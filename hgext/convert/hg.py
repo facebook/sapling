@@ -24,6 +24,8 @@ class mercurial_sink(converter_sink):
         if os.path.isdir(path) and len(os.listdir(path)) > 0:
             try:
                 self.repo = hg.repository(self.ui, path)
+                if not self.repo.local():
+                    raise NoRepo(_('%s is not a local Mercurial repo') % path)
                 ui.status(_('destination %s is a Mercurial repository\n') %
                           path)
             except hg.RepoError, err:
@@ -33,6 +35,8 @@ class mercurial_sink(converter_sink):
             try:
                 ui.status(_('initializing destination %s repository\n') % path)
                 self.repo = hg.repository(self.ui, path, create=True)
+                if not self.repo.local():
+                    raise NoRepo(_('%s is not a local Mercurial repo') % path)
                 self.created.append(path)
             except hg.RepoError, err:
                 ui.print_exc()
