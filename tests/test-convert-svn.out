@@ -75,14 +75,16 @@ converting...
 0 nice day
 updating tags
 % update svn repository again
-A         letter2.txt
+A         todo
+A         todo/letter2.txt
 Sending        letter.txt
-Adding         letter2.txt
+Adding         todo
+Adding         todo/letter2.txt
 Transmitting file data ..
 Committed revision 9.
 
 Committed revision 10.
-Sending        letter2.txt
+Sending        todo/letter2.txt
 Transmitting file data .
 Committed revision 11.
 % test incremental conversion
@@ -95,9 +97,9 @@ converting...
 updating tags
 o  7 update tags files: .hgtags
 |
-o  6 work in progress files: letter2.txt
+o  6 work in progress files: todo/letter2.txt
 |
-o  5 second letter files: letter.txt letter2.txt
+o  5 second letter files: letter.txt todo/letter2.txt
 |
 o  4 update tags files: .hgtags
 |

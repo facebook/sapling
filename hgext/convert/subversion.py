@@ -544,7 +544,7 @@ class svn_source(converter_source):
                                 copies[self.recode(copyto_entry)] = self.recode(entry)
                                 # copy from quux splort/quuxfile
 
-        return (entries, copies)
+        return (util.unique(entries), copies)
 
     def _fetch_revisions(self, from_revnum = 0, to_revnum = 347):
         self.child_cset = None
