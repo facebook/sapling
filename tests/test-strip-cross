@@ -43,7 +43,8 @@ commit '102 120' '012 210' '021 201'
 
 commit '201 210' '021 120' '012 102'
 
-HGUSER=another-user commit 'manifest-file'
+HGUSER=another-user; export HGUSER
+commit 'manifest-file'
 
 commit '012' 'manifest-file'
 
