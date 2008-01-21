@@ -89,7 +89,7 @@ o  9 branch trunk@1 into old2 files:
 | | |
 | o |  3 change letter files: letter.txt
 | | |
-+---o  2 branch trunk, remove letter3 files: letter.txt letter.txt letter2.txt letter2.txt
++---o  2 branch trunk, remove letter3 files: letter.txt letter2.txt
 | |
 | o  1 hello files: letter.txt letter2.txt letter3.txt
 |/

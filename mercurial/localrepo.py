@@ -687,6 +687,8 @@ class localrepository(repo.repository):
                p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = tr = None
         valid = 0 # don't save the dirstate if this isn't set
+        if files:
+            files = util.unique(files)
         try:
             commit = []
             remove = []
