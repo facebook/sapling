@@ -646,7 +646,7 @@ class svn_source(converter_source):
             # '2007-01-04T17:35:00.902377Z'
             date = util.parsedate(date[:19] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
 
-            log = message and self.recode(message)
+            log = message and self.recode(message) or ''
             author = author and self.recode(author) or ''
             try:
                 branch = self.module.split("/")[-1]
