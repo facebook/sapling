@@ -101,12 +101,12 @@ d
 0 Initial revision files: b/c
 o  5 (branch) ci2 files: b/c
 |
-o  4 () ci1 files: a b/c
-|
-o  3 () update tags files: .hgtags
-|
-o  2 () ci0 files: b/c
-|
+| o  4 () ci1 files: a b/c
+| |
+| o  3 () update tags files: .hgtags
+| |
+| o  2 () ci0 files: b/c
+|/
 | o  1 (INITIAL) import files:
 |/
 o  0 () Initial revision files: a b/c

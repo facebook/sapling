@@ -49,11 +49,13 @@ class convert_cvs(converter_source):
             os.chdir(self.path)
             id = None
             state = 0
+            filerevids = {}
             for l in util.popen(cmd):
                 if state == 0: # header
                     if l.startswith("PatchSet"):
                         id = l[9:-2]
                         if maxrev and int(id) > maxrev:
+                            # ignore everything
                             state = 3
                     elif l.startswith("Date"):
                         date = util.parsedate(l[6:-1], ["%Y/%m/%d %H:%M:%S"])
@@ -64,7 +66,8 @@ class convert_cvs(converter_source):
                         self.lastbranch[branch] = id
                     elif l.startswith("Ancestor branch"):
                         ancestor = l[17:-1]
-                        self.parent[id] = self.lastbranch[ancestor]
+                        # figure out the parent later
+                        self.parent[id] = None
                     elif l.startswith("Author"):
                         author = self.recode(l[8:-1])
                     elif l.startswith("Tag:") or l.startswith("Tags:"):
@@ -73,23 +76,36 @@ class convert_cvs(converter_source):
                         if (len(t) > 1) or (t[0] and (t[0] != "(none)")):
                             self.tags.update(dict.fromkeys(t, id))
                     elif l.startswith("Log:"):
+                        # switch to gathering log
                         state = 1
                         log = ""
                 elif state == 1: # log
                     if l == "Members: \n":
+                        # switch to gathering members
                         files = {}
+                        oldrevs = []
                         log = self.recode(log[:-1])
                         state = 2
                     else:
+                        # gather log
                         log += l
-                elif state == 2:
-                    if l == "\n": #
+                elif state == 2: # members
+                    if l == "\n": # start of next entry
                         state = 0
                         p = [self.parent[id]]
                         if id == "1":
                             p = []
                         if branch == "HEAD":
                             branch = ""
+                        if branch and p[0] == None:
+                            latest = None
+                            # the last changeset that contains a base
+                            # file is our parent
+                            for r in oldrevs:
+                                latest = max(filerevids[r], latest)
+                            p = [latest]
+
+                        # add current commit to set
                         c = commit(author=author, date=date, parents=p,
                                    desc=log, branch=branch)
                         self.changeset[id] = c
@@ -98,9 +114,14 @@ class convert_cvs(converter_source):
                         colon = l.rfind(':')
                         file = l[1:colon]
                         rev = l[colon+1:-2]
-                        rev = rev.split("->")[1]
+                        oldrev, rev = rev.split("->")
                         files[file] = rev
+
+                        # save some information for identifying branch points
+                        oldrevs.append("%s:%s" % (oldrev, file))
+                        filerevids["%s:%s" % (rev, file)] = id
                 elif state == 3:
+                    # swallow all input
                     continue
 
             self.heads = self.lastbranch.values()
