@@ -206,7 +206,9 @@ def create_server(ui, repo):
         myui = repo.ui
     address = myui.config("web", "address", "")
     port = int(myui.config("web", "port", 8000))
-    prefix = myui.config("web", "prefix", "").rstrip("/")
+    prefix = myui.config("web", "prefix", "")
+    if prefix:
+        prefix = "/" + prefix.strip("/")
     use_ipv6 = myui.configbool("web", "ipv6")
     webdir_conf = myui.config("web", "webdir_conf")
     ssl_cert = myui.config("web", "certificate")

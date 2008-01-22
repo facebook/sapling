@@ -2418,11 +2418,17 @@ def serve(ui, repo, **opts):
 
             if not ui.verbose: return
 
-            if self.httpd.port != 80:
-                ui.status(_('listening at http://%s:%d/\n') %
-                          (self.httpd.addr, self.httpd.port))
+            if self.httpd.prefix:
+                prefix = self.httpd.prefix.strip('/') + '/'
             else:
-                ui.status(_('listening at http://%s/\n') % self.httpd.addr)
+                prefix = ''
+
+            if self.httpd.port != 80:
+                ui.status(_('listening at http://%s:%d/%s\n') %
+                          (self.httpd.addr, self.httpd.port, prefix))
+            else:
+                ui.status(_('listening at http://%s/%s\n') % 
+                          (self.httpd.addr, prefix))
 
         def run(self):
             self.httpd.serve_forever()
