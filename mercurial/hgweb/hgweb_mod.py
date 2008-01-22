@@ -212,7 +212,7 @@ class hgweb(object):
                     req.form['cmd'] = [tmpl.cache['default']]
                     cmd = req.form['cmd'][0]
 
-                if cmd == 'file' and 'raw' in req.form['style']:
+                if cmd == 'file' and 'raw' in req.form.get('style', []):
                     webcommands.rawfile(self, req, tmpl)
                 else:
                     getattr(webcommands, cmd)(self, req, tmpl)
