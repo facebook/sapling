@@ -7,7 +7,7 @@
 
 import os, mimetypes
 from mercurial import revlog, util
-from common import staticfile
+from common import staticfile, ErrorResponse
 
 def log(web, req, tmpl):
     if 'file' in req.form and req.form['file'][0]:
@@ -100,8 +100,7 @@ def archive(web, req, tmpl):
         web.archive(tmpl, req, req.form['node'][0], type_)
         return
 
-    req.respond(400, tmpl('error',
-                           error='Unsupported archive type: %s' % type_))
+    raise ErrorResponse(400, 'Unsupported archive type: %s' % type_)
 
 def static(web, req, tmpl):
     fname = req.form['file'][0]
