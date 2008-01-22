@@ -87,7 +87,7 @@ class wsgirequest(object):
         headers = headers.items()
         headers.append(('Content-type', type))
         if filename:
-            headers.append(('Content-disposition', 'attachment; filename=%s' %
+            headers.append(('Content-disposition', 'inline; filename=%s' %
                             filename))
         if length:
             headers.append(('Content-length', str(length)))
