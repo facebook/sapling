@@ -7,6 +7,6 @@ summary:     test
 ---- HEADERS
 200 Script output follows
 ---- DATA
-[('content-type', 'text/html; charset=ascii')]
+[('Content-type', 'text/html; charset=ascii')]
 ---- ERRORS
 

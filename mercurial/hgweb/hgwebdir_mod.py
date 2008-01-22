@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetools, cStringIO
+import os
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen, \
@@ -226,6 +226,7 @@ class hgwebdir(object):
                  "%s%s" % ((not descending and column == sortcolumn)
                             and "-" or "", column))
                 for column in sortable]
+
         req.write(tmpl("index", entries=entries, subdir=subdir,
                        sortcolumn=sortcolumn, descending=descending,
                        **dict(sort)))
@@ -233,11 +234,9 @@ class hgwebdir(object):
     def templater(self, req):
 
         def header(**map):
-            header_file = cStringIO.StringIO(
-                ''.join(tmpl("header", encoding=util._encoding, **map)))
-            msg = mimetools.Message(header_file, 0)
-            req.header(msg.items())
-            yield header_file.read()
+            ctype = tmpl('mimetype', encoding=util._encoding)
+            req.httphdr(templater.stringify(ctype))
+            yield tmpl('header', encoding=util._encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)

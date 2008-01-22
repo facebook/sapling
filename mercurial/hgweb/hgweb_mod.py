@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetypes, re, mimetools, cStringIO
+import os, mimetypes, re
 from mercurial.node import *
 from mercurial import mdiff, ui, hg, util, archival, patch, hook
 from mercurial import revlog, templater
@@ -253,11 +253,9 @@ class hgweb(object):
         # some functions for the templater
 
         def header(**map):
-            header_file = cStringIO.StringIO(
-                ''.join(tmpl("header", encoding=self.encoding, **map)))
-            msg = mimetools.Message(header_file, 0)
-            req.header(msg.items())
-            yield header_file.read()
+            ctype = tmpl('mimetype', encoding=self.encoding)
+            req.httphdr(templater.stringify(ctype))
+            yield tmpl('header', encoding=self.encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)
