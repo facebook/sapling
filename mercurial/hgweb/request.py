@@ -38,6 +38,10 @@ class wsgirequest(object):
             if not self.headers:
                 raise RuntimeError("request.write called before headers sent")
 
+            for k, v in self.headers:
+                if not isinstance(v, str):
+                    raise TypeError('header value must be string: %r' % v)
+
             if isinstance(status, ErrorResponse):
                 status = statusmessage(status.code)
             elif isinstance(status, int):

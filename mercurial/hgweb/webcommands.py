@@ -30,7 +30,7 @@ def rawfile(web, req, tmpl):
     path = fctx.path()
     text = fctx.data()
     mt = mimetypes.guess_type(path)[0]
-    if util.binary(text):
+    if mt is None or util.binary(text):
         mt = mt or 'application/octet-stream'
 
     req.httphdr(mt, path, len(text))
