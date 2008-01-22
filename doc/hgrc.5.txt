@@ -553,6 +553,8 @@ web::
     Maximum number of files to list per changeset. Default is 10.
   port;;
     Port to listen on. Default is 8000.
+  prefix;;
+    Prefix path to serve from. Default is '' (server root).
   push_ssl;;
     Whether to require that inbound pushes be transported over SSL to
     prevent password sniffing.  Default is true.
