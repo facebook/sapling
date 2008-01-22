@@ -36,8 +36,7 @@ class wsgirequest(object):
     def start_response(self, status):
         if self._start_response is not None:
             if not self.headers:
-                raise RuntimeError("request.write called before headers sent" +
-                	               " (%s)." % thing)
+                raise RuntimeError("request.write called before headers sent")
 
             if isinstance(status, ErrorResponse):
                 status = statusmessage(status.code)
