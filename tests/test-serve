@@ -16,3 +16,27 @@ fi
 echo % With -v
 hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v | sed -e 's,:[0-9][0-9]*/,/,'
 cat hg.pid >> "$DAEMON_PIDS"
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix foo
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix foo | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix /foo
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix /foo | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix foo/
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix foo/ | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix /foo/
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix /foo/ | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
