@@ -94,8 +94,8 @@ def _kwrestrict(cmd):
     '''Returns True if cmd should trigger restricted expansion.
     Keywords will only expanded when writing to working dir.
     Crucial for mq as expanded keywords should not make it into patches.'''
-    return cmd in ('diff1', 
-                   'qimport', 'qnew', 'qpush', 'qrefresh', 'record', 'qrecord')
+    return cmd in ('diff1', 'record',
+                   'qfold', 'qimport', 'qnew', 'qpush', 'qrefresh', 'qrecord')
 
 
 _kwtemplater = None
