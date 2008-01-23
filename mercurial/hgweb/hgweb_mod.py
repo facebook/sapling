@@ -844,11 +844,13 @@ class hgweb(object):
             arch_version = short(cnode)
         name = "%s-%s" % (reponame, arch_version)
         mimetype, artype, extension, encoding = self.archive_specs[type_]
-        headers = [('Content-type', mimetype),
-                   ('Content-disposition', 'attachment; filename=%s%s' %
-                    (name, extension))]
+        headers = [
+            ('Content-Type', mimetype),
+            ('Content-Disposition', 'attachment; filename=%s%s' %
+                (name, extension))
+        ]
         if encoding:
-            headers.append(('Content-encoding', encoding))
+            headers.append(('Content-Encoding', encoding))
         req.header(headers)
         archival.archive(self.repo, req, cnode, artype, prefix=name)
 

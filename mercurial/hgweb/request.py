@@ -80,17 +80,17 @@ class wsgirequest(object):
     def close(self):
         return None
 
-    def header(self, headers=[('Content-type','text/html')]):
+    def header(self, headers=[('Content-Type','text/html')]):
         self.headers.extend(headers)
 
     def httphdr(self, type, filename=None, length=0, headers={}):
         headers = headers.items()
-        headers.append(('Content-type', type))
+        headers.append(('Content-Type', type))
         if filename:
-            headers.append(('Content-disposition', 'inline; filename=%s' %
+            headers.append(('Content-Disposition', 'inline; filename=%s' %
                             filename))
         if length:
-            headers.append(('Content-length', str(length)))
+            headers.append(('Content-Length', str(length)))
         self.header(headers)
 
 def wsgiapplication(app_maker):

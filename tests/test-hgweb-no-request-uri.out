@@ -7,7 +7,7 @@ summary:     test
 ---- HEADERS
 200 Script output follows
 ---- DATA
-[('Content-type', 'application/atom+xml; charset=ascii')]
+[('Content-Type', 'application/atom+xml; charset=ascii')]
 <?xml version="1.0" encoding="ascii"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
  <!-- Changelog -->
@@ -41,7 +41,7 @@ summary:     test
 ---- HEADERS
 200 Script output follows
 ---- DATA
-[('Content-type', 'text/plain; charset=ascii')]
+[('Content-Type', 'text/plain; charset=ascii')]
 
 -rw-r--r-- 4 bar
 
@@ -52,7 +52,7 @@ summary:     test
 ---- HEADERS
 200 Script output follows
 ---- DATA
-[('Content-type', 'text/plain; charset=ascii')]
+[('Content-Type', 'text/plain; charset=ascii')]
 
 /repo/
 
@@ -62,7 +62,7 @@ summary:     test
 ---- HEADERS
 200 Script output follows
 ---- DATA
-[('Content-type', 'text/plain; charset=ascii')]
+[('Content-Type', 'text/plain; charset=ascii')]
 
 -rw-r--r-- 4 bar
 
