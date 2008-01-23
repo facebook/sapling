@@ -1,4 +1,4 @@
-# Copyright (C) 2005, 2006 by Intevation GmbH
+# Copyright (C) 2005, 2006, 2008 by Intevation GmbH
 # Author(s):
 # Thomas Arendsen Hein <thomas@intevation.de>
 #
@@ -10,7 +10,6 @@ Mercurial version
 """
 
 import os
-import os.path
 import re
 import time
 import util
