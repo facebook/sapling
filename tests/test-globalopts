@@ -25,6 +25,13 @@ echo %% -R/--repository
 hg -R a tip
 hg --repository b tip
 
+echo %% implicit -R
+hg ann a/a
+hg ann a/a a/a
+hg ann a/a b/b
+hg -R b ann a/a
+hg log
+
 echo %% abbrev of long option
 hg --repo c tip
 

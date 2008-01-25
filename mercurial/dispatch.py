@@ -150,8 +150,7 @@ def _runcatch(ui, args):
 
     return -1
 
-def _findrepo():
-    p = os.getcwd()
+def _findrepo(p):
     while not os.path.isdir(os.path.join(p, ".hg")):
         oldp, p = p, os.path.dirname(p)
         if p == oldp:
@@ -254,7 +253,7 @@ def _dispatch(ui, args):
         os.chdir(cwd[-1])
 
     # read the local repository .hgrc into a local ui object
-    path = _findrepo() or ""
+    path = _findrepo(os.getcwd()) or ""
     if not path:
         lui = ui
     if path:
@@ -345,6 +344,11 @@ def _dispatch(ui, args):
             ui.setconfig("bundle", "mainreporoot", repo.root)
         except hg.RepoError:
             if cmd not in commands.optionalrepo.split():
+                if args and not path: # try to infer -R from command args
+                    repos = map(_findrepo, args)
+                    guess = repos[0]
+                    if guess and repos.count(guess) == len(repos):
+                        return _dispatch(ui, ['--repository', guess] + fullargs)
                 if not path:
                     raise hg.RepoError(_("There is no Mercurial repository here"
                                          " (.hg not found)"))

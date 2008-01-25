@@ -24,6 +24,12 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     b
 
+%% implicit -R
+0: a
+0: a
+abort: There is no Mercurial repository here (.hg not found)!
+abort: a/a not under root
+abort: There is no Mercurial repository here (.hg not found)!
 %% abbrev of long option
 changeset:   1:b6c483daf290
 tag:         tip
