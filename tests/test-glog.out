@@ -317,7 +317,7 @@ o  changeset:   5:3589c3c477ab
 
 % unused arguments
 hg glog: invalid arguments
-hg glog [OPTION]... [FILE]...
+hg glog [OPTION]... [FILE]
 
 show revision history alongside an ASCII revision graph
 failed
