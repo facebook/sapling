@@ -139,5 +139,8 @@ hg glog -q
 echo % glog
 hg glog
 
+echo % file glog
+hg glog 5
+
 echo % unused arguments
-hg glog -q foo || echo failed
+hg glog -q foo bar || echo failed
