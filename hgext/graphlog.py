@@ -322,5 +322,5 @@ cmdtable = {
           ('r', 'rev', [], _('show the specified revision or range')),
           ('', 'style', '', _('display using template map file')),
           ('', 'template', '', _('display with template'))],
-         _('hg glog [OPTION] [FILE]...')),
+         _('hg glog [OPTION]... [FILE]...')),
 }
