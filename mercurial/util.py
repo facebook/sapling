@@ -262,7 +262,7 @@ def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
     res = ''
-    group = False
+    group = 0
     def peek(): return i < n and pat[i]
     while i < n:
         c = pat[i]
@@ -292,11 +292,11 @@ def globre(pat, head='^', tail='$'):
                     stuff = '\\' + stuff
                 res = '%s[%s]' % (res, stuff)
         elif c == '{':
-            group = True
+            group += 1
             res += '(?:'
         elif c == '}' and group:
             res += ')'
-            group = False
+            group -= 1
         elif c == ',' and group:
             res += '|'
         elif c == '\\':
