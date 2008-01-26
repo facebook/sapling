@@ -230,6 +230,10 @@ class converter(object):
         self.map[rev] = newnode
 
     def convert(self):
+
+        def recode(s):
+            return s.decode('utf-8').encode(orig_encoding, 'replace')
+
         try:
             self.source.before()
             self.dest.before()
@@ -251,8 +255,8 @@ class converter(object):
                 # convert log message to local encoding without using
                 # tolocal() because util._encoding conver() use it as
                 # 'utf-8'
-                desc = desc.decode('utf-8').encode(orig_encoding, 'replace')
-                self.ui.status("%d %s\n" % (num, desc))
+                self.ui.status("%d %s\n" % (num, recode(desc)))
+                self.ui.note(_("source: %s\n" % recode(c)))
                 self.copy(c)
 
             tags = self.source.gettags()

@@ -26,9 +26,14 @@ Committed revision 3.
 % test incremental conversion
 assuming destination test-hg
 scanning source...
+fetching revision log for "/trunk/test" from 3 to 2
 sorting...
 converting...
 0 changeb
+source:
+a
+b
+no tags found at revision 3
 % test filemap
 initializing destination fmap repository
 scanning source...

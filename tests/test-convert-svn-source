@@ -49,7 +49,7 @@ svn ci -m changeb
 cd ..
 
 echo % test incremental conversion
-hg convert $svnurl
+hg convert -v $svnurl | sed 's/source:.*/source:/'
 
 echo % test filemap
 echo 'include b' > filemap
