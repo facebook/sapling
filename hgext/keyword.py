@@ -86,16 +86,14 @@ import re, shutil, sys, tempfile, time
 
 commands.optionalrepo += ' kwdemo'
 
+# hg commands that trigger expansion only when writing to working dir,
+# not when reading filelog, and unexpand when reading from working dir
+restricted = ('diff1', 'record',
+              'qfold', 'qimport', 'qnew', 'qpush', 'qrefresh', 'qrecord')
+
 def utcdate(date):
     '''Returns hgdate in cvs-like UTC format.'''
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
-
-def _kwrestrict(cmd):
-    '''Returns True if cmd should trigger restricted expansion.
-    Keywords will only expanded when writing to working dir.
-    Crucial for mq as expanded keywords should not make it into patches.'''
-    return cmd in ('diff1', 'record',
-                   'qfold', 'qimport', 'qnew', 'qpush', 'qrefresh', 'qrecord')
 
 
 _kwtemplater = None
@@ -157,7 +155,7 @@ class kwtemplater(object):
 
     def expand(self, node, data):
         '''Returns data with keywords expanded.'''
-        if util.binary(data) or _kwrestrict(self.hgcmd):
+        if util.binary(data) or self.hgcmd in restricted:
             return data
         return self.substitute(node, data, self.re_kw.sub)
 
@@ -451,7 +449,7 @@ def reposetup(ui, repo):
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)
-            if _kwrestrict(hgcmd) and _kwtemplater.matcher(filename):
+            if hgcmd in restricted and _kwtemplater.matcher(filename):
                 return _kwtemplater.shrink(data)
             return data
 
