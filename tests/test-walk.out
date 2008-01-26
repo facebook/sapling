@@ -174,6 +174,11 @@ f  beans/navy      beans/navy
 f  beans/pinto     beans/pinto
 f  beans/turtle    beans/turtle
 
+hg debugwalk -I {*,{b,m}*/*}k
+f  beans/black    beans/black
+f  fenugreek      fenugreek
+f  mammals/skunk  mammals/skunk
+
 hg debugwalk glob:mammals/../beans/b*
 f  beans/black     beans/black
 f  beans/borlotti  beans/borlotti

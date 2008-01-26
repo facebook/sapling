@@ -58,6 +58,7 @@ debugwalk .hg
 debugwalk ../.hg
 chdir ..
 debugwalk -Ibeans
+debugwalk -I '{*,{b,m}*/*}k'
 debugwalk 'glob:mammals/../beans/b*'
 debugwalk '-X*/Procyonidae' mammals
 debugwalk path:mammals
