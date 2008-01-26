@@ -668,13 +668,18 @@ class svn_source(converter_source):
                 return None, branched
 
             parents = []
-            # check whether this revision is the start of a branch
-            if self.module in orig_paths:
-                ent = orig_paths[self.module]
+            # check whether this revision is the start of a branch or part
+            # of a branch renaming
+            orig_paths = orig_paths.items()
+            orig_paths.sort()
+            root_paths = [(p,e) for p,e in orig_paths if self.module.startswith(p)]
+            if root_paths:
+                path, ent = root_paths[-1]
                 if ent.copyfrom_path:
                     branched = True
+                    newpath = ent.copyfrom_path + self.module[len(path):]
                     # ent.copyfrom_rev may not be the actual last revision
-                    previd = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
+                    previd = self.latest(newpath, ent.copyfrom_rev)
                     if previd is not None:
                         parents = [previd]
                         prevmodule, prevnum = self.revsplit(previd)[1:]
@@ -683,8 +688,6 @@ class svn_source(converter_source):
                 else:
                     self.ui.debug("No copyfrom path, don't know what to do.\n")
 
-            orig_paths = orig_paths.items()
-            orig_paths.sort()
             paths = []
             # filter out unrelated paths
             for path, ent in orig_paths:
