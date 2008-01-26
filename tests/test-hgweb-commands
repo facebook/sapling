@@ -27,6 +27,7 @@ echo % File-related
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/file/1/foo/?style=raw'
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/annotate/1/foo/?style=raw'
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/file/1/?style=raw'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/file/1/foo' | sed "s/[0-9]* years/many years/"
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/filediff/1/foo/?style=raw'
 
 echo % Overviews

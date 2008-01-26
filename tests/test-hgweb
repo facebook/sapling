@@ -7,7 +7,7 @@ mkdir da
 echo foo > da/foo
 echo foo > foo
 hg ci -Ambase -d '0 0'
-hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log
+hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 echo % manifest
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/?style=raw')
@@ -37,3 +37,6 @@ python -c "print len(file('access.log').readlines()), 'log lines written'"
 
 echo % static file
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/static/style-gitweb.css'
+
+echo % errors
+cat errors.log

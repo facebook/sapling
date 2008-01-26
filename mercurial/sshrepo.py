@@ -195,7 +195,7 @@ class sshrepository(remoterepository):
         r = self.pipei.read(l)
         if r:
             # remote may send "unsynced changes"
-            self.raise_(hg.RepoError(_("push failed: %s") % r))
+            self.raise_(repo.RepoError(_("push failed: %s") % r))
 
         self.readerr()
         l = int(self.pipei.readline())

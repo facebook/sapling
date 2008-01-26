@@ -45,7 +45,7 @@
 # Revisions context menu will now display additional entries to fire
 # vdiff on hovered and selected revisions.
 
-import sys, os
+import os
 from mercurial import hg, fancyopts, commands, ui, util, patch, revlog
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
@@ -61,17 +61,14 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
 
         for f in modified:
             # TODO get file permissions
-            print ":100664 100664 %s %s M\t%s\t%s" % (hg.short(mmap[f]),
-                                                      hg.short(mmap2[f]),
-                                                      f, f)
+            ui.write(":100664 100664 %s %s M\t%s\t%s\n" %
+                     (hg.short(mmap[f]), hg.short(mmap2[f]), f, f))
         for f in added:
-            print ":000000 100664 %s %s N\t%s\t%s" % (empty,
-                                                      hg.short(mmap2[f]),
-                                                      f, f)
+            ui.write(":000000 100664 %s %s N\t%s\t%s\n" %
+                     (empty, hg.short(mmap2[f]), f, f))
         for f in removed:
-            print ":100664 000000 %s %s D\t%s\t%s" % (hg.short(mmap[f]),
-                                                      empty,
-                                                      f, f)
+            ui.write(":100664 000000 %s %s D\t%s\t%s\n" %
+                     (hg.short(mmap[f]), empty, f, f))
     ##
 
     while True:
@@ -93,7 +90,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
             node1 = repo.changelog.parents(node1)[0]
         if opts['patch']:
             if opts['pretty']:
-                catcommit(repo, node2, "")
+                catcommit(ui, repo, node2, "")
             patch.diff(repo, node1, node2,
                        files=files,
                        opts=patch.diffopts(ui, {'git': True}))
@@ -102,14 +99,14 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         if not opts['stdin']:
             break
 
-def catcommit(repo, n, prefix, ctx=None):
+def catcommit(ui, repo, n, prefix, ctx=None):
     nlprefix = '\n' + prefix;
     if ctx is None:
         ctx = repo.changectx(n)
     (p1, p2) = ctx.parents()
-    print "tree %s" % (hg.short(ctx.changeset()[0])) # use ctx.node() instead ??
-    if p1: print "parent %s" % (hg.short(p1.node()))
-    if p2: print "parent %s" % (hg.short(p2.node()))
+    ui.write("tree %s\n" % hg.short(ctx.changeset()[0])) # use ctx.node() instead ??
+    if p1: ui.write("parent %s\n" % hg.short(p1.node()))
+    if p2: ui.write("parent %s\n" % hg.short(p2.node()))
     date = ctx.date()
     description = ctx.description().replace("\0", "")
     lines = description.splitlines()
@@ -118,24 +115,24 @@ def catcommit(repo, n, prefix, ctx=None):
     else:
         committer = ctx.user()
 
-    print "author %s %s %s" % (ctx.user(), int(date[0]), date[1])
-    print "committer %s %s %s" % (committer, int(date[0]), date[1])
-    print "revision %d" % ctx.rev()
-    print "branch %s" % ctx.branch()
-    print ""
+    ui.write("author %s %s %s\n" % (ctx.user(), int(date[0]), date[1]))
+    ui.write("committer %s %s %s\n" % (committer, int(date[0]), date[1]))
+    ui.write("revision %d\n" % ctx.rev())
+    ui.write("branch %s\n\n" % ctx.branch())
+
     if prefix != "":
-        print "%s%s" % (prefix, description.replace('\n', nlprefix).strip())
+        ui.write("%s%s\n" % (prefix, description.replace('\n', nlprefix).strip()))
     else:
-        print description
+        ui.write(description + "\n")
     if prefix:
-        sys.stdout.write('\0')
+        ui.write('\0')
 
 def base(ui, repo, node1, node2):
     """Output common ancestor information"""
     node1 = repo.lookup(node1)
     node2 = repo.lookup(node2)
     n = repo.changelog.ancestor(node1, node2)
-    print hg.short(n)
+    ui.write(hg.short(n) + "\n")
 
 def catfile(ui, repo, type=None, r=None, **opts):
     """cat a specific revision"""
@@ -158,10 +155,10 @@ def catfile(ui, repo, type=None, r=None, **opts):
 
     while r:
         if type != "commit":
-            sys.stderr.write("aborting hg cat-file only understands commits\n")
-            sys.exit(1);
+            ui.warn("aborting hg cat-file only understands commits\n")
+            return 1;
         n = repo.lookup(r)
-        catcommit(repo, n, prefix)
+        catcommit(ui, repo, n, prefix)
         if opts['stdin']:
             try:
                 (type, r) = raw_input().split(' ');
@@ -175,7 +172,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
 # telling you which commits are reachable from the supplied ones via
 # a bitmask based on arg position.
 # you can specify a commit to stop at by starting the sha1 with ^
-def revtree(args, repo, full="tree", maxnr=0, parents=False):
+def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
     def chlogwalk():
         count = repo.changelog.count()
         i = count
@@ -260,24 +257,24 @@ def revtree(args, repo, full="tree", maxnr=0, parents=False):
                 if pp[1] != hg.nullid:
                     parentstr += " " + hg.short(pp[1])
             if not full:
-                print hg.short(n) + parentstr
+                ui.write("%s%s\n" % (hg.short(n), parentstr))
             elif full == "commit":
-                print hg.short(n) + parentstr
-                catcommit(repo, n, '    ', ctx)
+                ui.write("%s%s\n" % (hg.short(n), parentstr))
+                catcommit(ui, repo, n, '    ', ctx)
             else:
                 (p1, p2) = repo.changelog.parents(n)
                 (h, h1, h2) = map(hg.short, (n, p1, p2))
                 (i1, i2) = map(repo.changelog.rev, (p1, p2))
 
                 date = ctx.date()[0]
-                print "%s %s:%s" % (date, h, mask),
+                ui.write("%s %s:%s" % (date, h, mask))
                 mask = is_reachable(want_sha1, reachable, p1)
                 if i1 != hg.nullrev and mask > 0:
-                    print "%s:%s " % (h1, mask),
+                    ui.write("%s:%s " % (h1, mask)),
                 mask = is_reachable(want_sha1, reachable, p2)
                 if i2 != hg.nullrev and mask > 0:
-                    print "%s:%s " % (h2, mask),
-                print ""
+                    ui.write("%s:%s " % (h2, mask))
+                ui.write("\n")
             if maxnr and count >= maxnr:
                 break
             count += 1
@@ -305,7 +302,7 @@ def revlist(ui, repo, *revs, **opts):
     else:
         full = None
     copy = [x for x in revs]
-    revtree(copy, repo, full, opts['max_count'], opts['parents'])
+    revtree(ui, copy, repo, full, opts['max_count'], opts['parents'])
 
 def config(ui, repo, **opts):
     """print extension options"""

@@ -1,4 +1,5 @@
-header = header.tmpl
+mimetype = 'text/plain; charset={encoding}'
+header = ''
 footer = ''
 changeset = changeset.tmpl
 difflineplus = '#line#'
@@ -8,7 +9,6 @@ diffline = '#line#'
 changesetparent = '# Parent #node#'
 changesetchild = '# Child #node#'
 filenodelink = ''
-filerevision = '#rawfileheader##raw#'
 fileline = '#line#'
 diffblock = '#lines#'
 filediff = filediff.tmpl

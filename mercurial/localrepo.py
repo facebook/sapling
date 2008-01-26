@@ -687,6 +687,8 @@ class localrepository(repo.repository):
                p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = tr = None
         valid = 0 # don't save the dirstate if this isn't set
+        if files:
+            files = util.unique(files)
         try:
             commit = []
             remove = []
@@ -996,7 +998,7 @@ class localrepository(repo.repository):
             mf2keys.sort()
             getnode = lambda fn: mf1.get(fn, nullid)
             for fn in mf2keys:
-                if mf1.has_key(fn):
+                if fn in mf1:
                     if (mf1.flags(fn) != mf2.flags(fn) or
                         (mf1[fn] != mf2[fn] and
                          (mf2[fn] != "" or fcmp(fn, getnode)))):
@@ -1510,7 +1512,7 @@ class localrepository(repo.repository):
             for node in nodes:
                 self.ui.debug("%s\n" % hex(node))
 
-    def changegroupsubset(self, bases, heads, source):
+    def changegroupsubset(self, bases, heads, source, extranodes=None):
         """This function generates a changegroup consisting of all the nodes
         that are descendents of any of the bases, and ancestors of any of
         the heads.
@@ -1520,7 +1522,15 @@ class localrepository(repo.repository):
         is non-trivial.
 
         Another wrinkle is doing the reverse, figuring out which changeset in
-        the changegroup a particular filenode or manifestnode belongs to."""
+        the changegroup a particular filenode or manifestnode belongs to.
+        
+        The caller can specify some nodes that must be included in the
+        changegroup using the extranodes argument.  It should be a dict
+        where the keys are the filenames (or 1 for the manifest), and the
+        values are lists of (node, linknode) tuples, where node is a wanted
+        node and linknode is the changelog node that should be transmitted as
+        the linkrev.
+        """
 
         self.hook('preoutgoing', throw=True, source=source)
 
@@ -1713,6 +1723,15 @@ class localrepository(repo.repository):
                 return msngset[fnode]
             return lookup_filenode_link
 
+        # Add the nodes that were explicitly requested.
+        def add_extra_nodes(name, nodes):
+            if not extranodes or name not in extranodes:
+                return
+
+            for node, linknode in extranodes[name]:
+                if node not in nodes:
+                    nodes[node] = linknode
+
         # Now that we have all theses utility functions to help out and
         # logically divide up the task, generate the group.
         def gengroup():
@@ -1728,6 +1747,7 @@ class localrepository(repo.repository):
             # The list of manifests has been collected by the generator
             # calling our functions back.
             prune_manifests()
+            add_extra_nodes(1, msng_mnfst_set)
             msng_mnfst_lst = msng_mnfst_set.keys()
             # Sort the manifestnodes by revision number.
             msng_mnfst_lst.sort(cmp_by_rev_func(mnfst))
@@ -1743,6 +1763,13 @@ class localrepository(repo.repository):
             msng_mnfst_lst = None
             msng_mnfst_set.clear()
 
+            if extranodes:
+                for fname in extranodes:
+                    if isinstance(fname, int):
+                        continue
+                    add_extra_nodes(fname,
+                                    msng_filenode_set.setdefault(fname, {}))
+                    changedfiles[fname] = 1
             changedfiles = changedfiles.keys()
             changedfiles.sort()
             # Go through all our files in order sorted by name.
@@ -1752,7 +1779,7 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
-                if msng_filenode_set.has_key(fname):
+                if fname in msng_filenode_set:
                     prune_filenodes(fname, filerevlog)
                     msng_filenode_lst = msng_filenode_set[fname].keys()
                 else:
@@ -1771,7 +1798,7 @@ class localrepository(repo.repository):
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
                         yield chnk
-                if msng_filenode_set.has_key(fname):
+                if fname in msng_filenode_set:
                     # Don't need this anymore, toss it to free memory.
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.
@@ -1852,7 +1879,7 @@ class localrepository(repo.repository):
 
         return util.chunkbuffer(gengroup())
 
-    def addchangegroup(self, source, srctype, url):
+    def addchangegroup(self, source, srctype, url, emptyok=False):
         """add changegroup to repo.
 
         return values:
@@ -1888,7 +1915,7 @@ class localrepository(repo.repository):
             self.ui.status(_("adding changesets\n"))
             cor = cl.count() - 1
             chunkiter = changegroup.chunkiter(source)
-            if cl.addgroup(chunkiter, csmap, trp, 1) is None:
+            if cl.addgroup(chunkiter, csmap, trp, 1) is None and not emptyok:
                 raise util.Abort(_("received changelog group is empty"))
             cnr = cl.count() - 1
             changesets = cnr - cor

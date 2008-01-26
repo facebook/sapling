@@ -80,9 +80,13 @@ def writebundle(cg, filename, bundletype):
         # in case of sshrepo because we don't know the end of the stream
 
         # an empty chunkiter is the end of the changegroup
+        # a changegroup has at least 2 chunkiters (changelog and manifest).
+        # after that, an empty chunkiter is the end of the changegroup
         empty = False
-        while not empty:
+        count = 0
+        while not empty or count <= 2:
             empty = True
+            count += 1
             for chunk in chunkiter(cg):
                 empty = False
                 fh.write(z.compress(chunkheader(len(chunk))))

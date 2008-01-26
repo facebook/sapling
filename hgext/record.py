@@ -364,10 +364,10 @@ def record(ui, repo, *pats, **opts):
     dorecord(ui, repo, record_committer, *pats, **opts)
 
 
-def qrecord(ui, repo, *pats, **opts):
-    '''interactively select changes for qrefresh
+def qrecord(ui, repo, patch, *pats, **opts):
+    '''interactively record a new patch
 
-    see 'hg help record' for more information and usage
+    see 'hg help qnew' & 'hg help record' for more information and usage
     '''
 
     try:
@@ -376,8 +376,10 @@ def qrecord(ui, repo, *pats, **opts):
         raise util.Abort(_("'mq' extension not loaded"))
 
     def qrecord_committer(ui, repo, pats, opts):
-        mq.refresh(ui, repo, *pats, **opts)
+        mq.new(ui, repo, patch, *pats, **opts)
 
+    opts = opts.copy()
+    opts['force'] = True    # always 'qnew -f'
     dorecord(ui, repo, qrecord_committer, *pats, **opts)
 
 
@@ -513,10 +515,10 @@ def extsetup():
     "qrecord":
         (qrecord,
 
-         # add qrefresh options
-         mq.cmdtable['^qrefresh'][1],
+         # add qnew options, except '--force'
+         [opt for opt in mq.cmdtable['qnew'][1] if opt[1] != 'force'],
 
-         _('hg qrecord [OPTION]... [FILE]...')),
+         _('hg qrecord [OPTION]... PATCH [FILE]...')),
     }
 
     cmdtable.update(qcmdtable)

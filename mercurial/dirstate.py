@@ -235,7 +235,7 @@ class dirstate(object):
         self._changepath(f, 'n', True)
         s = os.lstat(self._join(f))
         self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime, 0)
-        if self._copymap.has_key(f):
+        if f in self._copymap:
             del self._copymap[f]
 
     def normallookup(self, f):

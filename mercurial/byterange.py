@@ -233,7 +233,7 @@ class FileRangeHandler(urllib2.FileHandler):
             size = (lb - fb)
             fo = RangeableFileObject(fo, (fb, lb))
         headers = mimetools.Message(StringIO(
-            'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
+            'Content-Type: %s\nContent-Length: %d\nLast-Modified: %s\n' %
             (mtype or 'text/plain', size, modified)))
         return urllib.addinfourl(fo, headers, 'file:'+file)
 

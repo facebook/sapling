@@ -1528,12 +1528,13 @@ def import_(ui, repo, patch1, *patches, **opts):
                                        files=files)
                 finally:
                     files = patch.updatedir(ui, repo, files)
-                n = repo.commit(files, message, user, date)
-                if opts.get('exact'):
-                    if hex(n) != nodeid:
-                        repo.rollback()
-                        raise util.Abort(_('patch is damaged'
-                                           ' or loses information'))
+                if not opts.get('no_commit'):
+                    n = repo.commit(files, message, user, date)
+                    if opts.get('exact'):
+                        if hex(n) != nodeid:
+                            repo.rollback()
+                            raise util.Abort(_('patch is damaged'
+                                               ' or loses information'))
             finally:
                 os.unlink(tmpname)
     finally:
@@ -2896,6 +2897,7 @@ table = {
           ('b', 'base', '', _('base path')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes')),
+          ('', 'no-commit', None, _("don't commit, just update the working directory")),
           ('', 'exact', None,
            _('apply patch to the nodes from which it was generated')),
           ('', 'import-branch', None,

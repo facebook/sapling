@@ -24,10 +24,8 @@ class wsgirequest(object):
         self.run_once = wsgienv['wsgi.run_once']
         self.env = wsgienv
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
-        self.start_response = start_response
+        self._start_response = start_response
         self.headers = []
-
-    out = property(lambda self: self)
 
     def __iter__(self):
         return iter([])
@@ -35,24 +33,34 @@ class wsgirequest(object):
     def read(self, count=-1):
         return self.inp.read(count)
 
+    def start_response(self, status):
+        if self._start_response is not None:
+            if not self.headers:
+                raise RuntimeError("request.write called before headers sent")
+
+            for k, v in self.headers:
+                if not isinstance(v, str):
+                    raise TypeError('header value must be string: %r' % v)
+
+            if isinstance(status, ErrorResponse):
+                status = statusmessage(status.code)
+            elif isinstance(status, int):
+                status = statusmessage(status)
+
+            self.server_write = self._start_response(status, self.headers)
+            self._start_response = None
+            self.headers = []
+
     def respond(self, status, *things):
+        if not things:
+            self.start_response(status)
         for thing in things:
             if hasattr(thing, "__iter__"):
                 for part in thing:
                     self.respond(status, part)
             else:
                 thing = str(thing)
-                if self.server_write is None:
-                    if not self.headers:
-                        raise RuntimeError("request.write called before headers sent (%s)." % thing)
-                    if isinstance(status, ErrorResponse):
-                        status = statusmessage(status.code)
-                    elif isinstance(status, int):
-                        status = statusmessage(status)
-                    self.server_write = self.start_response(status,
-                                                            self.headers)
-                    self.start_response = None
-                    self.headers = []
+                self.start_response(status)
                 try:
                     self.server_write(thing)
                 except socket.error, inst:
@@ -72,21 +80,23 @@ class wsgirequest(object):
     def close(self):
         return None
 
-    def header(self, headers=[('Content-type','text/html')]):
+    def header(self, headers=[('Content-Type','text/html')]):
         self.headers.extend(headers)
 
     def httphdr(self, type, filename=None, length=0, headers={}):
         headers = headers.items()
-        headers.append(('Content-type', type))
+        headers.append(('Content-Type', type))
         if filename:
-            headers.append(('Content-disposition', 'attachment; filename=%s' %
+            headers.append(('Content-Disposition', 'inline; filename=%s' %
                             filename))
         if length:
-            headers.append(('Content-length', str(length)))
+            headers.append(('Content-Length', str(length)))
         self.header(headers)
 
 def wsgiapplication(app_maker):
+    '''For compatibility with old CGI scripts. A plain hgweb() or hgwebdir()
+    can and should now be used as a WSGI application.'''
     application = app_maker()
     def run_wsgi(env, respond):
-        application(env, respond)
+        return application(env, respond)
     return run_wsgi

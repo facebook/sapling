@@ -354,12 +354,12 @@ def _dispatch(ui, args):
         d = lambda: func(ui, *args, **cmdoptions)
 
     # run pre-hook, and abort if it fails
-    ret = hook.hook(ui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
+    ret = hook.hook(lui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
     if ret:
         return ret
     ret = _runcommand(ui, options, cmd, d)
     # run post-hook, passing command result
-    hook.hook(ui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
+    hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
               result = ret)
     return ret
 

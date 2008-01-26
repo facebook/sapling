@@ -224,7 +224,7 @@ class queue:
         def write_list(items, path):
             fp = self.opener(path, 'w')
             for i in items:
-                print >> fp, i
+                fp.write("%s\n" % i)
             fp.close()
         if self.applied_dirty: write_list(map(str, self.applied), self.status_path)
         if self.series_dirty: write_list(self.full_series, self.series_path)
@@ -1267,7 +1267,7 @@ class queue:
             self.ui.warn("saved queue repository parents: %s %s\n" %
                          (hg.short(qpp[0]), hg.short(qpp[1])))
             if qupdate:
-                print "queue directory updating"
+                self.ui.status(_("queue directory updating\n"))
                 r = self.qrepo()
                 if not r:
                     self.ui.warn("Unable to load queue repository\n")

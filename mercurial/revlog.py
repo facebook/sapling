@@ -1237,21 +1237,31 @@ class revlog(object):
 
         return node
 
-    def strip(self, rev, minlink):
-        if self.count() == 0 or rev >= self.count():
+    def strip(self, minlink):
+        """truncate the revlog on the first revision with a linkrev >= minlink
+
+        This function is called when we're stripping revision minlink and
+        its descendants from the repository.
+
+        We have to remove all revisions with linkrev >= minlink, because
+        the equivalent changelog revisions will be renumbered after the
+        strip.
+
+        So we truncate the revlog on the first of these revisions, and
+        trust that the caller has saved the revisions that shouldn't be
+        removed and that it'll readd them after this truncation.
+        """
+        if self.count() == 0:
             return
 
         if isinstance(self.index, lazyindex):
             self._loadindexmap()
 
-        # When stripping away a revision, we need to make sure it
-        # does not actually belong to an older changeset.
-        # The minlink parameter defines the oldest revision
-        # we're allowed to strip away.
-        while minlink > self.index[rev][4]:
-            rev += 1
-            if rev >= self.count():
-                return
+        for rev in xrange(0, self.count()):
+            if self.index[rev][4] >= minlink:
+                break
+        else:
+            return
 
         # first truncate the files on disk
         end = self.start(rev)

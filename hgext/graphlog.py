@@ -5,11 +5,12 @@
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
 
+import os
 import sys
 from mercurial.cmdutil import revrange, show_changeset
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev
-from mercurial.util import Abort
+from mercurial.util import Abort, canonpath
 
 def revision_grapher(repo, start_rev, stop_rev):
     """incremental revision grapher
@@ -62,6 +63,62 @@ def revision_grapher(repo, start_rev, stop_rev):
 
         revs = next_revs
         curr_rev -= 1
+
+def filelog_grapher(repo, path, start_rev, stop_rev):
+    """incremental file log grapher
+
+    This generator function walks through the revision history of a
+    single file from revision start_rev to revision stop_rev (which must
+    be less than or equal to start_rev) and for each revision emits
+    tuples with the following elements:
+
+      - Current revision.
+      - Current node.
+      - Column of the current node in the set of ongoing edges.
+      - Edges; a list of (col, next_col) indicating the edges between
+        the current node and its parents.
+      - Number of columns (ongoing edges) in the current revision.
+      - The difference between the number of columns (ongoing edges)
+        in the next revision and the number of columns (ongoing edges)
+        in the current revision. That is: -1 means one column removed;
+        0 means no columns added or removed; 1 means one column added.
+    """
+
+    assert start_rev >= stop_rev
+    curr_rev = start_rev
+    revs = []
+    filerev = repo.file(path).count() - 1
+    while filerev >= 0:
+        fctx = repo.filectx(path, fileid=filerev)
+
+        # Compute revs and next_revs.
+        if filerev not in revs:
+            revs.append(filerev)
+        rev_index = revs.index(filerev)
+        next_revs = revs[:]
+
+        # Add parents to next_revs.
+        parents = [f.filerev() for f in fctx.parents()]
+        parents_to_add = []
+        for parent in parents:
+            if parent not in next_revs:
+                parents_to_add.append(parent)
+        parents_to_add.sort()
+        next_revs[rev_index:rev_index + 1] = parents_to_add
+
+        edges = []
+        for parent in parents:
+            edges.append((rev_index, next_revs.index(parent)))
+
+        changerev = fctx.linkrev()
+        if changerev <= start_rev:
+            node = repo.changelog.node(changerev)
+            n_columns_diff = len(next_revs) - len(revs)
+            yield (changerev, node, rev_index, edges, len(revs), n_columns_diff)
+        if changerev <= stop_rev:
+            break
+        revs = next_revs
+        filerev -= 1
 
 def get_rev_parents(repo, rev):
     return [x for x in repo.changelog.parentrevs(rev) if x != nullrev]
@@ -141,7 +198,7 @@ def get_revs(repo, rev_opt):
     else:
         return (repo.changelog.count() - 1, 0)
 
-def graphlog(ui, repo, **opts):
+def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
 
     Print a revision history alongside a revision graph drawn with
@@ -157,7 +214,11 @@ def graphlog(ui, repo, **opts):
     if start_rev == nullrev:
         return
     cs_printer = show_changeset(ui, repo, opts)
-    grapher = revision_grapher(repo, start_rev, stop_rev)
+    if path:
+        cpath = canonpath(repo.root, os.getcwd(), path)
+        grapher = filelog_grapher(repo, cpath, start_rev, stop_rev)
+    else:
+        grapher = revision_grapher(repo, start_rev, stop_rev)
     repo_parents = repo.dirstate.parents()
     prev_n_columns_diff = 0
     prev_node_index = 0
@@ -261,5 +322,5 @@ cmdtable = {
           ('r', 'rev', [], _('show the specified revision or range')),
           ('', 'style', '', _('display using template map file')),
           ('', 'template', '', _('display with template'))],
-         _('hg glog [OPTION]...')),
+         _('hg glog [OPTION]... [FILE]')),
 }

@@ -89,6 +89,9 @@ def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=Tr
                        receiver)
     except SubversionException, (inst, num):
         pickle.dump(num, fp, protocol)
+    except IOError:
+        # Caller may interrupt the iteration
+        pickle.dump(None, fp, protocol)
     else:
         pickle.dump(None, fp, protocol)
     fp.close()
@@ -102,7 +105,53 @@ def debugsvnlog(ui, **opts):
     args = decodeargs(sys.stdin.read())
     get_log_child(sys.stdout, *args)
 
+class logstream:
+    """Interruptible revision log iterator."""
+    def __init__(self, stdout):
+        self._stdout = stdout
+
+    def __iter__(self):
+        while True:
+            entry = pickle.load(self._stdout)
+            try:
+                orig_paths, revnum, author, date, message = entry
+            except:
+                if entry is None:
+                    break
+                raise SubversionException("child raised exception", entry)
+            yield entry
+
+    def close(self):
+        if self._stdout:
+            self._stdout.close()
+            self._stdout = None
+
+def get_log(url, paths, start, end, limit=0, discover_changed_paths=True,
+                strict_node_history=False):
+    args = [url, paths, start, end, limit, discover_changed_paths,
+            strict_node_history]
+    arg = encodeargs(args)
+    hgexe = util.hgexecutable()
+    cmd = '%s debugsvnlog' % util.shellquote(hgexe)
+    stdin, stdout = os.popen2(cmd, 'b')
+    stdin.write(arg)
+    stdin.close()
+    return logstream(stdout)
+
 # SVN conversion code stolen from bzr-svn and tailor
+#
+# Subversion looks like a versioned filesystem, branches structures
+# are defined by conventions and not enforced by the tool. First,
+# we define the potential branches (modules) as "trunk" and "branches"
+# children directories. Revisions are then identified by their
+# module and revision number (and a repository identifier).
+#
+# The revision graph is really a tree (or a forest). By default, a
+# revision parent is the previous revision in the same module. If the
+# module directory is copied/moved from another module then the
+# revision is the module root and its parent the source revision in
+# the parent module. A revision has at most one parent.
+#
 class svn_source(converter_source):
     def __init__(self, ui, url, rev=None):
         super(svn_source, self).__init__(ui, url, rev=rev)
@@ -133,7 +182,6 @@ class svn_source(converter_source):
             self.ctx = self.transport.client
             self.base = svn.ra.get_repos_root(self.ra)
             self.module = self.url[len(self.base):]
-            self.modulemap = {} # revision, module
             self.commits = {}
             self.paths = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
@@ -257,45 +305,26 @@ class svn_source(converter_source):
             uuid, module, revnum = self.revsplit(rev)
             self.module = module
             self.reparent(module)
+            # We assume that:
+            # - requests for revisions after "stop" come from the
+            # revision graph backward traversal. Cache all of them
+            # down to stop, they will be used eventually.
+            # - requests for revisions before "stop" come to get
+            # isolated branches parents. Just fetch what is needed.
             stop = self.lastrevs.get(module, 0)
-            self._fetch_revisions(from_revnum=revnum, to_revnum=stop)
+            if revnum < stop:
+                stop = revnum + 1
+            self._fetch_revisions(revnum, stop)
         commit = self.commits[rev]
         # caller caches the result, so free it here to release memory
         del self.commits[rev]
         return commit
 
-    def get_log(self, paths, start, end, limit=0, discover_changed_paths=True,
-                strict_node_history=False):
-
-        def parent(fp):
-            while True:
-                entry = pickle.load(fp)
-                try:
-                    orig_paths, revnum, author, date, message = entry
-                except:
-                    if entry is None:
-                        break
-                    raise SubversionException("child raised exception", entry)
-                yield entry
-
-        args = [self.url, paths, start, end, limit, discover_changed_paths,
-                strict_node_history]
-        arg = encodeargs(args)
-        hgexe = util.hgexecutable()
-        cmd = '%s debugsvnlog' % util.shellquote(hgexe)
-        stdin, stdout = os.popen2(cmd, 'b')
-
-        stdin.write(arg)
-        stdin.close()
-
-        for p in parent(stdout):
-            yield p
-
     def gettags(self):
         tags = {}
         start = self.revnum(self.head)
         try:
-            for entry in self.get_log([self.tags], 0, start):
+            for entry in get_log(self.url, [self.tags], 0, start):
                 orig_paths, revnum, author, date, message = entry
                 for path in orig_paths:
                     if not path.startswith(self.tags+'/'):
@@ -400,13 +429,11 @@ class svn_source(converter_source):
         entries = []
         copyfrom = {} # Map of entrypath, revision for finding source of deleted revisions.
         copies = {}
-        revnum = self.revnum(rev)
 
-        if revnum in self.modulemap:
-            new_module = self.modulemap[revnum]
-            if new_module != self.module:
-                self.module = new_module
-                self.reparent(self.module)
+        new_module, revnum = self.revsplit(rev)[1:]
+        if new_module != self.module:
+            self.module = new_module
+            self.reparent(self.module)
 
         for path, ent in paths:
             entrypath = get_entry_from_path(path, module=self.module)
@@ -432,12 +459,9 @@ class svn_source(converter_source):
 
                 # if a branch is created but entries are removed in the same
                 # changeset, get the right fromrev
-                if parents:
-                    uuid, old_module, fromrev = self.revsplit(parents[0])
-                else:
-                    fromrev = revnum - 1
-                    # might always need to be revnum - 1 in these 3 lines?
-                    old_module = self.modulemap.get(fromrev, self.module)
+                # parents cannot be empty here, you cannot remove things from
+                # a root revision.
+                uuid, old_module, fromrev = self.revsplit(parents[0])
 
                 basepath = old_module + "/" + get_entry_from_path(path, module=self.module)
                 entrypath = old_module + "/" + get_entry_from_path(path, module=self.module)
@@ -466,7 +490,12 @@ class svn_source(converter_source):
                     fromrev = froment.copyfrom_rev
                     self.ui.debug("Info: %s %s %s %s\n" % (frompath, froment, ent, entrypath))
 
-                fromkind = svn.ra.check_path(self.ra, entrypath, fromrev)
+                # We can avoid the reparent calls if the module has not changed
+                # but it probably does not worth the pain.
+                self.reparent('')
+                fromkind = svn.ra.check_path(self.ra, entrypath.strip('/'), fromrev)
+                self.reparent(self.module)
+                
                 if fromkind == svn.core.svn_node_file:   # a deleted file
                     entries.append(self.recode(entry))
                 elif fromkind == svn.core.svn_node_dir:
@@ -508,6 +537,9 @@ class svn_source(converter_source):
 
                 # If the directory just had a prop change,
                 # then we shouldn't need to look for its children.
+                if ent.action == 'M':
+                    continue
+
                 # Also this could create duplicate entries. Not sure
                 # whether this will matter. Maybe should make entries a set.
                 # print "Changed directory", revnum, path, ent.action, ent.copyfrom_path, ent.copyfrom_rev
@@ -566,25 +598,25 @@ class svn_source(converter_source):
                                 copies[self.recode(copyto_entry)] = self.recode(entry)
                                 # copy from quux splort/quuxfile
 
-        return (entries, copies)
+        return (util.unique(entries), copies)
 
-    def _fetch_revisions(self, from_revnum = 0, to_revnum = 347):
+    def _fetch_revisions(self, from_revnum, to_revnum):
+        if from_revnum < to_revnum:
+            from_revnum, to_revnum = to_revnum, from_revnum
+
         self.child_cset = None
         def parselogentry(orig_paths, revnum, author, date, message):
+            """Return the parsed commit object or None, and True if 
+            the revision is a branch root.
+            """
             self.ui.debug("parsing revision %d (%d changes)\n" %
                           (revnum, len(orig_paths)))
 
-            if revnum in self.modulemap:
-                new_module = self.modulemap[revnum]
-                if new_module != self.module:
-                    self.module = new_module
-                    self.reparent(self.module)
-
             rev = self.revid(revnum)
             # branch log might return entries for a parent we already have
-            if (rev in self.commits or
-                (revnum < self.lastrevs.get(self.module, 0))):
-                return
+
+            if (rev in self.commits or revnum < to_revnum):
+                return None, False
 
             parents = []
             # check whether this revision is the start of a branch
@@ -593,14 +625,11 @@ class svn_source(converter_source):
                 if ent.copyfrom_path:
                     # ent.copyfrom_rev may not be the actual last revision
                     prev = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
-                    self.modulemap[prev] = ent.copyfrom_path
                     parents = [self.revid(prev, ent.copyfrom_path)]
                     self.ui.note('found parent of branch %s at %d: %s\n' % \
                                      (self.module, prev, ent.copyfrom_path))
                 else:
                     self.ui.debug("No copyfrom path, don't know what to do.\n")
-
-            self.modulemap[revnum] = self.module # track backwards in time
 
             orig_paths = orig_paths.items()
             orig_paths.sort()
@@ -612,14 +641,12 @@ class svn_source(converter_source):
                     continue
                 paths.append((path, ent))
 
-            self.paths[rev] = (paths, parents)
-
             # Example SVN datetime. Includes microseconds.
             # ISO-8601 conformant
             # '2007-01-04T17:35:00.902377Z'
             date = util.parsedate(date[:19] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
 
-            log = message and self.recode(message)
+            log = message and self.recode(message) or ''
             author = author and self.recode(author) or ''
             try:
                 branch = self.module.split("/")[-1]
@@ -636,23 +663,50 @@ class svn_source(converter_source):
                           rev=rev.encode('utf-8'))
 
             self.commits[rev] = cset
+            # The parents list is *shared* among self.paths and the
+            # commit object. Both will be updated below.
+            self.paths[rev] = (paths, cset.parents)
             if self.child_cset and not self.child_cset.parents:
-                self.child_cset.parents = [rev]
+                self.child_cset.parents[:] = [rev]
             self.child_cset = cset
+            return cset, len(parents) > 0
 
         self.ui.note('fetching revision log for "%s" from %d to %d\n' %
                      (self.module, from_revnum, to_revnum))
 
         try:
-            for entry in self.get_log([self.module], from_revnum, to_revnum):
-                orig_paths, revnum, author, date, message = entry
-                if self.is_blacklisted(revnum):
-                    self.ui.note('skipping blacklisted revision %d\n' % revnum)
-                    continue
-                if orig_paths is None:
-                    self.ui.debug('revision %d has no entries\n' % revnum)
-                    continue
-                parselogentry(orig_paths, revnum, author, date, message)
+            firstcset = None
+            stream = get_log(self.url, [self.module], from_revnum, to_revnum)
+            try:
+                for entry in stream:
+                    paths, revnum, author, date, message = entry
+                    if self.is_blacklisted(revnum):
+                        self.ui.note('skipping blacklisted revision %d\n' 
+                                     % revnum)
+                        continue
+                    if paths is None:
+                        self.ui.debug('revision %d has no entries\n' % revnum)
+                        continue
+                    cset, branched = parselogentry(paths, revnum, author, 
+                                                   date, message)
+                    if cset:
+                        firstcset = cset
+                    if branched:
+                        break
+            finally:
+                stream.close()
+
+            if firstcset and not firstcset.parents:
+                # The first revision of the sequence (the last fetched one)
+                # has invalid parents if not a branch root. Find the parent
+                # revision now, if any.
+                try:
+                    firstrevnum = self.revnum(firstcset.rev)
+                    if firstrevnum > 1:
+                        latest = self.latest(self.module, firstrevnum - 1)
+                        firstcset.parents.append(self.revid(latest))
+                except util.Abort:
+                    pass
         except SubversionException, (inst, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self,
@@ -664,9 +718,9 @@ class svn_source(converter_source):
         # TODO: ra.get_file transmits the whole file instead of diffs.
         mode = ''
         try:
-            revnum = self.revnum(rev)
-            if self.module != self.modulemap[revnum]:
-                self.module = self.modulemap[revnum]
+            new_module, revnum = self.revsplit(rev)[1:]
+            if self.module != new_module:
+                self.module = new_module
                 self.reparent(self.module)
             info = svn.ra.get_file(self.ra, file, revnum, io)
             if isinstance(info, list):

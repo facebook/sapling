@@ -13,6 +13,9 @@
 # option) any later version.
 #
 
+emulate -LR zsh
+setopt extendedglob
+
 local curcontext="$curcontext" state line
 typeset -A _hg_cmd_globals
 
@@ -153,9 +156,9 @@ _hg_tags() {
   typeset -a tags
   local tag rev
 
-  _hg_cmd tags 2> /dev/null | while read tag rev
+  _hg_cmd tags 2> /dev/null | while read tag
   do
-    tags+=($tag)
+    tags+=(${tag/ #    [0-9]#:*})
   done
   (( $#tags )) && _describe -t tags 'tags' tags
 }
@@ -674,13 +677,13 @@ _hg_cmd_view() {
 # MQ
 _hg_qseries() {
   typeset -a patches
-  patches=($(_hg_cmd qseries 2>/dev/null))
+  patches=(${(f)"$(_hg_cmd qseries 2>/dev/null)"})
   (( $#patches )) && _describe -t hg-patches 'patches' patches
 }
 
 _hg_qapplied() {
   typeset -a patches
-  patches=($(_hg_cmd qapplied 2>/dev/null))
+  patches=(${(f)"$(_hg_cmd qapplied 2>/dev/null)"})
   if (( $#patches ))
   then
     patches+=(qbase qtip)
@@ -690,7 +693,7 @@ _hg_qapplied() {
 
 _hg_qunapplied() {
   typeset -a patches
-  patches=($(_hg_cmd qunapplied 2>/dev/null))
+  patches=(${(f)"$(_hg_cmd qunapplied 2>/dev/null)"})
   (( $#patches )) && _describe -t hg-unapplied-patches 'unapplied patches' patches
 }
 
@@ -728,6 +731,12 @@ _hg_cmd_qfold() {
   _arguments -s -w : $_hg_global_opts $_h_commit_opts \
   '(--keep,-k)'{-k,--keep}'[keep folded patch files]' \
   '*:unapplied patch:_hg_qunapplied'
+}
+
+_hg_cmd_qgoto() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[overwrite any local changes]' \
+  ':patch:_hg_qseries'
 }
 
 _hg_cmd_qguard() {

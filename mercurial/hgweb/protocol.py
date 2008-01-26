@@ -28,7 +28,7 @@ def heads(web, req):
 
 def branches(web, req):
     nodes = []
-    if req.form.has_key('nodes'):
+    if 'nodes' in req.form:
         nodes = map(bin, req.form['nodes'][0].split(" "))
     resp = cStringIO.StringIO()
     for b in web.repo.branches(nodes):
@@ -38,7 +38,7 @@ def branches(web, req):
     req.write(resp)
 
 def between(web, req):
-    if req.form.has_key('pairs'):
+    if 'pairs' in req.form:
         pairs = [map(bin, p.split("-"))
                  for p in req.form['pairs'][0].split(" ")]
     resp = cStringIO.StringIO()
@@ -54,7 +54,7 @@ def changegroup(web, req):
     if not web.allowpull:
         return
 
-    if req.form.has_key('roots'):
+    if 'roots' in req.form:
         nodes = map(bin, req.form['roots'][0].split(" "))
 
     z = zlib.compressobj()
@@ -74,9 +74,9 @@ def changegroupsubset(web, req):
     if not web.allowpull:
         return
 
-    if req.form.has_key('bases'):
+    if 'bases' in req.form:
         bases = [bin(x) for x in req.form['bases'][0].split(' ')]
-    if req.form.has_key('heads'):
+    if 'heads' in req.form:
         heads = [bin(x) for x in req.form['heads'][0].split(' ')]
 
     z = zlib.compressobj()

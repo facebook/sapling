@@ -36,11 +36,11 @@ def get_mtime(repo_path):
         return os.stat(store_path).st_mtime
 
 def staticfile(directory, fname, req):
-    """return a file inside directory with guessed content-type header
+    """return a file inside directory with guessed Content-Type header
 
     fname always uses '/' as directory separator and isn't allowed to
     contain unusual path components.
-    Content-type is guessed using the mimetypes module.
+    Content-Type is guessed using the mimetypes module.
     Return an empty string if fname is illegal or file not found.
 
     """
@@ -54,8 +54,10 @@ def staticfile(directory, fname, req):
     try:
         os.stat(path)
         ct = mimetypes.guess_type(path)[0] or "text/plain"
-        req.header([('Content-type', ct),
-                    ('Content-length', str(os.path.getsize(path)))])
+        req.header([
+            ('Content-Type', ct),
+            ('Content-Length', str(os.path.getsize(path)))
+        ])
         return file(path, 'rb').read()
     except TypeError:
         raise ErrorResponse(500, 'illegal file name')

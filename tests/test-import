@@ -32,6 +32,13 @@ hg --cwd a diff -r0:1 > tip.patch
 hg --cwd b import -mpatch ../tip.patch
 rm -r b
 
+echo % import of plain diff should be ok with --no-commit
+hg clone -r0 a b
+hg --cwd a diff -r0:1 > tip.patch
+hg --cwd b import --no-commit ../tip.patch
+hg --cwd b diff --nodates
+rm -r b
+
 echo % hg -R repo import
 # put the clone in a subdir - having a directory named "a"
 # used to hide a bug.

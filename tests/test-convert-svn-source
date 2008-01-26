@@ -103,13 +103,16 @@ hg convert $svnurl A-hg
 echo % update svn repository again
 cd A
 echo "see second letter" >> letter.txt
-echo "nice to meet you" > letter2.txt
-svn add letter2.txt
+# Put it in a subdirectory to test duplicate file records
+# from svn source (issue 714)
+mkdir todo
+echo "nice to meet you" > todo/letter2.txt
+svn add todo
 svn ci -m "second letter"
 
 svn copy -m "tag v0.2" $svnurl/trunk $svnurl/tags/v0.2
 
-echo "blah-blah-blah" >> letter2.txt
+echo "blah-blah-blah" >> todo/letter2.txt
 svn ci -m "work in progress"
 cd ..
 

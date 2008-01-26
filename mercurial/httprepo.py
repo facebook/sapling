@@ -247,7 +247,7 @@ class httprepository(remoterepository):
         # will take precedence if found, so drop them
         for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
             try:
-                if os.environ.has_key(env):
+                if env in os.environ:
                     del os.environ[env]
             except OSError:
                 pass
@@ -343,7 +343,7 @@ class httprepository(remoterepository):
                 version = proto.split('-', 1)[1]
                 version_info = tuple([int(n) for n in version.split('.')])
             except ValueError:
-                raise repo.RepoError(_("'%s' sent a broken Content-type "
+                raise repo.RepoError(_("'%s' sent a broken Content-Type "
                                      "header (%s)") % (self._url, proto))
             if version_info > (0, 1):
                 raise repo.RepoError(_("'%s' uses newer protocol %s") %
@@ -428,7 +428,7 @@ class httprepository(remoterepository):
             try:
                 rfp = self.do_cmd(
                     'unbundle', data=fp,
-                    headers={'content-type': 'application/octet-stream'},
+                    headers={'Content-Type': 'application/octet-stream'},
                     heads=' '.join(map(hex, heads)))
                 try:
                     ret = int(rfp.readline())

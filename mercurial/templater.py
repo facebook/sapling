@@ -82,7 +82,7 @@ class templater(object):
         '''perform expansion.
         t is name of map element to expand.
         map is added elements to use during expansion.'''
-        if not self.cache.has_key(t):
+        if not t in self.cache:
             try:
                 self.cache[t] = file(self.map[t]).read()
             except IOError, inst:

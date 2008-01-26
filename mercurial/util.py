@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import _
 import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile, strutil
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import re, urlparse
+import urlparse
 
 try:
     set = set

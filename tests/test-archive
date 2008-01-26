@@ -13,7 +13,7 @@ hg commit -Am 3 -d '1000000000 0'
 echo "[web]" >> .hg/hgrc
 echo "name = test-archive" >> .hg/hgrc
 echo "allow_archive = gz bz2, zip" >> .hg/hgrc
-hg serve -p $HGPORT -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
 TIP=`hg id -v | cut -f1 -d' '`
@@ -69,8 +69,12 @@ if [ -f rev-0.tar ]; then
     echo 'rev-0.tar created'
 fi
 
+echo % server errors
+cat errors.log
+
 echo '% empty repo'
 hg init ../empty
 cd ../empty
 hg archive ../test-empty
+
 exit 0

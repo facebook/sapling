@@ -5,15 +5,36 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os
-from mercurial import revlog
-from common import staticfile
+import os, mimetypes
+from mercurial import revlog, util
+from common import staticfile, ErrorResponse
 
 def log(web, req, tmpl):
-    if req.form.has_key('file') and req.form['file'][0]:
+    if 'file' in req.form and req.form['file'][0]:
         filelog(web, req, tmpl)
     else:
         changelog(web, req, tmpl)
+
+def rawfile(web, req, tmpl):
+    path = web.cleanpath(req.form.get('file', [''])[0])
+    if not path:
+        req.write(web.manifest(tmpl, web.changectx(req), path))
+        return
+
+    try:
+        fctx = web.filectx(req)
+    except revlog.LookupError:
+        req.write(web.manifest(tmpl, web.changectx(req), path))
+        return
+
+    path = fctx.path()
+    text = fctx.data()
+    mt = mimetypes.guess_type(path)[0]
+    if mt is None or util.binary(text):
+        mt = mt or 'application/octet-stream'
+
+    req.httphdr(mt, path, len(text))
+    req.write(text)
 
 def file(web, req, tmpl):
     path = web.cleanpath(req.form.get('file', [''])[0])
@@ -27,10 +48,10 @@ def file(web, req, tmpl):
     req.write(web.manifest(tmpl, web.changectx(req), path))
 
 def changelog(web, req, tmpl, shortlog = False):
-    if req.form.has_key('node'):
+    if 'node' in req.form:
         ctx = web.changectx(req)
     else:
-        if req.form.has_key('rev'):
+        if 'rev' in req.form:
             hi = req.form['rev'][0]
         else:
             hi = web.repo.changelog.count() - 1
@@ -79,8 +100,7 @@ def archive(web, req, tmpl):
         web.archive(tmpl, req, req.form['node'][0], type_)
         return
 
-    req.respond(400, tmpl('error',
-                           error='Unsupported archive type: %s' % type_))
+    raise ErrorResponse(400, 'Unsupported archive type: %s' % type_)
 
 def static(web, req, tmpl):
     fname = req.form['file'][0]

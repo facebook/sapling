@@ -147,9 +147,18 @@ class WinOSError(WinError, OSError):
                          self.win_strerror)
 
 def os_link(src, dst):
-    # NB will only succeed on NTFS
     try:
         win32file.CreateHardLink(dst, src)
+        # CreateHardLink sometimes succeeds on mapped drives but
+        # following nlinks() returns 1. Check it now and bail out.
+        if nlinks(src) < 2:
+            try:
+                win32file.DeleteFile(dst)
+            except:
+                pass
+            # Fake hardlinking error
+            raise WinOSError((18, 'CreateHardLink', 'The system cannot '
+                              'move the file to a different disk drive'))
     except pywintypes.error, details:
         raise WinOSError(details)
 

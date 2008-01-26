@@ -227,6 +227,67 @@ drwxr-xr-x da
 
 200 Script output follows
 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test:foo</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/1">changelog</a>
+<a href="/shortlog/1">shortlog</a>
+<a href="/tags">tags</a>
+<a href="/rev/a4f92ed23982">changeset</a>
+<a href="/file/a4f92ed23982/">manifest</a>
+<a href="/log/a4f92ed23982/foo">revisions</a>
+<a href="/annotate/a4f92ed23982/foo">annotate</a>
+<a href="/raw-file/a4f92ed23982/foo">raw</a>
+</div>
+
+<h2>foo</h2>
+
+<table>
+<tr>
+ <td class="metatag">changeset 1:</td>
+ <td><a href="/rev/a4f92ed23982">a4f92ed23982</a></td></tr>
+
+
+<tr>
+ <td class="metatag">author:</td>
+ <td>&#116;&#101;&#115;&#116;</td></tr>
+<tr>
+ <td class="metatag">date:</td>
+ <td>Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td></tr>
+<tr>
+ <td class="metatag">permissions:</td>
+ <td>-rw-r--r--</td></tr>
+<tr>
+  <td class="metatag">description:</td>
+  <td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+</tr>
+</table>
+
+<pre>
+<div class="parity0"><span class="lineno">     1</span>foo
+</div>
+</pre>
+
+
+<div class="logo">
+powered by<br/>
+<a href="http://www.selenic.com/mercurial/">mercurial</a>
+</div>
+
+</body>
+</html>
+
+200 Script output follows
+
 
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/foo	Thu Jan 01 00:00:00 1970 +0000

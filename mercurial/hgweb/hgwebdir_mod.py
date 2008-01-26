@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetools, cStringIO
+import os
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen, \
@@ -143,7 +143,7 @@ class hgwebdir(object):
         def entries(sortcolumn="", descending=False, subdir="", **map):
             def sessionvars(**map):
                 fields = []
-                if req.form.has_key('style'):
+                if 'style' in req.form:
                     style = req.form['style'][0]
                     if style != get('web', 'style', ''):
                         fields.append(('style', style))
@@ -214,7 +214,7 @@ class hgwebdir(object):
 
         sortable = ["name", "description", "contact", "lastchange"]
         sortcolumn, descending = self.repos_sorted
-        if req.form.has_key('sort'):
+        if 'sort' in req.form:
             sortcolumn = req.form['sort'][0]
             descending = sortcolumn.startswith('-')
             if descending:
@@ -226,6 +226,7 @@ class hgwebdir(object):
                  "%s%s" % ((not descending and column == sortcolumn)
                             and "-" or "", column))
                 for column in sortable]
+
         req.write(tmpl("index", entries=entries, subdir=subdir,
                        sortcolumn=sortcolumn, descending=descending,
                        **dict(sort)))
@@ -233,11 +234,9 @@ class hgwebdir(object):
     def templater(self, req):
 
         def header(**map):
-            header_file = cStringIO.StringIO(
-                ''.join(tmpl("header", encoding=util._encoding, **map)))
-            msg = mimetools.Message(header_file, 0)
-            req.header(msg.items())
-            yield header_file.read()
+            ctype = tmpl('mimetype', encoding=util._encoding)
+            req.httphdr(templater.stringify(ctype))
+            yield tmpl('header', encoding=util._encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)
@@ -262,7 +261,7 @@ class hgwebdir(object):
         style = self.style
         if style is None:
             style = config('web', 'style', '')
-        if req.form.has_key('style'):
+        if 'style' in req.form:
             style = req.form['style'][0]
         if self.stripecount is None:
             self.stripecount = int(config('web', 'stripes', 1))
