@@ -201,15 +201,14 @@ class converter(object):
             self.map[rev] = dest
             return
         files, copies = changes
-        parents = [self.map[r] for r in commit.parents]
+        pbranches = []
         if commit.parents:
-            prev = commit.parents[0]
-            if prev not in self.commitcache:
-                self.cachecommit(prev)
-            pbranch = self.commitcache[prev].branch
-        else:
-            pbranch = None
-        self.dest.setbranch(commit.branch, pbranch, parents)
+            for prev in commit.parents:
+                if prev not in self.commitcache:
+                    self.cachecommit(prev)
+                pbranches.append((self.map[prev], 
+                                  self.commitcache[prev].branch))
+        self.dest.setbranch(commit.branch, pbranches)
         for f, v in files:
             filenames.append(f)
             try:
@@ -225,6 +224,7 @@ class converter(object):
                         # Merely marks that a copy happened.
                         self.dest.copyfile(copyf, f)
 
+        parents = [b[0] for b in pbranches]
         newnode = self.dest.putcommit(filenames, parents, commit)
         self.source.converted(rev, newnode)
         self.map[rev] = newnode
