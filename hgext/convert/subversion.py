@@ -286,7 +286,17 @@ class svn_source(converter_source):
         self._changescache = None
         self.modecache = {}
         (paths, parents) = self.paths[rev]
-        files, copies = self.expandpaths(rev, paths, parents)
+        if parents:
+            files, copies = self.expandpaths(rev, paths, parents)
+        else:
+            # Perform a full checkout on roots
+            uuid, module, revnum = self.revsplit(rev)
+            entries = svn.client.ls(self.base + module, optrev(revnum), 
+                                    True, self.ctx)
+            files = [n for n,e in entries.iteritems() 
+                     if e.kind == svn.core.svn_node_file]
+            copies = {}
+
         files.sort()
         files = zip(files, [rev] * len(files))
 
