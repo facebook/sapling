@@ -1,0 +1,60 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" svn svn-bindings || exit 80
+
+fix_path()
+{
+    tr '\\' /
+}
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+echo "hgext.graphlog =" >> $HGRCPATH
+
+svnadmin create svn-repo
+
+svnpath=`pwd | fix_path`
+# SVN wants all paths to start with a slash. Unfortunately,
+# Windows ones don't. Handle that.
+expr $svnpath : "\/" > /dev/null
+if [ $? -ne 0 ]; then
+    svnpath='/'$svnpath
+fi
+
+echo % initial svn import
+mkdir projA
+cd projA
+mkdir trunk
+mkdir trunk/d1
+echo b > trunk/d1/b
+cd ..
+
+svnurl=file://$svnpath/svn-repo/projA
+svn import -m "init projA" projA $svnurl | fix_path
+
+# Build a module renaming chain which used to confuse the converter.
+echo % update svn repository
+svn co $svnurl A | fix_path
+cd A
+svn mv $svnurl/trunk $svnurl/subproject -m movedtrunk
+svn up
+mkdir subproject/trunk
+svn add subproject/trunk
+svn ci -m createtrunk
+mkdir subproject/branches
+svn add subproject/branches
+svn ci -m createbranches
+svn mv $svnurl/subproject/d1 $svnurl/subproject/trunk/d1 -m moved1
+svn up
+echo b >> subproject/trunk/d1/b
+svn ci -m changeb
+svn mv $svnurl/subproject/trunk/d1 $svnurl/subproject/branches/d1 -m moved1again
+cd ..
+
+echo % convert trunk and branches
+hg convert --datesort $svnurl/subproject A-hg
+
+cd A-hg
+hg glog --template '#rev# #desc|firstline# files: #files#\n'
+hg branches | sed 's/:.*/:/'
+cd ..

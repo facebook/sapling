@@ -200,9 +200,9 @@ class svn_source(converter_source):
         except IOError, e:
             pass
 
-        self.last_changed = self.latest(self.module, latest)
-
-        self.head = self.revid(self.last_changed)
+        self.head = self.latest(self.module, latest)
+        self.last_changed = self.revnum(self.head)
+        
         self._changescache = None
 
         if os.path.exists(os.path.join(url, '.svn/entries')):
@@ -252,8 +252,7 @@ class svn_source(converter_source):
         if trunk:
             oldmodule = self.module or ''
             self.module += '/' + trunk
-            lt = self.latest(self.module, self.last_changed)
-            self.head = self.revid(lt)
+            self.head = self.latest(self.module, self.last_changed)
 
         # First head in the list is the module's head
         self.heads = [self.head]
@@ -266,10 +265,10 @@ class svn_source(converter_source):
                                         self.ctx)
             for branch in branchnames.keys():
                 module = '%s/%s/%s' % (oldmodule, branches, branch)
-                brevnum = self.latest(module, self.last_changed)
-                brev = self.revid(brevnum, module)
-                self.ui.note('found branch %s at %d\n' % (branch, brevnum))
-                self.heads.append(brev)
+                brevid = self.latest(module, self.last_changed)
+                self.ui.note('found branch %s at %d\n' % 
+                             (branch, self.revnum(brevid)))
+                self.heads.append(brevid)
 
         return self.heads
 
@@ -369,7 +368,10 @@ class svn_source(converter_source):
         return uuid, mod, revnum
 
     def latest(self, path, stop=0):
-        'find the latest revision affecting path, up to stop'
+        """Find the latest revid affecting path, up to stop. It may return
+        a revision in a different module, since a branch may be moved without
+        a change being reported.
+        """
         if not stop:
             stop = svn.ra.get_latest_revnum(self.ra)
         try:
@@ -381,7 +383,28 @@ class svn_source(converter_source):
         if not dirent:
             raise util.Abort('%s not found up to revision %d' % (path, stop))
 
-        return dirent.created_rev
+        # stat() gives us the previous revision on this line of development, but
+        # it might be in *another module*. Fetch the log and detect renames down
+        # to the latest revision.
+        stream = get_log(self.url, [path], stop, dirent.created_rev)
+        try:
+            for entry in stream:
+                paths, revnum, author, date, message = entry
+                if revnum <= dirent.created_rev:
+                    break
+
+                for p in paths:
+                    if not path.startswith(p) or not paths[p].copyfrom_path:
+                        continue
+                    newpath = paths[p].copyfrom_path + path[len(p):]
+                    self.ui.debug("branch renamed from %s to %s at %d\n" % 
+                                  (path, newpath, revnum))
+                    path = newpath
+                    break
+        finally:
+            stream.close()
+
+        return self.revid(dirent.created_rev, path)
 
     def get_blacklist(self):
         """Avoid certain revision numbers.
@@ -624,10 +647,11 @@ class svn_source(converter_source):
                 ent = orig_paths[self.module]
                 if ent.copyfrom_path:
                     # ent.copyfrom_rev may not be the actual last revision
-                    prev = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
-                    parents = [self.revid(prev, ent.copyfrom_path)]
-                    self.ui.note('found parent of branch %s at %d: %s\n' % \
-                                     (self.module, prev, ent.copyfrom_path))
+                    previd = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
+                    parents = [previd]
+                    prevmodule, prevnum = self.revsplit(previd)[1:]
+                    self.ui.note('found parent of branch %s at %d: %s\n' %
+                                 (self.module, prevnum, prevmodule))
                 else:
                     self.ui.debug("No copyfrom path, don't know what to do.\n")
 
@@ -704,7 +728,7 @@ class svn_source(converter_source):
                     firstrevnum = self.revnum(firstcset.rev)
                     if firstrevnum > 1:
                         latest = self.latest(self.module, firstrevnum - 1)
-                        firstcset.parents.append(self.revid(latest))
+                        firstcset.parents.append(latest)
                 except util.Abort:
                     pass
         except SubversionException, (inst, num):
