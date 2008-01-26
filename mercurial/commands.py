@@ -1529,7 +1529,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 finally:
                     files = patch.updatedir(ui, repo, files)
                 if not opts.get('no_commit'):
-                    n = repo.commit(files, message, user, date)
+                    n = repo.commit(files, message, opts.get('user') or user,
+                                    opts.get('date') or date)
                     if opts.get('exact'):
                         if hex(n) != nodeid:
                             repo.rollback()
@@ -2901,8 +2902,9 @@ table = {
           ('', 'exact', None,
            _('apply patch to the nodes from which it was generated')),
           ('', 'import-branch', None,
-           _('Use any branch information in patch (implied by --exact)'))] + commitopts,
-         _('hg import [-p NUM] [-m MESSAGE] [-f] PATCH...')),
+           _('Use any branch information in patch (implied by --exact)'))] +
+         commitopts + commitopts2,
+         _('hg import [OPTION]... PATCH...')),
     "incoming|in":
         (incoming,
          [('M', 'no-merges', None, _('do not show merges')),

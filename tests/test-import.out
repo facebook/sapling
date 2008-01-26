@@ -31,6 +31,30 @@ adding file changes
 added 1 changesets with 2 changes to 2 files
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
+% import of plain diff with specific date and user
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying ../tip.patch
+changeset:   1:ca68f19f3a40
+tag:         tip
+user:        user@nowhere.net
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+patch
+
+
+diff -r 80971e65b431 -r ca68f19f3a40 a
+--- a/a	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -1,1 +1,2 @@
+ line 1
++line 2
+
 % import of plain diff should be ok with --no-commit
 requesting all changes
 adding changesets

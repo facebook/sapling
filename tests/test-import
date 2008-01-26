@@ -32,6 +32,13 @@ hg --cwd a diff -r0:1 > tip.patch
 hg --cwd b import -mpatch ../tip.patch
 rm -r b
 
+echo % import of plain diff with specific date and user
+hg clone -r0 a b
+hg --cwd a diff -r0:1 > tip.patch
+hg --cwd b import -mpatch -d '1 0' -u 'user@nowhere.net' ../tip.patch
+hg -R b tip -pv
+rm -r b
+
 echo % import of plain diff should be ok with --no-commit
 hg clone -r0 a b
 hg --cwd a diff -r0:1 > tip.patch
