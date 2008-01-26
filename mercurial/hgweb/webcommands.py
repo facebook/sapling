@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, mimetypes
-from mercurial import revlog, util
+from mercurial import revlog, util, hg
 from common import staticfile, ErrorResponse
 
 def log(web, req, tmpl):
