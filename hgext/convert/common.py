@@ -167,12 +167,11 @@ class converter_sink(object):
         tags: {tagname: sink_rev_id, ...}"""
         raise NotImplementedError()
 
-    def setbranch(self, branch, pbranch, parents):
+    def setbranch(self, branch, pbranches):
         """Set the current branch name. Called before the first putfile
         on the branch.
         branch: branch name for subsequent commits
-        pbranch: branch name of parent commit
-        parents: destination revisions of parent"""
+        pbranches: (converted parent revision, parent branch) tuples"""
         pass
 
     def setfilemapmode(self, active):

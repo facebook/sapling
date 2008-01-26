@@ -80,30 +80,43 @@ class mercurial_sink(converter_sink):
         except OSError:
             pass
 
-    def setbranch(self, branch, pbranch, parents):
-        if (not self.clonebranches) or (branch == self.lastbranch):
+    def setbranch(self, branch, pbranches):
+        if not self.clonebranches:
             return
 
+        setbranch = (branch != self.lastbranch)
         self.lastbranch = branch
-        self.after()
         if not branch:
             branch = 'default'
-        if not pbranch:
-            pbranch = 'default'
+        pbranches = [(b[0], b[1] and b[1] or 'default') for b in pbranches]
+        pbranch = pbranches and pbranches[0][1] or 'default'
 
         branchpath = os.path.join(self.path, branch)
-        try:
-            self.repo = hg.repository(self.ui, branchpath)
-        except:
-            if not parents:
-                self.repo = hg.repository(self.ui, branchpath, create=True)
-            else:
-                self.ui.note(_('cloning branch %s to %s\n') % (pbranch, branch))
-                hg.clone(self.ui, os.path.join(self.path, pbranch),
-                         branchpath, rev=parents, update=False,
-                         stream=True)
+        if setbranch:
+            self.after()
+            try:
                 self.repo = hg.repository(self.ui, branchpath)
-        self.before()
+            except:
+                self.repo = hg.repository(self.ui, branchpath, create=True)
+            self.before()
+
+        # pbranches may bring revisions from other branches (merge parents)
+        # Make sure we have them, or pull them.
+        missings = {}
+        for b in pbranches:
+            try:
+                self.repo.lookup(b[0])
+            except:
+                missings.setdefault(b[1], []).append(b[0])
+        
+        if missings:
+            self.after()
+            for pbranch, heads in missings.iteritems():
+                pbranchpath = os.path.join(self.path, pbranch)
+                prepo = hg.repository(self.ui, pbranchpath)
+                self.ui.note(_('pulling from %s into %s\n') % (pbranch, branch))
+                self.repo.pull(prepo, [prepo.lookup(h) for h in heads])
+            self.before()
 
     def putcommit(self, files, parents, commit):
         seen = {}
