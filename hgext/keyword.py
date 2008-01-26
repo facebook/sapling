@@ -94,8 +94,8 @@ def _kwrestrict(cmd):
     '''Returns True if cmd should trigger restricted expansion.
     Keywords will only expanded when writing to working dir.
     Crucial for mq as expanded keywords should not make it into patches.'''
-    return cmd in ('diff1', 
-                   'qimport', 'qnew', 'qpush', 'qrefresh', 'record', 'qrecord')
+    return cmd in ('diff1', 'record',
+                   'qfold', 'qimport', 'qnew', 'qpush', 'qrefresh', 'qrecord')
 
 
 _kwtemplater = None
@@ -310,7 +310,7 @@ def demo(ui, repo, *args, **opts):
         kwmaps = kwtemplater.templates
         if ui.configitems('keywordmaps'):
             # override maps from optional rcfile
-            for k, v in kwmaps.items():
+            for k, v in kwmaps.iteritems():
                 ui.setconfig('keywordmaps', k, v)
     elif args:
         # simulate hgrc parsing
@@ -329,7 +329,7 @@ def demo(ui, repo, *args, **opts):
     demostatus('config using %s keyword template maps' % kwstatus)
     ui.write('[extensions]\n%s\n' % extension)
     demoitems('keyword', ui.configitems('keyword'))
-    demoitems('keywordmaps', kwmaps.items())
+    demoitems('keywordmaps', kwmaps.iteritems())
     keywords = '$' + '$\n$'.join(kwmaps.keys()) + '$\n'
     repo.wopener(fn, 'w').write(keywords)
     repo.add([fn])
@@ -464,10 +464,10 @@ def reposetup(ui, repo):
                 wlock = self.wlock()
                 lock = self.lock()
                 # store and postpone commit hooks
-                commithooks = []
+                commithooks = {}
                 for name, cmd in ui.configitems('hooks'):
                     if name.split('.', 1)[0] == 'commit':
-                        commithooks.append((name, cmd))
+                        commithooks[name] = cmd
                         ui.setconfig('hooks', name, None)
                 if commithooks:
                     # store parents for commit hook environment
@@ -488,7 +488,7 @@ def reposetup(ui, repo):
                                           p1=p1, p2=p2, extra=extra)
 
                 # restore commit hooks
-                for name, cmd in commithooks:
+                for name, cmd in commithooks.iteritems():
                     ui.setconfig('hooks', name, cmd)
                 if node is not None:
                     _overwrite(ui, self, node=node)

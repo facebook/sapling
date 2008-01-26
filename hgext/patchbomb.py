@@ -381,7 +381,6 @@ def patchbomb(ui, repo, *revs, **opts):
     parent = None
 
     sender_addr = email.Utils.parseaddr(sender)[1]
-    sendmail = None
     for m in msgs:
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
@@ -426,12 +425,10 @@ def patchbomb(ui, repo, *revs, **opts):
             fp.write('\n\n')
             fp.close()
         else:
-            if not sendmail:
-                sendmail = mail.connect(ui)
             ui.status('Sending ', m['Subject'], ' ...\n')
             # Exim does not remove the Bcc field
             del m['Bcc']
-            sendmail(ui, sender, to + bcc + cc, m.as_string(0))
+            mail.sendmail(ui, sender, to + bcc + cc, m.as_string(0))
 
 cmdtable = {
     "email":
