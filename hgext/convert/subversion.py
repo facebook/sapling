@@ -182,6 +182,7 @@ class svn_source(converter_source):
             self.ctx = self.transport.client
             self.base = svn.ra.get_repos_root(self.ra)
             self.module = self.url[len(self.base):]
+            self.rootmodule = self.module
             self.commits = {}
             self.paths = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
@@ -201,6 +202,9 @@ class svn_source(converter_source):
             pass
 
         self.head = self.latest(self.module, latest)
+        if not self.head:
+            raise util.Abort(_('no revision found in module %s') %
+                             self.module.encode(self.encoding))
         self.last_changed = self.revnum(self.head)
         
         self._changescache = None
@@ -253,6 +257,9 @@ class svn_source(converter_source):
             oldmodule = self.module or ''
             self.module += '/' + trunk
             self.head = self.latest(self.module, self.last_changed)
+            if not self.head:
+                raise util.Abort(_('no revision found in module %s') %
+                                 self.module.encode(self.encoding))
 
         # First head in the list is the module's head
         self.heads = [self.head]
@@ -266,6 +273,10 @@ class svn_source(converter_source):
             for branch in branchnames.keys():
                 module = '%s/%s/%s' % (oldmodule, branches, branch)
                 brevid = self.latest(module, self.last_changed)
+                if not brevid:
+                    self.ui.note(_('ignoring empty branch %s\n') %
+                                   branch.encode(self.encoding))
+                    continue
                 self.ui.note('found branch %s at %d\n' % 
                              (branch, self.revnum(brevid)))
                 self.heads.append(brevid)
@@ -380,7 +391,8 @@ class svn_source(converter_source):
     def latest(self, path, stop=0):
         """Find the latest revid affecting path, up to stop. It may return
         a revision in a different module, since a branch may be moved without
-        a change being reported.
+        a change being reported. Return None if computed module does not
+        belong to rootmodule subtree.
         """
         if not stop:
             stop = svn.ra.get_latest_revnum(self.ra)
@@ -414,6 +426,9 @@ class svn_source(converter_source):
         finally:
             stream.close()
 
+        if not path.startswith(self.rootmodule):
+            self.ui.debug(_('ignoring foreign branch %r\n') % path)
+            return None
         return self.revid(dirent.created_rev, path)
 
     def get_blacklist(self):
@@ -645,23 +660,26 @@ class svn_source(converter_source):
             self.ui.debug("parsing revision %d (%d changes)\n" %
                           (revnum, len(orig_paths)))
 
+            branched = False
             rev = self.revid(revnum)
             # branch log might return entries for a parent we already have
 
             if (rev in self.commits or revnum < to_revnum):
-                return None, False
+                return None, branched
 
             parents = []
             # check whether this revision is the start of a branch
             if self.module in orig_paths:
                 ent = orig_paths[self.module]
                 if ent.copyfrom_path:
+                    branched = True
                     # ent.copyfrom_rev may not be the actual last revision
                     previd = self.latest(ent.copyfrom_path, ent.copyfrom_rev)
-                    parents = [previd]
-                    prevmodule, prevnum = self.revsplit(previd)[1:]
-                    self.ui.note('found parent of branch %s at %d: %s\n' %
-                                 (self.module, prevnum, prevmodule))
+                    if previd is not None:
+                        parents = [previd]
+                        prevmodule, prevnum = self.revsplit(previd)[1:]
+                        self.ui.note('found parent of branch %s at %d: %s\n' %
+                                     (self.module, prevnum, prevmodule))
                 else:
                     self.ui.debug("No copyfrom path, don't know what to do.\n")
 
@@ -703,13 +721,14 @@ class svn_source(converter_source):
             if self.child_cset and not self.child_cset.parents:
                 self.child_cset.parents[:] = [rev]
             self.child_cset = cset
-            return cset, len(parents) > 0
+            return cset, branched
 
         self.ui.note('fetching revision log for "%s" from %d to %d\n' %
                      (self.module, from_revnum, to_revnum))
 
         try:
             firstcset = None
+            branched = False
             stream = get_log(self.url, [self.module], from_revnum, to_revnum)
             try:
                 for entry in stream:
@@ -730,7 +749,7 @@ class svn_source(converter_source):
             finally:
                 stream.close()
 
-            if firstcset and not firstcset.parents:
+            if not branched and firstcset and not firstcset.parents:
                 # The first revision of the sequence (the last fetched one)
                 # has invalid parents if not a branch root. Find the parent
                 # revision now, if any.
@@ -738,7 +757,8 @@ class svn_source(converter_source):
                     firstrevnum = self.revnum(firstcset.rev)
                     if firstrevnum > 1:
                         latest = self.latest(self.module, firstrevnum - 1)
-                        firstcset.parents.append(latest)
+                        if latest:
+                            firstcset.parents.append(latest)
                 except util.Abort:
                     pass
         except SubversionException, (inst, num):

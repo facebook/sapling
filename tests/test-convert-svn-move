@@ -25,8 +25,10 @@ echo % initial svn import
 mkdir projA
 cd projA
 mkdir trunk
+echo a > trunk/a
 mkdir trunk/d1
 echo b > trunk/d1/b
+echo c > trunk/d1/c
 cd ..
 
 svnurl=file://$svnpath/svn-repo/projA
@@ -36,6 +38,9 @@ svn import -m "init projA" projA $svnurl | fix_path
 echo % update svn repository
 svn co $svnurl A | fix_path
 cd A
+echo a >> trunk/a
+echo c >> trunk/d1/c
+svn ci -m commitbeforemove
 svn mv $svnurl/trunk $svnurl/subproject -m movedtrunk
 svn up
 mkdir subproject/trunk
