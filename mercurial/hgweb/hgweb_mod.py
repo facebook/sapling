@@ -585,12 +585,9 @@ class hgweb(object):
         n = fctx.filenode()
         parity = paritygen(self.stripecount)
 
-        mt = mimetypes.guess_type(f)[0]
-        rawtext = text
         if util.binary(text):
-            mt = mt or 'application/octet-stream'
-            text = "(binary:%s)" % mt
-        mt = mt or 'text/plain'
+            mt = mimetypes.guess_type(f)[0] or 'application/octet-stream'
+            text = '(binary:%s)' % mt
 
         def lines():
             for l, t in enumerate(text.splitlines(1)):
@@ -602,8 +599,6 @@ class hgweb(object):
                     file=f,
                     path=_up(f),
                     text=lines(),
-                    raw=rawtext,
-                    mimetype=mt,
                     rev=fctx.rev(),
                     node=hex(fctx.node()),
                     author=fctx.user(),
