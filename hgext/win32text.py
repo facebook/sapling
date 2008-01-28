@@ -62,12 +62,12 @@ def cleverencode(s, cmd):
         return dumbencode(s, cmd)
     return s
 
-util.filtertable.update({
+_filters = {
     'dumbdecode:': dumbdecode,
     'dumbencode:': dumbencode,
     'cleverdecode:': cleverdecode,
     'cleverencode:': cleverencode,
-    })
+    }
 
 def forbidcrlf(ui, repo, hooktype, node, **kwargs):
     halt = False
@@ -99,3 +99,10 @@ def forbidcrlf(ui, repo, hooktype, node, **kwargs):
                   '[decode]\n'
                   '** = cleverdecode:\n'))
     return halt
+
+def reposetup(ui, repo):
+    if not repo.local():
+        return
+    for name, fn in _filters.iteritems():
+        repo.adddatafilter(name, fn)
+

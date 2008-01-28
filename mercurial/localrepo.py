@@ -83,6 +83,7 @@ class localrepository(repo.repository):
         self.branchcache = None
         self.nodetagscache = None
         self.filterpats = {}
+        self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
 
     def __getattr__(self, name):
@@ -485,16 +486,26 @@ class localrepository(repo.repository):
             l = []
             for pat, cmd in self.ui.configitems(filter):
                 mf = util.matcher(self.root, "", [pat], [], [])[1]
-                l.append((mf, cmd))
+                fn = None
+                for name, filterfn in self._datafilters.iteritems():
+                    if cmd.startswith(name): 
+                        fn = filterfn
+                        break
+                if not fn:
+                    fn = lambda s, c: util.filter(s, c)
+                l.append((mf, fn, cmd))
             self.filterpats[filter] = l
 
-        for mf, cmd in self.filterpats[filter]:
+        for mf, fn, cmd in self.filterpats[filter]:
             if mf(filename):
                 self.ui.debug(_("filtering %s through %s\n") % (filename, cmd))
-                data = util.filter(data, cmd)
+                data = fn(data, cmd)
                 break
 
         return data
+
+    def adddatafilter(self, name, filter):
+        self._datafilters[name] = filter
 
     def wread(self, filename):
         if self._link(filename):
