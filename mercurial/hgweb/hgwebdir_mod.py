@@ -90,7 +90,7 @@ class hgwebdir(object):
                 # top-level index
                 elif not virtual:
                     tmpl = self.templater(req)
-                    self.makeindex(req, tmpl)
+                    req.write(self.makeindex(req, tmpl))
                     return
 
                 # nested indexes and hgwebs
@@ -112,7 +112,7 @@ class hgwebdir(object):
                     subdir = virtual + '/'
                     if [r for r in repos if r.startswith(subdir)]:
                         tmpl = self.templater(req)
-                        self.makeindex(req, tmpl, subdir)
+                        req.write(self.makeindex(req, tmpl, subdir))
                         return
 
                     up = virtual.rfind('/')
@@ -227,9 +227,9 @@ class hgwebdir(object):
                             and "-" or "", column))
                 for column in sortable]
 
-        req.write(tmpl("index", entries=entries, subdir=subdir,
-                       sortcolumn=sortcolumn, descending=descending,
-                       **dict(sort)))
+        return tmpl("index", entries=entries, subdir=subdir,
+                    sortcolumn=sortcolumn, descending=descending,
+                    **dict(sort))
 
     def templater(self, req):
 
