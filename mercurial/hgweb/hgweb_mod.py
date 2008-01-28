@@ -214,18 +214,18 @@ class hgweb(object):
                 if cmd not in webcommands.__all__:
                     raise ErrorResponse(400, 'No such method: ' + cmd)
                 elif cmd == 'file' and 'raw' in req.form.get('style', []):
-                    webcommands.rawfile(self, req, tmpl)
+                    content = webcommands.rawfile(self, req, tmpl)
                 else:
-                    getattr(webcommands, cmd)(self, req, tmpl)
+                    content = getattr(webcommands, cmd)(self, req, tmpl)
 
+                req.write(content)
                 del tmpl
 
         except revlog.LookupError, err:
             req.respond(404, tmpl(
                         'error', error='revision not found: %s' % err.name))
         except (hg.RepoError, revlog.RevlogError), inst:
-            req.respond('500 Internal Server Error',
-                        tmpl('error', error=str(inst)))
+            req.respond(500, tmpl('error', error=str(inst)))
         except ErrorResponse, inst:
             req.respond(inst.code, tmpl('error', error=inst.message))
 
