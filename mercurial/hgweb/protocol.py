@@ -10,6 +10,14 @@ from mercurial import util, streamclone
 from mercurial.i18n import gettext as _
 from mercurial.node import *
 
+# __all__ is populated with the allowed commands. Be sure to add to it if
+# you're adding a new command, or the new command won't work.
+
+__all__ = [
+   'lookup', 'heads', 'branches', 'between', 'changegroup',
+   'changegroupsubset', 'capabilities', 'unbundle', 'stream_out',
+]
+
 def lookup(web, req):
     try:
         r = hex(web.repo.lookup(req.form['key'][0]))

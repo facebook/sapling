@@ -9,6 +9,15 @@ import os, mimetypes
 from mercurial import revlog, util, hg
 from common import staticfile, ErrorResponse
 
+# __all__ is populated with the allowed commands. Be sure to add to it if
+# you're adding a new command, or the new command won't work.
+
+__all__ = [
+   'log', 'rawfile', 'file', 'changelog', 'shortlog', 'changeset', 'rev',
+   'manifest', 'tags', 'summary', 'filediff', 'diff', 'annotate', 'filelog',
+   'archive', 'static',
+]
+
 def log(web, req, tmpl):
     if 'file' in req.form and req.form['file'][0]:
         filelog(web, req, tmpl)

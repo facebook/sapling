@@ -202,17 +202,18 @@ class hgweb(object):
         try:
 
             cmd = req.form.get('cmd', [''])[0]
-            if hasattr(protocol, cmd):
+            if cmd in protocol.__all__:
                 method = getattr(protocol, cmd)
                 method(self, req)
             else:
-
                 tmpl = self.templater(req)
                 if cmd == '':
                     req.form['cmd'] = [tmpl.cache['default']]
                     cmd = req.form['cmd'][0]
 
-                if cmd == 'file' and 'raw' in req.form.get('style', []):
+                if cmd not in webcommands.__all__:
+                    raise ErrorResponse(400, 'No such method: ' + cmd)
+                elif cmd == 'file' and 'raw' in req.form.get('style', []):
                     webcommands.rawfile(self, req, tmpl)
                 else:
                     getattr(webcommands, cmd)(self, req, tmpl)
@@ -227,8 +228,6 @@ class hgweb(object):
                         tmpl('error', error=str(inst)))
         except ErrorResponse, inst:
             req.respond(inst.code, tmpl('error', error=inst.message))
-        except AttributeError:
-            req.respond(400, tmpl('error', error='No such method: ' + cmd))
 
     def templater(self, req):
 
