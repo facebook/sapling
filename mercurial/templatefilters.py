@@ -121,6 +121,15 @@ def permissions(flags):
         return "-rwxr-xr-x"
     return "-rw-r--r--"
 
+def xmlescape(text):
+    text = (text
+            .replace('&', '&amp;')
+            .replace('<', '&lt;')
+            .replace('>', '&gt;')
+            .replace('"', '&quot;')
+            .replace("'", '&#39;')) # &apos; invalid in HTML
+    return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
+
 filters = {
     "addbreaks": nl2br,
     "basename": os.path.basename,
@@ -147,5 +156,6 @@ filters = {
     "urlescape": lambda x: urllib.quote(x),
     "user": lambda x: util.shortuser(x),
     "stringescape": lambda x: x.encode('string_escape'),
+    "xmlescape": xmlescape,
     }
 

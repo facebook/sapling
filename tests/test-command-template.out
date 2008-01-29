@@ -541,6 +541,14 @@ c7b487c6c50e
 97054abb4ab8
 b608e9d1a3f0
 1e4e1b8f71e0
+<changeset author="User Name &lt;user@hostname&gt;"/>
+<changeset author="person"/>
+<changeset author="person"/>
+<changeset author="person"/>
+<changeset author="person"/>
+<changeset author="other@place"/>
+<changeset author="A. N. Other &lt;other@place&gt;"/>
+<changeset author="User Name &lt;user@hostname&gt;"/>
 # formatnode filter works
 #  quiet
 1e4e1b8f71e0
