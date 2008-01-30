@@ -294,10 +294,8 @@ class posixfile_nt(object):
             self.closed = True
 
     def flush(self):
-        try:
-            win32file.FlushFileBuffers(self.handle)
-        except pywintypes.error, err:
-            raise WinIOError(err)
+        # we have no application-level buffering
+        pass
 
     def truncate(self, pos=0):
         try:
