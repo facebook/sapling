@@ -98,7 +98,7 @@ def filelog_grapher(repo, path, start_rev, stop_rev):
         next_revs = revs[:]
 
         # Add parents to next_revs.
-        parents = [f.filerev() for f in fctx.parents()]
+        parents = [f.filerev() for f in fctx.parents() if f.path() == path]
         parents_to_add = []
         for parent in parents:
             if parent not in next_revs:
