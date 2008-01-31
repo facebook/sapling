@@ -214,12 +214,6 @@ def domain(author):
     if f >= 0: author = author[:f]
     return author
 
-def email(author):
-    '''get email of author.'''
-    r = author.find('>')
-    if r == -1: r = None
-    return author[author.find('<')+1:r]
-
 def person(author):
     '''get name of author, or else username.'''
     f = author.find('<')
@@ -257,7 +251,7 @@ common_filters = {
     "age": age,
     "date": lambda x: util.datestr(x),
     "domain": domain,
-    "email": email,
+    "email": util.email,
     "escape": lambda x: cgi.escape(x, True),
     "fill68": lambda x: fill(x, width=68),
     "fill76": lambda x: fill(x, width=76),

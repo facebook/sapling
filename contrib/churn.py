@@ -69,7 +69,7 @@ def __gather(ui, repo, node1, node2):
     modified, added, removed, deleted, unknown = changes
 
     who = repo.changelog.read(node2)[1]
-    who = templater.email(who) # get the email of the person
+    who = util.email(who) # get the email of the person
 
     mmap1 = repo.manifest.read(repo.changelog.read(node1)[0])
     mmap2 = repo.manifest.read(repo.changelog.read(node2)[0])

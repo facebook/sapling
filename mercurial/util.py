@@ -1636,6 +1636,12 @@ def shortuser(user):
         user = user[:f]
     return user
 
+def email(author):
+    '''get email of author.'''
+    r = author.find('>')
+    if r == -1: r = None
+    return author[author.find('<')+1:r]
+
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) characters."""
     if len(text) <= maxlength:

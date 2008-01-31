@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import os, smtplib, templater, util, socket
+import os, smtplib, util, socket
 
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''
@@ -50,8 +50,8 @@ def _smtp(ui):
 def _sendmail(ui, sender, recipients, msg):
     '''send mail using sendmail.'''
     program = ui.config('email', 'method')
-    cmdline = '%s -f %s %s' % (program, templater.email(sender),
-                               ' '.join(map(templater.email, recipients)))
+    cmdline = '%s -f %s %s' % (program, util.email(sender),
+                               ' '.join(map(util.email, recipients)))
     ui.note(_('sending mail: %s\n') % cmdline)
     fp = os.popen(cmdline, 'w')
     fp.write(msg)
