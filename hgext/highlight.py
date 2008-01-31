@@ -85,28 +85,18 @@ def pygments_format(filename, text, forcetext, stripecount, style):
 def filerevision_pygments(self, tmpl, fctx):
     """Reimplement hgweb.filerevision to use syntax highlighting"""
     f = fctx.path()
-
-    rawtext = fctx.data()
-    text = rawtext
-
+    text = fctx.data()
     fl = fctx.filelog()
     n = fctx.filenode()
 
-    mt = mimetypes.guess_type(f)[0]
-
-    # we always want hgweb.encoding
-    util._encoding = self.encoding
-
     if util.binary(text):
-        mt = mt or 'application/octet-stream'
+        mt = mimetypes.guess_type(f)[0] or 'application/octet-stream'
         text = "(binary:%s)" % mt
-
         # don't parse (binary:...) as anything
         forcetext = True
     else:
-        mt = mt or 'text/plain'
-
         # encode to hgweb.encoding for lexers and formatter
+        util._encoding = self.encoding
         text = util.tolocal(text)
         forcetext = False
 
@@ -128,12 +118,10 @@ def filerevision_pygments(self, tmpl, fctx):
         new_header =  old_header + SYNTAX_CSS
         tmpl.cache['header'] = new_header
 
-    yield tmpl("filerevision",
+    return tmpl("filerevision",
                file=f,
                path=hgweb_mod._up(f), # fixme: make public
                text=text_formatted,
-               raw=rawtext,
-               mimetype=mt,
                rev=fctx.rev(),
                node=hex(fctx.node()),
                author=fctx.user(),
