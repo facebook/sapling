@@ -8,8 +8,8 @@
 
 import os
 from mercurial.i18n import gettext as _
-from mercurial import ui, hg, util, templater
-from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen, \
+from mercurial import ui, hg, util, templater, templatefilters
+from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen,\
                    get_contact
 from hgweb_mod import hgweb
 from request import wsgirequest
@@ -266,7 +266,7 @@ class hgwebdir(object):
         if self.stripecount is None:
             self.stripecount = int(config('web', 'stripes', 1))
         mapfile = style_map(templater.templatepath(), style)
-        tmpl = templater.templater(mapfile, templater.common_filters,
+        tmpl = templater.templater(mapfile, templatefilters.filters,
                                    defaults={"header": header,
                                              "footer": footer,
                                              "motd": motd,

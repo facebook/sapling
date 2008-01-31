@@ -27,9 +27,9 @@
 
 import re
 from mercurial.hgweb import hgweb_mod
-from mercurial import templater
+from mercurial import templatefilters
 
-orig_escape = templater.common_filters["escape"]
+orig_escape = templatefilters.filters["escape"]
 
 interhg_table = []
 
@@ -39,7 +39,7 @@ def interhg_escape(x):
         escstr = regexp.sub(format, escstr)
     return escstr
 
-templater.common_filters["escape"] = interhg_escape
+templatefilters.filters["escape"] = interhg_escape
 
 orig_refresh = hgweb_mod.hgweb.refresh
 

@@ -78,8 +78,8 @@ like CVS' $Log$, are not supported. A keyword template map
 "Log = {desc}" expands to the first line of the changeset description.
 '''
 
-from mercurial import commands, cmdutil, context, dispatch, filelog
-from mercurial import patch, localrepo, revlog, templater, util
+from mercurial import commands, cmdutil, context, dispatch, filelog, revlog
+from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.node import *
 from mercurial.i18n import _
 import re, shutil, sys, tempfile, time
@@ -130,7 +130,7 @@ class kwtemplater(object):
         kwpat = r'\$(%s)(: [^$\n\r]*? )??\$' % '|'.join(escaped)
         self.re_kw = re.compile(kwpat)
 
-        templater.common_filters['utcdate'] = utcdate
+        templatefilters.filters['utcdate'] = utcdate
         self.ct = cmdutil.changeset_templater(self.ui, self.repo,
                                               False, '', False)
 
@@ -149,7 +149,8 @@ class kwtemplater(object):
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
             self.ct.show(changenode=fnode, root=self.repo.root, file=self.path)
-            return '$%s: %s $' % (kw, templater.firstline(self.ui.popbuffer()))
+            return '$%s: %s $' % (kw, templatefilters.firstline(
+                self.ui.popbuffer()))
 
         return subfunc(kwsub, data)
 

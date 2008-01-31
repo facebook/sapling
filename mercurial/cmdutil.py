@@ -8,7 +8,7 @@
 from node import *
 from i18n import _
 import os, sys, bisect, stat
-import mdiff, bdiff, util, templater, patch, errno
+import mdiff, bdiff, util, templater, templatefilters, patch, errno
 
 revrangesep = ':'
 
@@ -673,7 +673,7 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, patch, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, patch, buffered)
-        filters = templater.common_filters.copy()
+        filters = templatefilters.filters.copy()
         filters['formatnode'] = (ui.debugflag and (lambda x: x)
                                  or (lambda x: x[:12]))
         self.t = templater.templater(mapfile, filters,

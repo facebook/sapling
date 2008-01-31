@@ -9,7 +9,7 @@
 import os, mimetypes, re
 from mercurial.node import *
 from mercurial import mdiff, ui, hg, util, archival, patch, hook
-from mercurial import revlog, templater
+from mercurial import revlog, templater, templatefilters
 from common import ErrorResponse, get_mtime, style_map, paritygen, get_contact
 from request import wsgirequest
 import webcommands, protocol
@@ -288,7 +288,7 @@ class hgweb(object):
 
         # create the templater
 
-        tmpl = templater.templater(mapfile, templater.common_filters,
+        tmpl = templater.templater(mapfile, templatefilters.filters,
                                    defaults={"url": req.url,
                                              "staticurl": staticurl,
                                              "urlbase": urlbase,

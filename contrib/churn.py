@@ -12,7 +12,7 @@
 # <alias email> <actual email>
 
 from mercurial.i18n import gettext as _
-from mercurial import hg, mdiff, cmdutil, ui, util, templater, node
+from mercurial import hg, mdiff, cmdutil, ui, util, templatefilters, node
 import os, sys
 
 def get_tty_width():
