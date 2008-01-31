@@ -127,11 +127,11 @@ def gather_stats(ui, repo, amap, revs=None, progress=False):
         if progress:
             nr_revs = max(nr_revs, 1)
             if int(100.0*(cur_rev - 1)/nr_revs) < int(100.0*cur_rev/nr_revs):
-                ui.write("%d%%.." % (int(100.0*cur_rev/nr_revs),))
+                ui.write("\rGnerating stats: %d%%" % (int(100.0*cur_rev/nr_revs),))
                 sys.stdout.flush()
 
     if progress:
-        ui.write("done\n")
+        ui.write("\r")
         sys.stdout.flush()
 
     return stats
