@@ -74,6 +74,8 @@ class converter(object):
             self.readauthormap(opts.get('authors'))
             self.authorfile = self.dest.authorfile()
 
+        self.splicemap = mapfile(ui, ui.config('convert', 'splicemap'))
+
     def walktree(self, heads):
         '''Return a mapping that identifies the uncommitted parents of every
         uncommitted changeset.'''
@@ -224,7 +226,12 @@ class converter(object):
                         # Merely marks that a copy happened.
                         self.dest.copyfile(copyf, f)
 
-        parents = [b[0] for b in pbranches]
+        try:
+            parents = [self.splicemap[rev]]
+            self.ui.debug('spliced in %s as parents of %s\n' %
+                          (parents, rev))
+        except KeyError:
+            parents = [b[0] for b in pbranches]
         newnode = self.dest.putcommit(filenames, parents, commit)
         self.source.converted(rev, newnode)
         self.map[rev] = newnode

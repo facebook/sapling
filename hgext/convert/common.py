@@ -311,6 +311,8 @@ class mapfile(dict):
         self._read()
 
     def _read(self):
+        if self.path is None:
+            return
         try:
             fp = open(self.path, 'r')
         except IOError, err:
