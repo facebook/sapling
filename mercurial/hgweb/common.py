@@ -8,6 +8,11 @@
 
 import errno, mimetypes, os
 
+HTTP_OK = 200
+HTTP_BAD_REQUEST = 400
+HTTP_NOT_FOUND = 404
+HTTP_SERVER_ERROR = 500
+
 class ErrorResponse(Exception):
     def __init__(self, code, message=None):
         Exception.__init__(self)
@@ -54,18 +59,15 @@ def staticfile(directory, fname, req):
     try:
         os.stat(path)
         ct = mimetypes.guess_type(path)[0] or "text/plain"
-        req.header([
-            ('Content-Type', ct),
-            ('Content-Length', str(os.path.getsize(path)))
-        ])
+        req.respond(HTTP_OK, ct, length = os.path.getsize(path))
         return file(path, 'rb').read()
     except TypeError:
-        raise ErrorResponse(500, 'illegal file name')
+        raise ErrorResponse(HTTP_SERVER_ERROR, 'illegal file name')
     except OSError, err:
         if err.errno == errno.ENOENT:
-            raise ErrorResponse(404)
+            raise ErrorResponse(HTTP_NOT_FOUND)
         else:
-            raise ErrorResponse(500, err.strerror)
+            raise ErrorResponse(HTTP_SERVER_ERROR, err.strerror)
 
 def style_map(templatepath, style):
     """Return path to mapfile for a given style.

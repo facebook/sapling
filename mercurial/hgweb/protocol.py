@@ -9,6 +9,7 @@ import cStringIO, zlib, bz2, tempfile, errno, os, sys
 from mercurial import util, streamclone
 from mercurial.i18n import gettext as _
 from mercurial.node import *
+from common import HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
@@ -18,6 +19,8 @@ __all__ = [
    'changegroupsubset', 'capabilities', 'unbundle', 'stream_out',
 ]
 
+HGTYPE = 'application/mercurial-0.1'
+
 def lookup(web, req):
     try:
         r = hex(web.repo.lookup(req.form['key'][0]))
@@ -26,12 +29,12 @@ def lookup(web, req):
         r = str(inst)
         success = 0
     resp = "%s %s\n" % (success, r)
-    req.httphdr("application/mercurial-0.1", length=len(resp))
+    req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
 def heads(web, req):
     resp = " ".join(map(hex, web.repo.heads())) + "\n"
-    req.httphdr("application/mercurial-0.1", length=len(resp))
+    req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
 def branches(web, req):
@@ -42,7 +45,7 @@ def branches(web, req):
     for b in web.repo.branches(nodes):
         resp.write(" ".join(map(hex, b)) + "\n")
     resp = resp.getvalue()
-    req.httphdr("application/mercurial-0.1", length=len(resp))
+    req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
 def between(web, req):
@@ -53,11 +56,11 @@ def between(web, req):
     for b in web.repo.between(pairs):
         resp.write(" ".join(map(hex, b)) + "\n")
     resp = resp.getvalue()
-    req.httphdr("application/mercurial-0.1", length=len(resp))
+    req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
 def changegroup(web, req):
-    req.httphdr("application/mercurial-0.1")
+    req.respond(HTTP_OK, HGTYPE)
     nodes = []
     if not web.allowpull:
         return
@@ -76,7 +79,7 @@ def changegroup(web, req):
     req.write(z.flush())
 
 def changegroupsubset(web, req):
-    req.httphdr("application/mercurial-0.1")
+    req.respond(HTTP_OK, HGTYPE)
     bases = []
     heads = []
     if not web.allowpull:
@@ -106,7 +109,7 @@ def capabilities(web, req):
     if unbundleversions:
         caps.append('unbundle=%s' % ','.join(unbundleversions))
     resp = ' '.join(caps)
-    req.httphdr("application/mercurial-0.1", length=len(resp))
+    req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
 def unbundle(web, req):
@@ -116,7 +119,8 @@ def unbundle(web, req):
             # drain incoming bundle, else client will not see
             # response when run outside cgi script
             pass
-        req.httphdr("application/mercurial-0.1", headers=headers)
+        req.header(headers.items())
+        req.respond(HTTP_OK, HGTYPE)
         req.write('0\n')
         req.write(response)
 
@@ -148,7 +152,7 @@ def unbundle(web, req):
         bail(_('unsynced changes\n'))
         return
 
-    req.httphdr("application/mercurial-0.1")
+    req.respond(HTTP_OK, HGTYPE)
 
     # do not lock repo until all changegroup data is
     # streamed. save to temporary file.
@@ -232,14 +236,15 @@ def unbundle(web, req):
                 filename = ''
             error = getattr(inst, 'strerror', 'Unknown error')
             if inst.errno == errno.ENOENT:
-                code = 404
+                code = HTTP_NOT_FOUND
             else:
-                code = 500
-            req.respond(code, '%s: %s\n' % (error, filename))
+                code = HTTP_SERVER_ERROR
+            req.respond(code)
+            req.write('%s: %s\n' % (error, filename))
     finally:
         fp.close()
         os.unlink(tempname)
 
 def stream_out(web, req):
-    req.httphdr("application/mercurial-0.1")
+    req.respond(HTTP_OK, HGTYPE)
     streamclone.stream_out(web.repo, req, untrusted=True)

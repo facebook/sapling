@@ -17,7 +17,6 @@ class wsgirequest(object):
             raise RuntimeError("Unknown and unsupported WSGI version %d.%d"
                                % version)
         self.inp = wsgienv['wsgi.input']
-        self.server_write = None
         self.err = wsgienv['wsgi.errors']
         self.threaded = wsgienv['wsgi.multithread']
         self.multiprocess = wsgienv['wsgi.multiprocess']
@@ -25,6 +24,7 @@ class wsgirequest(object):
         self.env = wsgienv
         self.form = cgi.parse(self.inp, self.env, keep_blank_values=1)
         self._start_response = start_response
+        self.server_write = None
         self.headers = []
 
     def __iter__(self):
@@ -33,8 +33,10 @@ class wsgirequest(object):
     def read(self, count=-1):
         return self.inp.read(count)
 
-    def start_response(self, status):
+    def respond(self, status, type=None, filename=None, length=0):
         if self._start_response is not None:
+
+            self.httphdr(type, filename, length)
             if not self.headers:
                 raise RuntimeError("request.write called before headers sent")
 
@@ -44,6 +46,8 @@ class wsgirequest(object):
 
             if isinstance(status, ErrorResponse):
                 status = statusmessage(status.code)
+            elif status == 200:
+                status = '200 Script output follows'
             elif isinstance(status, int):
                 status = statusmessage(status)
 
@@ -51,24 +55,17 @@ class wsgirequest(object):
             self._start_response = None
             self.headers = []
 
-    def respond(self, status, *things):
-        if not things:
-            self.start_response(status)
-        for thing in things:
-            if hasattr(thing, "__iter__"):
-                for part in thing:
-                    self.respond(status, part)
-            else:
-                thing = str(thing)
-                self.start_response(status)
-                try:
-                    self.server_write(thing)
-                except socket.error, inst:
-                    if inst[0] != errno.ECONNRESET:
-                        raise
-
-    def write(self, *things):
-        self.respond('200 Script output follows', *things)
+    def write(self, thing):
+        if hasattr(thing, "__iter__"):
+            for part in thing:
+                self.write(part)
+        else:
+            thing = str(thing)
+            try:
+                self.server_write(thing)
+            except socket.error, inst:
+                if inst[0] != errno.ECONNRESET:
+                    raise
 
     def writelines(self, lines):
         for line in lines:
@@ -83,9 +80,10 @@ class wsgirequest(object):
     def header(self, headers=[('Content-Type','text/html')]):
         self.headers.extend(headers)
 
-    def httphdr(self, type, filename=None, length=0, headers={}):
+    def httphdr(self, type=None, filename=None, length=0, headers={}):
         headers = headers.items()
-        headers.append(('Content-Type', type))
+        if type is not None:
+            headers.append(('Content-Type', type))
         if filename:
             headers.append(('Content-Disposition', 'inline; filename=%s' %
                             filename))

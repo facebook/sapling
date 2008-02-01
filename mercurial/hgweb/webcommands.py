@@ -7,7 +7,7 @@
 
 import os, mimetypes
 from mercurial import revlog, util, hg
-from common import staticfile, ErrorResponse
+from common import staticfile, ErrorResponse, HTTP_OK, HTTP_NOT_FOUND
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
@@ -27,12 +27,16 @@ def log(web, req, tmpl):
 def rawfile(web, req, tmpl):
     path = web.cleanpath(req.form.get('file', [''])[0])
     if not path:
-        return web.manifest(tmpl, web.changectx(req), path)
+        content = web.manifest(tmpl, web.changectx(req), path)
+        req.respond(HTTP_OK, web.ctype)
+        return content
 
     try:
         fctx = web.filectx(req)
     except revlog.LookupError:
-        return web.manifest(tmpl, web.changectx(req), path)
+        content = web.manifest(tmpl, web.changectx(req), path)
+        req.respond(HTTP_OK, web.ctype)
+        return content
 
     path = fctx.path()
     text = fctx.data()
@@ -40,7 +44,7 @@ def rawfile(web, req, tmpl):
     if mt is None or util.binary(text):
         mt = mt or 'application/octet-stream'
 
-    req.httphdr(mt, path, len(text))
+    req.respond(HTTP_OK, mt, path, len(text))
     return [text]
 
 def file(web, req, tmpl):
@@ -104,8 +108,7 @@ def archive(web, req, tmpl):
         web.configbool("web", "allow" + type_, False))):
         web.archive(tmpl, req, req.form['node'][0], type_)
         return []
-
-    raise ErrorResponse(400, 'Unsupported archive type: %s' % type_)
+    raise ErrorResponse(HTTP_NOT_FOUND, 'Unsupported archive type: %s' % type_)
 
 def static(web, req, tmpl):
     fname = req.form['file'][0]

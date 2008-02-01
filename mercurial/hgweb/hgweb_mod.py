@@ -11,6 +11,7 @@ from mercurial.node import *
 from mercurial import mdiff, ui, hg, util, archival, patch, hook
 from mercurial import revlog, templater, templatefilters
 from common import ErrorResponse, get_mtime, style_map, paritygen, get_contact
+from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
 import webcommands, protocol
 
@@ -207,27 +208,35 @@ class hgweb(object):
                 method(self, req)
             else:
                 tmpl = self.templater(req)
+                ctype = tmpl('mimetype', encoding=self.encoding)
+                ctype = templater.stringify(ctype)
+                
                 if cmd == '':
                     req.form['cmd'] = [tmpl.cache['default']]
                     cmd = req.form['cmd'][0]
 
                 if cmd not in webcommands.__all__:
-                    raise ErrorResponse(400, 'No such method: ' + cmd)
+                    msg = 'No such method: %s' % cmd
+                    raise ErrorResponse(HTTP_BAD_REQUEST, msg)
                 elif cmd == 'file' and 'raw' in req.form.get('style', []):
+                    self.ctype = ctype
                     content = webcommands.rawfile(self, req, tmpl)
                 else:
                     content = getattr(webcommands, cmd)(self, req, tmpl)
+                    req.respond(HTTP_OK, ctype)
 
                 req.write(content)
                 del tmpl
 
         except revlog.LookupError, err:
-            req.respond(404, tmpl(
-                        'error', error='revision not found: %s' % err.name))
+            req.respond(HTTP_NOT_FOUND, ctype)
+            req.write(tmpl('error', error='revision not found: %s' % err.name))
         except (hg.RepoError, revlog.RevlogError), inst:
-            req.respond(500, tmpl('error', error=str(inst)))
+            req.respond(HTTP_SERVER_ERROR, ctype)
+            req.write(tmpl('error', error=str(inst)))
         except ErrorResponse, inst:
-            req.respond(inst.code, tmpl('error', error=inst.message))
+            req.respond(inst.code, ctype)
+            req.write(tmpl('error', error=inst.message))
 
     def templater(self, req):
 
@@ -252,8 +261,6 @@ class hgweb(object):
         # some functions for the templater
 
         def header(**map):
-            ctype = tmpl('mimetype', encoding=self.encoding)
-            req.httphdr(templater.stringify(ctype))
             yield tmpl('header', encoding=self.encoding, **map)
 
         def footer(**map):
@@ -668,7 +675,7 @@ class hgweb(object):
                 files[short] = (f, n)
 
         if not files:
-            raise ErrorResponse(404, 'Path not found: ' + path)
+            raise ErrorResponse(HTTP_NOT_FOUND, 'Path not found: ' + path)
 
         def filelist(**map):
             fl = files.keys()
@@ -846,6 +853,7 @@ class hgweb(object):
         if encoding:
             headers.append(('Content-Encoding', encoding))
         req.header(headers)
+        req.respond(HTTP_OK)
         archival.archive(self.repo, req, cnode, artype, prefix=name)
 
     # add tags to things

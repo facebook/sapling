@@ -10,7 +10,7 @@ import os
 from mercurial.i18n import gettext as _
 from mercurial import ui, hg, util, templater, templatefilters
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen,\
-                   get_contact
+                   get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
 from request import wsgirequest
 
@@ -76,6 +76,9 @@ class hgwebdir(object):
             try:
 
                 virtual = req.env.get("PATH_INFO", "").strip('/')
+                tmpl = self.templater(req)
+                ctype = tmpl('mimetype', encoding=util._encoding)
+                ctype = templater.stringify(ctype)
 
                 # a static file
                 if virtual.startswith('static/') or 'static' in req.form:
@@ -89,11 +92,12 @@ class hgwebdir(object):
 
                 # top-level index
                 elif not virtual:
-                    tmpl = self.templater(req)
+                    req.respond(HTTP_OK, ctype)
                     req.write(self.makeindex(req, tmpl))
                     return
 
                 # nested indexes and hgwebs
+                
                 repos = dict(self.repos)
                 while virtual:
                     real = repos.get(virtual)
@@ -104,14 +108,15 @@ class hgwebdir(object):
                             hgweb(repo).run_wsgi(req)
                             return
                         except IOError, inst:
-                            raise ErrorResponse(500, inst.strerror)
+                            msg = inst.strerror
+                            raise ErrorResponse(HTTP_SERVER_ERROR, msg)
                         except hg.RepoError, inst:
-                            raise ErrorResponse(500, str(inst))
+                            raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
 
                     # browse subdirectories
                     subdir = virtual + '/'
                     if [r for r in repos if r.startswith(subdir)]:
-                        tmpl = self.templater(req)
+                        req.respond(HTTP_OK, ctype)
                         req.write(self.makeindex(req, tmpl, subdir))
                         return
 
@@ -121,12 +126,12 @@ class hgwebdir(object):
                     virtual = virtual[:up]
 
                 # prefixes not found
-                tmpl = self.templater(req)
-                req.respond(404, tmpl("notfound", repo=virtual))
+                req.respond(HTTP_NOT_FOUND, ctype)
+                req.write(tmpl("notfound", repo=virtual))
 
             except ErrorResponse, err:
-                tmpl = self.templater(req)
-                req.respond(err.code, tmpl('error', error=err.message or ''))
+                req.respond(err.code, ctype)
+                req.write(tmpl('error', error=err.message or ''))
         finally:
             tmpl = None
 
@@ -234,8 +239,6 @@ class hgwebdir(object):
     def templater(self, req):
 
         def header(**map):
-            ctype = tmpl('mimetype', encoding=util._encoding)
-            req.httphdr(templater.stringify(ctype))
             yield tmpl('header', encoding=util._encoding, **map)
 
         def footer(**map):
