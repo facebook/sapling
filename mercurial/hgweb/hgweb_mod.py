@@ -79,9 +79,10 @@ def revnavgen(pos, pagelen, limit, nodefunc):
     return nav
 
 class hgweb(object):
-    def __init__(self, repo, name=None):
+    def __init__(self, repo, name=None, parentui=None):
         if isinstance(repo, str):
-            parentui = ui.ui(report_untrusted=False, interactive=False)
+            parentui = (parentui or
+                        ui.ui(report_untrusted=False, interactive=False))
             self.repo = hg.repository(parentui, repo)
         else:
             self.repo = repo

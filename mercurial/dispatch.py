@@ -373,8 +373,17 @@ def _runcommand(ui, options, cmd, cmdfunc):
             if len(tb) != 2: # no
                 raise
             raise ParseError(cmd, _("invalid arguments"))
+    return profiled(ui, checkargs, options)
 
-    if options['profile']:
+def profiled(ui, func, options={}):
+    def profile_fp():
+        outfile = ui.config('profile', 'output', untrusted=True)
+        if outfile:
+            return open(outfile, 'w')
+        else:
+            return sys.stderr
+    
+    if options.get('profile') or ui.config('profile', 'enable') == 'hotshot':
         import hotshot, hotshot.stats
         prof = hotshot.Profile("hg.prof")
         try:
@@ -390,10 +399,11 @@ def _runcommand(ui, options, cmd, cmdfunc):
         finally:
             prof.close()
             stats = hotshot.stats.load("hg.prof")
+            stats.stream = profile_fp()
             stats.strip_dirs()
             stats.sort_stats('time', 'calls')
             stats.print_stats(40)
-    elif options['lsprof']:
+    elif options.get('lsprof') or ui.config('profile', 'enable') == 'lsprof':
         try:
             from mercurial import lsprof
         except ImportError:
@@ -403,11 +413,11 @@ def _runcommand(ui, options, cmd, cmdfunc):
         p = lsprof.Profiler()
         p.enable(subcalls=True)
         try:
-            return checkargs()
+            return func()
         finally:
             p.disable()
             stats = lsprof.Stats(p.getstats())
             stats.sort()
-            stats.pprint(top=10, file=sys.stderr, climit=5)
+            stats.pprint(top=10, file=profile_fp(), climit=5)
     else:
-        return checkargs()
+        return func()
