@@ -1,28 +1,19 @@
-# this is copied from the lsprof distro because somehow
-# it is not installed by distutils
-#
-# small modifications made
+#! /usr/bin/env python
 
 import sys
-try:
-    from _lsprof import Profiler, profiler_entry, profiler_subentry
-except ImportError, inst:
-    import packagescan
-    if packagescan.scan_in_progress:
-        raise packagescan.SkipPackage('_lsprof not available')
-    raise
+from _lsprof import Profiler, profiler_entry, profiler_subentry
 
 __all__ = ['profile', 'Stats']
 
 def profile(f, *args, **kwds):
     """XXX docstring"""
     p = Profiler()
-    p.enable(subcalls=True)
+    p.enable(subcalls=True, builtins=True)
     try:
-        ret = f(*args, **kwds)
+        f(*args, **kwds)
     finally:
         p.disable()
-    return ret, Stats(p.getstats())
+    return Stats(p.getstats())
 
 
 class Stats(object):
@@ -49,14 +40,14 @@ class Stats(object):
         d = self.data
         if top is not None:
             d = d[:top]
-        cols = "% 12s %11.4f %11.4f   %s\n"
-        hcols = "% 12s %12s %12s %s\n"
-        cols2 = "+%12s %11.4f %11.4f +  %s\n"
-        file.write(hcols % ("CallCount", "Total(s)",
-                            "Inline(s)", "module:lineno(function)"))
+        cols = "% 12s %12s %11.4f %11.4f   %s\n"
+        hcols = "% 12s %12s %12s %12s %s\n"
+        cols2 = "+%12s %12s %11.4f %11.4f +  %s\n"
+        file.write(hcols % ("CallCount", "Recursive", "Total(ms)",
+                            "Inline(ms)", "module:lineno(function)"))
         count = 0
         for e in d:
-            file.write(cols % (e.callcount, e.totaltime,
+            file.write(cols % (e.callcount, e.reccallcount, e.totaltime,
                                e.inlinetime, label(e.code)))
             count += 1
             if limit is not None and count == limit:
@@ -64,7 +55,7 @@ class Stats(object):
             ccount = 0
             if e.calls:
                 for se in e.calls:
-                    file.write(cols % ("+%s" % se.callcount,
+                    file.write(cols % ("+%s" % se.callcount, se.reccallcount,
                                        se.totaltime, se.inlinetime,
                                        "+%s" % label(se.code)))
                     count += 1
@@ -83,11 +74,11 @@ class Stats(object):
             e = self.data[i]
             if not isinstance(e.code, str):
                 self.data[i] = type(e)((label(e.code),) + e[1:])
-                if e.calls:
-                    for j in range(len(e.calls)):
-                        se = e.calls[j]
-                        if not isinstance(se.code, str):
-                            e.calls[j] = type(se)((label(se.code),) + se[1:])
+            if e.calls:
+                for j in range(len(e.calls)):
+                    se = e.calls[j]
+                    if not isinstance(se.code, str):
+                        e.calls[j] = type(se)((label(se.code),) + se[1:])
 
 _fn2mod = {}
 
@@ -97,7 +88,7 @@ def label(code):
     try:
         mname = _fn2mod[code.co_filename]
     except KeyError:
-        for k, v in sys.modules.iteritems():
+        for k, v in sys.modules.items():
             if v is None:
                 continue
             if not hasattr(v, '__file__'):
