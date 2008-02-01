@@ -379,7 +379,8 @@ def profiled(ui, func, options={}):
     def profile_fp():
         outfile = ui.config('profile', 'output', untrusted=True)
         if outfile:
-            return open(outfile, 'w')
+            pid = str(os.getpid())
+            return open(outfile.replace('%p', pid), 'w')
         else:
             return sys.stderr
     

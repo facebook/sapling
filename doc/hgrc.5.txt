@@ -412,7 +412,10 @@ profile::
     "hotshot" is deprecated, and produces less reliable results.
     Default is no profiling.
   output;;
-    The name of a file to write profiling data to.  Default is stderr.
+    The name of a file to write profiling data to.  Each occurrence of
+    "%%p" will be replaced with the current process ID (the repeated
+    "%" protects against the config parser's string interpolator).
+    Default output is to stderr.
   
 server::
   Controls generic server settings.
