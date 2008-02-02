@@ -11,6 +11,7 @@ from darcs import darcs_source
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
 from subversion import debugsvnlog, svn_source, svn_sink
+from monotone import monotone_source
 from gnuarch import gnuarch_source
 import filemap
 
@@ -32,6 +33,7 @@ source_converters = [
     ('svn', svn_source),
     ('hg', mercurial_source),
     ('darcs', darcs_source),
+    ('mtn', monotone_source),
     ('gnuarch', gnuarch_source),
     ]
 

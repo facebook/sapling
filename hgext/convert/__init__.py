@@ -19,6 +19,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     - Darcs
     - git
     - Subversion
+    - Monotone
     - GNU Arch
 
     Accepted destination formats:
