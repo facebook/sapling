@@ -339,6 +339,8 @@ def branch(ui, repo, label=None, **opts):
 
     Unless --force is specified, branch will not let you set a
     branch name that shadows an existing branch.
+
+    Use the command 'hg update' to switch to an existing branch.
     """
 
     if label:
@@ -358,6 +360,8 @@ def branches(ui, repo, active=False):
     inactive.  If active is specified, only show active branches.
 
     A branch is considered active if it contains unmerged heads.
+
+    Use the command 'hg update' to switch to an existing branch.
     """
     b = repo.branchtags()
     heads = dict.fromkeys(repo.heads(), 1)
