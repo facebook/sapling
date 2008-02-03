@@ -22,8 +22,8 @@ SKIPREV = 'SKIP'
 class commit(object):
     def __init__(self, author, date, desc, parents, branch=None, rev=None,
                  extra={}):
-        self.author = author
-        self.date = date
+        self.author = author or 'unknown'
+        self.date = date or '0 0'
         self.desc = desc
         self.parents = parents
         self.branch = branch
