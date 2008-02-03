@@ -861,10 +861,16 @@ class queue:
             start = info[0]
             rev = revlog.bin(info[1])
 
+            if update:
+                top = self.check_toppatch(repo)
+
+            if repo.changelog.heads(rev) != [revlog.bin(self.applied[-1].rev)]:
+                raise util.Abort("popping would remove a revision not "
+                                 "managed by this patch queue")
+
             # we know there are no local changes, so we can make a simplified
             # form of hg.update.
             if update:
-                top = self.check_toppatch(repo)
                 qp = self.qparents(repo, rev)
                 changes = repo.changelog.read(qp)
                 mmap = repo.manifest.read(changes[0])
@@ -915,6 +921,8 @@ class queue:
             self.check_toppatch(repo)
             (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
             top = revlog.bin(top)
+            if repo.changelog.heads(top) != [top]:
+                raise util.Abort("cannot refresh a revision with children")
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
             message, comments, user, date, patchfound = self.readheaders(patchfn)
