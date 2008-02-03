@@ -118,6 +118,7 @@ class localrepository(repo.repository):
         self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
 
         def writetag(fp, name, munge, prevtags):
+            fp.seek(0, 2)
             if prevtags and prevtags[-1] != '\n':
                 fp.write('\n')
             fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
