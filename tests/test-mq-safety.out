@@ -1,0 +1,14 @@
+% try to commit on top of a patch
+abort: cannot commit over an applied mq patch
+% qpop/qrefresh on the wrong revision
+abort: working directory revision is not qtip
+using patch queue:
+abort: popping would remove a revision not managed by this patch queue
+abort: working directory revision is not qtip
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% qpop
+abort: popping would remove a revision not managed by this patch queue
+% qrefresh
+abort: cannot refresh a revision with children
+% tip:
+3 append quux

@@ -41,6 +41,15 @@ echo corrupted > .hg/branch.cache
 hg log -qr foo
 cat .hg/branch.cache
 
+echo % push should update the branch cache
+hg init ../target
+echo % pushing just rev 0
+hg push -qr 0 ../target
+cat ../target/.hg/branch.cache
+echo % pushing everything
+hg push -qf ../target
+cat ../target/.hg/branch.cache
+
 echo % update with no arguments: tipmost revision of the current branch
 hg up -q -C 0
 hg up -q

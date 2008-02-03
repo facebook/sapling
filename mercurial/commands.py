@@ -1540,6 +1540,9 @@ def import_(ui, repo, patch1, *patches, **opts):
                             repo.rollback()
                             raise util.Abort(_('patch is damaged'
                                                ' or loses information'))
+                    # Force a dirstate write so that the next transaction
+                    # backups an up-do-date file.
+                    repo.dirstate.write()
             finally:
                 os.unlink(tmpname)
     finally:

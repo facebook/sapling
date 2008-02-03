@@ -27,6 +27,11 @@ r = os.system(sys.argv[2])
 sys.exit(bool(r))
 EOF
 
+cat <<EOF > badhook
+import sys
+sys.stdout.write("KABOOM")
+EOF
+
 echo "# creating 'remote'"
 hg init remote
 cd remote
@@ -91,13 +96,16 @@ hg cat -r tip foo
 
 echo z > z
 hg ci -A -m z -d '1000001 0' z
+# a bad, evil hook that prints to stdout
+echo 'changegroup.stdout = python ../badhook' >> .hg/hgrc
 
 cd ../local
 echo r > r
 hg ci -A -m z -d '1000002 0' r
 
-echo "# push should succeed"
+echo "# push should succeed even though it has an unexpected response"
 hg push
+hg -R ../remote heads
 
 cd ..
 cat dummylog

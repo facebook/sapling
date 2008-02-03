@@ -600,11 +600,19 @@ class queue:
                     raise util.Abort(_("local changes found"))
         return m, a, r, d
 
+    _reserved = ('series', 'status', 'guards')
+    def check_reserved_name(self, name):
+        if (name in self._reserved or name.startswith('.hg')
+            or name.startswith('.mq')):
+            raise util.Abort(_('"%s" cannot be used as the name of a patch')
+                             % name)
+
     def new(self, repo, patch, *pats, **opts):
         msg = opts.get('msg')
         force = opts.get('force')
         user = opts.get('user')
         date = opts.get('date')
+        self.check_reserved_name(patch)
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
         if opts.get('include') or opts.get('exclude') or pats:
@@ -872,10 +880,16 @@ class queue:
             start = info[0]
             rev = revlog.bin(info[1])
 
+            if update:
+                top = self.check_toppatch(repo)
+
+            if repo.changelog.heads(rev) != [revlog.bin(self.applied[-1].rev)]:
+                raise util.Abort("popping would remove a revision not "
+                                 "managed by this patch queue")
+
             # we know there are no local changes, so we can make a simplified
             # form of hg.update.
             if update:
-                top = self.check_toppatch(repo)
                 qp = self.qparents(repo, rev)
                 changes = repo.changelog.read(qp)
                 mmap = repo.manifest.read(changes[0])
@@ -898,8 +912,8 @@ class queue:
                     except: pass
                     repo.dirstate.forget(f)
                 repo.dirstate.setparents(qp, revlog.nullid)
-            self.strip(repo, rev, update=False, backup='strip')
             del self.applied[start:end]
+            self.strip(repo, rev, update=False, backup='strip')
             if len(self.applied):
                 self.ui.write("Now at: %s\n" % self.applied[-1].name)
             else:
@@ -926,6 +940,8 @@ class queue:
             self.check_toppatch(repo)
             (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
             top = revlog.bin(top)
+            if repo.changelog.heads(top) != [top]:
+                raise util.Abort("cannot refresh a revision with children")
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
             message, comments, user, date, patchfound = self.readheaders(patchfn)
@@ -1112,12 +1128,13 @@ class queue:
                 if not user:
                     user = changes[1]
 
+                self.applied.pop()
+                self.applied_dirty = 1
                 self.strip(repo, top, update=False,
                            backup='strip')
                 n = repo.commit(filelist, message, user, date, match=matchfn,
                                 force=1)
-                self.applied[-1] = statusentry(revlog.hex(n), patchfn)
-                self.applied_dirty = 1
+                self.applied.append(statusentry(revlog.hex(n), patchfn))
                 self.removeundo(repo)
             else:
                 self.printdiff(repo, patchparent, fp=patchf)
@@ -1406,6 +1423,7 @@ class queue:
 
                 if not patchname:
                     patchname = normname('%d.diff' % r)
+                self.check_reserved_name(patchname)
                 checkseries(patchname)
                 checkfile(patchname)
                 self.full_series.insert(0, patchname)
@@ -1428,6 +1446,7 @@ class queue:
                     raise util.Abort(_('-e is incompatible with import from -'))
                 if not patchname:
                     patchname = normname(filename)
+                self.check_reserved_name(patchname)
                 if not os.path.isfile(self.join(patchname)):
                     raise util.Abort(_("patch %s does not exist") % patchname)
             else:
@@ -1442,6 +1461,7 @@ class queue:
                     raise util.Abort(_("unable to read %s") % patchname)
                 if not patchname:
                     patchname = normname(os.path.basename(filename))
+                self.check_reserved_name(patchname)
                 checkfile(patchname)
                 patchf = self.opener(patchname, "w")
                 patchf.write(text)
@@ -2147,6 +2167,12 @@ def reposetup(ui, repo):
                 return tagscache
 
             mqtags = [(revlog.bin(patch.rev), patch.name) for patch in q.applied]
+
+            if mqtags[-1][0] not in self.changelog.nodemap:
+                self.ui.warn('mq status file refers to unknown node %s\n'
+                             % revlog.short(mqtags[-1][0]))
+                return tagscache
+
             mqtags.append((mqtags[-1][0], 'qtip'))
             mqtags.append((mqtags[0][0], 'qbase'))
             mqtags.append((self.changelog.parents(mqtags[0][0])[0], 'qparent'))
@@ -2163,11 +2189,17 @@ def reposetup(ui, repo):
             if not q.applied:
                 return super(mqrepo, self)._branchtags()
 
-            self.branchcache = {} # avoid recursion in changectx
             cl = self.changelog
+            qbasenode = revlog.bin(q.applied[0].rev)
+            if qbasenode not in cl.nodemap:
+                self.ui.warn('mq status file refers to unknown node %s\n'
+                             % revlog.short(qbasenode))
+                return super(mqrepo, self)._branchtags()
+
+            self.branchcache = {} # avoid recursion in changectx
             partial, last, lrev = self._readbranchcache()
 
-            qbase = cl.rev(revlog.bin(q.applied[0].rev))
+            qbase = cl.rev(qbasenode)
             start = lrev + 1
             if start < qbase:
                 # update the cache (excluding the patches) and save it

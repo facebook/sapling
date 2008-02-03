@@ -120,6 +120,7 @@ class localrepository(repo.repository):
         self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
 
         def writetag(fp, name, munge, prevtags):
+            fp.seek(0, 2)
             if prevtags and prevtags[-1] != '\n':
                 fp.write('\n')
             fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
@@ -1981,6 +1982,10 @@ class localrepository(repo.repository):
             del tr
 
         if changesets > 0:
+            # forcefully update the on-disk branch cache
+            self.ui.debug(_("updating the branch cache\n"))
+            self.branchcache = None
+            self.branchtags()
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
                       source=srctype, url=url)
 

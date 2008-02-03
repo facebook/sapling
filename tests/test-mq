@@ -42,6 +42,12 @@ echo % qinit -c
 hg --cwd c qinit -c
 hg -R c/.hg/patches st
 
+echo % qnew should refuse bad patch names
+hg -R c qnew series
+hg -R c qnew status
+hg -R c qnew guards
+hg -R c qnew .hgignore
+
 echo % qnew implies add
 
 hg -R c qnew test.patch
@@ -296,6 +302,13 @@ hg st
 
 echo % mq tags
 hg log --template '{rev} {tags}\n' -r qparent:qtip
+
+echo % bad node in status
+hg qpop
+hg strip -qn tip
+hg tip 2>&1 | sed -e 's/unknown node .*/unknown node/'
+hg branches 2>&1 | sed -e 's/unknown node .*/unknown node/'
+hg qpop
 
 cat >>$HGRCPATH <<EOF
 [diff]
