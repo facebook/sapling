@@ -175,7 +175,7 @@ class ConnectionManager:
         else:
             return dict(self._hostmap)
 
-class HTTPHandler(urllib2.HTTPHandler):
+class KeepAliveHandler:
     def __init__(self):
         self._cm = ConnectionManager()
 
@@ -313,6 +313,9 @@ class HTTPHandler(urllib2.HTTPHandler):
             h.request(req.get_method(), req.get_selector(), body, headers)
         except socket.error, err: # XXX what error?
             raise urllib2.URLError(err)
+
+class HTTPHandler(KeepAliveHandler, urllib2.HTTPHandler):
+    pass
 
 class HTTPResponse(httplib.HTTPResponse):
     # we need to subclass HTTPResponse in order to

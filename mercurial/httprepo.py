@@ -103,7 +103,7 @@ class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
     send = _gen_sendfile(keepalive.HTTPConnection)
 
-class basehttphandler(keepalive.HTTPHandler):
+class httphandler(keepalive.HTTPHandler):
     def http_open(self, req):
         return self.do_open(httpconnection, req)
 
@@ -117,12 +117,9 @@ if has_https:
         # must be able to send big bundle as stream.
         send = _gen_sendfile(httplib.HTTPSConnection)
 
-    class httphandler(basehttphandler, urllib2.HTTPSHandler):
+    class httpshandler(keepalive.KeepAliveHandler, urllib2.HTTPSHandler):
         def https_open(self, req):
             return self.do_open(httpsconnection, req)
-else:
-    class httphandler(basehttphandler):
-        pass
 
 # In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
 # it doesn't know about the auth type requested.  This can happen if
@@ -207,6 +204,8 @@ class httprepository(remoterepository):
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         # XXX proxyauthinfo = None
         handlers = [httphandler()]
+        if has_https:
+            handlers.append(httpshandler())
 
         if proxyurl:
             # proxy can be proper url or host[:port]
