@@ -901,8 +901,8 @@ class queue:
                     except: pass
                     repo.dirstate.forget(f)
                 repo.dirstate.setparents(qp, revlog.nullid)
-            self.strip(repo, rev, update=False, backup='strip')
             del self.applied[start:end]
+            self.strip(repo, rev, update=False, backup='strip')
             if len(self.applied):
                 self.ui.write("Now at: %s\n" % self.applied[-1].name)
             else:
@@ -1086,12 +1086,13 @@ class queue:
                 else:
                     message = msg
 
+                self.applied.pop()
+                self.applied_dirty = 1
                 self.strip(repo, top, update=False,
                            backup='strip')
                 n = repo.commit(filelist, message, changes[1], match=matchfn,
                                 force=1)
-                self.applied[-1] = statusentry(revlog.hex(n), patchfn)
-                self.applied_dirty = 1
+                self.applied.append(statusentry(revlog.hex(n), patchfn))
                 self.removeundo(repo)
             else:
                 self.printdiff(repo, patchparent, fp=patchf)
