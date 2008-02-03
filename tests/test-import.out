@@ -112,6 +112,12 @@ email patch
 
 next line
 ---
+% import patch1 patch2; rollback
+parent: 0
+applying ../patch1
+applying ../patch2
+rolling back last transaction
+parent: 1
 % hg import in a subdirectory
 requesting all changes
 adding changesets
