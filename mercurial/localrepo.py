@@ -1900,6 +1900,10 @@ class localrepository(repo.repository):
             del tr
 
         if changesets > 0:
+            # forcefully update the on-disk branch cache
+            self.ui.debug(_("updating the branch cache\n"))
+            self.branchcache = None
+            self.branchtags()
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
                       source=srctype, url=url)
 
