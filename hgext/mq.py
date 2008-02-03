@@ -600,9 +600,17 @@ class queue:
                     raise util.Abort(_("local changes found"))
         return m, a, r, d
 
+    _reserved = ('series', 'status', 'guards')
+    def check_reserved_name(self, name):
+        if (name in self._reserved or name.startswith('.hg')
+            or name.startswith('.mq')):
+            raise util.Abort(_('"%s" cannot be used as the name of a patch')
+                             % name)
+
     def new(self, repo, patch, *pats, **opts):
         msg = opts.get('msg')
         force = opts.get('force')
+        self.check_reserved_name(patch)
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
         if opts.get('include') or opts.get('exclude') or pats:
@@ -1372,6 +1380,7 @@ class queue:
 
                 if not patchname:
                     patchname = normname('%d.diff' % r)
+                self.check_reserved_name(patchname)
                 checkseries(patchname)
                 checkfile(patchname)
                 self.full_series.insert(0, patchname)
@@ -1394,6 +1403,7 @@ class queue:
                     raise util.Abort(_('-e is incompatible with import from -'))
                 if not patchname:
                     patchname = normname(filename)
+                self.check_reserved_name(patchname)
                 if not os.path.isfile(self.join(patchname)):
                     raise util.Abort(_("patch %s does not exist") % patchname)
             else:
@@ -1408,6 +1418,7 @@ class queue:
                     raise util.Abort(_("unable to read %s") % patchname)
                 if not patchname:
                     patchname = normname(os.path.basename(filename))
+                self.check_reserved_name(patchname)
                 checkfile(patchname)
                 patchf = self.opener(patchname, "w")
                 patchf.write(text)

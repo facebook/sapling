@@ -59,6 +59,11 @@ adding b/z
 % qinit -c
 A .hgignore
 A series
+% qnew should refuse bad patch names
+abort: "series" cannot be used as the name of a patch
+abort: "status" cannot be used as the name of a patch
+abort: "guards" cannot be used as the name of a patch
+abort: ".hgignore" cannot be used as the name of a patch
 % qnew implies add
 A .hgignore
 A series
