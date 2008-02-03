@@ -297,6 +297,13 @@ hg st
 echo % mq tags
 hg log --template '{rev} {tags}\n' -r qparent:qtip
 
+echo % bad node in status
+hg qpop
+hg strip -qn tip
+hg tip 2>&1 | sed -e 's/unknown node .*/unknown node/'
+hg branches 2>&1 | sed -e 's/unknown node .*/unknown node/'
+hg qpop
+
 cat >>$HGRCPATH <<EOF
 [diff]
 git = True

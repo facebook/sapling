@@ -2096,6 +2096,12 @@ def reposetup(ui, repo):
                 return tagscache
 
             mqtags = [(revlog.bin(patch.rev), patch.name) for patch in q.applied]
+
+            if mqtags[-1][0] not in self.changelog.nodemap:
+                self.ui.warn('mq status file refers to unknown node %s\n'
+                             % revlog.short(mqtags[-1][0]))
+                return tagscache
+
             mqtags.append((mqtags[-1][0], 'qtip'))
             mqtags.append((mqtags[0][0], 'qbase'))
             mqtags.append((self.changelog.parents(mqtags[0][0])[0], 'qparent'))
@@ -2112,11 +2118,17 @@ def reposetup(ui, repo):
             if not q.applied:
                 return super(mqrepo, self)._branchtags()
 
-            self.branchcache = {} # avoid recursion in changectx
             cl = self.changelog
+            qbasenode = revlog.bin(q.applied[0].rev)
+            if qbasenode not in cl.nodemap:
+                self.ui.warn('mq status file refers to unknown node %s\n'
+                             % revlog.short(qbasenode))
+                return super(mqrepo, self)._branchtags()
+
+            self.branchcache = {} # avoid recursion in changectx
             partial, last, lrev = self._readbranchcache()
 
-            qbase = cl.rev(revlog.bin(q.applied[0].rev))
+            qbase = cl.rev(qbasenode)
             start = lrev + 1
             if start < qbase:
                 # update the cache (excluding the patches) and save it
