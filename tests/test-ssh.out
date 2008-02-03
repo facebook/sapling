@@ -70,7 +70,7 @@ crosschecking files in changesets and manifests
 checking files
 2 files, 2 changesets, 3 total revisions
 bleah
-# push should succeed
+# push should succeed even though it has an unexpected response
 pushing to ssh://user@dummy/remote
 searching for changes
 note: unsynced remote changes!
@@ -78,6 +78,21 @@ remote: adding changesets
 remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
+abort: unexpected response:
+'KABOOM1\n'
+changeset:   3:ac7448082955
+tag:         tip
+parent:      1:572896fe480d
+user:        test
+date:        Mon Jan 12 13:46:42 1970 +0000
+summary:     z
+
+changeset:   2:187c6caa0d1e
+parent:      0:e34318c26897
+user:        test
+date:        Mon Jan 12 13:46:41 1970 +0000
+summary:     z
+
 Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio

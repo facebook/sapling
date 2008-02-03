@@ -115,14 +115,25 @@ class sshrepository(remoterepository):
         return self.pipei
 
     def call(self, cmd, **args):
-        r = self.do_cmd(cmd, **args)
-        l = r.readline()
+        self.do_cmd(cmd, **args)
+        return self._recv()
+
+    def _recv(self):
+        l = self.pipei.readline()
         self.readerr()
         try:
             l = int(l)
         except:
             self.raise_(util.UnexpectedOutput(_("unexpected response:"), l))
-        return r.read(l)
+        return self.pipei.read(l)
+
+    def _send(self, data, flush=False):
+        self.pipeo.write("%d\n" % len(data))
+        if data:
+            self.pipeo.write(data)
+        if flush:
+            self.pipeo.flush()
+        self.readerr()
 
     def lock(self):
         self.call("lock")
@@ -183,25 +194,22 @@ class sshrepository(remoterepository):
 
         while 1:
             d = cg.read(4096)
-            if not d: break
-            self.pipeo.write(str(len(d)) + '\n')
-            self.pipeo.write(d)
-            self.readerr()
+            if not d:
+                break
+            self._send(d)
 
-        self.pipeo.write('0\n')
-        self.pipeo.flush()
+        self._send("", flush=True)
 
-        self.readerr()
-        l = int(self.pipei.readline())
-        r = self.pipei.read(l)
+        r = self._recv()
         if r:
             # remote may send "unsynced changes"
             self.raise_(hg.RepoError(_("push failed: %s") % r))
 
-        self.readerr()
-        l = int(self.pipei.readline())
-        r = self.pipei.read(l)
-        return int(r)
+        r = self._recv()
+        try:
+            return int(r)
+        except:
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), r))
 
     def addchangegroup(self, cg, source, url):
         d = self.call("addchangegroup")
@@ -209,18 +217,21 @@ class sshrepository(remoterepository):
             self.raise_(repo.RepoError(_("push refused: %s") % d))
         while 1:
             d = cg.read(4096)
-            if not d: break
+            if not d:
+                break
             self.pipeo.write(d)
             self.readerr()
 
         self.pipeo.flush()
 
         self.readerr()
-        l = int(self.pipei.readline())
-        r = self.pipei.read(l)
+        r = self._recv()
         if not r:
             return 1
-        return int(r)
+        try:
+            return int(r)
+        except:
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), r))
 
     def stream_out(self):
         return self.do_cmd('stream_out')
