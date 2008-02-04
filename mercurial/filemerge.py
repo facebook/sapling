@@ -191,7 +191,7 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
             r = 1
 
     if _toolbool(ui, tool, "fixeol"):
-        _matcheol(repo.join(fd), back)
+        _matcheol(repo.wjoin(fd), back)
 
     if r:
         repo.ui.warn(_("merging %s failed!\n") % fd)
