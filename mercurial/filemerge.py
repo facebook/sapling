@@ -9,7 +9,7 @@ from node import *
 from i18n import _
 import util, os, tempfile, context, simplemerge, re
 
-def _toolstr(ui, tool, part, default=None):
+def _toolstr(ui, tool, part, default=""):
     return ui.config("merge-tools", tool + "." + part, default)
 
 def _toolbool(ui, tool, part, default=False):
