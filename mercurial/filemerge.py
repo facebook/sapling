@@ -59,6 +59,29 @@ def _picktool(repo, ui, path, binary, symlink):
         if _findtool(ui, t) and check(t, None, symlink, binary):
             return t
 
+def _eoltype(data):
+    "Guess the EOL type of a file"
+    if '\0' in data: # binary
+        return None
+    if '\r\n' in data: # Windows
+        return '\r\n'
+    if '\r' in data: # Old Mac
+        return '\r'
+    if '\n' in data: # UNIX
+        return '\n'
+    return None # unknown
+
+def _matcheol(file, origfile):
+    "Convert EOL markers in a file to match origfile"
+    tostyle = _eoltype(open(origfile, "rb").read())
+    if tostyle:
+        data = open(file, "rb").read()
+        style = _eoltype(data)
+        if style:
+            newdata = data.replace(style, tostyle)
+            if newdata != data:
+                open(file, "wb").write(newdata)
+
 def filemerge(repo, fw, fd, fo, wctx, mctx):
     """perform a 3-way merge in the working directory
 
@@ -157,6 +180,9 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
     if not r and _toolbool(ui, tool, "checkconflicts"):
         if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcm.data()):
             r = 1
+
+    if _toolbool(ui, tool, "fixeol"):
+        _matcheol(repo.join(fd), back)
 
     if r:
         repo.ui.warn(_("merging %s failed!\n") % fd)
