@@ -8,7 +8,7 @@ kdiff3.fixeol=True
 kdiff3.gui=True
 
 gvimdiff.args=--nofork -d -g -O $local $other $base
-gvimdiff.regkey=Software\Vin\GVim
+gvimdiff.regkey=Software\Vim\GVim
 gvimdiff.regname=path
 gvimdiff.priority=-9
 
