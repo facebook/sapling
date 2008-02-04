@@ -18,27 +18,28 @@ M zzz1_merge_ok
 M zzz2_merge_bad
 # local merge with bad merge tool
 merging zzz1_merge_ok
-merging zzz1_merge_ok failed!
 merging zzz2_merge_bad
 merging zzz2_merge_bad failed!
-3 files updated, 0 files merged, 2 files removed, 2 files unresolved
+3 files updated, 1 files merged, 2 files removed, 1 files unresolved
 There are unresolved merges with locally modified files.
-You can redo the full merge using:
+You can finish the partial merge using:
   hg update 0
   hg update 1
 2 files updated, 0 files merged, 3 files removed, 0 files unresolved
 --- a/zzz1_merge_ok
 +++ b/zzz1_merge_ok
++new first line
 +new last line
 --- a/zzz2_merge_bad
 +++ b/zzz2_merge_bad
 +another last line
 M zzz1_merge_ok
 M zzz2_merge_bad
+? zzz2_merge_bad.orig
 # local merge with conflicts
-warning: conflicts during merge.
 merging zzz1_merge_ok
 merging zzz2_merge_bad
+warning: conflicts during merge.
 merging zzz2_merge_bad failed!
 3 files updated, 1 files merged, 2 files removed, 1 files unresolved
 There are unresolved merges with locally modified files.
@@ -57,6 +58,7 @@ You can finish the partial merge using:
 +new last line
 M zzz1_merge_ok
 M zzz2_merge_bad
+? zzz2_merge_bad.orig
 # local merge without conflicts
 merging zzz1_merge_ok
 4 files updated, 1 files merged, 2 files removed, 0 files unresolved

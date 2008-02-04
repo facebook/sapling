@@ -13,21 +13,26 @@ A b
 % should fail
 a already tracked!
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-warning: conflicts during merge.
 merging a
+warning: conflicts during merge.
 merging a failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:
   hg update -C 2
   hg merge 1
 M a
+? a.orig
 % should fail
 a already tracked!
 M a
+? a.orig
 % issue683
 R a
+? a.orig
 M a
+? a.orig
 c does not exist!
 d does not exist!
 M a
 A c
+? a.orig

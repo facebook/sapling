@@ -813,40 +813,6 @@ def debuginstall(ui):
     os.unlink(fa)
     os.unlink(fd)
 
-    # merge helper
-    ui.status(_("Checking merge helper...\n"))
-    cmd = (os.environ.get("HGMERGE") or ui.config("ui", "merge")
-           or "hgmerge")
-    cmdpath = util.find_exe(cmd) or util.find_exe(cmd.split()[0])
-    if not cmdpath:
-        if cmd == 'hgmerge':
-            ui.write(_(" No merge helper set and can't find default"
-                       " hgmerge script in PATH\n"))
-            ui.write(_(" (specify a merge helper in your .hgrc file)\n"))
-        else:
-            ui.write(_(" Can't find merge helper '%s' in PATH\n") % cmd)
-            ui.write(_(" (specify a merge helper in your .hgrc file)\n"))
-            problems += 1
-    else:
-        # actually attempt a patch here
-        fa = writetemp("1\n2\n3\n4\n")
-        fl = writetemp("1\n2\n3\ninsert\n4\n")
-        fr = writetemp("begin\n1\n2\n3\n4\n")
-        r = util.system('%s "%s" "%s" "%s"' % (cmd, fl, fa, fr))
-        if r:
-            ui.write(_(" Got unexpected merge error %d!\n") % r)
-            problems += 1
-        m = file(fl).read()
-        if m != "begin\n1\n2\n3\ninsert\n4\n":
-            ui.write(_(" Got unexpected merge results!\n"))
-            ui.write(_(" (your merge helper may have the"
-                       " wrong argument order)\n"))
-            ui.write(_(" Result: %r\n") % m)
-            problems += 1
-        os.unlink(fa)
-        os.unlink(fl)
-        os.unlink(fr)
-
     # editor
     ui.status(_("Checking commit editor...\n"))
     editor = ui.geteditor()
