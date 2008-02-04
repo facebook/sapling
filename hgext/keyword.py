@@ -149,8 +149,8 @@ class kwtemplater(object):
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
             self.ct.show(changenode=fnode, root=self.repo.root, file=self.path)
-            return '$%s: %s $' % (kw, templatefilters.firstline(
-                self.ui.popbuffer()))
+            ekw = templatefilters.firstline(self.ui.popbuffer())
+            return '$%s: %s $' % (kw, ekw)
 
         return subfunc(kwsub, data)
 
