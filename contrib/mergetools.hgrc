@@ -3,7 +3,8 @@
 [merge-tools]
 kdiff3.args=--auto -L1 base --L2 local --L3 other $base $local $other -o $output
 kdiff3.regkey=Software\KDiff3
-kdiff3.append=\kdiff3.exe
+kdiff3.regappend=\kdiff3.exe
+kdiff3.fixeol=True
 kdiff3.gui=True
 
 gvimdiff.args=--nofork -d -g -O $local $other $base
