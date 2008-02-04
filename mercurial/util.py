@@ -1086,6 +1086,9 @@ if os.name == 'nt':
 else:
     nulldev = '/dev/null'
 
+    def lookup_reg(key, name=None, scope=None):
+        return None
+
     def rcfiles(path):
         rcs = [os.path.join(path, 'hgrc')]
         rcdir = os.path.join(path, 'hgrc.d')

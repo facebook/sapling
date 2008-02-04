@@ -16,6 +16,13 @@ def _toolbool(ui, tool, part, default=False):
     return ui.configbool("merge-tools", tool + "." + part, default)
 
 def _findtool(ui, tool):
+    k = _toolstr(ui, tool, "regkey")
+    if k:
+        p = util.lookup_reg(k, _toolstr(ui, tool, "regname"))
+        if p:
+            p = util.find_exe(p + _toolstr(ui, tool, "regappend"))
+            if p:
+                return p
     return util.find_exe(_toolstr(ui, tool, "executable", tool))
 
 def _picktool(repo, ui, path, binary, symlink):
