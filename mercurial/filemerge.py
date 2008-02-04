@@ -47,7 +47,7 @@ def _picktool(repo, ui, path, binary, symlink):
         return os.environ.get("HGMERGE")
 
     # then patterns
-    for pattern, tool in ui.configitems("merge-patterns"):
+    for pat, tool in ui.configitems("merge-patterns"):
         mf = util.matcher(repo.root, "", [pat], [], [])[1]
         if mf(path) and check(tool, pat, symlink, False):
                 return tool
