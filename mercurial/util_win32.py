@@ -202,7 +202,7 @@ def lookup_reg(key, valname=None, scope=None):
     except ImportError:
         return None
 
-    def query_val(scope, key):
+    def query_val(scope, key, valname):
         try:
             keyhandle = OpenKey(scope, key)
             return QueryValueEx(keyhandle, valname)[0]
