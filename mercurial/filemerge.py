@@ -36,6 +36,8 @@ def _picktool(repo, ui, path, binary, symlink):
             ui.warn(_("tool %s can't handle symlinks\n") % tmsg)
         elif binary and not _toolbool(ui, tool, "binary"):
             ui.warn(_("tool %s can't handle binary\n") % tmsg)
+        elif not util.gui() and _toolbool(ui, tool, "gui"):
+            ui.warn(_("tool %s requires a GUI\n") % tmsg)
         else:
             return True
         return False

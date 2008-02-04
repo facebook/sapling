@@ -895,6 +895,10 @@ def splitpath(path):
     function if need.'''
     return path.split(os.sep)
 
+def gui():
+    '''Are we running in a GUI?'''
+    return os.name == "nt" or os.name == "mac" or os.environ.get("DISPLAY")
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
