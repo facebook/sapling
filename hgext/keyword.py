@@ -410,10 +410,9 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    nokwcommands = ('add', 'addremove', 'bundle', 'clone', 'copy',
-                    'export', 'grep', 'identify', 'incoming', 'init',
-                    'log', 'outgoing', 'push', 'remove', 'rename',
-                    'rollback', 'tip',
+    nokwcommands = ('add', 'addremove', 'bundle', 'copy', 'export', 'grep',
+                    'identify', 'incoming', 'init', 'log', 'outgoing', 'push',
+                    'remove', 'rename', 'rollback', 'tip',
                     'convert')
     hgcmd, func, args, opts, cmdopts = dispatch._parse(ui, sys.argv[1:])
     if hgcmd in nokwcommands:
