@@ -66,9 +66,6 @@ HGMERGE::
     will be executed with three arguments: local file, remote file,
     ancestor file.
 
-    The default program is "hgmerge", which is a shell script provided
-    by Mercurial with some sensible defaults.
-
     (deprecated, use .hgrc)
 
 HGRCPATH::
@@ -97,11 +94,11 @@ VISUAL::
     This is the name of the editor to use when committing. See EDITOR.
 
 EDITOR::
-    Sometimes Mercurial needs to open a text file in an editor for a user
-    to modify, for example when writing commit messages or when using the
-    hgmerge script. The editor it uses is determined by looking at the
-    environment variables HGEDITOR, VISUAL and EDITOR, in that order. The
-    first non-empty one is chosen. If all of them are empty, the editor
+    Sometimes Mercurial needs to open a text file in an editor
+    for a user to modify, for example when writing commit messages.
+    The editor it uses is determined by looking at the environment
+    variables HGEDITOR, VISUAL and EDITOR, in that order. The first
+    non-empty one is chosen. If all of them are empty, the editor
     defaults to 'vi'.
 
 PYTHONPATH::

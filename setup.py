@@ -40,11 +40,6 @@ try:
 except ImportError:
     pass
 
-if os.name in ['nt']:
-    extra['scripts'] = ['hg']
-else:
-    extra['scripts'] = ['hg', 'hgmerge']
-
 # specify version string, otherwise 'hg identify' will be used:
 version = ''
 
@@ -77,6 +72,7 @@ setup(name='mercurial',
       url='http://selenic.com/mercurial',
       description='Scalable distributed SCM',
       license='GNU GPL',
+      scripts=['hg'],
       packages=['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert'],
       ext_modules=ext_modules,
       data_files=[(os.path.join('mercurial', root),
