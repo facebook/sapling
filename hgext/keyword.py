@@ -455,7 +455,7 @@ def reposetup(ui, repo):
 
         def commit(self, files=None, text='', user=None, date=None,
                    match=util.always, force=False, force_editor=False,
-                   p1=None, p2=None, extra={}):
+                   p1=None, p2=None, extra={}, empty_ok=False):
             wlock = lock = None
             _p1 = _p2 = None
             try:
@@ -483,7 +483,8 @@ def reposetup(ui, repo):
                              self).commit(files=files, text=text, user=user,
                                           date=date, match=match, force=force,
                                           force_editor=force_editor,
-                                          p1=p1, p2=p2, extra=extra)
+                                          p1=p1, p2=p2, extra=extra,
+                                          empty_ok=empty_ok)
 
                 # restore commit hooks
                 for name, cmd in commithooks.iteritems():
