@@ -11,6 +11,7 @@ from darcs import darcs_source
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
 from subversion import debugsvnlog, svn_source, svn_sink
+from gnuarch import gnuarch_source
 import filemap
 
 import os, shutil
@@ -23,6 +24,7 @@ source_converters = [
     ('svn', svn_source),
     ('hg', mercurial_source),
     ('darcs', darcs_source),
+    ('gnuarch', gnuarch_source),
     ]
 
 sink_converters = [

@@ -227,7 +227,7 @@ class commandline(object):
             except TypeError:
                 pass
         cmdline = [util.shellquote(arg) for arg in cmdline]
-        cmdline += ['<', util.nulldev]
+        cmdline += ['2>', util.nulldev, '<', util.nulldev]
         cmdline = ' '.join(cmdline)
         self.ui.debug(cmdline, '\n')
         return cmdline
@@ -246,6 +246,12 @@ class commandline(object):
         self.ui.debug(output)
         return output, fp.close()
 
+    def runlines(self, cmd, *args, **kwargs):
+        fp = self._run(cmd, *args, **kwargs)
+        output = fp.readlines()
+        self.ui.debug(output)
+        return output, fp.close()
+
     def checkexit(self, status, output=''):
         if status:
             if output:
@@ -256,6 +262,11 @@ class commandline(object):
 
     def run0(self, cmd, *args, **kwargs):
         output, status = self.run(cmd, *args, **kwargs)
+        self.checkexit(status, output)
+        return output
+
+    def runlines0(self, cmd, *args, **kwargs):
+        output, status = self.runlines(cmd, *args, **kwargs)
         self.checkexit(status, output)
         return output
 
