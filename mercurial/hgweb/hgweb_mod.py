@@ -467,7 +467,7 @@ class hgweb(object):
             def revgen():
                 for i in xrange(cl.count() - 1, 0, -100):
                     l = []
-                    for j in xrange(max(0, i - 100), i):
+                    for j in xrange(max(0, i - 100), i + 1):
                         ctx = self.repo.changectx(j)
                         l.append(ctx)
                     l.reverse()
