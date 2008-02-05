@@ -69,6 +69,8 @@ if [ -f rev-0.tar ]; then
     echo 'rev-0.tar created'
 fi
 
+hg archive -t bogus test.bogus
+
 echo '% empty repo'
 hg init ../empty
 cd ../empty
