@@ -1,0 +1,7 @@
+% build diff with CRLF
+adding b
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% qimport CRLF diff
+adding b.diff to series file
+applying b.diff
+Now at: b.diff

@@ -1,0 +1,36 @@
+#!/bin/sh
+
+cat > writelines.py <<EOF
+import sys
+path = sys.argv[1]
+args = sys.argv[2:]
+assert (len(args) % 2) == 0
+
+f = file(path, 'wb')
+for i in xrange(len(args)/2):
+   count, s = args[2*i:2*i+2]
+   count = int(count)
+   s = s.decode('string_escape')
+   f.write(s*count)
+f.close()
+
+EOF
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+echo "[diff]" >> $HGRCPATH
+echo "git=1" >> $HGRCPATH
+
+echo % build diff with CRLF
+hg init repo
+cd repo
+python ../writelines.py b 5 'a\n' 5 'a\r\n'
+hg ci -Am addb
+python ../writelines.py b 2 'a\n' 10 'b\n' 2 'a\r\n'
+hg diff > b.diff
+hg up -C
+echo % qimport CRLF diff
+hg qimport b.diff
+hg qpush
+
+
