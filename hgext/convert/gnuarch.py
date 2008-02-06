@@ -217,11 +217,9 @@ class gnuarch_source(converter_source, commandline):
         return changes, copies
 
     def _parsecatlog(self, data, rev):
+        readingsummary = False
         for l in data:
             l = l.strip()
-            if l.startswith('Summary:'):
-                self.changes[rev].summary = l[len('Summary: '):]
-
             if l.startswith('Standard-date:'):
                 date = l[len('Standard-date: '):]
                 strdate = util.strdate(date, '%Y-%m-%d %H:%M:%S')
@@ -229,6 +227,12 @@ class gnuarch_source(converter_source, commandline):
 
             if l.startswith('Creator:'):
                 self.changes[rev].author = l[len('Creator: '):]
+
+            if not readingsummary and l.startswith('Summary:'):
+                readingsummary = True
+                self.changes[rev].summary = l[len('Summary: '):]
+            elif not l.startswith('Keywords:'):
+                self.changes[rev].summary += '\n%s' % l
 
     def _parsedelta(self, data, rev):
         for l in data:
