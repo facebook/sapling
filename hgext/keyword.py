@@ -88,7 +88,7 @@ commands.optionalrepo += ' kwdemo'
 
 # hg commands that do not act on keywords
 nokwcommands = ('add addremove bundle copy export grep identify incoming init'
-                ' log outgoing push remove rename rollback tip convert')
+                ' log outgoing push remove rename rollback tip convert email')
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
@@ -410,8 +410,12 @@ def reposetup(ui, repo):
     This is done for local repos only, and only if there are
     files configured at all for keyword substitution.'''
 
-    if not repo.local():
-        return
+    try:
+        if (not repo.local() or '.hg' in repo.root.split('/')
+            or repo._url.startswith('bundle:')):
+            return
+    except AttributeError:
+        pass
 
     hgcmd, func, args, opts, cmdopts = dispatch._parse(ui, sys.argv[1:])
     if hgcmd in nokwcommands.split():
@@ -426,7 +430,7 @@ def reposetup(ui, repo):
         if node1 is not None and node1 != repo.changectx().node():
             hgcmd = 'diff1'
 
-    inc, exc = [], ['.hgtags']
+    inc, exc = [], ['.hg*']
     for pat, opt in ui.configitems('keyword'):
         if opt != 'ignore':
             inc.append(pat)
