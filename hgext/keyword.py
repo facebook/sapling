@@ -86,10 +86,13 @@ import re, shutil, sys, tempfile, time
 
 commands.optionalrepo += ' kwdemo'
 
+# hg commands that do not act on keywords
+nokwcommands = ('add addremove bundle copy export grep identify incoming init'
+                ' log outgoing push remove rename rollback tip convert')
+
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
-restricted = ('diff1', 'record',
-              'qfold', 'qimport', 'qnew', 'qpush', 'qrefresh', 'qrecord')
+restricted = 'diff1 record qfold qimport qnew qpush qrefresh qrecord'
 
 def utcdate(date):
     '''Returns hgdate in cvs-like UTC format.'''
@@ -113,11 +116,11 @@ class kwtemplater(object):
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
     }
 
-    def __init__(self, ui, repo, inc, exc, hgcmd):
+    def __init__(self, ui, repo, inc, exc, restricted):
         self.ui = ui
         self.repo = repo
         self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
-        self.hgcmd = hgcmd
+        self.restricted = restricted
         self.commitnode = None
         self.path = ''
 
@@ -149,14 +152,14 @@ class kwtemplater(object):
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
             self.ct.show(changenode=fnode, root=self.repo.root, file=self.path)
-            return '$%s: %s $' % (kw, templatefilters.firstline(
-                self.ui.popbuffer()))
+            ekw = templatefilters.firstline(self.ui.popbuffer())
+            return '$%s: %s $' % (kw, ekw)
 
         return subfunc(kwsub, data)
 
     def expand(self, node, data):
         '''Returns data with keywords expanded.'''
-        if util.binary(data) or self.hgcmd in restricted:
+        if self.restricted or util.binary(data):
             return data
         return self.substitute(node, data, self.re_kw.sub)
 
@@ -410,13 +413,8 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    nokwcommands = ('add', 'addremove', 'bundle', 'clone', 'copy',
-                    'export', 'grep', 'identify', 'incoming', 'init',
-                    'log', 'outgoing', 'push', 'remove', 'rename',
-                    'rollback', 'tip',
-                    'convert')
     hgcmd, func, args, opts, cmdopts = dispatch._parse(ui, sys.argv[1:])
-    if hgcmd in nokwcommands:
+    if hgcmd in nokwcommands.split():
         return
 
     if hgcmd == 'diff':
@@ -438,7 +436,8 @@ def reposetup(ui, repo):
         return
 
     global _kwtemplater
-    _kwtemplater = kwtemplater(ui, repo, inc, exc, hgcmd)
+    _restricted = hgcmd in restricted.split()
+    _kwtemplater = kwtemplater(ui, repo, inc, exc, _restricted)
 
     class kwrepo(repo.__class__):
         def file(self, f, kwmatch=False):
@@ -450,13 +449,13 @@ def reposetup(ui, repo):
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)
-            if hgcmd in restricted and _kwtemplater.matcher(filename):
+            if _restricted and _kwtemplater.matcher(filename):
                 return _kwtemplater.shrink(data)
             return data
 
         def commit(self, files=None, text='', user=None, date=None,
                    match=util.always, force=False, force_editor=False,
-                   p1=None, p2=None, extra={}):
+                   p1=None, p2=None, extra={}, empty_ok=False):
             wlock = lock = None
             _p1 = _p2 = None
             try:
@@ -484,7 +483,8 @@ def reposetup(ui, repo):
                              self).commit(files=files, text=text, user=user,
                                           date=date, match=match, force=force,
                                           force_editor=force_editor,
-                                          p1=p1, p2=p2, extra=extra)
+                                          p1=p1, p2=p2, extra=extra,
+                                          empty_ok=empty_ok)
 
                 # restore commit hooks
                 for name, cmd in commithooks.iteritems():

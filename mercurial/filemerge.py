@@ -43,14 +43,16 @@ def _picktool(repo, ui, path, binary, symlink):
         return False
 
     # HGMERGE takes precedence
-    if os.environ.get("HGMERGE"):
-        return os.environ.get("HGMERGE")
+    hgmerge = os.environ.get("HGMERGE")
+    if hgmerge:
+        return (hgmerge, hgmerge)
 
     # then patterns
     for pat, tool in ui.configitems("merge-patterns"):
         mf = util.matcher(repo.root, "", [pat], [], [])[1]
         if mf(path) and check(tool, pat, symlink, False):
-                return tool
+                toolpath = _findtool(ui, tool)
+                return (tool, '"' + toolpath + '"')
 
     # then merge tools
     tools = {}
@@ -63,10 +65,12 @@ def _picktool(repo, ui, path, binary, symlink):
     if ui.config("ui", "merge"):
         tools.insert(0, (None, ui.config("ui", "merge"))) # highest priority
     tools.append((None, "hgmerge")) # the old default, if found
-    tools.append((None, "internal:merge")) # internal merge as last resort
     for p,t in tools:
-        if _findtool(ui, t) and check(t, None, symlink, binary):
-            return t
+        toolpath = _findtool(ui, t)
+        if toolpath and check(t, None, symlink, binary):
+            return (t, '"' + toolpath + '"')
+    # internal merge as last resort
+    return (not (symlink or binary) and "internal:merge" or None, None)
 
 def _eoltype(data):
     "Guess the EOL type of a file"
@@ -124,7 +128,7 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
     fca = fcm.ancestor(fco) or repo.filectx(fw, fileid=nullrev)
     binary = isbin(fcm) or isbin(fco) or isbin(fca)
     symlink = fcm.islink() or fco.islink()
-    tool = _picktool(repo, ui, fw, binary, symlink)
+    tool, toolpath = _picktool(repo, ui, fw, binary, symlink)
     ui.debug(_("picked tool '%s' for %s (binary %s symlink %s)\n") %
                (tool, fw, binary, symlink))
 
@@ -177,7 +181,6 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
     if tool == "internal:merge":
         r = simplemerge.simplemerge(a, b, c, label=['local', 'other'])
     else:
-        toolpath = _findtool(ui, tool)
         args = _toolstr(ui, tool, "args", '$local $base $other')
         if "$output" in args:
             out, a = a, back # read input from backup, write to original
