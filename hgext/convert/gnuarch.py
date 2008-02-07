@@ -197,6 +197,8 @@ class gnuarch_source(converter_source, commandline):
         while len(contents) > 0:
             c = contents.pop()
             p = os.path.join(path, c)
+            # os.walk could be used, but here we avoid internal GNU
+            # Arch files and directories, thus saving a lot time.
             if not self._exclude(p):
                 if os.path.isdir(p):
                     contents += [os.path.join(c, f) for f in os.listdir(p)]
@@ -217,22 +219,20 @@ class gnuarch_source(converter_source, commandline):
         return changes, copies
 
     def _parsecatlog(self, data, rev):
-        readingsummary = False
+        summary = []
         for l in data:
             l = l.strip()
-            if l.startswith('Standard-date:'):
+            if summary:
+                summary.append(l)
+            elif l.startswith('Summary:'):
+                summary.append(l[len('Summary: '):])
+            elif l.startswith('Standard-date:'):
                 date = l[len('Standard-date: '):]
                 strdate = util.strdate(date, '%Y-%m-%d %H:%M:%S')
                 self.changes[rev].date = util.datestr(strdate)
-
-            if l.startswith('Creator:'):
+            elif l.startswith('Creator:'):
                 self.changes[rev].author = l[len('Creator: '):]
-
-            if not readingsummary and l.startswith('Summary:'):
-                readingsummary = True
-                self.changes[rev].summary = l[len('Summary: '):]
-            elif not l.startswith('Keywords:'):
-                self.changes[rev].summary += '\n%s' % l
+        self.changes[rev].summary = '\n'.join(summary)
 
     def _parsedelta(self, data, rev):
         for l in data:
