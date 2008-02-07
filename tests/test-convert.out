@@ -8,6 +8,7 @@ Convert a foreign SCM repository to a Mercurial one.
     - Darcs
     - git
     - Subversion
+    - GNU Arch
 
     Accepted destination formats:
     - Mercurial

@@ -1456,7 +1456,7 @@ class queue:
                             raise util.Abort(_('need --name to import a patch from -'))
                         text = sys.stdin.read()
                     else:
-                        text = file(filename).read()
+                        text = file(filename, 'rb').read()
                 except IOError:
                     raise util.Abort(_("unable to read %s") % patchname)
                 if not patchname:
