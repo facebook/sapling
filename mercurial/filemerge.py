@@ -7,7 +7,7 @@
 
 from node import *
 from i18n import _
-import util, os, tempfile, context, simplemerge, re
+import util, os, tempfile, context, simplemerge, re, filecmp
 
 def _toolstr(ui, tool, part, default=""):
     return ui.config("merge-tools", tool + "." + part, default)
@@ -192,6 +192,13 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
     if not r and _toolbool(ui, tool, "checkconflicts"):
         if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcm.data()):
             r = 1
+
+    if not r and _toolbool(ui, tool, "checkchanged"):
+        if filecmp.cmp(repo.wjoin(fd), back):
+            if ui.prompt(_(" output file %s appears unchanged\n"
+                "was merge successful (yn)?") % fd,
+                _("[yn]"), _("n")) != _("y"):
+                r = 1
 
     if _toolbool(ui, tool, "fixeol"):
         _matcheol(repo.wjoin(fd), back)

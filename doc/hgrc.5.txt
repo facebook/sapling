@@ -289,6 +289,10 @@ merge-tools::
     Check whether there are conflicts even though the tool reported
     success.
     Default: False
+  checkchanged;;
+    Check whether outputs were written even though the tool reported
+    success.
+    Default: False
   fixeol;;
     Attempt to fix up EOL changes caused by the merge tool.
     Default: False

@@ -28,6 +28,7 @@ xxdiff.gui=True
 xxdiff.priority=-8
 
 diffmerge.args=--nosplash --merge --title1=base --title2=local --title3=other $base $local $other
+diffmerge.checkchanged=True
 diffmerge.gui=True
 
 p4merge.args=$base $local $other $output
