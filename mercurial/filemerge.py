@@ -60,10 +60,14 @@ def _picktool(repo, ui, path, binary, symlink):
         t = k.split('.')[0]
         if t not in tools:
             tools[t] = int(_toolstr(ui, t, "priority", "0"))
+    names = tools.keys()
     tools = [(-p,t) for t,p in tools.items()]
     tools.sort()
-    if ui.config("ui", "merge"):
-        tools.insert(0, (None, ui.config("ui", "merge"))) # highest priority
+    uimerge = ui.config("ui", "merge")
+    if uimerge:
+        if uimerge not in names:
+            return (uimerge, uimerge)
+        tools.insert(0, (None, uimerge)) # highest priority
     tools.append((None, "hgmerge")) # the old default, if found
     for p,t in tools:
         toolpath = _findtool(ui, t)
