@@ -116,11 +116,11 @@ class kwtemplater(object):
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
     }
 
-    def __init__(self, ui, repo, inc, exc, restricted):
+    def __init__(self, ui, repo, inc, exc, restrict):
         self.ui = ui
         self.repo = repo
         self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
-        self.restricted = restricted
+        self.restrict = restrict
         self.commitnode = None
         self.path = ''
 
@@ -159,7 +159,7 @@ class kwtemplater(object):
 
     def expand(self, node, data):
         '''Returns data with keywords expanded.'''
-        if self.restricted or util.binary(data):
+        if self.restrict or util.binary(data):
             return data
         return self.substitute(node, data, self.re_kw.sub)
 
@@ -436,8 +436,8 @@ def reposetup(ui, repo):
         return
 
     global _kwtemplater
-    _restricted = hgcmd in restricted.split()
-    _kwtemplater = kwtemplater(ui, repo, inc, exc, _restricted)
+    restrict = hgcmd in restricted.split()
+    _kwtemplater = kwtemplater(ui, repo, inc, exc, restrict)
 
     class kwrepo(repo.__class__):
         def file(self, f, kwmatch=False):
@@ -449,7 +449,7 @@ def reposetup(ui, repo):
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)
-            if _restricted and _kwtemplater.matcher(filename):
+            if restrict and _kwtemplater.matcher(filename):
                 return _kwtemplater.shrink(data)
             return data
 
