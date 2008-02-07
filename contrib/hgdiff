@@ -15,7 +15,7 @@ parser.add_option("-d", "--difflib", action="store_true", default=False)
 parser.add_option('-x', '--count', default=1)
 parser.add_option('-c', '--context', type="int", default=3)
 parser.add_option('-p', '--show-c-function', action="store_true", default=False)
-parser.add_option('-w', '--ignore-all-space', action="store_true", 
+parser.add_option('-w', '--ignore-all-space', action="store_true",
                   default=False)
 
 (options, args) = parser.parse_args()

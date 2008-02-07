@@ -4,7 +4,7 @@ adding a
 diff -r 33aaa84a386b a
 --- a/a
 +++ b/a
-@@ -1,1 +1,1 @@ a
+@@ -1,1 +1,1 @@
 -a
 +abc
 adding b
@@ -17,8 +17,12 @@ summary:     1
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
  a: versions differ -> m
  b: remote created -> g
+picked tool 'true' for a (binary False symlink False)
 merging a
 my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
 getting b
@@ -50,8 +54,12 @@ summary:     1
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
+  searching for copies back to rev 1
+  unmatched files in other:
+   b
  a: versions differ -> m
  b: remote created -> g
+picked tool 'true' for a (binary False symlink False)
 merging a
 my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
 getting b
@@ -82,7 +90,7 @@ description:
 diff -r 802f095af299 a
 --- a/a
 +++ b/a
-@@ -1,1 +1,1 @@ a2
+@@ -1,1 +1,1 @@
 -a2
 +abc
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -100,10 +108,13 @@ failed
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 802f095af299+ remote 030602aee63d
+  searching for copies back to rev 1
  a: versions differ -> m
  b: versions differ -> m
+picked tool 'true' for a (binary False symlink False)
 merging a
 my a@802f095af299+ other a@030602aee63d ancestor a@33aaa84a386b
+picked tool 'true' for b (binary False symlink False)
 merging b
 my b@802f095af299+ other b@030602aee63d ancestor b@000000000000
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
@@ -123,7 +134,7 @@ summary:     3
 diff -r 802f095af299 a
 --- a/a
 +++ b/a
-@@ -1,1 +1,1 @@ a2
+@@ -1,1 +1,1 @@
 -a2
 +abc
 adding a

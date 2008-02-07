@@ -16,33 +16,33 @@ hg ci -mb -d '0 0'
 cd ../test
 
 echo % expect ssl error
-hg serve -p 20059 -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
-hg --cwd ../test2 push http://localhost:20059/
+hg --cwd ../test2 push http://localhost:$HGPORT/ | sed -e 's,:[0-9][0-9]*/,/,'
 kill `cat hg.pid`
 
 echo % expect authorization error
 echo '[web]' > .hg/hgrc
 echo 'push_ssl = false' >> .hg/hgrc
-hg serve -p 20059 -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
-hg --cwd ../test2 push http://localhost:20059/
+hg --cwd ../test2 push http://localhost:$HGPORT/ | sed -e 's,:[0-9][0-9]*/,/,'
 kill `cat hg.pid`
 
 echo % expect authorization error: must have authorized user
 echo 'allow_push = unperson' >> .hg/hgrc
-hg serve -p 20059 -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
-hg --cwd ../test2 push http://localhost:20059/
+hg --cwd ../test2 push http://localhost:$HGPORT/ | sed -e 's,:[0-9][0-9]*/,/,'
 kill `cat hg.pid`
 
 echo % expect success
 echo 'allow_push = *' >> .hg/hgrc
 echo '[hooks]' >> .hg/hgrc
 echo 'changegroup = python ../printenv.py changegroup 0 ../urls' >> .hg/hgrc
-hg serve -p 20059 -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
-hg --cwd ../test2 push http://localhost:20059/
+hg --cwd ../test2 push http://localhost:$HGPORT/ | sed -e 's,:[0-9][0-9]*/,/,'
 kill `cat hg.pid`
 hg rollback
 
@@ -52,14 +52,14 @@ echo % expect authorization error: all users denied
 echo '[web]' > .hg/hgrc
 echo 'push_ssl = false' >> .hg/hgrc
 echo 'deny_push = *' >> .hg/hgrc
-hg serve -p 20059 -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
-hg --cwd ../test2 push http://localhost:20059/
+hg --cwd ../test2 push http://localhost:$HGPORT/ | sed -e 's,:[0-9][0-9]*/,/,'
 kill `cat hg.pid`
 
 echo % expect authorization error: some users denied, users must be authenticated
 echo 'deny_push = unperson' >> .hg/hgrc
-hg serve -p 20059 -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
-hg --cwd ../test2 push http://localhost:20059/
+hg --cwd ../test2 push http://localhost:$HGPORT/ | sed -e 's,:[0-9][0-9]*/,/,'
 kill `cat hg.pid`

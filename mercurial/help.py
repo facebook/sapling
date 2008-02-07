@@ -38,13 +38,12 @@ helptable = {
     'environment|env|Environment Variables':
     r'''
 HG::
-    Path to the 'hg' executable, automatically passed when running hooks
-    or external tools. Falls back to 'hg' if unset and the value can't be
-    autodetected, e.g. when Mercurial is run as a Python module.
+    Path to the 'hg' executable, automatically passed when running hooks,
+    extensions or external tools. If unset or empty, an executable named
+    'hg' (with com/exe/bat/cmd extension on Windows) is searched.
 
 HGEDITOR::
-    This is the name of the editor to use when committing. Defaults to the
-    value of EDITOR.
+    This is the name of the editor to use when committing. See EDITOR.
 
     (deprecated, use .hgrc)
 
@@ -66,9 +65,6 @@ HGMERGE::
     An executable to use for resolving merge conflicts. The program
     will be executed with three arguments: local file, remote file,
     ancestor file.
-
-    The default program is "hgmerge", which is a shell script provided
-    by Mercurial with some sensible defaults.
 
     (deprecated, use .hgrc)
 
@@ -94,9 +90,16 @@ LOGNAME::
     If neither HGUSER nor EMAIL is set, LOGNAME will be used (with
     '@hostname' appended) as the author value for a commit.
 
+VISUAL::
+    This is the name of the editor to use when committing. See EDITOR.
+
 EDITOR::
-    This is the name of the editor used in the hgmerge script. It will be
-    used for commit messages if HGEDITOR isn't set. Defaults to 'vi'.
+    Sometimes Mercurial needs to open a text file in an editor
+    for a user to modify, for example when writing commit messages.
+    The editor it uses is determined by looking at the environment
+    variables HGEDITOR, VISUAL and EDITOR, in that order. The first
+    non-empty one is chosen. If all of them are empty, the editor
+    defaults to 'vi'.
 
 PYTHONPATH::
     This is used by Python to find imported modules and may need to be set

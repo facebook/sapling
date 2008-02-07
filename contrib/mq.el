@@ -18,6 +18,7 @@
 ;; C-l').  If not, write to the Free Software Foundation, Inc., 59
 ;; Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
+(eval-when-compile (require 'cl))
 (require 'mercurial)
 
 
@@ -62,35 +63,42 @@
 (make-variable-buffer-local 'mq-prev-buffer)
 (put 'mq-prev-buffer 'permanent-local t)
 
+(defvar mq-top nil)
+(make-variable-buffer-local 'mq-top)
+(put 'mq-top 'permanent-local t)
 
 ;;; Global keymap.
 
-(defvar mq-global-map (make-sparse-keymap))
-(fset 'mq-global-map mq-global-map)
-(global-set-key mq-global-prefix 'mq-global-map)
-(define-key mq-global-map "." 'mq-push)
-(define-key mq-global-map ">" 'mq-push-all)
-(define-key mq-global-map "," 'mq-pop)
-(define-key mq-global-map "<" 'mq-pop-all)
-(define-key mq-global-map "=" 'mq-diff)
-(define-key mq-global-map "r" 'mq-refresh)
-(define-key mq-global-map "e" 'mq-refresh-edit)
-(define-key mq-global-map "i" 'mq-new)
-(define-key mq-global-map "n" 'mq-next)
-(define-key mq-global-map "o" 'mq-signoff)
-(define-key mq-global-map "p" 'mq-previous)
-(define-key mq-global-map "s" 'mq-edit-series)
-(define-key mq-global-map "t" 'mq-top)
+(defvar mq-global-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "." 'mq-push)
+    (define-key map ">" 'mq-push-all)
+    (define-key map "," 'mq-pop)
+    (define-key map "<" 'mq-pop-all)
+    (define-key map "=" 'mq-diff)
+    (define-key map "r" 'mq-refresh)
+    (define-key map "e" 'mq-refresh-edit)
+    (define-key map "i" 'mq-new)
+    (define-key map "n" 'mq-next)
+    (define-key map "o" 'mq-signoff)
+    (define-key map "p" 'mq-previous)
+    (define-key map "s" 'mq-edit-series)
+    (define-key map "t" 'mq-top)
+    map))
+
+(global-set-key mq-global-prefix mq-global-map)
 
 (add-minor-mode 'mq-mode 'mq-mode)
 
 
 ;;; Refresh edit mode keymap.
 
-(defvar mq-edit-mode-map (make-sparse-keymap))
-(define-key mq-edit-mode-map "\C-c\C-c" 'mq-edit-finish)
-(define-key mq-edit-mode-map "\C-c\C-k" 'mq-edit-kill)
-(define-key mq-edit-mode-map "\C-c\C-s" 'mq-signoff)
+(defvar mq-edit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" 'mq-edit-finish)
+    (define-key map "\C-c\C-k" 'mq-edit-kill)
+    (define-key map "\C-c\C-s" 'mq-signoff)
+    map))
 
 
 ;;; Helper functions.
@@ -102,7 +110,7 @@ May return nil, meaning \"use the default\"."
 		  (hg-chomp (hg-run0 (or source "qseries"))) "\n")))
     (when force
       (completing-read (format "Patch%s: " (or prompt ""))
-		       (map 'list 'cons patches patches)
+		       (mapcar (lambda (x) (cons x x)) patches)
 		       nil
 		       nil
 		       nil
@@ -131,7 +139,7 @@ May return nil, meaning \"use the default\"."
     (let ((line (buffer-substring bol (point))))
       (when (> (length line) 0)
 	line))))
-  
+
 (defun mq-push (&optional patch)
   "Push patches until PATCH is reached.
 If PATCH is nil, push at most one patch."
@@ -166,7 +174,7 @@ If PATCH is nil, push at most one patch."
       (if ok
 	  (message "Pushing... %s" last-line)
 	(error "Pushing... %s" last-line)))))
-  
+
 (defun mq-push-all ()
   "Push patches until all are applied."
   (interactive)
@@ -195,7 +203,7 @@ If PATCH is nil, pop at most one patch."
       (if ok
 	  (message "Popping... %s" last-line)
 	(error "Popping... %s" last-line)))))
-  
+
 (defun mq-pop-all ()
   "Push patches until none are applied."
   (interactive)
@@ -255,7 +263,7 @@ This would become the active patch if popped to."
   (let ((buf mq-prev-buffer))
     (kill-buffer nil)
     (switch-to-buffer buf)))
-  
+
 (defun mq-edit-kill ()
   "Kill the edit currently being prepared."
   (interactive)
@@ -316,7 +324,7 @@ Key bindings
   (set-buffer-modified-p nil)
   (setq buffer-undo-list nil)
   (run-hooks 'text-mode-hook 'mq-edit-mode-hook))
-  
+
 (defun mq-refresh-edit ()
   "Refresh the topmost applied patch, editing the patch description."
   (interactive)

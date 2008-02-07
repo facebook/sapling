@@ -1,0 +1,180 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" svn svn-bindings || exit 80
+
+fix_path()
+{
+    tr '\\' /
+}
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+
+svnadmin create svn-repo
+
+echo % initial svn import
+mkdir t
+cd t
+echo a > a
+cd ..
+
+svnpath=`pwd | fix_path`
+# SVN wants all paths to start with a slash. Unfortunately,
+# Windows ones don't. Handle that.
+expr $svnpath : "\/" > /dev/null
+if [ $? -ne 0 ]; then
+    svnpath='/'$svnpath
+fi
+
+svnurl=file://$svnpath/svn-repo/trunk/test
+svn import -m init t $svnurl | fix_path
+
+echo % update svn repository
+svn co $svnurl t2 | fix_path
+cd t2
+echo b >> a
+echo b > b
+svn add b
+svn ci -m changea
+cd ..
+
+echo % convert to hg once
+hg convert $svnurl
+
+echo % update svn repository again
+cd t2
+echo c >> a
+echo c >> b
+svn ci -m changeb
+cd ..
+
+echo % test incremental conversion
+hg convert -v $svnurl | sed 's/source:.*/source:/'
+
+echo % test filemap
+echo 'include b' > filemap
+hg convert --filemap filemap $svnurl fmap
+echo '[extensions]' >> $HGRCPATH
+echo 'hgext.graphlog =' >> $HGRCPATH
+hg glog -R fmap --template '#rev# #desc|firstline# files: #files#\n'
+
+echo % test stop revision
+hg convert --rev 1 $svnurl stoprev
+# Check convert_revision extra-records.
+# This is also the only place testing more than one extra field
+# in a revision.
+hg --cwd stoprev tip --debug | grep extra | sed 's/=.*/=/'
+
+########################################
+
+echo "# now tests that it works with trunk/branches/tags layout"
+echo
+echo % initial svn import
+mkdir projA
+cd projA
+mkdir trunk
+mkdir branches
+mkdir tags
+cd ..
+
+svnurl=file://$svnpath/svn-repo/projA
+svn import -m "init projA" projA $svnurl | fix_path
+
+
+echo % update svn repository
+svn co $svnurl/trunk A | fix_path
+cd A
+echo hello > letter.txt
+svn add letter.txt
+svn ci -m hello
+
+echo world >> letter.txt
+svn ci -m world
+
+svn copy -m "tag v0.1" $svnurl/trunk $svnurl/tags/v0.1
+
+echo 'nice day today!' >> letter.txt
+svn ci -m "nice day"
+cd ..
+
+echo % convert to hg once
+hg convert $svnurl A-hg
+
+echo % update svn repository again
+cd A
+echo "see second letter" >> letter.txt
+# Put it in a subdirectory to test duplicate file records
+# from svn source (issue 714)
+mkdir todo
+echo "nice to meet you" > todo/letter2.txt
+svn add todo
+svn ci -m "second letter"
+
+svn copy -m "tag v0.2" $svnurl/trunk $svnurl/tags/v0.2
+
+echo "blah-blah-blah" >> todo/letter2.txt
+svn ci -m "work in progress"
+cd ..
+
+echo % test incremental conversion
+hg convert $svnurl A-hg
+
+cd A-hg
+hg glog --template '#rev# #desc|firstline# files: #files#\n'
+hg tags -q
+cd ..
+
+########################################
+
+echo "# now tests that it works with trunk/tags layout, but no branches yet"
+echo
+echo % initial svn import
+mkdir projB
+cd projB
+mkdir trunk
+mkdir tags
+cd ..
+
+svnurl=file://$svnpath/svn-repo/projB
+svn import -m "init projB" projB $svnurl | fix_path
+
+
+echo % update svn repository
+svn co $svnurl/trunk B | fix_path
+cd B
+echo hello > letter.txt
+svn add letter.txt
+svn ci -m hello
+
+echo world >> letter.txt
+svn ci -m world
+
+svn copy -m "tag v0.1" $svnurl/trunk $svnurl/tags/v0.1
+
+echo 'nice day today!' >> letter.txt
+svn ci -m "nice day"
+cd ..
+
+echo % convert to hg once
+hg convert $svnurl B-hg
+
+echo % update svn repository again
+cd B
+echo "see second letter" >> letter.txt
+echo "nice to meet you" > letter2.txt
+svn add letter2.txt
+svn ci -m "second letter"
+
+svn copy -m "tag v0.2" $svnurl/trunk $svnurl/tags/v0.2
+
+echo "blah-blah-blah" >> letter2.txt
+svn ci -m "work in progress"
+cd ..
+
+echo % test incremental conversion
+hg convert $svnurl B-hg
+
+cd B-hg
+hg glog --template '#rev# #desc|firstline# files: #files#\n'
+hg tags -q
+cd ..

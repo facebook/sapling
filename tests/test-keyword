@@ -1,0 +1,253 @@
+#!/bin/sh
+
+cat <<EOF >> $HGRCPATH
+[extensions]
+hgext.keyword =
+hgext.mq =
+[keyword]
+* =
+b = ignore
+[hooks]
+commit=
+commit.test=cp a hooktest
+EOF
+
+echo % help
+hg help keyword
+
+echo % hg kwdemo
+hg --quiet kwdemo --default \
+| sed -e 's![^ ][^ ]*demo.txt,v!/TMP/demo.txt,v!' \
+ -e 's/,v [a-z0-9][a-z0-9]* /,v xxxxxxxxxxxx /' \
+ -e '/[$]Revision/ s/: [a-z0-9][a-z0-9]* /: xxxxxxxxxxxx /' \
+ -e 's! 20[0-9][0-9]/[01][0-9]/[0-3][0-9] [0-2][0-9]:[0-6][0-9]:[0-6][0-9]! 2000/00/00 00:00:00!'
+
+hg --quiet kwdemo "Branch = {branches}"
+
+hg init Test
+cd Test
+
+echo % kwshrink should exit silently in empty/invalid repo
+hg kwshrink
+
+echo 'expand $Id$' > a
+echo 'do not process $Id:' >> a
+echo 'xxx $' >> a
+echo 'ignore $Id$' > b
+ln -s a sym
+echo % cat
+cat sym a b
+
+echo % addremove
+hg addremove
+echo % status
+hg status
+
+echo % default keyword expansion including commit hook
+echo % interrupted commit should not change state or run commit hook
+hg --debug commit
+echo % status
+hg status
+
+echo % commit
+hg --debug commit -mabsym -d '0 0' -u 'User Name <user@example.com>'
+echo % status
+hg status
+echo % identify
+hg --quiet identify
+echo % cat
+cat sym a b
+echo % hg cat
+hg cat sym a b
+
+echo
+echo % diff a hooktest
+diff a hooktest
+
+echo % removing commit hook from config
+sed -e '/\[hooks\]/,$ d' $HGRCPATH > $HGRCPATH.nohook
+mv $HGRCPATH.nohook $HGRCPATH
+rm hooktest
+
+echo % touch
+touch a b
+echo % status
+hg status
+
+rm sym a b
+echo % update
+hg update
+echo % cat
+cat sym a b
+
+echo % check whether expansion is filewise
+echo '$Id$' > c
+echo 'tests for different changenodes' >> c
+echo % commit c
+hg commit -A -mcndiff -d '1 0' -u 'User Name <user@example.com>'
+echo % force expansion
+hg -v kwexpand
+echo % compare changenodes in a c
+cat a c
+
+echo % qimport
+hg qimport -r tip -n mqtest.diff
+echo % keywords should not be expanded in patch
+cat .hg/patches/mqtest.diff
+echo % qpop
+hg qpop
+echo % qgoto - should imply qpush
+hg qgoto mqtest.diff
+echo % cat
+cat c
+echo % qpop and move on
+hg qpop
+
+echo % copy
+hg cp a c
+
+echo % kwfiles added
+hg kwfiles
+
+echo % commit
+hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
+echo % cat a c
+cat a c
+echo % touch copied c after 1 second
+sleep 1
+touch c
+echo % status
+hg status
+
+echo % kwfiles
+hg kwfiles
+
+echo % diff --rev
+hg diff --rev 0 | grep -v 'b/c'
+
+echo % rollback
+hg rollback
+echo % status
+hg status
+echo % update -C
+hg update --clean
+
+echo % custom keyword expansion
+echo % try with kwdemo
+hg --quiet kwdemo "Xinfo = {author}: {desc}"
+
+cat <<EOF >>$HGRCPATH
+[keywordmaps]
+Id = {file} {node|short} {date|rfc822date} {author|user}
+Xinfo = {author}: {desc}
+EOF
+
+echo % cat
+cat sym a b
+echo % hg cat
+hg cat sym a b
+
+echo
+echo '$Xinfo$' >> a
+cat <<EOF >> log
+firstline
+secondline
+EOF
+
+echo % interrupted commit should not change state
+hg commit
+echo % status
+hg status
+
+echo % commit
+hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
+rm log
+echo % status
+hg status
+
+echo % cat
+cat sym a b
+echo % hg cat
+hg cat sym a b
+echo
+
+echo % remove
+hg remove a
+hg --debug commit -m rma
+echo % status
+hg status
+echo % rollback
+hg rollback
+echo % status
+hg status
+echo % revert a
+hg revert --no-backup --rev tip a
+echo % cat a
+cat a
+
+echo % clone to test incoming
+cd ..
+hg clone -r0 Test Test-a
+cd Test-a
+cat <<EOF >> .hg/hgrc
+[paths]
+default = ../Test
+EOF
+echo % incoming
+# remove path to temp dir
+hg incoming | sed -e 's/^\(comparing with \).*\(test-keyword.*\)/\1\2/'
+
+sed -e 's/Id.*/& rejecttest/' a > a.new
+mv a.new a
+echo % commit rejecttest
+hg --debug commit -m'rejects?' -d '3 0' -u 'User Name <user@example.com>'
+echo % export
+hg export -o ../rejecttest.diff tip
+
+cd ../Test
+echo % import
+hg import ../rejecttest.diff
+echo % cat
+cat sym a b
+echo
+echo % rollback
+hg rollback
+echo % clean update
+hg update --clean
+
+echo % kwexpand/kwshrink on selected files
+mkdir x
+echo % copy a x/a
+hg copy a x/a
+echo % kwexpand a
+hg --verbose kwexpand a
+echo % kwexpand x/a should abort
+hg --verbose kwexpand x/a
+cd x
+hg --debug commit -m xa -d '3 0' -u 'User Name <user@example.com>'
+echo % cat a
+cat a
+echo % kwshrink a inside directory x
+hg --verbose kwshrink a
+echo % cat a
+cat a
+cd ..
+
+echo % kwexpand nonexistent
+hg kwexpand nonexistent
+
+echo % switch off expansion
+echo % kwshrink with unknown file u
+cp a u
+hg --verbose kwshrink
+echo % cat
+cat sym a b
+echo % hg cat
+hg cat sym a b
+echo
+rm $HGRCPATH
+echo % cat
+cat sym a b
+echo % hg cat
+hg cat sym a b
+echo

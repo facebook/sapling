@@ -1,5 +1,12 @@
 #!/bin/sh
 
+checkundo()
+{
+    if [ -f .hg/store/undo ]; then
+	echo ".hg/store/undo still exists after $1"
+    fi
+}
+
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
@@ -35,6 +42,12 @@ echo % qinit -c
 hg --cwd c qinit -c
 hg -R c/.hg/patches st
 
+echo % qnew should refuse bad patch names
+hg -R c qnew series
+hg -R c qnew status
+hg -R c qnew guards
+hg -R c qnew .hgignore
+
 echo % qnew implies add
 
 hg -R c qnew test.patch
@@ -57,6 +70,7 @@ echo '% qinit; <stuff>; qinit -c'
 hg init e
 cd e
 hg qnew A
+checkundo qnew
 echo foo > foo
 hg add foo
 hg qrefresh
@@ -75,6 +89,27 @@ cat .hg/patches/series
 cd ..
 
 cd a
+
+echo a > somefile
+hg add somefile
+
+echo % qnew with uncommitted changes
+
+hg qnew uncommitted.patch
+hg st
+hg qseries
+
+echo '% qnew with uncommitted changes and missing file (issue 803)'
+
+hg qnew issue803.patch someotherfile 2>&1 | \
+    sed -e 's/someotherfile:.*/someotherfile: No such file or directory/'
+hg st
+hg qseries
+hg qpop -f
+hg qdel issue803.patch
+
+hg revert --no-backup somefile
+rm somefile
 
 echo % qnew -m
 
@@ -100,14 +135,17 @@ echo 'working dir diff:'
 hg diff --nodates -q
 # restore things
 hg qrefresh
+checkundo qrefresh
 
 echo % qpop
 
 hg qpop
+checkundo qpop
 
 echo % qpush
 
 hg qpush
+checkundo qpush
 
 cd ..
 
@@ -265,6 +303,13 @@ hg st
 echo % mq tags
 hg log --template '{rev} {tags}\n' -r qparent:qtip
 
+echo % bad node in status
+hg qpop
+hg strip -qn tip
+hg tip 2>&1 | sed -e 's/unknown node .*/unknown node/'
+hg branches 2>&1 | sed -e 's/unknown node .*/unknown node/'
+hg qpop
+
 cat >>$HGRCPATH <<EOF
 [diff]
 git = True
@@ -338,6 +383,46 @@ hg qrefresh --git
 cat .hg/patches/bar
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r .
 
+echo % refresh omitting an added file
+hg qnew baz
+echo newfile > newfile
+hg add newfile
+hg qrefresh
+hg st -A newfile
+hg qrefresh -X newfile
+hg st -A newfile
+hg revert newfile
+rm newfile
+hg qpop
+hg qdel baz
+
+echo % create a git patch
+echo a > alexander
+hg add alexander
+hg qnew -f --git addalexander
+grep diff .hg/patches/addalexander
+
+echo % create a git binary patch
+cat > writebin.py <<EOF
+import sys
+path = sys.argv[1]
+open(path, 'wb').write('BIN\x00ARY')
+EOF
+python writebin.py bucephalus
+
+python "$TESTDIR/md5sum.py" bucephalus
+hg add bucephalus
+hg qnew -f --git addbucephalus
+grep diff .hg/patches/addbucephalus
+
+echo % check binary patches can be popped and pushed
+hg qpop
+test -f bucephalus && echo % bucephalus should not be there
+hg qpush
+test -f bucephalus || echo % bucephalus should be there
+python "$TESTDIR/md5sum.py" bucephalus
+
+
 echo '% strip again'
 cd ..
 hg init strip
@@ -354,6 +439,7 @@ HGMERGE=true hg merge
 hg ci -m merge -d '0 0'
 hg log
 hg strip 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+checkundo strip
 hg log
 cd ..
 

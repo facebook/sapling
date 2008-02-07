@@ -1,0 +1,90 @@
+rm 'd/b'
+assuming destination git-repo-hg
+initializing destination git-repo-hg repository
+scanning source...
+sorting...
+converting...
+5 t1
+4 t2
+3 t3
+2 t4.1
+1 t4.2
+0 Merge branch other
+changeset:   5:c6d72c98aa00
+tag:         tip
+parent:      3:a18bdfccf429
+parent:      4:48cb5b72ce56
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:15 2007 +0000
+files:       a
+description:
+Merge branch other
+
+committer: test <test@example.org>
+
+
+% full conversion
+o    9 "Discard change to foo" files: foo
+|\
+| o  8 "change foo" files: foo
+| |
+o |  7 "change bar" files: bar
+|/
+o    6 "(octopus merge fixup)" files:
+|\
+| o    5 "Octopus merge" files: baz
+| |\
+o | |  4 "add baz" files: baz
+| | |
++---o  3 "add bar" files: bar
+| |
+o |  2 "add quux" files: quux
+| |
+| o  1 "change foo" files: foo
+|/
+o  0 "add foo" files: foo
+
+245a3b8bc653999c2b22cdabd517ccb47aecafdf 644   bar
+354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
+9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
+88dfeab657e8cf2cef3dec67b914f49791ae76b1 644   quux
+% foo bar baz: octopus merge
+o    8 "Discard change to foo" files: foo
+|\
+| o  7 "change foo" files: foo
+| |
+o |  6 "change bar" files: bar
+|/
+o    5 "(octopus merge fixup)" files:
+|\
+| o    4 "Octopus merge" files: baz
+| |\
+o | |  3 "add baz" files: baz
+| | |
++---o  2 "add bar" files: bar
+| |
+| o  1 "change foo" files: foo
+|/
+o  0 "add foo" files: foo
+
+245a3b8bc653999c2b22cdabd517ccb47aecafdf 644   bar
+354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
+9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
+% foo baz quux: only some parents of an octopus merge; "discard" a head
+o  6 "Discard change to foo" files: foo
+|
+o  5 "change foo" files: foo
+|
+o    4 "Octopus merge" files:
+|\
+| o  3 "add baz" files: baz
+| |
+| o  2 "add quux" files: quux
+| |
+o |  1 "change foo" files: foo
+|/
+o  0 "add foo" files: foo
+
+354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
+9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
+88dfeab657e8cf2cef3dec67b914f49791ae76b1 644   quux

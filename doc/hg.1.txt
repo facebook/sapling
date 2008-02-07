@@ -62,6 +62,14 @@ SPECIFYING SINGLE REVISIONS
     The reserved name "tip" is a special tag that always identifies
     the most recent revision.
 
+    The reserved name "null" indicates the null revision. This is the
+    revision of an empty repository, and the parent of revision 0.
+
+    The reserved name "." indicates the working directory parent. If
+    no working directory is checked out, it is equivalent to null.
+    If an uncommitted merge is in progress, "." is the revision of
+    the first parent.
+
 SPECIFYING MULTIPLE REVISIONS
 -----------------------------
 
@@ -83,11 +91,11 @@ SPECIFYING MULTIPLE REVISIONS
 
 FILES
 -----
- .hgignore::
+ repo/.hgignore::
     This file contains regular expressions (one per line) that describe file
     names that should be ignored by hg. For details, see hgignore(5).
 
- .hgtags::
+ repo/.hgtags::
     This file contains changeset hash values and text tag names (one of each
     separated by spaces) that correspond to tagged versions of the repository
     contents.

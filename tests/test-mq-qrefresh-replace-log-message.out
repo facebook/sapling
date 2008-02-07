@@ -1,4 +1,8 @@
 =======================
+Should fail if no patches applied
+No patches applied
+No patches applied
+=======================
 Should display 'First commit message'
 description:
 First commit message

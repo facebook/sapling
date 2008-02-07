@@ -1,4 +1,5 @@
 default = 'changelog'
+mimetype = 'text/html'
 header = header.tmpl
 footer = footer.tmpl
 search = search.tmpl
@@ -46,7 +47,7 @@ filediffparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a
 filelogparent = '<tr><th>parent #rev#:</th><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
 filediffchild = '<tr><th class="child">child #rev#:</th><td class="child"><a href="?cs=#node|short#">#node|short#</a></td></tr>'
 filelogchild = '<tr><th>child #rev#:</th><td><a href="?f=#node|short#;file=#file|urlescape#">#node|short#</a></td></tr>'
-indexentry = '<tr class="parity#parity#"><td><a href="#url#">#name|escape#</a></td><td>#description#</td><td>#contact|obfuscate#</td><td class="age">#lastchange|age# ago</td><td class="indexlinks"><a href="#url#?cl=tip;style=rss">RSS</a> #archives%archiveentry#</td></tr>'
+indexentry = '<tr class="parity#parity#"><td><a href="#url#">#name|escape#</a></td><td>#description#</td><td>#contact|obfuscate#</td><td class="age">#lastchange|age# ago</td><td class="indexlinks"><a href="#url#?cl=tip;style=rss">RSS</a> <a href="#url#atom-log">Atom</a> #archives%archiveentry#</td></tr>'
 index = index.tmpl
 archiveentry = '<a href="#url#?ca=#node|short#;type=#type|urlescape#">#type|escape#</a> '
 notfound = notfound.tmpl

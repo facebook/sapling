@@ -48,7 +48,7 @@ class bundlerevlog(revlog.revlog):
                 continue
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise revlog.LookupError(_("unknown parent %s") % short(p1))
+                    raise revlog.LookupError(hex(p1), _("unknown parent %s") % short(p1))
             if linkmapper is None:
                 link = n
             else:
@@ -56,8 +56,8 @@ class bundlerevlog(revlog.revlog):
 
             if not prev:
                 prev = p1
-            # start, size, base is not used, link, p1, p2, delta ref
-            e = (revlog.offset_type(start, 0), size, -1, None, link,
+            # start, size, full unc. size, base (unused), link, p1, p2, node
+            e = (revlog.offset_type(start, 0), size, -1, -1, link,
                  self.rev(p1), self.rev(p2), node)
             self.basemap[n] = prev
             self.index.insert(-1, e)
@@ -193,18 +193,27 @@ class bundlerepository(localrepo.localrepository):
         else:
             raise util.Abort(_("%s: unknown bundle compression type")
                              % bundlename)
-        self.changelog = bundlechangelog(self.sopener, self.bundlefile)
-        self.manifest = bundlemanifest(self.sopener, self.bundlefile,
-                                       self.changelog.rev)
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
-        while 1:
-            f = changegroup.getchunk(self.bundlefile)
-            if not f:
-                break
-            self.bundlefilespos[f] = self.bundlefile.tell()
-            for c in changegroup.chunkiter(self.bundlefile):
-                pass
+
+    def __getattr__(self, name):
+        if name == 'changelog':
+            self.changelog = bundlechangelog(self.sopener, self.bundlefile)
+            self.manstart = self.bundlefile.tell()
+            return self.changelog
+        if name == 'manifest':
+            self.bundlefile.seek(self.manstart)
+            self.manifest = bundlemanifest(self.sopener, self.bundlefile,
+                                           self.changelog.rev)
+            self.filestart = self.bundlefile.tell()
+            return self.manifest
+        if name == 'manstart':
+            self.changelog
+            return self.manstart
+        if name == 'filestart':
+            self.manifest
+            return self.filestart
+        return localrepo.localrepository.__getattr__(self, name)
 
     def url(self):
         return self._url
@@ -213,6 +222,16 @@ class bundlerepository(localrepo.localrepository):
         return -1
 
     def file(self, f):
+        if not self.bundlefilespos:
+            self.bundlefile.seek(self.filestart)
+            while 1:
+                chunk = changegroup.getchunk(self.bundlefile)
+                if not chunk:
+                    break
+                self.bundlefilespos[chunk] = self.bundlefile.tell()
+                for c in changegroup.chunkiter(self.bundlefile):
+                    pass
+
         if f[0] == '/':
             f = f[1:]
         if f in self.bundlefilespos:
@@ -237,14 +256,25 @@ class bundlerepository(localrepo.localrepository):
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new bundle repository'))
+    parentpath = ui.config("bundle", "mainreporoot", "")
+    if parentpath:
+        # Try to make the full path relative so we get a nice, short URL.
+        # In particular, we don't want temp dir names in test outputs.
+        cwd = os.getcwd()
+        if parentpath == cwd:
+            parentpath = ''
+        else:
+            cwd = os.path.join(cwd,'')
+            if parentpath.startswith(cwd):
+                parentpath = parentpath[len(cwd):]
     path = util.drop_scheme('file', path)
     if path.startswith('bundle:'):
         path = util.drop_scheme('bundle', path)
         s = path.split("+", 1)
         if len(s) == 1:
-            repopath, bundlename = "", s[0]
+            repopath, bundlename = parentpath, s[0]
         else:
             repopath, bundlename = s
     else:
-        repopath, bundlename = '', path
+        repopath, bundlename = parentpath, path
     return bundlerepository(ui, repopath, bundlename)

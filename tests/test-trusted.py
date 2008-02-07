@@ -6,6 +6,9 @@ import os
 from mercurial import ui, util
 
 hgrc = os.environ['HGRCPATH']
+f = open(hgrc)
+basehgrc = f.read()
+f.close()
 
 def testui(user='foo', group='bar', tusers=(), tgroups=(),
            cuser='foo', cgroup='bar', debug=False, silent=False):
@@ -16,7 +19,8 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
     # write a global hgrc with the list of trusted users/groups and
     # some setting so that we can be sure it was read
     f = open(hgrc, 'w')
-    f.write('[paths]\n')
+    f.write(basehgrc)
+    f.write('\n[paths]\n')
     f.write('global = /some/path\n\n')
 
     if tusers or tgroups:

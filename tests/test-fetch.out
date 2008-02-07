@@ -13,6 +13,8 @@ added 1 changesets with 1 changes to 1 files
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1:97d72e5f12c7
 adding c
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pulling from ../a
 searching for changes
 adding changesets
@@ -25,3 +27,25 @@ new changeset 3:cd3a41621cf0 merges remote changes with local
 a
 b
 c
+% fetch over http, no auth
+pulling from http://localhost:20059/
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+merging with new head 2:97d72e5f12c7
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+new changeset 3:0b6439e938f9 merges remote changes with local
+Automated merge with http://localhost:20059/
+% fetch over http with auth (should be hidden in desc)
+pulling from http://user:***@localhost:20059/
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+merging with new head 2:97d72e5f12c7
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+new changeset 3:0b6439e938f9 merges remote changes with local
+Automated merge with http://localhost:20059/

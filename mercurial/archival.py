@@ -15,7 +15,7 @@ def tidyprefix(dest, prefix, suffixes):
     safe for consumers.'''
 
     if prefix:
-        prefix = prefix.replace('\\', '/')
+        prefix = util.normpath(prefix)
     else:
         if not isinstance(dest, str):
             raise ValueError('dest must be string if no prefix')
@@ -208,6 +208,8 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         archiver.addfile(name, mode, islink, data)
 
     ctx = repo.changectx(node)
+    if kind not in archivers:
+        raise util.Abort(_("unknown archive type '%s'" % kind))
     archiver = archivers[kind](dest, prefix, mtime or ctx.date()[0])
     m = ctx.manifest()
     items = m.items()

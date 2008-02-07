@@ -282,7 +282,7 @@ class bugzilla(object):
                root=self.repo.root,
                webroot=webroot(self.repo.root))
         data = self.ui.popbuffer()
-        self.add_comment(bugid, data, templater.email(ctx.user()))
+        self.add_comment(bugid, data, util.email(ctx.user()))
 
 def hook(ui, repo, hooktype, node=None, **kwargs):
     '''add comment to bugzilla for each changeset that refers to a

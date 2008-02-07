@@ -1,0 +1,76 @@
+% initial svn import
+Adding         projA/trunk
+Adding         projA/trunk/a
+Adding         projA/trunk/d1
+Adding         projA/trunk/d1/b
+Adding         projA/trunk/d1/c
+
+Committed revision 1.
+% update svn repository
+A    A/trunk
+A    A/trunk/a
+A    A/trunk/d1
+A    A/trunk/d1/b
+A    A/trunk/d1/c
+Checked out revision 1.
+Sending        trunk/a
+Sending        trunk/d1/c
+Transmitting file data ..
+Committed revision 2.
+
+Committed revision 3.
+D    trunk
+A    subproject
+A    subproject/a
+A    subproject/d1
+A    subproject/d1/b
+A    subproject/d1/c
+Updated to revision 3.
+A         subproject/trunk
+Adding         subproject/trunk
+
+Committed revision 4.
+A         subproject/branches
+Adding         subproject/branches
+
+Committed revision 5.
+
+Committed revision 6.
+A    subproject/trunk/d1
+A    subproject/trunk/d1/b
+A    subproject/trunk/d1/c
+D    subproject/d1
+Updated to revision 6.
+Sending        subproject/trunk/d1/b
+Transmitting file data .
+Committed revision 7.
+
+Committed revision 8.
+% convert trunk and branches
+initializing destination A-hg repository
+scanning source...
+sorting...
+converting...
+6 createtrunk
+5 moved1
+4 moved1
+3 changeb
+2 changeb
+1 moved1again
+0 moved1again
+o  6 moved1again files: d1/b d1/c
+|
+| o  5 moved1again files:
+| |
+o |  4 changeb files: d1/b
+| |
+| o  3 changeb files: b
+| |
+o |  2 moved1 files: d1/b d1/c
+| |
+| o  1 moved1 files: b c
+|
+o  0 createtrunk files:
+
+default                        6:
+d1                             5:

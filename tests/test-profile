@@ -1,0 +1,15 @@
+#!/bin/sh
+
+echo % test --time
+hg --time help -q help 2>&1 | grep Time > /dev/null || echo --time failed
+
+echo % test --profile
+if "$TESTDIR/hghave" -q hotshot; then
+    # hotshot might be missing for licensing issues
+    hg --profile help -q help 2>&1 | grep ncalls > /dev/null || echo --profile failed
+fi
+
+echo % test --lsprof
+if "$TESTDIR/hghave" -q lsprof; then
+    hg --lsprof help -q help 2>&1 | grep CallCount > /dev/null || echo --lsprof failed
+fi

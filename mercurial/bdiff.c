@@ -12,6 +12,7 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #if defined __hpux || defined __SUNPRO_C || defined _AIX
 # define inline
@@ -58,21 +59,17 @@ struct hunklist {
 	struct hunk *base, *head;
 };
 
-static inline uint32_t rol32(uint32_t word, unsigned int shift)
-{
-        return (word << shift) | (word >> (32 - shift));
-}
-
 int splitlines(const char *a, int len, struct line **lr)
 {
-	int g, h, i;
+	int h, i;
 	const char *p, *b = a;
+	const char * const plast = a + len - 1;
 	struct line *l;
 
 	/* count the lines */
 	i = 1; /* extra line for sentinel */
 	for (p = a; p < a + len; p++)
-		if (*p == '\n' || p == a + len - 1)
+		if (*p == '\n' || p == plast)
 			i++;
 
 	*lr = l = (struct line *)malloc(sizeof(struct line) * i);
@@ -82,24 +79,17 @@ int splitlines(const char *a, int len, struct line **lr)
 	/* build the line array and calculate hashes */
 	h = 0;
 	for (p = a; p < a + len; p++) {
-		/*
-		 * a simple hash from GNU diff, with better collision
-		 * resistance from hashpjw. this slows down common
-		 * case by 10%, but speeds up worst case by 100x.
-		 */
-		h = *p + rol32(h, 7);
-		if ((g = h & 0xf0000000)) {
-			h ^= g >> 24;
-			h ^= g;
-		}
-		if (*p == '\n' || p == a + len - 1) {
+		/* Leonid Yuriev's hash */
+                h = (h * 1664525) + *p + 1013904223;
+
+		if (*p == '\n' || p == plast) {
+			l->h = h;
+			h = 0;
 			l->len = p - b + 1;
-			l->h = h * l->len;
 			l->l = b;
-			l->n = -1;
+			l->n = INT_MAX;
 			l++;
 			b = p + 1;
-			h = 0;
 		}
 	}
 
@@ -116,28 +106,35 @@ int inline cmp(struct line *a, struct line *b)
 
 static int equatelines(struct line *a, int an, struct line *b, int bn)
 {
-	int i, j, buckets = 1, t;
-	struct pos *h;
+	int i, j, buckets = 1, t, scale;
+	struct pos *h = NULL;
 
 	/* build a hash table of the next highest power of 2 */
 	while (buckets < bn + 1)
 		buckets *= 2;
 
-	h = (struct pos *)malloc(buckets * sizeof(struct pos));
-	buckets = buckets - 1;
+	/* try to allocate a large hash table to avoid collisions */
+	for (scale = 4; scale; scale /= 2) {
+		h = (struct pos *)malloc(scale * buckets * sizeof(struct pos));
+		if (h)
+			break;
+	}
+
 	if (!h)
 		return 0;
 
+	buckets = buckets * scale - 1;
+
 	/* clear the hash table */
 	for (i = 0; i <= buckets; i++) {
-		h[i].pos = -1;
+		h[i].pos = INT_MAX;
 		h[i].len = 0;
 	}
 
 	/* add lines to the hash table chains */
 	for (i = bn - 1; i >= 0; i--) {
 		/* find the equivalence class */
-		for (j = b[i].h & buckets; h[j].pos != -1;
+		for (j = b[i].h & buckets; h[j].pos != INT_MAX;
 		     j = (j + 1) & buckets)
 			if (!cmp(b + i, b + h[j].pos))
 				break;
@@ -150,12 +147,12 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	}
 
 	/* compute popularity threshold */
-	t = (bn >= 200) ? bn / 100 : bn + 1;
+	t = (bn >= 4000) ? bn / 1000 : bn + 1;
 
 	/* match items in a to their equivalence class in b */
 	for (i = 0; i < an; i++) {
 		/* find the equivalence class */
-		for (j = a[i].h & buckets; h[j].pos != -1;
+		for (j = a[i].h & buckets; h[j].pos != INT_MAX;
 		     j = (j + 1) & buckets)
 			if (!cmp(a + i, b + h[j].pos))
 				break;
@@ -164,7 +161,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 		if (h[j].len <= t)
 			a[i].n = h[j].pos; /* point to head of match list */
 		else
-			a[i].n = -1; /* too popular */
+			a[i].n = INT_MAX; /* too popular */
 	}
 
 	/* discard hash tables */
@@ -179,11 +176,11 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 
 	for (i = a1; i < a2; i++) {
 		/* skip things before the current block */
-		for (j = a[i].n; j != -1 && j < b1; j = b[j].n)
+		for (j = a[i].n; j < b1; j = b[j].n)
 			;
 
 		/* loop through all lines match a[i] in b */
-		for (; j != -1 && j < b2; j = b[j].n) {
+		for (; j < b2; j = b[j].n) {
 			/* does this extend an earlier match? */
 			if (i > a1 && j > b1 && pos[j - 1].pos == i - 1)
 				k = pos[j - 1].len + 1;
@@ -216,6 +213,7 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 
 	*omi = mi - mb;
 	*omj = mj - mb;
+
 	return mk + mb;
 }
 
@@ -247,7 +245,7 @@ static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 
 	/* allocate and fill arrays */
 	t = equatelines(a, an, b, bn);
-	pos = (struct pos *)calloc(bn, sizeof(struct pos));
+	pos = (struct pos *)calloc(bn ? bn : 1, sizeof(struct pos));
 	/* we can't have more matches than lines in the shorter file */
 	l.head = l.base = (struct hunk *)malloc(sizeof(struct hunk) *
 	                                        ((an<bn ? an:bn) + 1));

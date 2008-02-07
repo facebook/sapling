@@ -59,6 +59,11 @@ adding b/z
 % qinit -c
 A .hgignore
 A series
+% qnew should refuse bad patch names
+abort: "series" cannot be used as the name of a patch
+abort: "status" cannot be used as the name of a patch
+abort: "guards" cannot be used as the name of a patch
+abort: ".hgignore" cannot be used as the name of a patch
 % qnew implies add
 A .hgignore
 A series
@@ -83,6 +88,14 @@ bleh
   series:
 A
 B
+% qnew with uncommitted changes
+abort: local changes found, refresh first
+A somefile
+% qnew with uncommitted changes and missing file (issue 803)
+someotherfile: No such file or directory
+A somefile
+issue803.patch
+Patch queue now empty
 % qnew -m
 foo bar
 % qrefresh
@@ -91,7 +104,7 @@ foo bar
 diff -r  xa
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 % empty qrefresh
@@ -102,7 +115,7 @@ foo bar
 working dir diff:
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 % qpop
@@ -241,7 +254,7 @@ foo
 diff -r cb9a9f314b8b a
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 diff -r cb9a9f314b8b b/f
@@ -273,6 +286,18 @@ Errors during apply, please fix and refresh bar
 0 qparent
 1 qbase foo
 2 qtip bar tip
+% bad node in status
+Now at: foo
+changeset:   0:cb9a9f314b8b
+mq status file refers to unknown node
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     a
+
+mq status file refers to unknown node
+default                        0:cb9a9f314b8b
+abort: working directory revision is not qtip
 new file
 
 diff --git a/new b/new
@@ -302,7 +327,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-(run 'hg update' to get a working copy)
 Patch queue now empty
 applying bar
 Now at: bar
@@ -336,7 +360,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-(run 'hg update' to get a working copy)
 Patch queue now empty
 applying bar
 Now at: bar
@@ -360,6 +383,20 @@ new file mode 100644
 @@ -0,0 +1,1 @@
 +bar
 3 barney (foo)
+% refresh omitting an added file
+C newfile
+A newfile
+Now at: bar
+% create a git patch
+diff --git a/alexander b/alexander
+% create a git binary patch
+8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
+diff --git a/bucephalus b/bucephalus
+% check binary patches can be popped and pushed
+Now at: addalexander
+applying addbucephalus
+Now at: addbucephalus
+8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 % strip again
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merging foo
@@ -397,7 +434,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-(run 'hg update' to get a working copy)
 changeset:   1:20cbbe65cff7
 tag:         tip
 user:        test

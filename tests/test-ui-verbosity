@@ -4,6 +4,9 @@ import os
 from mercurial import ui
 
 hgrc = os.environ['HGRCPATH']
+f = open(hgrc)
+basehgrc = f.read()
+f.close()
 
 print '      hgrc settings    command line options      final result   '
 print '    quiet verbo debug   quiet verbo debug      quiet verbo debug'
@@ -17,7 +20,8 @@ for i in xrange(64):
     cmd_debug    = bool(i & 1<<5)
 
     f = open(hgrc, 'w')
-    f.write('[ui]\n')
+    f.write(basehgrc)
+    f.write('\n[ui]\n')
     if hgrc_quiet:
         f.write('quiet = True\n')
     if hgrc_verbose:

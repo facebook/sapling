@@ -5,8 +5,7 @@ adding quux2
 merging bar
 merging bar failed!
 merging foo and baz
-merging foo failed!
-1 files updated, 0 files merged, 0 files removed, 2 files unresolved
+1 files updated, 1 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:
   hg update -C 2
   hg merge 1
@@ -14,8 +13,7 @@ There are unresolved merges, you can redo the full merge using:
 merging bar
 merging bar failed!
 merging baz and foo
-merging baz failed!
-1 files updated, 0 files merged, 0 files removed, 2 files unresolved
+1 files updated, 1 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:
   hg update -C 1
   hg merge 2

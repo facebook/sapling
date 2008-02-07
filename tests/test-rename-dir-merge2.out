@@ -1,7 +1,6 @@
 adding a/f
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-copying a/f to b/f
-removing a/f
+moving a/f to b/f
 adding a/aa/g
 pulling from ../r2
 searching for changes

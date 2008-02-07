@@ -1,0 +1,61 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" darcs || exit 80
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert=" >> $HGRCPATH
+echo 'hgext.graphlog =' >> $HGRCPATH
+
+DARCS_EMAIL='test@example.org'; export DARCS_EMAIL
+HOME=do_not_use_HOME_darcs; export HOME
+
+# skip if we can't import elementtree
+mkdir dummy
+mkdir dummy/_darcs
+if hg convert dummy 2>&1 | grep ElementTree > /dev/null; then
+    echo 'skipped: missing feature: elementtree module'
+    exit 80
+fi
+
+echo % initialize darcs repo
+mkdir darcs-repo
+cd darcs-repo
+darcs init
+echo a > a
+darcs record -a -l -m p0
+cd ..
+
+echo % branch and update
+darcs get darcs-repo darcs-clone >/dev/null
+cd darcs-clone
+echo c >> a
+echo c > c
+darcs record -a -l -m p1.1
+cd ..
+
+echo % update source
+cd darcs-repo
+echo b >> a
+echo b > b
+darcs record -a -l -m p1.2
+
+echo % merge branch
+darcs pull -a ../darcs-clone
+echo e > a
+darcs record -a -l -m p2
+cd ..
+
+glog()
+{
+    hg glog --template '#rev# "#desc|firstline#" files: #files#\n' "$@"
+}
+
+hg convert darcs-repo darcs-repo-hg 2>&1 | grep -v hGetLine | grep -v '^$'
+# The converter does not currently handle patch conflicts very well.
+# When they occur, it reverts *all* changes and moves forward,
+# letting the conflict resolving patch fix collisions.
+# Unfortunately, non-conflicting changes, like the addition of the
+# "c" file in p1.1 patch are reverted too.
+# Just to say that manifest not listing "c" here is a bug.
+glog -R darcs-repo-hg
+hg -R darcs-repo-hg manifest --debug

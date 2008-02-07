@@ -17,7 +17,9 @@ FILES
 
 Mercurial reads configuration data from several files, if they exist.
 The names of these files depend on the system on which Mercurial is
-installed.
+installed. Windows registry keys contain PATH-like strings, every
+part must reference a Mercurial.ini file or be a directory where *.rc
+files will be read.
 
 (Unix)    <install-root>/etc/mercurial/hgrc.d/*.rc::
 (Unix)    <install-root>/etc/mercurial/hgrc::
@@ -29,6 +31,8 @@ installed.
 
 (Unix)    /etc/mercurial/hgrc.d/*.rc::
 (Unix)    /etc/mercurial/hgrc::
+(Windows) HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial::
+  or::
 (Windows) C:\Mercurial\Mercurial.ini::
     Per-system configuration files, for the system on which Mercurial
     is running.  Options in these files apply to all Mercurial
@@ -120,34 +124,39 @@ decode/encode::
 
   NOTE: the tempfile mechanism is recommended for Windows systems,
   where the standard shell I/O redirection operators often have
-  strange effects.  In particular, if you are doing line ending
-  conversion on Windows using the popular dos2unix and unix2dos
-  programs, you *must* use the tempfile mechanism, as using pipes will
-  corrupt the contents of your files.
+  strange effects and may corrupt the contents of your files.
 
-  Tempfile example:
+  The most common usage is for LF <-> CRLF translation on Windows.
+  For this, use the "smart" convertors which check for binary files:
 
+    [extensions]
+    hgext.win32text =
     [encode]
-    # convert files to unix line ending conventions on checkin
-    **.txt = tempfile: dos2unix -n INFILE OUTFILE
-
+    ** = cleverencode:
     [decode]
-    # convert files to windows line ending conventions when writing
-    # them to the working dir
-    **.txt = tempfile: unix2dos -n INFILE OUTFILE
+    ** = cleverdecode:
+
+  or if you only want to translate certain files:
+
+    [extensions]
+    hgext.win32text =
+    [encode]
+    **.txt = dumbencode:
+    [decode]
+    **.txt = dumbdecode:
 
 defaults::
-  Use the [defaults] section to define command defaults, i.e. the 
+  Use the [defaults] section to define command defaults, i.e. the
   default options/arguments to pass to the specified commands.
-  
+
   The following example makes 'hg log' run in verbose mode, and
   'hg status' show only the modified files, by default.
-  
+
     [defaults]
     log = -v
     status = -m
-  
-  The actual commands, instead of their aliases, must be used when 
+
+  The actual commands, instead of their aliases, must be used when
   defining command defaults. The command defaults will also be
   applied to the aliases of the commands defined.
 
@@ -224,6 +233,78 @@ format::
     you to store longer filenames in some situations at the expense of
     compatibility.
 
+merge-patterns::
+  This section specifies merge tools to associate with particular file
+  patterns. Tools matched here will take precedence over the default
+  merge tool. Patterns are globs by default, rooted at the repository root.
+
+  Example:
+
+    [merge-patterns]
+    **.c = kdiff3
+    **.jpg = myimgmerge
+
+merge-tools::
+  This section configures external merge tools to use for file-level
+  merges.
+
+  Example ~/.hgrc:
+
+    [merge-tools]
+    # Override stock tool location
+    kdiff3.executable = ~/bin/kdiff3
+    # Specify command line
+    kdiff3.args = $base $local $other -o $output
+    # Give higher priority
+    kdiff3.priority = 1
+
+    # Define new tool
+    myHtmlTool.args = -m $local $other $base $output
+    myHtmlTool.regkey = Software\FooSoftware\HtmlMerge
+    myHtmlTool.priority = 1
+
+  Supported arguments:
+  priority;;
+    The priority in which to evaluate this tool.
+    Default: 0.
+  executable;;
+    Either just the name of the executable or its pathname.
+    Default: the tool name.
+  args;;
+    The arguments to pass to the tool executable. You can refer to the files
+    being merged as well as the output file through these variables: $base,
+    $local, $other, $output.
+    Default: $local $base $other
+  premerge;;
+    Attempt to run internal non-interactive 3-way merge tool before
+    launching external tool.
+    Default: True
+  binary;;
+    This tool can merge binary files.  Defaults to False, unless tool
+    was selected by file pattern match.
+  symlink;;
+    This tool can merge symlinks.  Defaults to False, even if tool was
+    selected by file pattern match.
+  checkconflicts;;
+    Check whether there are conflicts even though the tool reported
+    success.
+    Default: False
+  fixeol;;
+    Attempt to fix up EOL changes caused by the merge tool.
+    Default: False
+  gui:;
+    This tool requires a graphical interface to run. Default: False
+  regkey;;
+    Windows registry key which describes install location of this tool.
+    Mercurial will search for this key first under HKEY_CURRENT_USER and
+    then under HKEY_LOCAL_MACHINE.  Default: None
+  regname;;
+    Name of value to read from specified registry key.  Defaults to the
+    unnamed (default) value.
+  regappend;;
+    String to append to the value read from the registry, typically the
+    executable name of the tool.  Default: None
+
 hooks::
   Commands or Python functions that get automatically executed by
   various actions such as starting or finishing a commit. Multiple
@@ -277,7 +358,7 @@ hooks::
     commit to proceed.  Non-zero status will cause the commit to fail.
     Parent changeset IDs are in $HG_PARENT1 and $HG_PARENT2.
   preoutgoing;;
-    Run before computing changes to send from the local repository to
+    Run before collecting changes to send from the local repository to
     another.  Non-zero status will cause failure.  This lets you
     prevent pull over http or ssh.  Also prevents against local pull,
     push (outbound) or bundle commands, but not effective, since you
@@ -394,6 +475,20 @@ paths::
     Optional.  Directory or URL to use when pushing if no destination
     is specified.
 
+profile::
+  Configuration of profiling options, for in-depth performance
+  analysis.  Mostly useful to developers.
+  enable;;
+    Enable a particular profiling mode.  Useful for profiling
+    server-side processes.  "lsprof" enables modern profiling.
+    "hotshot" is deprecated, and produces less reliable results.
+    Default is no profiling.
+  output;;
+    The name of a file to write profiling data to.  Each occurrence of
+    "%%p" will be replaced with the current process ID (the repeated
+    "%" protects against the config parser's string interpolator).
+    Default output is to stderr.
+  
 server::
   Controls generic server settings.
   uncompressed;;
@@ -444,7 +539,18 @@ ui::
     Template string for commands that print changesets.
   merge;;
     The conflict resolution program to use during a manual merge.
-    Default is "hgmerge".
+    There are some internal tools available:
+
+      internal:local;;
+        keep the local version
+      internal:other;;
+        use the other version
+      internal:merge;;
+        use the internal non-interactive merge tool
+      internal:fail;;
+        fail to merge
+
+    See the merge-tools section for more information on configuring tools.
   patch;;
     command to use to apply patches. Look for 'gpatch' or 'patch' in PATH if
     unset.
@@ -515,7 +621,7 @@ web::
     Example: "http://hgserver/repos/"
   contact;;
     Name or email address of the person in charge of the repository.
-    Default is "unknown".
+    Defaults to ui.username or $EMAIL or "unknown" if unset or empty.
   deny_push;;
     Whether to deny pushing to the repository.  If empty or not set,
     push is not denied.  If the special value "*", all remote users
@@ -544,6 +650,8 @@ web::
     Maximum number of files to list per changeset. Default is 10.
   port;;
     Port to listen on. Default is 8000.
+  prefix;;
+    Prefix path to serve from. Default is '' (server root).
   push_ssl;;
     Whether to require that inbound pushes be transported over SSL to
     prevent password sniffing.  Default is true.

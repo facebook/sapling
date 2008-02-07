@@ -67,7 +67,7 @@ class _demandmod(object):
             return "<proxied module '%s'>" % self._data[0]
         return "<unloaded module '%s'>" % self._data[0]
     def __call__(self, *args, **kwargs):
-        raise TypeError("'unloaded module' object is not callable")
+        raise TypeError("%s object is not callable" % repr(self))
     def __getattribute__(self, attr):
         if attr in ('_data', '_extend', '_load', '_module'):
             return object.__getattribute__(self, attr)
@@ -77,7 +77,7 @@ class _demandmod(object):
         self._load()
         setattr(self._module, attr, val)
 
-def _demandimport(name, globals=None, locals=None, fromlist=None):
+def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
     if not locals or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
         return _origimport(name, globals, locals, fromlist)
@@ -95,6 +95,9 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
                 return locals[base]
         return _demandmod(name, globals, locals)
     else:
+        if level is not None:
+            # from . import b,c,d or from .a import b,c,d
+            return _origimport(name, globals, locals, fromlist, level)
         # from a import b,c,d
         mod = _origimport(name, globals, locals)
         # recurse down the module chain
@@ -108,7 +111,18 @@ def _demandimport(name, globals=None, locals=None, fromlist=None):
                 setattr(mod, x, _demandmod(x, mod.__dict__, locals))
         return mod
 
-ignore = ['_hashlib', '_xmlplus', 'fcntl', 'win32com.gen_py']
+ignore = [
+    '_hashlib',
+    '_xmlplus',
+    'fcntl',
+    'win32com.gen_py',
+    # imported by tarfile, not available under Windows
+    'pwd',
+    'grp',
+    # imported by profile, itself imported by hotshot.stats,
+    # not available under Windows
+    'resource',
+    ]
 
 def enable():
     "enable global demand-loading of modules"

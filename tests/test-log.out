@@ -86,6 +86,8 @@ a
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding foo
 5 e (dir/b)
+% log copies, execute bit set
+6 
 % log -p d
 changeset:   3:16b60bf3f99a
 user:        test

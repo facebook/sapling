@@ -6,7 +6,9 @@ echo "extdiff=" >> $HGRCPATH
 hg init a
 cd a
 echo a > a
+echo b > b
 hg add
+# should diff cloned directories
 hg extdiff -o -r $opt
 
 echo "[extdiff]" >> $HGRCPATH
@@ -22,13 +24,17 @@ hg ci -d '0 0' -mtest1
 echo b >> a
 hg ci -d '1 0' -mtest2
 
+# should diff cloned files directly
 hg falabala -r 0:1
 
 # test diff during merge
 hg update 0
-echo b >> b
-hg add b
+echo c >> c
+hg add c
 hg ci -m "new branch" -d '1 0'
 hg update -C 1
 hg merge tip
-hg falabala || echo "diff-like tools yield a non-zero exit code"
+# should diff cloned file against wc file
+hg falabala > out || echo "diff-like tools yield a non-zero exit code"
+# cleanup the output since the wc is a tmp directory
+sed  's:\(.* \).*\(\/test-extdiff\):\1[tmp]\2:' out

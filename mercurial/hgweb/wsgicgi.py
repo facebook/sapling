@@ -16,6 +16,7 @@ def launch(application):
     util.set_binary(sys.stdout)
 
     environ = dict(os.environ.items())
+    environ.setdefault('PATH_INFO', '')
     environ['wsgi.input'] = sys.stdin
     environ['wsgi.errors'] = sys.stderr
     environ['wsgi.version'] = (1, 0)
@@ -61,13 +62,4 @@ def launch(application):
         headers_set[:] = [status, response_headers]
         return write
 
-    result = application(environ, start_response)
-    try:
-        for data in result:
-            if data:    # don't send headers until body appears
-                write(data)
-        if not headers_sent:
-            write('')   # send headers now if body was empty
-    finally:
-        if hasattr(result,'close'):
-            result.close()
+    application(environ, start_response)

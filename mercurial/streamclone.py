@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import os, stat, util, lock
+import os, osutil, stat, util, lock
 
 # if server supports streaming clone, it advertises "stream"
 # capability with value that is version+flags of repo it is serving.
@@ -19,17 +19,14 @@ def walkrepo(root):
 
     strip_count = len(root) + len(os.sep)
     def walk(path, recurse):
-        ents = os.listdir(path)
-        ents.sort()
-        for e in ents:
+        for e, kind, st in osutil.listdir(path, stat=True):
             pe = os.path.join(path, e)
-            st = os.lstat(pe)
-            if stat.S_ISDIR(st.st_mode):
+            if kind == stat.S_IFDIR:
                 if recurse:
                     for x in walk(pe, True):
                         yield x
             else:
-                if not stat.S_ISREG(st.st_mode) or len(e) < 2:
+                if kind != stat.S_IFREG or len(e) < 2:
                     continue
                 sfx = e[-2:]
                 if sfx in ('.d', '.i'):
@@ -66,7 +63,7 @@ def stream_out(repo, fileobj, untrusted=False):
 
     # get consistent snapshot of repo. lock during scan so lock not
     # needed while we stream, and commits can happen.
-    lock = None
+    repolock = None
     try:
         try:
             repolock = repo.lock()

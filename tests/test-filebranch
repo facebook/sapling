@@ -37,7 +37,7 @@ echo 2b > baz
 hg commit -m "branch b" -d "1000000 0"
 
 echo "we shouldn't have anything but n state here"
-hg debugstate | cut -b 1-16,35-
+hg debugstate | cut -b 1-16,37-
 
 echo merging
 hg pull ../a
@@ -48,7 +48,7 @@ echo 2b > baz
 echo new > quux
 
 echo "we shouldn't have anything but foo in merge state here"
-hg debugstate | cut -b 1-16,35- | grep "^m"
+hg debugstate | cut -b 1-16,37- | grep "^m"
 
 hg ci -m "merge" -d "1000000 0"
 

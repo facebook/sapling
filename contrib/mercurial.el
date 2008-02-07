@@ -426,7 +426,7 @@ Handle frickin' frackin' gratuitous event-related incompatibilities."
     (if (or (not default) current-prefix-arg)
         (string-to-number
          (eval (list* 'read-string
-                      (or prompt "") 
+                      (or prompt "")
                       (if default (cons (format "%d" default) nil) nil))))
       default)))
 
@@ -521,7 +521,7 @@ directory names from the file system.  We do not penalise URLs."
 	    (completing-read (format "Revision%s (%s): "
 				     (or prompt "")
 				     (or default "tip"))
-			     (map 'list 'cons revs revs)
+			     (mapcar (lambda (x) (cons x x)) revs)
 			     nil
 			     nil
 			     nil
@@ -565,7 +565,7 @@ directory names from the file system.  We do not penalise URLs."
 	  (when buf
 	    (set-buffer buf)
 	    (hg-mode-line-internal status parents)))))))
-  
+
 
 ;;; View mode bits.
 
@@ -588,7 +588,7 @@ current frame."
   (setq hg-view-mode t)
   (setq truncate-lines t)
   (when file-name
-    (setq hg-view-file-name 
+    (setq hg-view-file-name
 	  (hg-abbrev-file-name file-name))))
 
 (defun hg-file-status (file)
@@ -666,7 +666,11 @@ This is useful across reverts and merges, where a context is likely
 to have moved a little, but not really changed."
   (let ((point-context (hg-position-context (point)))
 	(mark-context (let ((mark (mark-marker)))
-			(and mark (hg-position-context mark)))))
+			(and mark
+			     ;; make sure active mark
+			     (marker-buffer mark)
+			     (marker-position mark)
+			     (hg-position-context mark)))))
     (list point-context mark-context)))
 
 (defun hg-find-context (ctx)
@@ -703,7 +707,7 @@ Always returns a valid, hopefully sane, position."
 						 (added . "a")
 						 (deleted . "!")
 						 (modified . "m"))))))))
-  
+
 (defun hg-mode-line (&optional force)
   "Update the modeline with the current status of a file.
 An update occurs if optional argument FORCE is non-nil,
@@ -1000,7 +1004,7 @@ With a prefix argument, prompt for all of these."
         ;; none revision is specified explicitly
         (none (and (not rev1) (not rev2)))
         ;; only one revision is specified explicitly
-        (one (or (and (or (equal rev1 rev2) (not rev2)) rev1) 
+        (one (or (and (or (equal rev1 rev2) (not rev2)) rev1)
                  (and (not rev1) rev2)))
 	diff)
     (hg-view-output ((cond
@@ -1012,7 +1016,7 @@ With a prefix argument, prompt for all of these."
 		       (format "Mercurial: Diff from rev %s to %s of %s"
 			       rev1 rev2 a-path))))
       (cond
-       (none 
+       (none
         (call-process (hg-binary) nil t nil "diff" path))
        (one
         (call-process (hg-binary) nil t nil "diff" "-r" one path))
@@ -1100,7 +1104,7 @@ With a prefix argument, prompt for each parameter."
         (limit (format "%d" (or log-limit hg-log-limit))))
     (hg-view-output ((if (equal r1 r2)
                          (format "Mercurial: Log of rev %s of %s" rev1 a-path)
-                       (format 
+                       (format
                         "Mercurial: at most %s log(s) from rev %s to %s of %s"
                         limit r1 r2 a-path)))
       (eval (list* 'call-process (hg-binary) nil t nil
@@ -1123,7 +1127,7 @@ With a prefix argument, prompt for each parameter."
   (interactive (list (hg-read-file-name " to log")
                      (hg-read-rev " to start with"
                                   "tip")
-                     (hg-read-rev " to end with" 
+                     (hg-read-rev " to end with"
 				  "0")
                      (hg-read-number "Output limited to: "
                                      hg-log-limit)))

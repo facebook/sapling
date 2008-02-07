@@ -1,0 +1,502 @@
+% Set up the repo
+adding da/foo
+adding foo
+% Logs and changes
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<feed xmlns="http://127.0.0.1/2005/Atom">
+ <!-- Changelog -->
+ <id>http://127.0.0.1/</id>
+ <link rel="self" href="http://127.0.0.1/atom-log"/>
+ <link rel="alternate" href="http://127.0.0.1/"/>
+ <title>test Changelog</title>
+ <updated>1970-01-01T00:00:00+00:00</updated>
+
+ <entry>
+  <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
+  <id>http://127.0.0.1/mercurial/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
+  <link href="http://127.0.0.1/rev/a4f92ed23982be056b9852de5dfe873eaac7f0de"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">Added tag 1.0 for changeset 2ef0ac749a14</pre>
+   </div>
+  </content>
+ </entry>
+ <entry>
+  <title>base</title>
+  <id>http://127.0.0.1/mercurial/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">base</pre>
+   </div>
+  </content>
+ </entry>
+
+</feed>
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<feed xmlns="http://127.0.0.1/2005/Atom">
+ <!-- Changelog -->
+ <id>http://127.0.0.1/</id>
+ <link rel="self" href="http://127.0.0.1/atom-log"/>
+ <link rel="alternate" href="http://127.0.0.1/"/>
+ <title>test Changelog</title>
+ <updated>1970-01-01T00:00:00+00:00</updated>
+
+ <entry>
+  <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
+  <id>http://127.0.0.1/mercurial/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
+  <link href="http://127.0.0.1/rev/a4f92ed23982be056b9852de5dfe873eaac7f0de"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">Added tag 1.0 for changeset 2ef0ac749a14</pre>
+   </div>
+  </content>
+ </entry>
+ <entry>
+  <title>base</title>
+  <id>http://127.0.0.1/mercurial/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">base</pre>
+   </div>
+  </content>
+ </entry>
+
+</feed>
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<feed xmlns="http://127.0.0.1/2005/Atom">
+ <id>http://127.0.0.1/atom-log/tip/foo</id>
+ <link rel="self" href="http://127.0.0.1/atom-log/tip/foo"/>
+ <title>test: foo history</title>
+ <updated>1970-01-01T00:00:00+00:00</updated>
+
+ <entry>
+  <title>base</title>
+  <id>http://127.0.0.1/mercurial/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">base</pre>
+   </div>
+  </content>
+ </entry>
+
+</feed>
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: shortlog</title>
+<link rel="alternate" type="application/atom+xml"
+   href="/atom-log" title="Atom feed for test">
+<link rel="alternate" type="application/rss+xml"
+   href="/rss-log" title="RSS feed for test">
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/1">changelog</a>
+<a href="/tags">tags</a>
+<a href="/file/a4f92ed23982/">manifest</a>
+
+<a type="application/rss+xml" href="/rss-log">rss</a>
+<a type="application/rss+xml" href="/atom-log" title="Atom feed for test">atom</a>
+</div>
+
+<h2>shortlog for test</h2>
+
+<form action="/log">
+
+<p>
+<label for="search1">search:</label>
+<input name="rev" id="search1" type="text" size="30">
+navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </small>
+</p>
+</form>
+
+<table class="slogEntry parity0">
+ <tr>
+  <td class="age">many years</td>
+  <td class="author">test</td>
+  <td class="node"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a></td>
+ </tr>
+</table>
+<table class="slogEntry parity1">
+ <tr>
+  <td class="age">many years</td>
+  <td class="author">test</td>
+  <td class="node"><a href="/rev/2ef0ac749a14">base</a></td>
+ </tr>
+</table>
+
+
+<form action="/log">
+
+<p>
+<label for="search2">search:</label>
+<input name="rev" id="search2" type="text" size="30">
+navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </small>
+</p>
+</form>
+
+
+<div class="logo">
+powered by<br/>
+<a href="http://www.selenic.com/mercurial/">mercurial</a>
+</div>
+
+</body>
+</html>
+
+200 Script output follows
+
+
+# HG changeset patch
+# User test
+# Date 0 0
+# Node ID a4f92ed23982be056b9852de5dfe873eaac7f0de
+# Parent 2ef0ac749a14e4f57a5a822464a0902c6f7f448f
+Added tag 1.0 for changeset 2ef0ac749a14
+
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++2ef0ac749a14e4f57a5a822464a0902c6f7f448f 1.0
+
+% File-related
+200 Script output follows
+
+foo
+200 Script output follows
+
+
+test@0: foo
+
+
+
+
+200 Script output follows
+
+
+drwxr-xr-x da
+-rw-r--r-- 45 .hgtags
+-rw-r--r-- 4 foo
+
+
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test:foo</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/1">changelog</a>
+<a href="/shortlog/1">shortlog</a>
+<a href="/tags">tags</a>
+<a href="/rev/a4f92ed23982">changeset</a>
+<a href="/file/a4f92ed23982/">manifest</a>
+<a href="/log/a4f92ed23982/foo">revisions</a>
+<a href="/annotate/a4f92ed23982/foo">annotate</a>
+<a href="/raw-file/a4f92ed23982/foo">raw</a>
+</div>
+
+<h2>foo</h2>
+
+<table>
+<tr>
+ <td class="metatag">changeset 1:</td>
+ <td><a href="/rev/a4f92ed23982">a4f92ed23982</a></td></tr>
+
+
+<tr>
+ <td class="metatag">author:</td>
+ <td>&#116;&#101;&#115;&#116;</td></tr>
+<tr>
+ <td class="metatag">date:</td>
+ <td>Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td></tr>
+<tr>
+ <td class="metatag">permissions:</td>
+ <td>-rw-r--r--</td></tr>
+<tr>
+  <td class="metatag">description:</td>
+  <td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+</tr>
+</table>
+
+<pre>
+<div class="parity0"><span class="lineno">     1</span>foo
+</div>
+</pre>
+
+
+<div class="logo">
+powered by<br/>
+<a href="http://www.selenic.com/mercurial/">mercurial</a>
+</div>
+
+</body>
+</html>
+
+200 Script output follows
+
+
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++foo
+
+
+
+
+% Overviews
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<feed xmlns="http://127.0.0.1/2005/Atom">
+ <id>http://127.0.0.1/</id>
+ <link rel="self" href="http://127.0.0.1/atom-tags"/>
+ <link rel="alternate" href="http://127.0.0.1/tags"/>
+ <title>test: tags</title>
+ <summary>test tag history</summary>
+ <author><name>Mercurial SCM</name></author>
+ <updated>1970-01-01T00:00:00+00:00</updated>
+
+ <entry>
+  <title>1.0</title>
+  <link rel="alternate" href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <id>http://127.0.0.1/mercurial/#tag-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="text">1.0</content>
+ </entry>
+
+</feed>
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow"/>
+<link rel="stylesheet" href="/static/style-gitweb.css" type="text/css" />
+
+
+<title>test: Summary</title>
+<link rel="alternate" type="application/atom+xml"
+   href="/atom-log" title="Atom feed for test"/>
+<link rel="alternate" type="application/rss+xml"
+   href="/rss-log" title="RSS feed for test"/>
+</head>
+<body>
+
+<div class="page_header">
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / summary
+
+<form action="/log">
+<input type="hidden" name="style" value="gitweb" />
+<div class="search">
+<input type="text" name="rev"  />
+</div>
+</form>
+</div>
+
+<div class="page_nav">
+summary |
+<a href="/shortlog?style=gitweb">shortlog</a> |
+<a href="/log?style=gitweb">changelog</a> |
+<a href="/tags?style=gitweb">tags</a> |
+<a href="/file/a4f92ed23982?style=gitweb">manifest</a>
+<br/>
+</div>
+
+<div class="title">&nbsp;</div>
+<table cellspacing="0">
+<tr><td>description</td><td>unknown</td></tr>
+<tr><td>owner</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td></tr>
+<tr><td>last change</td><td>Thu, 01 Jan 1970 00:00:00 +0000</td></tr>
+</table>
+
+<div><a  class="title" href="/shortlog?style=gitweb">changes</a></div>
+<table cellspacing="0">
+<tr class="parity0"><td class="age"><i>long ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b> <span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a></td><td class="link" nowrap><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/file/a4f92ed23982?style=gitweb">manifest</a></td></tr><tr class="parity1"><td class="age"><i>long ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>base</b> <span class="logtags"><span class="tagtag" title="1.0">1.0</span> </span></a></td><td class="link" nowrap><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/file/2ef0ac749a14?style=gitweb">manifest</a></td></tr>
+<tr class="light"><td colspan="4"><a class="list" href="/shortlog?style=gitweb">...</a></td></tr>
+</table>
+
+<div><a class="title" href="/tags?style=gitweb">tags</a></div>
+<table cellspacing="0">
+<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td><td class="link"><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/log/2ef0ac749a14?style=gitweb">changelog</a> | <a href="/file/2ef0ac749a14?style=gitweb">manifest</a></td></tr>
+<tr class="light"><td colspan="3"><a class="list" href="/tags?style=gitweb">...</a></td></tr>
+</table>
+
+<div><a class="title" href="#">branches</a></div>
+<table cellspacing="0">
+<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">manifest</a></td></tr>
+<tr class="light">
+  <td colspan="4"><a class="list"  href="#">...</a></td>
+</tr>
+</table>
+<div class="page_footer">
+<div class="page_footer_text">test</div>
+<a class="rss_logo" href="/rss-log">RSS</a> 
+<a class="rss_logo" href="/atom-log">Atom</a>
+<br />
+
+</div>
+</body>
+</html>
+
+% capabilities
+200 Script output follows
+
+lookup changegroupsubset unbundle=HG10GZ,HG10BZ,HG10UN% heads
+200 Script output follows
+
+a4f92ed23982be056b9852de5dfe873eaac7f0de
+% lookup
+200 Script output follows
+
+0 'key'
+% branches
+200 Script output follows
+
+a4f92ed23982be056b9852de5dfe873eaac7f0de 2ef0ac749a14e4f57a5a822464a0902c6f7f448f 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000
+% changegroup
+200 Script output follows
+
+xœc`@    % stream_out
+200 Script output follows
+
+1
+% Static files
+200 Script output follows
+
+a { text-decoration:none; }
+.age { white-space:nowrap; }
+.date { white-space:nowrap; }
+.indexlinks { white-space:nowrap; }
+.parity0 { background-color: #dddddd; }
+.parity1 { background-color: #eeeeee; }
+.lineno { width: 60px; color: #aaaaaa; font-size: smaller;
+          text-align: right; padding-right:1em; }
+.plusline { color: green; }
+.minusline { color: red; }
+.atline { color: purple; }
+.annotate { font-size: smaller; text-align: right; padding-right: 1em; }
+.buttons a {
+  background-color: #666666;
+  padding: 2pt;
+  color: white;
+  font-family: sans;
+  font-weight: bold;
+}
+.navigate a {
+  background-color: #ccc;
+  padding: 2pt;
+  font-family: sans;
+  color: black;
+}
+
+.metatag {
+  background-color: #888888;
+  color: white;
+  text-align: right;
+}
+
+/* Common */
+pre { margin: 0; }
+
+.logo {
+  background-color: #333;
+  padding: 4pt;
+  margin: 8pt 0 8pt 8pt;
+  font-family: sans;
+  font-size: 60%;
+  color: white;
+  float: right;
+  clear: right;
+  text-align: left;
+}
+
+.logo a {
+  font-weight: bold;
+  font-size: 150%;
+  color: #999;
+}
+
+/* Changelog/Filelog entries */
+.logEntry { width: 100%; }
+.logEntry .age { width: 15%; }
+.logEntry th { font-weight: normal; text-align: right; vertical-align: top; }
+.logEntry th.age, .logEntry th.firstline { font-weight: bold; }
+.logEntry th.firstline { text-align: left; width: inherit; }
+
+/* Shortlog entries */
+.slogEntry { width: 100%; }
+.slogEntry .age { width: 8em; }
+.slogEntry td { font-weight: normal; text-align: left; vertical-align: top; }
+.slogEntry td.author { width: 15em; }
+
+/* Tag entries */
+#tagEntries { list-style: none; margin: 0; padding: 0; }
+#tagEntries .tagEntry { list-style: none; margin: 0; padding: 0; }
+
+/* Changeset entry */
+#changesetEntry { }
+#changesetEntry th { font-weight: normal; background-color: #888; color: #fff; text-align: right; }
+#changesetEntry th.files, #changesetEntry th.description { vertical-align: top; }
+
+/* File diff view */
+#filediffEntry { }
+#filediffEntry th { font-weight: normal; background-color: #888; color: #fff; text-align: right; }
+
+% ERRORS ENCOUNTERED

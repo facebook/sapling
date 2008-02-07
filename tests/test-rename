@@ -88,6 +88,11 @@ hg status -C
 diff d1/b d2/b
 hg update -C
 
+echo "# attempt to move one file into a non-existent directory"
+hg rename d1/a dx/
+hg status -C
+hg update -C
+
 echo "# attempt to move potentially more than one file into a non-existent"
 echo "# directory"
 hg rename 'glob:d1/**' dx

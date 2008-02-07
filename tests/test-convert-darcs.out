@@ -1,0 +1,29 @@
+% initialize darcs repo
+Finished recording patch 'p0'
+% branch and update
+Finished recording patch 'p1.1'
+% update source
+Finished recording patch 'p1.2'
+% merge branch
+We have conflicts in the following files:
+./a
+Finished pulling and applying.
+Finished recording patch 'p2'
+initializing destination darcs-repo-hg repository
+scanning source...
+sorting...
+converting...
+3 p0
+2 p1.2
+1 p1.1
+0 p2
+o  3 "p2" files: a
+|
+o  2 "p1.1" files:
+|
+o  1 "p1.2" files: a b
+|
+o  0 "p0" files: a
+
+7225b30cdf38257d5cc7780772c051b6f33e6d6b 644   a
+1e88685f5ddec574a34c70af492f95b6debc8741 644   b

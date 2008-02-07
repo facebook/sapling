@@ -13,3 +13,9 @@ hg rollback
 hg verify
 hg parents
 hg status
+
+# Test issue 902
+hg commit -m "test"
+hg branch test
+hg rollback
+hg branch

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+hg init
+hg qinit
+hg qnew base.patch
+echo a > a
+echo b > b
+hg add a b
+hg qrefresh
+$TESTDIR/readlink.py a
+
+hg qnew symlink.patch
+rm a
+ln -s b a
+hg qrefresh --git
+$TESTDIR/readlink.py a
+
+hg qpop
+hg qpush
+$TESTDIR/readlink.py a

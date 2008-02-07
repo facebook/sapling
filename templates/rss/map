@@ -1,4 +1,5 @@
 default = 'changelog'
+mimetype = 'text/xml; charset={encoding}'
 header = header.tmpl
 changelog = changelog.tmpl
 changelogentry = changelogentry.tmpl

@@ -1,0 +1,12 @@
+changeset:   0:61c9426e69fe
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     test
+
+---- HEADERS
+200 Script output follows
+---- DATA
+[('Content-Type', 'text/html; charset=ascii')]
+---- ERRORS
+

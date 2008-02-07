@@ -6,18 +6,21 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import util
+import util, re
+
+_commentre = None
 
 def _parselines(fp):
     for line in fp:
-        if not line.endswith('\n'):
-            line += '\n'
-        escape = False
-        for i in xrange(len(line)):
-            if escape: escape = False
-            elif line[i] == '\\': escape = True
-            elif line[i] == '#': break
-        line = line[:i].rstrip()
+        if "#" in line:
+            global _commentre
+            if not _commentre:
+                _commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
+            # remove comments prefixed by an even number of escapes
+            line = _commentre.sub(r'\1', line)
+            # fixup properly escaped comments that survived the above
+            line = line.replace("\\#", "#")
+        line = line.rstrip()
         if line:
             yield line
 
@@ -57,9 +60,12 @@ def ignore(root, files, warn):
                         warn(_("%s: ignoring invalid syntax '%s'\n") % (f, s))
                     continue
                 pat = syntax + line
-                for s in syntaxes.values():
-                    if line.startswith(s):
+                for s, rels in syntaxes.items():
+                    if line.startswith(rels):
                         pat = line
+                        break
+                    elif line.startswith(s+':'):
+                        pat = rels + line[len(s)+1:]
                         break
                 pats[f].append(pat)
         except IOError, inst:
@@ -82,9 +88,3 @@ def ignore(root, files, warn):
                 util.matcher(root, inc=patlist, src=f))
 
     return ignorefunc
-
-
-    '''default match function used by dirstate and
-    localrepository.  this honours the repository .hgignore file
-    and any other files specified in the [ui] section of .hgrc.'''
-

@@ -10,8 +10,13 @@ import util, sys
 from i18n import _
 
 _extensions = {}
-commandtable = {}
-setuphooks = []
+_order = []
+
+def extensions():
+    for name in _order:
+        module = _extensions[name]
+        if module:
+            yield name, module
 
 def find(name):
     '''return module with given extension name'''
@@ -24,8 +29,13 @@ def find(name):
         raise KeyError(name)
 
 def load(ui, name, path):
-    if name in _extensions:
+    if name.startswith('hgext.'):
+        shortname = name[6:]
+    else:
+        shortname = name
+    if shortname in _extensions:
         return
+    _extensions[shortname] = None
     if path:
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
@@ -49,25 +59,19 @@ def load(ui, name, path):
             mod = importh("hgext.%s" % name)
         except ImportError:
             mod = importh(name)
-    _extensions[name] = mod
+    _extensions[shortname] = mod
+    _order.append(shortname)
 
     uisetup = getattr(mod, 'uisetup', None)
     if uisetup:
         uisetup(ui)
-    reposetup = getattr(mod, 'reposetup', None)
-    if reposetup:
-        setuphooks.append(reposetup)
-    cmdtable = getattr(mod, 'cmdtable', {})
-    overrides = [cmd for cmd in cmdtable if cmd in commandtable]
-    if overrides:
-        ui.warn(_("extension '%s' overrides commands: %s\n")
-                % (name, " ".join(overrides)))
-    commandtable.update(cmdtable)
 
 def loadall(ui):
     result = ui.configitems("extensions")
     for i, (name, path) in enumerate(result):
         if path:
+            if path[0] == '!':
+                continue
             path = os.path.expanduser(path)
         try:
             load(ui, name, path)

@@ -1,0 +1,6 @@
+a -> a not a symlink
+a -> b
+Now at: base.patch
+applying symlink.patch
+Now at: symlink.patch
+a -> b

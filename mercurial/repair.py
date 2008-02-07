@@ -6,71 +6,86 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import changegroup, revlog, os, commands
+import changegroup, os
+from node import *
 
-def strip(ui, repo, rev, backup="all"):
-    def limitheads(chlog, stop):
-        """return the list of all nodes that have no children"""
-        p = {}
-        h = []
-        stoprev = 0
-        if stop in chlog.nodemap:
-            stoprev = chlog.rev(stop)
+def _limitheads(cl, stoprev):
+    """return the list of all revs >= stoprev that have no children"""
+    seen = {}
+    heads = []
 
-        for r in xrange(chlog.count() - 1, -1, -1):
-            n = chlog.node(r)
-            if n not in p:
-                h.append(n)
-            if n == stop:
+    for r in xrange(cl.count() - 1, stoprev - 1, -1):
+        if r not in seen:
+            heads.append(r)
+        for p in cl.parentrevs(r):
+            seen[p] = 1
+    return heads
+
+def _bundle(repo, bases, heads, node, suffix, extranodes=None):
+    """create a bundle with the specified revisions as a backup"""
+    cg = repo.changegroupsubset(bases, heads, 'strip', extranodes)
+    backupdir = repo.join("strip-backup")
+    if not os.path.isdir(backupdir):
+        os.mkdir(backupdir)
+    name = os.path.join(backupdir, "%s-%s" % (short(node), suffix))
+    repo.ui.warn("saving bundle to %s\n" % name)
+    return changegroup.writebundle(cg, name, "HG10BZ")
+
+def _collectfiles(repo, striprev):
+    """find out the filelogs affected by the strip"""
+    files = {}
+
+    for x in xrange(striprev, repo.changelog.count()):
+        for name in repo.changectx(x).files():
+            if name in files:
+                continue
+            files[name] = 1
+
+    files = files.keys()
+    files.sort()
+    return files
+
+def _collectextranodes(repo, files, link):
+    """return the nodes that have to be saved before the strip"""
+    def collectone(revlog):
+        extra = []
+        startrev = count = revlog.count()
+        # find the truncation point of the revlog
+        for i in xrange(0, count):
+            node = revlog.node(i)
+            lrev = revlog.linkrev(node)
+            if lrev >= link:
+                startrev = i + 1
                 break
-            if r < stoprev:
-                break
-            for pn in chlog.parents(n):
-                p[pn] = 1
-        return h
 
-    def bundle(repo, bases, heads, rev, suffix):
-        cg = repo.changegroupsubset(bases, heads, 'strip')
-        backupdir = repo.join("strip-backup")
-        if not os.path.isdir(backupdir):
-            os.mkdir(backupdir)
-        name = os.path.join(backupdir, "%s-%s" % (revlog.short(rev), suffix))
-        ui.warn("saving bundle to %s\n" % name)
-        return changegroup.writebundle(cg, name, "HG10BZ")
+        # see if any revision after that point has a linkrev less than link
+        # (we have to manually save these guys)
+        for i in xrange(startrev, count):
+            node = revlog.node(i)
+            lrev = revlog.linkrev(node)
+            if lrev < link:
+                extra.append((node, cl.node(lrev)))
 
-    def stripall(revnum):
-        mm = repo.changectx(rev).manifest()
-        seen = {}
+        return extra
 
-        for x in xrange(revnum, repo.changelog.count()):
-            for f in repo.changectx(x).files():
-                if f in seen:
-                    continue
-                seen[f] = 1
-                if f in mm:
-                    filerev = mm[f]
-                else:
-                    filerev = 0
-                seen[f] = filerev
-        # we go in two steps here so the strip loop happens in a
-        # sensible order.  When stripping many files, this helps keep
-        # our disk access patterns under control.
-        seen_list = seen.keys()
-        seen_list.sort()
-        for f in seen_list:
-            ff = repo.file(f)
-            filerev = seen[f]
-            if filerev != 0:
-                if filerev in ff.nodemap:
-                    filerev = ff.rev(filerev)
-                else:
-                    filerev = 0
-            ff.strip(filerev, revnum)
+    extranodes = {}
+    cl = repo.changelog
+    extra = collectone(repo.manifest)
+    if extra:
+        extranodes[1] = extra
+    for fname in files:
+        f = repo.file(fname)
+        extra = collectone(f)
+        if extra:
+            extranodes[fname] = extra
 
-    chlog = repo.changelog
+    return extranodes
+
+def strip(ui, repo, node, backup="all"):
+    cl = repo.changelog
     # TODO delete the undo files, and handle undo of merge sets
-    pp = chlog.parents(rev)
-    revnum = chlog.rev(rev)
+    pp = cl.parents(node)
+    striprev = cl.rev(node)
 
     # save is a list of all the branches we are truncating away
     # that we actually want to keep.  changegroup will be used
@@ -78,7 +93,7 @@ def strip(ui, repo, rev, backup="all"):
     saveheads = []
     savebases = {}
 
-    heads = limitheads(chlog, rev)
+    heads = [cl.node(r) for r in _limitheads(cl, striprev)]
     seen = {}
 
     # search through all the heads, finding those where the revision
@@ -89,39 +104,48 @@ def strip(ui, repo, rev, backup="all"):
         n = h
         while True:
             seen[n] = 1
-            pp = chlog.parents(n)
-            if pp[1] != revlog.nullid:
+            pp = cl.parents(n)
+            if pp[1] != nullid:
                 for p in pp:
-                    if chlog.rev(p) > revnum and p not in seen:
+                    if cl.rev(p) > striprev and p not in seen:
                         heads.append(p)
-            if pp[0] == revlog.nullid:
+            if pp[0] == nullid:
                 break
-            if chlog.rev(pp[0]) < revnum:
+            if cl.rev(pp[0]) < striprev:
                 break
             n = pp[0]
-            if n == rev:
+            if n == node:
                 break
-        r = chlog.reachable(h, rev)
-        if rev not in r:
+        r = cl.reachable(h, node)
+        if node not in r:
             saveheads.append(h)
             for x in r:
-                if chlog.rev(x) > revnum:
+                if cl.rev(x) > striprev:
                     savebases[x] = 1
+
+    files = _collectfiles(repo, striprev)
+
+    extranodes = _collectextranodes(repo, files, striprev)
 
     # create a changegroup for all the branches we need to keep
     if backup == "all":
-        bundle(repo, [rev], chlog.heads(), rev, 'backup')
-    if saveheads:
-        chgrpfile = bundle(repo, savebases.keys(), saveheads, rev, 'temp')
+        _bundle(repo, [node], cl.heads(), node, 'backup')
+    if saveheads or extranodes:
+        chgrpfile = _bundle(repo, savebases.keys(), saveheads, node, 'temp',
+                            extranodes)
 
-    stripall(revnum)
+    cl.strip(striprev)
+    repo.manifest.strip(striprev)
+    for name in files:
+        f = repo.file(name)
+        f.strip(striprev)
 
-    change = chlog.read(rev)
-    chlog.strip(revnum, revnum)
-    repo.manifest.strip(repo.manifest.rev(change[0]), revnum)
-    if saveheads:
+    if saveheads or extranodes:
         ui.status("adding branch\n")
-        commands.unbundle(ui, repo, "file:%s" % chgrpfile, update=False)
+        f = open(chgrpfile, "rb")
+        gen = changegroup.readbundle(f, chgrpfile)
+        repo.addchangegroup(gen, 'strip', 'bundle:' + chgrpfile, True)
+        f.close()
         if backup != "strip":
             os.unlink(chgrpfile)
 

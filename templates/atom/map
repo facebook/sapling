@@ -1,0 +1,10 @@
+default = 'changelog'
+feedupdated = '<updated>#date|rfc3339date#</updated>'
+mimetype = 'application/atom+xml; charset={encoding}'
+header = header.tmpl
+changelog = changelog.tmpl
+changelogentry = changelogentry.tmpl
+filelog = filelog.tmpl
+filelogentry = filelogentry.tmpl
+tags = tags.tmpl
+tagentry = tagentry.tmpl

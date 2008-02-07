@@ -1,0 +1,24 @@
+#!/bin/sh
+# basic test for hg debugrebuildstate
+
+hg init repo
+cd repo
+
+touch foo bar
+hg ci -Am 'add foo bar'
+
+touch baz
+hg add baz
+hg rm bar
+
+echo '% state dump'
+hg debugstate | cut -b 1-16,37- | sort
+echo '% status'
+hg st -A
+
+hg debugrebuildstate
+echo '% state dump'
+hg debugstate | cut -b 1-16,37- | sort
+echo '% status'
+hg st -A
+

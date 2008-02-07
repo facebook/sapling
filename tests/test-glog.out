@@ -307,9 +307,17 @@ o  changeset:   0:7aa22e58e8c1
    date:        Thu Jan 01 00:00:00 1970 +0000
    summary:     (0) root
 
+% file glog
+o  changeset:   5:3589c3c477ab
+   parent:      3:02173ffbf857
+   parent:      4:e2cad8233c77
+   user:        test
+   date:        Thu Jan 01 00:00:05 1970 +0000
+   summary:     (5) expand
+
 % unused arguments
 hg glog: invalid arguments
-hg glog [OPTION]...
+hg glog [OPTION]... [FILE]
 
 show revision history alongside an ASCII revision graph
 failed

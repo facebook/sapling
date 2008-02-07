@@ -10,7 +10,7 @@ diff -r d9e5953b9dec b
 M b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 %% merge should fail
-abort: untracked local file 'b' differs from remote version
+abort: untracked file in working directory differs from file in requested revision: 'b'
 %% merge of b expected
 merging for b
 merging b
@@ -34,7 +34,7 @@ abort: outstanding uncommitted changes
 diff -r c1dd73cbf59f b
 --- a/b
 +++ b/b
-@@ -1,1 +1,1 @@ This is file b1
+@@ -1,1 +1,1 @@
 -This is file b1
 +This is file b22
 M b
@@ -49,7 +49,7 @@ merging b
 diff -r c1dd73cbf59f b
 --- a/b
 +++ b/b
-@@ -1,1 +1,1 @@ This is file b1
+@@ -1,1 +1,1 @@
 -This is file b1
 +This is file b33
 M b

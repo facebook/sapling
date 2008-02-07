@@ -6,20 +6,23 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial import demandimport; demandimport.enable()
-import os, mimetools, cStringIO
+import os
 from mercurial.i18n import gettext as _
-from mercurial import ui, hg, util, templater
-from common import get_mtime, staticfile, style_map, paritygen
+from mercurial import ui, hg, util, templater, templatefilters
+from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen,\
+                   get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
+from request import wsgirequest
 
 # This is a stopgap
 class hgwebdir(object):
     def __init__(self, config, parentui=None):
         def cleannames(items):
-            return [(name.strip(os.sep), path) for name, path in items]
+            return [(util.pconvert(name).strip('/'), path)
+                    for name, path in items]
 
-        self.parentui = parentui
+        self.parentui = parentui or ui.ui(report_untrusted=False,
+                                          interactive = False)
         self.motd = None
         self.style = None
         self.stripecount = None
@@ -60,59 +63,79 @@ class hgwebdir(object):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
             raise RuntimeError("This function is only intended to be called while running as a CGI script.")
         import mercurial.hgweb.wsgicgi as wsgicgi
-        from request import wsgiapplication
-        def make_web_app():
-            return self
-        wsgicgi.launch(wsgiapplication(make_web_app))
+        wsgicgi.launch(self)
+
+    def __call__(self, env, respond):
+        req = wsgirequest(env, respond)
+        self.run_wsgi(req)
+        return req
 
     def run_wsgi(self, req):
-        def header(**map):
-            header_file = cStringIO.StringIO(
-                ''.join(tmpl("header", encoding=util._encoding, **map)))
-            msg = mimetools.Message(header_file, 0)
-            req.header(msg.items())
-            yield header_file.read()
 
-        def footer(**map):
-            yield tmpl("footer", **map)
+        try:
+            try:
 
-        def motd(**map):
-            if self.motd is not None:
-                yield self.motd
-            else:
-                yield config('web', 'motd', '')
+                virtual = req.env.get("PATH_INFO", "").strip('/')
+                tmpl = self.templater(req)
+                ctype = tmpl('mimetype', encoding=util._encoding)
+                ctype = templater.stringify(ctype)
 
-        parentui = self.parentui or ui.ui(report_untrusted=False)
+                # a static file
+                if virtual.startswith('static/') or 'static' in req.form:
+                    static = os.path.join(templater.templatepath(), 'static')
+                    if virtual.startswith('static/'):
+                        fname = virtual[7:]
+                    else:
+                        fname = req.form['static'][0]
+                    req.write(staticfile(static, fname, req))
+                    return
 
-        def config(section, name, default=None, untrusted=True):
-            return parentui.config(section, name, default, untrusted)
+                # top-level index
+                elif not virtual:
+                    req.respond(HTTP_OK, ctype)
+                    req.write(self.makeindex(req, tmpl))
+                    return
 
-        url = req.env['REQUEST_URI'].split('?')[0]
-        if not url.endswith('/'):
-            url += '/'
-        pathinfo = req.env.get('PATH_INFO', '').strip('/') + '/'
-        base = url[:len(url) - len(pathinfo)]
-        if not base.endswith('/'):
-            base += '/'
+                # nested indexes and hgwebs
+                
+                repos = dict(self.repos)
+                while virtual:
+                    real = repos.get(virtual)
+                    if real:
+                        req.env['REPO_NAME'] = virtual
+                        try:
+                            repo = hg.repository(self.parentui, real)
+                            hgweb(repo).run_wsgi(req)
+                            return
+                        except IOError, inst:
+                            msg = inst.strerror
+                            raise ErrorResponse(HTTP_SERVER_ERROR, msg)
+                        except hg.RepoError, inst:
+                            raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
 
-        staticurl = config('web', 'staticurl') or base + 'static/'
-        if not staticurl.endswith('/'):
-            staticurl += '/'
+                    # browse subdirectories
+                    subdir = virtual + '/'
+                    if [r for r in repos if r.startswith(subdir)]:
+                        req.respond(HTTP_OK, ctype)
+                        req.write(self.makeindex(req, tmpl, subdir))
+                        return
 
-        style = self.style
-        if style is None:
-            style = config('web', 'style', '')
-        if req.form.has_key('style'):
-            style = req.form['style'][0]
-        if self.stripecount is None:
-            self.stripecount = int(config('web', 'stripes', 1))
-        mapfile = style_map(templater.templatepath(), style)
-        tmpl = templater.templater(mapfile, templater.common_filters,
-                                   defaults={"header": header,
-                                             "footer": footer,
-                                             "motd": motd,
-                                             "url": url,
-                                             "staticurl": staticurl})
+                    up = virtual.rfind('/')
+                    if up < 0:
+                        break
+                    virtual = virtual[:up]
+
+                # prefixes not found
+                req.respond(HTTP_NOT_FOUND, ctype)
+                req.write(tmpl("notfound", repo=virtual))
+
+            except ErrorResponse, err:
+                req.respond(err.code, ctype)
+                req.write(tmpl('error', error=err.message or ''))
+        finally:
+            tmpl = None
+
+    def makeindex(self, req, tmpl, subdir=""):
 
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive", untrusted=True)
@@ -125,7 +148,7 @@ class hgwebdir(object):
         def entries(sortcolumn="", descending=False, subdir="", **map):
             def sessionvars(**map):
                 fields = []
-                if req.form.has_key('style'):
+                if 'style' in req.form:
                     style = req.form['style'][0]
                     if style != get('web', 'style', ''):
                         fields.append(('style', style))
@@ -142,19 +165,22 @@ class hgwebdir(object):
                     continue
                 name = name[len(subdir):]
 
-                u = ui.ui(parentui=parentui)
+                u = ui.ui(parentui=self.parentui)
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
-                except IOError:
-                    pass
+                except Exception, e:
+                    u.warn(_('error reading %s/.hg/hgrc: %s\n' % (path, e)))
+                    continue
                 def get(section, name, default=None):
                     return u.config(section, name, default, untrusted=True)
 
                 if u.configbool("web", "hidden", untrusted=True):
                     continue
 
-                url = ('/'.join([req.env["REQUEST_URI"].split('?')[0], name])
-                       .replace("//", "/")) + '/'
+                parts = [req.env['PATH_INFO'].strip('/'), name]
+                if req.env['SCRIPT_NAME']:
+                    parts.insert(0, req.env['SCRIPT_NAME'])
+                url = ('/'.join(parts).replace("//", "/")) + '/'
 
                 # update time with local timezone
                 try:
@@ -162,9 +188,7 @@ class hgwebdir(object):
                 except OSError:
                     continue
 
-                contact = (get("ui", "username") or # preferred
-                           get("web", "contact") or # deprecated
-                           get("web", "author", "")) # also
+                contact = get_contact(get)
                 description = get("web", "description", "")
                 name = get("web", "name", name)
                 row = dict(contact=contact or "unknown",
@@ -193,66 +217,62 @@ class hgwebdir(object):
                     row['parity'] = parity.next()
                     yield row
 
-        def makeindex(req, subdir=""):
-            sortable = ["name", "description", "contact", "lastchange"]
-            sortcolumn, descending = self.repos_sorted
-            if req.form.has_key('sort'):
-                sortcolumn = req.form['sort'][0]
-                descending = sortcolumn.startswith('-')
-                if descending:
-                    sortcolumn = sortcolumn[1:]
-                if sortcolumn not in sortable:
-                    sortcolumn = ""
+        sortable = ["name", "description", "contact", "lastchange"]
+        sortcolumn, descending = self.repos_sorted
+        if 'sort' in req.form:
+            sortcolumn = req.form['sort'][0]
+            descending = sortcolumn.startswith('-')
+            if descending:
+                sortcolumn = sortcolumn[1:]
+            if sortcolumn not in sortable:
+                sortcolumn = ""
 
-            sort = [("sort_%s" % column,
-                     "%s%s" % ((not descending and column == sortcolumn)
-                               and "-" or "", column))
-                    for column in sortable]
-            req.write(tmpl("index", entries=entries, subdir=subdir,
-                           sortcolumn=sortcolumn, descending=descending,
-                           **dict(sort)))
+        sort = [("sort_%s" % column,
+                 "%s%s" % ((not descending and column == sortcolumn)
+                            and "-" or "", column))
+                for column in sortable]
 
-        try:
-            virtual = req.env.get("PATH_INFO", "").strip('/')
-            if virtual.startswith('static/'):
-                static = os.path.join(templater.templatepath(), 'static')
-                fname = virtual[7:]
-                req.write(staticfile(static, fname, req) or
-                          tmpl('error', error='%r not found' % fname))
-            elif virtual:
-                repos = dict(self.repos)
-                while virtual:
-                    real = repos.get(virtual)
-                    if real:
-                        req.env['REPO_NAME'] = virtual
-                        try:
-                            repo = hg.repository(parentui, real)
-                            hgweb(repo).run_wsgi(req)
-                        except IOError, inst:
-                            req.write(tmpl("error", error=inst.strerror))
-                        except hg.RepoError, inst:
-                            req.write(tmpl("error", error=str(inst)))
-                        return
+        return tmpl("index", entries=entries, subdir=subdir,
+                    sortcolumn=sortcolumn, descending=descending,
+                    **dict(sort))
 
-                    # browse subdirectories
-                    subdir = virtual + '/'
-                    if [r for r in repos if r.startswith(subdir)]:
-                        makeindex(req, subdir)
-                        return
+    def templater(self, req):
 
-                    up = virtual.rfind('/')
-                    if up < 0:
-                        break
-                    virtual = virtual[:up]
+        def header(**map):
+            yield tmpl('header', encoding=util._encoding, **map)
 
-                req.write(tmpl("notfound", repo=virtual))
+        def footer(**map):
+            yield tmpl("footer", **map)
+
+        def motd(**map):
+            if self.motd is not None:
+                yield self.motd
             else:
-                if req.form.has_key('static'):
-                    static = os.path.join(templater.templatepath(), "static")
-                    fname = req.form['static'][0]
-                    req.write(staticfile(static, fname, req)
-                              or tmpl("error", error="%r not found" % fname))
-                else:
-                    makeindex(req)
-        finally:
-            tmpl = None
+                yield config('web', 'motd', '')
+
+        def config(section, name, default=None, untrusted=True):
+            return self.parentui.config(section, name, default, untrusted)
+
+        url = req.env.get('SCRIPT_NAME', '')
+        if not url.endswith('/'):
+            url += '/'
+
+        staticurl = config('web', 'staticurl') or url + 'static/'
+        if not staticurl.endswith('/'):
+            staticurl += '/'
+
+        style = self.style
+        if style is None:
+            style = config('web', 'style', '')
+        if 'style' in req.form:
+            style = req.form['style'][0]
+        if self.stripecount is None:
+            self.stripecount = int(config('web', 'stripes', 1))
+        mapfile = style_map(templater.templatepath(), style)
+        tmpl = templater.templater(mapfile, templatefilters.filters,
+                                   defaults={"header": header,
+                                             "footer": footer,
+                                             "motd": motd,
+                                             "url": url,
+                                             "staticurl": staticurl})
+        return tmpl

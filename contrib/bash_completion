@@ -28,7 +28,7 @@
 #              cat ~/.patchbomb-$1
 #          fi
 #      }
-# 
+#
 #
 # Writing completion functions for additional commands:
 #
@@ -50,7 +50,7 @@
 #                  an argument (e.g. '--cwd|-R|--repository')
 # - $canonical - 1 if we canonicalized $cmd before calling the function
 #                0 otherwise
-# 
+#
 
 shopt -s extglob
 
@@ -305,6 +305,15 @@ _hg_cmd_qpush()
     _hg_ext_mq_patchlist qunapplied
 }
 
+_hg_cmd_qgoto()
+{
+    if [[ "$prev" = @(-n|--name) ]]; then
+	_hg_ext_mq_queues
+	return
+    fi
+    _hg_ext_mq_patchlist qseries
+}
+
 _hg_cmd_qdelete()
 {
     local qcmd=qunapplied
@@ -425,7 +434,7 @@ _hg_cmd_bisect()
     done
 
     if [ -z "$subcmd" ] || [ $COMP_CWORD -eq $i ] || [ "$subcmd" = help ]; then
-	COMPREPLY=(${COMPREPLY[@]:-} 
+	COMPREPLY=(${COMPREPLY[@]:-}
 		   $(compgen -W 'bad good help init next reset' -- "$cur"))
 	return
     fi
@@ -445,7 +454,7 @@ _hg_cmd_email()
 {
     case "$prev" in
 	-c|--cc|-t|--to|-f|--from|--bcc)
-	    # we need an e-mail address. let the user provide a function 
+	    # we need an e-mail address. let the user provide a function
 	    # to get them
 	    if [ "$(type -t _hg_emails)" = function ]; then
 		local arg=to

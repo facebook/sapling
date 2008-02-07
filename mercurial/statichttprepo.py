@@ -33,7 +33,7 @@ class statichttprepository(localrepo.localrepository):
         self._url = path
         self.ui = ui
 
-        self.path = (path + "/.hg")
+        self.path = path.rstrip('/') + "/.hg"
         self.opener = opener(self.path)
         # find requirements
         try:

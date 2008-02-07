@@ -1,15 +1,102 @@
 #!/usr/bin/env python
 """Test the running system for features availability. Exit with zero
-if all features are there, non-zero otherwise.
+if all features are there, non-zero otherwise. If a feature name is
+prefixed with "no-", the absence of feature is tested.
 """
 import optparse
 import os
+import re
 import sys
+import tempfile
+
+tempprefix = 'hg-hghave-'
+
+def matchoutput(cmd, regexp, ignorestatus=False):
+    """Return True if cmd executes successfully and its output
+    is matched by the supplied regular expression.
+    """
+    r = re.compile(regexp)
+    fh = os.popen(cmd)
+    s = fh.read()
+    ret = fh.close()
+    return (ignorestatus or ret is None) and r.search(s)
+
+def has_cvs():
+    return matchoutput('cvs --version 2>&1', r'Concurrent Versions System')
+
+def has_cvsps():
+    return matchoutput('cvsps -h -q 2>&1', r'cvsps version', True)
+
+def has_darcs():
+    return matchoutput('darcs', 'darcs version', True)
+
+def has_eol_in_paths():
+    try:
+        fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
+        os.close(fd)
+        os.remove(path)
+        return True
+    except:
+        return False
+
+def has_executablebit():
+    fd, path = tempfile.mkstemp(prefix=tempprefix)
+    os.close(fd)
+    try:
+        s = os.lstat(path).st_mode
+        os.chmod(path, s | 0100)
+        return (os.lstat(path).st_mode & 0100 != 0)
+    finally:
+        os.remove(path)
+
+def has_fifo():
+    return hasattr(os, "mkfifo")
+
+def has_hotshot():
+    try:
+        # hotshot.stats tests hotshot and many problematic dependencies
+        # like profile.
+        import hotshot.stats
+        return True
+    except ImportError:
+        return False
+
+def has_lsprof():
+    try:
+        import _lsprof
+        return True
+    except ImportError:
+        return False
+
+def has_git():
+    return matchoutput('git --version 2>&1', r'^git version')
+
+def has_svn():
+    return matchoutput('svn --version 2>&1', r'^svn, version') and \
+        matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
+
+def has_svn_bindings():
+    try:
+        import svn.core
+        return True
+    except ImportError:
+        return False
 
 def has_symlink():
     return hasattr(os, "symlink")
 
 checks = {
+    "cvs": (has_cvs, "cvs client"),
+    "cvsps": (has_cvsps, "cvsps utility"),
+    "darcs": (has_darcs, "darcs client"),
+    "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
+    "execbit": (has_executablebit, "executable bit"),
+    "fifo": (has_fifo, "named pipes"),
+    "git": (has_git, "git command line client"),
+    "hotshot": (has_hotshot, "python hotshot module"),
+    "lsprof": (has_lsprof, "python lsprof module"),
+    "svn": (has_svn, "subversion client and admin tools"),
+    "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
 }
 
@@ -29,7 +116,7 @@ if __name__ == '__main__':
     if options.list_features:
         list_features()
         sys.exit(0)
-        
+
     quiet = options.quiet
 
     failures = 0
@@ -39,17 +126,23 @@ if __name__ == '__main__':
         if not quiet:
             sys.stderr.write(msg + '\n')
         failures += 1
-    
+
     for feature in args:
+        negate = feature.startswith('no-')
+        if negate:
+            feature = feature[3:]
+
         if feature not in checks:
-            error('hghave: unknown feature: ' + feature)
+            error('skipped: unknown feature: ' + feature)
             continue
-        
-        check, desc = checks[feature]       
-        if not check():
-            error('hghave: missing feature: ' + desc)
+
+        check, desc = checks[feature]
+        if not negate and not check():
+            error('skipped: missing feature: ' + desc)
+        elif negate and check():
+            error('skipped: system supports %s' % desc)
 
     if failures != 0:
         sys.exit(1)
 
-    
+

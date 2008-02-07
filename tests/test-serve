@@ -7,12 +7,40 @@ echo '[web]' > .hg/hgrc
 echo 'accesslog = access.log' >> .hg/hgrc
 
 echo % Without -v
-hg serve -a localhost -p 20063 -d --pid-file=hg.pid
+hg serve -a localhost -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> "$DAEMON_PIDS"
 if [ -f access.log ]; then
     echo 'access log created - .hg/hgrc respected'
 fi
 
 echo % With -v
-hg serve -a localhost -p 20064 -d --pid-file=hg.pid -v
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
+sleep 1
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix foo
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix foo | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
+sleep 1
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix /foo
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix /foo | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
+sleep 1
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix foo/
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix foo/ | sed -e 's,:[0-9][0-9]*/,/,'
+cat hg.pid >> "$DAEMON_PIDS"
+sleep 1
+kill `cat hg.pid`
+sleep 1
+
+echo % With --prefix /foo/
+hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v --prefix /foo/ | sed -e 's,:[0-9][0-9]*/,/,'
 cat hg.pid >> "$DAEMON_PIDS"

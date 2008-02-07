@@ -13,8 +13,9 @@ platform-specific details from the core.
 """
 
 from i18n import _
-import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile
-import os, threading, time, calendar, ConfigParser, locale, glob
+import cStringIO, errno, getpass, popen2, re, shutil, sys, tempfile, strutil
+import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
+import urlparse
 
 try:
     set = set
@@ -79,18 +80,6 @@ def fromlocal(s):
 def locallen(s):
     """Find the length in characters of a local string"""
     return len(s.decode(_encoding, "replace"))
-
-def localsub(s, a, b=None):
-    try:
-        u = s.decode(_encoding, _encodingmode)
-        if b is not None:
-            u = u[a:b]
-        else:
-            u = u[:a]
-        return u.encode(_encoding, _encodingmode)
-    except UnicodeDecodeError, inst:
-        sub = s[max(0, inst.start-10), inst.start+10]
-        raise Abort(_("decoding near '%s': %s!") % (sub, inst))
 
 # used by parsedate
 defaultdateformats = (
@@ -235,13 +224,7 @@ def binary(s):
 
 def unique(g):
     """return the uniq elements of iterable g"""
-    seen = {}
-    l = []
-    for f in g:
-        if f not in seen:
-            seen[f] = 1
-            l.append(f)
-    return l
+    return dict.fromkeys(g).keys()
 
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
@@ -279,7 +262,7 @@ def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
     res = ''
-    group = False
+    group = 0
     def peek(): return i < n and pat[i]
     while i < n:
         c = pat[i]
@@ -309,11 +292,11 @@ def globre(pat, head='^', tail='$'):
                     stuff = '\\' + stuff
                 res = '%s[%s]' % (res, stuff)
         elif c == '{':
-            group = True
+            group += 1
             res += '(?:'
         elif c == '}' and group:
             res += ')'
-            group = False
+            group -= 1
         elif c == ',' and group:
             res += '|'
         elif c == '\\':
@@ -345,7 +328,7 @@ def pathto(root, n1, n2):
         if os.path.splitdrive(root)[0] != os.path.splitdrive(n1)[0]:
             return os.path.join(root, localpath(n2))
         n2 = '/'.join((pconvert(root), n2))
-    a, b = n1.split(os.sep), n2.split('/')
+    a, b = splitpath(n1), n2.split('/')
     a.reverse()
     b.reverse()
     while a and b and a[-1] == b[-1]:
@@ -358,7 +341,7 @@ def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
     if root == os.sep:
         rootsep = os.sep
-    elif root.endswith(os.sep):
+    elif endswithsep(root):
         rootsep = root
     else:
         rootsep = root + os.sep
@@ -366,6 +349,7 @@ def canonpath(root, cwd, myname):
     if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
+    audit_path = path_auditor(root)
     if name != rootsep and name.startswith(rootsep):
         name = name[len(rootsep):]
         audit_path(name)
@@ -476,6 +460,15 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
         try:
             pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
             return re.compile(pat).match
+        except OverflowError:
+            # We're using a Python with a tiny regex engine and we
+            # made it explode, so we'll divide the pattern list in two
+            # until it works
+            l = len(pats)
+            if l < 2:
+                raise
+            a, b = matchfn(pats[:l//2], tail), matchfn(pats[l//2:], tail)
+            return lambda s: a(s) or b(s)
         except re.error:
             for k, p in pats:
                 try:
@@ -540,17 +533,21 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
 
     return (roots, match, (inc or exc or anypats) and True)
 
-_hgexecutable = 'hg'
+_hgexecutable = None
+
+def hgexecutable():
+    """return location of the 'hg' executable.
+
+    Defaults to $HG or 'hg' in the search path.
+    """
+    if _hgexecutable is None:
+        set_hgexecutable(os.environ.get('HG') or find_exe('hg', 'hg'))
+    return _hgexecutable
 
 def set_hgexecutable(path):
-    """remember location of the 'hg' executable if easily possible
-
-    path might be None or empty if hg was loaded as a module,
-    fall back to 'hg' in this case.
-    """
+    """set location of the 'hg' executable"""
     global _hgexecutable
-    if path:
-        _hgexecutable = os.path.abspath(path)
+    _hgexecutable = path
 
 def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     '''enhanced shell command execution.
@@ -577,8 +574,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     try:
         for k, v in environ.iteritems():
             os.environ[k] = py2shell(v)
-        if 'HG' not in os.environ:
-            os.environ['HG'] = _hgexecutable
+        os.environ['HG'] = hgexecutable()
         if cwd is not None and oldcwd != cwd:
             os.chdir(cwd)
         rc = os.system(cmd)
@@ -663,7 +659,7 @@ def copyfiles(src, dst, hardlink=None):
 
     if os.path.isdir(src):
         os.mkdir(dst)
-        for name in os.listdir(src):
+        for name, kind in osutil.listdir(src):
             srcname = os.path.join(src, name)
             dstname = os.path.join(dst, name)
             copyfiles(srcname, dstname, hardlink)
@@ -677,12 +673,60 @@ def copyfiles(src, dst, hardlink=None):
         else:
             shutil.copy(src, dst)
 
-def audit_path(path):
-    """Abort if path contains dangerous components"""
-    parts = os.path.normcase(path).split(os.sep)
-    if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '')
-        or os.pardir in parts):
-        raise Abort(_("path contains illegal component: %s") % path)
+class path_auditor(object):
+    '''ensure that a filesystem path contains no banned components.
+    the following properties of a path are checked:
+
+    - under top-level .hg
+    - starts at the root of a windows drive
+    - contains ".."
+    - traverses a symlink (e.g. a/symlink_here/b)
+    - inside a nested repository'''
+
+    def __init__(self, root):
+        self.audited = set()
+        self.auditeddir = set()
+        self.root = root
+
+    def __call__(self, path):
+        if path in self.audited:
+            return
+        normpath = os.path.normcase(path)
+        parts = splitpath(normpath)
+        if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '')
+            or os.pardir in parts):
+            raise Abort(_("path contains illegal component: %s") % path)
+        def check(prefix):
+            curpath = os.path.join(self.root, prefix)
+            try:
+                st = os.lstat(curpath)
+            except OSError, err:
+                # EINVAL can be raised as invalid path syntax under win32.
+                # They must be ignored for patterns can be checked too.
+                if err.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EINVAL):
+                    raise
+            else:
+                if stat.S_ISLNK(st.st_mode):
+                    raise Abort(_('path %r traverses symbolic link %r') %
+                                (path, prefix))
+                elif (stat.S_ISDIR(st.st_mode) and
+                      os.path.isdir(os.path.join(curpath, '.hg'))):
+                    raise Abort(_('path %r is inside repo %r') %
+                                (path, prefix))
+        parts.pop()
+        prefixes = []
+        for n in range(len(parts)):
+            prefix = os.sep.join(parts)
+            if prefix in self.auditeddir:
+                break
+            check(prefix)
+            prefixes.append(prefix)
+            parts.pop()
+
+        self.audited.add(path)
+        # only add prefixes to the cache after checking everything: we don't
+        # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
+        self.auditeddir.update(prefixes)
 
 def _makelock_file(info, pathname):
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
@@ -711,12 +755,9 @@ def fstat(fp):
 
 posixfile = file
 
-def is_win_9x():
-    '''return true if run on windows 95, 98 or me.'''
-    try:
-        return sys.getwindowsversion()[3] == 1
-    except AttributeError:
-        return os.name == 'nt' and 'command' in os.environ.get('comspec', '')
+def openhardlinks():
+    '''return true if it is safe to hold open file handles to hardlinks'''
+    return True
 
 getuser_fallback = None
 
@@ -790,13 +831,26 @@ def checkexec(path):
 
     Requires a directory (like /foo/.hg)
     """
-    fh, fn = tempfile.mkstemp("", "", path)
-    os.close(fh)
-    m = os.stat(fn).st_mode
-    os.chmod(fn, m ^ 0111)
-    r = (os.stat(fn).st_mode != m)
-    os.unlink(fn)
-    return r
+
+    # VFAT on some Linux versions can flip mode but it doesn't persist
+    # a FS remount. Frequently we can detect it if files are created
+    # with exec bit on.
+
+    try:
+        EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        fh, fn = tempfile.mkstemp("", "", path)
+        try:
+            os.close(fh)
+            m = os.stat(fn).st_mode & 0777
+            new_file_has_exec = m & EXECFLAGS
+            os.chmod(fn, m ^ EXECFLAGS)
+            exec_flags_cannot_flip = ((os.stat(fn).st_mode & 0777) == m)
+        finally:
+            os.unlink(fn)
+    except (IOError, OSError):
+        # we don't care, the user probably won't be able to commit anyway
+        return False
+    return not (new_file_has_exec or exec_flags_cannot_flip)
 
 def execfunc(path, fallback):
     '''return an is_exec() function with default to fallback'''
@@ -829,6 +883,22 @@ def needbinarypatch():
     """return True if patches should be applied in binary mode by default."""
     return os.name == 'nt'
 
+def endswithsep(path):
+    '''Check path ends with os.sep or os.altsep.'''
+    return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
+
+def splitpath(path):
+    '''Split path by os.sep.
+    Note that this function does not use os.altsep because this is
+    an alternative of simple "xxx.split(os.sep)".
+    It is recommended to use os.path.normpath() before using this
+    function if need.'''
+    return path.split(os.sep)
+
+def gui():
+    '''Are we running in a GUI?'''
+    return os.name == "nt" or os.name == "mac" or os.environ.get("DISPLAY")
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
@@ -850,7 +920,15 @@ if os.name == 'nt':
 
         def write(self, s):
             try:
-                return self.fp.write(s)
+                # This is workaround for "Not enough space" error on
+                # writing large size of data to console.
+                limit = 16000
+                l = len(s)
+                start = 0
+                while start < l:
+                    end = start + limit
+                    self.fp.write(s[start:end])
+                    start = end
             except IOError, inst:
                 if inst.errno != 0: raise
                 self.close()
@@ -865,6 +943,16 @@ if os.name == 'nt':
                 raise IOError(errno.EPIPE, 'Broken pipe')
 
     sys.stdout = winstdout(sys.stdout)
+
+    def _is_win_9x():
+        '''return true if run on windows 95, 98 or me.'''
+        try:
+            return sys.getwindowsversion()[3] == 1
+        except AttributeError:
+            return 'command' in os.environ.get('comspec', '')
+
+    def openhardlinks():
+        return not _is_win_9x and "win32api" in locals()
 
     def system_rcpath():
         try:
@@ -891,21 +979,24 @@ if os.name == 'nt':
             pf = pf[1:-1] # Remove the quotes
         return pf
 
+    def sshargs(sshcmd, host, user, port):
+        '''Build argument list for ssh or Plink'''
+        pflag = 'plink' in sshcmd.lower() and '-P' or '-p'
+        args = user and ("%s@%s" % (user, host)) or host
+        return port and ("%s %s %s" % (args, pflag, port)) or args
+
     def testpid(pid):
         '''return False if pid dead, True if running or not known'''
         return True
 
-    def set_exec(f, mode):
-        pass
-
-    def set_link(f, mode):
+    def set_flags(f, flags):
         pass
 
     def set_binary(fd):
         msvcrt.setmode(fd.fileno(), os.O_BINARY)
 
     def pconvert(path):
-        return path.replace("\\", "/")
+        return '/'.join(splitpath(path))
 
     def localpath(path):
         return path.replace('/', '\\')
@@ -936,6 +1027,19 @@ if os.name == 'nt':
         if _quotere is None:
             _quotere = re.compile(r'(\\*)("|\\$)')
         return '"%s"' % _quotere.sub(r'\1\1\\\2', s)
+
+    def quotecommand(cmd):
+        """Build a command string suitable for os.popen* calls."""
+        # The extra quotes are needed because popen* runs the command
+        # through the current COMSPEC. cmd.exe suppress enclosing quotes.
+        return '"' + cmd + '"'
+
+    def popen(command):
+        # Work around "popen spawned process may not write to stdout
+        # under windows"
+        # http://bugs.python.org/issue1366
+        command += " 2> %s" % nulldev
+        return os.popen(quotecommand(command))
 
     def explain_exit(code):
         return _("exited with status %d") % code, code
@@ -978,7 +1082,7 @@ if os.name == 'nt':
     try:
         # override functions with win32 versions if possible
         from util_win32 import *
-        if not is_win_9x():
+        if not _is_win_9x():
             posixfile = posixfile_nt
     except ImportError:
         pass
@@ -986,11 +1090,15 @@ if os.name == 'nt':
 else:
     nulldev = '/dev/null'
 
+    def lookup_reg(key, name=None, scope=None):
+        return None
+
     def rcfiles(path):
         rcs = [os.path.join(path, 'hgrc')]
         rcdir = os.path.join(path, 'hgrc.d')
         try:
-            rcs.extend([os.path.join(rcdir, f) for f in os.listdir(rcdir)
+            rcs.extend([os.path.join(rcdir, f)
+                        for f, kind in osutil.listdir(rcdir)
                         if f.endswith(".rc")])
         except OSError:
             pass
@@ -1019,40 +1127,42 @@ else:
                 pf = pf[1:-1] # Remove the quotes
         return pf
 
+    def sshargs(sshcmd, host, user, port):
+        '''Build argument list for ssh'''
+        args = user and ("%s@%s" % (user, host)) or host
+        return port and ("%s -p %s" % (args, port)) or args
+
     def is_exec(f):
         """check whether a file is executable"""
         return (os.lstat(f).st_mode & 0100 != 0)
 
-    def set_exec(f, mode):
+    def set_flags(f, flags):
         s = os.lstat(f).st_mode
-        if (s & 0100 != 0) == mode:
+        x = "x" in flags
+        l = "l" in flags
+        if l:
+            if not stat.S_ISLNK(s):
+                # switch file to link
+                data = file(f).read()
+                os.unlink(f)
+                os.symlink(data, f)
+            # no chmod needed at this point
             return
-        if mode:
-            # Turn on +x for every +r bit when making a file executable
-            # and obey umask.
-            os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
-        else:
-            os.chmod(f, s & 0666)
-
-    def set_link(f, mode):
-        """make a file a symbolic link/regular file
-
-        if a file is changed to a link, its contents become the link data
-        if a link is changed to a file, its link data become its contents
-        """
-
-        m = os.path.islink(f)
-        if m == bool(mode):
-            return
-
-        if mode: # switch file to link
-            data = file(f).read()
-            os.unlink(f)
-            os.symlink(data, f)
-        else:
+        if stat.S_ISLNK(s):
+            # switch link to file
             data = os.readlink(f)
             os.unlink(f)
             file(f, "w").write(data)
+            s = 0666 & ~_umask # avoid restatting for chmod
+
+        sx = s & 0100
+        if x and not sx:
+            # Turn on +x for every +r bit when making a file executable
+            # and obey umask.
+            os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
+        elif not x and sx:
+            # Turn off all +x bits
+            os.chmod(f, s & 0666)
 
     def set_binary(fd):
         pass
@@ -1089,6 +1199,12 @@ else:
             return '"%s"' % s
         else:
             return "'%s'" % s.replace("'", "'\\''")
+
+    def quotecommand(cmd):
+        return cmd
+
+    def popen(command):
+        return os.popen(command)
 
     def testpid(pid):
         '''return False if pid dead, True if running or not sure'''
@@ -1199,7 +1315,7 @@ def mktempcopy(name, emptyok=False):
     # what we want.  If the original file already exists, just copy
     # its mode.  Otherwise, manually obey umask.
     try:
-        st_mode = os.lstat(name).st_mode
+        st_mode = os.lstat(name).st_mode & 0777
     except OSError, inst:
         if inst.errno != errno.ENOENT:
             raise
@@ -1259,7 +1375,10 @@ class opener(object):
     """
     def __init__(self, base, audit=True):
         self.base = base
-        self.audit = audit
+        if audit:
+            self.audit_path = path_auditor(base)
+        else:
+            self.audit_path = always
 
     def __getattr__(self, name):
         if name == '_can_symlink':
@@ -1268,8 +1387,7 @@ class opener(object):
         raise AttributeError(name)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False):
-        if self.audit:
-            audit_path(path)
+        self.audit_path(path)
         f = os.path.join(self.base, path)
 
         if not text and "b" not in mode:
@@ -1290,8 +1408,7 @@ class opener(object):
         return posixfile(f, mode)
 
     def symlink(self, src, dst):
-        if self.audit:
-            audit_path(dst)
+        self.audit_path(dst)
         linkname = os.path.join(self.base, dst)
         try:
             os.unlink(linkname)
@@ -1309,7 +1426,7 @@ class opener(object):
                 raise OSError(err.errno, _('could not symlink to %r: %s') %
                               (src, err.strerror), linkname)
         else:
-            f = self(self, dst, "w")
+            f = self(dst, "w")
             f.write(src)
             f.close()
 
@@ -1317,45 +1434,34 @@ class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
     iterator over chunks of arbitrary size."""
 
-    def __init__(self, in_iter, targetsize = 2**16):
+    def __init__(self, in_iter):
         """in_iter is the iterator that's iterating over the input chunks.
         targetsize is how big a buffer to try to maintain."""
-        self.in_iter = iter(in_iter)
+        self.iter = iter(in_iter)
         self.buf = ''
-        self.targetsize = int(targetsize)
-        if self.targetsize <= 0:
-            raise ValueError(_("targetsize must be greater than 0, was %d") %
-                             targetsize)
-        self.iterempty = False
-
-    def fillbuf(self):
-        """Ignore target size; read every chunk from iterator until empty."""
-        if not self.iterempty:
-            collector = cStringIO.StringIO()
-            collector.write(self.buf)
-            for ch in self.in_iter:
-                collector.write(ch)
-            self.buf = collector.getvalue()
-            self.iterempty = True
+        self.targetsize = 2**16
 
     def read(self, l):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry."""
-        if l > len(self.buf) and not self.iterempty:
+        if l > len(self.buf) and self.iter:
             # Clamp to a multiple of self.targetsize
-            targetsize = self.targetsize * ((l // self.targetsize) + 1)
+            targetsize = max(l, self.targetsize)
             collector = cStringIO.StringIO()
             collector.write(self.buf)
             collected = len(self.buf)
-            for chunk in self.in_iter:
+            for chunk in self.iter:
                 collector.write(chunk)
                 collected += len(chunk)
                 if collected >= targetsize:
                     break
             if collected < targetsize:
-                self.iterempty = True
+                self.iter = False
             self.buf = collector.getvalue()
-        s, self.buf = self.buf[:l], buffer(self.buf, l)
+        if len(self.buf) == l:
+            s, self.buf = str(self.buf), ''
+        else:
+            s, self.buf = self.buf[:l], buffer(self.buf, l)
         return s
 
 def filechunkiter(f, size=65536, limit=None):
@@ -1383,7 +1489,7 @@ def makedate():
         tz = time.timezone
     return time.mktime(lt), tz
 
-def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
+def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True, timezone_format=" %+03d%02d"):
     """represent a (unixtime, offset) tuple as a localized time.
     unixtime is seconds since the epoch, and offset is the time zone's
     number of seconds away from UTC. if timezone is false, do not
@@ -1391,10 +1497,10 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True):
     t, tz = date or makedate()
     s = time.strftime(format, time.gmtime(float(t) - tz))
     if timezone:
-        s += " %+03d%02d" % (-tz / 3600, ((-tz % 3600) / 60))
+        s += timezone_format % (-tz / 3600, ((-tz % 3600) / 60))
     return s
 
-def strdate(string, format, defaults):
+def strdate(string, format, defaults=[]):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
     def timezone(string):
@@ -1537,6 +1643,12 @@ def shortuser(user):
         user = user[:f]
     return user
 
+def email(author):
+    '''get email of author.'''
+    r = author.find('>')
+    if r == -1: r = None
+    return author[author.find('<')+1:r]
+
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) characters."""
     if len(text) <= maxlength:
@@ -1579,7 +1691,7 @@ def rcpath():
             for p in os.environ['HGRCPATH'].split(os.pathsep):
                 if not p: continue
                 if os.path.isdir(p):
-                    for f in os.listdir(p):
+                    for f, kind in osutil.listdir(p):
                         if f.endswith('.rc'):
                             _rcpath.append(os.path.join(p, f))
                 else:
@@ -1616,3 +1728,19 @@ def drop_scheme(scheme, path):
         if path.startswith('//'):
             path = path[2:]
     return path
+
+def uirepr(s):
+    # Avoid double backslash in Windows path repr()
+    return repr(s).replace('\\\\', '\\')
+
+def hidepassword(url):
+    '''hide user credential in a url string'''
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+    netloc = re.sub('([^:]*):([^@]*)@(.*)', r'\1:***@\3', netloc)
+    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
+
+def removeauth(url):
+    '''remove all authentication information from a url string'''
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+    netloc = netloc[netloc.find('@')+1:]
+    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))

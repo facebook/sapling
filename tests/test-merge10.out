@@ -14,6 +14,6 @@ M testdir/subdir/a
 diff -r d02b3fc32762 testdir/subdir/a
 --- a/testdir/subdir/a
 +++ b/testdir/subdir/a
-@@ -1,1 +1,1 @@ a
+@@ -1,1 +1,1 @@
 -a
 +alpha

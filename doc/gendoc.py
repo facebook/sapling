@@ -1,6 +1,7 @@
 import sys, textwrap
 # import from the live mercurial repo
 sys.path.insert(0, "..")
+from mercurial import demandimport; demandimport.enable()
 from mercurial.commands import table, globalopts
 from mercurial.i18n import gettext as _
 from mercurial.help import helptable

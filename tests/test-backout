@@ -37,6 +37,22 @@ echo '# backout of backout is as if nothing happened'
 hg backout -d '3 0' --merge tip
 cat a 2>/dev/null || echo cat: a: No such file or directory
 
+echo '# across branch'
+cd ..
+hg init branch
+cd branch
+echo a > a
+hg ci -Am0 -d '0 0'
+echo b > b
+hg ci -Am1 -d '0 0'
+hg co -C 0
+# should fail
+hg backout -d '0 0' 1
+echo c > c
+hg ci -Am2 -d '0 0'
+# should fail
+hg backout -d '0 0' 1
+
 echo '# backout with merge'
 cd ..
 hg init merge

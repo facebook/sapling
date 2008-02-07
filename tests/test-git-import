@@ -44,8 +44,12 @@ copy from new
 copy to copyx
 EOF
 
-test -f copy -a ! -x copy || echo failed
-test -x copyx || echo failed
+if "$TESTDIR/hghave" -q execbit; then
+    test -f copy -a ! -x copy || echo failed
+    test -x copyx || echo failed
+else
+    test -f copy || echo failed
+fi
 cat copy
 hg cat copy
 
@@ -194,3 +198,19 @@ index 0000000..257cc56
 EOF
 cat "foo bar"
 
+echo % copy then modify the original file
+hg import -m copy-mod-orig - <<EOF
+diff --git a/foo2 b/foo2
+index 257cc56..fe08ec6 100644
+--- a/foo2
++++ b/foo2
+@@ -1 +1,2 @@
+ foo
++new line
+diff --git a/foo2 b/foo3
+similarity index 100%
+copy from foo2
+copy to foo3
+EOF
+
+cat foo3

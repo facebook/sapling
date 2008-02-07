@@ -4,12 +4,25 @@ merge
 resolving manifests
  overwrite None partial False
  ancestor af1939970a1c local f26ec4fc3fa3+ remote 8e765a822af2
+  searching for copies back to rev 1
+  unmatched files in local:
+   c2
+  unmatched files in other:
+   b
+   b2
+  all copies found (* = to merge, ! = divergent):
+   c2 -> a2 !
+   b -> a *
+   b2 -> a2 !
+  checking for directory renames
  a2: divergent renames -> dr
  a: remote moved to b -> m
  b2: remote created -> g
+copying a to b
+picked tool 'internal:merge' for a (binary False symlink False)
 merging a and b
 my a@f26ec4fc3fa3+ other b@8e765a822af2 ancestor a@af1939970a1c
-copying a to b
+ premerge successful
 removing a
 warning: detected divergent renames of a2 to:
  c2

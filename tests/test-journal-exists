@@ -1,0 +1,12 @@
+#!/bin/sh
+
+hg init
+echo a > a
+hg ci -Am0
+
+touch .hg/store/journal
+
+echo foo > a
+hg ci -Am0
+
+hg recover

@@ -1,0 +1,385 @@
+% help
+keyword extension - keyword expansion in local repositories
+
+This extension expands RCS/CVS-like or self-customized $Keywords$
+in tracked text files selected by your configuration.
+
+Keywords are only expanded in local repositories and not stored in
+the change history. The mechanism can be regarded as a convenience
+for the current user or for archive distribution.
+
+Configuration is done in the [keyword] and [keywordmaps] sections
+of hgrc files.
+
+Example:
+
+    [keyword]
+    # expand keywords in every python file except those matching "x*"
+    **.py =
+    x*    = ignore
+
+Note: the more specific you are in your filename patterns
+      the less you lose speed in huge repos.
+
+For [keywordmaps] template mapping and expansion demonstration and
+control run "hg kwdemo".
+
+An additional date template filter {date|utcdate} is provided.
+
+The default template mappings (view with "hg kwdemo -d") can be replaced
+with customized keywords and templates.
+Again, run "hg kwdemo" to control the results of your config changes.
+
+Before changing/disabling active keywords, run "hg kwshrink" to avoid
+the risk of inadvertedly storing expanded keywords in the change history.
+
+To force expansion after enabling it, or a configuration change, run
+"hg kwexpand".
+
+Also, when committing with the record extension or using mq's qrecord, be aware
+that keywords cannot be updated. Again, run "hg kwexpand" on the files in
+question to update keyword expansions after all changes have been checked in.
+
+Expansions spanning more than one line and incremental expansions,
+like CVS' $Log$, are not supported. A keyword template map
+"Log = {desc}" expands to the first line of the changeset description.
+
+list of commands:
+
+ kwdemo     print [keywordmaps] configuration and an expansion example
+ kwexpand   expand keywords in working directory
+ kwfiles    print files currently configured for keyword expansion
+ kwshrink   revert expanded keywords in working directory
+
+use "hg -v help keyword" to show aliases and global options
+% hg kwdemo
+[extensions]
+hgext.keyword = 
+[keyword]
+* = 
+b = ignore
+demo.txt = 
+[keywordmaps]
+RCSFile = {file|basename},v
+Author = {author|user}
+Header = {root}/{file},v {node|short} {date|utcdate} {author|user}
+Source = {root}/{file},v
+Date = {date|utcdate}
+Id = {file|basename},v {node|short} {date|utcdate} {author|user}
+Revision = {node|short}
+$RCSFile: demo.txt,v $
+$Author: test $
+$Header: /TMP/demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
+$Source: /TMP/demo.txt,v $
+$Date: 2000/00/00 00:00:00 $
+$Id: demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
+$Revision: xxxxxxxxxxxx $
+[extensions]
+hgext.keyword = 
+[keyword]
+* = 
+b = ignore
+demo.txt = 
+[keywordmaps]
+Branch = {branches}
+$Branch: demobranch $
+% kwshrink should exit silently in empty/invalid repo
+% cat
+expand $Id$
+do not process $Id:
+xxx $
+expand $Id$
+do not process $Id:
+xxx $
+ignore $Id$
+% addremove
+adding a
+adding b
+adding sym
+% status
+A a
+A b
+A sym
+% default keyword expansion including commit hook
+% interrupted commit should not change state or run commit hook
+a
+b
+sym
+transaction abort!
+rollback completed
+abort: empty commit message
+% status
+A a
+A b
+A sym
+% commit
+a
+b
+sym
+overwriting a expanding keywords
+running hook commit.test: cp a hooktest
+% status
+? hooktest
+% identify
+f782df5f9602
+% cat
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+ignore $Id$
+% hg cat
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+ignore $Id$
+a
+% diff a hooktest
+% removing commit hook from config
+% touch
+% status
+% update
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% cat
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+ignore $Id$
+% check whether expansion is filewise
+% commit c
+adding c
+% force expansion
+overwriting a expanding keywords
+overwriting c expanding keywords
+% compare changenodes in a c
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+$Id: c,v ba4426d1938e 1970/01/01 00:00:01 user $
+tests for different changenodes
+% qimport
+% keywords should not be expanded in patch
+# HG changeset patch
+# User User Name <user@example.com>
+# Date 1 0
+# Node ID ba4426d1938ec9673e03ab274d88c44e24618f7f
+# Parent  f782df5f9602483b4e51c31a12315f353bba380c
+cndiff
+
+diff -r f782df5f9602 -r ba4426d1938e c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,2 @@
++$Id$
++tests for different changenodes
+% qpop
+Patch queue now empty
+% qgoto - should imply qpush
+applying mqtest.diff
+Now at: mqtest.diff
+% cat
+$Id: c,v ba4426d1938e 1970/01/01 00:00:01 user $
+tests for different changenodes
+% qpop and move on
+Patch queue now empty
+% copy
+% kwfiles added
+a
+c
+% commit
+c
+ c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
+overwriting c expanding keywords
+% cat a c
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+expand $Id: c,v 0ba462c0f077 1970/01/01 00:00:01 user $
+do not process $Id:
+xxx $
+% touch copied c after 1 second
+% status
+% kwfiles
+a
+c
+% diff --rev
+diff -r f782df5f9602 c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,3 @@
++expand $Id$
++do not process $Id:
++xxx $
+% rollback
+rolling back last transaction
+% status
+A c
+% update -C
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+% custom keyword expansion
+% try with kwdemo
+[extensions]
+hgext.keyword = 
+[keyword]
+* = 
+b = ignore
+demo.txt = 
+[keywordmaps]
+Xinfo = {author}: {desc}
+$Xinfo: test: hg keyword config and expansion example $
+% cat
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+do not process $Id:
+xxx $
+ignore $Id$
+% hg cat
+expand $Id: a f782df5f9602 Thu, 01 Jan 1970 00:00:00 +0000 user $
+do not process $Id:
+xxx $
+ignore $Id$
+a
+% interrupted commit should not change state
+transaction abort!
+rollback completed
+abort: empty commit message
+% status
+M a
+? log
+% commit
+a
+overwriting a expanding keywords
+% status
+% cat
+expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: firstline $
+expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: firstline $
+ignore $Id$
+% hg cat
+expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: firstline $
+ignore $Id$
+a
+% remove
+% status
+% rollback
+rolling back last transaction
+% status
+R a
+% revert a
+% cat a
+expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: firstline $
+% clone to test incoming
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 3 changes to 3 files
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% incoming
+comparing with test-keyword/Test
+searching for changes
+changeset:   1:0729690beff6
+tag:         tip
+user:        User Name <user@example.com>
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     firstline
+
+% commit rejecttest
+a
+overwriting a expanding keywords
+% export
+% import
+applying ../rejecttest.diff
+% cat
+expand $Id: a 82983f13f138 Thu, 01 Jan 1970 00:00:03 +0000 user $ rejecttest
+do not process $Id: rejecttest
+xxx $
+$Xinfo: User Name <user@example.com>: rejects? $
+expand $Id: a 82983f13f138 Thu, 01 Jan 1970 00:00:03 +0000 user $ rejecttest
+do not process $Id: rejecttest
+xxx $
+$Xinfo: User Name <user@example.com>: rejects? $
+ignore $Id$
+
+% rollback
+rolling back last transaction
+% clean update
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% kwexpand/kwshrink on selected files
+% copy a x/a
+% kwexpand a
+overwriting a expanding keywords
+% kwexpand x/a should abort
+abort: outstanding uncommitted changes in given files
+x/a
+ x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
+overwriting x/a expanding keywords
+% cat a
+expand $Id: x/a f27c134d2d9b Thu, 01 Jan 1970 00:00:03 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: xa $
+% kwshrink a inside directory x
+overwriting x/a shrinking keywords
+% cat a
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+% kwexpand nonexistent
+nonexistent: No such file or directory
+% switch off expansion
+% kwshrink with unknown file u
+overwriting a shrinking keywords
+overwriting x/a shrinking keywords
+% cat
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+ignore $Id$
+% hg cat
+expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: firstline $
+ignore $Id$
+a
+% cat
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+ignore $Id$
+% hg cat
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+ignore $Id$
+a

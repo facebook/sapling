@@ -33,10 +33,9 @@ def chunkiter(source):
             break
         yield c
 
-def genchunk(data):
-    """build a changegroup chunk"""
-    header = struct.pack(">l", len(data)+ 4)
-    return "%s%s" % (header, data)
+def chunkheader(length):
+    """build a changegroup chunk header"""
+    return struct.pack(">l", length + 4)
 
 def closechunk():
     return struct.pack(">l", 0)
@@ -81,12 +80,21 @@ def writebundle(cg, filename, bundletype):
         # in case of sshrepo because we don't know the end of the stream
 
         # an empty chunkiter is the end of the changegroup
+        # a changegroup has at least 2 chunkiters (changelog and manifest).
+        # after that, an empty chunkiter is the end of the changegroup
         empty = False
-        while not empty:
+        count = 0
+        while not empty or count <= 2:
             empty = True
+            count += 1
             for chunk in chunkiter(cg):
                 empty = False
-                fh.write(z.compress(genchunk(chunk)))
+                fh.write(z.compress(chunkheader(len(chunk))))
+                pos = 0
+                while pos < len(chunk):
+                    next = pos + 2**20
+                    fh.write(z.compress(chunk[pos:next]))
+                    pos = next
             fh.write(z.compress(closechunk()))
         fh.write(z.flush())
         cleanup = None

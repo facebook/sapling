@@ -30,7 +30,7 @@ diffs (6 lines):
 diff -r cb9a9f314b8b -r 0647d048b600 a
 --- a/a	Thu Jan 01 00:00:00 1970 +0000
 +++ b/a	Thu Jan 01 00:00:01 1970 +0000
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 (run 'hg update' to get a working copy)
@@ -60,7 +60,7 @@ diffs (6 lines):
 diff -r cb9a9f314b8b -r 0647d048b600 a
 --- a/a	Thu Jan 01 00:00:00 1970 +0000
 +++ b/a	Thu Jan 01 00:00:01 1970 +0000
-@@ -1,1 +1,2 @@ a
+@@ -1,1 +1,2 @@
  a
 +a
 (run 'hg update' to get a working copy)

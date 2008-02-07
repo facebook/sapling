@@ -22,6 +22,7 @@ added 1 changesets with 2 changes to 2 files
 applying ../tip.patch
 transaction abort!
 rollback completed
+abort: empty commit message
 % import of plain diff should be ok with message
 requesting all changes
 adding changesets
@@ -30,6 +31,44 @@ adding file changes
 added 1 changesets with 2 changes to 2 files
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
+% import of plain diff with specific date and user
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying ../tip.patch
+changeset:   1:ca68f19f3a40
+tag:         tip
+user:        user@nowhere.net
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+patch
+
+
+diff -r 80971e65b431 -r ca68f19f3a40 a
+--- a/a	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -1,1 +1,2 @@
+ line 1
++line 2
+
+% import of plain diff should be ok with --no-commit
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 2 changes to 2 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying ../tip.patch
+diff -r 80971e65b431 a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ line 1
++line 2
 % hg -R repo import
 requesting all changes
 adding changesets
@@ -91,6 +130,7 @@ added 1 changesets with 2 changes to 2 files
 applying patch from stdin
 transaction abort!
 rollback completed
+abort: empty commit message
 % hg export in email, should use patch header
 requesting all changes
 adding changesets
@@ -111,6 +151,13 @@ applying patch from stdin
 email patch
 
 next line
+---
+% import patch1 patch2; rollback
+parent: 0
+applying ../patch1
+applying ../patch2
+rolling back last transaction
+parent: 1
 % hg import in a subdirectory
 requesting all changes
 adding changesets
@@ -124,3 +171,55 @@ summary:     subdir change
 % committer should be 'someoneelse'
 user:        someoneelse
 % should be empty
+% test fuzziness
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying tip.patch
+patching file a
+Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
+a
+adding a
+adding b1
+adding c1
+adding d
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -0,0 +1,1 @@
++a
+diff --git a/b1 b/b2
+rename from b1
+rename to b2
+--- a/b1
++++ b/b2
+@@ -0,0 +1,1 @@
++b
+diff --git a/c1 b/c1
+--- a/c1
++++ b/c1
+@@ -0,0 +1,1 @@
++c
+diff --git a/c1 b/c2
+copy from c1
+copy to c2
+--- a/c1
++++ b/c2
+@@ -0,0 +1,1 @@
++c
+diff --git a/d b/d
+--- a/d
++++ b/d
+@@ -1,1 +0,0 @@
+-d
+4 files updated, 0 files merged, 2 files removed, 0 files unresolved
+applying empty.diff
+% a file
+a
+% b1 file
+% b2 file
+b
+% c1 file
+c
+% c2 file
+c
+% d file

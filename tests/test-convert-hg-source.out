@@ -1,0 +1,20 @@
+merging baz and foo
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+merging foo and baz
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+initializing destination new repository
+scanning source...
+sorting...
+converting...
+5 add foo bar
+4 change foo
+3 make bar and baz copies of foo
+2 merge local copy
+1 merge remote copy
+0 mark baz executable
+comparing with ../orig
+searching for changes
+no changes found

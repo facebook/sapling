@@ -52,3 +52,17 @@ echo blue >> color
 hg ci -m 3 -d '0 0'
 hg grep orange
 hg grep --all orange
+
+# Got a traceback when using grep on a single
+# revision with renamed files.
+cd ..
+echo % issue 685
+hg init issue685
+cd issue685
+echo octarine > color
+hg ci -Amcolor
+hg rename color colour
+hg ci -Am rename
+hg grep octarine
+# Used to crash here
+hg grep -r 1 octarine

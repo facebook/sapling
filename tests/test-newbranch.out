@@ -83,6 +83,15 @@ modify a branch
 bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
 4909a3732169c0c20011c4f4b8fdff4e3d89b23f foo
 67ec16bde7f1575d523313b9bca000f6a6f12dca bar
+% push should update the branch cache
+% pushing just rev 0
+be8523e69bf892e25817fc97187516b3c0804ae4 0
+be8523e69bf892e25817fc97187516b3c0804ae4 default
+% pushing everything
+4909a3732169c0c20011c4f4b8fdff4e3d89b23f 4
+bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
+4909a3732169c0c20011c4f4b8fdff4e3d89b23f foo
+67ec16bde7f1575d523313b9bca000f6a6f12dca bar
 % update with no arguments: tipmost revision of the current branch
 bf1bc2f45e83
 4909a3732169 (foo) tip

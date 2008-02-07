@@ -25,3 +25,11 @@ cd ../d
 hg clone ../a
 cd a
 hg cat a
+
+# check that we drop the file:// from the path before
+# writing the .hgrc
+cd ../..
+hg clone file://a e
+grep 'file:' e/.hg/hgrc
+
+exit 0

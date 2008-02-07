@@ -47,6 +47,10 @@ def _create_auth_baton(pool):
         svn.client.get_ssl_client_cert_pw_file_provider(pool),
         svn.client.get_ssl_server_trust_file_provider(pool),
         ]
+    # Platform-dependant authentication methods
+    if hasattr(svn.client, 'get_windows_simple_provider'):
+        providers.append(svn.client.get_windows_simple_provider(pool))
+
     return svn.core.svn_auth_open(providers, pool)
 
 class NotBranchError(SubversionException):
@@ -77,7 +81,7 @@ class SvnRaTransport(object):
                 self.ra = svn.client.open_ra_session(
                     self.svn_url.encode('utf8'),
                     self.client, self.pool)
-            except SubversionException, (_, num):
+            except SubversionException, (inst, num):
                 if num in (svn.core.SVN_ERR_RA_ILLEGAL_URL,
                            svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
                            svn.core.SVN_ERR_BAD_URL):

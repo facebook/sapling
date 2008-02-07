@@ -219,7 +219,7 @@ copy <source ...> <dest>::
     -f, --force           既存の変更されたファイルに無理矢理コピー
                           します
     -p, --parents         コピー先にコピー元のパスを追加します
-    
+
     別名: cp
 
 diff [-a] [-r revision] [-r revision] [files ...]::
@@ -388,7 +388,7 @@ locate [options] [files]::
 
     オプション:
 
-    -0, --print0         xargs と一緒に使うために、ファイル名を 
+    -0, --print0         xargs と一緒に使うために、ファイル名を
                          NUL で終えます
     -f, --fullpath       ファイルシステムのルートからの完全なパ
                          スを表示します
@@ -580,9 +580,9 @@ serve [options]::
     -E, --errorlog <file>    エラーログが出力されるファイルの名前を
                              指定します
     -a, --address <addr>     使用するアドレスを指定します
-    -p, --port <n>           使用するポートを指定します 
+    -p, --port <n>           使用するポートを指定します
                              (デフォルト: 8000)
-    -n, --name <name>        ウェブページで表示する名前を指定します 
+    -n, --name <name>        ウェブページで表示する名前を指定します
                              (デフォルト: working dir)
     -t, --templatedir <path> 使用するウェブの雛型を指定します
     -6, --ipv6               IPv4 に加えて IPv6 も使用します

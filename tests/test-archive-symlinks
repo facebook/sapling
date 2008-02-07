@@ -1,19 +1,14 @@
 #!/bin/sh
 
+"$TESTDIR/hghave" symlink || exit 80
+
 origdir=`pwd`
-
-cat >> readlink.py <<EOF
-import os
-import sys
-
-for f in sys.argv[1:]:
-    print f, '->', os.readlink(f)
-EOF
 
 hg init repo
 cd repo
 ln -s nothing dangling
-hg ci -qAm 'add symlink'
+# avoid tar warnings about old timestamp
+hg ci -d '2000-01-01 00:00:00 +0000' -qAm 'add symlink'
 
 hg archive -t files ../archive
 hg archive -t tar -p tar ../archive.tar
@@ -22,16 +17,16 @@ hg archive -t zip -p zip ../archive.zip
 echo '% files'
 cd "$origdir"
 cd archive
-python ../readlink.py dangling
+$TESTDIR/readlink.py dangling
 
 echo '% tar'
 cd "$origdir"
 tar xf archive.tar
 cd tar
-python ../readlink.py dangling
+$TESTDIR/readlink.py dangling
 
 echo '% zip'
 cd "$origdir"
 unzip archive.zip > /dev/null
 cd zip
-python ../readlink.py dangling
+$TESTDIR/readlink.py dangling

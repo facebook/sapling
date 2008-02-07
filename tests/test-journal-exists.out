@@ -1,0 +1,8 @@
+adding a
+abort: journal already exists - run hg recover!
+rolling back interrupted transaction
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions

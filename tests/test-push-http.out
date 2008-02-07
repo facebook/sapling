@@ -1,19 +1,19 @@
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % expect ssl error
-pushing to http://localhost:20059/
+pushing to http://localhost/
 searching for changes
 ssl required
 % expect authorization error
-pushing to http://localhost:20059/
+pushing to http://localhost/
 searching for changes
 push not authorized
 % expect authorization error: must have authorized user
-pushing to http://localhost:20059/
+pushing to http://localhost/
 searching for changes
 push not authorized
 % expect success
-pushing to http://localhost:20059/
+pushing to http://localhost/
 searching for changes
 adding changesets
 adding manifests
@@ -22,10 +22,10 @@ added 1 changesets with 1 changes to 1 files
 rolling back last transaction
 changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_URL=remote:http 
 % expect authorization error: all users denied
-pushing to http://localhost:20059/
+pushing to http://localhost/
 searching for changes
 push not authorized
 % expect authorization error: some users denied, users must be authenticated
-pushing to http://localhost:20059/
+pushing to http://localhost/
 searching for changes
 push not authorized

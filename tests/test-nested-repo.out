@@ -1,8 +1,9 @@
 # should print nothing
-# should print ? b/x
-? b/x
-# should print A b/x
-A b/x
-# should forget b/x
-forgetting b/x
-# should print nothing
+# should fail
+abort: path 'b/x' is inside repo 'b'
+abort: path 'b/x' is inside repo 'b'
+# should fail
+abort: path 'b/x' is inside repo 'b'
+# should arguably print nothing
+# should fail
+abort: path 'b/a' is inside repo 'b'

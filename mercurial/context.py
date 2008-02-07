@@ -70,7 +70,7 @@ class changectx(object):
         a = self._manifest.keys()
         a.sort()
         for f in a:
-            return f
+            yield f
 
     def changeset(self): return self._changeset
     def manifest(self): return self._manifest
@@ -82,6 +82,7 @@ class changectx(object):
     def files(self): return self._changeset[3]
     def description(self): return self._changeset[4]
     def branch(self): return self._changeset[5].get("branch")
+    def extra(self): return self._changeset[5]
     def tags(self): return self._repo.nodetags(self._node)
 
     def parents(self):
@@ -94,20 +95,29 @@ class changectx(object):
         c = self._repo.changelog.children(self._node)
         return [changectx(self._repo, x) for x in c]
 
-    def filenode(self, path):
+    def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
-                return self._manifest[path]
+                return self._manifest[path], self._manifest.flags(path)
             except KeyError:
-                raise revlog.LookupError(_("'%s' not found in manifest") % path)
+                raise revlog.LookupError(path, _("'%s' not found in manifest") % path)
         if '_manifestdelta' in self.__dict__ or path in self.files():
             if path in self._manifestdelta:
-                return self._manifestdelta[path]
+                return self._manifestdelta[path], self._manifestdelta.flags(path)
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
-            raise revlog.LookupError(_("'%s' not found in manifest") % path)
+            raise revlog.LookupError(path, _("'%s' not found in manifest") % path)
 
-        return node
+        return node, flag
+
+    def filenode(self, path):
+        return self._fileinfo(path)[0]
+
+    def fileflags(self, path):
+        try:
+            return self._fileinfo(path)[1]
+        except revlog.LookupError:
+            return ''
 
     def filectx(self, path, fileid=None, filelog=None):
         """get a file context from this changeset"""
@@ -149,12 +159,11 @@ class filectx(object):
         if filelog:
             self._filelog = filelog
 
-        if fileid is None:
-            if changectx is None:
-                self._changeid = changeid
-            else:
-                self._changectx = changectx
-        else:
+        if changeid is not None:
+            self._changeid = changeid
+        if changectx is not None:
+            self._changectx = changectx
+        if fileid is not None:
             self._fileid = fileid
 
     def __getattr__(self, name):
@@ -165,7 +174,10 @@ class filectx(object):
             self._filelog = self._repo.file(self._path)
             return self._filelog
         elif name == '_changeid':
-            self._changeid = self._filelog.linkrev(self._filenode)
+            if '_changectx' in self.__dict__:
+                self._changeid = self._changectx.rev()
+            else:
+                self._changeid = self._filelog.linkrev(self._filenode)
             return self._changeid
         elif name == '_filenode':
             if '_fileid' in self.__dict__:
@@ -211,13 +223,19 @@ class filectx(object):
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
+    def fileflags(self): return self._changectx.fileflags(self._path)
+    def isexec(self): return 'x' in self.fileflags()
+    def islink(self): return 'l' in self.fileflags()
     def filelog(self): return self._filelog
 
     def rev(self):
         if '_changectx' in self.__dict__:
             return self._changectx.rev()
+        if '_changeid' in self.__dict__:
+            return self._changectx.rev() 
         return self._filelog.linkrev(self._filenode)
 
+    def linkrev(self): return self._filelog.linkrev(self._filenode)
     def node(self): return self._changectx.node()
     def user(self): return self._changectx.user()
     def date(self): return self._changectx.date()
@@ -228,18 +246,42 @@ class filectx(object):
     def changectx(self): return self._changectx
 
     def data(self): return self._filelog.read(self._filenode)
-    def renamed(self): return self._filelog.renamed(self._filenode)
     def path(self): return self._path
     def size(self): return self._filelog.size(self._filerev)
 
     def cmp(self, text): return self._filelog.cmp(self._filenode, text)
+
+    def renamed(self):
+        """check if file was actually renamed in this changeset revision
+
+        If rename logged in file revision, we report copy for changeset only
+        if file revisions linkrev points back to the changeset in question
+        or both changeset parents contain different file revisions.
+        """
+
+        renamed = self._filelog.renamed(self._filenode)
+        if not renamed:
+            return renamed
+
+        if self.rev() == self.linkrev():
+            return renamed
+
+        name = self.path()
+        fnode = self._filenode
+        for p in self._changectx.parents():
+            try:
+                if fnode == p.filenode(name):
+                    return None
+            except revlog.LookupError:
+                pass
+        return renamed
 
     def parents(self):
         p = self._path
         fl = self._filelog
         pl = [(p, n, fl) for n in self._filelog.parents(self._filenode)]
 
-        r = self.renamed()
+        r = self._filelog.renamed(self._filenode)
         if r:
             pl[0] = (r[0], r[1], None)
 
@@ -305,7 +347,7 @@ class filectx(object):
             return [getctx(p, n) for p, n in pl if n != nullrev]
 
         # use linkrev to find the first changeset where self appeared
-        if self.rev() != self._filelog.linkrev(self._filenode):
+        if self.rev() != self.linkrev():
             base = self.filectx(self.filerev())
         else:
             base = self
@@ -414,9 +456,11 @@ class workingctx(changectx):
         """generate a manifest corresponding to the working directory"""
 
         man = self._parents[0].manifest().copy()
-        is_exec = util.execfunc(self._repo.root, man.execf)
-        is_link = util.linkfunc(self._repo.root, man.linkf)
         copied = self._repo.dirstate.copies()
+        is_exec = util.execfunc(self._repo.root,
+                                lambda p: man.execf(copied.get(p,p)))
+        is_link = util.linkfunc(self._repo.root,
+                                lambda p: man.linkf(copied.get(p,p)))
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
@@ -461,6 +505,27 @@ class workingctx(changectx):
 
     def children(self):
         return []
+
+    def fileflags(self, path):
+        if '_manifest' in self.__dict__:
+            try:
+                return self._manifest.flags(path)
+            except KeyError:
+                return ''
+
+        pnode = self._parents[0].changeset()[0]
+        orig = self._repo.dirstate.copies().get(path, path)
+        node, flag = self._repo.manifest.find(pnode, orig)
+        is_link = util.linkfunc(self._repo.root, lambda p: 'l' in flag)
+        is_exec = util.execfunc(self._repo.root, lambda p: 'x' in flag)
+        try:
+            return (is_link(path) and 'l' or '') + (is_exec(path) and 'e' or '')
+        except OSError:
+            pass
+
+        if not node or path in self.deleted() or path in self.removed():
+            return ''
+        return flag
 
     def filectx(self, path, filelog=None):
         """get a file context from the working directory"""

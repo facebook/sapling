@@ -42,7 +42,7 @@ class lazycommand(object):
             return
 
         try:
-            self._cmd = findcmd(self._ui, self._target)[1]
+            self._cmd = findcmd(self._ui, self._target, commands.table)[1]
             if self._cmd == self:
                 raise RecursiveCommand()
             if self._target in commands.norepo.split(' '):

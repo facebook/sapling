@@ -1,0 +1,22 @@
+% create source repository
+adding a
+% fork source repository
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b
+% update source repository
+% merge repositories
+pulling from ../t2
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+M b
+% rename b as c
+A c
+R b
+% rename back c as b
+M b

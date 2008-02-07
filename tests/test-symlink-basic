@@ -7,14 +7,6 @@ cleanpath()
     sed -e "s:/.*\(/test-symlink-basic/.*\):...\1:"
 }
 
-cat >> readlink.py <<EOF
-import os
-import sys
-
-for f in sys.argv[1:]:
-    print f, '->', os.readlink(f)
-EOF
-
 hg init a
 cd a
 ln -s nothing dangling
@@ -25,29 +17,29 @@ hg commit -m 'add symlink' -d '0 0'
 hg tip -v
 hg manifest --debug
 echo '% rev 0:'
-python ../readlink.py dangling
+$TESTDIR/readlink.py dangling
 
 rm dangling
 ln -s void dangling
 hg commit -m 'change symlink'
 echo '% rev 1:'
-python ../readlink.py dangling
+$TESTDIR/readlink.py dangling
 
 echo '% modifying link'
 rm dangling
 ln -s empty dangling
-python ../readlink.py dangling
+$TESTDIR/readlink.py dangling
 
 echo '% reverting to rev 0:'
 hg revert -r 0 -a
-python ../readlink.py dangling
+$TESTDIR/readlink.py dangling
 
 echo '% backups:'
-python ../readlink.py *.orig
+$TESTDIR/readlink.py *.orig
 
 rm *.orig
 hg up -C
 echo '% copies'
 hg cp -v dangling dangling2
 hg st -Cmard
-python ../readlink.py dangling dangling2
+$TESTDIR/readlink.py dangling dangling2

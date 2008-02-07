@@ -18,7 +18,6 @@ basic commands:
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
- revert     revert files or dirs to their states as of some revision
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory

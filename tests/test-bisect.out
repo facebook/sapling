@@ -202,7 +202,10 @@ Testing changeset 16:a2e6ea4973e9 (30 changesets remaining, ~4 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Testing changeset 23:5ec79163bff4 (15 changesets remaining, ~3 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-Testing changeset 27:288867a866e9 (8 changesets remaining, ~3 tests)
+skip
+Testing changeset 24:10e0acd3809e (15 changesets remaining, ~3 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 27:288867a866e9 (7 changesets remaining, ~2 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Testing changeset 29:b5bd63375ab9 (4 changesets remaining, ~2 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -214,3 +217,27 @@ user:        test
 date:        Thu Jan 01 00:00:29 1970 +0000
 summary:     msg 29
 
+% bisect reverse test
+Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 7:03750880c6b5 (16 changesets remaining, ~4 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+skip
+Testing changeset 6:a3d5c6fdf0d3 (16 changesets remaining, ~4 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 2:db07c04beaca (7 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 0:b99c7b9c8e11 (3 changesets remaining, ~1 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 1:5cd978ea5149 (2 changesets remaining, ~1 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+The first good revision is:
+changeset:   1:5cd978ea5149
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     msg 1
+
+abort: Inconsistent state, 31:58c80a7c8a40 is good and bad
+error
+Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
+5cd978ea5149

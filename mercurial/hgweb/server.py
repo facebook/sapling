@@ -10,7 +10,6 @@ import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
 from mercurial import ui, hg, util, templater
 from hgweb_mod import hgweb
 from hgwebdir_mod import hgwebdir
-from request import wsgiapplication
 from mercurial.i18n import gettext as _
 
 def _splitURI(uri):
@@ -44,17 +43,17 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.protocol_version = 'HTTP/1.1'
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kargs)
 
+    def _log_any(self, fp, format, *args):
+        fp.write("%s - - [%s] %s\n" % (self.client_address[0],
+                                       self.log_date_time_string(),
+                                       format % args))
+        fp.flush()
+
     def log_error(self, format, *args):
-        errorlog = self.server.errorlog
-        errorlog.write("%s - - [%s] %s\n" % (self.client_address[0],
-                                             self.log_date_time_string(),
-                                             format % args))
+        self._log_any(self.server.errorlog, format, *args)
 
     def log_message(self, format, *args):
-        accesslog = self.server.accesslog
-        accesslog.write("%s - - [%s] %s\n" % (self.client_address[0],
-                                              self.log_date_time_string(),
-                                              format % args))
+        self._log_any(self.server.accesslog, format, *args)
 
     def do_write(self):
         try:
@@ -77,7 +76,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.do_POST()
 
     def do_hgweb(self):
-        path_info, query = _splitURI(self.path)
+        path, query = _splitURI(self.path)
 
         env = {}
         env['GATEWAY_INTERFACE'] = 'CGI/1.1'
@@ -85,7 +84,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         env['SERVER_NAME'] = self.server.server_name
         env['SERVER_PORT'] = str(self.server.server_port)
         env['REQUEST_URI'] = self.path
-        env['PATH_INFO'] = path_info
+        env['SCRIPT_NAME'] = self.server.prefix
+        env['PATH_INFO'] = path[len(self.server.prefix):]
         env['REMOTE_HOST'] = self.client_address[0]
         env['REMOTE_ADDR'] = self.client_address[0]
         if query:
@@ -121,10 +121,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.saved_headers = []
         self.sent_headers = False
         self.length = None
-        req = self.server.reqmaker(env, self._start_response)
-        for data in req:
-            if data:
-                self._write(data)
+        self.server.application(env, self._start_response)
 
     def send_headers(self):
         if not self.saved_status:
@@ -200,16 +197,23 @@ def create_server(ui, repo):
 
     def openlog(opt, default):
         if opt and opt != '-':
-            return open(opt, 'w')
+            return open(opt, 'a')
         return default
 
-    address = repo.ui.config("web", "address", "")
-    port = int(repo.ui.config("web", "port", 8000))
-    use_ipv6 = repo.ui.configbool("web", "ipv6")
-    webdir_conf = repo.ui.config("web", "webdir_conf")
-    ssl_cert = repo.ui.config("web", "certificate")
-    accesslog = openlog(repo.ui.config("web", "accesslog", "-"), sys.stdout)
-    errorlog = openlog(repo.ui.config("web", "errorlog", "-"), sys.stderr)
+    if repo is None:
+        myui = ui
+    else:
+        myui = repo.ui
+    address = myui.config("web", "address", "")
+    port = int(myui.config("web", "port", 8000))
+    prefix = myui.config("web", "prefix", "")
+    if prefix:
+        prefix = "/" + prefix.strip("/")
+    use_ipv6 = myui.configbool("web", "ipv6")
+    webdir_conf = myui.config("web", "webdir_conf")
+    ssl_cert = myui.config("web", "certificate")
+    accesslog = openlog(myui.config("web", "accesslog", "-"), sys.stdout)
+    errorlog = openlog(myui.config("web", "errorlog", "-"), sys.stderr)
 
     if use_threads:
         try:
@@ -246,13 +250,14 @@ def create_server(ui, repo):
                     raise hg.RepoError(_("There is no Mercurial repository here"
                                          " (.hg not found)"))
                 return hgwebobj
-            self.reqmaker = wsgiapplication(make_handler)
+            self.application = make_handler()
 
             addr = address
             if addr in ('', '::'):
                 addr = socket.gethostname()
 
             self.addr, self.port = addr, port
+            self.prefix = prefix
 
             if ssl_cert:
                 try:

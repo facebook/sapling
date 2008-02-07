@@ -13,6 +13,9 @@
 # option) any later version.
 #
 
+emulate -LR zsh
+setopt extendedglob
+
 local curcontext="$curcontext" state line
 typeset -A _hg_cmd_globals
 
@@ -153,9 +156,9 @@ _hg_tags() {
   typeset -a tags
   local tag rev
 
-  _hg_cmd tags 2> /dev/null | while read tag rev
+  _hg_cmd tags 2> /dev/null | while read tag
   do
-    tags+=($tag)
+    tags+=(${tag/ #    [0-9]#:*})
   done
   (( $#tags )) && _describe -t tags 'tags' tags
 }
@@ -198,6 +201,13 @@ _hg_modified() {
   typeset -a status_files
   _hg_status m
   _wanted files expl 'modified files' _multi_parts / status_files
+}
+
+_hg_config() {
+    typeset -a items
+    local line
+    items=(${${(%f)"$(_hg_cmd showconfig)"}%%\=*})
+    (( $#items )) && _describe -t config 'config item' items
 }
 
 _hg_addremove() {
@@ -352,6 +362,17 @@ _hg_cmd_archive() {
   '*:destination:_files'
 }
 
+_hg_cmd_backout() {
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
+    '--merge[merge with old dirstate parent after backout]' \
+    '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
+    '--parent[parent to choose when backing out merge]' \
+    '(--user -u)'{-u+,--user}'[record user as commiter]:user:' \
+    '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
+    '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
+    '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt'
+}
+
 _hg_cmd_bundle() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[run even when remote repository is unrelated]' \
@@ -431,7 +452,8 @@ _hg_cmd_grep() {
   '(--line-number -n)'{-n,--line-number}'[print matching line numbers]' \
   '*'{-r+,--rev}'[search in given revision range]:revision:_hg_revrange' \
   '(--user -u)'{-u,--user}'[print user who committed change]' \
-  '*:search pattern:_hg_files'
+  '1:search pattern:' \
+  '*:files:_hg_files'
 }
 
 _hg_cmd_heads() {
@@ -442,6 +464,15 @@ _hg_cmd_heads() {
 _hg_cmd_help() {
   _arguments -s -w : $_hg_global_opts \
   '*:mercurial command:_hg_commands'
+}
+
+_hg_cmd_identify() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--rev -r)'{-r+,--rev}'[identify the specified rev]:revision:_hg_tags' \
+  '(--num -n)'{-n+,--num}'[show local revision number]' \
+  '(--id -i)'{-i+,--id}'[show global revision id]' \
+  '(--branch -b)'{-b+,--branch}'[show branch]' \
+  '(--tags -t)'{-t+,--tags}'[show tags]'
 }
 
 _hg_cmd_import() {
@@ -457,7 +488,7 @@ _hg_cmd_incoming() {
   '(--no-merges -M)'{-M,--no-merges}'[do not show merge revisions]' \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
   '(--patch -p)'{-p,--patch}'[show patch]' \
-  '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]' \
+  '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]:revision:_hg_tags' \
   '(--newest-first -n)'{-n,--newest-first}'[show newest record first]' \
   '--bundle[file to store the bundles into]:bundle file:_files' \
   ':source:_hg_remote'
@@ -509,7 +540,7 @@ _hg_cmd_outgoing() {
 _hg_cmd_parents() {
   _arguments -s -w : $_hg_global_opts $_hg_style_opts \
   '(--rev -r)'{-r+,--rev}'[show parents of the specified rev]:revision:_hg_tags' \
-  ':revision:_hg_tags'
+  ':last modified file:_hg_files'
 }
 
 _hg_cmd_paths() {
@@ -521,13 +552,14 @@ _hg_cmd_pull() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
   '(--update -u)'{-u,--update}'[update to new tip if changesets were pulled]' \
+  '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]:revision:' \
   ':source:_hg_remote'
 }
 
 _hg_cmd_push() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[force push]' \
-  '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]' \
+  '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]:revision:_hg_tags' \
   ':destination:_hg_remote'
 }
 
@@ -579,6 +611,12 @@ _hg_cmd_serve() {
   '(--ipv6 -6)'{-6,--ipv6}'[use IPv6 in addition to IPv4]'
 }
 
+_hg_cmd_showconfig() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--untrusted -u)'{-u+,--untrusted}'[show untrusted configuration options]' \
+  ':config item:_hg_config'
+}
+
 _hg_cmd_status() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
   '(--all -A)'{-A,--all}'[show status of all files]' \
@@ -620,7 +658,13 @@ _hg_cmd_unbundle() {
 _hg_cmd_update() {
   _arguments -s -w : $_hg_global_opts \
   '(--clean -C)'{-C,--clean}'[overwrite locally modified files]' \
+  '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
   ':revision:_hg_tags'
+}
+
+# bisect extension
+_hg_cmd_bisect() {
+  _arguments -s -w : $_hg_global_opts ':evaluation:(help init reset next good bad)'
 }
 
 # HGK
@@ -633,13 +677,13 @@ _hg_cmd_view() {
 # MQ
 _hg_qseries() {
   typeset -a patches
-  patches=($(_hg_cmd qseries 2>/dev/null))
+  patches=(${(f)"$(_hg_cmd qseries 2>/dev/null)"})
   (( $#patches )) && _describe -t hg-patches 'patches' patches
 }
 
 _hg_qapplied() {
   typeset -a patches
-  patches=($(_hg_cmd qapplied 2>/dev/null))
+  patches=(${(f)"$(_hg_cmd qapplied 2>/dev/null)"})
   if (( $#patches ))
   then
     patches+=(qbase qtip)
@@ -649,7 +693,7 @@ _hg_qapplied() {
 
 _hg_qunapplied() {
   typeset -a patches
-  patches=($(_hg_cmd qunapplied 2>/dev/null))
+  patches=(${(f)"$(_hg_cmd qunapplied 2>/dev/null)"})
   (( $#patches )) && _describe -t hg-unapplied-patches 'unapplied patches' patches
 }
 
@@ -687,6 +731,12 @@ _hg_cmd_qfold() {
   _arguments -s -w : $_hg_global_opts $_h_commit_opts \
   '(--keep,-k)'{-k,--keep}'[keep folded patch files]' \
   '*:unapplied patch:_hg_qunapplied'
+}
+
+_hg_cmd_qgoto() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[overwrite any local changes]' \
+  ':patch:_hg_qseries'
 }
 
 _hg_cmd_qguard() {

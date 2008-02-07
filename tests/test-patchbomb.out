@@ -107,3 +107,41 @@ Write the introductory message for the patch series.
 Writing [PATCH 0 of 2] test ...
 Writing [PATCH 1 of 2] a ...
 Writing [PATCH 2 of 2] b ...
+adding c
+% test bundle and description
+searching for changes
+1 changesets found
+
+Displaying test ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: test
+Message-Id: <patchbomb.180@
+Date: Thu, 01 Jan 1970 00:03:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+a multiline
+
+description
+
+--===
+Content-Type: application/x-mercurial-bundle
+MIME-Version: 1.0
+Content-Disposition: attachment; filename="bundle.hg"
+Content-Transfer-Encoding: base64
+
+SEcxMEJaaDkxQVkmU1nvR7I3AAAN////lFYQWj1/4HwRkdC/AywIAk0E4pfoSIIIgQCgGEQOcLAA
+2tA1VPyp4mkeoG0EaaPU0GTT1GjRiNPIg9CZGBqZ6UbU9J+KFU09DNUaGgAAAAAANAGgAAAAA1U8
+oGgAADQGgAANNANAAAAAAZipFLz3XoakCEQB3PVPyHJVi1iYkAAKQAZQGpQGZESInRnCFMqLDla2
+Bx3qfRQeA2N4lnzKkAmP8kR2asievLLXXebVU8Vg4iEBqcJNJAxIapSU6SM4888ZAciRG6MYAIEE
+SlIBpFisgGkyRjX//TMtfcUAEsGu56+YnE1OlTZmzKm8BSu2rvo4rHAYYaadIFFuTy0LYgIkgLVD
+sgVa2F19D1tx9+hgbAygLgQwaIqcDdgA4BjQgIiz/AEP72++llgDKhKducqodGE4B0ETqF3JFOFC
+Q70eyNw=
+--===

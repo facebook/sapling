@@ -15,8 +15,8 @@ AppUpdatesURL=http://www.selenic.com/mercurial
 AppID={{4B95A5F1-EF59-4B08-BED8-C891C46121B3}
 AppContact=mercurial@selenic.com
 OutputBaseFilename=Mercurial-snapshot
-DefaultDirName={sd}\Mercurial
-SourceDir=C:\hg\hg-release
+DefaultDirName={pf}\Mercurial
+SourceDir=..\..
 VersionInfoDescription=Mercurial distributed SCM
 VersionInfoCopyright=Copyright 2005-2007 Matt Mackall and others
 VersionInfoCompany=Matt Mackall and others
@@ -29,17 +29,17 @@ PrivilegesRequired=none
 
 [Files]
 Source: contrib\mercurial.el; DestDir: {app}/Contrib
+Source: contrib\vim\*.*; DestDir: {app}/Contrib/Vim
+Source: contrib\zsh_completion; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Flags: confirmoverwrite
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
 Source: dist\library.zip; DestDir: {app}
-Source: dist\patch.exe; DestDir: {app}
 Source: dist\mfc71.dll; DestDir: {app}
 Source: dist\msvcr71.dll; DestDir: {app}
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
-Source: doc\*.txt; DestDir: {app}\Docs
 Source: doc\*.html; DestDir: {app}\Docs
 Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt

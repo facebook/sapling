@@ -1,4 +1,5 @@
-header = header.tmpl
+mimetype = 'text/plain; charset={encoding}'
+header = ''
 footer = ''
 changeset = changeset.tmpl
 difflineplus = '#line#'
@@ -8,7 +9,6 @@ diffline = '#line#'
 changesetparent = '# Parent #node#'
 changesetchild = '# Child #node#'
 filenodelink = ''
-filerevision = '#rawfileheader##raw#'
 fileline = '#line#'
 diffblock = '#lines#'
 filediff = filediff.tmpl
@@ -18,4 +18,6 @@ manifest = manifest.tmpl
 manifestdirentry = 'drwxr-xr-x {basename}\n'
 manifestfileentry = '{permissions|permissions} {size} {basename}\n'
 index = index.tmpl
+notfound = notfound.tmpl
+error = error.tmpl
 indexentry = '#url#\n'

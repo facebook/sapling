@@ -41,6 +41,11 @@ echo foo > foo
 hg ci -Ame2 -d '6 0'
 hg log -vC --template '{rev} {file_copies%filecopy}\n' -r 5
 
+echo % log copies, execute bit set
+chmod +x e
+hg ci -me3 -d '7 0'
+hg log -vC --template '{rev} {file_copies%filecopy}\n' -r 6
+
 echo '% log -p d'
 hg log -pv d
 

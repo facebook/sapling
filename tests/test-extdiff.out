@@ -1,9 +1,7 @@
 adding a
-making snapshot of 0 files from rev 000000000000
-making snapshot of 1 files from working dir
+adding b
 Only in a: a
-making snapshot of 0 files from rev 000000000000
-making snapshot of 1 files from working dir
+Only in a: b
 diffing a.000000000000 a
 hg falabala [OPTION]... [FILE]...
 
@@ -26,14 +24,10 @@ options:
  -X --exclude  exclude names matching the given patterns
 
 use "hg -v help falabala" to show global options
-making snapshot of 1 files from rev e27a2475d60a
-making snapshot of 1 files from rev 5e49ec8d3f05
-diffing a.e27a2475d60a a.5e49ec8d3f05
+diffing a.8a5febb7f867/a a.34eed99112ab/a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-making snapshot of 1 files from rev 5e49ec8d3f05
-making snapshot of 1 files from working dir
-diffing a.5e49ec8d3f05 a
 diff-like tools yield a non-zero exit code
+diffing a.34eed99112ab/c [tmp]/test-extdiff/a/c

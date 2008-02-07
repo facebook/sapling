@@ -14,6 +14,6 @@ summary:     add empty2
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 M empty2
-b80de5d138758541c5f05265ad144ab9fa86d1db 644 empty1
-b80de5d138758541c5f05265ad144ab9fa86d1db 644 empty2
-b80de5d138758541c5f05265ad144ab9fa86d1db 644 empty3
+b80de5d138758541c5f05265ad144ab9fa86d1db 644   empty1
+b80de5d138758541c5f05265ad144ab9fa86d1db 644   empty2
+b80de5d138758541c5f05265ad144ab9fa86d1db 644   empty3

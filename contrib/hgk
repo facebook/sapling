@@ -4,6 +4,8 @@
 # This program is free software; it may be used, copied, modified
 # and distributed under the terms of the GNU General Public Licence,
 # either version 2, or (at your option) any later version.
+#
+# See hgk.py for extension usage and configuration.
 
 
 # Modified version of Tip 171:
@@ -32,7 +34,7 @@ proc ::tk::MouseWheel {wFired X Y D {shifted 0}} {
     # if we are outside the app, try and scroll the focus widget
     if {![winfo exists $w]} { catch {set w [focus]} }
     if {[winfo exists $w]} {
-        
+
         if {[bind $w $evt] ne ""} {
             # Awkward ... this widget has a MouseWheel binding, but to
             # trigger successfully in it, we must give it focus.
@@ -70,8 +72,17 @@ proc ::tk::MouseWheel {wFired X Y D {shifted 0}} {
 bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
 
 # end of win32 section
-} 
+}
 
+
+# Unify right mouse button handling.
+# See "mouse buttons on macintosh" thread on comp.lang.tcl
+if {[tk windowingsystem] eq "aqua"} {
+    event add <<B3>> <Control-ButtonPress-1>
+    event add <<B3>> <Button-2>
+} else {
+    event add <<B3>> <Button-3>
+}
 
 proc gitdir {} {
     global env
@@ -263,6 +274,7 @@ proc parsecommit {id contents listed olds} {
     set comname {}
     set comdate {}
     set rev {}
+    set branch {}
     if {![info exists nchildren($id)]} {
 	set children($id) {}
 	set nchildren($id) 0
@@ -299,6 +311,8 @@ proc parsecommit {id contents listed olds} {
 		    set comname [join [lrange $line 1 [expr {$x - 1}]]]
 		} elseif {$tag == "revision"} {
 		    set rev [lindex $line 1]
+        } elseif {$tag == "branch"} {
+		    set branch [join [lrange $line 1 end]]
 		}
 	    }
 	} else {
@@ -323,11 +337,14 @@ proc parsecommit {id contents listed olds} {
 	set comdate [clock format $comdate -format "%Y-%m-%d %H:%M:%S"]
     }
     set commitinfo($id) [list $headline $auname $audate \
-			     $comname $comdate $comment $rev]
+			     $comname $comdate $comment $rev $branch]
 }
 
 proc readrefs {} {
-    global tagids idtags headids idheads tagcontents env
+    global tagids idtags headids idheads tagcontents env curid
+    
+    set curid [exec $env(HG) --config ui.report_untrusted=false id]
+    regexp -- {[[:xdigit:]]+} $curid curid
 
     set tags [exec $env(HG) --config ui.report_untrusted=false tags]
     regsub -all "\r\n" $tags "\n" tags
@@ -390,6 +407,7 @@ proc makewindow {} {
     global entries sha1entry sha1string sha1but
     global maincursor textcursor curtextcursor
     global rowctxmenu gaudydiff mergemax
+    global hgvdiff
 
     menu .bar
     .bar add cascade -label "File" -menu .bar.file
@@ -593,6 +611,12 @@ proc makewindow {} {
     $rowctxmenu add command -label "Make patch" -command mkpatch
     $rowctxmenu add command -label "Create tag" -command mktag
     $rowctxmenu add command -label "Write commit to file" -command writecommit
+    if { $hgvdiff ne "" } {
+	$rowctxmenu add command -label "Visual diff with parent" \
+	    -command {vdiff 1}
+	$rowctxmenu add command -label "Visual diff with selected" \
+	    -command {vdiff 0}
+    }
 }
 
 # when we make a key binding for the toplevel, make sure
@@ -623,13 +647,14 @@ proc click {w} {
 proc savestuff {w} {
     global canv canv2 canv3 ctext cflist mainfont textfont
     global stuffsaved findmergefiles gaudydiff maxgraphpct
-    global maxwidth
+    global maxwidth authorcolors curidfont
 
     if {$stuffsaved} return
     if {![winfo viewable .]} return
     catch {
-	set f [open "~/.gitk-new" w]
+	set f [open "~/.hgk-new" w]
 	puts $f [list set mainfont $mainfont]
+	puts $f [list set curidfont $curidfont]
 	puts $f [list set textfont $textfont]
 	puts $f [list set findmergefiles $findmergefiles]
 	puts $f [list set gaudydiff $gaudydiff]
@@ -647,8 +672,25 @@ proc savestuff {w} {
 	set wid [expr {([winfo width $cflist] - 11) \
 			   / [font measure [$cflist cget -font] "0"]}]
 	puts $f "set geometry(cflistw) $wid"
+	puts $f "#"
+	puts $f "# authorcolors format:"
+	puts $f "#"
+	puts $f "# zero or more sublists of"
+	puts $f "#"
+	puts $f "#    { regex color }"
+	puts $f "#"
+	puts $f "# followed by a list of colors"
+	puts $f "#"
+	puts $f "# If the commit author matches a regex in a sublist,"
+	puts $f "# the commit will be colored by that color"
+	puts $f "# otherwise the next unused entry from the list of colors"
+	puts $f "# will be assigned to this commit and also all other commits"
+	puts $f "# of the same author.  When the list of colors is exhausted,"
+	puts $f "# the last entry will be reused."
+	puts $f "#"
+	puts $f "set authorcolors {$authorcolors}"
 	close $f
-	file rename -force "~/.gitk-new" "~/.gitk"
+	file rename -force "~/.hgk-new" "~/.hgk"
     }
     set stuffsaved 1
 }
@@ -737,6 +779,35 @@ Use and redistribute under the terms of the GNU General Public License} \
     pack $w.m -side top -fill x -padx 20 -pady 20
     button $w.ok -text Close -command "destroy $w"
     pack $w.ok -side bottom
+}
+
+set aunextcolor 0
+proc assignauthorcolor {name} {
+    global authorcolors aucolormap aunextcolor
+    if [info exists aucolormap($name)] return
+
+    set randomcolors {black}
+    for {set i 0} {$i < [llength $authorcolors]} {incr i} {
+	set col [lindex $authorcolors $i]
+	if {[llength $col] > 1} {
+	    set re [lindex $col 0]
+	    set c [lindex $col 1]
+	    if {[regexp -- $re $name]} {
+		set aucolormap($name) $c
+		return
+	    }
+	} else {
+	    set randomcolors [lrange $authorcolors $i end]
+	    break
+	}
+    }
+
+    set ncolors [llength $randomcolors]
+    set c [lindex $randomcolors $aunextcolor]
+    if {[incr aunextcolor] >= $ncolors} {
+	incr aunextcolor -1
+    }
+    set aucolormap($name) $c
 }
 
 proc assigncolor {id} {
@@ -876,6 +947,7 @@ proc drawcommitline {level} {
     global lineno lthickness mainline mainlinearrow sidelines
     global commitlisted rowtextx idpos lastuse displist
     global oldnlines olddlevel olddisplist
+    global aucolormap curid curidfont
 
     incr numcommits
     incr lineno
@@ -934,14 +1006,25 @@ proc drawcommitline {level} {
     }
     set headline [lindex $commitinfo($id) 0]
     set name [lindex $commitinfo($id) 1]
+    assignauthorcolor $name
+    set fg $aucolormap($name)
+    if {$id == $curid} {
+	set fn $curidfont
+    } else {
+	set fn $mainfont
+    }
+
     set date [lindex $commitinfo($id) 2]
     set linehtag($lineno) [$canv create text $xt $y1 -anchor w \
-			       -text $headline -font $mainfont ]
-    $canv bind $linehtag($lineno) <Button-3> "rowmenu %X %Y $id"
+			       -text $headline -font $fn \
+			       -fill $fg]
+    $canv bind $linehtag($lineno) <<B3>> "rowmenu %X %Y $id"
     set linentag($lineno) [$canv2 create text 3 $y1 -anchor w \
-			       -text $name -font $namefont]
+			       -text $name -font $namefont \
+			       -fill $fg]
     set linedtag($lineno) [$canv3 create text 3 $y1 -anchor w \
-			       -text $date -font $mainfont]
+			       -text $date -font $mainfont \
+			       -fill $fg]
 
     set olddlevel $level
     set olddisplist $displist
@@ -2206,6 +2289,9 @@ proc selectline {l isnew} {
     $ctext mark gravity fmark.0 left
     set info $commitinfo($id)
     $ctext insert end "Revision: [lindex $info 6]\n"
+    if {[llength [lindex $info 7]] > 0} {
+        $ctext insert end "Branch: [lindex $info 7]\n"
+    }
     $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
     $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
     if {[info exists idtags($id)]} {
@@ -3071,9 +3157,10 @@ proc redisplay {} {
 
 proc incrfont {inc} {
     global mainfont namefont textfont ctext canv phase
-    global stopped entries
+    global stopped entries curidfont
     unmarkmatches
     set mainfont [lreplace $mainfont 1 1 [expr {[lindex $mainfont 1] + $inc}]]
+    set curidfont [lreplace $curidfont 1 1 [expr {[lindex $curidfont 1] + $inc}]]
     set namefont [lreplace $namefont 1 1 [expr {[lindex $namefont 1] + $inc}]]
     set textfont [lreplace $textfont 1 1 [expr {[lindex $textfont 1] + $inc}]]
     setcoords
@@ -3364,7 +3451,7 @@ proc mstime {} {
 }
 
 proc rowmenu {x y id} {
-    global rowctxmenu idline selectedline rowmenuid
+    global rowctxmenu idline selectedline rowmenuid hgvdiff
 
     if {![info exists selectedline] || $idline($id) eq $selectedline} {
 	set state disabled
@@ -3374,6 +3461,9 @@ proc rowmenu {x y id} {
     $rowctxmenu entryconfigure 0 -state $state
     $rowctxmenu entryconfigure 1 -state $state
     $rowctxmenu entryconfigure 2 -state $state
+    if { $hgvdiff ne "" } {
+	$rowctxmenu entryconfigure 6 -state $state
+    }
     set rowmenuid $id
     tk_popup $rowctxmenu $x $y
 }
@@ -3686,6 +3776,26 @@ proc rereadrefs {} {
     }
 }
 
+proc vdiff {withparent} {
+    global env rowmenuid selectedline lineid hgvdiff
+
+    if {![info exists rowmenuid]} return
+    set curid $rowmenuid
+
+    if {$withparent} {
+	set parents [exec $env(HG) --config ui.report_untrusted=false parents --rev $curid --template "{node}\n"]
+	set firstparent [lindex [split $parents "\n"] 0]
+	set otherid $firstparent
+    } else {
+	if {![info exists selectedline]} return
+	set otherid $lineid($selectedline)
+    }
+    set range "$otherid:$curid"
+    if {[catch {exec $env(HG) --config ui.report_untrusted=false $hgvdiff -r $range} err]} {
+        # Ignore errors, this is just visualization
+    }
+}
+
 proc showtag {tag isnew} {
     global ctext cflist tagcontents tagids linknum
 
@@ -3711,6 +3821,19 @@ proc doquit {} {
     destroy .
 }
 
+proc getconfig {} {
+    global env
+
+    set lines [exec $env(HG) debug-config]
+    regsub -all "\r\n" $lines "\n" config
+    set config {}
+    foreach line [split $lines "\n"] {
+	regsub "^(k|v)=" $line "" line
+	lappend config $line
+    }
+    return $config
+}
+
 # defaults...
 set datemode 0
 set boldnames 0
@@ -3718,6 +3841,7 @@ set diffopts "-U 5 -p"
 set wrcomcmd "\"\$HG\" --config ui.report_untrusted=false debug-diff-tree --stdin -p --pretty"
 
 set mainfont {Helvetica 9}
+set curidfont {}
 set textfont {Courier 9}
 set findmergefiles 0
 set gaudydiff 0
@@ -3725,8 +3849,15 @@ set maxgraphpct 50
 set maxwidth 16
 
 set colors {green red blue magenta darkgrey brown orange}
+set authorcolors {
+    black blue deeppink mediumorchid blue burlywood4 goldenrod slateblue red2 navy dimgrey
+}
 
-catch {source ~/.gitk}
+catch {source ~/.hgk}
+
+if {$curidfont == ""} {  # initialize late based on current mainfont
+    set curidfont "$mainfont bold italic underline"
+}
 
 set namefont $mainfont
 if {$boldnames} {
@@ -3752,7 +3883,12 @@ set stopped 0
 set redisplaying 0
 set stuffsaved 0
 set patchnum 0
+
+array set config [getconfig]
+set hgvdiff $config(vdiff)
 setcoords
 makewindow
 readrefs
+set hgroot [exec $env(HG) root]
+wm title . "hgk $hgroot"
 getcommits $revtreeargs

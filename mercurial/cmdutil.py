@@ -7,9 +7,8 @@
 
 from node import *
 from i18n import _
-import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex
-import mdiff, bdiff, util, templater, patch, commands, hg, lock, time
-import fancyopts, revlog, version, extensions, hook
+import os, sys, bisect, stat
+import mdiff, bdiff, util, templater, templatefilters, patch, errno
 
 revrangesep = ':'
 
@@ -17,130 +16,8 @@ class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
 class AmbiguousCommand(Exception):
     """Exception raised if command shortcut matches more than one command."""
-class ParseError(Exception):
-    """Exception raised on errors in parsing the command line."""
 
-def runcatch(ui, args, argv0=None):
-    def catchterm(*args):
-        raise util.SignalInterrupt
-
-    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
-        num = getattr(signal, name, None)
-        if num: signal.signal(num, catchterm)
-
-    try:
-        try:
-            # enter the debugger before command execution
-            if '--debugger' in args:
-                pdb.set_trace()
-            try:
-                return dispatch(ui, args, argv0=argv0)
-            finally:
-                ui.flush()
-        except:
-            # enter the debugger when we hit an exception
-            if '--debugger' in args:
-                pdb.post_mortem(sys.exc_info()[2])
-            ui.print_exc()
-            raise
-
-    except ParseError, inst:
-        if inst.args[0]:
-            ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
-            commands.help_(ui, inst.args[0])
-        else:
-            ui.warn(_("hg: %s\n") % inst.args[1])
-            commands.help_(ui, 'shortlist')
-    except AmbiguousCommand, inst:
-        ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
-                (inst.args[0], " ".join(inst.args[1])))
-    except UnknownCommand, inst:
-        ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
-        commands.help_(ui, 'shortlist')
-    except hg.RepoError, inst:
-        ui.warn(_("abort: %s!\n") % inst)
-    except lock.LockHeld, inst:
-        if inst.errno == errno.ETIMEDOUT:
-            reason = _('timed out waiting for lock held by %s') % inst.locker
-        else:
-            reason = _('lock held by %s') % inst.locker
-        ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-    except lock.LockUnavailable, inst:
-        ui.warn(_("abort: could not lock %s: %s\n") %
-               (inst.desc or inst.filename, inst.strerror))
-    except revlog.RevlogError, inst:
-        ui.warn(_("abort: %s!\n") % inst)
-    except util.SignalInterrupt:
-        ui.warn(_("killed!\n"))
-    except KeyboardInterrupt:
-        try:
-            ui.warn(_("interrupted!\n"))
-        except IOError, inst:
-            if inst.errno == errno.EPIPE:
-                if ui.debugflag:
-                    ui.warn(_("\nbroken pipe\n"))
-            else:
-                raise
-    except socket.error, inst:
-        ui.warn(_("abort: %s\n") % inst[1])
-    except IOError, inst:
-        if hasattr(inst, "code"):
-            ui.warn(_("abort: %s\n") % inst)
-        elif hasattr(inst, "reason"):
-            try: # usually it is in the form (errno, strerror)
-                reason = inst.reason.args[1]
-            except: # it might be anything, for example a string
-                reason = inst.reason
-            ui.warn(_("abort: error: %s\n") % reason)
-        elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
-            if ui.debugflag:
-                ui.warn(_("broken pipe\n"))
-        elif getattr(inst, "strerror", None):
-            if getattr(inst, "filename", None):
-                ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
-            else:
-                ui.warn(_("abort: %s\n") % inst.strerror)
-        else:
-            raise
-    except OSError, inst:
-        if getattr(inst, "filename", None):
-            ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
-        else:
-            ui.warn(_("abort: %s\n") % inst.strerror)
-    except util.UnexpectedOutput, inst:
-        ui.warn(_("abort: %s") % inst[0])
-        if not isinstance(inst[1], basestring):
-            ui.warn(" %r\n" % (inst[1],))
-        elif not inst[1]:
-            ui.warn(_(" empty string\n"))
-        else:
-            ui.warn("\n%r\n" % util.ellipsis(inst[1]))
-    except ImportError, inst:
-        m = str(inst).split()[-1]
-        ui.warn(_("abort: could not import module %s!\n" % m))
-        if m in "mpatch bdiff".split():
-            ui.warn(_("(did you forget to compile extensions?)\n"))
-        elif m in "zlib".split():
-            ui.warn(_("(is your Python install correct?)\n"))
-
-    except util.Abort, inst:
-        ui.warn(_("abort: %s\n") % inst)
-    except SystemExit, inst:
-        # Commands shouldn't sys.exit directly, but give a return code.
-        # Just in case catch this and and pass exit code to caller.
-        return inst.code
-    except:
-        ui.warn(_("** unknown exception encountered, details follow\n"))
-        ui.warn(_("** report bug details to "
-                 "http://www.selenic.com/mercurial/bts\n"))
-        ui.warn(_("** or mercurial@selenic.com\n"))
-        ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
-               % version.get_version())
-        raise
-
-    return -1
-
-def findpossible(ui, cmd):
+def findpossible(ui, cmd, table):
     """
     Return cmd -> (aliases, command table entry)
     for each matching command.
@@ -148,7 +25,7 @@ def findpossible(ui, cmd):
     """
     choice = {}
     debugchoice = {}
-    for e in commands.table.keys():
+    for e in table.keys():
         aliases = e.lstrip("^").split("|")
         found = None
         if cmd in aliases:
@@ -160,20 +37,20 @@ def findpossible(ui, cmd):
                     break
         if found is not None:
             if aliases[0].startswith("debug") or found.startswith("debug"):
-                debugchoice[found] = (aliases, commands.table[e])
+                debugchoice[found] = (aliases, table[e])
             else:
-                choice[found] = (aliases, commands.table[e])
+                choice[found] = (aliases, table[e])
 
     if not choice and debugchoice:
         choice = debugchoice
 
     return choice
 
-def findcmd(ui, cmd):
+def findcmd(ui, cmd, table):
     """Return (aliases, command table entry) for command string."""
-    choice = findpossible(ui, cmd)
+    choice = findpossible(ui, cmd, table)
 
-    if choice.has_key(cmd):
+    if cmd in choice:
         return choice[cmd]
 
     if len(choice) > 1:
@@ -186,251 +63,9 @@ def findcmd(ui, cmd):
 
     raise UnknownCommand(cmd)
 
-def findrepo():
-    p = os.getcwd()
-    while not os.path.isdir(os.path.join(p, ".hg")):
-        oldp, p = p, os.path.dirname(p)
-        if p == oldp:
-            return None
-
-    return p
-
-def parse(ui, args):
-    options = {}
-    cmdoptions = {}
-
-    try:
-        args = fancyopts.fancyopts(args, commands.globalopts, options)
-    except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(None, inst)
-
-    if args:
-        cmd, args = args[0], args[1:]
-        aliases, i = findcmd(ui, cmd)
-        cmd = aliases[0]
-        defaults = ui.config("defaults", cmd)
-        if defaults:
-            args = shlex.split(defaults) + args
-        c = list(i[1])
-    else:
-        cmd = None
-        c = []
-
-    # combine global options into local
-    for o in commands.globalopts:
-        c.append((o[0], o[1], options[o[1]], o[3]))
-
-    try:
-        args = fancyopts.fancyopts(args, c, cmdoptions)
-    except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(cmd, inst)
-
-    # separate global options back out
-    for o in commands.globalopts:
-        n = o[1]
-        options[n] = cmdoptions[n]
-        del cmdoptions[n]
-
-    return (cmd, cmd and i[0] or None, args, options, cmdoptions)
-
-def parseconfig(config):
-    """parse the --config options from the command line"""
-    parsed = []
-    for cfg in config:
-        try:
-            name, value = cfg.split('=', 1)
-            section, name = name.split('.', 1)
-            if not section or not name:
-                raise IndexError
-            parsed.append((section, name, value))
-        except (IndexError, ValueError):
-            raise util.Abort(_('malformed --config option: %s') % cfg)
-    return parsed
-
-def earlygetopt(aliases, args):
-    """Return list of values for an option (or aliases).
-
-    The values are listed in the order they appear in args.
-    The options and values are removed from args.
-    """
-    try:
-        argcount = args.index("--")
-    except ValueError:
-        argcount = len(args)
-    shortopts = [opt for opt in aliases if len(opt) == 2]
-    values = []
-    pos = 0
-    while pos < argcount:
-        if args[pos] in aliases:
-            if pos + 1 >= argcount:
-                # ignore and let getopt report an error if there is no value
-                break
-            del args[pos]
-            values.append(args.pop(pos))
-            argcount -= 2
-        elif args[pos][:2] in shortopts:
-            # short option can have no following space, e.g. hg log -Rfoo
-            values.append(args.pop(pos)[2:])
-            argcount -= 1
-        else:
-            pos += 1
-    return values
-
-def dispatch(ui, args, argv0=None):
-    # remember how to call 'hg' before changing the working dir
-    util.set_hgexecutable(argv0)
-
-    # read --config before doing anything else
-    # (e.g. to change trust settings for reading .hg/hgrc)
-    config = earlygetopt(['--config'], args)
-    if config:
-        ui.updateopts(config=parseconfig(config))
-
-    # check for cwd
-    cwd = earlygetopt(['--cwd'], args)
-    if cwd:
-        os.chdir(cwd[-1])
-
-    # read the local repository .hgrc into a local ui object
-    path = findrepo() or ""
-    if not path:
-        lui = ui
-    if path:
-        try:
-            lui = commands.ui.ui(parentui=ui)
-            lui.readconfig(os.path.join(path, ".hg", "hgrc"))
-        except IOError:
-            pass
-
-    # now we can expand paths, even ones in .hg/hgrc
-    rpath = earlygetopt(["-R", "--repository", "--repo"], args)
-    if rpath:
-        path = lui.expandpath(rpath[-1])
-        lui = commands.ui.ui(parentui=ui)
-        lui.readconfig(os.path.join(path, ".hg", "hgrc"))
-
-    extensions.loadall(lui)
-    # check for fallback encoding
-    fallback = lui.config('ui', 'fallbackencoding')
-    if fallback:
-        util._fallbackencoding = fallback
-
-    fullargs = args
-    cmd, func, args, options, cmdoptions = parse(lui, args)
-
-    if options["config"]:
-        raise util.Abort(_("Option --config may not be abbreviated!"))
-    if options["cwd"]:
-        raise util.Abort(_("Option --cwd may not be abbreviated!"))
-    if options["repository"]:
-        raise util.Abort(_(
-            "Option -R has to be separated from other options (i.e. not -qR) "
-            "and --repository may only be abbreviated as --repo!"))
-
-    if options["encoding"]:
-        util._encoding = options["encoding"]
-    if options["encodingmode"]:
-        util._encodingmode = options["encodingmode"]
-    if options["time"]:
-        def get_times():
-            t = os.times()
-            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
-                t = (t[0], t[1], t[2], t[3], time.clock())
-            return t
-        s = get_times()
-        def print_time():
-            t = get_times()
-            ui.warn(_("Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
-                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
-        atexit.register(print_time)
-
-    ui.updateopts(options["verbose"], options["debug"], options["quiet"],
-                 not options["noninteractive"], options["traceback"])
-
-    if options['help']:
-        return commands.help_(ui, cmd, options['version'])
-    elif options['version']:
-        return commands.version_(ui)
-    elif not cmd:
-        return commands.help_(ui, 'shortlist')
-
-    repo = None
-    if cmd not in commands.norepo.split():
-        try:
-            repo = hg.repository(ui, path=path)
-            ui = repo.ui
-            if not repo.local():
-                raise util.Abort(_("repository '%s' is not local") % path)
-        except hg.RepoError:
-            if cmd not in commands.optionalrepo.split():
-                if not path:
-                    raise hg.RepoError(_("There is no Mercurial repository here"
-                                         " (.hg not found)"))
-                raise
-        d = lambda: func(ui, repo, *args, **cmdoptions)
-    else:
-        d = lambda: func(ui, *args, **cmdoptions)
-
-    # run pre-hook, and abort if it fails
-    ret = hook.hook(ui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
-    if ret:
-        return ret
-    ret = runcommand(ui, options, cmd, d)
-    # run post-hook, passing command result
-    hook.hook(ui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
-              result = ret)
-    return ret
-
-def runcommand(ui, options, cmd, cmdfunc):
-    def checkargs():
-        try:
-            return cmdfunc()
-        except TypeError, inst:
-            # was this an argument error?
-            tb = traceback.extract_tb(sys.exc_info()[2])
-            if len(tb) != 2: # no
-                raise
-            raise ParseError(cmd, _("invalid arguments"))
-
-    if options['profile']:
-        import hotshot, hotshot.stats
-        prof = hotshot.Profile("hg.prof")
-        try:
-            try:
-                return prof.runcall(checkargs)
-            except:
-                try:
-                    ui.warn(_('exception raised - generating '
-                             'profile anyway\n'))
-                except:
-                    pass
-                raise
-        finally:
-            prof.close()
-            stats = hotshot.stats.load("hg.prof")
-            stats.strip_dirs()
-            stats.sort_stats('time', 'calls')
-            stats.print_stats(40)
-    elif options['lsprof']:
-        try:
-            from mercurial import lsprof
-        except ImportError:
-            raise util.Abort(_(
-                'lsprof not available - install from '
-                'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
-        p = lsprof.Profiler()
-        p.enable(subcalls=True)
-        try:
-            return checkargs()
-        finally:
-            p.disable()
-            stats = lsprof.Stats(p.getstats())
-            stats.sort()
-            stats.pprint(top=10, file=sys.stderr, climit=5)
-    else:
-        return checkargs()
-
 def bail_if_changed(repo):
+    if repo.dirstate.parents()[1] != nullid:
+        raise util.Abort(_('outstanding uncommitted merge'))
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))
@@ -460,15 +95,6 @@ def setremoteconfig(ui, opts):
         ui.setconfig("ui", "ssh", opts['ssh'])
     if opts.get('remotecmd'):
         ui.setconfig("ui", "remotecmd", opts['remotecmd'])
-
-def parseurl(url, revs):
-    '''parse url#branch, returning url, branch + revs'''
-
-    if '#' not in url:
-        return url, (revs or None)
-
-    url, rev = url.split('#', 1)
-    return url, revs + [rev]
 
 def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can
@@ -642,14 +268,15 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        if repo.dirstate[abs] != 'r' and not util.lexists(target):
+        if repo.dirstate[abs] != 'r' and (not util.lexists(target)
+            or (os.path.isdir(target) and not os.path.islink(target))):
             remove.append(abs)
             mapping[abs] = rel, exact
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
     if not dry_run:
-        repo.add(add)
         repo.remove(remove)
+        repo.add(add)
     if similarity > 0:
         for old, new, score in findrenames(repo, add, remove, similarity):
             oldrel, oldexact = mapping[old]
@@ -661,6 +288,206 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             if not dry_run:
                 repo.copy(old, new)
 
+def copy(ui, repo, pats, opts, rename=False):
+    # called with the repo lock held
+    #
+    # hgsep => pathname that uses "/" to separate directories
+    # ossep => pathname that uses os.sep to separate directories
+    cwd = repo.getcwd()
+    targets = {}
+    after = opts.get("after")
+    dryrun = opts.get("dry_run")
+
+    def walkpat(pat):
+        srcs = []
+        for tag, abs, rel, exact in walk(repo, [pat], opts, globbed=True):
+            state = repo.dirstate[abs]
+            if state in '?r':
+                if exact and state == '?':
+                    ui.warn(_('%s: not copying - file is not managed\n') % rel)
+                if exact and state == 'r':
+                    ui.warn(_('%s: not copying - file has been marked for'
+                              ' remove\n') % rel)
+                continue
+            # abs: hgsep
+            # rel: ossep
+            srcs.append((abs, rel, exact))
+        return srcs
+
+    # abssrc: hgsep
+    # relsrc: ossep
+    # otarget: ossep
+    def copyfile(abssrc, relsrc, otarget, exact):
+        abstarget = util.canonpath(repo.root, cwd, otarget)
+        reltarget = repo.pathto(abstarget, cwd)
+        target = repo.wjoin(abstarget)
+        src = repo.wjoin(abssrc)
+        state = repo.dirstate[abstarget]
+
+        # check for collisions
+        prevsrc = targets.get(abstarget)
+        if prevsrc is not None:
+            ui.warn(_('%s: not overwriting - %s collides with %s\n') %
+                    (reltarget, repo.pathto(abssrc, cwd),
+                     repo.pathto(prevsrc, cwd)))
+            return
+
+        # check for overwrites
+        exists = os.path.exists(target)
+        if (not after and exists or after and state in 'mn'):
+            if not opts['force']:
+                ui.warn(_('%s: not overwriting - file exists\n') %
+                        reltarget)
+                return
+
+        if after:
+            if not exists:
+                return
+        elif not dryrun:
+            try:
+                if exists:
+                    os.unlink(target)
+                targetdir = os.path.dirname(target) or '.'
+                if not os.path.isdir(targetdir):
+                    os.makedirs(targetdir)
+                util.copyfile(src, target)
+            except IOError, inst:
+                if inst.errno == errno.ENOENT:
+                    ui.warn(_('%s: deleted in working copy\n') % relsrc)
+                else:
+                    ui.warn(_('%s: cannot copy - %s\n') %
+                            (relsrc, inst.strerror))
+                    return True # report a failure
+
+        if ui.verbose or not exact:
+            action = rename and "moving" or "copying"
+            ui.status(_('%s %s to %s\n') % (action, relsrc, reltarget))
+
+        targets[abstarget] = abssrc
+
+        # fix up dirstate
+        origsrc = repo.dirstate.copied(abssrc) or abssrc
+        if abstarget == origsrc: # copying back a copy?
+            if state not in 'mn' and not dryrun:
+                repo.dirstate.normallookup(abstarget)
+        else:
+            if repo.dirstate[origsrc] == 'a':
+                if not ui.quiet:
+                    ui.warn(_("%s has not been committed yet, so no copy "
+                              "data will be stored for %s.\n")
+                            % (repo.pathto(origsrc, cwd), reltarget))
+                if abstarget not in repo.dirstate and not dryrun:
+                    repo.add([abstarget])
+            elif not dryrun:
+                repo.copy(origsrc, abstarget)
+
+        if rename and not dryrun:
+            repo.remove([abssrc], True)
+
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
+    def targetpathfn(pat, dest, srcs):
+        if os.path.isdir(pat):
+            abspfx = util.canonpath(repo.root, cwd, pat)
+            abspfx = util.localpath(abspfx)
+            if destdirexists:
+                striplen = len(os.path.split(abspfx)[0])
+            else:
+                striplen = len(abspfx)
+            if striplen:
+                striplen += len(os.sep)
+            res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
+        elif destdirexists:
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
+        else:
+            res = lambda p: dest
+        return res
+
+    # pat: ossep
+    # dest ossep
+    # srcs: list of (hgsep, hgsep, ossep, bool)
+    # return: function that takes hgsep and returns ossep
+    def targetpathafterfn(pat, dest, srcs):
+        if util.patkind(pat, None)[0]:
+            # a mercurial pattern
+            res = lambda p: os.path.join(dest,
+                                         os.path.basename(util.localpath(p)))
+        else:
+            abspfx = util.canonpath(repo.root, cwd, pat)
+            if len(abspfx) < len(srcs[0][0]):
+                # A directory. Either the target path contains the last
+                # component of the source path or it does not.
+                def evalpath(striplen):
+                    score = 0
+                    for s in srcs:
+                        t = os.path.join(dest, util.localpath(s[0])[striplen:])
+                        if os.path.exists(t):
+                            score += 1
+                    return score
+
+                abspfx = util.localpath(abspfx)
+                striplen = len(abspfx)
+                if striplen:
+                    striplen += len(os.sep)
+                if os.path.isdir(os.path.join(dest, os.path.split(abspfx)[1])):
+                    score = evalpath(striplen)
+                    striplen1 = len(os.path.split(abspfx)[0])
+                    if striplen1:
+                        striplen1 += len(os.sep)
+                    if evalpath(striplen1) > score:
+                        striplen = striplen1
+                res = lambda p: os.path.join(dest,
+                                             util.localpath(p)[striplen:])
+            else:
+                # a file
+                if destdirexists:
+                    res = lambda p: os.path.join(dest,
+                                        os.path.basename(util.localpath(p)))
+                else:
+                    res = lambda p: dest
+        return res
+
+
+    pats = util.expand_glob(pats)
+    if not pats:
+        raise util.Abort(_('no source or destination specified'))
+    if len(pats) == 1:
+        raise util.Abort(_('no destination specified'))
+    dest = pats.pop()
+    destdirexists = os.path.isdir(dest)
+    if not destdirexists:
+        if len(pats) > 1 or util.patkind(pats[0], None)[0]:
+            raise util.Abort(_('with multiple sources, destination must be an '
+                               'existing directory'))
+        if util.endswithsep(dest):
+            raise util.Abort(_('destination %s is not a directory') % dest)
+
+    tfn = targetpathfn
+    if after:
+        tfn = targetpathafterfn
+    copylist = []
+    for pat in pats:
+        srcs = walkpat(pat)
+        if not srcs:
+            continue
+        copylist.append((tfn(pat, dest, srcs), srcs))
+    if not copylist:
+        raise util.Abort(_('no files to copy'))
+
+    errors = 0
+    for targetpath, srcs in copylist:
+        for abssrc, relsrc, exact in srcs:
+            if copyfile(abssrc, relsrc, targetpath(abssrc), exact):
+                errors += 1
+
+    if errors:
+        ui.warn(_('(consider using --after)\n'))
+
+    return errors
+
 def service(opts, parentfn=None, initfn=None, runfn=None):
     '''Run a command as a service.'''
 
@@ -668,6 +495,15 @@ def service(opts, parentfn=None, initfn=None, runfn=None):
         rfd, wfd = os.pipe()
         args = sys.argv[:]
         args.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
+        # Don't pass --cwd to the child process, because we've already
+        # changed directory.
+        for i in xrange(1,len(args)):
+            if args[i].startswith('--cwd='):
+                del args[i]
+                break
+            elif args[i].startswith('--cwd'):
+                del args[i:i+2]
+                break
         pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
                          args[0], args)
         os.close(wfd)
@@ -837,7 +673,7 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, patch, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, patch, buffered)
-        filters = templater.common_filters.copy()
+        filters = templatefilters.filters.copy()
         filters['formatnode'] = (ui.debugflag and (lambda x: x)
                                  or (lambda x: x[:12]))
         self.t = templater.templater(mapfile, filters,
@@ -947,25 +783,25 @@ class changeset_templater(changeset_printer):
             c = [{'name': x[0], 'source': x[1]} for x in copies]
             return showlist('file_copy', c, plural='file_copies', **args)
 
-        if self.ui.debugflag:
-            files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
-            def showfiles(**args):
-                return showlist('file', files[0], **args)
-            def showadds(**args):
-                return showlist('file_add', files[1], **args)
-            def showdels(**args):
-                return showlist('file_del', files[2], **args)
-            def showmanifest(**args):
-                args = args.copy()
-                args.update(dict(rev=self.repo.manifest.rev(changes[0]),
-                                 node=hex(changes[0])))
-                return self.t('manifest', **args)
-        else:
-            def showfiles(**args):
-                return showlist('file', changes[3], **args)
-            showadds = ''
-            showdels = ''
-            showmanifest = ''
+        files = []
+        def getfiles():
+            if not files:
+                files[:] = self.repo.status(
+                    log.parents(changenode)[0], changenode)[:3]
+            return files
+        def showfiles(**args):
+            return showlist('file', changes[3], **args)
+        def showmods(**args):
+            return showlist('file_mod', getfiles()[0], **args)
+        def showadds(**args):
+            return showlist('file_add', getfiles()[1], **args)
+        def showdels(**args):
+            return showlist('file_del', getfiles()[2], **args)
+        def showmanifest(**args):
+            args = args.copy()
+            args.update(dict(rev=self.repo.manifest.rev(changes[0]),
+                             node=hex(changes[0])))
+            return self.t('manifest', **args)
 
         defprops = {
             'author': changes[1],
@@ -974,6 +810,7 @@ class changeset_templater(changeset_printer):
             'desc': changes[4].strip(),
             'file_adds': showadds,
             'file_dels': showdels,
+            'file_mods': showmods,
             'files': showfiles,
             'file_copies': showcopies,
             'manifest': showmanifest,
@@ -1065,7 +902,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
-    df = util.matchdate(date + " to " + date)
+    df = util.matchdate(date)
     get = util.cachefunc(lambda r: repo.changectx(r).changeset())
     changeiter, matchfn = walkchangerevs(ui, repo, [], get, {'rev':None})
     results = {}
@@ -1275,3 +1112,48 @@ def walkchangerevs(ui, repo, pats, change, opts):
             for rev in nrevs:
                 yield 'iter', rev, None
     return iterate(), matchfn
+
+def commit(ui, repo, commitfunc, pats, opts):
+    '''commit the specified files or all outstanding changes'''
+    message = logmessage(opts)
+
+    # extract addremove carefully -- this function can be called from a command
+    # that doesn't support addremove
+    if opts.get('addremove'):
+        addremove(repo, pats, opts)
+
+    fns, match, anypats = matchpats(repo, pats, opts)
+    if pats:
+        status = repo.status(files=fns, match=match)
+        modified, added, removed, deleted, unknown = status[:5]
+        files = modified + added + removed
+        slist = None
+        for f in fns:
+            if f == '.':
+                continue
+            if f not in files:
+                rf = repo.wjoin(f)
+                try:
+                    mode = os.lstat(rf)[stat.ST_MODE]
+                except OSError:
+                    raise util.Abort(_("file %s not found!") % rf)
+                if stat.S_ISDIR(mode):
+                    name = f + '/'
+                    if slist is None:
+                        slist = list(files)
+                        slist.sort()
+                    i = bisect.bisect(slist, name)
+                    if i >= len(slist) or not slist[i].startswith(name):
+                        raise util.Abort(_("no match under directory %s!")
+                                         % rf)
+                elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
+                    raise util.Abort(_("can't commit %s: "
+                                       "unsupported file type!") % rf)
+                elif f not in repo.dirstate:
+                    raise util.Abort(_("file %s not tracked!") % rf)
+    else:
+        files = []
+    try:
+        return commitfunc(ui, repo, files, message, match, opts)
+    except ValueError, inst:
+        raise util.Abort(str(inst))

@@ -13,16 +13,16 @@ hg commit -Am 3 -d '1000000000 0'
 echo "[web]" >> .hg/hgrc
 echo "name = test-archive" >> .hg/hgrc
 echo "allow_archive = gz bz2, zip" >> .hg/hgrc
-hg serve -p 20059 -d --pid-file=hg.pid
+hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
 TIP=`hg id -v | cut -f1 -d' '`
 QTIP=`hg id -q`
 cat > getarchive.py <<EOF
-import sys, urllib2
+import os, sys, urllib2
 node, archive = sys.argv[1:]
-f = urllib2.urlopen('http://127.0.0.1:20059/?cmd=archive;node=%s;type=%s'
-                    % (node, archive))
+f = urllib2.urlopen('http://127.0.0.1:%s/?cmd=archive;node=%s;type=%s'
+                    % (os.environ['HGPORT'], node, archive))
 sys.stdout.write(f.read())
 EOF
 http_proxy= python getarchive.py "$TIP" gz | gunzip | tar tf - | sed "s/$QTIP/TIP/"
@@ -69,8 +69,14 @@ if [ -f rev-0.tar ]; then
     echo 'rev-0.tar created'
 fi
 
+hg archive -t bogus test.bogus
+
+echo % server errors
+cat errors.log
+
 echo '% empty repo'
 hg init ../empty
 cd ../empty
 hg archive ../test-empty
+
 exit 0

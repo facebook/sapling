@@ -1,4 +1,7 @@
-﻿Andrea Arcangeli <andrea at suse.de>
+[This file is here for historical purposes, all recent contributors
+should appear in the changelog directly]
+
+Andrea Arcangeli <andrea at suse.de>
 Thomas Arendsen Hein <thomas at intevation.de>
 Goffredo Baroncelli <kreijack at libero.it>
 Muli Ben-Yehuda <mulix at mulix.org>
@@ -36,5 +39,3 @@ Michael S. Tsirkin <mst at mellanox.co.il>
 Rafael Villar Burke <pachi at mmn-arquitectos.com>
 Tristan Wibberley <tristan at wibberley.org>
 Mark Williamson <mark.williamson at cl.cam.ac.uk>
-
-If you are a contributor and don't see your name here, please let me know.

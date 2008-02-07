@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2005, 2006 by Intevation GmbH <intevation@intevation.de>
+# Copyright 2005-2007 by Intevation GmbH <intevation@intevation.de>
 # Author(s):
 # Thomas Arendsen Hein <thomas@intevation.de>
 #
@@ -25,7 +25,10 @@ You can use pattern matching of your normal shell, e.g.:
 command="cd repos && hg-ssh user/thomas/* projects/{mercurial,foo}"
 """
 
-from mercurial import commands
+# enable importing on demand to reduce startup time
+from mercurial import demandimport; demandimport.enable()
+
+from mercurial import dispatch
 
 import sys, os
 
@@ -38,7 +41,7 @@ if orig_cmd.startswith('hg -R ') and orig_cmd.endswith(' serve --stdio'):
     path = orig_cmd[6:-14]
     repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
     if repo in allowed_paths:
-        commands.dispatch(['-R', repo, 'serve', '--stdio'])
+        dispatch.dispatch(['-R', repo, 'serve', '--stdio'])
     else:
         sys.stderr.write("Illegal repository %r\n" % repo)
         sys.exit(-1)

@@ -14,3 +14,126 @@ drwxr-xr-x da
 -rw-r--r-- 4 foo
 
 
+% plain file
+200 Script output follows
+
+foo
+% should give a 404 - static file that does not exist
+404 Not Found
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>Mercurial Error</title>
+</head>
+<body>
+
+<h2>Mercurial Error</h2>
+
+<p>
+An error occurred while processing your request:
+</p>
+<p>
+Not Found
+</p>
+
+
+<div class="logo">
+powered by<br/>
+<a href="http://www.selenic.com/mercurial/">mercurial</a>
+</div>
+
+</body>
+</html>
+
+% should give a 404 - bad revision
+404 Not Found
+
+
+error: revision not found: spam
+% should give a 400 - bad command
+400
+
+
+error: No such method: spam
+% should give a 404 - file does not exist
+404 Not Found
+
+
+error: Path not found: bork/
+% stop and restart
+7 log lines written
+% static file
+200 Script output follows
+
+body { font-family: sans-serif; font-size: 12px; margin:0px; border:solid #d9d8d1; border-width:1px; margin:10px; }
+a { color:#0000cc; }
+a:hover, a:visited, a:active { color:#880000; }
+div.page_header { height:25px; padding:8px; font-size:18px; font-weight:bold; background-color:#d9d8d1; }
+div.page_header a:visited { color:#0000cc; }
+div.page_header a:hover { color:#880000; }
+div.page_nav { padding:8px; }
+div.page_nav a:visited { color:#0000cc; }
+div.page_path { padding:8px; border:solid #d9d8d1; border-width:0px 0px 1px}
+div.page_footer { padding:4px 8px; background-color: #d9d8d1; }
+div.page_footer_text { float:left; color:#555555; font-style:italic; }
+div.page_body { padding:8px; }
+div.title, a.title {
+	display:block; padding:6px 8px;
+	font-weight:bold; background-color:#edece6; text-decoration:none; color:#000000;
+}
+a.title:hover { background-color: #d9d8d1; }
+div.title_text { padding:6px 0px; border: solid #d9d8d1; border-width:0px 0px 1px; }
+div.log_body { padding:8px 8px 8px 150px; }
+.age { white-space:nowrap; }
+span.age { position:relative; float:left; width:142px; font-style:italic; }
+div.log_link {
+	padding:0px 8px;
+	font-size:10px; font-family:sans-serif; font-style:normal;
+	position:relative; float:left; width:136px;
+}
+div.list_head { padding:6px 8px 4px; border:solid #d9d8d1; border-width:1px 0px 0px; font-style:italic; }
+a.list { text-decoration:none; color:#000000; }
+a.list:hover { text-decoration:underline; color:#880000; }
+table { padding:8px 4px; }
+th { padding:2px 5px; font-size:12px; text-align:left; }
+tr.light:hover, .parity0:hover { background-color:#edece6; }
+tr.dark, .parity1 { background-color:#f6f6f0; }
+tr.dark:hover, .parity1:hover { background-color:#edece6; }
+td { padding:2px 5px; font-size:12px; vertical-align:top; }
+td.link { padding:2px 5px; font-family:sans-serif; font-size:10px; }
+div.pre { font-family:monospace; font-size:12px; white-space:pre; }
+div.diff_info { font-family:monospace; color:#000099; background-color:#edece6; font-style:italic; }
+div.index_include { border:solid #d9d8d1; border-width:0px 0px 1px; padding:12px 8px; }
+div.search { margin:4px 8px; position:absolute; top:56px; right:12px }
+.linenr { color:#999999; text-decoration:none }
+a.rss_logo {
+	float:right; padding:3px 6px; line-height:10px;
+	border:1px solid; border-color:#fcc7a5 #7d3302 #3e1a01 #ff954e;
+	color:#ffffff; background-color:#ff6600;
+	font-weight:bold; font-family:sans-serif; font-size:10px;
+	text-align:center; text-decoration:none;
+}
+a.rss_logo:hover { background-color:#ee5500; }
+pre { margin: 0; }
+span.logtags span {
+	padding: 0px 4px;
+	font-size: 10px;
+	font-weight: normal;
+	border: 1px solid;
+	background-color: #ffaaff;
+	border-color: #ffccff #ff00ee #ff00ee #ffccff;
+}
+span.logtags span.tagtag {
+	background-color: #ffffaa;
+	border-color: #ffffcc #ffee00 #ffee00 #ffffcc;
+}
+span.logtags span.branchtag {
+	background-color: #aaffaa;
+	border-color: #ccffcc #00cc33 #00cc33 #ccffcc;
+}
+% errors

@@ -2,6 +2,7 @@
 
 cp "$TESTDIR"/printenv.py .
 
+echo "====== Setting up test"
 hg init test
 cd test
 echo 0 > afile
@@ -30,20 +31,40 @@ hg commit -m "0.3m" -d "1000000 0"
 hg verify
 cd ..
 hg init empty
+
+echo "====== Bundle test to full.hg"
 hg -R test bundle full.hg empty
+echo "====== Unbundle full.hg in test"
 hg -R test unbundle full.hg
+echo "====== Verify empty"
 hg -R empty heads
 hg -R empty verify
 
+echo "====== Pull full.hg into test (using --cwd)"
 hg --cwd test pull ../full.hg
+echo "====== Pull full.hg into empty (using --cwd)"
 hg --cwd empty pull ../full.hg
+echo "====== Rollback empty"
 hg -R empty rollback
+echo "====== Pull full.hg into empty again (using --cwd)"
 hg --cwd empty pull ../full.hg
 
+echo "====== Pull full.hg into test (using -R)"
+hg -R test pull full.hg
+echo "====== Pull full.hg into empty (using -R)"
+hg -R empty pull full.hg
+echo "====== Rollback empty"
+hg -R empty rollback
+echo "====== Pull full.hg into empty again (using -R)"
+hg -R empty pull full.hg
+
+echo "====== Log -R full.hg in fresh empty"
 rm -r empty
 hg init empty
 cd empty
 hg -R bundle://../full.hg log
+
+echo "====== Pull ../full.hg into empty (with hook)"
 echo '[hooks]' >> .hg/hgrc
 echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
 #doesn't work (yet ?)
@@ -51,18 +72,24 @@ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
 hg pull bundle://../full.hg
 cd ..
 
+echo "====== Create partial clones"
 rm -r empty
 hg init empty
 hg clone -r 3 test partial
 hg clone partial partial2
 cd partial
+echo "====== Log -R full.hg in partial"
 hg -R bundle://../full.hg log
+echo "====== Incoming full.hg in partial"
 hg incoming bundle://../full.hg
+echo "====== Outgoing -R full.hg vs partial2 in partial"
 hg -R bundle://../full.hg outgoing ../partial2
+echo "====== Outgoing -R does-not-exist.hg vs partial2 in partial"
 hg -R bundle://../does-not-exist.hg outgoing ../partial2
 cd ..
 
 # test for http://www.selenic.com/mercurial/bts/issue216
+echo "====== Unbundle incremental bundles into fresh empty in one go"
 rm -r empty
 hg init empty
 hg -R test bundle --base null -r 0 ../0.hg
@@ -70,6 +97,7 @@ hg -R test bundle --base 0    -r 1 ../1.hg
 hg -R empty unbundle -u ../0.hg ../1.hg
 
 # test for 540d1059c802
+echo "====== test for 540d1059c802"
 hg init orig
 cd orig
 echo foo > foo

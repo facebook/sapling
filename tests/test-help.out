@@ -15,7 +15,6 @@ basic commands:
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
- revert     revert files or dirs to their states as of some revision
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory
@@ -34,7 +33,6 @@ use "hg help" for the full list of commands or "hg -v" for details
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
- revert     revert files or dirs to their states as of some revision
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory
@@ -47,6 +45,7 @@ list of commands:
  annotate     show changeset information per file line
  archive      create unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
+ bisect       subdivision search of changesets
  branch       set or show the current branch name
  branches     list repository named branches
  bundle       create a changegroup file
@@ -75,8 +74,8 @@ list of commands:
  recover      roll back an interrupted transaction
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
- revert       revert files or dirs to their states as of some revision
- rollback     roll back the last transaction in this repository
+ revert       restore individual files or dirs to an earlier state
+ rollback     roll back the last transaction
  root         print the root (top) of the current working dir
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
@@ -95,6 +94,7 @@ use "hg -v help" to show aliases and global options
  annotate     show changeset information per file line
  archive      create unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
+ bisect       subdivision search of changesets
  branch       set or show the current branch name
  branches     list repository named branches
  bundle       create a changegroup file
@@ -123,8 +123,8 @@ use "hg -v help" to show aliases and global options
  recover      roll back an interrupted transaction
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
- revert       revert files or dirs to their states as of some revision
- rollback     roll back the last transaction in this repository
+ revert       restore individual files or dirs to an earlier state
+ rollback     roll back the last transaction
  root         print the root (top) of the current working dir
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
@@ -212,11 +212,15 @@ options:
 use "hg -v help diff" to show global options
 hg status [OPTION]... [FILE]...
 
+aliases: st
+
 show changed files in the working directory
 
     Show status of files in the repository.  If names are given, only
-    files that match are shown.  Files that are clean or ignored, are
-    not listed unless -c (clean), -i (ignored) or -A is given.
+    files that match are shown.  Files that are clean or ignored or
+    source of a copy/move operation, are not listed unless -c (clean),
+    -i (ignored), -C (copies) or -A is given.  Unless options described
+    with "show only ..." are given, the options -mardu are used.
 
     NOTE: status may appear to disagree with diff if permissions have
     changed or a merge has occurred. The standard diff format does not
@@ -233,10 +237,8 @@ show changed files in the working directory
     C = clean
     ! = deleted, but still tracked
     ? = not tracked
-    I = ignored (not shown by default)
+    I = ignored
       = the previous added file was copied from here
-
-aliases: st
 
 options:
 
@@ -277,7 +279,6 @@ basic commands:
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
- revert     revert files or dirs to their states as of some revision
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory
@@ -301,7 +302,6 @@ basic commands:
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
- revert     revert files or dirs to their states as of some revision
  serve      export the repository via HTTP
  status     show changed files in the working directory
  update     update working directory

@@ -11,7 +11,7 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 bar should remain deleted.
-f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo
+f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644   foo
 pulling from ../A2
 searching for changes
 adding changesets
@@ -22,4 +22,4 @@ added 1 changesets with 0 changes to 0 files (+1 heads)
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 bar should remain deleted.
-f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644 foo
+f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644   foo

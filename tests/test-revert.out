@@ -63,3 +63,5 @@ adding b/b
 reverting b/b
 forgetting newdir/newfile
 reverting b/b
+% reverting a rename target should revert the source
+? newa

@@ -18,10 +18,6 @@ class transaction(object):
     def __init__(self, report, opener, journal, after=None):
         self.journal = None
 
-        # abort here if the journal already exists
-        if os.path.exists(journal):
-            raise AssertionError(_("journal already exists - run hg recover"))
-
         self.count = 1
         self.report = report
         self.opener = opener

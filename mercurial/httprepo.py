@@ -9,7 +9,7 @@
 from node import *
 from remoterepo import *
 from i18n import _
-import hg, os, urllib, urllib2, urlparse, zlib, util, httplib
+import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
 import errno, keepalive, tempfile, socket, changegroup
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
@@ -103,9 +103,12 @@ class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
     send = _gen_sendfile(keepalive.HTTPConnection)
 
-class basehttphandler(keepalive.HTTPHandler):
+class httphandler(keepalive.HTTPHandler):
     def http_open(self, req):
         return self.do_open(httpconnection, req)
+
+    def __del__(self):
+        self.close_all()
 
 has_https = hasattr(urllib2, 'HTTPSHandler')
 if has_https:
@@ -114,12 +117,9 @@ if has_https:
         # must be able to send big bundle as stream.
         send = _gen_sendfile(httplib.HTTPSConnection)
 
-    class httphandler(basehttphandler, urllib2.HTTPSHandler):
+    class httpshandler(keepalive.KeepAliveHandler, urllib2.HTTPSHandler):
         def https_open(self, req):
             return self.do_open(httpsconnection, req)
-else:
-    class httphandler(basehttphandler):
-        pass
 
 # In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
 # it doesn't know about the auth type requested.  This can happen if
@@ -144,6 +144,43 @@ def zgenerator(f):
         raise IOError(None, _('connection ended unexpectedly'))
     yield zd.flush()
 
+_safe = ('abcdefghijklmnopqrstuvwxyz'
+         'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+         '0123456789' '_.-/')
+_safeset = None
+_hex = None
+def quotepath(path):
+    '''quote the path part of a URL
+
+    This is similar to urllib.quote, but it also tries to avoid
+    quoting things twice (inspired by wget):
+
+    >>> quotepath('abc def')
+    'abc%20def'
+    >>> quotepath('abc%20def')
+    'abc%20def'
+    >>> quotepath('abc%20 def')
+    'abc%20%20def'
+    >>> quotepath('abc def%20')
+    'abc%20def%20'
+    >>> quotepath('abc def%2')
+    'abc%20def%252'
+    >>> quotepath('abc def%')
+    'abc%20def%25'
+    '''
+    global _safeset, _hex
+    if _safeset is None:
+        _safeset = util.set(_safe)
+        _hex = util.set('abcdefABCDEF0123456789')
+    l = list(path)
+    for i in xrange(len(l)):
+        c = l[i]
+        if c == '%' and i + 2 < len(l) and (l[i+1] in _hex and l[i+2] in _hex):
+            pass
+        elif c not in _safeset:
+            l[i] = '%%%02X' % ord(c)
+    return ''.join(l)
+
 class httprepository(remoterepository):
     def __init__(self, ui, path):
         self.path = path
@@ -153,18 +190,22 @@ class httprepository(remoterepository):
         if query or frag:
             raise util.Abort(_('unsupported URL component: "%s"') %
                              (query or frag))
-        if not urlpath: urlpath = '/'
+        if not urlpath:
+            urlpath = '/'
+        urlpath = quotepath(urlpath)
         host, port, user, passwd = netlocsplit(netloc)
 
         # urllib cannot handle URLs with embedded user or passwd
         self._url = urlparse.urlunsplit((scheme, netlocunsplit(host, port),
                                          urlpath, '', ''))
         self.ui = ui
+        self.ui.debug(_('using %s\n') % self._url)
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         # XXX proxyauthinfo = None
-        self.handler = httphandler()
-        handlers = [self.handler]
+        handlers = [httphandler()]
+        if has_https:
+            handlers.append(httpshandler())
 
         if proxyurl:
             # proxy can be proper url or host[:port]
@@ -190,6 +231,9 @@ class httprepository(remoterepository):
             # "http_proxy.always" config is for running tests on localhost
             if (not ui.configbool("http_proxy", "always") and
                 host.lower() in no_list):
+                # avoid auto-detection of proxy settings by appending
+                # a ProxyHandler with no proxies defined.
+                handlers.append(urllib2.ProxyHandler({}))
                 ui.debug(_('disabling proxy for %s\n') % host)
             else:
                 proxyurl = urlparse.urlunsplit((
@@ -204,7 +248,7 @@ class httprepository(remoterepository):
         # will take precedence if found, so drop them
         for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
             try:
-                if os.environ.has_key(env):
+                if env in os.environ:
                     del os.environ[env]
             except OSError:
                 pass
@@ -213,7 +257,11 @@ class httprepository(remoterepository):
         if user:
             ui.debug(_('http auth: user %s, password %s\n') %
                      (user, passwd and '*' * len(passwd) or 'not set'))
-            passmgr.add_password(None, host, user, passwd or '')
+            netloc = host
+            if port:
+                netloc += ':' + port
+            # Python < 2.4.3 uses only the netloc to search for a password
+            passmgr.add_password(None, (self._url, netloc), user, passwd or '')
 
         handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),
                          httpdigestauthhandler(passmgr)))
@@ -223,11 +271,6 @@ class httprepository(remoterepository):
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
 
-    def __del__(self):
-        if self.handler:
-            self.handler.close_all()
-            self.handler = None
-
     def url(self):
         return self.path
 
@@ -236,9 +279,9 @@ class httprepository(remoterepository):
     def get_caps(self):
         if self.caps is None:
             try:
-                self.caps = self.do_read('capabilities').split()
-            except hg.RepoError:
-                self.caps = ()
+                self.caps = util.set(self.do_read('capabilities').split())
+            except repo.RepoError:
+                self.caps = util.set()
             self.ui.debug(_('capabilities: %s\n') %
                           (' '.join(self.caps or ['none'])))
         return self.caps
@@ -258,8 +301,7 @@ class httprepository(remoterepository):
         cu = "%s%s" % (self._url, qs)
         try:
             if data:
-                self.ui.debug(_("sending %s bytes\n") %
-                              headers.get('content-length', 'X'))
+                self.ui.debug(_("sending %s bytes\n") % len(data))
             resp = urllib2.urlopen(request(cu, data, headers))
         except urllib2.HTTPError, inst:
             if inst.code == 401:
@@ -289,7 +331,7 @@ class httprepository(remoterepository):
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
             self.ui.debug(_("Requested URL: '%s'\n") % cu)
-            raise hg.RepoError(_("'%s' does not appear to be an hg repository")
+            raise repo.RepoError(_("'%s' does not appear to be an hg repository")
                                % self._url)
 
         if proto.startswith('application/mercurial-'):
@@ -297,10 +339,10 @@ class httprepository(remoterepository):
                 version = proto.split('-', 1)[1]
                 version_info = tuple([int(n) for n in version.split('.')])
             except ValueError:
-                raise hg.RepoError(_("'%s' sent a broken Content-type "
+                raise repo.RepoError(_("'%s' sent a broken Content-Type "
                                      "header (%s)") % (self._url, proto))
             if version_info > (0, 1):
-                raise hg.RepoError(_("'%s' uses newer protocol %s") %
+                raise repo.RepoError(_("'%s' uses newer protocol %s") %
                                    (self._url, version))
 
         return resp
@@ -314,11 +356,12 @@ class httprepository(remoterepository):
             fp.close()
 
     def lookup(self, key):
+        self.requirecap('lookup', _('look up remote revision'))
         d = self.do_cmd("lookup", key = key).read()
         success, data = d[:-1].split(' ', 1)
         if int(success):
             return bin(data)
-        raise hg.RepoError(data)
+        raise repo.RepoError(data)
 
     def heads(self):
         d = self.do_read("heads")
@@ -351,6 +394,7 @@ class httprepository(remoterepository):
         return util.chunkbuffer(zgenerator(f))
 
     def changegroupsubset(self, bases, heads, source):
+        self.requirecap('changegroupsubset', _('look up remote changes'))
         baselst = " ".join([hex(n) for n in bases])
         headlst = " ".join([hex(n) for n in heads])
         f = self.do_cmd("changegroupsubset", bases=baselst, heads=headlst)
@@ -380,7 +424,7 @@ class httprepository(remoterepository):
             try:
                 rfp = self.do_cmd(
                     'unbundle', data=fp,
-                    headers={'content-type': 'application/octet-stream'},
+                    headers={'Content-Type': 'application/octet-stream'},
                     heads=' '.join(map(hex, heads)))
                 try:
                     ret = int(rfp.readline())

@@ -2,18 +2,18 @@
 
 cp "$TESTDIR"/printenv.py .
 
-http_proxy= hg clone static-http://localhost:20059/ copy
+http_proxy= hg clone static-http://localhost:$HGPORT/ copy
 echo $?
 test -d copy || echo copy: No such file or directory
 
 # This server doesn't do range requests so it's basically only good for
 # one pull
 cat > dumb.py <<EOF
-import BaseHTTPServer, SimpleHTTPServer, signal
+import BaseHTTPServer, SimpleHTTPServer, os, signal
 
 def run(server_class=BaseHTTPServer.HTTPServer,
         handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
-    server_address = ('localhost', 20059)
+    server_address = ('localhost', int(os.environ['HGPORT']))
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
 
@@ -34,7 +34,7 @@ hg tip
 
 cd ..
 
-http_proxy= hg clone static-http://localhost:20059/remote local
+http_proxy= hg clone static-http://localhost:$HGPORT/remote local | sed -e 's,:[0-9][0-9]*/,/,'
 
 cd local
 hg verify
@@ -47,6 +47,20 @@ hg commit -A -mtest2 -d '100000000 0'
 cd ../local
 echo '[hooks]' >> .hg/hgrc
 echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
-http_proxy= hg pull
+http_proxy= hg pull | sed -e 's,:[0-9][0-9]*/,/,'
+
+echo '% test with "/" URI (issue 747)'
+cd ..
+hg init
+echo a > a
+hg add a
+hg ci -ma
+
+http_proxy= hg clone static-http://localhost:$HGPORT/ local2 | sed -e 's,:[0-9][0-9]*/,/,'
+
+cd local2
+hg verify
+cat a
+hg paths | sed -e 's,:[0-9][0-9]*/,/,'
 
 kill $!

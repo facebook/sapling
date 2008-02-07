@@ -1,4 +1,5 @@
 default = 'shortlog'
+mimetype = 'text/html; charset={encoding}'
 header = header.tmpl
 footer = footer.tmpl
 search = search.tmpl
@@ -15,8 +16,8 @@ changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-manifestdirentry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td>&nbsp;<td><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">#basename|escape#/</a>'
-manifestfileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td align=right><tt>#size#</tt>&nbsp;<td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#basename|escape#</a>'
+manifestdirentry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td>&nbsp;<td>&nbsp;<td><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">#basename|escape#/</a>'
+manifestfileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td align=right><tt class="date">#date|isodate#</tt>&nbsp;<td align=right><tt>#size#</tt>&nbsp;<td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#basename|escape#</a>'
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
@@ -47,7 +48,7 @@ filediffparent = '<tr><th class="parent">parent #rev#:</th><td class="parent"><a
 filelogparent = '<tr><th>parent #rev#:</th><td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td></tr>'
 filediffchild = '<tr><th class="child">child #rev#:</th><td class="child"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td></tr>'
 filelogchild = '<tr><th>child #rev#:</th><td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td></tr>'
-indexentry = '<tr class="parity#parity#"><td><a href="#url#{sessionvars%urlparameter}">#name|escape#</a></td><td>#description#</td><td>#contact|obfuscate#</td><td class="age">#lastchange|age# ago</td><td class="indexlinks"><a href="#url#rss-log">RSS</a> #archives%archiveentry#</td></tr>'
+indexentry = '<tr class="parity#parity#"><td><a href="#url#{sessionvars%urlparameter}">#name|escape#</a></td><td>#description#</td><td>#contact|obfuscate#</td><td class="age">#lastchange|age# ago</td><td class="indexlinks"><a href="#url#rss-log">RSS</a> <a href="#url#atom-log">Atom</a> #archives%archiveentry#</td></tr>'
 index = index.tmpl
 archiveentry = '<a href="#url#archive/#node|short##extension|urlescape#">#type|escape#</a> '
 notfound = notfound.tmpl

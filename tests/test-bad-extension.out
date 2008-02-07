@@ -1,5 +1,4 @@
 *** failed to import extension badext: bit bucket overflow
-extension 'hgext.gpg' overrides commands: sigs sigcheck sign
 hg help [COMMAND]
 
 show help for a command, extension, or list of commands

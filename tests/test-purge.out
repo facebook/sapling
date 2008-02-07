@@ -59,6 +59,9 @@ untracked_file still around
 Removing file untracked_file
 directory
 r1
+% tracked file in ignored directory (issue621)
+untracked_file
+Removing file untracked_file
 % skip excluded files
 directory
 excluded_file

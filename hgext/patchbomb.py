@@ -115,24 +115,24 @@ def patchbomb(ui, repo, *revs, **opts):
     '''
 
     def prompt(prompt, default = None, rest = ': ', empty_ok = False):
-        try:
-            # readline gives raw_input editing capabilities, but is not
-            # present on windows
-            import readline
-        except ImportError: pass
-
-        if default: prompt += ' [%s]' % default
+        if not ui.interactive:
+            return default
+        if default:
+            prompt += ' [%s]' % default
         prompt += rest
         while True:
-            r = raw_input(prompt)
-            if r: return r
-            if default is not None: return default
-            if empty_ok: return r
+            r = ui.prompt(prompt, default=default)
+            if r:
+                return r
+            if default is not None:
+                return default
+            if empty_ok:
+                return r
             ui.warn(_('Please enter a valid value.\n'))
 
-    def confirm(s):
+    def confirm(s, denial):
         if not prompt(s, default = 'y', rest = '? ').lower().startswith('y'):
-            raise ValueError
+            raise util.Abort(denial)
 
     def cdiffstat(summary, patchlines):
         s = patch.diffstat(patchlines)
@@ -140,7 +140,11 @@ def patchbomb(ui, repo, *revs, **opts):
             if summary:
                 ui.write(summary, '\n')
                 ui.write(s, '\n')
-            confirm(_('Does the diffstat above look okay'))
+            confirm(_('Does the diffstat above look okay'),
+                    _('diffstat rejected'))
+        elif s is None:
+            ui.warn(_('No diffstat information available.\n'))
+            s = ''
         return s
 
     def makepatch(patch, idx, total):
@@ -149,27 +153,33 @@ def patchbomb(ui, repo, *revs, **opts):
         body = ''
         for line in patch:
             if line.startswith('#'):
-                if line.startswith('# Node ID'): node = line.split()[-1]
+                if line.startswith('# Node ID'):
+                    node = line.split()[-1]
                 continue
-            if (line.startswith('diff -r')
-                or line.startswith('diff --git')):
+            if line.startswith('diff -r') or line.startswith('diff --git'):
                 break
             desc.append(line)
-        if not node: raise ValueError
+        if not node:
+            raise ValueError
 
-        #body = ('\n'.join(desc[1:]).strip() or
-        #        'Patch subject is complete summary.')
-        #body += '\n\n\n'
-
-        if opts['plain']:
-            while patch and patch[0].startswith('# '): patch.pop(0)
-            if patch: patch.pop(0)
-            while patch and not patch[0].strip(): patch.pop(0)
-        if opts['diffstat']:
-            body += cdiffstat('\n'.join(desc), patch) + '\n\n'
         if opts['attach']:
+             body = ('\n'.join(desc[1:]).strip() or
+                   'Patch subject is complete summary.')
+             body += '\n\n\n'
+
+        if opts.get('plain'):
+            while patch and patch[0].startswith('# '):
+                patch.pop(0)
+            if patch:
+                patch.pop(0)
+            while patch and not patch[0].strip():
+                patch.pop(0)
+        if opts.get('diffstat'):
+            body += cdiffstat('\n'.join(desc), patch) + '\n\n'
+        if opts.get('attach') or opts.get('inline'):
             msg = email.MIMEMultipart.MIMEMultipart()
-            if body: msg.attach(email.MIMEText.MIMEText(body, 'plain'))
+            if body:
+                msg.attach(email.MIMEText.MIMEText(body, 'plain'))
             p = email.MIMEText.MIMEText('\n'.join(patch), 'x-patch')
             binnode = bin(node)
             # if node is mq patch, it will have patch file name as tag
@@ -179,10 +189,13 @@ def patchbomb(ui, repo, *revs, **opts):
                 patchname = patchname[0]
             elif total > 1:
                 patchname = cmdutil.make_filename(repo, '%b-%n.patch',
-                                                   binnode, idx, total)
+                                                  binnode, idx, total)
             else:
                 patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
-            p['Content-Disposition'] = 'inline; filename=' + patchname
+            disposition = 'inline'
+            if opts['attach']:
+                disposition = 'attachment'
+            p['Content-Disposition'] = disposition + '; filename=' + patchname
             msg.attach(p)
         else:
             body += '\n'.join(patch)
@@ -190,7 +203,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
         subj = desc[0].strip().rstrip('. ')
         if total == 1:
-            subj = '[PATCH] ' + (opts['subject'] or subj)
+            subj = '[PATCH] ' + (opts.get('subject') or subj)
         else:
             tlen = len(str(total))
             subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, subj)
@@ -216,7 +229,7 @@ def patchbomb(ui, repo, *revs, **opts):
         tmpfn = os.path.join(tmpdir, 'bundle')
         try:
             commands.bundle(ui, repo, tmpfn, dest, **opts)
-            return open(tmpfn).read()
+            return open(tmpfn, 'rb').read()
         finally:
             try:
                 os.unlink(tmpfn)
@@ -224,17 +237,18 @@ def patchbomb(ui, repo, *revs, **opts):
                 pass
             os.rmdir(tmpdir)
 
-    really_sending = not (opts['test'] or opts['mbox'])
-
-    if really_sending:
+    if not (opts.get('test') or opts.get('mbox')):
+        # really sending
         mail.validateconfig(ui)
 
-    if not (revs or opts.get('rev') or opts.get('outgoing')):
+    if not (revs or opts.get('rev')
+            or opts.get('outgoing') or opts.get('bundle')):
         raise util.Abort(_('specify at least one changeset with -r or -o'))
 
     cmdutil.setremoteconfig(ui, opts)
     if opts.get('outgoing') and opts.get('bundle'):
-        raise util.Abort(_("--outgoing mode always on with --bundle; do not re-specify --outgoing"))
+        raise util.Abort(_("--outgoing mode always on with --bundle;"
+                           " do not re-specify --outgoing"))
 
     if opts.get('outgoing') or opts.get('bundle'):
         if len(revs) > 1:
@@ -254,12 +268,21 @@ def patchbomb(ui, repo, *revs, **opts):
 
     # start
     if opts.get('date'):
-        start_time = util.parsedate(opts['date'])
+        start_time = util.parsedate(opts.get('date'))
     else:
         start_time = util.makedate()
 
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
+
+    def getdescription(body, sender):
+        if opts.get('desc'):
+            body = open(opts.get('desc')).read()
+        else:
+            ui.write(_('\nWrite the introductory message for the '
+                       'patch series.\n\n'))
+            body = ui.edit(body, sender)
+        return body
 
     def getexportmsgs():
         patches = []
@@ -285,7 +308,8 @@ def patchbomb(ui, repo, *revs, **opts):
         jumbo = []
         msgs = []
 
-        ui.write(_('This patch series consists of %d patches.\n\n') % len(patches))
+        ui.write(_('This patch series consists of %d patches.\n\n')
+                 % len(patches))
 
         for p, i in zip(patches, xrange(len(patches))):
             jumbo.extend(p)
@@ -295,24 +319,18 @@ def patchbomb(ui, repo, *revs, **opts):
             tlen = len(str(len(patches)))
 
             subj = '[PATCH %0*d of %d] %s' % (
-                tlen, 0,
-                len(patches),
-                opts['subject'] or
-                prompt('Subject:', rest = ' [PATCH %0*d of %d] ' % (tlen, 0,
-                    len(patches))))
+                tlen, 0, len(patches),
+                opts.get('subject') or
+                prompt('Subject:',
+                       rest=' [PATCH %0*d of %d] ' % (tlen, 0, len(patches))))
 
             body = ''
-            if opts['diffstat']:
+            if opts.get('diffstat'):
                 d = cdiffstat(_('Final summary:\n'), jumbo)
-                if d: body = '\n' + d
+                if d:
+                    body = '\n' + d
 
-            if opts['desc']:
-                body = open(opts['desc']).read()
-            else:
-                ui.write(_('\nWrite the introductory message for the '
-                           'patch series.\n\n'))
-                body = ui.edit(body, sender)
-
+            body = getdescription(body, sender)
             msg = email.MIMEText.MIMEText(body)
             msg['Subject'] = subj
 
@@ -320,11 +338,10 @@ def patchbomb(ui, repo, *revs, **opts):
         return msgs
 
     def getbundlemsgs(bundle):
-        subj = (opts['subject']
+        subj = (opts.get('subject')
                 or prompt('Subject:', default='A bundle for your repository'))
-        ui.write(_('\nWrite the introductory message for the bundle.\n\n'))
-        body = ui.edit('', sender)
 
+        body = getdescription('', sender)
         msg = email.MIMEMultipart.MIMEMultipart()
         if body:
             msg.attach(email.MIMEText.MIMEText(body, 'plain'))
@@ -337,7 +354,7 @@ def patchbomb(ui, repo, *revs, **opts):
         msg['Subject'] = subj
         return [msg]
 
-    sender = (opts['from'] or ui.config('email', 'from') or
+    sender = (opts.get('from') or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
 
@@ -347,25 +364,24 @@ def patchbomb(ui, repo, *revs, **opts):
         msgs = getexportmsgs()
 
     def getaddrs(opt, prpt, default = None):
-        addrs = opts[opt] or (ui.config('email', opt) or
-                              ui.config('patchbomb', opt) or
-                              prompt(prpt, default = default)).split(',')
+        addrs = opts.get(opt) or (ui.config('email', opt) or
+                                  ui.config('patchbomb', opt) or
+                                  prompt(prpt, default = default)).split(',')
         return [a.strip() for a in addrs if a.strip()]
 
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
-    bcc = opts['bcc'] or (ui.config('email', 'bcc') or
+    bcc = opts.get('bcc') or (ui.config('email', 'bcc') or
                           ui.config('patchbomb', 'bcc') or '').split(',')
     bcc = [a.strip() for a in bcc if a.strip()]
 
     ui.write('\n')
 
-    if really_sending:
-        mailer = mail.connect(ui)
     parent = None
 
     sender_addr = email.Utils.parseaddr(sender)[1]
+    sendmail = None
     for m in msgs:
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
@@ -376,14 +392,16 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             parent = m['Message-Id']
         m['Date'] = util.datestr(date=start_time,
-                format="%a, %d %b %Y %H:%M:%S", timezone=True)
+                                 format="%a, %d %b %Y %H:%M:%S", timezone=True)
 
         start_time = (start_time[0] + 1, start_time[1])
         m['From'] = sender
         m['To'] = ', '.join(to)
-        if cc: m['Cc']  = ', '.join(cc)
-        if bcc: m['Bcc'] = ', '.join(bcc)
-        if opts['test']:
+        if cc:
+            m['Cc']  = ', '.join(cc)
+        if bcc:
+            m['Bcc'] = ', '.join(bcc)
+        if opts.get('test'):
             ui.status('Displaying ', m['Subject'], ' ...\n')
             ui.flush()
             if 'PAGER' in os.environ:
@@ -398,25 +416,28 @@ def patchbomb(ui, repo, *revs, **opts):
                     raise
             if fp is not ui:
                 fp.close()
-        elif opts['mbox']:
+        elif opts.get('mbox'):
             ui.status('Writing ', m['Subject'], ' ...\n')
-            fp = open(opts['mbox'], m.has_key('In-Reply-To') and 'ab+' or 'wb+')
+            fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
             date = util.datestr(date=start_time,
-                    format='%a %b %d %H:%M:%S %Y', timezone=False)
+                                format='%a %b %d %H:%M:%S %Y', timezone=False)
             fp.write('From %s %s\n' % (sender_addr, date))
             fp.write(m.as_string(0))
             fp.write('\n\n')
             fp.close()
         else:
+            if not sendmail:
+                sendmail = mail.connect(ui)
             ui.status('Sending ', m['Subject'], ' ...\n')
             # Exim does not remove the Bcc field
             del m['Bcc']
-            mailer.sendmail(sender, to + bcc + cc, m.as_string(0))
+            sendmail(sender, to + bcc + cc, m.as_string(0))
 
 cmdtable = {
     "email":
         (patchbomb,
-         [('a', 'attach', None, _('send patches as inline attachments')),
+         [('a', 'attach', None, _('send patches as attachments')),
+          ('i', 'inline', None, _('send patches as inline attachments')),
           ('', 'bcc', [], _('email addresses of blind copy recipients')),
           ('c', 'cc', [], _('email addresses of copy recipients')),
           ('d', 'diffstat', None, _('add diffstat output to messages')),

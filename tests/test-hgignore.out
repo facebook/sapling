@@ -14,6 +14,21 @@ A dir/b.o
 ? a.c
 ? syntax
 --
+A dir/b.o
+? .hgignore
+? a.c
+? syntax
+--
+A dir/b.o
+? .hgignore
+? a.c
+? syntax
+--
+A dir/b.o
+? .hgignore
+? a.c
+? syntax
+--
 .hgignore: ignoring invalid syntax 'invalid'
 A dir/b.o
 ? .hgignore

@@ -1,6 +1,7 @@
 #!/bin/sh
 
-hg init
+hg init t
+cd t
 echo foo > a
 hg add a
 hg commit -m "1" -d "1000000 0"
@@ -12,4 +13,6 @@ hg verify 2>/dev/null || echo verify failed
 chmod -w .hg/store/data/a.i
 echo barber > a
 hg commit -m "2" -d "1000000 0" 2>/dev/null || echo commit failed
-
+chmod -w .
+hg diff --nodates
+chmod +w .

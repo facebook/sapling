@@ -8,7 +8,7 @@
 from node import *
 from remoterepo import *
 from i18n import _
-import hg, os, re, stat, util
+import repo, os, re, stat, util
 
 class sshrepository(remoterepository):
     def __init__(self, ui, path, create=0):
@@ -17,27 +17,26 @@ class sshrepository(remoterepository):
 
         m = re.match(r'^ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?$', path)
         if not m:
-            self.raise_(hg.RepoError(_("couldn't parse location %s") % path))
+            self.raise_(repo.RepoError(_("couldn't parse location %s") % path))
 
         self.user = m.group(2)
         self.host = m.group(3)
         self.port = m.group(5)
         self.path = m.group(7) or "."
 
-        args = self.user and ("%s@%s" % (self.user, self.host)) or self.host
-        args = self.port and ("%s -p %s") % (args, self.port) or args
-
         sshcmd = self.ui.config("ui", "ssh", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd", "hg")
+
+        args = util.sshargs(sshcmd, self.host, self.user, self.port)
 
         if create:
             cmd = '%s %s "%s init %s"'
             cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
             ui.note('running %s\n' % cmd)
-            res = os.system(cmd)
+            res = util.system(cmd)
             if res != 0:
-                self.raise_(hg.RepoError(_("could not create remote repo")))
+                self.raise_(repo.RepoError(_("could not create remote repo")))
 
         self.validate_repo(ui, sshcmd, args, remotecmd)
 
@@ -51,6 +50,7 @@ class sshrepository(remoterepository):
         cmd = '%s %s "%s -R %s serve --stdio"'
         cmd = cmd % (sshcmd, args, remotecmd, self.path)
 
+        cmd = util.quotecommand(cmd)
         ui.note('running %s\n' % cmd)
         self.pipeo, self.pipei, self.pipee = os.popen3(cmd, 'b')
 
@@ -69,13 +69,13 @@ class sshrepository(remoterepository):
             lines.append(l)
             max_noise -= 1
         else:
-            self.raise_(hg.RepoError(_("no suitable response from remote hg")))
+            self.raise_(repo.RepoError(_("no suitable response from remote hg")))
 
-        self.capabilities = ()
+        self.capabilities = util.set()
         lines.reverse()
         for l in lines:
             if l.startswith("capabilities:"):
-                self.capabilities = l[:-1].split(":")[1].split()
+                self.capabilities.update(l[:-1].split(":")[1].split())
                 break
 
     def readerr(self):
@@ -114,14 +114,25 @@ class sshrepository(remoterepository):
         return self.pipei
 
     def call(self, cmd, **args):
-        r = self.do_cmd(cmd, **args)
-        l = r.readline()
+        self.do_cmd(cmd, **args)
+        return self._recv()
+
+    def _recv(self):
+        l = self.pipei.readline()
         self.readerr()
         try:
             l = int(l)
         except:
             self.raise_(util.UnexpectedOutput(_("unexpected response:"), l))
-        return r.read(l)
+        return self.pipei.read(l)
+
+    def _send(self, data, flush=False):
+        self.pipeo.write("%d\n" % len(data))
+        if data:
+            self.pipeo.write(data)
+        if flush:
+            self.pipeo.flush()
+        self.readerr()
 
     def lock(self):
         self.call("lock")
@@ -131,12 +142,13 @@ class sshrepository(remoterepository):
         self.call("unlock")
 
     def lookup(self, key):
+        self.requirecap('lookup', _('look up remote revision'))
         d = self.call("lookup", key=key)
         success, data = d[:-1].split(" ", 1)
         if int(success):
             return bin(data)
         else:
-            self.raise_(hg.RepoError(data))
+            self.raise_(repo.RepoError(data))
 
     def heads(self):
         d = self.call("heads")
@@ -168,6 +180,7 @@ class sshrepository(remoterepository):
         return self.do_cmd("changegroup", roots=n)
 
     def changegroupsubset(self, bases, heads, kind):
+        self.requirecap('changegroupsubset', _('look up remote changes'))
         bases = " ".join(map(hex, bases))
         heads = " ".join(map(hex, heads))
         return self.do_cmd("changegroupsubset", bases=bases, heads=heads)
@@ -175,47 +188,49 @@ class sshrepository(remoterepository):
     def unbundle(self, cg, heads, source):
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
         if d:
-            self.raise_(hg.RepoError(_("push refused: %s") % d))
+            # remote may send "unsynced changes"
+            self.raise_(repo.RepoError(_("push refused: %s") % d))
 
         while 1:
             d = cg.read(4096)
-            if not d: break
-            self.pipeo.write(str(len(d)) + '\n')
-            self.pipeo.write(d)
-            self.readerr()
+            if not d:
+                break
+            self._send(d)
 
-        self.pipeo.write('0\n')
-        self.pipeo.flush()
+        self._send("", flush=True)
 
-        self.readerr()
-        d = self.pipei.readline()
-        if d != '\n':
-            return 1
+        r = self._recv()
+        if r:
+            # remote may send "unsynced changes"
+            self.raise_(repo.RepoError(_("push failed: %s") % r))
 
-        l = int(self.pipei.readline())
-        r = self.pipei.read(l)
-        if not r:
-            return 1
-        return int(r)
+        r = self._recv()
+        try:
+            return int(r)
+        except:
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), r))
 
     def addchangegroup(self, cg, source, url):
         d = self.call("addchangegroup")
         if d:
-            self.raise_(hg.RepoError(_("push refused: %s") % d))
+            self.raise_(repo.RepoError(_("push refused: %s") % d))
         while 1:
             d = cg.read(4096)
-            if not d: break
+            if not d:
+                break
             self.pipeo.write(d)
             self.readerr()
 
         self.pipeo.flush()
 
         self.readerr()
-        l = int(self.pipei.readline())
-        r = self.pipei.read(l)
+        r = self._recv()
         if not r:
             return 1
-        return int(r)
+        try:
+            return int(r)
+        except:
+            self.raise_(util.UnexpectedOutput(_("unexpected response:"), r))
 
     def stream_out(self):
         return self.do_cmd('stream_out')

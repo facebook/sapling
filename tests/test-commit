@@ -10,6 +10,7 @@ hg init test
 cd test
 echo foo > foo
 hg add foo
+HGEDITOR=true hg commit -m ""
 hg commit -d '0 0' -m commit-1
 echo foo >> foo
 hg commit -d '1 4444444' -m commit-3

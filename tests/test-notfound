@@ -1,9 +1,0 @@
-#!/bin/sh
-
-hg init
-
-echo "Is there an error message when trying to diff non-existing files?"
-hg diff not found
-
-echo "Is there an error message when trying to add non-existing files?"
-hg add not found

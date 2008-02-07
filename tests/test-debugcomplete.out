@@ -4,6 +4,7 @@ addremove
 annotate
 archive
 backout
+bisect
 branch
 branches
 bundle
@@ -62,6 +63,7 @@ debugcomplete
 debugconfig
 debugdata
 debugdate
+debugfsinfo
 debugindex
 debugindexdot
 debuginstall
@@ -127,6 +129,7 @@ rawcommit
 --noninteractive
 --pid-file
 --port
+--prefix
 --profile
 --quiet
 --repository

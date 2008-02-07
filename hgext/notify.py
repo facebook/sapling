@@ -135,7 +135,7 @@ class notifier(object):
     def fixmail(self, addr):
         '''try to clean up email addresses.'''
 
-        addr = templater.email(addr.strip())
+        addr = util.email(addr.strip())
         if self.domain:
             a = addr.find('@localhost')
             if a != -1:
@@ -231,7 +231,7 @@ class notifier(object):
         else:
             self.ui.status(_('notify: sending %d subscribers %d changes\n') %
                            (len(self.subs), count))
-            mail.sendmail(self.ui, templater.email(msg['From']),
+            mail.sendmail(self.ui, util.email(msg['From']),
                           self.subs, msgtext)
 
     def diff(self, node, ref):

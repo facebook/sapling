@@ -6,11 +6,10 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import os, smtplib, templater, util, socket
+import os, smtplib, util, socket
 
 def _smtp(ui):
-    '''send mail using smtp.'''
-
+    '''build an smtp connection and return a function to send mail'''
     local_hostname = ui.config('smtp', 'local_hostname')
     s = smtplib.SMTP(local_hostname=local_hostname)
     mailhost = ui.config('smtp', 'host')
@@ -30,44 +29,48 @@ def _smtp(ui):
         s.ehlo()
     username = ui.config('smtp', 'username')
     password = ui.config('smtp', 'password')
+    if username and not password:
+        password = ui.getpass()
     if username and password:
         ui.note(_('(authenticating to mail server as %s)\n') %
                   (username))
         s.login(username, password)
-    return s
 
-class _sendmail(object):
+    def send(sender, recipients, msg):
+        try:
+            return s.sendmail(sender, recipients, msg)
+        except smtplib.SMTPRecipientsRefused, inst:
+            recipients = [r[1] for r in inst.recipients.values()]
+            raise util.Abort('\n' + '\n'.join(recipients))
+        except smtplib.SMTPException, inst:
+            raise util.Abort(inst)
+
+    return send
+
+def _sendmail(ui, sender, recipients, msg):
     '''send mail using sendmail.'''
-
-    def __init__(self, ui, program):
-        self.ui = ui
-        self.program = program
-
-    def sendmail(self, sender, recipients, msg):
-        cmdline = '%s -f %s %s' % (
-            self.program, templater.email(sender),
-            ' '.join(map(templater.email, recipients)))
-        self.ui.note(_('sending mail: %s\n') % cmdline)
-        fp = os.popen(cmdline, 'w')
-        fp.write(msg)
-        ret = fp.close()
-        if ret:
-            raise util.Abort('%s %s' % (
-                os.path.basename(self.program.split(None, 1)[0]),
-                util.explain_exit(ret)[0]))
+    program = ui.config('email', 'method')
+    cmdline = '%s -f %s %s' % (program, util.email(sender),
+                               ' '.join(map(util.email, recipients)))
+    ui.note(_('sending mail: %s\n') % cmdline)
+    fp = os.popen(cmdline, 'w')
+    fp.write(msg)
+    ret = fp.close()
+    if ret:
+        raise util.Abort('%s %s' % (
+            os.path.basename(program.split(None, 1)[0]),
+            util.explain_exit(ret)[0]))
 
 def connect(ui):
-    '''make a mail connection. object returned has one method, sendmail.
+    '''make a mail connection. return a function to send mail.
     call as sendmail(sender, list-of-recipients, msg).'''
-
-    method = ui.config('email', 'method', 'smtp')
-    if method == 'smtp':
+    if ui.config('email', 'method', 'smtp') == 'smtp':
         return _smtp(ui)
-
-    return _sendmail(ui, method)
+    return lambda s, r, m: _sendmail(ui, s, r, m)
 
 def sendmail(ui, sender, recipients, msg):
-    return connect(ui).sendmail(sender, recipients, msg)
+    send = connect(ui)
+    return send(sender, recipients, msg)
 
 def validateconfig(ui):
     '''determine if we have enough config data to try sending email.'''

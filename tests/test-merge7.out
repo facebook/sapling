@@ -6,8 +6,8 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
-warning: conflicts during merge.
 merging test.txt
+warning: conflicts during merge.
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:
@@ -20,20 +20,22 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
-warning: conflicts during merge.
 resolving manifests
  overwrite None partial False
  ancestor faaea63e63a9 local 451c744aabcc+ remote a070d41e8360
+  searching for copies back to rev 1
  test.txt: versions differ -> m
+picked tool 'internal:merge' for test.txt (binary False symlink False)
 merging test.txt
 my test.txt@451c744aabcc+ other test.txt@a070d41e8360 ancestor test.txt@faaea63e63a9
+warning: conflicts during merge.
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:
   hg update -C 3
   hg merge 4
 one
-<<<<<<< my
+<<<<<<< local
 two-point-five
 =======
 two-point-one

@@ -1,0 +1,40 @@
+#!/bin/sh
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+convert=
+[convert]
+hg.saverev=False
+EOF
+
+hg init orig
+cd orig
+
+echo foo > foo
+echo bar > bar
+hg ci -qAm 'add foo bar' -d '0 0'
+
+echo >> foo
+hg ci -m 'change foo' -d '1 0'
+
+hg up -qC 0
+hg copy --after --force foo bar
+hg copy foo baz
+hg ci -m 'make bar and baz copies of foo' -d '2 0'
+
+hg merge
+hg ci -m 'merge local copy' -d '3 0'
+
+hg up -C 1
+hg merge 2
+hg ci -m 'merge remote copy' -d '4 0'
+
+chmod +x baz
+hg ci -m 'mark baz executable' -d '5 0'
+
+cd ..
+hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
+cd new
+hg out ../orig
+
+true

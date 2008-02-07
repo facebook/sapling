@@ -40,12 +40,15 @@ echo "--" ; hg status 2>&1 | sed -e 's/abort: .*\.hgignore:/abort: .hgignore:/'
 echo ".*\.o" > .hgignore
 echo "--" ; hg status
 
-# XXX: broken
-#echo "glob:**.o" > .hgignore
-#echo "--" ; hg status
-#
-#echo "glob:*.o" > .hgignore
-#echo "--" ; hg status
+echo "glob:**.o" > .hgignore
+echo "--" ; hg status
+
+echo "glob:*.o" > .hgignore
+echo "--" ; hg status
+
+echo "syntax: glob" > .hgignore
+echo "re:.*\.o" >> .hgignore
+echo "--" ; hg status
 
 echo "syntax: invalid" > .hgignore
 echo "--" ; hg status 2>&1 | sed -e 's/.*\.hgignore:/.hgignore:/'

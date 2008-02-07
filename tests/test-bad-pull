@@ -1,15 +1,15 @@
 #!/bin/sh
 
-hg clone http://localhost:20059/ copy
+hg clone http://localhost:$HGPORT/ copy
 echo $?
 test -d copy || echo copy: No such file or directory
 
 cat > dumb.py <<EOF
-import BaseHTTPServer, SimpleHTTPServer, signal
+import BaseHTTPServer, SimpleHTTPServer, os, signal
 
 def run(server_class=BaseHTTPServer.HTTPServer,
         handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
-    server_address = ('localhost', 20059)
+    server_address = ('localhost', int(os.environ['HGPORT']))
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
 
@@ -23,7 +23,7 @@ echo $! >> $DAEMON_PIDS
 # give the server some time to start running
 sleep 1
 
-http_proxy= hg clone http://localhost:20059/foo copy2 2>&1 | \
+http_proxy= hg clone http://localhost:$HGPORT/foo copy2 2>&1 | \
     sed -e 's/404.*/404/' -e 's/Date:.*/Date:/'
 echo $?
 

@@ -30,7 +30,7 @@ class diffopts(object):
     defaults = {
         'context': 3,
         'text': False,
-        'showfunc': True,
+        'showfunc': False,
         'git': False,
         'nodates': False,
         'ignorews': False,
@@ -59,11 +59,11 @@ def wsclean(opts, text):
         text = re.sub('\n+', '', text)
     return text
 
-def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
+def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     def datetag(date, addtab=True):
         if not opts.git and not opts.nodates:
             return '\t%s\n' % date
-        if addtab and ' ' in fn:
+        if addtab and ' ' in fn1:
             return '\t\n'
         return '\n'
 
@@ -76,29 +76,29 @@ def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
             return md5.new(v).digest()
         if a and b and len(a) == len(b) and h(a) == h(b):
             return ""
-        l = ['Binary file %s has changed\n' % fn]
+        l = ['Binary file %s has changed\n' % fn1]
     elif not a:
         b = splitnewlines(b)
         if a is None:
             l1 = '--- /dev/null%s' % datetag(epoch, False)
         else:
-            l1 = "--- %s%s" % ("a/" + fn, datetag(ad))
-        l2 = "+++ %s%s" % ("b/" + fn, datetag(bd))
+            l1 = "--- %s%s" % ("a/" + fn1, datetag(ad))
+        l2 = "+++ %s%s" % ("b/" + fn2, datetag(bd))
         l3 = "@@ -0,0 +1,%d @@\n" % len(b)
         l = [l1, l2, l3] + ["+" + e for e in b]
     elif not b:
         a = splitnewlines(a)
-        l1 = "--- %s%s" % ("a/" + fn, datetag(ad))
+        l1 = "--- %s%s" % ("a/" + fn1, datetag(ad))
         if b is None:
             l2 = '+++ /dev/null%s' % datetag(epoch, False)
         else:
-            l2 = "+++ %s%s" % ("b/" + fn, datetag(bd))
+            l2 = "+++ %s%s" % ("b/" + fn2, datetag(bd))
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
         l = [l1, l2, l3] + ["-" + e for e in a]
     else:
         al = splitnewlines(a)
         bl = splitnewlines(b)
-        l = list(bunidiff(a, b, al, bl, "a/" + fn, "b/" + fn, opts=opts))
+        l = list(bunidiff(a, b, al, bl, "a/" + fn1, "b/" + fn2, opts=opts))
         if not l: return ""
         # difflib uses a space, rather than a tab
         l[0] = "%s%s" % (l[0][:-2], datetag(ad))
@@ -110,7 +110,7 @@ def unidiff(a, ad, b, bd, fn, r=None, opts=defaultopts):
 
     if r:
         l.insert(0, "diff %s %s\n" %
-                    (' '.join(["-r %s" % rev for rev in r]), fn))
+                    (' '.join(["-r %s" % rev for rev in r]), fn1))
 
     return "".join(l)
 
@@ -244,6 +244,9 @@ def patch(a, bin):
 # similar to difflib.SequenceMatcher.get_matching_blocks
 def get_matching_blocks(a, b):
     return [(d[0], d[2], d[1] - d[0]) for d in bdiff.blocks(a, b)]
+
+def trivialdiffheader(length):
+    return struct.pack(">lll", 0, 0, length)
 
 patches = mpatch.patches
 patchedsize = mpatch.patchedsize

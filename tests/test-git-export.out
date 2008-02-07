@@ -33,9 +33,9 @@ old mode 100755
 new mode 100644
 rename from src
 rename to dst
---- a/dst
+--- a/src
 +++ b/dst
-@@ -3,3 +3,4 @@ 3
+@@ -3,3 +3,4 @@
  3
  4
  5
@@ -75,28 +75,52 @@ rename to renamed.bin
 diff --git a/dst2 b/dst3
 rename from dst2
 rename to dst3
+%  reversed
+diff --git a/dst3 b/dst2
+rename from dst3
+rename to dst2
 
 % file created before r1 and renamed before r2
 diff --git a/foo b/bar
 rename from foo
 rename to bar
---- a/bar
+--- a/foo
 +++ b/bar
-@@ -1,2 +1,3 @@ a
+@@ -1,2 +1,3 @@
  a
  b
 +c
+%  reversed
+diff --git a/bar b/foo
+rename from bar
+rename to foo
+--- a/bar
++++ b/foo
+@@ -1,3 +1,2 @@
+ a
+ b
+-c
 
 % file created in r1 and renamed before r2
 diff --git a/foo b/bar
 rename from foo
 rename to bar
---- a/bar
+--- a/foo
 +++ b/bar
-@@ -1,1 +1,3 @@ a
+@@ -1,1 +1,3 @@
  a
 +b
 +c
+%  reversed
+diff --git a/bar b/foo
+rename from bar
+rename to foo
+--- a/bar
++++ b/foo
+@@ -1,3 +1,1 @@
+ a
+-b
+-c
 
 % file created after r1 and renamed before r2
 diff --git a/bar b/bar
@@ -107,6 +131,15 @@ new file mode 100644
 +a
 +b
 +c
+%  reversed
+diff --git a/bar b/bar
+deleted file mode 100644
+--- a/bar
++++ /dev/null
+@@ -1,3 +0,0 @@
+-a
+-b
+-c
 
 % comparing with the working dir
 % there's a copy in the working dir...
@@ -145,6 +178,16 @@ rename to brand-new3
 diff --git a/brand-new2 b/brand-new3-2
 copy from brand-new2
 copy to brand-new3-2
+%  reversed
+diff --git a/brand-new3 b/brand-new2
+rename from brand-new3
+rename to brand-new2
+diff --git a/brand-new3-2 b/brand-new3-2
+deleted file mode 100644
+--- a/brand-new3-2
++++ /dev/null
+@@ -1,1 +0,0 @@
+-
 % there should be a trailing TAB if there are spaces in the file name
 diff --git a/with spaces b/with spaces
 new file mode 100644

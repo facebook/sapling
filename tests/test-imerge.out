@@ -1,0 +1,48 @@
+adding bar
+adding foo
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+% start imerge
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+U foo
+foo
+bar
+bar
+bar
+% status -v
+merging e6da46716401 and 30d266f502e7
+U foo (foo2)
+% next
+foo
+% merge next
+merging foo and foo2
+all conflicts resolved
+% unresolve
+% merge foo
+merging foo and foo2
+all conflicts resolved
+% save
+% load
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+R foo
+all conflicts resolved
+foo
+changeset:   3:fa9a6defdcaf
+tag:         tip
+parent:      2:e6da46716401
+parent:      1:30d266f502e7
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+files:       foo foo2
+description:
+merged
+
+
+% nothing to merge -- tip
+abort: there is nothing to merge
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+% nothing to merge
+abort: there is nothing to merge - use "hg update" instead

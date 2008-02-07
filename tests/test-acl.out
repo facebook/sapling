@@ -28,6 +28,7 @@ adding foo/Bar/file.txt revisions
 adding foo/file.txt revisions
 adding quux/file.py revisions
 added 3 changesets with 3 changes to 3 files
+updating the branch cache
 rolling back last transaction
 0:6675d58eff77
 
@@ -59,6 +60,7 @@ calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow not enabled
 acl: acl.deny not enabled
 acl: changes have source "push" - skipping
+updating the branch cache
 rolling back last transaction
 0:6675d58eff77
 
@@ -94,6 +96,7 @@ acl: acl.deny not enabled
 acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: allowing changeset 911600dab2ae
+updating the branch cache
 rolling back last transaction
 0:6675d58eff77
 
@@ -383,6 +386,7 @@ acl: acl.deny enabled, 0 entries for user barney
 acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: allowing changeset 911600dab2ae
+updating the branch cache
 rolling back last transaction
 0:6675d58eff77
 
@@ -578,6 +582,7 @@ acl: acl.deny enabled, 0 entries for user barney
 acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: allowing changeset 911600dab2ae
+updating the branch cache
 rolling back last transaction
 0:6675d58eff77
 

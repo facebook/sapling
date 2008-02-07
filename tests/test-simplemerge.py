@@ -19,14 +19,24 @@ import unittest
 from unittest import TestCase
 import imp
 import shutil
-from mercurial import util
+from mercurial import util, simplemerge
 
-# copy simplemerge to the cwd to avoid creating a .pyc file in the source tree
-shutil.copyfile(os.path.join(os.environ['TESTDIR'], os.path.pardir,
-                             'contrib', 'simplemerge'),
-                'simplemerge.py')
-simplemerge = imp.load_source('simplemerge', 'simplemerge.py')
-Merge3 = simplemerge.Merge3
+# bzr compatible interface, for the tests
+class Merge3(simplemerge.Merge3Text):
+    """3-way merge of texts.
+
+    Given BASE, OTHER, THIS, tries to produce a combined text
+    incorporating the changes from both BASE->OTHER and BASE->THIS.
+    All three will typically be sequences of lines."""
+    def __init__(self, base, a, b):
+        basetext = '\n'.join([i.strip('\n') for i in base] + [''])
+        atext = '\n'.join([i.strip('\n') for i in a] + [''])
+        btext = '\n'.join([i.strip('\n') for i in b] + [''])
+        if util.binary(basetext) or util.binary(atext) or util.binary(btext):
+            raise util.Abort("don't know how to merge binary files")
+        simplemerge.Merge3Text.__init__(self, basetext, atext, btext,
+                                        base, a, b)
+
 CantReprocessAndShowBase = simplemerge.CantReprocessAndShowBase
 
 def split_lines(t):
