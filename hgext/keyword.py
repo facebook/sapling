@@ -82,7 +82,7 @@ from mercurial import commands, cmdutil, context, dispatch, filelog, revlog
 from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.node import *
 from mercurial.i18n import _
-import re, shutil, sys, tempfile, time
+import re, shutil, tempfile, time
 
 commands.optionalrepo += ' kwdemo'
 
@@ -99,7 +99,30 @@ def utcdate(date):
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
 
 
-_kwtemplater = None
+_kwtemplater, _cmd, _cmdoptions = None, None, None
+ 
+# store originals of monkeypatches
+_patchfile_init = patch.patchfile.__init__
+_dispatch_parse = dispatch._parse
+
+def _kwpatchfile_init(self, ui, fname, missing=False):
+    '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
+    rejects or conflicts due to expanded keywords in working dir.'''
+    _patchfile_init(self, ui, fname, missing=missing)
+    if _kwtemplater.matcher(self.fname):
+        # shrink keywords read from working dir
+        kwshrunk = _kwtemplater.shrink(''.join(self.lines))
+        self.lines = kwshrunk.splitlines(True)
+
+def _kwdispatch_parse(ui, args):
+    '''Monkeypatch dispatch._parse to obtain
+    current command and command options (global _cmd, _cmdoptions).'''
+    global _cmd, _cmdoptions
+    _cmd, func, args, options, _cmdoptions = _dispatch_parse(ui, args)
+    return _cmd, func, args, options, _cmdoptions
+
+dispatch._parse = _kwdispatch_parse
+
 
 class kwtemplater(object):
     '''
@@ -210,21 +233,6 @@ class kwfilelog(filelog.filelog):
             t2 = super(kwfilelog, self).read(node)
             return t2 != text
         return revlog.revlog.cmp(self, node, text)
-
-
-# store original patch.patchfile.__init__
-_patchfile_init = patch.patchfile.__init__
-
-def _kwpatchfile_init(self, ui, fname, missing=False):
-    '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
-    rejects or conflicts due to expanded keywords in working dir.'''
-    _patchfile_init(self, ui, fname, missing=missing)
-
-    if _kwtemplater.matcher(self.fname):
-        # shrink keywords read from working dir
-        kwshrunk = _kwtemplater.shrink(''.join(self.lines))
-        self.lines = kwshrunk.splitlines(True)
-
 
 def _iskwfile(f, link):
     return not link(f) and _kwtemplater.matcher(f)
@@ -410,25 +418,16 @@ def reposetup(ui, repo):
     This is done for local repos only, and only if there are
     files configured at all for keyword substitution.'''
 
+    global _kwtemplater
+    hgcmd, hgcmdopts = _cmd, _cmdoptions
+
     try:
-        if (not repo.local() or '.hg' in repo.root.split('/')
+        if (not repo.local() or hgcmd in nokwcommands.split() 
+            or '.hg' in repo.root.split('/')
             or repo._url.startswith('bundle:')):
             return
     except AttributeError:
         pass
-
-    hgcmd, func, args, opts, cmdopts = dispatch._parse(ui, sys.argv[1:])
-    if hgcmd in nokwcommands.split():
-        return
-
-    if hgcmd == 'diff':
-        # only expand if comparing against working dir
-        node1, node2 = cmdutil.revpair(repo, cmdopts.get('rev'))
-        if node2 is not None:
-            return
-        # shrink if rev is not current node
-        if node1 is not None and node1 != repo.changectx().node():
-            hgcmd = 'diff1'
 
     inc, exc = [], ['.hg*']
     for pat, opt in ui.configitems('keyword'):
@@ -439,7 +438,15 @@ def reposetup(ui, repo):
     if not inc:
         return
 
-    global _kwtemplater
+    if hgcmd == 'diff':
+        # only expand if comparing against working dir
+        node1, node2 = cmdutil.revpair(repo, hgcmdopts.get('rev'))
+        if node2 is not None:
+            return
+        # shrink if rev is not current node
+        if node1 is not None and node1 != repo.changectx().node():
+            hgcmd = 'diff1'
+
     restrict = hgcmd in restricted.split()
     _kwtemplater = kwtemplater(ui, repo, inc, exc, restrict)
 
