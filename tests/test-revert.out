@@ -71,9 +71,9 @@ reverting b/b
 % reverting a rename target should revert the source
 ? newa
 %% 4 ignored files (we will add/commit everything)
-? ignoreddir/file
-? ignoreddir/removed
 I ignored
+I ignoreddir/file
+I ignoreddir/removed
 I removed
 %% should revert ignored* and undelete *removed
 reverting ignored

@@ -21,7 +21,7 @@ cd ..
 hg init repo2
 cd repo2
 touch modified removed deleted ignored
-echo "ignored" > .hgignore
+echo "^ignored$" > .hgignore
 hg ci -A -m 'initial checkin' -d "1000000 0"
 sleep 1 # make sure mtime is changed
 touch modified added unknown ignored
@@ -37,3 +37,10 @@ echo "hg status -C:"
 hg status -C
 echo "hg status -A:"
 hg status -A
+echo "^ignoreddir$" > .hgignore
+mkdir ignoreddir
+touch ignoreddir/file
+echo "hg status ignoreddir/file:"
+hg status ignoreddir/file
+echo "hg status -i ignoreddir/file:"
+hg status -i ignoreddir/file

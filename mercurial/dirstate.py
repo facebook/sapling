@@ -530,6 +530,7 @@ class dirstate(object):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
+        files = files or []
         _join = self._join
         lstat = os.lstat
         cmap = self._copymap
@@ -547,8 +548,9 @@ class dirstate(object):
             if fn in dmap:
                 type_, mode, size, time, foo = dmap[fn]
             else:
-                if list_ignored and self._ignore(fn):
-                    iadd(fn)
+                if (list_ignored or fn in files) and self._dirignore(fn):
+                    if list_ignored:
+                        iadd(fn)
                 else:
                     uadd(fn)
                 continue
