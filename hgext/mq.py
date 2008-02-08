@@ -1554,6 +1554,8 @@ def init(ui, repo, **opts):
     if r:
         if not os.path.exists(r.wjoin('.hgignore')):
             fp = r.wopener('.hgignore', 'w')
+            fp.write('^\\.hg\n')
+            fp.write('^\\.mq\n')
             fp.write('syntax: glob\n')
             fp.write('status\n')
             fp.write('guards\n')

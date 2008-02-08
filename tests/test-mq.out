@@ -70,6 +70,8 @@ A series
 A test.patch
 % qinit; qinit -c
   .hgignore:
+^\.hg
+^\.mq
 syntax: glob
 status
 guards
