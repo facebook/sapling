@@ -2429,7 +2429,8 @@ def revert(ui, repo, *pats, **opts):
                     if mfentry:
                         # if version of file is same in parent and target
                         # manifests, do nothing
-                        if pmf[abs] != mfentry:
+                        if (pmf[abs] != mfentry or
+                            pmf.flags(abs) != mf.flags(abs)):
                             handle(revert, False)
                     else:
                         handle(remove, False)
