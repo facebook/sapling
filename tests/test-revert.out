@@ -37,14 +37,19 @@ notfound: No such file in rev 095eacd0c0d7
 A z
 ? b
 ? e.orig
-%% should add a, forget z
+%% should add a, remove d, forget z
 adding a
+removing d
 forgetting z
-%% should forget a
+%% should forget a, undelete d
 forgetting a
+undeleting d
 %% should silently add a
 A a
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+R d
+%% should silently keep d removed
+R d
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 reverting c
 %% should print non-executable
 non-executable
@@ -65,3 +70,14 @@ forgetting newdir/newfile
 reverting b/b
 % reverting a rename target should revert the source
 ? newa
+%% 4 ignored files (we will add/commit everything)
+? ignoreddir/file
+? ignoreddir/removed
+I ignored
+I removed
+%% should revert ignored* and undelete *removed
+reverting ignored
+reverting ignoreddir/file
+undeleting ignoreddir/removed
+undeleting removed
+%% should silently revert the named files

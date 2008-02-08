@@ -215,6 +215,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     revert_opts['date'] = None
     revert_opts['all'] = True
     revert_opts['rev'] = hex(parent)
+    revert_opts['no_backup'] = None
     revert(ui, repo, **revert_opts)
     commit_opts = opts.copy()
     commit_opts['addremove'] = False
@@ -2327,7 +2328,6 @@ def revert(ui, repo, *pats, **opts):
     # but not other.
 
     names = {}
-    target_only = {}
 
     wlock = repo.wlock()
     try:
@@ -2335,8 +2335,6 @@ def revert(ui, repo, *pats, **opts):
         for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
                                                  badmatch=mf.has_key):
             names[abs] = (rel, exact)
-            if src == 'b':
-                target_only[abs] = True
 
         # walk target manifest.
 
@@ -2354,10 +2352,9 @@ def revert(ui, repo, *pats, **opts):
             if abs in names or src == 'b':
                 continue
             names[abs] = (rel, exact)
-            target_only[abs] = True
 
-        changes = repo.status(match=names.has_key)[:5]
-        modified, added, removed, deleted, unknown = map(dict.fromkeys, changes)
+        changes = repo.status(match=names.has_key)[:4]
+        modified, added, removed, deleted = map(dict.fromkeys, changes)
 
         # if f is a rename, also revert the source
         cwd = repo.getcwd()
@@ -2385,8 +2382,6 @@ def revert(ui, repo, *pats, **opts):
             (added, revert, forget, True, False),
             (removed, undelete, None, False, False),
             (deleted, revert, remove, False, False),
-            (unknown, add, None, True, False),
-            (target_only, add, None, False, False),
             )
 
         entries = names.items()
@@ -2413,10 +2408,14 @@ def revert(ui, repo, *pats, **opts):
                     handle(hitlist, backuphit)
                 elif misslist is not None:
                     handle(misslist, backupmiss)
-                else:
-                    if exact: ui.warn(_('file not managed: %s\n') % rel)
                 break
             else:
+                if abs not in repo.dirstate:
+                    if mfentry:
+                        handle(add, True)
+                    elif exact:
+                        ui.warn(_('file not managed: %s\n') % rel)
+                    continue
                 # file has not changed in dirstate
                 if node == parent:
                     if exact: ui.warn(_('no changes needed to %s\n') % rel)
