@@ -155,24 +155,24 @@ class gnuarch_source(converter_source, commandline):
     def _update(self, rev):
         if rev == 'base-0':
             # Initialise 'base-0' revision
-            self.ui.debug(_('obtaining revision %s...\n' % rev))
-            revision = '%s--%s' % (self.treeversion, rev)
-            output = self._execute('get', revision, self.tmppath)
-            self.ui.debug(_('analysing revision %s...\n' % rev))
-            files = self._readcontents(self.tmppath)
-            self.changes[rev].add_files += files
+            self._obtainrevision(rev)
         else:
             self.ui.debug(_('applying revision %s...\n' % rev))
             revision = '%s--%s' % (self.treeversion, rev)
-            output = self._execute('replay', '-d', self.tmppath, revision)
-
-            old_rev = self.parents[rev][0]
-            self.ui.debug(_('computing changeset between %s and %s...\n' \
-                               % (old_rev, rev)))
-            rev_a = '%s--%s' % (self.treeversion, old_rev)
-            rev_b = '%s--%s' % (self.treeversion, rev)
-            delta = self.runlines0('delta', '-n', rev_a, rev_b)
-            self._parsedelta(delta, rev)
+            changeset, status = self.runlines('replay', '-d', self.tmppath,
+                                              revision)
+            if status:
+                # Something went wrong while merging (baz or tla
+                # issue?), get latest revision and try from there
+                shutil.rmtree(self.tmppath, ignore_errors=True)
+                self._obtainrevision(rev)
+            else:
+                old_rev = self.parents[rev][0]
+                self.ui.debug(_('computing changeset between %s and %s...\n' \
+                                    % (old_rev, rev)))
+                rev_a = '%s--%s' % (self.treeversion, old_rev)
+                rev_b = '%s--%s' % (self.treeversion, rev)
+                self._parsechangeset(changeset, rev)
 
     def _getfile(self, name, rev):
         mode = os.lstat(os.path.join(self.tmppath, name)).st_mode
@@ -218,6 +218,15 @@ class gnuarch_source(converter_source, commandline):
             copies[s] = d
         return changes, copies
 
+    def _obtainrevision(self, rev):
+        self.ui.debug(_('obtaining revision %s...\n' % rev))
+        revision = '%s--%s' % (self.treeversion, rev)
+        output = self._execute('get', revision, self.tmppath)
+        self.checkexit(output)
+        self.ui.debug(_('analysing revision %s...\n' % rev))
+        files = self._readcontents(self.tmppath)
+        self.changes[rev].add_files += files
+
     def _parsecatlog(self, data, rev):
         summary = []
         for l in data:
@@ -234,7 +243,7 @@ class gnuarch_source(converter_source, commandline):
                 self.changes[rev].author = l[len('Creator: '):]
         self.changes[rev].summary = '\n'.join(summary)
 
-    def _parsedelta(self, data, rev):
+    def _parsechangeset(self, data, rev):
         for l in data:
             l = l.strip()
             if l.startswith('A') and not l.startswith('A/'):

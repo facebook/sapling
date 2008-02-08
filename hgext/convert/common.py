@@ -249,7 +249,7 @@ class commandline(object):
     def runlines(self, cmd, *args, **kwargs):
         fp = self._run(cmd, *args, **kwargs)
         output = fp.readlines()
-        self.ui.debug(output)
+        self.ui.debug(''.join(output))
         return output, fp.close()
 
     def checkexit(self, status, output=''):
@@ -267,7 +267,7 @@ class commandline(object):
 
     def runlines0(self, cmd, *args, **kwargs):
         output, status = self.runlines(cmd, *args, **kwargs)
-        self.checkexit(status, output)
+        self.checkexit(status, ''.join(output))
         return output
 
     def getargmax(self):
