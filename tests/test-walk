@@ -92,6 +92,13 @@ hg rm fenugreek
 debugwalk fenugreek
 touch new
 debugwalk new
+
+mkdir ignored
+touch ignored/file
+echo '^ignored$' > .hgignore
+debugwalk ignored
+debugwalk ignored/file
+
 chdir ..
 debugwalk -R t t/mammals/skunk
 mkdir t2

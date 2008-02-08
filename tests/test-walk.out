@@ -278,6 +278,11 @@ m  fenugreek  fenugreek  exact
 hg debugwalk new
 f  new  new  exact
 
+hg debugwalk ignored
+
+hg debugwalk ignored/file
+f  ignored/file  ignored/file  exact
+
 cd ..
 
 hg debugwalk -R t t/mammals/skunk

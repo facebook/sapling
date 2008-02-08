@@ -369,6 +369,14 @@ class dirstate(object):
                           % (self.pathto(f), kind))
         return False
 
+    def _dirignore(self, f):
+        if self._ignore(f):
+            return True
+        for c in strutil.findall(f, '/'):
+            if self._ignore(f[:c]):
+                return True
+        return False
+
     def walk(self, files=None, match=util.always, badmatch=None):
         # filter out the stat
         for src, f, st in self.statwalk(files, match, badmatch=badmatch):
@@ -404,9 +412,11 @@ class dirstate(object):
             return match(file_)
 
         ignore = self._ignore
+        dirignore = self._dirignore
         if ignored:
             imatch = match
             ignore = util.never
+            dirignore = util.never
 
         # self._root may end with a path separator when self._root == '/'
         common_prefix_len = len(self._root)
@@ -492,8 +502,9 @@ class dirstate(object):
                         yield 'b', ff, None
                 continue
             if s_isdir(st.st_mode):
-                for f, src, st in findfiles(f):
-                    yield src, f, st
+                if not dirignore(nf):
+                    for f, src, st in findfiles(f):
+                        yield src, f, st
             else:
                 if nf in known:
                     continue
