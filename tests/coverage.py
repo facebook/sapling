@@ -218,7 +218,7 @@ class StatementFindingAstVisitor(compiler.visitor.ASTVisitor):
         firstelse = self.getFirstLine(suite)
         for l in range(lastprev+1, firstelse):
             if l in self.suite_spots:
-                self.doSuite(None, suite, l in exclude=self.excluded)
+                self.doSuite(None, suite, exclude=l in self.excluded)
                 break
         else:
             self.doSuite(None, suite)
