@@ -63,4 +63,19 @@ hg verify
 cat a
 hg paths | sed -e 's,:[0-9][0-9]*/,/,'
 
+echo '% test with empty repo (issue965)'
+cd ..
+hg init remotempty
+
+http_proxy= hg clone static-http://localhost:$HGPORT/remotempty local3 | sed -e 's,:[0-9][0-9]*/,/,'
+
+cd local3
+hg verify
+hg paths | sed -e 's,:[0-9][0-9]*/,/,'
+
+echo '% test with non-repo'
+cd ..
+mkdir notarepo
+http_proxy= hg clone static-http://localhost:$HGPORT/notarepo local3 2>&1 | sed -e 's,:[0-9][0-9]*/,/,'
+
 kill $!

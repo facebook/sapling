@@ -42,3 +42,14 @@ checking files
 1 files, 1 changesets, 1 total revisions
 a
 default = static-http://localhost/
+% test with empty repo (issue965)
+no changes found
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+0 files, 0 changesets, 0 total revisions
+default = static-http://localhost/remotempty
+% test with non-repo
+abort: 'http://localhost/notarepo' does not appear to be an hg repository!
