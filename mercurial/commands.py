@@ -466,7 +466,10 @@ def cat(ui, repo, file1, *pats, **opts):
     for src, abs, rel, exact in cmdutil.walk(repo, (file1,) + pats, opts,
                                              ctx.node()):
         fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
-        fp.write(ctx.filectx(abs).data())
+        data = ctx.filectx(abs).data()
+        if opts['decode']:
+            data = repo.wwritedata(abs, data)
+        fp.write(data)
         err = 0
     return err
 
@@ -2765,6 +2768,7 @@ table = {
         (cat,
          [('o', 'output', '', _('print output to file with formatted name')),
           ('r', 'rev', '', _('print the given revision')),
+          ('d', 'decode', None, _('apply any matching decode filter')),
          ] + walkopts,
          _('hg cat [OPTION]... FILE...')),
     "^clone":

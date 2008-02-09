@@ -8,6 +8,7 @@ echo 0 > b
 hg ci -A -m m -d "1000000 0"
 hg rm a
 hg cat a
+hg cat --decode a # more tests in test-encode
 sleep 1 # make sure mtime is changed
 echo 1 > b
 hg ci -m m -d "1000000 0"

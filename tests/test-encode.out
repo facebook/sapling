@@ -7,3 +7,8 @@ this is a test
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 %% uncompress our new working dir copy
 this is a test
+%% check hg cat operation
+this is a test
+this is a test
+this is a test
+this is a test
