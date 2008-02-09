@@ -286,7 +286,7 @@ class dirstate(object):
             self._changepath(f, '?')
             del self._map[f]
         except KeyError:
-            self._ui.warn(_("not in dirstate: %s!\n") % f)
+            self._ui.warn(_("not in dirstate: %s\n") % f)
 
     def clear(self):
         self._map = {}

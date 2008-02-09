@@ -963,7 +963,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     try:
         regexp = re.compile(pattern, reflags)
     except Exception, inst:
-        ui.warn(_("grep: invalid match pattern: %s!\n") % inst)
+        ui.warn(_("grep: invalid match pattern: %s\n") % inst)
         return None
     sep, eol = ':', '\n'
     if opts['print0']:
