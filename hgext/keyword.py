@@ -99,7 +99,7 @@ def utcdate(date):
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
 
 
-_kwtemplater, _cmd, _cmdoptions = None, None, None
+_kwtemplater = _cmd = _cmdoptions = None
  
 # store originals of monkeypatches
 _patchfile_init = patch.patchfile.__init__
