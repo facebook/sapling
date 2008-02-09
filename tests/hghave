@@ -85,6 +85,22 @@ def has_svn_bindings():
 def has_symlink():
     return hasattr(os, "symlink")
 
+def has_unix_permissions():
+    d = tempfile.mkdtemp(prefix=tempprefix, dir=".")
+    try:
+        fname = os.path.join(d, 'foo')
+        for umask in (077, 007, 022):
+            os.umask(umask)
+            f = open(fname, 'w')
+            f.close()
+            mode = os.stat(fname).st_mode
+            os.unlink(fname)
+            if mode & 0777 != ~umask & 0666:
+                return False
+        return True
+    finally:
+        os.rmdir(d)
+
 checks = {
     "cvs": (has_cvs, "cvs client"),
     "cvsps": (has_cvsps, "cvsps utility"),
@@ -98,6 +114,7 @@ checks = {
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
+    "unix-permissions": (has_unix_permissions, "unix-style permissions"),
 }
 
 def list_features():
