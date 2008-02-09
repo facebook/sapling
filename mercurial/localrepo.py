@@ -369,7 +369,7 @@ class localrepository(repo.repository):
             if not (lrev < self.changelog.count() and
                     self.changelog.node(lrev) == last): # sanity check
                 # invalidate the cache
-                raise ValueError('Invalid branch cache: unknown tip')
+                raise ValueError('invalidating branch cache (tip differs)')
             for l in lines:
                 if not l: continue
                 node, label = l.split(" ", 1)

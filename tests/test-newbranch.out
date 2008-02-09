@@ -63,7 +63,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     modify a branch
 
-Invalid branch cache: unknown tip
+invalidating branch cache (tip differs)
 changeset:   4:4909a3732169c0c20011c4f4b8fdff4e3d89b23f
 branch:      foo
 tag:         tip
