@@ -1298,7 +1298,7 @@ def encodedopener(openerfn, fn):
         return openerfn(fn(path), *args, **kw)
     return o
 
-def mktempcopy(name, emptyok=False):
+def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
 
     The permission bits are copied from the original file.
@@ -1319,7 +1319,10 @@ def mktempcopy(name, emptyok=False):
     except OSError, inst:
         if inst.errno != errno.ENOENT:
             raise
-        st_mode = 0666 & ~_umask
+        st_mode = createmode
+        if st_mode is None:
+            st_mode = ~_umask
+        st_mode &= 0666
     os.chmod(temp, st_mode)
     if emptyok:
         return temp
@@ -1350,9 +1353,10 @@ class atomictempfile(posixfile):
     file.  When rename is called, the copy is renamed to the original
     name, making the changes visible.
     """
-    def __init__(self, name, mode):
+    def __init__(self, name, mode, createmode):
         self.__name = name
-        self.temp = mktempcopy(name, emptyok=('w' in mode))
+        self.temp = mktempcopy(name, emptyok=('w' in mode),
+                               createmode=createmode)
         posixfile.__init__(self, self.temp, mode)
 
     def rename(self):
@@ -1367,6 +1371,22 @@ class atomictempfile(posixfile):
             except: pass
             posixfile.close(self)
 
+def makedirs(name, mode=None):
+    """recursive directory creation with parent mode inheritance"""
+    try:
+        os.mkdir(name)
+        if mode is not None:
+            os.chmod(name, mode)
+        return
+    except OSError, err:
+        if err.errno == errno.EEXIST:
+            return
+        if err.errno != errno.ENOENT:
+            raise
+    parent = os.path.abspath(os.path.dirname(name))
+    makedirs(parent, mode)
+    makedirs(name, mode)
+
 class opener(object):
     """Open files relative to a base directory
 
@@ -1379,12 +1399,18 @@ class opener(object):
             self.audit_path = path_auditor(base)
         else:
             self.audit_path = always
+        self.createmode = None
 
     def __getattr__(self, name):
         if name == '_can_symlink':
             self._can_symlink = checklink(self.base)
             return self._can_symlink
         raise AttributeError(name)
+
+    def _fixfilemode(self, name):
+        if self.createmode is None:
+            return
+        os.chmod(name, self.createmode & 0666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False):
         self.audit_path(path)
@@ -1393,6 +1419,7 @@ class opener(object):
         if not text and "b" not in mode:
             mode += "b" # for that other OS
 
+        nlink = -1
         if mode[0] != "r":
             try:
                 nlink = nlinks(f)
@@ -1400,12 +1427,15 @@ class opener(object):
                 nlink = 0
                 d = os.path.dirname(f)
                 if not os.path.isdir(d):
-                    os.makedirs(d)
+                    makedirs(d, self.createmode)
             if atomictemp:
-                return atomictempfile(f, mode)
+                return atomictempfile(f, mode, self.createmode)
             if nlink > 1:
                 rename(mktempcopy(f), f)
-        return posixfile(f, mode)
+        fp = posixfile(f, mode)
+        if nlink == 0:
+            self._fixfilemode(f)
+        return fp
 
     def symlink(self, src, dst):
         self.audit_path(dst)
@@ -1417,7 +1447,7 @@ class opener(object):
 
         dirname = os.path.dirname(linkname)
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            makedirs(dirname, self.createmode)
 
         if self._can_symlink:
             try:
@@ -1429,6 +1459,7 @@ class opener(object):
             f = self(dst, "w")
             f.write(src)
             f.close()
+            self._fixfilemode(dst)
 
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an

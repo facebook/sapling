@@ -68,8 +68,20 @@ class localrepository(repo.repository):
             self.encodefn = lambda x: x
             self.decodefn = lambda x: x
             self.spath = self.path
-        self.sopener = util.encodedopener(util.opener(self.spath),
-                                          self.encodefn)
+
+        try:
+            # files in .hg/ will be created using this mode
+            mode = os.stat(self.spath).st_mode
+            # avoid some useless chmods
+            if (0777 & ~util._umask) == (0777 & mode):
+                mode = None
+        except OSError:
+            mode = None
+
+        self.opener.createmode = mode
+        sopener = util.opener(self.spath)
+        sopener.createmode = mode
+        self.sopener = util.encodedopener(sopener, self.encodefn)
 
         self.ui = ui.ui(parentui=parentui)
         try:
