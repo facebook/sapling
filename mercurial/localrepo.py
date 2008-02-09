@@ -501,9 +501,11 @@ class localrepository(repo.repository):
             for pat, cmd in self.ui.configitems(filter):
                 mf = util.matcher(self.root, "", [pat], [], [])[1]
                 fn = None
+                params = cmd
                 for name, filterfn in self._datafilters.iteritems():
                     if cmd.startswith(name): 
                         fn = filterfn
+                        params = cmd[len(name):].lstrip()
                         break
                 if not fn:
                     fn = lambda s, c, **kwargs: util.filter(s, c)
@@ -511,7 +513,7 @@ class localrepository(repo.repository):
                 if not inspect.getargspec(fn)[2]:
                     oldfn = fn
                     fn = lambda s, c, **kwargs: oldfn(s, c)
-                l.append((mf, fn, cmd))
+                l.append((mf, fn, params))
             self.filterpats[filter] = l
 
         for mf, fn, cmd in self.filterpats[filter]:
