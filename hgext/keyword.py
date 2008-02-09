@@ -82,7 +82,7 @@ from mercurial import commands, cmdutil, context, dispatch, filelog, revlog
 from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.node import *
 from mercurial.i18n import _
-import re, shutil, tempfile, time
+import re, shutil, tempfile, time, os
 
 commands.optionalrepo += ' kwdemo'
 
@@ -423,7 +423,7 @@ def reposetup(ui, repo):
 
     try:
         if (not repo.local() or hgcmd in nokwcommands.split() 
-            or '.hg' in repo.root.split('/')
+            or '.hg' in repo.root.split(os.sep)
             or repo._url.startswith('bundle:')):
             return
     except AttributeError:
