@@ -241,7 +241,10 @@ class converter(object):
     def convert(self):
 
         def recode(s):
-            return s.decode('utf-8').encode(orig_encoding, 'replace')
+            if isinstance(s, unicode):
+                return s.encode(orig_encoding, 'replace')
+            else:
+                return s.decode('utf-8').encode(orig_encoding, 'replace')
 
         try:
             self.source.before()
