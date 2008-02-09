@@ -246,31 +246,47 @@ class gnuarch_source(converter_source, commandline):
     def _parsechangeset(self, data, rev):
         for l in data:
             l = l.strip()
+            # Added file (ignore added directory)
             if l.startswith('A') and not l.startswith('A/'):
                 file = l[1:].strip()
                 if not self._exclude(file):
                     self.changes[rev].add_files.append(file)
-            elif l.startswith('/>'):
-                dirs = l[2:].strip().split(' ')
-                if len(dirs) == 1:
-                    dirs = l[2:].strip().split('\t')
-                if not self._exclude(dirs[0]) and not self._exclude(dirs[1]):
-                    self.changes[rev].ren_dirs[dirs[0]] = dirs[1]
-            elif l.startswith('M'):
-                file = l[1:].strip()
-                if not self._exclude(file):
-                    self.changes[rev].mod_files.append(file)
-            elif l.startswith('->'):
-                file = l[2:].strip()
-                if not self._exclude(file):
-                    self.changes[rev].mod_files.append(file)
+            # Deleted file (ignore deleted directory)
             elif l.startswith('D') and not l.startswith('D/'):
                 file = l[1:].strip()
                 if not self._exclude(file):
                     self.changes[rev].del_files.append(file)
+            # Modified binary file
+            elif l.startswith('Mb'):
+                file = l[2:].strip()
+                if not self._exclude(file):
+                    self.changes[rev].mod_files.append(file)
+            # Modified link
+            elif l.startswith('M->'):
+                file = l[3:].strip()
+                if not self._exclude(file):
+                    self.changes[rev].mod_files.append(file)
+            # Modified file
+            elif l.startswith('M'):
+                file = l[1:].strip()
+                if not self._exclude(file):
+                    self.changes[rev].mod_files.append(file)
+            # Renamed file (or link)
             elif l.startswith('=>'):
                 files = l[2:].strip().split(' ')
                 if len(files) == 1:
                     files = l[2:].strip().split('\t')
                 if not self._exclude(files[0]) and not self._exclude(files[1]):
                     self.changes[rev].ren_files[files[0]] = files[1]
+            # Conversion from file to link or from link to file (modified)
+            elif l.startswith('ch'):
+                file = l[2:].strip()
+                if not self._exclude(file):
+                    self.changes[rev].mod_files.append(file)
+            # Renamed directory
+            elif l.startswith('/>'):
+                dirs = l[2:].strip().split(' ')
+                if len(dirs) == 1:
+                    dirs = l[2:].strip().split('\t')
+                if not self._exclude(dirs[0]) and not self._exclude(dirs[1]):
+                    self.changes[rev].ren_dirs[dirs[0]] = dirs[1]
