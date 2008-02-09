@@ -84,10 +84,14 @@ demo.txt =
 Branch = {branches}
 $Branch: demobranch $
 % kwshrink should exit silently in empty/invalid repo
+pulling from test-keyword.hg
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % cat
-expand $Id$
-do not process $Id:
-xxx $
 expand $Id$
 do not process $Id:
 xxx $
@@ -95,43 +99,35 @@ ignore $Id$
 % addremove
 adding a
 adding b
-adding sym
 % status
 A a
 A b
-A sym
 % default keyword expansion including commit hook
 % interrupted commit should not change state or run commit hook
 a
 b
-sym
 transaction abort!
 rollback completed
 abort: empty commit message
 % status
 A a
 A b
-A sym
 % commit
 a
 b
-sym
 overwriting a expanding keywords
 running hook commit.test: cp a hooktest
 % status
 ? hooktest
 % identify
-f782df5f9602
+ef63ca68695b
 % cat
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
-do not process $Id:
-xxx $
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
 do not process $Id:
 xxx $
 ignore $Id$
 % hg cat
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
 do not process $Id:
 xxx $
 ignore $Id$
@@ -139,24 +135,21 @@ a
 % diff a hooktest
 % removing commit hook from config
 % bundle
-1 changesets found
+2 changesets found
 % pull from bundle
 pulling from ../kw.hg
 requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 3 changes to 3 files
+added 2 changesets with 3 changes to 3 files
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % touch
 % status
 % update
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % cat
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
-do not process $Id:
-xxx $
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
 do not process $Id:
 xxx $
 ignore $Id$
@@ -167,10 +160,10 @@ adding c
 overwriting a expanding keywords
 overwriting c expanding keywords
 % compare changenodes in a c
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
 do not process $Id:
 xxx $
-$Id: c,v ba4426d1938e 1970/01/01 00:00:01 user $
+$Id: c,v 40a904bbbe4c 1970/01/01 00:00:01 user $
 tests for different changenodes
 % qinit -c
 % qimport
@@ -179,11 +172,11 @@ tests for different changenodes
 # HG changeset patch
 # User User Name <user@example.com>
 # Date 1 0
-# Node ID ba4426d1938ec9673e03ab274d88c44e24618f7f
-# Parent  f782df5f9602483b4e51c31a12315f353bba380c
+# Node ID 40a904bbbe4cd4ab0a1f28411e35db26341a40ad
+# Parent  ef63ca68695bc9495032c6fda1350c71e6d256e9
 cndiff
 
-diff -r f782df5f9602 -r ba4426d1938e c
+diff -r ef63ca68695b -r 40a904bbbe4c c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/c	Thu Jan 01 00:00:01 1970 +0000
 @@ -0,0 +1,2 @@
@@ -195,7 +188,7 @@ Patch queue now empty
 applying mqtest.diff
 Now at: mqtest.diff
 % cat
-$Id: c,v ba4426d1938e 1970/01/01 00:00:01 user $
+$Id: c,v 40a904bbbe4c 1970/01/01 00:00:01 user $
 tests for different changenodes
 % qpop and move on
 Patch queue now empty
@@ -208,10 +201,10 @@ c
  c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
 overwriting c expanding keywords
 % cat a c
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
 do not process $Id:
 xxx $
-expand $Id: c,v 0ba462c0f077 1970/01/01 00:00:01 user $
+expand $Id: c,v e22d299ac0c2 1970/01/01 00:00:01 user $
 do not process $Id:
 xxx $
 % touch copied c after 1 second
@@ -220,7 +213,7 @@ xxx $
 a
 c
 % diff --rev
-diff -r f782df5f9602 c
+diff -r ef63ca68695b c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -0,0 +1,3 @@
 +expand $Id$
@@ -244,15 +237,12 @@ demo.txt =
 Xinfo = {author}: {desc}
 $Xinfo: test: hg keyword config and expansion example $
 % cat
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
-do not process $Id:
-xxx $
-expand $Id: a,v f782df5f9602 1970/01/01 00:00:00 user $
+expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
 do not process $Id:
 xxx $
 ignore $Id$
 % hg cat
-expand $Id: a f782df5f9602 Thu, 01 Jan 1970 00:00:00 +0000 user $
+expand $Id: a ef63ca68695b Thu, 01 Jan 1970 00:00:00 +0000 user $
 do not process $Id:
 xxx $
 ignore $Id$
@@ -269,17 +259,13 @@ a
 overwriting a expanding keywords
 % status
 % cat
-expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
-do not process $Id:
-xxx $
-$Xinfo: User Name <user@example.com>: firstline $
-expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
 xxx $
 $Xinfo: User Name <user@example.com>: firstline $
 ignore $Id$
 % hg cat
-expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
 xxx $
 $Xinfo: User Name <user@example.com>: firstline $
@@ -293,7 +279,7 @@ rolling back last transaction
 R a
 % revert a
 % cat a
-expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
 xxx $
 $Xinfo: User Name <user@example.com>: firstline $
@@ -302,12 +288,12 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 1 changesets with 3 changes to 3 files
+added 2 changesets with 3 changes to 3 files
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % incoming
 comparing with test-keyword/Test
 searching for changes
-changeset:   1:0729690beff6
+changeset:   2:bb948857c743
 tag:         tip
 user:        User Name <user@example.com>
 date:        Thu Jan 01 00:00:02 1970 +0000
@@ -320,11 +306,7 @@ overwriting a expanding keywords
 % import
 applying ../rejecttest.diff
 % cat
-expand $Id: a 82983f13f138 Thu, 01 Jan 1970 00:00:03 +0000 user $ rejecttest
-do not process $Id: rejecttest
-xxx $
-$Xinfo: User Name <user@example.com>: rejects? $
-expand $Id: a 82983f13f138 Thu, 01 Jan 1970 00:00:03 +0000 user $ rejecttest
+expand $Id: a 4e0994474d25 Thu, 01 Jan 1970 00:00:03 +0000 user $ rejecttest
 do not process $Id: rejecttest
 xxx $
 $Xinfo: User Name <user@example.com>: rejects? $
@@ -344,7 +326,7 @@ x/a
  x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
 overwriting x/a expanding keywords
 % cat a
-expand $Id: x/a f27c134d2d9b Thu, 01 Jan 1970 00:00:03 +0000 user $
+expand $Id: x/a cfa68229c116 Thu, 01 Jan 1970 00:00:03 +0000 user $
 do not process $Id:
 xxx $
 $Xinfo: User Name <user@example.com>: xa $
@@ -356,7 +338,7 @@ do not process $Id:
 xxx $
 $Xinfo$
 % kwexpand nonexistent
-nonexistent: No such file or directory
+nonexistent:
 % switch off expansion
 % kwshrink with unknown file u
 overwriting a shrinking keywords
@@ -366,23 +348,15 @@ expand $Id$
 do not process $Id:
 xxx $
 $Xinfo$
-expand $Id$
-do not process $Id:
-xxx $
-$Xinfo$
 ignore $Id$
 % hg cat
-expand $Id: a 0729690beff6 Thu, 01 Jan 1970 00:00:02 +0000 user $
+expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
 xxx $
 $Xinfo: User Name <user@example.com>: firstline $
 ignore $Id$
 a
 % cat
-expand $Id$
-do not process $Id:
-xxx $
-$Xinfo$
 expand $Id$
 do not process $Id:
 xxx $
