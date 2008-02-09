@@ -579,8 +579,13 @@ class localrepository(repo.repository):
                 self.ui.status(_("rolling back last transaction\n"))
                 transaction.rollback(self.sopener, self.sjoin("undo"))
                 util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-                branch = self.opener("undo.branch").read()
-                self.dirstate.setbranch(branch)
+                try:
+                    branch = self.opener("undo.branch").read()
+                    self.dirstate.setbranch(branch)
+                except IOError:
+                    self.ui.warn(_("Named branch could not be reset, "
+                                   "current branch still is: %s\n")
+                                 % util.tolocal(self.dirstate.branch()))
                 self.invalidate()
                 self.dirstate.invalidate()
             else:
