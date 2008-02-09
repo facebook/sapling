@@ -387,7 +387,9 @@ def files(ui, repo, *pats, **opts):
     if opts.get('untracked'):
         files += unknown
     files.sort()
-    kwfiles = [f for f in files if _iskwfile(f, repo._link)]
+    wctx = repo.workingctx()
+    islink = lambda p: 'l' in wctx.fileflags(p)
+    kwfiles = [f for f in files if _iskwfile(f, islink)]
     cwd = pats and repo.getcwd() or ''
     kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()
     if opts.get('all') or opts.get('ignore'):
