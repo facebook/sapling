@@ -48,7 +48,7 @@ echo
 echo '% after commit'
 echo '% working dir files can only be written by the owner'
 echo '% files created in .hg can be written by the group'
-echo '% (in particular, store/**, dirstate, branch.cache)'
+echo '% (in particular, store/**, dirstate, branch.cache, undo files)'
 echo '% new directories are setgid'
 python ../printmodes.py .
 

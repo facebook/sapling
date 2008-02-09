@@ -78,6 +78,7 @@ class localrepository(repo.repository):
         except OSError:
             mode = None
 
+        self._createmode = mode
         self.opener.createmode = mode
         sopener = util.opener(self.spath)
         sopener.createmode = mode
@@ -563,8 +564,9 @@ class localrepository(repo.repository):
                    (self.join("journal.dirstate"), self.join("undo.dirstate")),
                    (self.join("journal.branch"), self.join("undo.branch"))]
         tr = transaction.transaction(self.ui.warn, self.sopener,
-                                       self.sjoin("journal"),
-                                       aftertrans(renames))
+                                     self.sjoin("journal"),
+                                     aftertrans(renames),
+                                     self._createmode)
         self._transref = weakref.ref(tr)
         return tr
 

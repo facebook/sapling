@@ -9,7 +9,7 @@
 % after commit
 % working dir files can only be written by the owner
 % files created in .hg can be written by the group
-% (in particular, store/**, dirstate, branch.cache)
+% (in particular, store/**, dirstate, branch.cache, undo files)
 % new directories are setgid
 00700 ./.hg/
 00600 ./.hg/00changelog.i
@@ -22,7 +22,7 @@
 02770 ./.hg/store/data/dir/
 00660 ./.hg/store/data/dir/bar.i
 00660 ./.hg/store/data/foo.i
-00600 ./.hg/store/undo
+00660 ./.hg/store/undo
 00660 ./.hg/undo.branch
 00660 ./.hg/undo.dirstate
 00700 ./dir/
@@ -49,6 +49,6 @@
 00770 ../push/.hg/store/data/dir/
 00660 ../push/.hg/store/data/dir/bar.i
 00660 ../push/.hg/store/data/foo.i
-00600 ../push/.hg/store/undo
+00660 ../push/.hg/store/undo
 00660 ../push/.hg/undo.branch
 00660 ../push/.hg/undo.dirstate
