@@ -33,7 +33,8 @@ umask 077
 hg init repo
 cd repo
 
-chmod 02770 .hg/store
+chmod 0770 .hg/store
+chmod g+s .hg/store
 
 echo '% before commit'
 echo '% store can be written by the group, other files cannot'
