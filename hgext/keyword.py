@@ -115,6 +115,16 @@ def _kwpatchfile_init(self, ui, fname, missing=False):
         kwshrunk = _kwtemplater.shrink(''.join(self.lines))
         self.lines = kwshrunk.splitlines(True)
 
+def _kwweb_changeset(web, req, tmpl):
+    '''Wraps webcommands.changeset turning off keyword expansion.'''
+    _kwtemplater.matcher = util.never
+    return web.changeset(tmpl, web.changectx(req))
+
+def _kwweb_filediff(web, req, tmpl):
+    '''Wraps webcommands.filediff turning off keyword expansion.'''
+    _kwtemplater.matcher = util.never
+    return web.filediff(tmpl, web.filectx(req))
+
 def _kwdispatch_parse(ui, args):
     '''Monkeypatch dispatch._parse to obtain
     current command and command options (global _cmd, _cmdoptions).'''
@@ -122,23 +132,8 @@ def _kwdispatch_parse(ui, args):
     _cmd, func, args, options, _cmdoptions = _dispatch_parse(ui, args)
     return _cmd, func, args, options, _cmdoptions
 
-def kwweb_changeset(web, req, tmpl):
-    try:
-        _kwtemplater.matcher = util.never
-    except AttributeError:
-        pass
-    return web.changeset(tmpl, web.changectx(req))
-
-def kwweb_filediff(web, req, tmpl):
-    try:
-        _kwtemplater.matcher = util.never
-    except AttributeError:
-        pass
-    return web.filediff(tmpl, web.filectx(req))
-
+# dispatch._parse is run before reposetup, so wrap it here
 dispatch._parse = _kwdispatch_parse
-webcommands.changeset = webcommands.rev = kwweb_changeset
-webcommands.filediff = webcommands.diff = kwweb_filediff
 
 
 class kwtemplater(object):
@@ -527,6 +522,8 @@ def reposetup(ui, repo):
 
     repo.__class__ = kwrepo
     patch.patchfile.__init__ = _kwpatchfile_init
+    webcommands.changeset = webcommands.rev = _kwweb_changeset
+    webcommands.filediff = webcommands.diff = _kwweb_filediff
 
 
 cmdtable = {
