@@ -154,8 +154,10 @@ class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         localrepo.localrepository.__init__(self, ui, path)
 
-        self._url = 'bundle:' + bundlename
-        if path: self._url += '+' + path
+        if path:
+            self._url = 'bundle:' + path + '+' + bundlename
+        else:
+            self._url = 'bundle:' + bundlename
 
         self.tempfile = None
         self.bundlefile = open(bundlename, "rb")
