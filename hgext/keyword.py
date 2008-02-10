@@ -139,11 +139,11 @@ class kwtemplater(object):
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
     }
 
-    def __init__(self, ui, repo, inc, exc, restrict):
+    def __init__(self, ui, repo, inc, exc, hgcmd):
         self.ui = ui
         self.repo = repo
         self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
-        self.restrict = restrict
+        self.restrict = hgcmd in restricted.split()
         self.commitnode = None
         self.path = ''
 
@@ -449,8 +449,7 @@ def reposetup(ui, repo):
         if node1 is not None and node1 != repo.changectx().node():
             hgcmd = 'diff1'
 
-    restrict = hgcmd in restricted.split()
-    _kwtemplater = kwtemplater(ui, repo, inc, exc, restrict)
+    _kwtemplater = kwtemplater(ui, repo, inc, exc, hgcmd)
 
     class kwrepo(repo.__class__):
         def file(self, f, kwmatch=False):
@@ -462,7 +461,7 @@ def reposetup(ui, repo):
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)
-            if restrict and _kwtemplater.matcher(filename):
+            if _kwtemplater.restrict and _kwtemplater.matcher(filename):
                 return _kwtemplater.shrink(data)
             return data
 
