@@ -80,6 +80,7 @@ like CVS' $Log$, are not supported. A keyword template map
 
 from mercurial import commands, cmdutil, context, dispatch, filelog, revlog
 from mercurial import patch, localrepo, templater, templatefilters, util
+from mercurial.hgweb import webcommands
 from mercurial.node import *
 from mercurial.i18n import _
 import re, shutil, tempfile, time
@@ -121,7 +122,23 @@ def _kwdispatch_parse(ui, args):
     _cmd, func, args, options, _cmdoptions = _dispatch_parse(ui, args)
     return _cmd, func, args, options, _cmdoptions
 
+def kwweb_changeset(web, req, tmpl):
+    try:
+        _kwtemplater.matcher = util.never
+    except AttributeError:
+        pass
+    return web.changeset(tmpl, web.changectx(req))
+
+def kwweb_filediff(web, req, tmpl):
+    try:
+        _kwtemplater.matcher = util.never
+    except AttributeError:
+        pass
+    return web.filediff(tmpl, web.filectx(req))
+
 dispatch._parse = _kwdispatch_parse
+webcommands.changeset = webcommands.rev = kwweb_changeset
+webcommands.filediff = webcommands.diff = kwweb_filediff
 
 
 class kwtemplater(object):
