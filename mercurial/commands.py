@@ -1713,6 +1713,8 @@ def log(ui, repo, *pats, **opts):
     if opts["date"]:
         df = util.matchdate(opts["date"])
 
+    only_branches = opts['only_branch']
+
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
     for st, rev, fns in changeiter:
         if st == 'add':
@@ -1723,6 +1725,11 @@ def log(ui, repo, *pats, **opts):
                 continue
             if opts['only_merges'] and len(parents) != 2:
                 continue
+
+            if only_branches:
+                revbranch = get(rev)[5]['branch']
+                if revbranch not in only_branches:
+                    continue
 
             if df:
                 changes = get(rev)
@@ -2930,6 +2937,8 @@ table = {
           ('M', 'no-merges', None, _('do not show merges')),
           ('', 'style', '', _('display using template map file')),
           ('m', 'only-merges', None, _('show only merges')),
+          ('b', 'only-branch', [],
+            _('show only changesets within the given named branch')),
           ('p', 'patch', None, _('show patch')),
           ('P', 'prune', [], _('do not display revision or any of its ancestors')),
           ('', 'template', '', _('display with template')),
