@@ -2,15 +2,11 @@
 
 "$TESTDIR/hghave" tla || exit 80
 
-# I cannot find a way to set the user name locally
-tla my-id > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-    echo '***'
-    echo '* PLEASE SET YOUR TLA USERNAME WITH:'
-    echo '* tla my-id username'
-    echo '***'
-    exit 1;
-fi
+mkdir do_not_use_HOME_tla
+cd do_not_use_HOME_tla
+HOME=`pwd`; export HOME
+cd ..
+tla my-id "mercurial <mercurial@selenic.com>"
 
 echo "[extensions]" >> $HGRCPATH
 echo "convert=" >> $HGRCPATH
