@@ -27,11 +27,11 @@ class gnuarch_source(converter_source, commandline):
 
         # Could use checktool, but we want to check for baz or tla.
         self.execmd = None
-        if util.find_exe('tla'):
-            self.execmd = 'tla'
+        if util.find_exe('baz'):
+            self.execmd = 'baz'
         else:
-            if util.find_exe('baz'):
-                self.execmd = 'baz'
+            if util.find_exe('tla'):
+                self.execmd = 'tla'
             else:
                 raise util.Abort(_('cannot find a GNU Arch tool'))
 
