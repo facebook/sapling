@@ -21,6 +21,9 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     ret = fh.close()
     return (ignorestatus or ret is None) and r.search(s)
 
+def has_baz():
+    return matchoutput('baz --version 2>&1', r'baz Bazaar version')
+
 def has_cvs():
     return matchoutput('cvs --version 2>&1', r'Concurrent Versions System')
 
@@ -102,6 +105,7 @@ def has_unix_permissions():
         os.rmdir(d)
 
 checks = {
+    "baz": (has_baz, "GNU Arch baz client"),
     "cvs": (has_cvs, "cvs client"),
     "cvsps": (has_cvsps, "cvsps utility"),
     "darcs": (has_darcs, "darcs client"),

@@ -23,7 +23,7 @@ class gnuarch_source(converter_source, commandline):
         super(gnuarch_source, self).__init__(ui, path, rev=rev)
 
         if not os.path.exists(os.path.join(path, '{arch}')):
-            raise NoRepo(_("couldn't open GNU Arch repo %s" % path))
+            raise NoRepo(_("%s does not look like a GNU Arch repo" % path))
 
         # Could use checktool, but we want to check for baz or tla.
         self.execmd = None
