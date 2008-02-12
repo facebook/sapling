@@ -88,6 +88,9 @@ def has_svn_bindings():
 def has_symlink():
     return hasattr(os, "symlink")
 
+def has_tla():
+    return matchoutput('tla --version 2>&1', r'The GNU Arch Revision')
+
 def has_unix_permissions():
     d = tempfile.mkdtemp(prefix=tempprefix, dir=".")
     try:
@@ -118,6 +121,7 @@ checks = {
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
+    "tla": (has_tla, "GNU Arch tla client"),
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),
 }
 

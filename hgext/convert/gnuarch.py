@@ -227,6 +227,11 @@ class gnuarch_source(converter_source, commandline):
         files = self._readcontents(self.tmppath)
         self.changes[rev].add_files += files
 
+    def _stripbasepath(self, path):
+        if path.startswith('./'):
+            return path[2:]
+        return path
+
     def _parsecatlog(self, data, rev):
         summary = []
         for l in data:
@@ -248,27 +253,27 @@ class gnuarch_source(converter_source, commandline):
             l = l.strip()
             # Added file (ignore added directory)
             if l.startswith('A') and not l.startswith('A/'):
-                file = l[1:].strip()
+                file = self._stripbasepath(l[1:].strip())
                 if not self._exclude(file):
                     self.changes[rev].add_files.append(file)
             # Deleted file (ignore deleted directory)
             elif l.startswith('D') and not l.startswith('D/'):
-                file = l[1:].strip()
+                file = self._stripbasepath(l[1:].strip())
                 if not self._exclude(file):
                     self.changes[rev].del_files.append(file)
             # Modified binary file
             elif l.startswith('Mb'):
-                file = l[2:].strip()
+                file = self._stripbasepath(l[2:].strip())
                 if not self._exclude(file):
                     self.changes[rev].mod_files.append(file)
             # Modified link
             elif l.startswith('M->'):
-                file = l[3:].strip()
+                file = self._stripbasepath(l[3:].strip())
                 if not self._exclude(file):
                     self.changes[rev].mod_files.append(file)
             # Modified file
             elif l.startswith('M'):
-                file = l[1:].strip()
+                file = self._stripbasepath(l[1:].strip())
                 if not self._exclude(file):
                     self.changes[rev].mod_files.append(file)
             # Renamed file (or link)
@@ -276,11 +281,13 @@ class gnuarch_source(converter_source, commandline):
                 files = l[2:].strip().split(' ')
                 if len(files) == 1:
                     files = l[2:].strip().split('\t')
-                if not self._exclude(files[0]) and not self._exclude(files[1]):
-                    self.changes[rev].ren_files[files[0]] = files[1]
+                src = self._stripbasepath(files[0])
+                dst = self._stripbasepath(files[1])
+                if not self._exclude(src) and not self._exclude(dst):
+                    self.changes[rev].ren_files[src] = dst
             # Conversion from file to link or from link to file (modified)
             elif l.startswith('ch'):
-                file = l[2:].strip()
+                file = self._stripbasepath(l[2:].strip())
                 if not self._exclude(file):
                     self.changes[rev].mod_files.append(file)
             # Renamed directory
@@ -288,5 +295,7 @@ class gnuarch_source(converter_source, commandline):
                 dirs = l[2:].strip().split(' ')
                 if len(dirs) == 1:
                     dirs = l[2:].strip().split('\t')
-                if not self._exclude(dirs[0]) and not self._exclude(dirs[1]):
-                    self.changes[rev].ren_dirs[dirs[0]] = dirs[1]
+                src = self._stripbasepath(dirs[0])
+                dst = self._stripbasepath(dirs[1])
+                if not self._exclude(src) and not self._exclude(dst):
+                    self.changes[rev].ren_dirs[src] = dst
