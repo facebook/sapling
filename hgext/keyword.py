@@ -94,7 +94,7 @@ nokwcommands = ('add addremove bundle copy export grep identify incoming init'
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
-restricted = 'diff1 record qfold qimport qnew qpush qrefresh qrecord'
+restricted = 'record qfold qimport qnew qpush qrefresh qrecord'
 
 def utcdate(date):
     '''Returns hgdate in cvs-like UTC format.'''
@@ -105,6 +105,7 @@ _kwtemplater = _cmd = _cmdoptions = None
  
 # store originals of monkeypatches
 _patchfile_init = patch.patchfile.__init__
+_patch_diff = patch.diff
 _dispatch_parse = dispatch._parse
 
 def _kwpatchfile_init(self, ui, fname, missing=False):
@@ -115,6 +116,16 @@ def _kwpatchfile_init(self, ui, fname, missing=False):
         # shrink keywords read from working dir
         kwshrunk = _kwtemplater.shrink(''.join(self.lines))
         self.lines = kwshrunk.splitlines(True)
+
+def _kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
+             fp=None, changes=None, opts=None):
+    # only expand if comparing against working dir
+    if node2 is not None:
+        _kwtemplater.matcher = util.never
+    if node1 is not None and node1 != repo.changectx().node():
+        _kwtemplater.restrict = True
+    _patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
+                fp=fp, changes=changes, opts=opts)
 
 def _kwweb_changeset(web, req, tmpl):
     '''Wraps webcommands.changeset turning off keyword expansion.'''
@@ -127,11 +138,10 @@ def _kwweb_filediff(web, req, tmpl):
     return web.filediff(tmpl, web.filectx(req))
 
 def _kwdispatch_parse(ui, args):
-    '''Monkeypatch dispatch._parse to obtain
-    current command and command options (global _cmd, _cmdoptions).'''
-    global _cmd, _cmdoptions
-    _cmd, func, args, options, _cmdoptions = _dispatch_parse(ui, args)
-    return _cmd, func, args, options, _cmdoptions
+    '''Monkeypatch dispatch._parse to obtain running hg command.'''
+    global _cmd
+    _cmd, func, args, options, cmdoptions = _dispatch_parse(ui, args)
+    return _cmd, func, args, options, cmdoptions
 
 # dispatch._parse is run before reposetup, so wrap it here
 dispatch._parse = _kwdispatch_parse
@@ -434,10 +444,9 @@ def reposetup(ui, repo):
     files configured at all for keyword substitution.'''
 
     global _kwtemplater
-    hgcmd, hgcmdopts = _cmd, _cmdoptions
 
     try:
-        if (not repo.local() or hgcmd in nokwcommands.split() 
+        if (not repo.local() or _cmd in nokwcommands.split() 
             or '.hg' in util.splitpath(repo.root)
             or repo._url.startswith('bundle:')):
             return
@@ -453,16 +462,7 @@ def reposetup(ui, repo):
     if not inc:
         return
 
-    if hgcmd == 'diff':
-        # only expand if comparing against working dir
-        node1, node2 = cmdutil.revpair(repo, hgcmdopts.get('rev'))
-        if node2 is not None:
-            return
-        # shrink if rev is not current node
-        if node1 is not None and node1 != repo.changectx().node():
-            hgcmd = 'diff1'
-
-    _kwtemplater = kwtemplater(ui, repo, inc, exc, hgcmd)
+    _kwtemplater = kwtemplater(ui, repo, inc, exc, _cmd)
 
     class kwrepo(repo.__class__):
         def file(self, f, kwmatch=False):
@@ -523,6 +523,7 @@ def reposetup(ui, repo):
 
     repo.__class__ = kwrepo
     patch.patchfile.__init__ = _kwpatchfile_init
+    patch.diff = _kw_diff
     webcommands.changeset = webcommands.rev = _kwweb_changeset
     webcommands.filediff = webcommands.diff = _kwweb_filediff
 
