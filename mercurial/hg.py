@@ -105,14 +105,14 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     destination is local repository
     """
 
-    origsource = ui.expandpath(source)
-    source, rev, checkout = parseurl(origsource, rev)
-
     if isinstance(source, str):
+        origsource = ui.expandpath(source)
+        source, rev, checkout = parseurl(origsource, rev)
         src_repo = repository(ui, source)
     else:
         src_repo = source
-        source = src_repo.url()
+        origsource = source = src_repo.url()
+        checkout = None
 
     if dest is None:
         dest = defaultdest(source)
