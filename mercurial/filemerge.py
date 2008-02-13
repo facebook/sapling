@@ -7,7 +7,7 @@
 
 from node import *
 from i18n import _
-import util, os, tempfile, context, simplemerge, re
+import util, os, tempfile, context, simplemerge, re, filecmp
 
 def _toolstr(ui, tool, part, default=""):
     return ui.config("merge-tools", tool + "." + part, default)
@@ -60,10 +60,14 @@ def _picktool(repo, ui, path, binary, symlink):
         t = k.split('.')[0]
         if t not in tools:
             tools[t] = int(_toolstr(ui, t, "priority", "0"))
+    names = tools.keys()
     tools = [(-p,t) for t,p in tools.items()]
     tools.sort()
-    if ui.config("ui", "merge"):
-        tools.insert(0, (None, ui.config("ui", "merge"))) # highest priority
+    uimerge = ui.config("ui", "merge")
+    if uimerge:
+        if uimerge not in names:
+            return (uimerge, uimerge)
+        tools.insert(0, (None, uimerge)) # highest priority
     tools.append((None, "hgmerge")) # the old default, if found
     for p,t in tools:
         toolpath = _findtool(ui, t)
@@ -192,6 +196,13 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
     if not r and _toolbool(ui, tool, "checkconflicts"):
         if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcm.data()):
             r = 1
+
+    if not r and _toolbool(ui, tool, "checkchanged"):
+        if filecmp.cmp(repo.wjoin(fd), back):
+            if ui.prompt(_(" output file %s appears unchanged\n"
+                "was merge successful (yn)?") % fd,
+                _("[yn]"), _("n")) != _("y"):
+                r = 1
 
     if _toolbool(ui, tool, "fixeol"):
         _matcheol(repo.wjoin(fd), back)

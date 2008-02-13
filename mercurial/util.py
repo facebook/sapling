@@ -459,6 +459,8 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
             return
         try:
             pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
+            if len(pat) > 20000:
+                raise OverflowError()
             return re.compile(pat).match
         except OverflowError:
             # We're using a Python with a tiny regex engine and we
