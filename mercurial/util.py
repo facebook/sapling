@@ -1594,7 +1594,7 @@ def parsedate(string, formats=None, defaults=None):
         for format in formats:
             try:
                 when, offset = strdate(string, format, defaults)
-            except ValueError:
+            except (ValueError, OverflowError):
                 pass
             else:
                 break
