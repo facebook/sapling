@@ -568,7 +568,7 @@ class dirstate(object):
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
-                if nonexistent and type_ in "nm":
+                if nonexistent and type_ in "nma":
                     dadd(fn)
                     continue
             # check the common case first

@@ -19,11 +19,12 @@ hg commit -d 'foo bar' -m commit-5
 hg commit -d ' 1 4444' -m commit-6
 hg commit -d '111111111111 0' -m commit-7
 
-echo % partial commit test
+echo % commit added file that has been deleted
 echo bar > bar
 hg add bar
 rm bar
 hg commit -d "1000000 0" -m commit-8 2>&1 | cleanpath
+hg commit -d "1000000 0" -m commit-8 bar 2>&1 | cleanpath
 
 hg -q revert -a --no-backup
 

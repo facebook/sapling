@@ -20,8 +20,8 @@ M c
 ? b
 %% should show b added
 A b
-%% should show b added
-A b
+%% should show b deleted
+! b
 forgetting b
 %% should not find b
 b: No such file or directory

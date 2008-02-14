@@ -12,9 +12,9 @@ transaction abort!
 rollback completed
 abort: invalid date: 'foo bar' 
 nothing changed
-% partial commit test
-trouble committing bar!
-abort: No such file or directory: .../test/bar
+% commit added file that has been deleted
+nothing changed
+abort: file .../test/bar not found!
 adding dir/file
 dir/file
 adding dir.file

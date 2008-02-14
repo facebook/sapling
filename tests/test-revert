@@ -32,7 +32,7 @@ hg add b
 echo %% should show b added
 hg status b
 rm b
-echo %% should show b added
+echo %% should show b deleted
 hg status b
 hg revert -v b
 echo %% should not find b
