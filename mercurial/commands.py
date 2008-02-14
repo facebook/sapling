@@ -2329,9 +2329,12 @@ def revert(ui, repo, *pats, **opts):
                 checkout(f)
                 repo.dirstate.add(f)
 
+            normal = repo.dirstate.normallookup
+            if node == parent and p2 == nullid:
+                normal = repo.dirstate.normal
             for f in undelete[0]:
                 checkout(f)
-                repo.dirstate.normal(f)
+                normal(f)
 
             audit_path = util.path_auditor(repo.root)
             for f in remove[0]:
