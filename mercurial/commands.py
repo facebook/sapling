@@ -2246,10 +2246,14 @@ def revert(ui, repo, *pats, **opts):
                 removed[src] = None
                 names[src] = (repo.pathto(src, cwd), True)
 
+        def removeforget(abs):
+            if repo.dirstate[abs] == 'a':
+                return _('forgetting %s\n')
+            return _('removing %s\n')
+
         revert = ([], _('reverting %s\n'))
         add = ([], _('adding %s\n'))
-        remove = ([], _('removing %s\n'))
-        forget = ([], _('forgetting %s\n'))
+        remove = ([], removeforget)
         undelete = ([], _('undeleting %s\n'))
 
         disptable = (
@@ -2260,7 +2264,7 @@ def revert(ui, repo, *pats, **opts):
             #   make backup if in target manifest
             #   make backup if not in target manifest
             (modified, revert, remove, True, True),
-            (added, revert, forget, True, False),
+            (added, revert, remove, True, False),
             (removed, undelete, None, False, False),
             (deleted, revert, remove, False, False),
             )
@@ -2280,7 +2284,10 @@ def revert(ui, repo, *pats, **opts):
                     if not opts.get('dry_run'):
                         util.copyfile(target, bakname)
                 if ui.verbose or not exact:
-                    ui.status(xlist[1] % rel)
+                    msg = xlist[1]
+                    if not isinstance(msg, basestring):
+                        msg = msg(abs)
+                    ui.status(msg % rel)
             for table, hitlist, misslist, backuphit, backupmiss in disptable:
                 if abs not in table: continue
                 # file has changed in dirstate
@@ -2319,8 +2326,17 @@ def revert(ui, repo, *pats, **opts):
                 fc = ctx[f]
                 repo.wwrite(f, fc.data(), fc.fileflags())
 
-            for f in forget[0]:
-                repo.dirstate.forget(f)
+            audit_path = util.path_auditor(repo.root)
+            for f in remove[0]:
+                if repo.dirstate[f] == 'a':
+                    repo.dirstate.forget(f)
+                    continue
+                audit_path(f)
+                try:
+                    util.unlink(repo.wjoin(f))
+                except OSError:
+                    pass
+                repo.dirstate.remove(f)
 
             for f in revert[0]:
                 checkout(f)
@@ -2336,14 +2352,6 @@ def revert(ui, repo, *pats, **opts):
                 checkout(f)
                 normal(f)
 
-            audit_path = util.path_auditor(repo.root)
-            for f in remove[0]:
-                audit_path(f)
-                try:
-                    util.unlink(repo.wjoin(f))
-                except OSError:
-                    pass
-                repo.dirstate.remove(f)
     finally:
         del wlock
 

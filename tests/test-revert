@@ -28,7 +28,16 @@ hg status
 hg revert --no-backup c
 echo %% should show unknown: b
 hg status
-echo %% should show a b c e
+hg add b
+echo %% should show b added
+hg status b
+rm b
+echo %% should show b added
+hg status b
+hg revert -v b
+echo %% should not find b
+hg status b
+echo %% should show a c e
 ls
 echo %% should verbosely save backup to e.orig
 echo z > e

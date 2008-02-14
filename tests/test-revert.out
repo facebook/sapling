@@ -18,9 +18,15 @@ M c
 ? b
 %% should show unknown: b
 ? b
-%% should show a b c e
+%% should show b added
+A b
+%% should show b added
+A b
+forgetting b
+%% should not find b
+b: No such file or directory
+%% should show a c e
 a
-b
 c
 e
 %% should verbosely save backup to e.orig
@@ -33,7 +39,6 @@ file not managed: q
 %% should say file not found
 notfound: No such file in rev 095eacd0c0d7
 A z
-? b
 ? e.orig
 %% should add a, remove d, forget z
 adding a
