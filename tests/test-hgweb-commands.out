@@ -184,7 +184,7 @@ navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a hr
 
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90" border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
 
 </body>
@@ -280,7 +280,7 @@ drwxr-xr-x da
 
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90" border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
 
 </body>
