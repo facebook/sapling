@@ -43,8 +43,8 @@ Not Found
 
 
 <div class="logo">
-powered by<br/>
-<a href="http://www.selenic.com/mercurial/">mercurial</a>
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
 
 </body>

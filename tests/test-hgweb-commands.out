@@ -183,8 +183,8 @@ navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a hr
 
 
 <div class="logo">
-powered by<br/>
-<a href="http://www.selenic.com/mercurial/">mercurial</a>
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90" border=0 alt="mercurial"></a>
 </div>
 
 </body>
@@ -279,8 +279,8 @@ drwxr-xr-x da
 
 
 <div class="logo">
-powered by<br/>
-<a href="http://www.selenic.com/mercurial/">mercurial</a>
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90" border=0 alt="mercurial"></a>
 </div>
 
 </body>
@@ -456,21 +456,8 @@ a { text-decoration:none; }
 pre { margin: 0; }
 
 .logo {
-  background-color: #333;
-  padding: 4pt;
-  margin: 8pt 0 8pt 8pt;
-  font-family: sans;
-  font-size: 60%;
-  color: white;
   float: right;
   clear: right;
-  text-align: left;
-}
-
-.logo a {
-  font-weight: bold;
-  font-size: 150%;
-  color: #999;
 }
 
 /* Changelog/Filelog entries */
