@@ -21,7 +21,7 @@ options:
 
  -o --output   print output to file with formatted name
  -r --rev      print the given revision
- -d --decode   apply any matching decode filter
+    --decode   apply any matching decode filter
  -I --include  include names matching the given patterns
  -X --exclude  exclude names matching the given patterns
 

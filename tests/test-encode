@@ -35,8 +35,8 @@ gunzip < a.gz
 
 echo %% check hg cat operation
 hg cat a.gz
-hg cat -d a.gz | gunzip
+hg cat --decode a.gz | gunzip
 mkdir subdir
 cd subdir
 hg -R .. cat ../a.gz
-hg -R .. cat -d ../a.gz | gunzip
+hg -R .. cat --decode ../a.gz | gunzip
