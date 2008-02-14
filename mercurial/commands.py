@@ -2211,9 +2211,12 @@ def revert(ui, repo, *pats, **opts):
     wlock = repo.wlock()
     try:
         # walk dirstate.
+        files = []
         for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
                                                  badmatch=mf.has_key):
             names[abs] = (rel, exact)
+            if src != 'b':
+                files.append(abs)
 
         # walk target manifest.
 
@@ -2232,7 +2235,7 @@ def revert(ui, repo, *pats, **opts):
                 continue
             names[abs] = (rel, exact)
 
-        changes = repo.status(match=names.has_key)[:4]
+        changes = repo.status(files=files, match=names.has_key)[:4]
         modified, added, removed, deleted = map(dict.fromkeys, changes)
 
         # if f is a rename, also revert the source
