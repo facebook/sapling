@@ -2251,7 +2251,6 @@ def revert(ui, repo, *pats, **opts):
         remove = ([], _('removing %s\n'))
         forget = ([], _('forgetting %s\n'))
         undelete = ([], _('undeleting %s\n'))
-        update = {}
 
         disptable = (
             # dispatch table:
@@ -2274,7 +2273,6 @@ def revert(ui, repo, *pats, **opts):
             target = repo.wjoin(abs)
             def handle(xlist, dobackup):
                 xlist[0].append(abs)
-                update[abs] = 1
                 if dobackup and not opts['no_backup'] and util.lexists(target):
                     bakname = "%s.orig" % rel
                     ui.note(_('saving current version of %s as %s\n') %
@@ -2317,16 +2315,32 @@ def revert(ui, repo, *pats, **opts):
                         handle(remove, False)
 
         if not opts.get('dry_run'):
+            def checkout(f):
+                fc = ctx[f]
+                repo.wwrite(f, fc.data(), fc.fileflags())
+
             for f in forget[0]:
                 repo.dirstate.forget(f)
-            r = hg.revert(repo, node, update.has_key)
+
+            for f in revert[0]:
+                checkout(f)
+
             for f in add[0]:
+                checkout(f)
                 repo.dirstate.add(f)
+
             for f in undelete[0]:
+                checkout(f)
                 repo.dirstate.normal(f)
+
+            audit_path = util.path_auditor(repo.root)
             for f in remove[0]:
+                audit_path(f)
+                try:
+                    util.unlink(repo.wjoin(f))
+                except OSError:
+                    pass
                 repo.dirstate.remove(f)
-            return r
     finally:
         del wlock
 

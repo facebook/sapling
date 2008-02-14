@@ -26,8 +26,6 @@ e
 %% should verbosely save backup to e.orig
 saving current version of e as e.orig
 reverting e
-resolving manifests
-getting e
 %% should say no changes needed
 no changes needed to a
 %% should say file not managed
