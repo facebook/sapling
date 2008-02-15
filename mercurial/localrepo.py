@@ -94,6 +94,7 @@ class localrepository(repo.repository):
         self.tagscache = None
         self._tagstypecache = None
         self.branchcache = None
+        self._ubranchcache = None  # UTF-8 version of branchcache
         self.nodetagscache = None
         self.filterpats = {}
         self._datafilters = {}
@@ -365,6 +366,7 @@ class localrepository(repo.repository):
         # charset internally
         for k, v in partial.items():
             self.branchcache[util.tolocal(k)] = v
+        self._ubranchcache = partial
         return self.branchcache
 
     def _readbranchcache(self):
@@ -617,6 +619,7 @@ class localrepository(repo.repository):
         self._tagstypecache = None
         self.nodetagscache = None
         self.branchcache = None
+        self._ubranchcache = None
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
