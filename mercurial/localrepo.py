@@ -616,6 +616,7 @@ class localrepository(repo.repository):
         self.tagscache = None
         self._tagstypecache = None
         self.nodetagscache = None
+        self.branchcache = None
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
