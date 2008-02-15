@@ -335,7 +335,7 @@ def pathto(root, n1, n2):
         a.pop()
         b.pop()
     b.reverse()
-    return os.sep.join((['..'] * len(a)) + b)
+    return os.sep.join((['..'] * len(a)) + b) or '.'
 
 def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
