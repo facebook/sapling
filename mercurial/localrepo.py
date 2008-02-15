@@ -345,9 +345,7 @@ class localrepository(repo.repository):
                 self.nodetagscache.setdefault(n, []).append(t)
         return self.nodetagscache.get(node, [])
 
-    def _branchtags(self):
-        partial, last, lrev = self._readbranchcache()
-
+    def _branchtags(self, partial, lrev):
         tiprev = self.changelog.count() - 1
         if lrev != tiprev:
             self._updatebranchcache(partial, lrev+1, tiprev+1)
@@ -360,7 +358,8 @@ class localrepository(repo.repository):
             return self.branchcache
 
         self.branchcache = {} # avoid recursion in changectx
-        partial = self._branchtags()
+        partial, last, lrev = self._readbranchcache()
+        self._branchtags(partial, lrev)
 
         # the branch cache is stored on disk as UTF-8, but in the local
         # charset internally
