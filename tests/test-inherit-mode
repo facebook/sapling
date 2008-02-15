@@ -28,13 +28,18 @@ for name in allnames:
     print '%05o %s%s' % (os.lstat(name).st_mode & 07777, name, suffix)
 EOF
 
+cat >mode.py <<EOF
+import sys
+import os
+print '%05o' % os.lstat(sys.argv[1]).st_mode
+EOF
+
 umask 077
 
 hg init repo
 cd repo
 
 chmod 0770 .hg/store
-chmod g+s .hg/store
 
 echo '% before commit'
 echo '% store can be written by the group, other files cannot'
@@ -66,3 +71,20 @@ echo
 echo '% after push'
 echo '% group can still write everything'
 python ../printmodes.py ../push
+
+# Test that we don't lose the setgid bit when we call chmod.
+# Not all systems support setgid directories (e.g. HFS+), so
+# just check that directories have the same mode.
+cd ..
+hg init setgid
+cd setgid
+chmod g+s .hg/store 2> /dev/null
+mkdir dir
+touch dir/file
+hg ci -qAm 'add dir/file'
+storemode=`python ../mode.py .hg/store`
+dirmode=`python ../mode.py .hg/store/data/dir`
+if [ "$storemode" != "$dirmode" ]; then
+    echo "$storemode != $dirmode"
+fi
+

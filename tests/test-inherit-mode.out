@@ -4,7 +4,7 @@
 00700 ./.hg/
 00600 ./.hg/00changelog.i
 00600 ./.hg/requires
-02770 ./.hg/store/
+00770 ./.hg/store/
 
 % after commit
 % working dir files can only be written by the owner
@@ -15,11 +15,11 @@
 00600 ./.hg/00changelog.i
 00660 ./.hg/dirstate
 00600 ./.hg/requires
-02770 ./.hg/store/
+00770 ./.hg/store/
 00660 ./.hg/store/00changelog.i
 00660 ./.hg/store/00manifest.i
-02770 ./.hg/store/data/
-02770 ./.hg/store/data/dir/
+00770 ./.hg/store/data/
+00770 ./.hg/store/data/dir/
 00660 ./.hg/store/data/dir/bar.i
 00660 ./.hg/store/data/foo.i
 00660 ./.hg/store/undo
