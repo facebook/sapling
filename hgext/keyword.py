@@ -101,8 +101,8 @@ def utcdate(date):
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
 
 
-_kwtemplater = _cmd = _cmdoptions = None
- 
+_kwtemplater = _cmd = None
+
 # store originals of monkeypatches
 _patchfile_init = patch.patchfile.__init__
 _patch_diff = patch.diff
@@ -112,10 +112,8 @@ def _kwpatchfile_init(self, ui, fname, missing=False):
     '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
     rejects or conflicts due to expanded keywords in working dir.'''
     _patchfile_init(self, ui, fname, missing=missing)
-    if _kwtemplater.matcher(self.fname):
-        # shrink keywords read from working dir
-        kwshrunk = _kwtemplater.shrink(''.join(self.lines))
-        self.lines = kwshrunk.splitlines(True)
+    # shrink keywords read from working dir
+    self.lines = _kwtemplater.shrinklines(self.fname, self.lines)
 
 def _kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
              fp=None, changes=None, opts=None):
@@ -162,13 +160,11 @@ class kwtemplater(object):
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
     }
 
-    def __init__(self, ui, repo, inc, exc, hgcmd):
+    def __init__(self, ui, repo, inc, exc):
         self.ui = ui
         self.repo = repo
         self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
-        self.restrict = hgcmd in restricted.split()
-        self.commitnode = None
-        self.path = ''
+        self.restrict = _cmd in restricted.split()
 
         kwmaps = self.ui.configitems('keywordmaps')
         if kwmaps: # override default templates
@@ -183,47 +179,89 @@ class kwtemplater(object):
         self.ct = cmdutil.changeset_templater(self.ui, self.repo,
                                               False, '', False)
 
-    def substitute(self, node, data, subfunc):
-        '''Obtains file's changenode if commit node not given,
-        and calls given substitution function.'''
-        if self.commitnode:
-            fnode = self.commitnode
-        else:
-            c = context.filectx(self.repo, self.path, fileid=node)
-            fnode = c.node()
+    def getnode(self, path, fnode):
+        '''Derives changenode from file path and filenode.'''
+        # used by kwfilelog.read and kwexpand
+        c = context.filectx(self.repo, path, fileid=fnode)
+        return c.node()
 
+    def substitute(self, data, path, node, subfunc):
+        '''Replaces keywords in data with expanded template.'''
         def kwsub(mobj):
-            '''Substitutes keyword using corresponding template.'''
             kw = mobj.group(1)
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
-            self.ct.show(changenode=fnode, root=self.repo.root, file=self.path)
+            self.ct.show(changenode=node, root=self.repo.root, file=path)
             ekw = templatefilters.firstline(self.ui.popbuffer())
             return '$%s: %s $' % (kw, ekw)
-
         return subfunc(kwsub, data)
 
-    def expand(self, node, data):
+    def expand(self, path, node, data):
         '''Returns data with keywords expanded.'''
-        if self.restrict or util.binary(data):
-            return data
-        return self.substitute(node, data, self.re_kw.sub)
+        if not self.restrict and self.matcher(path) and not util.binary(data):
+            changenode = self.getnode(path, node)
+            return self.substitute(data, path, changenode, self.re_kw.sub)
+        return data
 
-    def process(self, node, data, expand):
-        '''Returns a tuple: data, count.
-        Count is number of keywords/keyword substitutions,
-        telling caller whether to act on file containing data.'''
-        if util.binary(data):
-            return data, None
-        if expand:
-            return self.substitute(node, data, self.re_kw.subn)
-        return data, self.re_kw.search(data)
+    def iskwfile(self, path, islink):
+        '''Returns true if path matches [keyword] pattern
+        and is not a symbolic link.
+        Caveat: localrepository._link fails on Windows.'''
+        return self.matcher(path) and not islink(path)
 
-    def shrink(self, text):
-        '''Returns text with all keyword substitutions removed.'''
-        if util.binary(text):
-            return text
+    def overwrite(self, node=None, expand=True, files=None):
+        '''Overwrites selected files expanding/shrinking keywords.'''
+        ctx = self.repo.changectx(node)
+        mf = ctx.manifest()
+        if node is not None:     # commit
+            files = [f for f in ctx.files() if f in mf]
+            notify = self.ui.debug
+        else:                    # kwexpand/kwshrink
+            notify = self.ui.note
+        candidates = [f for f in files if self.iskwfile(f, mf.linkf)]
+        if candidates:
+            self.restrict = True # do not expand when reading
+            candidates.sort()
+            action = expand and 'expanding' or 'shrinking'
+            for f in candidates:
+                fp = self.repo.file(f)
+                data = fp.read(mf[f])
+                if util.binary(data):
+                    continue
+                if expand:
+                    changenode = node or self.getnode(f, mf[f])
+                    data, found = self.substitute(data, f, changenode,
+                                                  self.re_kw.subn)
+                else:
+                    found = self.re_kw.search(data)
+                if found:
+                    notify(_('overwriting %s %s keywords\n') % (f, action))
+                    self.repo.wwrite(f, data, mf.flags(f))
+                    self.repo.dirstate.normal(f)
+            self.restrict = False
+
+    def shrinktext(self, text):
+        '''Unconditionally removes all keyword substitutions from text.'''
         return self.re_kw.sub(r'$\1$', text)
+
+    def shrink(self, fname, text):
+        '''Returns text with all keyword substitutions removed.'''
+        if self.matcher(fname) and not util.binary(text):
+            return self.shrinktext(text)
+        return text
+
+    def shrinklines(self, fname, lines):
+        '''Returns lines with keyword substitutions removed.'''
+        if self.matcher(fname):
+            text = ''.join(lines)
+            if not util.binary(text):
+                return self.shrinktext(text).splitlines(True)
+        return lines
+
+    def wread(self, fname, data):
+        '''If in restricted mode returns data read from wdir with
+        keyword substitutions removed.'''
+        return self.restrict and self.shrink(fname, data) or data
 
 class kwfilelog(filelog.filelog):
     '''
@@ -232,33 +270,25 @@ class kwfilelog(filelog.filelog):
     '''
     def __init__(self, opener, path):
         super(kwfilelog, self).__init__(opener, path)
-        _kwtemplater.path = path
-
-    def kwctread(self, node, expand):
-        '''Reads expanding and counting keywords, called from _overwrite.'''
-        data = super(kwfilelog, self).read(node)
-        return _kwtemplater.process(node, data, expand)
+        self.path = path
 
     def read(self, node):
         '''Expands keywords when reading filelog.'''
         data = super(kwfilelog, self).read(node)
-        return _kwtemplater.expand(node, data)
+        return _kwtemplater.expand(self.path, node, data)
 
     def add(self, text, meta, tr, link, p1=None, p2=None):
         '''Removes keyword substitutions when adding to filelog.'''
-        text = _kwtemplater.shrink(text)
+        text = _kwtemplater.shrink(self.path, text)
         return super(kwfilelog, self).add(text, meta, tr, link, p1=p1, p2=p2)
 
     def cmp(self, node, text):
         '''Removes keyword substitutions for comparison.'''
-        text = _kwtemplater.shrink(text)
+        text = _kwtemplater.shrink(self.path, text)
         if self.renamed(node):
             t2 = super(kwfilelog, self).read(node)
             return t2 != text
         return revlog.revlog.cmp(self, node, text)
-
-def _iskwfile(f, link):
-    return not link(f) and _kwtemplater.matcher(f)
 
 def _status(ui, repo, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
@@ -270,30 +300,8 @@ def _status(ui, repo, *pats, **opts):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
 
-def _overwrite(ui, repo, node=None, expand=True, files=None):
-    '''Overwrites selected files expanding/shrinking keywords.'''
-    ctx = repo.changectx(node)
-    mf = ctx.manifest()
-    if node is not None:   # commit
-        _kwtemplater.commitnode = node
-        files = [f for f in ctx.files() if f in mf]
-        notify = ui.debug
-    else:                  # kwexpand/kwshrink
-        notify = ui.note
-    candidates = [f for f in files if _iskwfile(f, mf.linkf)]
-    if candidates:
-        candidates.sort()
-        action = expand and 'expanding' or 'shrinking'
-        for f in candidates:
-            fp = repo.file(f, kwmatch=True)
-            data, kwfound = fp.kwctread(mf[f], expand)
-            if kwfound:
-                notify(_('overwriting %s %s keywords\n') % (f, action))
-                repo.wwrite(f, data, mf.flags(f))
-                repo.dirstate.normal(f)
-
 def _kwfwrite(ui, repo, expand, *pats, **opts):
-    '''Selects files and passes them to _overwrite.'''
+    '''Selects files and passes them to kwtemplater.overwrite.'''
     status = _status(ui, repo, *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
     if modified or added or removed or deleted:
@@ -302,7 +310,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        _overwrite(ui, repo, expand=expand, files=clean)
+        _kwtemplater.overwrite(expand=expand, files=clean)
     finally:
         del wlock, lock
 
@@ -412,7 +420,7 @@ def files(ui, repo, *pats, **opts):
     files.sort()
     wctx = repo.workingctx()
     islink = lambda p: 'l' in wctx.fileflags(p)
-    kwfiles = [f for f in files if _iskwfile(f, islink)]
+    kwfiles = [f for f in files if _kwtemplater.iskwfile(f, islink)]
     cwd = pats and repo.getcwd() or ''
     kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()
     if opts.get('all') or opts.get('ignore'):
@@ -446,7 +454,7 @@ def reposetup(ui, repo):
     global _kwtemplater
 
     try:
-        if (not repo.local() or _cmd in nokwcommands.split() 
+        if (not repo.local() or _cmd in nokwcommands.split()
             or '.hg' in util.splitpath(repo.root)
             or repo._url.startswith('bundle:')):
             return
@@ -462,21 +470,17 @@ def reposetup(ui, repo):
     if not inc:
         return
 
-    _kwtemplater = kwtemplater(ui, repo, inc, exc, _cmd)
+    _kwtemplater = kwtemplater(ui, repo, inc, exc)
 
     class kwrepo(repo.__class__):
-        def file(self, f, kwmatch=False):
+        def file(self, f):
             if f[0] == '/':
                 f = f[1:]
-            if kwmatch or _kwtemplater.matcher(f):
-                return kwfilelog(self.sopener, f)
-            return filelog.filelog(self.sopener, f)
+            return kwfilelog(self.sopener, f)
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)
-            if _kwtemplater.restrict and _kwtemplater.matcher(filename):
-                return _kwtemplater.shrink(data)
-            return data
+            return _kwtemplater.wread(filename, data)
 
         def commit(self, files=None, text='', user=None, date=None,
                    match=util.always, force=False, force_editor=False,
@@ -515,7 +519,7 @@ def reposetup(ui, repo):
                 for name, cmd in commithooks.iteritems():
                     ui.setconfig('hooks', name, cmd)
                 if node is not None:
-                    _overwrite(ui, self, node=node)
+                    _kwtemplater.overwrite(node=node)
                     repo.hook('commit', node=node, parent1=_p1, parent2=_p2)
                 return node
             finally:
