@@ -4,6 +4,7 @@ cat <<EOF >> $HGRCPATH
 [extensions]
 hgext.keyword =
 hgext.mq =
+hgext.notify =
 [keyword]
 * =
 b = ignore
@@ -88,8 +89,25 @@ cd ..
 hg init Test
 cd Test
 
+echo % notify on pull to check whether keywords stay as is in email
+echo % ie. if patch.diff wrapper acts as it should
+
+cat <<EOF >> $HGRCPATH
+[hooks]
+incoming.notify = python:hgext.notify.hook
+[notify]
+sources = pull
+diffstat = False
+[reposubs]
+* = Test
+EOF
+
 echo % pull from bundle
-hg pull -u ../kw.hg
+hg pull -u ../kw.hg 2>&1 | sed -e '/^Date:/,/^diffs (/ d'
+
+echo % remove notify config
+sed -e '/\[hooks\]/,$ d' $HGRCPATH > $HGRCPATH.nonotify
+mv $HGRCPATH.nonotify $HGRCPATH
 
 echo % touch
 touch a b

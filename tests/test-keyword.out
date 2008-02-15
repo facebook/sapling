@@ -136,6 +136,8 @@ a
 % removing commit hook from config
 % bundle
 2 changesets found
+% notify on pull to check whether keywords stay as is in email
+% ie. if patch.diff wrapper acts as it should
 % pull from bundle
 pulling from ../kw.hg
 requesting all changes
@@ -143,7 +145,28 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 3 changes to 3 files
+
+diff -r 000000000000 -r a2392c293916 sym
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/sym	Sat Feb 09 20:25:47 2008 +0100
+@@ -0,0 +1,1 @@
++a
+\ No newline at end of file
+
+diff -r a2392c293916 -r ef63ca68695b a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,3 @@
++expand $Id$
++do not process $Id:
++xxx $
+diff -r a2392c293916 -r ef63ca68695b b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++ignore $Id$
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% remove notify config
 % touch
 % status
 % update
