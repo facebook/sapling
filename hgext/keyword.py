@@ -101,7 +101,8 @@ def utcdate(date):
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
 
 
-_kwtemplater = _cmd = None
+# make keyword tools accessible
+kwtools = {'templater': None, 'hgcmd': None}
 
 # store originals of monkeypatches
 _patchfile_init = patch.patchfile.__init__
@@ -113,33 +114,35 @@ def _kwpatchfile_init(self, ui, fname, missing=False):
     rejects or conflicts due to expanded keywords in working dir.'''
     _patchfile_init(self, ui, fname, missing=missing)
     # shrink keywords read from working dir
-    self.lines = _kwtemplater.shrinklines(self.fname, self.lines)
+    kwt = kwtools['templater']
+    self.lines = kwt.shrinklines(self.fname, self.lines)
 
 def _kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
              fp=None, changes=None, opts=None):
-    # only expand if comparing against working dir
+    '''Monkeypatch patch.diff to avoid expansion except when
+    comparing against working dir.'''
     if node2 is not None:
-        _kwtemplater.matcher = util.never
+        kwtools['templater'].matcher = util.never
     if node1 is not None and node1 != repo.changectx().node():
-        _kwtemplater.restrict = True
+        kwtools['templater'].restrict = True
     _patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
                 fp=fp, changes=changes, opts=opts)
 
 def _kwweb_changeset(web, req, tmpl):
     '''Wraps webcommands.changeset turning off keyword expansion.'''
-    _kwtemplater.matcher = util.never
+    kwtools['templater'].matcher = util.never
     return web.changeset(tmpl, web.changectx(req))
 
 def _kwweb_filediff(web, req, tmpl):
     '''Wraps webcommands.filediff turning off keyword expansion.'''
-    _kwtemplater.matcher = util.never
+    kwtools['templater'].matcher = util.never
     return web.filediff(tmpl, web.filectx(req))
 
 def _kwdispatch_parse(ui, args):
     '''Monkeypatch dispatch._parse to obtain running hg command.'''
-    global _cmd
-    _cmd, func, args, options, cmdoptions = _dispatch_parse(ui, args)
-    return _cmd, func, args, options, cmdoptions
+    cmd, func, args, options, cmdoptions = _dispatch_parse(ui, args)
+    kwtools['hgcmd'] = cmd
+    return cmd, func, args, options, cmdoptions
 
 # dispatch._parse is run before reposetup, so wrap it here
 dispatch._parse = _kwdispatch_parse
@@ -164,7 +167,7 @@ class kwtemplater(object):
         self.ui = ui
         self.repo = repo
         self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
-        self.restrict = _cmd in restricted.split()
+        self.restrict = kwtools['hgcmd'] in restricted.split()
 
         kwmaps = self.ui.configitems('keywordmaps')
         if kwmaps: # override default templates
@@ -270,30 +273,31 @@ class kwfilelog(filelog.filelog):
     '''
     def __init__(self, opener, path):
         super(kwfilelog, self).__init__(opener, path)
+        self.kwt = kwtools['templater']
         self.path = path
 
     def read(self, node):
         '''Expands keywords when reading filelog.'''
         data = super(kwfilelog, self).read(node)
-        return _kwtemplater.expand(self.path, node, data)
+        return self.kwt.expand(self.path, node, data)
 
     def add(self, text, meta, tr, link, p1=None, p2=None):
         '''Removes keyword substitutions when adding to filelog.'''
-        text = _kwtemplater.shrink(self.path, text)
+        text = self.kwt.shrink(self.path, text)
         return super(kwfilelog, self).add(text, meta, tr, link, p1=p1, p2=p2)
 
     def cmp(self, node, text):
         '''Removes keyword substitutions for comparison.'''
-        text = _kwtemplater.shrink(self.path, text)
+        text = self.kwt.shrink(self.path, text)
         if self.renamed(node):
             t2 = super(kwfilelog, self).read(node)
             return t2 != text
         return revlog.revlog.cmp(self, node, text)
 
-def _status(ui, repo, *pats, **opts):
+def _status(ui, repo, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
-    if _kwtemplater:
+    if kwt:
         files, match, anypats = cmdutil.matchpats(repo, pats, opts)
         return repo.status(files=files, match=match, list_clean=True)
     if ui.configitems('keyword'):
@@ -302,7 +306,8 @@ def _status(ui, repo, *pats, **opts):
 
 def _kwfwrite(ui, repo, expand, *pats, **opts):
     '''Selects files and passes them to kwtemplater.overwrite.'''
-    status = _status(ui, repo, *pats, **opts)
+    kwt = kwtools['templater']
+    status = _status(ui, repo, kwt, *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
     if modified or added or removed or deleted:
         raise util.Abort(_('outstanding uncommitted changes in given files'))
@@ -310,7 +315,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        _kwtemplater.overwrite(expand=expand, files=clean)
+        kwt.overwrite(expand=expand, files=clean)
     finally:
         del wlock, lock
 
@@ -412,7 +417,8 @@ def files(ui, repo, *pats, **opts):
     keyword expansion.
     That is, files matched by [keyword] config patterns but not symlinks.
     '''
-    status = _status(ui, repo, *pats, **opts)
+    kwt = kwtools['templater']
+    status = _status(ui, repo, kwt, *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
     files = modified + added + clean
     if opts.get('untracked'):
@@ -420,7 +426,7 @@ def files(ui, repo, *pats, **opts):
     files.sort()
     wctx = repo.workingctx()
     islink = lambda p: 'l' in wctx.fileflags(p)
-    kwfiles = [f for f in files if _kwtemplater.iskwfile(f, islink)]
+    kwfiles = [f for f in files if kwt.iskwfile(f, islink)]
     cwd = pats and repo.getcwd() or ''
     kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()
     if opts.get('all') or opts.get('ignore'):
@@ -451,10 +457,8 @@ def reposetup(ui, repo):
     This is done for local repos only, and only if there are
     files configured at all for keyword substitution.'''
 
-    global _kwtemplater
-
     try:
-        if (not repo.local() or _cmd in nokwcommands.split()
+        if (not repo.local() or kwtools['hgcmd'] in nokwcommands.split() 
             or '.hg' in util.splitpath(repo.root)
             or repo._url.startswith('bundle:')):
             return
@@ -470,7 +474,7 @@ def reposetup(ui, repo):
     if not inc:
         return
 
-    _kwtemplater = kwtemplater(ui, repo, inc, exc)
+    kwtools['templater'] = kwt = kwtemplater(ui, repo, inc, exc)
 
     class kwrepo(repo.__class__):
         def file(self, f):
@@ -480,7 +484,7 @@ def reposetup(ui, repo):
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)
-            return _kwtemplater.wread(filename, data)
+            return kwt.wread(filename, data)
 
         def commit(self, files=None, text='', user=None, date=None,
                    match=util.always, force=False, force_editor=False,
@@ -519,7 +523,7 @@ def reposetup(ui, repo):
                 for name, cmd in commithooks.iteritems():
                     ui.setconfig('hooks', name, cmd)
                 if node is not None:
-                    _kwtemplater.overwrite(node=node)
+                    kwt.overwrite(node=node)
                     repo.hook('commit', node=node, parent1=_p1, parent2=_p2)
                 return node
             finally:
