@@ -123,7 +123,7 @@ def _kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
     comparing against working dir.'''
     if node2 is not None:
         kwtools['templater'].matcher = util.never
-    if node1 is not None and node1 != repo.changectx().node():
+    elif node1 is not None and node1 != repo.changectx().node():
         kwtools['templater'].restrict = True
     _patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
                 fp=fp, changes=changes, opts=opts)
@@ -458,7 +458,7 @@ def reposetup(ui, repo):
     files configured at all for keyword substitution.'''
 
     try:
-        if (not repo.local() or kwtools['hgcmd'] in nokwcommands.split() 
+        if (not repo.local() or kwtools['hgcmd'] in nokwcommands.split()
             or '.hg' in util.splitpath(repo.root)
             or repo._url.startswith('bundle:')):
             return
