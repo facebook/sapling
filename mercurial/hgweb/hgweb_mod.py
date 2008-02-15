@@ -636,7 +636,8 @@ class hgweb(object):
 
         def annotate(**map):
             last = None
-            for lineno, (f, l) in enumerate(fctx.annotate(follow=True)):
+            lines = enumerate(fctx.annotate(follow=True, linenumber=True))
+            for lineno, ((f, targetline), l) in lines:
                 fnode = f.filenode()
                 name = self.repo.ui.shortuser(f.user())
 
@@ -648,6 +649,7 @@ class hgweb(object):
                        "rev": f.rev(),
                        "author": name,
                        "file": f.path(),
+                       "targetline": targetline,
                        "line": l,
                        "lineid": "l%d" % (lineno + 1),
                        "linenumber": "% 6d" % (lineno + 1)}
