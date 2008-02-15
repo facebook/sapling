@@ -2186,20 +2186,17 @@ def reposetup(ui, repo):
 
             return tagscache
 
-        def _branchtags(self):
+        def _branchtags(self, partial, lrev):
             q = self.mq
             if not q.applied:
-                return super(mqrepo, self)._branchtags()
+                return super(mqrepo, self)._branchtags(partial, lrev)
 
             cl = self.changelog
             qbasenode = revlog.bin(q.applied[0].rev)
             if qbasenode not in cl.nodemap:
                 self.ui.warn('mq status file refers to unknown node %s\n'
                              % revlog.short(qbasenode))
-                return super(mqrepo, self)._branchtags()
-
-            self.branchcache = {} # avoid recursion in changectx
-            partial, last, lrev = self._readbranchcache()
+                return super(mqrepo, self)._branchtags(partial, lrev)
 
             qbase = cl.rev(qbasenode)
             start = lrev + 1
