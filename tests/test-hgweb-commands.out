@@ -273,7 +273,7 @@ drwxr-xr-x da
 </table>
 
 <pre>
-<div class="parity0"><span class="lineno">     1</span>foo
+<div class="parity0"><a class="lineno" href="#l1" id="l1">     1</a>foo
 </div>
 </pre>
 
