@@ -95,6 +95,7 @@ class localrepository(repo.repository):
         self._tagstypecache = None
         self.branchcache = None
         self._ubranchcache = None  # UTF-8 version of branchcache
+        self._branchcachetip = None
         self.nodetagscache = None
         self.filterpats = {}
         self._datafilters = {}
@@ -354,11 +355,22 @@ class localrepository(repo.repository):
         return partial
 
     def branchtags(self):
-        if self.branchcache is not None:
+        tip = self.changelog.tip()
+        if self.branchcache is not None and self._branchcachetip == tip:
             return self.branchcache
 
-        self.branchcache = {} # avoid recursion in changectx
-        partial, last, lrev = self._readbranchcache()
+        oldtip = self._branchcachetip
+        self._branchcachetip = tip
+        if self.branchcache is None:
+            self.branchcache = {} # avoid recursion in changectx
+        else:
+            self.branchcache.clear() # keep using the same dict
+        if oldtip is None or oldtip not in self.changelog.nodemap:
+            partial, last, lrev = self._readbranchcache()
+        else:
+            lrev = self.changelog.rev(oldtip)
+            partial = self._ubranchcache
+
         self._branchtags(partial, lrev)
 
         # the branch cache is stored on disk as UTF-8, but in the local
@@ -619,6 +631,7 @@ class localrepository(repo.repository):
         self.nodetagscache = None
         self.branchcache = None
         self._ubranchcache = None
+        self._branchcachetip = None
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
@@ -885,8 +898,8 @@ class localrepository(repo.repository):
                       parent2=xp2)
             tr.close()
 
-            if self.branchcache and "branch" in extra:
-                self.branchcache[util.tolocal(extra["branch"])] = n
+            if self.branchcache:
+                self.branchtags()
 
             if use_dirstate or update_dirstate:
                 self.dirstate.setparents(n)
@@ -2008,7 +2021,6 @@ class localrepository(repo.repository):
         if changesets > 0:
             # forcefully update the on-disk branch cache
             self.ui.debug(_("updating the branch cache\n"))
-            self.branchcache = None
             self.branchtags()
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
                       source=srctype, url=url)
