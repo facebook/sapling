@@ -14,18 +14,18 @@ abort: invalid date: 'foo bar'
 nothing changed
 % commit added file that has been deleted
 nothing changed
-abort: file .../test/bar not found!
+abort: file bar not found!
 adding dir/file
 dir/file
 adding dir.file
-abort: no match under directory .../test/dir!
-abort: no match under directory .../test/bleh!
-abort: no match under directory .../test/dir2!
+abort: no match under directory dir!
+abort: no match under directory .!
+abort: no match under directory ../dir2!
 dir/file
 does-not-exist: No such file or directory
-abort: file .../test/does-not-exist not found!
-abort: file .../test/baz not tracked!
-abort: file .../test/quux not tracked!
+abort: file does-not-exist not found!
+abort: file baz not tracked!
+abort: file quux not tracked!
 dir/file
 % partial subdir commit test
 adding bar/bar

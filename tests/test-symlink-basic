@@ -2,17 +2,12 @@
 
 "$TESTDIR/hghave" symlink || exit 80
 
-cleanpath()
-{
-    sed -e "s:/.*\(/test-symlink-basic/.*\):...\1:"
-}
-
 hg init a
 cd a
 ln -s nothing dangling
-hg commit -m 'commit symlink without adding' -d '0 0' dangling 2>&1 | cleanpath
+hg commit -m 'commit symlink without adding' dangling
 hg add dangling
-hg commit -m 'add symlink' -d '0 0'
+hg commit -m 'add symlink'
 
 hg tip -v
 hg manifest --debug
