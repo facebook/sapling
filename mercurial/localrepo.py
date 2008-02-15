@@ -1433,7 +1433,7 @@ class localrepository(repo.repository):
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
-                return None, 1
+                return None, 0
             elif inc:
                 self.ui.warn(_("note: unsynced remote changes!\n"))
 
