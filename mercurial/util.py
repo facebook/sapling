@@ -901,6 +901,9 @@ def gui():
     '''Are we running in a GUI?'''
     return os.name == "nt" or os.name == "mac" or os.environ.get("DISPLAY")
 
+def lookup_reg(key, name=None, scope=None):
+    return None
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
@@ -1091,9 +1094,6 @@ if os.name == 'nt':
 
 else:
     nulldev = '/dev/null'
-
-    def lookup_reg(key, name=None, scope=None):
-        return None
 
     def rcfiles(path):
         rcs = [os.path.join(path, 'hgrc')]

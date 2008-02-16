@@ -16,11 +16,11 @@ marked working directory as branch branch2
 (branch merge, don't forget to commit)
 marked working directory as branch branch3
 % incremental conversion
-2 c1
-pulling from branch0 into branch1
-2 changesets found
-1 c2
+2 c2
 pulling from branch0 into branch2
+2 changesets found
+1 c1
+pulling from branch0 into branch1
 2 changesets found
 0 c3
 pulling from branch2 into branch3
