@@ -18,6 +18,14 @@ import os, shutil
 from mercurial import hg, util
 from mercurial.i18n import _
 
+orig_encoding = 'ascii'
+
+def recode(s):
+    if isinstance(s, unicode):
+        return s.encode(orig_encoding, 'replace')
+    else:
+        return s.decode('utf-8').encode(orig_encoding, 'replace')
+
 source_converters = [
     ('cvs', convert_cvs),
     ('git', convert_git),
@@ -156,7 +164,11 @@ class converter(object):
             for c in children.get(n, []):
                 if c not in pendings:
                     pendings[c] = [p for p in parents[c] if p not in self.map]
-                pendings[c].remove(n)
+                try:
+                    pendings[c].remove(n)
+                except ValueError:
+                    raise util.Abort(_('cycle detected between %s and %s')
+                                       % (recode(c), recode(n)))
                 if not pendings[c]:
                     # Parents are converted, node is eligible
                     actives.insert(0, c)
@@ -251,12 +263,6 @@ class converter(object):
 
     def convert(self):
 
-        def recode(s):
-            if isinstance(s, unicode):
-                return s.encode(orig_encoding, 'replace')
-            else:
-                return s.decode('utf-8').encode(orig_encoding, 'replace')
-
         try:
             self.source.before()
             self.dest.before()
@@ -306,8 +312,6 @@ class converter(object):
         finally:
             self.source.after()
         self.map.close()
-
-orig_encoding = 'ascii'
 
 def convert(ui, src, dest=None, revmapfile=None, **opts):
     global orig_encoding
