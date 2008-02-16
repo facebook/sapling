@@ -7,4 +7,4 @@ This is just some random text
 that will go inside the file and take a few lines.
 It is very boring to read, but computers don't
 care about things like that.
-host - - [date] "GET /?f=f165dc289438;file=sometext.txt;style=raw HTTP/1.1" 200 -
+host - - [date] "GET /?f=37afcac6d393;file=sub/sometext.txt;style=raw HTTP/1.1" 200 -

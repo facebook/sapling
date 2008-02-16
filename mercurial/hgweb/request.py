@@ -85,8 +85,8 @@ class wsgirequest(object):
         if type is not None:
             headers.append(('Content-Type', type))
         if filename:
-            headers.append(('Content-Disposition', 'inline; filename=%s' %
-                            filename))
+            headers.append(('Content-Disposition',
+                            'inline; filename=%s' % filename.split('/')[-1]))
         if length:
             headers.append(('Content-Length', str(length)))
         self.header(headers)
