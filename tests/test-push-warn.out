@@ -33,7 +33,7 @@ pushing to ../c
 searching for changes
 abort: push creates new remote branches!
 (did you forget to merge? use push -f to force)
-0
+1
 pushing to ../c
 searching for changes
 no changes found
@@ -42,12 +42,12 @@ pushing to ../c
 searching for changes
 abort: push creates new remote branches!
 (did you forget to merge? use push -f to force)
-0
+1
 pushing to ../c
 searching for changes
 abort: push creates new remote branches!
 (did you forget to merge? use push -f to force)
-0
+1
 pushing to ../c
 searching for changes
 adding changesets
