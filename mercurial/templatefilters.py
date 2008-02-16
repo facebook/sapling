@@ -100,10 +100,6 @@ def person(author):
     if f == -1: return util.shortuser(author)
     return author[:f].rstrip()
 
-def shortdate(date):
-    '''turn (timestamp, tzoff) tuple into iso 8631 date.'''
-    return util.datestr(date, format='%Y-%m-%d', timezone=False)
-
 def indent(text, prefix):
     '''indent each non-empty line of text after first with prefix.'''
     lines = text.splitlines()
@@ -145,7 +141,7 @@ filters = {
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
     "rfc3339date": lambda x: util.datestr(x, "%Y-%m-%dT%H:%M:%S", True, "%+03d:%02d"),
     "short": lambda x: x[:12],
-    "shortdate": shortdate,
+    "shortdate": util.shortdate,
     "stringify": templater.stringify,
     "strip": lambda x: x.strip(),
     "urlescape": lambda x: urllib.quote(x),

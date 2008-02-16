@@ -78,7 +78,8 @@ def annotate(ui, repo, *pats, **opts):
     detects as binary. With -a, annotate will generate an annotation
     anyway, probably with undesirable results.
     """
-    getdate = util.cachefunc(lambda x: util.datestr(x[0].date()))
+    datefunc = ui.quiet and util.shortdate or util.datestr
+    getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
 
     if not pats:
         raise util.Abort(_('at least one file name or pattern required'))
@@ -1028,6 +1029,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     prev = {}
     def display(fn, rev, states, prevstates):
+        datefunc = ui.quiet and util.shortdate or util.datestr
         found = False
         filerevmatches = {}
         r = prev.get(fn, -1)
@@ -1044,7 +1046,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             if opts['user']:
                 cols.append(ui.shortuser(get(r)[1]))
             if opts.get('date'):
-                cols.append(util.datestr(get(r)[2]))
+                cols.append(datefunc(get(r)[2]))
             if opts['files_with_matches']:
                 c = (fn, r)
                 if c in filerevmatches:
@@ -2742,8 +2744,8 @@ table = {
          [('r', 'rev', '', _('annotate the specified revision')),
           ('f', 'follow', None, _('follow file copies and renames')),
           ('a', 'text', None, _('treat all files as text')),
-          ('u', 'user', None, _('list the author')),
-          ('d', 'date', None, _('list the date')),
+          ('u', 'user', None, _('list the author (long with -v)')),
+          ('d', 'date', None, _('list the date (short with -q)')),
           ('n', 'number', None, _('list the revision number (default)')),
           ('c', 'changeset', None, _('list the changeset')),
           ('l', 'line-number', None,
@@ -2896,8 +2898,8 @@ table = {
            _('print only filenames and revs that match')),
           ('n', 'line-number', None, _('print matching line numbers')),
           ('r', 'rev', [], _('search in given revision range')),
-          ('u', 'user', None, _('print user who committed change')),
-          ('d', 'date', None, _('list the date')),
+          ('u', 'user', None, _('list the author (long with -v)')),
+          ('d', 'date', None, _('list the date (short with -q)')),
          ] + walkopts,
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
