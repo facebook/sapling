@@ -1043,6 +1043,8 @@ def grep(ui, repo, pattern, *pats, **opts):
                 cols.append(change)
             if opts['user']:
                 cols.append(ui.shortuser(get(r)[1]))
+            if opts.get('date'):
+                cols.append(util.datestr(get(r)[2]))
             if opts['files_with_matches']:
                 c = (fn, r)
                 if c in filerevmatches:
@@ -2895,6 +2897,7 @@ table = {
           ('n', 'line-number', None, _('print matching line numbers')),
           ('r', 'rev', [], _('search in given revision range')),
           ('u', 'user', None, _('print user who committed change')),
+          ('d', 'date', None, _('list the date')),
          ] + walkopts,
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
