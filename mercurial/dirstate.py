@@ -197,7 +197,8 @@ class dirstate(object):
 
     def _incpathcheck(self, f):
         if '\r' in f or '\n' in f:
-            raise util.Abort(_("'\\n' and '\\r' disallowed in filenames"))
+            raise util.Abort(_("'\\n' and '\\r' disallowed in filenames: %r")
+                             % f)
         # shadows
         if f in self._dirs:
             raise util.Abort(_('directory %r already in dirstate') % f)
