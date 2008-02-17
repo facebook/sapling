@@ -1572,17 +1572,21 @@ def strdate(string, format, defaults=[]):
         unixtime = localunixtime + offset
     return unixtime, offset
 
-def parsedate(string, formats=None, defaults=None):
-    """parse a localized time string and return a (unixtime, offset) tuple.
+def parsedate(date, formats=None, defaults=None):
+    """parse a localized date/time string and return a (unixtime, offset) tuple.
+
     The date may be a "unixtime offset" string or in one of the specified
-    formats."""
-    if not string:
+    formats. If the date already is a (unixtime, offset) tuple, it is returned.
+    """
+    if not date:
         return 0, 0
+    if type(date) is type((0, 0)) and len(date) == 2:
+        return date
     if not formats:
         formats = defaultdateformats
-    string = string.strip()
+    date = date.strip()
     try:
-        when, offset = map(int, string.split(' '))
+        when, offset = map(int, date.split(' '))
     except ValueError:
         # fill out defaults
         if not defaults:
@@ -1599,13 +1603,13 @@ def parsedate(string, formats=None, defaults=None):
 
         for format in formats:
             try:
-                when, offset = strdate(string, format, defaults)
+                when, offset = strdate(date, format, defaults)
             except (ValueError, OverflowError):
                 pass
             else:
                 break
         else:
-            raise Abort(_('invalid date: %r ') % string)
+            raise Abort(_('invalid date: %r ') % date)
     # validate explicit (probably user-specified) date and
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12

@@ -2,16 +2,10 @@
 transaction abort!
 rollback completed
 abort: empty commit message
-transaction abort!
-rollback completed
 abort: impossible time zone offset: 4444444
-transaction abort!
-rollback completed
 abort: invalid date: '1\t15.1' 
-transaction abort!
-rollback completed
 abort: invalid date: 'foo bar' 
-nothing changed
+abort: date exceeds 32 bits: 111111111111
 % commit added file that has been deleted
 nothing changed
 abort: file bar not found!

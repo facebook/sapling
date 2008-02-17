@@ -202,6 +202,7 @@ class localrepository(repo.repository):
 
         date: date tuple to use if committing'''
 
+        date = util.parsedate(date)
         for x in self.status()[:5]:
             if '.hgtags' in x:
                 raise util.Abort(_('working copy of .hgtags is changed '

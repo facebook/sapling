@@ -196,6 +196,10 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if not rev:
         raise util.Abort(_("please specify a revision to backout"))
 
+    date = opts.get('date')
+    if date:
+        opts['date'] = util.parsedate(date)
+
     cmdutil.bail_if_changed(repo)
     node = repo.lookup(rev)
 
@@ -1439,6 +1443,10 @@ def import_(ui, repo, patch1, *patches, **opts):
     To read a patch from standard input, use patch name "-".
     """
     patches = (patch1,) + patches
+
+    date = opts.get('date')
+    if date:
+        opts['date'] = util.parsedate(date)
 
     if opts.get('exact') or not opts['force']:
         cmdutil.bail_if_changed(repo)

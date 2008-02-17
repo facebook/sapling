@@ -1115,6 +1115,9 @@ def walkchangerevs(ui, repo, pats, change, opts):
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
+    date = opts.get('date')
+    if date:
+        opts['date'] = util.parsedate(date)
     message = logmessage(opts)
 
     # extract addremove carefully -- this function can be called from a command

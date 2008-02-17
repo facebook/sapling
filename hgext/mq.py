@@ -612,6 +612,8 @@ class queue:
         force = opts.get('force')
         user = opts.get('user')
         date = opts.get('date')
+        if date:
+            date = util.parsedate(date)
         self.check_reserved_name(patch)
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
@@ -640,7 +642,7 @@ class queue:
                 p.write("# HG changeset patch\n")
                 if user:
                     p.write("# User " + user + "\n")
-                p.write("# Date " + date + "\n")
+                p.write("# Date %d %d\n" % date)
                 p.write("\n")
             elif user:
                 p.write("From: " + user + "\n")
@@ -935,6 +937,9 @@ class queue:
         if len(self.applied) == 0:
             self.ui.write("No patches applied\n")
             return 1
+        newdate = opts.get('date')
+        if newdate:
+            newdate = '%d %d' % util.parsedate(newdate)
         wlock = repo.wlock()
         try:
             self.check_toppatch(repo)
@@ -995,7 +1000,6 @@ class queue:
                         comments = ['From: ' + newuser, ''] + comments
                 user = newuser
 
-            newdate = opts.get('date')
             if newdate:
                 if setheaderfield(comments, ['# Date '], newdate):
                     date = newdate
