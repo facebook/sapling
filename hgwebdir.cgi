@@ -22,7 +22,6 @@ cgitb.enable()
 #os.environ["HGENCODING"] = "UTF-8"
 
 from mercurial.hgweb.hgwebdir_mod import hgwebdir
-from mercurial import dispatch, ui
 import mercurial.hgweb.wsgicgi as wsgicgi
 
 # The config file looks like this.  You can have paths to individual
@@ -44,5 +43,5 @@ import mercurial.hgweb.wsgicgi as wsgicgi
 # Alternatively you can pass a list of ('virtual/path', '/real/path') tuples
 # or use a dictionary with entries like 'virtual/path': '/real/path'
 
-u = ui.ui(report_untrusted=False, interactive=False)
-dispatch.profiled(u, lambda: wsgicgi.launch(hgwebdir('hgweb.config', u)))
+application = hgwebdir('hgweb.config')
+wsgicgi.launch(application)
