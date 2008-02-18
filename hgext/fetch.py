@@ -65,6 +65,10 @@ def fetch(ui, repo, source='default', **opts):
         modheads = repo.pull(other, heads=revs)
         return postincoming(other, modheads)
 
+    date = opts.get('date')
+    if date:
+        opts['date'] = util.parsedate(date)
+
     parent, p2 = repo.dirstate.parents()
     if parent != repo.changelog.tip():
         raise util.Abort(_('working dir not at tip '

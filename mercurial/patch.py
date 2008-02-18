@@ -1056,7 +1056,8 @@ def diffopts(ui, opts={}, untrusted=False):
         showfunc=get('show_function', 'showfunc'),
         ignorews=get('ignore_all_space', 'ignorews'),
         ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
-        ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'))
+        ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'),
+        context=get('unified'))
 
 def updatedir(ui, repo, patches):
     '''Update dirstate after patch application according to metadata'''

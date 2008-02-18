@@ -197,7 +197,8 @@ class dirstate(object):
 
     def _incpathcheck(self, f):
         if '\r' in f or '\n' in f:
-            raise util.Abort(_("'\\n' and '\\r' disallowed in filenames"))
+            raise util.Abort(_("'\\n' and '\\r' disallowed in filenames: %r")
+                             % f)
         # shadows
         if f in self._dirs:
             raise util.Abort(_('directory %r already in dirstate') % f)
@@ -286,7 +287,7 @@ class dirstate(object):
             self._changepath(f, '?')
             del self._map[f]
         except KeyError:
-            self._ui.warn(_("not in dirstate: %s!\n") % f)
+            self._ui.warn(_("not in dirstate: %s\n") % f)
 
     def clear(self):
         self._map = {}
@@ -369,6 +370,14 @@ class dirstate(object):
                           % (self.pathto(f), kind))
         return False
 
+    def _dirignore(self, f):
+        if self._ignore(f):
+            return True
+        for c in strutil.findall(f, '/'):
+            if self._ignore(f[:c]):
+                return True
+        return False
+
     def walk(self, files=None, match=util.always, badmatch=None):
         # filter out the stat
         for src, f, st in self.statwalk(files, match, badmatch=badmatch):
@@ -404,9 +413,11 @@ class dirstate(object):
             return match(file_)
 
         ignore = self._ignore
+        dirignore = self._dirignore
         if ignored:
             imatch = match
             ignore = util.never
+            dirignore = util.never
 
         # self._root may end with a path separator when self._root == '/'
         common_prefix_len = len(self._root)
@@ -492,8 +503,9 @@ class dirstate(object):
                         yield 'b', ff, None
                 continue
             if s_isdir(st.st_mode):
-                for f, src, st in findfiles(f):
-                    yield src, f, st
+                if not dirignore(nf):
+                    for f, src, st in findfiles(f):
+                        yield src, f, st
             else:
                 if nf in known:
                     continue
@@ -519,6 +531,7 @@ class dirstate(object):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
+        files = files or []
         _join = self._join
         lstat = os.lstat
         cmap = self._copymap
@@ -536,8 +549,9 @@ class dirstate(object):
             if fn in dmap:
                 type_, mode, size, time, foo = dmap[fn]
             else:
-                if list_ignored and self._ignore(fn):
-                    iadd(fn)
+                if (list_ignored or fn in files) and self._dirignore(fn):
+                    if list_ignored:
+                        iadd(fn)
                 else:
                     uadd(fn)
                 continue
@@ -555,7 +569,7 @@ class dirstate(object):
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
-                if nonexistent and type_ in "nm":
+                if nonexistent and type_ in "nma":
                     dadd(fn)
                     continue
             # check the common case first

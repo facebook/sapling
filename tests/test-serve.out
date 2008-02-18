@@ -2,15 +2,11 @@
 access log created - .hg/hgrc respected
 % With -v
 listening at http://localhost/
-killed!
 % With --prefix foo
 listening at http://localhost/foo/
-killed!
 % With --prefix /foo
 listening at http://localhost/foo/
-killed!
 % With --prefix foo/
 listening at http://localhost/foo/
-killed!
 % With --prefix /foo/
 listening at http://localhost/foo/

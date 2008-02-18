@@ -1,4 +1,4 @@
-abort: file .../test-symlink-basic/a/dangling not tracked!
+abort: file dangling not tracked!
 changeset:   0:cabd88b706fc
 tag:         tip
 user:        test

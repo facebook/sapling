@@ -102,7 +102,6 @@ class convert_git(converter_source):
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
-        author = author or "unknown"
 
         c = commit(parents=parents, date=date, author=author, desc=message,
                    rev=version)

@@ -420,9 +420,7 @@ DAEMON_PIDS = None
 HGRCPATH = None
 
 os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGMERGE"]  = ('python "%s" -L my -L other'
-                          % os.path.join(TESTDIR, os.path.pardir,
-                                         'contrib', 'simplemerge'))
+os.environ["HGMERGE"] = "internal:merge"
 os.environ["HGUSER"]   = "test"
 os.environ["HGENCODING"] = "ascii"
 os.environ["HGENCODINGMODE"] = "strict"

@@ -30,8 +30,8 @@ SKIPREV = 'SKIP'
 class commit(object):
     def __init__(self, author, date, desc, parents, branch=None, rev=None,
                  extra={}):
-        self.author = author
-        self.date = date
+        self.author = author or 'unknown'
+        self.date = date or '0 0'
         self.desc = desc
         self.parents = parents
         self.branch = branch
@@ -227,7 +227,7 @@ class commandline(object):
             except TypeError:
                 pass
         cmdline = [util.shellquote(arg) for arg in cmdline]
-        cmdline += ['<', util.nulldev]
+        cmdline += ['2>', util.nulldev, '<', util.nulldev]
         cmdline = ' '.join(cmdline)
         self.ui.debug(cmdline, '\n')
         return cmdline
@@ -246,6 +246,12 @@ class commandline(object):
         self.ui.debug(output)
         return output, fp.close()
 
+    def runlines(self, cmd, *args, **kwargs):
+        fp = self._run(cmd, *args, **kwargs)
+        output = fp.readlines()
+        self.ui.debug(''.join(output))
+        return output, fp.close()
+
     def checkexit(self, status, output=''):
         if status:
             if output:
@@ -257,6 +263,11 @@ class commandline(object):
     def run0(self, cmd, *args, **kwargs):
         output, status = self.run(cmd, *args, **kwargs)
         self.checkexit(status, output)
+        return output
+
+    def runlines0(self, cmd, *args, **kwargs):
+        output, status = self.runlines(cmd, *args, **kwargs)
+        self.checkexit(status, ''.join(output))
         return output
 
     def getargmax(self):
@@ -311,6 +322,8 @@ class mapfile(dict):
         self._read()
 
     def _read(self):
+        if self.path is None:
+            return
         try:
             fp = open(self.path, 'r')
         except IOError, err:

@@ -4,6 +4,7 @@ cat <<EOF >> $HGRCPATH
 [extensions]
 hgext.keyword =
 hgext.mq =
+hgext.notify =
 [keyword]
 * =
 b = ignore
@@ -24,19 +25,31 @@ hg --quiet kwdemo --default \
 
 hg --quiet kwdemo "Branch = {branches}"
 
-hg init Test
-cd Test
+hg init Test-bndl
+cd Test-bndl
 
 echo % kwshrink should exit silently in empty/invalid repo
 hg kwshrink
+
+# Symlinks cannot be created on Windows. The bundle was made with:
+#
+# hg init t
+# cd t
+# echo a > a
+# ln -s a sym
+# hg add sym
+# hg ci -m addsym -u mercurial
+# hg bundle --base null ../test-keyword.hg
+#
+hg pull -u "$TESTDIR/test-keyword.hg" \
+    | sed 's/pulling from.*test-keyword.hg/pulling from test-keyword.hg/'
 
 echo 'expand $Id$' > a
 echo 'do not process $Id:' >> a
 echo 'xxx $' >> a
 echo 'ignore $Id$' > b
-ln -s a sym
 echo % cat
-cat sym a b
+cat a b
 
 echo % addremove
 hg addremove
@@ -56,7 +69,7 @@ hg status
 echo % identify
 hg --quiet identify
 echo % cat
-cat sym a b
+cat a b
 echo % hg cat
 hg cat sym a b
 
@@ -69,6 +82,33 @@ sed -e '/\[hooks\]/,$ d' $HGRCPATH > $HGRCPATH.nohook
 mv $HGRCPATH.nohook $HGRCPATH
 rm hooktest
 
+echo % bundle
+hg bundle --base null ../kw.hg
+
+cd ..
+hg init Test
+cd Test
+
+echo % notify on pull to check whether keywords stay as is in email
+echo % ie. if patch.diff wrapper acts as it should
+
+cat <<EOF >> $HGRCPATH
+[hooks]
+incoming.notify = python:hgext.notify.hook
+[notify]
+sources = pull
+diffstat = False
+[reposubs]
+* = Test
+EOF
+
+echo % pull from bundle
+hg pull -u ../kw.hg 2>&1 | sed -e '/^Date:/,/^diffs (/ d'
+
+echo % remove notify config
+sed -e '/\[hooks\]/,$ d' $HGRCPATH > $HGRCPATH.nonotify
+mv $HGRCPATH.nonotify $HGRCPATH
+
 echo % touch
 touch a b
 echo % status
@@ -78,7 +118,7 @@ rm sym a b
 echo % update
 hg update
 echo % cat
-cat sym a b
+cat a b
 
 echo % check whether expansion is filewise
 echo '$Id$' > c
@@ -90,8 +130,12 @@ hg -v kwexpand
 echo % compare changenodes in a c
 cat a c
 
+echo % qinit -c
+hg qinit -c
 echo % qimport
 hg qimport -r tip -n mqtest.diff
+echo % qcommit
+hg qcommit -mqtest
 echo % keywords should not be expanded in patch
 cat .hg/patches/mqtest.diff
 echo % qpop
@@ -123,7 +167,7 @@ echo % kwfiles
 hg kwfiles
 
 echo % diff --rev
-hg diff --rev 0 | grep -v 'b/c'
+hg diff --rev 1 | grep -v 'b/c'
 
 echo % rollback
 hg rollback
@@ -143,7 +187,7 @@ Xinfo = {author}: {desc}
 EOF
 
 echo % cat
-cat sym a b
+cat a b
 echo % hg cat
 hg cat sym a b
 
@@ -166,7 +210,7 @@ echo % status
 hg status
 
 echo % cat
-cat sym a b
+cat a b
 echo % hg cat
 hg cat sym a b
 echo
@@ -187,7 +231,7 @@ cat a
 
 echo % clone to test incoming
 cd ..
-hg clone -r0 Test Test-a
+hg clone -r1 Test Test-a
 cd Test-a
 cat <<EOF >> .hg/hgrc
 [paths]
@@ -208,7 +252,7 @@ cd ../Test
 echo % import
 hg import ../rejecttest.diff
 echo % cat
-cat sym a b
+cat a b
 echo
 echo % rollback
 hg rollback
@@ -234,20 +278,20 @@ cat a
 cd ..
 
 echo % kwexpand nonexistent
-hg kwexpand nonexistent
+hg kwexpand nonexistent 2>&1 | sed 's/nonexistent:.*/nonexistent:/'
 
 echo % switch off expansion
 echo % kwshrink with unknown file u
 cp a u
 hg --verbose kwshrink
 echo % cat
-cat sym a b
+cat a b
 echo % hg cat
 hg cat sym a b
 echo
 rm $HGRCPATH
 echo % cat
-cat sym a b
+cat a b
 echo % hg cat
 hg cat sym a b
 echo

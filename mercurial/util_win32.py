@@ -187,6 +187,37 @@ def testpid(pid):
         return details[0] != winerror.ERROR_INVALID_PARAMETER
     return True
 
+def lookup_reg(key, valname=None, scope=None):
+    ''' Look up a key/value name in the Windows registry.
+
+    valname: value name. If unspecified, the default value for the key
+    is used.
+    scope: optionally specify scope for registry lookup, this can be
+    a sequence of scopes to look up in order. Default (CURRENT_USER,
+    LOCAL_MACHINE).
+    '''
+    try:
+        from _winreg import HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, \
+            QueryValueEx, OpenKey
+    except ImportError:
+        return None
+
+    def query_val(scope, key, valname):
+        try:
+            keyhandle = OpenKey(scope, key)
+            return QueryValueEx(keyhandle, valname)[0]
+        except EnvironmentError:
+            return None
+
+    if scope is None:
+        scope = (HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE)
+    elif not isinstance(scope, (list, tuple)):
+        scope = (scope,)
+    for s in scope:
+        val = query_val(s, key, valname)
+        if val is not None:
+            return val
+
 def system_rcpath_win32():
     '''return default os-specific hgrc search path'''
     proc = win32api.GetCurrentProcess()

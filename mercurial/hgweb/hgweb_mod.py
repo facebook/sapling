@@ -10,7 +10,8 @@ import os, mimetypes, re
 from mercurial.node import *
 from mercurial import mdiff, ui, hg, util, archival, patch, hook
 from mercurial import revlog, templater, templatefilters
-from common import ErrorResponse, get_mtime, style_map, paritygen, get_contact
+from common import get_mtime, style_map, paritygen, countgen, get_contact
+from common import ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
 import webcommands, protocol
@@ -371,16 +372,26 @@ class hgweb(object):
                        file=f,
                        filenode=hex(fn or nullid))
 
+        blockcount = countgen()
         def prettyprintlines(diff):
-            for l in diff.splitlines(1):
-                if l.startswith('+'):
-                    yield tmpl("difflineplus", line=l)
-                elif l.startswith('-'):
-                    yield tmpl("difflineminus", line=l)
-                elif l.startswith('@'):
-                    yield tmpl("difflineat", line=l)
+            blockno = blockcount.next()
+            for lineno, l in enumerate(diff.splitlines(1)):
+                if blockno == 0:
+                    lineno = lineno + 1
                 else:
-                    yield tmpl("diffline", line=l)
+                    lineno = "%d.%d" % (blockno, lineno + 1)
+                if l.startswith('+'):
+                    ltype = "difflineplus"
+                elif l.startswith('-'):
+                    ltype = "difflineminus"
+                elif l.startswith('@'):
+                    ltype = "difflineat"
+                else:
+                    ltype = "diffline"
+                yield tmpl(ltype,
+                           line=l,
+                           lineid="l%s" % lineno,
+                           linenumber="% 8s" % lineno)
 
         r = self.repo
         c1 = r.changectx(node1)
@@ -466,7 +477,7 @@ class hgweb(object):
             def revgen():
                 for i in xrange(cl.count() - 1, 0, -100):
                     l = []
-                    for j in xrange(max(0, i - 100), i):
+                    for j in xrange(max(0, i - 100), i + 1):
                         ctx = self.repo.changectx(j)
                         l.append(ctx)
                     l.reverse()
@@ -596,9 +607,10 @@ class hgweb(object):
             text = '(binary:%s)' % mt
 
         def lines():
-            for l, t in enumerate(text.splitlines(1)):
+            for lineno, t in enumerate(text.splitlines(1)):
                 yield {"line": t,
-                       "linenumber": "% 6d" % (l + 1),
+                       "lineid": "l%d" % (lineno + 1),
+                       "linenumber": "% 6d" % (lineno + 1),
                        "parity": parity.next()}
 
         return tmpl("filerevision",
@@ -623,7 +635,8 @@ class hgweb(object):
 
         def annotate(**map):
             last = None
-            for f, l in fctx.annotate(follow=True):
+            lines = enumerate(fctx.annotate(follow=True, linenumber=True))
+            for lineno, ((f, targetline), l) in lines:
                 fnode = f.filenode()
                 name = self.repo.ui.shortuser(f.user())
 
@@ -635,7 +648,10 @@ class hgweb(object):
                        "rev": f.rev(),
                        "author": name,
                        "file": f.path(),
-                       "line": l}
+                       "targetline": targetline,
+                       "line": l,
+                       "lineid": "l%d" % (lineno + 1),
+                       "linenumber": "% 6d" % (lineno + 1)}
 
         return tmpl("fileannotate",
                     file=f,

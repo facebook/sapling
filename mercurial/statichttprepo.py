@@ -9,14 +9,16 @@
 
 from i18n import _
 import changelog, filelog, httprangereader
-import repo, localrepo, manifest, os, urllib, urllib2, util
+import repo, localrepo, manifest, util
+import urllib, urllib2, errno
 
 class rangereader(httprangereader.httprangereader):
     def read(self, size=None):
         try:
             return httprangereader.httprangereader.read(self, size)
         except urllib2.HTTPError, inst:
-            raise IOError(None, inst)
+            num = inst.code == 404 and errno.ENOENT or None
+            raise IOError(num, inst)
         except urllib2.URLError, inst:
             raise IOError(None, inst.reason[1])
 
@@ -35,11 +37,17 @@ class statichttprepository(localrepo.localrepository):
 
         self.path = path.rstrip('/') + "/.hg"
         self.opener = opener(self.path)
+
         # find requirements
         try:
             requirements = self.opener("requires").read().splitlines()
-        except IOError:
-            requirements = []
+        except IOError, inst:
+            if inst.errno == errno.ENOENT:
+                msg = _("'%s' does not appear to be an hg repository") % path
+                raise repo.RepoError(msg)
+            else:
+                requirements = []
+
         # check them
         for r in requirements:
             if r not in self.supported:

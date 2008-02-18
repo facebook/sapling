@@ -101,6 +101,12 @@ def paritygen(stripecount, offset=0):
             parity = 1 - parity
             count = 0
 
+def countgen(start=0, step=1):
+    """count forever -- useful for line numbers"""
+    while True:
+        yield start
+        start += step
+
 def get_contact(config):
     """Return repo contact information or empty string.
 

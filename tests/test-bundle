@@ -70,7 +70,14 @@ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
 #doesn't work (yet ?)
 #hg -R bundle://../full.hg verify
 hg pull bundle://../full.hg
+echo "====== Rollback empty"
+hg rollback
 cd ..
+echo "====== Log -R bundle:empty+full.hg"
+hg -R bundle:empty+full.hg log --template="{rev} "
+echo ""
+echo "====== Pull full.hg into empty again (using -R; with hook)"
+hg -R empty pull full.hg
 
 echo "====== Create partial clones"
 rm -r empty

@@ -1,6 +1,7 @@
 #!/bin/sh
 
-hg init
+hg init repo
+cd repo
 echo 123 > a
 echo 123 > c
 echo 123 > e
@@ -27,7 +28,16 @@ hg status
 hg revert --no-backup c
 echo %% should show unknown: b
 hg status
-echo %% should show a b c e
+hg add b
+echo %% should show b added
+hg status b
+rm b
+echo %% should show b deleted
+hg status b
+hg revert -v b
+echo %% should not find b
+hg status b
+echo %% should show a c e
 ls
 echo %% should verbosely save backup to e.orig
 echo z > e
@@ -40,19 +50,26 @@ hg revert q
 rm q
 echo %% should say file not found
 hg revert notfound
+touch d
+hg add d
 hg rm a
 hg commit -m "second" -d "1000000 0"
 echo z > z
 hg add z
 hg st
-echo %% should add a, forget z
+echo %% should add a, remove d, forget z
 hg revert --all -r0
-echo %% should forget a
+echo %% should forget a, undelete d
 hg revert --all -rtip
 rm a *.orig
 echo %% should silently add a
 hg revert -r0 a
 hg st a
+hg rm d
+hg st d
+echo %% should silently keep d removed
+hg revert -r0 d
+hg st d
 
 hg update -C
 chmod +x c
@@ -67,6 +84,8 @@ chmod -x c
 hg revert --all
 echo %% should print executable
 test -x c && echo executable
+
+cd ..
 
 echo %% issue 241
 hg init a
@@ -100,3 +119,33 @@ hg mv a newa
 hg revert newa
 hg st a newa
 
+cd ..
+
+hg init ignored
+cd ignored
+echo '^ignored$' > .hgignore
+echo '^ignoreddir$' >> .hgignore
+echo '^removed$' >> .hgignore
+
+mkdir ignoreddir
+touch ignoreddir/file
+touch ignoreddir/removed
+touch ignored
+touch removed
+echo '%% 4 ignored files (we will add/commit everything)'
+hg st -A -X .hgignore
+hg ci -qAm 'add files' ignored ignoreddir/file ignoreddir/removed removed
+
+echo >> ignored
+echo >> ignoreddir/file
+hg rm removed ignoreddir/removed
+echo '%% should revert ignored* and undelete *removed'
+hg revert -a --no-backup
+hg st -mardi
+
+hg up -qC
+echo >> ignored
+hg rm removed
+echo %% should silently revert the named files
+hg revert --no-backup ignored removed
+hg st -mardi

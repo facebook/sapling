@@ -1,10 +1,5 @@
 #!/bin/sh
 
-cleanpath()
-{
-    sed -e "s:/.*\(/test/.*\):...\1:"
-}
-
 echo % commit date test
 hg init test
 cd test
@@ -19,11 +14,12 @@ hg commit -d 'foo bar' -m commit-5
 hg commit -d ' 1 4444' -m commit-6
 hg commit -d '111111111111 0' -m commit-7
 
-echo % partial commit test
+echo % commit added file that has been deleted
 echo bar > bar
 hg add bar
 rm bar
-hg commit -d "1000000 0" -m commit-8 2>&1 | cleanpath
+hg commit -d "1000000 0" -m commit-8
+hg commit -d "1000000 0" -m commit-8-2 bar
 
 hg -q revert -a --no-backup
 
@@ -34,22 +30,22 @@ hg -v commit -d '0 0' -m commit-9 dir
 
 echo > dir.file
 hg add
-hg commit -d '0 0' -m commit-10 dir dir.file 2>&1 | cleanpath
+hg commit -d '0 0' -m commit-10 dir dir.file
 
 echo >> dir/file
 mkdir bleh
 mkdir dir2
 cd bleh
-hg commit -d '0 0' -m commit-11 . 2>&1 | cleanpath
-hg commit -d '0 0' -m commit-12 ../dir ../dir2 2>&1 | cleanpath
+hg commit -d '0 0' -m commit-11 .
+hg commit -d '0 0' -m commit-12 ../dir ../dir2
 hg -v commit -d '0 0' -m commit-13 ../dir
 cd ..
 
-hg commit -d '0 0' -m commit-14 does-not-exist 2>&1 | cleanpath
+hg commit -d '0 0' -m commit-14 does-not-exist
 ln -s foo baz
-hg commit -d '0 0' -m commit-15 baz 2>&1 | cleanpath
+hg commit -d '0 0' -m commit-15 baz
 touch quux
-hg commit -d '0 0' -m commit-16 quux 2>&1 | cleanpath
+hg commit -d '0 0' -m commit-16 quux
 echo >> dir/file
 hg -v commit -d '0 0' -m commit-17 dir/file
 cd ..

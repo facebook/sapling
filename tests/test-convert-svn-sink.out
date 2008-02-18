@@ -260,8 +260,8 @@ adding left-2
 adding right-1
 adding right-2
 3 files updated, 0 files merged, 2 files removed, 0 files unresolved
-warning: conflicts during merge.
 merging b
+warning: conflicts during merge.
 merging b failed!
 2 files updated, 0 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:

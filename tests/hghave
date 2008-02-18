@@ -21,6 +21,9 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     ret = fh.close()
     return (ignorestatus or ret is None) and r.search(s)
 
+def has_baz():
+    return matchoutput('baz --version 2>&1', r'baz Bazaar version')
+
 def has_cvs():
     return matchoutput('cvs --version 2>&1', r'Concurrent Versions System')
 
@@ -85,7 +88,27 @@ def has_svn_bindings():
 def has_symlink():
     return hasattr(os, "symlink")
 
+def has_tla():
+    return matchoutput('tla --version 2>&1', r'The GNU Arch Revision')
+
+def has_unix_permissions():
+    d = tempfile.mkdtemp(prefix=tempprefix, dir=".")
+    try:
+        fname = os.path.join(d, 'foo')
+        for umask in (077, 007, 022):
+            os.umask(umask)
+            f = open(fname, 'w')
+            f.close()
+            mode = os.stat(fname).st_mode
+            os.unlink(fname)
+            if mode & 0777 != ~umask & 0666:
+                return False
+        return True
+    finally:
+        os.rmdir(d)
+
 checks = {
+    "baz": (has_baz, "GNU Arch baz client"),
     "cvs": (has_cvs, "cvs client"),
     "cvsps": (has_cvsps, "cvsps utility"),
     "darcs": (has_darcs, "darcs client"),
@@ -98,6 +121,8 @@ checks = {
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
+    "tla": (has_tla, "GNU Arch tla client"),
+    "unix-permissions": (has_unix_permissions, "unix-style permissions"),
 }
 
 def list_features():

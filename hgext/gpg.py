@@ -203,6 +203,11 @@ def sign(ui, repo, *revs, **opts):
     mygpg = newgpg(ui, **opts)
     sigver = "0"
     sigmessage = ""
+
+    date = opts.get('date')
+    if date:
+        opts['date'] = util.parsedate(date)
+
     if revs:
         nodes = [repo.lookup(n) for n in revs]
     else:

@@ -1,0 +1,50 @@
+# Some default global settings for common merge tools
+
+[merge-tools]
+kdiff3.args=--auto -L1 base --L2 local --L3 other $base $local $other -o $output
+kdiff3.regkey=Software\KDiff3
+kdiff3.regappend=\kdiff3.exe
+kdiff3.fixeol=True
+kdiff3.gui=True
+
+gvimdiff.args=--nofork -d -g -O $local $other $base
+gvimdiff.regkey=Software\Vim\GVim
+gvimdiff.regname=path
+gvimdiff.priority=-9
+
+merge.checkconflicts=True
+merge.priority=-10
+
+gpyfm.gui=True
+
+meld.gui=True
+
+tkdiff.args=$local $other -a $base -o $output
+tkdiff.gui=True
+tkdiff.priority=-8
+
+xxdiff.args=--show-merged-pane --exit-with-merge-status --title1 local --title2 base --title3 other --merged-filename $output --merge $local $base $other
+xxdiff.gui=True
+xxdiff.priority=-8
+
+diffmerge.args=--nosplash --merge --title1=base --title2=local --title3=other $base $local $other
+diffmerge.checkchanged=True
+diffmerge.gui=True
+
+p4merge.args=$base $local $other $output
+p4merge.regkey=Software\Perforce\Environment
+p4merge.regname=P4INSTROOT
+p4merge.regappend=\p4merge.exe
+p4merge.gui=True
+p4merge.priority=-8
+
+tortoisemerge.args=/base: $output /mine:$local /theirs:$other /merged:$output
+tortoisemerge.regkey=Software\TortoiseSVN
+tortoisemerge.gui=True
+
+ecmerge.args=$base $local $other --mode=merge3 --title0=base --title1=local --title2=other --to=$output
+ecmerge.regkey=Software\Elli\xc3\xa9 Computing\Merge
+ecmerge.gui=True
+
+filemerge.args=-left $other -right $local -ancestor $base -merge $output
+filemerge.gui=True

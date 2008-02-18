@@ -34,21 +34,8 @@ a { text-decoration:none; }
 pre { margin: 0; }
 
 .logo {
-  background-color: #333;
-  padding: 4pt;
-  margin: 8pt 0 8pt 8pt;
-  font-family: sans;
-  font-size: 60%;
-  color: white;
   float: right;
   clear: right;
-  text-align: left;
-}
-
-.logo a {
-  font-weight: bold;
-  font-size: 150%;
-  color: #999;
 }
 
 /* Changelog/Filelog entries */

@@ -10,3 +10,31 @@ default                        0:19709c5a4e75 (inactive)
 -------
 c                              5:5ca481e59b8c
 a                              1:dd6b440dd85a
+--- Branch a
+changeset:   1:dd6b440dd85a
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     Adding a branch
+
+---- Branch b
+changeset:   4:22df7444f7c1
+branch:      b
+parent:      2:ac22033332d1
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   3:aee39cd168d0
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     Adding b branch head 1
+
+changeset:   2:ac22033332d1
+branch:      b
+parent:      0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     Adding b branch
+

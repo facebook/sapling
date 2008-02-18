@@ -335,7 +335,7 @@ def pathto(root, n1, n2):
         a.pop()
         b.pop()
     b.reverse()
-    return os.sep.join((['..'] * len(a)) + b)
+    return os.sep.join((['..'] * len(a)) + b) or '.'
 
 def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
@@ -459,6 +459,8 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
             return
         try:
             pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
+            if len(pat) > 20000:
+                raise OverflowError()
             return re.compile(pat).match
         except OverflowError:
             # We're using a Python with a tiny regex engine and we
@@ -895,6 +897,13 @@ def splitpath(path):
     function if need.'''
     return path.split(os.sep)
 
+def gui():
+    '''Are we running in a GUI?'''
+    return os.name == "nt" or os.name == "mac" or os.environ.get("DISPLAY")
+
+def lookup_reg(key, name=None, scope=None):
+    return None
+
 # Platform specific variants
 if os.name == 'nt':
     import msvcrt
@@ -1291,7 +1300,7 @@ def encodedopener(openerfn, fn):
         return openerfn(fn(path), *args, **kw)
     return o
 
-def mktempcopy(name, emptyok=False):
+def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
 
     The permission bits are copied from the original file.
@@ -1312,7 +1321,10 @@ def mktempcopy(name, emptyok=False):
     except OSError, inst:
         if inst.errno != errno.ENOENT:
             raise
-        st_mode = 0666 & ~_umask
+        st_mode = createmode
+        if st_mode is None:
+            st_mode = ~_umask
+        st_mode &= 0666
     os.chmod(temp, st_mode)
     if emptyok:
         return temp
@@ -1343,9 +1355,10 @@ class atomictempfile(posixfile):
     file.  When rename is called, the copy is renamed to the original
     name, making the changes visible.
     """
-    def __init__(self, name, mode):
+    def __init__(self, name, mode, createmode):
         self.__name = name
-        self.temp = mktempcopy(name, emptyok=('w' in mode))
+        self.temp = mktempcopy(name, emptyok=('w' in mode),
+                               createmode=createmode)
         posixfile.__init__(self, self.temp, mode)
 
     def rename(self):
@@ -1360,6 +1373,22 @@ class atomictempfile(posixfile):
             except: pass
             posixfile.close(self)
 
+def makedirs(name, mode=None):
+    """recursive directory creation with parent mode inheritance"""
+    try:
+        os.mkdir(name)
+        if mode is not None:
+            os.chmod(name, mode)
+        return
+    except OSError, err:
+        if err.errno == errno.EEXIST:
+            return
+        if err.errno != errno.ENOENT:
+            raise
+    parent = os.path.abspath(os.path.dirname(name))
+    makedirs(parent, mode)
+    makedirs(name, mode)
+
 class opener(object):
     """Open files relative to a base directory
 
@@ -1372,12 +1401,18 @@ class opener(object):
             self.audit_path = path_auditor(base)
         else:
             self.audit_path = always
+        self.createmode = None
 
     def __getattr__(self, name):
         if name == '_can_symlink':
             self._can_symlink = checklink(self.base)
             return self._can_symlink
         raise AttributeError(name)
+
+    def _fixfilemode(self, name):
+        if self.createmode is None:
+            return
+        os.chmod(name, self.createmode & 0666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False):
         self.audit_path(path)
@@ -1386,6 +1421,7 @@ class opener(object):
         if not text and "b" not in mode:
             mode += "b" # for that other OS
 
+        nlink = -1
         if mode[0] != "r":
             try:
                 nlink = nlinks(f)
@@ -1393,12 +1429,15 @@ class opener(object):
                 nlink = 0
                 d = os.path.dirname(f)
                 if not os.path.isdir(d):
-                    os.makedirs(d)
+                    makedirs(d, self.createmode)
             if atomictemp:
-                return atomictempfile(f, mode)
+                return atomictempfile(f, mode, self.createmode)
             if nlink > 1:
                 rename(mktempcopy(f), f)
-        return posixfile(f, mode)
+        fp = posixfile(f, mode)
+        if nlink == 0:
+            self._fixfilemode(f)
+        return fp
 
     def symlink(self, src, dst):
         self.audit_path(dst)
@@ -1410,7 +1449,7 @@ class opener(object):
 
         dirname = os.path.dirname(linkname)
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            makedirs(dirname, self.createmode)
 
         if self._can_symlink:
             try:
@@ -1422,6 +1461,7 @@ class opener(object):
             f = self(dst, "w")
             f.write(src)
             f.close()
+            self._fixfilemode(dst)
 
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
@@ -1493,6 +1533,10 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True, timezone_fo
         s += timezone_format % (-tz / 3600, ((-tz % 3600) / 60))
     return s
 
+def shortdate(date=None):
+    """turn (timestamp, tzoff) tuple into iso 8631 date."""
+    return datestr(date, format='%Y-%m-%d', timezone=False)
+
 def strdate(string, format, defaults=[]):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
@@ -1528,17 +1572,21 @@ def strdate(string, format, defaults=[]):
         unixtime = localunixtime + offset
     return unixtime, offset
 
-def parsedate(string, formats=None, defaults=None):
-    """parse a localized time string and return a (unixtime, offset) tuple.
+def parsedate(date, formats=None, defaults=None):
+    """parse a localized date/time string and return a (unixtime, offset) tuple.
+
     The date may be a "unixtime offset" string or in one of the specified
-    formats."""
-    if not string:
+    formats. If the date already is a (unixtime, offset) tuple, it is returned.
+    """
+    if not date:
         return 0, 0
+    if type(date) is type((0, 0)) and len(date) == 2:
+        return date
     if not formats:
         formats = defaultdateformats
-    string = string.strip()
+    date = date.strip()
     try:
-        when, offset = map(int, string.split(' '))
+        when, offset = map(int, date.split(' '))
     except ValueError:
         # fill out defaults
         if not defaults:
@@ -1555,13 +1603,13 @@ def parsedate(string, formats=None, defaults=None):
 
         for format in formats:
             try:
-                when, offset = strdate(string, format, defaults)
-            except ValueError:
+                when, offset = strdate(date, format, defaults)
+            except (ValueError, OverflowError):
                 pass
             else:
                 break
         else:
-            raise Abort(_('invalid date: %r ') % string)
+            raise Abort(_('invalid date: %r ') % date)
     # validate explicit (probably user-specified) date and
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
@@ -1656,11 +1704,9 @@ def walkrepos(path):
             raise err
 
     for root, dirs, files in os.walk(path, onerror=errhandler):
-        for d in dirs:
-            if d == '.hg':
-                yield root
-                dirs[:] = []
-                break
+        if '.hg' in dirs:
+            dirs[:] = [] # don't descend further
+            yield root # found a repository
 
 _rcpath = None
 

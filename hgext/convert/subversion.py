@@ -947,7 +947,7 @@ class svn_sink(converter_sink, commandline):
                 os.rename(tempname, wdest)
 
     def dirs_of(self, files):
-        dirs = set()
+        dirs = util.set()
         for f in files:
             if os.path.isdir(self.wjoin(f)):
                 dirs.add(f)
@@ -970,7 +970,8 @@ class svn_sink(converter_sink, commandline):
 
     def tidy_dirs(self, names):
         dirs = list(self.dirs_of(names))
-        dirs.sort(reverse=True)
+        dirs.sort()
+        dirs.reverse()
         deleted = []
         for d in dirs:
             wd = self.wjoin(d)
@@ -991,7 +992,7 @@ class svn_sink(converter_sink, commandline):
                 return self.revid(self.childmap[parent])
             except KeyError:
                 pass
-        entries = set(self.delete)
+        entries = util.set(self.delete)
         files = util.frozenset(files)
         entries.update(self.add_dirs(files.difference(entries)))
         if self.copies:

@@ -103,9 +103,12 @@ class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
     send = _gen_sendfile(keepalive.HTTPConnection)
 
-class basehttphandler(keepalive.HTTPHandler):
+class httphandler(keepalive.HTTPHandler):
     def http_open(self, req):
         return self.do_open(httpconnection, req)
+
+    def __del__(self):
+        self.close_all()
 
 has_https = hasattr(urllib2, 'HTTPSHandler')
 if has_https:
@@ -114,12 +117,9 @@ if has_https:
         # must be able to send big bundle as stream.
         send = _gen_sendfile(httplib.HTTPSConnection)
 
-    class httphandler(basehttphandler, urllib2.HTTPSHandler):
+    class httpshandler(keepalive.KeepAliveHandler, urllib2.HTTPSHandler):
         def https_open(self, req):
             return self.do_open(httpsconnection, req)
-else:
-    class httphandler(basehttphandler):
-        pass
 
 # In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
 # it doesn't know about the auth type requested.  This can happen if
@@ -203,8 +203,9 @@ class httprepository(remoterepository):
 
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         # XXX proxyauthinfo = None
-        self.handler = httphandler()
-        handlers = [self.handler]
+        handlers = [httphandler()]
+        if has_https:
+            handlers.append(httpshandler())
 
         if proxyurl:
             # proxy can be proper url or host[:port]
@@ -269,11 +270,6 @@ class httprepository(remoterepository):
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
-
-    def __del__(self):
-        if self.handler:
-            self.handler.close_all()
-            self.handler = None
 
     def url(self):
         return self.path

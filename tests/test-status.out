@@ -99,7 +99,6 @@ never-existed: No such file or directory
 A added
 R removed
 ! deleted
-? ignored
 ? unknown
 hg status -C:
 A added
@@ -118,3 +117,6 @@ R removed
 I ignored
 C .hgignore
 C modified
+hg status ignoreddir/file:
+hg status -i ignoreddir/file:
+I ignoreddir/file

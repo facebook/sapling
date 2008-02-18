@@ -32,3 +32,11 @@ hg co
 
 echo %% uncompress our new working dir copy
 gunzip < a.gz
+
+echo %% check hg cat operation
+hg cat a.gz
+hg cat --decode a.gz | gunzip
+mkdir subdir
+cd subdir
+hg -R .. cat ../a.gz
+hg -R .. cat --decode ../a.gz | gunzip

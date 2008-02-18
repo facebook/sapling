@@ -59,12 +59,19 @@ adding b/z
 % qinit -c
 A .hgignore
 A series
+% qnew should refuse bad patch names
+abort: "series" cannot be used as the name of a patch
+abort: "status" cannot be used as the name of a patch
+abort: "guards" cannot be used as the name of a patch
+abort: ".hgignore" cannot be used as the name of a patch
 % qnew implies add
 A .hgignore
 A series
 A test.patch
 % qinit; qinit -c
   .hgignore:
+^\.hg
+^\.mq
 syntax: glob
 status
 guards
@@ -281,6 +288,18 @@ Errors during apply, please fix and refresh bar
 0 qparent
 1 qbase foo
 2 qtip bar tip
+% bad node in status
+Now at: foo
+changeset:   0:cb9a9f314b8b
+mq status file refers to unknown node
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     a
+
+mq status file refers to unknown node
+default                        0:cb9a9f314b8b
+abort: working directory revision is not qtip
 new file
 
 diff --git a/new b/new

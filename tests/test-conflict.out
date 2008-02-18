@@ -1,15 +1,16 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-warning: conflicts during merge.
 merging a
+warning: conflicts during merge.
 merging a failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
 There are unresolved merges, you can redo the full merge using:
   hg update -C 2
   hg merge 1
 e7fe8eb3e180+0d24b7662d3e+ tip
-<<<<<<< my
+<<<<<<< local
 something else
 =======
 something
 >>>>>>> other
 M a
+? a.orig

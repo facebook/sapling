@@ -124,6 +124,19 @@ adding manifests
 adding file changes
 added 9 changesets with 7 changes to 4 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
+====== Rollback empty
+rolling back last transaction
+====== Log -R bundle:empty+full.hg
+8 7 6 5 4 3 2 1 0 
+====== Pull full.hg into empty again (using -R; with hook)
+changegroup hook: HG_NODE=5649c9d34dd87d0ecb5fd39672128376e83b22e1 HG_SOURCE=pull HG_URL=bundle:empty+full.hg 
+pulling from full.hg
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 9 changesets with 7 changes to 4 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
 ====== Create partial clones
 requesting all changes
 adding changesets

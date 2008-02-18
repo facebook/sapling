@@ -71,7 +71,7 @@ class convert_cvs(converter_source):
                     elif l.startswith("Ancestor branch"):
                         ancestor = l[17:-1]
                         # figure out the parent later
-                        self.parent[id] = None
+                        self.parent[id] = self.lastbranch[ancestor]
                     elif l.startswith("Author"):
                         author = self.recode(l[8:-1])
                     elif l.startswith("Tag:") or l.startswith("Tags:"):
@@ -101,13 +101,14 @@ class convert_cvs(converter_source):
                             p = []
                         if branch == "HEAD":
                             branch = ""
-                        if branch and p[0] == None:
+                        if branch:
                             latest = None
                             # the last changeset that contains a base
                             # file is our parent
                             for r in oldrevs:
-                                latest = max(filerevids[r], latest)
-                            p = [latest]
+                                latest = max(filerevids.get(r, None), latest)
+                            if latest:
+                                p = [latest]
 
                         # add current commit to set
                         c = commit(author=author, date=date, parents=p,

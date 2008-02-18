@@ -68,8 +68,21 @@ class localrepository(repo.repository):
             self.encodefn = lambda x: x
             self.decodefn = lambda x: x
             self.spath = self.path
-        self.sopener = util.encodedopener(util.opener(self.spath),
-                                          self.encodefn)
+
+        try:
+            # files in .hg/ will be created using this mode
+            mode = os.stat(self.spath).st_mode
+            # avoid some useless chmods
+            if (0777 & ~util._umask) == (0777 & mode):
+                mode = None
+        except OSError:
+            mode = None
+
+        self._createmode = mode
+        self.opener.createmode = mode
+        sopener = util.opener(self.spath)
+        sopener.createmode = mode
+        self.sopener = util.encodedopener(sopener, self.encodefn)
 
         self.ui = ui.ui(parentui=parentui)
         try:
@@ -81,6 +94,8 @@ class localrepository(repo.repository):
         self.tagscache = None
         self._tagstypecache = None
         self.branchcache = None
+        self._ubranchcache = None  # UTF-8 version of branchcache
+        self._branchcachetip = None
         self.nodetagscache = None
         self.filterpats = {}
         self._datafilters = {}
@@ -120,6 +135,7 @@ class localrepository(repo.repository):
         self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
 
         def writetag(fp, name, munge, prevtags):
+            fp.seek(0, 2)
             if prevtags and prevtags[-1] != '\n':
                 fp.write('\n')
             fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
@@ -186,6 +202,7 @@ class localrepository(repo.repository):
 
         date: date tuple to use if committing'''
 
+        date = util.parsedate(date)
         for x in self.status()[:5]:
             if '.hgtags' in x:
                 raise util.Abort(_('working copy of .hgtags is changed '
@@ -330,9 +347,7 @@ class localrepository(repo.repository):
                 self.nodetagscache.setdefault(n, []).append(t)
         return self.nodetagscache.get(node, [])
 
-    def _branchtags(self):
-        partial, last, lrev = self._readbranchcache()
-
+    def _branchtags(self, partial, lrev):
         tiprev = self.changelog.count() - 1
         if lrev != tiprev:
             self._updatebranchcache(partial, lrev+1, tiprev+1)
@@ -341,16 +356,29 @@ class localrepository(repo.repository):
         return partial
 
     def branchtags(self):
-        if self.branchcache is not None:
+        tip = self.changelog.tip()
+        if self.branchcache is not None and self._branchcachetip == tip:
             return self.branchcache
 
-        self.branchcache = {} # avoid recursion in changectx
-        partial = self._branchtags()
+        oldtip = self._branchcachetip
+        self._branchcachetip = tip
+        if self.branchcache is None:
+            self.branchcache = {} # avoid recursion in changectx
+        else:
+            self.branchcache.clear() # keep using the same dict
+        if oldtip is None or oldtip not in self.changelog.nodemap:
+            partial, last, lrev = self._readbranchcache()
+        else:
+            lrev = self.changelog.rev(oldtip)
+            partial = self._ubranchcache
+
+        self._branchtags(partial, lrev)
 
         # the branch cache is stored on disk as UTF-8, but in the local
         # charset internally
         for k, v in partial.items():
             self.branchcache[util.tolocal(k)] = v
+        self._ubranchcache = partial
         return self.branchcache
 
     def _readbranchcache(self):
@@ -368,7 +396,7 @@ class localrepository(repo.repository):
             if not (lrev < self.changelog.count() and
                     self.changelog.node(lrev) == last): # sanity check
                 # invalidate the cache
-                raise ValueError('Invalid branch cache: unknown tip')
+                raise ValueError('invalidating branch cache (tip differs)')
             for l in lines:
                 if not l: continue
                 node, label = l.split(" ", 1)
@@ -487,9 +515,11 @@ class localrepository(repo.repository):
             for pat, cmd in self.ui.configitems(filter):
                 mf = util.matcher(self.root, "", [pat], [], [])[1]
                 fn = None
+                params = cmd
                 for name, filterfn in self._datafilters.iteritems():
                     if cmd.startswith(name): 
                         fn = filterfn
+                        params = cmd[len(name):].lstrip()
                         break
                 if not fn:
                     fn = lambda s, c, **kwargs: util.filter(s, c)
@@ -497,7 +527,7 @@ class localrepository(repo.repository):
                 if not inspect.getargspec(fn)[2]:
                     oldfn = fn
                     fn = lambda s, c, **kwargs: oldfn(s, c)
-                l.append((mf, fn, cmd))
+                l.append((mf, fn, params))
             self.filterpats[filter] = l
 
         for mf, fn, cmd in self.filterpats[filter]:
@@ -550,8 +580,9 @@ class localrepository(repo.repository):
                    (self.join("journal.dirstate"), self.join("undo.dirstate")),
                    (self.join("journal.branch"), self.join("undo.branch"))]
         tr = transaction.transaction(self.ui.warn, self.sopener,
-                                       self.sjoin("journal"),
-                                       aftertrans(renames))
+                                     self.sjoin("journal"),
+                                     aftertrans(renames),
+                                     self._createmode)
         self._transref = weakref.ref(tr)
         return tr
 
@@ -578,8 +609,13 @@ class localrepository(repo.repository):
                 self.ui.status(_("rolling back last transaction\n"))
                 transaction.rollback(self.sopener, self.sjoin("undo"))
                 util.rename(self.join("undo.dirstate"), self.join("dirstate"))
-                branch = self.opener("undo.branch").read()
-                self.dirstate.setbranch(branch)
+                try:
+                    branch = self.opener("undo.branch").read()
+                    self.dirstate.setbranch(branch)
+                except IOError:
+                    self.ui.warn(_("Named branch could not be reset, "
+                                   "current branch still is: %s\n")
+                                 % util.tolocal(self.dirstate.branch()))
                 self.invalidate()
                 self.dirstate.invalidate()
             else:
@@ -594,6 +630,9 @@ class localrepository(repo.repository):
         self.tagscache = None
         self._tagstypecache = None
         self.nodetagscache = None
+        self.branchcache = None
+        self._ubranchcache = None
+        self._branchcachetip = None
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
@@ -860,8 +899,8 @@ class localrepository(repo.repository):
                       parent2=xp2)
             tr.close()
 
-            if self.branchcache and "branch" in extra:
-                self.branchcache[util.tolocal(extra["branch"])] = n
+            if self.branchcache:
+                self.branchtags()
 
             if use_dirstate or update_dirstate:
                 self.dirstate.setparents(n)
@@ -1484,7 +1523,7 @@ class localrepository(repo.repository):
                 self.ui.warn(_("abort: push creates new remote branches!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
-                return None, 1
+                return None, 0
             elif inc:
                 self.ui.warn(_("note: unsynced remote changes!\n"))
 
@@ -1981,6 +2020,9 @@ class localrepository(repo.repository):
             del tr
 
         if changesets > 0:
+            # forcefully update the on-disk branch cache
+            self.ui.debug(_("updating the branch cache\n"))
+            self.branchtags()
             self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
                       source=srctype, url=url)
 

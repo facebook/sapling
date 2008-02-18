@@ -1115,6 +1115,9 @@ def walkchangerevs(ui, repo, pats, change, opts):
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
+    date = opts.get('date')
+    if date:
+        opts['date'] = util.parsedate(date)
     message = logmessage(opts)
 
     # extract addremove carefully -- this function can be called from a command
@@ -1133,10 +1136,11 @@ def commit(ui, repo, commitfunc, pats, opts):
                 continue
             if f not in files:
                 rf = repo.wjoin(f)
+                rel = repo.pathto(f)
                 try:
                     mode = os.lstat(rf)[stat.ST_MODE]
                 except OSError:
-                    raise util.Abort(_("file %s not found!") % rf)
+                    raise util.Abort(_("file %s not found!") % rel)
                 if stat.S_ISDIR(mode):
                     name = f + '/'
                     if slist is None:
@@ -1145,12 +1149,12 @@ def commit(ui, repo, commitfunc, pats, opts):
                     i = bisect.bisect(slist, name)
                     if i >= len(slist) or not slist[i].startswith(name):
                         raise util.Abort(_("no match under directory %s!")
-                                         % rf)
+                                         % rel)
                 elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
                     raise util.Abort(_("can't commit %s: "
-                                       "unsupported file type!") % rf)
+                                       "unsupported file type!") % rel)
                 elif f not in repo.dirstate:
-                    raise util.Abort(_("file %s not tracked!") % rf)
+                    raise util.Abort(_("file %s not tracked!") % rel)
     else:
         files = []
     try:

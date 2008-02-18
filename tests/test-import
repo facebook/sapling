@@ -125,6 +125,18 @@ python mkmsg2.py | hg --cwd b import -
 hg --cwd b tip --template '{desc}\n'
 rm -r b
 
+# We weren't backing up the correct dirstate file when importing many patches
+# (issue963)
+echo '% import patch1 patch2; rollback'
+echo line 3 >> a/a
+hg --cwd a ci -m'third change'
+hg --cwd a export -o '../patch%R' 1 2
+hg clone -qr0 a b
+hg --cwd b parents --template 'parent: #rev#\n'
+hg --cwd b import ../patch1 ../patch2
+hg --cwd b rollback
+hg --cwd b parents --template 'parent: #rev#\n'
+rm -r b
 
 # bug non regression test
 # importing a patch in a subdirectory failed at the commit stage

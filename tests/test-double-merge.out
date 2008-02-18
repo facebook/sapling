@@ -10,10 +10,14 @@ resolving manifests
  foo: versions differ -> m
  foo: remote copied to bar -> m
 copying foo to bar
+picked tool 'internal:merge' for foo (binary False symlink False)
 merging foo and bar
 my foo@2092631ce82b+ other bar@7731dad1c2b9 ancestor foo@310fd17130da
+ premerge successful
+picked tool 'internal:merge' for foo (binary False symlink False)
 merging foo
 my foo@2092631ce82b+ other foo@7731dad1c2b9 ancestor foo@310fd17130da
+ premerge successful
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 -- foo --

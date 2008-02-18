@@ -233,6 +233,82 @@ format::
     you to store longer filenames in some situations at the expense of
     compatibility.
 
+merge-patterns::
+  This section specifies merge tools to associate with particular file
+  patterns. Tools matched here will take precedence over the default
+  merge tool. Patterns are globs by default, rooted at the repository root.
+
+  Example:
+
+    [merge-patterns]
+    **.c = kdiff3
+    **.jpg = myimgmerge
+
+merge-tools::
+  This section configures external merge tools to use for file-level
+  merges.
+
+  Example ~/.hgrc:
+
+    [merge-tools]
+    # Override stock tool location
+    kdiff3.executable = ~/bin/kdiff3
+    # Specify command line
+    kdiff3.args = $base $local $other -o $output
+    # Give higher priority
+    kdiff3.priority = 1
+
+    # Define new tool
+    myHtmlTool.args = -m $local $other $base $output
+    myHtmlTool.regkey = Software\FooSoftware\HtmlMerge
+    myHtmlTool.priority = 1
+
+  Supported arguments:
+  priority;;
+    The priority in which to evaluate this tool.
+    Default: 0.
+  executable;;
+    Either just the name of the executable or its pathname.
+    Default: the tool name.
+  args;;
+    The arguments to pass to the tool executable. You can refer to the files
+    being merged as well as the output file through these variables: $base,
+    $local, $other, $output.
+    Default: $local $base $other
+  premerge;;
+    Attempt to run internal non-interactive 3-way merge tool before
+    launching external tool.
+    Default: True
+  binary;;
+    This tool can merge binary files.  Defaults to False, unless tool
+    was selected by file pattern match.
+  symlink;;
+    This tool can merge symlinks.  Defaults to False, even if tool was
+    selected by file pattern match.
+  checkconflicts;;
+    Check whether there are conflicts even though the tool reported
+    success.
+    Default: False
+  checkchanged;;
+    Check whether outputs were written even though the tool reported
+    success.
+    Default: False
+  fixeol;;
+    Attempt to fix up EOL changes caused by the merge tool.
+    Default: False
+  gui:;
+    This tool requires a graphical interface to run. Default: False
+  regkey;;
+    Windows registry key which describes install location of this tool.
+    Mercurial will search for this key first under HKEY_CURRENT_USER and
+    then under HKEY_LOCAL_MACHINE.  Default: None
+  regname;;
+    Name of value to read from specified registry key.  Defaults to the
+    unnamed (default) value.
+  regappend;;
+    String to append to the value read from the registry, typically the
+    executable name of the tool.  Default: None
+
 hooks::
   Commands or Python functions that get automatically executed by
   various actions such as starting or finishing a commit. Multiple
@@ -453,7 +529,18 @@ ui::
     Template string for commands that print changesets.
   merge;;
     The conflict resolution program to use during a manual merge.
-    Default is "hgmerge".
+    There are some internal tools available:
+
+      internal:local;;
+        keep the local version
+      internal:other;;
+        use the other version
+      internal:merge;;
+        use the internal non-interactive merge tool
+      internal:fail;;
+        fail to merge
+
+    See the merge-tools section for more information on configuring tools.
   patch;;
     command to use to apply patches. Look for 'gpatch' or 'patch' in PATH if
     unset.

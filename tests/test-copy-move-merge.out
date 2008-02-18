@@ -14,11 +14,15 @@ resolving manifests
  a: remote moved to b -> m
 copying a to b
 copying a to c
+picked tool 'internal:merge' for a (binary False symlink False)
 merging a and b
 my a@fb3948d97f07+ other b@40da226db0f0 ancestor a@583c7b748052
+ premerge successful
 removing a
+picked tool 'internal:merge' for a (binary False symlink False)
 merging a and c
 my a@fb3948d97f07+ other c@40da226db0f0 ancestor a@583c7b748052
+ premerge successful
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 -- b --

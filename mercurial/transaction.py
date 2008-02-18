@@ -15,7 +15,7 @@ from i18n import _
 import os
 
 class transaction(object):
-    def __init__(self, report, opener, journal, after=None):
+    def __init__(self, report, opener, journal, after=None, createmode=None):
         self.journal = None
 
         self.count = 1
@@ -27,6 +27,8 @@ class transaction(object):
         self.journal = journal
 
         self.file = open(self.journal, "w")
+        if createmode is not None:
+            os.chmod(self.journal, createmode & 0666)
 
     def __del__(self):
         if self.journal:
