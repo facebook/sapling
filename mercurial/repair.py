@@ -9,18 +9,6 @@
 import changegroup, os
 from node import *
 
-def _limitheads(cl, stoprev):
-    """return the list of all revs >= stoprev that have no children"""
-    seen = {}
-    heads = []
-
-    for r in xrange(cl.count() - 1, stoprev - 1, -1):
-        if r not in seen:
-            heads.append(r)
-        for p in cl.parentrevs(r):
-            seen[p] = 1
-    return heads
-
 def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     """create a bundle with the specified revisions as a backup"""
     cg = repo.changegroupsubset(bases, heads, 'strip', extranodes)
@@ -87,42 +75,39 @@ def strip(ui, repo, node, backup="all"):
     pp = cl.parents(node)
     striprev = cl.rev(node)
 
-    # save is a list of all the branches we are truncating away
-    # that we actually want to keep.  changegroup will be used
-    # to preserve them and add them back after the truncate
-    saveheads = []
-    savebases = {}
+    # Some revisions with rev > striprev may not be descendants of striprev.
+    # We have to find these revisions and put them in a bundle, so that
+    # we can restore them after the truncations.
+    # To create the bundle we use repo.changegroupsubset which requires
+    # the list of heads and bases of the set of interesting revisions.
+    # (head = revision in the set that has no descendant in the set;
+    #  base = revision in the set that has no ancestor in the set)
+    tostrip = {striprev: 1}
+    saveheads = {}
+    savebases = []
+    for r in xrange(striprev + 1, cl.count()):
+        parents = cl.parentrevs(r)
+        if parents[0] in tostrip or parents[1] in tostrip:
+            # r is a descendant of striprev
+            tostrip[r] = 1
+            # if this is a merge and one of the parents does not descend
+            # from striprev, mark that parent as a savehead.
+            if parents[1] != nullrev:
+                for p in parents:
+                    if p not in tostrip and p > striprev:
+                        saveheads[p] = 1
+        else:
+            # if no parents of this revision will be stripped, mark it as
+            # a savebase
+            if parents[0] < striprev and parents[1] < striprev:
+                savebases.append(cl.node(r))
 
-    heads = [cl.node(r) for r in _limitheads(cl, striprev)]
-    seen = {}
+            for p in parents:
+                if p in saveheads:
+                    del saveheads[p]
+            saveheads[r] = 1
 
-    # search through all the heads, finding those where the revision
-    # we want to strip away is an ancestor.  Also look for merges
-    # that might be turned into new heads by the strip.
-    while heads:
-        h = heads.pop()
-        n = h
-        while True:
-            seen[n] = 1
-            pp = cl.parents(n)
-            if pp[1] != nullid:
-                for p in pp:
-                    if cl.rev(p) > striprev and p not in seen:
-                        heads.append(p)
-            if pp[0] == nullid:
-                break
-            if cl.rev(pp[0]) < striprev:
-                break
-            n = pp[0]
-            if n == node:
-                break
-        r = cl.reachable(h, node)
-        if node not in r:
-            saveheads.append(h)
-            for x in r:
-                if cl.rev(x) > striprev:
-                    savebases[x] = 1
-
+    saveheads = [cl.node(r) for r in saveheads]
     files = _collectfiles(repo, striprev)
 
     extranodes = _collectextranodes(repo, files, striprev)
@@ -131,7 +116,7 @@ def strip(ui, repo, node, backup="all"):
     if backup == "all":
         _bundle(repo, [node], cl.heads(), node, 'backup')
     if saveheads or extranodes:
-        chgrpfile = _bundle(repo, savebases.keys(), saveheads, node, 'temp',
+        chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',
                             extranodes)
 
     cl.strip(striprev)
