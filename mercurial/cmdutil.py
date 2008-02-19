@@ -967,7 +967,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
     if follow:
         defrange = '%s:0' % repo.changectx().rev()
     else:
-        defrange = 'tip:0'
+        defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
     wanted = {}
     slowpath = anypats or opts.get('removed')
