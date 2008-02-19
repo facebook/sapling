@@ -67,6 +67,17 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     subdirectory into the root of the repository, use '.' as the path to
     rename to.
 
+    The splicemap is a file that allows insertion of synthetic
+    history, letting you specify the parents of a revision.  This is
+    useful if you want to e.g. give a Subversion merge two parents, or
+    graft two disconnected series of history together.  Each entry
+    contains a key, followed by a space, followed by one or two
+    values, separated by spaces.  The key is the revision ID in the
+    source revision control system whose parents should be modified
+    (same format as a key in .hg/shamap).  The values are the revision
+    IDs (in either the source or destination revision control system)
+    that should be used as the new parents for that node.
+
     Back end options:
 
     --config convert.hg.clonebranches=False   (boolean)
@@ -100,6 +111,7 @@ cmdtable = {
           ('', 'filemap', '', 'remap file names using contents of file'),
           ('r', 'rev', '', 'import up to target revision REV'),
           ('s', 'source-type', '', 'source repository type'),
+          ('', 'splicemap', '', 'splice synthesized history into place'),
           ('', 'datesort', None, 'try to sort changesets by date')],
          'hg convert [OPTION]... SOURCE [DEST [MAPFILE]]'),
     "debugsvnlog":

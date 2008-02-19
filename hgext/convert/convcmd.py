@@ -84,7 +84,7 @@ class converter(object):
             self.readauthormap(opts.get('authors'))
             self.authorfile = self.dest.authorfile()
 
-        self.splicemap = mapfile(ui, ui.config('convert', 'splicemap'))
+        self.splicemap = mapfile(ui, opts.get('splicemap'))
 
     def walktree(self, heads):
         '''Return a mapping that identifies the uncommitted parents of every
@@ -252,9 +252,10 @@ class converter(object):
                         self.dest.copyfile(copyf, f)
 
         try:
-            parents = [self.splicemap[rev]]
-            self.ui.debug('spliced in %s as parents of %s\n' %
-                          (parents, rev))
+            parents = self.splicemap[rev].replace(',', ' ').split()
+            self.ui.status('spliced in %s as parents of %s\n' %
+                           (parents, rev))
+            parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
         newnode = self.dest.putcommit(filenames, parents, commit)
