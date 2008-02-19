@@ -933,19 +933,19 @@ class revlog(object):
             raise RevlogError(_('incompatible revision flag %x') %
                               (self.index[rev][0] & 0xFFFF))
 
-        if self._inline:
-            # we probably have the whole chunk cached
-            df = None
-        else:
-            df = self.opener(self.datafile)
+        df = None
 
         # do we have useful data cached?
         if self._cache and self._cache[1] >= base and self._cache[1] < rev:
             base = self._cache[1]
             text = str(self._cache[2])
             self._loadindex(base, rev + 1)
+            if not self._inline and rev > base + 1:
+                df = self.opener(self.datafile)
         else:
             self._loadindex(base, rev + 1)
+            if not self._inline and rev > base:
+                df = self.opener(self.datafile)
             text = self.chunk(base, df=df)
 
         bins = [self.chunk(r, df) for r in xrange(base + 1, rev + 1)]
