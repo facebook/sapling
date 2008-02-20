@@ -255,7 +255,8 @@ def user_rcpath_win32():
         appdir = shell.SHGetPathFromIDList(
             shell.SHGetSpecialFolderLocation(0, shellcon.CSIDL_APPDATA))
         userdir = os.path.dirname(appdir)
-    return os.path.join(userdir, 'mercurial.ini')
+    return [os.path.join(userdir, 'mercurial.ini'),
+            os.path.join(userdir, '.hgrc')]
 
 class posixfile_nt(object):
     '''file object with posix-like semantics.  on windows, normal
