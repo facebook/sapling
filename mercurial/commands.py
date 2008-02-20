@@ -1072,19 +1072,19 @@ def grep(ui, repo, pattern, *pats, **opts):
         if st == 'window':
             matches.clear()
         elif st == 'add':
-            mf = repo.changectx(rev).manifest()
+            ctx = repo.changectx(rev)
             matches[rev] = {}
             for fn in fns:
                 if fn in skip:
                     continue
                 try:
-                    grepbody(fn, rev, getfile(fn).read(mf[fn]))
+                    grepbody(fn, rev, getfile(fn).read(ctx.filenode(fn)))
                     fstate.setdefault(fn, [])
                     if follow:
-                        copied = getfile(fn).renamed(mf[fn])
+                        copied = getfile(fn).renamed(ctx.filenode(fn))
                         if copied:
                             copies.setdefault(rev, {})[fn] = copied[0]
-                except KeyError:
+                except revlog.LookupError:
                     pass
         elif st == 'iter':
             states = matches[rev].items()

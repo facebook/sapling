@@ -199,35 +199,38 @@ class hgweb(object):
                         req.form['node'] = [fn[:-len(ext)]]
                         req.form['type'] = [type_]
 
-        # actually process the request
+        # process this if it's a protocol request
+
+        cmd = req.form.get('cmd', [''])[0]
+        if cmd in protocol.__all__:
+            method = getattr(protocol, cmd)
+            method(self, req)
+            return
+
+        # process the web interface request
 
         try:
 
-            cmd = req.form.get('cmd', [''])[0]
-            if cmd in protocol.__all__:
-                method = getattr(protocol, cmd)
-                method(self, req)
+            tmpl = self.templater(req)
+            ctype = tmpl('mimetype', encoding=self.encoding)
+            ctype = templater.stringify(ctype)
+
+            if cmd == '':
+                req.form['cmd'] = [tmpl.cache['default']]
+                cmd = req.form['cmd'][0]
+
+            if cmd not in webcommands.__all__:
+                msg = 'No such method: %s' % cmd
+                raise ErrorResponse(HTTP_BAD_REQUEST, msg)
+            elif cmd == 'file' and 'raw' in req.form.get('style', []):
+                self.ctype = ctype
+                content = webcommands.rawfile(self, req, tmpl)
             else:
-                tmpl = self.templater(req)
-                ctype = tmpl('mimetype', encoding=self.encoding)
-                ctype = templater.stringify(ctype)
-                
-                if cmd == '':
-                    req.form['cmd'] = [tmpl.cache['default']]
-                    cmd = req.form['cmd'][0]
+                content = getattr(webcommands, cmd)(self, req, tmpl)
+                req.respond(HTTP_OK, ctype)
 
-                if cmd not in webcommands.__all__:
-                    msg = 'No such method: %s' % cmd
-                    raise ErrorResponse(HTTP_BAD_REQUEST, msg)
-                elif cmd == 'file' and 'raw' in req.form.get('style', []):
-                    self.ctype = ctype
-                    content = webcommands.rawfile(self, req, tmpl)
-                else:
-                    content = getattr(webcommands, cmd)(self, req, tmpl)
-                    req.respond(HTTP_OK, ctype)
-
-                req.write(content)
-                del tmpl
+            req.write(content)
+            del tmpl
 
         except revlog.LookupError, err:
             req.respond(HTTP_NOT_FOUND, ctype)
