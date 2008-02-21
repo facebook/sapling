@@ -6,6 +6,8 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 4 files, 9 changesets, 7 total revisions
+====== Bundle --all
+9 changesets found
 ====== Bundle test to full.hg
 searching for changes
 9 changesets found

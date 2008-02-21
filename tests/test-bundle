@@ -32,6 +32,8 @@ hg verify
 cd ..
 hg init empty
 
+echo "====== Bundle --all"
+hg -R test bundle --all all.hg
 echo "====== Bundle test to full.hg"
 hg -R test bundle full.hg empty
 echo "====== Unbundle full.hg in test"

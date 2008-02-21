@@ -398,9 +398,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
     Generate a compressed changegroup file collecting changesets not
     found in the other repository.
 
-    If no destination repository is specified the destination is assumed
-    to have all the nodes specified by one or more --base parameters.
-    To create a bundle containing all changesets, use --base null.
+    If no destination repository is specified the destination is
+    assumed to have all the nodes specified by one or more --base
+    parameters.  To create a bundle containing all changesets, use
+    --all (or --base null).
 
     The bundle file can then be transferred using conventional means and
     applied to another repository with the unbundle or pull command.
@@ -413,7 +414,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
     revs = opts.get('rev') or None
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
-    base = opts.get('base')
+    if opts.get('all'):
+        base = ['null']
+    else:
+        base = opts.get('base')
     if base:
         if dest:
             raise util.Abort(_("--base is incompatible with specifiying "
@@ -2812,8 +2816,10 @@ table = {
            _('a changeset you would like to bundle')),
           ('', 'base', [],
            _('a base changeset to specify instead of a destination')),
+          ('a', 'all', None,
+           _('bundle all changesets in the repository')),
          ] + remoteopts,
-         _('hg bundle [-f] [-r REV]... [--base REV]... FILE [DEST]')),
+         _('hg bundle [-f] [-a] [-r REV]... [--base REV]... FILE [DEST]')),
     "cat":
         (cat,
          [('o', 'output', '', _('print output to file with formatted name')),
