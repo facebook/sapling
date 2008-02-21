@@ -88,8 +88,8 @@ import re, shutil, tempfile, time
 commands.optionalrepo += ' kwdemo'
 
 # hg commands that do not act on keywords
-nokwcommands = ('add addremove bundle copy export grep identify incoming init'
-                ' log outgoing push remove rename rollback tip'
+nokwcommands = ('add addremove bundle copy export grep incoming init'
+                ' log outgoing push rename rollback tip'
                 ' convert email glog')
 
 # hg commands that trigger expansion only when writing to working dir,

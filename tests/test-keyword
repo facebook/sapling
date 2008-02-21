@@ -67,6 +67,7 @@ hg --debug commit -mabsym -d '0 0' -u 'User Name <user@example.com>'
 echo % status
 hg status
 echo % identify
+hg debugrebuildstate
 hg --quiet identify
 echo % cat
 cat a b
@@ -216,6 +217,7 @@ hg cat sym a b
 echo
 
 echo % remove
+hg debugrebuildstate
 hg remove a
 hg --debug commit -m rma
 echo % status
