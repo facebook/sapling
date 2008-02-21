@@ -101,14 +101,7 @@ def changegroupsubset(web, req):
     req.write(z.flush())
 
 def capabilities(web, req):
-    caps = ['lookup', 'changegroupsubset']
-    if web.configbool('server', 'uncompressed'):
-        caps.append('stream=%d' % web.repo.changelog.version)
-    # XXX: make configurable and/or share code with do_unbundle:
-    unbundleversions = ['HG10GZ', 'HG10BZ', 'HG10UN']
-    if unbundleversions:
-        caps.append('unbundle=%s' % ','.join(unbundleversions))
-    resp = ' '.join(caps)
+    resp = ' '.join(web.capabilities())
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 

@@ -53,6 +53,9 @@ bundletypes = {
     "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),
 }
 
+# hgweb uses this list to communicate it's preferred type
+bundlepriority = ['HG10GZ', 'HG10BZ', 'HG10UN']
+
 def writebundle(cg, filename, bundletype):
     """Write a bundle file and return its filename.
 
