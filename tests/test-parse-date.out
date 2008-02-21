@@ -1,6 +1,6 @@
 reverting a
 changeset 3:107ce1ee2b43 backs out changeset 1:25a1420a55f8
-merging with changeset 2:e6c3abc120e7
+merging with changeset 3:107ce1ee2b43
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 abort: invalid date: 'should fail' 

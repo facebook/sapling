@@ -59,9 +59,10 @@ hg init merge
 cd merge
 
 echo line 1 > a
-hg commit -d '0 0' -A -m a
-
 echo line 2 >> a
+hg commit -d '0 0' -A -m a
+# remove line 1
+echo line 2 > a
 hg commit -d '1 0' -m b
 
 echo line 3 >> a
@@ -69,6 +70,7 @@ hg commit -d '2 0' -m c
 
 hg backout --merge -d '3 0' 1
 hg commit -d '4 0' -m d
+# check line 1 is back
 cat a
 
 echo '# backout should not back out subsequent changesets'
@@ -81,6 +83,8 @@ hg commit -d '1 0' -m b
 echo 1 > b
 hg commit -d '2 0' -A -m c
 hg backout -d '3 0' 1
+hg locate b
+hg update -C tip
 hg locate b
 
 cd ..

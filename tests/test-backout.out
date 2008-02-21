@@ -25,12 +25,14 @@ abort: cannot back out change on a different branch
 # backout with merge
 adding a
 reverting a
-changeset 3:3eb045e364a4 backs out changeset 1:314f55b1bf23
-merging with changeset 2:b66ea5b77abb
+changeset 3:26b8ccb9ad91 backs out changeset 1:5a50a024c182
+merging with changeset 3:26b8ccb9ad91
 merging a
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 line 1
+line 2
+line 3
 # backout should not back out subsequent changesets
 adding a
 adding b
@@ -38,6 +40,8 @@ reverting a
 changeset 3:3202beb76721 backs out changeset 1:22bca4c721e5
 the backout changeset is a new head - do not forget to merge
 (use "backout --merge" if you want to auto-merge)
+b
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding a
 adding b
 adding c

@@ -177,10 +177,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
     changeset is a child of the backed out changeset.
 
     If you back out a changeset other than the tip, a new head is
-    created.  This head is the parent of the working directory.  If
-    you back out an old changeset, your working directory will appear
-    old after the backout.  You should merge the backout changeset
-    with another head.
+    created.  This head will be the new tip and you should merge this
+    backout changeset with another head (current one by default).
 
     The --merge option remembers the parent of the working directory
     before starting the backout, then merges the new head with that
@@ -243,9 +241,10 @@ def backout(ui, repo, node=None, rev=None, **opts):
     ui.status(_('changeset %s backs out changeset %s\n') %
               (nice(repo.changelog.tip()), nice(node)))
     if op1 != node:
+        hg.clean(repo, op1, show_stats=False)
         if opts['merge']:
-            ui.status(_('merging with changeset %s\n') % nice(op1))
-            hg.merge(repo, hex(op1))
+            ui.status(_('merging with changeset %s\n') % nice(repo.changelog.tip()))
+            hg.merge(repo, hex(repo.changelog.tip()))
         else:
             ui.status(_('the backout changeset is a new head - '
                         'do not forget to merge\n'))
