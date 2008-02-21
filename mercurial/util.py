@@ -1709,6 +1709,9 @@ def walkrepos(path):
         if '.hg' in dirs:
             dirs[:] = [] # don't descend further
             yield root # found a repository
+            qroot = os.path.join(root, '.hg', 'patches')
+            if os.path.exists(os.path.join(qroot, '.hg')):
+                yield qroot # we have a patch queue repo here
 
 _rcpath = None
 
