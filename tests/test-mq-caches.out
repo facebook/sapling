@@ -1,8 +1,8 @@
 # mq patch on an empty repo
 tip: 0
-No .hg/branch.cache
+No branch cache
 tip: 0
-No .hg/branch.cache
+No branch cache
 
 # some regular revisions
 Patch queue now empty

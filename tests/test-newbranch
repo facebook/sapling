@@ -1,5 +1,7 @@
 #!/bin/sh
 
+branchcache=.hg/branch.cache
+
 hg init t
 cd t
 hg branches
@@ -32,23 +34,23 @@ hg branches -q
 
 echo % test for invalid branch cache
 hg rollback
-cp .hg/branch.cache .hg/bc-invalid
+cp $branchcache .hg/bc-invalid
 hg log -r foo
-cp .hg/bc-invalid .hg/branch.cache
+cp .hg/bc-invalid $branchcache
 hg --debug log -r foo
-rm .hg/branch.cache
-echo corrupted > .hg/branch.cache
+rm $branchcache
+echo corrupted > $branchcache
 hg log -qr foo
-cat .hg/branch.cache
+cat $branchcache
 
 echo % push should update the branch cache
 hg init ../target
 echo % pushing just rev 0
 hg push -qr 0 ../target
-cat ../target/.hg/branch.cache
+cat ../target/$branchcache
 echo % pushing everything
 hg push -qf ../target
-cat ../target/.hg/branch.cache
+cat ../target/$branchcache
 
 echo % update with no arguments: tipmost revision of the current branch
 hg up -q -C 0

@@ -9,7 +9,7 @@
 % after commit
 % working dir files can only be written by the owner
 % files created in .hg can be written by the group
-% (in particular, store/**, dirstate, branch.cache, undo files)
+% (in particular, store/**, dirstate, branch cache file, undo files)
 % new directories are setgid
 00700 ./.hg/
 00600 ./.hg/00changelog.i

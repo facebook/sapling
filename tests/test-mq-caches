@@ -1,18 +1,18 @@
 #!/bin/sh
 
+branches=.hg/branch.cache
 echo '[extensions]' >> $HGRCPATH
 echo 'hgext.mq=' >> $HGRCPATH
 
 show_branch_cache()
 {
-    branches=.hg/branch.cache
     # force cache (re)generation
     hg log -r does-not-exist 2> /dev/null
     hg log -r tip --template 'tip: #rev#\n'
     if [ -f $branches ]; then
 	sort $branches
     else
-	echo No $branches
+	echo No branch cache
     fi
     if [ "$1" = 1 ]; then
 	for b in foo bar; do
@@ -61,7 +61,7 @@ show_branch_cache 1
 
 echo
 echo '# removing the cache'
-rm .hg/branch.cache
+rm $branches
 show_branch_cache 1
 
 echo
