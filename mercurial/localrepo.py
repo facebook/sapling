@@ -1003,8 +1003,15 @@ class localrepository(repo.repository):
                     fixup = []
                     # do a full compare of any files that might have changed
                     ctx = self.changectx()
+                    mexec = lambda f: 'x' in ctx.fileflags(f)
+                    mlink = lambda f: 'l' in ctx.fileflags(f)
+                    is_exec = util.execfunc(self.root, mexec)
+                    is_link = util.linkfunc(self.root, mlink)
+                    def flags(f):
+                        return is_link(f) and 'l' or is_exec(f) and 'x' or ''
                     for f in lookup:
-                        if f not in ctx or ctx[f].cmp(self.wread(f)):
+                        if (f not in ctx or flags(f) != ctx.fileflags(f)
+                            or ctx[f].cmp(self.wread(f))):
                             modified.append(f)
                         else:
                             fixup.append(f)

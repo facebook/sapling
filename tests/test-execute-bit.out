@@ -1,5 +1,8 @@
 adding a
-1549299e88d1 tip
+79abf14474dc tip
+% make sure we notice the change of mode if the cached size == -1
+n   0         -1 unset               a
+M a
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 d69afc33ff8a
 not executable -- whew
