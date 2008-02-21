@@ -82,7 +82,7 @@ commit()
     fi
     echo $rev > $rev
     hg add $rev
-    hg ci -d "$rev 0" -m "($rev) $msg"
+    hg ci -d "$rev 0" -m "($rev) $msg" $rev
 }
 
 echo "[extensions]" >> $HGRCPATH
