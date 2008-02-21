@@ -1,17 +1,3 @@
-====== .hgrc
-[ui]
-slash = True
-[defaults]
-backout = -d "0 0"
-commit = -d "0 0"
-debugrawcommit = -d "0 0"
-tag = -d "0 0"
-[extensions]
-mq=
-[defaults]
-log = --template "{rev}: {desc}\n"
-heads = --template "{rev}: {desc}\n"
-incoming = --template "{rev}: {desc}\n"
 ====== Setup main
 adding one
 ====== Bundle main

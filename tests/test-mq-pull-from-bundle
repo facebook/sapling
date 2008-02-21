@@ -9,9 +9,6 @@ heads = --template "{rev}: {desc}\\n"
 incoming = --template "{rev}: {desc}\\n"
 EOF
 
-echo "====== .hgrc"
-cat $HGRCPATH
-
 echo "====== Setup main"
 hg init base
 cd base
