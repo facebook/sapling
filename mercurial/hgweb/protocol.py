@@ -123,7 +123,7 @@ def unbundle(web, req):
     ssl_req = web.configbool('web', 'push_ssl', True)
     if ssl_req:
         if req.env.get('wsgi.url_scheme') != 'https':
-            bail(_('ssl required\n'))
+            bail('ssl required\n')
             return
         proto = 'https'
     else:
@@ -131,7 +131,7 @@ def unbundle(web, req):
 
     # do not allow push unless explicitly allowed
     if not web.check_perm(req, 'push', False):
-        bail(_('push not authorized\n'),
+        bail('push not authorized\n',
              headers={'status': '401 Unauthorized'})
         return
 
@@ -143,7 +143,7 @@ def unbundle(web, req):
 
     # fail early if possible
     if not check_heads():
-        bail(_('unsynced changes\n'))
+        bail('unsynced changes\n')
         return
 
     req.respond(HTTP_OK, HGTYPE)
@@ -163,7 +163,7 @@ def unbundle(web, req):
             try:
                 if not check_heads():
                     req.write('0\n')
-                    req.write(_('unsynced changes\n'))
+                    req.write('unsynced changes\n')
                     return
 
                 fp.seek(0)
