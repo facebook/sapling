@@ -9,6 +9,7 @@ import cStringIO, zlib, bz2, tempfile, errno, os, sys
 from mercurial import util, streamclone
 from mercurial.i18n import gettext as _
 from mercurial.node import *
+from mercurial import changegroup as changegroupmod
 from common import HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
@@ -167,36 +168,11 @@ def unbundle(web, req):
 
                 fp.seek(0)
                 header = fp.read(6)
-                if not header.startswith("HG"):
-                    # old client with uncompressed bundle
-                    def generator(f):
-                        yield header
-                        for chunk in f:
-                            yield chunk
-                elif not header.startswith("HG10"):
-                    req.write("0\n")
-                    req.write(_("unknown bundle version\n"))
-                    return
-                elif header == "HG10GZ":
-                    def generator(f):
-                        zd = zlib.decompressobj()
-                        for chunk in f:
-                            yield zd.decompress(chunk)
-                elif header == "HG10BZ":
-                    def generator(f):
-                        zd = bz2.BZ2Decompressor()
-                        zd.decompress("BZ")
-                        for chunk in f:
-                            yield zd.decompress(chunk)
-                elif header == "HG10UN":
-                    def generator(f):
-                        for chunk in f:
-                            yield chunk
-                else:
-                    req.write("0\n")
-                    req.write(_("unknown bundle compression type\n"))
-                    return
-                gen = generator(util.filechunkiter(fp, 4096))
+                if header.startswith('HG') and not header.startswith('HG10'):
+                    raise ValueError('unknown bundle version')
+                elif header not in changegroupmod.bundletypes:
+                    raise ValueError('unknown bundle compression type')
+                gen = changegroupmod.unbundle(header, fp)
 
                 # send addchangegroup output to client
 
@@ -207,8 +183,7 @@ def unbundle(web, req):
                     url = 'remote:%s:%s' % (proto,
                                             req.env.get('REMOTE_HOST', ''))
                     try:
-                        ret = web.repo.addchangegroup(
-                                    util.chunkbuffer(gen), 'serve', url)
+                        ret = web.repo.addchangegroup(gen, 'serve', url)
                     except util.Abort, inst:
                         sys.stdout.write("abort: %s\n" % inst)
                         ret = 0
@@ -219,6 +194,9 @@ def unbundle(web, req):
                 req.write(val)
             finally:
                 del lock
+        except ValueError, inst:
+            req.write('0\n')
+            req.write(str(inst) + '\n')
         except (OSError, IOError), inst:
             req.write('0\n')
             filename = getattr(inst, 'filename', '')
