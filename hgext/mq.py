@@ -1610,6 +1610,8 @@ def clone(ui, source, dest=None, **opts):
                     del heads[h]
                 destrev = heads.keys()
                 destrev.append(sr.changelog.parents(qbase)[0])
+    elif sr.capable('lookup'):
+        qbase = sr.lookup('qbase')
     ui.note(_('cloning main repo\n'))
     sr, dr = hg.clone(ui, sr.url(), dest,
                       pull=opts['pull'],
