@@ -119,6 +119,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         ui.status(_("destination directory: %s\n") % dest)
 
     def localpath(path):
+        if path.startswith('file://localhost/'):
+            return path[16:]
         if path.startswith('file://'):
             return path[7:]
         if path.startswith('file:'):
