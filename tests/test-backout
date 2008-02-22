@@ -123,4 +123,37 @@ hg update -C
 
 hg backout -d '6 0' --parent 3 4
 
+cd ..
+
+echo '# named branches'
+
+hg init named_branches
+cd named_branches
+
+echo default > default
+hg ci -d '0 0' -Am default
+hg branch branch1
+echo branch1 > file1
+hg ci -d '1 0' -Am file1
+hg branch branch2
+echo branch2 > file2
+hg ci -d '2 0' -Am file2
+hg backout -d '3 0' -r 1 -m 'backout on branch1'
+# XXX maybe backout shouldn't suggest a merge here as it is a different branch?
+
+echo '% on branch2 with branch1 not merged, so file1 should still exist:'
+hg id
+hg st -A
+
+echo '% on branch2 with branch1 merged, so file1 should be gone:'
+hg merge
+hg ci -d '4 0' -m 'merge backout of branch1'
+hg id
+hg st -A
+
+echo '% on branch1, so no file1 and file2:'
+hg co -C branch1
+hg id
+hg st -A
+
 exit 0
