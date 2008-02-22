@@ -184,7 +184,10 @@ def backout(ui, repo, node=None, rev=None, **opts):
     before starting the backout, then merges the new head with that
     changeset afterwards.  This saves you from doing the merge by
     hand.  The result of this merge is not committed, as for a normal
-    merge.'''
+    merge.
+
+    See 'hg help dates' for a list of formats valid for -d/--date.
+    '''
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
 
@@ -533,6 +536,8 @@ def commit(ui, repo, *pats, **opts):
 
     If no commit message is specified, the configured editor is started to
     enter a message.
+
+    See 'hg help dates' for a list of formats valid for -d/--date.
     """
     def commitfunc(ui, repo, files, message, match, opts):
         return repo.commit(files, message, opts['user'], opts['date'], match,
@@ -1440,6 +1445,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     problems or other deficiencies in the text patch format.
 
     To read a patch from standard input, use patch name "-".
+    See 'hg help dates' for a list of formats valid for -d/--date.
     """
     patches = (patch1,) + patches
 
@@ -1661,6 +1667,8 @@ def log(ui, repo, *pats, **opts):
     If no revision range is specified, the default is tip:0 unless
     --follow is set, in which case the working directory parent is
     used as the starting revision.
+
+    See 'hg help dates' for a list of formats valid for -d/--date.
 
     By default this command outputs: changeset id and hash, tags,
     non-trivial parents, user, date and time, and a summary for each
@@ -2173,7 +2181,8 @@ def revert(ui, repo, *pats, **opts):
 
     Using the -r option, revert the given files or directories to their
     contents as of a specific revision. This can be helpful to "roll
-    back" some or all of an earlier  change.
+    back" some or all of an earlier change.
+    See 'hg help dates' for a list of formats valid for -d/--date.
 
     Revert modifies the working directory.  It does not commit any
     changes, or change the parent of the working directory.  If you
@@ -2185,7 +2194,6 @@ def revert(ui, repo, *pats, **opts):
     mode of a file was changed, it is reset.
 
     If names are given, all files matching the names are reverted.
-
     If no arguments are given, no files are reverted.
 
     Modified files are saved with a .orig suffix before reverting.
@@ -2541,6 +2549,8 @@ def tag(ui, repo, name, rev_=None, **opts):
     similarly to other project files and can be hand-edited if
     necessary.  The file '.hg/localtags' is used for local tags (not
     shared among repositories).
+
+    See 'hg help dates' for a list of formats valid for -d/--date.
     """
     if name in ['tip', '.', 'null']:
         raise util.Abort(_("the name '%s' is reserved") % name)
@@ -2642,6 +2652,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
 
     Update the working directory to the specified revision, or the
     tip of the current branch if none is specified.
+    See 'hg help dates' for a list of formats valid for -d/--date.
 
     If there are no outstanding changes in the working directory and
     there is a linear relationship between the current version and the

@@ -17,7 +17,10 @@ def fetch(ui, repo, source='default', **opts):
 
     If the pulled changes add a new head, the head is automatically
     merged, and the result of the merge is committed.  Otherwise, the
-    working directory is updated.'''
+    working directory is updated.
+
+    See 'hg help dates' for a list of formats valid for -d/--date.
+    '''
 
     def postincoming(other, modheads):
         if modheads == 0:

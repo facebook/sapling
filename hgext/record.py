@@ -341,6 +341,8 @@ def record(ui, repo, *pats, **opts):
     If a list of files is omitted, all changes reported by "hg status"
     will be candidates for recording.
 
+    See 'hg help dates' for a list of formats valid for -d/--date.
+
     You will be prompted for whether to record changes to each
     modified file, and for files with multiple changes, for each
     change to use.  For each query, the following responses are
