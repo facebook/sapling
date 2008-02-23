@@ -444,12 +444,13 @@ class hgweb(object):
             for i in xrange(start, end):
                 ctx = self.repo.changectx(i)
                 n = ctx.node()
+                showtags = self.showtag(tmpl, 'changelogtag', n)
 
                 l.insert(0, {"parity": parity.next(),
                              "author": ctx.user(),
                              "parent": self.siblings(ctx.parents(), i - 1),
                              "child": self.siblings(ctx.children(), i + 1),
-                             "changelogtag": self.showtag("changelogtag",n),
+                             "changelogtag": showtags,
                              "desc": ctx.description(),
                              "date": ctx.date(),
                              "files": self.listfilediffs(tmpl, ctx.files(), n),
@@ -513,13 +514,14 @@ class hgweb(object):
 
                 count += 1
                 n = ctx.node()
+                showtags = self.showtag(tmpl, 'changelogtag', n)
 
                 yield tmpl('searchentry',
                            parity=parity.next(),
                            author=ctx.user(),
                            parent=self.siblings(ctx.parents()),
                            child=self.siblings(ctx.children()),
-                           changelogtag=self.showtag("changelogtag",n),
+                           changelogtag=showtags,
                            desc=ctx.description(),
                            date=ctx.date(),
                            files=self.listfilediffs(tmpl, ctx.files(), n),
@@ -542,6 +544,7 @@ class hgweb(object):
 
     def changeset(self, tmpl, ctx):
         n = ctx.node()
+        showtags = self.showtag(tmpl, 'changesettag', n)
         parents = ctx.parents()
         p1 = parents[0].node()
 
@@ -561,7 +564,7 @@ class hgweb(object):
                     node=hex(n),
                     parent=self.siblings(parents),
                     child=self.siblings(ctx.children()),
-                    changesettag=self.showtag("changesettag",n),
+                    changesettag=showtags,
                     author=ctx.user(),
                     desc=ctx.description(),
                     date=ctx.date(),
