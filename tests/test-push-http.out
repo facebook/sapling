@@ -4,14 +4,17 @@ adding a
 pushing to http://localhost/
 searching for changes
 ssl required
+% serve errors
 % expect authorization error
 pushing to http://localhost/
 searching for changes
 push not authorized
+% serve errors
 % expect authorization error: must have authorized user
 pushing to http://localhost/
 searching for changes
 push not authorized
+% serve errors
 % expect success
 pushing to http://localhost/
 searching for changes
@@ -19,13 +22,16 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-rolling back last transaction
+% serve errors
 changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_URL=remote:http 
+rolling back last transaction
 % expect authorization error: all users denied
 pushing to http://localhost/
 searching for changes
 push not authorized
+% serve errors
 % expect authorization error: some users denied, users must be authenticated
 pushing to http://localhost/
 searching for changes
 push not authorized
+% serve errors
