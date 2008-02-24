@@ -196,6 +196,15 @@ class svn_source(converter_source):
             except ValueError:
                 raise util.Abort('svn: revision %s is not an integer' % rev)
 
+        self.startrev = self.ui.config('convert', 'svn.startrev', default=0)
+        try:
+            self.startrev = int(self.startrev)
+            if self.startrev < 0:
+                self.startrev = 0
+        except ValueError:
+            raise util.Abort(_('svn: start revision %s is not an integer') 
+                             % self.startrev)
+
         try:
             self.get_blacklist()
         except IOError, e:
@@ -283,6 +292,15 @@ class svn_source(converter_source):
                              (branch, self.revnum(brevid)))
                 self.heads.append(brevid)
 
+        if self.startrev and self.heads:
+            if len(self.heads) > 1:
+                raise util.Abort(_('svn: start revision is not supported with '
+                                   'with more than one branch'))
+            revnum = self.revnum(self.heads[0])
+            if revnum < self.startrev:
+                raise util.Abort(_('svn: no revision found after start revision %d') 
+                                 % self.startrev)
+
         return self.heads
 
     def getfile(self, file, rev):
@@ -349,7 +367,7 @@ class svn_source(converter_source):
             
         start = self.revnum(self.head)
         try:
-            for entry in get_log(self.url, [self.tags], 0, start):
+            for entry in get_log(self.url, [self.tags], self.startrev, start):
                 orig_paths, revnum, author, date, message = entry
                 for path in orig_paths:
                     if not path.startswith(self.tags+'/'):
@@ -686,10 +704,11 @@ class svn_source(converter_source):
                     # ent.copyfrom_rev may not be the actual last revision
                     previd = self.latest(newpath, ent.copyfrom_rev)
                     if previd is not None:
-                        parents = [previd]
                         prevmodule, prevnum = self.revsplit(previd)[1:]
-                        self.ui.note('found parent of branch %s at %d: %s\n' %
-                                     (self.module, prevnum, prevmodule))
+                        if prevnum >= self.startrev:
+                            parents = [previd]
+                            self.ui.note('found parent of branch %s at %d: %s\n' %
+                                         (self.module, prevnum, prevmodule))
                 else:
                     self.ui.debug("No copyfrom path, don't know what to do.\n")
 
@@ -736,11 +755,14 @@ class svn_source(converter_source):
 
         try:
             firstcset = None
-            branched = False
+            lastonbranch = False
             stream = get_log(self.url, [self.module], from_revnum, to_revnum)
             try:
                 for entry in stream:
                     paths, revnum, author, date, message = entry
+                    if revnum < self.startrev:
+                        lastonbranch = True
+                        break
                     if self.is_blacklisted(revnum):
                         self.ui.note('skipping blacklisted revision %d\n' 
                                      % revnum)
@@ -748,16 +770,16 @@ class svn_source(converter_source):
                     if paths is None:
                         self.ui.debug('revision %d has no entries\n' % revnum)
                         continue
-                    cset, branched = parselogentry(paths, revnum, author, 
-                                                   date, message)
+                    cset, lastonbranch = parselogentry(paths, revnum, author, 
+                                                       date, message)
                     if cset:
                         firstcset = cset
-                    if branched:
+                    if lastonbranch:
                         break
             finally:
                 stream.close()
 
-            if not branched and firstcset and not firstcset.parents:
+            if not lastonbranch and firstcset and not firstcset.parents:
                 # The first revision of the sequence (the last fetched one)
                 # has invalid parents if not a branch root. Find the parent
                 # revision now, if any.

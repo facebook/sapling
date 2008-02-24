@@ -1,0 +1,92 @@
+% initial svn import
+Adding         projA/trunk
+Adding         projA/branches
+Adding         projA/tags
+
+Committed revision 1.
+% update svn repository
+A    A/trunk
+A    A/branches
+A    A/tags
+Checked out revision 1.
+A         trunk/a
+A         trunk/b
+Adding         trunk/a
+Adding         trunk/b
+Transmitting file data ..
+Committed revision 2.
+D         trunk/b
+Deleting       trunk/b
+
+Committed revision 3.
+At revision 3.
+Sending        trunk/a
+Transmitting file data .
+Committed revision 4.
+% branch
+At revision 4.
+A         branches/branch1
+Adding         branches/branch1
+Sending        branches/branch1/a
+Transmitting file data .
+Committed revision 5.
+A         branches/branch1/c
+Sending        branches/branch1/a
+Adding         branches/branch1/c
+Transmitting file data ..
+Committed revision 6.
+At revision 6.
+% convert before branching point
+initializing destination A-r3-hg repository
+scanning source...
+sorting...
+converting...
+3 removeb
+2 changeaa
+1 branch, changeaaa
+0 addc,changeaaaa
+o  3 addc,changeaaaa files: a c
+|
+o  2 branch, changeaaa files: a
+|
+o  1 changeaa files: a
+|
+o  0 removeb files: a
+
+
+% convert before branching point
+initializing destination A-r4-hg repository
+scanning source...
+sorting...
+converting...
+2 changeaa
+1 branch, changeaaa
+0 addc,changeaaaa
+o  2 addc,changeaaaa files: a c
+|
+o  1 branch, changeaaa files: a
+|
+o  0 changeaa files: a
+
+
+% convert at branching point
+initializing destination A-r5-hg repository
+scanning source...
+sorting...
+converting...
+1 branch, changeaaa
+0 addc,changeaaaa
+o  1 addc,changeaaaa files: a c
+|
+o  0 branch, changeaaa files: a
+
+
+% convert last revision only
+initializing destination A-r6-hg repository
+scanning source...
+sorting...
+converting...
+0 addc,changeaaaa
+o  0 addc,changeaaaa files: a c
+
+

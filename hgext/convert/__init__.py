@@ -105,6 +105,13 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     --config convert.svn.trunk=trunk          (directory name)
         specify the name of the trunk branch
 
+    Source history can be retrieved starting at a specific revision,
+    instead of being integrally converted. Only single branch
+    conversions are supported.
+
+    --config convert.svn.startrev=0           (svn revision number)
+        specify start Subversion revision.
+
     Mercurial Destination
     ---------------------
 
