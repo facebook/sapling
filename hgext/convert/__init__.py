@@ -95,7 +95,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     "svn://repo/path/tags" exists, it is looked for tags referencing
     converted branches. Default "trunk", "branches" and "tags" values
     can be overriden with following options. Set them to paths
-    relative to the source URL.
+    relative to the source URL, or leave them blank to disable
+    autodetection.
 
     --config convert.svn.branches=branches    (directory name)
         specify the directory containing branches

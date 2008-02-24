@@ -236,6 +236,8 @@ class svn_source(converter_source):
 
         def getcfgpath(name, rev):
             cfgpath = self.ui.config('convert', 'svn.' + name)
+            if cfgpath is not None and cfgpath.strip() == '':
+                return None
             path = (cfgpath or name).strip('/')
             if not self.exists(path, rev):
                 if cfgpath:
@@ -342,6 +344,9 @@ class svn_source(converter_source):
 
     def gettags(self):
         tags = {}
+        if self.tags is None:
+            return tags
+            
         start = self.revnum(self.head)
         try:
             for entry in get_log(self.url, [self.tags], 0, start):
