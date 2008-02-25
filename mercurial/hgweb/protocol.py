@@ -175,8 +175,8 @@ def unbundle(web, req):
 
                 # send addchangegroup output to client
 
-                old_stdout = sys.stdout
-                sys.stdout = cStringIO.StringIO()
+                oldio = sys.stdout, sys.stderr
+                sys.stderr = sys.stdout = cStringIO.StringIO()
 
                 try:
                     url = 'remote:%s:%s' % (proto,
@@ -188,7 +188,7 @@ def unbundle(web, req):
                         ret = 0
                 finally:
                     val = sys.stdout.getvalue()
-                    sys.stdout = old_stdout
+                    sys.stdout, sys.stderr = oldio
                 req.write('%d\n' % ret)
                 req.write(val)
             finally:
