@@ -139,7 +139,7 @@ adding foo
 <div class="buttons">
 <a href="/log/1">changelog</a>
 <a href="/tags">tags</a>
-<a href="/file/a4f92ed23982/">manifest</a>
+<a href="/file/a4f92ed23982/">files</a>
 
 <a type="application/rss+xml" href="/rss-log">rss</a>
 <a type="application/rss+xml" href="/atom-log" title="Atom feed for test">atom</a>
@@ -207,7 +207,7 @@ navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a hr
 <a href="/log/0">changelog</a>
 <a href="/shortlog/0">shortlog</a>
 <a href="/tags">tags</a>
-<a href="/file/2ef0ac749a14">manifest</a>
+<a href="/file/2ef0ac749a14">files</a>
 <a href="/raw-rev/2ef0ac749a14">raw</a>
 
 </div>
@@ -314,7 +314,7 @@ drwxr-xr-x da
 <a href="/shortlog/1">shortlog</a>
 <a href="/tags">tags</a>
 <a href="/rev/a4f92ed23982">changeset</a>
-<a href="/file/a4f92ed23982/">manifest</a>
+<a href="/file/a4f92ed23982/">files</a>
 <a href="/log/a4f92ed23982/foo">revisions</a>
 <a href="/annotate/a4f92ed23982/foo">annotate</a>
 <a href="/raw-file/a4f92ed23982/foo">raw</a>
@@ -426,7 +426,7 @@ summary |
 <a href="/shortlog?style=gitweb">shortlog</a> |
 <a href="/log?style=gitweb">changelog</a> |
 <a href="/tags?style=gitweb">tags</a> |
-<a href="/file/a4f92ed23982?style=gitweb">manifest</a>
+<a href="/file/a4f92ed23982?style=gitweb">files</a>
 <br/>
 </div>
 
@@ -439,19 +439,19 @@ summary |
 
 <div><a  class="title" href="/shortlog?style=gitweb">changes</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>long ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b> <span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a></td><td class="link" nowrap><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/file/a4f92ed23982?style=gitweb">manifest</a></td></tr><tr class="parity1"><td class="age"><i>long ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>base</b> <span class="logtags"><span class="tagtag" title="1.0">1.0</span> </span></a></td><td class="link" nowrap><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/file/2ef0ac749a14?style=gitweb">manifest</a></td></tr>
+<tr class="parity0"><td class="age"><i>long ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b> <span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a></td><td class="link" nowrap><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>long ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>base</b> <span class="logtags"><span class="tagtag" title="1.0">1.0</span> </span></a></td><td class="link" nowrap><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/file/2ef0ac749a14?style=gitweb">files</a></td></tr>
 <tr class="light"><td colspan="4"><a class="list" href="/shortlog?style=gitweb">...</a></td></tr>
 </table>
 
 <div><a class="title" href="/tags?style=gitweb">tags</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td><td class="link"><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/log/2ef0ac749a14?style=gitweb">changelog</a> | <a href="/file/2ef0ac749a14?style=gitweb">manifest</a></td></tr>
+<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td><td class="link"><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/log/2ef0ac749a14?style=gitweb">changelog</a> | <a href="/file/2ef0ac749a14?style=gitweb">files</a></td></tr>
 <tr class="light"><td colspan="3"><a class="list" href="/tags?style=gitweb">...</a></td></tr>
 </table>
 
 <div><a class="title" href="#">branches</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">manifest</a></td></tr>
+<tr class="parity0"><td class="age"><i>long ago</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr>
 <tr class="light">
   <td colspan="4"><a class="list"  href="#">...</a></td>
 </tr>

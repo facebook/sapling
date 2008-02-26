@@ -1,5 +1,5 @@
 #header#
-<title>#repo|escape#: Manifest</title>
+<title>#repo|escape#: files</title>
 <link rel="alternate" type="application/atom+xml"
    href="{url}atom-log" title="Atom feed for #repo|escape#"/>
 <link rel="alternate" type="application/rss+xml"
@@ -8,7 +8,7 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / manifest
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / files
 </div>
 
 <div class="page_nav">
@@ -16,7 +16,7 @@
 <a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
 <a href="{url}log{sessionvars%urlparameter}">changelog</a> |
 <a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-manifest |
+files |
 <a href="{url}rev/#node|short#{sessionvars%urlparameter}">changeset</a> #archives%archiveentry#<br/>
 </div>
 
@@ -29,8 +29,8 @@ manifest |
 <td><a href="{url}file/#node|short##up|urlescape#{sessionvars%urlparameter}">[up]</a></td>
 <td class="link">&nbsp;</td>
 </tr>
-#dentries%manifestdirentry#
-#fentries%manifestfileentry#
+#dentries%direntry#
+#fentries%fileentry#
 </table>
 
 #footer#
