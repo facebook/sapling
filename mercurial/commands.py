@@ -568,9 +568,17 @@ def copy(ui, repo, *pats, **opts):
     finally:
         del wlock
 
-def debugancestor(ui, index, rev1, rev2):
+def debugancestor(ui, *opts):
     """find the ancestor revision of two revisions in a given index"""
-    r = revlog.revlog(util.opener(os.getcwd(), audit=False), index)
+    if len(opts) == 3:
+        index, rev1, rev2 = opts
+        r = revlog.revlog(util.opener(os.getcwd(), audit=False), index)
+    elif len(opts) == 2:
+        rev1, rev2 = opts
+        repo = hg.repository(ui)
+        r = repo.changelog
+    else:
+        raise util.Abort(_('either two or three arguments required'))
     a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
@@ -2850,7 +2858,8 @@ table = {
            _('forcibly copy over an existing managed file')),
          ] + walkopts + dryrunopts,
          _('hg copy [OPTION]... [SOURCE]... DEST')),
-    "debugancestor": (debugancestor, [], _('hg debugancestor INDEX REV1 REV2')),
+    "debugancestor": (debugancestor, [],
+                      _('hg debugancestor [INDEX] REV1 REV2')),
     "debugcheckstate": (debugcheckstate, [], _('hg debugcheckstate')),
     "debugcomplete":
         (debugcomplete,
