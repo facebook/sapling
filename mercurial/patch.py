@@ -890,6 +890,9 @@ def iterhunks(ui, fp, sourcefile=None):
     context = None
     lr = linereader(fp)
     dopatch = True
+    # gitworkdone is True if a git operation (copy, rename, ...) was
+    # performed already for the current file. Useful when the file
+    # section may have no hunk.
     gitworkdone = False
 
     while True:
@@ -938,8 +941,8 @@ def iterhunks(ui, fp, sourcefile=None):
                         changed[gp.path] = (gp.op, gp)
                 # else error?
                 # copy/rename + modify should modify target, not source
-                if changed.get(bfile[2:], (None, None))[0] in ('COPY',
-                                                               'RENAME'):
+                gitop = changed.get(bfile[2:], (None, None))[0]
+                if gitop in ('COPY', 'DELETE', 'RENAME'):
                     afile = bfile
                     gitworkdone = True
             newfile = True

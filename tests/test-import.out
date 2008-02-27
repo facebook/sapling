@@ -223,3 +223,12 @@ c
 % c2 file
 c
 % d file
+% test trailing binary removal
+adding a
+adding b
+R a
+R b
+diff --git a/a b/a
+diff --git a/b b/b
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying remove.diff

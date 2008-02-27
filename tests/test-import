@@ -207,3 +207,21 @@ do
 done
 cd ..
 
+# Test importing a patch ending with a binary file removal
+echo % test trailing binary removal
+hg init binaryremoval
+cd binaryremoval
+echo a > a
+python -c "file('b', 'wb').write('a\x00b')"
+hg ci -Am addall
+hg rm a
+hg rm b
+hg st
+hg ci -m remove
+hg export --git . > remove.diff
+cat remove.diff | grep git
+hg up -C 0
+hg import remove.diff
+hg manifest
+cd ..
+
