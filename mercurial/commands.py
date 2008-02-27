@@ -2649,13 +2649,19 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     bundle command.
     """
     fnames = (fname1,) + fnames
-    for fname in fnames:
-        if os.path.exists(fname):
-            f = open(fname, "rb")
-        else:
-            f = urllib.urlopen(fname)
-        gen = changegroup.readbundle(f, fname)
-        modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
+
+    lock = None
+    try:
+        lock = repo.lock()
+        for fname in fnames:
+            if os.path.exists(fname):
+                f = open(fname, "rb")
+            else:
+                f = urllib.urlopen(fname)
+            gen = changegroup.readbundle(f, fname)
+            modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
+    finally:
+        del lock
 
     return postincoming(ui, repo, modheads, opts['update'], None)
 
