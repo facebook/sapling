@@ -2775,7 +2775,7 @@ table = {
            _('guess renamed files by similarity (0<=s<=100)')),
          ] + walkopts + dryrunopts,
          _('hg addremove [OPTION]... [FILE]...')),
-    "^annotate":
+    "^annotate|blame":
         (annotate,
          [('r', 'rev', '', _('annotate the specified revision')),
           ('f', 'follow', None, _('follow file copies and renames')),
