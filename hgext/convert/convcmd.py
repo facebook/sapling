@@ -206,8 +206,8 @@ class converter(object):
                     self.authors[srcauthor] = dstauthor
             except IndexError:
                 self.ui.warn(
-                    'Ignoring bad line in author file map %s: %s\n'
-                    % (authorfile, line))
+                    'Ignoring bad line in author map file %s: %s\n'
+                    % (authorfile, line.rstrip()))
         afile.close()
 
     def cachecommit(self, rev):
