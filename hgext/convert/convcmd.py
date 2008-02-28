@@ -191,6 +191,8 @@ class converter(object):
     def readauthormap(self, authorfile):
         afile = open(authorfile, 'r')
         for line in afile:
+            if line.strip() == '':
+                continue
             try:
                 srcauthor = line.split('=')[0].strip()
                 dstauthor = line.split('=')[1].strip()
