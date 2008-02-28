@@ -1,4 +1,4 @@
-# queue.py - patch queues for mercurial
+# mq.py - patch queues for mercurial
 #
 # Copyright 2005, 2006 Chris Mason <mason@suse.com>
 #
