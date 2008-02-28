@@ -1527,7 +1527,7 @@ class localrepository(repo.repository):
                     warn = 1
 
             if warn:
-                self.ui.warn(_("abort: push creates new remote branches!\n"))
+                self.ui.warn(_("abort: push creates new remote heads!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
                 return None, 0

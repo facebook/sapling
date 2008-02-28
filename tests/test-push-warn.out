@@ -1,7 +1,7 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to ../a
 searching for changes
-abort: push creates new remote branches!
+abort: push creates new remote heads!
 (did you forget to merge? use push -f to force)
 pulling from ../a
 searching for changes
@@ -12,7 +12,7 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 pushing to ../a
 searching for changes
-abort: push creates new remote branches!
+abort: push creates new remote heads!
 (did you forget to merge? use push -f to force)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -31,7 +31,7 @@ merging foo
 (branch merge, don't forget to commit)
 pushing to ../c
 searching for changes
-abort: push creates new remote branches!
+abort: push creates new remote heads!
 (did you forget to merge? use push -f to force)
 1
 pushing to ../c
@@ -40,12 +40,12 @@ no changes found
 0
 pushing to ../c
 searching for changes
-abort: push creates new remote branches!
+abort: push creates new remote heads!
 (did you forget to merge? use push -f to force)
 1
 pushing to ../c
 searching for changes
-abort: push creates new remote branches!
+abort: push creates new remote heads!
 (did you forget to merge? use push -f to force)
 1
 pushing to ../c
