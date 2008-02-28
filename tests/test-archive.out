@@ -29,7 +29,6 @@ test-TIP/foo
 True
 abort: archive prefix contains illegal components
 Archive:  test.zip
-    testing: test/.hg_archival.txt    OK
     testing: test/bar                 OK
     testing: test/baz/bletch          OK
     testing: test/foo                 OK

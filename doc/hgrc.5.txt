@@ -513,6 +513,11 @@ trusted::
 
 ui::
   User interface controls.
+  archivemeta;;
+    Whether to include the .hg_archival.txt file containing metadata
+    (hashes for the repository base and for tip) in archives created by
+    the hg archive command or downloaded via hgweb.
+    Default is true.
   debug;;
     Print debugging information.  True or False.  Default is False.
   editor;;

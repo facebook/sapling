@@ -59,7 +59,7 @@ python md5comp.py tip1.tar.gz tip2.tar.gz
 hg archive -t zip -p /illegal test.zip
 hg archive -t zip -p very/../bad test.zip
 
-hg archive -t zip -r 2 test.zip
+hg archive --config ui.archivemeta=false -t zip -r 2 test.zip
 unzip -t test.zip
 
 hg archive -t tar - | tar tf - | sed "s/$QTIP/TIP/"
