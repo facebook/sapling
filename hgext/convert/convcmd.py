@@ -194,8 +194,9 @@ class converter(object):
             if line.strip() == '':
                 continue
             try:
-                srcauthor = line.split('=')[0].strip()
-                dstauthor = line.split('=')[1].strip()
+                srcauthor, dstauthor = line.split('=', 1)
+                srcauthor = srcauthor.strip()
+                dstauthor = dstauthor.strip()
                 if srcauthor in self.authors and dstauthor != self.authors[srcauthor]:
                     self.ui.status(
                         'Overriding mapping for author %s, was %s, will be %s\n'
