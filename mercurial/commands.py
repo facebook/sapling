@@ -1561,6 +1561,7 @@ def incoming(ui, repo, source="default", **opts):
 
     See pull for valid source format details.
     """
+    limit = cmdutil.loglimit(opts)
     source, revs, checkout = hg.parseurl(ui.expandpath(source), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
 
@@ -1599,10 +1600,14 @@ def incoming(ui, repo, source="default", **opts):
         if opts['newest_first']:
             o.reverse()
         displayer = cmdutil.show_changeset(ui, other, opts)
+        count = 0
         for n in o:
+            if count >= limit:
+                break
             parents = [p for p in other.changelog.parents(n) if p != nullid]
             if opts['no_merges'] and len(parents) == 2:
                 continue
+            count += 1
             displayer.show(changenode=n)
     finally:
         if hasattr(other, 'close'):
@@ -1869,6 +1874,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
     See pull for valid destination format details.
     """
+    limit = cmdutil.loglimit(opts)
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
     cmdutil.setremoteconfig(ui, opts)
@@ -1885,10 +1891,14 @@ def outgoing(ui, repo, dest=None, **opts):
     if opts['newest_first']:
         o.reverse()
     displayer = cmdutil.show_changeset(ui, repo, opts)
+    count = 0
     for n in o:
+        if count >= limit:
+            break
         parents = [p for p in repo.changelog.parents(n) if p != nullid]
         if opts['no_merges'] and len(parents) == 2:
             continue
+        count += 1
         displayer.show(changenode=n)
 
 def parents(ui, repo, file_=None, **opts):
@@ -2975,6 +2985,7 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
           ('p', 'patch', None, _('show patch')),
+          ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('a specific revision up to which you would like to pull')),
           ('', 'template', '', _('display with template')),
          ] + remoteopts,
@@ -3032,6 +3043,7 @@ table = {
            _('run even when remote repository is unrelated')),
           ('p', 'patch', None, _('show patch')),
           ('', 'style', '', _('display using template map file')),
+          ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('a specific revision you would like to push')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'template', '', _('display with template')),

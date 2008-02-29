@@ -151,6 +151,18 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     4
 
+% limit to 2 changesets
+comparing with test
+changeset:   0:9cb21d99fe27
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0
+
+changeset:   1:d717f5dfad6a
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1
+
 comparing with http://localhost/
 changeset:   0:9cb21d99fe27
 user:        test
@@ -300,6 +312,24 @@ tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     13
+
+% limit to 3 changesets
+comparing with test
+searching for changes
+changeset:   9:3741c3ad1096
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     9
+
+changeset:   10:de4143c8d9a5
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     10
+
+changeset:   11:0e1c188b9a7a
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     11
 
 comparing with http://localhost/
 searching for changes
