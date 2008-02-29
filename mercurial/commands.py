@@ -568,13 +568,13 @@ def copy(ui, repo, *pats, **opts):
     finally:
         del wlock
 
-def debugancestor(ui, *opts):
+def debugancestor(ui, *args):
     """find the ancestor revision of two revisions in a given index"""
-    if len(opts) == 3:
-        index, rev1, rev2 = opts
+    if len(args) == 3:
+        index, rev1, rev2 = args
         r = revlog.revlog(util.opener(os.getcwd(), audit=False), index)
-    elif len(opts) == 2:
-        rev1, rev2 = opts
+    elif len(args) == 2:
+        rev1, rev2 = args
         repo = hg.repository(ui)
         r = repo.changelog
     else:
