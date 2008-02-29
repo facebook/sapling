@@ -55,9 +55,12 @@ def pygmentize(self, tmpl, fctx, field):
         new_header =  old_header + SYNTAX_CSS
         tmpl.cache['header'] = new_header
 
+    text = fctx.data()
+    if util.binary(text):
+        return
+
     style = self.config("web", "pygments_style", "colorful")
     # To get multi-line strings right, we can't format line-by-line
-    text = fctx.data()
     try:
         lexer = guess_lexer_for_filename(fctx.path(), text,
                                          encoding=util._encoding)
