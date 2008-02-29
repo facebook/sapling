@@ -568,14 +568,16 @@ def copy(ui, repo, *pats, **opts):
     finally:
         del wlock
 
-def debugancestor(ui, *args):
+def debugancestor(ui, repo, *args):
     """find the ancestor revision of two revisions in a given index"""
     if len(args) == 3:
         index, rev1, rev2 = args
         r = revlog.revlog(util.opener(os.getcwd(), audit=False), index)
     elif len(args) == 2:
+        if not repo:
+            raise util.Abort(_("There is no Mercurial repository here "
+                               "(.hg not found)"))
         rev1, rev2 = args
-        repo = hg.repository(ui)
         r = repo.changelog
     else:
         raise util.Abort(_('either two or three arguments required'))
@@ -3162,6 +3164,6 @@ table = {
     "version": (version_, [], _('hg version')),
 }
 
-norepo = ("clone init version help debugancestor debugcomplete debugdata"
+norepo = ("clone init version help debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall debugfsinfo")
-optionalrepo = ("identify paths serve showconfig")
+optionalrepo = ("identify paths serve showconfig debugancestor")
