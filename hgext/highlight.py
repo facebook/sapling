@@ -42,7 +42,7 @@ from mercurial.templatefilters import filters
 
 from pygments import highlight
 from pygments.util import ClassNotFound
-from pygments.lexers import guess_lexer_for_filename, TextLexer
+from pygments.lexers import guess_lexer, guess_lexer_for_filename, TextLexer
 from pygments.formatters import HtmlFormatter
 
 SYNTAX_CSS = ('\n<link rel="stylesheet" href="#staticurl#highlight.css" '
