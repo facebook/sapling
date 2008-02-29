@@ -1699,14 +1699,7 @@ def log(ui, repo, *pats, **opts):
     get = util.cachefunc(lambda r: repo.changectx(r).changeset())
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
 
-    if opts['limit']:
-        try:
-            limit = int(opts['limit'])
-        except ValueError:
-            raise util.Abort(_('limit must be a positive integer'))
-        if limit <= 0: raise util.Abort(_('limit must be positive'))
-    else:
-        limit = sys.maxint
+    limit = cmdutil.loglimit(opts)
     count = 0
 
     if opts['copies'] and opts['rev']:

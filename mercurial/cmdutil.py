@@ -89,6 +89,19 @@ def logmessage(opts):
                              (logfile, inst.strerror))
     return message
 
+def loglimit(opts):
+    """get the log limit according to option -l/--limit"""
+    limit = opts.get('limit')
+    if limit:
+        try:
+            limit = int(limit)
+        except ValueError:
+            raise util.Abort(_('limit must be a positive integer'))
+        if limit <= 0: raise util.Abort(_('limit must be positive'))
+    else:
+        limit = sys.maxint
+    return limit
+
 def setremoteconfig(ui, opts):
     "copy remote options to ui tree"
     if opts.get('ssh'):
