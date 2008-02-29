@@ -2772,6 +2772,17 @@ commitopts2 = [
     ('u', 'user', '', _('record user as committer')),
 ]
 
+templateopts = [
+    ('', 'style', '', _('display using template map file')),
+    ('', 'template', '', _('display with template')),
+]
+
+logopts = [
+    ('p', 'patch', None, _('show patch')),
+    ('l', 'limit', '', _('limit number of changes displayed')),
+    ('M', 'no-merges', None, _('do not show merges')),
+] + templateopts
+
 table = {
     "^add": (add, walkopts + dryrunopts, _('hg add [OPTION]... [FILE]...')),
     "addremove":
@@ -2948,9 +2959,8 @@ table = {
          _('hg grep [OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
-         [('', 'style', '', _('display using template map file')),
-          ('r', 'rev', '', _('show only heads which are descendants of rev')),
-          ('', 'template', '', _('display with template'))],
+         [('r', 'rev', '', _('show only heads which are descendants of rev')),
+         ] + templateopts,
          _('hg heads [-r REV] [REV]...')),
     "help": (help_, [], _('hg help [COMMAND]')),
     "identify|id":
@@ -2978,17 +2988,12 @@ table = {
          _('hg import [OPTION]... PATCH...')),
     "incoming|in":
         (incoming,
-         [('M', 'no-merges', None, _('do not show merges')),
-          ('f', 'force', None,
+         [('f', 'force', None,
            _('run even when remote repository is unrelated')),
-          ('', 'style', '', _('display using template map file')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
-          ('p', 'patch', None, _('show patch')),
-          ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('a specific revision up to which you would like to pull')),
-          ('', 'template', '', _('display with template')),
-         ] + remoteopts,
+         ] + logopts + remoteopts,
          _('hg incoming [-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
     "^init":
@@ -3013,18 +3018,13 @@ table = {
           ('d', 'date', '', _('show revs matching date spec')),
           ('C', 'copies', None, _('show copied files')),
           ('k', 'keyword', [], _('do case-insensitive search for a keyword')),
-          ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('show the specified revision or range')),
           ('', 'removed', None, _('include revs where files were removed')),
-          ('M', 'no-merges', None, _('do not show merges')),
-          ('', 'style', '', _('display using template map file')),
           ('m', 'only-merges', None, _('show only merges')),
           ('b', 'only-branch', [],
             _('show only changesets within the given named branch')),
-          ('p', 'patch', None, _('show patch')),
           ('P', 'prune', [], _('do not display revision or any of its ancestors')),
-          ('', 'template', '', _('display with template')),
-         ] + walkopts,
+         ] + logopts + walkopts,
          _('hg log [OPTION]... [FILE]')),
     "manifest":
         (manifest,
@@ -3038,22 +3038,16 @@ table = {
          _('hg merge [-f] [[-r] REV]')),
     "outgoing|out":
         (outgoing,
-         [('M', 'no-merges', None, _('do not show merges')),
-          ('f', 'force', None,
+         [('f', 'force', None,
            _('run even when remote repository is unrelated')),
-          ('p', 'patch', None, _('show patch')),
-          ('', 'style', '', _('display using template map file')),
-          ('l', 'limit', '', _('limit number of changes displayed')),
           ('r', 'rev', [], _('a specific revision you would like to push')),
           ('n', 'newest-first', None, _('show newest record first')),
-          ('', 'template', '', _('display with template')),
-         ] + remoteopts,
+         ] + logopts + remoteopts,
          _('hg outgoing [-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
     "^parents":
         (parents,
          [('r', 'rev', '', _('show parents from the specified rev')),
-          ('', 'style', '', _('display using template map file')),
-          ('', 'template', '', _('display with template'))],
+         ] + templateopts,
          _('hg parents [-r REV] [FILE]')),
     "paths": (paths, [], _('hg paths [NAME]')),
     "^pull":
@@ -3150,9 +3144,8 @@ table = {
     "tags": (tags, [], _('hg tags')),
     "tip":
         (tip,
-         [('', 'style', '', _('display using template map file')),
-          ('p', 'patch', None, _('show patch')),
-          ('', 'template', '', _('display with template'))],
+         [('p', 'patch', None, _('show patch')),
+         ] + templateopts,
          _('hg tip [-p]')),
     "unbundle":
         (unbundle,

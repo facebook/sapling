@@ -8,6 +8,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial import cmdutil
+from mercurial.commands import templateopts
 from mercurial.i18n import _
 
 
@@ -35,7 +36,6 @@ cmdtable = {
     "children":
         (children,
          [('r', 'rev', '', _('show children of the specified rev')),
-          ('', 'style', '', _('display using template map file')),
-          ('', 'template', '', _('display with template'))],
+         ] + templateopts,
          _('hg children [-r REV] [FILE]')),
 }

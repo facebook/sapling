@@ -8,6 +8,7 @@
 import os
 import sys
 from mercurial.cmdutil import revrange, show_changeset
+from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev
 from mercurial.util import Abort, canonpath
@@ -320,7 +321,6 @@ cmdtable = {
          [('l', 'limit', '', _('limit number of changes displayed')),
           ('p', 'patch', False, _('show patch')),
           ('r', 'rev', [], _('show the specified revision or range')),
-          ('', 'style', '', _('display using template map file')),
-          ('', 'template', '', _('display with template'))],
+         ] + templateopts,
          _('hg glog [OPTION]... [FILE]')),
 }
