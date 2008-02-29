@@ -2344,8 +2344,7 @@ cmdtable = {
          _('hg qseries [-ms]')),
     "^strip":
         (strip,
-         [('f', 'force', None, _('force multi-head removal')),
-          ('b', 'backup', None, _('bundle unrelated changesets')),
+         [('b', 'backup', None, _('bundle unrelated changesets')),
           ('n', 'nobackup', None, _('no backups'))],
          _('hg strip [-f] [-b] [-n] REV')),
     "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
