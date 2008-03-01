@@ -120,3 +120,7 @@ C modified
 hg status ignoreddir/file:
 hg status -i ignoreddir/file:
 I ignoreddir/file
+adding .hgignore
+adding deleted
+adding modified
+adding removed

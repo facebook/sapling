@@ -2493,6 +2493,9 @@ def status(ui, repo, *pats, **opts):
     -i (ignored), -C (copies) or -A is given.  Unless options described
     with "show only ..." are given, the options -mardu are used.
 
+    Option -q/--quiet hides untracked files unless explicitly
+    requested by -u.
+
     NOTE: status may appear to disagree with diff if permissions have
     changed or a merge has occurred. The standard diff format does not
     report permission changes and diff only reports changes relative
@@ -2537,6 +2540,12 @@ def status(ui, repo, *pats, **opts):
     for opt, char, changes in ([ct for ct in explicit_changetypes
                                 if all or opts[ct[0]]]
                                or changetypes):
+
+        # skip unknown files if -q, but -u and -A have priority over -q
+        if (not opts['unknown']) and (not opts['all']):
+            if opt == 'unknown' and ui.quiet:
+                continue
+
         if opts['no_status']:
             format = "%%s%s" % end
         else:
