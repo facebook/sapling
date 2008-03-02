@@ -62,7 +62,7 @@ hg copy modified copied
 # Run status with 2 different flags.
 # Check if result is the same or different.
 # If result is not as expected, raise error
-function assert {
+assert() {
     hg status $1 > ../a
     hg status $2 > ../b
     out=`diff ../a ../b`
