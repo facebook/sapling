@@ -2493,8 +2493,8 @@ def status(ui, repo, *pats, **opts):
     -i (ignored), -C (copies) or -A is given.  Unless options described
     with "show only ..." are given, the options -mardu are used.
 
-    Option -q/--quiet hides untracked files unless explicitly
-    requested by -u.
+    Option -q/--quiet hides untracked (unknown and ignored) files
+    unless explicitly requested with -u/--unknown or -i/-ignored.
 
     NOTE: status may appear to disagree with diff if permissions have
     changed or a merge has occurred. The standard diff format does not
@@ -2522,9 +2522,17 @@ def status(ui, repo, *pats, **opts):
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
         n for n in repo.status(node1=node1, node2=node2, files=files,
-                             match=matchfn,
-                             list_ignored=all or opts['ignored'],
-                             list_clean=all or opts['clean'])]
+                               match=matchfn,
+                               list_ignored=opts['ignored']
+                                            or all and not ui.quiet,
+                               list_clean=opts['clean'] or all,
+                               list_unknown=opts['unknown']
+                                            or not (ui.quiet or
+                                                    opts['modified'] or
+                                                    opts['added'] or
+                                                    opts['removed'] or
+                                                    opts['deleted'] or
+                                                    opts['ignored']))]
 
     changetypes = (('modified', 'M', modified),
                    ('added', 'A', added),
@@ -2540,11 +2548,6 @@ def status(ui, repo, *pats, **opts):
     for opt, char, changes in ([ct for ct in explicit_changetypes
                                 if all or opts[ct[0]]]
                                or changetypes):
-
-        # skip unknown files if -q, but -u and -A have priority over -q
-        if (not opts['unknown']) and (not opts['all']):
-            if opt == 'unknown' and ui.quiet:
-                continue
 
         if opts['no_status']:
             format = "%%s%s" % end

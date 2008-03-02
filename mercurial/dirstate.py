@@ -383,8 +383,8 @@ class dirstate(object):
         for src, f, st in self.statwalk(files, match, badmatch=badmatch):
             yield src, f
 
-    def statwalk(self, files=None, match=util.always, ignored=False,
-                 badmatch=None, directories=False):
+    def statwalk(self, files=None, match=util.always, unknown=True,
+                 ignored=False, badmatch=None, directories=False):
         '''
         walk recursively through the directory tree, finding all files
         matched by the match function
@@ -412,6 +412,7 @@ class dirstate(object):
                 return False
             return match(file_)
 
+        # TODO: don't walk unknown directories if unknown and ignored are False
         ignore = self._ignore
         dirignore = self._dirignore
         if ignored:
@@ -527,7 +528,7 @@ class dirstate(object):
             if imatch(k):
                 yield 'm', k, None
 
-    def status(self, files, match, list_ignored, list_clean):
+    def status(self, files, match, list_ignored, list_clean, list_unknown=True):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
@@ -545,14 +546,15 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
-        for src, fn, st in self.statwalk(files, match, ignored=list_ignored):
+        for src, fn, st in self.statwalk(files, match, unknown=list_unknown,
+                                         ignored=list_ignored):
             if fn in dmap:
                 type_, mode, size, time, foo = dmap[fn]
             else:
                 if (list_ignored or fn in files) and self._dirignore(fn):
                     if list_ignored:
                         iadd(fn)
-                else:
+                elif list_unknown:
                     uadd(fn)
                 continue
             if src == 'm':

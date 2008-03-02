@@ -82,13 +82,14 @@ function assert {
 }
 
 # assert flag1 flag2 [0-same | 1-different]
-assert "-q" "-mard"     0
-assert "-A" "-mardicCu" 0
-assert "-qA" "-mardicCu" 0
-assert "-qAu" "-A"      0
-assert "-qA" "-A"       0
-assert "-qu" "-u"       0
-assert "-q" "-u"        1
-assert "-m" "-a"        1
-assert "-r" "-d"        1
+assert "-q" "-mard"      0
+assert "-A" "-marduicC"  0
+assert "-qA" "-mardcC"   0
+assert "-qAui" "-A"      0
+assert "-qAu" "-marducC" 0
+assert "-qAi" "-mardicC" 0
+assert "-qu" "-u"        0
+assert "-q" "-u"         1
+assert "-m" "-a"         1
+assert "-r" "-d"         1
 

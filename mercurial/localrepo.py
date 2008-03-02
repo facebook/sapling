@@ -959,7 +959,7 @@ class localrepository(repo.repository):
                 yield src, fn
 
     def status(self, node1=None, node2=None, files=[], match=util.always,
-               list_ignored=False, list_clean=False):
+               list_ignored=False, list_clean=False, list_unknown=True):
         """return status of files between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
@@ -995,7 +995,8 @@ class localrepository(repo.repository):
         if not node2:
             (lookup, modified, added, removed, deleted, unknown,
              ignored, clean) = self.dirstate.status(files, match,
-                                                    list_ignored, list_clean)
+                                                    list_ignored, list_clean,
+                                                    list_unknown)
 
             # are we comparing working dir against its parent?
             if compareworking:

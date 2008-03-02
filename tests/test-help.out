@@ -222,8 +222,8 @@ show changed files in the working directory
     -i (ignored), -C (copies) or -A is given.  Unless options described
     with "show only ..." are given, the options -mardu are used.
 
-    Option -q/--quiet hides untracked files unless explicitly
-    requested by -u.
+    Option -q/--quiet hides untracked (unknown and ignored) files
+    unless explicitly requested with -u/--unknown or -i/-ignored.
 
     NOTE: status may appear to disagree with diff if permissions have
     changed or a merge has occurred. The standard diff format does not
