@@ -654,7 +654,13 @@ class hgweb(object):
 
         def annotate(**map):
             last = None
-            lines = enumerate(fctx.annotate(follow=True, linenumber=True))
+            if util.binary(fctx.data()):
+                mt = (mimetypes.guess_type(fctx.path())[0]
+                      or 'application/octet-stream')
+                lines = enumerate([((fctx.filectx(fctx.filerev()), 1),
+                                    '(binary:%s)' % mt)])
+            else:
+                lines = enumerate(fctx.annotate(follow=True, linenumber=True))
             for lineno, ((f, targetline), l) in lines:
                 fnode = f.filenode()
                 name = self.repo.ui.shortuser(f.user())
