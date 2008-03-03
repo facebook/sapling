@@ -1,4 +1,5 @@
-*** failed to import extension badext: bit bucket overflow
+*** failed to import extension badext from .../badext.py: bit bucket overflow
+*** failed to import extension badext2: No module named badext2
 hg help [COMMAND]
 
 show help for a command, extension, or list of commands

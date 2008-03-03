@@ -78,8 +78,12 @@ def loadall(ui):
         except (util.SignalInterrupt, KeyboardInterrupt):
             raise
         except Exception, inst:
-            ui.warn(_("*** failed to import extension %s: %s\n") %
-                    (name, inst))
+            if path:
+                ui.warn(_("*** failed to import extension %s from %s: %s\n")
+                        % (name, path, inst))
+            else:
+                ui.warn(_("*** failed to import extension %s: %s\n")
+                        % (name, inst))
             if ui.print_exc():
                 return 1
 

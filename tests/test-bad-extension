@@ -7,5 +7,7 @@ echo '[extensions]' >> $HGRCPATH
 echo "gpg =" >> $HGRCPATH
 echo "hgext.gpg =" >> $HGRCPATH
 echo "badext = $abspath" >> $HGRCPATH
+echo "badext2 =" >> $HGRCPATH
 
-hg -q help help
+hg -q help help 2>&1 | python -c \
+  "import sys; sys.stdout.write(sys.stdin.read().replace('$abspath', '.../badext.py'))"
