@@ -17,7 +17,12 @@ def fetch(ui, repo, source='default', **opts):
 
     If the pulled changes add a new head, the head is automatically
     merged, and the result of the merge is committed.  Otherwise, the
-    working directory is updated.
+    working directory is updated to include the new changes.
+
+    When a merge occurs, the newly pulled changes are assumed to be
+    "authoritative".  The head of the new changes is used as the first
+    parent, with local changes as the second.  To switch the merge
+    order, use --switch-parent.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     '''
@@ -34,15 +39,27 @@ def fetch(ui, repo, source='default', **opts):
             newparent = newchildren[0]
             hg.clean(repo, newparent)
         newheads = [n for n in repo.heads() if n != newparent]
-        err = False
-        if newheads:
-            ui.status(_('merging with new head %d:%s\n') %
-                      (repo.changelog.rev(newheads[0]), short(newheads[0])))
-            err = hg.merge(repo, newheads[0], remind=False)
-        if not err and len(newheads) > 1:
+        if len(newheads) > 1:
             ui.status(_('not merging with %d other new heads '
                         '(use "hg heads" and "hg merge" to merge them)') %
                       (len(newheads) - 1))
+            return
+        err = False
+        if newheads:
+            # By default, we consider the repository we're pulling
+            # *from* as authoritative, so we merge our changes into
+            # theirs.
+            if opts['switch_parent']:
+                firstparent, secondparent = newparent, newheads[0]
+            else:
+                firstparent, secondparent = newheads[0], newparent
+                ui.status(_('updating to %d:%s\n') %
+                          (repo.changelog.rev(firstparent),
+                           short(firstparent)))
+            hg.clean(repo, firstparent)
+            ui.status(_('merging with %d:%s\n') %
+                      (repo.changelog.rev(secondparent), short(secondparent)))
+            err = hg.merge(repo, secondparent, remind=False)
         if not err:
             mod, add, rem = repo.status()[:3]
             message = (cmdutil.logmessage(opts) or
@@ -54,6 +71,7 @@ def fetch(ui, repo, source='default', **opts):
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
                                            short(n)))
+
     def pull():
         cmdutil.setremoteconfig(ui, opts)
 
@@ -97,6 +115,7 @@ cmdtable = {
         (fetch,
         [('r', 'rev', [], _('a specific revision you would like to pull')),
          ('f', 'force-editor', None, _('edit commit message')),
+         ('', 'switch-parent', None, _('switch parents when merging')),
         ] + commands.commitopts + commands.commitopts2 + commands.remoteopts,
         _('hg fetch [SOURCE]')),
 }

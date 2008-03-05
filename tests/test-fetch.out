@@ -15,13 +15,16 @@ added 1 changesets with 1 changes to 1 files
 adding c
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% should merge c into a
 pulling from ../a
 searching for changes
 adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
-merging with new head 2:97d72e5f12c7
+updating to 2:97d72e5f12c7
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 new changeset 3:cd3a41621cf0 merges remote changes with local
 a
@@ -34,7 +37,9 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
-merging with new head 2:97d72e5f12c7
+updating to 2:97d72e5f12c7
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 new changeset 3:0b6439e938f9 merges remote changes with local
 Automated merge with http://localhost:20059/
@@ -45,7 +50,24 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
-merging with new head 2:97d72e5f12c7
+updating to 2:97d72e5f12c7
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 new changeset 3:0b6439e938f9 merges remote changes with local
 Automated merge with http://localhost:20059/
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding f
+adding g
+% should merge f into g
+pulling from ../f
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+merging with 3:cc6a3744834d
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+new changeset 4:96d2275e70b4 merges remote changes with local

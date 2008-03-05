@@ -24,6 +24,7 @@ hg --cwd c commit -d '3 0' -Amc
 hg clone c d
 hg clone c e
 
+echo % should merge c into a
 hg --cwd c fetch -d '4 0' -m 'automated merge' ../a
 ls c
 
@@ -37,3 +38,15 @@ hg --cwd d tip --template '{desc}\n'
 echo '% fetch over http with auth (should be hidden in desc)'
 hg --cwd e fetch -d '5 0' http://user:password@localhost:$HGPORT/
 hg --cwd e tip --template '{desc}\n'
+
+hg clone a f
+hg clone a g
+
+echo f > f/f
+hg --cwd f ci -d '6 0' -Amf
+
+echo g > g/g
+hg --cwd g ci -d '6 0' -Amg
+
+echo % should merge f into g
+hg --cwd g fetch --switch ../f
