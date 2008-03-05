@@ -38,6 +38,8 @@ parser.add_option("-i", "--interactive", action="store_true",
     help="prompt to accept changed output")
 parser.add_option("-j", "--jobs", type="int",
     help="number of jobs to run in parallel")
+parser.add_option("--keep-tmpdir", action="store_true",
+    help="keep temporary directory after running tests (best used with --tmpdir)")
 parser.add_option("-R", "--restart", action="store_true",
     help="restart at last error")
 parser.add_option("-p", "--port", type="int",
@@ -133,9 +135,10 @@ def check_required_tools():
             print "WARNING: Did not find prerequisite tool: "+p
 
 def cleanup_exit():
-    if verbose:
-        print "# Cleaning up HGTMP", HGTMP
-    shutil.rmtree(HGTMP, True)
+    if not options.keep_tmpdir:
+        if verbose:
+            print "# Cleaning up HGTMP", HGTMP
+        shutil.rmtree(HGTMP, True)
 
 def use_correct_python():
     # some tests run python interpreter. they must use same
@@ -398,7 +401,8 @@ def run_one(test, skips):
         pass
 
     os.chdir(TESTDIR)
-    shutil.rmtree(tmpd, True)
+    if not options.keep_tmpdir:
+	    shutil.rmtree(tmpd, True)
     if skipped:
         return None
     return ret == 0
