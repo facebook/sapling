@@ -79,10 +79,12 @@ def fetch(ui, repo, source='default', **opts):
         ui.status(_('pulling from %s\n') %
                   util.hidepassword(ui.expandpath(source)))
         revs = None
-        if opts['rev'] and not other.local():
-            raise util.Abort(_("fetch -r doesn't work for remote repositories yet"))
-        elif opts['rev']:
-            revs = [other.lookup(rev) for rev in opts['rev']]
+        if opts['rev']:
+            if not other.local():
+                raise util.Abort(_("fetch -r doesn't work for remote "
+                                   "repositories yet"))
+            else:
+                revs = [other.lookup(rev) for rev in opts['rev']]
         modheads = repo.pull(other, heads=revs)
         return postincoming(other, modheads)
 

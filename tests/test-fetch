@@ -24,6 +24,10 @@ hg --cwd c commit -d '3 0' -Amc
 hg clone c d
 hg clone c e
 
+# We cannot use the default commit message if fetching from a local
+# repo, because the path of the repo will be included in the commit
+# message, making every commit appear different.
+
 echo % should merge c into a
 hg --cwd c fetch -d '4 0' -m 'automated merge' ../a
 ls c
@@ -49,4 +53,4 @@ echo g > g/g
 hg --cwd g ci -d '6 0' -Amg
 
 echo % should merge f into g
-hg --cwd g fetch --switch ../f
+hg --cwd g fetch -d '7 0' --switch -m 'automated merge' ../f
