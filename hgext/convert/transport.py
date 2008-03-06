@@ -116,10 +116,3 @@ class SvnRaTransport(object):
 
     def do_update(self, revnum, path, *args, **kwargs):
         return self.Reporter(svn.ra.do_update(self.ra, revnum, path, *args, **kwargs))
-
-    def clone(self, offset=None):
-        """See Transport.clone()."""
-        if offset is None:
-            return self.__class__(self.base)
-
-        return SvnRaTransport(urlutils.join(self.base, offset), ra=self.ra)
