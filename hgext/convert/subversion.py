@@ -793,8 +793,7 @@ class svn_source(converter_source):
                     pass
         except SubversionException, (inst, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
-                raise NoSuchRevision(branch=self,
-                    revision="Revision number %d" % to_revnum)
+                raise util.Abort('svn: branch has no revision %s' % to_revnum)
             raise
 
     def _getfile(self, file, rev):
