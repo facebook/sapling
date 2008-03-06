@@ -13,7 +13,7 @@
 
 import win32api
 
-import errno, os, pywintypes, win32con, win32file, win32process
+import errno, os, sys, pywintypes, win32con, win32file, win32process
 import cStringIO, winerror
 import osutil
 from win32com.shell import shell,shellcon
