@@ -46,3 +46,5 @@ abort: there is nothing to merge
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 % nothing to merge
 abort: there is nothing to merge - use "hg update" instead
+% load unknown parent
+abort: merge parent e6da4671640124fe5d3d70d2f54441d6cd76ae35 not in repository

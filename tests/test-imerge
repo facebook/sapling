@@ -61,4 +61,10 @@ hg up 0
 echo % nothing to merge
 hg imerge
 
+cd ..
+hg -q clone -r 0 base clone
+cd clone
+echo % load unknown parent
+hg imerge load ../savedmerge
+
 exit 0

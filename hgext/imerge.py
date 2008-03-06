@@ -8,7 +8,7 @@ imerge - interactive merge
 from mercurial.i18n import _
 from mercurial.node import hex, short
 from mercurial import commands, cmdutil, dispatch, fancyopts
-from mercurial import hg, filemerge, util
+from mercurial import hg, filemerge, util, revlog
 import os, tarfile
 
 class InvalidStateFileException(Exception): pass
@@ -78,8 +78,8 @@ class Imerge(object):
 
         try:
             parents = [self.repo.changectx(n) for n in status[:2]]
-        except LookupError:
-            raise util.Abort('merge parent %s not in repository' % short(p))
+        except revlog.LookupError, e:
+            raise util.Abort('merge parent %s not in repository' % e.name)
 
         status = status[2:]
         conflicts = int(status.pop(0)) * 3
