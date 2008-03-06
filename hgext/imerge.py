@@ -6,7 +6,7 @@ imerge - interactive merge
 '''
 
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import hex, short
 from mercurial import commands, cmdutil, dispatch, fancyopts
 from mercurial import hg, filemerge, util
 import os, tarfile

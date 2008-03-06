@@ -46,7 +46,7 @@ pretty fast (at least faster than having to compare the entire tree).
 '''
 
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import short
 from mercurial import cmdutil, util, commands
 import os, shlex, shutil, tempfile
 

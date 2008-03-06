@@ -46,7 +46,7 @@
 #   ** = user6
 
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import bin, short
 from mercurial import util
 import getpass
 

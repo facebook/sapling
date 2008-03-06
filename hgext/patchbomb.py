@@ -69,7 +69,7 @@ import email.MIMEMultipart, email.MIMEText, email.MIMEBase
 import email.Utils, email.Encoders
 from mercurial import cmdutil, commands, hg, mail, ui, patch, util
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import bin
 
 def patchbomb(ui, repo, *revs, **opts):
     '''send changesets by email

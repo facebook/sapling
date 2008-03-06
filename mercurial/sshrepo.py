@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import *
-from remoterepo import *
+from node import bin, hex
+from remoterepo import remotelock, remoterepository
 from i18n import _
 import repo, os, re, stat, util
 

@@ -53,7 +53,7 @@
 #   committer_email = bugzilla_user_name
 
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import short
 from mercurial import cmdutil, templater, util
 import os, re, time
 

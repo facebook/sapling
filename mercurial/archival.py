@@ -6,7 +6,7 @@
 # the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-from node import *
+from node import hex
 import cStringIO, os, stat, tarfile, time, util, zipfile
 import zlib, gzip
 

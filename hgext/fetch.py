@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import nullid, short
 from mercurial import commands, cmdutil, hg, node, util
 
 def fetch(ui, repo, source='default', **opts):

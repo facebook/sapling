@@ -7,7 +7,7 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-from node import *
+from node import nullid
 from i18n import _
 import struct, os, time, bisect, stat, strutil, util, re, errno, ignore
 import cStringIO, osutil

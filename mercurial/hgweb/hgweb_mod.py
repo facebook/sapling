@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, mimetypes, re
-from mercurial.node import *
+from mercurial.node import hex, nullid, short
 from mercurial import mdiff, ui, hg, util, archival, patch, hook
 from mercurial import revlog, templater, templatefilters, changegroup
 from common import get_mtime, style_map, paritygen, countgen, get_contact

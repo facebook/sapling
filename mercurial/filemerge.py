@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import *
+from node import nullrev
 from i18n import _
 import util, os, tempfile, context, simplemerge, re, filecmp
 

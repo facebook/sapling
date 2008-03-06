@@ -81,7 +81,7 @@ like CVS' $Log$, are not supported. A keyword template map
 from mercurial import commands, cmdutil, context, dispatch, filelog, revlog
 from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.hgweb import webcommands
-from mercurial.node import *
+from mercurial.node import nullid, hex
 from mercurial.i18n import _
 import re, shutil, tempfile, time
 

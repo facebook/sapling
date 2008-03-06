@@ -66,7 +66,7 @@
 # push changes to, they can manage their own subscriptions.
 
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import bin, short
 from mercurial import patch, cmdutil, templater, util, mail
 import email.Parser, fnmatch, socket, time
 

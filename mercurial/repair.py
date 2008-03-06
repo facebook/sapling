@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import changegroup, os
-from node import *
+from node import nullrev, short
 
 def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     """create a bundle with the specified revisions as a backup"""

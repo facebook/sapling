@@ -10,7 +10,7 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-from node import *
+from node import hex, nullid, short
 from i18n import _
 import changegroup, util, os, struct, bz2, tempfile, mdiff
 import localrepo, changelog, manifest, filelog, revlog

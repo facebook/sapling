@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-from node import *
+from node import bin, hex
 import os, streamclone, sys, tempfile, util, hook
 
 class sshserver(object):

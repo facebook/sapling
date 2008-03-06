@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-from node import *
+from node import hex, nullid, short
 import base85, cmdutil, mdiff, util, context, revlog, diffhelpers
 import cStringIO, email.Parser, os, popen2, re, sha, errno
 import sys, tempfile, zlib
