@@ -30,6 +30,8 @@ refresh contents of top applied patch     qrefresh
 '''
 
 from mercurial.i18n import _
+from mercurial.node import bin, hex, short
+from mercurial.repo import RepoError
 from mercurial import commands, cmdutil, hg, patch, revlog, util
 from mercurial import repair
 import os, sys, re, errno
@@ -1254,7 +1256,7 @@ class queue:
             elif lines[i].startswith('Dirstate:'):
                 l = lines[i].rstrip()
                 l = l[10:].split(' ')
-                qpp = [ hg.bin(x) for x in l ]
+                qpp = [ bin(x) for x in l ]
             elif datastart != None:
                 l = lines[i].rstrip()
                 se = statusentry(l)
@@ -1277,7 +1279,7 @@ class queue:
             if rev not in heads:
                 self.ui.warn("save entry has children, leaving it alone\n")
             else:
-                self.ui.warn("removing save entry %s\n" % hg.short(rev))
+                self.ui.warn("removing save entry %s\n" % short(rev))
                 pp = repo.dirstate.parents()
                 if rev in pp:
                     update = True
@@ -1286,7 +1288,7 @@ class queue:
                 self.strip(repo, rev, update=update, backup='strip')
         if qpp:
             self.ui.warn("saved queue repository parents: %s %s\n" %
-                         (hg.short(qpp[0]), hg.short(qpp[1])))
+                         (short(qpp[0]), short(qpp[1])))
             if qupdate:
                 self.ui.status(_("queue directory updating\n"))
                 r = self.qrepo()
@@ -1311,7 +1313,7 @@ class queue:
         r = self.qrepo()
         if r:
             pp = r.dirstate.parents()
-            msg += "\nDirstate: %s %s" % (hg.hex(pp[0]), hg.hex(pp[1]))
+            msg += "\nDirstate: %s %s" % (hex(pp[0]), hex(pp[1]))
         msg += "\n\nPatch Data:\n"
         text = msg + "\n".join([str(x) for x in self.applied]) + '\n' + (ar and
                    "\n".join(ar) + '\n' or "")
@@ -1597,7 +1599,7 @@ def clone(ui, source, dest=None, **opts):
     patchespath = opts['patches'] or patchdir(sr)
     try:
         pr = hg.repository(ui, patchespath)
-    except hg.RepoError:
+    except RepoError:
         raise util.Abort(_('versioned patch repository not found'
                            ' (see qinit -c)'))
     qbase, destrev = None, None

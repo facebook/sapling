@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
+from repo import RepoError
 import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex, time
 import util, commands, hg, lock, fancyopts, revlog, version, extensions, hook
 import cmdutil
@@ -64,7 +65,7 @@ def _runcatch(ui, args):
     except cmdutil.UnknownCommand, inst:
         ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         commands.help_(ui, 'shortlist')
-    except hg.RepoError, inst:
+    except RepoError, inst:
         ui.warn(_("abort: %s!\n") % inst)
     except lock.LockHeld, inst:
         if inst.errno == errno.ETIMEDOUT:
@@ -341,7 +342,7 @@ def _dispatch(ui, args):
             if not repo.local():
                 raise util.Abort(_("repository '%s' is not local") % path)
             ui.setconfig("bundle", "mainreporoot", repo.root)
-        except hg.RepoError:
+        except RepoError:
             if cmd not in commands.optionalrepo.split():
                 if args and not path: # try to infer -R from command args
                     repos = map(_findrepo, args)
@@ -349,8 +350,8 @@ def _dispatch(ui, args):
                     if guess and repos.count(guess) == len(repos):
                         return _dispatch(ui, ['--repository', guess] + fullargs)
                 if not path:
-                    raise hg.RepoError(_("There is no Mercurial repository here"
-                                         " (.hg not found)"))
+                    raise RepoError(_("There is no Mercurial repository here"
+                                      " (.hg not found)"))
                 raise
         d = lambda: func(ui, repo, *args, **cmdoptions)
     else:

@@ -8,7 +8,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import hg, util
+from node import short
+import util
 
 def bisect(changelog, state):
     clparents = changelog.parentrevs
@@ -41,7 +42,7 @@ def bisect(changelog, state):
     bad = changelog.node(badrev)
     if not ancestors: # now we're confused
         raise util.Abort(_("Inconsistent state, %s:%s is good and bad")
-                         % (badrev, hg.short(bad)))
+                         % (badrev, short(bad)))
 
     # build children dict
     children = {}

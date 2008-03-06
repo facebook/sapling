@@ -8,6 +8,7 @@
 
 import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
 from mercurial import hg, util
+from mercurial.repo import RepoError
 from hgweb_mod import hgweb
 from hgwebdir_mod import hgwebdir
 from mercurial.i18n import gettext as _
@@ -247,8 +248,8 @@ def create_server(ui, repo):
                 elif repo is not None:
                     hgwebobj = hgweb(hg.repository(repo.ui, repo.root))
                 else:
-                    raise hg.RepoError(_("There is no Mercurial repository here"
-                                         " (.hg not found)"))
+                    raise RepoError(_("There is no Mercurial repository here"
+                                      " (.hg not found)"))
                 return hgwebobj
             self.application = make_handler()
 
@@ -277,7 +278,7 @@ def create_server(ui, repo):
 
         def __init__(self, *args, **kwargs):
             if self.address_family is None:
-                raise hg.RepoError(_('IPv6 not available on this system'))
+                raise RepoError(_('IPv6 not available on this system'))
             super(IPv6HTTPServer, self).__init__(*args, **kwargs)
 
     if ssl_cert:

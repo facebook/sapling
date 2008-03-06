@@ -6,7 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, mimetypes
-from mercurial import revlog, util, hg
+from mercurial import revlog, util
+from mercurial.repo import RepoError
 from common import staticfile, ErrorResponse, HTTP_OK, HTTP_NOT_FOUND
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
@@ -67,7 +68,7 @@ def changelog(web, req, tmpl, shortlog = False):
             hi = web.repo.changelog.count() - 1
         try:
             ctx = web.repo.changectx(hi)
-        except hg.RepoError:
+        except RepoError:
             return web.search(tmpl, hi) # XXX redirect to 404 page?
 
     return web.changelog(tmpl, ctx, shortlog = shortlog)

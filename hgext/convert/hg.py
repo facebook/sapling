@@ -15,6 +15,7 @@
 
 import os, time
 from mercurial.i18n import _
+from mercurial.repo import RepoError
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, revlog, util
 
@@ -32,7 +33,7 @@ class mercurial_sink(converter_sink):
                 self.repo = hg.repository(self.ui, path)
                 if not self.repo.local():
                     raise NoRepo(_('%s is not a local Mercurial repo') % path)
-            except hg.RepoError, err:
+            except RepoError, err:
                 ui.print_exc()
                 raise NoRepo(err.args[0])
         else:
@@ -42,7 +43,7 @@ class mercurial_sink(converter_sink):
                 if not self.repo.local():
                     raise NoRepo(_('%s is not a local Mercurial repo') % path)
                 self.created.append(path)
-            except hg.RepoError, err:
+            except RepoError, err:
                 ui.print_exc()
                 raise NoRepo("could not create hg repo %s as sink" % path)
         self.lock = None
@@ -155,7 +156,7 @@ class mercurial_sink(converter_sink):
                                     bin(p1), bin(p2), extra=extra)
             self.repo.dirstate.clear()
             text = "(octopus merge fixup)\n"
-            p2 = hg.hex(self.repo.changelog.tip())
+            p2 = hex(self.repo.changelog.tip())
 
         if self.filemapmode and nparents == 1:
             man = self.repo.manifest
@@ -194,7 +195,7 @@ class mercurial_sink(converter_sink):
                 extra['branch'] = self.tagsbranch
             try:
                 tagparent = self.repo.changectx(self.tagsbranch).node()
-            except hg.RepoError, inst:
+            except RepoError, inst:
                 tagparent = nullid
             self.repo.rawcommit([".hgtags"], "update tags", "convert-repo",
                                 date, tagparent, nullid, extra=extra)
@@ -212,8 +213,8 @@ class mercurial_source(converter_source):
             # try to provoke an exception if this isn't really a hg
             # repo, but some other bogus compatible-looking url
             if not self.repo.local():
-                raise hg.RepoError()
-        except hg.RepoError:
+                raise RepoError()
+        except RepoError:
             ui.print_exc()
             raise NoRepo("%s is not a local Mercurial repo" % path)
         self.lastrev = None

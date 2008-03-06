@@ -46,7 +46,8 @@
 # vdiff on hovered and selected revisions.
 
 import os
-from mercurial import hg, commands, util, patch, revlog
+from mercurial import commands, util, patch, revlog
+from mercurial.node import nullid, nullrev, short
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
@@ -57,18 +58,18 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         status = repo.status(node1, node2, files=files)[:5]
         modified, added, removed, deleted, unknown = status
 
-        empty = hg.short(hg.nullid)
+        empty = short(nullid)
 
         for f in modified:
             # TODO get file permissions
             ui.write(":100664 100664 %s %s M\t%s\t%s\n" %
-                     (hg.short(mmap[f]), hg.short(mmap2[f]), f, f))
+                     (short(mmap[f]), short(mmap2[f]), f, f))
         for f in added:
             ui.write(":000000 100664 %s %s N\t%s\t%s\n" %
-                     (empty, hg.short(mmap2[f]), f, f))
+                     (empty, short(mmap2[f]), f, f))
         for f in removed:
             ui.write(":100664 000000 %s %s D\t%s\t%s\n" %
-                     (hg.short(mmap[f]), empty, f, f))
+                     (short(mmap[f]), empty, f, f))
     ##
 
     while True:
@@ -104,9 +105,9 @@ def catcommit(ui, repo, n, prefix, ctx=None):
     if ctx is None:
         ctx = repo.changectx(n)
     (p1, p2) = ctx.parents()
-    ui.write("tree %s\n" % hg.short(ctx.changeset()[0])) # use ctx.node() instead ??
-    if p1: ui.write("parent %s\n" % hg.short(p1.node()))
-    if p2: ui.write("parent %s\n" % hg.short(p2.node()))
+    ui.write("tree %s\n" % short(ctx.changeset()[0])) # use ctx.node() instead ??
+    if p1: ui.write("parent %s\n" % short(p1.node()))
+    if p2: ui.write("parent %s\n" % short(p2.node()))
     date = ctx.date()
     description = ctx.description().replace("\0", "")
     lines = description.splitlines()
@@ -132,7 +133,7 @@ def base(ui, repo, node1, node2):
     node1 = repo.lookup(node1)
     node2 = repo.lookup(node2)
     n = repo.changelog.ancestor(node1, node2)
-    ui.write(hg.short(n) + "\n")
+    ui.write(short(n) + "\n")
 
 def catfile(ui, repo, type=None, r=None, **opts):
     """cat a specific revision"""
@@ -252,27 +253,27 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
             parentstr = ""
             if parents:
                 pp = repo.changelog.parents(n)
-                if pp[0] != hg.nullid:
-                    parentstr += " " + hg.short(pp[0])
-                if pp[1] != hg.nullid:
-                    parentstr += " " + hg.short(pp[1])
+                if pp[0] != nullid:
+                    parentstr += " " + short(pp[0])
+                if pp[1] != nullid:
+                    parentstr += " " + short(pp[1])
             if not full:
-                ui.write("%s%s\n" % (hg.short(n), parentstr))
+                ui.write("%s%s\n" % (short(n), parentstr))
             elif full == "commit":
-                ui.write("%s%s\n" % (hg.short(n), parentstr))
+                ui.write("%s%s\n" % (short(n), parentstr))
                 catcommit(ui, repo, n, '    ', ctx)
             else:
                 (p1, p2) = repo.changelog.parents(n)
-                (h, h1, h2) = map(hg.short, (n, p1, p2))
+                (h, h1, h2) = map(short, (n, p1, p2))
                 (i1, i2) = map(repo.changelog.rev, (p1, p2))
 
                 date = ctx.date()[0]
                 ui.write("%s %s:%s" % (date, h, mask))
                 mask = is_reachable(want_sha1, reachable, p1)
-                if i1 != hg.nullrev and mask > 0:
+                if i1 != nullrev and mask > 0:
                     ui.write("%s:%s " % (h1, mask)),
                 mask = is_reachable(want_sha1, reachable, p2)
-                if i2 != hg.nullrev and mask > 0:
+                if i2 != nullrev and mask > 0:
                     ui.write("%s:%s " % (h2, mask))
                 ui.write("\n")
             if maxnr and count >= maxnr:

@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import hex, nullid, nullrev, short
+from repo import RepoError
 from i18n import _
 import os, re, sys, urllib
 import hg, util, revlog, bundlerepo, extensions
@@ -311,7 +312,7 @@ def bisect(ui, repo, rev=None, extra=None,
     try:
         for kind in state:
             for node in state[kind]:
-                f.write("%s %s\n" % (kind, hg.hex(node)))
+                f.write("%s %s\n" % (kind, hex(node)))
         f.rename()
     finally:
         del wlock
@@ -333,7 +334,7 @@ def bisect(ui, repo, rev=None, extra=None,
         rev = repo.changelog.rev(node)
         ui.write(_("Testing changeset %s:%s "
                    "(%s changesets remaining, ~%s tests)\n")
-                 % (rev, hg.short(node), changesets, tests))
+                 % (rev, short(node), changesets, tests))
         if not noupdate:
             cmdutil.bail_if_changed(repo)
             return hg.clean(repo, node)
@@ -1522,7 +1523,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                         p2 = repo.lookup(p2)
                         if p1 == wp[0].node():
                             repo.dirstate.setparents(p1, p2)
-                    except hg.RepoError:
+                    except RepoError:
                         pass
                 if opts.get('exact') or opts.get('import_branch'):
                     repo.dirstate.setbranch(branch or 'default')
@@ -2437,8 +2438,8 @@ def serve(ui, repo, **opts):
 
     if opts["stdio"]:
         if repo is None:
-            raise hg.RepoError(_("There is no Mercurial repository here"
-                                 " (.hg not found)"))
+            raise RepoError(_("There is no Mercurial repository here"
+                              " (.hg not found)"))
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
@@ -2452,8 +2453,8 @@ def serve(ui, repo, **opts):
                 repo.ui.setconfig("web", o, str(opts[o]))
 
     if repo is None and not ui.config("web", "webdir_conf"):
-        raise hg.RepoError(_("There is no Mercurial repository here"
-                             " (.hg not found)"))
+        raise RepoError(_("There is no Mercurial repository here"
+                          " (.hg not found)"))
 
     class service:
         def init(self):

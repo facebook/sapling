@@ -8,6 +8,7 @@
 
 import os, mimetypes, re
 from mercurial.node import hex, nullid, short
+from mercurial.repo import RepoError
 from mercurial import mdiff, ui, hg, util, archival, patch, hook
 from mercurial import revlog, templater, templatefilters, changegroup
 from common import get_mtime, style_map, paritygen, countgen, get_contact
@@ -74,7 +75,7 @@ def revnavgen(pos, pagelen, limit, nodefunc):
                 yield {"label": label, "node": node}
 
             yield {"label": "tip", "node": "tip"}
-        except hg.RepoError:
+        except RepoError:
             pass
 
     return nav
@@ -248,7 +249,7 @@ class hgweb(object):
         except revlog.LookupError, err:
             req.respond(HTTP_NOT_FOUND, ctype)
             req.write(tmpl('error', error='revision not found: %s' % err.name))
-        except (hg.RepoError, revlog.RevlogError), inst:
+        except (RepoError, revlog.RevlogError), inst:
             req.respond(HTTP_SERVER_ERROR, ctype)
             req.write(tmpl('error', error=str(inst)))
         except ErrorResponse, inst:
@@ -915,7 +916,7 @@ class hgweb(object):
 
         try:
             ctx = self.repo.changectx(changeid)
-        except hg.RepoError:
+        except RepoError:
             man = self.repo.manifest
             mn = man.lookup(changeid)
             ctx = self.repo.changectx(man.linkrev(mn))
@@ -931,7 +932,7 @@ class hgweb(object):
         try:
             ctx = self.repo.changectx(changeid)
             fctx = ctx.filectx(path)
-        except hg.RepoError:
+        except RepoError:
             fctx = self.repo.filectx(path, fileid=changeid)
 
         return fctx
