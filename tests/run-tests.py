@@ -402,7 +402,7 @@ def run_one(test, skips):
 
     os.chdir(TESTDIR)
     if not options.keep_tmpdir:
-	    shutil.rmtree(tmpd, True)
+        shutil.rmtree(tmpd, True)
     if skipped:
         return None
     return ret == 0
