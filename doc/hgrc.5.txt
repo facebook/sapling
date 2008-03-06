@@ -217,7 +217,7 @@ extensions::
   defines the extension.
 
   To explicitly disable an extension that is enabled in an hgrc of
-  broader scope, prepend its path with '!', as in 
+  broader scope, prepend its path with '!', as in
   'hgext.foo = !/ext/path' or 'hgext.foo = !' when no path is supplied.
 
   Example for ~/.hgrc:

@@ -517,7 +517,7 @@ class localrepository(repo.repository):
                 fn = None
                 params = cmd
                 for name, filterfn in self._datafilters.iteritems():
-                    if cmd.startswith(name): 
+                    if cmd.startswith(name):
                         fn = filterfn
                         params = cmd[len(name):].lstrip()
                         break
@@ -1585,7 +1585,7 @@ class localrepository(repo.repository):
 
         Another wrinkle is doing the reverse, figuring out which changeset in
         the changegroup a particular filenode or manifestnode belongs to.
-        
+
         The caller can specify some nodes that must be included in the
         changegroup using the extranodes argument.  It should be a dict
         where the keys are the filenames (or 1 for the manifest), and the

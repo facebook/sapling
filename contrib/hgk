@@ -342,7 +342,7 @@ proc parsecommit {id contents listed olds} {
 
 proc readrefs {} {
     global tagids idtags headids idheads tagcontents env curid
-    
+
     set curid [exec $env(HG) --config ui.report_untrusted=false id]
     regexp -- {[[:xdigit:]]+} $curid curid
 

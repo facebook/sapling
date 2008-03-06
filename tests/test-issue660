@@ -16,7 +16,7 @@ mkdir a
 echo a > a/a
 
 echo % should fail - would corrupt dirstate
-hg add a/a 
+hg add a/a
 
 echo % removing shadow
 hg rm --after a

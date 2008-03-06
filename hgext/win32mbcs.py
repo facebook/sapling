@@ -81,7 +81,7 @@ def encode_with_check(arg):
         return arg
 
 def wrap(func):
-    
+
     def wrapped(*args):
         # check argument is unicode, then call original
         for arg in args:
@@ -122,7 +122,7 @@ def install():
         from mercurial import ui
         _ui = ui.ui()
     os.path.join = wrap(os.path.join)
-    os.path.split = wrap(os.path.split) 
+    os.path.split = wrap(os.path.split)
     os.path.splitext = wrap(os.path.splitext)
     os.path.splitunc = wrap(os.path.splitunc)
     os.path.normpath = wrap(os.path.normpath)
@@ -134,7 +134,7 @@ def install():
 def uninstall():
     # restore original functions.
     os.path.join = unwrap(os.path.join)
-    os.path.split = unwrap(os.path.split) 
+    os.path.split = unwrap(os.path.split)
     os.path.splitext = unwrap(os.path.splitext)
     os.path.splitunc = unwrap(os.path.splitunc)
     os.path.normpath = unwrap(os.path.normpath)

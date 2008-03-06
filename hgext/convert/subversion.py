@@ -202,7 +202,7 @@ class svn_source(converter_source):
             if self.startrev < 0:
                 self.startrev = 0
         except ValueError:
-            raise util.Abort(_('svn: start revision %s is not an integer') 
+            raise util.Abort(_('svn: start revision %s is not an integer')
                              % self.startrev)
 
         try:
@@ -215,7 +215,7 @@ class svn_source(converter_source):
             raise util.Abort(_('no revision found in module %s') %
                              self.module.encode(self.encoding))
         self.last_changed = self.revnum(self.head)
-        
+
         self._changescache = None
 
         if os.path.exists(os.path.join(url, '.svn/entries')):
@@ -288,7 +288,7 @@ class svn_source(converter_source):
                     self.ui.note(_('ignoring empty branch %s\n') %
                                    branch.encode(self.encoding))
                     continue
-                self.ui.note('found branch %s at %d\n' % 
+                self.ui.note('found branch %s at %d\n' %
                              (branch, self.revnum(brevid)))
                 self.heads.append(brevid)
 
@@ -298,7 +298,7 @@ class svn_source(converter_source):
                                    'with more than one branch'))
             revnum = self.revnum(self.heads[0])
             if revnum < self.startrev:
-                raise util.Abort(_('svn: no revision found after start revision %d') 
+                raise util.Abort(_('svn: no revision found after start revision %d')
                                  % self.startrev)
 
         return self.heads
@@ -322,9 +322,9 @@ class svn_source(converter_source):
         else:
             # Perform a full checkout on roots
             uuid, module, revnum = self.revsplit(rev)
-            entries = svn.client.ls(self.base + module, optrev(revnum), 
+            entries = svn.client.ls(self.base + module, optrev(revnum),
                                     True, self.ctx)
-            files = [n for n,e in entries.iteritems() 
+            files = [n for n,e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
             copies = {}
 
@@ -364,7 +364,7 @@ class svn_source(converter_source):
         tags = {}
         if self.tags is None:
             return tags
-            
+
         start = self.revnum(self.head)
         try:
             for entry in get_log(self.url, [self.tags], self.startrev, start):
@@ -442,7 +442,7 @@ class svn_source(converter_source):
                     if not path.startswith(p) or not paths[p].copyfrom_path:
                         continue
                     newpath = paths[p].copyfrom_path + path[len(p):]
-                    self.ui.debug("branch renamed from %s to %s at %d\n" % 
+                    self.ui.debug("branch renamed from %s to %s at %d\n" %
                                   (path, newpath, revnum))
                     path = newpath
                     break
@@ -566,7 +566,7 @@ class svn_source(converter_source):
                 self.reparent('')
                 fromkind = svn.ra.check_path(self.ra, entrypath.strip('/'), fromrev)
                 self.reparent(self.module)
-                
+
                 if fromkind == svn.core.svn_node_file:   # a deleted file
                     entries.append(self.recode(entry))
                 elif fromkind == svn.core.svn_node_dir:
@@ -677,7 +677,7 @@ class svn_source(converter_source):
 
         self.child_cset = None
         def parselogentry(orig_paths, revnum, author, date, message):
-            """Return the parsed commit object or None, and True if 
+            """Return the parsed commit object or None, and True if
             the revision is a branch root.
             """
             self.ui.debug("parsing revision %d (%d changes)\n" %
@@ -764,13 +764,13 @@ class svn_source(converter_source):
                         lastonbranch = True
                         break
                     if self.is_blacklisted(revnum):
-                        self.ui.note('skipping blacklisted revision %d\n' 
+                        self.ui.note('skipping blacklisted revision %d\n'
                                      % revnum)
                         continue
                     if paths is None:
                         self.ui.debug('revision %d has no entries\n' % revnum)
                         continue
-                    cset, lastonbranch = parselogentry(paths, revnum, author, 
+                    cset, lastonbranch = parselogentry(paths, revnum, author,
                                                        date, message)
                     if cset:
                         firstcset = cset

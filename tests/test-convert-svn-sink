@@ -10,7 +10,7 @@ fixpath()
 svnupanddisplay()
 {
     (
-       cd $1; 
+       cd $1;
        svn up;
        svn st -v | fixpath
        limit=''
@@ -18,7 +18,7 @@ svnupanddisplay()
            limit="--limit=$2"
        fi
        svn log --xml -v $limit | fixpath | sed 's,<date>.*,<date/>,'
-    ) 
+    )
 }
 
 echo "[extensions]" >> $HGRCPATH

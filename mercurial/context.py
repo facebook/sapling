@@ -232,7 +232,7 @@ class filectx(object):
         if '_changectx' in self.__dict__:
             return self._changectx.rev()
         if '_changeid' in self.__dict__:
-            return self._changectx.rev() 
+            return self._changectx.rev()
         return self._filelog.linkrev(self._filenode)
 
     def linkrev(self): return self._filelog.linkrev(self._filenode)

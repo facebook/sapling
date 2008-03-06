@@ -114,7 +114,7 @@ class mercurial_sink(converter_sink):
                 self.repo.lookup(b[0])
             except:
                 missings.setdefault(b[1], []).append(b[0])
-        
+
         if missings:
             self.after()
             for pbranch, heads in missings.iteritems():

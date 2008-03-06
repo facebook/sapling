@@ -2474,7 +2474,7 @@ def serve(ui, repo, **opts):
                 ui.status(_('listening at http://%s:%d/%s\n') %
                           (self.httpd.addr, self.httpd.port, prefix))
             else:
-                ui.status(_('listening at http://%s/%s\n') % 
+                ui.status(_('listening at http://%s/%s\n') %
                           (self.httpd.addr, prefix))
 
         def run(self):

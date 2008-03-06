@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cat > unix2dos.py <<EOF 
+cat > unix2dos.py <<EOF
 import sys
 
 for path in sys.argv[1:]:

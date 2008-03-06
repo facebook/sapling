@@ -236,7 +236,7 @@ class converter(object):
             for prev in commit.parents:
                 if prev not in self.commitcache:
                     self.cachecommit(prev)
-                pbranches.append((self.map[prev], 
+                pbranches.append((self.map[prev],
                                   self.commitcache[prev].branch))
         self.dest.setbranch(commit.branch, pbranches)
         for f, v in files:

@@ -97,7 +97,7 @@ class hgwebdir(object):
                     return
 
                 # nested indexes and hgwebs
-                
+
                 repos = dict(self.repos)
                 while virtual:
                     real = repos.get(virtual)

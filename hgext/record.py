@@ -67,8 +67,8 @@ def scanpatch(fp):
 
 class header(object):
     """patch header
-    
-    XXX shoudn't we move this to mercurial/patch.py ? 
+
+    XXX shoudn't we move this to mercurial/patch.py ?
     """
     diff_re = re.compile('diff --git a/(.*) b/(.*)$')
     allhunks_re = re.compile('(?:index|new file|deleted file) ')
@@ -134,7 +134,7 @@ def countchanges(hunk):
 
 class hunk(object):
     """patch hunk
-    
+
     XXX shouldn't we merge this with patch.hunk ?
     """
     maxcontext = 3
@@ -267,7 +267,7 @@ def filterpatch(ui, chunks):
     applied = {}        # 'filename' -> [] of chunks
     def prompt(query):
         """prompt query, and process base inputs
-        
+
         - y/n for the rest of file
         - y/n for the rest
         - ? (help)
