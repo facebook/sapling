@@ -1,6 +1,6 @@
 # GNU Arch support for the convert extension
 
-from common import NoRepo, checktool, commandline, commit, converter_source
+from common import NoRepo, commandline, commit, converter_source
 from mercurial.i18n import _
 from mercurial import util
 import os, shutil, tempfile, stat

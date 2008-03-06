@@ -12,7 +12,6 @@ import errno
 import optparse
 import os
 import popen2
-import re
 import shutil
 import signal
 import sys

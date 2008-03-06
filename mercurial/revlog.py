@@ -12,7 +12,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
-import binascii, changegroup, errno, ancestor, mdiff, os
+import changegroup, errno, ancestor, mdiff
 import sha, struct, util, zlib
 
 _pack = struct.pack

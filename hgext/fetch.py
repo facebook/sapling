@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import nullid, short
-from mercurial import commands, cmdutil, hg, node, util
+from mercurial import commands, cmdutil, hg, util
 
 def fetch(ui, repo, source='default', **opts):
     '''Pull changes from a remote repository, merge new changes if needed.

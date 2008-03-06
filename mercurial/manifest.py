@@ -8,7 +8,7 @@
 from node import bin, hex, nullid
 from revlog import revlog, RevlogError
 from i18n import _
-import array, bisect, struct, mdiff
+import array, struct, mdiff
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):

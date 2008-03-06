@@ -8,7 +8,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import changelog, filelog, httprangereader
+import changelog, httprangereader
 import repo, localrepo, manifest, util
 import urllib, urllib2, errno
 

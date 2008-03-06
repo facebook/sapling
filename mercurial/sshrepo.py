@@ -8,7 +8,7 @@
 from node import bin, hex
 from remoterepo import remotelock, remoterepository
 from i18n import _
-import repo, os, re, stat, util
+import repo, os, re, util
 
 class sshrepository(remoterepository):
     def __init__(self, ui, path, create=0):

@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from i18n import _
 import os, osutil, stat, util, lock
 
 # if server supports streaming clone, it advertises "stream"

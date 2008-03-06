@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
-from mercurial import ui, hg, util, templater
+from mercurial import hg, util
 from hgweb_mod import hgweb
 from hgwebdir_mod import hgwebdir
 from mercurial.i18n import gettext as _

@@ -46,7 +46,7 @@
 # vdiff on hovered and selected revisions.
 
 import os
-from mercurial import hg, fancyopts, commands, ui, util, patch, revlog
+from mercurial import hg, commands, util, patch, revlog
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""

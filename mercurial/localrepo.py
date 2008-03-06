@@ -9,7 +9,7 @@ from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
-import re, lock, transaction, tempfile, stat, errno, ui
+import lock, transaction, stat, errno, ui
 import os, revlog, time, util, extensions, hook, inspect
 
 class localrepository(repo.repository):

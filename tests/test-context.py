@@ -1,5 +1,5 @@
 import os
-from mercurial import hg, ui, commands
+from mercurial import hg, ui
 
 u = ui.ui()
 

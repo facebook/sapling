@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, short
 from i18n import _
-import ancestor, bdiff, repo, revlog, util, os, errno
+import ancestor, bdiff, revlog, util, os, errno
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular

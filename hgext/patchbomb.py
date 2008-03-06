@@ -67,7 +67,7 @@
 import os, errno, socket, tempfile
 import email.MIMEMultipart, email.MIMEText, email.MIMEBase
 import email.Utils, email.Encoders
-from mercurial import cmdutil, commands, hg, mail, ui, patch, util
+from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
 

@@ -13,7 +13,6 @@
 
 import win32api
 
-from i18n import _
 import errno, os, pywintypes, win32con, win32file, win32process
 import cStringIO, winerror
 import osutil

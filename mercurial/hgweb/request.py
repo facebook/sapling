@@ -7,7 +7,6 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import socket, cgi, errno
-from mercurial.i18n import gettext as _
 from common import ErrorResponse, statusmessage
 
 class wsgirequest(object):

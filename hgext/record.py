@@ -8,9 +8,9 @@
 '''interactive change selection during commit or qrefresh'''
 
 from mercurial.i18n import _
-from mercurial import cmdutil, commands, cmdutil, extensions, hg, mdiff, patch, revlog
+from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
-import copy, cStringIO, errno, operator, os, re, shutil, tempfile
+import copy, cStringIO, errno, operator, os, re, tempfile
 
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
 

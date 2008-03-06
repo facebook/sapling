@@ -22,7 +22,6 @@
 # [hooks]
 # pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
 
-from mercurial import util, ui
 from mercurial.i18n import gettext as _
 from mercurial.node import bin, short
 import re

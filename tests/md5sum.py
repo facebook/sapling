@@ -7,7 +7,6 @@
 # GPL-compatible.
 
 import sys
-import os
 import md5
 
 for filename in sys.argv[1:]:

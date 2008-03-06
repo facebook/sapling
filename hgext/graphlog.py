@@ -10,7 +10,7 @@ import sys
 from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts
 from mercurial.i18n import _
-from mercurial.node import nullid, nullrev
+from mercurial.node import nullrev
 from mercurial.util import Abort, canonpath
 
 def revision_grapher(repo, start_rev, stop_rev):

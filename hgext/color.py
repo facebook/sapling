@@ -51,7 +51,7 @@ qseries.missing = red bold
 
 import re, sys
 
-from mercurial import commands, cmdutil, ui
+from mercurial import commands, cmdutil
 from mercurial.i18n import _
 
 # start and stop parameters for effects

@@ -19,7 +19,7 @@
 # s: "i hate that."
 
 from i18n import _
-import util, mdiff, fancyopts, sys, os
+import util, mdiff, sys, os
 
 class CantReprocessAndShowBase(Exception):
     pass

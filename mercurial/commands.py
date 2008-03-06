@@ -10,7 +10,7 @@ from i18n import _
 import os, re, sys, urllib
 import hg, util, revlog, bundlerepo, extensions
 import difflib, patch, time, help, mdiff, tempfile
-import errno, version, socket
+import version, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 
 # Commands start here, listed alphabetically

@@ -9,7 +9,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import nullid
 from i18n import _
-import struct, os, time, bisect, stat, strutil, util, re, errno, ignore
+import struct, os, bisect, stat, strutil, util, errno, ignore
 import cStringIO, osutil
 
 _unknown = ('?', 0, 0, 0)

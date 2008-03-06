@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import imp, os
-import util, sys
+import util
 from i18n import _
 
 _extensions = {}

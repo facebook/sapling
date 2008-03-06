@@ -16,7 +16,7 @@
 import os, time
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
-from mercurial import hg, lock, revlog, util
+from mercurial import hg, revlog, util
 
 from common import NoRepo, commit, converter_source, converter_sink
 

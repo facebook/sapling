@@ -10,7 +10,7 @@ from node import bin, hex
 from remoterepo import remoterepository
 from i18n import _
 import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
-import errno, keepalive, tempfile, socket, changegroup
+import errno, keepalive, socket, changegroup
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):

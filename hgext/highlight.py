@@ -31,13 +31,8 @@ demandimport.ignore.extend(['pkgutil',
                             'pkg_resources',
                             '__main__',])
 
-import mimetypes
-
-from mercurial.hgweb import hgweb_mod
 from mercurial.hgweb.hgweb_mod import hgweb
 from mercurial import util
-from mercurial.hgweb.common import paritygen
-from mercurial.node import hex
 from mercurial.templatefilters import filters
 
 from pygments import highlight

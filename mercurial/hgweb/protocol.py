@@ -5,9 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import cStringIO, zlib, bz2, tempfile, errno, os, sys
+import cStringIO, zlib, tempfile, errno, os, sys
 from mercurial import util, streamclone
-from mercurial.i18n import gettext as _
 from mercurial.node import bin, hex
 from mercurial import changegroup as changegroupmod
 from common import HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR

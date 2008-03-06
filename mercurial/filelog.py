@@ -7,7 +7,6 @@
 
 from node import bin, nullid
 from revlog import revlog
-import os
 
 class filelog(revlog):
     def __init__(self, opener, path):

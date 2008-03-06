@@ -7,8 +7,7 @@
 
 from node import bin, hex, nullid
 from revlog import revlog
-from i18n import _
-import os, time, util
+import util
 
 def _string_escape(text):
     """

@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 import os, tempfile
-from mercurial import bundlerepo, changegroup, cmdutil, commands, hg, merge
+from mercurial import bundlerepo, changegroup, cmdutil, hg, merge
 from mercurial import patch, revlog, util
 
 '''patch transplanting tool

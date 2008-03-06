@@ -7,7 +7,7 @@
 
 from node import nullrev
 from i18n import _
-import util, os, tempfile, context, simplemerge, re, filecmp
+import util, os, tempfile, simplemerge, re, filecmp
 
 def _toolstr(ui, tool, part, default=""):
     return ui.config("merge-tools", tool + "." + part, default)

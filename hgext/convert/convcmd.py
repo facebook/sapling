@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from common import NoRepo, SKIPREV, converter_source, converter_sink, mapfile
+from common import NoRepo, SKIPREV, mapfile
 from cvs import convert_cvs
 from darcs import darcs_source
 from git import convert_git
