@@ -458,8 +458,10 @@ summary |
 </table>
 <div class="page_footer">
 <div class="page_footer_text">test</div>
-<a class="rss_logo" href="/rss-log">RSS</a>
-<a class="rss_logo" href="/atom-log">Atom</a>
+<div class="rss_logo">
+<a href="/rss-log">RSS</a>
+<a href="/atom-log">Atom</a>
+</div>
 <br />
 
 </div>
