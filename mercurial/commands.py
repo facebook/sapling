@@ -2568,7 +2568,7 @@ def tag(ui, repo, name, rev_=None, **opts):
     Name a particular revision using <name>.
 
     Tags are used to name particular revisions of the repository and are
-    very useful to compare different revision, to go back to significant
+    very useful to compare different revisions, to go back to significant
     earlier versions or to mark branch points as releases, etc.
 
     If no revision is given, the parent of the working directory is used,
