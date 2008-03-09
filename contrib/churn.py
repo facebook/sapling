@@ -178,21 +178,23 @@ def churn(ui, repo, **opts):
 
     # make a list of tuples (name, lines) and sort it in descending order
     ordered = stats.items()
-    ordered.sort(lambda x, y: cmp(y[1], x[1]))
-
     if not ordered:
         return
-    maximum = ordered[0][1]
+    ordered.sort(lambda x, y: cmp(y[1], x[1]))
+    max_churn = ordered[0][1]
 
-    width = get_tty_width()
-    ui.note(_("assuming %i character terminal\n") % width)
-    width -= 1
+    tty_width = get_tty_width()
+    ui.note(_("assuming %i character terminal\n") % tty_width)
+    tty_width -= 1
 
-    for i in ordered:
-        person = i[0]
-        lines = i[1]
-        print "%s %6d %s" % (pad(person, 20), lines,
-                graph(lines, maximum, width - 20 - 1 - 6 - 2 - 2, '*'))
+    max_user_width = max([len(user) for user, churn in ordered])
+
+    graph_width = tty_width - max_user_width - 1 - 6 - 2 - 2
+
+    for user, churn in ordered:
+        print "%s %6d %s" % (pad(user, max_user_width),
+                             churn,
+                             graph(churn, max_churn, graph_width, '*'))
 
 cmdtable = {
     "churn":
