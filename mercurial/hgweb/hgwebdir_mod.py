@@ -28,6 +28,7 @@ class hgwebdir(object):
         self.style = None
         self.stripecount = None
         self.repos_sorted = ('name', False)
+        self._baseurl = None
         if isinstance(config, (list, tuple)):
             self.repos = cleannames(config)
             self.repos_sorted = ('', False)
@@ -48,6 +49,8 @@ class hgwebdir(object):
                     self.style = cp.get('web', 'style')
                 if cp.has_option('web', 'stripes'):
                     self.stripecount = int(cp.get('web', 'stripes'))
+                if cp.has_option('web', 'baseurl'):
+                    self._baseurl = cp.get('web', 'baseurl')
             if cp.has_section('paths'):
                 self.repos.extend(cleannames(cp.items('paths')))
             if cp.has_section('collections'):
@@ -233,6 +236,9 @@ class hgwebdir(object):
                             and "-" or "", column))
                 for column in sortable]
 
+        if self._baseurl is not None:
+            req.env['SCRIPT_NAME'] = self._baseurl
+
         return tmpl("index", entries=entries, subdir=subdir,
                     sortcolumn=sortcolumn, descending=descending,
                     **dict(sort))
@@ -253,6 +259,9 @@ class hgwebdir(object):
 
         def config(section, name, default=None, untrusted=True):
             return self.parentui.config(section, name, default, untrusted)
+
+        if self._baseurl is not None:
+            req.env['SCRIPT_NAME'] = self._baseurl
 
         url = req.env.get('SCRIPT_NAME', '')
         if not url.endswith('/'):
