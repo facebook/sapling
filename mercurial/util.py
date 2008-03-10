@@ -1532,7 +1532,7 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True, timezone_fo
     t, tz = date or makedate()
     s = time.strftime(format, time.gmtime(float(t) - tz))
     if timezone:
-        s += timezone_format % (-tz / 3600, ((-tz % 3600) / 60))
+        s += timezone_format % (int(-tz / 3600.0), ((-tz % 3600) / 60))
     return s
 
 def shortdate(date=None):
