@@ -1,12 +1,12 @@
 % Without -v
 access log created - .hg/hgrc respected
 % With -v
-listening at http://localhost/
+listening at http://localhost/ (127.0.0.1)
 % With --prefix foo
-listening at http://localhost/foo/
+listening at http://localhost/foo/ (127.0.0.1)
 % With --prefix /foo
-listening at http://localhost/foo/
+listening at http://localhost/foo/ (127.0.0.1)
 % With --prefix foo/
-listening at http://localhost/foo/
+listening at http://localhost/foo/ (127.0.0.1)
 % With --prefix /foo/
-listening at http://localhost/foo/
+listening at http://localhost/foo/ (127.0.0.1)

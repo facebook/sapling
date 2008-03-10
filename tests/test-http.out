@@ -1,5 +1,5 @@
 adding foo
-abort: cannot start server:
+abort: cannot start server at ':20060':
 % clone via stream
 streaming all changes
 XXX files to transfer, XXX bytes of data

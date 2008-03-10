@@ -253,13 +253,6 @@ def create_server(ui, repo):
                 return hgwebobj
             self.application = make_handler()
 
-            addr = address
-            if addr in ('', '::'):
-                addr = socket.gethostname()
-
-            self.addr, self.port = addr, port
-            self.prefix = prefix
-
             if ssl_cert:
                 try:
                     from OpenSSL import SSL
@@ -272,6 +265,15 @@ def create_server(ui, repo):
                 self.socket = SSL.Connection(ctx, sock)
                 self.server_bind()
                 self.server_activate()
+
+            self.addr, self.port = self.socket.getsockname()[0:2]
+            self.prefix = prefix
+
+            self.fqaddr = socket.getfqdn(address)
+            try:
+                socket.getaddrbyhost(self.fqaddr)
+            except:
+                fqaddr = address
 
     class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)
@@ -292,4 +294,5 @@ def create_server(ui, repo):
         else:
             return MercurialHTTPServer((address, port), handler)
     except socket.error, inst:
-        raise util.Abort(_('cannot start server: %s') % inst.args[1])
+        raise util.Abort(_("cannot start server at '%s:%d': %s")
+                         % (address, port, inst.args[1]))

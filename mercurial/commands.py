@@ -2461,10 +2461,7 @@ def serve(ui, repo, **opts):
     class service:
         def init(self):
             util.set_signal_handler()
-            try:
-                self.httpd = hgweb.server.create_server(parentui, repo)
-            except socket.error, inst:
-                raise util.Abort(_('cannot start server: ') + inst.args[1])
+            self.httpd = hgweb.server.create_server(parentui, repo)
 
             if not ui.verbose: return
 
@@ -2473,12 +2470,12 @@ def serve(ui, repo, **opts):
             else:
                 prefix = ''
 
-            if self.httpd.port != 80:
-                ui.status(_('listening at http://%s:%d/%s\n') %
-                          (self.httpd.addr, self.httpd.port, prefix))
-            else:
-                ui.status(_('listening at http://%s/%s\n') %
-                          (self.httpd.addr, prefix))
+            port = ':%d' % self.httpd.port
+            if port == ':80':
+                port = ''
+
+            ui.status(_('listening at http://%s%s/%s (%s:%d)\n') %
+                      (self.httpd.fqaddr, port, prefix, self.httpd.addr, self.httpd.port))
 
         def run(self):
             self.httpd.serve_forever()
@@ -3115,8 +3112,8 @@ table = {
           ('d', 'daemon', None, _('run server in background')),
           ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
-          ('p', 'port', 0, _('port to use (default: 8000)')),
-          ('a', 'address', '', _('address to use')),
+          ('p', 'port', 0, _('port to listen on (default: 8000)')),
+          ('a', 'address', '', _('address to listen on (default: all interfaces)')),
           ('', 'prefix', '', _('prefix path to serve from (default: server root)')),
           ('n', 'name', '',
            _('name to show in web pages (default: working dir)')),
