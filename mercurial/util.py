@@ -1524,20 +1524,23 @@ def makedate():
         tz = time.timezone
     return time.mktime(lt), tz
 
-def datestr(date=None, format='%a %b %d %H:%M:%S %Y', timezone=True, timezone_format=" %+03d%02d"):
+def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     """represent a (unixtime, offset) tuple as a localized time.
     unixtime is seconds since the epoch, and offset is the time zone's
     number of seconds away from UTC. if timezone is false, do not
     append time zone to string."""
     t, tz = date or makedate()
+    if "%1" in format or "%2" in format:
+        sign = (tz > 0) and "-" or "+"
+        minutes = abs(tz) / 60
+        format = format.replace("%1", "%c%02d" % (sign, minutes / 60))
+        format = format.replace("%2", "%02d" % (minutes % 60))
     s = time.strftime(format, time.gmtime(float(t) - tz))
-    if timezone:
-        s += timezone_format % (int(-tz / 3600.0), ((-tz % 3600) / 60))
     return s
 
 def shortdate(date=None):
     """turn (timestamp, tzoff) tuple into iso 8631 date."""
-    return datestr(date, format='%Y-%m-%d', timezone=False)
+    return datestr(date, format='%Y-%m-%d')
 
 def strdate(string, format, defaults=[]):
     """parse a localized time string and return a (unixtime, offset) tuple.
@@ -1545,9 +1548,10 @@ def strdate(string, format, defaults=[]):
     def timezone(string):
         tz = string.split()[-1]
         if tz[0] in "+-" and len(tz) == 5 and tz[1:].isdigit():
-            tz = int(tz)
-            offset = - 3600 * (tz / 100) - 60 * (tz % 100)
-            return offset
+            sign = (tz[0] == "+") and 1 or -1
+            hours = int(tz[1:3])
+            minutes = int(tz[3:5])
+            return -sign * (hours * 60 + minutes) * 60
         if tz == "GMT" or tz == "UTC":
             return 0
         return None
@@ -1601,7 +1605,7 @@ def parsedate(date, formats=None, defaults=None):
                 elif part[0] in "dm":
                     defaults[part] = "1"
                 else:
-                    defaults[part] = datestr(now, "%" + part[0], False)
+                    defaults[part] = datestr(now, "%" + part[0])
 
         for format in formats:
             try:

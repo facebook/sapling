@@ -210,9 +210,7 @@ class notifier(object):
             del msg['From']
             msg['From'] = sender
 
-        msg['Date'] = util.datestr(date=util.makedate(),
-                                   format="%a, %d %b %Y %H:%M:%S",
-                                   timezone=True)
+        msg['Date'] = util.datestr(format="%a, %d %b %Y %H:%M:%S %1%2")
         fix_subject()
         fix_sender()
 
