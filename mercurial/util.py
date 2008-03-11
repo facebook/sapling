@@ -1586,7 +1586,7 @@ def parsedate(date, formats=None, defaults=None):
     """
     if not date:
         return 0, 0
-    if type(date) is type((0, 0)) and len(date) == 2:
+    if isinstance(date, tuple) and len(date) == 2:
         return date
     if not formats:
         formats = defaultdateformats
@@ -1602,8 +1602,6 @@ def parsedate(date, formats=None, defaults=None):
             if part not in defaults:
                 if part[0] in "HMS":
                     defaults[part] = "00"
-                elif part[0] in "dm":
-                    defaults[part] = "1"
                 else:
                     defaults[part] = datestr(now, "%" + part[0])
 
@@ -1640,7 +1638,8 @@ def matchdate(date):
     """
 
     def lower(date):
-        return parsedate(date, extendeddateformats)[0]
+        d = dict(mb="1", d="1")
+        return parsedate(date, extendeddateformats, d)[0]
 
     def upper(date):
         d = dict(mb="12", HI="23", M="59", S="59")
