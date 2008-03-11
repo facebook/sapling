@@ -65,9 +65,10 @@ def fetch(ui, repo, source='default', **opts):
             message = (cmdutil.logmessage(opts) or
                        (_('Automated merge with %s') %
                         util.removeauth(other.url())))
+            force_editor = opts.get('force_editor') or opts.get('edit')
             n = repo.commit(mod + add + rem, message,
                             opts['user'], opts['date'],
-                            force_editor=opts.get('force_editor'))
+                            force_editor=force_editor)
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
                                            short(n)))
@@ -102,9 +103,11 @@ def fetch(ui, repo, source='default', **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        mod, add, rem = repo.status()[:3]
+        mod, add, rem, del_ = repo.status()[:4]
         if mod or add or rem:
             raise util.Abort(_('outstanding uncommitted changes'))
+        if del_:
+            raise util.Abort(_('working directory is missing some files'))
         if len(repo.heads()) > 1:
             raise util.Abort(_('multiple heads in this repository '
                                '(use "hg heads" and "hg merge" to merge)'))
@@ -116,7 +119,8 @@ cmdtable = {
     'fetch':
         (fetch,
         [('r', 'rev', [], _('a specific revision you would like to pull')),
-         ('f', 'force-editor', None, _('edit commit message')),
+         ('e', 'edit', None, _('edit commit message')),
+         ('', 'force-editor', None, _('edit commit message (DEPRECATED)')),
          ('', 'switch-parent', None, _('switch parents when merging')),
         ] + commands.commitopts + commands.commitopts2 + commands.remoteopts,
         _('hg fetch [SOURCE]')),
