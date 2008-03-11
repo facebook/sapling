@@ -391,8 +391,7 @@ def patchbomb(ui, repo, *revs, **opts):
             m['In-Reply-To'] = parent
         else:
             parent = m['Message-Id']
-        m['Date'] = util.datestr(date=start_time,
-                                 format="%a, %d %b %Y %H:%M:%S", timezone=True)
+        m['Date'] = util.datestr(start_time, "%a, %d %b %Y %H:%M:%S %1%2")
 
         start_time = (start_time[0] + 1, start_time[1])
         m['From'] = sender
@@ -419,8 +418,7 @@ def patchbomb(ui, repo, *revs, **opts):
         elif opts.get('mbox'):
             ui.status('Writing ', m['Subject'], ' ...\n')
             fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
-            date = util.datestr(date=start_time,
-                                format='%a %b %d %H:%M:%S %Y', timezone=False)
+            date = util.datestr(start_time, '%a %b %d %H:%M:%S %Y')
             fp.write('From %s %s\n' % (sender_addr, date))
             fp.write(m.as_string(0))
             fp.write('\n\n')

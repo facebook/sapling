@@ -69,14 +69,6 @@ def firstline(text):
     except IndexError:
         return ''
 
-def isodate(date):
-    '''turn a (timestamp, tzoff) tuple into an iso 8631 date and time.'''
-    return util.datestr(date, format='%Y-%m-%d %H:%M')
-
-def hgdate(date):
-    '''turn a (timestamp, tzoff) tuple into an hg cset timestamp.'''
-    return "%d %d" % date
-
 def nl2br(text):
     '''replace raw newlines with xhtml line breaks.'''
     return text.replace('\n', '<br/>\n')
@@ -142,13 +134,13 @@ filters = {
     "fill76": lambda x: fill(x, width=76),
     "firstline": firstline,
     "tabindent": lambda x: indent(x, '\t'),
-    "hgdate": hgdate,
-    "isodate": isodate,
+    "hgdate": lambda x: "%d %d" % x,
+    "isodate": lambda x: util.datestr(x, '%Y-%m-%d %H:%M %1%2'),
     "obfuscate": obfuscate,
     "permissions": permissions,
     "person": person,
-    "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S"),
-    "rfc3339date": lambda x: util.datestr(x, "%Y-%m-%dT%H:%M:%S", True, "%+03d:%02d"),
+    "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S %1%2"),
+    "rfc3339date": lambda x: util.datestr(x, "%Y-%m-%dT%H:%M:%S%1:%2"),
     "short": lambda x: x[:12],
     "shortdate": util.shortdate,
     "stringify": templater.stringify,

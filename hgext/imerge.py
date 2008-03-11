@@ -79,7 +79,8 @@ class Imerge(object):
         try:
             parents = [self.repo.changectx(n) for n in status[:2]]
         except revlog.LookupError, e:
-            raise util.Abort('merge parent %s not in repository' % e.name)
+            raise util.Abort(_('merge parent %s not in repository') %
+                             short(e.name))
 
         status = status[2:]
         conflicts = int(status.pop(0)) * 3
