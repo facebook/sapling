@@ -1954,13 +1954,13 @@ def paths(ui, repo, search=None):
     if search:
         for name, path in ui.configitems("paths"):
             if name == search:
-                ui.write("%s\n" % path)
+                ui.write("%s\n" % util.hidepassword(path))
                 return
         ui.warn(_("not found!\n"))
         return 1
     else:
         for name, path in ui.configitems("paths"):
-            ui.write("%s = %s\n" % (name, path))
+            ui.write("%s = %s\n" % (name, util.hidepassword(path)))
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
