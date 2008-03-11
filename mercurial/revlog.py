@@ -33,11 +33,11 @@ class RevlogError(Exception):
     pass
 
 class LookupError(RevlogError):
-    def __init__(self, name, message=None):
-        if message is None:
-            message = _('not found: %s') % name
-        RevlogError.__init__(self, message)
+    def __init__(self, name, index, message):
         self.name = name
+        if isinstance(name, str) and len(name) == 20:
+            name = short(name)
+        RevlogError.__init__(self, _('%s@%s: %s') % (index, name, message))
 
 def getoffset(q):
     return int(q >> 16)
@@ -519,7 +519,7 @@ class revlog(object):
         try:
             return self.nodemap[node]
         except KeyError:
-            raise LookupError(hex(node), _('%s: no node %s') % (self.indexfile, hex(node)))
+            raise LookupError(node, self.indexfile, _('no node'))
     def node(self, rev):
         return self.index[rev][7]
     def linkrev(self, node):
@@ -839,8 +839,8 @@ class revlog(object):
                 for n in self.nodemap:
                     if n.startswith(bin_id) and hex(n).startswith(id):
                         if node is not None:
-                            raise LookupError(hex(node),
-                                              _("Ambiguous identifier"))
+                            raise LookupError(id, self.indexfile,
+                                              _('ambiguous identifier'))
                         node = n
                 if node is not None:
                     return node
@@ -859,7 +859,7 @@ class revlog(object):
         if n:
             return n
 
-        raise LookupError(id, _("No match found"))
+        raise LookupError(id, self.indexfile, _('no match found'))
 
     def cmp(self, node, text):
         """compare text with a given file revision"""
@@ -1170,13 +1170,13 @@ class revlog(object):
 
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise LookupError(hex(p), _("unknown parent %s") % short(p))
+                    raise LookupError(p, self.indexfile, _('unknown parent'))
 
             if not chain:
                 # retrieve the parent revision of the delta chain
                 chain = p1
                 if not chain in self.nodemap:
-                    raise LookupError(hex(chain), _("unknown base %s") % short(chain[:4]))
+                    raise LookupError(chain, self.indexfile, _('unknown base'))
 
             # full versions are inserted when the needed deltas become
             # comparable to the uncompressed text or when the previous

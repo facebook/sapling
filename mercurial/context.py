@@ -100,13 +100,15 @@ class changectx(object):
             try:
                 return self._manifest[path], self._manifest.flags(path)
             except KeyError:
-                raise revlog.LookupError(path, _("'%s' not found in manifest") % path)
+                raise revlog.LookupError(self._node, path,
+                                         _('not found in manifest'))
         if '_manifestdelta' in self.__dict__ or path in self.files():
             if path in self._manifestdelta:
                 return self._manifestdelta[path], self._manifestdelta.flags(path)
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
-            raise revlog.LookupError(path, _("'%s' not found in manifest") % path)
+            raise revlog.LookupError(self._node, path,
+                                     _('not found in manifest'))
 
         return node, flag
 
