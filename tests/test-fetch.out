@@ -71,3 +71,5 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 merging with 3:cc6a3744834d
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 new changeset 4:55aa4f32ec59 merges remote changes with local
+% should abort, because i is modified
+abort: working directory is missing some files

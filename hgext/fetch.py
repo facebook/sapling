@@ -103,9 +103,11 @@ def fetch(ui, repo, source='default', **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        mod, add, rem = repo.status()[:3]
+        mod, add, rem, del_ = repo.status()[:4]
         if mod or add or rem:
             raise util.Abort(_('outstanding uncommitted changes'))
+        if del_:
+            raise util.Abort(_('working directory is missing some files'))
         if len(repo.heads()) > 1:
             raise util.Abort(_('multiple heads in this repository '
                                '(use "hg heads" and "hg merge" to merge)'))
