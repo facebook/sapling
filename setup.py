@@ -61,15 +61,15 @@ ext_modules=[
 
 packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert']
 
-if sys.platform == 'linux2' and os.uname()[2] > '2.6':
-    # the inotify extension is only usable with Linux 2.6 kernels
-    ext_modules.append(Extension('hgext.inotify.linux._inotify',
-                                 ['hgext/inotify/linux/_inotify.c']))
-    packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
-
 try:
     import posix
     ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
+
+    if sys.platform == 'linux2' and os.uname()[2] > '2.6':
+        # the inotify extension is only usable with Linux 2.6 kernels
+        ext_modules.append(Extension('hgext.inotify.linux._inotify',
+                                     ['hgext/inotify/linux/_inotify.c']))
+        packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
 except ImportError:
     pass
 
