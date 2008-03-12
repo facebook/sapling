@@ -61,3 +61,5 @@ hg --cwd g fetch -d '7 0' --switch -m 'automated merge' ../f
 rm i/g
 echo % should abort, because i is modified
 hg --cwd i fetch ../h
+
+true
