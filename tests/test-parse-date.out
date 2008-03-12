@@ -15,3 +15,21 @@ Sat Apr 15 13:30:00 2006 +0200
 Sat Apr 15 13:30:00 2006 +0000
 Wed Feb 01 13:00:30 2006 -0500
 Wed Feb 01 13:00:30 2006 +0000
+internal: 1000000000 -16200
+standard: Sun Sep 09 06:16:40 2001 +0430
+internal: 1000000000 -15300
+standard: Sun Sep 09 06:01:40 2001 +0415
+internal: 1000000000 -14400
+standard: Sun Sep 09 05:46:40 2001 +0400
+internal: 1000000000 0
+standard: Sun Sep 09 01:46:40 2001 +0000
+internal: 1000000000 14400
+standard: Sat Sep 08 21:46:40 2001 -0400
+internal: 1000000000 15300
+standard: Sat Sep 08 21:31:40 2001 -0415
+internal: 1000000000 16200
+standard: Sat Sep 08 21:16:40 2001 -0430
+internal: 999967600 -16200
+standard: Sat Sep 08 21:16:40 2001 +0430
+internal: 1000000000 16200
+standard: Sat Sep 08 21:16:40 2001 -0430

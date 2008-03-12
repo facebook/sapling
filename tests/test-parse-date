@@ -32,3 +32,14 @@ hg debugrebuildstate
 echo "d" > a
 hg ci -d "2006-01-15 13:30 +0500" -m "winter@UTC+5"
 hg log --template '{date|date}\n'
+
+# Test issue1014 (fractional timezones)
+hg debugdate "1000000000 -16200" # 0430
+hg debugdate "1000000000 -15300" # 0415
+hg debugdate "1000000000 -14400" # 0400
+hg debugdate "1000000000 0"      # GMT
+hg debugdate "1000000000 14400"  # -0400
+hg debugdate "1000000000 15300"  # -0415
+hg debugdate "1000000000 16200"  # -0430
+hg debugdate "Sat Sep 08 21:16:40 2001 +0430"
+hg debugdate "Sat Sep 08 21:16:40 2001 -0430"
