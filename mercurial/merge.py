@@ -29,7 +29,7 @@ def checkcollision(mctx):
                              % (fn, folded[fold]))
         folded[fold] = fn
 
-def forgetremoved(wctx, mctx):
+def forgetremoved(wctx, mctx, branchmerge):
     """
     Forget removed files
 
@@ -38,13 +38,23 @@ def forgetremoved(wctx, mctx):
     then we need to remove it from the dirstate, to prevent the
     dirstate from listing the file when it is no longer in the
     manifest.
+
+    If we're merging, and the other revision has removed a file
+    that is not present in the working directory, we need to mark it
+    as removed.
     """
 
     action = []
     man = mctx.manifest()
-    for f in wctx.deleted() + wctx.removed():
+    state = branchmerge and 'r' or 'f'
+    for f in wctx.deleted():
         if f not in man:
-            action.append((f, "f"))
+            action.append((f, state))
+
+    if not branchmerge:
+        for f in wctx.removed():
+            if f not in man:
+                action.append((f, "f"))
 
     return action
 
@@ -608,8 +618,7 @@ def update(repo, node, branchmerge, force, partial):
             checkunknown(wc, p2)
         if not util.checkfolding(repo.path):
             checkcollision(p2)
-        if not branchmerge:
-            action += forgetremoved(wc, p2)
+        action += forgetremoved(wc, p2, branchmerge)
         action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
         ### apply phase
