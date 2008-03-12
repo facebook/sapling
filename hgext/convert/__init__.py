@@ -33,8 +33,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     basename of the source with '-hg' appended.  If the destination
     repository doesn't exist, it will be created.
 
-    If <MAPFILE> isn't given, it will be put in a default location
-    (<dest>/.hg/shamap by default).  The <MAPFILE> is a simple text
+    If <REVMAP> isn't given, it will be put in a default location
+    (<dest>/.hg/shamap by default).  The <REVMAP> is a simple text
     file that maps each source commit ID to the destination ID for
     that revision, like so:
     <source ID> <destination ID>
@@ -140,7 +140,7 @@ cmdtable = {
           ('s', 'source-type', '', 'source repository type'),
           ('', 'splicemap', '', 'splice synthesized history into place'),
           ('', 'datesort', None, 'try to sort changesets by date')],
-         'hg convert [OPTION]... SOURCE [DEST [MAPFILE]]'),
+         'hg convert [OPTION]... SOURCE [DEST [REVMAP]]'),
     "debugsvnlog":
         (debugsvnlog,
          [],
