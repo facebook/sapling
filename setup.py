@@ -59,6 +59,14 @@ ext_modules=[
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'])
     ]
 
+packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert']
+
+if sys.platform == 'linux2' and os.uname()[2] > '2.6':
+    # the inotify extension is only usable with Linux 2.6 kernels
+    ext_modules.append(Extension('hgext.inotify.linux._inotify',
+                                 ['hgext/inotify/linux/_inotify.c']))
+    packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
+
 try:
     import posix
     ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
@@ -73,7 +81,7 @@ setup(name='mercurial',
       description='Scalable distributed SCM',
       license='GNU GPL',
       scripts=['hg'],
-      packages=['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert'],
+      packages=packages,
       ext_modules=ext_modules,
       data_files=[(os.path.join('mercurial', root),
                    [os.path.join(root, file_) for file_ in files])
