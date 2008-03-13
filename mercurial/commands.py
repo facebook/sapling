@@ -2618,7 +2618,11 @@ def tag(ui, repo, name, rev_=None, **opts):
     if not message:
         message = _('Added tag %s for changeset %s') % (name, short(r))
 
-    repo.tag(name, r, message, opts['local'], opts['user'], opts['date'])
+    date = opts.get('date')
+    if date:
+        date = util.parsedate(date)
+
+    repo.tag(name, r, message, opts['local'], opts['user'], date)
 
 def tags(ui, repo):
     """list repository tags
