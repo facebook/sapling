@@ -367,6 +367,20 @@ class hgweb(object):
             branches.append({"name": branch})
         return branches
 
+    def nodeinbranch(self, ctx):
+        branches = []
+        branch = ctx.branch()
+        if branch != 'default' and self.repo.branchtags().get(branch) != ctx.node():
+            branches.append({"name": branch})
+        return branches
+
+    def nodebranchnodefault(self, ctx):
+        branches = []
+        branch = ctx.branch()
+        if branch != 'default':
+            branches.append({"name": branch})
+        return branches
+
     def showtag(self, tmpl, t1, node=nullid, **args):
         for t in self.repo.nodetags(node):
             yield tmpl(t1, tag=t, **args)
@@ -458,6 +472,7 @@ class hgweb(object):
                              "rev": i,
                              "node": hex(n),
                              "tags": self.nodetagsdict(n),
+                             "inbranch": self.nodeinbranch(ctx),
                              "branches": self.nodebranchdict(ctx)})
 
             if limit > 0:
@@ -529,6 +544,7 @@ class hgweb(object):
                            rev=ctx.rev(),
                            node=hex(n),
                            tags=self.nodetagsdict(n),
+                           inbranch=self.nodeinbranch(ctx),
                            branches=self.nodebranchdict(ctx))
 
                 if count >= self.maxchanges:
@@ -572,6 +588,8 @@ class hgweb(object):
                     files=files,
                     archives=self.archivelist(hex(n)),
                     tags=self.nodetagsdict(n),
+                    branch=self.nodebranchnodefault(ctx),
+                    inbranch=self.nodeinbranch(ctx),
                     branches=self.nodebranchdict(ctx))
 
     def filelog(self, tmpl, fctx):
@@ -642,6 +660,7 @@ class hgweb(object):
                     author=fctx.user(),
                     date=fctx.date(),
                     desc=fctx.description(),
+                    branch=self.nodebranchnodefault(fctx),
                     parent=self.siblings(fctx.parents()),
                     child=self.siblings(fctx.children()),
                     rename=self.renamelink(fl, n),
@@ -689,6 +708,7 @@ class hgweb(object):
                     date=fctx.date(),
                     desc=fctx.description(),
                     rename=self.renamelink(fl, n),
+                    branch=self.nodebranchnodefault(fctx),
                     parent=self.siblings(fctx.parents()),
                     child=self.siblings(fctx.children()),
                     permissions=fctx.manifest().flags(f))
@@ -757,6 +777,7 @@ class hgweb(object):
                     dentries=dirlist,
                     archives=self.archivelist(hex(node)),
                     tags=self.nodetagsdict(node),
+                    inbranch=self.nodeinbranch(ctx),
                     branches=self.nodebranchdict(ctx))
 
     def tags(self, tmpl):
@@ -837,6 +858,7 @@ class hgweb(object):
                     rev=i,
                     node=hn,
                     tags=self.nodetagsdict(n),
+                    inbranch=self.nodeinbranch(ctx),
                     branches=self.nodebranchdict(ctx)))
 
             yield l
@@ -869,6 +891,7 @@ class hgweb(object):
                     file=path,
                     node=hex(n),
                     rev=fctx.rev(),
+                    branch=self.nodebranchnodefault(fctx),
                     parent=self.siblings(parents),
                     child=self.siblings(fctx.children()),
                     diff=diff)
