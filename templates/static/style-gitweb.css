@@ -75,3 +75,7 @@ span.logtags span.branchtag {
 	background-color: #aaffaa;
 	border-color: #ccffcc #00cc33 #00cc33 #ccffcc;
 }
+span.logtags span.inbranchtag {
+	background-color: #d5dde6;
+	border-color: #e3ecf4 #9398f4 #9398f4 #e3ecf4;
+}

@@ -16,12 +16,13 @@
 </div>
 
 <div>
-<a class="title" href="{url}raw-rev/#node|short#">#desc|strip|escape|firstline# <span class="logtags">{branches%branchtag}{tags%tagtag}</span></a>
+<a class="title" href="{url}raw-rev/#node|short#">#desc|strip|escape|firstline# <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}</span></a>
 </div>
 <div class="title_text">
 <table cellspacing="0">
 <tr><td>author</td><td>#author|obfuscate#</td></tr>
 <tr><td></td><td>#date|date# (#date|age# ago)</td></tr>
+#branch%changesetbranch#
 <tr><td>changeset {rev}</td><td style="font-family:monospace">{node|short}</td></tr>
 #parent%changesetparent#
 #child%changesetchild#
