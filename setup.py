@@ -12,6 +12,7 @@ if not hasattr(sys, 'version_info') or sys.version_info < (2, 3, 0, 'final'):
 import os
 from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
+from distutils.ccompiler import new_compiler
 
 import mercurial.version
 
@@ -66,10 +67,13 @@ try:
     ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
 
     if sys.platform == 'linux2' and os.uname()[2] > '2.6':
-        # the inotify extension is only usable with Linux 2.6 kernels
-        ext_modules.append(Extension('hgext.inotify.linux._inotify',
-                                     ['hgext/inotify/linux/_inotify.c']))
-        packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
+        # The inotify extension is only usable with Linux 2.6 kernels.
+        # You also need a reasonably recent C library.
+        cc = new_compiler()
+        if cc.has_function('inotify_add_watch'):
+            ext_modules.append(Extension('hgext.inotify.linux._inotify',
+                                         ['hgext/inotify/linux/_inotify.c']))
+            packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
 except ImportError:
     pass
 
