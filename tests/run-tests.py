@@ -267,7 +267,7 @@ def run(cmd):
                        % options.timeout)
     return ret, splitnewlines(output)
 
-def run_one(test, skips):
+def run_one(test, skips, fails):
     '''tristate output:
     None -> skipped
     True -> passed
@@ -278,6 +278,11 @@ def run_one(test, skips):
             skips.append((test, msg))
         else:
             print "\nSkipping %s: %s" % (test, msg)
+        return None
+
+    def fail(msg):
+        fails.append((test, msg))
+        print "\nERROR: %s %s" % (test, msg)
         return None
 
     vlog("# Test", test)
@@ -352,7 +357,7 @@ def run_one(test, skips):
         ref_out = []
     if not skipped and out != ref_out:
         diffret = 1
-        print "\nERROR: %s output changed" % (test)
+        fail("output changed")
         show_diff(ref_out, out)
     if skipped:
         missing = extract_missing_features(out)
@@ -360,7 +365,7 @@ def run_one(test, skips):
             missing = ['irrelevant']
         skip(missing[-1])
     elif ret:
-        print "\nERROR: %s failed with error code %d" % (test, ret)
+        fail("returned error code %d" % ret)
     elif diffret:
         ret = diffret
 
@@ -474,13 +479,17 @@ def run_children(tests):
     failures = 0
     tested, skipped, failed = 0, 0, 0
     skips = []
+    fails = []
     while fps:
         pid, status = os.wait()
         fp = fps.pop(pid)
         l = fp.read().splitlines()
         test, skip, fail = map(int, l[:3])
-        for s in l[3:]:
+        split = -fail or len(l)
+        for s in l[3:split]:
             skips.append(s.split(" ", 1))
+        for s in l[split:]:
+            fails.append(s.split(" ", 1))
         tested += test
         skipped += skip
         failed += fail
@@ -489,6 +498,8 @@ def run_children(tests):
     print
     for s in skips:
         print "Skipped %s: %s" % (s[0], s[1])
+    for s in fails:
+        print "Failed %s: %s" % (s[0], s[1])
     print "# Ran %d tests, %d skipped, %d failed." % (
         tested, skipped, failed)
     sys.exit(failures != 0)
@@ -526,11 +537,12 @@ def run_tests(tests):
                 tests = orig
 
         skips = []
+        fails = []
         for test in tests:
             if options.retest and not os.path.exists(test + ".err"):
                 skipped += 1
                 continue
-            ret = run_one(test, skips)
+            ret = run_one(test, skips, fails)
             if ret is None:
                 skipped += 1
             elif not ret:
@@ -551,11 +563,15 @@ def run_tests(tests):
             fp.write('%d\n%d\n%d\n' % (tested, skipped, failed))
             for s in skips:
                 fp.write("%s %s\n" % s)
+            for s in fails:
+                fp.write("%s %s\n" % s)
             fp.close()
         else:
             print
             for s in skips:
                 print "Skipped %s: %s" % s
+            for s in fails:
+                print "Failed %s: %s" % s
             print "# Ran %d tests, %d skipped, %d failed." % (
                 tested, skipped, failed)
 
