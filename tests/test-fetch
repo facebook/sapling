@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# adjust to non-default HGPORT, e.g. with run-tests.py -j
+hideport() { sed "s/localhost:$HGPORT/localhost:20059/"; }
+hidehash() { sed "s/changeset 3:............ merges/changeset 3:... merges/"; }
+
 echo "[extensions]" >> $HGRCPATH
 echo "fetch=" >> $HGRCPATH
 
@@ -36,12 +40,12 @@ hg --cwd a serve -a localhost -p $HGPORT -d --pid-file=hg.pid
 cat a/hg.pid >> "$DAEMON_PIDS"
 
 echo '% fetch over http, no auth'
-hg --cwd d fetch -d '5 0' http://localhost:$HGPORT/
-hg --cwd d tip --template '{desc}\n'
+hg --cwd d fetch -d '5 0' http://localhost:$HGPORT/ | hideport | hidehash
+hg --cwd d tip --template '{desc}\n' | hideport
 
 echo '% fetch over http with auth (should be hidden in desc)'
-hg --cwd e fetch -d '5 0' http://user:password@localhost:$HGPORT/
-hg --cwd e tip --template '{desc}\n'
+hg --cwd e fetch -d '5 0' http://user:password@localhost:$HGPORT/ | hideport | hidehash
+hg --cwd e tip --template '{desc}\n' | hideport
 
 hg clone a f
 hg clone a g

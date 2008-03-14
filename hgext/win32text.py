@@ -22,6 +22,7 @@
 # [hooks]
 # pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
 
+from mercurial import util
 from mercurial.i18n import gettext as _
 from mercurial.node import bin, short
 import re
@@ -46,19 +47,15 @@ def dumbdecode(s, cmd, ui=None, repo=None, filename=None, **kwargs):
 def dumbencode(s, cmd):
     return s.replace('\r\n', '\n')
 
-def clevertest(s, cmd):
-    if '\0' in s: return False
-    return True
-
 def cleverdecode(s, cmd, **kwargs):
-    if clevertest(s, cmd):
-        return dumbdecode(s, cmd, **kwargs)
-    return s
+    if util.binary(s):
+        return s
+    return dumbdecode(s, cmd, **kwargs)
 
 def cleverencode(s, cmd):
-    if clevertest(s, cmd):
-        return dumbencode(s, cmd)
-    return s
+    if util.binary(s):
+        return s
+    return dumbencode(s, cmd)
 
 _filters = {
     'dumbdecode:': dumbdecode,
@@ -75,7 +72,7 @@ def forbidcrlf(ui, repo, hooktype, node, **kwargs):
             if f not in c:
                 continue
             data = c[f].data()
-            if '\0' not in data and '\r\n' in data:
+            if not util.binary(data) and '\r\n' in data:
                 if not halt:
                     ui.warn(_('Attempt to commit or push text file(s) '
                               'using CRLF line endings\n'))

@@ -1,0 +1,10 @@
+% local deleted a file, remote removed
+abort: outstanding uncommitted changes
+resolving manifests
+removing a
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% should show a as removed
+R a
+% manifest. should not have a:
+b

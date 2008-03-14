@@ -10,12 +10,35 @@ if not hasattr(sys, 'version_info') or sys.version_info < (2, 3, 0, 'final'):
     raise SystemExit, "Mercurial requires python 2.3 or later."
 
 import os
+import shutil
+import tempfile
 from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
+from distutils.ccompiler import new_compiler
 
 import mercurial.version
 
 extra = {}
+
+# simplified version of distutils.ccompiler.CCompiler.has_function
+# that actually removes its temporary files.
+def has_function(cc, funcname):
+    tmpdir = tempfile.mkdtemp(prefix='hg-install-')
+    try:
+        fname = os.path.join(tmpdir, 'funcname.c')
+        f = open(fname, 'w')
+        f.write('int main(void) {\n')
+        f.write('    %s();\n' % funcname)
+        f.write('}\n')
+        f.close()
+        try:
+            objects = cc.compile([fname])
+            cc.link_executable(objects, os.path.join(tmpdir, "a.out"))
+        except:
+            return False
+        return True
+    finally:
+        shutil.rmtree(tmpdir)
 
 # py2exe needs to be installed to work
 try:
@@ -66,10 +89,13 @@ try:
     ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
 
     if sys.platform == 'linux2' and os.uname()[2] > '2.6':
-        # the inotify extension is only usable with Linux 2.6 kernels
-        ext_modules.append(Extension('hgext.inotify.linux._inotify',
-                                     ['hgext/inotify/linux/_inotify.c']))
-        packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
+        # The inotify extension is only usable with Linux 2.6 kernels.
+        # You also need a reasonably recent C library.
+        cc = new_compiler()
+        if has_function(cc, 'inotify_add_watch'):
+            ext_modules.append(Extension('hgext.inotify.linux._inotify',
+                                         ['hgext/inotify/linux/_inotify.c']))
+            packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
 except ImportError:
     pass
 

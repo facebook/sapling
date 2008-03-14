@@ -63,6 +63,9 @@ class dirstate(object):
         elif name == '_slash':
             self._slash = self._ui.configbool('ui', 'slash') and os.sep != '/'
             return self._slash
+        elif name == '_checkexec':
+            self._checkexec = util.checkexec(self._root)
+            return self._checkexec
         else:
             raise AttributeError, name
 
@@ -578,8 +581,9 @@ class dirstate(object):
             if type_ == 'n':
                 if not st:
                     st = lstat(_join(fn))
-                if (size >= 0 and (size != st.st_size
-                                   or (mode ^ st.st_mode) & 0100)
+                if (size >= 0 and
+                    (size != st.st_size
+                     or ((mode ^ st.st_mode) & 0100 and self._checkexec))
                     or size == -2
                     or fn in self._copymap):
                     madd(fn)
