@@ -883,13 +883,12 @@ class localrepository(repo.repository):
             if branchname:
                 extra["branch"] = branchname
 
-            if use_dirstate:
-                lines = [line.rstrip() for line in text.rstrip().splitlines()]
-                while lines and not lines[0]:
-                    del lines[0]
-                if not lines:
-                    raise util.Abort(_("empty commit message"))
-                text = '\n'.join(lines)
+            lines = [line.rstrip() for line in text.rstrip().splitlines()]
+            while lines and not lines[0]:
+                del lines[0]
+            if not lines and use_dirstate:
+                raise util.Abort(_("empty commit message"))
+            text = '\n'.join(lines)
 
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
                                    user, date, extra)
