@@ -609,7 +609,7 @@ def update(repo, node, branchmerge, force, partial):
             raise util.Abort(_("update spans branches, use 'hg merge' "
                                "or 'hg update -C' to lose changes"))
         if branchmerge and not forcemerge:
-            if wc.files():
+            if wc.files() or wc.deleted():
                 raise util.Abort(_("outstanding uncommitted changes"))
 
         ### calculate phase

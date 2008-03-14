@@ -17,7 +17,8 @@ hg up -qC 1
 rm a
 
 echo '% local deleted a file, remote removed'
-hg -v merge
+hg merge # should fail, since there are deleted files
+hg -v merge --force
 echo % should show a as removed
 hg st
 
