@@ -574,15 +574,17 @@ def debugancestor(ui, repo, *args):
     if len(args) == 3:
         index, rev1, rev2 = args
         r = revlog.revlog(util.opener(os.getcwd(), audit=False), index)
+        lookup = r.lookup
     elif len(args) == 2:
         if not repo:
             raise util.Abort(_("There is no Mercurial repository here "
                                "(.hg not found)"))
         rev1, rev2 = args
         r = repo.changelog
+        lookup = repo.lookup
     else:
         raise util.Abort(_('either two or three arguments required'))
-    a = r.ancestor(r.lookup(rev1), r.lookup(rev2))
+    a = r.ancestor(lookup(rev1), lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
 def debugcomplete(ui, cmd='', **opts):
