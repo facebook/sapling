@@ -996,7 +996,6 @@ class revlog(object):
             e = self._io.packentry(self.index[i], self.node, self.version, i)
             fp.write(e)
 
-        fp.close()
         # if we don't call rename, the temp file will never replace the
         # real index
         fp.rename()
