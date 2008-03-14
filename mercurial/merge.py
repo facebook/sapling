@@ -106,7 +106,7 @@ def findcopies(repo, m1, m2, ma, limit):
             seen[s] = 1
             if fc.path() != orig and fc.path() not in old:
                 old[fc.path()] = 1
-            if fc.rev() < limit:
+            if fc.rev() < limit and fc.rev() is not None:
                 continue
             visit += fc.parents()
 
