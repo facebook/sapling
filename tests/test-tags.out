@@ -50,7 +50,7 @@ summary:     Removed tag bar
 
 tip                                5:57e1983b4a60
 % remove nonexistent tag
-abort: tag foobar does not exist
+abort: tag 'foobar' does not exist
 changeset:   5:57e1983b4a60
 tag:         tip
 user:        test
@@ -62,7 +62,7 @@ bar                                0:b409d9da318e
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 tip                                6:b5ff9d142648
 bar                                0:b409d9da318e
-abort: a tag named bar already exists (use -f to force)
+abort: tag 'bar' already exists (use -f to force)
 tip                                6:b5ff9d142648
 bar                                0:b409d9da318e
 adding foo
@@ -72,8 +72,8 @@ bar                                2:72b852876a42
 tip                                4:40af5d225513
 bar                                2:72b852876a42
 adding foo
-abort: localtag tag is local
-abort: globaltag tag is global
+abort: tag 'localtag' is not a global tag
+abort: tag 'globaltag' is not a local tag
 tip                                1:a0b6fe111088
 localtag                           0:bbd179dfa0a7 local
 globaltag                          0:bbd179dfa0a7

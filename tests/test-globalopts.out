@@ -188,7 +188,7 @@ list of commands:
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
- tag          add a tag for the current or given revision
+ tag          add one or more tags for the current or given revision
  tags         list repository tags
  tip          show the tip revision
  unbundle     apply one or more changegroup files
@@ -241,7 +241,7 @@ list of commands:
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
- tag          add a tag for the current or given revision
+ tag          add one or more tags for the current or given revision
  tags         list repository tags
  tip          show the tip revision
  unbundle     apply one or more changegroup files

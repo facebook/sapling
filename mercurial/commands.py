@@ -2589,8 +2589,8 @@ def status(ui, repo, *pats, **opts):
             if f in copy and (f in added or f in showcopy):
                 ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
 
-def tag(ui, repo, name, rev_=None, **opts):
-    """add a tag for the current or given revision
+def tag(ui, repo, name1, *names, **opts):
+    """add one or more tags for the current or given revision
 
     Name a particular revision using <name>.
 
@@ -2609,47 +2609,49 @@ def tag(ui, repo, name, rev_=None, **opts):
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
-    if name in ['tip', '.', 'null']:
-        raise util.Abort(_("the name '%s' is reserved") % name)
-    if rev_ is not None:
-        ui.warn(_("use of 'hg tag NAME [REV]' is deprecated, "
-                  "please use 'hg tag [-r REV] NAME' instead\n"))
-        if opts['rev']:
-            raise util.Abort(_("use only one form to specify the revision"))
+
+    rev_ = None
+    names = (name1,) + names
+    if len(names) != len(dict.fromkeys(names)):
+        raise util.Abort(_('tag names must be unique'))
+    for n in names:
+        if n in ['tip', '.', 'null']:
+            raise util.Abort(_('the name \'%s\' is reserved') % n)
     if opts['rev'] and opts['remove']:
         raise util.Abort(_("--rev and --remove are incompatible"))
     if opts['rev']:
         rev_ = opts['rev']
     message = opts['message']
     if opts['remove']:
-        tagtype = repo.tagtype(name)
-
-        if not tagtype:
-            raise util.Abort(_('tag %s does not exist') % name)
-        if opts['local'] and tagtype == 'global':
-           raise util.Abort(_('%s tag is global') % name)
-        if not opts['local'] and tagtype == 'local':
-           raise util.Abort(_('%s tag is local') % name)
-
+        expectedtype = opts['local'] and 'local' or 'global'
+        for n in names:
+            if not repo.tagtype(n):
+                raise util.Abort(_('tag \'%s\' does not exist') % n)
+            if repo.tagtype(n) != expectedtype:
+                raise util.Abort(_('tag \'%s\' is not a %s tag') %
+                                 (n, expectedtype))
         rev_ = nullid
         if not message:
-            message = _('Removed tag %s') % name
-    elif name in repo.tags() and not opts['force']:
-        raise util.Abort(_('a tag named %s already exists (use -f to force)')
-                         % name)
+            message = _('Removed tag %s') % ', '.join(names)
+    elif not opts['force']:
+        for n in names:
+            if n in repo.tags():
+                raise util.Abort(_('tag \'%s\' already exists '
+                                   '(use -f to force)') % n)
     if not rev_ and repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('uncommitted merge - please provide a '
                            'specific revision'))
     r = repo.changectx(rev_).node()
 
     if not message:
-        message = _('Added tag %s for changeset %s') % (name, short(r))
+        message = (_('Added tag %s for changeset %s') %
+                   (', '.join(names), short(r)))
 
     date = opts.get('date')
     if date:
         date = util.parsedate(date)
 
-    repo.tag(name, r, message, opts['local'], opts['user'], date)
+    repo.tag(names, r, message, opts['local'], opts['user'], date)
 
 def tags(ui, repo):
     """list repository tags
@@ -3190,7 +3192,7 @@ table = {
           # -l/--local is already there, commitopts cannot be used
           ('m', 'message', '', _('use <text> as commit message')),
          ] + commitopts2,
-         _('hg tag [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME')),
+         _('hg tag [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...')),
     "tags": (tags, [], _('hg tags')),
     "tip":
         (tip,

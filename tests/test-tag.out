@@ -18,12 +18,26 @@ summary:     test
 
 abort: working copy of .hgtags is changed (please commit .hgtags manually)
 failed
-use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
-abort: use only one form to specify the revision
+abort: tag names must be unique
 failed
-use of 'hg tag NAME [REV]' is deprecated, please use 'hg tag [-r REV] NAME' instead
+abort: the name 'tip' is reserved
+failed
+abort: tag 'bleah' already exists (use -f to force)
+failed
+abort: tag 'bleah' already exists (use -f to force)
+failed
+abort: tag 'blecch' does not exist
+failed
+abort: tag 'blecch' does not exist
+failed
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 bleah0
+868cc8fbb43b754ad09fa109885d243fc49adae7 gack
+868cc8fbb43b754ad09fa109885d243fc49adae7 gawk
+868cc8fbb43b754ad09fa109885d243fc49adae7 gorp
+3807bcf62c5614cb6c16436b514d7764ca5f1631 gack
+0000000000000000000000000000000000000000 gack
+0000000000000000000000000000000000000000 gorp
 3ecf002a1c572a2f3bb4e665417e60fca65bbd42 bleah1
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 0acdaf8983679e0aac16e811534eb49d7ee1f2b4 foobar

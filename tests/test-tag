@@ -10,11 +10,21 @@ hg history
 
 echo foo >> .hgtags
 hg tag -d "1000000 0" "bleah2" || echo "failed"
-hg tag -d "1000000 0" -r 0 "bleah2" 1 || echo "failed"
 
 hg revert .hgtags
+hg tag -d "1000000 0" -r 0 x y z y y z || echo "failed"
+hg tag -d "1000000 0" tap nada dot tip null . || echo "failed"
+hg tag -d "1000000 0" "bleah" || echo "failed"
+hg tag -d "1000000 0" "blecch" "bleah" || echo "failed"
+
+hg tag -d "1000000 0" --remove "blecch" || echo "failed"
+hg tag -d "1000000 0" --remove "bleah" "blecch" "blough" || echo "failed"
+
 hg tag -d "1000000 0" -r 0 "bleah0"
-hg tag -l -d "1000000 0" "bleah1" 1
+hg tag -l -d "1000000 0" -r 1 "bleah1"
+hg tag -d "1000000 0" gack gawk gorp
+hg tag -d "1000000 0" -f gack
+hg tag -d "1000000 0" --remove gack gorp
 
 cat .hgtags
 cat .hg/localtags

@@ -124,21 +124,29 @@ class localrepository(repo.repository):
 
     tag_disallowed = ':\r\n'
 
-    def _tag(self, name, node, message, local, user, date, parent=None,
+    def _tag(self, names, node, message, local, user, date, parent=None,
              extra={}):
         use_dirstate = parent is None
 
+        if isinstance(names, str):
+            allchars = names
+            names = (names,)
+        else:
+            allchars = ''.join(names)
         for c in self.tag_disallowed:
-            if c in name:
+            if c in allchars:
                 raise util.Abort(_('%r cannot be used in a tag name') % c)
 
-        self.hook('pretag', throw=True, node=hex(node), tag=name, local=local)
+        for name in names:
+            self.hook('pretag', throw=True, node=hex(node), tag=name,
+                      local=local)
 
-        def writetag(fp, name, munge, prevtags):
+        def writetags(fp, names, munge, prevtags):
             fp.seek(0, 2)
             if prevtags and prevtags[-1] != '\n':
                 fp.write('\n')
-            fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
+            for name in names:
+                fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
             fp.close()
 
         prevtags = ''
@@ -151,8 +159,9 @@ class localrepository(repo.repository):
                 prevtags = fp.read()
 
             # local tags are stored in the current charset
-            writetag(fp, name, None, prevtags)
-            self.hook('tag', node=hex(node), tag=name, local=local)
+            writetags(fp, names, None, prevtags)
+            for name in names:
+                self.hook('tag', node=hex(node), tag=name, local=local)
             return
 
         if use_dirstate:
@@ -172,7 +181,7 @@ class localrepository(repo.repository):
                 fp.write(prevtags)
 
         # committed tags are stored in UTF-8
-        writetag(fp, name, util.fromlocal, prevtags)
+        writetags(fp, names, util.fromlocal, prevtags)
 
         if use_dirstate and '.hgtags' not in self.dirstate:
             self.add(['.hgtags'])
@@ -180,20 +189,24 @@ class localrepository(repo.repository):
         tagnode = self.commit(['.hgtags'], message, user, date, p1=parent,
                               extra=extra)
 
-        self.hook('tag', node=hex(node), tag=name, local=local)
+        for name in names:
+            self.hook('tag', node=hex(node), tag=name, local=local)
 
         return tagnode
 
-    def tag(self, name, node, message, local, user, date):
-        '''tag a revision with a symbolic name.
+    def tag(self, names, node, message, local, user, date):
+        '''tag a revision with one or more symbolic names.
 
-        if local is True, the tag is stored in a per-repository file.
-        otherwise, it is stored in the .hgtags file, and a new
+        names is a list of strings or, when adding a single tag, names may be a
+        string.
+        
+        if local is True, the tags are stored in a per-repository file.
+        otherwise, they are stored in the .hgtags file, and a new
         changeset is committed with the change.
 
         keyword arguments:
 
-        local: whether to store tag in non-version-controlled file
+        local: whether to store tags in non-version-controlled file
         (default False)
 
         message: commit message to use if committing
@@ -207,7 +220,7 @@ class localrepository(repo.repository):
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
 
-        self._tag(name, node, message, local, user, date)
+        self._tag(names, node, message, local, user, date)
 
     def tags(self):
         '''return a mapping of tag to node'''
