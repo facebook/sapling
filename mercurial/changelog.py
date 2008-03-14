@@ -108,6 +108,9 @@ class changelog(revlog):
         # if we're doing an initial clone, divert to another file
         if self._delaycount == 0:
             self._delayname = fp.name
+            if not self.count():
+                # make sure to truncate the file
+                mode = mode.replace('a', 'w')
             return self._realopener(name + ".a", mode)
         # otherwise, divert to memory
         return appender(fp, self._delaybuf)
