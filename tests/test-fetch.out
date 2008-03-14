@@ -41,7 +41,7 @@ updating to 2:97d72e5f12c7
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-new changeset 3:0b6439e938f9 merges remote changes with local
+new changeset 3:... merges remote changes with local
 Automated merge with http://localhost:20059/
 % fetch over http with auth (should be hidden in desc)
 pulling from http://user:***@localhost:20059/
@@ -54,7 +54,7 @@ updating to 2:97d72e5f12c7
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-new changeset 3:0b6439e938f9 merges remote changes with local
+new changeset 3:... merges remote changes with local
 Automated merge with http://localhost:20059/
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
