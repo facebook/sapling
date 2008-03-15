@@ -1,0 +1,63 @@
+#!/bin/sh
+
+add()
+{
+    echo $2 >> $1
+}
+
+hg init t
+cd t
+
+# set up a boring main branch
+add a a
+hg add a
+hg ci -m0
+
+add a m1
+hg ci -m1
+
+add a m2
+hg ci -m2
+
+show()
+{
+    echo "- $2: $1"
+    hg st -C $1
+    echo
+    hg diff --git $1
+    echo
+}
+
+# make a new branch and get diff/status output
+# $1 - first commit
+# $2 - second commit
+# $3 - working dir action
+# $4 - test description
+tb()
+{
+    hg co -q -C 0
+
+    $1
+    hg ci -m "t1"
+    $2
+    hg ci -m "t2"
+    $3
+
+    echo "** $4 **"
+    echo "** $1 / $2 / $3"
+    show "" "working to parent"
+    show "--rev 0" "working to root"
+    show "--rev 2" "working to branch"
+    show "--rev 0 --rev ." "root to parent"
+    show "--rev . --rev 0" "parent to root"
+    show "--rev 2 --rev ." "branch to parent"
+    show "--rev . --rev 2" "parent to branch"
+    echo
+}
+
+tb "add a a1" "add a a2" "hg mv a b" "rename in working dir"
+tb "add a a1" "add a a2" "hg cp a b" "copy in working dir" 
+tb "hg mv a b" "add b b1" "add b w" "single rename"
+tb "hg cp a b" "add b b1" "add a w" "single copy"
+tb "hg mv a b" "hg mv b c" "hg mv c d" "rename chain"
+tb "hg cp a b" "hg cp b c" "hg cp c d" "copy chain"

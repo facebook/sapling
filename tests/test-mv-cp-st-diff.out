@@ -1,0 +1,673 @@
+** rename in working dir **
+** add a a1 / add a a2 / hg mv a b
+- working to parent: 
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+
+- working to root: --rev 0
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,1 +1,3 @@
+ a
++a1
++a2
+
+- working to branch: --rev 2
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++a1
++a2
+
+- root to parent: --rev 0 --rev .
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++a1
++a2
+
+- parent to root: --rev . --rev 0
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,1 @@
+ a
+-a1
+-a2
+
+- branch to parent: --rev 2 --rev .
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++a1
++a2
+
+- parent to branch: --rev . --rev 2
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,3 @@
+ a
+-a1
+-a2
++m1
++m2
+
+
+** copy in working dir **
+** add a a1 / add a a2 / hg cp a b
+- working to parent: 
+A b
+  a
+
+diff --git a/a b/b
+copy from a
+copy to b
+
+- working to root: --rev 0
+M a
+A b
+  a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++a1
++a2
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,1 +1,3 @@
+ a
++a1
++a2
+
+- working to branch: --rev 2
+M a
+A b
+  a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++a1
++a2
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++a1
++a2
+
+- root to parent: --rev 0 --rev .
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++a1
++a2
+
+- parent to root: --rev . --rev 0
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,1 @@
+ a
+-a1
+-a2
+
+- branch to parent: --rev 2 --rev .
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++a1
++a2
+
+- parent to branch: --rev . --rev 2
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,3 @@
+ a
+-a1
+-a2
++m1
++m2
+
+
+** single rename **
+** hg mv a b / add b b1 / add b w
+- working to parent: 
+M b
+
+diff --git a/b b/b
+--- a/b
++++ b/b
+@@ -1,2 +1,3 @@
+ a
+ b1
++w
+
+- working to root: --rev 0
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,1 +1,3 @@
+ a
++b1
++w
+
+- working to branch: --rev 2
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++b1
++w
+
+- root to parent: --rev 0 --rev .
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,1 +1,2 @@
+ a
++b1
+
+- parent to root: --rev . --rev 0
+A a
+  b
+R b
+
+diff --git a/b b/a
+rename from b
+rename to a
+--- a/b
++++ b/a
+@@ -1,2 +1,1 @@
+ a
+-b1
+
+- branch to parent: --rev 2 --rev .
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,3 +1,2 @@
+ a
+-m1
+-m2
++b1
+
+- parent to branch: --rev . --rev 2
+A a
+  b
+R b
+
+diff --git a/b b/a
+rename from b
+rename to a
+--- a/b
++++ b/a
+@@ -1,2 +1,3 @@
+ a
+-b1
++m1
++m2
+
+
+** single copy **
+** hg cp a b / add b b1 / add a w
+- working to parent: 
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++w
+
+- working to root: --rev 0
+M a
+A b
+  a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++w
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,1 +1,2 @@
+ a
++b1
+
+- working to branch: --rev 2
+M a
+A b
+  a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,2 @@
+ a
+-m1
+-m2
++w
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,3 +1,2 @@
+ a
+-m1
+-m2
++b1
+
+- root to parent: --rev 0 --rev .
+A b
+  a
+
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,1 +1,2 @@
+ a
++b1
+
+- parent to root: --rev . --rev 0
+R b
+
+diff --git a/b b/b
+deleted file mode 100644
+--- a/b
++++ /dev/null
+@@ -1,2 +0,0 @@
+-a
+-b1
+
+- branch to parent: --rev 2 --rev .
+M a
+A b
+  a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,3 +1,2 @@
+ a
+-m1
+-m2
++b1
+
+- parent to branch: --rev . --rev 2
+M a
+R b
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++m1
++m2
+diff --git a/b b/b
+deleted file mode 100644
+--- a/b
++++ /dev/null
+@@ -1,2 +0,0 @@
+-a
+-b1
+
+
+** rename chain **
+** hg mv a b / hg mv b c / hg mv c d
+- working to parent: 
+A d
+  c
+R c
+
+diff --git a/c b/d
+rename from c
+rename to d
+
+- working to root: --rev 0
+A d
+  a
+R a
+
+diff --git a/a b/d
+rename from a
+rename to d
+
+- working to branch: --rev 2
+A d
+  a
+R a
+
+diff --git a/a b/d
+rename from a
+rename to d
+--- a/a
++++ b/d
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+
+- root to parent: --rev 0 --rev .
+A c
+  a
+R a
+
+diff --git a/a b/c
+rename from a
+rename to c
+
+- parent to root: --rev . --rev 0
+A a
+  c
+R c
+
+diff --git a/c b/a
+rename from c
+rename to a
+
+- branch to parent: --rev 2 --rev .
+A c
+  a
+R a
+
+diff --git a/a b/c
+rename from a
+rename to c
+--- a/a
++++ b/c
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+
+- parent to branch: --rev . --rev 2
+A a
+  c
+R c
+
+diff --git a/c b/a
+rename from c
+rename to a
+--- a/c
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++m1
++m2
+
+
+** copy chain **
+** hg cp a b / hg cp b c / hg cp c d
+- working to parent: 
+A d
+  c
+
+diff --git a/c b/d
+copy from c
+copy to d
+
+- working to root: --rev 0
+A b
+  a
+A c
+  a
+A d
+  a
+
+diff --git a/a b/b
+copy from a
+copy to b
+diff --git a/a b/c
+copy from a
+copy to c
+diff --git a/a b/d
+copy from a
+copy to d
+
+- working to branch: --rev 2
+M a
+A b
+  a
+A c
+  a
+A d
+  a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+diff --git a/a b/c
+copy from a
+copy to c
+--- a/a
++++ b/c
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+diff --git a/a b/d
+copy from a
+copy to d
+--- a/a
++++ b/d
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+
+- root to parent: --rev 0 --rev .
+A b
+  a
+A c
+  a
+
+diff --git a/a b/b
+copy from a
+copy to b
+diff --git a/a b/c
+copy from a
+copy to c
+
+- parent to root: --rev . --rev 0
+R b
+R c
+
+diff --git a/b b/b
+deleted file mode 100644
+--- a/b
++++ /dev/null
+@@ -1,1 +0,0 @@
+-a
+diff --git a/c b/c
+deleted file mode 100644
+--- a/c
++++ /dev/null
+@@ -1,1 +0,0 @@
+-a
+
+- branch to parent: --rev 2 --rev .
+M a
+A b
+  a
+A c
+  a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+diff --git a/a b/b
+copy from a
+copy to b
+--- a/a
++++ b/b
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+diff --git a/a b/c
+copy from a
+copy to c
+--- a/a
++++ b/c
+@@ -1,3 +1,1 @@
+ a
+-m1
+-m2
+
+- parent to branch: --rev . --rev 2
+M a
+R b
+R c
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++m1
++m2
+diff --git a/b b/b
+deleted file mode 100644
+--- a/b
++++ /dev/null
+@@ -1,1 +0,0 @@
+-a
+diff --git a/c b/c
+deleted file mode 100644
+--- a/c
++++ /dev/null
+@@ -1,1 +0,0 @@
+-a
+
+
