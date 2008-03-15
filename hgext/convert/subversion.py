@@ -417,6 +417,11 @@ class svn_source(converter_source):
         a change being reported. Return None if computed module does not
         belong to rootmodule subtree.
         """
+        if not path.startswith(self.rootmodule):
+            # Requests on foreign branches may be forbidden at server level
+            self.ui.debug(_('ignoring foreign branch %r\n') % path)
+            return None
+
         if not stop:
             stop = svn.ra.get_latest_revnum(self.ra)
         try:
