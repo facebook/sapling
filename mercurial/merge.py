@@ -11,18 +11,15 @@ import errno, util, os, heapq, filemerge
 
 def _checkunknown(wctx, mctx):
     "check for collisions between unknown files and files in mctx"
-    man = mctx.manifest()
     for f in wctx.unknown():
-        if f in man:
-            if mctx.filectx(f).cmp(wctx.filectx(f).data()):
-                raise util.Abort(_("untracked file in working directory differs"
-                                   " from file in requested revision: '%s'")
-                                 % f)
+        if f in mctx and mctx[f].cmp(wctx[f].data()):
+            raise util.Abort(_("untracked file in working directory differs"
+                               " from file in requested revision: '%s'") % f)
 
 def _checkcollision(mctx):
     "check for case folding collisions in the destination context"
     folded = {}
-    for fn in mctx.manifest():
+    for fn in mctx:
         fold = fn.lower()
         if fold in folded:
             raise util.Abort(_("case-folding collision between %s and %s")
@@ -45,15 +42,14 @@ def _forgetremoved(wctx, mctx, branchmerge):
     """
 
     action = []
-    man = mctx.manifest()
     state = branchmerge and 'r' or 'f'
     for f in wctx.deleted():
-        if f not in man:
+        if f not in mctx:
             action.append((f, state))
 
     if not branchmerge:
         for f in wctx.removed():
-            if f not in man:
+            if f not in mctx:
                 action.append((f, "f"))
 
     return action
