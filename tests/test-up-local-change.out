@@ -17,7 +17,7 @@ summary:     1
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
-  searching for copies back to rev 1
+  searching for copies back to rev 0
   unmatched files in other:
    b
  a: versions differ -> m
@@ -54,7 +54,7 @@ summary:     1
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
-  searching for copies back to rev 1
+  searching for copies back to rev 0
   unmatched files in other:
    b
  a: versions differ -> m

@@ -12,9 +12,15 @@ diff --git a/new b/copy
 copy from new
 copy to copy
 % rename
-diff --git a/copy b/rename
-rename from copy
-rename to rename
+diff --git a/copy b/copy
+deleted file mode 100644
+--- a/copy
++++ /dev/null
+@@ -1,1 +0,0 @@
+-new
+diff --git a/new b/rename
+copy from new
+copy to rename
 % delete
 diff --git a/rename b/rename
 deleted file mode 100644
