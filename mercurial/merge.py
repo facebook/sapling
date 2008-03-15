@@ -123,23 +123,18 @@ def findcopies(repo, m1, m2, ma, limit):
         c1 = ctx(f, m1[f])
         for of in _findoldnames(c1, limit):
             fullcopy[f] = of # remember for dir rename detection
-            if of not in m2: # original file not in other manifest?
-                if of in ma:
-                    diverge.setdefault(of, []).append(f)
-                continue
-            # if the original file is unchanged on the other branch,
-            # no merge needed
-            if m2[of] == ma.get(of):
-                continue
-            c2 = ctx(of, m2[of])
-            ca = c1.ancestor(c2)
-            if not ca: # unrelated?
-                continue
-            # named changed on only one side?
-            if ca.path() == f or ca.path() == c2.path():
-                if c1 == ca and c2 == ca: # no merge needed, ignore copy
-                    continue
-                copy[f] = of
+            if of in m2: # original file not in other manifest?
+                # if the original file is unchanged on the other branch,
+                # no merge needed
+                if m2[of] != ma.get(of):
+                    c2 = ctx(of, m2[of])
+                    ca = c1.ancestor(c2)
+                    # related and named changed on only one side?
+                    if ca and ca.path() == f or ca.path() == c2.path():
+                        if c1 != ca or c2 != ca: # merge needed?
+                            copy[f] = of
+            elif of in ma:
+                diverge.setdefault(of, []).append(f)
 
     if not repo.ui.configbool("merge", "followcopies", True):
         return {}, {}
