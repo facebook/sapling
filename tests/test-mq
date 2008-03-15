@@ -487,3 +487,13 @@ cd qclonedest2
 qlog
 cd ..
 
+echo % 'test applying on an empty file (issue 1033)'
+hg init empty
+cd empty
+touch a
+hg ci -Am addempty
+echo a > a
+hg qnew -f -e changea
+hg qpop
+hg qpush
+cd ..

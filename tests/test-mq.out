@@ -472,3 +472,8 @@ main repo:
     rev 0: add foo
 patch repo:
     rev 0: checkpoint
+% test applying on an empty file (issue 1033)
+adding a
+Patch queue now empty
+applying changea
+Now at: changea

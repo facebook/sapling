@@ -505,7 +505,7 @@ class patchfile:
         return -1
 
 class hunk:
-    def __init__(self, desc, num, lr, context, gitpatch=None):
+    def __init__(self, desc, num, lr, context, create=False, remove=False):
         self.number = num
         self.desc = desc
         self.hunk = [ desc ]
@@ -515,7 +515,8 @@ class hunk:
             self.read_context_hunk(lr)
         else:
             self.read_unified_hunk(lr)
-        self.gitpatch = gitpatch
+        self.create = create
+        self.remove = remove and not create
 
     def read_unified_hunk(self, lr):
         m = unidesc.match(self.desc)
@@ -640,6 +641,7 @@ class hunk:
         self.hunk[0] = self.desc
 
     def reverse(self):
+        self.create, self.remove = self.remove, self.create
         origlena = self.lena
         origstarta = self.starta
         self.lena = self.lenb
@@ -670,12 +672,10 @@ class hunk:
         return len(self.a) == self.lena and len(self.b) == self.lenb
 
     def createfile(self):
-        create = self.gitpatch is None or self.gitpatch.op == 'ADD'
-        return self.starta == 0 and self.lena == 0 and create
+        return self.starta == 0 and self.lena == 0 and self.create
 
     def rmfile(self):
-        remove = self.gitpatch is None or self.gitpatch.op == 'DELETE'
-        return self.startb == 0 and self.lenb == 0 and remove
+        return self.startb == 0 and self.lenb == 0 and self.remove
 
     def fuzzit(self, l, fuzz, toponly):
         # this removes context lines from the top and bottom of list 'l'.  It
@@ -912,7 +912,9 @@ def iterhunks(ui, fp, sourcefile=None):
                 if context == None and x.startswith('***************'):
                     context = True
                 gpatch = changed.get(bfile[2:], (None, None))[1]
-                current_hunk = hunk(x, hunknum + 1, lr, context, gpatch)
+                create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
+                remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
+                current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
             except PatchError, err:
                 ui.debug(err)
                 current_hunk = None
