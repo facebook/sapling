@@ -260,6 +260,25 @@ summary:     0.3m
 
 ====== Outgoing -R does-not-exist.hg vs partial2 in partial
 abort: No such file or directory: ../does-not-exist.hg
+====== Direct clone from bundle (all-history)
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 9 changesets with 7 changes to 4 files (+1 heads)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   8:836ac62537ab
+tag:         tip
+parent:      3:ac69c658229d
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0.3m
+
+changeset:   7:80fe151401c2
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1.3m
+
 ====== Unbundle incremental bundles into fresh empty in one go
 1 changesets found
 1 changesets found
