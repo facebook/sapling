@@ -118,27 +118,28 @@ def findcopies(repo, m1, m2, ma, limit):
     fullcopy = {}
     diverge = {}
 
-    def checkcopies(c, man, aman):
-        '''check possible copies for filectx c'''
-        for of in _findoldnames(c, limit):
-            fullcopy[c.path()] = of # remember for dir rename detection
-            if of not in man: # original file not in other manifest?
+    def checkcopies(f, m1, m2):
+        '''check possible copies of f from m1 to m2'''
+        c1 = ctx(f, m1[f])
+        for of in _findoldnames(c1, limit):
+            fullcopy[f] = of # remember for dir rename detection
+            if of not in m2: # original file not in other manifest?
                 if of in ma:
-                    diverge.setdefault(of, []).append(c.path())
+                    diverge.setdefault(of, []).append(f)
                 continue
             # if the original file is unchanged on the other branch,
             # no merge needed
-            if man[of] == aman.get(of):
+            if m2[of] == ma.get(of):
                 continue
-            c2 = ctx(of, man[of])
-            ca = c.ancestor(c2)
+            c2 = ctx(of, m2[of])
+            ca = c1.ancestor(c2)
             if not ca: # unrelated?
                 continue
             # named changed on only one side?
-            if ca.path() == c.path() or ca.path() == c2.path():
-                if c == ca and c2 == ca: # no merge needed, ignore copy
+            if ca.path() == f or ca.path() == c2.path():
+                if c1 == ca and c2 == ca: # no merge needed, ignore copy
                     continue
-                copy[c.path()] = of
+                copy[f] = of
 
     if not repo.ui.configbool("merge", "followcopies", True):
         return {}, {}
@@ -160,10 +161,10 @@ def findcopies(repo, m1, m2, ma, limit):
                       % "\n   ".join(u2))
 
     for f in u1:
-        checkcopies(ctx(f, m1[f]), m2, ma)
+        checkcopies(f, m1, m2)
 
     for f in u2:
-        checkcopies(ctx(f, m2[f]), m1, ma)
+        checkcopies(f, m2, m1)
 
     diverge2 = {}
     for of, fl in diverge.items():
