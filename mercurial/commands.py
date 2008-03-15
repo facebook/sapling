@@ -9,7 +9,7 @@ from node import hex, nullid, nullrev, short
 from repo import RepoError
 from i18n import _
 import os, re, sys, urllib
-import hg, util, revlog, bundlerepo, extensions
+import hg, util, revlog, bundlerepo, extensions, copies
 import difflib, patch, time, help, mdiff, tempfile
 import version, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
@@ -2543,6 +2543,22 @@ def status(ui, repo, *pats, **opts):
 
     explicit_changetypes = changetypes + (('clean', 'C', clean),)
 
+    copy = {}
+    showcopy = {}
+    if ((all or opts.get('copies')) and not opts.get('no_status')):
+        if opts.get('rev') == []:
+            # fast path, more correct with merge parents
+            showcopy = copy = repo.dirstate.copies().copy()
+        else:
+            ctxn = repo.changectx(nullid)
+            ctx1 = repo.changectx(node1)
+            ctx2 = repo.changectx(node2)
+            if node2 is None:
+                ctx2 = repo.workingctx()
+            copy, diverge = copies.copies(repo, ctx1, ctx2, ctxn)
+            for k, v in copy.items():
+                copy[v] = k
+
     end = opts['print0'] and '\0' or '\n'
 
     for opt, char, changes in ([ct for ct in explicit_changetypes
@@ -2556,10 +2572,8 @@ def status(ui, repo, *pats, **opts):
 
         for f in changes:
             ui.write(format % repo.pathto(f, cwd))
-            if ((all or opts.get('copies')) and not opts.get('no_status')):
-                copied = repo.dirstate.copied(f)
-                if copied:
-                    ui.write('  %s%s' % (repo.pathto(copied, cwd), end))
+            if f in copy and (f in added or f in showcopy):
+                ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
 
 def tag(ui, repo, name, rev_=None, **opts):
     """add a tag for the current or given revision
