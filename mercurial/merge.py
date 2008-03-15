@@ -9,7 +9,7 @@ from node import nullid, nullrev
 from i18n import _
 import errno, util, os, heapq, filemerge
 
-def checkunknown(wctx, mctx):
+def _checkunknown(wctx, mctx):
     "check for collisions between unknown files and files in mctx"
     man = mctx.manifest()
     for f in wctx.unknown():
@@ -19,7 +19,7 @@ def checkunknown(wctx, mctx):
                                    " from file in requested revision: '%s'")
                                  % f)
 
-def checkcollision(mctx):
+def _checkcollision(mctx):
     "check for case folding collisions in the destination context"
     folded = {}
     for fn in mctx.manifest():
@@ -29,7 +29,7 @@ def checkcollision(mctx):
                              % (fn, folded[fold]))
         folded[fold] = fn
 
-def forgetremoved(wctx, mctx, branchmerge):
+def _forgetremoved(wctx, mctx, branchmerge):
     """
     Forget removed files
 
@@ -58,31 +58,53 @@ def forgetremoved(wctx, mctx, branchmerge):
 
     return action
 
+def _nonoverlap(d1, d2, d3):
+    "Return list of elements in d1 not in d2 or d3"
+    l = [d for d in d1 if d not in d3 and d not in d2]
+    l.sort()
+    return l
+
+def _dirname(f):
+    s = f.rfind("/")
+    if s == -1:
+        return ""
+    return f[:s]
+
+def _dirs(files):
+    d = {}
+    for f in files:
+        f = _dirname(f)
+        while f not in d:
+            d[f] = True
+            f = _dirname(f)
+    return d
+
+def _findoldnames(fctx, limit):
+    "find files that path was copied from, back to linkrev limit"
+    old = {}
+    seen = {}
+    orig = fctx.path()
+    visit = [fctx]
+    while visit:
+        fc = visit.pop()
+        s = str(fc)
+        if s in seen:
+            continue
+        seen[s] = 1
+        if fc.path() != orig and fc.path() not in old:
+            old[fc.path()] = 1
+        if fc.rev() < limit:
+            continue
+        visit += fc.parents()
+
+    old = old.keys()
+    old.sort()
+    return old
+
 def findcopies(repo, m1, m2, ma, limit):
     """
     Find moves and copies between m1 and m2 back to limit linkrev
     """
-
-    def nonoverlap(d1, d2, d3):
-        "Return list of elements in d1 not in d2 or d3"
-        l = [d for d in d1 if d not in d3 and d not in d2]
-        l.sort()
-        return l
-
-    def dirname(f):
-        s = f.rfind("/")
-        if s == -1:
-            return ""
-        return f[:s]
-
-    def dirs(files):
-        d = {}
-        for f in files:
-            f = dirname(f)
-            while f not in d:
-                d[f] = True
-                f = dirname(f)
-        return d
 
     wctx = repo.workingctx()
 
@@ -92,35 +114,13 @@ def findcopies(repo, m1, m2, ma, limit):
         return wctx.filectx(f)
     ctx = util.cachefunc(makectx)
 
-    def findold(fctx):
-        "find files that path was copied from, back to linkrev limit"
-        old = {}
-        seen = {}
-        orig = fctx.path()
-        visit = [fctx]
-        while visit:
-            fc = visit.pop()
-            s = str(fc)
-            if s in seen:
-                continue
-            seen[s] = 1
-            if fc.path() != orig and fc.path() not in old:
-                old[fc.path()] = 1
-            if fc.rev() < limit and fc.rev() is not None:
-                continue
-            visit += fc.parents()
-
-        old = old.keys()
-        old.sort()
-        return old
-
     copy = {}
     fullcopy = {}
     diverge = {}
 
     def checkcopies(c, man, aman):
         '''check possible copies for filectx c'''
-        for of in findold(c):
+        for of in _findoldnames(c, limit):
             fullcopy[c.path()] = of # remember for dir rename detection
             if of not in man: # original file not in other manifest?
                 if of in ma:
@@ -149,8 +149,8 @@ def findcopies(repo, m1, m2, ma, limit):
 
     repo.ui.debug(_("  searching for copies back to rev %d\n") % limit)
 
-    u1 = nonoverlap(m1, m2, ma)
-    u2 = nonoverlap(m2, m1, ma)
+    u1 = _nonoverlap(m1, m2, ma)
+    u2 = _nonoverlap(m2, m1, ma)
 
     if u1:
         repo.ui.debug(_("  unmatched files in local:\n   %s\n")
@@ -188,14 +188,14 @@ def findcopies(repo, m1, m2, ma, limit):
     repo.ui.debug(_("  checking for directory renames\n"))
 
     # generate a directory move map
-    d1, d2 = dirs(m1), dirs(m2)
+    d1, d2 = _dirs(m1), _dirs(m2)
     invalid = {}
     dirmove = {}
 
     # examine each file copy for a potential directory move, which is
     # when all the files in a directory are moved to a new directory
     for dst, src in fullcopy.items():
-        dsrc, ddst = dirname(src), dirname(dst)
+        dsrc, ddst = _dirname(src), _dirname(dst)
         if dsrc in invalid:
             # already seen to be uninteresting
             continue
@@ -236,7 +236,7 @@ def findcopies(repo, m1, m2, ma, limit):
 
     return copy, diverge
 
-def symmetricdifference(repo, rev1, rev2):
+def _symmetricdifference(repo, rev1, rev2):
     """symmetric difference of the sets of ancestors of rev1 and rev2
 
     I.e. revisions that are ancestors of rev1 or rev2, but not both.
@@ -340,7 +340,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if rev1 is None:
             # p1 is a workingctx
             rev1 = p1.parents()[0].rev()
-        limit = min(symmetricdifference(repo, rev1, p2.rev()))
+        limit = min(_symmetricdifference(repo, rev1, p2.rev()))
         copy, diverge = findcopies(repo, m1, m2, ma, limit)
 
     for of, fl in diverge.items():
@@ -615,10 +615,10 @@ def update(repo, node, branchmerge, force, partial):
         ### calculate phase
         action = []
         if not force:
-            checkunknown(wc, p2)
+            _checkunknown(wc, p2)
         if not util.checkfolding(repo.path):
-            checkcollision(p2)
-        action += forgetremoved(wc, p2, branchmerge)
+            _checkcollision(p2)
+        action += _forgetremoved(wc, p2, branchmerge)
         action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
         ### apply phase
