@@ -78,8 +78,7 @@ remote: adding changesets
 remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
-abort: unexpected response:
-'KABOOM1\n'
+remote: KABOOM
 changeset:   3:ac7448082955
 tag:         tip
 parent:      1:572896fe480d

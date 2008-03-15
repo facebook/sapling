@@ -85,6 +85,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
 
 _redirect = False
 def redirect(state):
+    global _redirect
     _redirect = state
 
 def hook(ui, repo, name, throw=False, **args):
@@ -92,8 +93,8 @@ def hook(ui, repo, name, throw=False, **args):
 
     if _redirect:
         # temporarily redirect stdout to stderr
-        oldstdout = os.dup(sys.stdout.fileno())
-        os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
+        oldstdout = os.dup(sys.__stdout__.fileno())
+        os.dup2(sys.__stderr__.fileno(), sys.__stdout__.fileno())
 
     hooks = [(hname, cmd) for hname, cmd in ui.configitems("hooks")
              if hname.split(".", 1)[0] == name and cmd]
@@ -106,8 +107,9 @@ def hook(ui, repo, name, throw=False, **args):
                             args, throw) or r
         else:
             r = _exthook(ui, repo, hname, cmd, args, throw) or r
-    return r
 
     if _redirect:
-        os.dup2(oldstdout, sys.stdout.fileno())
+        os.dup2(oldstdout, sys.__stdout__.fileno())
         os.close(oldstdout)
+
+    return r

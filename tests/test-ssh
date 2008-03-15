@@ -29,7 +29,7 @@ EOF
 
 cat <<EOF > badhook
 import sys
-sys.stdout.write("KABOOM")
+sys.stdout.write("KABOOM\n")
 EOF
 
 echo "# creating 'remote'"
