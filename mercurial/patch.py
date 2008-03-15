@@ -8,7 +8,7 @@
 
 from i18n import _
 from node import hex, nullid, short
-import base85, cmdutil, mdiff, util, context, revlog, diffhelpers
+import base85, cmdutil, mdiff, util, context, revlog, diffhelpers, copies
 import cStringIO, email.Parser, os, popen2, re, sha, errno
 import sys, tempfile, zlib
 
@@ -1202,36 +1202,6 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             execf2 = mc.execf
             linkf2 = mc.linkf
 
-    # returns False if there was no rename between ctx1 and ctx2
-    # returns None if the file was created between ctx1 and ctx2
-    # returns the (file, node) present in ctx1 that was renamed to f in ctx2
-    # This will only really work if c1 is the Nth 1st parent of c2.
-    def renamed(c1, c2, man, f):
-        startrev = c1.rev()
-        c = c2
-        crev = c.rev()
-        if crev is None:
-            crev = repo.changelog.count()
-        orig = f
-        files = (f,)
-        while crev > startrev:
-            if f in files:
-                try:
-                    src = getfilectx(f, c).renamed()
-                except revlog.LookupError:
-                    return None
-                if src:
-                    f = src[0]
-            crev = c.parents()[0].rev()
-            # try to reuse
-            c = getctx(crev)
-            files = c.files()
-        if f not in man:
-            return None
-        if f == orig:
-            return False
-        return f
-
     if repo.ui.quiet:
         r = None
     else:
@@ -1239,28 +1209,9 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         r = [hexfunc(node) for node in [node1, node2] if node]
 
     if opts.git:
-        copied = {}
-        c1, c2 = ctx1, ctx2
-        files = added
-        man = man1
-        if node2 and ctx1.rev() >= ctx2.rev():
-            # renamed() starts at c2 and walks back in history until c1.
-            # Since ctx1.rev() >= ctx2.rev(), invert ctx2 and ctx1 to
-            # detect (inverted) copies.
-            c1, c2 = ctx2, ctx1
-            files = removed
-            man = ctx2.manifest()
-        for f in files:
-            src = renamed(c1, c2, man, f)
-            if src:
-                copied[f] = src
-        if ctx1 == c2:
-            # invert the copied dict
-            copied = dict([(v, k) for (k, v) in copied.iteritems()])
-        # If we've renamed file foo to bar (copied['bar'] = 'foo'),
-        # avoid showing a diff for foo if we're going to show
-        # the rename to bar.
-        srcs = [x[1] for x in copied.iteritems() if x[0] in added]
+        copy, diverge = copies.copies(repo, ctx1, ctx2, repo.changectx(nullid))
+        for k, v in copy.items():
+            copy[v] = k
 
     all = modified + added + removed
     all.sort()
@@ -1286,8 +1237,8 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
             if f in added:
                 mode = gitmode(execf2(f), linkf2(f))
-                if f in copied:
-                    a = copied[f]
+                if f in copy:
+                    a = copy[f]
                     omode = gitmode(man1.execf(a), man1.linkf(a))
                     addmodehdr(header, omode, mode)
                     if a in removed and a not in gone:
@@ -1303,7 +1254,8 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 if util.binary(tn):
                     dodiff = 'binary'
             elif f in removed:
-                if f in srcs:
+                # have we already reported a copy above?
+                if f in copy and copy[f] in added and copy[copy[f]] == f:
                     dodiff = False
                 else:
                     mode = gitmode(man1.execf(f), man1.linkf(f))

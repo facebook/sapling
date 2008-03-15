@@ -57,7 +57,7 @@ def copies(repo, c1, c2, ca):
     Find moves and copies between context c1 and c2
     """
     # avoid silly behavior for update from empty dir
-    if not c1 or not c2 or not ca:
+    if not c1 or not c2:
         return {}, {}
 
     rev1, rev2 = c1.rev(), c2.rev()

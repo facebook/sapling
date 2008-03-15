@@ -100,7 +100,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
-    if not (backwards or overwrite):
+    if pa and not (backwards or overwrite):
         copy, diverge = copies.copies(repo, p1, p2, pa)
         copied = dict.fromkeys(copy.values())
         for of, fl in diverge.items():

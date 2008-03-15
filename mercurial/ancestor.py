@@ -97,6 +97,9 @@ def symmetricdifference(a, b, pfunc):
     # We keep track of the number of revisions in the heap that
     # we may be interested in.  We stop walking the graph as soon
     # as this number reaches 0.
+    if a == b:
+        return [a]
+
     WHITE = 1
     BLACK = 2
     ALLCOLORS = WHITE | BLACK
