@@ -55,7 +55,7 @@ class hgwebdir(object):
                 self.repos.extend(cleannames(cp.items('paths')))
             if cp.has_section('collections'):
                 for prefix, root in cp.items('collections'):
-                    for path in util.walkrepos(root):
+                    for path in util.walkrepos(root, followsym = True):
                         repo = os.path.normpath(path)
                         name = repo
                         if name.startswith(prefix):
