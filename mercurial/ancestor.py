@@ -81,3 +81,51 @@ def ancestor(a, b, pfunc):
                 gx = x.next()
     except StopIteration:
         return None
+
+def symmetricdifference(a, b, pfunc):
+    """symmetric difference of the sets of ancestors of a and b
+
+    I.e. revisions that are ancestors of a or b, but not both.
+    """
+    # basic idea:
+    # - mark a and b with different colors
+    # - walk the graph in topological order with the help of a heap;
+    #   for each revision r:
+    #     - if r has only one color, we want to return it
+    #     - add colors[r] to its parents
+    #
+    # We keep track of the number of revisions in the heap that
+    # we may be interested in.  We stop walking the graph as soon
+    # as this number reaches 0.
+    WHITE = 1
+    BLACK = 2
+    ALLCOLORS = WHITE | BLACK
+    colors = {a: WHITE, b: BLACK}
+
+    visit = [-a, -b]
+    heapq.heapify(visit)
+    n_wanted = len(visit)
+    ret = []
+
+    while n_wanted:
+        r = -heapq.heappop(visit)
+        wanted = colors[r] != ALLCOLORS
+        n_wanted -= wanted
+        if wanted:
+            ret.append(r)
+
+        for p in pfunc(r):
+            if p not in colors:
+                # first time we see p; add it to visit
+                n_wanted += wanted
+                colors[p] = colors[r]
+                heapq.heappush(visit, -p)
+            elif colors[p] != ALLCOLORS and colors[p] != colors[r]:
+                # at first we thought we wanted p, but now
+                # we know we don't really want it
+                n_wanted -= 1
+                colors[p] |= colors[r]
+
+        del colors[r]
+
+    return ret

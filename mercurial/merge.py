@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev
 from i18n import _
-import errno, util, os, heapq, filemerge
+import errno, util, os, heapq, filemerge, ancestor
 
 def _checkunknown(wctx, mctx):
     "check for collisions between unknown files and files in mctx"
@@ -228,58 +228,6 @@ def findcopies(repo, m1, m2, ma, limit):
 
     return copy, diverge
 
-def _symmetricdifference(repo, rev1, rev2):
-    """symmetric difference of the sets of ancestors of rev1 and rev2
-
-    I.e. revisions that are ancestors of rev1 or rev2, but not both.
-    """
-    # basic idea:
-    # - mark rev1 and rev2 with different colors
-    # - walk the graph in topological order with the help of a heap;
-    #   for each revision r:
-    #     - if r has only one color, we want to return it
-    #     - add colors[r] to its parents
-    #
-    # We keep track of the number of revisions in the heap that
-    # we may be interested in.  We stop walking the graph as soon
-    # as this number reaches 0.
-    WHITE = 1
-    BLACK = 2
-    ALLCOLORS = WHITE | BLACK
-    colors = {rev1: WHITE, rev2: BLACK}
-
-    cl = repo.changelog
-
-    visit = [-rev1, -rev2]
-    heapq.heapify(visit)
-    n_wanted = len(visit)
-    ret = []
-
-    while n_wanted:
-        r = -heapq.heappop(visit)
-        wanted = colors[r] != ALLCOLORS
-        n_wanted -= wanted
-        if wanted:
-            ret.append(r)
-
-        for p in cl.parentrevs(r):
-            if p == nullrev:
-                continue
-            if p not in colors:
-                # first time we see p; add it to visit
-                n_wanted += wanted
-                colors[p] = colors[r]
-                heapq.heappush(visit, -p)
-            elif colors[p] != ALLCOLORS and colors[p] != colors[r]:
-                # at first we thought we wanted p, but now
-                # we know we don't really want it
-                n_wanted -= 1
-                colors[p] |= colors[r]
-
-        del colors[r]
-
-    return ret
-
 def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     """
     Merge p1 and p2 with ancestor ma and generate merge action list
@@ -332,7 +280,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if rev1 is None:
             # p1 is a workingctx
             rev1 = p1.parents()[0].rev()
-        limit = min(_symmetricdifference(repo, rev1, p2.rev()))
+        pr = repo.changelog.parentrevs
+        def parents(rev):
+            return [p for p in pr(rev) if p != nullrev]
+        limit = min(ancestor.symmetricdifference(rev1, p2.rev(), parents))
         copy, diverge = findcopies(repo, m1, m2, ma, limit)
 
     for of, fl in diverge.items():
