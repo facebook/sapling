@@ -316,7 +316,7 @@ class Watcher(object):
             root, fn = self.split(wfn)
             del self.dir(self.statustrees[key], root)[fn]
             del self.dir(self.tree, root)[fn]
-        
+
     def scan(self, topdir=''):
         self.handle_timeout()
         ds = self.repo.dirstate._map.copy()
@@ -359,7 +359,7 @@ class Watcher(object):
 
     def walk(self, states, tree, prefix=''):
         # This is the "inner loop" when talking to the client.
-        
+
         for name, val in tree.iteritems():
             path = join(prefix, name)
             try:
@@ -384,7 +384,7 @@ class Watcher(object):
             self.repo.dirstate.ignorefunc = None
             self.ui.note('rescanning due to .hgignore change\n')
             self.scan()
-        
+
     def getstat(self, wpath):
         try:
             return self.statcache[wpath]
@@ -394,7 +394,7 @@ class Watcher(object):
             except OSError, err:
                 if err.errno != errno.ENOENT:
                     raise
-        
+
     def stat(self, wpath):
         try:
             st = os.lstat(join(self.wprefix, wpath))
@@ -404,7 +404,7 @@ class Watcher(object):
         except OSError, err:
             self.statcache.pop(wpath, None)
             raise
-            
+
     def created(self, wpath):
         if wpath == '.hgignore':
             self.update_hgignore()
@@ -435,7 +435,7 @@ class Watcher(object):
             return
 
         self.updatestatus(wpath, None)
-        
+
     def schedule_work(self, wpath, evt):
         self.eventq.setdefault(wpath, [])
         prev = self.eventq[wpath]
@@ -454,7 +454,7 @@ class Watcher(object):
             self.modified(wpath)
         elif evt == 'd':
             self.deleted(wpath)
-            
+
     def process_create(self, wpath, evt):
         if self.ui.debugflag:
             self.ui.note(_('%s event: created %s\n') %
@@ -583,7 +583,7 @@ class Server(object):
             return
 
         names = cs.read().split('\0')
-        
+
         states = names.pop()
 
         self.ui.note(_('answering query for %r\n') % states)

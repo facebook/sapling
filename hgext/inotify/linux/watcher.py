@@ -69,7 +69,7 @@ class Event(object):
         self.mask = raw.mask
         self.cookie = raw.cookie
         self.name = raw.name
-    
+
     def __repr__(self):
         r = repr(self.raw)
         return 'Event(path=' + repr(self.path) + ', ' + r[r.find('(')+1:]
@@ -155,7 +155,7 @@ class Watcher(object):
 
     def path(self, path):
         '''Return a (watch descriptor, event mask) pair for the given path.
-        
+
         If the path is not being watched, return None.'''
 
         return self._paths.get(path)
@@ -167,7 +167,7 @@ class Watcher(object):
         this watcher, return None.'''
 
         return self._wds.get(wd)
-        
+
     def read(self, bufsize=None):
         '''Read a list of queued inotify events.
 
