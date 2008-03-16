@@ -68,7 +68,7 @@ def copies(repo, c1, c2, ca):
     pr = repo.changelog.parentrevs
     def parents(rev):
         return [p for p in pr(rev) if p != nullrev]
-    limit = min(ancestor.symmetricdifference(rev1, rev2, parents) + [rev1, rev2])
+    limit = min(ancestor.symmetricdifference(rev1, rev2, parents))
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()
