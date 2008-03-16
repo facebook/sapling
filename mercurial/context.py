@@ -190,6 +190,9 @@ class filectx(object):
         elif name == '_filerev':
             self._filerev = self._filelog.rev(self._filenode)
             return self._filerev
+        elif name == '_repopath':
+            self._repopath = self._path
+            return self._repopath
         else:
             raise AttributeError, name
 
@@ -404,7 +407,7 @@ class filectx(object):
                 pl = [(n.path(), n.filenode()) for n in c.parents()]
                 acache[(c._path, None)] = pl
 
-        flcache = {self._path:self._filelog, fc2._path:fc2._filelog}
+        flcache = {self._repopath:self._filelog, fc2._repopath:fc2._filelog}
         def parents(vertex):
             if vertex in acache:
                 return acache[vertex]

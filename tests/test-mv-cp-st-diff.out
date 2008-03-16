@@ -793,3 +793,103 @@ deleted file mode 100644
 -5
 
 
+** circular rename **
+** add a a1 / hg mv a b / hg mv b a
+- working to parent: 
+A a
+  b
+R b
+
+diff --git a/b b/a
+rename from b
+rename to a
+
+- working to root: --rev 0
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++6
++a1
+
+- working to branch: --rev 2
+M a
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++6
++a1
+
+- root to parent: --rev 0 --rev .
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,1 +1,3 @@
+ a
++6
++a1
+
+- parent to root: --rev . --rev 0
+A a
+  b
+R b
+
+diff --git a/b b/a
+rename from b
+rename to a
+--- a/b
++++ b/a
+@@ -1,3 +1,1 @@
+ a
+-6
+-a1
+
+- branch to parent: --rev 2 --rev .
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,3 +1,3 @@
+ a
+-m1
+-m2
++6
++a1
+
+- parent to branch: --rev . --rev 2
+A a
+  b
+R b
+
+diff --git a/b b/a
+rename from b
+rename to a
+--- a/b
++++ b/a
+@@ -1,3 +1,3 @@
+ a
+-6
+-a1
++m1
++m2
+
+
