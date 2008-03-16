@@ -19,8 +19,9 @@ rename from a
 rename to b
 --- a/a
 +++ b/b
-@@ -1,1 +1,3 @@
+@@ -1,1 +1,4 @@
  a
++0
 +a1
 +a2
 
@@ -34,10 +35,11 @@ rename from a
 rename to b
 --- a/a
 +++ b/b
-@@ -1,3 +1,3 @@
+@@ -1,3 +1,4 @@
  a
 -m1
 -m2
++0
 +a1
 +a2
 
@@ -47,8 +49,9 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,1 +1,3 @@
+@@ -1,1 +1,4 @@
  a
++0
 +a1
 +a2
 
@@ -58,8 +61,9 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,1 @@
+@@ -1,4 +1,1 @@
  a
+-0
 -a1
 -a2
 
@@ -69,10 +73,11 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,3 @@
+@@ -1,3 +1,4 @@
  a
 -m1
 -m2
++0
 +a1
 +a2
 
@@ -82,8 +87,9 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,3 @@
+@@ -1,4 +1,3 @@
  a
+-0
 -a1
 -a2
 +m1
@@ -108,8 +114,9 @@ A b
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,1 +1,3 @@
+@@ -1,1 +1,4 @@
  a
++1
 +a1
 +a2
 diff --git a/a b/b
@@ -117,8 +124,9 @@ copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,1 +1,3 @@
+@@ -1,1 +1,4 @@
  a
++1
 +a1
 +a2
 
@@ -130,10 +138,11 @@ A b
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,3 @@
+@@ -1,3 +1,4 @@
  a
 -m1
 -m2
++1
 +a1
 +a2
 diff --git a/a b/b
@@ -141,10 +150,11 @@ copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,3 +1,3 @@
+@@ -1,3 +1,4 @@
  a
 -m1
 -m2
++1
 +a1
 +a2
 
@@ -154,8 +164,9 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,1 +1,3 @@
+@@ -1,1 +1,4 @@
  a
++1
 +a1
 +a2
 
@@ -165,8 +176,9 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,1 @@
+@@ -1,4 +1,1 @@
  a
+-1
 -a1
 -a2
 
@@ -176,10 +188,11 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,3 @@
+@@ -1,3 +1,4 @@
  a
 -m1
 -m2
++1
 +a1
 +a2
 
@@ -189,8 +202,9 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,3 @@
+@@ -1,4 +1,3 @@
  a
+-1
 -a1
 -a2
 +m1
@@ -205,8 +219,9 @@ M b
 diff --git a/b b/b
 --- a/b
 +++ b/b
-@@ -1,2 +1,3 @@
+@@ -1,3 +1,4 @@
  a
+ 2
  b1
 +w
 
@@ -220,12 +235,61 @@ rename from a
 rename to b
 --- a/a
 +++ b/b
-@@ -1,1 +1,3 @@
+@@ -1,1 +1,4 @@
  a
++2
 +b1
 +w
 
 - working to branch: --rev 2
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,3 +1,4 @@
+ a
+-m1
+-m2
++2
++b1
++w
+
+- root to parent: --rev 0 --rev .
+A b
+  a
+R a
+
+diff --git a/a b/b
+rename from a
+rename to b
+--- a/a
++++ b/b
+@@ -1,1 +1,3 @@
+ a
++2
++b1
+
+- parent to root: --rev . --rev 0
+A a
+  b
+R b
+
+diff --git a/b b/a
+rename from b
+rename to a
+--- a/b
++++ b/a
+@@ -1,3 +1,1 @@
+ a
+-2
+-b1
+
+- branch to parent: --rev 2 --rev .
 A b
   a
 R a
@@ -239,51 +303,7 @@ rename to b
  a
 -m1
 -m2
-+b1
-+w
-
-- root to parent: --rev 0 --rev .
-A b
-  a
-R a
-
-diff --git a/a b/b
-rename from a
-rename to b
---- a/a
-+++ b/b
-@@ -1,1 +1,2 @@
- a
-+b1
-
-- parent to root: --rev . --rev 0
-A a
-  b
-R b
-
-diff --git a/b b/a
-rename from b
-rename to a
---- a/b
-+++ b/a
-@@ -1,2 +1,1 @@
- a
--b1
-
-- branch to parent: --rev 2 --rev .
-A b
-  a
-R a
-
-diff --git a/a b/b
-rename from a
-rename to b
---- a/a
-+++ b/b
-@@ -1,3 +1,2 @@
- a
--m1
--m2
++2
 +b1
 
 - parent to branch: --rev . --rev 2
@@ -296,8 +316,9 @@ rename from b
 rename to a
 --- a/b
 +++ b/a
-@@ -1,2 +1,3 @@
+@@ -1,3 +1,3 @@
  a
+-2
 -b1
 +m1
 +m2
@@ -311,8 +332,9 @@ M a
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@
+@@ -1,2 +1,3 @@
  a
+ 3
 +w
 
 - working to root: --rev 0
@@ -323,16 +345,18 @@ A b
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,1 +1,2 @@
+@@ -1,1 +1,3 @@
  a
++3
 +w
 diff --git a/a b/b
 copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,1 +1,2 @@
+@@ -1,1 +1,3 @@
  a
++3
 +b1
 
 - working to branch: --rev 2
@@ -343,44 +367,62 @@ A b
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,2 @@
+@@ -1,3 +1,3 @@
  a
 -m1
 -m2
++3
 +w
 diff --git a/a b/b
 copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,3 +1,2 @@
+@@ -1,3 +1,3 @@
  a
 -m1
 -m2
++3
 +b1
 
 - root to parent: --rev 0 --rev .
+M a
 A b
   a
 
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++3
 diff --git a/a b/b
 copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,1 +1,2 @@
+@@ -1,1 +1,3 @@
  a
++3
 +b1
 
 - parent to root: --rev . --rev 0
+M a
 R b
 
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,2 +1,1 @@
+ a
+-3
 diff --git a/b b/b
 deleted file mode 100644
 --- a/b
 +++ /dev/null
-@@ -1,2 +0,0 @@
+@@ -1,3 +0,0 @@
 -a
+-3
 -b1
 
 - branch to parent: --rev 2 --rev .
@@ -391,19 +433,21 @@ A b
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++3
 diff --git a/a b/b
 copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,3 +1,2 @@
+@@ -1,3 +1,3 @@
  a
 -m1
 -m2
++3
 +b1
 
 - parent to branch: --rev . --rev 2
@@ -413,16 +457,18 @@ R b
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,1 +1,3 @@
+@@ -1,2 +1,3 @@
  a
+-3
 +m1
 +m2
 diff --git a/b b/b
 deleted file mode 100644
 --- a/b
 +++ /dev/null
-@@ -1,2 +0,0 @@
+@@ -1,3 +0,0 @@
 -a
+-3
 -b1
 
 
@@ -445,6 +491,11 @@ R a
 diff --git a/a b/d
 rename from a
 rename to d
+--- a/a
++++ b/d
+@@ -1,1 +1,2 @@
+ a
++4
 
 - working to branch: --rev 2
 A d
@@ -456,10 +507,11 @@ rename from a
 rename to d
 --- a/a
 +++ b/d
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++4
 
 - root to parent: --rev 0 --rev .
 A c
@@ -469,6 +521,11 @@ R a
 diff --git a/a b/c
 rename from a
 rename to c
+--- a/a
++++ b/c
+@@ -1,1 +1,2 @@
+ a
++4
 
 - parent to root: --rev . --rev 0
 A a
@@ -478,6 +535,11 @@ R c
 diff --git a/c b/a
 rename from c
 rename to a
+--- a/c
++++ b/a
+@@ -1,2 +1,1 @@
+ a
+-4
 
 - branch to parent: --rev 2 --rev .
 A c
@@ -489,10 +551,11 @@ rename from a
 rename to c
 --- a/a
 +++ b/c
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++4
 
 - parent to branch: --rev . --rev 2
 A a
@@ -504,8 +567,9 @@ rename from c
 rename to a
 --- a/c
 +++ b/a
-@@ -1,1 +1,3 @@
+@@ -1,2 +1,3 @@
  a
+-4
 +m1
 +m2
 
@@ -521,6 +585,7 @@ copy from c
 copy to d
 
 - working to root: --rev 0
+M a
 A b
   a
 A c
@@ -528,15 +593,36 @@ A c
 A d
   a
 
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++5
 diff --git a/a b/b
 copy from a
 copy to b
+--- a/a
++++ b/b
+@@ -1,1 +1,2 @@
+ a
++5
 diff --git a/a b/c
 copy from a
 copy to c
+--- a/a
++++ b/c
+@@ -1,1 +1,2 @@
+ a
++5
 diff --git a/a b/d
 copy from a
 copy to d
+--- a/a
++++ b/d
+@@ -1,1 +1,2 @@
+ a
++5
 
 - working to branch: --rev 2
 M a
@@ -550,67 +636,97 @@ A d
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++5
 diff --git a/a b/b
 copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++5
 diff --git a/a b/c
 copy from a
 copy to c
 --- a/a
 +++ b/c
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++5
 diff --git a/a b/d
 copy from a
 copy to d
 --- a/a
 +++ b/d
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++5
 
 - root to parent: --rev 0 --rev .
+M a
 A b
   a
 A c
   a
 
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++5
 diff --git a/a b/b
 copy from a
 copy to b
+--- a/a
++++ b/b
+@@ -1,1 +1,2 @@
+ a
++5
 diff --git a/a b/c
 copy from a
 copy to c
+--- a/a
++++ b/c
+@@ -1,1 +1,2 @@
+ a
++5
 
 - parent to root: --rev . --rev 0
+M a
 R b
 R c
 
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,2 +1,1 @@
+ a
+-5
 diff --git a/b b/b
 deleted file mode 100644
 --- a/b
 +++ /dev/null
-@@ -1,1 +0,0 @@
+@@ -1,2 +0,0 @@
 -a
+-5
 diff --git a/c b/c
 deleted file mode 100644
 --- a/c
 +++ /dev/null
-@@ -1,1 +0,0 @@
+@@ -1,2 +0,0 @@
 -a
+-5
 
 - branch to parent: --rev 2 --rev .
 M a
@@ -622,28 +738,31 @@ A c
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++5
 diff --git a/a b/b
 copy from a
 copy to b
 --- a/a
 +++ b/b
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++5
 diff --git a/a b/c
 copy from a
 copy to c
 --- a/a
 +++ b/c
-@@ -1,3 +1,1 @@
+@@ -1,3 +1,2 @@
  a
 -m1
 -m2
++5
 
 - parent to branch: --rev . --rev 2
 M a
@@ -653,21 +772,24 @@ R c
 diff --git a/a b/a
 --- a/a
 +++ b/a
-@@ -1,1 +1,3 @@
+@@ -1,2 +1,3 @@
  a
+-5
 +m1
 +m2
 diff --git a/b b/b
 deleted file mode 100644
 --- a/b
 +++ /dev/null
-@@ -1,1 +0,0 @@
+@@ -1,2 +0,0 @@
 -a
+-5
 diff --git a/c b/c
 deleted file mode 100644
 --- a/c
 +++ /dev/null
-@@ -1,1 +0,0 @@
+@@ -1,2 +0,0 @@
 -a
+-5
 
 

@@ -28,6 +28,7 @@ show()
     echo
 }
 
+count=0
 # make a new branch and get diff/status output
 # $1 - first commit
 # $2 - second commit
@@ -37,6 +38,9 @@ tb()
 {
     hg co -q -C 0
 
+    add a $count
+    count=`expr $count + 1`
+    hg ci -m "t0"
     $1
     hg ci -m "t1"
     $2
