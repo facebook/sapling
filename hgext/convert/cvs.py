@@ -14,7 +14,9 @@ class convert_cvs(converter_source):
         if not os.path.exists(cvs):
             raise NoRepo("%s does not look like a CVS checkout" % path)
 
-        for tool in ('cvsps', 'cvs'):
+        self.cmd = ui.config('convert', 'cvsps', 'cvsps -A -u --cvs-direct -q')
+        cvspsexe = self.cmd.split(None, 1)[0]
+        for tool in (cvspsexe, 'cvs'):
             checktool(tool)
 
         self.changeset = {}
@@ -34,7 +36,7 @@ class convert_cvs(converter_source):
             return
 
         maxrev = 0
-        cmd = 'cvsps -A -u --cvs-direct -q'
+        cmd = self.cmd
         if self.rev:
             # TODO: handle tags
             try:
