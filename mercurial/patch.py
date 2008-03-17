@@ -800,13 +800,13 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
             while i < pathlen - 1 and path[i] == '/':
                 i += 1
             count -= 1
-        return path[i:].rstrip()
+        return path[:i].lstrip(), path[i:].rstrip()
 
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
-    afile = pathstrip(afile_orig, strip)
+    abase, afile = pathstrip(afile_orig, strip)
     gooda = not nulla and os.path.exists(afile)
-    bfile = pathstrip(bfile_orig, strip)
+    bbase, bfile = pathstrip(bfile_orig, strip)
     if afile == bfile:
         goodb = gooda
     else:
@@ -815,16 +815,20 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
     if reverse:
         createfunc = hunk.rmfile
     missing = not goodb and not gooda and not createfunc()
+    # If afile is "a/b/foo" and bfile is "a/b/foo.orig" we assume the
+    # diff is between a file and its backup. In this case, the original
+    # file should be patched (see original mpatch code).
+    isbackup = (abase == bbase and bfile.startswith(afile))
     fname = None
     if not missing:
         if gooda and goodb:
-            fname = (afile in bfile) and afile or bfile
+            fname = isbackup and afile or bfile
         elif gooda:
             fname = afile
 
     if not fname:
         if not nullb:
-            fname = (afile in bfile) and afile or bfile
+            fname = isbackup and afile or bfile
         elif not nulla:
             fname = afile
         else:

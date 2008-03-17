@@ -225,3 +225,22 @@ hg import remove.diff
 hg manifest
 cd ..
 
+echo % 'test update+rename with common name (issue 927)'
+hg init t
+cd t
+touch a
+hg ci -Am t
+echo a > a
+# Here, bfile.startswith(afile)
+hg copy a a2
+hg ci -m copya
+hg export --git tip > copy.diff
+hg up -C 0
+hg import copy.diff
+echo % view a
+# a should contain an 'a'
+cat a
+echo % view a2
+# and a2 should have duplicated it
+cat a2
+cd ..

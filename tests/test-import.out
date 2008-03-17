@@ -232,3 +232,11 @@ diff --git a/a b/a
 diff --git a/b b/b
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying remove.diff
+% test update+rename with common name (issue 927)
+adding a
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+applying copy.diff
+% view a
+a
+% view a2
+a
