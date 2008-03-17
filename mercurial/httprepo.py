@@ -94,9 +94,9 @@ def _gen_sendfile(connection):
             # if auth required, some data sent twice, so rewind here
             data.seek(0)
             for chunk in util.filechunkiter(data):
-                connection.send(self, chunk)
+                connection.sendall(self, chunk)
         else:
-            connection.send(self, data)
+            connection.sendall(self, data)
     return _sendfile
 
 class httpconnection(keepalive.HTTPConnection):
