@@ -136,6 +136,7 @@ filters = {
     "tabindent": lambda x: indent(x, '\t'),
     "hgdate": lambda x: "%d %d" % x,
     "isodate": lambda x: util.datestr(x, '%Y-%m-%d %H:%M %1%2'),
+    "isodatesec": lambda x: util.datestr(x, '%Y-%m-%d %H:%M:%S %1%2'),
     "obfuscate": obfuscate,
     "permissions": permissions,
     "person": person,
