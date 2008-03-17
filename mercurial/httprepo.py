@@ -10,7 +10,7 @@ from node import bin, hex
 from remoterepo import remoterepository
 from i18n import _
 import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
-import errno, keepalive, socket, changegroup, version
+import errno, keepalive, socket, changegroup
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
@@ -268,7 +268,7 @@ class httprepository(remoterepository):
         opener = urllib2.build_opener(*handlers)
 
         # 1.0 here is the _protocol_ version
-        opener.addheaders = [('User-agent', version.get_useragent())]
+        opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
         urllib2.install_opener(opener)
 
     def url(self):

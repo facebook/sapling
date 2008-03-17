@@ -10,7 +10,6 @@ Mercurial version
 """
 
 import os
-import sys
 import re
 import time
 
@@ -27,16 +26,6 @@ def get_version(doreload=False):
     except ImportError:
         version = unknown_version
     return version
-
-def get_useragent():
-    """Return some extended version information for the User-Agent
-    field in http requests."""
-    hgver = get_version()
-    pyver = '%s(%s)' % (sys.version.split()[0], hex(sys.hexversion))
-    ostype = os.name
-    plat = sys.platform
-    return 'mercurial/proto-1.0 (Python/%s; Mercurial/%s; %s/%s)' % \
-           (pyver, hgver, ostype, plat)
 
 def write_version(version):
     """Overwrite version file."""
