@@ -103,6 +103,7 @@ hg log --template '{author|user}\n'
 hg log --template '{date|age}\n' > /dev/null || exit 1
 hg log --template '{date|date}\n'
 hg log --template '{date|isodate}\n'
+hg log --template '{date|isodatesec}\n'
 hg log --template '{date|rfc822date}\n'
 hg log --template '{desc|firstline}\n'
 hg log --template '{node|short}\n'
