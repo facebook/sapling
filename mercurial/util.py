@@ -1720,7 +1720,7 @@ def walkrepos(path, followsym=False, seen_dirs=None):
                 dirlst.append(dirstat)
             return not match
     else:
-        followsym = false
+        followsym = False
 
     if (seen_dirs is None) and followsym:
         seen_dirs = []
