@@ -522,6 +522,12 @@ ui::
     Print debugging information.  True or False.  Default is False.
   editor;;
     The editor to use during a commit.  Default is $EDITOR or "vi".
+  pager;;
+    The pager that is used when displaying long output.
+    Default is $PAGER. If not set, the output is written to the
+    stdandard output.
+  usepager;;
+    If set to true, the system pager is used. True or False. Default is False.
   fallbackencoding;;
     Encoding to try if it's not possible to decode the changelog using
     UTF-8.  Default is ISO-8859-1.
