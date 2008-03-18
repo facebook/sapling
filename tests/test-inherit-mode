@@ -78,6 +78,7 @@ python ../printmodes.py ../push
 cd ..
 hg init setgid
 cd setgid
+chmod g+rwx .hg/store
 chmod g+s .hg/store 2> /dev/null
 mkdir dir
 touch dir/file
