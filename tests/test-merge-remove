@@ -34,3 +34,10 @@ cp B bar
 hg add -v foo1 bar
 hg debugstate --nodates
 hg st -qC
+
+echo '% reverting foo1 and bar'
+hg revert -vr . foo1 bar
+hg debugstate --nodates
+hg st -qC
+hg diff
+

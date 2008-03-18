@@ -2380,8 +2380,19 @@ def revert(ui, repo, *pats, **opts):
                     pass
                 repo.dirstate.remove(f)
 
+            normal = None
+            if node == parent:
+                # We're reverting to our parent. If possible, we'd like status
+                # to report the file as clean. We have to use normallookup for
+                # merges to avoid losing information about merged/dirty files.
+                if p2 != nullid:
+                    normal = repo.dirstate.normallookup
+                else:
+                    normal = repo.dirstate.normal
             for f in revert[0]:
                 checkout(f)
+                if normal:
+                    normal(f)
 
             for f in add[0]:
                 checkout(f)

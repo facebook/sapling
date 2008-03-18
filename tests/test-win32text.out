@@ -177,3 +177,10 @@ rem empty<CR><LF>
 
 # empty<CR><LF>
 # empty<LF>
+% just linefeed<LF>
+% just linefeed<LF>
+no changes needed to linefeed
+% just linefeed<LF>
+M linefeed
+reverting linefeed
+% just linefeed<CR><LF>

@@ -99,3 +99,17 @@ hg add f5.sh
 hg ci -m 7 -d'0 0'
 python print.py < f5.sh
 hg cat f5.sh | python print.py
+
+echo '% just linefeed' > linefeed
+hg ci -qAm 8 linefeed
+python print.py < linefeed
+hg cat linefeed | python print.py
+hg st -q
+hg revert -a linefeed
+python print.py < linefeed
+hg st -q
+echo modified >> linefeed
+hg st -q
+hg revert -a
+hg st -q
+python print.py < linefeed
