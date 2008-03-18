@@ -22,6 +22,7 @@ abort: uncommitted merge - please provide a specific revision
 undeleting a
 forgetting b
 %%% should show b unknown and a marked modified (merged)
+M a
 ? b
 %%% should show foo-b
 foo-b

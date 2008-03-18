@@ -244,6 +244,21 @@ class dirstate(object):
 
     def normallookup(self, f):
         'mark a file normal, but possibly dirty'
+        if self._pl[1] != nullid and f in self._map:
+            # if there is a merge going on and the file was either
+            # in state 'm' or dirty before being removed, restore that state.
+            entry = self._map[f]
+            if entry[0] == 'r' and entry[2] in (-1, -2):
+                source = self._copymap.get(f)
+                if entry[2] == -1:
+                    self.merge(f)
+                elif entry[2] == -2:
+                    self.normaldirty(f)
+                if source:
+                    self.copy(source, f)
+                return
+            if entry[0] == 'm' or entry[0] == 'n' and entry[2] == -2:
+                return
         self._dirty = True
         self._changepath(f, 'n', True)
         self._map[f] = ('n', 0, -1, -1, 0)

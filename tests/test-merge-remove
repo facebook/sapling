@@ -27,3 +27,10 @@ cp bar B
 hg rm -f foo1 bar
 hg debugstate --nodates
 hg st -qC
+
+echo '% readding foo1 and bar'
+cp F foo1
+cp B bar
+hg add -v foo1 bar
+hg debugstate --nodates
+hg st -qC

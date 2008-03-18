@@ -13,3 +13,12 @@ copy: foo -> foo1
 R bar
 R foo1
   foo
+% readding foo1 and bar
+adding bar
+adding foo1
+n   0         -2 bar
+m 644         14 foo1
+copy: foo -> foo1
+M bar
+M foo1
+  foo
