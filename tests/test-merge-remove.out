@@ -1,0 +1,15 @@
+merging foo1 and foo
+1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+n   0         -2 bar
+m 644         14 foo1
+copy: foo -> foo1
+M bar
+M foo1
+% removing foo1 and bar
+r   0         -2 bar
+r   0         -1 foo1
+copy: foo -> foo1
+R bar
+R foo1
+  foo

@@ -270,8 +270,15 @@ class dirstate(object):
         'mark a file removed'
         self._dirty = True
         self._changepath(f, 'r')
-        self._map[f] = ('r', 0, 0, 0, 0)
-        if f in self._copymap:
+        size = 0
+        if self._pl[1] != nullid and f in self._map:
+            entry = self._map[f]
+            if entry[0] == 'm':
+                size = -1
+            elif entry[0] == 'n' and entry[2] == -2:
+                size = -2
+        self._map[f] = ('r', 0, size, 0, 0)
+        if size == 0 and f in self._copymap:
             del self._copymap[f]
 
     def merge(self, f):
