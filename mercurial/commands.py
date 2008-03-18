@@ -697,23 +697,26 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     finally:
         del wlock
 
-def debugstate(ui, repo):
+def debugstate(ui, repo, nodates=None):
     """show the contents of the current dirstate"""
     k = repo.dirstate._map.items()
     k.sort()
+    timestr = ""
+    showdate = not nodates
     for file_, ent in k:
-        if ent[3] == -1:
-            # Pad or slice to locale representation
-            locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(0)))
-            timestr = 'unset'
-            timestr = timestr[:locale_len] + ' '*(locale_len - len(timestr))
-        else:
-            timestr = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ent[3]))
+        if showdate:
+            if ent[3] == -1:
+                # Pad or slice to locale representation
+                locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime(0)))
+                timestr = 'unset'
+                timestr = timestr[:locale_len] + ' '*(locale_len - len(timestr))
+            else:
+                timestr = time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime(ent[3]))
         if ent[1] & 020000:
             mode = 'lnk'
         else:
             mode = '%3o' % (ent[1] & 0777)
-        ui.write("%c %s %10d %s %s\n" % (ent[0], mode, ent[2], timestr, file_))
+        ui.write("%c %s %10d %s%s\n" % (ent[0], mode, ent[2], timestr, file_))
     for f in repo.dirstate.copies():
         ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
 
@@ -2944,7 +2947,10 @@ table = {
         (debugsetparents,
          [],
          _('hg debugsetparents REV1 [REV2]')),
-    "debugstate": (debugstate, [], _('hg debugstate')),
+    "debugstate":
+        (debugstate,
+         [('', 'nodates', None, _('do not display the saved mtime'))],
+         _('hg debugstate [OPTS]')),
     "debugwalk": (debugwalk, walkopts, _('hg debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,
