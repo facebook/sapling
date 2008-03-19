@@ -3,10 +3,10 @@ creating base
 creating branch a
 creating branch b
 we shouldn't have anything but n state here
-n 644          2 bar
-n 644          3 baz
-n 644          3 foo
-n 644          2 quux
+n   0         -1 bar
+n   0         -1 baz
+n   0         -1 foo
+n   0         -1 quux
 merging
 pulling from ../a
 searching for changes

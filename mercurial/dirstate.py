@@ -10,7 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import nullid
 from i18n import _
 import struct, os, bisect, stat, strutil, util, errno, ignore
-import cStringIO, osutil
+import cStringIO, osutil, sys
 
 _unknown = ('?', 0, 0, 0)
 _format = ">cllll"
@@ -66,6 +66,12 @@ class dirstate(object):
         elif name == '_checkexec':
             self._checkexec = util.checkexec(self._root)
             return self._checkexec
+        elif name == '_limit':
+            try:
+                self._limit = int(self._ui.config('ui', 'limit', 1))
+            except ValueError:
+                self._limit = 1
+            return self._limit
         else:
             raise AttributeError, name
 
@@ -335,6 +341,11 @@ class dirstate(object):
     def write(self):
         if not self._dirty:
             return
+        st = self._opener("dirstate", "w", atomictemp=True)
+        if self._limit > 0:
+            limit = util.fstat(st).st_mtime - self._limit
+        else:
+            limit = sys.maxint
         cs = cStringIO.StringIO()
         copymap = self._copymap
         pack = struct.pack
@@ -343,10 +354,11 @@ class dirstate(object):
         for f, e in self._map.iteritems():
             if f in copymap:
                 f = "%s\0%s" % (f, copymap[f])
+            if e[3] > limit and e[0] == 'n':
+                e = (e[0], 0, -1, -1, 0)
             e = pack(_format, e[0], e[1], e[2], e[3], len(f))
             write(e)
             write(f)
-        st = self._opener("dirstate", "w", atomictemp=True)
         st.write(cs.getvalue())
         st.rename()
         self._dirty = self._dirtypl = False

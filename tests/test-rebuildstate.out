@@ -2,7 +2,7 @@ adding bar
 adding foo
 % state dump
 a   0         -1 baz
-n 644          0 foo
+n   0         -1 foo
 r   0          0 bar
 % status
 A baz
