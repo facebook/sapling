@@ -385,7 +385,7 @@ class ui(object):
             self.buffers[-1].extend([str(a) for a in args])
         else:
             if self.getpager() and not self.pager:
-                self.pager = os.popen(self.getpager(), "w")
+                self.pager = os.popen(self.getpager(), "wb")
                 sys.stderr = self.pager
                 sys.stdout = self.pager
             for a in args:
@@ -495,6 +495,6 @@ class ui(object):
 
     def getpager(self):
         '''return a pager'''
-        if self.configbool("ui", "usepager", False):
+        if sys.stdout.isatty() and self.configbool("ui", "usepager", False):
             return (self.config("ui", "pager")
                     or os.environ.get("PAGER"))
