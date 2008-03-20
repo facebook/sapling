@@ -60,6 +60,10 @@ class ui(object):
                 self.ucdata = dupconfig(self.parentui.ucdata)
             if self.parentui.overlay:
                 self.overlay = dupconfig(self.parentui.overlay)
+            if self.parentui is not parentui and parentui.overlay is not None:
+                if self.overlay is None:
+                    self.overlay = util.configparser()
+                updateconfig(parentui.overlay, self.overlay)
             self.buffers = parentui.buffers
 
     def __getattr__(self, key):
