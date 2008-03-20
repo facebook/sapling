@@ -7,7 +7,6 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import bin, hex
-from remoterepo import remoterepository
 from i18n import _
 import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
 import errno, keepalive, socket, changegroup
@@ -181,7 +180,7 @@ def quotepath(path):
             l[i] = '%%%02X' % ord(c)
     return ''.join(l)
 
-class httprepository(remoterepository):
+class httprepository(repo.repository):
     def __init__(self, ui, path):
         self.path = path
         self.caps = None

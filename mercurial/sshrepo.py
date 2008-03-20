@@ -6,11 +6,20 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import bin, hex
-from remoterepo import remotelock, remoterepository
 from i18n import _
 import repo, os, re, util
 
-class sshrepository(remoterepository):
+class remotelock(object):
+    def __init__(self, repo):
+        self.repo = repo
+    def release(self):
+        self.repo.unlock()
+        self.repo = None
+    def __del__(self):
+        if self.repo:
+            self.release()
+
+class sshrepository(repo.repository):
     def __init__(self, ui, path, create=0):
         self._url = path
         self.ui = ui
