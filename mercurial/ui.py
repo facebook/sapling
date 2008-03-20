@@ -61,6 +61,7 @@ class ui(object):
                 self.ucdata = dupconfig(self.parentui.ucdata)
             if self.parentui.overlay:
                 self.overlay = dupconfig(self.parentui.overlay)
+            self.buffers = parentui.buffers
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
