@@ -1000,7 +1000,8 @@ if os.name == 'nt':
         pass
 
     def set_binary(fd):
-        msvcrt.setmode(fd.fileno(), os.O_BINARY)
+        if hasattr(fd, 'fileno'):
+            msvcrt.setmode(fd.fileno(), os.O_BINARY)
 
     def pconvert(path):
         return '/'.join(splitpath(path))
