@@ -3,7 +3,7 @@
 hgserve()
 {
     hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -v $@ \
-        | sed -e 's/:[0-9][0-9]*//g' -e 's/localhost\.localdomain/localhost/'
+        | sed -e 's/:[0-9][0-9]*//g' -e 's/http:\/\/[^/]*\//http:\/\/localhost\//'
     cat hg.pid >> "$DAEMON_PIDS"
     sleep 1
     kill `cat hg.pid`
