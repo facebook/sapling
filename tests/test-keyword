@@ -158,8 +158,7 @@ echo % commit
 hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
 echo % cat a c
 cat a c
-echo % touch copied c after 1 second
-sleep 1
+echo % touch copied c
 touch c
 echo % status
 hg status

@@ -230,7 +230,7 @@ xxx $
 expand $Id: c,v e22d299ac0c2 1970/01/01 00:00:01 user $
 do not process $Id:
 xxx $
-% touch copied c after 1 second
+% touch copied c
 % status
 % kwfiles
 a

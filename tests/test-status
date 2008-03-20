@@ -23,7 +23,6 @@ cd repo2
 touch modified removed deleted ignored
 echo "^ignored$" > .hgignore
 hg ci -A -m 'initial checkin' -d "1000000 0"
-sleep 1 # make sure mtime is changed
 touch modified added unknown ignored
 hg add added
 hg remove removed
