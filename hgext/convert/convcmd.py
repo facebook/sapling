@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from common import NoRepo, SKIPREV, mapfile
+from common import NoRepo, MissingTool, SKIPREV, mapfile
 from cvs import convert_cvs
 from darcs import darcs_source
 from git import convert_git
@@ -48,7 +48,7 @@ def convertsource(ui, path, type, rev):
         try:
             if not type or name == type:
                 return source(ui, path, rev)
-        except NoRepo, inst:
+        except (NoRepo, MissingTool), inst:
             exceptions.append(inst)
     if not ui.quiet:
         for inst in exceptions:

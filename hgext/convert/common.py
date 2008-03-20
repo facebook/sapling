@@ -18,10 +18,13 @@ def decodeargs(s):
     s = base64.decodestring(s)
     return pickle.loads(s)
 
-def checktool(exe, name=None):
+class MissingTool(Exception): pass
+
+def checktool(exe, name=None, abort=True):
     name = name or exe
     if not util.find_exe(exe):
-        raise util.Abort('cannot find required "%s" tool' % name)
+        exc = abort and util.Abort or MissingTool
+        raise exc(_('cannot find required "%s" tool') % name)
 
 class NoRepo(Exception): pass
 

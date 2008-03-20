@@ -2,7 +2,8 @@
 
 import os, re, time
 from mercurial import util
-from common import NoRepo, commit, converter_source, checktool, commandline
+from common import NoRepo, MissingTool, commit, converter_source, checktool
+from common import commandline
 from mercurial.i18n import _
 
 class monotone_source(converter_source, commandline):
@@ -41,7 +42,7 @@ class monotone_source(converter_source, commandline):
         if not os.path.exists(path):
             raise norepo
 
-        checktool('mtn')
+        checktool('mtn', abort=False)
 
         # test if there are any revisions
         self.rev = None
