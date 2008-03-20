@@ -66,12 +66,6 @@ class dirstate(object):
         elif name == '_checkexec':
             self._checkexec = util.checkexec(self._root)
             return self._checkexec
-        elif name == '_limit':
-            try:
-                self._limit = int(self._ui.config('ui', 'limit', 1))
-            except ValueError:
-                self._limit = 1
-            return self._limit
         else:
             raise AttributeError, name
 
@@ -342,10 +336,15 @@ class dirstate(object):
         if not self._dirty:
             return
         st = self._opener("dirstate", "w", atomictemp=True)
-        if self._limit > 0:
-            limit = util.fstat(st).st_mtime - self._limit
-        else:
-            limit = sys.maxint
+
+        try:
+            gran = int(self._ui.config('dirstate', 'granularity', 1))
+        except ValueError:
+            gran = 1
+        limit = sys.maxint
+        if gran > 0:
+            limit = util.fstat(st).st_mtime - gran
+
         cs = cStringIO.StringIO()
         copymap = self._copymap
         pack = struct.pack
