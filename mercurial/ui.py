@@ -31,7 +31,6 @@ class ui(object):
                  parentui=None):
         self.overlay = None
         self.buffers = []
-        self.pager = None
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
@@ -65,15 +64,6 @@ class ui(object):
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
-
-    def __del__(self):
-        if self.pager:
-            try:
-                self.pager.close()
-            except IOException:
-                # we might get into an broken pipe if the users quit
-                # the pager before we finished io
-                pass
 
     def isatty(self):
         if ui._isatty is None:
@@ -381,14 +371,9 @@ class ui(object):
         return "".join(self.buffers.pop())
 
     def write(self, *args):
-        """Write to a pager if available, otherwise to stdout"""
         if self.buffers:
             self.buffers[-1].extend([str(a) for a in args])
         else:
-            if self.getpager() and not self.pager:
-                self.pager = os.popen(self.getpager(), "wb")
-                sys.stderr = self.pager
-                sys.stdout = self.pager
             for a in args:
                 sys.stdout.write(str(a))
 
@@ -493,9 +478,3 @@ class ui(object):
                 self.config("ui", "editor") or
                 os.environ.get("VISUAL") or
                 os.environ.get("EDITOR", "vi"))
-
-    def getpager(self):
-        '''return a pager'''
-        if sys.stdout.isatty() and self.configbool("ui", "usepager", False):
-            return (self.config("ui", "pager")
-                    or os.environ.get("PAGER"))
