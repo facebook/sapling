@@ -199,7 +199,7 @@ class localrepository(repo.repository):
 
         names is a list of strings or, when adding a single tag, names may be a
         string.
-        
+
         if local is True, the tags are stored in a per-repository file.
         otherwise, they are stored in the .hgtags file, and a new
         changeset is committed with the change.
