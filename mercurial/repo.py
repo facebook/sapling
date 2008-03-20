@@ -40,4 +40,3 @@ class repository(object):
 
     def cancopy(self):
         return self.local()
-

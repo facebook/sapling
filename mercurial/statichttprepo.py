@@ -74,9 +74,6 @@ class statichttprepository(localrepo.localrepository):
     def url(self):
         return 'static-' + self._url
 
-    def dev(self):
-        return -1
-
     def local(self):
         return False
 

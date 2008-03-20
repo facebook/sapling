@@ -8,11 +8,7 @@
 import repo
 
 class remoterepository(repo.repository):
-    def dev(self):
-        return -1
-
-    def local(self):
-        return False
+    pass
 
 class remotelock(object):
     def __init__(self, repo):

@@ -221,9 +221,6 @@ class bundlerepository(localrepo.localrepository):
     def url(self):
         return self._url
 
-    def dev(self):
-        return -1
-
     def file(self, f):
         if not self.bundlefilespos:
             self.bundlefile.seek(self.filestart)
