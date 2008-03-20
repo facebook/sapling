@@ -490,6 +490,11 @@ xœc`@    % stream_out
 200 Script output follows
 
 1
+% failing unbundle, requires POST request
+405 Method Not Allowed
+
+0
+unbundle requires POST request
 % Static files
 200 Script output follows
 

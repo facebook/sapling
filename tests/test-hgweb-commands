@@ -47,6 +47,8 @@ echo % changegroup
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/changegroup'
 echo % stream_out
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/stream_out'
+echo % failing unbundle, requires POST request
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/unbundle'
 
 echo % Static files
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/static/style.css'

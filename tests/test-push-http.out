@@ -6,14 +6,14 @@ searching for changes
 ssl required
 % serve errors
 % expect authorization error
+abort: authorization failed
 pushing to http://localhost/
 searching for changes
-push not authorized
 % serve errors
 % expect authorization error: must have authorized user
+abort: authorization failed
 pushing to http://localhost/
 searching for changes
-push not authorized
 % serve errors
 % expect success
 pushing to http://localhost/
@@ -26,12 +26,12 @@ added 1 changesets with 1 changes to 1 files
 changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_URL=remote:http 
 rolling back last transaction
 % expect authorization error: all users denied
+abort: authorization failed
 pushing to http://localhost/
 searching for changes
-push not authorized
 % serve errors
 % expect authorization error: some users denied, users must be authenticated
+abort: authorization failed
 pushing to http://localhost/
 searching for changes
-push not authorized
 % serve errors

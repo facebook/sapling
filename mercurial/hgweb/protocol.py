@@ -106,16 +106,25 @@ def capabilities(web, req):
     req.write(resp)
 
 def unbundle(web, req):
+
     def bail(response, headers={}):
-        length = int(req.env['CONTENT_LENGTH'])
+        length = int(req.env.get('CONTENT_LENGTH', 0))
         for s in util.filechunkiter(req, limit=length):
             # drain incoming bundle, else client will not see
             # response when run outside cgi script
             pass
+
+        status = headers.pop('status', HTTP_OK)
         req.header(headers.items())
-        req.respond(HTTP_OK, HGTYPE)
+        req.respond(status, HGTYPE)
         req.write('0\n')
         req.write(response)
+
+    # enforce that you can only unbundle with POST requests
+    if req.env['REQUEST_METHOD'] != 'POST':
+        headers = {'status': '405 Method Not Allowed'}
+        bail('unbundle requires POST request\n', headers)
+        return
 
     # require ssl by default, auth info cannot be sniffed and
     # replayed
@@ -130,8 +139,7 @@ def unbundle(web, req):
 
     # do not allow push unless explicitly allowed
     if not web.check_perm(req, 'push', False):
-        bail('push not authorized\n',
-             headers={'status': '401 Unauthorized'})
+        bail('push not authorized\n', headers={'status': '401 Unauthorized'})
         return
 
     their_heads = req.form['heads'][0].split(' ')
