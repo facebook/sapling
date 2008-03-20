@@ -234,8 +234,6 @@ class notifier(object):
 
     def diff(self, node, ref):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
-        if maxdiff == 0:
-            return
         prev = self.repo.changelog.parents(node)[0]
         self.ui.pushbuffer()
         patch.diff(self.repo, prev, ref)
@@ -245,6 +243,8 @@ class notifier(object):
             # s may be nil, don't include the header if it is
             if s:
                 self.ui.write('\ndiffstat:\n\n%s' % s)
+        if maxdiff == 0:
+            return
         if maxdiff > 0 and len(difflines) > maxdiff:
             self.ui.write(_('\ndiffs (truncated from %d to %d lines):\n\n') %
                           (len(difflines), maxdiff))
