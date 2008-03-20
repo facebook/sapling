@@ -37,7 +37,7 @@ echo 2b > baz
 hg commit -m "branch b" -d "1000000 0"
 
 echo "we shouldn't have anything but n state here"
-hg debugstate --nodates
+hg debugstate --nodates | grep -v "^n"
 
 echo merging
 hg pull ../a
