@@ -261,6 +261,9 @@ class bundlerepository(localrepo.localrepository):
         if self._tempparent:
             shutil.rmtree(self._tempparent, True)
 
+    def cancopy(self):
+        return False
+
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new bundle repository'))
