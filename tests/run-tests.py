@@ -552,6 +552,7 @@ def run_tests(tests):
                     if answer.lower() in "y yes".split():
                         rename(test + ".err", test + ".out")
                         tested += 1
+                        fails.pop()
                         continue
                 failed += 1
                 if options.first:
