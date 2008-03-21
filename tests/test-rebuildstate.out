@@ -1,14 +1,6 @@
 adding bar
 adding foo
-% state dump
-a   0         -1 baz
-n   0         -1 foo
-r   0          0 bar
-% status
-A baz
-R bar
-C foo
-% state dump
+% state dump after
 n 666         -1 bar
 n 666         -1 foo
 % status

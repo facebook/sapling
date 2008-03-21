@@ -11,13 +11,8 @@ touch baz
 hg add baz
 hg rm bar
 
-echo '% state dump'
-hg debugstate --nodates | sort
-echo '% status'
-hg st -A
-
 hg debugrebuildstate
-echo '% state dump'
+echo '% state dump after'
 hg debugstate --nodates | sort
 echo '% status'
 hg st -A
