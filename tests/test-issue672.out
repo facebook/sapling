@@ -1,6 +1,7 @@
 adding 1
 adding 2
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
 resolving manifests
  overwrite None partial False
  ancestor 81f4b099af3d local c64f439569a9+ remote 2f8037f47a5c
@@ -17,6 +18,7 @@ getting 1a
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 resolving manifests
  overwrite None partial False

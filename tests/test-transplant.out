@@ -2,6 +2,7 @@ adding r1
 adding r2
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding b1
+created new head
 adding b2
 adding b3
 4  b3
@@ -100,6 +101,7 @@ adding added
 removing toremove
 adding bar
 2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+created new head
 applying a1e30dd1b8e7
 patching file foo
 Hunk #1 FAILED at 0

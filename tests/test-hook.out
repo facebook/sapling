@@ -15,6 +15,7 @@ pretxncommit hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=2
 2:1324a5531bac
 commit hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
 commit.b hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
+created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 precommit hook: HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 

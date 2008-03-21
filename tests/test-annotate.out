@@ -46,6 +46,7 @@ nobody 0 8435f90966e4 Thu Jan 01 00:00:01 1970 +0000:1: a
 3 b:5: b5
 3 b:6: b6
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 merging b
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -64,6 +65,7 @@ merging b
 4 b:5: c
 3 b:5: b5
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
 merging b
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)

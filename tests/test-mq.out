@@ -323,6 +323,7 @@ diff --git a/new b/copy
 copy from new
 copy to copy
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+created new head
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding branch
 adding changesets
@@ -401,6 +402,7 @@ Now at: addbucephalus
 8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 % strip again
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 merging foo
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)

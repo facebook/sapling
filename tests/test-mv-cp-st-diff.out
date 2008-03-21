@@ -1,3 +1,4 @@
+created new head
 ** rename in working dir **
 ** add a a1 / add a a2 / hg mv a b
 - working to parent: 
@@ -96,6 +97,7 @@ diff --git a/a b/a
 +m2
 
 
+created new head
 ** copy in working dir **
 ** add a a1 / add a a2 / hg cp a b
 - working to parent: 
@@ -211,6 +213,7 @@ diff --git a/a b/a
 +m2
 
 
+created new head
 ** single rename **
 ** hg mv a b / add b b1 / add b w
 - working to parent: 
@@ -324,6 +327,7 @@ rename to a
 +m2
 
 
+created new head
 ** single copy **
 ** hg cp a b / add b b1 / add a w
 - working to parent: 
@@ -472,6 +476,7 @@ deleted file mode 100644
 -b1
 
 
+created new head
 ** rename chain **
 ** hg mv a b / hg mv b c / hg mv c d
 - working to parent: 
@@ -574,6 +579,7 @@ rename to a
 +m2
 
 
+created new head
 ** copy chain **
 ** hg cp a b / hg cp b c / hg cp c d
 - working to parent: 
@@ -793,6 +799,7 @@ deleted file mode 100644
 -5
 
 
+created new head
 ** circular rename **
 ** add a a1 / hg mv a b / hg mv b a
 - working to parent: 

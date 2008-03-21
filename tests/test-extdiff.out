@@ -26,6 +26,7 @@ options:
 use "hg -v help falabala" to show global options
 diffing a.8a5febb7f867/a a.34eed99112ab/a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)

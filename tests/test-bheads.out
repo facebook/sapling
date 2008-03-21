@@ -9,6 +9,7 @@ marked working directory as branch a
 =======
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch b
+created new head
 2: Adding b branch
 1: Adding a branch
 -------
@@ -20,6 +21,7 @@ marked working directory as branch b
 3: Adding b branch head 1
 =======
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
 4: Adding b branch head 2
 3: Adding b branch head 1
 1: Adding a branch
@@ -28,6 +30,7 @@ marked working directory as branch b
 3: Adding b branch head 1
 =======
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
 5: Adding b branch head 3
 4: Adding b branch head 2
 3: Adding b branch head 1

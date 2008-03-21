@@ -85,6 +85,7 @@ a
 % log copies, non-linear manifest
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding foo
+created new head
 5 e (dir/b)
 % log copies, execute bit set
 6 
@@ -106,6 +107,7 @@ diff -r 21fba396af4c -r 16b60bf3f99a d
 adding base
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b1
+created new head
 % log -f
 changeset:   3:e62f78d544b4
 tag:         tip
@@ -126,6 +128,7 @@ summary:     base
 
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding b2
+created new head
 % log -f -r 1:tip
 changeset:   1:3d5bf5654eda
 user:        test

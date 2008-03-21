@@ -4,6 +4,7 @@ adding b
 adding c
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding c
+created new head
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % hg parents
 changeset:   3:02d851b7e549

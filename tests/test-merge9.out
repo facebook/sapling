@@ -2,6 +2,7 @@ adding bar
 adding foo
 adding quux1
 adding quux2
+created new head
 merging bar
 merging bar failed!
 merging foo and baz

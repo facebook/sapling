@@ -547,7 +547,11 @@ def commit(ui, repo, *pats, **opts):
     def commitfunc(ui, repo, files, message, match, opts):
         return repo.commit(files, message, opts['user'], opts['date'], match,
                            force_editor=opts.get('force_editor'))
+
+    heads = repo.changelog.heads()
     cmdutil.commit(ui, repo, commitfunc, pats, opts)
+    if len(repo.changelog.heads()) > len(heads):
+        ui.status(_('created new head\n'))
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit

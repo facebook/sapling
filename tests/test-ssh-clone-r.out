@@ -1,5 +1,6 @@
 # creating 'remote'
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       3      0       0 362fef284ce2 000000000000 000000000000

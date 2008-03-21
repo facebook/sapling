@@ -174,6 +174,7 @@ user:        someoneelse
 % test fuzziness
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 applying tip.patch
 patching file a
 Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).

@@ -68,6 +68,7 @@ abort: no files or directories specified; use --all to revert the whole repo
 reverting a
 %% issue332
 adding b/b
+created new head
 reverting b/b
 forgetting newdir/newfile
 reverting b/b

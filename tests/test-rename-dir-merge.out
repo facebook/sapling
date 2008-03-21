@@ -4,6 +4,7 @@ adding a/b
 moving a/a to b/a
 moving a/b to b/b
 2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+created new head
 resolving manifests
  overwrite None partial False
  ancestor f9b20c0d4c51 local ce36d17b18fb+ remote 55119e611c80
@@ -70,4 +71,5 @@ a/* b/a b/b b/c b/d
 A b/c
   a/c
 ? b/d
+created new head
 b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88

@@ -1,4 +1,5 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 merging bar and foo
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -14,6 +15,7 @@ bar renamed from foo:9e25c27b87571a1edee5ae4dddee5687746cc8e2
      0         0       7      0       0 690b295714ae 000000000000 000000000000
      1         7      13      1       1 9e25c27b8757 690b295714ae 000000000000
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 4:2d2f9a22c82b 2:0a3ab4856510 
 3:7d3b554bfdf1 2:0a3ab4856510 1:5cd961e4045d 
 2:0a3ab4856510 0:2665aaee66e9 
@@ -62,6 +64,7 @@ bar renamed from foo:9e25c27b87571a1edee5ae4dddee5687746cc8e2
      0         0       7      0       0 690b295714ae 000000000000 000000000000
      1         7      13      1       1 9e25c27b8757 690b295714ae 000000000000
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 4:2d2f9a22c82b 2:0a3ab4856510 
 3:96ab80c60897 1:5cd961e4045d 2:0a3ab4856510 
 2:0a3ab4856510 0:2665aaee66e9 

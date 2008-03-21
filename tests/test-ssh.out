@@ -70,6 +70,7 @@ crosschecking files in changesets and manifests
 checking files
 2 files, 2 changesets, 3 total revisions
 bleah
+created new head
 # push should succeed even though it has an unexpected response
 pushing to ssh://user@dummy/remote
 searching for changes

@@ -1,3 +1,4 @@
+created new head
 --------------
 test L:up a   R:nc a b W:       - 1  get local a to b
 --------------
@@ -28,6 +29,7 @@ M b
 C a
 --------------
 
+created new head
 --------------
 test L:nc a b R:up a   W:       - 2  get rem change to a and b
 --------------
@@ -59,6 +61,7 @@ M b
   a
 --------------
 
+created new head
 --------------
 test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
 --------------
@@ -89,6 +92,7 @@ M b
   a
 --------------
 
+created new head
 --------------
 test L:nm a b R:up a   W:       - 4  get remote change to b
 --------------
@@ -117,6 +121,7 @@ M b
   a
 --------------
 
+created new head
 --------------
 test L:       R:nc a b W:       - 5  get b
 --------------
@@ -142,6 +147,7 @@ M b
 C a
 --------------
 
+created new head
 --------------
 test L:nc a b R:       W:       - 6  nothing
 --------------
@@ -165,6 +171,7 @@ C a
 C b
 --------------
 
+created new head
 --------------
 test L:       R:nm a b W:       - 7  get b
 --------------
@@ -191,6 +198,7 @@ my rev@94b33a1b7f2d+ other rev@e03727d2d66b ancestor rev@924404dff337
 M b
 --------------
 
+created new head
 --------------
 test L:nm a b R:       W:       - 8  nothing
 --------------
@@ -213,6 +221,7 @@ my rev@ecf3cb2a4219+ other rev@97c705ade336 ancestor rev@924404dff337
 C b
 --------------
 
+created new head
 --------------
 test L:um a b R:um a b W:       - 9  do merge with ancestor in a
 --------------
@@ -234,6 +243,7 @@ my rev@ec03c2ca8642+ other rev@79cc6877a3b7 ancestor rev@924404dff337
 M b
 --------------
 
+created new head
 --------------
 test L:nm a b R:nm a c W:       - 11 get c, keep b
 --------------
@@ -266,6 +276,7 @@ M c
 C b
 --------------
 
+created new head
 --------------
 test L:nc a b R:up b   W:       - 12 merge b no ancestor
 --------------
@@ -288,6 +299,7 @@ M b
 C a
 --------------
 
+created new head
 --------------
 test L:up b   R:nm a b W:       - 13 merge b no ancestor
 --------------
@@ -311,6 +323,7 @@ my rev@59318016310c+ other rev@e03727d2d66b ancestor rev@924404dff337
 M b
 --------------
 
+created new head
 --------------
 test L:nc a b R:up a b W:       - 14 merge b no ancestor
 --------------
@@ -335,6 +348,7 @@ M a
 M b
 --------------
 
+created new head
 --------------
 test L:up b   R:nm a b W:       - 15 merge b no ancestor, remove a
 --------------
@@ -358,6 +372,7 @@ my rev@59318016310c+ other rev@e03727d2d66b ancestor rev@924404dff337
 M b
 --------------
 
+created new head
 --------------
 test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
 --------------
@@ -382,6 +397,7 @@ M a
 M b
 --------------
 
+created new head
 --------------
 test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
 --------------
@@ -404,6 +420,7 @@ M b
 C a
 --------------
 
+created new head
 --------------
 test L:nm a b R:up a b W:       - 18 merge b no ancestor
 --------------
@@ -428,6 +445,7 @@ M a
 M b
 --------------
 
+created new head
 --------------
 test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
 --------------
@@ -450,6 +468,7 @@ M b
 C a
 --------------
 
+created new head
 --------------
 test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
 --------------
@@ -479,6 +498,7 @@ M b
   a
 --------------
 
+created new head
 --------------
 test L:um a b R:up a   W:       - 21 merge a and b to b
 --------------
@@ -506,6 +526,7 @@ M b
   a
 --------------
 
+created new head
 --------------
 test L:nm a b R:up a c W:       - 23 get c, keep b
 --------------

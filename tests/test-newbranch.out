@@ -6,6 +6,7 @@ abort: a branch of the same name already exists (use --force to override)
 marked working directory as branch default
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 foo
+created new head
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 foo

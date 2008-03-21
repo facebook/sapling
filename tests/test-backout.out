@@ -21,10 +21,12 @@ adding b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 abort: cannot back out change on a different branch
 adding c
+created new head
 abort: cannot back out change on a different branch
 # backout with merge
 adding a
 reverting a
+created new head
 changeset 3:26b8ccb9ad91 backs out changeset 1:5a50a024c182
 merging with changeset 3:26b8ccb9ad91
 merging a
@@ -37,6 +39,7 @@ line 3
 adding a
 adding b
 reverting a
+created new head
 changeset 3:3202beb76721 backs out changeset 1:22bca4c721e5
 the backout changeset is a new head - do not forget to merge
 (use "backout --merge" if you want to auto-merge)
@@ -47,6 +50,7 @@ adding b
 adding c
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding d
+created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 # backout of merge should fail
@@ -69,6 +73,7 @@ adding file1
 marked working directory as branch branch2
 adding file2
 removing file1
+created new head
 changeset 3:f1c642b1d8e5 backs out changeset 1:bf1602f437f3
 the backout changeset is a new head - do not forget to merge
 (use "backout --merge" if you want to auto-merge)

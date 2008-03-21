@@ -1,4 +1,5 @@
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
 %% no merges expected
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -9,6 +10,7 @@ diff -r d9e5953b9dec b
 +This is file b1
 M b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
 %% merge should fail
 abort: untracked file in working directory differs from file in requested revision: 'b'
 %% merge of b expected
@@ -24,6 +26,7 @@ diff -r d9e5953b9dec b
 M b
 %%
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 Contents of b should be "this is file b1"
 This is file b1
 %% merge fails
@@ -39,6 +42,7 @@ diff -r c1dd73cbf59f b
 +This is file b22
 M b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
 %% merge of b should fail
 abort: outstanding uncommitted changes
 %% merge of b expected

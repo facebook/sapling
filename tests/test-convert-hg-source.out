@@ -1,3 +1,4 @@
+created new head
 merging baz and foo
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -5,6 +6,7 @@ merging baz and foo
 merging foo and baz
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+created new head
 initializing destination new repository
 scanning source...
 sorting...
