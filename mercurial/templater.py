@@ -7,6 +7,7 @@
 
 from i18n import _
 import re, sys, os
+from mercurial import util
 
 def parsestring(s, quoted=True):
     '''parse a string using simple c-like syntax.
@@ -55,6 +56,9 @@ class templater(object):
 
         if not mapfile:
             return
+        if not os.path.exists(mapfile):
+            raise util.Abort(_('style not found: %s') % mapfile)
+
         i = 0
         for l in file(mapfile):
             l = l.strip()

@@ -83,7 +83,7 @@ created new head
 # error if style not readable
 abort: Permission denied: ./q
 # error if no style
-abort: No such file or directory: notexist
+abort: style not found: notexist
 # error if style missing key
 abort: ./t: no key named 'changeset'
 # error if include fails
