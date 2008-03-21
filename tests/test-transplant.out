@@ -10,6 +10,7 @@ adding b3
 2 0:17ab29e464c6  b1
 1  r2
 0  r1
+updating working directory
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 3 files removed, 0 files unresolved
 % rebase b onto r1
@@ -27,6 +28,7 @@ a53251cdf717 transplanted to ffd6818a3975
 2 0:17ab29e464c6  b1
 1  r2
 0  r1
+updating working directory
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 3 files removed, 0 files unresolved
 % rebase b onto r1, skipping b2
@@ -47,6 +49,7 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 searching for changes
 applying 37a1297eb21b
@@ -72,6 +75,7 @@ applying 722f4667af76
 0  r1
 % skip local changes transplanted to the source
 adding b4
+updating working directory
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 searching for changes
 applying 4333daefcb15
@@ -82,6 +86,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 searching for changes
 searching for changes

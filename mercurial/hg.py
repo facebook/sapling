@@ -243,6 +243,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             fp.close()
 
             if update:
+                dest_repo.ui.status(_("updating working directory\n"))
                 if not checkout:
                     try:
                         checkout = dest_repo.lookup("default")

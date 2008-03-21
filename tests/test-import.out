@@ -6,6 +6,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 % message should be same
@@ -18,6 +19,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 transaction abort!
@@ -29,6 +31,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 % import of plain diff with specific date and user
@@ -37,6 +40,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 changeset:   1:ca68f19f3a40
@@ -61,6 +65,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
 diff -r 80971e65b431 a
@@ -75,6 +80,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying tip.patch
 % import from stdin
@@ -83,6 +89,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 % override commit message
@@ -91,6 +98,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 summary:     override
@@ -100,6 +108,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../msg.patch
 user:        email patcher
@@ -110,6 +119,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 % plain diff in email, subject, no message body
@@ -118,6 +128,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 % plain diff in email, no subject, no message body, should fail
@@ -126,6 +137,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 transaction abort!
@@ -137,6 +149,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 summary:     second change
@@ -146,6 +159,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
 email patch
@@ -164,6 +178,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../../../tip.patch
 % message should be 'subdir change'

@@ -1,5 +1,7 @@
 adding a
+updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b
 1:97d72e5f12c7
@@ -13,7 +15,9 @@ added 1 changesets with 1 changes to 1 files
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1:97d72e5f12c7
 adding c
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % should merge c into a
 pulling from ../a
@@ -56,7 +60,9 @@ merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 new changeset 3:... merges remote changes with local
 Automated merge with http://localhost:20059/
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding f
 adding g

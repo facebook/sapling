@@ -19,6 +19,7 @@ abort: ../z not under root
 ? a/b/c/demo
 adding a/b/c/demo
 2. clone it
+updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # git symlink diff
 diff --git a/a/b/c/demo b/a/b/c/demo

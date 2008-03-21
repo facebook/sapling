@@ -12,6 +12,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -34,6 +35,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -44,6 +46,7 @@ a
 default = static-http://localhost/
 % test with empty repo (issue965)
 no changes found
+updating working directory
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
