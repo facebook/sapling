@@ -37,6 +37,7 @@ cvscall -q checkout src
 
 echo % commit a new revision changing b/c
 cd src
+sleep 1
 echo c >> b/c
 cvscall -q commit -mci0 . | grep '<--' |\
     sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
