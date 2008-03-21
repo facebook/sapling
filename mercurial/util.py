@@ -1000,7 +1000,9 @@ if os.name == 'nt':
         pass
 
     def set_binary(fd):
-        if hasattr(fd, 'fileno'):
+        # When run without console, pipes may expose invalid
+        # fileno(), usually set to -1.
+        if hasattr(fd, 'fileno') and fd.fileno() >= 0:
             msvcrt.setmode(fd.fileno(), os.O_BINARY)
 
     def pconvert(path):
