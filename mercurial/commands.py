@@ -2131,7 +2131,7 @@ def remove(ui, repo, *pats, **opts):
     project history. -A can be used to remove only files that have already
     been deleted, -f can be used to force deletion, and -Af can be used
     to remove files from the next revision without deleting them.
-    
+
     The following table details the behavior of remove for different file
     states (columns) and option combinations (rows). The file states are
     Added, Clean, Modified and Missing (as reported by hg status). The
