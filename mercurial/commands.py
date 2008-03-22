@@ -2750,15 +2750,15 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     tip of the current branch if none is specified.
     See 'hg help dates' for a list of formats valid for -d/--date.
 
-    If there are no outstanding changes in the working directory and
-    there is a linear relationship between the current version and the
-    requested version, the result is the requested version.
+    If there are no outstanding changes in the working directory, the
+    result is the requested version.
 
-    To merge the working directory with another revision, use the
-    merge command.
+    If the requested version is a descendant of the working directory
+    and there are outstanding changes, those changes will be merged
+    into the result.
 
-    By default, update will refuse to run if doing so would require
-    discarding local changes.
+    By default, update will refuse to run if there are outstanding
+    changes and the update spans branches.
     """
     if rev and node:
         raise util.Abort(_("please specify just one revision"))

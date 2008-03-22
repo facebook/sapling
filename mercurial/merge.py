@@ -364,8 +364,11 @@ def update(repo, node, branchmerge, force, partial):
                     raise util.Abort(_("there is nothing to merge, just use "
                                        "'hg update' or look at 'hg heads'"))
         elif not (overwrite or branchmerge):
-            raise util.Abort(_("update spans branches, use 'hg merge' "
-                               "or 'hg update -C' to lose changes"))
+            if wc.files() or wc.deleted():
+                raise util.Abort(_("update spans branches, use 'hg merge' "
+                                   "or 'hg update -C' to lose changes"))
+            # Allow jumping branches if there are no changes
+            overwrite = True
         if branchmerge and not forcemerge:
             if wc.files() or wc.deleted():
                 raise util.Abort(_("outstanding uncommitted changes"))
