@@ -1,0 +1,31 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "churn=" >> $HGRCPATH
+
+echo % create test repository
+hg init repo
+cd repo
+echo a > a
+hg ci -Am adda -u user1
+echo b >> a
+echo b > b
+hg ci -Am addb -u user2
+echo c >> a
+echo c >> b
+echo c > c
+hg ci -Am addc -u user3
+
+echo % churn all
+hg churn
+echo % churn up to rev 1
+hg churn -r :1
+echo % churn with aliases
+cat > ../aliases <<EOF
+user1 alias1
+user3 alias3
+EOF
+hg churn --aliases ../aliases
+echo % churn with column specifier
+COLUMNS=40 hg churn
+
