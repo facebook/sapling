@@ -412,6 +412,9 @@ class coverage:
         else:
             omit = []
 
+        omit = [os.path.normcase(os.path.abspath(os.path.realpath(p)))
+                for p in omit]
+
         if settings.get('report'):
             self.report(args, show_missing, ignore_errors, omit_prefixes=omit)
         if settings.get('annotate'):
@@ -537,7 +540,7 @@ class coverage:
                     if os.path.exists(g):
                         f = g
                         break
-            cf = os.path.normcase(os.path.abspath(f))
+            cf = os.path.normcase(os.path.abspath(os.path.realpath(f)))
             self.canonical_filename_cache[filename] = cf
         return self.canonical_filename_cache[filename]
 
