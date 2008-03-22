@@ -1,88 +1,71 @@
 % file not managed
 ? foo
-.:
-foo
+./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 00 state added, options none
 not removing bar: file has been marked for add (use -f to force removal)
 A bar
-.:
-bar
-foo
+./bar
+./foo
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 % 01 state clean, options none
 R foo
-.:
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 02 state modified, options none
 not removing foo: file is modified (use -f to force removal)
 M foo
-.:
-foo
+./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 03 state missing, options none
 R foo
-.:
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 10 state added, options -f
 ? bar
-.:
-bar
-foo
+./bar
+./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 11 state clean, options -f
 R foo
-.:
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 12 state modified, options -f
 R foo
-.:
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 13 state missing, options -f
 R foo
-.:
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 20 state added, options -A
 not removing bar: file still exists (use -f to force removal)
 A bar
-.:
-bar
-foo
+./bar
+./foo
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 % 21 state clean, options -A
 not removing foo: file still exists (use -f to force removal)
-.:
-foo
+./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 22 state modified, options -A
 not removing foo: file still exists (use -f to force removal)
 M foo
-.:
-foo
+./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 23 state missing, options -A
 R foo
-.:
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 30 state added, options -Af
 ? bar
-.:
-bar
-foo
+./bar
+./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 31 state clean, options -Af
 R foo
-.:
-foo
+./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 32 state modified, options -Af
 R foo
-.:
-foo
+./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 33 state missing, options -Af
 R foo
-.:
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding test/bar
 adding test/foo
@@ -91,37 +74,27 @@ removing test/foo
 removing test/bar
 R test/bar
 R test/foo
-.:
-foo
+./foo
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % dir, options -f
 removing test/foo
 removing test/bar
 R test/bar
 R test/foo
-.:
-foo
+./foo
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % dir, options -A
 not removing test/foo: file still exists (use -f to force removal)
 removing test/bar
 R test/bar
-.:
-foo
-test
-
-./test:
-foo
+./foo
+./test/foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % dir, options -Af
 removing test/foo
 removing test/bar
 R test/bar
 R test/foo
-.:
-foo
-test
-
-./test:
-foo
+./foo
+./test/foo
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
