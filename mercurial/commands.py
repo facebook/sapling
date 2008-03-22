@@ -3150,7 +3150,7 @@ table = {
         (remove,
          [('A', 'after', None, _('record delete for missing files')),
           ('f', 'force', None,
-		  _('remove (and delete) file even if added or modified')),
+           _('remove (and delete) file even if added or modified')),
          ] + walkopts,
          _('hg remove [OPTION]... FILE...')),
     "rename|mv":
