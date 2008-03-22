@@ -2127,51 +2127,74 @@ def remove(ui, repo, *pats, **opts):
 
     Schedule the indicated files for removal from the repository.
 
-    This only removes files from the current branch, not from the
-    entire project history.  If the files still exist in the working
-    directory, they will be deleted from it.  If invoked with --after,
-    files are marked as removed, but not actually unlinked unless --force
-    is also given. Without exact file names, --after will only mark
-    files as removed if they are no longer in the working directory.
+    This only removes files from the current branch, not from the entire
+    project history. -A can be used to remove only files that have already
+    been deleted, -f can be used to force deletion, and -Af can be used
+    to remove files from the next revision without deleting them.
+    
+    The following table details the behavior of remove for different file
+    states (columns) and option combinations (rows). The file states are
+    Added, Clean, Modified and Missing (as reported by hg status). The
+    actions are Warn, Remove (from branch) and Delete (from disk).
+
+           A  C  M  !
+    none   W  RD W  R
+    -f     R  RD RD R
+    -A     W  W  W  R
+    -Af    R  R  R  R
 
     This command schedules the files to be removed at the next commit.
     To undo a remove before that, see hg revert.
-
-    Modified files and added files are not removed by default.  To
-    remove them, use the -f/--force option.
     """
-    if not opts['after'] and not pats:
+
+    after, force = opts.get('after'), opts.get('force')
+    if not pats and not after:
         raise util.Abort(_('no files specified'))
+
     files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
-    exact = dict.fromkeys(files)
     mardu = map(dict.fromkeys, repo.status(files=files, match=matchfn))[:5]
     modified, added, removed, deleted, unknown = mardu
+
     remove, forget = [], []
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts):
+
         reason = None
-        if abs in modified and not opts['force']:
-            reason = _('is modified (use -f to force removal)')
-        elif abs in added:
-            if opts['force']:
-                forget.append(abs)
-                continue
-            reason = _('has been marked for add (use -f to force removal)')
-            exact = 1 # force the message
-        elif abs not in repo.dirstate:
-            reason = _('is not managed')
-        elif opts['after'] and not exact and abs not in deleted:
+        if abs in removed or abs in unknown:
             continue
-        elif abs in removed:
-            continue
-        if reason:
-            if exact:
-                ui.warn(_('not removing %s: file %s\n') % (rel, reason))
-        else:
-            if ui.verbose or not exact:
-                ui.status(_('removing %s\n') % rel)
+
+        # last column
+        elif abs in deleted:
             remove.append(abs)
+
+        # rest of the third row
+        elif after and not force:
+            reason = _('still exists (use -f to force removal)')
+
+        # rest of the first column
+        elif abs in added:
+            if not force:
+                reason = _('has been marked for add (use -f to force removal)')
+            else:
+                forget.append(abs)
+
+        # rest of the third column
+        elif abs in modified:
+            if not force:
+                reason = _('is modified (use -f to force removal)')
+            else:
+                remove.append(abs)
+
+        # rest of the second column
+        elif not reason:
+            remove.append(abs)
+
+        if reason:
+            ui.warn(_('not removing %s: file %s\n') % (rel, reason))
+        elif ui.verbose or not exact:
+            ui.status(_('removing %s\n') % rel)
+
     repo.forget(forget)
-    repo.remove(remove, unlink=opts['force'] or not opts['after'])
+    repo.remove(remove, unlink=not after)
 
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove
@@ -3125,8 +3148,9 @@ table = {
     "recover": (recover, [], _('hg recover')),
     "^remove|rm":
         (remove,
-         [('A', 'after', None, _('record remove without deleting')),
-          ('f', 'force', None, _('remove file even if modified')),
+         [('A', 'after', None, _('record delete for missing files')),
+          ('f', 'force', None,
+		  _('remove (and delete) file even if added or modified')),
          ] + walkopts,
          _('hg remove [OPTION]... FILE...')),
     "rename|mv":

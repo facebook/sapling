@@ -1,67 +1,127 @@
-not removing foo: file is not managed
-abort: no files specified
-undeleting foo
-removing foo
-# HG changeset patch
-# User test
-# Date 1000000 0
-# Node ID 8ba83d44753d6259db5ce6524974dd1174e90f47
-# Parent  0000000000000000000000000000000000000000
-1
+% file not managed
+? foo
+.:
+foo
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 00 state added, options none
+not removing bar: file has been marked for add (use -f to force removal)
+A bar
+.:
+bar
+foo
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+% 01 state clean, options none
+R foo
+.:
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 02 state modified, options none
+not removing foo: file is modified (use -f to force removal)
+M foo
+.:
+foo
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 03 state missing, options none
+R foo
+.:
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 10 state added, options -f
+? bar
+.:
+bar
+foo
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 11 state clean, options -f
+R foo
+.:
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 12 state modified, options -f
+R foo
+.:
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 13 state missing, options -f
+R foo
+.:
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 20 state added, options -A
+not removing bar: file still exists (use -f to force removal)
+A bar
+.:
+bar
+foo
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+% 21 state clean, options -A
+not removing foo: file still exists (use -f to force removal)
+.:
+foo
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 22 state modified, options -A
+not removing foo: file still exists (use -f to force removal)
+M foo
+.:
+foo
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 23 state missing, options -A
+R foo
+.:
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 30 state added, options -Af
+? bar
+.:
+bar
+foo
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 31 state clean, options -Af
+R foo
+.:
+foo
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 32 state modified, options -Af
+R foo
+.:
+foo
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% 33 state missing, options -Af
+R foo
+.:
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding test/bar
+adding test/foo
+% dir, options none
+removing test/foo
+removing test/bar
+R test/bar
+R test/foo
+.:
+foo
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% dir, options -f
+removing test/foo
+removing test/bar
+R test/bar
+R test/foo
+.:
+foo
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% dir, options -A
+not removing test/foo: file still exists (use -f to force removal)
+removing test/bar
+R test/bar
+.:
+foo
+test
 
-diff -r 000000000000 -r 8ba83d44753d foo
---- /dev/null
-+++ b/foo
-@@ -0,0 +1,1 @@
-+a
-# HG changeset patch
-# User test
-# Date 1000000 0
-# Node ID a1fce69c50d97881c5c014ab23f580f720c78678
-# Parent  8ba83d44753d6259db5ce6524974dd1174e90f47
-2
+./test:
+foo
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% dir, options -Af
+removing test/foo
+removing test/bar
+R test/bar
+R test/foo
+.:
+foo
+test
 
-diff -r 8ba83d44753d -r a1fce69c50d9 foo
---- a/foo
-+++ /dev/null
-@@ -1,1 +0,0 @@
--a
-changeset:   0:8ba83d44753d
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     1
-
-diff -r 000000000000 -r 8ba83d44753d foo
---- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/foo	Mon Jan 12 13:46:40 1970 +0000
-@@ -0,0 +1,1 @@
-+a
-
-changeset:   1:a1fce69c50d9
-tag:         tip
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     2
-
-diff -r 8ba83d44753d -r a1fce69c50d9 foo
---- a/foo	Mon Jan 12 13:46:40 1970 +0000
-+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
-@@ -1,1 +0,0 @@
--a
-
-not removing a: file has been marked for add (use -f to force removal)
-adding a
-adding b
-adding c/d
-not removing b: file is modified (use -f to force removal)
-R b
-R c/d
-d
-undeleting c/d
-R b
-R b
-removing c/d
-R b
-R c/d
-updating working directory
-3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+./test:
+foo
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
