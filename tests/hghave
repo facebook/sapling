@@ -107,6 +107,13 @@ def has_unix_permissions():
     finally:
         os.rmdir(d)
 
+def has_pygments():
+    try:
+        import pygments
+        return True
+    except ImportError:
+        return False
+
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
     "cvs": (has_cvs, "cvs client"),
@@ -123,6 +130,7 @@ checks = {
     "symlink": (has_symlink, "symbolic links"),
     "tla": (has_tla, "GNU Arch tla client"),
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),
+    "pygments": (has_pygments, "Pygments source highlighting library"),
 }
 
 def list_features():
