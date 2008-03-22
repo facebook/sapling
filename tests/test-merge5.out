@@ -1,4 +1,7 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 removing b
 created new head
+% should abort
 abort: update spans branches, use 'hg merge' or 'hg update -C' to lose changes
+% should succeed
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
