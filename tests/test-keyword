@@ -296,3 +296,13 @@ cat a b
 echo % hg cat
 hg cat sym a b
 echo
+
+echo % hg serve
+hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+echo % hgweb changeset
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/rev/tip/?style=raw')
+echo % hgweb filediff
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/bb948857c743/a?style=raw')
+echo % errors encountered
+cat errors.log
