@@ -120,7 +120,7 @@ class Imerge(object):
         # this could be greatly improved
         realmerge = os.environ.get('HGMERGE')
         if not interactive:
-            os.environ['HGMERGE'] = 'merge'
+            os.environ['HGMERGE'] = 'internal:merge'
 
         # The filemerge ancestor algorithm does not work if self.wctx
         # already has two parents (in normal merge it doesn't yet). But

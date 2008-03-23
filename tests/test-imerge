@@ -46,6 +46,11 @@ echo % save
 echo foo > foo2
 hg imerge save ../savedmerge
 
+echo % merge auto
+hg up -C 1
+hg --traceback imerge --auto
+cat foo2
+
 echo % load
 hg up -C 0
 hg imerge --traceback load ../savedmerge

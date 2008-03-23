@@ -23,6 +23,20 @@ all conflicts resolved
 merging foo and foo2
 all conflicts resolved
 % save
+% merge auto
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+merging foo2 and foo
+warning: conflicts during merge.
+merging foo2 failed!
+U foo2
+foo
+<<<<<<< local
+foo
+=======
+bar
+>>>>>>> other
 % load
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
