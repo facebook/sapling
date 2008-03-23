@@ -2720,11 +2720,10 @@ def tip(ui, repo, **opts):
     recently added changeset in the repository, the most recently
     changed head.
 
-    If you have just made a commit, that commit will be the
-    tip. Alternately, if you have just pulled changes from another
-    repository, the tip of that repository becomes the current tip.
-    The "tip" tag is special and can not be renamed or assigned to a
-    different changeset.
+    If you have just made a commit, that commit will be the tip. If
+    you have just pulled changes from another repository, the tip of
+    that repository becomes the current tip. The "tip" tag is special
+    and cannot be renamed or assigned to a different changeset.
     """
     cmdutil.show_changeset(ui, repo, opts).show(nullrev+repo.changelog.count())
 
