@@ -24,6 +24,12 @@ SKIPPED_PREFIX = 'skipped: '
 
 required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
+defaults = {
+    'jobs': ('HGTEST_JOBS', 1),
+    'timeout': ('HGTEST_TIMEOUT', 180),
+    'port': ('HGTEST_PORT', 20059),
+}
+
 parser = optparse.OptionParser("%prog [options] [tests]")
 parser.add_option("-C", "--annotate", action="store_true",
     help="output files annotated with coverage")
@@ -36,19 +42,23 @@ parser.add_option("-f", "--first", action="store_true",
 parser.add_option("-i", "--interactive", action="store_true",
     help="prompt to accept changed output")
 parser.add_option("-j", "--jobs", type="int",
-    help="number of jobs to run in parallel")
+    help="number of jobs to run in parallel"
+         " (default: $%s or %d)" % defaults['jobs'])
 parser.add_option("--keep-tmpdir", action="store_true",
-    help="keep temporary directory after running tests (best used with --tmpdir)")
+    help="keep temporary directory after running tests"
+         " (best used with --tmpdir)")
 parser.add_option("-R", "--restart", action="store_true",
     help="restart at last error")
 parser.add_option("-p", "--port", type="int",
-    help="port on which servers should listen")
+    help="port on which servers should listen"
+         " (default: $%s or %d)" % defaults['port'])
 parser.add_option("-r", "--retest", action="store_true",
     help="retest failed tests")
 parser.add_option("-s", "--cover_stdlib", action="store_true",
     help="print a test coverage report inc. standard libraries")
 parser.add_option("-t", "--timeout", type="int",
-    help="kill errant tests after TIMEOUT seconds")
+    help="kill errant tests after TIMEOUT seconds"
+         " (default: $%s or %d)" % defaults['timeout'])
 parser.add_option("--tmpdir", type="string",
     help="run tests in the given temporary directory")
 parser.add_option("-v", "--verbose", action="store_true",
@@ -56,7 +66,9 @@ parser.add_option("-v", "--verbose", action="store_true",
 parser.add_option("--with-hg", type="string",
     help="test existing install at given location")
 
-parser.set_defaults(jobs=1, port=20059, timeout=180)
+for option, default in defaults.items():
+    defaults[option] = os.environ.get(*default)
+parser.set_defaults(**defaults)
 (options, args) = parser.parse_args()
 verbose = options.verbose
 coverage = options.cover or options.cover_stdlib or options.annotate
