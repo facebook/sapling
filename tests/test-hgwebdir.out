@@ -5,7 +5,7 @@ adding c
 404 Not Found
 
 
-error: Path not found: bork/
+error: bork@8580ff50825a: not found in manifest
 % should succeed
 200 Script output follows
 

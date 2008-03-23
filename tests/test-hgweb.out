@@ -59,14 +59,49 @@ error: revision not found: spam
 400
 
 
-error: No such method: spam
+error: no such method: spam
 % should give a 404 - file does not exist
 404 Not Found
 
 
-error: Path not found: bork/
+error: bork@2ef0ac749a14: not found in manifest
+404 Not Found
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>Mercurial Error</title>
+</head>
+<body>
+
+<h2>Mercurial Error</h2>
+
+<p>
+An error occurred while processing your request:
+</p>
+<p>
+bork@2ef0ac749a14: not found in manifest
+</p>
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+404 Not Found
+
+
+error: bork@2ef0ac749a14: not found in manifest
 % stop and restart
-7 log lines written
+9 log lines written
 % static file
 200 Script output follows
 

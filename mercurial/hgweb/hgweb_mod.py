@@ -234,7 +234,7 @@ class hgweb(object):
                 cmd = req.form['cmd'][0]
 
             if cmd not in webcommands.__all__:
-                msg = 'No such method: %s' % cmd
+                msg = 'no such method: %s' % cmd
                 raise ErrorResponse(HTTP_BAD_REQUEST, msg)
             elif cmd == 'file' and 'raw' in req.form.get('style', []):
                 self.ctype = ctype
@@ -248,7 +248,11 @@ class hgweb(object):
 
         except revlog.LookupError, err:
             req.respond(HTTP_NOT_FOUND, ctype)
-            req.write(tmpl('error', error='revision not found: %s' % err.name))
+            if 'manifest' in err.message:
+                msg = str(err)
+            else:
+                msg = 'revision not found: %s' % err.name
+            req.write(tmpl('error', error=msg))
         except (RepoError, revlog.RevlogError), inst:
             req.respond(HTTP_SERVER_ERROR, ctype)
             req.write(tmpl('error', error=str(inst)))
@@ -737,7 +741,7 @@ class hgweb(object):
                 files[short] = (f, n)
 
         if not files:
-            raise ErrorResponse(HTTP_NOT_FOUND, 'Path not found: ' + path)
+            raise ErrorResponse(HTTP_NOT_FOUND, 'path not found: ' + path)
 
         def filelist(**map):
             fl = files.keys()

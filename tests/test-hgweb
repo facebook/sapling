@@ -27,6 +27,8 @@ echo % should give a 400 - bad command
 
 echo % should give a 404 - file does not exist
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/bork?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/bork'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/bork?style=raw'
 
 echo % stop and restart
 kill `cat hg.pid`

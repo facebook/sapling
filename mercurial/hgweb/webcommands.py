@@ -34,10 +34,13 @@ def rawfile(web, req, tmpl):
 
     try:
         fctx = web.filectx(req)
-    except revlog.LookupError:
-        content = web.manifest(tmpl, web.changectx(req), path)
-        req.respond(HTTP_OK, web.ctype)
-        return content
+    except revlog.LookupError, inst:
+        try:
+            content = web.manifest(tmpl, web.changectx(req), path)
+            req.respond(HTTP_OK, web.ctype)
+            return content
+        except ErrorResponse:
+            raise inst
 
     path = fctx.path()
     text = fctx.data()
@@ -53,10 +56,13 @@ def file(web, req, tmpl):
     if path:
         try:
             return web.filerevision(tmpl, web.filectx(req))
-        except revlog.LookupError:
+        except revlog.LookupError, inst:
             pass
 
-    return web.manifest(tmpl, web.changectx(req), path)
+    try:
+        return web.manifest(tmpl, web.changectx(req), path)
+    except ErrorResponse:
+        raise inst
 
 def changelog(web, req, tmpl, shortlog = False):
     if 'node' in req.form:
@@ -109,7 +115,7 @@ def archive(web, req, tmpl):
         web.configbool("web", "allow" + type_, False))):
         web.archive(tmpl, req, req.form['node'][0], type_)
         return []
-    raise ErrorResponse(HTTP_NOT_FOUND, 'Unsupported archive type: %s' % type_)
+    raise ErrorResponse(HTTP_NOT_FOUND, 'unsupported archive type: %s' % type_)
 
 def static(web, req, tmpl):
     fname = req.form['file'][0]
