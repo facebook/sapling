@@ -17,9 +17,11 @@ u = ui.ui()
 opts = {}
 args = []
 try:
-    args = fancyopts.fancyopts(sys.argv[1:], options, opts)
-except fancyopts.getopt.GetoptError, inst:
-    u.warn('Usage:\n%s' % help)
+    args = list(fancyopts.fancyopts(sys.argv[1:], options, opts))
+    args += [None]*(3 - len(args))
+    src, dest, revmapfile = args
+except (fancyopts.getopt.GetoptError, ValueError), inst:
+    u.warn('Usage:\n%s\n' % help)
     sys.exit(-1)
 
-convert._convert(u, *args, **opts)
+convert.convert(u, src, dest, revmapfile, **opts)
