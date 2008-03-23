@@ -4,7 +4,7 @@ remove() {
     hg rm $@
     hg st
     # do not use ls -R, which recurses in .hg subdirs on Mac OS X 10.5
-    find . ! -regex '.*/\.hg.*' -a -type f
+    find . -name .hg -prune -o -type f -print
     hg up -C
 }
 
