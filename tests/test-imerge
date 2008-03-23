@@ -33,6 +33,12 @@ hg -v imerge st
 echo % next
 hg imerge next
 
+echo % resolve and unresolve
+hg imerge resolve foo
+hg -v imerge st
+hg imerge unresolve foo
+hg -v imerge st
+
 echo % merge next
 hg --traceback imerge
 
