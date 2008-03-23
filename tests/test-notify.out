@@ -23,8 +23,7 @@ To: baz, foo@bar
 
 changeset 0647d048b600 in test-notify/b
 details: test-notify/b?cmd=changeset;node=0647d048b600
-description:
-	b
+description: b
 
 diffs (6 lines):
 
