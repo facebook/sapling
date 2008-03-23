@@ -1,0 +1,50 @@
+% tedious monotone keys configuration
+% create monotone repository
+mtn: adding a to workspace manifest
+mtn: adding bin to workspace manifest
+mtn: adding c to workspace manifest
+mtn: adding dir to workspace manifest
+mtn: adding dir/b to workspace manifest
+mtn: beginning commit on branch 'com.selenic.test'
+mtn: committed revision 803ef0bf815e35b951dbd4310acd1e45e675016e
+% update monotone working directory
+mtn: skipping dir, already accounted for in workspace
+mtn: renaming a to dir/a in workspace manifest
+mtn: dropping c from workspace manifest
+mtn: beginning commit on branch 'com.selenic.test'
+mtn: committed revision 4daf60753d6fe21a06ce5f716303fe55fd6d3a56
+% convert once
+assuming destination repo.mtn-hg
+initializing destination repo.mtn-hg repository
+scanning source...
+sorting...
+converting...
+1 initialize
+0 update1
+mtn: adding e to workspace manifest
+mtn: dropping dir/b from workspace manifest
+mtn: renaming bin to bin2 in workspace manifest
+mtn: beginning commit on branch 'com.selenic.test'
+mtn: committed revision 6c6977a6ef609ec80e40779f89dbd2772c96de62
+% convert incrementally
+assuming destination repo.mtn-hg
+scanning source...
+sorting...
+converting...
+0 update2
+5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  2 "update2" files: bin bin2 e
+|
+o  1 "update1" files: a bin dir/a dir/b
+|
+o  0 "initialize" files: a bin c dir/b
+
+% manifest
+bin2
+c
+dir/a
+dir/b
+e
+% contents
+a
+a

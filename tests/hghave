@@ -33,6 +33,9 @@ def has_cvsps():
 def has_darcs():
     return matchoutput('darcs', 'darcs version', True)
 
+def has_mtn():
+    return matchoutput('mtn --version', 'monotone', True)
+
 def has_eol_in_paths():
     try:
         fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
@@ -125,6 +128,7 @@ checks = {
     "git": (has_git, "git command line client"),
     "hotshot": (has_hotshot, "python hotshot module"),
     "lsprof": (has_lsprof, "python lsprof module"),
+    "mtn": (has_mtn, "monotone client"),
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),

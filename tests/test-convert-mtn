@@ -1,0 +1,76 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" mtn || exit 80
+
+# Monotone directory is called .monotone on *nix and monotone
+# on Windows. Having a variable here ease test patching.
+mtndir=.monotone
+echo "[extensions]" >> $HGRCPATH
+echo "convert=" >> $HGRCPATH
+echo 'hgext.graphlog =' >> $HGRCPATH
+
+HOME=`pwd`/do_not_use_HOME_mtn; export HOME
+# Windows version of monotone home
+APPDATA=$HOME; export APPDATA
+
+echo % tedious monotone keys configuration
+# The /dev/null redirection is necessary under Windows, or
+# it complains about home directory permissions
+mtn --quiet genkey test@selenic.com 1>/dev/null 2>&1 <<EOF
+passphrase
+passphrase
+EOF
+cat >> $HOME/$mtndir/monotonerc <<EOF
+function get_passphrase(keypair_id)
+    return "passphrase"
+end
+EOF
+
+echo % create monotone repository
+mtn db init --db=repo.mtn
+mtn --db=repo.mtn --branch=com.selenic.test setup workingdir
+cd workingdir
+echo a > a
+mkdir dir
+echo b > dir/b
+python -c 'file("bin", "wb").write("a\\x00b")'
+echo c > c
+mtn add a dir/b c bin
+mtn ci -m initialize
+echo % update monotone working directory
+mtn mv a dir/a
+echo a >> dir/a
+echo b >> dir/b
+mtn drop c
+python -c 'file("bin", "wb").write("b\\x00c")'
+mtn ci -m update1
+cd ..
+
+echo % convert once
+hg convert -s mtn repo.mtn
+
+cd workingdir
+echo e > e
+mtn add e
+mtn drop dir/b
+mtn mv bin bin2
+mtn ci -m update2
+cd ..
+
+echo % convert incrementally
+hg convert -s mtn repo.mtn
+
+glog()
+{
+    hg glog --template '#rev# "#desc|firstline#" files: #files#\n' "$@"
+}
+
+cd repo.mtn-hg
+hg up -C
+glog
+echo % manifest
+# BUG: c and dir/b should not appear here
+hg manifest
+echo % contents
+cat dir/a
+
