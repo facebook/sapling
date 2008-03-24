@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetypes, re, mimetools, cStringIO
+import os, mimetypes, re
 from mercurial.node import hex, nullid, short
 from mercurial.repo import RepoError
 from mercurial import mdiff, ui, hg, util, archival, patch, hook
@@ -226,17 +226,8 @@ class hgweb(object):
         try:
 
             tmpl = self.templater(req)
-            try:
-                ctype = tmpl('mimetype', encoding=self.encoding)
-                ctype = templater.stringify(ctype)
-            except KeyError:
-                # old templates with inline HTTP headers?
-                if 'mimetype' in tmpl:
-                    raise
-                header = tmpl('header', encoding=self.encoding)
-                header_file = cStringIO.StringIO(templater.stringify(header))
-                msg = mimetools.Message(header_file, 0)
-                ctype = msg['content-type']
+            ctype = tmpl('mimetype', encoding=self.encoding)
+            ctype = templater.stringify(ctype)
 
             if cmd == '':
                 req.form['cmd'] = [tmpl.cache['default']]
@@ -291,13 +282,7 @@ class hgweb(object):
         # some functions for the templater
 
         def header(**map):
-            header = tmpl('header', encoding=self.encoding, **map)
-            if 'mimetype' not in tmpl:
-                # old template with inline HTTP headers
-                header_file = cStringIO.StringIO(templater.stringify(header))
-                msg = mimetools.Message(header_file, 0)
-                header = header_file.read()
-            yield header
+            yield tmpl('header', encoding=self.encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)
