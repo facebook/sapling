@@ -766,7 +766,7 @@ class queue:
     def push(self, repo, patch=None, force=False, list=False,
              mergeq=None):
         wlock = repo.wlock()
-        if repo.dirstate.parents()[0] != repo.lookup("tip"):
+        if repo.dirstate.parents()[0] != repo.changelog.tip():
             self.ui.status(_("(working directory not at tip)\n"))
 
         try:
