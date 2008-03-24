@@ -4,4 +4,4 @@ created new head
 % should abort
 abort: crosses branches (use 'hg merge' or 'hg update -C' to discard changes)
 % should succeed
-abort: crosses branches (use 'hg merge'or 'hg update -C')
+abort: crosses branches (use 'hg merge' or 'hg update -C')

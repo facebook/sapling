@@ -373,7 +373,7 @@ def update(repo, node, branchmerge, force, partial):
                 if wc.files() or wc.deleted():
                     raise util.Abort(_("crosses branches (use 'hg merge' or "
                                        "'hg update -C' to discard changes)"))
-                raise util.Abort(_("crosses branches (use 'hg merge'"
+                raise util.Abort(_("crosses branches (use 'hg merge' "
                                    "or 'hg update -C')"))
             elif wc.files() or wc.deleted():
                 raise util.Abort(_("crosses named branches (use "
