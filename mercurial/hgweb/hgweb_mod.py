@@ -248,9 +248,8 @@ class hgweb(object):
 
         except revlog.LookupError, err:
             req.respond(HTTP_NOT_FOUND, ctype)
-            if 'manifest' in err.message:
-                msg = str(err)
-            else:
+            msg = str(err)
+            if 'manifest' not in msg:
                 msg = 'revision not found: %s' % err.name
             req.write(tmpl('error', error=msg))
         except (RepoError, revlog.RevlogError), inst:
