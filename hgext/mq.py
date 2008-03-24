@@ -1616,7 +1616,10 @@ def clone(ui, source, dest=None, **opts):
                 destrev = heads.keys()
                 destrev.append(sr.changelog.parents(qbase)[0])
     elif sr.capable('lookup'):
-        qbase = sr.lookup('qbase')
+        try:
+            qbase = sr.lookup('qbase')
+        except RepoError:
+            pass
     ui.note(_('cloning main repo\n'))
     sr, dr = hg.clone(ui, sr.url(), dest,
                       pull=opts['pull'],
