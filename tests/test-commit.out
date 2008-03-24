@@ -92,3 +92,14 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     commit-foo-subdir
 
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+merging a
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% should fail because we are specifying a file name
+abort: cannot partially commit a merge (do not specify files or patterns)
+% should fail because we are specifying a pattern
+abort: cannot partially commit a merge (do not specify files or patterns)
+% should succeed
