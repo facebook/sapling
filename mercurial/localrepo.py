@@ -752,6 +752,8 @@ class localrepository(repo.repository):
         if files:
             files = util.unique(files)
         try:
+            wlock = self.wlock()
+            lock = self.lock()
             commit = []
             remove = []
             changed = []
@@ -810,8 +812,6 @@ class localrepository(repo.repository):
 
             self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
 
-            wlock = self.wlock()
-            lock = self.lock()
             tr = self.transaction()
             trp = weakref.proxy(tr)
 
