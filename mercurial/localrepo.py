@@ -633,8 +633,8 @@ class localrepository(repo.repository):
 
     def invalidate(self):
         for a in "changelog manifest".split():
-            if hasattr(self, a):
-                self.__delattr__(a)
+            if a in self.__dict__:
+                delattr(self, a)
         self.tagscache = None
         self._tagstypecache = None
         self.nodetagscache = None
