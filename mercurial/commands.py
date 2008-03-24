@@ -2764,17 +2764,17 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
 
     Update the working directory to the specified revision, or the
     tip of the current branch if none is specified.
-    See 'hg help dates' for a list of formats valid for -d/--date.
 
-    If there are no outstanding changes in the working directory, the
-    result is the requested version.
+    If the requested revision is a descendant of the working
+    directory, any outstanding changes in the working directory will
+    be merged into the result. If it is not directly descended but is
+    on the same named branch, update aborts with a suggestion to use
+    merge or update -C instead.
 
-    If the requested version is a descendant of the working directory
-    and there are outstanding changes, those changes will be merged
-    into the result.
+    If the requested revision is on a different named branch and the
+    working directory is clean, update quietly switches branches.
 
-    By default, update will refuse to run if there are outstanding
-    changes and the update spans branches.
+    See 'hg help dates' for a list of formats valid for --date.
     """
     if rev and node:
         raise util.Abort(_("please specify just one revision"))

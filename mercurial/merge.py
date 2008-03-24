@@ -346,7 +346,6 @@ def update(repo, node, branchmerge, force, partial):
                 else:
                     raise util.Abort(_("branch %s not found") % wc.branch())
         overwrite = force and not branchmerge
-        forcemerge = force and branchmerge
         pl = wc.parents()
         p1, p2 = pl[0], repo.changectx(node)
         pa = p1.ancestor(p2)
@@ -356,22 +355,32 @@ def update(repo, node, branchmerge, force, partial):
         ### check phase
         if not overwrite and len(pl) > 1:
             raise util.Abort(_("outstanding uncommitted merges"))
-        if pa == p1 or pa == p2: # is there a linear path from p1 to p2?
-            if branchmerge:
-                if p1.branch() != p2.branch() and pa != p2:
+        if branchmerge:
+            if pa == p2:
+                raise util.Abort(_("can't merge with ancestor"))
+            elif pa == p1:
+                if p1.branch() != p2.branch():
                     fastforward = True
                 else:
-                    raise util.Abort(_("there is nothing to merge, just use "
-                                       "'hg update' or look at 'hg heads'"))
-        elif not (overwrite or branchmerge):
-            if wc.files() or wc.deleted():
-                raise util.Abort(_("update spans branches, use 'hg merge' "
-                                   "or 'hg update -C' to lose changes"))
-            # Allow jumping branches if there are no changes
-            overwrite = True
-        if branchmerge and not forcemerge:
-            if wc.files() or wc.deleted():
+                    raise util.Abort(_("nothing to merge (use 'hg update'"
+                                       " or check 'hg heads')"))
+            if not force and (wc.files() or wc.deleted()):
                 raise util.Abort(_("outstanding uncommitted changes"))
+        elif not overwrite:
+            if pa == p1 or pa == p2: # linear
+                pass # all good
+            elif p1.branch() == p2.branch():
+                if wc.files() or wc.deleted():
+                    raise util.Abort(_("crosses branches (use 'hg merge' or "
+                                       "'hg update -C' to discard changes)"))
+                raise util.Abort(_("crosses branches (use 'hg merge'"
+                                   "or 'hg update -C')"))
+            elif wc.files() or wc.deleted():
+                raise util.Abort(_("crosses named branches (use "
+                                   "'hg update -C' to discard changes)"))
+            else:
+                # Allow jumping branches if there are no changes
+                overwrite = True
 
         ### calculate phase
         action = []
