@@ -548,9 +548,18 @@ def commit(ui, repo, *pats, **opts):
         return repo.commit(files, message, opts['user'], opts['date'], match,
                            force_editor=opts.get('force_editor'))
 
-    heads = repo.changelog.heads()
-    cmdutil.commit(ui, repo, commitfunc, pats, opts)
-    if len(repo.changelog.heads()) > len(heads):
+    node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
+    if not node:
+        return
+    cl = repo.changelog
+    rev = cl.rev(node)
+    parents = cl.parentrevs(rev)
+    if rev - 1 in parents:
+        # one of the parents was the old tip
+        return
+    if (parents == (nullrev, nullrev) or
+        len(cl.heads(cl.node(parents[0]))) > 1 and
+        (parents[1] == nullrev or len(cl.heads(cl.node(parents[1]))) > 1)):
         ui.status(_('created new head\n'))
 
 def copy(ui, repo, *pats, **opts):
