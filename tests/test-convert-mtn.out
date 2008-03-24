@@ -32,18 +32,16 @@ scanning source...
 sorting...
 converting...
 0 update2
-5 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  2 "update2" files: bin bin2 e
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  2 "update2" files: bin bin2 dir/b e
 |
-o  1 "update1" files: a bin dir/a dir/b
+o  1 "update1" files: a bin c dir/a dir/b
 |
 o  0 "initialize" files: a bin c dir/b
 
 % manifest
 bin2
-c
 dir/a
-dir/b
 e
 % contents
 a

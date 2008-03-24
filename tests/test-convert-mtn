@@ -69,7 +69,6 @@ cd repo.mtn-hg
 hg up -C
 glog
 echo % manifest
-# BUG: c and dir/b should not appear here
 hg manifest
 echo % contents
 cat dir/a
