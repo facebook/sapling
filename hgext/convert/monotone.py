@@ -26,6 +26,7 @@ class monotone_source(converter_source, commandline):
         self.add_file_re = re.compile(space + "add_file" + name + "content" + revision)
         self.patch_re    = re.compile(space + "patch" + name + "from" + revision + "to" + revision)
         self.rename_re   = re.compile(space + "rename" + name + "to" + name)
+        self.delete_re   = re.compile(space + "delete" + name)
         self.tag_re      = re.compile(space + "tag" + name + "revision" + revision)
         self.cert_re     = re.compile(lines + space + "name" + name + "value" + value)
 
@@ -137,6 +138,9 @@ class monotone_source(converter_source, commandline):
             # Delete/rename is handled later when the convert engine
             # discovers an IOError exception from getfile,
             # but only if we add the "from" file to the list of changes.
+            m = self.delete_re.match(e)
+            if m:
+                files[m.group(1)] = rev
             m = self.rename_re.match(e)
             if m:
                 toname = m.group(2)

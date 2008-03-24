@@ -26,24 +26,28 @@ mtn: dropping dir/b from workspace manifest
 mtn: renaming bin to bin2 in workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
 mtn: committed revision 6c6977a6ef609ec80e40779f89dbd2772c96de62
+mtn: renaming dir to dir2 in workspace manifest
+mtn: beginning commit on branch 'com.selenic.test'
+mtn: committed revision 5de5abe7c15eae70cf3acdda23c9c319ea50c1af
 % convert incrementally
 assuming destination repo.mtn-hg
 scanning source...
 sorting...
 converting...
-0 update2
-5 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  2 "update2" files: bin bin2 e
+1 update2
+0 movedir
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  3 "movedir" files: dir/a dir2/a
 |
-o  1 "update1" files: a bin dir/a dir/b
+o  2 "update2" files: bin bin2 dir/b e
+|
+o  1 "update1" files: a bin c dir/a dir/b
 |
 o  0 "initialize" files: a bin c dir/b
 
 % manifest
 bin2
-c
-dir/a
-dir/b
+dir2/a
 e
 % contents
 a

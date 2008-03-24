@@ -55,6 +55,9 @@ mtn add e
 mtn drop dir/b
 mtn mv bin bin2
 mtn ci -m update2
+# Test directory move
+mtn mv dir dir2
+mtn ci -m movedir
 cd ..
 
 echo % convert incrementally
@@ -69,8 +72,7 @@ cd repo.mtn-hg
 hg up -C
 glog
 echo % manifest
-# BUG: c and dir/b should not appear here
 hg manifest
 echo % contents
-cat dir/a
+cat dir2/a
 
