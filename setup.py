@@ -24,20 +24,32 @@ extra = {}
 # that actually removes its temporary files.
 def has_function(cc, funcname):
     tmpdir = tempfile.mkdtemp(prefix='hg-install-')
+    devnull = oldstderr = None
     try:
-        fname = os.path.join(tmpdir, 'funcname.c')
-        f = open(fname, 'w')
-        f.write('int main(void) {\n')
-        f.write('    %s();\n' % funcname)
-        f.write('}\n')
-        f.close()
         try:
+            fname = os.path.join(tmpdir, 'funcname.c')
+            f = open(fname, 'w')
+            f.write('int main(void) {\n')
+            f.write('    %s();\n' % funcname)
+            f.write('}\n')
+            f.close()
+            # Redirect stderr to /dev/null to hide any error messages
+            # from the compiler.
+            # This will have to be changed if we ever have to check
+            # for a function on Windows.
+            devnull = open('/dev/null', 'w')
+            oldstderr = os.dup(sys.stderr.fileno())
+            os.dup2(devnull.fileno(), sys.stderr.fileno())
             objects = cc.compile([fname])
             cc.link_executable(objects, os.path.join(tmpdir, "a.out"))
         except:
             return False
         return True
     finally:
+        if oldstderr is not None:
+            os.dup2(oldstderr, sys.stderr.fileno())
+        if devnull is not None:
+            devnull.close()
         shutil.rmtree(tmpdir)
 
 # py2exe needs to be installed to work
