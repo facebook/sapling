@@ -67,7 +67,7 @@ def fetch(ui, repo, source='default', **opts):
                         util.removeauth(other.url())))
             force_editor = opts.get('force_editor') or opts.get('edit')
             n = repo.commit(mod + add + rem, message,
-                            opts['user'], opts['date'],
+                            opts['user'], opts['date'], force=True,
                             force_editor=force_editor)
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),

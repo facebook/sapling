@@ -539,6 +539,9 @@ def commit(ui, repo, *pats, **opts):
     If a list of files is omitted, all changes reported by "hg status"
     will be committed.
 
+    If you are committing the result of a merge, do not provide any
+    file names or -I/-X filters.
+
     If no commit message is specified, the configured editor is started to
     enter a message.
 

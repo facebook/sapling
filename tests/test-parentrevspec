@@ -16,7 +16,7 @@ commit()
 
     echo >> foo
 
-    hg commit -d '0 0' -qAm "$msg" foo
+    hg commit -d '0 0' -qAm "$msg"
 }
 
 hg init repo

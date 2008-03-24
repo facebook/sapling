@@ -781,6 +781,11 @@ class localrepository(repo.repository):
             if use_dirstate:
                 p1, p2 = self.dirstate.parents()
                 update_dirstate = True
+
+                if (not force and p2 != nullid and
+                    (files or match != util.always)):
+                    raise util.Abort(_('cannot partially commit a merge '
+                                       '(do not specify files or patterns)'))
             else:
                 p1, p2 = p1, p2 or nullid
                 update_dirstate = (self.dirstate.parents()[0] == p1)
