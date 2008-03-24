@@ -359,7 +359,6 @@ def run_one(test, skips, fails):
         signal.alarm(0)
 
     skipped = (ret == SKIPPED_STATUS)
-    diffret = 0
     # If reference output file exists, check test output against it
     if os.path.exists(ref):
         f = open(ref, "r")
@@ -367,19 +366,20 @@ def run_one(test, skips, fails):
         f.close()
     else:
         ref_out = []
-    if not skipped and out != ref_out:
-        diffret = 1
-        fail("output changed")
-        show_diff(ref_out, out)
     if skipped:
         missing = extract_missing_features(out)
         if not missing:
             missing = ['irrelevant']
         skip(missing[-1])
+    elif out != ref_out:
+        if ret:
+            fail("output changed and returned error code %d" % ret)
+        else:
+            fail("output changed")
+        show_diff(ref_out, out)
+        ret = 1
     elif ret:
         fail("returned error code %d" % ret)
-    elif diffret:
-        ret = diffret
 
     if not verbose:
         sys.stdout.write(skipped and 's' or '.')
