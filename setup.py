@@ -88,10 +88,11 @@ mercurial.version.remember_version(version)
 cmdclass = {'install_data': install_package_data}
 
 ext_modules=[
-    Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
-    Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
     Extension('mercurial.base85', ['mercurial/base85.c']),
-    Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'])
+    Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
+    Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c']),
+    Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
+    Extension('mercurial.parsers', ['mercurial/parsers.c']),
     ]
 
 packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert']

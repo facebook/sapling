@@ -8,7 +8,7 @@
 from node import bin, hex, nullid
 from revlog import revlog, RevlogError
 from i18n import _
-import array, struct, mdiff
+import array, struct, mdiff, parsers
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):
@@ -39,14 +39,7 @@ class manifest(revlog):
 
     def parse(self, lines):
         mfdict = manifestdict()
-        fdict = mfdict._flags
-        for l in lines.splitlines():
-            f, n = l.split('\0')
-            if len(n) > 40:
-                fdict[f] = n[40:]
-                mfdict[f] = bin(n[:40])
-            else:
-                mfdict[f] = bin(n)
+        parsers.parse_manifest(mfdict, mfdict._flags, lines)
         return mfdict
 
     def readdelta(self, node):
