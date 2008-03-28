@@ -15,7 +15,7 @@ from common import get_mtime, style_map, paritygen, countgen, get_contact
 from common import ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
-import webcommands, protocol
+import webcommands, protocol, webutil
 
 shortcuts = {
     'cl': [('cmd', ['changelog']), ('rev', None)],
@@ -340,54 +340,6 @@ class hgweb(object):
         if len(files) > self.maxfiles:
             yield tmpl("fileellipses")
 
-    def siblings(self, siblings=[], hiderev=None, **args):
-        siblings = [s for s in siblings if s.node() != nullid]
-        if len(siblings) == 1 and siblings[0].rev() == hiderev:
-            return
-        for s in siblings:
-            d = {'node': hex(s.node()), 'rev': s.rev()}
-            if hasattr(s, 'path'):
-                d['file'] = s.path()
-            d.update(args)
-            yield d
-
-    def renamelink(self, fl, node):
-        r = fl.renamed(node)
-        if r:
-            return [dict(file=r[0], node=hex(r[1]))]
-        return []
-
-    def nodetagsdict(self, node):
-        return [{"name": i} for i in self.repo.nodetags(node)]
-
-    def nodebranchdict(self, ctx):
-        branches = []
-        branch = ctx.branch()
-        # If this is an empty repo, ctx.node() == nullid,
-        # ctx.branch() == 'default', but branchtags() is
-        # an empty dict. Using dict.get avoids a traceback.
-        if self.repo.branchtags().get(branch) == ctx.node():
-            branches.append({"name": branch})
-        return branches
-
-    def nodeinbranch(self, ctx):
-        branches = []
-        branch = ctx.branch()
-        if branch != 'default' and self.repo.branchtags().get(branch) != ctx.node():
-            branches.append({"name": branch})
-        return branches
-
-    def nodebranchnodefault(self, ctx):
-        branches = []
-        branch = ctx.branch()
-        if branch != 'default':
-            branches.append({"name": branch})
-        return branches
-
-    def showtag(self, tmpl, t1, node=nullid, **args):
-        for t in self.repo.nodetags(node):
-            yield tmpl(t1, tag=t, **args)
-
     def diff(self, tmpl, node1, node2, files):
         def filterfiles(filters, files):
             l = [x for x in files if x in filters]
@@ -462,21 +414,22 @@ class hgweb(object):
             for i in xrange(start, end):
                 ctx = self.repo.changectx(i)
                 n = ctx.node()
-                showtags = self.showtag(tmpl, 'changelogtag', n)
+                showtags = webutil.showtag(self.repo, tmpl, 'changelogtag', n)
 
                 l.insert(0, {"parity": parity.next(),
                              "author": ctx.user(),
-                             "parent": self.siblings(ctx.parents(), i - 1),
-                             "child": self.siblings(ctx.children(), i + 1),
+                             "parent": webutil.siblings(ctx.parents(), i - 1),
+                             "child": webutil.siblings(ctx.children(), i + 1),
                              "changelogtag": showtags,
                              "desc": ctx.description(),
                              "date": ctx.date(),
                              "files": self.listfilediffs(tmpl, ctx.files(), n),
                              "rev": i,
                              "node": hex(n),
-                             "tags": self.nodetagsdict(n),
-                             "inbranch": self.nodeinbranch(ctx),
-                             "branches": self.nodebranchdict(ctx)})
+                             "tags": webutil.nodetagsdict(self.repo, n),
+                             "inbranch": webutil.nodeinbranch(self.repo, ctx),
+                             "branches": webutil.nodebranchdict(self.repo, ctx)
+                            })
 
             if limit > 0:
                 l = l[:limit]
@@ -533,22 +486,22 @@ class hgweb(object):
 
                 count += 1
                 n = ctx.node()
-                showtags = self.showtag(tmpl, 'changelogtag', n)
+                showtags = webutil.showtag(self.repo, tmpl, 'changelogtag', n)
 
                 yield tmpl('searchentry',
                            parity=parity.next(),
                            author=ctx.user(),
-                           parent=self.siblings(ctx.parents()),
-                           child=self.siblings(ctx.children()),
+                           parent=webutil.siblings(ctx.parents()),
+                           child=webutil.siblings(ctx.children()),
                            changelogtag=showtags,
                            desc=ctx.description(),
                            date=ctx.date(),
                            files=self.listfilediffs(tmpl, ctx.files(), n),
                            rev=ctx.rev(),
                            node=hex(n),
-                           tags=self.nodetagsdict(n),
-                           inbranch=self.nodeinbranch(ctx),
-                           branches=self.nodebranchdict(ctx))
+                           tags=webutil.nodetagsdict(self.repo, n),
+                           inbranch=webutil.nodeinbranch(self.repo, ctx),
+                           branches=webutil.nodebranchdict(self.repo, ctx))
 
                 if count >= self.maxchanges:
                     break
@@ -564,7 +517,7 @@ class hgweb(object):
 
     def changeset(self, tmpl, ctx):
         n = ctx.node()
-        showtags = self.showtag(tmpl, 'changesettag', n)
+        showtags = webutil.showtag(self.repo, tmpl, 'changesettag', n)
         parents = ctx.parents()
         p1 = parents[0].node()
 
@@ -582,18 +535,18 @@ class hgweb(object):
                     diff=diff,
                     rev=ctx.rev(),
                     node=hex(n),
-                    parent=self.siblings(parents),
-                    child=self.siblings(ctx.children()),
+                    parent=webutil.siblings(parents),
+                    child=webutil.siblings(ctx.children()),
                     changesettag=showtags,
                     author=ctx.user(),
                     desc=ctx.description(),
                     date=ctx.date(),
                     files=files,
                     archives=self.archivelist(hex(n)),
-                    tags=self.nodetagsdict(n),
-                    branch=self.nodebranchnodefault(ctx),
-                    inbranch=self.nodeinbranch(ctx),
-                    branches=self.nodebranchdict(ctx))
+                    tags=webutil.nodetagsdict(self.repo, n),
+                    branch=webutil.nodebranchnodefault(ctx),
+                    inbranch=webutil.nodeinbranch(self.repo, ctx),
+                    branches=webutil.nodebranchdict(self.repo, ctx))
 
     def filelog(self, tmpl, fctx):
         f = fctx.path()
@@ -619,9 +572,9 @@ class hgweb(object):
                              "node": hex(ctx.node()),
                              "author": ctx.user(),
                              "date": ctx.date(),
-                             "rename": self.renamelink(fl, n),
-                             "parent": self.siblings(fctx.parents()),
-                             "child": self.siblings(fctx.children()),
+                             "rename": webutil.renamelink(fl, n),
+                             "parent": webutil.siblings(fctx.parents()),
+                             "child": webutil.siblings(fctx.children()),
                              "desc": ctx.description()})
 
             if limit > 0:
@@ -663,10 +616,10 @@ class hgweb(object):
                     author=fctx.user(),
                     date=fctx.date(),
                     desc=fctx.description(),
-                    branch=self.nodebranchnodefault(fctx),
-                    parent=self.siblings(fctx.parents()),
-                    child=self.siblings(fctx.children()),
-                    rename=self.renamelink(fl, n),
+                    branch=webutil.nodebranchnodefault(fctx),
+                    parent=webutil.siblings(fctx.parents()),
+                    child=webutil.siblings(fctx.children()),
+                    rename=webutil.renamelink(fl, n),
                     permissions=fctx.manifest().flags(f))
 
     def fileannotate(self, tmpl, fctx):
@@ -710,10 +663,10 @@ class hgweb(object):
                     author=fctx.user(),
                     date=fctx.date(),
                     desc=fctx.description(),
-                    rename=self.renamelink(fl, n),
-                    branch=self.nodebranchnodefault(fctx),
-                    parent=self.siblings(fctx.parents()),
-                    child=self.siblings(fctx.children()),
+                    rename=webutil.renamelink(fl, n),
+                    branch=webutil.nodebranchnodefault(fctx),
+                    parent=webutil.siblings(fctx.parents()),
+                    child=webutil.siblings(fctx.children()),
                     permissions=fctx.manifest().flags(f))
 
     def manifest(self, tmpl, ctx, path):
@@ -779,9 +732,9 @@ class hgweb(object):
                     fentries=filelist,
                     dentries=dirlist,
                     archives=self.archivelist(hex(node)),
-                    tags=self.nodetagsdict(node),
-                    inbranch=self.nodeinbranch(ctx),
-                    branches=self.nodebranchdict(ctx))
+                    tags=webutil.nodetagsdict(self.repo, node),
+                    inbranch=webutil.nodeinbranch(self.repo, ctx),
+                    branches=webutil.nodebranchdict(self.repo, ctx))
 
     def tags(self, tmpl):
         i = self.repo.tagslist()
@@ -860,9 +813,9 @@ class hgweb(object):
                     date=ctx.date(),
                     rev=i,
                     node=hn,
-                    tags=self.nodetagsdict(n),
-                    inbranch=self.nodeinbranch(ctx),
-                    branches=self.nodebranchdict(ctx)))
+                    tags=webutil.nodetagsdict(self.repo, n),
+                    inbranch=webutil.nodeinbranch(self.repo, ctx),
+                    branches=webutil.nodebranchdict(self.repo, ctx)))
 
             yield l
 
@@ -894,9 +847,9 @@ class hgweb(object):
                     file=path,
                     node=hex(n),
                     rev=fctx.rev(),
-                    branch=self.nodebranchnodefault(fctx),
-                    parent=self.siblings(parents),
-                    child=self.siblings(fctx.children()),
+                    branch=webutil.nodebranchnodefault(fctx),
+                    parent=webutil.siblings(parents),
+                    child=webutil.siblings(fctx.children()),
                     diff=diff)
 
     archive_specs = {
@@ -923,45 +876,6 @@ class hgweb(object):
         req.header(headers)
         req.respond(HTTP_OK)
         archival.archive(self.repo, req, cnode, artype, prefix=name)
-
-    # add tags to things
-    # tags -> list of changesets corresponding to tags
-    # find tag, changeset, file
-
-    def cleanpath(self, path):
-        path = path.lstrip('/')
-        return util.canonpath(self.repo.root, '', path)
-
-    def changectx(self, req):
-        if 'node' in req.form:
-            changeid = req.form['node'][0]
-        elif 'manifest' in req.form:
-            changeid = req.form['manifest'][0]
-        else:
-            changeid = self.repo.changelog.count() - 1
-
-        try:
-            ctx = self.repo.changectx(changeid)
-        except RepoError:
-            man = self.repo.manifest
-            mn = man.lookup(changeid)
-            ctx = self.repo.changectx(man.linkrev(mn))
-
-        return ctx
-
-    def filectx(self, req):
-        path = self.cleanpath(req.form['file'][0])
-        if 'node' in req.form:
-            changeid = req.form['node'][0]
-        else:
-            changeid = req.form['filenode'][0]
-        try:
-            ctx = self.repo.changectx(changeid)
-            fctx = ctx.filectx(path)
-        except RepoError:
-            fctx = self.repo.filectx(path, fileid=changeid)
-
-        return fctx
 
     def check_perm(self, req, op, default):
         '''check permission for operation based on user auth.

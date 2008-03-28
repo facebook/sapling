@@ -6,7 +6,9 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, mimetypes
-from mercurial import revlog, util
+import webutil
+from mercurial import revlog
+from mercurial.util import binary
 from mercurial.repo import RepoError
 from common import staticfile, ErrorResponse, HTTP_OK, HTTP_NOT_FOUND
 
@@ -26,17 +28,17 @@ def log(web, req, tmpl):
         return changelog(web, req, tmpl)
 
 def rawfile(web, req, tmpl):
-    path = web.cleanpath(req.form.get('file', [''])[0])
+    path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     if not path:
-        content = web.manifest(tmpl, web.changectx(req), path)
+        content = web.manifest(tmpl, webutil.changectx(web.repo, req), path)
         req.respond(HTTP_OK, web.ctype)
         return content
 
     try:
-        fctx = web.filectx(req)
+        fctx = webutil.filectx(web.repo, req)
     except revlog.LookupError, inst:
         try:
-            content = web.manifest(tmpl, web.changectx(req), path)
+            content = web.manifest(tmpl, webutil.changectx(web.repo, req), path)
             req.respond(HTTP_OK, web.ctype)
             return content
         except ErrorResponse:
@@ -45,28 +47,28 @@ def rawfile(web, req, tmpl):
     path = fctx.path()
     text = fctx.data()
     mt = mimetypes.guess_type(path)[0]
-    if mt is None or util.binary(text):
+    if mt is None or binary(text):
         mt = mt or 'application/octet-stream'
 
     req.respond(HTTP_OK, mt, path, len(text))
     return [text]
 
 def file(web, req, tmpl):
-    path = web.cleanpath(req.form.get('file', [''])[0])
+    path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     if path:
         try:
-            return web.filerevision(tmpl, web.filectx(req))
+            return web.filerevision(tmpl, webutil.filectx(web.repo, req))
         except revlog.LookupError, inst:
             pass
 
     try:
-        return web.manifest(tmpl, web.changectx(req), path)
+        return web.manifest(tmpl, webutil.changectx(web.repo, req), path)
     except ErrorResponse:
         raise inst
 
 def changelog(web, req, tmpl, shortlog = False):
     if 'node' in req.form:
-        ctx = web.changectx(req)
+        ctx = webutil.changectx(web.repo, req)
     else:
         if 'rev' in req.form:
             hi = req.form['rev'][0]
@@ -83,13 +85,13 @@ def shortlog(web, req, tmpl):
     return changelog(web, req, tmpl, shortlog = True)
 
 def changeset(web, req, tmpl):
-    return web.changeset(tmpl, web.changectx(req))
+    return web.changeset(tmpl, webutil.changectx(web.repo, req))
 
 rev = changeset
 
 def manifest(web, req, tmpl):
-    return web.manifest(tmpl, web.changectx(req),
-                        web.cleanpath(req.form['path'][0]))
+    return web.manifest(tmpl, webutil.changectx(web.repo, req),
+                        webutil.cleanpath(web.repo, req.form['path'][0]))
 
 def tags(web, req, tmpl):
     return web.tags(tmpl)
@@ -98,15 +100,15 @@ def summary(web, req, tmpl):
     return web.summary(tmpl)
 
 def filediff(web, req, tmpl):
-    return web.filediff(tmpl, web.filectx(req))
+    return web.filediff(tmpl, webutil.filectx(web.repo, req))
 
 diff = filediff
 
 def annotate(web, req, tmpl):
-    return web.fileannotate(tmpl, web.filectx(req))
+    return web.fileannotate(tmpl, webutil.filectx(web.repo, req))
 
 def filelog(web, req, tmpl):
-    return web.filelog(tmpl, web.filectx(req))
+    return web.filelog(tmpl, webutil.filectx(web.repo, req))
 
 def archive(web, req, tmpl):
     type_ = req.form['type'][0]
