@@ -31,7 +31,8 @@ static int hexdigit(char c)
 static PyObject *unhexlify(const char *str, int len)
 {
 	PyObject *ret = NULL;
-	char *c, *d;
+	const char *c;
+	char *d;
 
 	if (len % 2) {
 		PyErr_SetString(PyExc_ValueError,
