@@ -6,9 +6,58 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+import os
 from mercurial.node import hex, nullid
 from mercurial.repo import RepoError
 from mercurial import util
+
+def up(p):
+    if p[0] != "/":
+        p = "/" + p
+    if p[-1] == "/":
+        p = p[:-1]
+    up = os.path.dirname(p)
+    if up == "/":
+        return "/"
+    return up + "/"
+
+def revnavgen(pos, pagelen, limit, nodefunc):
+    def seq(factor, limit=None):
+        if limit:
+            yield limit
+            if limit >= 20 and limit <= 40:
+                yield 50
+        else:
+            yield 1 * factor
+            yield 3 * factor
+        for f in seq(factor * 10):
+            yield f
+
+    def nav(**map):
+        l = []
+        last = 0
+        for f in seq(1, pagelen):
+            if f < pagelen or f <= last:
+                continue
+            if f > limit:
+                break
+            last = f
+            if pos + f < limit:
+                l.append(("+%d" % f, hex(nodefunc(pos + f).node())))
+            if pos - f >= 0:
+                l.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
+
+        try:
+            yield {"label": "(0)", "node": hex(nodefunc('0').node())}
+
+            for label, node in l:
+                yield {"label": label, "node": node}
+
+            yield {"label": "tip", "node": "tip"}
+        except RepoError:
+            pass
+
+    return nav
 
 def siblings(siblings=[], hiderev=None, **args):
     siblings = [s for s in siblings if s.node() != nullid]

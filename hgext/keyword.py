@@ -128,15 +128,21 @@ def _kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
     _patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
                 fp=fp, changes=changes, opts=opts)
 
+# monkeypatching hgweb functions changeset and filediff
+# actual monkeypatching is done at the bottom of reposetup()
+
+web_changeset = webcommands.changeset
+web_filediff = webcommands.filediff
+
 def _kwweb_changeset(web, req, tmpl):
     '''Wraps webcommands.changeset turning off keyword expansion.'''
     kwtools['templater'].matcher = util.never
-    return web.changeset(tmpl, web.changectx(req))
+    return web_changeset(web, req, tmpl)
 
 def _kwweb_filediff(web, req, tmpl):
     '''Wraps webcommands.filediff turning off keyword expansion.'''
     kwtools['templater'].matcher = util.never
-    return web.filediff(tmpl, web.filectx(req))
+    return web_filediff(web, req, tmpl)
 
 def _kwdispatch_parse(ui, args):
     '''Monkeypatch dispatch._parse to obtain running hg command.'''

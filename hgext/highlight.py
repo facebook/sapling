@@ -31,7 +31,7 @@ demandimport.ignore.extend(['pkgutil',
                             'pkg_resources',
                             '__main__',])
 
-from mercurial.hgweb.hgweb_mod import hgweb
+from mercurial.hgweb import webcommands, webutil
 from mercurial import util
 from mercurial.templatefilters import filters
 
@@ -79,20 +79,19 @@ def pygmentize(self, tmpl, fctx, field):
     newl = oldl.replace('line|escape', 'line|colorize')
     tmpl.cache[field] = newl
 
-def filerevision_highlight(self, tmpl, fctx):
-    pygmentize(self, tmpl, fctx, 'fileline')
+web_filerevision = webcommands._filerevision
+web_annotate = webcommands.annotate
 
-    return realrevision(self, tmpl, fctx)
+def filerevision_highlight(web, tmpl, fctx):
+    pygmentize(web, tmpl, fctx, 'fileline')
+    return web_filerevision(web, tmpl, fctx)
 
-def fileannotate_highlight(self, tmpl, fctx):
-    pygmentize(self, tmpl, fctx, 'annotateline')
-
-    return realannotate(self, tmpl, fctx)
+def annotate_highlight(web, req, tmpl):
+    fctx = webutil.filectx(web.repo, req)
+    pygmentize(web, tmpl, fctx, 'annotateline')
+    return web_annotate(web, req, tmpl)
 
 # monkeypatch in the new version
-# should be safer than overriding the method in a derived class
-# and then patching the class
-realrevision = hgweb.filerevision
-hgweb.filerevision = filerevision_highlight
-realannotate = hgweb.fileannotate
-hgweb.fileannotate = fileannotate_highlight
+
+webcommands._filerevision = filerevision_highlight
+webcommands.annotate = annotate_highlight
