@@ -1,0 +1,76 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" svn svn-bindings || exit 80
+
+fix_path()
+{
+    tr '\\' /
+}
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+echo "hgext.graphlog =" >> $HGRCPATH
+
+svnadmin create svn-repo
+
+svnpath=`pwd | fix_path`
+# SVN wants all paths to start with a slash. Unfortunately,
+# Windows ones don't. Handle that.
+expr $svnpath : "\/" > /dev/null
+if [ $? -ne 0 ]; then
+    svnpath='/'$svnpath
+fi
+
+echo % initial svn import
+mkdir projA
+cd projA
+mkdir trunk
+mkdir branches
+mkdir tags
+mkdir unrelated
+cd ..
+
+svnurl=file://$svnpath/svn-repo/projA
+svn import -m "init projA" projA $svnurl | fix_path
+
+echo % update svn repository
+svn co $svnurl A | fix_path
+cd A
+echo a > trunk/a
+svn add trunk/a
+svn ci -m adda
+echo a >> trunk/a
+svn ci -m changea
+echo a >> trunk/a
+svn ci -m changea2
+# Add an unrelated commit to test that tags are bound to the
+# correct "from" revision and not a dummy one
+echo a >> unrelated/dummy
+svn add unrelated/dummy
+svn ci -m unrelatedchange
+echo % tag current revision
+svn up
+svn copy trunk tags/trunk.v1
+svn copy trunk tags/trunk.badtag
+svn ci -m "tagging trunk.v1 trunk.badtag"
+echo a >> trunk/a
+svn ci -m changea3
+echo % fix the bad tag
+# trunk.badtag should not show in converted tags
+svn up
+svn mv tags/trunk.badtag tags/trunk.goodtag
+svn ci -m "fix trunk.badtag"
+cd ..
+
+echo % convert
+hg convert --datesort $svnurl A-hg
+
+cd A-hg
+hg glog --template '#rev# #desc|firstline# tags: #tags#\n'
+hg tags -q
+cd ..
+
+echo % convert without tags
+hg convert --datesort --config convert.svn.tags= $svnurl A-notags-hg
+hg -R a-notags-hg tags -q
+
