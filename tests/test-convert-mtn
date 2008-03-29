@@ -58,6 +58,15 @@ mtn ci -m update2
 # Test directory move
 mtn mv dir dir2
 mtn ci -m movedir
+# Test directory removal with empty directory
+mkdir dir2/dir
+mkdir dir2/dir/subdir
+echo f > dir2/dir/subdir/f
+mkdir dir2/dir/emptydir
+mtn add -R dir2/dir
+mtn ci -m emptydir
+mtn drop -R dir2/dir
+mtn ci -m dropdirectory
 cd ..
 
 echo % convert incrementally
@@ -75,4 +84,6 @@ echo % manifest
 hg manifest
 echo % contents
 cat dir2/a
+test -d dir2/dir && echo 'removed dir2/dir is still there!'
+exit 0
 
