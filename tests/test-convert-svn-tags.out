@@ -1,0 +1,55 @@
+% initial svn import
+Adding         projA/trunk
+Adding         projA/branches
+Adding         projA/tags
+
+Committed revision 1.
+% update svn repository
+A    A/trunk
+A    A/branches
+A    A/tags
+Checked out revision 1.
+A         trunk/a
+Adding         trunk/a
+Transmitting file data .
+Committed revision 2.
+Sending        trunk/a
+Transmitting file data .
+Committed revision 3.
+Sending        trunk/a
+Transmitting file data .
+Committed revision 4.
+% tag current revision
+At revision 4.
+A         tags/trunk.v1
+Adding         tags/trunk.v1
+
+Committed revision 5.
+Sending        trunk/a
+Transmitting file data .
+Committed revision 6.
+% convert
+initializing destination A-hg repository
+scanning source...
+sorting...
+converting...
+4 init projA
+3 adda
+2 changea
+1 changea2
+0 changea3
+updating tags
+o  5 update tags tags: tip
+|
+o  4 changea3 tags:
+|
+o  3 changea2 tags: trunk.v1
+|
+o  2 changea tags:
+|
+o  1 adda tags:
+|
+o  0 init projA tags:
+
+tip
+trunk.v1
