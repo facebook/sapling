@@ -185,8 +185,9 @@ def copies(repo, c1, c2, ca, checkdirs=False):
                 if f.startswith(d):
                     # new file added in a directory that was moved, move it
                     df = dirmove[d] + f[len(d):]
-                    copy[f] = df
-                    repo.ui.debug(_("  file %s -> %s\n") % (f, copy[f]))
+                    if df not in copy:
+                        copy[f] = df
+                        repo.ui.debug(_("  file %s -> %s\n") % (f, copy[f]))
                     break
 
     return copy, diverge
