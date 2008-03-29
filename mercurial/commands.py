@@ -227,7 +227,10 @@ def backout(ui, repo, node=None, rev=None, **opts):
             raise util.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
 
+    # the backout should appear on the same branch
+    branch = repo.dirstate.branch()
     hg.clean(repo, node, show_stats=False)
+    repo.dirstate.setbranch(branch)
     revert_opts = opts.copy()
     revert_opts['date'] = None
     revert_opts['all'] = True
