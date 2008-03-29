@@ -53,8 +53,8 @@ def _findoldnames(fctx, limit):
     old.sort()
     return [o[1] for o in old]
 
-def _symmetricdifference(repo, a, b):
-    """find revisions that are ancestors of a or b, but not both"""
+def _findlimit(repo, a, b):
+    "find the earliest revision that's an ancestor of a or b but not both"
     # basic idea:
     # - mark a and b with different sides
     # - if a parent's children are all on the same side, the parent is
@@ -62,11 +62,12 @@ def _symmetricdifference(repo, a, b):
     # - walk the graph in topological order with the help of a heap;
     #   - add unseen parents to side map
     #   - clear side of any parent that has children on different sides
-    #   - track number of unvisited nodes that might still be on a side
-    #   - quit when interesting nodes is zero
+    #   - track number of interesting revs that might still be on a side
+    #   - track the lowest interesting rev seen
+    #   - quit when interesting revs is zero
 
     cl = repo.changelog
-    working = cl.count()
+    working = cl.count() # pseudo rev for the working directory
     if a is None:
         a = working
     if b is None:
@@ -76,6 +77,7 @@ def _symmetricdifference(repo, a, b):
     visit = [-a, -b]
     heapq.heapify(visit)
     interesting = len(visit)
+    limit = working
 
     while interesting:
         r = -heapq.heappop(visit)
@@ -95,8 +97,9 @@ def _symmetricdifference(repo, a, b):
                 side[p] = 0
                 interesting -= 1
         if side[r]:
+            limit = r # lowest rev visited
             interesting -= 1
-            yield r
+    return limit
 
 def copies(repo, c1, c2, ca, checkdirs=False):
     """
@@ -106,7 +109,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
     if not c1 or not c2 or c1 == c2:
         return {}, {}
 
-    limit = min(_symmetricdifference(repo, c1.rev(), c2.rev()))
+    limit = _findlimit(repo, c1.rev(), c2.rev())
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()
