@@ -97,7 +97,7 @@ def copies(repo, c1, c2, ca):
                     c2 = ctx(of, m2[of])
                     ca = c1.ancestor(c2)
                     # related and named changed on only one side?
-                    if ca and ca.path() == f or ca.path() == c2.path():
+                    if ca and (ca.path() == f or ca.path() == c2.path()):
                         if c1 != ca or c2 != ca: # merge needed?
                             copy[f] = of
             elif of in ma:
