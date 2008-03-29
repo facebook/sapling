@@ -263,7 +263,7 @@ class svn_source(converter_source):
         rev = optrev(self.last_changed)
         oldmodule = ''
         trunk = getcfgpath('trunk', rev)
-        tags = getcfgpath('tags', rev)
+        self.tags = getcfgpath('tags', rev)
         branches = getcfgpath('branches', rev)
 
         # If the project has a trunk or branches, we will extract heads
@@ -278,7 +278,8 @@ class svn_source(converter_source):
 
         # First head in the list is the module's head
         self.heads = [self.head]
-        self.tags = '%s/%s' % (oldmodule , (tags or 'tags'))
+        if self.tags is not None:
+            self.tags = '%s/%s' % (oldmodule , (self.tags or 'tags'))
 
         # Check if branches bring a few more heads to the list
         if branches:

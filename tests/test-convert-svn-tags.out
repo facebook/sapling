@@ -71,3 +71,14 @@ o  0 init projA tags:
 tip
 trunk.v1
 trunk.goodtag
+% convert without tags
+initializing destination A-notags-hg repository
+scanning source...
+sorting...
+converting...
+4 init projA
+3 adda
+2 changea
+1 changea2
+0 changea3
+tip

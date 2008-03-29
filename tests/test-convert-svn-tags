@@ -69,3 +69,8 @@ cd A-hg
 hg glog --template '#rev# #desc|firstline# tags: #tags#\n'
 hg tags -q
 cd ..
+
+echo % convert without tags
+hg convert --datesort --config convert.svn.tags= $svnurl A-notags-hg
+hg -R a-notags-hg tags -q
+
