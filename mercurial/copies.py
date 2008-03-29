@@ -35,22 +35,23 @@ def _findoldnames(fctx, limit):
     old = {}
     seen = {}
     orig = fctx.path()
-    visit = [fctx]
+    visit = [(fctx, 0)]
     while visit:
-        fc = visit.pop()
+        fc, depth = visit.pop()
         s = str(fc)
         if s in seen:
             continue
         seen[s] = 1
         if fc.path() != orig and fc.path() not in old:
-            old[fc.path()] = 1
+            old[fc.path()] = (depth, fc.path()) # remember depth
         if fc.rev() < limit and fc.rev() is not None:
             continue
-        visit += fc.parents()
+        visit += [(p, depth - 1) for p in fc.parents()]
 
-    old = old.keys()
+    # return old names sorted by depth
+    old = old.values()
     old.sort()
-    return old
+    return [o[1] for o in old]
 
 def copies(repo, c1, c2, ca):
     """
