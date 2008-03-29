@@ -268,12 +268,7 @@ def create_server(ui, repo):
 
             self.addr, self.port = self.socket.getsockname()[0:2]
             self.prefix = prefix
-
             self.fqaddr = socket.getfqdn(address)
-            try:
-                socket.getaddrbyhost(self.fqaddr)
-            except:
-                fqaddr = address
 
     class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)
