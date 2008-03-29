@@ -53,7 +53,7 @@ def _findoldnames(fctx, limit):
     old.sort()
     return [o[1] for o in old]
 
-def copies(repo, c1, c2, ca):
+def copies(repo, c1, c2, ca, checkdirs=False):
     """
     Find moves and copies between context c1 and c2
     """
@@ -104,9 +104,6 @@ def copies(repo, c1, c2, ca):
             elif of in ma:
                 diverge.setdefault(of, []).append(f)
 
-    if not repo.ui.configbool("merge", "followcopies", True):
-        return {}, {}
-
     repo.ui.debug(_("  searching for copies back to rev %d\n") % limit)
 
     u1 = _nonoverlap(m1, m2, ma)
@@ -140,7 +137,7 @@ def copies(repo, c1, c2, ca):
             repo.ui.debug(_("   %s -> %s %s\n") % (f, fullcopy[f], note))
     del diverge2
 
-    if not fullcopy or not repo.ui.configbool("merge", "followdirs", True):
+    if not fullcopy or not checkdirs:
         return copy, diverge
 
     repo.ui.debug(_("  checking for directory renames\n"))
@@ -187,7 +184,8 @@ def copies(repo, c1, c2, ca):
             for d in dirmove:
                 if f.startswith(d):
                     # new file added in a directory that was moved, move it
-                    copy[f] = dirmove[d] + f[len(d):]
+                    df = dirmove[d] + f[len(d):]
+                    copy[f] = df
                     repo.ui.debug(_("  file %s -> %s\n") % (f, copy[f]))
                     break
 
