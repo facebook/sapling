@@ -107,28 +107,24 @@ def symmetricdifference(a, b, pfunc):
 
     visit = [-a, -b]
     heapq.heapify(visit)
-    n_wanted = len(visit)
-    ret = []
+    interesting = len(visit)
 
-    while n_wanted:
+    while interesting:
         r = -heapq.heappop(visit)
-        wanted = colors[r] != ALLCOLORS
-        n_wanted -= wanted
-        if wanted:
-            ret.append(r)
+        if colors[r] != ALLCOLORS:
+            interesting -= 1
 
         for p in pfunc(r):
             if p not in colors:
                 # first time we see p; add it to visit
-                n_wanted += wanted
                 colors[p] = colors[r]
+                if colors[p] != ALLCOLORS:
+                    interesting += 1
                 heapq.heappush(visit, -p)
             elif colors[p] != ALLCOLORS and colors[p] != colors[r]:
                 # at first we thought we wanted p, but now
                 # we know we don't really want it
-                n_wanted -= 1
                 colors[p] |= colors[r]
+                interesting -= 1
 
-        del colors[r]
-
-    return ret
+    return [r for r in colors if colors[r] != ALLCOLORS]
