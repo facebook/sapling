@@ -88,43 +88,36 @@ def symmetricdifference(a, b, pfunc):
     I.e. revisions that are ancestors of a or b, but not both.
     """
     # basic idea:
-    # - mark a and b with different colors
+    # - mark a and b with different sides
+    # - if a parent's children are all on the same side, the parent is
+    #   on that side, otherwise it is on no side
     # - walk the graph in topological order with the help of a heap;
-    #   for each revision r:
-    #     - if r has only one color, we want to return it
-    #     - add colors[r] to its parents
-    #
-    # We keep track of the number of revisions in the heap that
-    # we may be interested in.  We stop walking the graph as soon
-    # as this number reaches 0.
+    #   - add unseen parents to side map
+    #   - clear side of any parent that has children on different sides
+    #   - track number of unvisited nodes that might still be on a side
+    #   - quit when interesting nodes is zero
     if a == b:
         return [a]
 
-    WHITE = 1
-    BLACK = 2
-    ALLCOLORS = WHITE | BLACK
-    colors = {a: WHITE, b: BLACK}
-
+    side = {a: -1, b: 1}
     visit = [-a, -b]
     heapq.heapify(visit)
     interesting = len(visit)
 
     while interesting:
         r = -heapq.heappop(visit)
-        if colors[r] != ALLCOLORS:
+        if side[r]:
             interesting -= 1
-
         for p in pfunc(r):
-            if p not in colors:
+            if p not in side:
                 # first time we see p; add it to visit
-                colors[p] = colors[r]
-                if colors[p] != ALLCOLORS:
+                side[p] = side[r]
+                if side[p]:
                     interesting += 1
                 heapq.heappush(visit, -p)
-            elif colors[p] != ALLCOLORS and colors[p] != colors[r]:
-                # at first we thought we wanted p, but now
-                # we know we don't really want it
-                colors[p] |= colors[r]
+            elif side[p] and side[p] != side[r]:
+                # p was interesting but now we know better
+                side[p] = 0
                 interesting -= 1
 
-    return [r for r in colors if colors[r] != ALLCOLORS]
+    return [r for r in side if side[r]]
