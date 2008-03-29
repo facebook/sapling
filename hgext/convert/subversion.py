@@ -369,18 +369,58 @@ class svn_source(converter_source):
         if self.tags is None:
             return tags
 
-        start = self.revnum(self.head)
+        # svn tags are just a convention, project branches left in a
+        # 'tags' directory. There is no other relationship than
+        # ancestry, which is expensive to discover and makes them hard
+        # to update incrementally.  Worse, past revisions may be
+        # referenced by tags far away in the future, requiring a deep
+        # history traversal on every calculation.  Current code
+        # performs a single backward traversal, tracking moves within
+        # the tags directory (tag renaming) and recording a new tag
+        # everytime a project is copied from outside the tags
+        # directory. It also lists deleted tags, this behaviour may
+        # change in the future.
+        pendings = []
+        tagspath = self.tags
+        start = svn.ra.get_latest_revnum(self.ra)
         try:
-            for entry in get_log(self.url, [self.tags], self.startrev, start):
-                orig_paths, revnum, author, date, message = entry
-                for path in orig_paths:
-                    if not path.startswith(self.tags+'/'):
+            for entry in get_log(self.url, [self.tags], start, self.startrev):
+                origpaths, revnum, author, date, message = entry
+                copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p,e 
+                          in origpaths.iteritems() if e.copyfrom_path]
+                copies.sort()
+                # Apply moves/copies from more specific to general
+                copies.reverse()
+
+                srctagspath = tagspath
+                if copies and copies[-1][2] == tagspath:
+                    # Track tags directory moves
+                    srctagspath = copies.pop()[0]
+
+                for source, sourcerev, dest in copies:
+                    if not dest.startswith(tagspath + '/'):
                         continue
-                    ent = orig_paths[path]
-                    source = ent.copyfrom_path
-                    rev = ent.copyfrom_rev
-                    tag = path.split('/')[-1]
-                    tags[tag] = self.revid(rev, module=source)
+                    for tag in pendings:
+                        if tag[0].startswith(dest):
+                            tagpath = source + tag[0][len(dest):]
+                            tag[:2] = [tagpath, sourcerev]
+                            break
+                    else:
+                        pendings.append([source, sourcerev, dest.split('/')[-1]])
+
+                # Tell tag renamings from tag creations
+                remainings = []
+                for source, sourcerev, tagname in pendings:
+                    if source.startswith(srctagspath):
+                        remainings.append([source, sourcerev, tagname])
+                        continue
+                    # From revision may be fake, get one with changes
+                    tagid = self.latest(source, sourcerev)
+                    if tagid:
+                        tags[tagname] = tagid
+                pendings = remainings
+                tagspath = srctagspath
+
         except SubversionException, (inst, num):
             self.ui.note('no tags found at revision %d\n' % start)
         return tags
