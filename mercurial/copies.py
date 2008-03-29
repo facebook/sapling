@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev
 from i18n import _
-import util, ancestor
+import util, heapq
 
 def _nonoverlap(d1, d2, d3):
     "Return list of elements in d1 not in d2 or d3"
@@ -53,6 +53,43 @@ def _findoldnames(fctx, limit):
     old.sort()
     return [o[1] for o in old]
 
+def _symmetricdifference(a, b, pfunc):
+    """find revisions that are ancestors of a or b, but not both"""
+    # basic idea:
+    # - mark a and b with different sides
+    # - if a parent's children are all on the same side, the parent is
+    #   on that side, otherwise it is on no side
+    # - walk the graph in topological order with the help of a heap;
+    #   - add unseen parents to side map
+    #   - clear side of any parent that has children on different sides
+    #   - track number of unvisited nodes that might still be on a side
+    #   - quit when interesting nodes is zero
+    if a == b:
+        return [a]
+
+    side = {a: -1, b: 1}
+    visit = [-a, -b]
+    heapq.heapify(visit)
+    interesting = len(visit)
+
+    while interesting:
+        r = -heapq.heappop(visit)
+        if side[r]:
+            interesting -= 1
+        for p in pfunc(r):
+            if p not in side:
+                # first time we see p; add it to visit
+                side[p] = side[r]
+                if side[p]:
+                    interesting += 1
+                heapq.heappush(visit, -p)
+            elif side[p] and side[p] != side[r]:
+                # p was interesting but now we know better
+                side[p] = 0
+                interesting -= 1
+
+    return [r for r in side if side[r]]
+
 def copies(repo, c1, c2, ca, checkdirs=False):
     """
     Find moves and copies between context c1 and c2
@@ -69,7 +106,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
     pr = repo.changelog.parentrevs
     def parents(rev):
         return [p for p in pr(rev) if p != nullrev]
-    limit = min(ancestor.symmetricdifference(rev1, rev2, parents))
+    limit = min(_symmetricdifference(rev1, rev2, parents))
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()
