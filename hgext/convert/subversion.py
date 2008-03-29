@@ -95,6 +95,10 @@ def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=Tr
     else:
         pickle.dump(None, fp, protocol)
     fp.close()
+    # With large history, cleanup process goes crazy and suddenly
+    # consumes *huge* amount of memory. The output file being closed,
+    # there is no need for clean termination.
+    os._exit(0)
 
 def debugsvnlog(ui, **opts):
     """Fetch SVN log in a subprocess and channel them back to parent to
