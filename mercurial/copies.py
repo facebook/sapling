@@ -53,7 +53,7 @@ def _findoldnames(fctx, limit):
     old.sort()
     return [o[1] for o in old]
 
-def _symmetricdifference(a, b, pfunc):
+def _symmetricdifference(repo, a, b):
     """find revisions that are ancestors of a or b, but not both"""
     # basic idea:
     # - mark a and b with different sides
@@ -64,8 +64,13 @@ def _symmetricdifference(a, b, pfunc):
     #   - clear side of any parent that has children on different sides
     #   - track number of unvisited nodes that might still be on a side
     #   - quit when interesting nodes is zero
-    if a == b:
-        return [a]
+
+    cl = repo.changelog
+    working = cl.count()
+    if a is None:
+        a = working
+    if b is None:
+        b = working
 
     side = {a: -1, b: 1}
     visit = [-a, -b]
@@ -74,9 +79,11 @@ def _symmetricdifference(a, b, pfunc):
 
     while interesting:
         r = -heapq.heappop(visit)
-        if side[r]:
-            interesting -= 1
-        for p in pfunc(r):
+        if r == working:
+            parents = [cl.rev(p) for p in repo.dirstate.parents()]
+        else:
+            parents = cl.parentrevs(r)
+        for p in parents:
             if p not in side:
                 # first time we see p; add it to visit
                 side[p] = side[r]
@@ -87,26 +94,19 @@ def _symmetricdifference(a, b, pfunc):
                 # p was interesting but now we know better
                 side[p] = 0
                 interesting -= 1
-
-    return [r for r in side if side[r]]
+        if side[r]:
+            interesting -= 1
+            yield r
 
 def copies(repo, c1, c2, ca, checkdirs=False):
     """
     Find moves and copies between context c1 and c2
     """
     # avoid silly behavior for update from empty dir
-    if not c1 or not c2:
+    if not c1 or not c2 or c1 == c2:
         return {}, {}
 
-    rev1, rev2 = c1.rev(), c2.rev()
-    if rev1 is None: # c1 is a workingctx
-        rev1 = c1.parents()[0].rev()
-    if rev2 is None: # c2 is a workingctx
-        rev2 = c2.parents()[0].rev()
-    pr = repo.changelog.parentrevs
-    def parents(rev):
-        return [p for p in pr(rev) if p != nullrev]
-    limit = min(_symmetricdifference(rev1, rev2, parents))
+    limit = min(_symmetricdifference(repo, c1.rev(), c2.rev()))
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()
