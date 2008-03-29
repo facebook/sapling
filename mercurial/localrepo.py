@@ -879,6 +879,7 @@ class localrepository(repo.repository):
                 if text:
                     edittext.append(text)
                 edittext.append("")
+                edittext.append("") # Empty line between message and comments.
                 edittext.append(_("HG: Enter commit message."
                                   "  Lines beginning with 'HG:' are removed."))
                 edittext.append("HG: --")
