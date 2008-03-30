@@ -117,7 +117,7 @@ def changectx(repo, req):
     elif 'manifest' in req.form:
         changeid = req.form['manifest'][0]
     else:
-        changeid = self.repo.changelog.count() - 1
+        changeid = repo.changelog.count() - 1
 
     try:
         ctx = repo.changectx(changeid)
