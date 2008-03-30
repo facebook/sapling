@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import hex, nullid, nullrev, short
-from repo import RepoError
+from repo import RepoError, NoCapability
 from i18n import _
 import os, re, sys, urllib
 import hg, util, revlog, bundlerepo, extensions, copies
@@ -2045,7 +2045,7 @@ def pull(ui, repo, source="default", **opts):
     if revs:
         try:
             revs = [other.lookup(rev) for rev in revs]
-        except repo.NoCapability:
+        except NoCapability:
             error = _("Other repository doesn't support revision lookup, "
                       "so a rev cannot be specified.")
             raise util.Abort(error)
