@@ -14,6 +14,9 @@ cd ..
 hg init copy
 cd copy
 
+echo '% pull a missing revision'
+hg pull -qr missing ../repo
+
 echo '% pull -r 0'
 hg pull -qr 0 ../repo
 hg log
