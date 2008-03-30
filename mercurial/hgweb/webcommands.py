@@ -8,7 +8,7 @@
 import os, mimetypes, re
 import webutil
 from mercurial import revlog, archival
-from mercurial.node import hex, nullid
+from mercurial.node import short, hex, nullid
 from mercurial.util import binary
 from mercurial.repo import RepoError
 from common import paritygen, staticfile, get_contact, ErrorResponse
