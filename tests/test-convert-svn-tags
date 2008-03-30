@@ -72,5 +72,5 @@ cd ..
 
 echo % convert without tags
 hg convert --datesort --config convert.svn.tags= $svnurl A-notags-hg
-hg -R a-notags-hg tags -q
+hg -R A-notags-hg tags -q
 
