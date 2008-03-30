@@ -72,7 +72,6 @@ def _collectextranodes(repo, files, link):
 def strip(ui, repo, node, backup="all"):
     cl = repo.changelog
     # TODO delete the undo files, and handle undo of merge sets
-    pp = cl.parents(node)
     striprev = cl.rev(node)
 
     # Some revisions with rev > striprev may not be descendants of striprev.
