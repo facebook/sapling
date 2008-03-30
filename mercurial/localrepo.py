@@ -2075,7 +2075,7 @@ class localrepository(repo.repository):
         l = fp.readline()
         try:
             total_files, total_bytes = map(int, l.split(' ', 1))
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise util.UnexpectedOutput(
                 _('Unexpected response from remote server:'), l)
         self.ui.status(_('%d files to transfer, %s of data\n') %
