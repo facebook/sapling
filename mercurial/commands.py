@@ -2527,8 +2527,17 @@ def serve(ui, repo, **opts):
             if port == ':80':
                 port = ''
 
-            ui.status(_('listening at http://%s%s/%s (%s:%d)\n') %
-                      (self.httpd.fqaddr, port, prefix, self.httpd.addr, self.httpd.port))
+            bindaddr = self.httpd.addr
+            if bindaddr == '0.0.0.0':
+                bindaddr = '*'
+            elif ':' in bindaddr: # IPv6
+                bindaddr = '[%s]' % bindaddr
+
+            fqaddr = self.httpd.fqaddr
+            if ':' in fqaddr:
+                fqaddr = '[%s]' % fqaddr
+            ui.status(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
+                      (fqaddr, port, prefix, bindaddr, self.httpd.port))
 
         def run(self):
             self.httpd.serve_forever()
