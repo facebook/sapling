@@ -108,6 +108,8 @@ kwtools = {'templater': None, 'hgcmd': None}
 _patchfile_init = patch.patchfile.__init__
 _patch_diff = patch.diff
 _dispatch_parse = dispatch._parse
+_webcommands_changeset = webcommands.changeset
+_webcommands_filediff = webcommands.filediff
 
 def _kwpatchfile_init(self, ui, fname, missing=False):
     '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
@@ -128,21 +130,15 @@ def _kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
     _patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
                 fp=fp, changes=changes, opts=opts)
 
-# monkeypatching hgweb functions changeset and filediff
-# actual monkeypatching is done at the bottom of reposetup()
-
-web_changeset = webcommands.changeset
-web_filediff = webcommands.filediff
-
 def _kwweb_changeset(web, req, tmpl):
     '''Wraps webcommands.changeset turning off keyword expansion.'''
     kwtools['templater'].matcher = util.never
-    return web_changeset(web, req, tmpl)
+    return _webcommands_changeset(web, req, tmpl)
 
 def _kwweb_filediff(web, req, tmpl):
     '''Wraps webcommands.filediff turning off keyword expansion.'''
     kwtools['templater'].matcher = util.never
-    return web_filediff(web, req, tmpl)
+    return _webcommands_filediff(web, req, tmpl)
 
 def _kwdispatch_parse(ui, args):
     '''Monkeypatch dispatch._parse to obtain running hg command.'''
@@ -151,6 +147,7 @@ def _kwdispatch_parse(ui, args):
     return cmd, func, args, options, cmdoptions
 
 # dispatch._parse is run before reposetup, so wrap it here
+# all other actual monkey patching is done at end of reposetup
 dispatch._parse = _kwdispatch_parse
 
 
