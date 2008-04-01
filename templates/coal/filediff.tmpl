@@ -1,0 +1,72 @@
+{header}
+<title>{repo|escape}: {file|escape} diff</title>
+</head>
+<body>
+
+<div class="menu">
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="{staticurl}hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+<li><a href="{url}shortlog/{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+</ul>
+<ul>
+<li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+</ul>
+<ul>
+<li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
+<li class="active">diff</li>
+<li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
+<li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file log</a></li>
+<li><a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a></li>
+</ul>
+</div>
+
+<div class="main">
+<h2>{repo|escape}</h2>
+<h3>diff {file|escape} @ {node|short}</h3>
+
+<form class="search" action="{url}log">
+{sessionvars%hiddenformentry}
+<p><input name="rev" id="search1" type="text" size="30"></p>
+</form>
+
+<div class="description">{desc|strip|escape|addbreaks}</div>
+
+<table id="changesetEntry">
+<tr>
+ <th>author</th>
+ <td>{author|obfuscate}</td>
+</tr>
+<tr>
+ <th>date</th>
+ <td>{date|date} ({date|age} ago)</td>
+</tr>
+<tr>
+ <th>parents</th>
+ <td>{parent%filerevparent}</td>
+</tr>
+<tr>
+ <th>children</th>
+ <td>{child%filerevchild}</td>
+</tr>
+{changesettag}
+</table>
+
+<div class="overflow">
+<table class="bigtable">
+<tr>
+ <th class="lineno">Line</th>
+ <th class="source">Diff</th>
+</tr>
+<table>
+{diff}
+</div>
+</div>	
+
+{footer}
+
+
