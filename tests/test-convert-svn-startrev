@@ -42,16 +42,16 @@ svn ci -m createab
 svn rm trunk/b
 svn ci -m removeb
 svn up
-echo a >> trunk/a
+"$TESTDIR/svn-safe-append.py" a trunk/a
 svn ci -m changeaa
 
 echo % branch
 svn up
 svn copy trunk branches/branch1
-echo a >> branches/branch1/a
+"$TESTDIR/svn-safe-append.py" a branches/branch1/a
 svn ci -m "branch, changeaaa"
 
-echo a >> branches/branch1/a
+"$TESTDIR/svn-safe-append.py" a branches/branch1/a
 echo c > branches/branch1/c
 svn add branches/branch1/c
 svn ci -m "addc,changeaaaa"

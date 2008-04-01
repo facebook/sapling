@@ -39,13 +39,13 @@ cd A
 echo a > trunk/a
 svn add trunk/a
 svn ci -m adda
-echo a >> trunk/a
+"$TESTDIR/svn-safe-append.py" a trunk/a
 svn ci -m changea
-echo a >> trunk/a
+"$TESTDIR/svn-safe-append.py" a trunk/a
 svn ci -m changea2
 # Add an unrelated commit to test that tags are bound to the
 # correct "from" revision and not a dummy one
-echo a >> unrelated/dummy
+"$TESTDIR/svn-safe-append.py" a unrelated/dummy
 svn add unrelated/dummy
 svn ci -m unrelatedchange
 echo % tag current revision
@@ -53,7 +53,7 @@ svn up
 svn copy trunk tags/trunk.v1
 svn copy trunk tags/trunk.badtag
 svn ci -m "tagging trunk.v1 trunk.badtag"
-echo a >> trunk/a
+"$TESTDIR/svn-safe-append.py" a trunk/a
 svn ci -m changea3
 echo % fix the bad tag
 # trunk.badtag should not show in converted tags

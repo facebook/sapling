@@ -48,25 +48,25 @@ svn ci -m "branch trunk, remove letter3"
 svn up
 
 echo % update trunk
-echo "what can I say ?" >> trunk/letter.txt
+"$TESTDIR/svn-safe-append.py" "what can I say ?" trunk/letter.txt
 svn ci -m "change letter"
 
 echo % update old branch
-echo "what's up ?" >> branches/old/letter2.txt
+"$TESTDIR/svn-safe-append.py" "what's up ?" branches/old/letter2.txt
 svn ci -m "change letter2"
 
 echo % create a cross-branch revision
 svn move -m "move letter2" trunk/letter2.txt \
     branches/old/letter3.txt
-echo "I am fine" >> branches/old/letter3.txt
+"$TESTDIR/svn-safe-append.py" "I am fine" branches/old/letter3.txt
 svn ci -m "move and update letter3.txt"
 
 echo % update old branch again
-echo "bye" >> branches/old/letter2.txt
+"$TESTDIR/svn-safe-append.py" "bye" branches/old/letter2.txt
 svn ci -m "change letter2 again"
 
 echo % update trunk again
-echo "how are you ?" >> trunk/letter.txt
+"$TESTDIR/svn-safe-append.py" "how are you ?" trunk/letter.txt
 svn ci -m "last change to letter"
 cd ..
 

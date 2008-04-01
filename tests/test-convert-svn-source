@@ -41,12 +41,12 @@ echo hello > letter.txt
 svn add letter.txt
 svn ci -m hello
 
-echo world >> letter.txt
+"$TESTDIR/svn-safe-append.py" world letter.txt
 svn ci -m world
 
 svn copy -m "tag v0.1" $svnurl/trunk $svnurl/tags/v0.1
 
-echo 'nice day today!' >> letter.txt
+"$TESTDIR/svn-safe-append.py" 'nice day today!' letter.txt
 svn ci -m "nice day"
 cd ..
 
@@ -55,14 +55,14 @@ hg convert $svnurl B-hg
 
 echo % update svn repository again
 cd B
-echo "see second letter" >> letter.txt
+"$TESTDIR/svn-safe-append.py" "see second letter" letter.txt
 echo "nice to meet you" > letter2.txt
 svn add letter2.txt
 svn ci -m "second letter"
 
 svn copy -m "tag v0.2" $svnurl/trunk $svnurl/tags/v0.2
 
-echo "blah-blah-blah" >> letter2.txt
+"$TESTDIR/svn-safe-append.py" "blah-blah-blah" letter2.txt
 svn ci -m "work in progress"
 cd ..
 
