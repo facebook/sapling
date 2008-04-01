@@ -38,8 +38,8 @@ svn import -m "init projA" projA $svnurl | fix_path
 echo % update svn repository
 svn co $svnurl A | fix_path
 cd A
-echo a >> trunk/a
-echo c >> trunk/d1/c
+"$TESTDIR/svn-safe-append.py" a trunk/a
+"$TESTDIR/svn-safe-append.py" c trunk/d1/c
 svn ci -m commitbeforemove
 svn mv $svnurl/trunk $svnurl/subproject -m movedtrunk
 svn up
@@ -51,7 +51,7 @@ svn add subproject/branches
 svn ci -m createbranches
 svn mv $svnurl/subproject/d1 $svnurl/subproject/trunk/d1 -m moved1
 svn up
-echo b >> subproject/trunk/d1/b
+"$TESTDIR/svn-safe-append.py" b subproject/trunk/d1/b
 svn ci -m changeb
 svn mv $svnurl/subproject/trunk/d1 $svnurl/subproject/branches/d1 -m moved1again
 cd ..

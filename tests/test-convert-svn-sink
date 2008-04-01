@@ -32,7 +32,7 @@ echo b > a/d1/d2/b
 echo % add
 hg --cwd a ci -d '0 0' -A -m 'add a file'
 
-echo a >> a/a
+"$TESTDIR/svn-safe-append.py" a a/a
 echo % modify
 hg --cwd a ci -d '1 0' -m 'modify a file'
 hg --cwd a tip -q
@@ -107,21 +107,21 @@ hg init b
 echo base > b/b
 hg --cwd b ci -d '0 0' -Ambase
 
-echo left-1 >> b/b
+"$TESTDIR/svn-safe-append.py" left-1 b/b
 echo left-1 > b/left-1
 hg --cwd b ci -d '1 0' -Amleft-1
 
-echo left-2 >> b/b
+"$TESTDIR/svn-safe-append.py" left-2 b/b
 echo left-2 > b/left-2
 hg --cwd b ci -d '2 0' -Amleft-2
 
 hg --cwd b up 0
 
-echo right-1 >> b/b
+"$TESTDIR/svn-safe-append.py" right-1 b/b
 echo right-1 > b/right-1
 hg --cwd b ci -d '3 0' -Amright-1
 
-echo right-2 >> b/b
+"$TESTDIR/svn-safe-append.py" right-2 b/b
 echo right-2 > b/right-2
 hg --cwd b ci -d '4 0' -Amright-2
 
