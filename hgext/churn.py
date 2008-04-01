@@ -155,7 +155,7 @@ def churn(ui, repo, **opts):
 
         for l in f.readlines():
             l = l.strip()
-            alias, actual = l.split(" ")
+            alias, actual = l.split()
             aliases[alias] = actual
 
         return aliases

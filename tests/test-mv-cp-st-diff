@@ -11,12 +11,17 @@ cd t
 # set up a boring main branch
 add a a
 hg add a
+mkdir x
+add x/x x
+hg add x/x
 hg ci -m0
 
 add a m1
 hg ci -m1
 
 add a m2
+add x/y y1
+hg add x/y
 hg ci -m2
 
 show()
@@ -59,6 +64,7 @@ tb()
     echo
 }
 
+
 tb "add a a1" "add a a2" "hg mv a b" "rename in working dir"
 tb "add a a1" "add a a2" "hg cp a b" "copy in working dir" 
 tb "hg mv a b" "add b b1" "add b w" "single rename"
@@ -66,3 +72,5 @@ tb "hg cp a b" "add b b1" "add a w" "single copy"
 tb "hg mv a b" "hg mv b c" "hg mv c d" "rename chain"
 tb "hg cp a b" "hg cp b c" "hg cp c d" "copy chain"
 tb "add a a1" "hg mv a b" "hg mv b a" "circular rename"
+
+tb "hg mv x y" "add y/x x1" "add y/x x2" "directory move"
