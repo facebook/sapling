@@ -281,6 +281,7 @@ merge-tools::
     myHtmlTool.priority = 1
 
   Supported arguments:
+
   priority;;
     The priority in which to evaluate this tool.
     Default: 0.
@@ -313,7 +314,7 @@ merge-tools::
   fixeol;;
     Attempt to fix up EOL changes caused by the merge tool.
     Default: False
-  gui:;
+  gui;;
     This tool requires a graphical interface to run. Default: False
   regkey;;
     Windows registry key which describes install location of this tool.
@@ -563,6 +564,7 @@ ui::
         fail to merge
 
     See the merge-tools section for more information on configuring tools.
+
   patch;;
     command to use to apply patches. Look for 'gpatch' or 'patch' in PATH if
     unset.
