@@ -438,7 +438,7 @@ def filediff(web, req, tmpl):
                 date=fctx.date(),
                 desc=fctx.description(),
                 author=fctx.user(),
-                rename=self.renamelink(fctx),
+                rename=webutil.renamelink(fctx),
                 branch=webutil.nodebranchnodefault(fctx),
                 parent=webutil.siblings(parents),
                 child=webutil.siblings(fctx.children()),
