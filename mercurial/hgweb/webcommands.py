@@ -85,7 +85,7 @@ def _filerevision(web, tmpl, fctx):
                 branch=webutil.nodebranchnodefault(fctx),
                 parent=webutil.siblings(fctx.parents()),
                 child=webutil.siblings(fctx.children()),
-                rename=webutil.renamelink(fl, n),
+                rename=webutil.renamelink(fctx),
                 permissions=fctx.manifest().flags(f))
 
 def file(web, req, tmpl):
@@ -215,7 +215,7 @@ def changelog(web, req, tmpl, shortlog = False):
 
     return tmpl(shortlog and 'shortlog' or 'changelog',
                 changenav=changenav,
-                node=hex(cl.tip()),
+                node=hex(ctx.node()),
                 rev=pos, changesets=count,
                 entries=lambda **x: changelist(limit=0,**x),
                 latestentry=lambda **x: changelist(limit=1,**x),
@@ -435,6 +435,10 @@ def filediff(web, req, tmpl):
                 file=path,
                 node=hex(n),
                 rev=fctx.rev(),
+                date=fctx.date(),
+                desc=fctx.description(),
+                author=fctx.user(),
+                rename=self.renamelink(fctx),
                 branch=webutil.nodebranchnodefault(fctx),
                 parent=webutil.siblings(parents),
                 child=webutil.siblings(fctx.children()),
@@ -484,7 +488,7 @@ def annotate(web, req, tmpl):
                 author=fctx.user(),
                 date=fctx.date(),
                 desc=fctx.description(),
-                rename=webutil.renamelink(fl, n),
+                rename=webutil.renamelink(fctx),
                 branch=webutil.nodebranchnodefault(fctx),
                 parent=webutil.siblings(fctx.parents()),
                 child=webutil.siblings(fctx.children()),
@@ -515,7 +519,7 @@ def filelog(web, req, tmpl):
                          "node": hex(ctx.node()),
                          "author": ctx.user(),
                          "date": ctx.date(),
-                         "rename": webutil.renamelink(fl, n),
+                         "rename": webutil.renamelink(fctx),
                          "parent": webutil.siblings(fctx.parents()),
                          "child": webutil.siblings(fctx.children()),
                          "desc": ctx.description()})

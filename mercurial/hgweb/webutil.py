@@ -70,8 +70,8 @@ def siblings(siblings=[], hiderev=None, **args):
         d.update(args)
         yield d
 
-def renamelink(fl, node):
-    r = fl.renamed(node)
+def renamelink(fctx):
+    r = fctx.renamed(node)
     if r:
         return [dict(file=r[0], node=hex(r[1]))]
     return []
