@@ -30,6 +30,7 @@ rename to b
 A b
   a
 R a
+R x/y
 
 diff --git a/a b/b
 rename from a
@@ -43,6 +44,12 @@ rename to b
 +0
 +a1
 +a2
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - root to parent: --rev 0 --rev .
 M a
@@ -70,6 +77,7 @@ diff --git a/a b/a
 
 - branch to parent: --rev 2 --rev .
 M a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -81,9 +89,16 @@ diff --git a/a b/a
 +0
 +a1
 +a2
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - parent to branch: --rev . --rev 2
 M a
+A x/y
 
 diff --git a/a b/a
 --- a/a
@@ -95,6 +110,12 @@ diff --git a/a b/a
 -a2
 +m1
 +m2
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
 
 
 created new head
@@ -136,6 +157,7 @@ copy to b
 M a
 A b
   a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -159,6 +181,12 @@ copy to b
 +1
 +a1
 +a2
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - root to parent: --rev 0 --rev .
 M a
@@ -186,6 +214,7 @@ diff --git a/a b/a
 
 - branch to parent: --rev 2 --rev .
 M a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -197,9 +226,16 @@ diff --git a/a b/a
 +1
 +a1
 +a2
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - parent to branch: --rev . --rev 2
 M a
+A x/y
 
 diff --git a/a b/a
 --- a/a
@@ -211,6 +247,12 @@ diff --git a/a b/a
 -a2
 +m1
 +m2
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
 
 
 created new head
@@ -248,6 +290,7 @@ rename to b
 A b
   a
 R a
+R x/y
 
 diff --git a/a b/b
 rename from a
@@ -261,6 +304,12 @@ rename to b
 +2
 +b1
 +w
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - root to parent: --rev 0 --rev .
 A b
@@ -296,6 +345,7 @@ rename to a
 A b
   a
 R a
+R x/y
 
 diff --git a/a b/b
 rename from a
@@ -308,10 +358,17 @@ rename to b
 -m2
 +2
 +b1
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - parent to branch: --rev . --rev 2
 A a
   b
+A x/y
 R b
 
 diff --git a/b b/a
@@ -325,6 +382,12 @@ rename to a
 -b1
 +m1
 +m2
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
 
 
 created new head
@@ -367,6 +430,7 @@ copy to b
 M a
 A b
   a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -388,6 +452,12 @@ copy to b
 -m2
 +3
 +b1
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - root to parent: --rev 0 --rev .
 M a
@@ -433,6 +503,7 @@ deleted file mode 100644
 M a
 A b
   a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -453,9 +524,16 @@ copy to b
 -m2
 +3
 +b1
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - parent to branch: --rev . --rev 2
 M a
+A x/y
 R b
 
 diff --git a/a b/a
@@ -474,6 +552,12 @@ deleted file mode 100644
 -a
 -3
 -b1
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
 
 
 created new head
@@ -506,6 +590,7 @@ rename to d
 A d
   a
 R a
+R x/y
 
 diff --git a/a b/d
 rename from a
@@ -517,6 +602,12 @@ rename to d
 -m1
 -m2
 +4
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - root to parent: --rev 0 --rev .
 A c
@@ -550,6 +641,7 @@ rename to a
 A c
   a
 R a
+R x/y
 
 diff --git a/a b/c
 rename from a
@@ -561,10 +653,17 @@ rename to c
 -m1
 -m2
 +4
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - parent to branch: --rev . --rev 2
 A a
   c
+A x/y
 R c
 
 diff --git a/c b/a
@@ -577,6 +676,12 @@ rename to a
 -4
 +m1
 +m2
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
 
 
 created new head
@@ -638,6 +743,7 @@ A c
   a
 A d
   a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -677,6 +783,12 @@ copy to d
 -m1
 -m2
 +5
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - root to parent: --rev 0 --rev .
 M a
@@ -740,6 +852,7 @@ A b
   a
 A c
   a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -769,9 +882,16 @@ copy to c
 -m1
 -m2
 +5
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - parent to branch: --rev . --rev 2
 M a
+A x/y
 R b
 R c
 
@@ -797,6 +917,12 @@ deleted file mode 100644
 @@ -1,2 +0,0 @@
 -a
 -5
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
 
 
 created new head
@@ -824,6 +950,7 @@ diff --git a/a b/a
 
 - working to branch: --rev 2
 M a
+R x/y
 
 diff --git a/a b/a
 --- a/a
@@ -834,6 +961,12 @@ diff --git a/a b/a
 -m2
 +6
 +a1
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - root to parent: --rev 0 --rev .
 A b
@@ -869,6 +1002,7 @@ rename to a
 A b
   a
 R a
+R x/y
 
 diff --git a/a b/b
 rename from a
@@ -881,10 +1015,17 @@ rename to b
 -m2
 +6
 +a1
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
 
 - parent to branch: --rev . --rev 2
 A a
   b
+A x/y
 R b
 
 diff --git a/b b/a
@@ -898,5 +1039,182 @@ rename to a
 -a1
 +m1
 +m2
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
+
+
+created new head
+moving x/x to y/x
+** directory move **
+** hg mv x y / add y/x x1 / add y/x x2
+- working to parent: 
+M y/x
+
+diff --git a/y/x b/y/x
+--- a/y/x
++++ b/y/x
+@@ -1,2 +1,3 @@
+ x
+ x1
++x2
+
+- working to root: --rev 0
+M a
+A y/x
+  x/x
+R x/x
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++7
+diff --git a/x/x b/y/x
+rename from x/x
+rename to y/x
+--- a/x/x
++++ b/y/x
+@@ -1,1 +1,3 @@
+ x
++x1
++x2
+
+- working to branch: --rev 2
+M a
+A y/x
+  x/x
+R x/x
+R x/y
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,2 @@
+ a
+-m1
+-m2
++7
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
+diff --git a/x/x b/y/x
+rename from x/x
+rename to y/x
+--- a/x/x
++++ b/y/x
+@@ -1,1 +1,3 @@
+ x
++x1
++x2
+
+- root to parent: --rev 0 --rev .
+M a
+A y/x
+  x/x
+R x/x
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++7
+diff --git a/x/x b/y/x
+rename from x/x
+rename to y/x
+--- a/x/x
++++ b/y/x
+@@ -1,1 +1,2 @@
+ x
++x1
+
+- parent to root: --rev . --rev 0
+M a
+A x/x
+  y/x
+R y/x
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,2 +1,1 @@
+ a
+-7
+diff --git a/y/x b/x/x
+rename from y/x
+rename to x/x
+--- a/y/x
++++ b/x/x
+@@ -1,2 +1,1 @@
+ x
+-x1
+
+- branch to parent: --rev 2 --rev .
+M a
+A y/x
+  x/x
+R x/x
+R x/y
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,2 @@
+ a
+-m1
+-m2
++7
+diff --git a/x/y b/x/y
+deleted file mode 100644
+--- a/x/y
++++ /dev/null
+@@ -1,1 +0,0 @@
+-y1
+diff --git a/x/x b/y/x
+rename from x/x
+rename to y/x
+--- a/x/x
++++ b/y/x
+@@ -1,1 +1,2 @@
+ x
++x1
+
+- parent to branch: --rev . --rev 2
+M a
+A x/x
+  y/x
+A x/y
+R y/x
+
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,2 +1,3 @@
+ a
+-7
++m1
++m2
+diff --git a/y/x b/x/x
+rename from y/x
+rename to x/x
+--- a/y/x
++++ b/x/x
+@@ -1,2 +1,1 @@
+ x
+-x1
+diff --git a/x/y b/x/y
+new file mode 100644
+--- /dev/null
++++ b/x/y
+@@ -0,0 +1,1 @@
++y1
 
 

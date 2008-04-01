@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev
 from i18n import _
-import util, ancestor
+import util, heapq
 
 def _nonoverlap(d1, d2, d3):
     "Return list of elements in d1 not in d2 or d3"
@@ -35,40 +35,81 @@ def _findoldnames(fctx, limit):
     old = {}
     seen = {}
     orig = fctx.path()
-    visit = [fctx]
+    visit = [(fctx, 0)]
     while visit:
-        fc = visit.pop()
+        fc, depth = visit.pop()
         s = str(fc)
         if s in seen:
             continue
         seen[s] = 1
         if fc.path() != orig and fc.path() not in old:
-            old[fc.path()] = 1
+            old[fc.path()] = (depth, fc.path()) # remember depth
         if fc.rev() < limit and fc.rev() is not None:
             continue
-        visit += fc.parents()
+        visit += [(p, depth - 1) for p in fc.parents()]
 
-    old = old.keys()
+    # return old names sorted by depth
+    old = old.values()
     old.sort()
-    return old
+    return [o[1] for o in old]
 
-def copies(repo, c1, c2, ca):
+def _findlimit(repo, a, b):
+    "find the earliest revision that's an ancestor of a or b but not both"
+    # basic idea:
+    # - mark a and b with different sides
+    # - if a parent's children are all on the same side, the parent is
+    #   on that side, otherwise it is on no side
+    # - walk the graph in topological order with the help of a heap;
+    #   - add unseen parents to side map
+    #   - clear side of any parent that has children on different sides
+    #   - track number of interesting revs that might still be on a side
+    #   - track the lowest interesting rev seen
+    #   - quit when interesting revs is zero
+
+    cl = repo.changelog
+    working = cl.count() # pseudo rev for the working directory
+    if a is None:
+        a = working
+    if b is None:
+        b = working
+
+    side = {a: -1, b: 1}
+    visit = [-a, -b]
+    heapq.heapify(visit)
+    interesting = len(visit)
+    limit = working
+
+    while interesting:
+        r = -heapq.heappop(visit)
+        if r == working:
+            parents = [cl.rev(p) for p in repo.dirstate.parents()]
+        else:
+            parents = cl.parentrevs(r)
+        for p in parents:
+            if p not in side:
+                # first time we see p; add it to visit
+                side[p] = side[r]
+                if side[p]:
+                    interesting += 1
+                heapq.heappush(visit, -p)
+            elif side[p] and side[p] != side[r]:
+                # p was interesting but now we know better
+                side[p] = 0
+                interesting -= 1
+        if side[r]:
+            limit = r # lowest rev visited
+            interesting -= 1
+    return limit
+
+def copies(repo, c1, c2, ca, checkdirs=False):
     """
     Find moves and copies between context c1 and c2
     """
     # avoid silly behavior for update from empty dir
-    if not c1 or not c2:
+    if not c1 or not c2 or c1 == c2:
         return {}, {}
 
-    rev1, rev2 = c1.rev(), c2.rev()
-    if rev1 is None: # c1 is a workingctx
-        rev1 = c1.parents()[0].rev()
-    if rev2 is None: # c2 is a workingctx
-        rev2 = c2.parents()[0].rev()
-    pr = repo.changelog.parentrevs
-    def parents(rev):
-        return [p for p in pr(rev) if p != nullrev]
-    limit = min(ancestor.symmetricdifference(rev1, rev2, parents))
+    limit = _findlimit(repo, c1.rev(), c2.rev())
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()
@@ -97,14 +138,11 @@ def copies(repo, c1, c2, ca):
                     c2 = ctx(of, m2[of])
                     ca = c1.ancestor(c2)
                     # related and named changed on only one side?
-                    if ca and ca.path() == f or ca.path() == c2.path():
+                    if ca and (ca.path() == f or ca.path() == c2.path()):
                         if c1 != ca or c2 != ca: # merge needed?
                             copy[f] = of
             elif of in ma:
                 diverge.setdefault(of, []).append(f)
-
-    if not repo.ui.configbool("merge", "followcopies", True):
-        return {}, {}
 
     repo.ui.debug(_("  searching for copies back to rev %d\n") % limit)
 
@@ -139,7 +177,7 @@ def copies(repo, c1, c2, ca):
             repo.ui.debug(_("   %s -> %s %s\n") % (f, fullcopy[f], note))
     del diverge2
 
-    if not fullcopy or not repo.ui.configbool("merge", "followdirs", True):
+    if not fullcopy or not checkdirs:
         return copy, diverge
 
     repo.ui.debug(_("  checking for directory renames\n"))
@@ -186,8 +224,10 @@ def copies(repo, c1, c2, ca):
             for d in dirmove:
                 if f.startswith(d):
                     # new file added in a directory that was moved, move it
-                    copy[f] = dirmove[d] + f[len(d):]
-                    repo.ui.debug(_("  file %s -> %s\n") % (f, copy[f]))
+                    df = dirmove[d] + f[len(d):]
+                    if df not in copy:
+                        copy[f] = df
+                        repo.ui.debug(_("  file %s -> %s\n") % (f, copy[f]))
                     break
 
     return copy, diverge

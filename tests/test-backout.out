@@ -74,7 +74,7 @@ marked working directory as branch branch2
 adding file2
 removing file1
 created new head
-changeset 3:f1c642b1d8e5 backs out changeset 1:bf1602f437f3
+changeset 3:d4e8f6db59fb backs out changeset 1:bf1602f437f3
 the backout changeset is a new head - do not forget to merge
 (use "backout --merge" if you want to auto-merge)
 % on branch2 with branch1 not merged, so file1 should still exist:
@@ -85,10 +85,11 @@ C file2
 % on branch2 with branch1 merged, so file1 should be gone:
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-21d4dc6f9a41 (branch2) tip
+22149cdde76d (branch2) tip
 C default
 C file2
 % on branch1, so no file1 and file2:
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-f1c642b1d8e5 (branch1)
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+bf1602f437f3 (branch1)
 C default
+C file1
