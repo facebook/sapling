@@ -3,6 +3,7 @@
 </head>
 <body>
 
+<div class="container">
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
@@ -20,7 +21,7 @@
 <li class="active">file</li>
 <li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
 <li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
-<li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a></li>
+<li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file log</a></li>
 <li><a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a></li>
 </ul>
 </div>
@@ -66,7 +67,7 @@
 {text%fileline}
 </table>
 </div>
-
+</div>
 </div>
 
 {footer}
