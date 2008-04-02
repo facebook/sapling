@@ -20,8 +20,8 @@ searchentry = shortlogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
 
-direntry = '<tr class="parity{parity}"><td class="permissions">drwxr-xr-x</td><td class="date"></td><td class="size"></td><td class="name"><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}/</a></td></tr>'
-fileentry = '<tr class="parity{parity}"><td class="permissions">{permissions|permissions}&nbsp;</td><td class="date">{date|isodate}&nbsp;</td><td class="size">{size}&nbsp;</td><td clase="filename"><a href="{url}file/{node|short}/{file|urlescape}#l1{sessionvars%urlparameter}">{basename|escape}</a></td></tr>'
+direntry = '<tr class="fileline parity{parity}"><td class="name"><img src="{staticurl}coal-folder.png"> <a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}/</a><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr>'
+fileentry = '<tr class="fileline parity{parity}"><td clase="filename"><img src="{staticurl}coal-file.png"> <a href="{url}file/{node|short}/{file|urlescape}#l1{sessionvars%urlparameter}">{basename|escape}</a></td><td class="size">{size}</td><td class="permissions">{permissions|permissions}</td></tr>'
 
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl

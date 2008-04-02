@@ -34,16 +34,14 @@
 
 <table class="bigtable">
 <tr>
-  <th class="permissions">permissions</th>
-  <th class="date">date</th>
-  <th class="size">size</th>
   <th class="name">name</th>
+  <th class="size">size</th>
+  <th class="permissions">permissions</th>
 </tr>
-<tr class="parity{upparity}">
-  <td class="permissions">drwxr-xr-x
-  <td class="date">
-  <td class="size">
-  <td class="name"><a href="{url}file/{node|short}{up|urlescape}{sessionvars%urlparameter}">[up]</a>
+<tr class="fileline parity{upparity}">
+  <td class="name"><a href="{url}file/{node|short}{up|urlescape}{sessionvars%urlparameter}">[up]</a></td>
+  <td class="size"></td>
+  <td class="permissions">drwxr-xr-x</td>
 </tr>
 {dentries%direntry}
 {fentries%fileentry}
