@@ -61,7 +61,7 @@ body {
   right: 2em;
 }
 
-.menu a { color: black; }
+.menu a { color: black; display: block; }
 
 a { text-decoration:none; }
 .age { white-space:nowrap; }
@@ -130,9 +130,9 @@ h3 {
 .bigtable .lineno { width: 2em; text-align: right;}
 .bigtable .lineno a { color: #999; font-size: smaller; font-family: monospace;}
 .bigtable td.source { font-family: monospace; white-space: pre; }
-.bigtable .permissions { width: 8em; }
+.bigtable .permissions { width: 8em; text-align: left;}
 .bigtable td.permissions { font-family: monospace; }
-.bigtable .date { width: 10em; }
+.bigtable .date { width: 10em; text-align: left;}
 .bigtable .size { width: 5em; text-align: right; }
 .bigtable td.size { font-family: monospace; }
 .bigtable .annotate { text-align: right; padding-right: }

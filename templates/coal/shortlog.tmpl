@@ -16,19 +16,26 @@
 <li class="active">log</li>
 <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
 </ul>
+<ul>
+<li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+</ul>
+<ul>
+{archives%archiveentry}
+</ul>
 </div>
 
 <div class="main">
 
 <h2>{repo|escape}</h2>
-<h3>log @ {node|short}</h3>
+<h3>log</h3>
 
 <form class="search" action="{url}log">
 {sessionvars%hiddenformentry}
 <p><input name="rev" id="search1" type="text" size="30"></p>
 </form>
 
-<div class="navigate">{changenav%navshortentry}</div>
+<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
 
 <table class="bigtable">
  <tr> 
@@ -39,6 +46,6 @@
 {entries%shortlogentry}
 </table>
 
-<div class="navigate">{changenav%navshortentry}</div>
+<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
 
 {footer}

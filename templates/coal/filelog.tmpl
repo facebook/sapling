@@ -23,7 +23,7 @@
 </ul>
 <ul>
 <li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
-<li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
+<li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
 <li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
 <li class="active">file log</li>
 <li><a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a></li>
@@ -33,7 +33,7 @@
 <div class="main">
 
 <h2>{repo|escape}</h2>
-<h3>log {file|escape} @ {node|short}</h3>
+<h3>log {file|escape}</h3>
 
 <form class="search" action="{url}log">
 {sessionvars%hiddenformentry}
