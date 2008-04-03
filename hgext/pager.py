@@ -29,7 +29,7 @@ import sys, os, signal
 
 def uisetup(ui):
     p = ui.config("pager", "pager", os.environ.get("PAGER"))
-    if p and sys.stdout.isatty():
+    if p and sys.stdout.isatty() and not ui.debugflag:
         if ui.configbool('pager', 'quiet'):
             signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         sys.stderr = sys.stdout = os.popen(p, "wb")
