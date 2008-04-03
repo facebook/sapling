@@ -16,6 +16,8 @@ def _toolbool(ui, tool, part, default=False):
     return ui.configbool("merge-tools", tool + "." + part, default)
 
 def _findtool(ui, tool):
+    if tool in ("internal:fail", "internal:local", "internal:other"):
+        return tool
     k = _toolstr(ui, tool, "regkey")
     if k:
         p = util.lookup_reg(k, _toolstr(ui, tool, "regname"))
