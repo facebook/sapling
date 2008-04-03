@@ -1,12 +1,18 @@
 % Without -v
 access log created - .hg/hgrc respected
+% errors
 % With -v
 listening at http://localhost/ (bound to 127.0.0.1)
+% errors
 % With --prefix foo
 listening at http://localhost/foo/ (bound to 127.0.0.1)
+% errors
 % With --prefix /foo
 listening at http://localhost/foo/ (bound to 127.0.0.1)
+% errors
 % With --prefix foo/
 listening at http://localhost/foo/ (bound to 127.0.0.1)
+% errors
 % With --prefix /foo/
 listening at http://localhost/foo/ (bound to 127.0.0.1)
+% errors
