@@ -123,8 +123,8 @@ class hgweb(object):
         if 'REPO_NAME' in req.env:
             req.url += req.env['REPO_NAME'] + '/'
 
-        if req.env.get('PATH_INFO'):
-            parts = req.env.get('PATH_INFO').strip('/').split('/')
+        if 'PATH_INFO' in req.env:
+            parts = req.env['PATH_INFO'].strip('/').split('/')
             repo_parts = req.env.get('REPO_NAME', '').split('/')
             if parts[:len(repo_parts)] == repo_parts:
                 parts = parts[len(repo_parts):]

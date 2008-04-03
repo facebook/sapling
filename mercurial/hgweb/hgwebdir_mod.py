@@ -181,7 +181,9 @@ class hgwebdir(object):
                 if u.configbool("web", "hidden", untrusted=True):
                     continue
 
-                parts = [req.env['PATH_INFO'].rstrip('/'), name]
+                parts = [name]
+                if 'PATH_INFO' in req.env:
+                    parts.insert(0, req.env['PATH_INFO'].rstrip('/'))
                 if req.env['SCRIPT_NAME']:
                     parts.insert(0, req.env['SCRIPT_NAME'])
                 url = ('/'.join(parts).replace("//", "/")) + '/'
