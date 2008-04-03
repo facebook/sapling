@@ -1,0 +1,160 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: black url(background.png) repeat-x;
+  font-family: sans-serif;
+}
+
+.container {
+  padding-right: 150px;
+}
+
+.main {
+  position: relative;
+  background: white;
+  padding: 2em;
+  border-right: 15px solid black;
+  border-bottom: 15px solid black;
+}
+
+.overflow {
+  width: 100%;
+  overflow: auto;
+}
+
+.menu {
+  background: #999;
+  padding: 10px;
+  width: 75px;
+  margin: 0;
+  font-size: 80% /*smaller*/;
+  text-align: left;
+  position: fixed;
+  top: 27px;
+  left: auto;
+  right: 27px;
+}
+
+.menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0 0;
+}
+
+.menu li {
+  margin-bottom: 3px;
+  padding: 2px 4px;
+  background: white;
+  color: black;
+  font-weight: normal;
+}
+
+.menu li.active {
+  border-left: 3px solid black;
+}
+
+.search {
+  position: absolute;
+  top: .7em;
+  right: 2em;
+}
+
+.menu a { color: black; display: block; }
+
+a { text-decoration:none; }
+.age { white-space:nowrap; }
+.date { white-space:nowrap; }
+.indexlinks { white-space:nowrap; }
+.parity0 { background-color: #f5f5f5; }
+.parity1 { background-color: white; }
+.plusline { color: green; }
+.minusline { color: red; }
+.atline { color: purple; }
+
+.navigate {
+  text-align: right;
+  font-size: 60%;
+  margin: 1em 0 1em 0;
+}
+
+.tag {
+  color: #999;
+  font-size: 70%;
+  font-weight: normal;
+  margin-left: .5em;
+  vertical-align: text-baseline;
+}
+
+.navigate a { 
+  #padding: 2pt;
+  #background-color: #f5f5f5;
+}
+
+/* Common */
+pre { margin: 0; }
+
+h2 { font-size: 120%; border-bottom: 1px solid #999; }
+h3 {
+  margin-top: -.7em;
+  font-size: 100%;
+}
+
+/* log and tags tables */
+.bigtable {
+  border-bottom: 1px solid #999;
+  border-collapse: collapse;
+  font-size: 90%;
+  width: 100%; 
+  font-weight: normal;
+  text-align: left;
+}
+
+.bigtable td {
+  padding: 1px 4px 1px 4px;
+  vertical-align: top;
+}
+
+.bigtable th { 
+  padding: 1px 4px 1px 4px;
+  border-bottom: 1px solid #999; 
+  font-size: smaller;
+}
+.bigtable tr { border: none; }
+.bigtable .age { width: 6em; }
+.bigtable .author { width: 10em; }
+.bigtable .description { }
+.bigtable .node { width: 5em; font-family: monospace;}
+.bigtable .lineno { width: 2em; text-align: right;}
+.bigtable .lineno a { color: #999; font-size: smaller; font-family: monospace;}
+.bigtable td.source { font-family: monospace; white-space: pre; }
+.bigtable .permissions { width: 8em; text-align: left;}
+.bigtable td.permissions { font-family: monospace; }
+.bigtable .date { width: 10em; text-align: left;}
+.bigtable .size { width: 5em; text-align: right; }
+.bigtable td.size { font-family: monospace; }
+.bigtable .annotate { text-align: right; padding-right: }
+.bigtable td.annotate { font-size: smaller; }
+
+/* Changeset entry */
+#changesetEntry { 
+  border-collapse: collapse;
+  font-size: 90%;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+#changesetEntry th { 
+  padding: 1px 4px 1px 4px;
+  width: 4em;
+  text-align: right;
+  font-weight: normal;
+  color: #999;
+  margin-right: .5em;
+  vertical-align: top;
+}
+
+div.description {
+  border-left: 3px solid #999;
+  margin: 1em 0 1em 0;
+  padding: .3em;
+}

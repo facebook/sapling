@@ -114,7 +114,7 @@ class templater(object):
                 v = v(**map)
             if format:
                 if not hasattr(v, '__iter__'):
-                    raise SyntaxError(_("Error expanding '%s%s'")
+                    raise SyntaxError(_("Error expanding '%s%%%s'")
                                       % (key, format))
                 lm = map.copy()
                 for i in v:

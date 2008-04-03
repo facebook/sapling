@@ -1,0 +1,54 @@
+{header}
+<title>{repo|escape}: log</title>
+<link rel="alternate" type="application/atom+xml"
+   href="{url}atom-log" title="Atom feed for {repo|escape}">
+<link rel="alternate" type="application/rss+xml"
+   href="{url}rss-log" title="RSS feed for {repo|escape}">
+</head>
+<body>
+
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="{staticurl}hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+<li class="active">log</li>
+<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+</ul>
+<ul>
+<li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+</ul>
+<ul>
+{archives%archiveentry}
+</ul>
+</div>
+
+<div class="main">
+
+<h2>{repo|escape}</h2>
+<h3>log</h3>
+
+<form class="search" action="{url}log">
+{sessionvars%hiddenformentry}
+<p><input name="rev" id="search1" type="text" size="30"></p>
+</form>
+
+<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
+
+<table class="bigtable">
+ <tr> 
+  <th class="age">Age</td>
+  <th class="author">Author</td>
+  <th class="description">Description</td>
+ </tr>
+{entries%shortlogentry}
+</table>
+
+<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
+</div>
+</div>
+
+{footer}

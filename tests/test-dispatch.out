@@ -10,7 +10,7 @@ output the current or given revision of files
     or tip if no revision is checked out.
 
     Output may be to a file, in which case the name of the file is
-    given using a format string.  The formatting rules are the same as
+    given using a format string. The formatting rules are the same as
     for the export command, with the following additions:
 
     %s   basename of file being printed

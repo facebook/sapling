@@ -1,0 +1,71 @@
+{header}
+<title>{repo|escape}: {node|short}</title>
+</head>
+<body>
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="{staticurl}hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+ <li><a href="{url}shortlog{sessionvars%urlparameter}">log</a></li>
+ <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+</ul>
+<ul>
+ <li class="active">changeset</li>
+ <li><a href="{url}file/{node|short}{sessionvars%urlparameter}">browse</a></li>
+</ul>
+<ul>
+ {archives%archiveentry}</ul>
+</ul>
+</div>
+
+<div class="main">
+
+<h2>{repo|escape}</h2>
+<h3>changeset {rev}:{node|short} {changesettag}</h3>
+
+<form class="search" action="{url}log">
+{sessionvars%hiddenformentry}
+<p><input name="rev" id="search1" type="text" size="30"></p>
+</form>
+
+<div class="description">{desc|strip|escape|addbreaks}</div>
+
+<table id="changesetEntry">
+<tr>
+ <th class="author">author</th>
+ <td class="author">{author|obfuscate}</td>
+</tr>
+<tr>
+ <th class="date">date</th>
+ <td class="date">{date|date} ({date|age} ago)</td></tr>
+<tr>
+ <th class="author">parents</th>
+ <td class="author">{parent%changesetparent}</td>
+</tr>
+<tr>
+ <th class="author">children</th>
+ <td class="author">{child%changesetchild}</td>
+</tr>
+<tr>
+ <th class="files">files</th>
+ <td class="files">{files}</td></tr>
+</tr>
+</table>
+<tr>
+
+<div class="overflow">
+<table class="bigtable">
+<tr>
+ <th class="lineno">Line</th>
+ <th class="source">Diff</th>
+</tr>
+</table>
+{diff}
+</div>
+</div>
+{footer}
+
+

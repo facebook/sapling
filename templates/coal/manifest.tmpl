@@ -1,0 +1,53 @@
+{header}
+<title>{repo|escape}: {node|short} {path|escape}</title>
+</head>
+<body>
+
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="{staticurl}hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+<li><a href="{url}shortlog/{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+</ul>
+<ul>
+<li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+<li class="active">browse</li>
+</ul>
+<ul>
+{archives%archiveentry}
+</ul>
+</div>
+
+<div class="main">
+
+<h2>{repo|escape}</h2>
+<h3>directory {path|escape} @ {rev}:{node|short} {tags%changelogtag}</h3>
+
+<form class="search" action="{url}log">
+{sessionvars%hiddenformentry}
+<p><input name="rev" id="search1" type="text" size="30"></p>
+</form>
+
+<table class="bigtable">
+<tr>
+  <th class="permissions">permissions</th>
+  <th class="date">date</th>
+  <th class="size">size</th>
+  <th class="name">name</th>
+</tr>
+<tr class="parity{upparity}">
+  <td class="permissions">drwxr-xr-x
+  <td class="date">
+  <td class="size">
+  <td class="name"><a href="{url}file/{node|short}{up|urlescape}{sessionvars%urlparameter}">[up]</a>
+</tr>
+{dentries%direntry}
+{fentries%fileentry}
+</table>
+</div>
+</div>
+{footer}

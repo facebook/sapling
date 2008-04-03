@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetools, cStringIO
+import os
 from mercurial.i18n import gettext as _
 from mercurial.repo import RepoError
 from mercurial import ui, hg, util, templater, templatefilters
@@ -81,17 +81,8 @@ class hgwebdir(object):
 
                 virtual = req.env.get("PATH_INFO", "").strip('/')
                 tmpl = self.templater(req)
-                try:
-                    ctype = tmpl('mimetype', encoding=util._encoding)
-                    ctype = templater.stringify(ctype)
-                except KeyError:
-                    # old templates with inline HTTP headers?
-                    if 'mimetype' in tmpl:
-                        raise
-                    header = tmpl('header', encoding=util._encoding)
-                    header_file = cStringIO.StringIO(templater.stringify(header))
-                    msg = mimetools.Message(header_file, 0)
-                    ctype = msg['content-type']
+                ctype = tmpl('mimetype', encoding=util._encoding)
+                ctype = templater.stringify(ctype)
 
                 # a static file
                 if virtual.startswith('static/') or 'static' in req.form:
@@ -255,13 +246,7 @@ class hgwebdir(object):
     def templater(self, req):
 
         def header(**map):
-            header = tmpl('header', encoding=util._encoding, **map)
-            if 'mimetype' not in tmpl:
-                # old template with inline HTTP headers
-                header_file = cStringIO.StringIO(templater.stringify(header))
-                msg = mimetools.Message(header_file, 0)
-                header = header_file.read()
-            yield header
+            yield tmpl('header', encoding=util._encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)
