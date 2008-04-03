@@ -85,11 +85,6 @@ a { text-decoration:none; }
   vertical-align: text-baseline;
 }
 
-.navigate a { 
-  #padding: 2pt;
-  #background-color: #f5f5f5;
-}
-
 /* Common */
 pre { margin: 0; }
 
@@ -128,12 +123,11 @@ h3 {
 .bigtable .lineno a { color: #999; font-size: smaller; font-family: monospace;}
 .bigtable td.source { font-family: monospace; white-space: pre; }
 .bigtable .permissions { width: 8em; text-align: left;}
-.bigtable td.permissions { font-family: monospace; }
-.bigtable .date { width: 10em; text-align: left;}
 .bigtable .size { width: 5em; text-align: right; }
-.bigtable td.size { font-family: monospace; }
 .bigtable .annotate { text-align: right; padding-right: }
 .bigtable td.annotate { font-size: smaller; }
+
+.fileline { font-family: monospace; }
 
 /* Changeset entry */
 #changesetEntry { 
