@@ -27,7 +27,7 @@ body {
   padding: 10px;
   width: 75px;
   margin: 0;
-  font-size: 80% /*smaller*/;
+  font-size: 80%;
   text-align: left;
   position: fixed;
   top: 27px;
@@ -50,16 +50,17 @@ body {
 }
 
 .menu li.active {
-  border-left: 3px solid black;
+  background: black;
+  color: white;
 }
+
+.menu a { color: black; display: block; }
 
 .search {
   position: absolute;
   top: .7em;
   right: 2em;
 }
-
-.menu a { color: black; display: block; }
 
 a { text-decoration:none; }
 .age { white-space:nowrap; }
@@ -128,6 +129,7 @@ h3 {
 .bigtable td.annotate { font-size: smaller; }
 
 .fileline { font-family: monospace; }
+.fileline img { border: 0; }
 
 /* Changeset entry */
 #changesetEntry { 
