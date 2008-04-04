@@ -662,14 +662,14 @@ class queue:
         finally:
             del wlock
 
-    def strip(self, repo, rev, update=True, backup="all"):
+    def strip(self, repo, rev, update=True, backup="all", force=None):
         wlock = lock = None
         try:
             wlock = repo.wlock()
             lock = repo.lock()
 
             if update:
-                self.check_localchanges(repo, refresh=False)
+                self.check_localchanges(repo, force=force, refresh=False)
                 urev = self.qparents(repo, rev)
                 hg.clean(repo, urev)
                 repo.dirstate.write()
@@ -2043,7 +2043,7 @@ def strip(ui, repo, rev, **opts):
     elif opts['nobackup']:
         backup = 'none'
     update = repo.dirstate.parents()[0] != revlog.nullid
-    repo.mq.strip(repo, rev, backup=backup, update=update)
+    repo.mq.strip(repo, rev, backup=backup, update=update, force=opts['force'])
     return 0
 
 def select(ui, repo, *args, **opts):
@@ -2352,7 +2352,8 @@ cmdtable = {
          _('hg qseries [-ms]')),
     "^strip":
         (strip,
-         [('b', 'backup', None, _('bundle unrelated changesets')),
+         [('f', 'force', None, _('force removal with local changes')),
+          ('b', 'backup', None, _('bundle unrelated changesets')),
           ('n', 'nobackup', None, _('no backups'))],
          _('hg strip [-f] [-b] [-n] REV')),
     "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
