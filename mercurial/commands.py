@@ -1047,6 +1047,9 @@ def grep(ui, repo, pattern, *pats, **opts):
             self.colstart = colstart
             self.colend = colend
 
+        def __hash__(self):
+            return hash((self.linenum, self.line))
+
         def __eq__(self, other):
             return self.line == other.line
 

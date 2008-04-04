@@ -34,6 +34,12 @@ class changectx(object):
     def __repr__(self):
         return "<changectx %s>" % str(self)
 
+    def __hash__(self):
+        try:
+            return hash(self._rev)
+        except AttributeError:
+            return id(self)
+
     def __eq__(self, other):
         try:
             return self._rev == other._rev
@@ -209,6 +215,12 @@ class filectx(object):
 
     def __repr__(self):
         return "<filectx %s>" % str(self)
+
+    def __hash__(self):
+        try:
+            return hash((self._path, self._fileid))
+        except AttributeError:
+            return id(self)
 
     def __eq__(self, other):
         try:
