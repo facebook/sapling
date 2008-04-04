@@ -17,11 +17,37 @@ import cStringIO, errno, getpass, re, shutil, sys, tempfile
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
 import urlparse
 
+# Python compatibility
+
 try:
     set = set
     frozenset = frozenset
 except NameError:
     from sets import Set as set, ImmutableSet as frozenset
+
+_md5 = None
+def md5(s):
+    global _md5
+    if _md5 is None:
+        try:
+            import hashlib
+            _md5 = hashlib.md5
+        except ImportError:
+            import md5
+            _md5 = md5.md5
+    return _md5(s)
+
+_sha1 = None
+def sha1(s):
+    global _sha1
+    if _sha1 is None:
+        try:
+            import hashlib
+            _sha1 = hashlib.sha1
+        except ImportError:
+            import sha
+            _sha1 = sha.sha
+    return _sha1(s)
 
 try:
     _encoding = os.environ.get("HGENCODING")

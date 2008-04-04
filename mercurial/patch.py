@@ -9,7 +9,7 @@
 from i18n import _
 from node import hex, nullid, short
 import base85, cmdutil, mdiff, util, context, revlog, diffhelpers, copies
-import cStringIO, email.Parser, os, popen2, re, sha, errno
+import cStringIO, email.Parser, os, popen2, re, errno
 import sys, tempfile, zlib
 
 class PatchError(Exception):
@@ -1120,7 +1120,7 @@ def b85diff(to, tn):
         if not text:
             return '0' * 40
         l = len(text)
-        s = sha.new('blob %d\0' % l)
+        s = util.sha1('blob %d\0' % l)
         s.update(text)
         return s.hexdigest()
 

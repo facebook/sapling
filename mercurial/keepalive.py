@@ -19,6 +19,8 @@
 
 # Modified by Benoit Boissinot:
 #  - fix for digest auth (inspired from urllib2.py @ Python v2.4)
+# Modified by Dirkjan Ochtman:
+#  - import md5 function from a local util module
 
 """An HTTP handler for urllib2 that supports HTTP 1.1 and keepalive.
 
@@ -450,7 +452,7 @@ def error_handler(url):
     keepalive_handler.close_all()
 
 def continuity(url):
-    import md5
+    from util import md5
     format = '%25s: %s'
 
     # first fetch the file with the normal http handler

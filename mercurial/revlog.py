@@ -13,13 +13,13 @@ of the GNU General Public License, incorporated herein by reference.
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import changegroup, errno, ancestor, mdiff
-import sha, struct, util, zlib
+import struct, util, zlib
 
 _pack = struct.pack
 _unpack = struct.unpack
 _compress = zlib.compress
 _decompress = zlib.decompress
-_sha = sha.new
+_sha = util.sha1
 
 # revlog flags
 REVLOGV0 = 0
