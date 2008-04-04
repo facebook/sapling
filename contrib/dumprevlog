@@ -3,10 +3,14 @@
 # $ find .hg/store/ -name "*.i" | xargs dumprevlog > repo.dump
 
 import sys
-from mercurial import revlog, node
+from mercurial import revlog, node, util
+
+for fp in (sys.stdin, sys.stdout, sys.stderr):
+    util.set_binary(fp)
 
 for f in sys.argv[1:]:
-    r = revlog.revlog(open, f)
+    binopen = lambda fn: open(fn, 'rb')
+    r = revlog.revlog(binopen, f)
     print "file:", f
     for i in xrange(r.count()):
         n = r.node(i)
