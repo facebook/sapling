@@ -1055,9 +1055,9 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
     return err
 
 def diffopts(ui, opts={}, untrusted=False):
-    def get(key, name=None):
+    def get(key, name=None, getter=ui.configbool):
         return (opts.get(key) or
-                ui.configbool('diff', name or key, None, untrusted=untrusted))
+                getter('diff', name or key, None, untrusted=untrusted))
     return mdiff.diffopts(
         text=opts.get('text'),
         git=get('git'),
@@ -1066,7 +1066,7 @@ def diffopts(ui, opts={}, untrusted=False):
         ignorews=get('ignore_all_space', 'ignorews'),
         ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
         ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'),
-        context=get('unified'))
+        context=get('unified', getter=ui.config))
 
 def updatedir(ui, repo, patches):
     '''Update dirstate after patch application according to metadata'''
