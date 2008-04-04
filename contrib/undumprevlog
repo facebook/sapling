@@ -6,6 +6,9 @@
 import sys
 from mercurial import revlog, node, util, transaction
 
+for fp in (sys.stdin, sys.stdout, sys.stderr):
+    util.set_binary(fp)
+
 opener = util.opener('.', False)
 tr = transaction.transaction(sys.stderr.write, opener, "undump.journal")
 while 1:
