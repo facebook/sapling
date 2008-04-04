@@ -3037,7 +3037,7 @@ table = {
            _('ignore changes in the amount of white space')),
           ('B', 'ignore-blank-lines', None,
            _('ignore changes whose lines are all blank')),
-          ('U', 'unified', 3,
+          ('U', 'unified', '',
            _('number of lines of context to show'))
          ] + walkopts,
          _('hg diff [OPTION]... [-r REV1 [-r REV2]] [FILE]...')),

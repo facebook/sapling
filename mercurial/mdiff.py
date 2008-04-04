@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+from i18n import _
 import bdiff, mpatch, re, struct, util, md5
 
 def splitnewlines(text):
@@ -46,6 +47,12 @@ class diffopts(object):
             if v is None:
                 v = self.defaults[k]
             setattr(self, k, v)
+
+        try:
+            self.context = int(self.context)
+        except ValueError:
+            raise util.Abort(_('diff context lines count must be '
+                               'an integer, not %r') % self.context)
 
 defaultopts = diffopts()
 
