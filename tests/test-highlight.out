@@ -10,7 +10,7 @@ adding get-with-headers.py
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style.css" type="text/css" />
 
-<link rel="stylesheet" href="/static/highlight.css" type="text/css" />
+<link rel="stylesheet" href="/highlightcss" type="text/css" />
 <title>test:get-with-headers.py</title>
 </head>
 <body>
@@ -72,7 +72,7 @@ adding get-with-headers.py
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style.css" type="text/css" />
 
-<link rel="stylesheet" href="/static/highlight.css" type="text/css" />
+<link rel="stylesheet" href="/highlightcss" type="text/css" />
 <title>test: get-with-headers.py annotate</title>
 </head>
 <body>
@@ -125,5 +125,17 @@ adding get-with-headers.py
 
 </body>
 </html>
+
+% hgweb highlightcss friendly
+200 Script output follows
+
+/* pygments_style = friendly */
+
+% errors encountered
+% hg serve again
+% hgweb highlightcss fruity
+200 Script output follows
+
+/* pygments_style = fruity */
 
 % errors encountered

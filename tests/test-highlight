@@ -5,6 +5,8 @@
 cat <<EOF >> $HGRCPATH
 [extensions]
 hgext.highlight =
+[web]
+pygments_style = friendly
 EOF
 
 hg init test
@@ -23,6 +25,28 @@ echo % hgweb filerevision
 echo % hgweb fileannotate
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py') \
     | sed "s/[0-9]* years ago/long ago/g"
+
+echo % hgweb highlightcss friendly
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/highlightcss') \
+    | head -n 4
+
+echo % errors encountered
+cat errors.log
+kill `cat hg.pid`
+
+# Change the pygments style
+cat > .hg/hgrc <<EOF
+[web]
+pygments_style = fruity
+EOF
+
+echo % hg serve again
+hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+echo % hgweb highlightcss fruity
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/highlightcss') \
+    | head -n 4
 
 echo % errors encountered
 cat errors.log
