@@ -407,6 +407,8 @@ class dirstate(object):
         return False
 
     def _dirignore(self, f):
+        if f == '.':
+            return False
         if self._ignore(f):
             return True
         for c in strutil.findall(f, '/'):

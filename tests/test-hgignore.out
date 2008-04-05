@@ -15,6 +15,12 @@ A dir/b.o
 ? syntax
 --
 A dir/b.o
+? a.c
+? a.o
+? dir/c.o
+? syntax
+--
+A dir/b.o
 ? .hgignore
 ? a.c
 ? syntax
