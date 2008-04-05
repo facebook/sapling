@@ -64,10 +64,9 @@
 #
 # That should be all.  Now your patchbomb is on its way out.
 
-import os, errno, socket, tempfile
+import os, errno, socket, tempfile, cStringIO
 import email.MIMEMultipart, email.MIMEText, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
-import cStringIO.StringIO
 from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
