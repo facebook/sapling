@@ -96,7 +96,7 @@ _filters = {
     'macencode:': macencode,
     }
 
-def forbidcrlforcr(ui, repo, hooktype, node, newline, **kwargs):
+def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     halt = False
     for rev in xrange(repo.changelog.rev(bin(node)), repo.changelog.count()):
         c = repo.changectx(rev)
@@ -131,10 +131,10 @@ def forbidcrlforcr(ui, repo, hooktype, node, newline, **kwargs):
     return halt
 
 def forbidcrlf(ui, repo, hooktype, node, **kwargs):
-    return forbidcrlforcr(ui, repo, hooktype, node, '\r\n', **kwargs)
+    return forbidnewline(ui, repo, hooktype, node, '\r\n', **kwargs)
 
 def forbidcr(ui, repo, hooktype, node, **kwargs):
-    return forbidcrlforcr(ui, repo, hooktype, node, '\r', **kwargs)
+    return forbidnewline(ui, repo, hooktype, node, '\r', **kwargs)
 
 def reposetup(ui, repo):
     if not repo.local():
