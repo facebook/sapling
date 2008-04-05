@@ -40,6 +40,10 @@ echo "--" ; hg status 2>&1 | sed -e 's/abort: .*\.hgignore:/abort: .hgignore:/'
 echo ".*\.o" > .hgignore
 echo "--" ; hg status
 
+# Check it does not ignore the current directory '.'
+echo "^\." > .hgignore
+echo "--" ; hg status
+
 echo "glob:**.o" > .hgignore
 echo "--" ; hg status
 
