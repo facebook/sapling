@@ -91,11 +91,11 @@ SPECIFYING MULTIPLE REVISIONS
 
 FILES
 -----
- repo/.hgignore::
+ .hgignore::
     This file contains regular expressions (one per line) that describe file
     names that should be ignored by hg. For details, see hgignore(5).
 
- repo/.hgtags::
+ .hgtags::
     This file contains changeset hash values and text tag names (one of each
     separated by spaces) that correspond to tagged versions of the repository
     contents.
