@@ -247,6 +247,10 @@ class svn_source(converter_source):
 
     def getheads(self):
 
+        def isdir(path, revnum):
+            kind = svn.ra.check_path(self.ra, path, revnum)
+            return kind == svn.core.svn_node_dir
+
         def getcfgpath(name, rev):
             cfgpath = self.ui.config('convert', 'svn.' + name)
             if cfgpath is not None and cfgpath.strip() == '':
@@ -288,6 +292,8 @@ class svn_source(converter_source):
                                         self.ctx)
             for branch in branchnames.keys():
                 module = '%s/%s/%s' % (oldmodule, branches, branch)
+                if not isdir(module, self.last_changed):
+                    continue
                 brevid = self.latest(module, self.last_changed)
                 if not brevid:
                     self.ui.note(_('ignoring empty branch %s\n') %

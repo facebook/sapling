@@ -12,10 +12,12 @@ Checked out revision 1.
 A         trunk/letter.txt
 A         trunk/letter2.txt
 A         trunk/letter3.txt
+A         branches/readme.txt
+Adding         branches/readme.txt
 Adding         trunk/letter.txt
 Adding         trunk/letter2.txt
 Adding         trunk/letter3.txt
-Transmitting file data ...
+Transmitting file data ....
 Committed revision 2.
 % branch to old letters
 A         branches/old
