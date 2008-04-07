@@ -68,7 +68,6 @@ Here is an example ignore file.
   *.elc
   *.pyc
   *~
-  .*.swp
 
   # switch to regexp syntax.
   syntax: regexp

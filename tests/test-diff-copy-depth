@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 for i in aaa zzz; do
     hg init t
