@@ -18,7 +18,9 @@ hg.1.gendoc.txt: ../mercurial/commands.py ../mercurial/help.py
 	python gendoc.py > $@
 
 %: %.xml
-	xmlto man $*.xml
+	xmlto man $*.xml ; \
+	sed -e 's/^\.hg/\\\&.hg/' $* > $*~ ; \
+	mv $*~ $*
 
 %.xml: %.txt
 	asciidoc -d manpage -b docbook $*.txt
