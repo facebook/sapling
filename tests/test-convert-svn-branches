@@ -38,7 +38,9 @@ cd A
 echo hello > trunk/letter.txt
 echo hey > trunk/letter2.txt
 echo ho > trunk/letter3.txt
-svn add trunk/letter.txt trunk/letter2.txt trunk/letter3.txt
+# Add a file within branches, used to confuse branch detection
+echo a > branches/readme.txt
+svn add trunk/letter.txt trunk/letter2.txt trunk/letter3.txt branches/readme.txt
 svn ci -m hello
 
 echo % branch to old letters
