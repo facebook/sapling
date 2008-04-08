@@ -393,7 +393,7 @@ class svn_source(converter_source):
         try:
             for entry in get_log(self.url, [self.tags], start, self.startrev):
                 origpaths, revnum, author, date, message = entry
-                copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p,e 
+                copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p, e
                           in origpaths.iteritems() if e.copyfrom_path]
                 copies.sort()
                 # Apply moves/copies from more specific to general
