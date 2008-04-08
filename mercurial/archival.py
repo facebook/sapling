@@ -52,7 +52,8 @@ class tarit:
         def _write_gzip_header(self):
             self.fileobj.write('\037\213')             # magic header
             self.fileobj.write('\010')                 # compression method
-            fname = self.filename[:-3]
+            # Python 2.6 deprecates self.filename
+            fname = getattr(self, 'name', None) or self.filename 
             flags = 0
             if fname:
                 flags = gzip.FNAME
