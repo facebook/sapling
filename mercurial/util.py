@@ -243,8 +243,8 @@ def filter(s, cmd):
     return pipefilter(s, cmd)
 
 def binary(s):
-    """return true if a string is binary data using diff's heuristic"""
-    if s and '\0' in s[:4096]:
+    """return true if a string is binary data"""
+    if s and '\0' in s:
         return True
     return False
 
