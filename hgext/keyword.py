@@ -128,7 +128,7 @@ class kwtemplater(object):
 
         kwmaps = self.ui.configitems('keywordmaps')
         if kwmaps: # override default templates
-            kwmaps = [(k, templater.parsestring(v, quoted=False))
+            kwmaps = [(k, templater.parsestring(v, False))
                       for (k, v) in kwmaps]
             self.templates = dict(kwmaps)
         escaped = map(re.escape, self.templates.keys())
@@ -241,7 +241,7 @@ class kwfilelog(filelog.filelog):
     def add(self, text, meta, tr, link, p1=None, p2=None):
         '''Removes keyword substitutions when adding to filelog.'''
         text = self.kwt.shrink(self.path, text)
-        return super(kwfilelog, self).add(text, meta, tr, link, p1=p1, p2=p2)
+        return super(kwfilelog, self).add(text, meta, tr, link, p1, p2)
 
     def cmp(self, node, text):
         '''Removes keyword substitutions for comparison.'''
@@ -302,7 +302,7 @@ def demo(ui, repo, *args, **opts):
     branchname = 'demobranch'
     tmpdir = tempfile.mkdtemp('', 'kwdemo.')
     ui.note(_('creating temporary repo at %s\n') % tmpdir)
-    repo = localrepo.localrepository(ui, path=tmpdir, create=True)
+    repo = localrepo.localrepository(ui, tmpdir, True)
     ui.setconfig('keyword', fn, '')
     if args or opts.get('rcfile'):
         kwstatus = 'custom'
@@ -481,20 +481,17 @@ def reposetup(ui, repo):
                     else:
                         _p2 = hex(_p2)
 
-                node = super(kwrepo,
-                             self).commit(files=files, text=text, user=user,
-                                          date=date, match=match, force=force,
-                                          force_editor=force_editor,
-                                          p1=p1, p2=p2, extra=extra,
-                                          empty_ok=empty_ok)
+                n = super(kwrepo, self).commit(files, text, user, date, match,
+                                               force, force_editor, p1, p2,
+                                               extra, empty_ok)
 
                 # restore commit hooks
                 for name, cmd in commithooks.iteritems():
                     ui.setconfig('hooks', name, cmd)
-                if node is not None:
-                    kwt.overwrite(node=node)
-                    repo.hook('commit', node=node, parent1=_p1, parent2=_p2)
-                return node
+                if n is not None:
+                    kwt.overwrite(node=n)
+                    repo.hook('commit', node=n, parent1=_p1, parent2=_p2)
+                return n
             finally:
                 del wlock, lock
 
@@ -502,7 +499,7 @@ def reposetup(ui, repo):
     def kwpatchfile_init(self, ui, fname, missing=False):
         '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
         rejects or conflicts due to expanded keywords in working dir.'''
-        patchfile_init(self, ui, fname, missing=missing)
+        patchfile_init(self, ui, fname, missing)
         # shrink keywords read from working dir
         self.lines = kwt.shrinklines(self.fname, self.lines)
 
@@ -514,8 +511,7 @@ def reposetup(ui, repo):
             kwt.matcher = util.never
         elif node1 is not None and node1 != repo.changectx().node():
             kwt.restrict = True
-        patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
-                   fp=fp, changes=changes, opts=opts)
+        patch_diff(repo, node1, node2, files, match, fp, changes, opts)
 
     def kwweb_changeset(web, req, tmpl):
         '''Wraps webcommands.changeset turning off keyword expansion.'''
