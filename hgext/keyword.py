@@ -169,7 +169,7 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.matcher(path) and not islink(path)
 
-    def overwrite(self, node=None, expand=True, files=None):
+    def overwrite(self, node, expand, files):
         '''Overwrites selected files expanding/shrinking keywords.'''
         ctx = self.repo.changectx(node)
         mf = ctx.manifest()
@@ -272,7 +272,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        kwt.overwrite(expand=expand, files=clean)
+        kwt.overwrite(None, expand, clean)
     finally:
         del wlock, lock
 
@@ -489,7 +489,7 @@ def reposetup(ui, repo):
                 for name, cmd in commithooks.iteritems():
                     ui.setconfig('hooks', name, cmd)
                 if n is not None:
-                    kwt.overwrite(node=n)
+                    kwt.overwrite(n, True, None)
                     repo.hook('commit', node=n, parent1=_p1, parent2=_p2)
                 return n
             finally:
