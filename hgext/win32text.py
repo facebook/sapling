@@ -64,27 +64,23 @@ def macdumbdecode(s, cmd, **kwargs):
 def macdumbencode(s, cmd):
     return s.replace('\r', '\n')
 
-def clevertest(s, cmd):
-    if '\0' in s: return False
-    return True
-
 def cleverdecode(s, cmd, **kwargs):
-    if clevertest(s, cmd):
+    if not util.binary(s):
         return dumbdecode(s, cmd, **kwargs)
     return s
 
 def cleverencode(s, cmd):
-    if clevertest(s, cmd):
+    if not util.binary(s):
         return dumbencode(s, cmd)
     return s
 
 def macdecode(s, cmd, **kwargs):
-    if clevertest(s, cmd):
+    if not util.binary(s):
         return macdumbdecode(s, cmd, **kwargs)
     return s
 
 def macencode(s, cmd):
-    if clevertest(s, cmd):
+    if not util.binary(s):
         return macdumbencode(s, cmd)
     return s
 
@@ -107,7 +103,7 @@ def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
             if f not in c:
                 continue
             data = c[f].data()
-            if '\0' not in data and newline in data:
+            if not util.binary(data) and newline in data:
                 if not halt:
                     ui.warn(_('Attempt to commit or push text file(s) '
                               'using %s line endings\n') %
