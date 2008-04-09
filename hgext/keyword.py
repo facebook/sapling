@@ -100,45 +100,8 @@ def utcdate(date):
     '''Returns hgdate in cvs-like UTC format.'''
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
 
-
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': '', 'inc': [], 'exc': ['.hg*']}
-
-# store originals of monkeypatches to be done at end of reposetup
-# that is, only if needed
-_patchfile_init = patch.patchfile.__init__
-_patch_diff = patch.diff
-_webcommands_changeset = webcommands.changeset
-_webcommands_filediff = webcommands.filediff
-
-def _kwpatchfile_init(self, ui, fname, missing=False):
-    '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
-    rejects or conflicts due to expanded keywords in working dir.'''
-    _patchfile_init(self, ui, fname, missing=missing)
-    # shrink keywords read from working dir
-    kwt = kwtools['templater']
-    self.lines = kwt.shrinklines(self.fname, self.lines)
-
-def _kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
-             fp=None, changes=None, opts=None):
-    '''Monkeypatch patch.diff to avoid expansion except when
-    comparing against working dir.'''
-    if node2 is not None:
-        kwtools['templater'].matcher = util.never
-    elif node1 is not None and node1 != repo.changectx().node():
-        kwtools['templater'].restrict = True
-    _patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
-                fp=fp, changes=changes, opts=opts)
-
-def _kwweb_changeset(web, req, tmpl):
-    '''Wraps webcommands.changeset turning off keyword expansion.'''
-    kwtools['templater'].matcher = util.never
-    return _webcommands_changeset(web, req, tmpl)
-
-def _kwweb_filediff(web, req, tmpl):
-    '''Wraps webcommands.filediff turning off keyword expansion.'''
-    kwtools['templater'].matcher = util.never
-    return _webcommands_filediff(web, req, tmpl)
 
 
 class kwtemplater(object):
@@ -265,9 +228,9 @@ class kwfilelog(filelog.filelog):
     Subclass of filelog to hook into its read, add, cmp methods.
     Keywords are "stored" unexpanded, and processed on reading.
     '''
-    def __init__(self, opener, path):
+    def __init__(self, opener, kwt, path):
         super(kwfilelog, self).__init__(opener, path)
-        self.kwt = kwtools['templater']
+        self.kwt = kwt
         self.path = path
 
     def read(self, node):
@@ -469,8 +432,7 @@ def reposetup(ui, repo):
     if file matches user configuration.
     Wraps commit to overwrite configured files with updated
     keyword substitutions.
-    This is done for local repos only, and only if there are
-    files configured at all for keyword substitution.'''
+    Monkeypatches patch and webcommands.'''
 
     try:
         if (not repo.local() or not kwtools['inc']
@@ -487,7 +449,7 @@ def reposetup(ui, repo):
         def file(self, f):
             if f[0] == '/':
                 f = f[1:]
-            return kwfilelog(self.sopener, f)
+            return kwfilelog(self.sopener, kwt, f)
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)
@@ -536,11 +498,46 @@ def reposetup(ui, repo):
             finally:
                 del wlock, lock
 
+    # monkeypatches
+    def kwpatchfile_init(self, ui, fname, missing=False):
+        '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
+        rejects or conflicts due to expanded keywords in working dir.'''
+        patchfile_init(self, ui, fname, missing=missing)
+        # shrink keywords read from working dir
+        self.lines = kwt.shrinklines(self.fname, self.lines)
+
+    def kw_diff(repo, node1=None, node2=None, files=None, match=util.always,
+                fp=None, changes=None, opts=None):
+        '''Monkeypatch patch.diff to avoid expansion except when
+        comparing against working dir.'''
+        if node2 is not None:
+            kwt.matcher = util.never
+        elif node1 is not None and node1 != repo.changectx().node():
+            kwt.restrict = True
+        patch_diff(repo, node1=node1, node2=node2, files=files, match=match,
+                   fp=fp, changes=changes, opts=opts)
+
+    def kwweb_changeset(web, req, tmpl):
+        '''Wraps webcommands.changeset turning off keyword expansion.'''
+        kwt.matcher = util.never
+        return webcommands_changeset(web, req, tmpl)
+
+    def kwweb_filediff(web, req, tmpl):
+        '''Wraps webcommands.filediff turning off keyword expansion.'''
+        kwt.matcher = util.never
+        return webcommands_filediff(web, req, tmpl)
+
     repo.__class__ = kwrepo
-    patch.patchfile.__init__ = _kwpatchfile_init
-    patch.diff = _kw_diff
-    webcommands.changeset = webcommands.rev = _kwweb_changeset
-    webcommands.filediff = webcommands.diff = _kwweb_filediff
+
+    patchfile_init = patch.patchfile.__init__
+    patch_diff = patch.diff
+    webcommands_changeset = webcommands.changeset
+    webcommands_filediff = webcommands.filediff
+
+    patch.patchfile.__init__ = kwpatchfile_init
+    patch.diff = kw_diff
+    webcommands.changeset = webcommands.rev = kwweb_changeset
+    webcommands.filediff = webcommands.diff = kwweb_filediff
 
 
 cmdtable = {
