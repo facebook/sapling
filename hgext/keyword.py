@@ -100,6 +100,11 @@ def utcdate(date):
     '''Returns hgdate in cvs-like UTC format.'''
     return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
 
+def textsafe(s):
+    '''Safe version of util.binary with reversed logic.
+    Note: argument may not be None, which is allowed for util.binary.'''
+    return '\0' not in s
+
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': '', 'inc': [], 'exc': ['.hg*']}
 
@@ -158,7 +163,7 @@ class kwtemplater(object):
 
     def expand(self, path, node, data):
         '''Returns data with keywords expanded.'''
-        if not self.restrict and self.matcher(path) and not util.binary(data):
+        if not self.restrict and self.matcher(path) and textsafe(data):
             changenode = self.getnode(path, node)
             return self.substitute(data, path, changenode, self.re_kw.sub)
         return data
@@ -186,7 +191,7 @@ class kwtemplater(object):
             for f in candidates:
                 fp = self.repo.file(f)
                 data = fp.read(mf[f])
-                if util.binary(data):
+                if not textsafe(data):
                     continue
                 if expand:
                     changenode = node or self.getnode(f, mf[f])
@@ -206,7 +211,7 @@ class kwtemplater(object):
 
     def shrink(self, fname, text):
         '''Returns text with all keyword substitutions removed.'''
-        if self.matcher(fname) and not util.binary(text):
+        if self.matcher(fname) and textsafe(text):
             return self.shrinktext(text)
         return text
 
@@ -214,7 +219,7 @@ class kwtemplater(object):
         '''Returns lines with keyword substitutions removed.'''
         if self.matcher(fname):
             text = ''.join(lines)
-            if not util.binary(text):
+            if textsafe(text):
                 return self.shrinktext(text).splitlines(True)
         return lines
 
