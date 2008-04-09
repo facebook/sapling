@@ -506,15 +506,17 @@ def clone(ui, source, dest=None, **opts):
     do not report errors. In these cases, use the --pull option to
     avoid hardlinking.
 
-    You can safely clone repositories and checked out files using full
-    hardlinks with
+    In some cases, you can clone repositories and checked out files
+    using full hardlinks with
 
       $ cp -al REPO REPOCLONE
 
-    which is the fastest way to clone. However, the operation is not
-    atomic (making sure REPO is not modified during the operation is
-    up to you) and you have to make sure your editor breaks hardlinks
-    (Emacs and most Linux Kernel tools do so).
+    This is the fastest way to clone, but it is not always safe.  The
+    operation is not atomic (making sure REPO is not modified during
+    the operation is up to you) and you have to make sure your editor
+    breaks hardlinks (Emacs and most Linux Kernel tools do so).  Also,
+    this is not compatible with certain extensions that place their
+    metadata under the .hg directory, such as mq.
 
     If you use the -r option to clone up to a specific revision, no
     subsequent revisions will be present in the cloned repository.
