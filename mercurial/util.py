@@ -569,12 +569,13 @@ def hgexecutable():
     Defaults to $HG or 'hg' in the search path.
     """
     if _hgexecutable is None:
-        if os.environ.has_key('HG'):
-            set_hgexecutable(os.environ.get('HG'))
+        hg = os.environ.get('HG')
+        if hg:
+            set_hgexecutable(hg)
         elif main_is_frozen():
             set_hgexecutable(sys.executable)
         else:
-            sel_hgexecutable(find_exe('hg', 'hg'))
+            set_hgexecutable(find_exe('hg', 'hg'))
     return _hgexecutable
 
 def set_hgexecutable(path):
