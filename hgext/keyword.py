@@ -102,12 +102,12 @@ def utcdate(date):
 
 
 # make keyword tools accessible
-kwtools = {'templater': None, 'hgcmd': None}
+kwtools = {'templater': None, 'hgcmd': '', 'inc': [], 'exc': ['.hg*']}
 
-# store originals of monkeypatches
+# store originals of monkeypatches to be done at end of reposetup
+# that is, only if needed
 _patchfile_init = patch.patchfile.__init__
 _patch_diff = patch.diff
-_dispatch_parse = dispatch._parse
 _webcommands_changeset = webcommands.changeset
 _webcommands_filediff = webcommands.filediff
 
@@ -140,16 +140,6 @@ def _kwweb_filediff(web, req, tmpl):
     kwtools['templater'].matcher = util.never
     return _webcommands_filediff(web, req, tmpl)
 
-def _kwdispatch_parse(ui, args):
-    '''Monkeypatch dispatch._parse to obtain running hg command.'''
-    cmd, func, args, options, cmdoptions = _dispatch_parse(ui, args)
-    kwtools['hgcmd'] = cmd
-    return cmd, func, args, options, cmdoptions
-
-# dispatch._parse is run before reposetup, so wrap it here
-# all other actual monkey patching is done at end of reposetup
-dispatch._parse = _kwdispatch_parse
-
 
 class kwtemplater(object):
     '''
@@ -166,10 +156,11 @@ class kwtemplater(object):
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
     }
 
-    def __init__(self, ui, repo, inc, exc):
+    def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
-        self.matcher = util.matcher(repo.root, inc=inc, exc=exc)[1]
+        self.matcher = util.matcher(repo.root,
+                                    inc=kwtools['inc'], exc=kwtools['exc'])[1]
         self.restrict = kwtools['hgcmd'] in restricted.split()
 
         kwmaps = self.ui.configitems('keywordmaps')
@@ -370,6 +361,7 @@ def demo(ui, repo, *args, **opts):
         ui.readconfig(repo.join('hgrc'))
     if not opts.get('default'):
         kwmaps = dict(ui.configitems('keywordmaps')) or kwtemplater.templates
+    uisetup(ui)
     reposetup(ui, repo)
     for k, v in ui.configitems('extensions'):
         if k.endswith('keyword'):
@@ -451,6 +443,26 @@ def shrink(ui, repo, *pats, **opts):
     _kwfwrite(ui, repo, False, *pats, **opts)
 
 
+def uisetup(ui):
+    '''Collects [keyword] config in kwtools.
+    Monkeypatches dispatch._parse if needed.'''
+
+    for pat, opt in ui.configitems('keyword'):
+        if opt != 'ignore':
+            kwtools['inc'].append(pat)
+        else:
+            kwtools['exc'].append(pat)
+
+    if kwtools['inc']:
+        def kwdispatch_parse(ui, args):
+            '''Monkeypatch dispatch._parse to obtain running hg command.'''
+            cmd, func, args, options, cmdoptions = dispatch_parse(ui, args)
+            kwtools['hgcmd'] = cmd
+            return cmd, func, args, options, cmdoptions
+
+        dispatch_parse = dispatch._parse
+        dispatch._parse = kwdispatch_parse
+
 def reposetup(ui, repo):
     '''Sets up repo as kwrepo for keyword substitution.
     Overrides file method to return kwfilelog instead of filelog
@@ -461,23 +473,15 @@ def reposetup(ui, repo):
     files configured at all for keyword substitution.'''
 
     try:
-        if (not repo.local() or kwtools['hgcmd'] in nokwcommands.split()
+        if (not repo.local() or not kwtools['inc']
+            or kwtools['hgcmd'] in nokwcommands.split()
             or '.hg' in util.splitpath(repo.root)
             or repo._url.startswith('bundle:')):
             return
     except AttributeError:
         pass
 
-    inc, exc = [], ['.hg*']
-    for pat, opt in ui.configitems('keyword'):
-        if opt != 'ignore':
-            inc.append(pat)
-        else:
-            exc.append(pat)
-    if not inc:
-        return
-
-    kwtools['templater'] = kwt = kwtemplater(ui, repo, inc, exc)
+    kwtools['templater'] = kwt = kwtemplater(ui, repo)
 
     class kwrepo(repo.__class__):
         def file(self, f):
