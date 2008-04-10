@@ -1,6 +1,6 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
-merging bar and foo
+merging bar and foo to bar
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 % contents of bar should be line0 line1 line2
@@ -27,6 +27,7 @@ resolving manifests
  ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 7d3b554bfdf1
   searching for copies back to rev 1
  bar: versions differ -> m
+preserving bar for resolve of bar
 picked tool 'internal:merge' for bar (binary False symlink False)
 merging bar
 my bar@2d2f9a22c82b+ other bar@7d3b554bfdf1 ancestor bar@0a3ab4856510
@@ -49,7 +50,7 @@ adding manifests
 adding file changes
 added 3 changesets with 3 changes to 2 files (+1 heads)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-merging foo and bar
+merging foo and bar to bar
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 % contents of bar should be line0 line1 line2
@@ -76,6 +77,7 @@ resolving manifests
  ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 96ab80c60897
   searching for copies back to rev 1
  bar: versions differ -> m
+preserving bar for resolve of bar
 picked tool 'internal:merge' for bar (binary False symlink False)
 merging bar
 my bar@2d2f9a22c82b+ other bar@96ab80c60897 ancestor bar@0a3ab4856510

@@ -30,8 +30,9 @@ resolving manifests
    1a -> 1 *
   checking for directory renames
  1a: local moved to 1 -> m
+preserving 1a for resolve of 1a
 picked tool 'internal:merge' for 1a (binary False symlink False)
-merging 1a and 1
+merging 1a and 1 to 1a
 my 1a@ac7575e3c052+ other 1@746e9549ea96 ancestor 1@81f4b099af3d
  premerge successful
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -47,11 +48,11 @@ resolving manifests
    1a -> 1 *
   checking for directory renames
  1: remote moved to 1a -> m
-copying 1 to 1a
-picked tool 'internal:merge' for 1 (binary False symlink False)
-merging 1 and 1a
-my 1@746e9549ea96+ other 1a@ac7575e3c052 ancestor 1@81f4b099af3d
- premerge successful
+preserving 1 for resolve of 1a
 removing 1
+picked tool 'internal:merge' for 1a (binary False symlink False)
+merging 1 and 1a to 1a
+my 1a@746e9549ea96+ other 1a@ac7575e3c052 ancestor 1@81f4b099af3d
+ premerge successful
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)

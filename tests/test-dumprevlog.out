@@ -34,9 +34,9 @@ adding more to file a
 -end-
 dumprevlog done
 undumping:
-.hg/store/data/a.i
-.hg/store/00manifest.i
 .hg/store/00changelog.i
+.hg/store/00manifest.i
+.hg/store/data/a.i
 undumping done
 checking changesets
 checking manifests

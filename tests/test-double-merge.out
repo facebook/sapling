@@ -10,10 +10,11 @@ resolving manifests
   checking for directory renames
  foo: versions differ -> m
  foo: remote copied to bar -> m
-copying foo to bar
-picked tool 'internal:merge' for foo (binary False symlink False)
-merging foo and bar
-my foo@2092631ce82b+ other bar@7731dad1c2b9 ancestor foo@310fd17130da
+preserving foo for resolve of bar
+preserving foo for resolve of foo
+picked tool 'internal:merge' for bar (binary False symlink False)
+merging foo and bar to bar
+my bar@2092631ce82b+ other bar@7731dad1c2b9 ancestor foo@310fd17130da
  premerge successful
 picked tool 'internal:merge' for foo (binary False symlink False)
 merging foo

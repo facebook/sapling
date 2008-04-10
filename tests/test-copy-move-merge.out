@@ -12,16 +12,16 @@ resolving manifests
   checking for directory renames
  a: remote moved to c -> m
  a: remote moved to b -> m
-copying a to b
-copying a to c
-picked tool 'internal:merge' for a (binary False symlink False)
-merging a and b
-my a@fb3948d97f07+ other b@40da226db0f0 ancestor a@583c7b748052
- premerge successful
+preserving a for resolve of b
+preserving a for resolve of c
 removing a
-picked tool 'internal:merge' for a (binary False symlink False)
-merging a and c
-my a@fb3948d97f07+ other c@40da226db0f0 ancestor a@583c7b748052
+picked tool 'internal:merge' for b (binary False symlink False)
+merging a and b to b
+my b@fb3948d97f07+ other b@40da226db0f0 ancestor a@583c7b748052
+ premerge successful
+picked tool 'internal:merge' for c (binary False symlink False)
+merging a and c to c
+my c@fb3948d97f07+ other c@40da226db0f0 ancestor a@583c7b748052
  premerge successful
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
