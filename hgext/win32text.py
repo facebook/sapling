@@ -29,6 +29,7 @@
 
 from mercurial.i18n import gettext as _
 from mercurial.node import bin, short
+from mercurial import util
 import re
 
 # regexp for single LF without CR preceding.
