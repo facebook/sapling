@@ -51,10 +51,10 @@ def pygmentize(field, fctx, style, tmpl):
     try:
         lexer = guess_lexer_for_filename(fctx.path(), text,
                                          encoding=util._encoding)
-    except ClassNotFound:
+    except (ClassNotFound, ValueError):
         try:
             lexer = guess_lexer(text, encoding=util._encoding)
-        except ClassNotFound:
+        except (ClassNotFound, ValueError):
             lexer = TextLexer(encoding=util._encoding)
 
     formatter = HtmlFormatter(style=style, encoding=util._encoding)
