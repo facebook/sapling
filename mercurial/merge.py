@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex
 from i18n import _
-import errno, util, os, filemerge, copies, sha, shutil
+import errno, util, os, filemerge, copies, shutil
 
 class mergestate(object):
     '''track 3-way merge state of individual files'''
@@ -19,7 +19,7 @@ class mergestate(object):
         self._local = node
         shutil.rmtree(self._repo.join("merge"), True)
     def add(self, fcl, fco, fca, fd, flags):
-        hash = sha.sha(fcl.path()).hexdigest()
+        hash = util.sha1(fcl.path()).hexdigest()
         self._repo.opener("merge/" + hash, "w").write(fcl.data())
         self._state[fd] = 'u'
         self._data[fd] = (hash, fcl.path(), fca.path(), hex(fca.filenode()),
