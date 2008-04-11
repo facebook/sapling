@@ -19,6 +19,9 @@ from distutils.ccompiler import new_compiler
 import mercurial.version
 
 extra = {}
+scripts = ['hg']
+if os.name == 'nt':
+    scripts.append('contrib/win32/hg.bat')
 
 # simplified version of distutils.ccompiler.CCompiler.has_function
 # that actually removes its temporary files.
@@ -119,7 +122,7 @@ setup(name='mercurial',
       url='http://selenic.com/mercurial',
       description='Scalable distributed SCM',
       license='GNU GPL',
-      scripts=['hg'],
+      scripts=scripts,
       packages=packages,
       ext_modules=ext_modules,
       data_files=[(os.path.join('mercurial', root),
