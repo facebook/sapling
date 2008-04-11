@@ -1168,12 +1168,6 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     if not node1:
         node1 = repo.dirstate.parents()[0]
 
-    ccache = {}
-    def getctx(r):
-        if r not in ccache:
-            ccache[r] = context.changectx(repo, r)
-        return ccache[r]
-
     flcache = {}
     def getfilectx(f, ctx):
         flctx = ctx.filectx(f, filelog=flcache.get(f))
