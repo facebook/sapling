@@ -11,9 +11,7 @@ merging test.txt
 warning: conflicts during merge.
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-There are unresolved merges, you can redo the full merge using:
-  hg update -C 1
-  hg merge 2
+use 'hg resolve' to retry unresolved file merges
 pulling from ../test-a
 searching for changes
 adding changesets
@@ -33,9 +31,7 @@ my test.txt@451c744aabcc+ other test.txt@a070d41e8360 ancestor test.txt@faaea63e
 warning: conflicts during merge.
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-There are unresolved merges, you can redo the full merge using:
-  hg update -C 3
-  hg merge 4
+use 'hg resolve' to retry unresolved file merges
 one
 <<<<<<< local
 two-point-five

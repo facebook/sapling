@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import nullid, nullrev, hex
+from node import nullid, nullrev, hex, bin
 from i18n import _
 import errno, util, os, filemerge, copies, shutil
 
@@ -13,27 +13,49 @@ class mergestate(object):
     '''track 3-way merge state of individual files'''
     def __init__(self, repo):
         self._repo = repo
-        self._state = {}
-        self._data = {}
+        self._read()
     def reset(self, node):
+        self._state = {}
         self._local = node
         shutil.rmtree(self._repo.join("merge"), True)
+    def _read(self):
+        self._state = {}
+        try:
+            f = self._repo.opener("merge/state")
+            self._local = bin(f.readline()[:-1])
+            for l in f:
+                bits = l[:-1].split("\0")
+                self._state[bits[0]] = bits[1:]
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+    def _write(self):
+        f = self._repo.opener("merge/state", "w")
+        f.write(hex(self._local) + "\n")
+        for d, v in self._state.items():
+            f.write("\0".join([d] + v) + "\n")
     def add(self, fcl, fco, fca, fd, flags):
         hash = util.sha1(fcl.path()).hexdigest()
         self._repo.opener("merge/" + hash, "w").write(fcl.data())
-        self._state[fd] = 'u'
-        self._data[fd] = (hash, fcl.path(), fca.path(), hex(fca.filenode()),
-                          fco.path(), flags)
+        self._state[fd] = ['u', hash, fcl.path(), fca.path(),
+                           hex(fca.filenode()), fco.path(), flags]
+        self._write()
     def __contains__(self, dfile):
         return dfile in self._state
     def __getitem__(self, dfile):
-        return self._state[dfile]
+        return self._state[dfile][0]
+    def __iter__(self):
+        l = self._state.keys()
+        l.sort()
+        for f in l:
+            yield f
     def mark(self, dfile, state):
-        self._state[dfile] = state
+        self._state[dfile][0] = state
+        self._write()
     def resolve(self, dfile, wctx, octx):
         if self[dfile] == 'r':
             return 0
-        hash, lfile, afile, anode, ofile, flags = self._data[dfile]
+        state, hash, lfile, afile, anode, ofile, flags = self._state[dfile]
         f = self._repo.opener("merge/" + hash)
         self._repo.wwrite(dfile, f.read(), flags)
         fcd = wctx[dfile]
@@ -41,7 +63,6 @@ class mergestate(object):
         fca = self._repo.filectx(afile, fileid=anode)
         r = filemerge.filemerge(self._repo, self._local, lfile, fcd, fco, fca)
         if not r:
-            util.set_flags(self._repo.wjoin(dfile), flags)
             self.mark(dfile, 'r')
         return r
 

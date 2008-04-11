@@ -23,9 +23,31 @@ hg ci -Am 'change foo' -d '0 0'
 
 # test with the rename on the remote side
 HGMERGE=false hg merge
+hg resolve -l
 
 # test with the rename on the local side
 hg up -C 1
 HGMERGE=false hg merge
+
+echo % show unresolved
+hg resolve -l
+
+echo % unmark baz
+hg resolve -u baz
+
+echo % show
+hg resolve -l
+
+echo % re-resolve baz
+hg resolve baz
+
+echo % after
+hg resolve -l
+
+echo % resolve all
+hg resolve
+
+echo % after
+hg resolve -l
 
 true

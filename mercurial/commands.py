@@ -13,6 +13,7 @@ import hg, util, revlog, bundlerepo, extensions, copies
 import difflib, patch, time, help, mdiff, tempfile
 import version, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
+import merge as merge_
 
 # Commands start here, listed alphabetically
 
@@ -2236,6 +2237,35 @@ def rename(ui, repo, *pats, **opts):
     finally:
         del wlock
 
+def resolve(ui, repo, *pats, **opts):
+    """resolve file merges from a branch merge or update
+
+    This command will attempt to resolve unresolved merges from the
+    last update or merge command. This will use the local file
+    revision preserved at the last update or merge to cleanly retry
+    the file merge attempt. With no file or options specified, this
+    command will attempt to resolve all unresolved files.
+    """
+
+    if len([x for x in opts if opts[x]]) > 1:
+        raise util.Abort(_("too many options specified"))
+
+    ms = merge_.mergestate(repo)
+    mf = util.matcher(repo.root, "", pats, [], [])[1]
+
+    for f in ms:
+        if mf(f):
+            if opts.get("list"):
+                ui.write("%s %s\n" % (ms[f].upper(), f))
+            elif opts.get("mark"):
+                ms.mark(f, "r")
+            elif opts.get("unmark"):
+                ms.mark(f, "u")
+            else:
+                wctx = repo.workingctx()
+                mctx = wctx.parents()[-1]
+                ms.resolve(f, wctx, mctx)
+
 def revert(ui, repo, *pats, **opts):
     """restore individual files or dirs to an earlier state
 
@@ -3196,6 +3226,12 @@ table = {
            _('forcibly copy over an existing managed file')),
          ] + walkopts + dryrunopts,
          _('hg rename [OPTION]... SOURCE... DEST')),
+    "resolve":
+        (resolve,
+         [('l', 'list', None, _('list state of files needing merge')),
+          ('m', 'mark', None, _('mark files as resolved')),
+          ('u', 'unmark', None, _('unmark files as resolved'))],
+          ('hg resolve [OPTION] [FILES...]')),
     "revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),

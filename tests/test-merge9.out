@@ -7,14 +7,31 @@ merging bar
 merging bar failed!
 merging foo and baz to baz
 1 files updated, 1 files merged, 0 files removed, 1 files unresolved
-There are unresolved merges, you can redo the full merge using:
-  hg update -C 2
-  hg merge 1
+use 'hg resolve' to retry unresolved file merges
+U bar
+R baz
 3 files updated, 0 files merged, 1 files removed, 0 files unresolved
 merging bar
 merging bar failed!
 merging baz and foo to baz
 1 files updated, 1 files merged, 0 files removed, 1 files unresolved
-There are unresolved merges, you can redo the full merge using:
-  hg update -C 1
-  hg merge 2
+use 'hg resolve' to retry unresolved file merges
+% show unresolved
+U bar
+R baz
+% unmark baz
+% show
+U bar
+U baz
+% re-resolve baz
+merging baz and foo to baz
+% after
+U bar
+R baz
+% resolve all
+merging bar
+warning: conflicts during merge.
+merging bar failed!
+% after
+U bar
+R baz

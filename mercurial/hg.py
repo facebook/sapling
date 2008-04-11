@@ -271,15 +271,7 @@ def update(repo, node):
     stats = _merge.update(repo, node, False, False, None)
     _showstats(repo, stats)
     if stats[3]:
-        repo.ui.status(_("There are unresolved merges with"
-                         " locally modified files.\n"))
-        if stats[1]:
-            repo.ui.status(_("You can finish the partial merge using:\n"))
-        else:
-            repo.ui.status(_("You can redo the full merge using:\n"))
-        # len(pl)==1, otherwise _merge.update() would have raised util.Abort:
-        repo.ui.status(_("  hg update %s\n  hg update %s\n")
-                       % (pl[0].rev(), repo.changectx(node).rev()))
+        repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
     return stats[3] > 0
 
 def clean(repo, node, show_stats=True):
@@ -294,11 +286,7 @@ def merge(repo, node, force=None, remind=True):
     _showstats(repo, stats)
     if stats[3]:
         pl = repo.parents()
-        repo.ui.status(_("There are unresolved merges,"
-                         " you can redo the full merge using:\n"
-                         "  hg update -C %s\n"
-                         "  hg merge %s\n")
-                       % (pl[0].rev(), pl[1].rev()))
+        repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3] > 0
