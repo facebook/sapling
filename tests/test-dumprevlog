@@ -23,7 +23,7 @@ python $CONTRIBDIR/dumprevlog .hg/store/data/a.i
 echo dumprevlog done
 
 # dump all revlogs to file repo.dump
-find .hg/store -name "*.i" | xargs python $CONTRIBDIR/dumprevlog > ../repo.dump
+find .hg/store -name "*.i" | sort | xargs python $CONTRIBDIR/dumprevlog > ../repo.dump
 
 cd ..
 
