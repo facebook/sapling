@@ -69,6 +69,15 @@ def defaultdest(source):
     '''return default destination of clone if none is given'''
     return os.path.basename(os.path.normpath(source))
 
+def localpath(path):
+    if path.startswith('file://localhost/'):
+        return path[16:]
+    if path.startswith('file://'):
+        return path[7:]
+    if path.startswith('file:'):
+        return path[5:]
+    return path
+
 def clone(ui, source, dest=None, pull=False, rev=None, update=True,
           stream=False):
     """Make a copy of an existing repository.
@@ -115,15 +124,6 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     if dest is None:
         dest = defaultdest(source)
         ui.status(_("destination directory: %s\n") % dest)
-
-    def localpath(path):
-        if path.startswith('file://localhost/'):
-            return path[16:]
-        if path.startswith('file://'):
-            return path[7:]
-        if path.startswith('file:'):
-            return path[5:]
-        return path
 
     dest = localpath(dest)
     source = localpath(source)
