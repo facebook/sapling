@@ -533,8 +533,10 @@ class workingctx(changectx):
         pnode = self._parents[0].changeset()[0]
         orig = self._repo.dirstate.copies().get(path, path)
         node, flag = self._repo.manifest.find(pnode, orig)
-        is_link = util.linkfunc(self._repo.root, lambda p: 'l' in flag)
-        is_exec = util.execfunc(self._repo.root, lambda p: 'x' in flag)
+        is_link = util.linkfunc(self._repo.root,
+                                lambda p: flag and 'l' in flag)
+        is_exec = util.execfunc(self._repo.root,
+                                lambda p: flag and 'x' in flag)
         try:
             return (is_link(path) and 'l' or '') + (is_exec(path) and 'e' or '')
         except OSError:
