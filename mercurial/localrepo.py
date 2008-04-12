@@ -476,6 +476,9 @@ class localrepository(repo.repository):
     def wjoin(self, f):
         return os.path.join(self.root, f)
 
+    def rjoin(self, f):
+        return os.path.join(self.root, util.pconvert(f))
+        
     def file(self, f):
         if f[0] == '/':
             f = f[1:]

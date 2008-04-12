@@ -109,7 +109,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     rev: revision to clone up to (implies pull=True)
 
     update: update working directory after clone completes, if
-    destination is local repository
+    destination is local repository (True means update to default rev,
+    anything else is treated as a revision)
     """
 
     if isinstance(source, str):
@@ -244,7 +245,9 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
             if update:
                 dest_repo.ui.status(_("updating working directory\n"))
-                if not checkout:
+                if update is not True:
+                    checkout = update
+                elif not checkout:
                     try:
                         checkout = dest_repo.lookup("default")
                     except:
