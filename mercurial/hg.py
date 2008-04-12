@@ -16,7 +16,7 @@ def _local(path):
     return (os.path.isfile(util.drop_scheme('file', path)) and
             bundlerepo or localrepo)
 
-def parseurl(url, revs):
+def parseurl(url, revs=[]):
     '''parse url#branch, returning url, branch + revs'''
 
     if '#' not in url:
