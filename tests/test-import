@@ -244,3 +244,20 @@ echo % view a2
 # and a2 should have duplicated it
 cat a2
 cd ..
+
+echo % 'test -p0'
+hg init p0
+cd p0
+echo a > a
+hg ci -Am t
+hg import -p0 - << EOF
+foobar
+--- a	Sat Apr 12 22:43:58 2008 -0400
++++ a	Sat Apr 12 22:44:05 2008 -0400
+@@ -1,1 +1,1 @@
+-a
++bb
+EOF
+hg status
+cat a
+cd ..

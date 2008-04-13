@@ -256,3 +256,7 @@ applying copy.diff
 a
 % view a2
 a
+% test -p0
+adding a
+applying patch from stdin
+bb
