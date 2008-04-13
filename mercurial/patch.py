@@ -789,7 +789,7 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
         pathlen = len(path)
         i = 0
         if count == 0:
-            return path.rstrip()
+            return '', path.rstrip()
         while count > 0:
             i = path.find('/', i)
             if i == -1:
