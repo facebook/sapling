@@ -675,28 +675,30 @@ class svn_source(converter_source):
                 # Copies here (must copy all from source)
                 # Probably not a real problem for us if
                 # source does not exist
-                if not ent.copyfrom_path:
+                if not ent.copyfrom_path or not parents:
                     continue
-                copyfrompath = self.getrelpath(ent.copyfrom_path.decode(self.encoding))
+                # Copy sources not in parent revisions cannot be represented,
+                # ignore their origin for now
+                pmodule, prevnum = self.revsplit(parents[0])[1:]
+                if ent.copyfrom_rev < prevnum:
+                    continue
+                copyfrompath = ent.copyfrom_path.decode(self.encoding)
+                copyfrompath = self.getrelpath(copyfrompath, pmodule)
                 if not copyfrompath:
                     continue
                 copyfrom[path] = ent
                 self.ui.debug("mark %s came from %s:%d\n" 
                               % (path, copyfrompath, ent.copyfrom_rev))
-
-                # Good, /probably/ a regular copy. Really should check
-                # to see whether the parent revision actually contains
-                # the directory in question.
                 children = self._find_children(ent.copyfrom_path, ent.copyfrom_rev)
                 children.sort()
                 for child in children:
-                    entrypath = self.getrelpath("/" + child)
+                    entrypath = self.getrelpath("/" + child, pmodule)
                     if not entrypath:
                         continue
                     entry = entrypath.decode(self.encoding)
                     copytopath = path + entry[len(copyfrompath):]
                     copytopath = self.getrelpath(copytopath)
-                    copies[self.recode(copytopath)] = self.recode(entry)
+                    copies[self.recode(copytopath)] = self.recode(entry, pmodule)
 
         return (util.unique(entries), copies)
 
