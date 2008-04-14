@@ -709,17 +709,17 @@ class localrepository(repo.repository):
             #
             meta["copy"] = cp
             if not manifest2: # not a branch merge
-                meta["copyrev"] = hex(manifest1.get(cp, nullid))
+                meta["copyrev"] = hex(manifest1[cp])
                 fp2 = nullid
             elif fp2 != nullid: # copied on remote side
-                meta["copyrev"] = hex(manifest1.get(cp, nullid))
+                meta["copyrev"] = hex(manifest1[cp])
             elif fp1 != nullid: # copied on local side, reversed
-                meta["copyrev"] = hex(manifest2.get(cp))
+                meta["copyrev"] = hex(manifest2[cp])
                 fp2 = fp1
             elif cp in manifest2: # directory rename on local side
                 meta["copyrev"] = hex(manifest2[cp])
             else: # directory rename on remote side
-                meta["copyrev"] = hex(manifest1.get(cp, nullid))
+                meta["copyrev"] = hex(manifest1[cp])
             self.ui.debug(_(" %s: copy %s:%s\n") %
                           (fn, cp, meta["copyrev"]))
             fp1 = nullid
