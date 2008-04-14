@@ -552,19 +552,21 @@ class svn_source(converter_source):
 
             kind = svn.ra.check_path(self.ra, entrypath, revnum)
             if kind == svn.core.svn_node_file:
-                if ent.copyfrom_path:
-                    copyfrom_path = self.getrelpath(ent.copyfrom_path)
-                    if copyfrom_path:
-                        self.ui.debug("Copied to %s from %s@%s\n" %
-                                      (entrypath, copyfrom_path,
-                                       ent.copyfrom_rev))
-                        # It's probably important for hg that the source
-                        # exists in the revision's parent, not just the
-                        # ent.copyfrom_rev
-                        fromkind = svn.ra.check_path(self.ra, copyfrom_path, ent.copyfrom_rev)
-                        if fromkind != 0:
-                            copies[self.recode(entry)] = self.recode(copyfrom_path)
                 entries.append(self.recode(entry))
+
+                if not ent.copyfrom_path:
+                    continue
+                copyfrom_path = self.getrelpath(ent.copyfrom_path)
+                if not copyfrom_path:
+                    continue
+                self.ui.debug("copied to %s from %s@%s\n" %
+                              (entrypath, copyfrom_path, ent.copyfrom_rev))
+                # It's probably important for hg that the source
+                # exists in the revision's parent, not just the
+                # ent.copyfrom_rev
+                fromkind = svn.ra.check_path(self.ra, copyfrom_path, ent.copyfrom_rev)
+                if fromkind != 0:
+                    copies[self.recode(entry)] = self.recode(copyfrom_path)
             elif kind == 0: # gone, but had better be a deleted *file*
                 self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
 
