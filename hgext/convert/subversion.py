@@ -185,6 +185,8 @@ class svn_source(converter_source):
             self.ra = self.transport.ra
             self.ctx = self.transport.client
             self.base = svn.ra.get_repos_root(self.ra)
+            # Module is either empty or a repository path starting with
+            # a slash and not ending with a slash.
             self.module = self.url[len(self.base):]
             self.rootmodule = self.module
             self.commits = {}
@@ -543,10 +545,10 @@ class svn_source(converter_source):
             #   "/CMFPlone/branches/Plone-2_0-branch/tests/PloneTestCase.py"
             # that is to say "tests/PloneTestCase.py"
             if path.startswith(module):
-                relative = path[len(module):]
+                relative = path.rstrip('/')[len(module):]
                 if relative.startswith('/'):
                     return relative[1:]
-                else:
+                elif relative == '':
                     return relative
 
             # The path is outside our tracked tree...
