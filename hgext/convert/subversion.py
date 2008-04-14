@@ -185,6 +185,8 @@ class svn_source(converter_source):
             self.ra = self.transport.ra
             self.ctx = self.transport.client
             self.base = svn.ra.get_repos_root(self.ra)
+            # Module is either empty or a repository path starting with
+            # a slash and not ending with a slash.
             self.module = self.url[len(self.base):]
             self.rootmodule = self.module
             self.commits = {}
@@ -535,24 +537,6 @@ class svn_source(converter_source):
         svn.ra.reparent(self.ra, svn_url.encode(self.encoding))
 
     def expandpaths(self, rev, paths, parents):
-        def get_entry_from_path(path, module=self.module):
-            # Given the repository url of this wc, say
-            #   "http://server/plone/CMFPlone/branches/Plone-2_0-branch"
-            # extract the "entry" portion (a relative path) from what
-            # svn log --xml says, ie
-            #   "/CMFPlone/branches/Plone-2_0-branch/tests/PloneTestCase.py"
-            # that is to say "tests/PloneTestCase.py"
-            if path.startswith(module):
-                relative = path[len(module):]
-                if relative.startswith('/'):
-                    return relative[1:]
-                else:
-                    return relative
-
-            # The path is outside our tracked tree...
-            self.ui.debug('%r is not under %r, ignoring\n' % (path, module))
-            return None
-
         entries = []
         copyfrom = {} # Map of entrypath, revision for finding source of deleted revisions.
         copies = {}
@@ -563,24 +547,25 @@ class svn_source(converter_source):
             self.reparent(self.module)
 
         for path, ent in paths:
-            entrypath = get_entry_from_path(path, module=self.module)
+            entrypath = self.getrelpath(path)
             entry = entrypath.decode(self.encoding)
 
             kind = svn.ra.check_path(self.ra, entrypath, revnum)
             if kind == svn.core.svn_node_file:
-                if ent.copyfrom_path:
-                    copyfrom_path = get_entry_from_path(ent.copyfrom_path)
-                    if copyfrom_path:
-                        self.ui.debug("Copied to %s from %s@%s\n" %
-                                      (entrypath, copyfrom_path,
-                                       ent.copyfrom_rev))
-                        # It's probably important for hg that the source
-                        # exists in the revision's parent, not just the
-                        # ent.copyfrom_rev
-                        fromkind = svn.ra.check_path(self.ra, copyfrom_path, ent.copyfrom_rev)
-                        if fromkind != 0:
-                            copies[self.recode(entry)] = self.recode(copyfrom_path)
                 entries.append(self.recode(entry))
+                if not ent.copyfrom_path or not parents:
+                    continue
+                # Copy sources not in parent revisions cannot be represented,
+                # ignore their origin for now
+                pmodule, prevnum = self.revsplit(parents[0])[1:]
+                if ent.copyfrom_rev < prevnum:
+                    continue
+                copyfrom_path = self.getrelpath(ent.copyfrom_path, pmodule)
+                if not copyfrom_path:
+                    continue
+                self.ui.debug("copied to %s from %s@%s\n" %
+                              (entrypath, copyfrom_path, ent.copyfrom_rev))
+                copies[self.recode(entry)] = self.recode(copyfrom_path)
             elif kind == 0: # gone, but had better be a deleted *file*
                 self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
 
@@ -590,8 +575,8 @@ class svn_source(converter_source):
                 # a root revision.
                 uuid, old_module, fromrev = self.revsplit(parents[0])
 
-                basepath = old_module + "/" + get_entry_from_path(path, module=self.module)
-                entrypath = old_module + "/" + get_entry_from_path(path, module=self.module)
+                basepath = old_module + "/" + self.getrelpath(path)
+                entrypath = basepath
 
                 def lookup_parts(p):
                     rc = None
@@ -647,7 +632,7 @@ class svn_source(converter_source):
                         # parent in the same commit? (probably can). Could
                         # cause problems if instead of revnum -1,
                         # we have to look in (copyfrom_path, revnum - 1)
-                        entrypath = get_entry_from_path("/" + child, module=old_module)
+                        entrypath = self.getrelpath("/" + child, module=old_module)
                         if entrypath:
                             entry = self.recode(entrypath.decode(self.encoding))
                             if entry in copies:
@@ -680,7 +665,7 @@ class svn_source(converter_source):
                     # parent in the same commit? (probably can). Could
                     # cause problems if instead of revnum -1,
                     # we have to look in (copyfrom_path, revnum - 1)
-                    entrypath = get_entry_from_path("/" + child, module=self.module)
+                    entrypath = self.getrelpath("/" + child)
                     # print child, self.module, entrypath
                     if entrypath:
                         # Need to filter out directories here...
@@ -691,39 +676,30 @@ class svn_source(converter_source):
                 # Copies here (must copy all from source)
                 # Probably not a real problem for us if
                 # source does not exist
-
-                # Can do this with the copy command "hg copy"
-                # if ent.copyfrom_path:
-                #     copyfrom_entry = get_entry_from_path(ent.copyfrom_path.decode(self.encoding),
-                #             module=self.module)
-                #     copyto_entry = entrypath
-                #
-                #     print "copy directory", copyfrom_entry, 'to', copyto_entry
-                #
-                #     copies.append((copyfrom_entry, copyto_entry))
-
-                if ent.copyfrom_path:
-                    copyfrom_path = ent.copyfrom_path.decode(self.encoding)
-                    copyfrom_entry = get_entry_from_path(copyfrom_path, module=self.module)
-                    if copyfrom_entry:
-                        copyfrom[path] = ent
-                        self.ui.debug("mark %s came from %s\n" % (path, copyfrom[path]))
-
-                        # Good, /probably/ a regular copy. Really should check
-                        # to see whether the parent revision actually contains
-                        # the directory in question.
-                        children = self._find_children(self.recode(copyfrom_path), ent.copyfrom_rev)
-                        children.sort()
-                        for child in children:
-                            entrypath = get_entry_from_path("/" + child, module=self.module)
-                            if entrypath:
-                                entry = entrypath.decode(self.encoding)
-                                # print "COPY COPY From", copyfrom_entry, entry
-                                copyto_path = path + entry[len(copyfrom_entry):]
-                                copyto_entry =  get_entry_from_path(copyto_path, module=self.module)
-                                # print "COPY", entry, "COPY To", copyto_entry
-                                copies[self.recode(copyto_entry)] = self.recode(entry)
-                                # copy from quux splort/quuxfile
+                if not ent.copyfrom_path or not parents:
+                    continue
+                # Copy sources not in parent revisions cannot be represented,
+                # ignore their origin for now
+                pmodule, prevnum = self.revsplit(parents[0])[1:]
+                if ent.copyfrom_rev < prevnum:
+                    continue
+                copyfrompath = ent.copyfrom_path.decode(self.encoding)
+                copyfrompath = self.getrelpath(copyfrompath, pmodule)
+                if not copyfrompath:
+                    continue
+                copyfrom[path] = ent
+                self.ui.debug("mark %s came from %s:%d\n" 
+                              % (path, copyfrompath, ent.copyfrom_rev))
+                children = self._find_children(ent.copyfrom_path, ent.copyfrom_rev)
+                children.sort()
+                for child in children:
+                    entrypath = self.getrelpath("/" + child, pmodule)
+                    if not entrypath:
+                        continue
+                    entry = entrypath.decode(self.encoding)
+                    copytopath = path + entry[len(copyfrompath):]
+                    copytopath = self.getrelpath(copytopath)
+                    copies[self.recode(copytopath)] = self.recode(entry, pmodule)
 
         return (util.unique(entries), copies)
 
@@ -732,6 +708,13 @@ class svn_source(converter_source):
             from_revnum, to_revnum = to_revnum, from_revnum
 
         self.child_cset = None
+
+        def isdescendantof(parent, child):
+            if not child or not parent or not child.startswith(parent):
+                return False
+            subpath = child[len(parent):]
+            return len(subpath) > 1 and subpath[0] == '/'
+
         def parselogentry(orig_paths, revnum, author, date, message):
             """Return the parsed commit object or None, and True if
             the revision is a branch root.
@@ -755,10 +738,21 @@ class svn_source(converter_source):
             if root_paths:
                 path, ent = root_paths[-1]
                 if ent.copyfrom_path:
+                    # If dir was moved while one of its file was removed 
+                    # the log may look like:
+                    # A /dir   (from /dir:x)
+                    # A /dir/a (from /dir/a:y)
+                    # A /dir/b (from /dir/b:z)
+                    # ...
+                    # for all remaining children.
+                    # Let's take the highest child element from rev as source.
+                    copies = [(p,e) for p,e in orig_paths[:-1] 
+                          if isdescendantof(ent.copyfrom_path, e.copyfrom_path)]
+                    fromrev = max([e.copyfrom_rev for p,e in copies] + [ent.copyfrom_rev])
                     branched = True
                     newpath = ent.copyfrom_path + self.module[len(path):]
                     # ent.copyfrom_rev may not be the actual last revision
-                    previd = self.latest(newpath, ent.copyfrom_rev)
+                    previd = self.latest(newpath, fromrev)
                     if previd is not None:
                         prevmodule, prevnum = self.revsplit(previd)[1:]
                         if prevnum >= self.startrev:
@@ -771,8 +765,7 @@ class svn_source(converter_source):
             paths = []
             # filter out unrelated paths
             for path, ent in orig_paths:
-                if not path.startswith(self.module):
-                    self.ui.debug("boring@%s: %s\n" % (revnum, path))
+                if self.getrelpath(path) is None:
                     continue
                 paths.append((path, ent))
 
@@ -884,6 +877,26 @@ class svn_source(converter_source):
         pool = Pool()
         rpath = '/'.join([self.base, path]).strip('/')
         return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool).keys()]
+
+    def getrelpath(self, path, module=None):
+        if module is None:
+            module = self.module
+        # Given the repository url of this wc, say
+        #   "http://server/plone/CMFPlone/branches/Plone-2_0-branch"
+        # extract the "entry" portion (a relative path) from what
+        # svn log --xml says, ie
+        #   "/CMFPlone/branches/Plone-2_0-branch/tests/PloneTestCase.py"
+        # that is to say "tests/PloneTestCase.py"
+        if path.startswith(module):
+            relative = path.rstrip('/')[len(module):]
+            if relative.startswith('/'):
+                return relative[1:]
+            elif relative == '':
+                return relative
+
+        # The path is outside our tracked tree...
+        self.ui.debug('%r is not under %r, ignoring\n' % (path, module))
+        return None
 
 pre_revprop_change = '''#!/bin/sh
 

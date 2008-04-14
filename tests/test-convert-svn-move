@@ -27,8 +27,10 @@ cd projA
 mkdir trunk
 echo a > trunk/a
 mkdir trunk/d1
+mkdir trunk/d2
 echo b > trunk/d1/b
 echo c > trunk/d1/c
+echo d > trunk/d2/d
 cd ..
 
 svnurl=file://$svnpath/svn-repo/projA
@@ -50,10 +52,16 @@ mkdir subproject/branches
 svn add subproject/branches
 svn ci -m createbranches
 svn mv $svnurl/subproject/d1 $svnurl/subproject/trunk/d1 -m moved1
+svn mv $svnurl/subproject/d2 $svnurl/subproject/trunk/d2 -m moved2
 svn up
 "$TESTDIR/svn-safe-append.py" b subproject/trunk/d1/b
-svn ci -m changeb
+svn rm subproject/trunk/d2
+svn ci -m "changeb and rm d2"
 svn mv $svnurl/subproject/trunk/d1 $svnurl/subproject/branches/d1 -m moved1again
+echo % copy a file from a past revision
+svn copy -r 7 $svnurl/subproject/trunk/d2/d $svnurl/subproject/trunk -m copyfilefrompast
+echo % copy a directory from a past revision
+svn copy -r 7 $svnurl/subproject/trunk/d2 $svnurl/subproject/trunk -m copydirfrompast
 cd ..
 
 echo % convert trunk and branches
