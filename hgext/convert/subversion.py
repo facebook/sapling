@@ -676,27 +676,25 @@ class svn_source(converter_source):
                 # Probably not a real problem for us if
                 # source does not exist
                 if ent.copyfrom_path:
-                    copyfrom_path = ent.copyfrom_path.decode(self.encoding)
-                    copyfrom_entry = self.getrelpath(copyfrom_path)
-                    if copyfrom_entry:
+                    copyfrompath = self.getrelpath(ent.copyfrom_path.decode(self.encoding))
+                    if copyfrompath:
                         copyfrom[path] = ent
-                        self.ui.debug("mark %s came from %s\n" % (path, copyfrom[path]))
+                        self.ui.debug("mark %s came from %s:%d\n" 
+                                      % (path, copyfrompath, ent.copyfrom_rev))
 
                         # Good, /probably/ a regular copy. Really should check
                         # to see whether the parent revision actually contains
                         # the directory in question.
-                        children = self._find_children(self.recode(copyfrom_path), ent.copyfrom_rev)
+                        children = self._find_children(ent.copyfrom_path, ent.copyfrom_rev)
                         children.sort()
                         for child in children:
                             entrypath = self.getrelpath("/" + child)
-                            if entrypath:
-                                entry = entrypath.decode(self.encoding)
-                                # print "COPY COPY From", copyfrom_entry, entry
-                                copyto_path = path + entry[len(copyfrom_entry):]
-                                copyto_entry = self.getrelpath(copyto_path)
-                                # print "COPY", entry, "COPY To", copyto_entry
-                                copies[self.recode(copyto_entry)] = self.recode(entry)
-                                # copy from quux splort/quuxfile
+                            if not entrypath:
+                                continue
+                            entry = entrypath.decode(self.encoding)
+                            copytopath = path + entry[len(copyfrompath):]
+                            copytopath = self.getrelpath(copytopath)
+                            copies[self.recode(copytopath)] = self.recode(entry)
 
         return (util.unique(entries), copies)
 
