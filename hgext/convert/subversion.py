@@ -744,8 +744,7 @@ class svn_source(converter_source):
             paths = []
             # filter out unrelated paths
             for path, ent in orig_paths:
-                if not path.startswith(self.module):
-                    self.ui.debug("boring@%s: %s\n" % (revnum, path))
+                if self.getrelpath(path) is None:
                     continue
                 paths.append((path, ent))
 
