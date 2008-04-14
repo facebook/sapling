@@ -60,24 +60,30 @@ Transmitting file data .
 Committed revision 8.
 
 Committed revision 9.
-% copy a directory from a past revision
+% copy a file from a past revision
 
 Committed revision 10.
+% copy a directory from a past revision
+
+Committed revision 11.
 % convert trunk and branches
 initializing destination A-hg repository
 scanning source...
 sorting...
 converting...
-8 createtrunk
+9 createtrunk
+8 moved1
 7 moved1
-6 moved1
-5 moved2
+6 moved2
+5 changeb and rm d2
 4 changeb and rm d2
-3 changeb and rm d2
+3 moved1again
 2 moved1again
-1 moved1again
+1 copyfilefrompast
 0 copydirfrompast
-o  8 copydirfrompast files: d2/d
+o  9 copydirfrompast files: d2/d
+|
+o  8 copyfilefrompast files: d
 |
 o  7 moved1again files: d1/b d1/c
 |
@@ -95,5 +101,5 @@ o |  2 moved1 files: d1/b d1/c
 |
 o  0 createtrunk files:
 
-default                        8:
+default                        9:
 d1                             6:

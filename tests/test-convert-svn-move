@@ -58,6 +58,8 @@ svn up
 svn rm subproject/trunk/d2
 svn ci -m "changeb and rm d2"
 svn mv $svnurl/subproject/trunk/d1 $svnurl/subproject/branches/d1 -m moved1again
+echo % copy a file from a past revision
+svn copy -r 7 $svnurl/subproject/trunk/d2/d $svnurl/subproject/trunk -m copyfilefrompast
 echo % copy a directory from a past revision
 svn copy -r 7 $svnurl/subproject/trunk/d2 $svnurl/subproject/trunk -m copydirfrompast
 cd ..
