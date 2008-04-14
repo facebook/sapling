@@ -245,7 +245,14 @@ def _verify(repo):
                 rp = fl.renamed(n)
                 if rp:
                     fl2 = repo.file(rp[0])
-                    rev = fl2.rev(rp[1])
+                    if fl2.count() == 0:
+                        err(flr, _("empty or missing copy source revlog %s:%s")
+                            % (rp[0], short(rp[1])), f)
+                    elif rp[1] == nullid:
+                        err(flr, _("copy source revision is nullid %s:%s")
+                            % (rp[0], short(rp[1])), f)
+                    else:
+                        rev = fl2.rev(rp[1])
             except KeyboardInterrupt:
                 repo.ui.warn(_("interrupted"))
                 raise
