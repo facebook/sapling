@@ -1018,11 +1018,16 @@ def walkchangerevs(ui, repo, pats, change, opts):
         minrev, maxrev = min(revs), max(revs)
         for file_, node in iterfiles():
             filelog = repo.file(file_)
-            # A zero count may be a directory or deleted file, so
-            # try to find matching entries on the slow path.
             if filelog.count() == 0:
-                slowpath = True
-                break
+                if node is None:
+                    # A zero count may be a directory or deleted file, so
+                    # try to find matching entries on the slow path.
+                    slowpath = True
+                    break
+                else:
+                    ui.warn(_('%s:%s copy source revision cannot be found!\n') 
+                            % (file_, short(node)))
+                    continue
             for rev, copied in filerevgen(filelog, node):
                 if rev <= maxrev:
                     if rev < minrev:
