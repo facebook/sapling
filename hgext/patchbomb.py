@@ -404,7 +404,7 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.status('Displaying ', m['Subject'], ' ...\n')
             ui.flush()
             if 'PAGER' in os.environ:
-                fp = os.popen(os.environ['PAGER'], 'w')
+                fp = util.popen(os.environ['PAGER'], 'w')
             else:
                 fp = ui
             generator = email.Generator.Generator(fp, mangle_from_=False)

@@ -47,7 +47,7 @@ them in the global .hgrc
 '''
 
 import sys, os, signal
-from mercurial import dispatch
+from mercurial import dispatch, util
 
 def uisetup(ui):
     def pagecmd(ui, options, cmd, cmdfunc):
@@ -56,7 +56,7 @@ def uisetup(ui):
             attend = ui.configlist('pager', 'attend')
             if (cmd in attend or
                 (cmd not in ui.configlist('pager', 'ignore') and not attend)):
-                sys.stderr = sys.stdout = os.popen(p, "wb")
+                sys.stderr = sys.stdout = util.popen(p, "wb")
                 if ui.configbool('pager', 'quiet'):
                     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         return oldrun(ui, options, cmd, cmdfunc)

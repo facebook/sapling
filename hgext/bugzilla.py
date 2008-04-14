@@ -55,7 +55,7 @@
 from mercurial.i18n import _
 from mercurial.node import short
 from mercurial import cmdutil, templater, util
-import os, re, time
+import re, time
 
 MySQLdb = None
 
@@ -127,7 +127,7 @@ class bugzilla_2_16(object):
             cmd = self.ui.config('bugzilla', 'notify',
                                'cd /var/www/html/bugzilla && '
                                './processmail %s nobody@nowhere.com') % id
-            fp = os.popen('(%s) 2>&1' % cmd)
+            fp = util.popen('(%s) 2>&1' % cmd)
             out = fp.read()
             ret = fp.close()
             if ret:
