@@ -35,41 +35,40 @@ svn import -m "init projA" projA $svnurl | fix_path
 echo % update svn repository
 svn co $svnurl A | fix_path
 cd A
-echo hello > trunk/letter.txt
-echo hey > trunk/letter2.txt
-echo ho > trunk/letter3.txt
+echo a > trunk/a
+echo b > trunk/b
+echo c > trunk/c
 # Add a file within branches, used to confuse branch detection
-echo a > branches/readme.txt
-svn add trunk/letter.txt trunk/letter2.txt trunk/letter3.txt branches/readme.txt
+echo d > branches/notinbranch
+svn add trunk/a trunk/b trunk/c branches/notinbranch
 svn ci -m hello
 
-echo % branch to old letters
+echo % branch to old
 svn copy trunk branches/old
-svn rm branches/old/letter3.txt
-svn ci -m "branch trunk, remove letter3"
+svn rm branches/old/c
+svn ci -m "branch trunk, remove c"
 svn up
 
 echo % update trunk
-"$TESTDIR/svn-safe-append.py" "what can I say ?" trunk/letter.txt
-svn ci -m "change letter"
+"$TESTDIR/svn-safe-append.py" a trunk/a
+svn ci -m "change a"
 
 echo % update old branch
-"$TESTDIR/svn-safe-append.py" "what's up ?" branches/old/letter2.txt
-svn ci -m "change letter2"
+"$TESTDIR/svn-safe-append.py" b branches/old/b
+svn ci -m "change b"
 
 echo % create a cross-branch revision
-svn move -m "move letter2" trunk/letter2.txt \
-    branches/old/letter3.txt
-"$TESTDIR/svn-safe-append.py" "I am fine" branches/old/letter3.txt
-svn ci -m "move and update letter3.txt"
+svn move -m "move b" trunk/b branches/old/c
+"$TESTDIR/svn-safe-append.py" c branches/old/c
+svn ci -m "move and update c"
 
 echo % update old branch again
-"$TESTDIR/svn-safe-append.py" "bye" branches/old/letter2.txt
-svn ci -m "change letter2 again"
+"$TESTDIR/svn-safe-append.py" b branches/old/b
+svn ci -m "change b again"
 
 echo % update trunk again
-"$TESTDIR/svn-safe-append.py" "how are you ?" trunk/letter.txt
-svn ci -m "last change to letter"
+"$TESTDIR/svn-safe-append.py" a trunk/a
+svn ci -m "last change to a"
 cd ..
 
 echo % convert trunk and branches
