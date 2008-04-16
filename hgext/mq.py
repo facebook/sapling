@@ -509,7 +509,8 @@ class queue:
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
             files = patch.updatedir(self.ui, repo, files)
-            n = repo.commit(files, message, user, date, force=1)
+            n = repo.commit(files, message, user, date, match=util.never,
+                            force=True)
 
             if n == None:
                 raise util.Abort(_("repo commit failed"))
