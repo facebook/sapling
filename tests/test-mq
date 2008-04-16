@@ -505,3 +505,35 @@ hg qnew -f -e changea
 hg qpop
 hg qpush
 cd ..
+
+echo % test qpush with --force, issue1087
+hg init forcepush
+cd forcepush
+echo hello > hello.txt
+echo bye > bye.txt
+hg ci -Ama
+hg qnew -d '0 0' empty
+hg qpop
+echo world >> hello.txt
+
+echo % qpush should fail, local changes
+hg qpush
+
+echo % apply force, should not discard changes with empty patch
+hg qpush -f
+hg diff --config diff.nodates=True
+hg qdiff --config diff.nodates=True
+hg log -l1 -p
+hg qref -d '0 0'
+hg qpop
+echo universe >> hello.txt
+echo universe >> bye.txt
+
+echo % qpush should fail, local changes
+hg qpush
+
+echo % apply force, should discard changes in hello, but not bye
+hg qpush -f
+hg st
+hg diff --config diff.nodates=True
+hg qdiff --config diff.nodates=True

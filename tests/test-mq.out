@@ -490,3 +490,63 @@ adding a
 Patch queue now empty
 applying changea
 Now at: changea
+% test qpush with --force, issue1087
+adding bye.txt
+adding hello.txt
+Patch queue now empty
+% qpush should fail, local changes
+abort: local changes found, refresh first
+% apply force, should not discard changes with empty patch
+applying empty
+/usr/bin/patch: **** Only garbage was found in the patch input.
+patch failed, unable to continue (try -v)
+patch empty is empty
+Now at: empty
+diff -r bf5fc3f07a0a hello.txt
+--- a/hello.txt
++++ b/hello.txt
+@@ -1,1 +1,2 @@
+ hello
++world
+diff -r 9ecee4f634e3 hello.txt
+--- a/hello.txt
++++ b/hello.txt
+@@ -1,1 +1,2 @@
+ hello
++world
+changeset:   1:bf5fc3f07a0a
+tag:         qtip
+tag:         tip
+tag:         empty
+tag:         qbase
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     imported patch empty
+
+
+Patch queue now empty
+% qpush should fail, local changes
+abort: local changes found, refresh first
+% apply force, should discard changes in hello, but not bye
+applying empty
+Now at: empty
+M bye.txt
+diff -r ba252371dbc1 bye.txt
+--- a/bye.txt
++++ b/bye.txt
+@@ -1,1 +1,2 @@
+ bye
++universe
+diff -r 9ecee4f634e3 bye.txt
+--- a/bye.txt
++++ b/bye.txt
+@@ -1,1 +1,2 @@
+ bye
++universe
+diff -r 9ecee4f634e3 hello.txt
+--- a/hello.txt
++++ b/hello.txt
+@@ -1,1 +1,3 @@
+ hello
++world
++universe
