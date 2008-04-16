@@ -1903,7 +1903,7 @@ def savename(path):
 
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
-    
+
     When --force is applied, all local changes in patched files will be lost.
     """
     q = repo.mq

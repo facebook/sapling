@@ -1025,7 +1025,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                     slowpath = True
                     break
                 else:
-                    ui.warn(_('%s:%s copy source revision cannot be found!\n') 
+                    ui.warn(_('%s:%s copy source revision cannot be found!\n')
                             % (file_, short(node)))
                     continue
             for rev, copied in filerevgen(filelog, node):
