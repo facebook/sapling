@@ -688,7 +688,7 @@ class svn_source(converter_source):
                 if not copyfrompath:
                     continue
                 copyfrom[path] = ent
-                self.ui.debug("mark %s came from %s:%d\n" 
+                self.ui.debug("mark %s came from %s:%d\n"
                               % (path, copyfrompath, ent.copyfrom_rev))
                 children = self._find_children(ent.copyfrom_path, ent.copyfrom_rev)
                 children.sort()
@@ -738,7 +738,7 @@ class svn_source(converter_source):
             if root_paths:
                 path, ent = root_paths[-1]
                 if ent.copyfrom_path:
-                    # If dir was moved while one of its file was removed 
+                    # If dir was moved while one of its file was removed
                     # the log may look like:
                     # A /dir   (from /dir:x)
                     # A /dir/a (from /dir/a:y)
@@ -746,7 +746,7 @@ class svn_source(converter_source):
                     # ...
                     # for all remaining children.
                     # Let's take the highest child element from rev as source.
-                    copies = [(p,e) for p,e in orig_paths[:-1] 
+                    copies = [(p,e) for p,e in orig_paths[:-1]
                           if isdescendantof(ent.copyfrom_path, e.copyfrom_path)]
                     fromrev = max([e.copyfrom_rev for p,e in copies] + [ent.copyfrom_rev])
                     branched = True
