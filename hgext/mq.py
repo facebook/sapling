@@ -937,6 +937,8 @@ class queue:
         qp = self.qparents(repo, top)
         if opts.get('git'):
             self.diffopts().git = True
+        if opts.get('unified') is not None:
+            self.diffopts().context = opts['unified']
         self.printdiff(repo, qp, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
