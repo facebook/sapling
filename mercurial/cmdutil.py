@@ -395,7 +395,7 @@ def copy(ui, repo, pats, opts, rename=False):
                 repo.copy(origsrc, abstarget)
 
         if rename and not dryrun:
-            repo.remove([abssrc], True)
+            repo.remove([abssrc], not after)
 
     # pat: ossep
     # dest ossep
