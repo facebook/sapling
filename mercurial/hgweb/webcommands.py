@@ -464,7 +464,6 @@ def annotate(web, req, tmpl):
             lines = enumerate(fctx.annotate(follow=True, linenumber=True))
         for lineno, ((f, targetline), l) in lines:
             fnode = f.filenode()
-            name = web.repo.ui.shortuser(f.user())
 
             if last != fnode:
                 last = fnode
@@ -472,7 +471,7 @@ def annotate(web, req, tmpl):
             yield {"parity": parity.next(),
                    "node": hex(f.node()),
                    "rev": f.rev(),
-                   "author": name,
+                   "author": f.user(),
                    "file": f.path(),
                    "targetline": targetline,
                    "line": l,

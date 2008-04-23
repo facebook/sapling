@@ -30,7 +30,7 @@ filelog = filelog.tmpl
 fileline = '<tr class="parity{parity}"><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
 filelogentry = filelogentry.tmpl
 
-annotateline = '<tr class="parity{parity}"><td class="annotate"><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}">{author|obfuscate}@{rev}</a></td><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
+annotateline = '<tr class="parity{parity}"><td class="annotate"><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}">{author|user}@{rev}</a></td><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
 
 diffblock = '<table class="bigtable parity{parity}">{lines}</table>'
 difflineplus = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source plusline">{line|escape}</td></tr>'
