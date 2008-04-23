@@ -69,6 +69,7 @@ def show_doc(ui):
         if f.startswith("debug"): continue
         d = get_cmd(h[f])
         # synopsis
+        ui.write("[[%s]]\n" % d['cmd'])
         ui.write("%s::\n" % d['synopsis'].replace("hg ","", 1))
         # description
         ui.write("%s\n\n" % d['desc'][1])
