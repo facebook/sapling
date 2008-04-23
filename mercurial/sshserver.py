@@ -167,7 +167,7 @@ class sshserver(object):
         self.respond('')
 
         # write bundle data to temporary file because it can be big
-
+        tempname = fp = None
         try:
             fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
             fp = os.fdopen(fd, 'wb+')
@@ -198,8 +198,10 @@ class sshserver(object):
                     self.lock.release()
                     self.lock = None
         finally:
-            fp.close()
-            os.unlink(tempname)
+            if fp is not None:
+                fp.close()
+            if tempname is not None:
+                os.unlink(tempname)
 
     def do_stream_out(self):
         streamclone.stream_out(self.repo, self.fout)
