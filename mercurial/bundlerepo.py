@@ -12,7 +12,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import hex, nullid, short
 from i18n import _
-import changegroup, util, os, struct, bz2, tempfile, shutil, mdiff
+import changegroup, util, os, struct, bz2, zlib, tempfile, shutil, mdiff
 import repo, localrepo, changelog, manifest, filelog, revlog
 
 class bundlerevlog(revlog.revlog):
@@ -173,14 +173,17 @@ class bundlerepository(localrepo.localrepository):
             raise util.Abort(_("%s: not a Mercurial bundle file") % bundlename)
         elif not header.startswith("HG10"):
             raise util.Abort(_("%s: unknown bundle version") % bundlename)
-        elif header == "HG10BZ":
+        elif (header == "HG10BZ") or (header == "HG10GZ"):
             fdtemp, temp = tempfile.mkstemp(prefix="hg-bundle-",
                                             suffix=".hg10un", dir=self.path)
             self.tempfile = temp
             fptemp = os.fdopen(fdtemp, 'wb')
             def generator(f):
-                zd = bz2.BZ2Decompressor()
-                zd.decompress("BZ")
+                if header == "HG10BZ":
+                    zd = bz2.BZ2Decompressor()
+                    zd.decompress("BZ")
+                elif header == "HG10GZ":
+                    zd = zlib.decompressobj()
                 for chunk in f:
                     yield zd.decompress(chunk)
             gen = generator(util.filechunkiter(self.bundlefile, 4096))
