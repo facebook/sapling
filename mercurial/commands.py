@@ -406,7 +406,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     If no destination repository is specified the destination is
     assumed to have all the nodes specified by one or more --base
     parameters. To create a bundle containing all changesets, use
-    --all (or --base null).
+    --all (or --base null). To change the compression method applied,
+    use the -t option (by default, bundles are compressed using bz2).
 
     The bundle file can then be transferred using conventional means and
     applied to another repository with the unbundle or pull command.
@@ -460,7 +461,14 @@ def bundle(ui, repo, fname, dest=None, **opts):
         cg = repo.changegroupsubset(o, revs, 'bundle')
     else:
         cg = repo.changegroup(o, 'bundle')
-    changegroup.writebundle(cg, fname, "HG10BZ")
+
+    bundletype = opts.get('type', 'bzip2').lower()
+    btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
+    bundletype = btypes.get(bundletype)
+    if bundletype not in changegroup.bundletypes:
+        raise util.Abort(_('unknown bundle type specified with --type'))
+
+    changegroup.writebundle(cg, fname, bundletype)
 
 def cat(ui, repo, file1, *pats, **opts):
     """output the current or given revision of files
@@ -2985,8 +2993,8 @@ table = {
            _('a changeset up to which you would like to bundle')),
           ('', 'base', [],
            _('a base changeset to specify instead of a destination')),
-          ('a', 'all', None,
-           _('bundle all changesets in the repository')),
+          ('a', 'all', None, _('bundle all changesets in the repository')),
+          ('t', 'type', 'bzip2', _('bundle compression type to use')),
          ] + remoteopts,
          _('hg bundle [-f] [-a] [-r REV]... [--base REV]... FILE [DEST]')),
     "cat":
