@@ -1930,7 +1930,7 @@ def push(ui, repo, patch=None, **opts):
         patch = q.series[-1]
     if opts['merge']:
         if opts['name']:
-            newpath = opts['name']
+            newpath = repo.join(opts['name'])
         else:
             newpath, i = lastsavename(q.path)
         if not newpath:
