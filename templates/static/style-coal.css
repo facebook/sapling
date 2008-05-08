@@ -83,7 +83,7 @@ a { text-decoration:none; }
   font-size: 70%;
   font-weight: normal;
   margin-left: .5em;
-  vertical-align: text-baseline;
+  vertical-align: baseline;
 }
 
 /* Common */
@@ -125,7 +125,7 @@ h3 {
 .bigtable td.source { font-family: monospace; white-space: pre; }
 .bigtable .permissions { width: 8em; text-align: left;}
 .bigtable .size { width: 5em; text-align: right; }
-.bigtable .annotate { text-align: right; padding-right: }
+.bigtable .annotate { text-align: right; }
 .bigtable td.annotate { font-size: smaller; }
 
 .fileline { font-family: monospace; }
