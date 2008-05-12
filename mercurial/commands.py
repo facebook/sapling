@@ -32,7 +32,7 @@ def add(ui, repo, *pats, **opts):
     exacts = {}
     names = []
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts,
-                                             badmatch=util.always):
+                                             badmatch=lambda x,y: True):
         if exact:
             if ui.verbose:
                 ui.status(_('adding %s\n') % rel)
@@ -1696,7 +1696,7 @@ def locate(ui, repo, *pats, **opts):
 
     ret = 1
     for src, abs, rel, exact in cmdutil.walk(repo, pats, opts, node=node,
-                                             badmatch=util.always,
+                                             badmatch=lambda x,y: True,
                                              default='relglob'):
         if src == 'b':
             continue

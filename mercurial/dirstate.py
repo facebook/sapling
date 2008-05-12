@@ -416,14 +416,13 @@ class dirstate(object):
                 return True
         return False
 
-    def walk(self, match, badmatch):
+    def walk(self, match):
         # filter out the stat
-        for src, f, st in self.statwalk(match.files(), match,
-                                        badmatch=badmatch):
+        for src, f, st in self.statwalk(match.files(), match, badfn=match.bad):
             yield src, f
 
     def statwalk(self, files, match, unknown=True,
-                 ignored=False, badmatch=None, directories=False):
+                 ignored=False, badfn=None, directories=False):
         '''
         walk recursively through the directory tree, finding all files
         matched by the match function
@@ -433,10 +432,15 @@ class dirstate(object):
         'f' the file was found in the directory tree
         'd' the file is a directory of the tree
         'm' the file was only in the dirstate and not in the tree
-        'b' file was not found and matched badmatch
+        'b' file was not found and did not match badfn
 
         and st is the stat result if the file was found in the directory.
         '''
+
+        def fwarn(f, msg):
+            self._ui.warn('%s: %s\n' % (self.pathto(ff), msg))
+            return False
+        badfn = badfn or fwarn
 
         # walk all files by default
         if not files:
@@ -536,10 +540,9 @@ class dirstate(object):
                         found = True
                         break
                 if not found:
-                    if inst.errno != errno.ENOENT or not badmatch:
-                        self._ui.warn('%s: %s\n' %
-                                      (self.pathto(ff), inst.strerror))
-                    elif badmatch and badmatch(ff) and imatch(nf):
+                    if inst.errno != errno.ENOENT:
+                        fwarn(ff, inst.strerror)
+                    elif badfn(ff, inst.strerror) and imatch(nf):
                         yield 'b', ff, None
                 continue
             if s_isdir(st.st_mode):

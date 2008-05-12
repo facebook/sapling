@@ -228,12 +228,18 @@ def matchpats(repo, pats=[], opts={}, globbed=False, default='relpath'):
         pats = util.expand_glob(pats or [])
     m = match.match(repo.root, repo.getcwd(), pats, opts.get('include'),
                     opts.get('exclude'), default)
+    def badfn(f, msg):
+        repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
+        return False
+    m.bad = badfn
     return m.files(), m, m.anypats()
 
 def walk(repo, pats=[], opts={}, node=None, badmatch=None, globbed=False,
          default='relpath'):
     dummy, m, dummy = matchpats(repo, pats, opts, globbed, default)
-    for src, fn in repo.walk(node, m, badmatch):
+    if badmatch:
+        m.bad = badmatch
+    for src, fn in repo.walk(node, m):
         yield src, fn, m.rel(fn), m.exact(fn)
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):

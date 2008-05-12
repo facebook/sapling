@@ -7,9 +7,8 @@ class match(object):
         self._cwd = cwd
         self._include = include
         self._exclude = exclude
-        f, mf, ap = util.matcher(self._root, self._cwd, self._patterns,
-                                 self._include, self._exclude, self.src(),
-                                 default)
+        f, mf, ap = util.matcher(root, cwd, patterns, include, exclude,
+                                 self.src(), default)
         self._files = f
         self._fmap = dict.fromkeys(f)
         self._matchfn = mf

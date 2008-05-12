@@ -931,7 +931,7 @@ class localrepository(repo.repository):
                 self.dirstate.invalidate()
             del tr, lock, wlock
 
-    def walk(self, node, match, badmatch):
+    def walk(self, node, match):
         '''
         walk recursively through the directory tree or a given
         changeset, finding all files matched by the match
@@ -963,14 +963,11 @@ class localrepository(repo.repository):
             ffiles = fdict.keys()
             ffiles.sort()
             for fn in ffiles:
-                if badmatch and badmatch(fn):
-                    if match(fn):
-                        yield 'b', fn
-                else:
-                    self.ui.warn(_('%s: No such file in rev %s\n')
-                                 % (self.pathto(fn), short(node)))
+                if match.bad(fn, 'No such file in rev ' + short(node)) \
+                        and match(fn):
+                    yield 'b', fn
         else:
-            for src, fn in self.dirstate.walk(match, badmatch):
+            for src, fn in self.dirstate.walk(match):
                 yield src, fn
 
     def status(self, node1=None, node2=None, files=[], match=util.always,
