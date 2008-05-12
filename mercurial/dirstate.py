@@ -418,11 +418,10 @@ class dirstate(object):
 
     def walk(self, match):
         # filter out the src and stat
-        for src, f, st in self.statwalk(match.files(), match, badfn=match.bad):
+        for src, f, st in self.statwalk(match.files(), match):
             yield f
 
-    def statwalk(self, files, match, unknown=True,
-                 ignored=False, badfn=None):
+    def statwalk(self, files, match, unknown=True, ignored=False):
         '''
         walk recursively through the directory tree, finding all files
         matched by the match function
@@ -438,7 +437,9 @@ class dirstate(object):
         def fwarn(f, msg):
             self._ui.warn('%s: %s\n' % (self.pathto(ff), msg))
             return False
-        badfn = badfn or fwarn
+        badfn = fwarn
+        if hasattr(match, 'bad'):
+            badfn = match.bad
 
         # walk all files by default
         if not files:
