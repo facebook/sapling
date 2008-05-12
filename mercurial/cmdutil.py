@@ -1153,7 +1153,7 @@ def commit(ui, repo, commitfunc, pats, opts):
 
     m = match(repo, pats, opts)
     if pats:
-        status = repo.status(files=m.files(), match=m)
+        status = repo.status(match=m)
         modified, added, removed, deleted, unknown = status[:5]
         files = modified + added + removed
         slist = None

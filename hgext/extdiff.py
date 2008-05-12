@@ -123,7 +123,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     node1, node2 = cmdutil.revpair(repo, opts['rev'])
     matcher = cmdutil.match(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.status(
-        node1, node2, matcher.files(), match=matcher)[:5]
+        node1, node2, matcher)[:5]
     if not (modified or added or removed):
         return 0
 

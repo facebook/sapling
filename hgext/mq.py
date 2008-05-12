@@ -506,8 +506,10 @@ class queue:
                     repo.dirstate.merge(f)
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
+
             files = patch.updatedir(self.ui, repo, files)
-            n = repo.commit(files, message, user, date, match=util.never,
+            match = cmdutil.matchfiles(repo, files or [])
+            n = repo.commit(files, message, user, date, match=match,
                             force=True)
 
             if n == None:
@@ -620,7 +622,7 @@ class queue:
             raise util.Abort(_('patch "%s" already exists') % patch)
         if opts.get('include') or opts.get('exclude') or pats:
             match = cmdutil.match(repo, pats, opts)
-            m, a, r, d = repo.status(files=match.files(), match=match)[:4]
+            m, a, r, d = repo.status(match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force)
             match = cmdutil.match(repo, m + a + r)
@@ -1047,7 +1049,7 @@ class queue:
                     match = cmdutil.matchfiles(repo, mm + aa + dd)
                 else:
                     match = cmdutil.matchall(repo)
-                m, a, r, d, u = repo.status(files=match.files(), match=match)[:5]
+                m, a, r, d, u = repo.status(match=match)[:5]
 
                 # we might end up with files that were added between
                 # tip and the dirstate parent, but then changed in the

@@ -256,7 +256,7 @@ def _status(ui, repo, kwt, *pats, **opts):
     Returns status of working directory.'''
     if kwt:
         matcher = cmdutil.match(repo, pats, opts)
-        return repo.status(files=matcher.files(), match=matcher, list_clean=True)
+        return repo.status(match=matcher, list_clean=True)
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
@@ -456,7 +456,7 @@ def reposetup(ui, repo):
             return kwt.wread(filename, data)
 
         def commit(self, files=None, text='', user=None, date=None,
-                   match=util.always, force=False, force_editor=False,
+                   match=None, force=False, force_editor=False,
                    p1=None, p2=None, extra={}, empty_ok=False):
             wlock = lock = None
             _p1 = _p2 = None

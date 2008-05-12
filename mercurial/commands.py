@@ -2180,7 +2180,7 @@ def remove(ui, repo, *pats, **opts):
         raise util.Abort(_('no files specified'))
 
     m = cmdutil.match(repo, pats, opts)
-    mardu = map(dict.fromkeys, repo.status(files=m.files(), match=m))[:5]
+    mardu = map(dict.fromkeys, repo.status(match=m))[:5]
     modified, added, removed, deleted, unknown = mardu
 
     remove, forget = [], []
@@ -2363,7 +2363,7 @@ def revert(ui, repo, *pats, **opts):
                 names[abs] = m.rel(abs), m.exact(abs)
 
         m = cmdutil.matchfiles(repo, names)
-        changes = repo.status(files=m.files(), match=m)[:4]
+        changes = repo.status(match=m)[:4]
         modified, added, removed, deleted = map(dict.fromkeys, changes)
 
         # if f is a rename, also revert the source
@@ -2630,7 +2630,7 @@ def status(ui, repo, *pats, **opts):
     matcher = cmdutil.match(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
-        n for n in repo.status(node1, node2, matcher.files(), matcher,
+        n for n in repo.status(node1, node2, matcher,
                                list_ignored=opts['ignored']
                                             or all and not ui.quiet,
                                list_clean=opts['clean'] or all,

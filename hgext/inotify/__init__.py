@@ -47,8 +47,9 @@ def reposetup(ui, repo):
         # to recurse.
         inotifyserver = False
 
-        def status(self, files, match, list_ignored, list_clean,
+        def status(self, match, list_ignored, list_clean,
                    list_unknown=True):
+            files = match.files()
             try:
                 if not list_ignored and not self.inotifyserver:
                     result = client.query(ui, repo, files, match, False,
@@ -88,7 +89,7 @@ def reposetup(ui, repo):
                             ui.print_exc()
 
             return super(inotifydirstate, self).status(
-                files, match or util.always, list_ignored, list_clean,
+                match, list_ignored, list_clean,
                 list_unknown)
 
     repo.dirstate.__class__ = inotifydirstate

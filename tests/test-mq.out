@@ -96,6 +96,7 @@ abort: local changes found, refresh first
 A somefile
 % qnew with uncommitted changes and missing file (issue 803)
 someotherfile: No such file or directory
+someotherfile: No such file or directory
 A somefile
 issue803.patch
 Patch queue now empty

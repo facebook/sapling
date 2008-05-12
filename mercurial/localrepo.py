@@ -11,6 +11,7 @@ import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
 import lock, transaction, stat, errno, ui
 import os, revlog, time, util, extensions, hook, inspect
+import match as match_
 
 class localrepository(repo.repository):
     capabilities = util.set(('lookup', 'changegroupsubset'))
@@ -748,7 +749,7 @@ class localrepository(repo.repository):
                            p1=p1, p2=p2, extra=extra, empty_ok=True)
 
     def commit(self, files=None, text="", user=None, date=None,
-               match=util.always, force=False, force_editor=False,
+               match=None, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = tr = None
         valid = 0 # don't save the dirstate if this isn't set
@@ -964,7 +965,7 @@ class localrepository(repo.repository):
             for fn in self.dirstate.walk(match):
                 yield fn
 
-    def status(self, node1=None, node2=None, files=[], match=util.always,
+    def status(self, node1=None, node2=None, match=None,
                list_ignored=False, list_clean=False, list_unknown=True):
         """return status of files between two nodes or node and working directory
 
@@ -984,6 +985,9 @@ class localrepository(repo.repository):
                     del mf[fn]
             return mf
 
+        if not match:
+            match = match_.always(self.root, self.getcwd())
+
         modified, added, removed, deleted, unknown = [], [], [], [], []
         ignored, clean = [], []
 
@@ -1000,10 +1004,8 @@ class localrepository(repo.repository):
         # are we comparing the working directory?
         if not node2:
             (lookup, modified, added, removed, deleted, unknown,
-             ignored, clean) = self.dirstate.status(files, match,
-                                                    list_ignored, list_clean,
-                                                    list_unknown)
-
+             ignored, clean) = self.dirstate.status(match, list_ignored,
+                                                    list_clean, list_unknown)
             # are we comparing working dir against its parent?
             if compareworking:
                 if lookup:
