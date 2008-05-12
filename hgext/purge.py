@@ -31,9 +31,41 @@ from mercurial import util, commands
 from mercurial.i18n import _
 import os
 
-def dopurge(ui, repo, dirs=None, act=True, ignored=False,
-            abort_on_err=False, eol='\n',
-            force=False, include=None, exclude=None):
+def purge(ui, repo, *dirs, **opts):
+    '''removes files not tracked by mercurial
+
+    Delete files not known to mercurial, this is useful to test local and
+    uncommitted changes in the otherwise clean source tree.
+
+    This means that purge will delete:
+     - Unknown files: files marked with "?" by "hg status"
+     - Ignored files: files usually ignored by Mercurial because they match
+       a pattern in a ".hgignore" file
+     - Empty directories: in fact Mercurial ignores directories unless they
+       contain files under source control managment
+    But it will leave untouched:
+     - Unmodified tracked files
+     - Modified tracked files
+     - New files added to the repository (with "hg add")
+
+    If directories are given on the command line, only files in these
+    directories are considered.
+
+    Be careful with purge, you could irreversibly delete some files you
+    forgot to add to the repository. If you only want to print the list of
+    files that this program would delete use the --print option.
+    '''
+    act = not opts['print']
+    ignored = bool(opts['all'])
+    abort_on_err = bool(opts['abort_on_err'])
+    eol = opts['print0'] and '\0' or '\n'
+    if eol == '\0':
+        # --print0 implies --print
+        act = False
+    force = bool(opts['force'])
+    include = opts['include']
+    exclude = opts['exclude']
+
     def error(msg):
         if abort_on_err:
             raise util.Abort(msg)
@@ -57,7 +89,7 @@ def dopurge(ui, repo, dirs=None, act=True, ignored=False,
     missing = []
     roots, match, anypats = util.cmdmatcher(repo.root, repo.getcwd(), dirs,
                                             include, exclude)
-    for src, f, st in repo.dirstate.statwalk(files=roots, match=match,
+    for src, f, st in repo.dirstate.statwalk(roots, match,
                                              ignored=ignored, directories=True):
         if src == 'd':
             directories.append(f)
@@ -98,45 +130,6 @@ def _check_fs(ui, repo):
             ui.warn(_("Purging on name mangling filesystems is not "
                       "fully supported.\n"))
         raise util.Abort(_("outstanding uncommitted changes"))
-
-
-def purge(ui, repo, *dirs, **opts):
-    '''removes files not tracked by mercurial
-
-    Delete files not known to mercurial, this is useful to test local and
-    uncommitted changes in the otherwise clean source tree.
-
-    This means that purge will delete:
-     - Unknown files: files marked with "?" by "hg status"
-     - Ignored files: files usually ignored by Mercurial because they match
-       a pattern in a ".hgignore" file
-     - Empty directories: in fact Mercurial ignores directories unless they
-       contain files under source control managment
-    But it will leave untouched:
-     - Unmodified tracked files
-     - Modified tracked files
-     - New files added to the repository (with "hg add")
-
-    If directories are given on the command line, only files in these
-    directories are considered.
-
-    Be careful with purge, you could irreversibly delete some files you
-    forgot to add to the repository. If you only want to print the list of
-    files that this program would delete use the --print option.
-    '''
-    act = not opts['print']
-    ignored = bool(opts['all'])
-    abort_on_err = bool(opts['abort_on_err'])
-    eol = opts['print0'] and '\0' or '\n'
-    if eol == '\0':
-        # --print0 implies --print
-        act = False
-    force = bool(opts['force'])
-    include = opts['include']
-    exclude = opts['exclude']
-    dopurge(ui, repo, dirs, act, ignored, abort_on_err,
-            eol, force, include, exclude)
-
 
 cmdtable = {
     'purge|clean':
