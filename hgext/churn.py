@@ -64,7 +64,7 @@ def __gather(ui, repo, node1, node2):
 
     lines = 0
 
-    changes = repo.status(node1, node2, None, util.always)[:5]
+    changes = repo.status(node1, node2)[:5]
 
     modified, added, removed, deleted, unknown = changes
 
