@@ -271,11 +271,11 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     add, remove = [], []
     mapping = {}
     m = match(repo, pats, opts)
-    for src, abs in repo.walk(m):
+    for abs in repo.walk(m):
         target = repo.wjoin(abs)
         rel = m.rel(abs)
         exact = m.exact(abs)
-        if src == 'f' and abs not in repo.dirstate:
+        if abs not in repo.dirstate:
             add.append(abs)
             mapping[abs] = rel, m.exact(abs)
             if repo.ui.verbose or not exact:
@@ -313,7 +313,7 @@ def copy(ui, repo, pats, opts, rename=False):
     def walkpat(pat):
         srcs = []
         m = match(repo, [pat], opts, globbed=True)
-        for tag, abs in repo.walk(m):
+        for abs in repo.walk(m):
             state = repo.dirstate[abs]
             rel = m.rel(abs)
             exact = m.exact(abs)

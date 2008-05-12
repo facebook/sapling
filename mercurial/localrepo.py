@@ -936,11 +936,6 @@ class localrepository(repo.repository):
         walk recursively through the directory tree or a given
         changeset, finding all files matched by the match
         function
-
-        results are yielded in a tuple (src, filename), where src
-        is one of:
-        'f' the file was found in the directory tree
-        'm' the file was only in the dirstate and not in the tree
         '''
 
         if node:
@@ -958,16 +953,16 @@ class localrepository(repo.repository):
                         del fdict[ffn]
                         break
                 if match(fn):
-                    yield 'm', fn
+                    yield fn
             ffiles = fdict.keys()
             ffiles.sort()
             for fn in ffiles:
                 if match.bad(fn, 'No such file in rev ' + short(node)) \
                         and match(fn):
-                    yield 'f', fn
+                    yield fn
         else:
             for src, fn in self.dirstate.walk(match):
-                yield src, fn
+                yield fn
 
     def status(self, node1=None, node2=None, files=[], match=util.always,
                list_ignored=False, list_clean=False, list_unknown=True):

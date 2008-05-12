@@ -275,10 +275,10 @@ hg debugwalk fifo
 fifo: unsupported file type (type is fifo)
 
 hg debugwalk fenugreek
-m  fenugreek  fenugreek  exact
+f  fenugreek  fenugreek  exact
 
 hg debugwalk fenugreek
-m  fenugreek  fenugreek  exact
+f  fenugreek  fenugreek  exact
 
 hg debugwalk new
 f  new  new  exact
