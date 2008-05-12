@@ -589,15 +589,16 @@ class dirstate(object):
 
         for src, fn, st in self.statwalk(files, match, unknown=list_unknown,
                                          ignored=list_ignored):
-            if fn in dmap:
-                state, mode, size, time, foo = dmap[fn]
-            else:
+            if fn not in dmap:
                 if (list_ignored or fn in files) and self._dirignore(fn):
                     if list_ignored:
                         iadd(fn)
                 elif list_unknown:
                     uadd(fn)
                 continue
+
+            state, mode, size, time, foo = dmap[fn]
+
             if src == 'm':
                 nonexistent = True
                 if not st:
@@ -610,8 +611,6 @@ class dirstate(object):
                     # We need to re-check that it is a valid file
                     if st and self._supported(fn, st.st_mode):
                         nonexistent = False
-                # XXX: what to do with file no longer present in the fs
-                # who are not removed in the dirstate ?
                 if nonexistent and state in "nma":
                     dadd(fn)
                     continue
