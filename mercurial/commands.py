@@ -2363,7 +2363,8 @@ def revert(ui, repo, *pats, **opts):
             if abs not in names:
                 names[abs] = m.rel(abs), m.exact(abs)
 
-        changes = repo.status(files=files, match=names.has_key)[:4]
+        m = cmdutil.matchfiles(repo, names)
+        changes = repo.status(files=m.files(), match=m)[:4]
         modified, added, removed, deleted = map(dict.fromkeys, changes)
 
         # if f is a rename, also revert the source

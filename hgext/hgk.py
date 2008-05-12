@@ -46,7 +46,7 @@
 # vdiff on hovered and selected revisions.
 
 import os
-from mercurial import commands, util, patch, revlog
+from mercurial import commands, util, patch, revlog, cmdutil
 from mercurial.node import nullid, nullrev, short
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
@@ -55,7 +55,8 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         assert node2 is not None
         mmap = repo.changectx(node1).manifest()
         mmap2 = repo.changectx(node2).manifest()
-        status = repo.status(node1, node2, files=files)[:5]
+        m = cmdutil.matchfiles(repo, files)
+        status = repo.status(node1, node2, files=m.files(), match=m)[:5]
         modified, added, removed, deleted, unknown = status
 
         empty = short(nullid)

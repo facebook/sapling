@@ -1045,12 +1045,10 @@ class queue:
                 man = repo.manifest.read(changes[0])
                 aaa = aa[:]
                 if opts.get('short'):
-                    filelist = mm + aa + dd
-                    match = dict.fromkeys(filelist).__contains__
+                    match = cmdutil.matchfiles(repo, mm + aa + dd)
                 else:
-                    filelist = None
-                    match = util.always
-                m, a, r, d, u = repo.status(files=filelist, match=match)[:5]
+                    match = cmdutil.matchall(repo)
+                m, a, r, d, u = repo.status(files=match.files(), match=match)[:5]
 
                 # we might end up with files that were added between
                 # tip and the dirstate parent, but then changed in the
