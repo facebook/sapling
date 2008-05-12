@@ -1149,13 +1149,13 @@ def commit(ui, repo, commitfunc, pats, opts):
     if opts.get('addremove'):
         addremove(repo, pats, opts)
 
-    fns, match, anypats = matchpats(repo, pats, opts)
+    m = match(repo, pats, opts)
     if pats:
-        status = repo.status(files=fns, match=match)
+        status = repo.status(files=m.files(), match=m)
         modified, added, removed, deleted, unknown = status[:5]
         files = modified + added + removed
         slist = None
-        for f in fns:
+        for f in m.files():
             if f == '.':
                 continue
             if f not in files:
