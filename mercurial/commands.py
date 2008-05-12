@@ -2259,10 +2259,10 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_("too many options specified"))
 
     ms = merge_.mergestate(repo)
-    mf = util.matcher(repo.root, "", pats, [], [])[1]
+    m = cmdutil.match(repo, pats, opts)
 
     for f in ms:
-        if mf(f):
+        if m(f):
             if opts.get("list"):
                 ui.write("%s %s\n" % (ms[f].upper(), f))
             elif opts.get("mark"):
