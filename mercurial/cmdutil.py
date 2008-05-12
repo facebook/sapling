@@ -235,6 +235,12 @@ def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
     m.bad = badfn
     return m
 
+def matchall(repo):
+    return _match.always(repo.root, repo.getcwd())
+
+def matchfiles(repo, files):
+    return _match.exact(repo.root, repo.getcwd(), files)
+
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
     if added is None or removed is None:
@@ -885,7 +891,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
     # options
     patch = False
     if opts.get('patch'):
-        patch = matchfn or util.always
+        patch = matchfn or matchall(repo)
 
     tmpl = opts.get('template')
     mapfile = None
@@ -1175,9 +1181,8 @@ def commit(ui, repo, commitfunc, pats, opts):
                                        "unsupported file type!") % rel)
                 elif f not in repo.dirstate:
                     raise util.Abort(_("file %s not tracked!") % rel)
-    else:
-        files = []
+        m = matchfiles(repo, files)
     try:
-        return commitfunc(ui, repo, files, message, m, opts)
+        return commitfunc(ui, repo, m.files(), message, m, opts)
     except ValueError, inst:
         raise util.Abort(str(inst))
