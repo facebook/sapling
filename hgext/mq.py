@@ -321,8 +321,7 @@ class queue:
     def printdiff(self, repo, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         m = cmdutil.match(repo, files, opts)
-        patch.diff(repo, node1, node2, m.files(), match=m,
-                   fp=fp, changes=changes, opts=self.diffopts())
+        patch.diff(repo, node1, node2, m, fp, changes, self.diffopts())
 
     def mergeone(self, repo, mergeq, head, patch, rev):
         # first try just applying the patch
@@ -1083,7 +1082,7 @@ class queue:
                 a = util.unique(aa)
                 c = [filter(matchfn, l) for l in (m, a, r, [], u)]
                 match = cmdutil.matchfiles(repo, util.unique(c[0] + c[1] + c[2]))
-                patch.diff(repo, patchparent, files=match.files(), match=match,
+                patch.diff(repo, patchparent, match=match,
                            fp=patchf, changes=c, opts=self.diffopts())
                 patchf.close()
 

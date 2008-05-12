@@ -1152,13 +1152,16 @@ def b85diff(to, tn):
     ret.append('\n')
     return ''.join(ret)
 
-def diff(repo, node1=None, node2=None, files=None, match=util.always,
+def diff(repo, node1=None, node2=None, match=None,
          fp=None, changes=None, opts=None):
     '''print diff of changes to files between two nodes, or node and
     working directory.
 
     if node1 is None, use first dirstate parent instead.
     if node2 is None, compare node1 with working directory.'''
+
+    if not match:
+        match = cmdutil.matchall(repo)
 
     if opts is None:
         opts = mdiff.defaultopts
@@ -1183,7 +1186,7 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
     date1 = util.datestr(ctx1.date())
 
     if not changes:
-        changes = repo.status(node1, node2, files, match=match)[:5]
+        changes = repo.status(node1, node2, files=match.files(), match=match)[:5]
     modified, added, removed, deleted, unknown = changes
 
     if not modified and not added and not removed:

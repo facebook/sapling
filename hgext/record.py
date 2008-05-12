@@ -410,8 +410,8 @@ def dorecord(ui, repo, committer, *pats, **opts):
             match = cmdutil.matchfiles(repo, modified + added + removed)
         diffopts = mdiff.diffopts(git=True, nodates=True)
         fp = cStringIO.StringIO()
-        patch.diff(repo, repo.dirstate.parents()[0], files=match.files(),
-                   match=match, changes=changes, opts=diffopts, fp=fp)
+        patch.diff(repo, repo.dirstate.parents()[0], match=match,
+                   changes=changes, opts=diffopts, fp=fp)
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
