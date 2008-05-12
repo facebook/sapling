@@ -412,17 +412,7 @@ def canonpath(root, cwd, myname):
 
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None):
-    return _matcher(canonroot, cwd, names, inc, exc, 'glob', src)
-
-def cmdmatcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None,
-               globbed=False, default=None):
-    default = default or 'relpath'
-    if default == 'relpath' and not globbed:
-        names = expand_glob(names)
-    return _matcher(canonroot, cwd, names, inc, exc, default, src)
-
-def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
+def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None, dflt_pat='glob'):
     """build a function to match a set of file patterns
 
     arguments:
