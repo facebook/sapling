@@ -977,11 +977,11 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 if windowsize < sizelimit:
                     windowsize *= 2
 
-    files, matchfn, anypats = matchpats(repo, pats, opts)
+    m = match(repo, pats, opts)
     follow = opts.get('follow') or opts.get('follow_first')
 
     if repo.changelog.count() == 0:
-        return [], matchfn
+        return [], m
 
     if follow:
         defrange = '%s:0' % repo.changectx().rev()
@@ -989,10 +989,10 @@ def walkchangerevs(ui, repo, pats, change, opts):
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
     wanted = {}
-    slowpath = anypats or opts.get('removed')
+    slowpath = m.anypats() or opts.get('removed')
     fncache = {}
 
-    if not slowpath and not files:
+    if not slowpath and not m.files():
         # No files, no patterns.  Display all revs.
         wanted = dict.fromkeys(revs)
     copies = []
@@ -1017,7 +1017,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                     if rev[0] < cl_count:
                         yield rev
         def iterfiles():
-            for filename in files:
+            for filename in m.files():
                 yield filename, None
             for filename_node in copies:
                 yield filename_node
@@ -1056,7 +1056,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                     yield j, change(j)[3]
 
         for rev, changefiles in changerevgen():
-            matches = filter(matchfn, changefiles)
+            matches = filter(m, changefiles)
             if matches:
                 fncache[rev] = matches
                 wanted[rev] = 1
@@ -1109,7 +1109,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 del wanted[x]
 
     def iterate():
-        if follow and not files:
+        if follow and not m.files():
             ff = followfilter(onlyfirst=opts.get('follow_first'))
             def want(rev):
                 if ff.match(rev) and rev in wanted:
@@ -1129,13 +1129,13 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 if not fns:
                     def fns_generator():
                         for f in change(rev)[3]:
-                            if matchfn(f):
+                            if m(f):
                                 yield f
                     fns = fns_generator()
                 yield 'add', rev, fns
             for rev in nrevs:
                 yield 'iter', rev, None
-    return iterate(), matchfn
+    return iterate(), m
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
