@@ -8,7 +8,8 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, bisect, stat
-import mdiff, bdiff, util, templater, templatefilters, patch, errno, match
+import mdiff, bdiff, util, templater, templatefilters, patch, errno
+import match as _match
 
 revrangesep = ':'
 
@@ -223,24 +224,24 @@ def make_file(repo, pat, node=None,
                               pathname),
                 mode)
 
-def matchpats(repo, pats=[], opts={}, globbed=False, default='relpath'):
+def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
     if not globbed and default == 'relpath':
         pats = util.expand_glob(pats or [])
-    m = match.match(repo.root, repo.getcwd(), pats, opts.get('include'),
-                    opts.get('exclude'), default)
+    m = _match.match(repo.root, repo.getcwd(), pats,
+                    opts.get('include'), opts.get('exclude'), default)
     def badfn(f, msg):
         repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
         return False
     m.bad = badfn
+    return m
+
+def matchpats(repo, pats=[], opts={}, globbed=False, default='relpath'):
+    m = match(repo, pats, opts, globbed, default)
     return m.files(), m, m.anypats()
 
-def walk(repo, pats=[], opts={}, node=None, badmatch=None, globbed=False,
-         default='relpath'):
-    dummy, m, dummy = matchpats(repo, pats, opts, globbed, default)
-    if badmatch:
-        m.bad = badmatch
-    for src, fn in repo.walk(node, m):
-        yield src, fn, m.rel(fn), m.exact(fn)
+def walk(repo, match, node=None):
+    for src, fn in repo.walk(node, match):
+        yield src, fn, match.rel(fn), match.exact(fn)
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
@@ -277,7 +278,8 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         similarity = float(opts.get('similarity') or 0)
     add, remove = [], []
     mapping = {}
-    for src, abs, rel, exact in walk(repo, pats, opts):
+    m = match(repo, pats, opts)
+    for src, abs, rel, exact in walk(repo, m):
         target = repo.wjoin(abs)
         if src == 'f' and abs not in repo.dirstate:
             add.append(abs)
@@ -316,7 +318,8 @@ def copy(ui, repo, pats, opts, rename=False):
 
     def walkpat(pat):
         srcs = []
-        for tag, abs, rel, exact in walk(repo, [pat], opts, globbed=True):
+        m = match(repo, [pat], opts, globbed=True)
+        for tag, abs, rel, exact in walk(repo, m):
             state = repo.dirstate[abs]
             if state in '?r':
                 if exact and state == '?':
