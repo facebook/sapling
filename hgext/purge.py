@@ -27,7 +27,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-from mercurial import util, commands
+from mercurial import util, commands, cmdutil
 from mercurial.i18n import _
 import os
 
@@ -63,8 +63,6 @@ def purge(ui, repo, *dirs, **opts):
         # --print0 implies --print
         act = False
     force = bool(opts['force'])
-    include = opts['include']
-    exclude = opts['exclude']
 
     def error(msg):
         if abort_on_err:
@@ -87,8 +85,7 @@ def purge(ui, repo, *dirs, **opts):
     directories = []
     files = []
     missing = []
-    roots, match, anypats = util.cmdmatcher(repo.root, repo.getcwd(), dirs,
-                                            include, exclude)
+    roots, match, anypats = cmdutil.matchpats(repo, dirs, opts)
     for src, f, st in repo.dirstate.statwalk(roots, match,
                                              ignored=ignored, directories=True):
         if src == 'd':
