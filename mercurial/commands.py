@@ -2624,64 +2624,47 @@ def status(ui, repo, *pats, **opts):
       = the previous added file was copied from here
     """
 
-    all = opts['all']
     node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
-
-    matcher = cmdutil.match(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
-    modified, added, removed, deleted, unknown, ignored, clean = [
-        n for n in repo.status(node1, node2, matcher,
-                               list_ignored=opts['ignored']
-                                            or all and not ui.quiet,
-                               list_clean=opts['clean'] or all,
-                               list_unknown=opts['unknown']
-                                            or not (ui.quiet or
-                                                    opts['modified'] or
-                                                    opts['added'] or
-                                                    opts['removed'] or
-                                                    opts['deleted'] or
-                                                    opts['ignored']))]
-
-    changetypes = (('modified', 'M', modified),
-                   ('added', 'A', added),
-                   ('removed', 'R', removed),
-                   ('deleted', '!', deleted),
-                   ('unknown', '?', unknown),
-                   ('ignored', 'I', ignored))
-
-    explicit_changetypes = changetypes + (('clean', 'C', clean),)
-
+    end = opts['print0'] and '\0' or '\n'
     copy = {}
-    showcopy = {}
-    if ((all or opts.get('copies')) and not opts.get('no_status')):
+    states = 'modified added removed deleted unknown ignored clean'.split()
+    show = [k for k in states if opts[k]]
+    if opts['all']:
+        show += ui.quiet and (states[:4] + ['clean']) or states
+    if not show:
+        show = ui.quiet and states[:4] or states[:5]
+
+    stat = repo.status(node1, node2, cmdutil.match(repo, pats, opts),
+                       'ignored' in show, 'clean' in show, 'unknown' in show)
+    changestates = zip(states, 'MAR!?IC', stat)
+
+    if (opts['all'] or opts['copies']) and not opts['no_status']:
         if opts.get('rev') == []:
             # fast path, more correct with merge parents
-            showcopy = copy = repo.dirstate.copies().copy()
+            copy = repo.dirstate.copies()
         else:
             ctxn = repo.changectx(nullid)
             ctx1 = repo.changectx(node1)
             ctx2 = repo.changectx(node2)
             if node2 is None:
                 ctx2 = repo.workingctx()
-            copy, diverge = copies.copies(repo, ctx1, ctx2, ctxn)
-            for k, v in copy.items():
-                copy[v] = k
+            for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
+                if v in stat.added:
+                    copy[v] = k
+                elif k in stat.added:
+                    copy[k] = v
 
-    end = opts['print0'] and '\0' or '\n'
-
-    for opt, char, changes in ([ct for ct in explicit_changetypes
-                                if all or opts[ct[0]]]
-                               or changetypes):
-
-        if opts['no_status']:
-            format = "%%s%s" % end
-        else:
+    for state, char, files in changestates:
+        if state in show:
             format = "%s %%s%s" % (char, end)
+            if opts['no_status']:
+                format = "%%s%s" % end
 
-        for f in changes:
-            ui.write(format % repo.pathto(f, cwd))
-            if f in copy and (f in added or f in showcopy):
-                ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
+            for f in files:
+                ui.write(format % repo.pathto(f, cwd))
+                if f in copy:
+                    ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
 
 def tag(ui, repo, name1, *names, **opts):
     """add one or more tags for the current or given revision
