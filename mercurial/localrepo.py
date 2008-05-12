@@ -786,7 +786,7 @@ class localrepository(repo.repository):
                 update_dirstate = True
 
                 if (not force and p2 != nullid and
-                    (files or match != util.always)):
+                    (match.files() or match.anypats())):
                     raise util.Abort(_('cannot partially commit a merge '
                                        '(do not specify files or patterns)'))
             else:

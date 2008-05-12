@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, bisect, stat
-import mdiff, bdiff, util, templater, templatefilters, patch, errno
+import mdiff, bdiff, util, templater, templatefilters, patch, errno, match
 
 revrangesep = ':'
 
@@ -224,21 +224,18 @@ def make_file(repo, pat, node=None,
                 mode)
 
 def matchpats(repo, pats=[], opts={}, globbed=False, default='relpath'):
-    pats = pats or []
     if not globbed and default == 'relpath':
         pats = util.expand_glob(pats or [])
-    return util.matcher(repo.root, repo.getcwd(), pats, opts.get('include'),
-                        opts.get('exclude'), None, default)
+    m = match.match(repo.root, repo.getcwd(), pats, opts.get('include'),
+                    opts.get('exclude'), default)
+    return m.files(), m, m.anypats()
 
 def walk(repo, pats=[], opts={}, node=None, badmatch=None, globbed=False,
          default='relpath'):
-    files, matchfn, anypats = matchpats(repo, pats, opts, globbed=globbed,
-                                        default=default)
-    exact = dict.fromkeys(files)
-    cwd = repo.getcwd()
-    for src, fn in repo.walk(node=node, files=files, match=matchfn,
+    dummy, m, dummy = matchpats(repo, pats, opts, globbed, default)
+    for src, fn in repo.walk(node=node, files=m.files(), match=m,
                              badmatch=badmatch):
-        yield src, fn, repo.pathto(fn, cwd), fn in exact
+        yield src, fn, m.rel(fn), m.exact(fn)
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
