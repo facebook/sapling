@@ -233,8 +233,7 @@ def matchpats(repo, pats=[], opts={}, globbed=False, default='relpath'):
 def walk(repo, pats=[], opts={}, node=None, badmatch=None, globbed=False,
          default='relpath'):
     dummy, m, dummy = matchpats(repo, pats, opts, globbed, default)
-    for src, fn in repo.walk(node=node, files=m.files(), match=m,
-                             badmatch=badmatch):
+    for src, fn in repo.walk(node, m, badmatch):
         yield src, fn, m.rel(fn), m.exact(fn)
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
