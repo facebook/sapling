@@ -417,9 +417,9 @@ class dirstate(object):
         return False
 
     def walk(self, match):
-        # filter out the stat
+        # filter out the src and stat
         for src, f, st in self.statwalk(match.files(), match, badfn=match.bad):
-            yield src, f
+            yield f
 
     def statwalk(self, files, match, unknown=True,
                  ignored=False, badfn=None, directories=False):

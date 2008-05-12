@@ -961,7 +961,7 @@ class localrepository(repo.repository):
                         and match(fn):
                     yield fn
         else:
-            for src, fn in self.dirstate.walk(match):
+            for fn in self.dirstate.walk(match):
                 yield fn
 
     def status(self, node1=None, node2=None, files=[], match=util.always,
