@@ -422,7 +422,7 @@ class dirstate(object):
             yield f
 
     def statwalk(self, files, match, unknown=True,
-                 ignored=False, badfn=None, directories=False):
+                 ignored=False, badfn=None):
         '''
         walk recursively through the directory tree, finding all files
         matched by the match function
@@ -430,7 +430,6 @@ class dirstate(object):
         results are yielded in a tuple (src, filename, st), where src
         is one of:
         'f' the file was found in the directory tree
-        'd' the file is a directory of the tree
         'm' the file was only in the dirstate and not in the tree
 
         and st is the stat result if the file was found in the directory.
@@ -485,8 +484,8 @@ class dirstate(object):
             wadd = work.append
             found = []
             add = found.append
-            if directories:
-                add((normpath(s[common_prefix_len:]), 'd', lstat(s)))
+            if hasattr(match, 'dir'):
+                match.dir(normpath(s[common_prefix_len:]))
             while work:
                 top = work.pop()
                 entries = listdir(top, stat=True)
@@ -513,8 +512,8 @@ class dirstate(object):
                     if kind == stat.S_IFDIR:
                         if not ignore(np):
                             wadd(p)
-                            if directories:
-                                add((np, 'd', st))
+                            if hasattr(match, 'dir'):
+                                match.dir(np)
                         if np in dc and match(np):
                             add((np, 'm', st))
                     elif imatch(np):
