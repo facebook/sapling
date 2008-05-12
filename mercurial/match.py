@@ -1,20 +1,13 @@
 import util
 
-class match(object):
-    def __init__(self, root, cwd, patterns, include, exclude, default):
-        self._patterns = patterns
+class _match(object):
+    def __init__(self, root, cwd, files, mf, ap):
         self._root = root
         self._cwd = cwd
-        self._include = include
-        self._exclude = exclude
-        f, mf, ap = util.matcher(root, cwd, patterns, include, exclude,
-                                 self.src(), default)
-        self._files = f
-        self._fmap = dict.fromkeys(f)
+        self._files = files
+        self._fmap = dict.fromkeys(files)
         self._matchfn = mf
         self._anypats = ap
-    def src(self):
-        return None
     def __call__(self, fn):
         return self._matchfn(fn)
     def __iter__(self):
@@ -35,17 +28,20 @@ class match(object):
     def anypats(self):
         return self._anypats
 
-def always(root, cwd):
-    return match(root, cwd, [], None, None, 'relpath')
+class always(_match):
+    def __init__(self, root, cwd):
+        _match.__init__(self, root, cwd, [], lambda f: True, False)
 
-def never(root, cwd):
-    m = match(root, cwd, [], None, None, 'relpath')
-    m._matchfn = lambda f: False
-    return m
+class never(_match):
+    def __init__(self, root, cwd):
+        _match.__init__(self, root, cwd, [], lambda f: False, False)
 
-def exact(root, cwd, files):
-    m = always(root, cwd)
-    m._files = files
-    m._fmap = dict.fromkeys(files)
-    m._matchfn = m._fmap.has_key
-    return m
+class exact(_match):
+    def __init__(self, root, cwd, files):
+        _match.__init__(self, root, cwd, files, lambda f: f in files, False)
+
+class match(_match):
+    def __init__(self, root, cwd, patterns, include, exclude, default):
+        f, mf, ap = util.matcher(root, cwd, patterns, include, exclude,
+                                 None, default)
+        _match.__init__(self, root, cwd, f, mf, ap)
