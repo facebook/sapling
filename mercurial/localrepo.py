@@ -931,7 +931,7 @@ class localrepository(repo.repository):
                 self.dirstate.invalidate()
             del tr, lock, wlock
 
-    def walk(self, node=None, files=[], match=util.always, badmatch=None):
+    def walk(self, node, files, match, badmatch):
         '''
         walk recursively through the directory tree or a given
         changeset, finding all files matched by the match
@@ -970,7 +970,7 @@ class localrepository(repo.repository):
                     self.ui.warn(_('%s: No such file in rev %s\n')
                                  % (self.pathto(fn), short(node)))
         else:
-            for src, fn in self.dirstate.walk(files, match, badmatch=badmatch):
+            for src, fn in self.dirstate.walk(files, match, badmatch):
                 yield src, fn
 
     def status(self, node1=None, node2=None, files=[], match=util.always,

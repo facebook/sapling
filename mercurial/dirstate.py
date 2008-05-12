@@ -416,12 +416,12 @@ class dirstate(object):
                 return True
         return False
 
-    def walk(self, files=None, match=util.always, badmatch=None):
+    def walk(self, files, match, badmatch):
         # filter out the stat
         for src, f, st in self.statwalk(files, match, badmatch=badmatch):
             yield src, f
 
-    def statwalk(self, files=None, match=util.always, unknown=True,
+    def statwalk(self, files, match, unknown=True,
                  ignored=False, badmatch=None, directories=False):
         '''
         walk recursively through the directory tree, finding all files
