@@ -235,10 +235,6 @@ def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
     m.bad = badfn
     return m
 
-def matchpats(repo, pats=[], opts={}, globbed=False, default='relpath'):
-    m = match(repo, pats, opts, globbed, default)
-    return m.files(), m, m.anypats()
-
 def walk(repo, match, node=None):
     for src, fn in repo.walk(node, match):
         yield src, fn, match.rel(fn), match.exact(fn)
@@ -1182,6 +1178,6 @@ def commit(ui, repo, commitfunc, pats, opts):
     else:
         files = []
     try:
-        return commitfunc(ui, repo, files, message, match, opts)
+        return commitfunc(ui, repo, files, message, m, opts)
     except ValueError, inst:
         raise util.Abort(str(inst))

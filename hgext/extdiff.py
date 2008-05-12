@@ -121,9 +121,9 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     - just invoke the diff for a single file in the working dir
     '''
     node1, node2 = cmdutil.revpair(repo, opts['rev'])
-    files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
+    matcher = cmdutil.match(repo, pats, opts)
     modified, added, removed, deleted, unknown = repo.status(
-        node1, node2, files, match=matchfn)[:5]
+        node1, node2, matcher.files(), match=matcher)[:5]
     if not (modified or added or removed):
         return 0
 

@@ -255,8 +255,8 @@ def _status(ui, repo, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
-        files, match, anypats = cmdutil.matchpats(repo, pats, opts)
-        return repo.status(files=files, match=match, list_clean=True)
+        matcher = cmdutil.match(repo, pats, opts)
+        return repo.status(files=matcher.files(), match=matcher, list_clean=True)
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))

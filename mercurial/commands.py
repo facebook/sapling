@@ -959,9 +959,8 @@ def diff(ui, repo, *pats, **opts):
     """
     node1, node2 = cmdutil.revpair(repo, opts['rev'])
 
-    fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
-
-    patch.diff(repo, node1, node2, fns, match=matchfn,
+    m = cmdutil.match(repo, pats, opts)
+    patch.diff(repo, node1, node2, m.files(), match=m,
                opts=patch.diffopts(ui, opts))
 
 def export(ui, repo, *changesets, **opts):
@@ -1958,10 +1957,10 @@ def parents(ui, repo, file_=None, **opts):
         ctx = repo.workingctx()
 
     if file_:
-        files, match, anypats = cmdutil.matchpats(repo, (file_,), opts)
-        if anypats or len(files) != 1:
+        m = cmdutil.match(repo, (file_,), opts)
+        if m.anypats() or len(m.files()) != 1:
             raise util.Abort(_('can only specify an explicit file name'))
-        file_ = files[0]
+        file_ = m.files()[0]
         filenodes = []
         for cp in ctx.parents():
             if not cp:
@@ -2130,7 +2129,7 @@ def rawcommit(ui, repo, *pats, **opts):
 
     message = cmdutil.logmessage(opts)
 
-    files, match, anypats = cmdutil.matchpats(repo, pats, opts)
+    files = cmdutil.match(repo, pats, opts).files()
     if opts['files']:
         files += open(opts['files']).read().splitlines()
 
@@ -2182,12 +2181,11 @@ def remove(ui, repo, *pats, **opts):
     if not pats and not after:
         raise util.Abort(_('no files specified'))
 
-    files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
-    mardu = map(dict.fromkeys, repo.status(files=files, match=matchfn))[:5]
+    m = cmdutil.match(repo, pats, opts)
+    mardu = map(dict.fromkeys, repo.status(files=m.files(), match=m))[:5]
     modified, added, removed, deleted, unknown = mardu
 
     remove, forget = [], []
-    m = cmdutil.match(repo, pats, opts)
     for src, abs, rel, exact in cmdutil.walk(repo, m):
 
         reason = None
@@ -2634,11 +2632,10 @@ def status(ui, repo, *pats, **opts):
     all = opts['all']
     node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
 
-    files, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
+    matcher = cmdutil.match(repo, pats, opts)
     cwd = (pats and repo.getcwd()) or ''
     modified, added, removed, deleted, unknown, ignored, clean = [
-        n for n in repo.status(node1=node1, node2=node2, files=files,
-                               match=matchfn,
+        n for n in repo.status(node1, node2, matcher.files(), matcher,
                                list_ignored=opts['ignored']
                                             or all and not ui.quiet,
                                list_clean=opts['clean'] or all,

@@ -320,9 +320,8 @@ class queue:
 
     def printdiff(self, repo, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
-        fns, matchfn, anypats = cmdutil.matchpats(repo, files, opts)
-
-        patch.diff(repo, node1, node2, fns, match=matchfn,
+        m = cmdutil.match(repo, files, opts)
+        patch.diff(repo, node1, node2, m.files(), match=m,
                    fp=fp, changes=changes, opts=self.diffopts())
 
     def mergeone(self, repo, mergeq, head, patch, rev):
@@ -621,11 +620,11 @@ class queue:
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
         if opts.get('include') or opts.get('exclude') or pats:
-            fns, match, anypats = cmdutil.matchpats(repo, pats, opts)
-            m, a, r, d = repo.status(files=fns, match=match)[:4]
+            match = cmdutil.match(repo, pats, opts)
+            m, a, r, d = repo.status(files=match.files(), match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force)
-            fns, match, anypats = cmdutil.matchpats(repo, m + a + r)
+            match = cmdutil.match(repo, m + a + r)
         commitfiles = m + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
@@ -1024,7 +1023,7 @@ class queue:
 
             if opts.get('git'):
                 self.diffopts().git = True
-            fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
+            matchfn = cmdutil.match(repo, pats, opts)
             tip = repo.changelog.tip()
             if top == tip:
                 # if the top of our patch queue is also the tip, there is an
