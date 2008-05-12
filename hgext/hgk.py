@@ -93,8 +93,8 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         if opts['patch']:
             if opts['pretty']:
                 catcommit(ui, repo, node2, "")
-            patch.diff(repo, node1, node2,
-                       files=files,
+            m = cmdutil.matchfiles(repo, files)
+            patch.diff(repo, node1, node2, files=m.files(), match=m,
                        opts=patch.diffopts(ui, {'git': True}))
         else:
             __difftree(repo, node1, node2, files=files)

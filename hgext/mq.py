@@ -1082,8 +1082,8 @@ class queue:
                 r = util.unique(dd)
                 a = util.unique(aa)
                 c = [filter(matchfn, l) for l in (m, a, r, [], u)]
-                filelist = util.unique(c[0] + c[1] + c[2])
-                patch.diff(repo, patchparent, files=filelist, match=matchfn,
+                match = cmdutil.matchfiles(repo, util.unique(c[0] + c[1] + c[2]))
+                patch.diff(repo, patchparent, files=match.files(), match=match,
                            fp=patchf, changes=c, opts=self.diffopts())
                 patchf.close()
 
@@ -1141,7 +1141,7 @@ class queue:
                 self.applied_dirty = 1
                 self.strip(repo, top, update=False,
                            backup='strip')
-                n = repo.commit(filelist, message, user, date, match=matchfn,
+                n = repo.commit(match.files(), message, user, date, match=match,
                                 force=1)
                 self.applied.append(statusentry(revlog.hex(n), patchfn))
                 self.removeundo(repo)
