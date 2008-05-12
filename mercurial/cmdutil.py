@@ -235,10 +235,6 @@ def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
     m.bad = badfn
     return m
 
-def walk(repo, match, node=None):
-    for src, fn in repo.walk(node, match):
-        yield src, fn
-
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
     if added is None or removed is None:
@@ -275,7 +271,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     add, remove = [], []
     mapping = {}
     m = match(repo, pats, opts)
-    for src, abs in walk(repo, m):
+    for src, abs in repo.walk(m):
         target = repo.wjoin(abs)
         rel = m.rel(abs)
         exact = m.exact(abs)
@@ -317,7 +313,7 @@ def copy(ui, repo, pats, opts, rename=False):
     def walkpat(pat):
         srcs = []
         m = match(repo, [pat], opts, globbed=True)
-        for tag, abs in walk(repo, m):
+        for tag, abs in repo.walk(m):
             state = repo.dirstate[abs]
             rel = m.rel(abs)
             exact = m.exact(abs)

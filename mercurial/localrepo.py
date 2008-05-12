@@ -931,7 +931,7 @@ class localrepository(repo.repository):
                 self.dirstate.invalidate()
             del tr, lock, wlock
 
-    def walk(self, node, match):
+    def walk(self, match, node=None):
         '''
         walk recursively through the directory tree or a given
         changeset, finding all files matched by the match
