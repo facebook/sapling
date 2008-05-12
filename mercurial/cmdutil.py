@@ -1183,6 +1183,6 @@ def commit(ui, repo, commitfunc, pats, opts):
                     raise util.Abort(_("file %s not tracked!") % rel)
         m = matchfiles(repo, files)
     try:
-        return commitfunc(ui, repo, m.files(), message, m, opts)
+        return commitfunc(ui, repo, message, m, opts)
     except ValueError, inst:
         raise util.Abort(str(inst))

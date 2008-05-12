@@ -562,9 +562,9 @@ def commit(ui, repo, *pats, **opts):
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
-    def commitfunc(ui, repo, files, message, match, opts):
-        return repo.commit(files, message, opts['user'], opts['date'], match,
-                           force_editor=opts.get('force_editor'))
+    def commitfunc(ui, repo, message, match, opts):
+        return repo.commit(match.files(), message, opts['user'], opts['date'],
+                           match, force_editor=opts.get('force_editor'))
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
