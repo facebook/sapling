@@ -84,14 +84,11 @@ def purge(ui, repo, *dirs, **opts):
 
     directories = []
     files = []
-    missing = []
     match = cmdutil.match(repo, dirs, opts)
     match.dir = directories.append
     for src, f, st in repo.dirstate.statwalk(match.files(), match,
                                              ignored=ignored):
-        if src == 'm':
-            missing.append(f)
-        elif src == 'f' and f not in repo.dirstate:
+        if src == 'f' and f not in repo.dirstate:
             files.append(f)
 
     directories.sort()
