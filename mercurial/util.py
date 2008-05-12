@@ -277,12 +277,12 @@ def expand_glob(pats):
         ret.append(p)
     return ret
 
-def patkind(name, dflt_pat='glob'):
+def patkind(name, default):
     """Split a string into an optional pattern kind prefix and the
     actual pattern."""
     for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
         if name.startswith(prefix + ':'): return name.split(':', 1)
-    return dflt_pat, name
+    return default, name
 
 def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
