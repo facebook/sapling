@@ -569,7 +569,7 @@ class dirstate(object):
             if imatch(k):
                 yield 'm', k, None
 
-    def status(self, files, match, list_ignored, list_clean, list_unknown=True):
+    def status(self, files, match, list_ignored, list_clean, list_unknown):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
