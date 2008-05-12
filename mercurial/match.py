@@ -34,3 +34,18 @@ class match(object):
         return self._files
     def anypats(self):
         return self._anypats
+
+def always(root, cwd):
+    return match(root, cwd, [], None, None, 'relpath')
+
+def never(root, cwd):
+    m = match(root, cwd, [], None, None, 'relpath')
+    m._matchfn = lambda f: False
+    return m
+
+def exact(root, cwd, files):
+    m = always(root, cwd)
+    m._files = files
+    m._fmap = dict.fromkeys(files)
+    m._matchfn = m._fmap.has_key
+    return m
