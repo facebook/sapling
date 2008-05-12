@@ -941,7 +941,6 @@ class localrepository(repo.repository):
         is one of:
         'f' the file was found in the directory tree
         'm' the file was only in the dirstate and not in the tree
-        'b' file was not found and matched badmatch
         '''
 
         if node:
@@ -965,7 +964,7 @@ class localrepository(repo.repository):
             for fn in ffiles:
                 if match.bad(fn, 'No such file in rev ' + short(node)) \
                         and match(fn):
-                    yield 'b', fn
+                    yield 'f', fn
         else:
             for src, fn in self.dirstate.walk(match):
                 yield src, fn

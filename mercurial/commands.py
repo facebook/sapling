@@ -1697,10 +1697,8 @@ def locate(ui, repo, *pats, **opts):
 
     ret = 1
     m = cmdutil.match(repo, pats, opts, default='relglob')
-    m.bad = lambda x,y: True
+    m.bad = lambda x,y: False
     for src, abs, rel, exact in cmdutil.walk(repo, m, node):
-        if src == 'b':
-            continue
         if not node and abs not in repo.dirstate:
             continue
         if opts['fullpath']:
@@ -2342,11 +2340,7 @@ def revert(ui, repo, *pats, **opts):
         files = []
 
         m = cmdutil.match(repo, pats, opts)
-        def bad(f, msg):
-            if f not in mf:
-                repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
-            return False
-        m.bad = bad
+        m.bad = lambda x,y: False
         for src, abs, rel, exact in cmdutil.walk(repo, m):
             names[abs] = (rel, exact)
 
@@ -2354,17 +2348,18 @@ def revert(ui, repo, *pats, **opts):
 
         def badfn(path, msg):
             if path in names:
-                return True
+                return False
             path_ = path + '/'
             for f in names:
                 if f.startswith(path_):
-                    return True
+                    return False
+            repo.ui.warn("%s: %s\n" % (m.rel(path), msg))
             return False
 
         m = cmdutil.match(repo, pats, opts)
         m.bad = badfn
         for src, abs, rel, exact in cmdutil.walk(repo, m, node=node):
-            if abs in names or src == 'b':
+            if abs in names:
                 continue
             names[abs] = (rel, exact)
 

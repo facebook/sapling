@@ -432,7 +432,6 @@ class dirstate(object):
         'f' the file was found in the directory tree
         'd' the file is a directory of the tree
         'm' the file was only in the dirstate and not in the tree
-        'b' file was not found and did not match badfn
 
         and st is the stat result if the file was found in the directory.
         '''
@@ -543,7 +542,7 @@ class dirstate(object):
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
                     elif badfn(ff, inst.strerror) and imatch(nf):
-                        yield 'b', ff, None
+                        yield 'f', ff, None
                 continue
             if s_isdir(st.st_mode):
                 if not dirignore(nf):
