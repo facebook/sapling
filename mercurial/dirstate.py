@@ -590,7 +590,7 @@ class dirstate(object):
         for src, fn, st in self.statwalk(files, match, unknown=list_unknown,
                                          ignored=list_ignored):
             if fn in dmap:
-                type_, mode, size, time, foo = dmap[fn]
+                state, mode, size, time, foo = dmap[fn]
             else:
                 if (list_ignored or fn in files) and self._dirignore(fn):
                     if list_ignored:
@@ -612,11 +612,11 @@ class dirstate(object):
                         nonexistent = False
                 # XXX: what to do with file no longer present in the fs
                 # who are not removed in the dirstate ?
-                if nonexistent and type_ in "nma":
+                if nonexistent and state in "nma":
                     dadd(fn)
                     continue
             # check the common case first
-            if type_ == 'n':
+            if state == 'n':
                 if not st:
                     st = lstat(_join(fn))
                 if (size >= 0 and
@@ -629,11 +629,11 @@ class dirstate(object):
                     ladd(fn)
                 elif list_clean:
                     cadd(fn)
-            elif type_ == 'm':
+            elif state == 'm':
                 madd(fn)
-            elif type_ == 'a':
+            elif state == 'a':
                 aadd(fn)
-            elif type_ == 'r':
+            elif state == 'r':
                 radd(fn)
 
         return (lookup, modified, added, removed, deleted, unknown, ignored,
