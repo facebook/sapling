@@ -33,14 +33,14 @@ def add(ui, repo, *pats, **opts):
     names = []
     m = cmdutil.match(repo, pats, opts)
     m.bad = lambda x,y: True
-    for src, abs, rel, exact in cmdutil.walk(repo, m):
-        if exact:
+    for src, abs in cmdutil.walk(repo, m):
+        if m.exact(abs):
             if ui.verbose:
-                ui.status(_('adding %s\n') % rel)
+                ui.status(_('adding %s\n') % m.rel(abs))
             names.append(abs)
             exacts[abs] = 1
         elif abs not in repo.dirstate:
-            ui.status(_('adding %s\n') % rel)
+            ui.status(_('adding %s\n') % m.rel(abs))
             names.append(abs)
     if not opts.get('dry_run'):
         rejected = repo.add(names)
@@ -110,10 +110,10 @@ def annotate(ui, repo, *pats, **opts):
     ctx = repo.changectx(opts['rev'])
 
     m = cmdutil.match(repo, pats, opts)
-    for src, abs, rel, exact in cmdutil.walk(repo, m, ctx.node()):
+    for src, abs in cmdutil.walk(repo, m, ctx.node()):
         fctx = ctx.filectx(abs)
         if not opts['text'] and util.binary(fctx.data()):
-            ui.write(_("%s: binary file\n") % ((pats and rel) or abs))
+            ui.write(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
             continue
 
         lines = fctx.annotate(follow=opts.get('follow'),
@@ -489,7 +489,7 @@ def cat(ui, repo, file1, *pats, **opts):
     ctx = repo.changectx(opts['rev'])
     err = 1
     m = cmdutil.match(repo, (file1,) + pats, opts)
-    for src, abs, rel, exact in cmdutil.walk(repo, m, ctx.node()):
+    for src, abs in cmdutil.walk(repo, m, ctx.node()):
         fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
         data = ctx.filectx(abs).data()
         if opts.get('decode'):
@@ -915,9 +915,10 @@ def debugrename(ui, repo, file1, *pats, **opts):
 
     ctx = repo.changectx(opts.get('rev', 'tip'))
     m = cmdutil.match(repo, (file1,) + pats, opts)
-    for src, abs, rel, exact in cmdutil.walk(repo, m, ctx.node()):
+    for src, abs in cmdutil.walk(repo, m, ctx.node()):
         fctx = ctx.filectx(abs)
         o = fctx.filelog().renamed(fctx.filenode())
+        rel = m.rel(abs)
         if o:
             ui.write(_("%s renamed from %s:%s\n") % (rel, o[0], hex(o[1])))
         else:
@@ -930,10 +931,10 @@ def debugwalk(ui, repo, *pats, **opts):
     if not items:
         return
     fmt = '%%s  %%-%ds  %%-%ds  %%s' % (
-        max([len(abs) for (src, abs, rel, exact) in items]),
-        max([len(rel) for (src, abs, rel, exact) in items]))
-    for src, abs, rel, exact in items:
-        line = fmt % (src, abs, rel, exact and 'exact' or '')
+        max([len(abs) for (src, abs) in items]),
+        max([len(m.rel(abs)) for (src, abs) in items]))
+    for src, abs in items:
+        line = fmt % (src, abs, m.rel(abs), m.exact(abs) and 'exact' or '')
         ui.write("%s\n" % line.rstrip())
 
 def diff(ui, repo, *pats, **opts):
@@ -1698,13 +1699,13 @@ def locate(ui, repo, *pats, **opts):
     ret = 1
     m = cmdutil.match(repo, pats, opts, default='relglob')
     m.bad = lambda x,y: False
-    for src, abs, rel, exact in cmdutil.walk(repo, m, node):
+    for src, abs in cmdutil.walk(repo, m, node):
         if not node and abs not in repo.dirstate:
             continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
         else:
-            ui.write(((pats and rel) or abs), end)
+            ui.write(((pats and m.rel(abs)) or abs), end)
         ret = 0
 
     return ret
@@ -2184,7 +2185,7 @@ def remove(ui, repo, *pats, **opts):
     modified, added, removed, deleted, unknown = mardu
 
     remove, forget = [], []
-    for src, abs, rel, exact in cmdutil.walk(repo, m):
+    for src, abs in cmdutil.walk(repo, m):
 
         reason = None
         if abs in removed or abs in unknown:
@@ -2217,9 +2218,9 @@ def remove(ui, repo, *pats, **opts):
             remove.append(abs)
 
         if reason:
-            ui.warn(_('not removing %s: file %s\n') % (rel, reason))
-        elif ui.verbose or not exact:
-            ui.status(_('removing %s\n') % rel)
+            ui.warn(_('not removing %s: file %s\n') % (m.rel(abs), reason))
+        elif ui.verbose or not m.exact(abs):
+            ui.status(_('removing %s\n') % m.rel(abs))
 
     repo.forget(forget)
     repo.remove(remove, unlink=not after)
@@ -2341,8 +2342,8 @@ def revert(ui, repo, *pats, **opts):
 
         m = cmdutil.match(repo, pats, opts)
         m.bad = lambda x,y: False
-        for src, abs, rel, exact in cmdutil.walk(repo, m):
-            names[abs] = (rel, exact)
+        for src, abs in cmdutil.walk(repo, m):
+            names[abs] = m.rel(abs), m.exact(abs)
 
         # walk target manifest.
 
@@ -2358,10 +2359,9 @@ def revert(ui, repo, *pats, **opts):
 
         m = cmdutil.match(repo, pats, opts)
         m.bad = badfn
-        for src, abs, rel, exact in cmdutil.walk(repo, m, node=node):
-            if abs in names:
-                continue
-            names[abs] = (rel, exact)
+        for src, abs in cmdutil.walk(repo, m, node=node):
+            if abs not in names:
+                names[abs] = m.rel(abs), m.exact(abs)
 
         changes = repo.status(files=files, match=names.has_key)[:4]
         modified, added, removed, deleted = map(dict.fromkeys, changes)

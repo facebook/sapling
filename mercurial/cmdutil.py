@@ -237,7 +237,7 @@ def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
 
 def walk(repo, match, node=None):
     for src, fn in repo.walk(node, match):
-        yield src, fn, match.rel(fn), match.exact(fn)
+        yield src, fn
 
 def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
@@ -275,11 +275,13 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     add, remove = [], []
     mapping = {}
     m = match(repo, pats, opts)
-    for src, abs, rel, exact in walk(repo, m):
+    for src, abs in walk(repo, m):
         target = repo.wjoin(abs)
+        rel = m.rel(abs)
+        exact = m.exact(abs)
         if src == 'f' and abs not in repo.dirstate:
             add.append(abs)
-            mapping[abs] = rel, exact
+            mapping[abs] = rel, m.exact(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
         if repo.dirstate[abs] != 'r' and (not util.lexists(target)
@@ -315,8 +317,10 @@ def copy(ui, repo, pats, opts, rename=False):
     def walkpat(pat):
         srcs = []
         m = match(repo, [pat], opts, globbed=True)
-        for tag, abs, rel, exact in walk(repo, m):
+        for tag, abs in walk(repo, m):
             state = repo.dirstate[abs]
+            rel = m.rel(abs)
+            exact = m.exact(abs)
             if state in '?r':
                 if exact and state == '?':
                     ui.warn(_('%s: not copying - file is not managed\n') % rel)
