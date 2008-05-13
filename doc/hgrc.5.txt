@@ -100,6 +100,7 @@ This section describes the different sections that may appear in a
 Mercurial "hgrc" file, the purpose of each section, its possible
 keys, and their possible values.
 
+[[decode]]
 decode/encode::
   Filters for transforming files on checkout/checkin. This would
   typically be used for newline processing or other
@@ -158,6 +159,7 @@ decode/encode::
     [decode]
     **.txt = dumbdecode:
 
+[[defaults]]
 defaults::
   Use the [defaults] section to define command defaults, i.e. the
   default options/arguments to pass to the specified commands.
@@ -173,6 +175,7 @@ defaults::
   defining command defaults. The command defaults will also be
   applied to the aliases of the commands defined.
 
+[[diff]]
 diff::
   Settings used when displaying diffs. They are all boolean and
   defaults to False.
@@ -189,6 +192,7 @@ diff::
   ignoreblanklines;;
     Ignore changes whose lines are all blank.
 
+[[email]]
 email::
   Settings for extensions that send email messages.
   from;;
@@ -217,6 +221,7 @@ email::
     from = Joseph User <joe.user@example.com>
     method = /usr/sbin/sendmail
 
+[[extensions]]
 extensions::
   Mercurial has an extension mechanism for adding new features. To
   enable an extension, create an entry for it in this section.
@@ -241,6 +246,7 @@ extensions::
     # (this extension will get loaded from the file specified)
     myfeature = ~/.hgext/myfeature.py
 
+[[format]]
 format::
 
   usestore;;
@@ -250,6 +256,7 @@ format::
     you to store longer filenames in some situations at the expense of
     compatibility.
 
+[[merge-patterns]]
 merge-patterns::
   This section specifies merge tools to associate with particular file
   patterns. Tools matched here will take precedence over the default
@@ -261,6 +268,7 @@ merge-patterns::
     **.c = kdiff3
     **.jpg = myimgmerge
 
+[[merge-tools]]
 merge-tools::
   This section configures external merge tools to use for file-level
   merges.
@@ -327,6 +335,7 @@ merge-tools::
     String to append to the value read from the registry, typically the
     executable name of the tool. Default: None
 
+[[hooks]]
 hooks::
   Commands or Python functions that get automatically executed by
   various actions such as starting or finishing a commit. Multiple
@@ -449,6 +458,7 @@ hooks::
   If a Python hook returns a "true" value or raises an exception, this
   is treated as failure of the hook.
 
+[[http_proxy]]
 http_proxy::
   Used to access web-based Mercurial repositories through a HTTP
   proxy.
@@ -463,6 +473,7 @@ http_proxy::
   user;;
     Optional. User name to authenticate with at the proxy server.
 
+[[smtp]]
 smtp::
   Configuration for extensions that need to send email messages.
   host;;
@@ -484,6 +495,7 @@ smtp::
     Optional. It's the hostname that the sender can use to identify itself
     to the MTA.
 
+[[paths]]
 paths::
   Assigns symbolic names to repositories. The left side is the
   symbolic name, and the right gives the directory or URL that is the
@@ -497,6 +509,7 @@ paths::
     Optional. Directory or URL to use when pushing if no destination
     is specified.
 
+[[server]]
 server::
   Controls generic server settings.
   uncompressed;;
@@ -509,6 +522,7 @@ server::
     6Mbps), uncompressed streaming is slower, because of the extra
     data transfer overhead. Default is False.
 
+[[trusted]]
 trusted::
   For security reasons, Mercurial will not use the settings in
   the .hg/hgrc file from a repository if it doesn't belong to a
@@ -525,6 +539,7 @@ trusted::
   groups;;
     Comma-separated list of trusted groups.
 
+[[ui]]
 ui::
   User interface controls.
   archivemeta;;
@@ -601,6 +616,7 @@ ui::
     Increase the amount of output printed. True or False. Default is False.
 
 
+[[web]]
 web::
   Web interface configuration.
   accesslog;;
