@@ -16,7 +16,7 @@ class monotone_source(converter_source, commandline):
 
         # regular expressions for parsing monotone output
         space    = r'\s*'
-        name     = r'\s+"((?:[^"]|\\")*)"\s*'
+        name     = r'\s+"((?:\\"|[^"])*)"\s*'
         value    = name
         revision = r'\s+\[(\w+)\]\s*'
         lines    = r'(?:.|\n)+'
@@ -98,11 +98,14 @@ class monotone_source(converter_source, commandline):
     def mtngetcerts(self, rev):
         certs = {"author":"<missing>", "date":"<missing>",
             "changelog":"<missing>", "branch":"<missing>"}
-        cert_list = self.mtnrun("certs", rev).split("\n\n")
+        cert_list = self.mtnrun("certs", rev).split('\n\n      key "')
         for e in cert_list:
             m = self.cert_re.match(e)
             if m:
-                certs[m.group(1)] = m.group(2)
+                name, value = m.groups()
+                value = value.replace(r'\"', '"')
+                value = value.replace(r'\\', '\\')
+                certs[name] = value
         return certs
 
     def mtnrenamefiles(self, files, fromdir, todir):
