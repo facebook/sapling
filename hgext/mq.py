@@ -1743,7 +1743,16 @@ def refresh(ui, repo, *pats, **opts):
     return ret
 
 def diff(ui, repo, *pats, **opts):
-    """diff of the current patch"""
+    """diff of the current patch and subsequent modifications
+    
+    Shows a diff which includes the current patch as well as any changes which
+    have been made in the working directory since the last refresh (thus
+    showing what the current patch would become after a qrefresh).
+    
+    Use 'hg diff' if you only want to see the changes made since the last
+    qrefresh, or 'hg export qtip' if you want to see changes made by the
+    current patch without including changes made since the qrefresh.
+    """
     repo.mq.diff(repo, pats, opts)
     return 0
 
