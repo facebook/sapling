@@ -2650,9 +2650,9 @@ def status(ui, repo, *pats, **opts):
             if node2 is None:
                 ctx2 = repo.workingctx()
             for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
-                if v in stat.added:
+                if v in stat[1]:
                     copy[v] = k
-                elif k in stat.added:
+                elif k in stat[1]:
                     copy[k] = v
 
     for state, char, files in changestates:
