@@ -44,6 +44,8 @@ echo % should push b.patch
 hg qpush
 
 hg qpop
+echo % test selection of an empty guard
+hg qselect ""
 hg qselect a
 echo % should push a.patch
 hg qpush
