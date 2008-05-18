@@ -28,7 +28,7 @@ list of commands:
  qclone       clone main and patch repository at same time
  qcommit      commit changes in the queue repository
  qdelete      remove patches from queue
- qdiff        diff of the current patch
+ qdiff        diff of the current patch and subsequent modifications
  qfold        fold the named patches into the current patch
  qgoto        push or pop patches until named patch is at top of stack
  qguard       set or print guards for a patch

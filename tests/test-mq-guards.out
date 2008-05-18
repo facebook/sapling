@@ -15,6 +15,8 @@ a.patch: +a
 applying b.patch
 Now at: b.patch
 Patch queue now empty
+% test selection of an empty guard
+abort: guard cannot be an empty string
 number of unguarded, unapplied patches has changed from 2 to 3
 % should push a.patch
 applying a.patch

@@ -126,6 +126,8 @@ class queue:
                 self.series_guards.append(self.guard_re.findall(comment))
 
     def check_guard(self, guard):
+        if not guard:
+            return _('guard cannot be an empty string')
         bad_chars = '# \t\r\n\f'
         first = guard[0]
         for c in '-+':
