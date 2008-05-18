@@ -55,7 +55,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         assert node2 is not None
         mmap = repo.changectx(node1).manifest()
         mmap2 = repo.changectx(node2).manifest()
-        m = cmdutil.matchfiles(repo, files)
+        m = cmdutil.match(repo, files)
         status = repo.status(node1, node2, match=m)[:5]
         modified, added, removed, deleted, unknown = status
 
@@ -93,7 +93,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         if opts['patch']:
             if opts['pretty']:
                 catcommit(ui, repo, node2, "")
-            m = cmdutil.matchfiles(repo, files)
+            m = cmdutil.match(repo, files)
             patch.diff(repo, node1, node2, match=m,
                        opts=patch.diffopts(ui, {'git': True}))
         else:
