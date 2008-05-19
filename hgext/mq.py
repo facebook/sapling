@@ -2323,7 +2323,7 @@ cmdtable = {
     "^qpop":
         (pop,
          [('a', 'all', None, _('pop all patches')),
-          ('n', 'name', '', _('queue name to pop')),
+          ('n', 'name', '', _('pop patches until the named patch is the current patch')),
           ('f', 'force', None, _('forget any local changes'))],
          _('hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]')),
     "^qpush":
