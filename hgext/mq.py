@@ -1941,7 +1941,11 @@ def push(ui, repo, patch=None, **opts):
     return ret
 
 def pop(ui, repo, patch=None, **opts):
-    """pop the current patch off the stack"""
+    """pop the current patch off the stack
+    
+    By default, pops off the top of the patch stack. If given a patch name,
+    keeps popping off patches until the named patch is at the top of the stack.
+    """
     localupdate = True
     if opts['name']:
         q = queue(ui, repo.join(""), repo.join(opts['name']))
@@ -2321,7 +2325,7 @@ cmdtable = {
     "^qpop":
         (pop,
          [('a', 'all', None, _('pop all patches')),
-          ('n', 'name', '', _('pop patches until the named patch is the current patch')),
+          ('n', 'name', '', _('queue name to pop')),
           ('f', 'force', None, _('forget any local changes'))],
          _('hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]')),
     "^qpush":
