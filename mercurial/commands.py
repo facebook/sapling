@@ -2068,7 +2068,7 @@ def push(ui, repo, dest=None, **opts):
 
     By default, push will refuse to run if it detects the result would
     increase the number of remote heads. This generally indicates the
-    the client has forgotten to sync and merge before pushing.
+    the client has forgotten to pull and merge before pushing.
 
     Valid URLs are of the form:
 
@@ -2078,7 +2078,8 @@ def push(ui, repo, dest=None, **opts):
       https://[user@]host[:port]/[path]
 
     An optional identifier after # indicates a particular branch, tag,
-    or changeset to push.
+    or changeset to push. If -r is used, the named changeset and all its
+    ancestors will be pushed to the remote repository.
 
     Look at the help text for the pull command for important details
     about ssh:// URLs.
