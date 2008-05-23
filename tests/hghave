@@ -25,7 +25,8 @@ def has_baz():
     return matchoutput('baz --version 2>&1', r'baz Bazaar version')
 
 def has_cvs():
-    return matchoutput('cvs --version 2>&1', r'Concurrent Versions System')
+    re = r'Concurrent Versions System.*?server'
+    return matchoutput('cvs --version 2>&1', re)
 
 def has_cvsps():
     return matchoutput('cvsps -h -q 2>&1', r'cvsps version', True)
@@ -120,7 +121,7 @@ def has_pygments():
 
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
-    "cvs": (has_cvs, "cvs client"),
+    "cvs": (has_cvs, "cvs client/server"),
     "cvsps": (has_cvsps, "cvsps utility"),
     "darcs": (has_darcs, "darcs client"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
