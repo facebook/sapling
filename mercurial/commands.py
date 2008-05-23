@@ -532,6 +532,9 @@ def clone(ui, source, dest=None, **opts):
     subsequent revisions will be present in the cloned repository.
     This option implies --pull, even on local repositories.
 
+    If the -U option is used, the new clone will contain only a repository
+    (.hg) and no working copy (the working copy parent is the null revision).
+
     See pull for valid source format details.
 
     It is possible to specify an ssh:// URL as the destination, but no
@@ -2990,7 +2993,8 @@ table = {
          _('hg cat [OPTION]... FILE...')),
     "^clone":
         (clone,
-         [('U', 'noupdate', None, _('do not update the new working directory')),
+         [('U', 'noupdate', None,
+          _('the clone will only contain a repository (no working copy)')),
           ('r', 'rev', [],
            _('a changeset you would like to have after cloning')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
