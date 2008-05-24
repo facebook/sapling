@@ -11,3 +11,14 @@ applying rm_a
 Now at: rm_a
 b
 Patch queue now empty
+
+% init t2
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% create the reference queue
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% merge
+merging with queue at refqueue
+(working directory not at tip)
+applying patcha
+Now at: patcha

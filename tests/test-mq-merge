@@ -49,3 +49,25 @@ hg manifest
 
 # ensure status is correct after merge
 hg qpop -a
+cd ..
+
+# Classic MQ merge sequence *with an explicit named queue*
+echo
+echo % init t2
+hg init t2
+cd t2
+echo a > a
+hg ci -Am init
+echo b >> a
+hg ci -m changea
+hg up -C 0
+echo c >> a
+hg qnew -f -e patcha
+echo % create the reference queue
+hg qsave -c -e -n refqueue 2> /dev/null
+hg up -C 1
+echo % merge
+hg qpush -m -n refqueue 2>&1 | \
+    sed 's/merging with queue at.*refqueue/merging with queue at refqueue/'
+cd ..
+
