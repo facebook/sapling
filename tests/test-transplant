@@ -96,3 +96,21 @@ hg transplant 1
 hg transplant --continue
 hg transplant 1:3
 hg locate
+cd ..
+
+# Test transplant --merge (issue 1111)
+echo % test transplant merge
+hg init t1111
+cd t1111
+echo a > a
+hg ci -Am adda
+echo b >> a
+hg ci -m appendb
+echo c >> a
+hg ci -m appendc
+hg up -C 0
+echo d >> a
+hg ci -m appendd
+echo % tranplant
+hg transplant -m 1
+cd ..

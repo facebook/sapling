@@ -129,3 +129,10 @@ applying 0282d5fbbe02
 added
 bar
 foo
+% test transplant merge
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+% tranplant
+applying 42dc4432fd35
+1:42dc4432fd35 merged at a9f4acbac129
