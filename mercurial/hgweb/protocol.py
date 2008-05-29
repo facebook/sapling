@@ -224,5 +224,7 @@ def unbundle(web, req):
         os.unlink(tempname)
 
 def stream_out(web, req):
+    if not web.allowpull:
+        return
     req.respond(HTTP_OK, HGTYPE)
     streamclone.stream_out(web.repo, req, untrusted=True)
