@@ -15,7 +15,8 @@ summary:     a
 % test bundle type None
 searching for changes
 1 changesets found
-HG10UNpulling from ../bNone
+HG10UN
+pulling from ../bNone
 requesting all changes
 adding changesets
 adding manifests
@@ -27,7 +28,8 @@ summary:     a
 % test bundle type bzip2
 searching for changes
 1 changesets found
-HG10BZpulling from ../bbzip2
+HG10BZ
+pulling from ../bbzip2
 requesting all changes
 adding changesets
 adding manifests
@@ -39,7 +41,8 @@ summary:     a
 % test bundle type gzip
 searching for changes
 1 changesets found
-HG10GZpulling from ../bgzip
+HG10GZ
+pulling from ../bgzip
 requesting all changes
 adding changesets
 adding manifests
