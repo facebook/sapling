@@ -31,6 +31,11 @@ hg add c
 hg branch c
 hg commit -d '5 0' -u test -m "Adding c branch"
 
+echo 'd' >d
+hg add d
+hg branch d
+hg commit -d '6 0' -u test -m "Adding d branch"
+
 hg branches
 echo '-------'
 hg branches -a

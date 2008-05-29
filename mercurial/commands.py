@@ -371,30 +371,26 @@ def branches(ui, repo, active=False):
     List the repository's named branches, indicating which ones are
     inactive.  If active is specified, only show active branches.
 
-    A branch is considered active if it contains unmerged heads.
+    A branch is considered active if it contains repository heads.
 
     Use the command 'hg update' to switch to an existing branch.
     """
-    b = repo.branchtags()
-    heads = dict.fromkeys(repo.heads(), 1)
-    l = [((n in heads), repo.changelog.rev(n), n, t) for t, n in b.items()]
-    l.sort()
-    l.reverse()
-    for ishead, r, n, t in l:
-        if active and not ishead:
-            # If we're only displaying active branches, abort the loop on
-            # encountering the first inactive head
-            break
-        else:
-            hexfunc = ui.debugflag and hex or short
+    hexfunc = ui.debugflag and hex or short
+    activebranches = [util.tolocal(repo.changectx(n).branch())
+                            for n in repo.heads()]
+    branches = [(tag in activebranches, repo.changelog.rev(node), tag)
+                            for tag, node in repo.branchtags().items()]
+    branches.sort(reverse=True)
+
+    for isactive, node, tag in branches:
+        if (not active) or isactive:
             if ui.quiet:
-                ui.write("%s\n" % t)
+                ui.write("%s\n" % tag)
             else:
-                spaces = " " * (30 - util.locallen(t))
-                # The code only gets here if inactive branches are being
-                # displayed or the branch is active.
-                isinactive = ((not ishead) and " (inactive)") or ''
-                ui.write("%s%s %s:%s%s\n" % (t, spaces, r, hexfunc(n), isinactive))
+                rev = str(node).rjust(32 - util.locallen(tag))
+                isinactive = ((not isactive) and " (inactive)") or ''
+                data = tag, rev, hexfunc(repo.lookup(node)), isinactive
+                ui.write("%s%s:%s%s\n" % data)
 
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file

@@ -5,12 +5,15 @@ created new head
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 created new head
 marked working directory as branch c
-c                              5:5ca481e59b8c
+marked working directory as branch d
+d                              6:9c581c5ff105
+b                              4:22df7444f7c1
 a                              1:dd6b440dd85a
-b                              4:22df7444f7c1 (inactive)
+c                              5:5ca481e59b8c (inactive)
 default                        0:19709c5a4e75 (inactive)
 -------
-c                              5:5ca481e59b8c
+d                              6:9c581c5ff105
+b                              4:22df7444f7c1
 a                              1:dd6b440dd85a
 --- Branch a
 changeset:   1:dd6b440dd85a

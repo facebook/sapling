@@ -123,8 +123,8 @@ o  branch=old3 11 branch trunk@1 into old3 files:
 |/
 o  branch= 0 init projA files:
 
-old3                           11:
-default                        10:
+old3                          11:
+default                       10:
 old                            9:
 old2                           8:
 tip
