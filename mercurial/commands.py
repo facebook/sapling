@@ -2252,6 +2252,10 @@ def resolve(ui, repo, *pats, **opts):
     revision preserved at the last update or merge to cleanly retry
     the file merge attempt. With no file or options specified, this
     command will attempt to resolve all unresolved files.
+
+    The codes used to show the status of files are:
+    U = unresolved
+    R = resolved
     """
 
     if len([x for x in opts if opts[x]]) > 1:
