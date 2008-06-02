@@ -46,7 +46,7 @@ assuming destination repo.mtn-hg
 scanning source...
 sorting...
 converting...
-3 update2
+3 update2 "with" quotes
 2 movedir
 1 emptydir
 0 dropdirectory
@@ -57,7 +57,7 @@ o  4 "emptydir" files: dir2/dir/subdir/f
 |
 o  3 "movedir" files: dir/a dir2/a
 |
-o  2 "update2" files: bin bin2 dir/b e
+o  2 "update2 "with" quotes" files: bin bin2 dir/b e
 |
 o  1 "update1" files: a bin c dir/a dir/b
 |

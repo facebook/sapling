@@ -54,7 +54,7 @@ echo e > e
 mtn add e
 mtn drop dir/b
 mtn mv bin bin2
-mtn ci -m update2
+mtn ci -m 'update2 "with" quotes'
 # Test directory move
 mtn mv dir dir2
 mtn ci -m movedir
