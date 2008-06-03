@@ -37,6 +37,8 @@ special help topics:
  dates             Date Formats
  patterns          File Name Patterns
  environment, env  Environment Variables
+ revs, revisions   Specifying Single Revisions
+ mrevs, multirevs  Specifying Multiple Revisions
 
 global options:
  -R --repository      repository root directory or symbolic path name
