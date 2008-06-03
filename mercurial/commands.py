@@ -2644,20 +2644,18 @@ def status(ui, repo, *pats, **opts):
     changestates = zip(states, 'MAR!?IC', stat)
 
     if (opts['all'] or opts['copies']) and not opts['no_status']:
-        if opts.get('rev') == []:
-            # fast path, more correct with merge parents
-            copy = repo.dirstate.copies()
-        else:
-            ctxn = repo.changectx(nullid)
-            ctx1 = repo.changectx(node1)
-            ctx2 = repo.changectx(node2)
-            if node2 is None:
-                ctx2 = repo.workingctx()
-            for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
-                if v in stat[1]:
-                    copy[v] = k
-                elif k in stat[1]:
-                    copy[k] = v
+        ctxn = repo.changectx(nullid)
+        ctx1 = repo.changectx(node1)
+        ctx2 = repo.changectx(node2)
+        added = stat[1]
+        if node2 is None:
+            added = stat[0] + stat[1] # merged?
+            ctx2 = repo.workingctx()
+        for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
+            if k in added:
+                copy[k] = v
+            elif v in added:
+                copy[v] = k
 
     for state, char, files in changestates:
         if state in show:

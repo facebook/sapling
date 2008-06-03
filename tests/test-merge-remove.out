@@ -13,7 +13,6 @@ r   0         -1 foo1
 copy: foo -> foo1
 R bar
 R foo1
-  foo
 % readding foo1 and bar
 adding bar
 adding foo1

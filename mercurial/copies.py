@@ -109,6 +109,10 @@ def copies(repo, c1, c2, ca, checkdirs=False):
     if not c1 or not c2 or c1 == c2:
         return {}, {}
 
+    # avoid silly behavior for parent -> working dir
+    if c2.node() == None and c1.node() == repo.dirstate.parents()[0]:
+        return repo.dirstate.copies(), {}
+
     limit = _findlimit(repo, c1.rev(), c2.rev())
     m1 = c1.manifest()
     m2 = c2.manifest()
