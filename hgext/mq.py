@@ -1534,6 +1534,10 @@ def unapplied(ui, repo, patch=None, **opts):
 def qimport(ui, repo, *filename, **opts):
     """import a patch
 
+    The patch is inserted into the series after the last applied patch.
+    If no patches have been applied, qimport prepends the patch
+    to the series.
+
     The patch will have the same name as its source file unless you
     give it a new one with --name.
 
