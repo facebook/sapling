@@ -2060,14 +2060,28 @@ def save(ui, repo, **opts):
     return 0
 
 def strip(ui, repo, rev, **opts):
-    """strip a revision and all later revs on the same branch"""
-    rev = repo.lookup(rev)
+    """strip a revision and all its descendants from the repository
+
+    If one of the working dir's parent revisions is stripped, the working
+    directory will be updated to the parent of the stripped revision.
+    """
     backup = 'all'
     if opts['backup']:
         backup = 'strip'
     elif opts['nobackup']:
         backup = 'none'
-    update = repo.dirstate.parents()[0] != revlog.nullid
+
+    rev = repo.lookup(rev)
+    p = repo.dirstate.parents()
+    cl = repo.changelog
+    update = True
+    if p[0] == revlog.nullid:
+        update = False
+    elif p[1] == revlog.nullid and rev != cl.ancestor(p[0], rev):
+        update = False
+    elif rev not in (cl.ancestor(p[0], rev), cl.ancestor(p[1], rev)):
+        update = False
+
     repo.mq.strip(repo, rev, backup=backup, update=update)
     return 0
 
