@@ -1401,6 +1401,16 @@ def help_(ui, name=None, with_version=False):
                                          and _(" (default: %s)") % default
                                          or "")))
 
+    if ui.verbose:
+        ui.write(_("\nspecial help topics:\n"))
+        topics = []
+        for i in help.helptable:
+            l = i.split('|')
+            topics.append((", ".join(l[:-1]), l[-1]))
+        topics_len = max([len(s[0]) for s in topics])
+        for t, desc in topics:
+            ui.write(" %-*s  %s\n" % (topics_len, t, desc))
+
     if opt_output:
         opts_len = max([len(line[0]) for line in opt_output if line[1]] or [0])
         for first, second in opt_output:
