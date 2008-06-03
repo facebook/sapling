@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-helptable = {
-    "dates|Date Formats":
+helptable = (
+    ("dates|Date Formats",
     r'''
     Some commands allow the user to specify a date:
     backout, commit, import, tag: Specify the commit date.
@@ -43,9 +43,55 @@ helptable = {
     ">{date}" - on or after a given date
     "{date} to {date}" - a date range, inclusive
     "-{days}" - within a given number of days of today
-    ''',
+    '''),
 
-    'environment|env|Environment Variables':
+    ("patterns|File Name Patterns",
+    r'''
+    Mercurial accepts several notations for identifying one or more
+    files at a time.
+
+    By default, Mercurial treats filenames as shell-style extended
+    glob patterns.
+
+    Alternate pattern notations must be specified explicitly.
+
+    To use a plain path name without any pattern matching, start a
+    name with "path:".  These path names must match completely, from
+    the root of the current repository.
+
+    To use an extended glob, start a name with "glob:".  Globs are
+    rooted at the current directory; a glob such as "*.c" will match
+    files ending in ".c" in the current directory only.
+
+    The supported glob syntax extensions are "**" to match any string
+    across path separators, and "{a,b}" to mean "a or b".
+
+    To use a Perl/Python regular expression, start a name with "re:".
+    Regexp pattern matching is anchored at the root of the repository.
+
+    Plain examples:
+
+    path:foo/bar   a name bar in a directory named foo in the root of
+                   the repository
+    path:path:name a file or directory named "path:name"
+
+    Glob examples:
+
+    glob:*.c       any name ending in ".c" in the current directory
+    *.c            any name ending in ".c" in the current directory
+    **.c           any name ending in ".c" in the current directory, or
+                   any subdirectory
+    foo/*.c        any name ending in ".c" in the directory foo
+    foo/**.c       any name ending in ".c" in the directory foo, or any
+                   subdirectory
+
+    Regexp examples:
+
+    re:.*\.c$      any name ending in ".c", anywhere in the repository
+
+    '''),
+
+    ('environment|env|Environment Variables',
     r'''
 HG::
     Path to the 'hg' executable, automatically passed when running hooks,
@@ -114,51 +160,5 @@ EDITOR::
 PYTHONPATH::
     This is used by Python to find imported modules and may need to be set
     appropriately if Mercurial is not installed system-wide.
-    ''',
-
-    "patterns|File Name Patterns": r'''
-    Mercurial accepts several notations for identifying one or more
-    files at a time.
-
-    By default, Mercurial treats filenames as shell-style extended
-    glob patterns.
-
-    Alternate pattern notations must be specified explicitly.
-
-    To use a plain path name without any pattern matching, start a
-    name with "path:".  These path names must match completely, from
-    the root of the current repository.
-
-    To use an extended glob, start a name with "glob:".  Globs are
-    rooted at the current directory; a glob such as "*.c" will match
-    files ending in ".c" in the current directory only.
-
-    The supported glob syntax extensions are "**" to match any string
-    across path separators, and "{a,b}" to mean "a or b".
-
-    To use a Perl/Python regular expression, start a name with "re:".
-    Regexp pattern matching is anchored at the root of the repository.
-
-    Plain examples:
-
-    path:foo/bar   a name bar in a directory named foo in the root of
-                   the repository
-    path:path:name a file or directory named "path:name"
-
-    Glob examples:
-
-    glob:*.c       any name ending in ".c" in the current directory
-    *.c            any name ending in ".c" in the current directory
-    **.c           any name ending in ".c" in the current directory, or
-                   any subdirectory
-    foo/*.c        any name ending in ".c" in the directory foo
-    foo/**.c       any name ending in ".c" in the directory foo, or any
-                   subdirectory
-
-    Regexp examples:
-
-    re:.*\.c$      any name ending in ".c", anywhere in the repository
-
-''',
-}
-
+    '''),
+)

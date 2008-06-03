@@ -1321,16 +1321,16 @@ def help_(ui, name=None, with_version=False):
 
     def helptopic(name):
         v = None
-        for i in help.helptable:
+        for i, d in help.helptable:
             l = i.split('|')
             if name in l:
                 v = i
                 header = l[-1]
+                doc = d
         if not v:
             raise cmdutil.UnknownCommand(name)
 
         # description
-        doc = help.helptable[v]
         if not doc:
             doc = _("(No help text available)")
         if callable(doc):
@@ -1404,7 +1404,7 @@ def help_(ui, name=None, with_version=False):
     if ui.verbose:
         ui.write(_("\nspecial help topics:\n"))
         topics = []
-        for i in help.helptable:
+        for i, d in help.helptable:
             l = i.split('|')
             topics.append((", ".join(l[:-1]), l[-1]))
         topics_len = max([len(s[0]) for s in topics])
