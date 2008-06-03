@@ -35,3 +35,33 @@ hg qdel -r e
 hg qdel -r qbase:e
 hg qapplied
 hg log --template '{rev} {desc}\n'
+
+cd ..
+hg init b
+cd b
+
+echo 'base' > base
+hg ci -Ambase
+
+hg qfinish
+hg qfinish -a
+
+hg qnew a
+hg qnew b
+hg qnew c
+
+hg qfinish 0
+hg qfinish b
+
+hg qpop
+hg qfinish -a c
+hg qpush
+
+hg qfinish qbase:b
+hg qapplied
+hg log --template '{rev} {desc}\n'
+
+hg qfinish -a c
+hg qapplied
+hg log --template '{rev} {desc}\n'
+ls .hg/patches

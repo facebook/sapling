@@ -535,6 +535,41 @@ class queue:
                 break
         return (err, n)
 
+    def _clean_series(self, patches):
+        indices = [self.find_series(p) for p in patches]
+        indices.sort()
+        for i in indices[-1::-1]:
+            del self.full_series[i]
+        self.parse_series()
+        self.series_dirty = 1
+
+    def finish(self, repo, revs):
+        revs.sort()
+        firstrev = repo.changelog.rev(revlog.bin(self.applied[0].rev))
+        appliedbase = 0
+        patches = []
+        for rev in revs:
+            if rev < firstrev:
+                raise util.Abort(_('revision %d is not managed') % rev)
+            base = revlog.bin(self.applied[appliedbase].rev)
+            node = repo.changelog.node(rev)
+            if node != base:
+                raise util.Abort(_('cannot delete revision %d above '
+                                   'applied patches') % rev)
+            patches.append(self.applied[appliedbase].name)
+            appliedbase += 1
+
+        r = self.qrepo()
+        if r:
+            r.remove(patches, True)
+        else:
+            for p in patches:
+                os.unlink(self.join(p))
+
+        del self.applied[:appliedbase]
+        self.applied_dirty = 1
+        self._clean_series(patches)
+
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):
             raise util.Abort(_('qdelete requires at least one revision or '
@@ -580,12 +615,7 @@ class queue:
         if appliedbase:
             del self.applied[:appliedbase]
             self.applied_dirty = 1
-        indices = [self.find_series(p) for p in realpatches]
-        indices.sort()
-        for i in indices[-1::-1]:
-            del self.full_series[i]
-        self.parse_series()
-        self.series_dirty = 1
+        self._clean_series(realpatches)
 
     def check_toppatch(self, repo):
         if len(self.applied) > 0:
@@ -1497,9 +1527,8 @@ def delete(ui, repo, *patches, **opts):
     the --rev parameter. At least one patch or revision is required.
 
     With --rev, mq will stop managing the named revisions (converting
-    them to regular mercurial changesets). The patches must be applied
-    and at the base of the stack. This option is useful when the patches
-    have been applied upstream.
+    them to regular mercurial changesets). The qfinish command should be
+    used as an alternative for qdel -r, as the latter option is deprecated.
 
     With --keep, the patch files are preserved in the patch directory."""
     q = repo.mq
@@ -2185,6 +2214,34 @@ def select(ui, repo, *args, **opts):
         finally:
             q.save_dirty()
 
+def finish(ui, repo, *revrange, **opts):
+    """move applied patches into repository history
+
+    Finishes the specified revisions (corresponding to applied patches) by
+    moving them out of mq control into regular repository history.
+
+    Accepts a revision range or the --all option. If --all is specified, all
+    applied mq revisions are removed from mq control. Otherwise, the given
+    revisions must be at the base of the stack of applied patches.
+
+    This can be especially useful if your changes have been applied to an
+    upstream repository, or if you are about to push your changes to upstream.
+    """
+    if not opts['applied'] and not revrange:
+        raise util.Abort(_('no revisions specified'))
+    elif opts['applied']:
+        revrange = ('qbase:qtip',) + revrange
+
+    q = repo.mq
+    if not q.applied:
+        ui.status(_('no patches applied\n'))
+        return 0
+
+    revs = cmdutil.revrange(repo, revrange)
+    q.finish(repo, revs)
+    q.save_dirty()
+    return 0
+
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         def abort_if_wdir_patched(self, errmsg, force=False):
@@ -2395,4 +2452,8 @@ cmdtable = {
          _('hg strip [-f] [-b] [-n] REV')),
     "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied": (unapplied, [] + seriesopts, _('hg qunapplied [-s] [PATCH]')),
+    "qfinish":
+        (finish,
+         [('a', 'applied', None, _('finish all applied changesets'))],
+         _('hg qfinish [-a] [REV...]')),
 }

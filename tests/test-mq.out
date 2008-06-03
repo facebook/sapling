@@ -29,6 +29,7 @@ list of commands:
  qcommit      commit changes in the queue repository
  qdelete      remove patches from queue
  qdiff        diff of the current patch and subsequent modifications
+ qfinish      move applied patches into repository history
  qfold        fold the named patches into the current patch
  qgoto        push or pop patches until named patch is at top of stack
  qguard       set or print guards for a patch
