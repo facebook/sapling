@@ -127,7 +127,7 @@ class bundlerevlog(revlog.revlog):
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         raise NotImplementedError
-    def addgroup(self, revs, linkmapper, transaction, unique=0):
+    def addgroup(self, revs, linkmapper, transaction):
         raise NotImplementedError
     def strip(self, rev, minlink):
         raise NotImplementedError

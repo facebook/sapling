@@ -1985,7 +1985,7 @@ class localrepository(repo.repository):
             self.ui.status(_("adding changesets\n"))
             cor = cl.count() - 1
             chunkiter = changegroup.chunkiter(source)
-            if cl.addgroup(chunkiter, csmap, trp, 1) is None and not emptyok:
+            if cl.addgroup(chunkiter, csmap, trp) is None and not emptyok:
                 raise util.Abort(_("received changelog group is empty"))
             cnr = cl.count() - 1
             changesets = cnr - cor
