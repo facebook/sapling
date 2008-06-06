@@ -31,6 +31,13 @@ class dirstate(object):
         elif name == '_copymap':
             self._read()
             return self._copymap
+        elif name == '_foldmap':
+            _foldmap = {}
+            for name in self._map:
+                norm = os.path.normcase(os.path.normpath(name))
+                _foldmap[norm] = name
+            self._foldmap = _foldmap
+            return self._foldmap
         elif name == '_branch':
             try:
                 self._branch = (self._opener("branch").read().strip()
@@ -69,6 +76,12 @@ class dirstate(object):
         elif name == '_folding':
             self._folding = not util.checkfolding(self._join('.hg'))
             return self._folding
+        elif name == 'normalize':
+            if self._folding:
+                self.normalize = self._normalize
+            else:
+                self.normalize = lambda x: x
+            return self.normalize
         else:
             raise AttributeError, name
 
@@ -167,7 +180,7 @@ class dirstate(object):
             dmap[f] = e # we hold onto e[4] because making a subtuple is slow
 
     def invalidate(self):
-        for a in "_map _copymap _branch _pl _dirs _ignore".split():
+        for a in "_map _copymap _foldmap _branch _pl _dirs _ignore".split():
             if a in self.__dict__:
                 delattr(self, a)
         self._dirty = False
@@ -319,6 +332,16 @@ class dirstate(object):
             del self._map[f]
         except KeyError:
             self._ui.warn(_("not in dirstate: %s\n") % f)
+
+    def _normalize(self, path):
+        normpath = os.path.normcase(os.path.normpath(path))
+        if normpath in self._foldmap:
+            return self._foldmap[normpath]
+        elif os.path.exists(path):
+            self._foldmap[normpath] = util.fspath(path, self._root)
+            return self._foldmap[normpath]
+        else:
+            return path
 
     def clear(self):
         self._map = {}
@@ -561,7 +584,7 @@ class dirstate(object):
                 known[nf] = 1
                 if match(nf):
                     if supported(ff, st.st_mode, verbose=True):
-                        yield 'f', nf, st
+                        yield 'f', self.normalize(nf), st
                     elif ff in dc:
                         yield 'm', nf, st
 
