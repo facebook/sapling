@@ -66,11 +66,17 @@ class dirstate(object):
         elif name == '_checkexec':
             self._checkexec = util.checkexec(self._root)
             return self._checkexec
+        elif name == '_folding':
+            self._folding = not util.checkfolding(self._join('.hg'))
+            return self._folding
         else:
             raise AttributeError, name
 
     def _join(self, f):
         return os.path.join(self._root, f)
+
+    def folding(self):
+        return self._folding
 
     def getcwd(self):
         cwd = os.getcwd()
