@@ -859,6 +859,53 @@ def checkfolding(path):
     except:
         return True
 
+_fspathcache = {}
+def fspath(name, root):
+    '''Get name in the case stored in the filesystem
+
+    The name is either relative to root, or it is an absolute path starting
+    with root. Note that this function is unnecessary, and should not be
+    called, for case-sensitive filesystems (simply because it's expensive).
+    '''
+    # If name is absolute, make it relative
+    if name.lower().startswith(root.lower()):
+        l = len(root)
+        if name[l] == os.sep or name[l] == os.altsep:
+            l = l + 1
+        name = name[l:]
+
+    if not os.path.exists(os.path.join(root, name)):
+        return None
+
+    seps = os.sep
+    if os.altsep:
+        seps = seps + os.altsep
+    # Protect backslashes. This gets silly very quickly.
+    seps.replace('\\','\\\\')
+    pattern = re.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
+    dir = os.path.normcase(os.path.normpath(root))
+    result = []
+    for part, sep in pattern.findall(name):
+        if sep:
+            result.append(sep)
+            continue
+
+        if dir not in _fspathcache:
+            _fspathcache[dir] = os.listdir(dir)
+        contents = _fspathcache[dir]
+
+        lpart = part.lower()
+        for n in contents:
+            if n.lower() == lpart:
+                result.append(n)
+                break
+        else:
+            # Cannot happen, as the file exists!
+            result.append(part)
+        dir = os.path.join(dir, lpart)
+
+    return ''.join(result)
+
 def checkexec(path):
     """
     Check whether the given path is on a filesystem with UNIX-like exec flags
