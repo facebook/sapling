@@ -24,7 +24,7 @@ fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
 fileline = '<div style="font-family:monospace" class="parity#parity#"><pre><a class="linenr" href="##lineid#" id="#lineid#">#linenumber#</a> #line|escape#</pre></div>'
-annotateline = '<tr style="font-family:monospace" class="parity#parity#"><td class="linenr" style="text-align: right;"><a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}#l{targetline}">#author|user#@#rev#</a></td><td><pre><a class="linenr" href="##lineid#" id="#lineid#">#linenumber#</a></pre></td><td><pre>#line|escape#</pre></td></tr>'
+annotateline = '<tr style="font-family:monospace" class="parity#parity#"><td class="linenr" style="text-align: right;"><a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}#l{targetline}" title="{node|short}: {desc|escape|firstline}">#author|user#@#rev#</a></td><td><pre><a class="linenr" href="##lineid#" id="#lineid#">#linenumber#</a></pre></td><td><pre>#line|escape#</pre></td></tr>'
 difflineplus = '<span style="color:#008800;"><a class="linenr" href="##lineid#" id="#lineid#">#linenumber#</a> #line|escape#</span>'
 difflineminus = '<span style="color:#cc0000;"><a class="linenr" href="##lineid#" id="#lineid#">#linenumber#</a> #line|escape#</span>'
 difflineat = '<span style="color:#990099;"><a class="linenr" href="##lineid#" id="#lineid#">#linenumber#</a> #line|escape#</span>'

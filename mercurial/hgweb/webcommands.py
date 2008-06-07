@@ -472,6 +472,7 @@ def annotate(web, req, tmpl):
                    "node": hex(f.node()),
                    "rev": f.rev(),
                    "author": f.user(),
+                   "desc": f.description(),
                    "file": f.path(),
                    "targetline": targetline,
                    "line": l,
