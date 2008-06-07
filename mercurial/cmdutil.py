@@ -276,17 +276,23 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         similarity = float(opts.get('similarity') or 0)
     add, remove = [], []
     mapping = {}
+    audit_path = util.path_auditor(repo.root)
     m = match(repo, pats, opts)
     for abs in repo.walk(m):
         target = repo.wjoin(abs)
+        good = True
+        try:
+            audit_path(abs)
+        except:
+            good = False
         rel = m.rel(abs)
         exact = m.exact(abs)
-        if abs not in repo.dirstate:
+        if good and abs not in repo.dirstate:
             add.append(abs)
             mapping[abs] = rel, m.exact(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        if repo.dirstate[abs] != 'r' and (not util.lexists(target)
+        if repo.dirstate[abs] != 'r' and (not good or not util.lexists(target)
             or (os.path.isdir(target) and not os.path.islink(target))):
             remove.append(abs)
             mapping[abs] = rel, exact
