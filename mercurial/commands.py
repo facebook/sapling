@@ -1253,7 +1253,14 @@ def help_(ui, name=None, with_version=False):
         if with_version:
             version_(ui)
             ui.write('\n')
-        aliases, i = cmdutil.findcmd(ui, name, table)
+
+        try:
+            aliases, i = cmdutil.findcmd(ui, name, table)
+        except cmdutil.AmbiguousCommand, inst:
+            select = lambda c: c.lstrip('^').startswith(inst.args[0])
+            helplist(_('list of commands:\n\n'), select)
+            return
+
         # synopsis
         ui.write("%s\n" % i[2])
 
