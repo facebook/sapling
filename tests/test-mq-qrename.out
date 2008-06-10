@@ -5,3 +5,4 @@ bar/renamed
 renamed
 baz
 .hg/patches/baz
+% test patch being renamed before committed

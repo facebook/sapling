@@ -1133,7 +1133,7 @@ class revlog(object):
 
         yield changegroup.closechunk()
 
-    def addgroup(self, revs, linkmapper, transaction, unique=0):
+    def addgroup(self, revs, linkmapper, transaction):
         """
         add a delta group
 
@@ -1170,8 +1170,6 @@ class revlog(object):
                 link = linkmapper(cs)
                 if node in self.nodemap:
                     # this can happen if two branches make the same change
-                    # if unique:
-                    #    raise RevlogError(_("already have %s") % hex(node[:4]))
                     chain = node
                     continue
                 delta = buffer(chunk, 80)

@@ -2038,10 +2038,14 @@ def rename(ui, repo, patch, name=None, **opts):
     if r:
         wlock = r.wlock()
         try:
-            if r.dirstate[name] == 'r':
-                r.undelete([name])
-            r.copy(patch, name)
-            r.remove([patch], False)
+            if r.dirstate[patch] == 'a':
+                r.dirstate.forget(patch)
+                r.dirstate.add(name)
+            else:
+                if r.dirstate[name] == 'r':
+                    r.undelete([name])
+                r.copy(patch, name)
+                r.remove([patch], False)
         finally:
             del wlock
 

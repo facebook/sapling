@@ -22,4 +22,15 @@ ls .hg/patches/bar
 hg qrename bar/renamed baz
 hg qseries
 ls .hg/patches/baz
+cd ..
+
+echo % test patch being renamed before committed
+hg init b
+cd b
+hg qinit -c
+hg qnew x
+hg qrename y
+hg qcommit -m rename
+cd ..
+
 

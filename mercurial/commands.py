@@ -1253,7 +1253,14 @@ def help_(ui, name=None, with_version=False):
         if with_version:
             version_(ui)
             ui.write('\n')
-        aliases, i = cmdutil.findcmd(ui, name, table)
+
+        try:
+            aliases, i = cmdutil.findcmd(ui, name, table)
+        except cmdutil.AmbiguousCommand, inst:
+            select = lambda c: c.lstrip('^').startswith(inst.args[0])
+            helplist(_('list of commands:\n\n'), select)
+            return
+
         # synopsis
         ui.write("%s\n" % i[2])
 
@@ -1314,16 +1321,16 @@ def help_(ui, name=None, with_version=False):
 
     def helptopic(name):
         v = None
-        for i in help.helptable:
+        for i, d in help.helptable:
             l = i.split('|')
             if name in l:
                 v = i
                 header = l[-1]
+                doc = d
         if not v:
             raise cmdutil.UnknownCommand(name)
 
         # description
-        doc = help.helptable[v]
         if not doc:
             doc = _("(No help text available)")
         if callable(doc):
@@ -1393,6 +1400,16 @@ def help_(ui, name=None, with_version=False):
                                          default
                                          and _(" (default: %s)") % default
                                          or "")))
+
+    if ui.verbose:
+        ui.write(_("\nspecial help topics:\n"))
+        topics = []
+        for i, d in help.helptable:
+            l = i.split('|')
+            topics.append((", ".join(l[:-1]), l[-1]))
+        topics_len = max([len(s[0]) for s in topics])
+        for t, desc in topics:
+            ui.write(" %-*s  %s\n" % (topics_len, t, desc))
 
     if opt_output:
         opts_len = max([len(line[0]) for line in opt_output if line[1]] or [0])
