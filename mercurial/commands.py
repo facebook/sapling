@@ -3319,7 +3319,7 @@ table = {
          _('hg unbundle [-u] FILE...')),
     "^update|up|checkout|co":
         (update,
-         [('C', 'clean', None, _('overwrite locally modified files')),
+         [('C', 'clean', None, _('overwrite locally modified files (no backup)')),
           ('d', 'date', '', _('tipmost revision matching date')),
           ('r', 'rev', '', _('revision'))],
          _('hg update [-C] [-d DATE] [[-r] REV]')),
