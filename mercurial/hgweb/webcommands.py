@@ -129,7 +129,7 @@ def _search(web, tmpl, query):
             if miss:
                 continue
 
-            count = 1
+            count += 1
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
 
@@ -362,7 +362,7 @@ def summary(web, req, tmpl):
             if k == "tip": # skip tip
                 continue
 
-            count = 1
+            count += 1
             if count > 10: # limit to 10 tags
                 break
 
