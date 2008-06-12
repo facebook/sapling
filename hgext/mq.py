@@ -967,10 +967,7 @@ class queue:
             self.ui.write("No patches applied\n")
             return
         qp = self.qparents(repo, top)
-        if opts.get('git'):
-            self.diffopts().git = True
-        if opts.get('unified') is not None:
-            self.diffopts().context = opts['unified']
+        self._diffopts = patch.diffopts(self.ui, opts)
         self.printdiff(repo, qp, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
@@ -2355,10 +2352,8 @@ cmdtable = {
          _('hg qcommit [OPTION]... [FILE]...')),
     "^qdiff":
         (diff,
-         [('g', 'git', None, _('use git extended diff format')),
-          ('U', 'unified', 3, _('number of lines of context to show')),
-         ] + commands.walkopts,
-         _('hg qdiff [-I] [-X] [-U NUM] [-g] [FILE]...')),
+         commands.diffopts + commands.diffopts2 + commands.walkopts,
+         _('hg qdiff [OPTION]... [FILE]...')),
     "qdelete|qremove|qrm":
         (delete,
          [('k', 'keep', None, _('keep patch file')),

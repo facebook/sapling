@@ -25,3 +25,35 @@ hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
 echo % qdiff dirname
 hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                  -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qdiff filename
+hg qdiff --nodates base
+
+echo % revert
+hg revert -a
+
+echo % qpop
+hg qpop
+
+echo % qdelete mqbase
+hg qdelete mqbase
+
+echo % commit 2
+printf '1\n2\n3\n4\nhello world\ngoodbye world\n7\n8\n9\n' > lines
+hg ci -Amlines -d '2 0'
+
+echo % qnew 2
+hg qnew -mmqbase2 mqbase2
+printf '\n\n1\n2\n3\n4\nhello  world\n     goodbye world\n7\n8\n9\n' > lines
+
+echo % qdiff -U 1
+hg qdiff --nodates -U 1
+
+echo % qdiff -b
+hg qdiff --nodates -b
+
+echo % qdiff -U 1 -B
+hg qdiff --nodates -U 1 -B
+
+echo qdiff -w
+hg qdiff --nodates -w

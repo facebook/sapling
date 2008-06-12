@@ -2932,6 +2932,23 @@ logopts = [
     ('M', 'no-merges', None, _('do not show merges')),
 ] + templateopts
 
+diffopts = [
+    ('a', 'text', None, _('treat all files as text')),
+    ('g', 'git', None, _('use git extended diff format')),
+    ('', 'nodates', None, _("don't include dates in diff headers"))
+]
+
+diffopts2 = [
+    ('p', 'show-function', None, _('show which function each change is in')),
+    ('w', 'ignore-all-space', None,
+     _('ignore white space when comparing lines')),
+    ('b', 'ignore-space-change', None,
+     _('ignore changes in the amount of white space')),
+    ('B', 'ignore-blank-lines', None,
+     _('ignore changes whose lines are all blank')),
+    ('U', 'unified', '', _('number of lines of context to show'))
+]
+
 table = {
     "^add": (add, walkopts + dryrunopts, _('hg add [OPTION]... [FILE]...')),
     "addremove":
@@ -3071,29 +3088,14 @@ table = {
     "debugwalk": (debugwalk, walkopts, _('hg debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,
-         [('r', 'rev', [], _('revision')),
-          ('a', 'text', None, _('treat all files as text')),
-          ('p', 'show-function', None,
-           _('show which function each change is in')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('', 'nodates', None, _("don't include dates in diff headers")),
-          ('w', 'ignore-all-space', None,
-           _('ignore white space when comparing lines')),
-          ('b', 'ignore-space-change', None,
-           _('ignore changes in the amount of white space')),
-          ('B', 'ignore-blank-lines', None,
-           _('ignore changes whose lines are all blank')),
-          ('U', 'unified', '',
-           _('number of lines of context to show'))
-         ] + walkopts,
+         [('r', 'rev', [], _('revision'))
+         ] + diffopts + diffopts2 + walkopts,
          _('hg diff [OPTION]... [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
         (export,
          [('o', 'output', '', _('print output to file with formatted name')),
-          ('a', 'text', None, _('treat all files as text')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('', 'nodates', None, _("don't include dates in diff headers")),
-          ('', 'switch-parent', None, _('diff against the second parent'))],
+          ('', 'switch-parent', None, _('diff against the second parent'))
+          ] + diffopts,
          _('hg export [OPTION]... [-o OUTFILESPEC] REV...')),
     "grep":
         (grep,
