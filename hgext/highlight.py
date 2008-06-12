@@ -57,11 +57,11 @@ def pygmentize(self, tmpl, fctx, field):
     style = self.config("web", "pygments_style", "colorful")
     # To get multi-line strings right, we can't format line-by-line
     try:
-        lexer = guess_lexer_for_filename(fctx.path(), text,
+        lexer = guess_lexer_for_filename(fctx.path(), text[:1024],
                                          encoding=util._encoding)
     except (ClassNotFound, ValueError):
         try:
-            lexer = guess_lexer(text, encoding=util._encoding)
+            lexer = guess_lexer(text[:1024], encoding=util._encoding)
         except (ClassNotFound, ValueError):
             lexer = TextLexer(encoding=util._encoding)
 
