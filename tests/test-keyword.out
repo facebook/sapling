@@ -294,6 +294,11 @@ xxx $
 $Xinfo: User Name <user@example.com>: firstline $
 ignore $Id$
 a
+% annotate
+1: expand $Id$
+1: do not process $Id:
+1: xxx $
+2: $Xinfo$
 % remove
 % status
 % rollback

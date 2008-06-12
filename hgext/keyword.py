@@ -88,7 +88,7 @@ import re, shutil, tempfile, time
 commands.optionalrepo += ' kwdemo'
 
 # hg commands that do not act on keywords
-nokwcommands = ('add addremove bundle copy export grep incoming init'
+nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
                 ' log outgoing push rename rollback tip'
                 ' convert email glog')
 
@@ -513,6 +513,11 @@ def reposetup(ui, repo):
             kwt.restrict = True
         patch_diff(repo, node1, node2, match, fp, changes, opts)
 
+    def kwweb_annotate(web, req, tmpl):
+        '''Wraps webcommands.annotate turning off keyword expansion.'''
+        kwt.matcher = util.never
+        return webcommands_annotate(web, req, tmpl)
+
     def kwweb_changeset(web, req, tmpl):
         '''Wraps webcommands.changeset turning off keyword expansion.'''
         kwt.matcher = util.never
@@ -527,11 +532,13 @@ def reposetup(ui, repo):
 
     patchfile_init = patch.patchfile.__init__
     patch_diff = patch.diff
+    webcommands_annotate = webcommands.annotate
     webcommands_changeset = webcommands.changeset
     webcommands_filediff = webcommands.filediff
 
     patch.patchfile.__init__ = kwpatchfile_init
     patch.diff = kw_diff
+    webcommands.annotate = kwweb_annotate
     webcommands.changeset = webcommands.rev = kwweb_changeset
     webcommands.filediff = webcommands.diff = kwweb_filediff
 

@@ -214,6 +214,8 @@ cat a b
 echo % hg cat
 hg cat sym a b
 echo
+echo % annotate
+hg annotate a
 
 echo % remove
 hg debugrebuildstate
