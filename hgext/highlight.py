@@ -1,6 +1,4 @@
-"""
-This is Mercurial extension for syntax highlighting in the file
-revision view of hgweb.
+"""a mercurial extension for syntax highlighting in hgweb
 
 It depends on the pygments syntax highlighting library:
 http://pygments.org/
