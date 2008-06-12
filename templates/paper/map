@@ -51,7 +51,7 @@ fileannotateparent = '<tr><td class="metatag">parent:</td><td><a href="{url}anno
 changesetchild = '<a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
 changelogchild = '<tr><th class="child">child</th><td class="child"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
 fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
-tags = tags.tmpl
+tags = ../coal/tags.tmpl
 tagentry = '<tr class="tagEntry parity{parity}"><td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{tag|escape}</a></td><td class="node">{node|short}</td></tr>'
 changelogtag = '<tr><th class="tag">tag:</th><td class="tag">{tag|escape}</td></tr>'
 changelogtag = '<span class="tag">{name|escape}</span> '
