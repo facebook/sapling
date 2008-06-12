@@ -350,7 +350,7 @@ rolling back last transaction
 % kwexpand a
 overwriting a expanding keywords
 % kwexpand x/a should abort
-abort: outstanding uncommitted changes in given files
+abort: outstanding uncommitted changes
 x/a
  x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
 overwriting x/a expanding keywords

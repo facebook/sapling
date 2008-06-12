@@ -263,11 +263,13 @@ def _status(ui, repo, kwt, *pats, **opts):
 
 def _kwfwrite(ui, repo, expand, *pats, **opts):
     '''Selects files and passes them to kwtemplater.overwrite.'''
+    if repo.dirstate.parents()[1] != nullid:
+        raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
     if modified or added or removed or deleted:
-        raise util.Abort(_('outstanding uncommitted changes in given files'))
+        raise util.Abort(_('outstanding uncommitted changes'))
     wlock = lock = None
     try:
         wlock = repo.wlock()
