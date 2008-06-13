@@ -109,7 +109,7 @@ def filelog(web, req, tmpl):
     return web.filelog(tmpl, web.filectx(req))
 
 def archive(web, req, tmpl):
-    type_ = req.form['type'][0]
+    type_ = req.form.get('type', [None])[0]
     allowed = web.configlist("web", "allow_archive")
     if (type_ in web.archives and (type_ in allowed or
         web.configbool("web", "allow" + type_, False))):
