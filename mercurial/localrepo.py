@@ -147,7 +147,11 @@ class localrepository(repo.repository):
             if prevtags and prevtags[-1] != '\n':
                 fp.write('\n')
             for name in names:
-                fp.write('%s %s\n' % (hex(node), munge and munge(name) or name))
+                m = munge and munge(name) or name
+                if self._tagstypecache and name in self._tagstypecache:
+                    old = self.tagscache.get(name, nullid)
+                    fp.write('%s %s\n' % (hex(old), m))
+                fp.write('%s %s\n' % (hex(node), m))
             fp.close()
 
         prevtags = ''
@@ -303,9 +307,8 @@ class localrepository(repo.repository):
             n = nh[0]
             if n != nullid:
                 self.tagscache[k] = n
-                self._tagstypecache[k] = tagtypes[k]
+            self._tagstypecache[k] = tagtypes[k]
         self.tagscache['tip'] = self.changelog.tip()
-
         return self.tagscache
 
     def tagtype(self, tagname):
