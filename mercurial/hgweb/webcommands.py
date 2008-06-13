@@ -538,7 +538,7 @@ def filelog(web, req, tmpl):
 
 
 def archive(web, req, tmpl):
-    type_ = req.form['type'][0]
+    type_ = req.form.get('type', [None])[0]
     allowed = web.configlist("web", "allow_archive")
     key = req.form['node'][0]
 
