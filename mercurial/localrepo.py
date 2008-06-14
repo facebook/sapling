@@ -874,9 +874,6 @@ class localrepository(repo.repository):
                                    (new, removed))
 
             # add changeset
-            new = new.keys()
-            new.sort()
-
             user = user or self.ui.username()
             if (not empty_ok and not text) or force_editor:
                 edittext = []
