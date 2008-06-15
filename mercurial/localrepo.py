@@ -688,7 +688,7 @@ class localrepository(repo.repository):
 
         meta = {}
         cp = self.dirstate.copied(fn)
-        if cp:
+        if cp and cp != fn:
             # Mark the new revision of this file as a copy of another
             # file.  This copy data will effectively act as a parent
             # of this new revision.  If this is a merge, the first
