@@ -186,6 +186,8 @@ class dirstate(object):
         self._dirty = False
 
     def copy(self, source, dest):
+        if source == dest:
+            return
         self._dirty = True
         self._copymap[dest] = source
 
