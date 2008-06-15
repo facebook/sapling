@@ -1,0 +1,60 @@
+#!/bin/sh
+
+# This is http://www.selenic.com/mercurial/bts/issue1148
+
+"$TESTDIR/hghave" cvs || exit 80
+
+cvscall()
+{
+    cvs -f "$@"
+}
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+echo "graphlog = " >> $HGRCPATH
+echo "[convert]" >> $HGRCPATH
+echo "cvsps=builtin" >> $HGRCPATH
+
+echo % create cvs repository
+mkdir cvsrepo
+cd cvsrepo
+export CVSROOT=`pwd`
+export CVS_OPTIONS=-f
+cd ..
+
+cvscall -q -d "$CVSROOT" init
+
+echo % Create a new project
+
+mkdir src
+cd src
+echo "1" > a > b
+cvscall import -m "init" src v0 r0
+cd ..
+cvscall co src
+cd src
+
+echo % Branch the project
+
+cvscall tag -b BRANCH
+cvscall up -r BRANCH
+
+echo % Modify file a, then b, then a 
+
+echo "2" > a
+cvscall ci -m "mod a" | grep '<--' | sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
+
+echo "2" > b
+cvscall ci -m "mod b" | grep '<--' | sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
+
+echo "3" > a
+cvscall ci -m "mod a again" | grep '<--' | sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
+
+echo % Convert
+
+cd ..
+hg convert src | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+
+echo % Check the result
+
+hg -R src-hg glog --template '#rev# (#branches#) #desc# files: #files#\n'
