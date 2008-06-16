@@ -67,7 +67,7 @@ parser.add_option("--with-hg", type="string",
     help="test existing install at given location")
 
 for option, default in defaults.items():
-    defaults[option] = os.environ.get(*default)
+    defaults[option] = int(os.environ.get(*default))
 parser.set_defaults(**defaults)
 (options, args) = parser.parse_args()
 verbose = options.verbose
