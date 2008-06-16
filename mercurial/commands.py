@@ -380,7 +380,8 @@ def branches(ui, repo, active=False):
                             for n in repo.heads()]
     branches = [(tag in activebranches, repo.changelog.rev(node), tag)
                             for tag, node in repo.branchtags().items()]
-    branches.sort(reverse=True)
+    branches.sort()
+    branches.reverse()
 
     for isactive, node, tag in branches:
         if (not active) or isactive:
