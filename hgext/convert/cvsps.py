@@ -18,7 +18,7 @@ def listsort(list, key):
     try:
         list.sort(key=key)
     except TypeError:
-        list.sort(lambda l, r:cmp(key(l), key(r)))
+        list.sort(lambda l, r: cmp(key(l), key(r)))
 
 class logentry(object):
     '''Class logentry has the following attributes:
@@ -78,13 +78,13 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         try:
             prefix = file(os.path.join('CVS','Repository')).read().strip()
             if prefix == ".":
-                prefix=""
+                prefix = ""
             directory = prefix
         except IOError:
             raise logerror('Not a CVS sandbox')
 
         if prefix and not prefix.endswith('/'):
-            prefix+='/'
+            prefix += '/'
 
         # Use the Root file in the sandbox, if it exists
         try:
@@ -113,9 +113,10 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         # and
         #    /pserver/user/server/path
         # are mapped to different cache file names.
-        cachefile = root.split(":")+[directory, "cache"]
+        cachefile = root.split(":") + [directory, "cache"]
         cachefile = ['-'.join(re.findall(r'\w+', s)) for s in cachefile if s]
-        cachefile = os.path.join(cachedir, '.'.join([s for s in cachefile if s]))
+        cachefile = os.path.join(cachedir,
+                                 '.'.join([s for s in cachefile if s]))
 
     if cache == 'update':
         try:
@@ -135,8 +136,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         cmd.append('-d%s' % root)
         p = root.split(':')[-1]
         if not p.endswith('/'):
-            p+='/'
-        prefix = p+prefix
+            p += '/'
+        prefix = p + prefix
     cmd.append(['log', 'rlog'][rlog])
     if date:
         # no space between option and date string
@@ -206,8 +207,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
                 # Convert magic branch number to an odd-numbered one
                 revn = len(rev)
-                if revn>3 and (revn%2) == 0 and rev[-2] == 0:
-                    rev = rev[:-2]+rev[-1:]
+                if revn > 3 and (revn % 2) == 0 and rev[-2] == 0:
+                    rev = rev[:-2] + rev[-1:]
                 rev = tuple(rev)
 
                 if rev not in tags:
@@ -244,11 +245,11 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             d = match.group(1)
             if d[2] == '/':
                 # Y2K
-                d = '19'+d
+                d = '19' + d
 
             if len(d.split()) != 3:
                 # cvs log dates always in GMT
-                d = d+' UTC'
+                d = d + ' UTC'
             e.date = util.parsedate(d, ['%y/%m/%d %H:%M:%S', '%Y/%m/%d %H:%M:%S', '%Y-%m-%d %H:%M:%S'])
             e.author = scache(match.group(2))
             e.dead = match.group(3).lower() == 'dead'
@@ -266,7 +267,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             state = 7
 
         elif state == 7:
-            # read the revision numbers of branches that start at this revision,
+            # read the revision numbers of branches that start at this revision
             # or store the commit log message otherwise
             m = re_70.match(line)
             if m:
@@ -301,15 +302,15 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             e.comment = scache('\n'.join(e.comment))
 
             revn = len(e.revision)
-            if revn>3 and (revn%2) == 0:
+            if revn > 3 and (revn % 2) == 0:
                 e.branch = tags.get(e.revision[:-1], [None])[0]
             else:
                 e.branch = None
 
             log.append(e)
 
-            if len(log)%100 == 0:
-                ui.status(util.ellipsis('%d %s'%(len(log), e.file), 80)+'\n')
+            if len(log) % 100 == 0:
+                ui.status(util.ellipsis('%d %s' % (len(log), e.file), 80)+'\n')
 
     listsort(log, key=lambda x:(x.rcs, x.revision))
 
@@ -330,9 +331,10 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             listsort(log, key=lambda x:x.date)
 
             if oldlog and oldlog[-1].date >= log[0].date:
-                raise logerror('Log cache overlaps with new log entries, re-run without cache.')
+                raise logerror('Log cache overlaps with new log entries,'
+                               ' re-run without cache.')
 
-            log = oldlog+log
+            log = oldlog + log
 
             # write the new cachefile
             ui.note(_('writing cvs log cache %s\n') % cachefile)
@@ -377,14 +379,17 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                   e.comment == c.comment and
                   e.author == c.author and
                   e.branch == c.branch and
-                  (c.date[0]+c.date[1]) <= (e.date[0]+e.date[1]) <= (c.date[0]+c.date[1])+fuzz and
+                  ((c.date[0] + c.date[1]) <=
+                   (e.date[0] + e.date[1]) <=
+                   (c.date[0] + c.date[1]) + fuzz) and
                   e.file not in files):
             c = changeset(comment=e.comment, author=e.author,
                           branch=e.branch, date=e.date, entries=[])
             changesets.append(c)
             files = {}
-            if len(changesets)%100 == 0:
-                ui.status(util.ellipsis('%d %s'%(len(changesets), repr(e.comment)[1:-1]), 80)+'\n')
+            if len(changesets) % 100 == 0:
+                t = '%d %s' % (len(changesets), repr(e.comment)[1:-1])
+                ui.status(util.ellipsis(t, 80) + '\n')
 
         e.Changeset = c
         c.entries.append(e)
@@ -402,13 +407,13 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
             nr = len(r)
             n = min(nl, nr)
             for i in range(n):
-                if i+1 == nl and nl<nr:
+                if i + 1 == nl and nl < nr:
                     return -1
-                elif i+1 == nr and nl>nr:
+                elif i + 1 == nr and nl > nr:
                     return +1
-                elif l[i]<r[i]:
+                elif l[i] < r[i]:
                     return -1
-                elif l[i]>r[i]:
+                elif l[i] > r[i]:
                     return +1
             return 0
         def entitycompare(l, r):
@@ -419,7 +424,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     # Sort changesets by date
 
     def cscmp(l, r):
-        d = sum(l.date)-sum(r.date)
+        d = sum(l.date) - sum(r.date)
         if d:
             return d
 
@@ -526,8 +531,8 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                     cc = changeset(author=c.author, branch=m, date=c.date,
                             comment='convert-repo: CVS merge from branch %s' % c.branch,
                             entries=[], tags=[], parents=[changesets[branches[m]], c])
-                    changesets.insert(i+1, cc)
-                    branches[m] = i+1
+                    changesets.insert(i + 1, cc)
+                    branches[m] = i + 1
 
                     # adjust our loop counters now we have inserted a new entry
                     n += 1
@@ -540,7 +545,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     # Number changesets
 
     for i, c in enumerate(changesets):
-        c.id = i+1
+        c.id = i + 1
 
     ui.status(_('%d changeset entries\n') % len(changesets))
 
