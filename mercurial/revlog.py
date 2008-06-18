@@ -32,7 +32,7 @@ REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 class RevlogError(Exception):
     pass
 
-class LookupError(RevlogError):
+class LookupError(RevlogError, KeyError):
     def __init__(self, name, index, message):
         self.name = name
         if isinstance(name, str) and len(name) == 20:
