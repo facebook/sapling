@@ -104,7 +104,6 @@ sorting...
 converting...
 0 ci2
 a
-a
 c
 d
 % convert again with --filemap
