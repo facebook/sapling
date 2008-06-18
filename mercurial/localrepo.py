@@ -683,19 +683,21 @@ class localrepository(repo.repository):
         self._wlockref = weakref.ref(l)
         return l
 
-    def filecommit(self, fn, manifest1, manifest2, linkrev, tr, changelist):
+    def filecommit(self, fctx, manifest1, manifest2, linkrev, tr, changelist):
         """
         commit an individual file as part of a larger transaction
         """
 
-        t = self.wread(fn)
+        fn = fctx.path()
+        t = fctx.data()
         fl = self.file(fn)
         fp1 = manifest1.get(fn, nullid)
         fp2 = manifest2.get(fn, nullid)
 
         meta = {}
-        cp = self.dirstate.copied(fn)
-        if cp and cp != fn:
+        cp = fctx.renamed()
+        if cp and cp[0] != fn:
+            cp = cp[0]
             # Mark the new revision of this file as a copy of another
             # file.  This copy data will effectively act as a parent
             # of this new revision.  If this is a merge, the first
@@ -754,36 +756,13 @@ class localrepository(repo.repository):
     def commit(self, files=None, text="", user=None, date=None,
                match=None, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
-        wlock = lock = tr = None
-        valid = 0 # don't save the dirstate if this isn't set
+        wlock = lock = None
         if files:
             files = util.unique(files)
         try:
             wlock = self.wlock()
             lock = self.lock()
-            commit = []
-            remove = []
-            changed = []
             use_dirstate = (p1 is None) # not rawcommit
-            extra = extra.copy()
-
-            if use_dirstate:
-                if files:
-                    for f in files:
-                        s = self.dirstate[f]
-                        if s in 'nma':
-                            commit.append(f)
-                        elif s == 'r':
-                            remove.append(f)
-                        else:
-                            self.ui.warn(_("%s not tracked!\n") % f)
-                else:
-                    changes = self.status(match=match)[:5]
-                    modified, added, removed, deleted, unknown = changes
-                    commit = modified + added
-                    remove = removed
-            else:
-                commit = files
 
             if use_dirstate:
                 p1, p2 = self.dirstate.parents()
@@ -793,23 +772,49 @@ class localrepository(repo.repository):
                     (match and (match.files() or match.anypats()))):
                     raise util.Abort(_('cannot partially commit a merge '
                                        '(do not specify files or patterns)'))
+
+                if files:
+                    modified, removed = [], []
+                    for f in files:
+                        s = self.dirstate[f]
+                        if s in 'nma':
+                            modified.append(f)
+                        elif s == 'r':
+                            removed.append(f)
+                        else:
+                            self.ui.warn(_("%s not tracked!\n") % f)
+                    changes = [modified, [], removed, [], []]
+                else:
+                    changes = self.status(match=match)
             else:
                 p1, p2 = p1, p2 or nullid
                 update_dirstate = (self.dirstate.parents()[0] == p1)
+                changes = [files, [], [], [], []]
 
+            wctx = context.workingctx(self, (p1, p2), text, user, date, 
+                                      extra, changes)
+            return self._commitctx(wctx, force, force_editor, empty_ok, 
+                                   use_dirstate, update_dirstate)
+        finally:
+            del lock, wlock
+
+    def _commitctx(self, wctx, force=False, force_editor=False, empty_ok=False,
+                  use_dirstate=True, update_dirstate=True):
+        tr = None
+        valid = 0 # don't save the dirstate if this isn't set
+        try:
+            commit = wctx.modified() + wctx.added()
+            remove = wctx.removed()
+            extra = wctx.extra().copy()
+            branchname = extra['branch']
+            user = wctx.user()
+            text = wctx.description()
+
+            p1, p2 = [p.node() for p in wctx.parents()]
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
             m1 = self.manifest.read(c1[0]).copy()
             m2 = self.manifest.read(c2[0])
-
-            if use_dirstate:
-                branchname = self.workingctx().branch()
-                try:
-                    branchname = branchname.decode('UTF-8').encode('UTF-8')
-                except UnicodeDecodeError:
-                    raise util.Abort(_('branch name not in UTF-8!'))
-            else:
-                branchname = ""
 
             if use_dirstate:
                 oldname = c1[5].get("branch") # stored in UTF-8
@@ -829,16 +834,16 @@ class localrepository(repo.repository):
 
             # check in files
             new = {}
+            changed = []
             linkrev = self.changelog.count()
             commit.sort()
-            is_exec = util.execfunc(self.root, m1.execf)
-            is_link = util.linkfunc(self.root, m1.linkf)
             for f in commit:
                 self.ui.note(f + "\n")
                 try:
-                    new[f] = self.filecommit(f, m1, m2, linkrev, trp, changed)
-                    new_exec = is_exec(f)
-                    new_link = is_link(f)
+                    fctx = wctx.filectx(f)
+                    new[f] = self.filecommit(fctx, m1, m2, linkrev, trp, changed)
+                    new_exec = fctx.isexec()
+                    new_link = fctx.islink()
                     if ((not changed or changed[-1] != f) and
                         m2.get(f) != new[f]):
                         # mention the file in the changelog if some
@@ -874,7 +879,6 @@ class localrepository(repo.repository):
                                    (new, removed))
 
             # add changeset
-            user = user or self.ui.username()
             if (not empty_ok and not text) or force_editor:
                 edittext = []
                 if text:
@@ -899,9 +903,6 @@ class localrepository(repo.repository):
                 text = self.ui.edit("\n".join(edittext), user)
                 os.chdir(olddir)
 
-            if branchname:
-                extra["branch"] = branchname
-
             lines = [line.rstrip() for line in text.rstrip().splitlines()]
             while lines and not lines[0]:
                 del lines[0]
@@ -910,7 +911,7 @@ class localrepository(repo.repository):
             text = '\n'.join(lines)
 
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
-                                   user, date, extra)
+                                   user, wctx.date(), extra)
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2)
             tr.close()
@@ -930,7 +931,7 @@ class localrepository(repo.repository):
         finally:
             if not valid: # don't save our updated dirstate
                 self.dirstate.invalidate()
-            del tr, lock, wlock
+            del tr
 
     def walk(self, match, node=None):
         '''

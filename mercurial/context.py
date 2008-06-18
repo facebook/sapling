@@ -444,11 +444,46 @@ class filectx(object):
 
 class workingctx(changectx):
     """A workingctx object makes access to data related to
-    the current working directory convenient."""
-    def __init__(self, repo):
+    the current working directory convenient.
+    parents - a pair of parent nodeids, or None to use the dirstate.
+    date - any valid date string or (unixtime, offset), or None.
+    user - username string, or None.
+    extra - a dictionary of extra values, or None.
+    changes - a list of file lists as returned by localrepo.status()
+               or None to use the repository status.
+    """
+    def __init__(self, repo, parents=None, text="", user=None, date=None, 
+                 extra=None, changes=None):
         self._repo = repo
         self._rev = None
         self._node = None
+        self._text = text
+        if date is not None:
+            self._date = util.parsedate(date)
+        else:
+            self._date = util.makedate()
+        if user:
+            self._user = user
+        else:
+            self._user = self._repo.ui.username()
+        if parents:
+            p1, p2 = parents
+            self._parents = [self._repo.changectx(p) for p in (p1, p2)]
+        if changes:
+            self._status = list(changes)
+
+        self._extra = {}
+        if extra:
+            self._extra = extra.copy()
+        if 'branch' not in self._extra:
+            branch = self._repo.dirstate.branch()
+            try:
+                branch = branch.decode('UTF-8').encode('UTF-8')
+            except UnicodeDecodeError:
+                raise util.Abort(_('branch name not in UTF-8!'))
+            self._extra['branch'] = branch
+        if self._extra['branch'] == '':
+            self._extra['branch'] = 'default'
 
     def __str__(self):
         return str(self._parents[0]) + "+"
@@ -495,9 +530,9 @@ class workingctx(changectx):
 
     def manifest(self): return self._manifest
 
-    def user(self): return self._repo.ui.username()
-    def date(self): return util.makedate()
-    def description(self): return ""
+    def user(self): return self._user
+    def date(self): return self._date
+    def description(self): return self._text
     def files(self):
         f = self.modified() + self.added() + self.removed()
         f.sort()
@@ -509,7 +544,8 @@ class workingctx(changectx):
     def deleted(self): return self._status[3]
     def unknown(self): return self._status[4]
     def clean(self): return self._status[5]
-    def branch(self): return self._repo.dirstate.branch()
+    def branch(self): return self._extra['branch']
+    def extra(self): return self._extra
 
     def tags(self):
         t = []
