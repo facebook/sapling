@@ -673,3 +673,89 @@ class workingfilectx(filectx):
             return (t, tz)
 
     def cmp(self, text): return self._repo.wread(self._path) == text
+
+class memctx(object):
+    """A memctx is a subset of changectx supposed to be built on memory
+    and passed to commit functions.
+
+    NOTE: this interface and the related memfilectx are experimental and
+    may change without notice.
+
+    parents - a pair of parent nodeids.
+    filectxfn - a callable taking (repo, memctx, path) arguments and
+    returning a memctx object.
+    date - any valid date string or (unixtime, offset), or None.
+    user - username string, or None.
+    extra - a dictionary of extra values, or None.
+    """
+    def __init__(self, repo, parents, text, files, filectxfn, user=None, 
+                 date=None, extra=None):
+        self._repo = repo
+        self._rev = None
+        self._node = None
+        self._text = text
+        self._date = date and util.parsedate(date) or util.makedate()
+        self._user = user or self._repo.ui.username()
+        parents = [(p or nullid) for p in parents]
+        p1, p2 = parents
+        self._parents = [self._repo.changectx(p) for p in (p1, p2)]
+        files = list(files)
+        files.sort()
+        self._status = [files, [], [], [], []]
+        self._filectxfn = filectxfn
+
+        self._extra = extra and extra.copy() or {}
+        if 'branch' not in self._extra:
+            self._extra['branch'] = 'default'
+        elif self._extra.get('branch') == '':
+            self._extra['branch'] = 'default'
+
+    def __str__(self):
+        return str(self._parents[0]) + "+"
+
+    def __nonzero__(self):
+        return True
+
+    def user(self): return self._user
+    def date(self): return self._date
+    def description(self): return self._text
+    def files(self): return self.modified()
+    def modified(self): return self._status[0]
+    def added(self): return self._status[1]
+    def removed(self): return self._status[2]
+    def deleted(self): return self._status[3]
+    def unknown(self): return self._status[4]
+    def clean(self): return self._status[5]
+    def branch(self): return self._extra['branch']
+    def extra(self): return self._extra
+
+    def parents(self):
+        """return contexts for each parent changeset"""
+        return self._parents
+
+    def filectx(self, path, filelog=None):
+        """get a file context from the working directory"""
+        return self._filectxfn(self._repo, self, path)
+
+class memfilectx(object):
+    """A memfilectx is a subset of filectx supposed to be built by client
+    code and passed to commit functions.
+    """
+    def __init__(self, path, data, islink, isexec, copied):
+        """copied is the source file path, or None."""
+        self._path = path
+        self._data = data
+        self._flags = (islink and 'l' or '') + (isexec and 'x' or '')
+        self._copied = None
+        if copied:
+            self._copied = (copied, nullid)
+
+    def __nonzero__(self): return True
+    def __str__(self): return "%s@%s" % (self.path(), self._changectx)
+    def path(self): return self._path
+    def data(self): return self._data
+    def fileflags(self): return self._flags
+    def isexec(self): return 'x' in self._flags
+    def islink(self): return 'l' in self._flags
+    def renamed(self): return self._copied
+

@@ -798,6 +798,17 @@ class localrepository(repo.repository):
         finally:
             del lock, wlock
 
+    def commitctx(self, ctx):
+        wlock = lock = None
+        try:
+            wlock = self.wlock()
+            lock = self.lock()
+            return self._commitctx(ctx, force=True, force_editor=False, 
+                                   empty_ok=True, use_dirstate=False, 
+                                   update_dirstate=False)
+        finally:
+            del lock, wlock
+
     def _commitctx(self, wctx, force=False, force_editor=False, empty_ok=False,
                   use_dirstate=True, update_dirstate=True):
         tr = None
