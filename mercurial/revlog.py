@@ -39,6 +39,9 @@ class LookupError(RevlogError, KeyError):
             name = short(name)
         RevlogError.__init__(self, _('%s@%s: %s') % (index, name, message))
 
+    def __str__(self):
+        return RevlogError.__str__(self)
+
 def getoffset(q):
     return int(q >> 16)
 
