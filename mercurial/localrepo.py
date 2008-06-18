@@ -758,16 +758,12 @@ class localrepository(repo.repository):
     def commit(self, files=None, text="", user=None, date=None,
                match=None, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
-        wlock = lock = tr = None
-        valid = 0 # don't save the dirstate if this isn't set
+        wlock = lock = None
         if files:
             files = util.unique(files)
         try:
             wlock = self.wlock()
             lock = self.lock()
-            commit = []
-            remove = []
-            changed = []
             use_dirstate = (p1 is None) # not rawcommit
 
             if use_dirstate:
@@ -798,6 +794,16 @@ class localrepository(repo.repository):
                 changes = [files, [], [], [], []]
 
             wctx = self.workingctx((p1, p2), text, user, date, extra, changes)
+            return self._commitctx(wctx, force, force_editor, empty_ok, 
+                                   use_dirstate, update_dirstate)
+        finally:
+            del lock, wlock
+
+    def _commitctx(self, wctx, force=False, force_editor=False, empty_ok=False,
+                  use_dirstate=True, update_dirstate=True):
+        tr = None
+        valid = 0 # don't save the dirstate if this isn't set
+        try:
             commit = wctx.modified() + wctx.added()
             remove = wctx.removed()
             extra = wctx.extra().copy()
@@ -805,6 +811,7 @@ class localrepository(repo.repository):
             user = wctx.user()
             text = wctx.description()
 
+            p1, p2 = [p.node() for p in wctx.parents()]
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
             m1 = self.manifest.read(c1[0]).copy()
@@ -828,6 +835,7 @@ class localrepository(repo.repository):
 
             # check in files
             new = {}
+            changed = []
             linkrev = self.changelog.count()
             commit.sort()
             for f in commit:
@@ -924,7 +932,7 @@ class localrepository(repo.repository):
         finally:
             if not valid: # don't save our updated dirstate
                 self.dirstate.invalidate()
-            del tr, lock, wlock
+            del tr
 
     def walk(self, match, node=None):
         '''
