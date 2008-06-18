@@ -122,6 +122,36 @@ def xmlescape(text):
             .replace("'", '&#39;')) # &apos; invalid in HTML
     return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
 
+_escapes = [
+    ('\\', '\\\\'), ('"', '\\"'), ('\t', '\\t'), ('\n', '\\n'),
+    ('\r', '\\r'), ('\f', '\\f'), ('\b', '\\b'),
+]
+
+def json(obj):
+    if obj is None or obj is False or obj is True:
+        return {None: 'null', False: 'false', True: 'true'}[obj]
+    elif isinstance(obj, int) or isinstance(obj, float):
+        return str(obj)
+    elif isinstance(obj, str):
+        for k, v in _escapes:
+            obj = obj.replace(k, v)
+        return '"%s"' % obj
+    elif isinstance(obj, unicode):
+        return json(obj.encode('utf-8'))
+    elif hasattr(obj, 'keys'):
+        out = []
+        for k, v in obj.iteritems():
+            s = '%s: %s' % (json(k), json(v))
+            out.append(s)
+        return '{' + ', '.join(out) + '}'
+    elif hasattr(obj, '__iter__'):
+        out = []
+        for i in obj:
+            out.append(json(i))
+        return '[' + ', '.join(out) + ']'
+    else:
+        raise TypeError('cannot encode type %s' % obj.__class__.__name__)
+
 filters = {
     "addbreaks": nl2br,
     "basename": os.path.basename,
@@ -150,5 +180,5 @@ filters = {
     "user": lambda x: util.shortuser(x),
     "stringescape": lambda x: x.encode('string_escape'),
     "xmlescape": xmlescape,
-    }
-
+    "json": json,
+}

@@ -5,14 +5,15 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetypes, re
+import os, mimetypes, re, cgi
 import webutil
-from mercurial import revlog, archival
+from mercurial import revlog, archival, templatefilters
 from mercurial.node import short, hex, nullid
-from mercurial.util import binary
+from mercurial.util import binary, datestr
 from mercurial.repo import RepoError
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_NOT_FOUND
+from mercurial import graphmod
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
@@ -20,7 +21,7 @@ from common import HTTP_OK, HTTP_NOT_FOUND
 __all__ = [
    'log', 'rawfile', 'file', 'changelog', 'shortlog', 'changeset', 'rev',
    'manifest', 'tags', 'summary', 'filediff', 'diff', 'annotate', 'filelog',
-   'archive', 'static',
+   'archive', 'static', 'graph',
 ]
 
 def log(web, req, tmpl):
@@ -574,3 +575,37 @@ def static(web, req, tmpl):
                         os.path.join(web.templatepath, "static"),
                         untrusted=False)
     return [staticfile(static, fname, req)]
+
+def graph(web, req, tmpl):
+    rev = webutil.changectx(web.repo, req).rev()
+    revcount = int(req.form.get('revcount', [25])[0])
+    bg_height = 39
+
+    max_rev = web.repo.changelog.count() - 1
+    revnode = web.repo.changelog.node(rev)
+    revnode_hex = hex(revnode)
+    uprev = min(max_rev, rev + revcount)
+    downrev = max(0, rev - revcount)
+    lessrev = max(0, rev - revcount / 2)
+
+    maxchanges = web.maxshortchanges or web.maxchanges
+    count = web.repo.changelog.count()
+    changenav = webutil.revnavgen(rev, maxchanges, count, web.repo.changectx)
+
+    tree = list(graphmod.graph(web.repo, rev, rev - revcount))
+    canvasheight = (len(tree) + 1) * bg_height - 27;
+
+    data = []
+    for i, (ctx, vtx, edges) in enumerate(tree):
+        node = short(ctx.node())
+        age = templatefilters.age(ctx.date())
+        desc = templatefilters.firstline(ctx.description())
+        desc = cgi.escape(desc)
+        user = cgi.escape(templatefilters.person(ctx.user()))
+        data.append((node, vtx, edges, desc, user, age, ctx.tags()))
+
+    return tmpl('graph', rev=rev, revcount=revcount, uprev=uprev,
+                lessrev=lessrev, revcountmore=revcount and 2 * revcount or 1,
+                revcountless=revcount / 2, downrev=downrev,
+                canvasheight=canvasheight, bg_height=bg_height,
+                jsdata=data, node=revnode_hex, changenav=changenav)

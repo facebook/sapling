@@ -8,6 +8,7 @@ search = search.tmpl
 changelog = shortlog.tmpl
 shortlog = shortlog.tmpl
 shortlogentry = shortlogentry.tmpl
+graph = graph.tmpl
 
 naventry = '<a href="{url}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
