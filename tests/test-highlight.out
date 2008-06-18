@@ -18,6 +18,7 @@ adding get-with-headers.py
 <div class="buttons">
 <a href="/log/0">changelog</a>
 <a href="/shortlog/0">shortlog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/rev/79ee608ca36d">changeset</a>
 <a href="/file/79ee608ca36d/">files</a>
@@ -80,6 +81,7 @@ adding get-with-headers.py
 <div class="buttons">
 <a href="/log/0">changelog</a>
 <a href="/shortlog/0">shortlog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/rev/79ee608ca36d">changeset</a>
 <a href="/file/79ee608ca36d/">files</a>

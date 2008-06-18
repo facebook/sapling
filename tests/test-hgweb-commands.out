@@ -138,6 +138,7 @@ adding foo
 
 <div class="buttons">
 <a href="/log/1">changelog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/file/a4f92ed23982/">files</a>
 
@@ -206,6 +207,7 @@ navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a hr
 <div class="buttons">
 <a href="/log/0">changelog</a>
 <a href="/shortlog/0">shortlog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/file/2ef0ac749a14">files</a>
 <a href="/raw-rev/2ef0ac749a14">raw</a>
@@ -312,6 +314,7 @@ drwxr-xr-x da
 <div class="buttons">
 <a href="/log/1">changelog</a>
 <a href="/shortlog/1">shortlog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/rev/a4f92ed23982">changeset</a>
 <a href="/file/a4f92ed23982/">files</a>
@@ -425,6 +428,7 @@ drwxr-xr-x da
 summary |
 <a href="/shortlog?style=gitweb">shortlog</a> |
 <a href="/log?style=gitweb">changelog</a> |
+<a href="/graph?style=gitweb">graph</a> |
 <a href="/tags?style=gitweb">tags</a> |
 <a href="/file/a4f92ed23982?style=gitweb">files</a>
 <br/>
@@ -564,4 +568,43 @@ pre { margin: 0; }
 #filediffEntry { }
 #filediffEntry th { font-weight: normal; background-color: #888; color: #fff; text-align: right; }
 
+/* Graph */
+div#wrapper {
+	position: relative;
+	margin: 0;
+	padding: 0;
+}
+
+canvas {
+	position: absolute;
+	z-index: 5;
+	top: -0.6em;
+	margin: 0;
+}
+
+ul#nodebgs {
+	list-style: none inside none;
+	padding: 0;
+	margin: 0;
+	top: -0.7em;
+}
+ 
+ul#graphnodes li, ul#nodebgs li {
+	height: 39px;
+}
+
+ul#graphnodes {
+	position: absolute;
+	z-index: 10;
+	top: -0.85em;
+	list-style: none inside none;
+	padding: 0;
+}
+
+ul#graphnodes li .info {
+	display: block;
+	font-size: 70%;
+	position: relative;
+	top: -1px;
+}
 % ERRORS ENCOUNTERED
