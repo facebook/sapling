@@ -8,6 +8,7 @@ search = ../coal/search.tmpl
 changelog = ../coal/shortlog.tmpl
 shortlog = ../coal/shortlog.tmpl
 shortlogentry = ../coal/shortlogentry.tmpl
+graph = ../coal/graph.tmpl
 
 naventry = '<a href="{url}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '

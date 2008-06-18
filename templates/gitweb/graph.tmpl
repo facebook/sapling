@@ -1,0 +1,113 @@
+#header#
+<title>#repo|escape#: Shortlog</title>
+<link rel="alternate" type="application/atom+xml"
+   href="{url}atom-log" title="Atom feed for #repo|escape#"/>
+<link rel="alternate" type="application/rss+xml"
+   href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+</head>
+<body>
+
+<div class="page_header">
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / shortlog
+</div>
+
+<form action="{url}log">
+{sessionvars%hiddenformentry}
+<div class="search">
+<input type="text" name="rev"  />
+</div>
+</form>
+<div class="page_nav">
+<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url}log/#rev#{sessionvars%urlparameter}">changelog</a> |
+graph |
+<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a>
+<br/>
+<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountless}">less</a>
+<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountmore}">more</a>
+| #changenav%navshortentry#<br/>
+</div>
+
+<div class="title">&nbsp;</div>
+
+<div id="noscript">The revision graph only works with JavaScript-enabled browsers.</div>
+
+<div id="wrapper">
+<ul id="nodebgs"></ul>
+<canvas id="graph" width="224" height="#canvasheight#"></canvas>
+<ul id="graphnodes"></ul>
+</div>
+
+<script type="text/javascript" src="#staticurl#graph.js"></script>
+<script>
+
+document.getElementById('noscript').style.visibility = 'hidden';
+
+data = {jsdata|json};
+graph = new Graph();
+graph.scale({bg_height});
+
+graph.edge = function(x0, y0, x1, y1, color) {
+	
+	this.setColor(color, 0.0, 0.65);
+	this.ctx.beginPath();
+	this.ctx.moveTo(x0, y0);
+	this.ctx.lineTo(x1, y1);
+	this.ctx.stroke();
+	
+}
+
+var nodes = document.getElementById('graphnodes');
+var nodebgs = document.getElementById('nodebgs');
+
+var revlink = '<li style="_STYLE"><span class="desc">';
+revlink += '<a class="list" href="{url}rev/_NODEID{sessionvars%urlparameter}" title="_NODEID"><b>_DESC</b></a>';
+revlink += '</span> _TAGS';
+revlink += '<span class="info">_DATE ago, by _USER</span></li>';
+
+graph.vertex = function(x, y, color, parity, cur) {
+	
+	this.ctx.beginPath();
+	color = this.setColor(color, 0.25, 0.75);
+	this.ctx.arc(x, y, radius, 0, Math.PI * 2, true);
+	this.ctx.fill();
+	
+	var bg = '<li class="bg parity' + parity + '"></li>';
+	nodebgs.innerHTML += bg;
+	
+	var left = (this.columns + 1) * this.bg_height;
+	var nstyle = 'padding-left: ' + left + 'px;';
+	var item = revlink.replace(/_STYLE/, nstyle);
+	item = item.replace(/_PARITY/, 'parity' + parity);
+	item = item.replace(/_NODEID/, cur[0]);
+	item = item.replace(/_NODEID/, cur[0]);
+	item = item.replace(/_DESC/, cur[3]);
+	item = item.replace(/_USER/, cur[4]);
+	item = item.replace(/_DATE/, cur[5]);
+	if (cur[6].length) {
+		var tagspan = '<span class="logtags">';
+		for (var t in cur[6]) {
+			var tag = cur[6][t];
+			tagspan += '<span class="tagtag">' + tag + '</span> ';
+		}
+		tagspan += '</span>';
+	} else {
+		tagspan = '';
+	}
+	item = item.replace(/_TAGS/, tagspan);
+	nodes.innerHTML += item;
+	
+}
+
+graph.render(data);
+</script>
+
+<div class="page_nav">
+<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountless}">less</a>
+<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountmore}">more</a>
+| {changenav%navshortentry}
+</div>
+
+#footer#

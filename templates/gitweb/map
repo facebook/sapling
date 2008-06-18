@@ -50,6 +50,7 @@ filelogparent = '<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="{url
 filediffchild = '<tr><td>child {rev}</td><td style="font-family:monospace"><a class="list" href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
 filelogchild = '<tr><td align="right">child #rev#:&nbsp;</td><td><a href="{url}file{node|short}/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td></tr>'
 shortlog = shortlog.tmpl
+graph = graph.tmpl
 tagtag = '<span class="tagtag" title="{name}">{name}</span> '
 branchtag = '<span class="branchtag" title="{name}">{name}</span> '
 inbranchtag = '<span class="inbranchtag" title="{name}">{name}</span> '
