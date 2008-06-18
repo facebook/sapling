@@ -491,8 +491,8 @@ class localrepository(repo.repository):
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
 
-    def workingctx(self, parents=None, changes=None):
-        return context.workingctx(self, parents, changes)
+    def workingctx(self, parents=None, extra=None, changes=None):
+        return context.workingctx(self, parents, extra, changes)
 
     def parents(self, changeid=None):
         '''
@@ -767,7 +767,6 @@ class localrepository(repo.repository):
             remove = []
             changed = []
             use_dirstate = (p1 is None) # not rawcommit
-            extra = extra.copy()
 
             if use_dirstate:
                 p1, p2 = self.dirstate.parents()
@@ -796,23 +795,16 @@ class localrepository(repo.repository):
                 update_dirstate = (self.dirstate.parents()[0] == p1)
                 changes = [files, [], [], [], []]
 
-            wctx = self.workingctx((p1, p2), changes)
+            wctx = self.workingctx((p1, p2), extra, changes)
             commit = wctx.modified() + wctx.added()
             remove = wctx.removed()
+            extra = wctx.extra().copy()
+            branchname = extra['branch']
 
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
             m1 = self.manifest.read(c1[0]).copy()
             m2 = self.manifest.read(c2[0])
-
-            if use_dirstate:
-                branchname = wctx.branch()
-                try:
-                    branchname = branchname.decode('UTF-8').encode('UTF-8')
-                except UnicodeDecodeError:
-                    raise util.Abort(_('branch name not in UTF-8!'))
-            else:
-                branchname = ""
 
             if use_dirstate:
                 oldname = c1[5].get("branch") # stored in UTF-8
@@ -900,9 +892,6 @@ class localrepository(repo.repository):
                 os.chdir(self.root)
                 text = self.ui.edit("\n".join(edittext), user)
                 os.chdir(olddir)
-
-            if branchname:
-                extra["branch"] = branchname
 
             lines = [line.rstrip() for line in text.rstrip().splitlines()]
             while lines and not lines[0]:
