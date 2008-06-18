@@ -683,19 +683,21 @@ class localrepository(repo.repository):
         self._wlockref = weakref.ref(l)
         return l
 
-    def filecommit(self, fn, manifest1, manifest2, linkrev, tr, changelist):
+    def filecommit(self, fctx, manifest1, manifest2, linkrev, tr, changelist):
         """
         commit an individual file as part of a larger transaction
         """
 
-        t = self.wread(fn)
+        fn = fctx.path()
+        t = fctx.data()
         fl = self.file(fn)
         fp1 = manifest1.get(fn, nullid)
         fp2 = manifest2.get(fn, nullid)
 
         meta = {}
-        cp = self.dirstate.copied(fn)
-        if cp and cp != fn:
+        cp = fctx.renamed()
+        if cp and cp[0] != fn:
+            cp = cp[0]
             # Mark the new revision of this file as a copy of another
             # file.  This copy data will effectively act as a parent
             # of this new revision.  If this is a merge, the first
@@ -768,6 +770,20 @@ class localrepository(repo.repository):
             extra = extra.copy()
 
             if use_dirstate:
+                p1, p2 = self.dirstate.parents()
+                update_dirstate = True
+
+                if (not force and p2 != nullid and
+                    (match and (match.files() or match.anypats()))):
+                    raise util.Abort(_('cannot partially commit a merge '
+                                       '(do not specify files or patterns)'))
+            else:
+                p1, p2 = p1, p2 or nullid
+                update_dirstate = (self.dirstate.parents()[0] == p1)
+
+            wctx = self.workingctx((p1, p2))
+
+            if use_dirstate:
                 if files:
                     for f in files:
                         s = self.dirstate[f]
@@ -785,25 +801,13 @@ class localrepository(repo.repository):
             else:
                 commit = files
 
-            if use_dirstate:
-                p1, p2 = self.dirstate.parents()
-                update_dirstate = True
-
-                if (not force and p2 != nullid and
-                    (match and (match.files() or match.anypats()))):
-                    raise util.Abort(_('cannot partially commit a merge '
-                                       '(do not specify files or patterns)'))
-            else:
-                p1, p2 = p1, p2 or nullid
-                update_dirstate = (self.dirstate.parents()[0] == p1)
-
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
             m1 = self.manifest.read(c1[0]).copy()
             m2 = self.manifest.read(c2[0])
 
             if use_dirstate:
-                branchname = self.workingctx().branch()
+                branchname = wctx.branch()
                 try:
                     branchname = branchname.decode('UTF-8').encode('UTF-8')
                 except UnicodeDecodeError:
@@ -831,14 +835,13 @@ class localrepository(repo.repository):
             new = {}
             linkrev = self.changelog.count()
             commit.sort()
-            is_exec = util.execfunc(self.root, m1.execf)
-            is_link = util.linkfunc(self.root, m1.linkf)
             for f in commit:
                 self.ui.note(f + "\n")
+                fctx = wctx.filectx(f)
                 try:
-                    new[f] = self.filecommit(f, m1, m2, linkrev, trp, changed)
-                    new_exec = is_exec(f)
-                    new_link = is_link(f)
+                    new[f] = self.filecommit(fctx, m1, m2, linkrev, trp, changed)
+                    new_exec = fctx.isexec()
+                    new_link = fctx.islink()
                     if ((not changed or changed[-1] != f) and
                         m2.get(f) != new[f]):
                         # mention the file in the changelog if some
