@@ -1013,12 +1013,6 @@ class svn_sink(converter_sink, commandline):
                 if 'x' in flags:
                     self.setexec.append(filename)
 
-    def delfile(self, name):
-        self.delete.append(name)
-
-    def copyfile(self, source, dest):
-        self.copies.append([source, dest])
-
     def _copyfile(self, source, dest):
         # SVN's copy command pukes if the destination file exists, but
         # our copyfile method expects to record a copy that has
@@ -1081,7 +1075,20 @@ class svn_sink(converter_sink, commandline):
     def revid(self, rev):
         return u"svn:%s@%s" % (self.uuid, rev)
 
-    def putcommit(self, files, parents, commit):
+    def putcommit(self, files, copies, parents, commit, source):
+        # Apply changes to working copy
+        for f, v in files:
+            try:
+                data = source.getfile(f, v)
+            except IOError, inst:
+                self.delete.append(f)
+            else:
+                e = source.getmode(f, v)
+                self.putfile(f, e, data)
+                if f in copies:
+                    self.copies.append([copies[f], f])
+        files = [f[0] for f in files]
+
         for parent in parents:
             try:
                 return self.revid(self.childmap[parent])

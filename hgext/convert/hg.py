@@ -72,21 +72,6 @@ class mercurial_sink(converter_sink):
         h = self.repo.changelog.heads()
         return [ hex(x) for x in h ]
 
-    def putfile(self, f, e, data):
-        self.repo.wwrite(f, data, e)
-        if f not in self.repo.dirstate:
-            self.repo.dirstate.normallookup(f)
-
-    def copyfile(self, source, dest):
-        self.repo.copy(source, dest)
-
-    def delfile(self, f):
-        try:
-            util.unlink(self.repo.wjoin(f))
-            #self.repo.remove([f])
-        except OSError:
-            pass
-
     def setbranch(self, branch, pbranches):
         if not self.clonebranches:
             return
@@ -125,7 +110,25 @@ class mercurial_sink(converter_sink):
                 self.repo.pull(prepo, [prepo.lookup(h) for h in heads])
             self.before()
 
-    def putcommit(self, files, parents, commit):
+    def putcommit(self, files, copies, parents, commit, source):
+        # Apply changes to working copy
+        for f, v in files:
+            try:
+                data = source.getfile(f, v)
+            except IOError, inst:
+                try:
+                    util.unlink(self.repo.wjoin(f))
+                except OSError:
+                    pass
+            else:
+                e = source.getmode(f, v)
+                self.repo.wwrite(f, data, e)
+                if f not in self.repo.dirstate:
+                    self.repo.dirstate.normallookup(f)
+                if f in copies:
+                    self.repo.copy(copies[f], f)
+        files = [f[0] for f in files]
+
         seen = {}
         pl = []
         for p in parents:
