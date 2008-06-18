@@ -446,14 +446,18 @@ class workingctx(changectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
     parents - a pair of parent nodeids, or None to use the dirstate.
+    changes - a list of file lists as returned by localrepo.status()
+               or None to use the repository status.
     """
-    def __init__(self, repo, parents=None):
+    def __init__(self, repo, parents=None, changes=None):
         self._repo = repo
         self._rev = None
         self._node = None
         if parents:
             p1, p2 = parents
             self._parents = [self._repo.changectx(p) for p in (p1, p2)]
+        if changes:
+            self._status = list(changes)
 
     def __str__(self):
         return str(self._parents[0]) + "+"

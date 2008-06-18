@@ -491,8 +491,8 @@ class localrepository(repo.repository):
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
 
-    def workingctx(self, parents=None):
-        return context.workingctx(self, parents)
+    def workingctx(self, parents=None, changes=None):
+        return context.workingctx(self, parents, changes)
 
     def parents(self, changeid=None):
         '''
@@ -777,29 +777,28 @@ class localrepository(repo.repository):
                     (match and (match.files() or match.anypats()))):
                     raise util.Abort(_('cannot partially commit a merge '
                                        '(do not specify files or patterns)'))
-            else:
-                p1, p2 = p1, p2 or nullid
-                update_dirstate = (self.dirstate.parents()[0] == p1)
 
-            wctx = self.workingctx((p1, p2))
-
-            if use_dirstate:
                 if files:
+                    modified, removed = [], []
                     for f in files:
                         s = self.dirstate[f]
                         if s in 'nma':
-                            commit.append(f)
+                            modified.append(f)
                         elif s == 'r':
-                            remove.append(f)
+                            removed.append(f)
                         else:
                             self.ui.warn(_("%s not tracked!\n") % f)
+                    changes = [modified, [], removed, [], []]
                 else:
-                    changes = self.status(match=match)[:5]
-                    modified, added, removed, deleted, unknown = changes
-                    commit = modified + added
-                    remove = removed
+                    changes = self.status(match=match)
             else:
-                commit = files
+                p1, p2 = p1, p2 or nullid
+                update_dirstate = (self.dirstate.parents()[0] == p1)
+                changes = [files, [], [], [], []]
+
+            wctx = self.workingctx((p1, p2), changes)
+            commit = wctx.modified() + wctx.added()
+            remove = wctx.removed()
 
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
