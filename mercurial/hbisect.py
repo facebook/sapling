@@ -90,9 +90,9 @@ def bisect(changelog, state):
                 break
 
         if y < perfect: # all downhill from here?
-            for c in children.get(rev, []):
-                poison[c] = True # poison children
-            continue
+           for c in children.get(rev, []):
+               poison[c] = True # poison children
+           continue
 
         for c in children.get(rev, []):
             if ancestors[c]:
