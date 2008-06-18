@@ -93,9 +93,11 @@ function Graph() {
 				end = line[1];
 				color = line[2];
 
-				if (end > this.columns) {
+				if (end > this.columns || start > this.columns) {
 					this.columns += 1;
-				} else if (start == this.columns && start > end) {
+				}
+				
+				if (start == this.columns && start > end) {
 					var fold = true;
 				}
 				
