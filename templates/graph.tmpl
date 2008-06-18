@@ -85,11 +85,13 @@ graph.vertex = function(x, y, color, parity, cur) {
 graph.render(data);
 </script>
 
-<br />
-<small class="navigate">
-<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountless}">less</a>
-<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountmore}">more</a>
-| {changenav%navgraphentry}
-</small>
+<form action="#url#log">
+{sessionvars%hiddenformentry}
+<p>
+<label for="search1">search:</label>
+<input name="rev" id="search1" type="text" size="30">
+navigate: <small class="navigate">#changenav%navgraphentry#</small>
+</p>
+</form>
 
 #footer#
