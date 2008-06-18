@@ -444,11 +444,16 @@ class filectx(object):
 
 class workingctx(changectx):
     """A workingctx object makes access to data related to
-    the current working directory convenient."""
-    def __init__(self, repo):
+    the current working directory convenient.
+    parents - a pair of parent nodeids, or None to use the dirstate.
+    """
+    def __init__(self, repo, parents=None):
         self._repo = repo
         self._rev = None
         self._node = None
+        if parents:
+            p1, p2 = parents
+            self._parents = [self._repo.changectx(p) for p in (p1, p2)]
 
     def __str__(self):
         return str(self._parents[0]) + "+"

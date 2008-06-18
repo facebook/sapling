@@ -491,8 +491,8 @@ class localrepository(repo.repository):
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
 
-    def workingctx(self):
-        return context.workingctx(self)
+    def workingctx(self, parents=None):
+        return context.workingctx(self, parents)
 
     def parents(self, changeid=None):
         '''
