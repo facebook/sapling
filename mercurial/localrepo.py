@@ -491,10 +491,8 @@ class localrepository(repo.repository):
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
 
-    def workingctx(self, parents=None, text="", user=None, date=None, 
-                   extra=None, changes=None):
-        return context.workingctx(self, parents, text, user, date, extra, 
-                                  changes)
+    def workingctx(self):
+        return context.workingctx(self)
 
     def parents(self, changeid=None):
         '''
@@ -793,7 +791,8 @@ class localrepository(repo.repository):
                 update_dirstate = (self.dirstate.parents()[0] == p1)
                 changes = [files, [], [], [], []]
 
-            wctx = self.workingctx((p1, p2), text, user, date, extra, changes)
+            wctx = context.workingctx(self, (p1, p2), text, user, date, 
+                                      extra, changes)
             return self._commitctx(wctx, force, force_editor, empty_ok, 
                                    use_dirstate, update_dirstate)
         finally:
