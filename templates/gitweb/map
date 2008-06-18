@@ -9,6 +9,7 @@ error = error.tmpl
 notfound = notfound.tmpl
 naventry = '<a href="{url}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
+navgraphentry = '<a href="{url}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 filenaventry = '<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{label|escape}</a> '
 filedifflink = '<a href="#url#diff/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#file|escape#</a> '
 filenodelink = '<tr class="parity#parity#"><td><a class="list" href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">#file|escape#</a></td><td></td><td class="link"><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">file</a> | <a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}">annotate</a> | <a href="#url#diff/#node|short#/#file|urlescape#{sessionvars%urlparameter}">diff</a> | <a href="#url#log/#node|short#/#file|urlescape#{sessionvars%urlparameter}">revisions</a></td></tr>'
