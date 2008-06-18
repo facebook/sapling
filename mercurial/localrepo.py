@@ -839,8 +839,8 @@ class localrepository(repo.repository):
             commit.sort()
             for f in commit:
                 self.ui.note(f + "\n")
-                fctx = wctx.filectx(f)
                 try:
+                    fctx = wctx.filectx(f)
                     new[f] = self.filecommit(fctx, m1, m2, linkrev, trp, changed)
                     new_exec = fctx.isexec()
                     new_link = fctx.islink()
