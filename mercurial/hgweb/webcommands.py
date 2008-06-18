@@ -578,10 +578,10 @@ def static(web, req, tmpl):
 
 def graph(web, req, tmpl):
     rev = webutil.changectx(web.repo, req).rev()
-    revcount = int(req.form.get('revcount', [25])[0])
     bg_height = 39
 
     max_rev = web.repo.changelog.count() - 1
+    revcount = min(max_rev, int(req.form.get('revcount', [25])[0]))
     revnode = web.repo.changelog.node(rev)
     revnode_hex = hex(revnode)
     uprev = min(max_rev, rev + revcount)
