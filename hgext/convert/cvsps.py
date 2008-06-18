@@ -391,7 +391,6 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                 t = '%d %s' % (len(changesets), repr(e.comment)[1:-1])
                 ui.status(util.ellipsis(t, 80) + '\n')
 
-        e.Changeset = c
         c.entries.append(e)
         files[e.file] = True
         c.date = e.date       # changeset date is date of latest commit in it
