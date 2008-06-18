@@ -108,7 +108,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         # repository location. The address may have all sort of nasties
         # in it, slashes, colons and such. So here we take just the
         # alphanumerics, concatenated in a way that does not mix up the
-        # various components, so that 
+        # various components, so that
         #    :pserver:user@server:/path
         # and
         #    /pserver/user/server/path
