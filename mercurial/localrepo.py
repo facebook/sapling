@@ -491,8 +491,10 @@ class localrepository(repo.repository):
     def changectx(self, changeid=None):
         return context.changectx(self, changeid)
 
-    def workingctx(self, parents=None, extra=None, changes=None):
-        return context.workingctx(self, parents, extra, changes)
+    def workingctx(self, parents=None, text="", user=None, date=None, 
+                   extra=None, changes=None):
+        return context.workingctx(self, parents, text, user, date, extra, 
+                                  changes)
 
     def parents(self, changeid=None):
         '''
@@ -795,11 +797,13 @@ class localrepository(repo.repository):
                 update_dirstate = (self.dirstate.parents()[0] == p1)
                 changes = [files, [], [], [], []]
 
-            wctx = self.workingctx((p1, p2), extra, changes)
+            wctx = self.workingctx((p1, p2), text, user, date, extra, changes)
             commit = wctx.modified() + wctx.added()
             remove = wctx.removed()
             extra = wctx.extra().copy()
             branchname = extra['branch']
+            user = wctx.user()
+            text = wctx.description()
 
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
@@ -868,7 +872,6 @@ class localrepository(repo.repository):
                                    (new, removed))
 
             # add changeset
-            user = user or self.ui.username()
             if (not empty_ok and not text) or force_editor:
                 edittext = []
                 if text:
@@ -901,7 +904,7 @@ class localrepository(repo.repository):
             text = '\n'.join(lines)
 
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
-                                   user, date, extra)
+                                   user, wctx.date(), extra)
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2)
             tr.close()
