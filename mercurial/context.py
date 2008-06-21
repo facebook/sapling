@@ -458,7 +458,7 @@ class workingctx(changectx):
         self._rev = None
         self._node = None
         self._text = text
-        if date is not None:
+        if date:
             self._date = util.parsedate(date)
         else:
             self._date = util.makedate()
