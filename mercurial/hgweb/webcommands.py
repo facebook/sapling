@@ -602,7 +602,9 @@ def graph(web, req, tmpl):
         desc = templatefilters.firstline(ctx.description())
         desc = cgi.escape(desc)
         user = cgi.escape(templatefilters.person(ctx.user()))
-        data.append((node, vtx, edges, desc, user, age, ctx.tags()))
+        branch = ctx.branch()
+        branch = branch, web.repo.branchtags().get(branch) == ctx.node()
+        data.append((node, vtx, edges, desc, user, age, branch, ctx.tags()))
 
     return tmpl('graph', rev=rev, revcount=revcount, uprev=uprev,
                 lessrev=lessrev, revcountmore=revcount and 2 * revcount or 1,
