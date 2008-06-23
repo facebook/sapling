@@ -452,7 +452,7 @@ class workingctx(changectx):
     changes - a list of file lists as returned by localrepo.status()
                or None to use the repository status.
     """
-    def __init__(self, repo, parents=None, text="", user=None, date=None, 
+    def __init__(self, repo, parents=None, text="", user=None, date=None,
                  extra=None, changes=None):
         self._repo = repo
         self._rev = None
@@ -688,7 +688,7 @@ class memctx(object):
     user - username string, or None.
     extra - a dictionary of extra values, or None.
     """
-    def __init__(self, repo, parents, text, files, filectxfn, user=None, 
+    def __init__(self, repo, parents, text, files, filectxfn, user=None,
                  date=None, extra=None):
         self._repo = repo
         self._rev = None

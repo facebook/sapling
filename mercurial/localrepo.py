@@ -791,9 +791,9 @@ class localrepository(repo.repository):
                 update_dirstate = (self.dirstate.parents()[0] == p1)
                 changes = [files, [], [], [], []]
 
-            wctx = context.workingctx(self, (p1, p2), text, user, date, 
+            wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            return self._commitctx(wctx, force, force_editor, empty_ok, 
+            return self._commitctx(wctx, force, force_editor, empty_ok,
                                    use_dirstate, update_dirstate)
         finally:
             del lock, wlock
@@ -803,8 +803,8 @@ class localrepository(repo.repository):
         try:
             wlock = self.wlock()
             lock = self.lock()
-            return self._commitctx(ctx, force=True, force_editor=False, 
-                                   empty_ok=True, use_dirstate=False, 
+            return self._commitctx(ctx, force=True, force_editor=False,
+                                   empty_ok=True, use_dirstate=False,
                                    update_dirstate=False)
         finally:
             del lock, wlock
