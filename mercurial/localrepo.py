@@ -1204,7 +1204,8 @@ class localrepository(repo.repository):
         heads.sort()
         return [n for (r, n) in heads]
 
-    def branchheads(self, branch, start=None):
+    def branchheads(self, branch=None, start=None):
+        branch = branch or self.workingctx().branch()
         branches = self.branchtags()
         if branch not in branches:
             return []
