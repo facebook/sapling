@@ -24,7 +24,7 @@ hg branch
 echo bleah > a
 hg ci -m "modify a branch" -d "1000000 0"
 
-hg merge
+hg merge default
 hg branch
 hg ci -m "merge" -d "1000000 0"
 hg log
@@ -73,4 +73,38 @@ hg commit -m'Merge ff into foo' -d '1000000 0'
 hg parents
 hg manifest
 
-exit 0
+echo % test merging, add 3 default heads and one test head
+cd ..
+hg init merges
+cd merges
+echo a > a
+hg ci -Ama
+
+echo b > b
+hg ci -Amb
+
+hg up 0
+echo c > c
+hg ci -Amc
+
+hg up 0
+echo d > d
+hg ci -Amd
+
+hg up 0
+hg branch test
+echo e >> e
+hg ci -Ame
+
+hg log
+
+echo % implicit merge with test branch as parent
+hg merge
+hg up -C default
+echo % implicit merge with default branch as parent
+hg merge
+echo % 3 branch heads, explicit merge required
+hg merge 2
+hg ci -m merge
+echo % 2 branch heads, implicit merge works
+hg merge

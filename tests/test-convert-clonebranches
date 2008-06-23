@@ -17,7 +17,7 @@ hg branch branch0
 echo b > b
 hg ci -qAm addb
 hg up -qC
-hg merge
+hg merge default
 hg ci -qm mergeab
 hg tag -ql mergeab
 cd ..
