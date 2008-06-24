@@ -86,6 +86,50 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     --config convert.hg.saverev=True          (boolean)
         allow target to preserve source revision ID
 
+    CVS Source
+    ----------
+
+    CVS source will use a sandbox (i.e. a checked-out copy) from CVS
+    to indicate the starting point of what will be converted. Direct
+    access to the repository files is not needed, unless of course
+    the repository is :local:. The conversion uses the top level
+    directory in the sandbox to find the CVS repository, and then uses
+    CVS rlog commands to find files to convert. This means that unless
+    a filemap is given, all files under the starting directory will be
+    converted, and that any directory reorganisation in the CVS
+    sandbox is ignored.
+
+    Because CVS does not have changesets, it is necessary to collect
+    individual commits to CVS and merge them into changesets. CVS source
+    can use the external 'cvsps' program (this is a legacy option and may
+    be removed in future) or use its internal changeset merging code.
+    External cvsps is default, and options may be passed to it by setting
+        --config convert.cvsps='cvsps -A -u --cvs-direct -q'
+    The options shown are the defaults.
+
+    Internal cvsps is selected by setting
+        --config convert.cvsps=builtin
+    and has a few more configurable options:
+        --config convert.cvsps.fuzz=60   (integer)
+            Specify the maximum time (in seconds) that is allowed between
+            commits with identical user and log message in a single
+            changeset. When very large files were checked in as part
+            of a changeset then the default may not be long enough.
+        --config convert.cvsps.mergeto='{{mergetobranch ([-\w]+)}}'
+            Specify a regular expression to which commit log messages are
+            matched. If a match occurs, then the conversion process will
+            insert a dummy revision merging the branch on which this log
+            message occurs to the branch indicated in the regex.
+        --config convert.cvsps.mergefrom='{{mergefrombranch ([-\w]+)}}'
+            Specify a regular expression to which commit log messages are
+            matched. If a match occurs, then the conversion process will
+            add the most recent revision on the branch indicated in the
+            regex as the second parent of the changeset.
+    
+    The hgext/convert/cvsps wrapper script allows the builtin changeset
+    merging code to be run without doing a conversion. Its parameters and
+    output are similar to that of cvsps 2.1.
+
     Subversion Source
     -----------------
 
