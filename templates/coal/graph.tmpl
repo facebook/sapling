@@ -67,9 +67,6 @@ graph.edge = function(x0, y0, x1, y1, color) {
 	
 }
 
-var nodes = document.getElementById('graphnodes');
-var nodebgs = document.getElementById('nodebgs');
-
 var revlink = '<li style="_STYLE"><span class="desc">';
 revlink += '<a href="{url}rev/_NODEID{sessionvars%urlparameter}" title="_NODEID">_DESC</a>';
 revlink += '</span><span class="tag">_TAGS</span>';
@@ -83,8 +80,6 @@ graph.vertex = function(x, y, color, parity, cur) {
 	this.ctx.fill();
 	
 	var bg = '<li class="bg parity' + parity + '"></li>';
-	nodebgs.innerHTML += bg;
-	
 	var left = (this.columns + 1) * this.bg_height;
 	var nstyle = 'padding-left: ' + left + 'px;';
 	var item = revlink.replace(/_STYLE/, nstyle);
@@ -95,7 +90,8 @@ graph.vertex = function(x, y, color, parity, cur) {
 	item = item.replace(/_USER/, cur[4]);
 	item = item.replace(/_DATE/, cur[5]);
 	item = item.replace(/_TAGS/, cur[7].join('&nbsp; '));
-	nodes.innerHTML += item;
+	
+	return [bg, item];
 	
 }
 

@@ -75,6 +75,9 @@ function Graph() {
 
 	this.render = function(data) {
 		
+		var backgrounds = '';
+		var nodedata = '';
+		
 		for (var i in data) {
 			
 			var parity = i % 2;
@@ -118,11 +121,16 @@ function Graph() {
 			radius = this.box_size / 8;
 			x = this.cell[0] + this.box_size * column + this.box_size / 2;
 			y = this.bg[1] - this.bg_height / 2;
-			this.vertex(x, y, color, parity, cur);
+			var add = this.vertex(x, y, color, parity, cur);
+			backgrounds += add[0];
+			nodedata += add[1];
 			
 			if (fold) this.columns -= 1;
 			
 		}
+		
+		document.getElementById('nodebgs').innerHTML += backgrounds;
+		document.getElementById('graphnodes').innerHTML += nodedata;
 		
 	}
 
