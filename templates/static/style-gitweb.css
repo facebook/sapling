@@ -85,6 +85,7 @@ div#wrapper {
 	position: relative;
 	margin: 0;
 	padding: 0;
+	margin-top: 3px;
 }
 
 canvas {

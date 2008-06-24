@@ -42,8 +42,9 @@ graph |
 
 <script type="text/javascript" src="#staticurl#graph.js"></script>
 <script>
+<!-- hide script content
 
-document.getElementById('noscript').style.visibility = 'hidden';
+document.getElementById('noscript').style.display = 'none';
 
 data = {jsdata|json};
 graph = new Graph();
@@ -107,6 +108,8 @@ graph.vertex = function(x, y, color, parity, cur) {
 }
 
 graph.render(data);
+
+// stop hiding script -->
 </script>
 
 <div class="page_nav">
