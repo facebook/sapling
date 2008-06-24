@@ -1205,7 +1205,7 @@ class localrepository(repo.repository):
         return [n for (r, n) in heads]
 
     def branchheads(self, branch=None, start=None):
-        branch = branch or self.workingctx().branch()
+        branch = branch is None and 'default' or self.workingctx().branch()
         branches = self.branchtags()
         if branch not in branches:
             return []
