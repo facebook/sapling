@@ -261,3 +261,15 @@ EOF
 hg status
 cat a
 cd ..
+
+echo % 'test paths outside repo root'
+mkdir outside
+touch outside/foo
+hg init inside
+cd inside
+hg import - <<EOF
+diff --git a/a b/b
+rename from ../outside/foo
+rename to bar
+EOF
+cd ..
