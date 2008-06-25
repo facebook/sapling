@@ -19,11 +19,8 @@ class changectx(object):
         if not changeid and changeid != 0:
             p1, p2 = self._repo.dirstate.parents()
             self._rev = self._repo.changelog.rev(p1)
-            if self._rev == -1:
-                changeid = 'tip'
-            else:
-                self._node = p1
-                return
+            self._node = p1
+            return
 
         self._node = self._repo.lookup(changeid)
         self._rev = self._repo.changelog.rev(self._node)
