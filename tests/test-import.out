@@ -260,3 +260,6 @@ a
 adding a
 applying patch from stdin
 bb
+% test paths outside repo root
+applying patch from stdin
+abort: ../outside/foo not under root

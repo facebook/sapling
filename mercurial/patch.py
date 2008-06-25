@@ -1039,9 +1039,12 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                 continue
         elif state == 'git':
             gitpatches = values
+            cwd = os.getcwd()
             for gp in gitpatches:
                 if gp.op in ('COPY', 'RENAME'):
-                    copyfile(gp.oldpath, gp.path)
+                    src, dst = [util.canonpath(cwd, cwd, x)
+                                for x in [gp.oldpath, gp.path]]
+                    copyfile(src, dst)
                 changed[gp.path] = (gp.op, gp)
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
