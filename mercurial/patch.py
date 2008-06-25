@@ -8,7 +8,7 @@
 
 from i18n import _
 from node import hex, nullid, short
-import base85, cmdutil, mdiff, util, context, revlog, diffhelpers, copies
+import base85, cmdutil, mdiff, util, revlog, diffhelpers, copies
 import cStringIO, email.Parser, os, popen2, re, errno
 import sys, tempfile, zlib
 
@@ -1180,7 +1180,7 @@ def diff(repo, node1=None, node2=None, match=None,
 
     # reading the data for node1 early allows it to play nicely
     # with repo.status and the revlog cache.
-    ctx1 = context.changectx(repo, node1)
+    ctx1 = repo.changectx(node1)
     # force manifest reading
     man1 = ctx1.manifest()
     date1 = util.datestr(ctx1.date())
@@ -1193,11 +1193,11 @@ def diff(repo, node1=None, node2=None, match=None,
         return
 
     if node2:
-        ctx2 = context.changectx(repo, node2)
+        ctx2 = repo.changectx(node2)
         execf2 = ctx2.manifest().execf
         linkf2 = ctx2.manifest().linkf
     else:
-        ctx2 = context.workingctx(repo)
+        ctx2 = repo.workingctx()
         execf2 = util.execfunc(repo.root, None)
         linkf2 = util.linkfunc(repo.root, None)
         if execf2 is None:

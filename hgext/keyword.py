@@ -78,7 +78,7 @@ like CVS' $Log$, are not supported. A keyword template map
 "Log = {desc}" expands to the first line of the changeset description.
 '''
 
-from mercurial import commands, cmdutil, context, dispatch, filelog, revlog
+from mercurial import commands, cmdutil, dispatch, filelog, revlog
 from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.hgweb import webcommands
 from mercurial.node import nullid, hex
@@ -142,7 +142,7 @@ class kwtemplater(object):
     def getnode(self, path, fnode):
         '''Derives changenode from file path and filenode.'''
         # used by kwfilelog.read and kwexpand
-        c = context.filectx(self.repo, path, fileid=fnode)
+        c = self.repo.filectx(path, fileid=fnode)
         return c.node()
 
     def substitute(self, data, path, node, subfunc):
