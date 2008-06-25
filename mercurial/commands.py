@@ -189,7 +189,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     hand. The result of this merge is not committed, as for a normal
     merge.
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See \'hg help dates\' for a list of formats valid for -d/--date.
     '''
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
@@ -2670,11 +2670,12 @@ def status(ui, repo, *pats, **opts):
     if (opts['all'] or opts['copies']) and not opts['no_status']:
         ctxn = repo.changectx(nullid)
         ctx1 = repo.changectx(node1)
-        ctx2 = repo.changectx(node2)
         added = stat[1]
         if node2 is None:
             added = stat[0] + stat[1] # merged?
             ctx2 = repo.workingctx()
+        else:
+            ctx2 = repo.changectx(node2)
         for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
             if k in added:
                 copy[k] = v
@@ -2713,7 +2714,7 @@ def tag(ui, repo, name1, *names, **opts):
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
 
-    rev_ = None
+    rev_ = "."
     names = (name1,) + names
     if len(names) != len(dict.fromkeys(names)):
         raise util.Abort(_('tag names must be unique'))

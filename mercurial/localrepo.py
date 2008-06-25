@@ -483,7 +483,9 @@ class localrepository(repo.repository):
             f = f[1:]
         return filelog.filelog(self.sopener, f)
 
-    def changectx(self, changeid=None):
+    def changectx(self, changeid):
+        if changeid == None:
+            raise "nope!"
         return context.changectx(self, changeid)
 
     def workingctx(self):
@@ -1018,7 +1020,7 @@ class localrepository(repo.repository):
                 if lookup:
                     fixup = []
                     # do a full compare of any files that might have changed
-                    ctx = self.changectx()
+                    ctx = self.changectx('')
                     mexec = lambda f: 'x' in ctx.fileflags(f)
                     mlink = lambda f: 'l' in ctx.fileflags(f)
                     is_exec = util.execfunc(self.root, mexec)

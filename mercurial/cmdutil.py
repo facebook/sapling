@@ -245,7 +245,7 @@ def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
     if added is None or removed is None:
         added, removed = repo.status()[1:3]
-    ctx = repo.changectx()
+    ctx = repo.changectx('.')
     for a in added:
         aa = repo.wread(a)
         bestname, bestscore = None, threshold
@@ -992,7 +992,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         return [], m
 
     if follow:
-        defrange = '%s:0' % repo.changectx().rev()
+        defrange = '%s:0' % repo.changectx('.').rev()
     else:
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
