@@ -62,7 +62,7 @@ filediffparent = '<tr><th class="parent">parent {rev}:</th><td class="parent"><a
 filelogparent = '<tr><th>parent {rev}:</th><td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
 filediffchild = '<tr><th class="child">child {rev}:</th><td class="child"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
 filelogchild = '<tr><th>child {rev}:</th><td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
-indexentry = '<tr class="parity{parity}"><td><a href="{url}{sessionvars%urlparameter}">{name|escape}</a></td><td>{description}</td><td>{contact|obfuscate}</td><td class="age">{lastchange|age} ago</td><td class="indexlinks"><a href="{url}rss-log">RSS</a> <a href="{url}atom-log">Atom</a> {archives%indexarchiveentry}</td></tr>\n'
+indexentry = '<tr class="parity{parity}"><td><a href="{url}{sessionvars%urlparameter}">{name|escape}</a></td><td>{description}</td><td>{contact|obfuscate}</td><td class="age">{lastchange|age} ago</td><td class="indexlinks">{archives%indexarchiveentry}</td></tr>\n'
 indexarchiveentry = '<a href="{url}archive/{node|short}{extension|urlescape}">&nbsp;&darr;{type|escape}</a>'
 index = ../coal/index.tmpl
 archiveentry = '<li><a href="{url}archive/{node|short}{extension|urlescape}">{type|escape}</a></li>'
