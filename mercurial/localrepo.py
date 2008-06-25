@@ -442,12 +442,7 @@ class localrepository(repo.repository):
 
     def lookup(self, key):
         if key == '.':
-            key, second = self.dirstate.parents()
-            if key == nullid:
-                raise repo.RepoError(_("no revision checked out"))
-            if second != nullid:
-                self.ui.warn(_("warning: working directory has two parents, "
-                               "tag '.' uses the first\n"))
+            return self.dirstate.parents()[0]
         elif key == 'null':
             return nullid
         n = self.changelog._match(key)
