@@ -409,7 +409,7 @@ def update(repo, node, branchmerge, force, partial):
 
     wlock = repo.wlock()
     try:
-        wc = repo.workingctx()
+        wc = repo.changectx(None)
         if node is None:
             # tip of current branch
             try:

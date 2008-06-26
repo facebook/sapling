@@ -485,11 +485,8 @@ class localrepository(repo.repository):
 
     def changectx(self, changeid):
         if changeid == None:
-            raise "nope!"
+            return context.workingctx(self)
         return context.changectx(self, changeid)
-
-    def workingctx(self):
-        return context.workingctx(self)
 
     def parents(self, changeid=None):
         '''
@@ -1202,7 +1199,7 @@ class localrepository(repo.repository):
         return [n for (r, n) in heads]
 
     def branchheads(self, branch=None, start=None):
-        branch = branch is None and self.workingctx().branch() or branch
+        branch = branch is None and self.changectx(None).branch() or branch
         branches = self.branchtags()
         if branch not in branches:
             return []

@@ -359,7 +359,7 @@ def branch(ui, repo, label=None, **opts):
 
     if label:
         if not opts.get('force') and label in repo.branchtags():
-            if label not in [p.branch() for p in repo.workingctx().parents()]:
+            if label not in [p.branch() for p in repo.changectx(None).parents()]:
                 raise util.Abort(_('a branch of the same name already exists'
                                    ' (use --force to override)'))
         repo.dirstate.setbranch(util.fromlocal(label))
@@ -1454,7 +1454,7 @@ def identify(ui, repo, source=None,
                 "can't query remote revision number, branch, or tags")
         output = [hexfunc(srepo.lookup(rev))]
     elif not rev:
-        ctx = repo.workingctx()
+        ctx = repo.changectx(None)
         parents = ctx.parents()
         changed = False
         if default or id or num:
@@ -1563,7 +1563,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     message = None
                 ui.debug(_('message:\n%s\n') % message)
 
-                wp = repo.workingctx().parents()
+                wp = repo.changectx(None).parents()
                 if opts.get('exact'):
                     if not nodeid or not p1:
                         raise util.Abort(_('not a mercurial patch'))
@@ -1902,7 +1902,7 @@ def merge(ui, repo, node=None, force=None, rev=None):
         node = rev
 
     if not node:
-        branch = repo.workingctx().branch()
+        branch = repo.changectx(None).branch()
         bheads = repo.branchheads()
         if len(bheads) > 2:
             raise util.Abort(_("branch '%s' has %d heads - "
@@ -1916,7 +1916,7 @@ def merge(ui, repo, node=None, force=None, rev=None):
                                    "please merge with an explicit rev") %
                                  branch)
             msg = _('there is nothing to merge')
-            if parent != repo.lookup(repo.workingctx().branch()):
+            if parent != repo.lookup(repo.changectx(None).branch()):
                 msg = _('%s - use "hg update" instead') % msg
             raise util.Abort(msg)
 
@@ -1975,7 +1975,7 @@ def parents(ui, repo, file_=None, **opts):
     if rev:
         ctx = repo.changectx(rev)
     else:
-        ctx = repo.workingctx()
+        ctx = repo.changectx(None)
 
     if file_:
         m = cmdutil.match(repo, (file_,), opts)
@@ -2297,7 +2297,7 @@ def resolve(ui, repo, *pats, **opts):
             elif opts.get("unmark"):
                 ms.mark(f, "u")
             else:
-                wctx = repo.workingctx()
+                wctx = repo.changectx(None)
                 mctx = wctx.parents()[-1]
                 ms.resolve(f, wctx, mctx)
 
@@ -2670,12 +2670,11 @@ def status(ui, repo, *pats, **opts):
     if (opts['all'] or opts['copies']) and not opts['no_status']:
         ctxn = repo.changectx(nullid)
         ctx1 = repo.changectx(node1)
+        ctx2 = repo.changectx(node2)
         added = stat[1]
         if node2 is None:
             added = stat[0] + stat[1] # merged?
-            ctx2 = repo.workingctx()
-        else:
-            ctx2 = repo.changectx(node2)
+
         for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
             if k in added:
                 copy[k] = v

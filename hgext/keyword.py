@@ -386,7 +386,7 @@ def files(ui, repo, *pats, **opts):
     if opts.get('untracked'):
         files += unknown
     files.sort()
-    wctx = repo.workingctx()
+    wctx = repo.changectx(None)
     islink = lambda p: 'l' in wctx.fileflags(p)
     kwfiles = [f for f in files if kwt.iskwfile(f, islink)]
     cwd = pats and repo.getcwd() or ''

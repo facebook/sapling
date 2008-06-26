@@ -1192,12 +1192,11 @@ def diff(repo, node1=None, node2=None, match=None,
     if not modified and not added and not removed:
         return
 
+    ctx2 = repo.changectx(node2)
     if node2:
-        ctx2 = repo.changectx(node2)
         execf2 = ctx2.manifest().execf
         linkf2 = ctx2.manifest().linkf
     else:
-        ctx2 = repo.workingctx()
         execf2 = util.execfunc(repo.root, None)
         linkf2 = util.linkfunc(repo.root, None)
         if execf2 is None:
