@@ -560,9 +560,10 @@ class dirstate(object):
                             continue
                 for f, kind, st in entries:
                     np = pconvert(join(nd, f))
+                    nn = self.normalize(np)
                     if np in known:
                         continue
-                    known[np] = 1
+                    known[nn] = 1
                     p = join(top, f)
                     # don't trip over symlinks
                     if kind == stat.S_IFDIR:
@@ -571,12 +572,12 @@ class dirstate(object):
                             if hasattr(match, 'dir'):
                                 match.dir(np)
                         if np in dc and match(np):
-                            add((np, 'm', st))
+                            add((nn, 'm', st))
                     elif imatch(np):
                         if supported(np, st.st_mode):
-                            add((np, 'f', st))
+                            add((nn, 'f', st))
                         elif np in dc:
-                            add((np, 'm', st))
+                            add((nn, 'm', st))
             found.sort()
             return found
 
@@ -584,6 +585,7 @@ class dirstate(object):
         files.sort()
         for ff in files:
             nf = normpath(ff)
+            nn = self.normalize(nf)
             f = _join(ff)
             try:
                 st = lstat(f)
@@ -604,9 +606,9 @@ class dirstate(object):
                     for f, src, st in findfiles(f):
                         yield src, f, st
             else:
-                if nf in known:
+                if nn in known:
                     continue
-                known[nf] = 1
+                known[nn] = 1
                 if match(nf):
                     if supported(ff, st.st_mode, verbose=True):
                         yield 'f', self.normalize(nf), st
