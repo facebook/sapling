@@ -475,12 +475,7 @@ class dirstate(object):
                 return True
         return False
 
-    def walk(self, match):
-        # filter out the src and stat
-        for src, f, st in self.statwalk(match):
-            yield f
-
-    def statwalk(self, match, unknown=True, ignored=False):
+    def walk(self, match, unknown, ignored):
         '''
         walk recursively through the directory tree, finding all files
         matched by the match function
@@ -631,7 +626,6 @@ class dirstate(object):
 
     def status(self, match, ignored, clean, unknown):
         listignored, listclean, listunknown = ignored, clean, unknown
-
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
@@ -648,7 +642,7 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
-        for src, fn, st in self.statwalk(match, listunknown, listignored):
+        for src, fn, st in self.walk(match, listunknown, listignored):
             if fn not in dmap:
                 if (listignored or match.exact(fn)) and self._dirignore(fn):
                     if listignored:
