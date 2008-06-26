@@ -837,19 +837,16 @@ class localrepository(repo.repository):
                 self.ui.note(f + "\n")
                 try:
                     fctx = wctx.filectx(f)
+                    newflags = fctx.flags()
                     new[f] = self.filecommit(fctx, m1, m2, linkrev, trp, changed)
-                    new_exec = fctx.isexec()
-                    new_link = fctx.islink()
                     if ((not changed or changed[-1] != f) and
                         m2.get(f) != new[f]):
                         # mention the file in the changelog if some
                         # flag changed, even if there was no content
                         # change.
-                        old_exec = m1.execf(f)
-                        old_link = m1.linkf(f)
-                        if old_exec != new_exec or old_link != new_link:
+                        if m1.flags(f) != newflags:
                             changed.append(f)
-                    m1.set(f, new_exec, new_link)
+                    m1.set(f, newflags)
                     if use_dirstate:
                         self.dirstate.normal(f)
 
@@ -1009,14 +1006,9 @@ class localrepository(repo.repository):
                     fixup = []
                     # do a full compare of any files that might have changed
                     ctx = self.changectx('')
-                    mexec = lambda f: 'x' in ctx.fileflags(f)
-                    mlink = lambda f: 'l' in ctx.fileflags(f)
-                    is_exec = util.execfunc(self.root, mexec)
-                    is_link = util.linkfunc(self.root, mlink)
-                    def flags(f):
-                        return is_link(f) and 'l' or is_exec(f) and 'x' or ''
+                    ff = self.dirstate.flagfunc(ctx.flags)
                     for f in lookup:
-                        if (f not in ctx or flags(f) != ctx.fileflags(f)
+                        if (f not in ctx or ff(f) != ctx.flags(f)
                             or ctx[f].cmp(self.wread(f))):
                             modified.append(f)
                         else:
@@ -1042,11 +1034,10 @@ class localrepository(repo.repository):
                 # generate a pseudo-manifest for the working dir
                 # XXX: create it in dirstate.py ?
                 mf2 = mfmatches(self.dirstate.parents()[0])
-                is_exec = util.execfunc(self.root, mf2.execf)
-                is_link = util.linkfunc(self.root, mf2.linkf)
+                ff = self.dirstate.flagfunc(mf2.flags)
                 for f in lookup + modified + added:
                     mf2[f] = ""
-                    mf2.set(f, is_exec(f), is_link(f))
+                    mf2.set(f, ff(f))
                 for f in removed:
                     if f in mf2:
                         del mf2[f]

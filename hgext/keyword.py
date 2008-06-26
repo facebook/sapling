@@ -387,7 +387,7 @@ def files(ui, repo, *pats, **opts):
         files += unknown
     files.sort()
     wctx = repo.changectx(None)
-    islink = lambda p: 'l' in wctx.fileflags(p)
+    islink = lambda p: 'l' in wctx.flags(p)
     kwfiles = [f for f in files if kwt.iskwfile(f, islink)]
     cwd = pats and repo.getcwd() or ''
     kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()

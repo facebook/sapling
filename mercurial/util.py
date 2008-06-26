@@ -933,12 +933,6 @@ def checkexec(path):
         return False
     return not (new_file_has_exec or exec_flags_cannot_flip)
 
-def execfunc(path, fallback):
-    '''return an is_exec() function with default to fallback'''
-    if checkexec(path):
-        return lambda x: is_exec(os.path.join(path, x))
-    return fallback
-
 def checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
     # mktemp is not racy because symlink creation will fail if the
@@ -950,12 +944,6 @@ def checklink(path):
         return True
     except (OSError, AttributeError):
         return False
-
-def linkfunc(path, fallback):
-    '''return an is_link() function with default to fallback'''
-    if checklink(path):
-        return lambda x: os.path.islink(os.path.join(path, x))
-    return fallback
 
 _umask = os.umask(0)
 os.umask(_umask)

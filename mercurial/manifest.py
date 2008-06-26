@@ -24,10 +24,8 @@ class manifestdict(dict):
     def linkf(self, f):
         "test for symlink in manifest flags"
         return "l" in self.flags(f)
-    def set(self, f, execf=False, linkf=False):
-        if linkf: self._flags[f] = "l"
-        elif execf: self._flags[f] = "x"
-        else: self._flags[f] = ""
+    def set(self, f, flags):
+        self._flags[f] = flags
     def copy(self):
         return manifestdict(dict.copy(self), dict.copy(self._flags))
 

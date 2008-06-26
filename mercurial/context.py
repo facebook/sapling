@@ -118,7 +118,7 @@ class changectx(object):
     def filenode(self, path):
         return self._fileinfo(path)[0]
 
-    def fileflags(self, path):
+    def flags(self, path):
         try:
             return self._fileinfo(path)[1]
         except revlog.LookupError:
@@ -237,9 +237,9 @@ class filectx(object):
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
-    def fileflags(self): return self._changectx.fileflags(self._path)
-    def isexec(self): return 'x' in self.fileflags()
-    def islink(self): return 'l' in self.fileflags()
+    def flags(self): return self._changectx.flags(self._path)
+    def isexec(self): return 'x' in self.flags()
+    def islink(self): return 'l' in self.flags()
     def filelog(self): return self._filelog
 
     def rev(self):
@@ -509,16 +509,14 @@ class workingctx(changectx):
 
         man = self._parents[0].manifest().copy()
         copied = self._repo.dirstate.copies()
-        is_exec = util.execfunc(self._repo.root,
-                                lambda p: man.execf(copied.get(p,p)))
-        is_link = util.linkfunc(self._repo.root,
-                                lambda p: man.linkf(copied.get(p,p)))
+        cf = lambda x: man.flags(copied.get(x, x))
+        ff = self._repo.dirstate.flagfunc(cf)
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 man[f] = man.get(copied.get(f, f), nullid) + i
                 try:
-                    man.set(f, is_exec(f), is_link(f))
+                    man.set(f, ff(f))
                 except OSError:
                     pass
 
@@ -555,7 +553,7 @@ class workingctx(changectx):
     def children(self):
         return []
 
-    def fileflags(self, path):
+    def flags(self, path):
         if '_manifest' in self.__dict__:
             try:
                 return self._manifest.flags(path)
@@ -565,12 +563,9 @@ class workingctx(changectx):
         pnode = self._parents[0].changeset()[0]
         orig = self._repo.dirstate.copies().get(path, path)
         node, flag = self._repo.manifest.find(pnode, orig)
-        is_link = util.linkfunc(self._repo.root,
-                                lambda p: flag and 'l' in flag)
-        is_exec = util.execfunc(self._repo.root,
-                                lambda p: flag and 'x' in flag)
         try:
-            return (is_link(path) and 'l' or '') + (is_exec(path) and 'x' or '')
+            ff = self._repo.dirstate.flagfunc(lambda x: flag or '')
+            return ff(path)
         except OSError:
             pass
 
@@ -724,6 +719,7 @@ class memctx(object):
     def clean(self): return self._status[5]
     def branch(self): return self._extra['branch']
     def extra(self): return self._extra
+    def flags(self, f): return self[f].flags()
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -750,7 +746,7 @@ class memfilectx(object):
     def __str__(self): return "%s@%s" % (self.path(), self._changectx)
     def path(self): return self._path
     def data(self): return self._data
-    def fileflags(self): return self._flags
+    def flags(self): return self._flags
     def isexec(self): return 'x' in self._flags
     def islink(self): return 'l' in self._flags
     def renamed(self): return self._copied

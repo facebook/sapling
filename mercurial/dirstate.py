@@ -70,6 +70,9 @@ class dirstate(object):
         elif name == '_slash':
             self._slash = self._ui.configbool('ui', 'slash') and os.sep != '/'
             return self._slash
+        elif name == '_checklink':
+            self._checklink = util.checklink(self._root)
+            return self._checklink
         elif name == '_checkexec':
             self._checkexec = util.checkexec(self._root)
             return self._checkexec
@@ -90,6 +93,34 @@ class dirstate(object):
 
     def folding(self):
         return self._folding
+
+    def flagfunc(self, fallback):
+        if self._checklink:
+            if self._checkexec:
+                def f(x):
+                    p = os.path.join(self._root, x)
+                    if os.path.islink(p):
+                        return 'l'
+                    if util.is_exec(p):
+                        return 'x'
+                    return ''
+                return f
+            def f(x):
+                if os.path.islink(os.path.join(self._root, x)):
+                    return 'l'
+                if 'x' in fallback(x):
+                    return 'x'
+                return ''
+            return f
+        if self._checkexec:
+            def f(x):
+                if 'l' in fallback(x):
+                    return 'l'
+                if util.is_exec(os.path.join(self._root, x)):
+                    return 'x'
+                return ''
+            return f
+        return fallback
 
     def getcwd(self):
         cwd = os.getcwd()

@@ -146,7 +146,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     if tool == "internal:local":
         return 0
     if tool == "internal:other":
-        repo.wwrite(fd, fco.data(), fco.fileflags())
+        repo.wwrite(fd, fco.data(), fco.flags())
         return 0
     if tool == "internal:fail":
         return 1

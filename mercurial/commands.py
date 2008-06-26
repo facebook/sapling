@@ -2480,7 +2480,7 @@ def revert(ui, repo, *pats, **opts):
         if not opts.get('dry_run'):
             def checkout(f):
                 fc = ctx[f]
-                repo.wwrite(f, fc.data(), fc.fileflags())
+                repo.wwrite(f, fc.data(), fc.flags())
 
             audit_path = util.path_auditor(repo.root)
             for f in remove[0]:
