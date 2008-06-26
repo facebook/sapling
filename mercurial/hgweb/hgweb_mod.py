@@ -16,21 +16,6 @@ from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
 import webcommands, protocol, webutil
 
-shortcuts = {
-    'cl': [('cmd', ['changelog']), ('rev', None)],
-    'sl': [('cmd', ['shortlog']), ('rev', None)],
-    'cs': [('cmd', ['changeset']), ('node', None)],
-    'f': [('cmd', ['file']), ('filenode', None)],
-    'fl': [('cmd', ['filelog']), ('filenode', None)],
-    'fd': [('cmd', ['filediff']), ('node', None)],
-    'fa': [('cmd', ['annotate']), ('filenode', None)],
-    'mf': [('cmd', ['manifest']), ('manifest', None)],
-    'ca': [('cmd', ['archive']), ('node', None)],
-    'tags': [('cmd', ['tags'])],
-    'tip': [('cmd', ['changeset']), ('node', ['tip'])],
-    'static': [('cmd', ['static']), ('file', None)]
-}
-
 class hgweb(object):
     def __init__(self, repo, name=None):
         if isinstance(repo, str):
@@ -103,16 +88,6 @@ class hgweb(object):
     def run_wsgi(self, req):
 
         self.refresh()
-
-        # expand form shortcuts
-
-        for k in shortcuts.iterkeys():
-            if k in req.form:
-                for name, value in shortcuts[k]:
-                    if value is None:
-                        value = req.form[k]
-                    req.form[name] = value
-                del req.form[k]
 
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
