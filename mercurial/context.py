@@ -12,16 +12,11 @@ import ancestor, bdiff, revlog, util, os, errno
 class changectx(object):
     """A changecontext object makes access to data related to a particular
     changeset convenient."""
-    def __init__(self, repo, changeid=None):
+    def __init__(self, repo, changeid=''):
         """changeid is a revision number, node, or tag"""
+        if changeid == '':
+            changeid = '.'
         self._repo = repo
-
-        if not changeid and changeid != 0:
-            p1, p2 = self._repo.dirstate.parents()
-            self._rev = self._repo.changelog.rev(p1)
-            self._node = p1
-            return
-
         self._node = self._repo.lookup(changeid)
         self._rev = self._repo.changelog.rev(self._node)
 
