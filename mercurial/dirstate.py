@@ -629,7 +629,9 @@ class dirstate(object):
             if imatch(k):
                 yield 'm', k, None
 
-    def status(self, match, list_ignored, list_clean, list_unknown):
+    def status(self, match, ignored, clean, unknown):
+        listignored, listclean, listunknown = ignored, clean, unknown
+
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
@@ -646,13 +648,12 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
-        for src, fn, st in self.statwalk(match, unknown=list_unknown,
-                                         ignored=list_ignored):
+        for src, fn, st in self.statwalk(match, listunknown, listignored):
             if fn not in dmap:
-                if (list_ignored or match.exact(fn)) and self._dirignore(fn):
-                    if list_ignored:
+                if (listignored or match.exact(fn)) and self._dirignore(fn):
+                    if listignored:
                         iadd(fn)
-                elif list_unknown:
+                elif listunknown:
                     uadd(fn)
                 continue
 
@@ -685,7 +686,7 @@ class dirstate(object):
                     madd(fn)
                 elif time != int(st.st_mtime):
                     ladd(fn)
-                elif list_clean:
+                elif listclean:
                     cadd(fn)
             elif state == 'm':
                 madd(fn)

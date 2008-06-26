@@ -972,7 +972,7 @@ class localrepository(repo.repository):
                 yield fn
 
     def status(self, node1=None, node2=None, match=None,
-               list_ignored=False, list_clean=False, list_unknown=True):
+               ignored=False, clean=False, unknown=True):
         """return status of files between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
@@ -994,6 +994,7 @@ class localrepository(repo.repository):
         if not match:
             match = match_.always(self.root, self.getcwd())
 
+        listignored, listclean, listunknown = ignored, clean, unknown
         modified, added, removed, deleted, unknown = [], [], [], [], []
         ignored, clean = [], []
 
@@ -1010,8 +1011,8 @@ class localrepository(repo.repository):
         # are we comparing the working directory?
         if not node2:
             (lookup, modified, added, removed, deleted, unknown,
-             ignored, clean) = self.dirstate.status(match, list_ignored,
-                                                    list_clean, list_unknown)
+             ignored, clean) = self.dirstate.status(match, listignored,
+                                                    listclean, listunknown)
             # are we comparing working dir against its parent?
             if compareworking:
                 if lookup:
@@ -1025,7 +1026,7 @@ class localrepository(repo.repository):
                             modified.append(f)
                         else:
                             fixup.append(f)
-                            if list_clean:
+                            if listclean:
                                 clean.append(f)
 
                     # update dirstate for files that are actually clean
@@ -1073,7 +1074,7 @@ class localrepository(repo.repository):
                         (mf1[fn] != mf2[fn] and
                          (mf2[fn] != "" or fcmp(fn, getnode)))):
                         modified.append(fn)
-                    elif list_clean:
+                    elif listclean:
                         clean.append(fn)
                     del mf1[fn]
                 else:

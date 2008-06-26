@@ -258,7 +258,7 @@ def _status(ui, repo, kwt, *pats, **opts):
     Returns status of working directory.'''
     if kwt:
         matcher = cmdutil.match(repo, pats, opts)
-        return repo.status(match=matcher, list_clean=True)
+        return repo.status(match=matcher, clean=True)
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
