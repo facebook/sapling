@@ -76,11 +76,11 @@ class dirstate(object):
         elif name == '_checkexec':
             self._checkexec = util.checkexec(self._root)
             return self._checkexec
-        elif name == '_folding':
-            self._folding = not util.checkfolding(self._join('.hg'))
-            return self._folding
+        elif name == '_checkcase':
+            self._checkcase = not util.checkcase(self._join('.hg'))
+            return self._checkcase
         elif name == 'normalize':
-            if self._folding:
+            if self._checkcase:
                 self.normalize = self._normalize
             else:
                 self.normalize = lambda x: x

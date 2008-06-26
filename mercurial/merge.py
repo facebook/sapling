@@ -460,7 +460,7 @@ def update(repo, node, branchmerge, force, partial):
         action = []
         if not force:
             _checkunknown(wc, p2)
-        if not util.checkfolding(repo.path):
+        if not util.checkcase(repo.path):
             _checkcollision(p2)
         action += _forgetremoved(wc, p2, branchmerge)
         action += manifestmerge(repo, wc, p2, pa, overwrite, partial)

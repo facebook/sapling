@@ -643,7 +643,7 @@ def debugfsinfo(ui, path = "."):
     file('.debugfsinfo', 'w').write('')
     ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
     ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
-    ui.write('case-sensitive: %s\n' % (util.checkfolding('.debugfsinfo')
+    ui.write('case-sensitive: %s\n' % (util.checkcase('.debugfsinfo')
                                 and 'yes' or 'no'))
     os.unlink('.debugfsinfo')
 

@@ -839,7 +839,7 @@ def groupname(gid=None):
 
 # File system features
 
-def checkfolding(path):
+def checkcase(path):
     """
     Check whether the given path is on a case-sensitive filesystem
 

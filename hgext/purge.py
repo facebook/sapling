@@ -118,8 +118,8 @@ def _check_fs(ui, repo):
     # notice a modified README file if the user ran "hg purge readme"
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
-        if not util.checkfolding(repo.path) and not ui.quiet:
-            ui.warn(_("Purging on name mangling filesystems is not "
+        if not util.checkcase(repo.path) and not ui.quiet:
+            ui.warn(_("Purging on case-insensitive filesystems is not "
                       "fully supported.\n"))
         raise util.Abort(_("outstanding uncommitted changes"))
 
