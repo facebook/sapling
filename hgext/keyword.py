@@ -163,11 +163,11 @@ class kwtemplater(object):
             return self.substitute(data, path, changenode, self.re_kw.sub)
         return data
 
-    def iskwfile(self, path, islink):
+    def iskwfile(self, path, flagfunc):
         '''Returns true if path matches [keyword] pattern
         and is not a symbolic link.
         Caveat: localrepository._link fails on Windows.'''
-        return self.matcher(path) and not islink(path)
+        return self.matcher(path) and not 'l' in flagfunc(path)
 
     def overwrite(self, node, expand, files):
         '''Overwrites selected files expanding/shrinking keywords.'''
@@ -178,9 +178,8 @@ class kwtemplater(object):
             notify = self.ui.debug
         else:                    # kwexpand/kwshrink
             ctx = self.repo['.']
-            mf = ctx.manifest()
             notify = self.ui.note
-        candidates = [f for f in files if self.iskwfile(f, mf.linkf)]
+        candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True # do not expand when reading
             candidates.sort()
@@ -387,8 +386,7 @@ def files(ui, repo, *pats, **opts):
         files += unknown
     files.sort()
     wctx = repo[None]
-    islink = lambda p: 'l' in wctx.flags(p)
-    kwfiles = [f for f in files if kwt.iskwfile(f, islink)]
+    kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
     cwd = pats and repo.getcwd() or ''
     kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()
     if opts.get('all') or opts.get('ignore'):

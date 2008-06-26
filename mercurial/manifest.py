@@ -18,12 +18,6 @@ class manifestdict(dict):
         self._flags = flags
     def flags(self, f):
         return self._flags.get(f, "")
-    def execf(self, f):
-        "test for executable in manifest flags"
-        return "x" in self.flags(f)
-    def linkf(self, f):
-        "test for symlink in manifest flags"
-        return "l" in self.flags(f)
     def set(self, f, flags):
         self._flags[f] = flags
     def copy(self):

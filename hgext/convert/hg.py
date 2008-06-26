@@ -229,8 +229,7 @@ class mercurial_source(converter_source):
             raise IOError(err)
 
     def getmode(self, name, rev):
-        m = self.changectx(rev).manifest()
-        return (m.execf(name) and 'x' or '') + (m.linkf(name) and 'l' or '')
+        return self.changectx(rev).manifest().flags(name)
 
     def getchanges(self, rev):
         ctx = self.changectx(rev)

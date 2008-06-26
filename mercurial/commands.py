@@ -1866,17 +1866,13 @@ def manifest(ui, repo, node=None, rev=None):
     if not node:
         node = rev
 
-    m = repo[node].manifest()
-    files = m.keys()
-    files.sort()
-
-    for f in files:
+    decor = {'l':'644 @ ', 'x':'755 * ', '':'644   '}
+    ctx = repo[node]
+    for f in ctx:
         if ui.debugflag:
-            ui.write("%40s " % hex(m[f]))
+            ui.write("%40s " % hex(ctx.manifest()[f]))
         if ui.verbose:
-            type = m.execf(f) and "*" or m.linkf(f) and "@" or " "
-            perm = m.execf(f) and "755" or "644"
-            ui.write("%3s %1s " % (perm, type))
+            ui.write(decor[ctx.flags(f)])
         ui.write("%s\n" % f)
 
 def merge(ui, repo, node=None, force=None, rev=None):

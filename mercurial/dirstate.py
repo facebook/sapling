@@ -384,7 +384,7 @@ class dirstate(object):
     def rebuild(self, parent, files):
         self.clear()
         for f in files:
-            if files.execf(f):
+            if 'x' in files.flag(f):
                 self._map[f] = ('n', 0777, -1, 0, 0)
             else:
                 self._map[f] = ('n', 0666, -1, 0, 0)
