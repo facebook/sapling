@@ -238,8 +238,6 @@ class filectx(object):
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
     def flags(self): return self._changectx.flags(self._path)
-    def isexec(self): return 'x' in self.flags()
-    def islink(self): return 'l' in self.flags()
     def filelog(self): return self._filelog
 
     def rev(self):
