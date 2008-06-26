@@ -175,7 +175,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
 # you can specify a commit to stop at by starting the sha1 with ^
 def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
     def chlogwalk():
-        count = repo.changelog.count()
+        count = len(repo)
         i = count
         l = [0] * 100
         chunk = 100

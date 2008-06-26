@@ -110,7 +110,7 @@ def _search(web, tmpl, query):
         qw = query.lower().split()
 
         def revgen():
-            for i in xrange(cl.count() - 1, 0, -100):
+            for i in xrange(len(cl) - 1, 0, -100):
                 l = []
                 for j in xrange(max(0, i - 100), i + 1):
                     ctx = web.repo[j]
@@ -168,7 +168,7 @@ def changelog(web, req, tmpl, shortlog = False):
         if 'rev' in req.form:
             hi = req.form['rev'][0]
         else:
-            hi = web.repo.changelog.count() - 1
+            hi = len(web.repo) - 1
         try:
             ctx = web.repo[hi]
         except RepoError:
@@ -205,7 +205,7 @@ def changelog(web, req, tmpl, shortlog = False):
 
     maxchanges = shortlog and web.maxshortchanges or web.maxchanges
     cl = web.repo.changelog
-    count = cl.count()
+    count = len(cl)
     pos = ctx.rev()
     start = max(0, pos - maxchanges + 1)
     end = min(count, start + maxchanges)
@@ -409,7 +409,7 @@ def summary(web, req, tmpl):
         yield l
 
     cl = web.repo.changelog
-    count = cl.count()
+    count = len(cl)
     start = max(0, count - web.maxchanges)
     end = min(count, start + web.maxchanges)
 
@@ -498,7 +498,7 @@ def filelog(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
     fl = fctx.filelog()
-    count = fl.count()
+    count = len(fl)
     pagelen = web.maxshortchanges
     pos = fctx.filerev()
     start = max(0, pos - pagelen + 1)
@@ -579,7 +579,7 @@ def graph(web, req, tmpl):
     rev = webutil.changectx(web.repo, req).rev()
     bg_height = 39
 
-    max_rev = web.repo.changelog.count() - 1
+    max_rev = len(web.repo) - 1
     revcount = min(max_rev, int(req.form.get('revcount', [25])[0]))
     revnode = web.repo.changelog.node(rev)
     revnode_hex = hex(revnode)
@@ -588,7 +588,7 @@ def graph(web, req, tmpl):
     lessrev = max(0, rev - revcount / 2)
 
     maxchanges = web.maxshortchanges or web.maxchanges
-    count = web.repo.changelog.count()
+    count = len(web.repo)
     changenav = webutil.revnavgen(rev, maxchanges, count, web.repo.changectx)
 
     tree = list(graphmod.graph(web.repo, rev, rev - revcount))

@@ -118,7 +118,5 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         ui.debug(_('acl: changes have source "%s" - skipping\n') % source)
         return
 
-    start = repo.changelog.rev(bin(node))
-    end = repo.changelog.count()
-    for rev in xrange(start, end):
+    for rev in xrange(repo[node].rev(), len(repo)):
         c.check(repo.changelog.node(rev))

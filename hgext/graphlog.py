@@ -89,7 +89,7 @@ def filelog_grapher(repo, path, start_rev, stop_rev):
     assert start_rev >= stop_rev
     curr_rev = start_rev
     revs = []
-    filerev = repo.file(path).count() - 1
+    filerev = len(repo.file(path)) - 1
     while filerev >= 0:
         fctx = repo.filectx(path, fileid=filerev)
 
@@ -198,7 +198,7 @@ def get_revs(repo, rev_opt):
         revs = revrange(repo, rev_opt)
         return (max(revs), min(revs))
     else:
-        return (repo.changelog.count() - 1, 0)
+        return (len(repo) - 1, 0)
 
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph

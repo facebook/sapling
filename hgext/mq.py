@@ -2319,7 +2319,7 @@ def reposetup(ui, repo):
             # we might as well use it, but we won't save it.
 
             # update the cache up to the tip
-            self._updatebranchcache(partial, start, cl.count())
+            self._updatebranchcache(partial, start, len(cl))
 
             return partial
 

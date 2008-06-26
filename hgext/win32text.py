@@ -98,7 +98,7 @@ _filters = {
 
 def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     halt = False
-    for rev in xrange(repo.changelog.rev(bin(node)), repo.changelog.count()):
+    for rev in xrange(repo[node].rev(), len(repo)):
         c = repo[rev]
         for f in c.files():
             if f not in c:

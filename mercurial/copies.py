@@ -67,7 +67,7 @@ def _findlimit(repo, a, b):
     #   - quit when interesting revs is zero
 
     cl = repo.changelog
-    working = cl.count() # pseudo rev for the working directory
+    working = len(cl) # pseudo rev for the working directory
     if a is None:
         a = working
     if b is None:

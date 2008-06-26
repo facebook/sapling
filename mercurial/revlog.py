@@ -515,9 +515,11 @@ class revlog(object):
 
     def tip(self):
         return self.node(len(self.index) - 2)
-    def count(self):
+    def __len__(self):
         return len(self.index) - 1
-
+    def __iter__(self):
+        for i in xrange(len(self)):
+            yield i
     def rev(self, node):
         try:
             return self.nodemap[node]
@@ -620,12 +622,11 @@ class revlog(object):
             lowestrev = nullrev
         if (lowestrev == nullrev) and (heads is None):
             # We want _all_ the nodes!
-            return ([self.node(r) for r in xrange(0, self.count())],
-                    [nullid], list(self.heads()))
+            return ([self.node(r) for r in self], [nullid], list(self.heads()))
         if heads is None:
             # All nodes are ancestors, so the latest ancestor is the last
             # node.
-            highestrev = self.count() - 1
+            highestrev = len(self) - 1
             # Set ancestors to None to signal that every node is an ancestor.
             ancestors = None
             # Set heads to an empty dictionary for later discovery of heads
@@ -754,15 +755,15 @@ class revlog(object):
         as if they had no children
         """
         if start is None and stop is None:
-            count = self.count()
+            count = len(self)
             if not count:
                 return [nullid]
             ishead = [1] * (count + 1)
             index = self.index
-            for r in xrange(count):
+            for r in self:
                 e = index[r]
                 ishead[e[5]] = ishead[e[6]] = 0
-            return [self.node(r) for r in xrange(count) if ishead[r]]
+            return [self.node(r) for r in self if ishead[r]]
 
         if start is None:
             start = nullid
@@ -774,7 +775,7 @@ class revlog(object):
         heads = {startrev: 1}
 
         parentrevs = self.parentrevs
-        for r in xrange(startrev + 1, self.count()):
+        for r in xrange(startrev + 1, len(self)):
             for p in parentrevs(r):
                 if p in reachable:
                     if r not in stoprevs:
@@ -789,7 +790,7 @@ class revlog(object):
         """find the children of a given node"""
         c = []
         p = self.rev(node)
-        for r in range(p + 1, self.count()):
+        for r in range(p + 1, len(self)):
             prevs = [pr for pr in self.parentrevs(r) if pr != nullrev]
             if prevs:
                 for pr in prevs:
@@ -818,8 +819,8 @@ class revlog(object):
             if str(rev) != id:
                 raise ValueError
             if rev < 0:
-                rev = self.count() + rev
-            if rev < 0 or rev >= self.count():
+                rev = len(self) + rev
+            if rev < 0 or rev >= len(self):
                 raise ValueError
             return self.node(rev)
         except (ValueError, OverflowError):
@@ -982,7 +983,7 @@ class revlog(object):
         df = self.opener(self.datafile, 'w')
         try:
             calc = self._io.size
-            for r in xrange(self.count()):
+            for r in self:
                 start = self.start(r) + (r + 1) * calc
                 length = self.length(r)
                 fp.seek(start)
@@ -995,7 +996,7 @@ class revlog(object):
         fp = self.opener(self.indexfile, 'w', atomictemp=True)
         self.version &= ~(REVLOGNGINLINEDATA)
         self._inline = False
-        for i in xrange(self.count()):
+        for i in self:
             e = self._io.packentry(self.index[i], self.node, self.version, i)
             fp.write(e)
 
@@ -1031,7 +1032,7 @@ class revlog(object):
         if node in self.nodemap:
             return node
 
-        curr = self.count()
+        curr = len(self)
         prev = curr - 1
         base = self.base(prev)
         offset = self.end(prev)
@@ -1146,7 +1147,7 @@ class revlog(object):
         """
 
         #track the base of the current delta log
-        r = self.count()
+        r = len(self)
         t = r - 1
         node = None
 
@@ -1265,13 +1266,13 @@ class revlog(object):
         trust that the caller has saved the revisions that shouldn't be
         removed and that it'll readd them after this truncation.
         """
-        if self.count() == 0:
+        if len(self) == 0:
             return
 
         if isinstance(self.index, lazyindex):
             self._loadindexmap()
 
-        for rev in xrange(0, self.count()):
+        for rev in self:
             if self.index[rev][4] >= minlink:
                 break
         else:
@@ -1292,15 +1293,15 @@ class revlog(object):
         # then reset internal state in memory to forget those revisions
         self._cache = None
         self._chunkcache = None
-        for x in xrange(rev, self.count()):
+        for x in xrange(rev, len(self)):
             del self.nodemap[self.node(x)]
 
         del self.index[rev:-1]
 
     def checksize(self):
         expected = 0
-        if self.count():
-            expected = max(0, self.end(self.count() - 1))
+        if len(self):
+            expected = max(0, self.end(len(self) - 1))
 
         try:
             f = self.opener(self.datafile)
@@ -1321,10 +1322,10 @@ class revlog(object):
             di = actual - (i * s)
             if self._inline:
                 databytes = 0
-                for r in xrange(self.count()):
+                for r in self:
                     databytes += max(0, self.length(r))
                 dd = 0
-                di = actual - self.count() * s - databytes
+                di = actual - len(self) * s - databytes
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise

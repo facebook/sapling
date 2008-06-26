@@ -91,7 +91,7 @@ def gather_stats(ui, repo, amap, revs=None, progress=False):
     cl    = repo.changelog
 
     if not revs:
-        revs = range(0, cl.count())
+        revs = range(len(cl))
 
     nr_revs = len(revs)
     cur_rev = 0

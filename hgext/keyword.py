@@ -178,6 +178,7 @@ class kwtemplater(object):
             notify = self.ui.debug
         else:                    # kwexpand/kwshrink
             ctx = self.repo['.']
+            mf = ctx.manifest()
             notify = self.ui.note
         candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
         if candidates:

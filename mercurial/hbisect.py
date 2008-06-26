@@ -20,12 +20,12 @@ def bisect(changelog, state):
         badrev = min([changelog.rev(n) for n in bad])
         goodrevs = [changelog.rev(n) for n in good]
         # build ancestors array
-        ancestors = [[]] * (changelog.count() + 1) # an extra for [-1]
+        ancestors = [[]] * (len(changelog) + 1) # an extra for [-1]
 
         # clear good revs from array
         for node in goodrevs:
             ancestors[node] = None
-        for rev in xrange(changelog.count(), -1, -1):
+        for rev in xrange(len(changelog), -1, -1):
             if ancestors[rev] is None:
                 for prev in clparents(rev):
                     ancestors[prev] = None

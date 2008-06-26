@@ -82,7 +82,7 @@ class changelog(revlog):
         "delay visibility of index updates to other readers"
         self._realopener = self.opener
         self.opener = self._delayopener
-        self._delaycount = self.count()
+        self._delaycount = len(self)
         self._delaybuf = []
         self._delayname = None
 
@@ -108,7 +108,7 @@ class changelog(revlog):
         # if we're doing an initial clone, divert to another file
         if self._delaycount == 0:
             self._delayname = fp.name
-            if not self.count():
+            if not len(self):
                 # make sure to truncate the file
                 mode = mode.replace('a', 'w')
             return self._realopener(name + ".a", mode)
@@ -192,4 +192,4 @@ class changelog(revlog):
         list.sort()
         l = [hex(manifest), user, parseddate] + list + ["", desc]
         text = "\n".join(l)
-        return self.addrevision(text, transaction, self.count(), p1, p2)
+        return self.addrevision(text, transaction, len(self), p1, p2)

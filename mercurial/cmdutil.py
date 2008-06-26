@@ -126,7 +126,7 @@ def revpair(repo, revs):
         if revrangesep in revs[0]:
             start, end = revs[0].split(revrangesep, 1)
             start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
+            end = revfix(repo, end, len(repo) - 1)
         else:
             start = revfix(repo, revs[0], None)
     elif len(revs) == 2:
@@ -151,7 +151,7 @@ def revrange(repo, revs):
         if revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
             start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
+            end = revfix(repo, end, len(repo) - 1)
             step = start > end and -1 or 1
             for rev in xrange(start, end+step, step):
                 if rev in seen:
@@ -988,7 +988,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
     m = match(repo, pats, opts)
     follow = opts.get('follow') or opts.get('follow_first')
 
-    if repo.changelog.count() == 0:
+    if not len(repo):
         return [], m
 
     if follow:
@@ -1007,9 +1007,9 @@ def walkchangerevs(ui, repo, pats, change, opts):
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog, node):
-            cl_count = repo.changelog.count()
+            cl_count = len(repo)
             if node is None:
-                last = filelog.count() - 1
+                last = len(filelog) - 1
             else:
                 last = filelog.rev(node)
             for i, window in increasing_windows(last, nullrev):
@@ -1032,7 +1032,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         minrev, maxrev = min(revs), max(revs)
         for file_, node in iterfiles():
             filelog = repo.file(file_)
-            if filelog.count() == 0:
+            if not len(filelog):
                 if node is None:
                     # A zero count may be a directory or deleted file, so
                     # try to find matching entries on the slow path.
@@ -1058,8 +1058,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
 
         # The slow path checks files modified in every changeset.
         def changerevgen():
-            for i, window in increasing_windows(repo.changelog.count()-1,
-                                                nullrev):
+            for i, window in increasing_windows(len(repo) - 1, nullrev):
                 for j in xrange(i - window, i + 1):
                     yield j, change(j)[3]
 

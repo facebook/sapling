@@ -773,7 +773,7 @@ def debugindex(ui, file_):
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
     ui.write("   rev    offset  length   base linkrev" +
              " nodeid       p1           p2\n")
-    for i in xrange(r.count()):
+    for i in r:
         node = r.node(i)
         try:
             pp = r.parents(node)
@@ -787,7 +787,7 @@ def debugindexdot(ui, file_):
     """dump an index DAG as a .dot file"""
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
     ui.write("digraph G {\n")
-    for i in xrange(r.count()):
+    for i in r:
         node = r.node(i)
         pp = r.parents(node)
         ui.write("\t%d -> %d\n" % (r.rev(pp[0]), i))
@@ -1762,7 +1762,7 @@ def log(ui, repo, *pats, **opts):
     if opts['copies'] and opts['rev']:
         endrev = max(cmdutil.revrange(repo, opts['rev'])) + 1
     else:
-        endrev = repo.changelog.count()
+        endrev = len(repo)
     rcache = {}
     ncache = {}
     def getrenamed(fn, rev):
@@ -1774,7 +1774,7 @@ def log(ui, repo, *pats, **opts):
             rcache[fn] = {}
             ncache[fn] = {}
             fl = repo.file(fn)
-            for i in xrange(fl.count()):
+            for i in fl:
                 node = fl.node(i)
                 lr = fl.linkrev(node)
                 renamed = fl.renamed(node)
@@ -2794,7 +2794,7 @@ def tip(ui, repo, **opts):
     that repository becomes the current tip. The "tip" tag is special
     and cannot be renamed or assigned to a different changeset.
     """
-    cmdutil.show_changeset(ui, repo, opts).show(nullrev+repo.changelog.count())
+    cmdutil.show_changeset(ui, repo, opts).show(len(repo) - 1)
 
 def unbundle(ui, repo, fname1, *fnames, **opts):
     """apply one or more changegroup files

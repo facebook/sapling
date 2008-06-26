@@ -65,13 +65,13 @@ def _verify(repo):
     havecl = havemf = 1
     seen = {}
     repo.ui.status(_("checking changesets\n"))
-    if repo.changelog.count() == 0 and repo.manifest.count() > 1:
+    if not len(repo) and len(repo.manifest):
         havecl = 0
         err(0, _("empty or missing 00changelog.i"))
     else:
         checksize(repo.changelog, "changelog")
 
-    for i in xrange(repo.changelog.count()):
+    for i in repo:
         changesets += 1
         n = repo.changelog.node(i)
         l = repo.changelog.linkrev(n)
@@ -101,18 +101,18 @@ def _verify(repo):
 
     seen = {}
     repo.ui.status(_("checking manifests\n"))
-    if repo.changelog.count() > 0 and repo.manifest.count() == 0:
+    if len(repo) and not len(repo.manifest):
         havemf = 0
         err(0, _("empty or missing 00manifest.i"))
     else:
         checkversion(repo.manifest, "manifest")
         checksize(repo.manifest, "manifest")
 
-    for i in xrange(repo.manifest.count()):
+    for i in repo.manifest:
         n = repo.manifest.node(i)
         l = repo.manifest.linkrev(n)
 
-        if l < 0 or (havecl and l >= repo.changelog.count()):
+        if l < 0 or (havecl and l >= len(repo)):
             err(None, _("bad link (%d) at manifest revision %d") % (l, i))
 
         if n in neededmanifests:
@@ -182,19 +182,19 @@ def _verify(repo):
         checkversion(fl, f)
         checksize(fl, f)
 
-        if fl.count() == 0:
+        if not len(fl):
             err(filelinkrevs[f][0], _("empty or missing revlog"), f)
             continue
 
         seen = {}
         nodes = {nullid: 1}
-        for i in xrange(fl.count()):
+        for i in fl:
             revisions += 1
             n = fl.node(i)
             flr = fl.linkrev(n)
 
             if flr < 0 or (havecl and flr not in filelinkrevs.get(f, [])):
-                if flr < 0 or flr >= repo.changelog.count():
+                if flr < 0 or flr >= len(repo):
                     err(None, _("rev %d point to nonexistent changeset %d")
                         % (i, flr), f)
                 else:
@@ -245,7 +245,7 @@ def _verify(repo):
                 rp = fl.renamed(n)
                 if rp:
                     fl2 = repo.file(rp[0])
-                    if fl2.count() == 0:
+                    if not len(fl2):
                         err(flr, _("empty or missing copy source revlog %s:%s")
                             % (rp[0], short(rp[1])), f)
                     elif rp[1] == nullid:

@@ -112,12 +112,11 @@ def cleanpath(repo, path):
     return util.canonpath(repo.root, '', path)
 
 def changectx(repo, req):
+    changeid = "tip"
     if 'node' in req.form:
         changeid = req.form['node'][0]
     elif 'manifest' in req.form:
         changeid = req.form['manifest'][0]
-    else:
-        changeid = repo.changelog.count() - 1
 
     try:
         ctx = repo[changeid]

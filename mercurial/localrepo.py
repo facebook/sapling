@@ -122,6 +122,16 @@ class localrepository(repo.repository):
             return context.workingctx(self)
         return context.changectx(self, changeid)
 
+    def __nonzero__(self):
+        return True
+
+    def __len__(self):
+        return len(self.changelog)
+
+    def __iter__(self):
+        for i in xrange(len(self)):
+            yield i
+
     def url(self):
         return 'file:' + self.root
 
@@ -368,7 +378,7 @@ class localrepository(repo.repository):
         return self.nodetagscache.get(node, [])
 
     def _branchtags(self, partial, lrev):
-        tiprev = self.changelog.count() - 1
+        tiprev = len(self) - 1
         if lrev != tiprev:
             self._updatebranchcache(partial, lrev+1, tiprev+1)
             self._writebranchcache(partial, self.changelog.tip(), tiprev)
@@ -413,8 +423,7 @@ class localrepository(repo.repository):
         try:
             last, lrev = lines.pop(0).split(" ", 1)
             last, lrev = bin(last), int(lrev)
-            if not (lrev < self.changelog.count() and
-                    self.changelog.node(lrev) == last): # sanity check
+            if lrev >= len(self) or self[lrev].node() != last:
                 # invalidate the cache
                 raise ValueError('invalidating branch cache (tip differs)')
             for l in lines:
@@ -834,7 +843,7 @@ class localrepository(repo.repository):
             # check in files
             new = {}
             changed = []
-            linkrev = self.changelog.count()
+            linkrev = len(self)
             commit.sort()
             for f in commit:
                 self.ui.note(f + "\n")
@@ -1638,7 +1647,7 @@ class localrepository(repo.repository):
         # Nor do we know which filenodes are missing.
         msng_filenode_set = {}
 
-        junk = mnfst.index[mnfst.count() - 1] # Get around a bug in lazyindex
+        junk = mnfst.index[len(mnfst) - 1] # Get around a bug in lazyindex
         junk = None
 
         # A changeset always belongs to itself, so the changenode lookup
@@ -1838,7 +1847,7 @@ class localrepository(repo.repository):
             # Go through all our files in order sorted by name.
             for fname in changedfiles:
                 filerevlog = self.file(fname)
-                if filerevlog.count() == 0:
+                if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
@@ -1889,10 +1898,10 @@ class localrepository(repo.repository):
         def identity(x):
             return x
 
-        def gennodelst(revlog):
-            for r in xrange(0, revlog.count()):
-                n = revlog.node(r)
-                if revlog.linkrev(n) in revset:
+        def gennodelst(log):
+            for r in log:
+                n = log.node(r)
+                if log.linkrev(n) in revset:
                     yield n
 
         def changed_file_collector(changedfileset):
@@ -1924,7 +1933,7 @@ class localrepository(repo.repository):
 
             for fname in changedfiles:
                 filerevlog = self.file(fname)
-                if filerevlog.count() == 0:
+                if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 nodeiter = gennodelst(filerevlog)
                 nodeiter = list(nodeiter)
@@ -1953,7 +1962,7 @@ class localrepository(repo.repository):
         """
         def csmap(x):
             self.ui.debug(_("add changeset %s\n") % short(x))
-            return cl.count()
+            return len(cl)
 
         def revmap(x):
             return cl.rev(x)
@@ -1976,11 +1985,11 @@ class localrepository(repo.repository):
             trp = weakref.proxy(tr)
             # pull off the changeset group
             self.ui.status(_("adding changesets\n"))
-            cor = cl.count() - 1
+            cor = len(cl) - 1
             chunkiter = changegroup.chunkiter(source)
             if cl.addgroup(chunkiter, csmap, trp) is None and not emptyok:
                 raise util.Abort(_("received changelog group is empty"))
-            cnr = cl.count() - 1
+            cnr = len(cl) - 1
             changesets = cnr - cor
 
             # pull off the manifest group
@@ -2000,11 +2009,11 @@ class localrepository(repo.repository):
                     break
                 self.ui.debug(_("adding %s revisions\n") % f)
                 fl = self.file(f)
-                o = fl.count()
+                o = len(fl)
                 chunkiter = changegroup.chunkiter(source)
                 if fl.addgroup(chunkiter, revmap, trp) is None:
                     raise util.Abort(_("received file revlog group is empty"))
-                revisions += fl.count() - o
+                revisions += len(fl) - o
                 files += 1
 
             # make changelog see real files again
