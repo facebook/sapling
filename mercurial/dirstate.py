@@ -91,9 +91,6 @@ class dirstate(object):
     def _join(self, f):
         return os.path.join(self._root, f)
 
-    def folding(self):
-        return self._folding
-
     def flagfunc(self, fallback):
         if self._checklink:
             if self._checkexec:
