@@ -56,7 +56,6 @@ def purge(ui, repo, *dirs, **opts):
     files that this program would delete use the --print option.
     '''
     act = not opts['print']
-    ignored = bool(opts['all'])
     abort_on_err = bool(opts['abort_on_err'])
     eol = opts['print0'] and '\0' or '\n'
     if eol == '\0':
@@ -86,16 +85,14 @@ def purge(ui, repo, *dirs, **opts):
     files = []
     match = cmdutil.match(repo, dirs, opts)
     match.dir = directories.append
-    for src, f, st in repo.dirstate.statwalk(match, ignored=ignored):
-        if src == 'f' and f not in repo.dirstate:
-            files.append(f)
-
+    status = repo.status(match=match, ignored=opts['all'], unknown=True)
+    files = status[4] + status[5]
+    files.sort()
     directories.sort()
 
     for f in files:
-        if f not in repo.dirstate:
-            ui.note(_('Removing file %s\n') % f)
-            remove(os.remove, f)
+        ui.note(_('Removing file %s\n') % f)
+        remove(os.remove, f)
 
     for f in directories[::-1]:
         if match(f) and not os.listdir(repo.wjoin(f)):
