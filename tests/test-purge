@@ -83,23 +83,15 @@ touch untracked_file
 rm r1
 # hide error messages to avoid changing the output when the text changes
 hg purge -p 2> /dev/null
-if [ $? -ne 0 ]; then
-    echo "refused to run"
-fi
-if [ -f untracked_file ]; then
-    echo "untracked_file still around"
-fi
-hg purge -p --force
+hg st
+
+hg purge -p
 hg purge -v 2> /dev/null
-if [ $? -ne 0 ]; then
-    echo "refused to run"
-fi
-if [ -f untracked_file ]; then
-    echo "untracked_file still around"
-fi
-hg purge -v --force
+hg st
+
+hg purge -v
 hg revert --all --quiet
-ls
+hg st -a
 
 echo '% tracked file in ignored directory (issue621)'
 echo directory >> .hgignore
