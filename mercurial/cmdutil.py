@@ -245,7 +245,7 @@ def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
     if added is None or removed is None:
         added, removed = repo.status()[1:3]
-    ctx = repo.changectx('.')
+    ctx = repo['.']
     for a in added:
         aa = repo.wread(a)
         bestname, bestscore = None, threshold
@@ -930,7 +930,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
     df = util.matchdate(date)
-    get = util.cachefunc(lambda r: repo.changectx(r).changeset())
+    get = util.cachefunc(lambda r: repo[r].changeset())
     changeiter, matchfn = walkchangerevs(ui, repo, [], get, {'rev':None})
     results = {}
     for st, rev, fns in changeiter:
@@ -992,7 +992,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         return [], m
 
     if follow:
-        defrange = '%s:0' % repo.changectx('.').rev()
+        defrange = '%s:0' % repo['.'].rev()
     else:
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])

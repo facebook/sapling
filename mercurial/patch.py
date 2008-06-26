@@ -1180,7 +1180,7 @@ def diff(repo, node1=None, node2=None, match=None,
 
     # reading the data for node1 early allows it to play nicely
     # with repo.status and the revlog cache.
-    ctx1 = repo.changectx(node1)
+    ctx1 = repo[node1]
     # force manifest reading
     man1 = ctx1.manifest()
     date1 = util.datestr(ctx1.date())
@@ -1192,7 +1192,7 @@ def diff(repo, node1=None, node2=None, match=None,
     if not modified and not added and not removed:
         return
 
-    ctx2 = repo.changectx(node2)
+    ctx2 = repo[node2]
 
     if repo.ui.quiet:
         r = None
@@ -1201,7 +1201,7 @@ def diff(repo, node1=None, node2=None, match=None,
         r = [hexfunc(node) for node in [node1, node2] if node]
 
     if opts.git:
-        copy, diverge = copies.copies(repo, ctx1, ctx2, repo.changectx(nullid))
+        copy, diverge = copies.copies(repo, ctx1, ctx2, repo[nullid])
         for k, v in copy.items():
             copy[v] = k
 
@@ -1280,7 +1280,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
     revwidth = max([len(str(rev)) for rev in revs])
 
     def single(rev, seqno, fp):
-        ctx = repo.changectx(rev)
+        ctx = repo[rev]
         node = ctx.node()
         parents = [p.node() for p in ctx.parents() if p]
         branch = ctx.branch()

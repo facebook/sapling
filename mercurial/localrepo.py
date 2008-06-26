@@ -117,6 +117,11 @@ class localrepository(repo.repository):
         else:
             raise AttributeError, name
 
+    def __getitem__(self, changeid):
+        if changeid == None:
+            return context.workingctx(self)
+        return context.changectx(self, changeid)
+
     def url(self):
         return 'file:' + self.root
 
@@ -330,7 +335,7 @@ class localrepository(repo.repository):
         last = {}
         ret = []
         for node in heads:
-            c = self.changectx(node)
+            c = self[node]
             rev = c.rev()
             try:
                 fnode = c.filenode('.hgtags')
@@ -436,7 +441,7 @@ class localrepository(repo.repository):
 
     def _updatebranchcache(self, partial, start, end):
         for r in xrange(start, end):
-            c = self.changectx(r)
+            c = self[r]
             b = c.branch()
             partial[b] = c.node()
 
@@ -484,13 +489,11 @@ class localrepository(repo.repository):
         return filelog.filelog(self.sopener, f)
 
     def changectx(self, changeid):
-        if changeid == None:
-            return context.workingctx(self)
-        return context.changectx(self, changeid)
+        return self[changeid]
 
     def parents(self, changeid=None):
         '''get list of changectxs for parents of changeid'''
-        return self.changectx(changeid).parents()
+        return self[changeid].parents()
 
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision, node, or tag.
@@ -1005,7 +1008,7 @@ class localrepository(repo.repository):
                 if lookup:
                     fixup = []
                     # do a full compare of any files that might have changed
-                    ctx = self.changectx('')
+                    ctx = self['.']
                     ff = self.dirstate.flagfunc(ctx.flags)
                     for f in lookup:
                         if (f not in ctx or ff(f) != ctx.flags(f)
@@ -1181,7 +1184,8 @@ class localrepository(repo.repository):
         return [n for (r, n) in heads]
 
     def branchheads(self, branch=None, start=None):
-        branch = branch is None and self.changectx(None).branch() or branch
+        if branch is None:
+            branch = self[None].branch()
         branches = self.branchtags()
         if branch not in branches:
             return []
@@ -1219,7 +1223,7 @@ class localrepository(repo.repository):
             if rev in ancestors:
                 ancestors.update(self.changelog.parentrevs(rev))
                 ancestors.remove(rev)
-            elif self.changectx(rev).branch() == branch:
+            elif self[rev].branch() == branch:
                 heads.append(rev)
                 ancestors.update(self.changelog.parentrevs(rev))
         heads = [self.changelog.node(rev) for rev in heads]

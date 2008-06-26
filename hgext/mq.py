@@ -342,7 +342,7 @@ class queue:
         hg.clean(repo, head)
         self.strip(repo, n, update=False, backup='strip')
 
-        ctx = repo.changectx(rev)
+        ctx = repo[rev]
         ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)

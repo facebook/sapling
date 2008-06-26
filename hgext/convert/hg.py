@@ -157,7 +157,7 @@ class mercurial_sink(converter_sink):
 
     def puttags(self, tags):
          try:
-             parentctx = self.repo.changectx(self.tagsbranch)
+             parentctx = self.repo[self.tagsbranch]
              tagparent = parentctx.node()
          except RepoError, inst:
              parentctx = None
@@ -212,19 +212,19 @@ class mercurial_source(converter_source):
 
     def changectx(self, rev):
         if self.lastrev != rev:
-            self.lastctx = self.repo.changectx(rev)
+            self.lastctx = self.repo[rev]
             self.lastrev = rev
         return self.lastctx
 
     def getheads(self):
         if self.rev:
-            return [hex(self.repo.changectx(self.rev).node())]
+            return [hex(self.repo[self.rev].node())]
         else:
             return [hex(node) for node in self.repo.heads()]
 
     def getfile(self, name, rev):
         try:
-            return self.changectx(rev).filectx(name).data()
+            return self.changectx(rev)[name].data()
         except revlog.LookupError, err:
             raise IOError(err)
 

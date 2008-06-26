@@ -91,7 +91,7 @@ class checker(object):
 
     def check(self, node):
         '''return if access allowed, raise exception if not.'''
-        files = self.repo.changectx(node).files()
+        files = self.repo[node].files()
         if self.deniable:
             for f in files:
                 if self.deny(f):

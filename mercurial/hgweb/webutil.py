@@ -120,11 +120,10 @@ def changectx(repo, req):
         changeid = repo.changelog.count() - 1
 
     try:
-        ctx = repo.changectx(changeid)
+        ctx = repo[changeid]
     except RepoError:
         man = repo.manifest
-        mn = man.lookup(changeid)
-        ctx = repo.changectx(man.linkrev(mn))
+        ctx = repo[man.linkrev(man.lookup(changeid))]
 
     return ctx
 
@@ -135,8 +134,7 @@ def filectx(repo, req):
     else:
         changeid = req.form['filenode'][0]
     try:
-        ctx = repo.changectx(changeid)
-        fctx = ctx.filectx(path)
+        fctx = repo[changeid][path]
     except RepoError:
         fctx = repo.filectx(path, fileid=changeid)
 

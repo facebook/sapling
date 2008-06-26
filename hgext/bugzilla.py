@@ -300,7 +300,7 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
                          hooktype)
     try:
         bz = bugzilla(ui, repo)
-        ctx = repo.changectx(node)
+        ctx = repo[node]
         ids = bz.find_bug_ids(ctx)
         if ids:
             for id in ids:

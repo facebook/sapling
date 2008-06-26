@@ -24,7 +24,7 @@ def _collectfiles(repo, striprev):
     files = {}
 
     for x in xrange(striprev, repo.changelog.count()):
-        for name in repo.changectx(x).files():
+        for name in repo[x].files():
             if name in files:
                 continue
             files[name] = 1

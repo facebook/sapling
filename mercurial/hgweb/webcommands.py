@@ -113,7 +113,7 @@ def _search(web, tmpl, query):
             for i in xrange(cl.count() - 1, 0, -100):
                 l = []
                 for j in xrange(max(0, i - 100), i + 1):
-                    ctx = web.repo.changectx(j)
+                    ctx = web.repo[j]
                     l.append(ctx)
                 l.reverse()
                 for e in l:
@@ -170,7 +170,7 @@ def changelog(web, req, tmpl, shortlog = False):
         else:
             hi = web.repo.changelog.count() - 1
         try:
-            ctx = web.repo.changectx(hi)
+            ctx = web.repo[hi]
         except RepoError:
             return _search(web, tmpl, hi) # XXX redirect to 404 page?
 
@@ -178,7 +178,7 @@ def changelog(web, req, tmpl, shortlog = False):
         cl = web.repo.changelog
         l = [] # build a list in forward order for efficiency
         for i in xrange(start, end):
-            ctx = web.repo.changectx(i)
+            ctx = web.repo[i]
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
 
@@ -299,7 +299,7 @@ def manifest(web, req, tmpl):
             yield {"file": full,
                    "parity": parity.next(),
                    "basename": f,
-                   "date": fctx.changectx().date(),
+                   "date": fctx.date(),
                    "size": fctx.size(),
                    "permissions": mf.flags(full)}
 
@@ -343,7 +343,7 @@ def tags(web, req, tmpl):
             count = count + 1
             yield {"parity": parity.next(),
                    "tag": k,
-                   "date": web.repo.changectx(n).date(),
+                   "date": web.repo[n].date(),
                    "node": hex(n)}
 
     return tmpl("tags",
@@ -371,7 +371,7 @@ def summary(web, req, tmpl):
                        parity=parity.next(),
                        tag=k,
                        node=hex(n),
-                       date=web.repo.changectx(n).date())
+                       date=web.repo[n].date())
 
     def branches(**map):
         parity = paritygen(web.stripecount)
@@ -381,17 +381,16 @@ def summary(web, req, tmpl):
         l.sort()
 
         for r,n,t in l:
-            ctx = web.repo.changectx(n)
             yield {'parity': parity.next(),
                    'branch': t,
                    'node': hex(n),
-                   'date': ctx.date()}
+                   'date': web.repo[n].date()}
 
     def changelist(**map):
         parity = paritygen(web.stripecount, offset=start-end)
         l = [] # build a list in forward order for efficiency
         for i in xrange(start, end):
-            ctx = web.repo.changectx(i)
+            ctx = web.repo[i]
             n = ctx.node()
             hn = hex(n)
 

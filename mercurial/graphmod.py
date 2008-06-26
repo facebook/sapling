@@ -69,6 +69,6 @@ def graph(repo, start_rev, stop_rev):
                     edges.append((col, next.index(p), colors[p]))
 
         # Yield and move on
-        yield (repo.changectx(curr_rev), (idx, color), edges)
+        yield (repo[curr_rev], (idx, color), edges)
         revs = next
         curr_rev -= 1

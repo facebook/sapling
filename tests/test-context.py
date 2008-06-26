@@ -16,4 +16,4 @@ os.utime('foo', (1000, 1000))
 repo.add(['foo'])
 repo.commit(text='commit1', date="0 0")
 
-print "workingfilectx.date =", repo.changectx(None).filectx('foo').date()
+print "workingfilectx.date =", repo[None]['foo'].date()

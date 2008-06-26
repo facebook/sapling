@@ -172,12 +172,12 @@ class kwtemplater(object):
     def overwrite(self, node, expand, files):
         '''Overwrites selected files expanding/shrinking keywords.'''
         if node is not None:     # commit
-            ctx = self.repo.changectx(node)
+            ctx = self.repo[node]
             mf = ctx.manifest()
             files = [f for f in ctx.files() if f in mf]
             notify = self.ui.debug
         else:                    # kwexpand/kwshrink
-            ctx = self.repo.changectx('.')
+            ctx = self.repo['.']
             mf = ctx.manifest()
             notify = self.ui.note
         candidates = [f for f in files if self.iskwfile(f, mf.linkf)]
@@ -386,7 +386,7 @@ def files(ui, repo, *pats, **opts):
     if opts.get('untracked'):
         files += unknown
     files.sort()
-    wctx = repo.changectx(None)
+    wctx = repo[None]
     islink = lambda p: 'l' in wctx.flags(p)
     kwfiles = [f for f in files if kwt.iskwfile(f, islink)]
     cwd = pats and repo.getcwd() or ''
@@ -513,7 +513,7 @@ def reposetup(ui, repo):
         comparing against working dir.'''
         if node2 is not None:
             kwt.matcher = util.never
-        elif node1 is not None and node1 != repo.changectx('.').node():
+        elif node1 is not None and node1 != repo['.'].node():
             kwt.restrict = True
         patch_diff(repo, node1, node2, match, fp, changes, opts)
 

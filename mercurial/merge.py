@@ -409,7 +409,7 @@ def update(repo, node, branchmerge, force, partial):
 
     wlock = repo.wlock()
     try:
-        wc = repo.changectx(None)
+        wc = repo[None]
         if node is None:
             # tip of current branch
             try:
@@ -421,7 +421,7 @@ def update(repo, node, branchmerge, force, partial):
                     raise util.Abort(_("branch %s not found") % wc.branch())
         overwrite = force and not branchmerge
         pl = wc.parents()
-        p1, p2 = pl[0], repo.changectx(node)
+        p1, p2 = pl[0], repo[node]
         pa = p1.ancestor(p2)
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
         fastforward = False

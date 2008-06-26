@@ -463,7 +463,7 @@ class workingctx(changectx):
             self._user = self._repo.ui.username()
         if parents:
             p1, p2 = parents
-            self._parents = [self._repo.changectx(p) for p in (p1, p2)]
+            self._parents = [changectx(self._repo, p) for p in (p1, p2)]
         if changes:
             self._status = list(changes)
 
@@ -687,7 +687,7 @@ class memctx(object):
         self._user = user or self._repo.ui.username()
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
-        self._parents = [self._repo.changectx(p) for p in (p1, p2)]
+        self._parents = [changectx(self._repo, p) for p in (p1, p2)]
         files = list(files)
         files.sort()
         self._status = [files, [], [], [], []]
