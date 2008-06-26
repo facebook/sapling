@@ -910,7 +910,7 @@ def debuginstall(ui):
 def debugrename(ui, repo, file1, *pats, **opts):
     """dump rename information"""
 
-    ctx = repo[opts.get('rev', 'tip')]
+    ctx = repo[opts.get('rev')]
     m = cmdutil.match(repo, (file1,) + pats, opts)
     for abs in repo.walk(m, ctx.node()):
         fctx = ctx.filectx(abs)
