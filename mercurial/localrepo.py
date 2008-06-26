@@ -489,17 +489,8 @@ class localrepository(repo.repository):
         return context.changectx(self, changeid)
 
     def parents(self, changeid=None):
-        '''
-        get list of changectxs for parents of changeid or working directory
-        '''
-        if changeid is None:
-            pl = self.dirstate.parents()
-        else:
-            n = self.changelog.lookup(changeid)
-            pl = self.changelog.parents(n)
-        if pl[1] == nullid:
-            return [self.changectx(pl[0])]
-        return [self.changectx(pl[0]), self.changectx(pl[1])]
+        '''get list of changectxs for parents of changeid'''
+        return self.changectx(changeid).parents()
 
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision, node, or tag.

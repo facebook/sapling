@@ -55,6 +55,12 @@ class changectx(object):
             md = self._repo.manifest.readdelta(self._changeset[0])
             self._manifestdelta = md
             return self._manifestdelta
+        elif name == '_parents':
+            p = self._repo.changelog.parents(self._node)
+            if p[1] == nullid:
+                p = p[:-1]
+            self._parents = [changectx(self._repo, x) for x in p]
+            return self._parents
         else:
             raise AttributeError, name
 
@@ -85,8 +91,7 @@ class changectx(object):
 
     def parents(self):
         """return contexts for each parent changeset"""
-        p = self._repo.changelog.parents(self._node)
-        return [changectx(self._repo, x) for x in p]
+        return self._parents
 
     def children(self):
         """return contexts for each child changeset"""
@@ -484,15 +489,18 @@ class workingctx(changectx):
         return True
 
     def __getattr__(self, name):
-        if name == '_parents':
-            self._parents = self._repo.parents()
-            return self._parents
         if name == '_status':
             self._status = self._repo.status()
             return self._status
         if name == '_manifest':
             self._buildmanifest()
             return self._manifest
+        elif name == '_parents':
+            p = self._repo.dirstate.parents()
+            if p[1] == nullid:
+                p = p[:-1]
+            self._parents = [changectx(self._repo, x) for x in p]
+            return self._parents
         else:
             raise AttributeError, name
 
@@ -543,10 +551,6 @@ class workingctx(changectx):
         t = []
         [t.extend(p.tags()) for p in self.parents()]
         return t
-
-    def parents(self):
-        """return contexts for each parent changeset"""
-        return self._parents
 
     def children(self):
         return []
