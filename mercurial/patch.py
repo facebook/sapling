@@ -1189,8 +1189,8 @@ def diff(repo, node1=None, node2=None, match=None,
     date1 = util.datestr(ctx1.date())
 
     if not changes:
-        changes = repo.status(node1, node2, match=match)[:5]
-    modified, added, removed, deleted, unknown = changes
+        changes = repo.status(node1, node2, match=match)
+    modified, added, removed = changes[:3]
 
     if not modified and not added and not removed:
         return

@@ -55,9 +55,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         mmap = repo[node1].manifest()
         mmap2 = repo[node2].manifest()
         m = cmdutil.match(repo, files)
-        status = repo.status(node1, node2, match=m)[:5]
-        modified, added, removed, deleted, unknown = status
-
+        modified, added, removed  = repo.status(node1, node2, m)[:3]
         empty = short(nullid)
 
         for f in modified:

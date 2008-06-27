@@ -2197,7 +2197,7 @@ def remove(ui, repo, *pats, **opts):
         raise util.Abort(_('no files specified'))
 
     m = cmdutil.match(repo, pats, opts)
-    mardu = map(dict.fromkeys, repo.status(match=m))[:5]
+    mardu = map(dict.fromkeys, repo.status(match=m, unknown=True))[:5]
     modified, added, removed, deleted, unknown = mardu
 
     remove, forget = [], []

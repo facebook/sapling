@@ -253,12 +253,12 @@ class kwfilelog(filelog.filelog):
             return t2 != text
         return revlog.revlog.cmp(self, node, text)
 
-def _status(ui, repo, kwt, *pats, **opts):
+def _status(ui, repo, kwt, unknown, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
         matcher = cmdutil.match(repo, pats, opts)
-        return repo.status(match=matcher, clean=True)
+        return repo.status(match=matcher, unknown=unknown, clean=True)
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
@@ -268,15 +268,15 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     if repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, *pats, **opts)
-    modified, added, removed, deleted, unknown, ignored, clean = status
+    status = _status(ui, repo, kwt, False, *pats, **opts)
+    modified, added, removed, deleted = status[:4]
     if modified or added or removed or deleted:
         raise util.Abort(_('outstanding uncommitted changes'))
     wlock = lock = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        kwt.overwrite(None, expand, clean)
+        kwt.overwrite(None, expand, status[6])
     finally:
         del wlock, lock
 
@@ -380,11 +380,9 @@ def files(ui, repo, *pats, **opts):
     That is, files matched by [keyword] config patterns but not symlinks.
     '''
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, *pats, **opts)
+    status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
-    files = modified + added + clean
-    if opts.get('untracked'):
-        files += unknown
+    files = modified + added + clean + unknown
     files.sort()
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]

@@ -488,7 +488,7 @@ class workingctx(changectx):
 
     def __getattr__(self, name):
         if name == '_status':
-            self._status = self._repo.status()
+            self._status = self._repo.status(unknown=True)
             return self._status
         if name == '_manifest':
             self._buildmanifest()

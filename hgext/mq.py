@@ -852,7 +852,7 @@ class queue:
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.parents()[0]
                 hg.revert(repo, node, None)
-                unknown = repo.status()[4]
+                unknown = repo.status(unknown=True)[4]
                 # only remove unknown files that we know we touched or
                 # created while patching
                 for f in unknown:
@@ -933,7 +933,7 @@ class queue:
                 qp = self.qparents(repo, rev)
                 changes = repo.changelog.read(qp)
                 mmap = repo.manifest.read(changes[0])
-                m, a, r, d, u = repo.status(qp, top)[:5]
+                m, a, r, d = repo.status(qp, top)[:4]
                 if d:
                     raise util.Abort("deletions found between repo revs")
                 for f in m:
@@ -1066,11 +1066,11 @@ class queue:
                 # patch already
                 #
                 # this should really read:
-                #   mm, dd, aa, aa2, uu = repo.status(tip, patchparent)[:5]
+                #   mm, dd, aa, aa2 = repo.status(tip, patchparent)[:4]
                 # but we do it backwards to take advantage of manifest/chlog
                 # caching against the next repo.status call
                 #
-                mm, aa, dd, aa2, uu = repo.status(patchparent, tip)[:5]
+                mm, aa, dd, aa2 = repo.status(patchparent, tip)[:4]
                 changes = repo.changelog.read(tip)
                 man = repo.manifest.read(changes[0])
                 aaa = aa[:]
@@ -1078,7 +1078,7 @@ class queue:
                     match = cmdutil.matchfiles(repo, mm + aa + dd)
                 else:
                     match = cmdutil.matchall(repo)
-                m, a, r, d, u = repo.status(match=match)[:5]
+                m, a, r, d = repo.status(match=match)[:4]
 
                 # we might end up with files that were added between
                 # tip and the dirstate parent, but then changed in the
@@ -1111,7 +1111,7 @@ class queue:
                 m = util.unique(mm)
                 r = util.unique(dd)
                 a = util.unique(aa)
-                c = [filter(matchfn, l) for l in (m, a, r, [], u)]
+                c = [filter(matchfn, l) for l in (m, a, r)]
                 match = cmdutil.matchfiles(repo, util.unique(c[0] + c[1] + c[2]))
                 patch.diff(repo, patchparent, match=match,
                            fp=patchf, changes=c, opts=self.diffopts())

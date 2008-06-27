@@ -972,7 +972,7 @@ class localrepository(repo.repository):
                 yield fn
 
     def status(self, node1=None, node2=None, match=None,
-               ignored=False, clean=False, unknown=True):
+               ignored=False, clean=False, unknown=False):
         """return status of files between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
