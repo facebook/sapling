@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import nullid, nullrev, short
+from node import nullid, nullrev, short, hex
 from i18n import _
 import ancestor, bdiff, revlog, util, os, errno
 
@@ -22,6 +22,9 @@ class changectx(object):
 
     def __str__(self):
         return short(self.node())
+
+    def __int__(self):
+        return self.rev()
 
     def __repr__(self):
         return "<changectx %s>" % str(self)
@@ -79,6 +82,7 @@ class changectx(object):
 
     def rev(self): return self._rev
     def node(self): return self._node
+    def hex(self): return hex(self._node)
     def user(self): return self._changeset[1]
     def date(self): return self._changeset[2]
     def files(self): return self._changeset[3]
@@ -692,6 +696,9 @@ class memctx(object):
 
     def __str__(self):
         return str(self._parents[0]) + "+"
+
+    def __int__(self):
+        return self._rev
 
     def __nonzero__(self):
         return True
