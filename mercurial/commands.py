@@ -2197,46 +2197,29 @@ def remove(ui, repo, *pats, **opts):
         raise util.Abort(_('no files specified'))
 
     m = cmdutil.match(repo, pats, opts)
-    mardu = map(dict.fromkeys, repo.status(match=m, unknown=True))[:5]
-    modified, added, removed, deleted, unknown = mardu
+    s = repo.status(match=m, clean=True)
+    modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
-    remove, forget = [], []
-    for abs in repo.walk(m):
+    def warn(files, reason):
+        for f in files:
+            ui.warn(_('not removing %s: file %s (use -f to force removal)\n')
+                    % (m.rel(f), reason))
 
-        reason = None
-        if abs in removed or abs in unknown:
-            continue
+    if force:
+        remove, forget = modified + deleted + clean, added
+    elif after:
+        remove, forget = deleted, []
+        warn(modified + added + clean, _('still exists'))
+    else:
+        remove, forget = deleted + clean, []
+        warn(modified, _('is modified'))
+        warn(added, _('has been marked for add'))
 
-        # last column
-        elif abs in deleted:
-            remove.append(abs)
-
-        # rest of the third row
-        elif after and not force:
-            reason = _('still exists (use -f to force removal)')
-
-        # rest of the first column
-        elif abs in added:
-            if not force:
-                reason = _('has been marked for add (use -f to force removal)')
-            else:
-                forget.append(abs)
-
-        # rest of the third column
-        elif abs in modified:
-            if not force:
-                reason = _('is modified (use -f to force removal)')
-            else:
-                remove.append(abs)
-
-        # rest of the second column
-        elif not reason:
-            remove.append(abs)
-
-        if reason:
-            ui.warn(_('not removing %s: file %s\n') % (m.rel(abs), reason))
-        elif ui.verbose or not m.exact(abs):
-            ui.status(_('removing %s\n') % m.rel(abs))
+    files = remove + forget
+    files.sort()
+    for f in files:
+        if ui.verbose or not m.exact(f):
+            ui.status(_('removing %s\n') % m.rel(f))
 
     repo.forget(forget)
     repo.remove(remove, unlink=not after)
