@@ -1094,8 +1094,7 @@ def updatedir(ui, repo, patches):
         repo.copy(src, dst)
     removes = removes.keys()
     if removes:
-        removes.sort()
-        repo.remove(removes, True)
+        repo.remove(util.sort(removes), True)
     for f in patches:
         ctype, gp = patches[f]
         if gp and gp.mode:
@@ -1113,9 +1112,7 @@ def updatedir(ui, repo, patches):
     cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
-    files.sort()
-
-    return files
+    return util.sort(files)
 
 def b85diff(to, tn):
     '''print base85-encoded binary diff'''
@@ -1208,13 +1205,10 @@ def diff(repo, node1=None, node2=None, match=None,
         for k, v in copy.items():
             copy[v] = k
 
-    all = modified + added + removed
-    all.sort()
     gone = {}
-
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
 
-    for f in all:
+    for f in util.sort(modified + added + removed):
         to = None
         tn = None
         dodiff = True

@@ -297,8 +297,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         if store:
             # clean up the results and save in the log.
             store = False
-            e.tags = [scache(x) for x in tags.get(e.revision, [])]
-            e.tags.sort()
+            e.tags = util.sort([scache(x) for x in tags.get(e.revision, [])])
             e.comment = scache('\n'.join(e.comment))
 
             revn = len(e.revision)
@@ -468,9 +467,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
             for tag in e.tags:
                 tags[tag] = True
         # remember tags only if this is the latest changeset to have it
-        tagnames = [tag for tag in tags if globaltags[tag] is c]
-        tagnames.sort()
-        c.tags = tagnames
+        c.tags = util.sort([tag for tag in tags if globaltags[tag] is c])
 
     # Find parent changesets, handle {{mergetobranch BRANCHNAME}}
     # by inserting dummy changesets with two parents, and handle

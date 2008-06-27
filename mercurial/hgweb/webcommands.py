@@ -13,7 +13,7 @@ from mercurial.util import binary, datestr
 from mercurial.repo import RepoError
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_NOT_FOUND
-from mercurial import graphmod
+from mercurial import graphmod, util
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
@@ -288,9 +288,7 @@ def manifest(web, req, tmpl):
         raise ErrorResponse(HTTP_NOT_FOUND, 'path not found: ' + path)
 
     def filelist(**map):
-        fl = files.keys()
-        fl.sort()
-        for f in fl:
+        for f in util.sort(files):
             full, fnode = files[f]
             if not fnode:
                 continue
@@ -304,9 +302,7 @@ def manifest(web, req, tmpl):
                    "permissions": mf.flags(full)}
 
     def dirlist(**map):
-        fl = files.keys()
-        fl.sort()
-        for f in fl:
+        for f in util.sort(files):
             full, fnode = files[f]
             if fnode:
                 continue
@@ -378,9 +374,7 @@ def summary(web, req, tmpl):
 
         b = web.repo.branchtags()
         l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.items()]
-        l.sort()
-
-        for r,n,t in l:
+        for r,n,t in util.sort(l):
             yield {'parity': parity.next(),
                    'branch': t,
                    'node': hex(n),

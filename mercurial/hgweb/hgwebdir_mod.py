@@ -19,8 +19,8 @@ from request import wsgirequest
 class hgwebdir(object):
     def __init__(self, config, parentui=None):
         def cleannames(items):
-            return [(util.pconvert(name).strip('/'), path)
-                    for name, path in items]
+            return util.sort([(util.pconvert(name).strip('/'), path)
+                              for name, path in items])
 
         self.parentui = parentui or ui.ui(report_untrusted=False,
                                           interactive = False)
@@ -34,7 +34,6 @@ class hgwebdir(object):
             self.repos_sorted = ('', False)
         elif isinstance(config, dict):
             self.repos = cleannames(config.items())
-            self.repos.sort()
         else:
             if isinstance(config, util.configparser):
                 cp = config

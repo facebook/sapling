@@ -164,14 +164,11 @@ class mercurial_sink(converter_sink):
              tagparent = nullid
 
          try:
-             old = parentctx.filectx(".hgtags").data()
-             oldlines = old.splitlines(1)
-             oldlines.sort()
+             oldlines = util.sort(parentctx['.hgtags'].data().splitlines(1))
          except:
              oldlines = []
 
-         newlines = [("%s %s\n" % (tags[tag], tag)) for tag in tags.keys()]
-         newlines.sort()
+         newlines = util.sort([("%s %s\n" % (tags[tag], tag)) for tag in tags])
 
          if newlines == oldlines:
              return None
@@ -238,8 +235,7 @@ class mercurial_source(converter_source):
         else:
             m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
         changes = [(name, rev) for name in m + a + r]
-        changes.sort()
-        return (changes, self.getcopies(ctx, m + a))
+        return util.sort(changes), self.getcopies(ctx, m + a)
 
     def getcopies(self, ctx, files):
         copies = {}

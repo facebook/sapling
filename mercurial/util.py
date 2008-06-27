@@ -252,6 +252,12 @@ def unique(g):
     """return the uniq elements of iterable g"""
     return dict.fromkeys(g).keys()
 
+def sort(l):
+    if not isinstance(l, list):
+        l = list(l)
+    l.sort()
+    return l
+
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
 

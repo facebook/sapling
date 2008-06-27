@@ -110,9 +110,8 @@ class darcs_source(converter_source, commandline):
                 copies[elt.get('from')] = elt.get('to')
             else:
                 changes.append((elt.text.strip(), rev))
-        changes.sort()
         self.lastrev = rev
-        return changes, copies
+        return util.sort(changes), copies
 
     def getfile(self, name, rev):
         if rev != self.lastrev:

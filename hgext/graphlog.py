@@ -13,6 +13,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial.util import Abort, canonpath
+from mercurial import util
 
 def revision_grapher(repo, start_rev, stop_rev):
     """incremental revision grapher
@@ -53,8 +54,7 @@ def revision_grapher(repo, start_rev, stop_rev):
         for parent in parents:
             if parent not in next_revs:
                 parents_to_add.append(parent)
-        parents_to_add.sort()
-        next_revs[rev_index:rev_index + 1] = parents_to_add
+        next_revs[rev_index:rev_index + 1] = util.sort(parents_to_add)
 
         edges = []
         for parent in parents:
@@ -105,8 +105,7 @@ def filelog_grapher(repo, path, start_rev, stop_rev):
         for parent in parents:
             if parent not in next_revs:
                 parents_to_add.append(parent)
-        parents_to_add.sort()
-        next_revs[rev_index:rev_index + 1] = parents_to_add
+        next_revs[rev_index:rev_index + 1] = util.sort(parents_to_add)
 
         edges = []
         for parent in parents:

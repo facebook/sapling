@@ -8,7 +8,7 @@
 from node import bin, hex, nullid
 from revlog import revlog, RevlogError
 from i18n import _
-import array, struct, mdiff, parsers
+import array, struct, mdiff, parsers, util
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):
@@ -126,9 +126,7 @@ class manifest(revlog):
         # if we're using the listcache, make sure it is valid and
         # parented by the same node we're diffing against
         if not (changed and self.listcache and p1 and self.mapcache[0] == p1):
-            files = map.keys()
-            files.sort()
-
+            files = util.sort(map)
             for f in files:
                 checkforbidden(f)
 

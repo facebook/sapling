@@ -380,9 +380,8 @@ def branches(ui, repo, active=False):
     hexfunc = ui.debugflag and hex or short
     activebranches = [util.tolocal(repo[n].branch())
                             for n in repo.heads()]
-    branches = [(tag in activebranches, repo.changelog.rev(node), tag)
-                            for tag, node in repo.branchtags().items()]
-    branches.sort()
+    branches = util.sort([(tag in activebranches, repo.changelog.rev(node), tag)
+                          for tag, node in repo.branchtags().items()])
     branches.reverse()
 
     for isactive, node, tag in branches:
@@ -635,9 +634,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    clist = cmdutil.findpossible(ui, cmd, table).keys()
-    clist.sort()
-    ui.write("%s\n" % "\n".join(clist))
+    ui.write("%s\n" % "\n".join(util.sort(cmdutil.findpossible(ui, cmd, table))))
 
 def debugfsinfo(ui, path = "."):
     file('.debugfsinfo', 'w').write('')
@@ -727,11 +724,9 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
 def debugstate(ui, repo, nodates=None):
     """show the contents of the current dirstate"""
-    k = repo.dirstate._map.items()
-    k.sort()
     timestr = ""
     showdate = not nodates
-    for file_, ent in k:
+    for file_, ent in util.sort(repo.dirstate._map.items()):
         if showdate:
             if ent[3] == -1:
                 # Pad or slice to locale representation
@@ -1142,9 +1137,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 except revlog.LookupError:
                     pass
         elif st == 'iter':
-            states = matches[rev].items()
-            states.sort()
-            for fn, m in states:
+            for fn, m in util.sort(matches[rev].items()):
                 copy = copies.get(rev, {}).get(fn)
                 if fn in skip:
                     if copy:
@@ -1162,9 +1155,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                     fstate[copy] = m
                 prev[fn] = rev
 
-    fstate = fstate.items()
-    fstate.sort()
-    for fn, state in fstate:
+    for fn, state in util.sort(fstate.items()):
         if fn in skip:
             continue
         if fn not in copies.get(prev[fn], {}):
@@ -1304,8 +1295,7 @@ def help_(ui, name=None, with_version=False):
             return
 
         ui.status(header)
-        fns = h.keys()
-        fns.sort()
+        fns = util.sort(h)
         m = max(map(len, fns))
         for f in fns:
             if ui.verbose:
@@ -2215,9 +2205,7 @@ def remove(ui, repo, *pats, **opts):
         warn(modified, _('is modified'))
         warn(added, _('has been marked for add'))
 
-    files = remove + forget
-    files.sort()
-    for f in files:
+    for f in util.sort(remove + forget):
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
@@ -2401,10 +2389,7 @@ def revert(ui, repo, *pats, **opts):
             (deleted, revert, remove, False, False),
             )
 
-        entries = names.items()
-        entries.sort()
-
-        for abs, (rel, exact) in entries:
+        for abs, (rel, exact) in util.sort(names.items()):
             mfentry = mf.get(abs)
             target = repo.wjoin(abs)
             def handle(xlist, dobackup):

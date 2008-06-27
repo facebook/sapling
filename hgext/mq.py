@@ -143,8 +143,7 @@ class queue:
             bad = self.check_guard(guard)
             if bad:
                 raise util.Abort(bad)
-        guards = dict.fromkeys(guards).keys()
-        guards.sort()
+        guards = util.sort(util.unique(guards))
         self.ui.debug('active guards: %s\n' % ' '.join(guards))
         self.active_guards = guards
         self.guards_dirty = True
@@ -536,8 +535,7 @@ class queue:
         return (err, n)
 
     def _clean_series(self, patches):
-        indices = [self.find_series(p) for p in patches]
-        indices.sort()
+        indices = util.sort([self.find_series(p) for p in patches])
         for i in indices[-1::-1]:
             del self.full_series[i]
         self.parse_series()
@@ -545,10 +543,10 @@ class queue:
 
     def finish(self, repo, revs):
         revs.sort()
-        firstrev = repo.changelog.rev(revlog.bin(self.applied[0].rev))
+        firstrev = repo[self.applied[0].rev].rev()
         appliedbase = 0
         patches = []
-        for rev in revs:
+        for rev in util.sort(revs):
             if rev < firstrev:
                 raise util.Abort(_('revision %d is not managed') % rev)
             base = revlog.bin(self.applied[appliedbase].rev)
@@ -1261,8 +1259,7 @@ class queue:
                                    self.guards_path)
                         and not fl.startswith('.')):
                         msng_list.append(fl)
-            msng_list.sort()
-            for x in msng_list:
+            for x in util.sort(msng_list):
                 pfx = self.ui.verbose and ('D ') or ''
                 self.ui.write("%s%s\n" % (pfx, displayname(x)))
 

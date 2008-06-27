@@ -153,9 +153,7 @@ class dirstate(object):
         return key in self._map
 
     def __iter__(self):
-        a = self._map.keys()
-        a.sort()
-        for x in a:
+        for x in util.sort(self._map):
             yield x
 
     def parents(self):
@@ -436,8 +434,7 @@ class dirstate(object):
         if not unknown:
             return ret
 
-        b = self._map.keys()
-        b.sort()
+        b = util.sort(self._map)
         blen = len(b)
 
         for x in unknown:
@@ -578,12 +575,10 @@ class dirstate(object):
                             add((nn, 'f', st))
                         elif np in dc:
                             add((nn, 'm', st))
-            found.sort()
-            return found
+            return util.sort(found)
 
         # step one, find all files that match our criteria
-        files.sort()
-        for ff in files:
+        for ff in util.sort(files):
             nf = normpath(ff)
             nn = self.normalize(nf)
             f = _join(ff)
@@ -617,9 +612,7 @@ class dirstate(object):
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
-        ks = dc.keys()
-        ks.sort()
-        for k in ks:
+        for k in util.sort(dc):
             if k in known:
                 continue
             known[k] = 1

@@ -262,11 +262,10 @@ def applyupdates(repo, action, wctx, mctx):
     "apply the merge action list to the working directory"
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
-    action.sort()
-
     ms = mergestate(repo)
     ms.reset(wctx.parents()[0].node())
     moves = []
+    action.sort()
 
     # prescan for merges
     for a in action:

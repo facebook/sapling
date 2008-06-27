@@ -653,9 +653,7 @@ class changeset_printer(object):
             self.ui.write(_("copies:      %s\n") % ' '.join(copies))
 
         if extra and self.ui.debugflag:
-            extraitems = extra.items()
-            extraitems.sort()
-            for key, value in extraitems:
+            for key, value in util.sort(extra.items()):
                 self.ui.write(_("extra:       %s=%s\n")
                               % (key, value.encode('string_escape')))
 
@@ -799,9 +797,7 @@ class changeset_templater(changeset_printer):
             return showlist('tag', self.repo.nodetags(changenode), **args)
 
         def showextras(**args):
-            extras = changes[5].items()
-            extras.sort()
-            for key, value in extras:
+            for key, value in util.sort(changes[5].items()):
                 args = args.copy()
                 args.update(dict(key=key, value=value))
                 yield self.t('extra', **args)
@@ -1129,9 +1125,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         for i, window in increasing_windows(0, len(revs)):
             yield 'window', revs[0] < revs[-1], revs[-1]
             nrevs = [rev for rev in revs[i:i+window] if want(rev)]
-            srevs = list(nrevs)
-            srevs.sort()
-            for rev in srevs:
+            for rev in util.sort(list(nrevs)):
                 fns = fncache.get(rev)
                 if not fns:
                     def fns_generator():
@@ -1159,7 +1153,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     m = match(repo, pats, opts)
     if pats:
         modified, added, removed = repo.status(match=m)[:3]
-        files = modified + added + removed
+        files = util.sort(modified + added + removed)
         slist = None
         for f in m.files():
             if f == '.':
@@ -1173,11 +1167,8 @@ def commit(ui, repo, commitfunc, pats, opts):
                     raise util.Abort(_("file %s not found!") % rel)
                 if stat.S_ISDIR(mode):
                     name = f + '/'
-                    if slist is None:
-                        slist = list(files)
-                        slist.sort()
-                    i = bisect.bisect(slist, name)
-                    if i >= len(slist) or not slist[i].startswith(name):
+                    i = bisect.bisect(files, name)
+                    if i >= len(files) or not files[i].startswith(name):
                         raise util.Abort(_("no match under directory %s!")
                                          % rel)
                 elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):

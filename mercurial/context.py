@@ -71,9 +71,7 @@ class changectx(object):
         return self.filectx(key)
 
     def __iter__(self):
-        a = self._manifest.keys()
-        a.sort()
-        for f in a:
+        for f in util.sort(self._manifest):
             yield f
 
     def changeset(self): return self._changeset
@@ -134,10 +132,7 @@ class changectx(object):
     def filectxs(self):
         """generate a file context for each file in this changeset's
            manifest"""
-        mf = self.manifest()
-        m = mf.keys()
-        m.sort()
-        for f in m:
+        for f in util.sort(mf):
             yield self.filectx(f, fileid=mf[f])
 
     def ancestor(self, c2):
@@ -383,12 +378,11 @@ class filectx(object):
         # sort by revision (per file) which is a topological order
         visit = []
         for f in files:
-            fn = [(n.rev(), n) for n in needed.keys() if n._path == f]
+            fn = [(n.rev(), n) for n in needed if n._path == f]
             visit.extend(fn)
-        visit.sort()
-        hist = {}
 
-        for r, f in visit:
+        hist = {}
+        for r, f in util.sort(visit):
             curr = decorate(f.data(), f)
             for p in parents(f):
                 if p != nullid:
@@ -530,9 +524,7 @@ class workingctx(changectx):
     def date(self): return self._date
     def description(self): return self._text
     def files(self):
-        f = self.modified() + self.added() + self.removed()
-        f.sort()
-        return f
+        return util.sort(self._status[0] + self._status[1] + self._status[2])
 
     def modified(self): return self._status[0]
     def added(self): return self._status[1]
@@ -688,8 +680,7 @@ class memctx(object):
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
-        files = list(files)
-        files.sort()
+        files = util.sort(list(files))
         self._status = [files, [], [], [], []]
         self._filectxfn = filectxfn
 

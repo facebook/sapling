@@ -92,14 +92,12 @@ def churn(ui, repo, **opts):
             alias, actual = l.split()
             amap[alias] = actual
 
-    revs = [int(r) for r in cmdutil.revrange(repo, opts['rev'])]
-    revs.sort()
+    revs = util.sort([int(r) for r in cmdutil.revrange(repo, opts['rev'])])
     stats = countrevs(ui, repo, amap, revs, opts.get('progress'))
     if not stats:
         return
 
-    stats = [(-l, u, l) for u,l in stats.items()]
-    stats.sort()
+    stats = util.sort([(-l, u, l) for u,l in stats.items()])
     maxchurn = float(max(1, stats[0][2]))
     maxuser = max([len(u) for k, u, l in stats])
 

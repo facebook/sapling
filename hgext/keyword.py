@@ -183,7 +183,6 @@ class kwtemplater(object):
         candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True # do not expand when reading
-            candidates.sort()
             action = expand and 'expanding' or 'shrinking'
             for f in candidates:
                 fp = self.repo.file(f)
@@ -382,8 +381,7 @@ def files(ui, repo, *pats, **opts):
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
-    files = modified + added + clean + unknown
-    files.sort()
+    files = util.sort(modified + added + clean + unknown)
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
     cwd = pats and repo.getcwd() or ''

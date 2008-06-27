@@ -60,7 +60,6 @@ def bisect(changelog, state):
                         children[prev] = [rev]
                         visit.append(prev)
 
-    candidates.sort()
     # have we narrowed it down to one entry?
     tot = len(candidates)
     if tot == 1:
@@ -71,7 +70,7 @@ def bisect(changelog, state):
     best_rev = None
     best_len = -1
     poison = {}
-    for rev in candidates:
+    for rev in util.sort(candidates):
         if rev in poison:
             for c in children.get(rev, []):
                 poison[c] = True # poison children

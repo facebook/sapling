@@ -156,9 +156,7 @@ class notifier(object):
             if fnmatch.fnmatch(self.repo.root, pat):
                 for user in users.split(','):
                     subs[self.fixmail(user)] = 1
-        subs = subs.keys()
-        subs.sort()
-        return subs
+        return util.sort(subs)
 
     def url(self, path=None):
         return self.ui.config('web', 'baseurl') + (path or self.root)

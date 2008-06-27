@@ -366,8 +366,7 @@ class localrepository(repo.repository):
             except:
                 r = -2 # sort to the beginning of the list if unknown
             l.append((r, t, n))
-        l.sort()
-        return [(t, n) for r, t, n in l]
+        return [(t, n) for r, t, n in util.sort(l)]
 
     def nodetags(self, node):
         '''return the tags associated with a node'''
@@ -811,7 +810,7 @@ class localrepository(repo.repository):
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
         try:
-            commit = wctx.modified() + wctx.added()
+            commit = util.sort(wctx.modified() + wctx.added())
             remove = wctx.removed()
             extra = wctx.extra().copy()
             branchname = extra['branch']
@@ -844,7 +843,6 @@ class localrepository(repo.repository):
             new = {}
             changed = []
             linkrev = len(self)
-            commit.sort()
             for f in commit:
                 self.ui.note(f + "\n")
                 try:
@@ -871,10 +869,9 @@ class localrepository(repo.repository):
 
             # update manifest
             m1.update(new)
-            remove.sort()
             removed = []
 
-            for f in remove:
+            for f in util.sort(remove):
                 if f in m1:
                     del m1[f]
                     removed.append(f)
@@ -950,10 +947,7 @@ class localrepository(repo.repository):
             # for dirstate.walk, files=['.'] means "walk the whole tree".
             # follow that here, too
             fdict.pop('.', None)
-            mdict = self.manifest.read(self.changelog.read(node)[0])
-            mfiles = mdict.keys()
-            mfiles.sort()
-            for fn in mfiles:
+            for fn in self[node]:
                 for ffn in fdict:
                     # match if the file is the exact name or a directory
                     if ffn == fn or fn.startswith("%s/" % ffn):
@@ -961,9 +955,7 @@ class localrepository(repo.repository):
                         break
                 if match(fn):
                     yield fn
-            ffiles = fdict.keys()
-            ffiles.sort()
-            for fn in ffiles:
+            for fn in util.sort(fdict):
                 if match.bad(fn, 'No such file in rev ' + short(node)) \
                         and match(fn):
                     yield fn
@@ -1065,10 +1057,8 @@ class localrepository(repo.repository):
 
             # make sure to sort the files so we talk to the disk in a
             # reasonable order
-            mf2keys = mf2.keys()
-            mf2keys.sort()
             getnode = lambda fn: mf1.get(fn, nullid)
-            for fn in mf2keys:
+            for fn in util.sort(mf2):
                 if fn in mf1:
                     if (mf1.flags(fn) != mf2.flags(fn) or
                         (mf1[fn] != mf2[fn] and
@@ -1190,8 +1180,7 @@ class localrepository(repo.repository):
         heads = self.changelog.heads(start)
         # sort the output in rev descending order
         heads = [(-self.changelog.rev(h), h) for h in heads]
-        heads.sort()
-        return [n for (r, n) in heads]
+        return [n for (r, n) in util.sort(heads)]
 
     def branchheads(self, branch=None, start=None):
         if branch is None:
@@ -1843,10 +1832,8 @@ class localrepository(repo.repository):
                     add_extra_nodes(fname,
                                     msng_filenode_set.setdefault(fname, {}))
                     changedfiles[fname] = 1
-            changedfiles = changedfiles.keys()
-            changedfiles.sort()
             # Go through all our files in order sorted by name.
-            for fname in changedfiles:
+            for fname in util.sort(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
@@ -1924,15 +1911,13 @@ class localrepository(repo.repository):
             for chnk in cl.group(nodes, identity,
                                  changed_file_collector(changedfiles)):
                 yield chnk
-            changedfiles = changedfiles.keys()
-            changedfiles.sort()
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
             for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
                 yield chnk
 
-            for fname in changedfiles:
+            for fname in util.sort(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)

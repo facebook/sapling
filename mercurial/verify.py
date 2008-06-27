@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import revlog
+import revlog, util
 
 def verify(repo):
     lock = repo.lock()
@@ -139,38 +139,26 @@ def _verify(repo):
     ui.status(_("crosschecking files in changesets and manifests\n"))
 
     if havemf:
-        nm = []
-        for m in mflinkrevs:
-            for c in mflinkrevs[m]:
-                nm.append((c, m))
-        nm.sort()
-        for c, m in nm:
+        for c, m in util.sort([(c, m) for m in mflinkrevs for c in mflinkrevs[m]]):
             err(c, _("changeset refers to unknown manifest %s") % short(m))
-        del mflinkrevs, nm
+        del mflinkrevs
 
-        fl = filelinkrevs.keys()
-        fl.sort()
-        for f in fl:
+        for f in util.sort(filelinkrevs):
             if f not in filenodes:
                 lr = filelinkrevs[f][0]
                 err(lr, _("in changeset but not in manifest"), f)
-        del fl
 
     if havecl:
-        fl = filenodes.keys()
-        fl.sort()
-        for f in fl:
+        for f in util.sort(filenodes):
             if f not in filelinkrevs:
                 try:
                     lr = min([repo.file(f).linkrev(n) for n in filenodes[f]])
                 except:
                     lr = None
                 err(lr, _("in manifest but not in changeset"), f)
-        del fl
 
     ui.status(_("checking files\n"))
-    files = dict.fromkeys(filenodes.keys() + filelinkrevs.keys()).keys()
-    files.sort()
+    files = util.sort(util.unique(filenodes.keys() + filelinkrevs.keys()))
     for f in files:
         fl = repo.file(f)
         checklog(fl, f)
@@ -214,8 +202,7 @@ def _verify(repo):
         # cross-check
         if f in filenodes:
             fns = [(mf.linkrev(l), n) for n,l in filenodes[f].items()]
-            fns.sort()
-            for lr, node in fns:
+            for lr, node in util.sort(fns):
                 err(lr, _("%s in manifests not found") % short(node), f)
 
     ui.status(_("%d files, %d changesets, %d total revisions\n") %

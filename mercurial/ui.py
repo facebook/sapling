@@ -312,15 +312,11 @@ class ui(object):
         items = self._configitems(section, untrusted=untrusted, abort=True)
         if self.debugflag and not untrusted and self.ucdata:
             uitems = self._configitems(section, untrusted=True, abort=False)
-            keys = uitems.keys()
-            keys.sort()
-            for k in keys:
+            for k in util.sort(uitems):
                 if uitems[k] != items.get(k):
                     self.warn(_("Ignoring untrusted configuration option "
                                 "%s.%s = %s\n") % (section, k, uitems[k]))
-        x = items.items()
-        x.sort()
-        return x
+        return util.sort(items.items())
 
     def walkconfig(self, untrusted=False):
         cdata = self._get_cdata(untrusted)
