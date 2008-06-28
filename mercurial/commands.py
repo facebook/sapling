@@ -110,8 +110,8 @@ def annotate(ui, repo, *pats, **opts):
     ctx = repo[opts['rev']]
 
     m = cmdutil.match(repo, pats, opts)
-    for abs in repo.walk(m, ctx.node()):
-        fctx = ctx.filectx(abs)
+    for abs in ctx.walk(m):
+        fctx = ctx[abs]
         if not opts['text'] and util.binary(fctx.data()):
             ui.write(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
             continue
@@ -485,9 +485,9 @@ def cat(ui, repo, file1, *pats, **opts):
     ctx = repo[opts['rev']]
     err = 1
     m = cmdutil.match(repo, (file1,) + pats, opts)
-    for abs in repo.walk(m, ctx.node()):
+    for abs in ctx.walk(m):
         fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
-        data = ctx.filectx(abs).data()
+        data = ctx[abs].data()
         if opts.get('decode'):
             data = repo.wwritedata(abs, data)
         fp.write(data)
@@ -907,8 +907,8 @@ def debugrename(ui, repo, file1, *pats, **opts):
 
     ctx = repo[opts.get('rev')]
     m = cmdutil.match(repo, (file1,) + pats, opts)
-    for abs in repo.walk(m, ctx.node()):
-        fctx = ctx.filectx(abs)
+    for abs in ctx.walk(m):
+        fctx = ctx[abs]
         o = fctx.filelog().renamed(fctx.filenode())
         rel = m.rel(abs)
         if o:
@@ -1693,17 +1693,13 @@ def locate(ui, repo, *pats, **opts):
     that contain white space as multiple filenames.
     """
     end = opts['print0'] and '\0' or '\n'
-    rev = opts['rev']
-    if rev:
-        node = repo.lookup(rev)
-    else:
-        node = None
+    rev = opts.get('rev') or None
 
     ret = 1
     m = cmdutil.match(repo, pats, opts, default='relglob')
     m.bad = lambda x,y: False
-    for abs in repo.walk(m, node):
-        if not node and abs not in repo.dirstate:
+    for abs in repo[rev].walk(m):
+        if not rev and abs not in repo.dirstate:
             continue
         if opts['fullpath']:
             ui.write(os.path.join(repo.root, abs), end)
@@ -2350,7 +2346,7 @@ def revert(ui, repo, *pats, **opts):
 
         m = cmdutil.match(repo, pats, opts)
         m.bad = badfn
-        for abs in repo.walk(m, node=node):
+        for abs in repo[node].walk(m):
             if abs not in names:
                 names[abs] = m.rel(abs), m.exact(abs)
 

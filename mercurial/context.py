@@ -146,6 +146,23 @@ class changectx(object):
         n = self._repo.changelog.ancestor(self._node, c2._node)
         return changectx(self._repo, n)
 
+    def walk(self, match):
+        fdict = dict.fromkeys(match.files())
+        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # follow that here, too
+        fdict.pop('.', None)
+        for fn in self:
+            for ffn in fdict:
+                # match if the file is the exact name or a directory
+                if ffn == fn or fn.startswith("%s/" % ffn):
+                    del fdict[ffn]
+                    break
+            if match(fn):
+                yield fn
+        for fn in util.sort(fdict):
+            if match.bad(fn, 'No such file in rev ' + str(self)) and match(fn):
+                yield fn
+
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -575,6 +592,10 @@ class workingctx(changectx):
     def ancestor(self, c2):
         """return the ancestor context of self and c2"""
         return self._parents[0].ancestor(c2) # punt on two parents for now
+
+    def walk(self, match):
+        for src, fn, st in self._repo.dirstate.walk(match, True, False):
+            yield fn
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular
