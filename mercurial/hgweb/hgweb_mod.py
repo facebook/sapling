@@ -89,6 +89,16 @@ class hgweb(object):
 
         self.refresh()
 
+        # process this if it's a protocol request
+        # protocol bits don't need to create any URLs
+        # and the clients always use the old URL structure
+
+        cmd = req.form.get('cmd', [''])[0]
+        if cmd and cmd in protocol.__all__:
+            method = getattr(protocol, cmd)
+            method(self, req)
+            return
+
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
 
@@ -120,8 +130,10 @@ class hgweb(object):
                 cmd = cmd[style+1:]
 
             # avoid accepting e.g. style parameter as command
-            if hasattr(webcommands, cmd) or hasattr(protocol, cmd):
+            if hasattr(webcommands, cmd):
                 req.form['cmd'] = [cmd]
+            else:
+                cmd = ''
 
             if args and args[0]:
                 node = args.pop(0)
@@ -138,14 +150,6 @@ class hgweb(object):
                     if fn.endswith(ext):
                         req.form['node'] = [fn[:-len(ext)]]
                         req.form['type'] = [type_]
-
-        # process this if it's a protocol request
-
-        cmd = req.form.get('cmd', [''])[0]
-        if cmd in protocol.__all__:
-            method = getattr(protocol, cmd)
-            method(self, req)
-            return
 
         # process the web interface request
 

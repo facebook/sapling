@@ -36,19 +36,19 @@ echo % Overviews
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/summary/?style=gitweb' | sed "s/[0-9]* years ago/long ago/g"
 
 echo % capabilities
-"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/capabilities'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'
 echo % heads
-"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/heads'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=heads'
 echo % lookup
-"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/lookup/1'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=lookup&node=1'
 echo % branches
-"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/branches'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=branches'
 echo % changegroup
-"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/changegroup'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=changegroup'
 echo % stream_out
-"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/stream_out'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=stream_out'
 echo % failing unbundle, requires POST request
-"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/unbundle'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=unbundle'
 
 echo % Static files
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/static/style.css'
