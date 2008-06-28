@@ -119,16 +119,16 @@ class manifest(revlog):
             return "".join([struct.pack(">lll", d[0], d[1], len(d[2])) + d[2]
                             for d in x ])
 
-        def checkforbidden(f):
-            if '\n' in f or '\r' in f:
-                raise RevlogError(_("'\\n' and '\\r' disallowed in filenames"))
+        def checkforbidden(l):
+            for f in l:
+                if '\n' in f or '\r' in f:
+                    raise RevlogError(_("'\\n' and '\\r' disallowed in filenames"))
 
         # if we're using the listcache, make sure it is valid and
         # parented by the same node we're diffing against
         if not (changed and self.listcache and p1 and self.mapcache[0] == p1):
             files = util.sort(map)
-            for f in files:
-                checkforbidden(f)
+            checkforbidden(files)
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
@@ -139,8 +139,7 @@ class manifest(revlog):
         else:
             addlist = self.listcache
 
-            for f in changed[0]:
-                checkforbidden(f)
+            checkforbidden(changed[0])
             # combine the changed lists into one list for sorting
             work = [[x, 0] for x in changed[0]]
             work[len(work):] = [[x, 1] for x in changed[1]]
