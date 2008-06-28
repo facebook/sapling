@@ -13,7 +13,7 @@ from mercurial.util import binary, datestr
 from mercurial.repo import RepoError
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_NOT_FOUND
-from mercurial import graphmod
+from mercurial import graphmod, util
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
@@ -110,10 +110,10 @@ def _search(web, tmpl, query):
         qw = query.lower().split()
 
         def revgen():
-            for i in xrange(cl.count() - 1, 0, -100):
+            for i in xrange(len(cl) - 1, 0, -100):
                 l = []
                 for j in xrange(max(0, i - 100), i + 1):
-                    ctx = web.repo.changectx(j)
+                    ctx = web.repo[j]
                     l.append(ctx)
                 l.reverse()
                 for e in l:
@@ -168,9 +168,9 @@ def changelog(web, req, tmpl, shortlog = False):
         if 'rev' in req.form:
             hi = req.form['rev'][0]
         else:
-            hi = web.repo.changelog.count() - 1
+            hi = len(web.repo) - 1
         try:
-            ctx = web.repo.changectx(hi)
+            ctx = web.repo[hi]
         except RepoError:
             return _search(web, tmpl, hi) # XXX redirect to 404 page?
 
@@ -178,7 +178,7 @@ def changelog(web, req, tmpl, shortlog = False):
         cl = web.repo.changelog
         l = [] # build a list in forward order for efficiency
         for i in xrange(start, end):
-            ctx = web.repo.changectx(i)
+            ctx = web.repo[i]
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
 
@@ -205,7 +205,7 @@ def changelog(web, req, tmpl, shortlog = False):
 
     maxchanges = shortlog and web.maxshortchanges or web.maxchanges
     cl = web.repo.changelog
-    count = cl.count()
+    count = len(cl)
     pos = ctx.rev()
     start = max(0, pos - maxchanges + 1)
     end = min(count, start + maxchanges)
@@ -288,9 +288,7 @@ def manifest(web, req, tmpl):
         raise ErrorResponse(HTTP_NOT_FOUND, 'path not found: ' + path)
 
     def filelist(**map):
-        fl = files.keys()
-        fl.sort()
-        for f in fl:
+        for f in util.sort(files):
             full, fnode = files[f]
             if not fnode:
                 continue
@@ -299,14 +297,12 @@ def manifest(web, req, tmpl):
             yield {"file": full,
                    "parity": parity.next(),
                    "basename": f,
-                   "date": fctx.changectx().date(),
+                   "date": fctx.date(),
                    "size": fctx.size(),
                    "permissions": mf.flags(full)}
 
     def dirlist(**map):
-        fl = files.keys()
-        fl.sort()
-        for f in fl:
+        for f in util.sort(files):
             full, fnode = files[f]
             if fnode:
                 continue
@@ -343,7 +339,7 @@ def tags(web, req, tmpl):
             count = count + 1
             yield {"parity": parity.next(),
                    "tag": k,
-                   "date": web.repo.changectx(n).date(),
+                   "date": web.repo[n].date(),
                    "node": hex(n)}
 
     return tmpl("tags",
@@ -371,27 +367,24 @@ def summary(web, req, tmpl):
                        parity=parity.next(),
                        tag=k,
                        node=hex(n),
-                       date=web.repo.changectx(n).date())
+                       date=web.repo[n].date())
 
     def branches(**map):
         parity = paritygen(web.stripecount)
 
         b = web.repo.branchtags()
         l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.items()]
-        l.sort()
-
-        for r,n,t in l:
-            ctx = web.repo.changectx(n)
+        for r,n,t in util.sort(l):
             yield {'parity': parity.next(),
                    'branch': t,
                    'node': hex(n),
-                   'date': ctx.date()}
+                   'date': web.repo[n].date()}
 
     def changelist(**map):
         parity = paritygen(web.stripecount, offset=start-end)
         l = [] # build a list in forward order for efficiency
         for i in xrange(start, end):
-            ctx = web.repo.changectx(i)
+            ctx = web.repo[i]
             n = ctx.node()
             hn = hex(n)
 
@@ -410,7 +403,7 @@ def summary(web, req, tmpl):
         yield l
 
     cl = web.repo.changelog
-    count = cl.count()
+    count = len(cl)
     start = max(0, count - web.maxchanges)
     end = min(count, start + web.maxchanges)
 
@@ -499,7 +492,7 @@ def filelog(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
     fl = fctx.filelog()
-    count = fl.count()
+    count = len(fl)
     pagelen = web.maxshortchanges
     pos = fctx.filerev()
     start = max(0, pos - pagelen + 1)
@@ -580,7 +573,7 @@ def graph(web, req, tmpl):
     rev = webutil.changectx(web.repo, req).rev()
     bg_height = 39
 
-    max_rev = web.repo.changelog.count() - 1
+    max_rev = len(web.repo) - 1
     revcount = min(max_rev, int(req.form.get('revcount', [25])[0]))
     revnode = web.repo.changelog.node(rev)
     revnode_hex = hex(revnode)
@@ -589,7 +582,7 @@ def graph(web, req, tmpl):
     lessrev = max(0, rev - revcount / 2)
 
     maxchanges = web.maxshortchanges or web.maxchanges
-    count = web.repo.changelog.count()
+    count = len(web.repo)
     changenav = webutil.revnavgen(rev, maxchanges, count, web.repo.changectx)
 
     tree = list(graphmod.graph(web.repo, rev, rev - revcount))

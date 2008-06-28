@@ -70,14 +70,17 @@ class dirstate(object):
         elif name == '_slash':
             self._slash = self._ui.configbool('ui', 'slash') and os.sep != '/'
             return self._slash
+        elif name == '_checklink':
+            self._checklink = util.checklink(self._root)
+            return self._checklink
         elif name == '_checkexec':
             self._checkexec = util.checkexec(self._root)
             return self._checkexec
-        elif name == '_folding':
-            self._folding = not util.checkfolding(self._join('.hg'))
-            return self._folding
+        elif name == '_checkcase':
+            self._checkcase = not util.checkcase(self._join('.hg'))
+            return self._checkcase
         elif name == 'normalize':
-            if self._folding:
+            if self._checkcase:
                 self.normalize = self._normalize
             else:
                 self.normalize = lambda x: x
@@ -88,8 +91,33 @@ class dirstate(object):
     def _join(self, f):
         return os.path.join(self._root, f)
 
-    def folding(self):
-        return self._folding
+    def flagfunc(self, fallback):
+        if self._checklink:
+            if self._checkexec:
+                def f(x):
+                    p = os.path.join(self._root, x)
+                    if os.path.islink(p):
+                        return 'l'
+                    if util.is_exec(p):
+                        return 'x'
+                    return ''
+                return f
+            def f(x):
+                if os.path.islink(os.path.join(self._root, x)):
+                    return 'l'
+                if 'x' in fallback(x):
+                    return 'x'
+                return ''
+            return f
+        if self._checkexec:
+            def f(x):
+                if 'l' in fallback(x):
+                    return 'l'
+                if util.is_exec(os.path.join(self._root, x)):
+                    return 'x'
+                return ''
+            return f
+        return fallback
 
     def getcwd(self):
         cwd = os.getcwd()
@@ -125,9 +153,7 @@ class dirstate(object):
         return key in self._map
 
     def __iter__(self):
-        a = self._map.keys()
-        a.sort()
-        for x in a:
+        for x in util.sort(self._map):
             yield x
 
     def parents(self):
@@ -356,7 +382,7 @@ class dirstate(object):
     def rebuild(self, parent, files):
         self.clear()
         for f in files:
-            if files.execf(f):
+            if 'x' in files.flags(f):
                 self._map[f] = ('n', 0777, -1, 0, 0)
             else:
                 self._map[f] = ('n', 0666, -1, 0, 0)
@@ -408,8 +434,7 @@ class dirstate(object):
         if not unknown:
             return ret
 
-        b = self._map.keys()
-        b.sort()
+        b = util.sort(self._map)
         blen = len(b)
 
         for x in unknown:
@@ -447,12 +472,7 @@ class dirstate(object):
                 return True
         return False
 
-    def walk(self, match):
-        # filter out the src and stat
-        for src, f, st in self.statwalk(match):
-            yield f
-
-    def statwalk(self, match, unknown=True, ignored=False):
+    def walk(self, match, unknown, ignored):
         '''
         walk recursively through the directory tree, finding all files
         matched by the match function
@@ -537,9 +557,10 @@ class dirstate(object):
                             continue
                 for f, kind, st in entries:
                     np = pconvert(join(nd, f))
+                    nn = self.normalize(np)
                     if np in known:
                         continue
-                    known[np] = 1
+                    known[nn] = 1
                     p = join(top, f)
                     # don't trip over symlinks
                     if kind == stat.S_IFDIR:
@@ -548,19 +569,18 @@ class dirstate(object):
                             if hasattr(match, 'dir'):
                                 match.dir(np)
                         if np in dc and match(np):
-                            add((np, 'm', st))
+                            add((nn, 'm', st))
                     elif imatch(np):
                         if supported(np, st.st_mode):
-                            add((np, 'f', st))
+                            add((nn, 'f', st))
                         elif np in dc:
-                            add((np, 'm', st))
-            found.sort()
-            return found
+                            add((nn, 'm', st))
+            return util.sort(found)
 
         # step one, find all files that match our criteria
-        files.sort()
-        for ff in files:
+        for ff in util.sort(files):
             nf = normpath(ff)
+            nn = self.normalize(nf)
             f = _join(ff)
             try:
                 st = lstat(f)
@@ -581,9 +601,9 @@ class dirstate(object):
                     for f, src, st in findfiles(f):
                         yield src, f, st
             else:
-                if nf in known:
+                if nn in known:
                     continue
-                known[nf] = 1
+                known[nn] = 1
                 if match(nf):
                     if supported(ff, st.st_mode, verbose=True):
                         yield 'f', self.normalize(nf), st
@@ -592,16 +612,15 @@ class dirstate(object):
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
-        ks = dc.keys()
-        ks.sort()
-        for k in ks:
+        for k in util.sort(dc):
             if k in known:
                 continue
             known[k] = 1
             if imatch(k):
                 yield 'm', k, None
 
-    def status(self, match, list_ignored, list_clean, list_unknown):
+    def status(self, match, ignored, clean, unknown):
+        listignored, listclean, listunknown = ignored, clean, unknown
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
@@ -618,13 +637,12 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
-        for src, fn, st in self.statwalk(match, unknown=list_unknown,
-                                         ignored=list_ignored):
+        for src, fn, st in self.walk(match, listunknown, listignored):
             if fn not in dmap:
-                if (list_ignored or match.exact(fn)) and self._dirignore(fn):
-                    if list_ignored:
+                if (listignored or match.exact(fn)) and self._dirignore(fn):
+                    if listignored:
                         iadd(fn)
-                elif list_unknown:
+                elif listunknown:
                     uadd(fn)
                 continue
 
@@ -657,7 +675,7 @@ class dirstate(object):
                     madd(fn)
                 elif time != int(st.st_mtime):
                     ladd(fn)
-                elif list_clean:
+                elif listclean:
                     cadd(fn)
             elif state == 'm':
                 madd(fn)

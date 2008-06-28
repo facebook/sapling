@@ -23,7 +23,6 @@ M bar
 M foo1
   foo
 % reverting foo1 and bar
-warning: working directory has two parents, tag '.' uses the first
 saving current version of bar as bar.orig
 reverting bar
 saving current version of foo1 as foo1.orig

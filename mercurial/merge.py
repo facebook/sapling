@@ -262,11 +262,10 @@ def applyupdates(repo, action, wctx, mctx):
     "apply the merge action list to the working directory"
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
-    action.sort()
-
     ms = mergestate(repo)
     ms.reset(wctx.parents()[0].node())
     moves = []
+    action.sort()
 
     # prescan for merges
     for a in action:
@@ -409,7 +408,7 @@ def update(repo, node, branchmerge, force, partial):
 
     wlock = repo.wlock()
     try:
-        wc = repo.workingctx()
+        wc = repo[None]
         if node is None:
             # tip of current branch
             try:
@@ -421,7 +420,7 @@ def update(repo, node, branchmerge, force, partial):
                     raise util.Abort(_("branch %s not found") % wc.branch())
         overwrite = force and not branchmerge
         pl = wc.parents()
-        p1, p2 = pl[0], repo.changectx(node)
+        p1, p2 = pl[0], repo[node]
         pa = p1.ancestor(p2)
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
         fastforward = False
@@ -460,7 +459,7 @@ def update(repo, node, branchmerge, force, partial):
         action = []
         if not force:
             _checkunknown(wc, p2)
-        if not util.checkfolding(repo.path):
+        if not util.checkcase(repo.path):
             _checkcollision(p2)
         action += _forgetremoved(wc, p2, branchmerge)
         action += manifestmerge(repo, wc, p2, pa, overwrite, partial)

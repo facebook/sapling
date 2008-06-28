@@ -252,6 +252,12 @@ def unique(g):
     """return the uniq elements of iterable g"""
     return dict.fromkeys(g).keys()
 
+def sort(l):
+    if not isinstance(l, list):
+        l = list(l)
+    l.sort()
+    return l
+
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
 
@@ -839,7 +845,7 @@ def groupname(gid=None):
 
 # File system features
 
-def checkfolding(path):
+def checkcase(path):
     """
     Check whether the given path is on a case-sensitive filesystem
 
@@ -933,12 +939,6 @@ def checkexec(path):
         return False
     return not (new_file_has_exec or exec_flags_cannot_flip)
 
-def execfunc(path, fallback):
-    '''return an is_exec() function with default to fallback'''
-    if checkexec(path):
-        return lambda x: is_exec(os.path.join(path, x))
-    return fallback
-
 def checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
     # mktemp is not racy because symlink creation will fail if the
@@ -950,12 +950,6 @@ def checklink(path):
         return True
     except (OSError, AttributeError):
         return False
-
-def linkfunc(path, fallback):
-    '''return an is_link() function with default to fallback'''
-    if checklink(path):
-        return lambda x: os.path.islink(os.path.join(path, x))
-    return fallback
 
 _umask = os.umask(0)
 os.umask(_umask)

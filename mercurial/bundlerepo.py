@@ -34,7 +34,7 @@ class bundlerevlog(revlog.revlog):
             for chunk in changegroup.chunkiter(bundlefile):
                 pos = bundlefile.tell()
                 yield chunk, pos - len(chunk)
-        n = self.count()
+        n = len(self)
         prev = None
         for chunk, start in chunkpositer():
             size = len(chunk)

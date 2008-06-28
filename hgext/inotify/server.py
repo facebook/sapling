@@ -534,9 +534,7 @@ class Watcher(object):
                 self.ui.note('%s processing %d deferred events as %d\n' %
                              (self.event_time(), self.deferred,
                               len(self.eventq)))
-            eventq = self.eventq.items()
-            eventq.sort()
-            for wpath, evts in eventq:
+            for wpath, evts in util.sort(self.eventq.items()):
                 for evt in evts:
                     self.deferred_event(wpath, evt)
             self.eventq.clear()

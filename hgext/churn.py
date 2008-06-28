@@ -7,7 +7,7 @@
 '''allow graphing the number of lines changed per contributor'''
 
 from mercurial.i18n import gettext as _
-from mercurial import mdiff, cmdutil, util, node
+from mercurial import patch, cmdutil, util, node
 import os, sys
 
 def get_tty_width():
@@ -31,98 +31,41 @@ def get_tty_width():
         pass
     return 80
 
-def __gather(ui, repo, node1, node2):
-    def dirtywork(f, mmap1, mmap2):
-        lines = 0
-
-        to = mmap1 and repo.file(f).read(mmap1[f]) or None
-        tn = mmap2 and repo.file(f).read(mmap2[f]) or None
-
-        diff = mdiff.unidiff(to, "", tn, "", f, f).split("\n")
-
-        for line in diff:
-            if not line:
-                continue # skip EOF
-            if line.startswith(" "):
-                continue # context line
-            if line.startswith("--- ") or line.startswith("+++ "):
-                continue # begining of diff
-            if line.startswith("@@ "):
-                continue # info line
-
-            # changed lines
-            lines += 1
-
-        return lines
-
-    ##
-
-    lines = 0
-
-    changes = repo.status(node1, node2)[:5]
-
-    modified, added, removed, deleted, unknown = changes
-
-    who = repo.changelog.read(node2)[1]
-    who = util.email(who) # get the email of the person
-
-    mmap1 = repo.manifest.read(repo.changelog.read(node1)[0])
-    mmap2 = repo.manifest.read(repo.changelog.read(node2)[0])
-    for f in modified:
-        lines += dirtywork(f, mmap1, mmap2)
-
-    for f in added:
-        lines += dirtywork(f, None, mmap2)
-
-    for f in removed:
-        lines += dirtywork(f, mmap1, None)
-
-    for f in deleted:
-        lines += dirtywork(f, mmap1, mmap2)
-
-    for f in unknown:
-        lines += dirtywork(f, mmap1, mmap2)
-
-    return (who, lines)
-
-def gather_stats(ui, repo, amap, revs=None, progress=False):
+def countrevs(ui, repo, amap, revs, progress=False):
     stats = {}
-
-    cl    = repo.changelog
-
+    count = pct = 0
     if not revs:
-        revs = range(0, cl.count())
-
-    nr_revs = len(revs)
-    cur_rev = 0
+        revs = range(len(repo))
 
     for rev in revs:
-        cur_rev += 1 # next revision
-
-        node2    = cl.node(rev)
-        node1    = cl.parents(node2)[0]
-
-        if cl.parents(node2)[1] != node.nullid:
+        ctx2 = repo[rev]
+        parents = ctx2.parents()
+        if len(parents) > 1:
             ui.note(_('Revision %d is a merge, ignoring...\n') % (rev,))
             continue
 
-        who, lines = __gather(ui, repo, node1, node2)
+        ctx1 = parents[0]
+        lines = 0
+        ui.pushbuffer()
+        patch.diff(repo, ctx1.node(), ctx2.node())
+        diff = ui.popbuffer()
 
-        # remap the owner if possible
-        if who in amap:
-            ui.note("using '%s' alias for '%s'\n" % (amap[who], who))
-            who = amap[who]
+        for l in diff.split('\n'):
+            if (l.startswith("+") and not l.startswith("+++ ") or
+                l.startswith("-") and not l.startswith("--- ")):
+                lines += 1
 
-        if not who in stats:
-            stats[who] = 0
-        stats[who] += lines
-
-        ui.note("rev %d: %d lines by %s\n" % (rev, lines, who))
+        user = util.email(ctx2.user())
+        user = amap.get(user, user) # remap
+        stats[user] = stats.get(user, 0) + lines
+        ui.debug("rev %d: %d lines by %s\n" % (rev, lines, user))
 
         if progress:
-            nr_revs = max(nr_revs, 1)
-            if int(100.0*(cur_rev - 1)/nr_revs) < int(100.0*cur_rev/nr_revs):
-                ui.write("\rGenerating stats: %d%%" % (int(100.0*cur_rev/nr_revs),))
+            count += 1
+            newpct = int(100.0 * count / max(len(revs), 1))
+            if pct < newpct:
+                pct = newpct
+                ui.write("\rGenerating stats: %d%%" % pct)
                 sys.stdout.flush()
 
     if progress:
@@ -139,61 +82,32 @@ def churn(ui, repo, **opts):
     <alias email> <actual email>'''
 
     def pad(s, l):
-        if len(s) < l:
-            return s + " " * (l-len(s))
-        return s[0:l]
-
-    def graph(n, maximum, width, char):
-        maximum = max(1, maximum)
-        n = int(n * width / float(maximum))
-
-        return char * (n)
-
-    def get_aliases(f):
-        aliases = {}
-
-        for l in f.readlines():
-            l = l.strip()
-            alias, actual = l.split()
-            aliases[alias] = actual
-
-        return aliases
+        return (s + " " * l)[:l]
 
     amap = {}
     aliases = opts.get('aliases')
     if aliases:
-        try:
-            f = open(aliases,"r")
-        except OSError, e:
-            print "Error: " + e
-            return
+        for l in open(aliases, "r"):
+            l = l.strip()
+            alias, actual = l.split()
+            amap[alias] = actual
 
-        amap = get_aliases(f)
-        f.close()
-
-    revs = [int(r) for r in cmdutil.revrange(repo, opts['rev'])]
-    revs.sort()
-    stats = gather_stats(ui, repo, amap, revs, opts.get('progress'))
-
-    # make a list of tuples (name, lines) and sort it in descending order
-    ordered = stats.items()
-    if not ordered:
+    revs = util.sort([int(r) for r in cmdutil.revrange(repo, opts['rev'])])
+    stats = countrevs(ui, repo, amap, revs, opts.get('progress'))
+    if not stats:
         return
-    ordered.sort(lambda x, y: cmp(y[1], x[1]))
-    max_churn = ordered[0][1]
 
-    tty_width = get_tty_width()
-    ui.note(_("assuming %i character terminal\n") % tty_width)
-    tty_width -= 1
+    stats = util.sort([(-l, u, l) for u,l in stats.items()])
+    maxchurn = float(max(1, stats[0][2]))
+    maxuser = max([len(u) for k, u, l in stats])
 
-    max_user_width = max([len(user) for user, churn in ordered])
+    ttywidth = get_tty_width()
+    ui.debug(_("assuming %i character terminal\n") % ttywidth)
+    width = ttywidth - maxuser - 2 - 6 - 2 - 2
 
-    graph_width = tty_width - max_user_width - 1 - 6 - 2 - 2
-
-    for user, churn in ordered:
-        print "%s %6d %s" % (pad(user, max_user_width),
-                             churn,
-                             graph(churn, max_churn, graph_width, '*'))
+    for k, user, churn in stats:
+        print "%s %6d %s" % (pad(user, maxuser), churn,
+                             "*" * int(churn * width / maxchurn))
 
 cmdtable = {
     "churn":

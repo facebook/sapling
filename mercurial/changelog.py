@@ -82,7 +82,7 @@ class changelog(revlog):
         "delay visibility of index updates to other readers"
         self._realopener = self.opener
         self.opener = self._delayopener
-        self._delaycount = self.count()
+        self._delaycount = len(self)
         self._delaybuf = []
         self._delayname = None
 
@@ -108,7 +108,7 @@ class changelog(revlog):
         # if we're doing an initial clone, divert to another file
         if self._delaycount == 0:
             self._delayname = fp.name
-            if not self.count():
+            if not len(self):
                 # make sure to truncate the file
                 mode = mode.replace('a', 'w')
             return self._realopener(name + ".a", mode)
@@ -130,9 +130,7 @@ class changelog(revlog):
 
     def encode_extra(self, d):
         # keys must be sorted to produce a deterministic changelog entry
-        keys = d.keys()
-        keys.sort()
-        items = [_string_escape('%s:%s' % (k, d[k])) for k in keys]
+        items = [_string_escape('%s:%s' % (k, d[k])) for k in util.sort(d)]
         return "\0".join(items)
 
     def read(self, node):
@@ -175,7 +173,7 @@ class changelog(revlog):
         files = l[3:]
         return (manifest, user, (time, timezone), files, desc, extra)
 
-    def add(self, manifest, list, desc, transaction, p1=None, p2=None,
+    def add(self, manifest, files, desc, transaction, p1=None, p2=None,
                   user=None, date=None, extra={}):
 
         user, desc = util.fromlocal(user), util.fromlocal(desc)
@@ -189,7 +187,6 @@ class changelog(revlog):
         if extra:
             extra = self.encode_extra(extra)
             parseddate = "%s %s" % (parseddate, extra)
-        list.sort()
-        l = [hex(manifest), user, parseddate] + list + ["", desc]
+        l = [hex(manifest), user, parseddate] + util.sort(files) + ["", desc]
         text = "\n".join(l)
-        return self.addrevision(text, transaction, self.count(), p1, p2)
+        return self.addrevision(text, transaction, len(self), p1, p2)

@@ -11,7 +11,7 @@ from mercurial import ui
 import common
 import os, select, socket, stat, struct, sys
 
-def query(ui, repo, names, match, list_ignored, list_clean, list_unknown=True):
+def query(ui, repo, names, match, ignored, clean, unknown=True):
     sock = socket.socket(socket.AF_UNIX)
     sockpath = repo.join('inotify.sock')
     sock.connect(sockpath)
@@ -20,10 +20,10 @@ def query(ui, repo, names, match, list_ignored, list_clean, list_unknown=True):
         for n in names or []:
             yield n
         states = 'almrx!'
-        if list_ignored:
+        if ignored:
             raise ValueError('this is insanity')
-        if list_clean: states += 'n'
-        if list_unknown: states += '?'
+        if clean: states += 'n'
+        if unknown: states += '?'
         yield states
 
     req = '\0'.join(genquery())

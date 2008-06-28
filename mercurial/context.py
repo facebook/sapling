@@ -12,19 +12,11 @@ import ancestor, bdiff, revlog, util, os, errno
 class changectx(object):
     """A changecontext object makes access to data related to a particular
     changeset convenient."""
-    def __init__(self, repo, changeid=None):
+    def __init__(self, repo, changeid=''):
         """changeid is a revision number, node, or tag"""
+        if changeid == '':
+            changeid = '.'
         self._repo = repo
-
-        if not changeid and changeid != 0:
-            p1, p2 = self._repo.dirstate.parents()
-            self._rev = self._repo.changelog.rev(p1)
-            if self._rev == -1:
-                changeid = 'tip'
-            else:
-                self._node = p1
-                return
-
         self._node = self._repo.lookup(changeid)
         self._rev = self._repo.changelog.rev(self._node)
 
@@ -63,6 +55,12 @@ class changectx(object):
             md = self._repo.manifest.readdelta(self._changeset[0])
             self._manifestdelta = md
             return self._manifestdelta
+        elif name == '_parents':
+            p = self._repo.changelog.parents(self._node)
+            if p[1] == nullid:
+                p = p[:-1]
+            self._parents = [changectx(self._repo, x) for x in p]
+            return self._parents
         else:
             raise AttributeError, name
 
@@ -73,9 +71,7 @@ class changectx(object):
         return self.filectx(key)
 
     def __iter__(self):
-        a = self._manifest.keys()
-        a.sort()
-        for f in a:
+        for f in util.sort(self._manifest):
             yield f
 
     def changeset(self): return self._changeset
@@ -93,8 +89,7 @@ class changectx(object):
 
     def parents(self):
         """return contexts for each parent changeset"""
-        p = self._repo.changelog.parents(self._node)
-        return [changectx(self._repo, x) for x in p]
+        return self._parents
 
     def children(self):
         """return contexts for each child changeset"""
@@ -121,7 +116,7 @@ class changectx(object):
     def filenode(self, path):
         return self._fileinfo(path)[0]
 
-    def fileflags(self, path):
+    def flags(self, path):
         try:
             return self._fileinfo(path)[1]
         except revlog.LookupError:
@@ -137,10 +132,7 @@ class changectx(object):
     def filectxs(self):
         """generate a file context for each file in this changeset's
            manifest"""
-        mf = self.manifest()
-        m = mf.keys()
-        m.sort()
-        for f in m:
+        for f in util.sort(mf):
             yield self.filectx(f, fileid=mf[f])
 
     def ancestor(self, c2):
@@ -240,9 +232,7 @@ class filectx(object):
 
     def filerev(self): return self._filerev
     def filenode(self): return self._filenode
-    def fileflags(self): return self._changectx.fileflags(self._path)
-    def isexec(self): return 'x' in self.fileflags()
-    def islink(self): return 'l' in self.fileflags()
+    def flags(self): return self._changectx.flags(self._path)
     def filelog(self): return self._filelog
 
     def rev(self):
@@ -388,12 +378,11 @@ class filectx(object):
         # sort by revision (per file) which is a topological order
         visit = []
         for f in files:
-            fn = [(n.rev(), n) for n in needed.keys() if n._path == f]
+            fn = [(n.rev(), n) for n in needed if n._path == f]
             visit.extend(fn)
-        visit.sort()
-        hist = {}
 
-        for r, f in visit:
+        hist = {}
+        for r, f in util.sort(visit):
             curr = decorate(f.data(), f)
             for p in parents(f):
                 if p != nullid:
@@ -468,7 +457,7 @@ class workingctx(changectx):
             self._user = self._repo.ui.username()
         if parents:
             p1, p2 = parents
-            self._parents = [self._repo.changectx(p) for p in (p1, p2)]
+            self._parents = [changectx(self._repo, p) for p in (p1, p2)]
         if changes:
             self._status = list(changes)
 
@@ -492,15 +481,18 @@ class workingctx(changectx):
         return True
 
     def __getattr__(self, name):
-        if name == '_parents':
-            self._parents = self._repo.parents()
-            return self._parents
         if name == '_status':
-            self._status = self._repo.status()
+            self._status = self._repo.status(unknown=True)
             return self._status
         if name == '_manifest':
             self._buildmanifest()
             return self._manifest
+        elif name == '_parents':
+            p = self._repo.dirstate.parents()
+            if p[1] == nullid:
+                p = p[:-1]
+            self._parents = [changectx(self._repo, x) for x in p]
+            return self._parents
         else:
             raise AttributeError, name
 
@@ -509,16 +501,14 @@ class workingctx(changectx):
 
         man = self._parents[0].manifest().copy()
         copied = self._repo.dirstate.copies()
-        is_exec = util.execfunc(self._repo.root,
-                                lambda p: man.execf(copied.get(p,p)))
-        is_link = util.linkfunc(self._repo.root,
-                                lambda p: man.linkf(copied.get(p,p)))
+        cf = lambda x: man.flags(copied.get(x, x))
+        ff = self._repo.dirstate.flagfunc(cf)
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 man[f] = man.get(copied.get(f, f), nullid) + i
                 try:
-                    man.set(f, is_exec(f), is_link(f))
+                    man.set(f, ff(f))
                 except OSError:
                     pass
 
@@ -534,9 +524,7 @@ class workingctx(changectx):
     def date(self): return self._date
     def description(self): return self._text
     def files(self):
-        f = self.modified() + self.added() + self.removed()
-        f.sort()
-        return f
+        return util.sort(self._status[0] + self._status[1] + self._status[2])
 
     def modified(self): return self._status[0]
     def added(self): return self._status[1]
@@ -552,14 +540,10 @@ class workingctx(changectx):
         [t.extend(p.tags()) for p in self.parents()]
         return t
 
-    def parents(self):
-        """return contexts for each parent changeset"""
-        return self._parents
-
     def children(self):
         return []
 
-    def fileflags(self, path):
+    def flags(self, path):
         if '_manifest' in self.__dict__:
             try:
                 return self._manifest.flags(path)
@@ -569,12 +553,9 @@ class workingctx(changectx):
         pnode = self._parents[0].changeset()[0]
         orig = self._repo.dirstate.copies().get(path, path)
         node, flag = self._repo.manifest.find(pnode, orig)
-        is_link = util.linkfunc(self._repo.root,
-                                lambda p: flag and 'l' in flag)
-        is_exec = util.execfunc(self._repo.root,
-                                lambda p: flag and 'x' in flag)
         try:
-            return (is_link(path) and 'l' or '') + (is_exec(path) and 'x' or '')
+            ff = self._repo.dirstate.flagfunc(lambda x: flag or '')
+            return ff(path)
         except OSError:
             pass
 
@@ -698,9 +679,8 @@ class memctx(object):
         self._user = user or self._repo.ui.username()
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
-        self._parents = [self._repo.changectx(p) for p in (p1, p2)]
-        files = list(files)
-        files.sort()
+        self._parents = [changectx(self._repo, p) for p in (p1, p2)]
+        files = util.sort(list(files))
         self._status = [files, [], [], [], []]
         self._filectxfn = filectxfn
 
@@ -728,6 +708,7 @@ class memctx(object):
     def clean(self): return self._status[5]
     def branch(self): return self._extra['branch']
     def extra(self): return self._extra
+    def flags(self, f): return self[f].flags()
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -754,7 +735,7 @@ class memfilectx(object):
     def __str__(self): return "%s@%s" % (self.path(), self._changectx)
     def path(self): return self._path
     def data(self): return self._data
-    def fileflags(self): return self._flags
+    def flags(self): return self._flags
     def isexec(self): return 'x' in self._flags
     def islink(self): return 'l' in self._flags
     def renamed(self): return self._copied

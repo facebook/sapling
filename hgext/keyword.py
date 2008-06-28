@@ -78,7 +78,7 @@ like CVS' $Log$, are not supported. A keyword template map
 "Log = {desc}" expands to the first line of the changeset description.
 '''
 
-from mercurial import commands, cmdutil, context, dispatch, filelog, revlog
+from mercurial import commands, cmdutil, dispatch, filelog, revlog
 from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.hgweb import webcommands
 from mercurial.node import nullid, hex
@@ -142,7 +142,7 @@ class kwtemplater(object):
     def getnode(self, path, fnode):
         '''Derives changenode from file path and filenode.'''
         # used by kwfilelog.read and kwexpand
-        c = context.filectx(self.repo, path, fileid=fnode)
+        c = self.repo.filectx(path, fileid=fnode)
         return c.node()
 
     def substitute(self, data, path, node, subfunc):
@@ -163,25 +163,26 @@ class kwtemplater(object):
             return self.substitute(data, path, changenode, self.re_kw.sub)
         return data
 
-    def iskwfile(self, path, islink):
+    def iskwfile(self, path, flagfunc):
         '''Returns true if path matches [keyword] pattern
         and is not a symbolic link.
         Caveat: localrepository._link fails on Windows.'''
-        return self.matcher(path) and not islink(path)
+        return self.matcher(path) and not 'l' in flagfunc(path)
 
     def overwrite(self, node, expand, files):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        ctx = self.repo.changectx(node)
-        mf = ctx.manifest()
         if node is not None:     # commit
+            ctx = self.repo[node]
+            mf = ctx.manifest()
             files = [f for f in ctx.files() if f in mf]
             notify = self.ui.debug
         else:                    # kwexpand/kwshrink
+            ctx = self.repo['.']
+            mf = ctx.manifest()
             notify = self.ui.note
-        candidates = [f for f in files if self.iskwfile(f, mf.linkf)]
+        candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True # do not expand when reading
-            candidates.sort()
             action = expand and 'expanding' or 'shrinking'
             for f in candidates:
                 fp = self.repo.file(f)
@@ -251,12 +252,12 @@ class kwfilelog(filelog.filelog):
             return t2 != text
         return revlog.revlog.cmp(self, node, text)
 
-def _status(ui, repo, kwt, *pats, **opts):
+def _status(ui, repo, kwt, unknown, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
         matcher = cmdutil.match(repo, pats, opts)
-        return repo.status(match=matcher, list_clean=True)
+        return repo.status(match=matcher, unknown=unknown, clean=True)
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
@@ -266,15 +267,15 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     if repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, *pats, **opts)
-    modified, added, removed, deleted, unknown, ignored, clean = status
+    status = _status(ui, repo, kwt, False, *pats, **opts)
+    modified, added, removed, deleted = status[:4]
     if modified or added or removed or deleted:
         raise util.Abort(_('outstanding uncommitted changes'))
     wlock = lock = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        kwt.overwrite(None, expand, clean)
+        kwt.overwrite(None, expand, status[6])
     finally:
         del wlock, lock
 
@@ -378,15 +379,11 @@ def files(ui, repo, *pats, **opts):
     That is, files matched by [keyword] config patterns but not symlinks.
     '''
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, *pats, **opts)
+    status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
-    files = modified + added + clean
-    if opts.get('untracked'):
-        files += unknown
-    files.sort()
-    wctx = repo.workingctx()
-    islink = lambda p: 'l' in wctx.fileflags(p)
-    kwfiles = [f for f in files if kwt.iskwfile(f, islink)]
+    files = util.sort(modified + added + clean + unknown)
+    wctx = repo[None]
+    kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
     cwd = pats and repo.getcwd() or ''
     kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()
     if opts.get('all') or opts.get('ignore'):
@@ -511,7 +508,7 @@ def reposetup(ui, repo):
         comparing against working dir.'''
         if node2 is not None:
             kwt.matcher = util.never
-        elif node1 is not None and node1 != repo.changectx().node():
+        elif node1 is not None and node1 != repo['.'].node():
             kwt.restrict = True
         patch_diff(repo, node1, node2, match, fp, changes, opts)
 

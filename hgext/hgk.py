@@ -52,12 +52,10 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):
         assert node2 is not None
-        mmap = repo.changectx(node1).manifest()
-        mmap2 = repo.changectx(node2).manifest()
+        mmap = repo[node1].manifest()
+        mmap2 = repo[node2].manifest()
         m = cmdutil.match(repo, files)
-        status = repo.status(node1, node2, match=m)[:5]
-        modified, added, removed, deleted, unknown = status
-
+        modified, added, removed  = repo.status(node1, node2, m)[:3]
         empty = short(nullid)
 
         for f in modified:
@@ -103,7 +101,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
 def catcommit(ui, repo, n, prefix, ctx=None):
     nlprefix = '\n' + prefix;
     if ctx is None:
-        ctx = repo.changectx(n)
+        ctx = repo[n]
     (p1, p2) = ctx.parents()
     ui.write("tree %s\n" % short(ctx.changeset()[0])) # use ctx.node() instead ??
     if p1: ui.write("parent %s\n" % short(p1.node()))
@@ -175,7 +173,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
 # you can specify a commit to stop at by starting the sha1 with ^
 def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
     def chlogwalk():
-        count = repo.changelog.count()
+        count = len(repo)
         i = count
         l = [0] * 100
         chunk = 100
@@ -191,7 +189,7 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
                     l[chunk - x:] = [0] * (chunk - x)
                     break
                 if full != None:
-                    l[x] = repo.changectx(i + x)
+                    l[x] = repo[i + x]
                     l[x].changeset() # force reading
                 else:
                     l[x] = 1

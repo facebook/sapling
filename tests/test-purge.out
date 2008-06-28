@@ -51,14 +51,12 @@ Removing file ignored
 directory
 r1
 % abort with missing files until we support name mangling filesystems
-refused to run
-untracked_file still around
 untracked_file
-refused to run
-untracked_file still around
+! r1
+? untracked_file
+untracked_file
 Removing file untracked_file
-directory
-r1
+! r1
 % tracked file in ignored directory (issue621)
 untracked_file
 Removing file untracked_file

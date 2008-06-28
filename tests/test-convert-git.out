@@ -24,7 +24,7 @@ committer: test <test@example.org>
 
 
 % full conversion
-o    9 "Discard change to foo" files: foo
+@    9 "Discard change to foo" files: foo
 |\
 | o  8 "change foo" files: foo
 | |
@@ -49,7 +49,7 @@ o  0 "add foo" files: foo
 9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
 88dfeab657e8cf2cef3dec67b914f49791ae76b1 644   quux
 % foo bar baz: octopus merge
-o    8 "Discard change to foo" files: foo
+@    8 "Discard change to foo" files: foo
 |\
 | o  7 "change foo" files: foo
 | |
@@ -71,7 +71,7 @@ o  0 "add foo" files: foo
 354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
 9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
 % foo baz quux: only some parents of an octopus merge; "discard" a head
-o  6 "Discard change to foo" files: foo
+@  6 "Discard change to foo" files: foo
 |
 o  5 "change foo" files: foo
 |

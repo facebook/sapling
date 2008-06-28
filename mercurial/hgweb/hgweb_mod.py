@@ -306,8 +306,8 @@ class hgweb(object):
                            linenumber="% 8s" % lineno)
 
         r = self.repo
-        c1 = r.changectx(node1)
-        c2 = r.changectx(node2)
+        c1 = r[node1]
+        c2 = r[node2]
         date1 = util.datestr(c1.date())
         date2 = util.datestr(c2.date())
 

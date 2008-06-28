@@ -126,7 +126,7 @@ def revpair(repo, revs):
         if revrangesep in revs[0]:
             start, end = revs[0].split(revrangesep, 1)
             start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
+            end = revfix(repo, end, len(repo) - 1)
         else:
             start = revfix(repo, revs[0], None)
     elif len(revs) == 2:
@@ -151,7 +151,7 @@ def revrange(repo, revs):
         if revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
             start = revfix(repo, start, 0)
-            end = revfix(repo, end, repo.changelog.count() - 1)
+            end = revfix(repo, end, len(repo) - 1)
             step = start > end and -1 or 1
             for rev in xrange(start, end+step, step):
                 if rev in seen:
@@ -245,7 +245,7 @@ def findrenames(repo, added=None, removed=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
     if added is None or removed is None:
         added, removed = repo.status()[1:3]
-    ctx = repo.changectx()
+    ctx = repo['.']
     for a in added:
         aa = repo.wread(a)
         bestname, bestscore = None, threshold
@@ -653,9 +653,7 @@ class changeset_printer(object):
             self.ui.write(_("copies:      %s\n") % ' '.join(copies))
 
         if extra and self.ui.debugflag:
-            extraitems = extra.items()
-            extraitems.sort()
-            for key, value in extraitems:
+            for key, value in util.sort(extra.items()):
                 self.ui.write(_("extra:       %s=%s\n")
                               % (key, value.encode('string_escape')))
 
@@ -799,9 +797,7 @@ class changeset_templater(changeset_printer):
             return showlist('tag', self.repo.nodetags(changenode), **args)
 
         def showextras(**args):
-            extras = changes[5].items()
-            extras.sort()
-            for key, value in extras:
+            for key, value in util.sort(changes[5].items()):
                 args = args.copy()
                 args.update(dict(key=key, value=value))
                 yield self.t('extra', **args)
@@ -930,7 +926,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
     df = util.matchdate(date)
-    get = util.cachefunc(lambda r: repo.changectx(r).changeset())
+    get = util.cachefunc(lambda r: repo[r].changeset())
     changeiter, matchfn = walkchangerevs(ui, repo, [], get, {'rev':None})
     results = {}
     for st, rev, fns in changeiter:
@@ -988,11 +984,11 @@ def walkchangerevs(ui, repo, pats, change, opts):
     m = match(repo, pats, opts)
     follow = opts.get('follow') or opts.get('follow_first')
 
-    if repo.changelog.count() == 0:
+    if not len(repo):
         return [], m
 
     if follow:
-        defrange = '%s:0' % repo.changectx().rev()
+        defrange = '%s:0' % repo['.'].rev()
     else:
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
@@ -1007,9 +1003,9 @@ def walkchangerevs(ui, repo, pats, change, opts):
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog, node):
-            cl_count = repo.changelog.count()
+            cl_count = len(repo)
             if node is None:
-                last = filelog.count() - 1
+                last = len(filelog) - 1
             else:
                 last = filelog.rev(node)
             for i, window in increasing_windows(last, nullrev):
@@ -1032,7 +1028,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         minrev, maxrev = min(revs), max(revs)
         for file_, node in iterfiles():
             filelog = repo.file(file_)
-            if filelog.count() == 0:
+            if not len(filelog):
                 if node is None:
                     # A zero count may be a directory or deleted file, so
                     # try to find matching entries on the slow path.
@@ -1058,8 +1054,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
 
         # The slow path checks files modified in every changeset.
         def changerevgen():
-            for i, window in increasing_windows(repo.changelog.count()-1,
-                                                nullrev):
+            for i, window in increasing_windows(len(repo) - 1, nullrev):
                 for j in xrange(i - window, i + 1):
                     yield j, change(j)[3]
 
@@ -1130,9 +1125,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         for i, window in increasing_windows(0, len(revs)):
             yield 'window', revs[0] < revs[-1], revs[-1]
             nrevs = [rev for rev in revs[i:i+window] if want(rev)]
-            srevs = list(nrevs)
-            srevs.sort()
-            for rev in srevs:
+            for rev in util.sort(list(nrevs)):
                 fns = fncache.get(rev)
                 if not fns:
                     def fns_generator():
@@ -1159,9 +1152,8 @@ def commit(ui, repo, commitfunc, pats, opts):
 
     m = match(repo, pats, opts)
     if pats:
-        status = repo.status(match=m)
-        modified, added, removed, deleted, unknown = status[:5]
-        files = modified + added + removed
+        modified, added, removed = repo.status(match=m)[:3]
+        files = util.sort(modified + added + removed)
         slist = None
         for f in m.files():
             if f == '.':
@@ -1175,11 +1167,8 @@ def commit(ui, repo, commitfunc, pats, opts):
                     raise util.Abort(_("file %s not found!") % rel)
                 if stat.S_ISDIR(mode):
                     name = f + '/'
-                    if slist is None:
-                        slist = list(files)
-                        slist.sort()
-                    i = bisect.bisect(slist, name)
-                    if i >= len(slist) or not slist[i].startswith(name):
+                    i = bisect.bisect(files, name)
+                    if i >= len(files) or not files[i].startswith(name):
                         raise util.Abort(_("no match under directory %s!")
                                          % rel)
                 elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):

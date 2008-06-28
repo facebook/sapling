@@ -91,7 +91,7 @@ class checker(object):
 
     def check(self, node):
         '''return if access allowed, raise exception if not.'''
-        files = self.repo.changectx(node).files()
+        files = self.repo[node].files()
         if self.deniable:
             for f in files:
                 if self.deny(f):
@@ -118,7 +118,5 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         ui.debug(_('acl: changes have source "%s" - skipping\n') % source)
         return
 
-    start = repo.changelog.rev(bin(node))
-    end = repo.changelog.count()
-    for rev in xrange(start, end):
+    for rev in xrange(repo[node].rev(), len(repo)):
         c.check(repo.changelog.node(rev))

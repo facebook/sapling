@@ -88,9 +88,7 @@ class transplanter:
 
     def apply(self, repo, source, revmap, merges, opts={}):
         '''apply the revisions in revmap one by one in revision order'''
-        revs = revmap.keys()
-        revs.sort()
-
+        revs = util.sort(revmap)
         p1, p2 = repo.dirstate.parents()
         pulls = []
         diffopts = patch.diffopts(self.ui, opts)
@@ -310,9 +308,7 @@ class transplanter:
         if not os.path.isdir(self.path):
             os.mkdir(self.path)
         series = self.opener('series', 'w')
-        revs = revmap.keys()
-        revs.sort()
-        for rev in revs:
+        for rev in util.sort(revmap):
             series.write(revlog.hex(revmap[rev]) + '\n')
         if merges:
             series.write('# Merges\n')
@@ -571,10 +567,6 @@ def transplant(ui, repo, *revs, **opts):
                 revmap[source.changelog.rev(r)] = r
         for r in merges:
             revmap[source.changelog.rev(r)] = r
-
-        revs = revmap.keys()
-        revs.sort()
-        pulls = []
 
         tp.apply(repo, source, revmap, merges, opts)
     finally:

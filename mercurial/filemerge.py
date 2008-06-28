@@ -63,8 +63,7 @@ def _picktool(repo, ui, path, binary, symlink):
         if t not in tools:
             tools[t] = int(_toolstr(ui, t, "priority", "0"))
     names = tools.keys()
-    tools = [(-p,t) for t,p in tools.items()]
-    tools.sort()
+    tools = util.sort([(-p,t) for t,p in tools.items()])
     uimerge = ui.config("ui", "merge")
     if uimerge:
         if uimerge not in names:
@@ -132,7 +131,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     ui = repo.ui
     fd = fcd.path()
     binary = isbin(fcd) or isbin(fco) or isbin(fca)
-    symlink = fcd.islink() or fco.islink()
+    symlink = 'l' in fcd.flags() + fco.flags()
     tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
     ui.debug(_("picked tool '%s' for %s (binary %s symlink %s)\n") %
                (tool, fd, binary, symlink))
@@ -146,7 +145,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     if tool == "internal:local":
         return 0
     if tool == "internal:other":
-        repo.wwrite(fd, fco.data(), fco.fileflags())
+        repo.wwrite(fd, fco.data(), fco.flags())
         return 0
     if tool == "internal:fail":
         return 1
@@ -180,9 +179,9 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     env = dict(HG_FILE=fd,
                HG_MY_NODE=short(mynode),
                HG_OTHER_NODE=str(fco.changectx()),
-               HG_MY_ISLINK=fcd.islink(),
-               HG_OTHER_ISLINK=fco.islink(),
-               HG_BASE_ISLINK=fca.islink())
+               HG_MY_ISLINK='l' in fcd.flags(),
+               HG_OTHER_ISLINK='l' in fco.flags(),
+               HG_BASE_ISLINK='l' in fca.flags())
 
     if tool == "internal:merge":
         r = simplemerge.simplemerge(a, b, c, label=['local', 'other'])

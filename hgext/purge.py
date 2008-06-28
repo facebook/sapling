@@ -56,79 +56,42 @@ def purge(ui, repo, *dirs, **opts):
     files that this program would delete use the --print option.
     '''
     act = not opts['print']
-    ignored = bool(opts['all'])
-    abort_on_err = bool(opts['abort_on_err'])
-    eol = opts['print0'] and '\0' or '\n'
-    if eol == '\0':
-        # --print0 implies --print
-        act = False
-    force = bool(opts['force'])
-
-    def error(msg):
-        if abort_on_err:
-            raise util.Abort(msg)
-        else:
-            ui.warn(_('warning: %s\n') % msg)
+    eol = '\n'
+    if opts['print0']:
+        eol = '\0'
+        act = False # --print0 implies --print
 
     def remove(remove_func, name):
         if act:
             try:
                 remove_func(os.path.join(repo.root, name))
             except OSError, e:
-                error(_('%s cannot be removed') % name)
+                m = _('%s cannot be removed') % name
+                if opts['abort_on_err']:
+                    raise util.Abort(m)
+                ui.warn(_('warning: %s\n') % m)
         else:
             ui.write('%s%s' % (name, eol))
 
-    if not force:
-        _check_fs(ui, repo)
-
     directories = []
-    files = []
     match = cmdutil.match(repo, dirs, opts)
     match.dir = directories.append
-    for src, f, st in repo.dirstate.statwalk(match, ignored=ignored):
-        if src == 'f' and f not in repo.dirstate:
-            files.append(f)
+    status = repo.status(match=match, ignored=opts['all'], unknown=True)
 
-    directories.sort()
+    for f in util.sort(status[4] + status[5]):
+        ui.note(_('Removing file %s\n') % f)
+        remove(os.remove, f)
 
-    for f in files:
-        if f not in repo.dirstate:
-            ui.note(_('Removing file %s\n') % f)
-            remove(os.remove, f)
-
-    for f in directories[::-1]:
+    for f in util.sort(directories)[::-1]:
         if match(f) and not os.listdir(repo.wjoin(f)):
             ui.note(_('Removing directory %s\n') % f)
             remove(os.rmdir, f)
-
-def _check_fs(ui, repo):
-    """Abort if there is the chance of having problems with name-mangling fs
-
-    In a name mangling filesystem (e.g. a case insensitive one)
-    dirstate.walk() can yield filenames different from the ones
-    stored in the dirstate. This already confuses the status and
-    add commands, but with purge this may cause data loss.
-
-    To prevent this, this function will abort if there are uncommitted
-    changes.
-    """
-
-    # We can't use (files, match) to do a partial walk here - we wouldn't
-    # notice a modified README file if the user ran "hg purge readme"
-    modified, added, removed, deleted = repo.status()[:4]
-    if modified or added or removed or deleted:
-        if not util.checkfolding(repo.path) and not ui.quiet:
-            ui.warn(_("Purging on name mangling filesystems is not "
-                      "fully supported.\n"))
-        raise util.Abort(_("outstanding uncommitted changes"))
 
 cmdtable = {
     'purge|clean':
         (purge,
          [('a', 'abort-on-err', None, _('abort if an error occurs')),
           ('',  'all', None, _('purge ignored files too')),
-          ('f', 'force', None, _('purge even when there are uncommitted changes')),
           ('p', 'print', None, _('print the file names instead of deleting them')),
           ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
                                   ' (implies -p)')),

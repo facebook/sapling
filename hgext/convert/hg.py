@@ -157,21 +157,18 @@ class mercurial_sink(converter_sink):
 
     def puttags(self, tags):
          try:
-             parentctx = self.repo.changectx(self.tagsbranch)
+             parentctx = self.repo[self.tagsbranch]
              tagparent = parentctx.node()
          except RepoError, inst:
              parentctx = None
              tagparent = nullid
 
          try:
-             old = parentctx.filectx(".hgtags").data()
-             oldlines = old.splitlines(1)
-             oldlines.sort()
+             oldlines = util.sort(parentctx['.hgtags'].data().splitlines(1))
          except:
              oldlines = []
 
-         newlines = [("%s %s\n" % (tags[tag], tag)) for tag in tags.keys()]
-         newlines.sort()
+         newlines = util.sort([("%s %s\n" % (tags[tag], tag)) for tag in tags])
 
          if newlines == oldlines:
              return None
@@ -212,25 +209,24 @@ class mercurial_source(converter_source):
 
     def changectx(self, rev):
         if self.lastrev != rev:
-            self.lastctx = self.repo.changectx(rev)
+            self.lastctx = self.repo[rev]
             self.lastrev = rev
         return self.lastctx
 
     def getheads(self):
         if self.rev:
-            return [hex(self.repo.changectx(self.rev).node())]
+            return [hex(self.repo[self.rev].node())]
         else:
             return [hex(node) for node in self.repo.heads()]
 
     def getfile(self, name, rev):
         try:
-            return self.changectx(rev).filectx(name).data()
+            return self.changectx(rev)[name].data()
         except revlog.LookupError, err:
             raise IOError(err)
 
     def getmode(self, name, rev):
-        m = self.changectx(rev).manifest()
-        return (m.execf(name) and 'x' or '') + (m.linkf(name) and 'l' or '')
+        return self.changectx(rev).manifest().flags(name)
 
     def getchanges(self, rev):
         ctx = self.changectx(rev)
@@ -239,8 +235,7 @@ class mercurial_source(converter_source):
         else:
             m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
         changes = [(name, rev) for name in m + a + r]
-        changes.sort()
-        return (changes, self.getcopies(ctx, m + a))
+        return util.sort(changes), self.getcopies(ctx, m + a)
 
     def getcopies(self, ctx, files):
         copies = {}

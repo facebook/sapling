@@ -20,12 +20,12 @@ def bisect(changelog, state):
         badrev = min([changelog.rev(n) for n in bad])
         goodrevs = [changelog.rev(n) for n in good]
         # build ancestors array
-        ancestors = [[]] * (changelog.count() + 1) # an extra for [-1]
+        ancestors = [[]] * (len(changelog) + 1) # an extra for [-1]
 
         # clear good revs from array
         for node in goodrevs:
             ancestors[node] = None
-        for rev in xrange(changelog.count(), -1, -1):
+        for rev in xrange(len(changelog), -1, -1):
             if ancestors[rev] is None:
                 for prev in clparents(rev):
                     ancestors[prev] = None
@@ -60,7 +60,6 @@ def bisect(changelog, state):
                         children[prev] = [rev]
                         visit.append(prev)
 
-    candidates.sort()
     # have we narrowed it down to one entry?
     tot = len(candidates)
     if tot == 1:
@@ -71,7 +70,7 @@ def bisect(changelog, state):
     best_rev = None
     best_len = -1
     poison = {}
-    for rev in candidates:
+    for rev in util.sort(candidates):
         if rev in poison:
             for c in children.get(rev, []):
                 poison[c] = True # poison children

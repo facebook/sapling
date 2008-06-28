@@ -12,7 +12,7 @@ for f in sys.argv[1:]:
     binopen = lambda fn: open(fn, 'rb')
     r = revlog.revlog(binopen, f)
     print "file:", f
-    for i in xrange(r.count()):
+    for i in r:
         n = r.node(i)
         p = r.parents(n)
         d = r.revision(n)

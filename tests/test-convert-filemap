@@ -80,6 +80,7 @@ splitrepo()
 	echo "include $i" >> "$fmap"
     done
     hg -q convert $opts --filemap "$fmap" --datesort source "$repo"
+    hg up -q -R "$repo"
     glog -R "$repo"
     hg -R "$repo" manifest --debug
 }
@@ -115,6 +116,7 @@ rename foo foo2
 rename copied copied2
 EOF
 hg -q convert --filemap renames.fmap --datesort source renames.repo
+hg up -q -R renames.repo
 glog -R renames.repo
 hg -R renames.repo manifest --debug
 hg --cwd renames.repo debugrename copied2

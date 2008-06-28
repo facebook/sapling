@@ -405,8 +405,8 @@ def dorecord(ui, repo, committer, *pats, **opts):
         if match.files():
             changes = None
         else:
-            changes = repo.status(match=match)[:5]
-            modified, added, removed = changes[:3]
+            changes = repo.status(match=match)[:3]
+            modified, added, removed = changes
             match = cmdutil.matchfiles(repo, modified + added + removed)
         diffopts = mdiff.diffopts(git=True, nodates=True)
         fp = cStringIO.StringIO()
@@ -431,7 +431,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
 
         if changes is None:
             match = cmdutil.matchfiles(repo, newfiles)
-            changes = repo.status(match=match)[:5]
+            changes = repo.status(match=match)
         modified = dict.fromkeys(changes[0])
 
         # 2. backup changed files, so we can restore them in the end
