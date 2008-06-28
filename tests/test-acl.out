@@ -58,8 +58,6 @@ adding foo/file.txt revisions
 adding quux/file.py revisions
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
-acl: acl.allow not enabled
-acl: acl.deny not enabled
 acl: changes have source "push" - skipping
 updating the branch cache
 rolling back last transaction
