@@ -30,12 +30,12 @@ def lookup(repo, req):
         success = 0
     resp = "%s %s\n" % (success, r)
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    req.write(resp)
+    yield resp
 
 def heads(repo, req):
     resp = " ".join(map(hex, repo.heads())) + "\n"
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    req.write(resp)
+    yield resp
 
 def branches(repo, req):
     nodes = []
@@ -46,7 +46,7 @@ def branches(repo, req):
         resp.write(" ".join(map(hex, b)) + "\n")
     resp = resp.getvalue()
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    req.write(resp)
+    yield resp
 
 def between(repo, req):
     if 'pairs' in req.form:
@@ -57,7 +57,7 @@ def between(repo, req):
         resp.write(" ".join(map(hex, b)) + "\n")
     resp = resp.getvalue()
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    req.write(resp)
+    yield resp
 
 def changegroup(repo, req):
     req.respond(HTTP_OK, HGTYPE)
@@ -72,9 +72,9 @@ def changegroup(repo, req):
         chunk = f.read(4096)
         if not chunk:
             break
-        req.write(z.compress(chunk))
+        yield z.compress(chunk)
 
-    req.write(z.flush())
+    yield z.flush()
 
 def changegroupsubset(repo, req):
     req.respond(HTTP_OK, HGTYPE)
@@ -92,9 +92,9 @@ def changegroupsubset(repo, req):
         chunk = f.read(4096)
         if not chunk:
             break
-        req.write(z.compress(chunk))
+        yield z.compress(chunk)
 
-    req.write(z.flush())
+    yield z.flush()
 
 def capabilities(repo, req):
     caps = ['lookup', 'changegroupsubset']
@@ -104,23 +104,11 @@ def capabilities(repo, req):
         caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     rsp = ' '.join(caps)
     req.respond(HTTP_OK, HGTYPE, length=len(rsp))
-    req.write(rsp)
+    yield rsp
 
 def unbundle(repo, req):
 
-    def bail(response, headers={}):
-        length = int(req.env.get('CONTENT_LENGTH', 0))
-        for s in util.filechunkiter(req, limit=length):
-            # drain incoming bundle, else client will not see
-            # response when run outside cgi script
-            pass
-
-        status = headers.pop('status', HTTP_OK)
-        req.header(headers.items())
-        req.respond(status, HGTYPE)
-        req.write('0\n')
-        req.write(response)
-
+    errorfmt = '0\n%s\n'
     proto = req.env.get('wsgi.url_scheme') or 'http'
     their_heads = req.form['heads'][0].split(' ')
 
@@ -130,7 +118,13 @@ def unbundle(repo, req):
 
     # fail early if possible
     if not check_heads():
-        bail('unsynced changes\n')
+        length = int(req.env.get('CONTENT_LENGTH', 0))
+        for s in util.filechunkiter(req, limit=length):
+            # drain incoming bundle, else client will not see
+            # response when run outside cgi script
+            pass
+        req.respond(HTTP_OK, HGTYPE)
+        yield errorfmt % 'unsynced changes'
         return
 
     req.respond(HTTP_OK, HGTYPE)
@@ -149,8 +143,7 @@ def unbundle(repo, req):
             lock = repo.lock()
             try:
                 if not check_heads():
-                    req.write('0\n')
-                    req.write('unsynced changes\n')
+                    yield errorfmt % 'unsynced changes'
                     return
 
                 fp.seek(0)
@@ -177,15 +170,12 @@ def unbundle(repo, req):
                 finally:
                     val = sys.stdout.getvalue()
                     sys.stdout, sys.stderr = oldio
-                req.write('%d\n' % ret)
-                req.write(val)
+                yield '%d\n%s' % (ret, val)
             finally:
                 del lock
         except ValueError, inst:
-            req.write('0\n')
-            req.write(str(inst) + '\n')
+            yield errorfmt % inst
         except (OSError, IOError), inst:
-            req.write('0\n')
             filename = getattr(inst, 'filename', '')
             # Don't send our filesystem layout to the client
             if filename.startswith(repo.root):
@@ -198,12 +188,11 @@ def unbundle(repo, req):
             else:
                 code = HTTP_SERVER_ERROR
             req.respond(code)
-            req.write('%s: %s\n' % (error, filename))
+            yield '0\n%s: %s\n' % (error, filename)
     finally:
         fp.close()
         os.unlink(tempname)
 
 def stream_out(repo, req):
     req.respond(HTTP_OK, HGTYPE)
-    for chunk in streamclone.stream_out(repo, untrusted=True):
-        req.write(chunk)
+    return streamclone.stream_out(repo, untrusted=True)

@@ -76,8 +76,7 @@ class hgweb(object):
 
     def __call__(self, env, respond):
         req = wsgirequest(env, respond)
-        self.run_wsgi(req)
-        return req
+        return self.run_wsgi(req)
 
     def run_wsgi(self, req):
 
@@ -90,10 +89,9 @@ class hgweb(object):
         cmd = req.form.get('cmd', [''])[0]
         if cmd and cmd in protocol.__all__:
             if cmd in perms and not self.check_perm(req, perms[cmd]):
-                return
+                return []
             method = getattr(protocol, cmd)
-            method(self.repo, req)
-            return
+            return method(self.repo, req)
 
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
@@ -171,6 +169,7 @@ class hgweb(object):
 
             req.write(content)
             del tmpl
+            return req
 
         except revlog.LookupError, err:
             req.respond(HTTP_NOT_FOUND, ctype)

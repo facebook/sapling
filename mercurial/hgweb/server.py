@@ -122,7 +122,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.saved_headers = []
         self.sent_headers = False
         self.length = None
-        self.server.application(env, self._start_response)
+        for chunk in self.server.application(env, self._start_response):
+            self._write(chunk)
 
     def send_headers(self):
         if not self.saved_status:
