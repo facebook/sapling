@@ -81,18 +81,18 @@ class templater(object):
     def __contains__(self, key):
         return key in self.cache or key in self.map
 
-    def __call__(self, t, **map):
-        '''perform expansion.
-        t is name of map element to expand.
-        map is added elements to use during expansion.'''
+    def _template(self, t):
+        '''Get the template for the given template name. Use a local cache.'''
         if not t in self.cache:
             try:
                 self.cache[t] = file(self.map[t]).read()
             except IOError, inst:
                 raise IOError(inst.args[0], _('template file %s: %s') %
                               (self.map[t], inst.args[1]))
-        tmpl = self.cache[t]
+        return self.cache[t]
 
+    def _process(self, tmpl, map):
+        '''Render a template. Returns a generator.'''
         while tmpl:
             m = self.template_re.search(tmpl)
             if not m:
@@ -119,12 +119,33 @@ class templater(object):
                 lm = map.copy()
                 for i in v:
                     lm.update(i)
-                    yield self(format, **lm)
+                    t = self._template(format)
+                    yield self._process(t, lm)
             else:
                 if fl:
                     for f in fl.split("|")[1:]:
                         v = self.filters[f](v)
                 yield v
+
+    def __call__(self, t, **map):
+        '''Perform expansion. t is name of map element to expand. map contains
+        added elements for use during expansion. Is a generator.'''
+        tmpl = self._template(t)
+        iters = [self._process(tmpl, map)]
+        while iters:
+            try:
+                item = iters[0].next()
+            except StopIteration:
+                iters.pop(0)
+                continue
+            if isinstance(item, str):
+                yield item
+            elif item is None:
+                yield ''
+            elif hasattr(item, '__iter__'):
+                iters.insert(0, iter(item))
+            else:
+                yield str(item)
 
 def templatepath(name=None):
     '''return location of template file or directory (if no name).
