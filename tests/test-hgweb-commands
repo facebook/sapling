@@ -34,6 +34,7 @@ echo % File-related
 echo % Overviews
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/tags/?style=atom' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/summary/?style=gitweb' | sed "s/[0-9]* years ago/long ago/g"
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/?style=gitweb' | sed "s/[0-9]* years/long/g"
 
 echo % capabilities
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'
