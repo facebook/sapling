@@ -204,4 +204,6 @@ class sshserver(object):
                 os.unlink(tempname)
 
     def do_stream_out(self):
-        streamclone.stream_out(self.repo, self.fout)
+        for chunk in streamclone.stream_out(self.repo):
+            self.fout.write(chunk)
+        self.fout.flush()
