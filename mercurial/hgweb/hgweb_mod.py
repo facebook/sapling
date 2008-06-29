@@ -92,7 +92,7 @@ class hgweb(object):
             if cmd in perms and not self.check_perm(req, perms[cmd]):
                 return
             method = getattr(protocol, cmd)
-            method(self, req)
+            method(self.repo, req)
             return
 
         # work with CGI variables to create coherent structure

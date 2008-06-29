@@ -21,9 +21,9 @@ __all__ = [
 
 HGTYPE = 'application/mercurial-0.1'
 
-def lookup(web, req):
+def lookup(repo, req):
     try:
-        r = hex(web.repo.lookup(req.form['key'][0]))
+        r = hex(repo.lookup(req.form['key'][0]))
         success = 1
     except Exception,inst:
         r = str(inst)
@@ -32,34 +32,34 @@ def lookup(web, req):
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
-def heads(web, req):
-    resp = " ".join(map(hex, web.repo.heads())) + "\n"
+def heads(repo, req):
+    resp = " ".join(map(hex, repo.heads())) + "\n"
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
-def branches(web, req):
+def branches(repo, req):
     nodes = []
     if 'nodes' in req.form:
         nodes = map(bin, req.form['nodes'][0].split(" "))
     resp = cStringIO.StringIO()
-    for b in web.repo.branches(nodes):
+    for b in repo.branches(nodes):
         resp.write(" ".join(map(hex, b)) + "\n")
     resp = resp.getvalue()
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
-def between(web, req):
+def between(repo, req):
     if 'pairs' in req.form:
         pairs = [map(bin, p.split("-"))
                  for p in req.form['pairs'][0].split(" ")]
     resp = cStringIO.StringIO()
-    for b in web.repo.between(pairs):
+    for b in repo.between(pairs):
         resp.write(" ".join(map(hex, b)) + "\n")
     resp = resp.getvalue()
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
     req.write(resp)
 
-def changegroup(web, req):
+def changegroup(repo, req):
     req.respond(HTTP_OK, HGTYPE)
     nodes = []
 
@@ -67,7 +67,7 @@ def changegroup(web, req):
         nodes = map(bin, req.form['roots'][0].split(" "))
 
     z = zlib.compressobj()
-    f = web.repo.changegroup(nodes, 'serve')
+    f = repo.changegroup(nodes, 'serve')
     while 1:
         chunk = f.read(4096)
         if not chunk:
@@ -76,7 +76,7 @@ def changegroup(web, req):
 
     req.write(z.flush())
 
-def changegroupsubset(web, req):
+def changegroupsubset(repo, req):
     req.respond(HTTP_OK, HGTYPE)
     bases = []
     heads = []
@@ -87,7 +87,7 @@ def changegroupsubset(web, req):
         heads = [bin(x) for x in req.form['heads'][0].split(' ')]
 
     z = zlib.compressobj()
-    f = web.repo.changegroupsubset(bases, heads, 'serve')
+    f = repo.changegroupsubset(bases, heads, 'serve')
     while 1:
         chunk = f.read(4096)
         if not chunk:
@@ -96,17 +96,17 @@ def changegroupsubset(web, req):
 
     req.write(z.flush())
 
-def capabilities(web, req):
+def capabilities(repo, req):
     caps = ['lookup', 'changegroupsubset']
-    if web.repo.ui.configbool('server', 'uncompressed', untrusted=True):
-        caps.append('stream=%d' % web.repo.changelog.version)
+    if repo.ui.configbool('server', 'uncompressed', untrusted=True):
+        caps.append('stream=%d' % repo.changelog.version)
     if changegroupmod.bundlepriority:
         caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     rsp = ' '.join(caps)
     req.respond(HTTP_OK, HGTYPE, length=len(rsp))
     req.write(rsp)
 
-def unbundle(web, req):
+def unbundle(repo, req):
 
     def bail(response, headers={}):
         length = int(req.env.get('CONTENT_LENGTH', 0))
@@ -125,7 +125,7 @@ def unbundle(web, req):
     their_heads = req.form['heads'][0].split(' ')
 
     def check_heads():
-        heads = map(hex, web.repo.heads())
+        heads = map(hex, repo.heads())
         return their_heads == [hex('force')] or their_heads == heads
 
     # fail early if possible
@@ -146,7 +146,7 @@ def unbundle(web, req):
             fp.write(s)
 
         try:
-            lock = web.repo.lock()
+            lock = repo.lock()
             try:
                 if not check_heads():
                     req.write('0\n')
@@ -170,7 +170,7 @@ def unbundle(web, req):
                     url = 'remote:%s:%s' % (proto,
                                             req.env.get('REMOTE_HOST', ''))
                     try:
-                        ret = web.repo.addchangegroup(gen, 'serve', url)
+                        ret = repo.addchangegroup(gen, 'serve', url)
                     except util.Abort, inst:
                         sys.stdout.write("abort: %s\n" % inst)
                         ret = 0
@@ -188,8 +188,8 @@ def unbundle(web, req):
             req.write('0\n')
             filename = getattr(inst, 'filename', '')
             # Don't send our filesystem layout to the client
-            if filename.startswith(web.repo.root):
-                filename = filename[len(web.repo.root)+1:]
+            if filename.startswith(repo.root):
+                filename = filename[len(repo.root)+1:]
             else:
                 filename = ''
             error = getattr(inst, 'strerror', 'Unknown error')
@@ -203,6 +203,6 @@ def unbundle(web, req):
         fp.close()
         os.unlink(tempname)
 
-def stream_out(web, req):
+def stream_out(repo, req):
     req.respond(HTTP_OK, HGTYPE)
-    streamclone.stream_out(web.repo, req, untrusted=True)
+    streamclone.stream_out(repo, req, untrusted=True)
