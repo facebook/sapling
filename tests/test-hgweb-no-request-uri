@@ -44,32 +44,36 @@ env = {
 output = StringIO()
 env['PATH_INFO'] = '/'
 env['QUERY_STRING'] = 'style=atom'
-hgweb('.', name = 'repo')(env, startrsp)
-print output.getvalue()
+content = hgweb('.', name = 'repo')(env, startrsp)
+sys.stdout.write(output.getvalue())
+sys.stdout.write(''.join(content))
 print '---- ERRORS'
 print errors.getvalue()
 
 output = StringIO()
 env['PATH_INFO'] = '/file/tip/'
 env['QUERY_STRING'] = 'style=raw'
-hgweb('.', name = 'repo')(env, startrsp)
-print output.getvalue()
+content = hgweb('.', name = 'repo')(env, startrsp)
+sys.stdout.write(output.getvalue())
+sys.stdout.write(''.join(content))
 print '---- ERRORS'
 print errors.getvalue()
 
 output = StringIO()
 env['PATH_INFO'] = '/'
 env['QUERY_STRING'] = 'style=raw'
-hgwebdir({'repo': '.'})(env, startrsp)
-print output.getvalue()
+content = hgwebdir({'repo': '.'})(env, startrsp)
+sys.stdout.write(output.getvalue())
+sys.stdout.write(''.join(content))
 print '---- ERRORS'
 print errors.getvalue()
 
 output = StringIO()
 env['PATH_INFO'] = '/repo/file/tip/'
 env['QUERY_STRING'] = 'style=raw'
-hgwebdir({'repo': '.'})(env, startrsp)
-print output.getvalue()
+content = hgwebdir({'repo': '.'})(env, startrsp)
+sys.stdout.write(output.getvalue())
+sys.stdout.write(''.join(content))
 print '---- ERRORS'
 print errors.getvalue()
 EOF

@@ -35,7 +35,6 @@ summary:     test
  </entry>
 
 </feed>
-
 ---- ERRORS
 
 ---- HEADERS
@@ -44,7 +43,6 @@ summary:     test
 [('Content-Type', 'text/plain; charset=ascii')]
 
 -rw-r--r-- 4 bar
-
 
 
 ---- ERRORS
@@ -56,7 +54,6 @@ summary:     test
 
 /repo/
 
-
 ---- ERRORS
 
 ---- HEADERS
@@ -65,7 +62,6 @@ summary:     test
 [('Content-Type', 'text/plain; charset=ascii')]
 
 -rw-r--r-- 4 bar
-
 
 
 ---- ERRORS
