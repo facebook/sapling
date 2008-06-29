@@ -62,8 +62,6 @@ def between(web, req):
 def changegroup(web, req):
     req.respond(HTTP_OK, HGTYPE)
     nodes = []
-    if not web.allowpull:
-        return
 
     if 'roots' in req.form:
         nodes = map(bin, req.form['roots'][0].split(" "))
@@ -82,8 +80,6 @@ def changegroupsubset(web, req):
     req.respond(HTTP_OK, HGTYPE)
     bases = []
     heads = []
-    if not web.allowpull:
-        return
 
     if 'bases' in req.form:
         bases = [bin(x) for x in req.form['bases'][0].split(' ')]
@@ -120,28 +116,7 @@ def unbundle(web, req):
         req.write('0\n')
         req.write(response)
 
-    # enforce that you can only unbundle with POST requests
-    if req.env['REQUEST_METHOD'] != 'POST':
-        headers = {'status': '405 Method Not Allowed'}
-        bail('unbundle requires POST request\n', headers)
-        return
-
-    # require ssl by default, auth info cannot be sniffed and
-    # replayed
-    ssl_req = web.configbool('web', 'push_ssl', True)
-    if ssl_req:
-        if req.env.get('wsgi.url_scheme') != 'https':
-            bail('ssl required\n')
-            return
-        proto = 'https'
-    else:
-        proto = 'http'
-
-    # do not allow push unless explicitly allowed
-    if not web.check_perm(req, 'push', False):
-        bail('push not authorized\n', headers={'status': '401 Unauthorized'})
-        return
-
+    proto = req.env.get('wsgi.url_scheme') or 'http'
     their_heads = req.form['heads'][0].split(' ')
 
     def check_heads():
@@ -224,7 +199,5 @@ def unbundle(web, req):
         os.unlink(tempname)
 
 def stream_out(web, req):
-    if not web.allowpull:
-        return
     req.respond(HTTP_OK, HGTYPE)
     streamclone.stream_out(web.repo, req, untrusted=True)

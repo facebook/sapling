@@ -16,6 +16,13 @@ from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
 import webcommands, protocol, webutil
 
+perms = {
+    'changegroup': 'pull',
+    'changegroupsubset': 'pull',
+    'unbundle': 'push',
+    'stream_out': 'pull',
+}
+
 class hgweb(object):
     def __init__(self, repo, name=None):
         if isinstance(repo, str):
@@ -95,6 +102,8 @@ class hgweb(object):
 
         cmd = req.form.get('cmd', [''])[0]
         if cmd and cmd in protocol.__all__:
+            if cmd in perms and not self.check_perm(req, perms[cmd]):
+                return
             method = getattr(protocol, cmd)
             method(self, req)
             return
@@ -343,16 +352,39 @@ class hgweb(object):
         'zip': ('application/zip', 'zip', '.zip', None),
         }
 
-    def check_perm(self, req, op, default):
-        '''check permission for operation based on user auth.
-        return true if op allowed, else false.
-        default is policy to use if no config given.'''
+    def check_perm(self, req, op):
+        '''Check permission for operation based on request data (including
+        authentication info. Return true if op allowed, else false.'''
+
+        def error(status, message):
+            req.respond(status, protocol.HGTYPE)
+            req.write('0\n%s\n' % message)
+
+        if op == 'pull':
+            return self.allowpull
+
+        # enforce that you can only push using POST requests
+        if req.env['REQUEST_METHOD'] != 'POST':
+            error('405 Method Not Allowed', 'push requires POST request')
+            return False
+
+        # require ssl by default for pushing, auth info cannot be sniffed
+        # and replayed
+        scheme = req.env.get('wsgi.url_scheme')
+        if self.configbool('web', 'push_ssl', True) and scheme != 'https':
+            error(HTTP_OK, 'ssl required')
+            return False
 
         user = req.env.get('REMOTE_USER')
 
-        deny = self.configlist('web', 'deny_' + op)
+        deny = self.configlist('web', 'deny_push')
         if deny and (not user or deny == ['*'] or user in deny):
+            error('401 Unauthorized', 'push not authorized')
             return False
 
-        allow = self.configlist('web', 'allow_' + op)
-        return (allow and (allow == ['*'] or user in allow)) or default
+        allow = self.configlist('web', 'allow_push')
+        result = allow and (allow == ['*'] or user in allow)
+        if not result:
+            error('401 Unauthorized', 'push not authorized')
+
+        return result

@@ -498,7 +498,7 @@ xœc`@    % stream_out
 405 Method Not Allowed
 
 0
-unbundle requires POST request
+push requires POST request
 % Static files
 200 Script output follows
 
