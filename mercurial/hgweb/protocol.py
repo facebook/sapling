@@ -97,9 +97,14 @@ def changegroupsubset(web, req):
     req.write(z.flush())
 
 def capabilities(web, req):
-    resp = ' '.join(web.capabilities())
-    req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    req.write(resp)
+    caps = ['lookup', 'changegroupsubset']
+    if web.repo.ui.configbool('server', 'uncompressed', untrusted=True):
+        caps.append('stream=%d' % web.repo.changelog.version)
+    if changegroupmod.bundlepriority:
+        caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
+    rsp = ' '.join(caps)
+    req.respond(HTTP_OK, HGTYPE, length=len(rsp))
+    req.write(rsp)
 
 def unbundle(web, req):
 

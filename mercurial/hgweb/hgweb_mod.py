@@ -10,7 +10,7 @@ import os, mimetypes
 from mercurial.node import hex, nullid
 from mercurial.repo import RepoError
 from mercurial import mdiff, ui, hg, util, patch, hook
-from mercurial import revlog, templater, templatefilters, changegroup
+from mercurial import revlog, templater, templatefilters
 from common import get_mtime, style_map, paritygen, countgen, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
@@ -36,7 +36,6 @@ class hgweb(object):
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
         self.stripecount = 1
-        self._capabilities = None
         # a repo owner may set web.templates in .hg/hgrc to get any file
         # readable by the user running the CGI script
         self.templatepath = self.config("web", "templates",
@@ -68,18 +67,6 @@ class hgweb(object):
             self.maxfiles = int(self.config("web", "maxfiles", 10))
             self.allowpull = self.configbool("web", "allowpull", True)
             self.encoding = self.config("web", "encoding", util._encoding)
-            self._capabilities = None
-
-    def capabilities(self):
-        if self._capabilities is not None:
-            return self._capabilities
-        caps = ['lookup', 'changegroupsubset']
-        if self.configbool('server', 'uncompressed'):
-            caps.append('stream=%d' % self.repo.changelog.version)
-        if changegroup.bundlepriority:
-            caps.append('unbundle=%s' % ','.join(changegroup.bundlepriority))
-        self._capabilities = caps
-        return caps
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
