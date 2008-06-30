@@ -124,8 +124,7 @@ def unbundle(repo, req):
             # response when run outside cgi script
             pass
         req.respond(HTTP_OK, HGTYPE)
-        yield errorfmt % 'unsynced changes'
-        return
+        return errorfmt % 'unsynced changes',
 
     req.respond(HTTP_OK, HGTYPE)
 
@@ -143,8 +142,7 @@ def unbundle(repo, req):
             lock = repo.lock()
             try:
                 if not check_heads():
-                    yield errorfmt % 'unsynced changes'
-                    return
+                    return errorfmt % 'unsynced changes',
 
                 fp.seek(0)
                 header = fp.read(6)
@@ -170,11 +168,11 @@ def unbundle(repo, req):
                 finally:
                     val = sys.stdout.getvalue()
                     sys.stdout, sys.stderr = oldio
-                yield '%d\n%s' % (ret, val)
+                return '%d\n%s' % (ret, val),
             finally:
                 del lock
         except ValueError, inst:
-            yield errorfmt % inst
+            return errorfmt % inst,
         except (OSError, IOError), inst:
             filename = getattr(inst, 'filename', '')
             # Don't send our filesystem layout to the client
@@ -188,7 +186,7 @@ def unbundle(repo, req):
             else:
                 code = HTTP_SERVER_ERROR
             req.respond(code)
-            yield '0\n%s: %s\n' % (error, filename)
+            return '0\n%s: %s\n' % (error, filename),
     finally:
         fp.close()
         os.unlink(tempname)
