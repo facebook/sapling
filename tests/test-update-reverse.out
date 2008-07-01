@@ -46,9 +46,9 @@ resolving manifests
  side2: remote deleted -> r
  side1: remote deleted -> r
  main: remote created -> g
-getting main
 removing side1
 removing side2
+getting main
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 Should only show a main
 a
