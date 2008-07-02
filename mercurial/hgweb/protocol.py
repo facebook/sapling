@@ -193,4 +193,5 @@ def unbundle(repo, req):
 
 def stream_out(repo, req):
     req.respond(HTTP_OK, HGTYPE)
-    return streamclone.stream_out(repo, untrusted=True)
+    streamclone.stream_out(repo, req, untrusted=True)
+    return []

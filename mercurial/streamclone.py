@@ -51,12 +51,12 @@ def walkrepo(root):
 #
 #   server writes out raw file data.
 
-def stream_out(repo, untrusted=False):
+def stream_out(repo, fileobj, untrusted=False):
     '''stream out all metadata files in repository.
     writes to file-like object, must support write() and optional flush().'''
 
     if not repo.ui.configbool('server', 'uncompressed', untrusted=untrusted):
-        yield '1\n'
+        fileobj.write('1\n')
         return
 
     # get consistent snapshot of repo. lock during scan so lock not
@@ -67,10 +67,10 @@ def stream_out(repo, untrusted=False):
             repolock = repo.lock()
         except (lock.LockHeld, lock.LockUnavailable), inst:
             repo.ui.warn('locking the repository failed: %s\n' % (inst,))
-            yield '2\n'
+            fileobj.write('2\n')
             return
 
-        yield '0\n'
+        fileobj.write('0\n')
         repo.ui.debug('scanning\n')
         entries = []
         total_bytes = 0
@@ -83,9 +83,11 @@ def stream_out(repo, untrusted=False):
 
     repo.ui.debug('%d files, %d bytes to transfer\n' %
                   (len(entries), total_bytes))
-    yield '%d %d\n' % (len(entries), total_bytes)
+    fileobj.write('%d %d\n' % (len(entries), total_bytes))
     for name, size in entries:
         repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
-        yield '%s\0%d\n' % (name, size)
+        fileobj.write('%s\0%d\n' % (name, size))
         for chunk in util.filechunkiter(repo.sopener(name), limit=size):
-            yield chunk
+            fileobj.write(chunk)
+    flush = getattr(fileobj, 'flush', None)
+    if flush: flush()
