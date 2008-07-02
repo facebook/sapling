@@ -169,20 +169,23 @@ class hgweb(object):
 
             req.write(content)
             del tmpl
-            return ''.join(content),
+            return []
 
         except revlog.LookupError, err:
             req.respond(HTTP_NOT_FOUND, ctype)
             msg = str(err)
             if 'manifest' not in msg:
                 msg = 'revision not found: %s' % err.name
-            return ''.join(tmpl('error', error=msg)),
+            req.write(tmpl('error', error=msg))
+            return []
         except (RepoError, revlog.RevlogError), inst:
             req.respond(HTTP_SERVER_ERROR, ctype)
-            return ''.join(tmpl('error', error=str(inst))),
+            req.write(tmpl('error', error=str(inst)))
+            return []
         except ErrorResponse, inst:
             req.respond(inst.code, ctype)
-            return ''.join(tmpl('error', error=inst.message)),
+            req.write(tmpl('error', error=inst.message))
+            return []
 
     def templater(self, req):
 
