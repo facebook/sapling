@@ -205,5 +205,4 @@ def unbundle(repo, req):
 
 def stream_out(repo, req):
     req.respond(HTTP_OK, HGTYPE)
-    for chunk in streamclone.stream_out(repo, untrusted=True):
-        req.write(chunk)
+    streamclone.stream_out(repo, req, untrusted=True)
