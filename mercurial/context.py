@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import nullid, nullrev, short
+from node import nullid, nullrev, short, hex
 from i18n import _
 import ancestor, bdiff, revlog, util, os, errno
 
@@ -22,6 +22,9 @@ class changectx(object):
 
     def __str__(self):
         return short(self.node())
+
+    def __int__(self):
+        return self.rev()
 
     def __repr__(self):
         return "<changectx %s>" % str(self)
@@ -79,6 +82,7 @@ class changectx(object):
 
     def rev(self): return self._rev
     def node(self): return self._node
+    def hex(self): return hex(self._node)
     def user(self): return self._changeset[1]
     def date(self): return self._changeset[2]
     def files(self): return self._changeset[3]
@@ -141,6 +145,23 @@ class changectx(object):
         """
         n = self._repo.changelog.ancestor(self._node, c2._node)
         return changectx(self._repo, n)
+
+    def walk(self, match):
+        fdict = dict.fromkeys(match.files())
+        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # follow that here, too
+        fdict.pop('.', None)
+        for fn in self:
+            for ffn in fdict:
+                # match if the file is the exact name or a directory
+                if ffn == fn or fn.startswith("%s/" % ffn):
+                    del fdict[ffn]
+                    break
+            if match(fn):
+                yield fn
+        for fn in util.sort(fdict):
+            if match.bad(fn, 'No such file in rev ' + str(self)) and match(fn):
+                yield fn
 
 class filectx(object):
     """A filecontext object makes access to data related to a particular
@@ -572,6 +593,10 @@ class workingctx(changectx):
         """return the ancestor context of self and c2"""
         return self._parents[0].ancestor(c2) # punt on two parents for now
 
+    def walk(self, match):
+        for src, fn, st in self._repo.dirstate.walk(match, True, False):
+            yield fn
+
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
@@ -692,6 +717,9 @@ class memctx(object):
 
     def __str__(self):
         return str(self._parents[0]) + "+"
+
+    def __int__(self):
+        return self._rev
 
     def __nonzero__(self):
         return True

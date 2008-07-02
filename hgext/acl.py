@@ -46,77 +46,45 @@
 #   ** = user6
 
 from mercurial.i18n import _
-from mercurial.node import bin, short
 from mercurial import util
 import getpass
 
-class checker(object):
-    '''acl checker.'''
+def buildmatch(ui, repo, user, key):
+    '''return tuple of (match function, list enabled).'''
+    if not ui.has_section(key):
+        ui.debug(_('acl: %s not enabled\n') % key)
+        return None
 
-    def buildmatch(self, key):
-        '''return tuple of (match function, list enabled).'''
-        if not self.ui.has_section(key):
-            self.ui.debug(_('acl: %s not enabled\n') % key)
-            return None, False
-
-        thisuser = self.getuser()
-        pats = [pat for pat, users in self.ui.configitems(key)
-                if thisuser in users.replace(',', ' ').split()]
-        self.ui.debug(_('acl: %s enabled, %d entries for user %s\n') %
-                      (key, len(pats), thisuser))
-        if pats:
-            match = util.matcher(self.repo.root, names=pats)[1]
-        else:
-            match = util.never
-        return match, True
-
-    def getuser(self):
-        '''return name of authenticated user.'''
-        return self.user
-
-    def __init__(self, ui, repo):
-        self.ui = ui
-        self.repo = repo
-        self.user = getpass.getuser()
-        cfg = self.ui.config('acl', 'config')
-        if cfg:
-            self.ui.readsections(cfg, 'acl.allow', 'acl.deny')
-        self.allow, self.allowable = self.buildmatch('acl.allow')
-        self.deny, self.deniable = self.buildmatch('acl.deny')
-
-    def skipsource(self, source):
-        '''true if incoming changes from this source should be skipped.'''
-        ok_sources = self.ui.config('acl', 'sources', 'serve').split()
-        return source not in ok_sources
-
-    def check(self, node):
-        '''return if access allowed, raise exception if not.'''
-        files = self.repo[node].files()
-        if self.deniable:
-            for f in files:
-                if self.deny(f):
-                    self.ui.debug(_('acl: user %s denied on %s\n') %
-                                  (self.getuser(), f))
-                    raise util.Abort(_('acl: access denied for changeset %s') %
-                                     short(node))
-        if self.allowable:
-            for f in files:
-                if not self.allow(f):
-                    self.ui.debug(_('acl: user %s not allowed on %s\n') %
-                                  (self.getuser(), f))
-                    raise util.Abort(_('acl: access denied for changeset %s') %
-                                     short(node))
-        self.ui.debug(_('acl: allowing changeset %s\n') % short(node))
+    pats = [pat for pat, users in ui.configitems(key)
+            if user in users.replace(',', ' ').split()]
+    ui.debug(_('acl: %s enabled, %d entries for user %s\n') %
+             (key, len(pats), user))
+    if pats:
+        return util.matcher(repo.root, names=pats)[1]
+    return util.never
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if hooktype != 'pretxnchangegroup':
         raise util.Abort(_('config error - hook type "%s" cannot stop '
                            'incoming changesets') % hooktype)
-
-    c = checker(ui, repo)
-    if c.skipsource(source):
+    if source not in ui.config('acl', 'sources', 'serve').split():
         ui.debug(_('acl: changes have source "%s" - skipping\n') % source)
         return
 
-    for rev in xrange(repo[node].rev(), len(repo)):
-        c.check(repo.changelog.node(rev))
+    user = getpass.getuser()
+    cfg = ui.config('acl', 'config')
+    if cfg:
+        ui.readsections(cfg, 'acl.allow', 'acl.deny')
+    allow = buildmatch(ui, repo, user, 'acl.allow')
+    deny = buildmatch(ui, repo, user, 'acl.deny')
+
+    for rev in xrange(repo[node], len(repo)):
+        ctx = repo[rev]
+        for f in ctx.files():
+            if deny and deny(f):
+                ui.debug(_('acl: user %s denied on %s\n') % (user, f))
+                raise util.Abort(_('acl: access denied for changeset %s') % ctx)
+            if allow and not allow(f):
+                ui.debug(_('acl: user %s not allowed on %s\n') % (user, f))
+                raise util.Abort(_('acl: access denied for changeset %s') % ctx)
+        ui.debug(_('acl: allowing changeset %s\n') % ctx)

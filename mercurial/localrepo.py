@@ -941,27 +941,7 @@ class localrepository(repo.repository):
         changeset, finding all files matched by the match
         function
         '''
-
-        if node:
-            fdict = dict.fromkeys(match.files())
-            # for dirstate.walk, files=['.'] means "walk the whole tree".
-            # follow that here, too
-            fdict.pop('.', None)
-            for fn in self[node]:
-                for ffn in fdict:
-                    # match if the file is the exact name or a directory
-                    if ffn == fn or fn.startswith("%s/" % ffn):
-                        del fdict[ffn]
-                        break
-                if match(fn):
-                    yield fn
-            for fn in util.sort(fdict):
-                if match.bad(fn, 'No such file in rev ' + short(node)) \
-                        and match(fn):
-                    yield fn
-        else:
-            for src, fn, st in self.dirstate.walk(match, True, False):
-                yield fn
+        return self[node].walk(match)
 
     def status(self, node1=None, node2=None, match=None,
                ignored=False, clean=False, unknown=False):
