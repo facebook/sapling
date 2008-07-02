@@ -129,7 +129,7 @@ setup(name='mercurial',
                    [os.path.join(root, file_) for file_ in files])
                   for root, dirs, files in os.walk('templates')],
       cmdclass=cmdclass,
-      options=dict(py2exe=dict(packages=['hgext']),
+      options=dict(py2exe=dict(packages=['hgext', 'email']),
                    bdist_mpkg=dict(zipdist=True,
                                    license='COPYING',
                                    readme='contrib/macosx/Readme.html',

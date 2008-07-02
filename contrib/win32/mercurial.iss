@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 [Setup]
-AppCopyright=Copyright 2005-2007 Matt Mackall and others
+AppCopyright=Copyright 2005-2008 Matt Mackall and others
 AppName=Mercurial
 AppVerName=Mercurial snapshot
 InfoAfterFile=contrib/win32/postinstall.txt
@@ -18,7 +18,7 @@ OutputBaseFilename=Mercurial-snapshot
 DefaultDirName={pf}\Mercurial
 SourceDir=..\..
 VersionInfoDescription=Mercurial distributed SCM
-VersionInfoCopyright=Copyright 2005-2007 Matt Mackall and others
+VersionInfoCopyright=Copyright 2005-2008 Matt Mackall and others
 VersionInfoCompany=Matt Mackall and others
 InternalCompressLevel=max
 SolidCompression=true
