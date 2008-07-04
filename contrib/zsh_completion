@@ -205,8 +205,7 @@ _hg_modified() {
 
 _hg_config() {
     typeset -a items
-    local line
-    items=(${${(%f)"$(_hg_cmd showconfig)"}%%\=*})
+    items=(${${(%f)"$(_call_program hg hg showconfig)"}%%\=*})
     (( $#items )) && _describe -t config 'config item' items
 }
 
@@ -291,10 +290,14 @@ _hg_global_opts=(
     '--cwd[change working directory]:new working directory:_files -/'
     '(--noninteractive -y)'{-y,--noninteractive}'[do not prompt, assume yes for any required answers]'
     '(--verbose -v)'{-v,--verbose}'[enable additional output]'
+    '*--config[set/override config option]:defined config items:_hg_config'
     '(--quiet -q)'{-q,--quiet}'[suppress output]'
     '(--help -h)'{-h,--help}'[display help and exit]'
     '--debug[debug mode]'
     '--debugger[start debugger]'
+    '--encoding[set the charset encoding (default: UTF8)]'
+    '--encodingmode[set the charset encoding mode (default: strict)]'
+    '--lsprof[print improved command execution profile]'
     '--traceback[print traceback on exception]'
     '--time[time how long the command takes]'
     '--profile[profile]'
