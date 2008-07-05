@@ -58,4 +58,5 @@ hg convert darcs-repo darcs-repo-hg 2>&1 | grep -v hGetLine | grep -v '^$'
 # "c" file in p1.1 patch are reverted too.
 # Just to say that manifest not listing "c" here is a bug.
 glog -R darcs-repo-hg
+hg up -q -R darcs-repo-hg
 hg -R darcs-repo-hg manifest --debug

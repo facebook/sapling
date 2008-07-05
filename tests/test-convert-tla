@@ -69,4 +69,5 @@ glog()
 
 echo % show graph log
 glog -R tla-repo-hg
+hg up -q -R tla-repo-hg
 hg -R tla-repo-hg manifest --debug
