@@ -102,10 +102,9 @@ def catcommit(ui, repo, n, prefix, ctx=None):
     nlprefix = '\n' + prefix;
     if ctx is None:
         ctx = repo[n]
-    (p1, p2) = ctx.parents()
     ui.write("tree %s\n" % short(ctx.changeset()[0])) # use ctx.node() instead ??
-    if p1: ui.write("parent %s\n" % short(p1.node()))
-    if p2: ui.write("parent %s\n" % short(p2.node()))
+    for p in ctx.parents():
+        ui.write("parent %s\n" % short(p.node()))
     date = ctx.date()
     description = ctx.description().replace("\0", "")
     lines = description.splitlines()
