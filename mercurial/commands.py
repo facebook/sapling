@@ -2026,9 +2026,9 @@ def pull(ui, repo, source="default", **opts):
     Valid URLs are of the form:
 
       local/filesystem/path (or file://local/filesystem/path)
-      http://[user@]host[:port]/[path]
-      https://[user@]host[:port]/[path]
-      ssh://[user@]host[:port]/[path]
+      http://[user[:pass]@]host[:port]/[path]
+      https://[user[:pass]@]host[:port]/[path]
+      ssh://[user[:pass]@]host[:port]/[path]
       static-http://host[:port]/[path]
 
     Paths in the local filesystem can either point to Mercurial
@@ -2088,9 +2088,9 @@ def push(ui, repo, dest=None, **opts):
     Valid URLs are of the form:
 
       local/filesystem/path (or file://local/filesystem/path)
-      ssh://[user@]host[:port]/[path]
-      http://[user@]host[:port]/[path]
-      https://[user@]host[:port]/[path]
+      ssh://[user[:pass]@]host[:port]/[path]
+      http://[user[:pass]@]host[:port]/[path]
+      https://[user[:pass]@]host[:port]/[path]
 
     An optional identifier after # indicates a particular branch, tag,
     or changeset to push. If -r is used, the named changeset and all its
