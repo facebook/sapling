@@ -82,3 +82,28 @@ echo % patch file contents
 cat .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+cd ..
+
+
+
+echo "[diff]" >> $HGRCPATH
+echo "git=True" >> $HGRCPATH
+
+# Test qrefresh --git losing copy metadata
+echo % create test repo
+hg init repo
+cd repo
+echo a > a
+hg ci -Am adda
+hg copy a ab
+echo b >> ab
+hg copy a ac
+echo c >> ac
+echo % capture changes
+hg qnew -f p1
+hg qdiff
+echo % refresh and check changes again
+hg qref
+hg qdiff
+cd ..
+

@@ -1129,7 +1129,7 @@ class queue:
                         f = repo.file(dst)
                         src = f.renamed(man[dst])
                         if src:
-                            copies[src[0]] = copies.get(dst, [])
+                            copies.setdefault(src[0], []).extend(copies.get(dst, []))
                             if dst in a:
                                 copies[src[0]].append(dst)
                         # we can't copy a file created by the patch itself
