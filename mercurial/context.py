@@ -477,8 +477,7 @@ class workingctx(changectx):
         else:
             self._user = self._repo.ui.username()
         if parents:
-            p1, p2 = parents
-            self._parents = [changectx(self._repo, p) for p in (p1, p2)]
+            self._parents = [changectx(self._repo, p) for p in parents]
         if changes:
             self._status = list(changes)
 
