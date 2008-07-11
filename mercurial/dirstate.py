@@ -9,11 +9,19 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import nullid
 from i18n import _
-import struct, os, bisect, stat, strutil, util, errno, ignore
+import struct, os, bisect, stat, util, errno, ignore
 import cStringIO, osutil, sys
 
 _unknown = ('?', 0, 0, 0)
 _format = ">cllll"
+
+def _finddirs(path):
+    pos = len(path)
+    while 1:
+        pos = path.rfind('/', 0, pos)
+        if pos == -1:
+            break
+        yield path[:pos]
 
 class dirstate(object):
 
@@ -55,10 +63,12 @@ class dirstate(object):
                 if err.errno != errno.ENOENT: raise
             return self._pl
         elif name == '_dirs':
-            self._dirs = {}
-            for f in self._map:
-                if self[f] != 'r':
-                    self._incpath(f)
+            dirs = {}
+            for f,s in self._map.items():
+                if s[0] != 'r':
+                    for base in _finddirs(f):
+                        dirs[base] = dirs.get(base, 0) + 1
+            self._dirs = dirs
             return self._dirs
         elif name == '_ignore':
             files = [self._join('.hgignore')]
@@ -223,67 +233,39 @@ class dirstate(object):
     def copies(self):
         return self._copymap
 
-    def _incpath(self, path):
-        c = path.rfind('/')
-        if c >= 0:
+    def _droppath(self, f):
+        if self[f] not in "?r" and "_dirs" in self.__dict__:
             dirs = self._dirs
-            base = path[:c]
-            if base not in dirs:
-                self._incpath(base)
-                dirs[base] = 1
-            else:
-                dirs[base] += 1
+            for base in _finddirs(f):
+                if dirs[base] == 1:
+                    del dirs[base]
+                else:
+                    dirs[base] -= 1
 
-    def _decpath(self, path):
-        c = path.rfind('/')
-        if c >= 0:
-            base = path[:c]
-            dirs = self._dirs
-            if dirs[base] == 1:
-                del dirs[base]
-                self._decpath(base)
-            else:
-                dirs[base] -= 1
-
-    def _incpathcheck(self, f):
-        if '\r' in f or '\n' in f:
-            raise util.Abort(_("'\\n' and '\\r' disallowed in filenames: %r")
-                             % f)
-        # shadows
-        if f in self._dirs:
-            raise util.Abort(_('directory %r already in dirstate') % f)
-        for c in strutil.rfindall(f, '/'):
-            d = f[:c]
-            if d in self._dirs:
-                break
-            if d in self._map and self[d] != 'r':
-                raise util.Abort(_('file %r in dirstate clashes with %r') %
-                                 (d, f))
-        self._incpath(f)
-
-    def _changepath(self, f, newstate, relaxed=False):
-        # handle upcoming path changes
+    def _addpath(self, f, check=False):
         oldstate = self[f]
-        if oldstate not in "?r" and newstate in "?r":
-            if "_dirs" in self.__dict__:
-                self._decpath(f)
-            return
-        if oldstate in "?r" and newstate not in "?r":
-            if relaxed and oldstate == '?':
-                # XXX
-                # in relaxed mode we assume the caller knows
-                # what it is doing, workaround for updating
-                # dir-to-file revisions
-                if "_dirs" in self.__dict__:
-                    self._incpath(f)
-                return
-            self._incpathcheck(f)
-            return
+        if check or oldstate == "r":
+            if '\r' in f or '\n' in f:
+                raise util.Abort(
+                    _("'\\n' and '\\r' disallowed in filenames: %r") % f)
+            if f in self._dirs:
+                raise util.Abort(_('directory %r already in dirstate') % f)
+            # shadows
+            for d in _finddirs(f):
+                if d in self._dirs:
+                    break
+                if d in self._map and self[d] != 'r':
+                    raise util.Abort(
+                        _('file %r in dirstate clashes with %r') % (d, f))
+        if oldstate in "?r" and "_dirs" in self.__dict__:
+            dirs = self._dirs
+            for base in _finddirs(f):
+                dirs[base] = dirs.get(base, 0) + 1
 
     def normal(self, f):
         'mark a file normal and clean'
         self._dirty = True
-        self._changepath(f, 'n', True)
+        self._addpath(f)
         s = os.lstat(self._join(f))
         self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime, 0)
         if f in self._copymap:
@@ -307,7 +289,7 @@ class dirstate(object):
             if entry[0] == 'm' or entry[0] == 'n' and entry[2] == -2:
                 return
         self._dirty = True
-        self._changepath(f, 'n', True)
+        self._addpath(f)
         self._map[f] = ('n', 0, -1, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -315,7 +297,7 @@ class dirstate(object):
     def normaldirty(self, f):
         'mark a file normal, but dirty'
         self._dirty = True
-        self._changepath(f, 'n', True)
+        self._addpath(f)
         self._map[f] = ('n', 0, -2, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -323,7 +305,7 @@ class dirstate(object):
     def add(self, f):
         'mark a file added'
         self._dirty = True
-        self._changepath(f, 'a')
+        self._addpath(f, True)
         self._map[f] = ('a', 0, -1, -1, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -331,7 +313,7 @@ class dirstate(object):
     def remove(self, f):
         'mark a file removed'
         self._dirty = True
-        self._changepath(f, 'r')
+        self._droppath(f)
         size = 0
         if self._pl[1] != nullid and f in self._map:
             entry = self._map[f]
@@ -347,7 +329,7 @@ class dirstate(object):
         'mark a file merged'
         self._dirty = True
         s = os.lstat(self._join(f))
-        self._changepath(f, 'm', True)
+        self._addpath(f)
         self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime, 0)
         if f in self._copymap:
             del self._copymap[f]
@@ -356,7 +338,7 @@ class dirstate(object):
         'forget a file'
         self._dirty = True
         try:
-            self._changepath(f, '?')
+            self._droppath('?')
             del self._map[f]
         except KeyError:
             self._ui.warn(_("not in dirstate: %s\n") % f)
@@ -467,8 +449,8 @@ class dirstate(object):
             return False
         if self._ignore(f):
             return True
-        for c in strutil.findall(f, '/'):
-            if self._ignore(f[:c]):
+        for p in _finddirs(f):
+            if self._ignore(p):
                 return True
         return False
 
