@@ -57,6 +57,24 @@ def has_executablebit():
     finally:
         os.remove(path)
 
+def has_icasefs():
+    # Stolen from mercurial.util
+    fd, path = tempfile.mkstemp(prefix=tempprefix)
+    os.close(fd)
+    try:
+        s1 = os.stat(path)
+        d, b = os.path.split(path)
+        p2 = os.path.join(d, b.upper())
+        if path == p2:
+            p2 = os.path.join(d, b.lower())
+        try:
+            s2 = os.stat(p2)
+            return s2 == s1
+        except:
+            return False
+    finally:
+        os.remove(path)  
+
 def has_fifo():
     return hasattr(os, "mkfifo")
 
@@ -129,6 +147,7 @@ checks = {
     "fifo": (has_fifo, "named pipes"),
     "git": (has_git, "git command line client"),
     "hotshot": (has_hotshot, "python hotshot module"),
+    "icasefs": (has_icasefs, "case insensitive file system"),
     "lsprof": (has_lsprof, "python lsprof module"),
     "mtn": (has_mtn, "monotone client (> 0.31)"),
     "svn": (has_svn, "subversion client and admin tools"),
