@@ -501,6 +501,9 @@ class workingctx(changectx):
     def __nonzero__(self):
         return True
 
+    def __contains__(self, key):
+        return self._dirstate[f] not in "?r"
+
     def __getattr__(self, name):
         if name == '_status':
             self._status = self._repo.status(unknown=True)
