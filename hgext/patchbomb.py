@@ -111,6 +111,8 @@ def patchbomb(ui, repo, *revs, **opts):
     See the [email] section in hgrc(5) for details.
     '''
 
+    _charsets = mail._charsets(ui)
+
     def prompt(prompt, default = None, rest = ': ', empty_ok = False):
         if not ui.interactive:
             return default
@@ -176,7 +178,8 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts.get('attach') or opts.get('inline'):
             msg = email.MIMEMultipart.MIMEMultipart()
             if body:
-                msg.attach(email.MIMEText.MIMEText(body, 'plain'))
+                msg.attach(mail.mimeencode(ui, body, _charsets,
+                                           opts.get('test')))
             p = email.MIMEText.MIMEText('\n'.join(patch), 'x-patch')
             binnode = bin(node)
             # if node is mq patch, it will have patch file name as tag
@@ -204,9 +207,9 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             tlen = len(str(total))
             subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, subj)
-        msg['Subject'] = subj
+        msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
         msg['X-Mercurial-Node'] = node
-        return msg
+        return msg, subj
 
     def outgoing(dest, revs):
         '''Return the revisions present locally but not in dest'''
@@ -328,10 +331,11 @@ def patchbomb(ui, repo, *revs, **opts):
                     body = '\n' + d
 
             body = getdescription(body, sender)
-            msg = email.MIMEText.MIMEText(body)
-            msg['Subject'] = subj
+            msg = mail.mimeencode(ui, body, _charsets, opts.get('test'))
+            msg['Subject'] = mail.headencode(ui, subj, _charsets,
+                                             opts.get('test'))
 
-            msgs.insert(0, msg)
+            msgs.insert(0, (msg, subj))
         return msgs
 
     def getbundlemsgs(bundle):
@@ -341,15 +345,15 @@ def patchbomb(ui, repo, *revs, **opts):
         body = getdescription('', sender)
         msg = email.MIMEMultipart.MIMEMultipart()
         if body:
-            msg.attach(email.MIMEText.MIMEText(body, 'plain'))
+            msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
         datapart = email.MIMEBase.MIMEBase('application', 'x-mercurial-bundle')
         datapart.set_payload(bundle)
         datapart.add_header('Content-Disposition', 'attachment',
                             filename='bundle.hg')
         email.Encoders.encode_base64(datapart)
         msg.attach(datapart)
-        msg['Subject'] = subj
-        return [msg]
+        msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
+        return [(msg, subj)]
 
     sender = (opts.get('from') or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
@@ -364,22 +368,25 @@ def patchbomb(ui, repo, *revs, **opts):
         addrs = opts.get(opt) or (ui.config('email', opt) or
                                   ui.config('patchbomb', opt) or
                                   prompt(prpt, default = default)).split(',')
-        return [a.strip() for a in addrs if a.strip()]
+        return [mail.addressencode(ui, a.strip(), _charsets, opts.get('test'))
+                for a in addrs if a.strip()]
 
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
 
     bcc = opts.get('bcc') or (ui.config('email', 'bcc') or
                           ui.config('patchbomb', 'bcc') or '').split(',')
-    bcc = [a.strip() for a in bcc if a.strip()]
+    bcc = [mail.addressencode(ui, a.strip(), _charsets, opts.get('test'))
+           for a in bcc if a.strip()]
 
     ui.write('\n')
 
     parent = None
 
     sender_addr = email.Utils.parseaddr(sender)[1]
+    sender = mail.addressencode(ui, sender, _charsets, opts.get('test'))
     sendmail = None
-    for m in msgs:
+    for m, subj in msgs:
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
         except TypeError:
@@ -398,7 +405,7 @@ def patchbomb(ui, repo, *revs, **opts):
         if bcc:
             m['Bcc'] = ', '.join(bcc)
         if opts.get('test'):
-            ui.status(_('Displaying '), m['Subject'], ' ...\n')
+            ui.status(_('Displaying '), subj, ' ...\n')
             ui.flush()
             if 'PAGER' in os.environ:
                 fp = util.popen(os.environ['PAGER'], 'w')
@@ -414,7 +421,7 @@ def patchbomb(ui, repo, *revs, **opts):
             if fp is not ui:
                 fp.close()
         elif opts.get('mbox'):
-            ui.status(_('Writing '), m['Subject'], ' ...\n')
+            ui.status(_('Writing '), subj, ' ...\n')
             fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
             generator = email.Generator.Generator(fp, mangle_from_=True)
             date = util.datestr(start_time, '%a %b %d %H:%M:%S %Y')
@@ -425,7 +432,7 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             if not sendmail:
                 sendmail = mail.connect(ui)
-            ui.status(_('Sending '), m['Subject'], ' ...\n')
+            ui.status(_('Sending '), subj, ' ...\n')
             # Exim does not remove the Bcc field
             del m['Bcc']
             fp = cStringIO.StringIO()
