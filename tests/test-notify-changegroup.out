@@ -11,6 +11,9 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Date:
 Subject: test-notify-changegroup/a: 2 new changesets
 From: test

@@ -104,7 +104,7 @@ diffstat = False
 EOF
 
 echo % pull from bundle
-hg pull -u ../kw.hg 2>&1 | sed -e '/^Date:/,/^diffs (/ d'
+hg pull -u ../kw.hg 2>&1 | sed -e '/^Content-Type:/,/^diffs (/ d'
 
 echo % remove notify config
 sed -e '/\[hooks\]/,$ d' $HGRCPATH > $HGRCPATH.nonotify

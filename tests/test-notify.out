@@ -14,6 +14,9 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Date:
 Subject: changeset in test-notify/b: b
 From: test
@@ -45,6 +48,9 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Date:
 Subject: b
 From: test@test.com
@@ -72,6 +78,9 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Date:
 Subject: b
 From: test@test.com
