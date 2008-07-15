@@ -79,11 +79,12 @@ _effect_params = { 'none': (0, 0),
 
 def render_effects(text, *effects):
     'Wrap text in commands to turn on each effect.'
-    start = []
+    start = [ str(_effect_params['none'][0]) ]
     stop = []
     for effect in effects:
         start.append(str(_effect_params[effect][0]))
         stop.append(str(_effect_params[effect][1]))
+    stop.append(str(_effect_params['none'][1]))
     start = '\033[' + ';'.join(start) + 'm'
     stop = '\033[' + ';'.join(stop) + 'm'
     return start + text + stop
