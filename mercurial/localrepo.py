@@ -953,7 +953,7 @@ class localrepository(repo.repository):
 
         def mfmatches(ctx):
             mf = ctx.manifest().copy()
-            for fn in mf:
+            for fn in mf.keys():
                 if not match(fn):
                     del mf[fn]
             return mf
