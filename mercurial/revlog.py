@@ -596,6 +596,27 @@ class revlog(object):
                     visit.append(p)
         return reachable
 
+    def ancestors(self, *revs):
+        'Generate the ancestors of revs using a breadth-first visit'
+        visit = list(revs)
+        seen = util.set([nullrev])
+        while visit:
+            for parent in self.parentrevs(visit.pop(0)):
+                if parent not in seen:
+                    visit.append(parent)
+                    seen.add(parent)
+                    yield parent
+
+    def descendants(self, *revs):
+        'Generate the descendants of revs in topological order'
+        seen = util.set(revs)
+        for i in xrange(min(revs) + 1, len(self)):
+            for x in self.parentrevs(i):
+                if x != nullrev and x in seen:
+                    seen.add(i)
+                    yield i
+                    break
+
     def nodesbetween(self, roots=None, heads=None):
         """Return a tuple containing three elements. Elements 1 and 2 contain
         a final list bases and heads after all the unreachable ones have been
