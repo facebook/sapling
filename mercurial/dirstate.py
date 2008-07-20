@@ -588,7 +588,7 @@ class dirstate(object):
                 known[nn] = 1
                 if match(nf):
                     if supported(ff, st.st_mode, verbose=True):
-                        yield 'f', self.normalize(nf), st
+                        yield 'f', nn, st
                     elif ff in dc:
                         yield 'm', nf, st
 
