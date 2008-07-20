@@ -943,7 +943,7 @@ class localrepository(repo.repository):
         '''
         return self[node].walk(match)
 
-    def status(self, node1=None, node2=None, match=None,
+    def status(self, node1='.', node2=None, match=None,
                ignored=False, clean=False, unknown=False):
         """return status of files between two nodes or node and working directory
 
@@ -951,111 +951,84 @@ class localrepository(repo.repository):
         If node2 is None, compare node1 with working directory.
         """
 
-        def fcmp(fn, getnode):
-            t1 = self.wread(fn)
-            return self.file(fn).cmp(getnode(fn), t1)
-
-        def mfmatches(node):
-            change = self.changelog.read(node)
-            mf = self.manifest.read(change[0]).copy()
+        def mfmatches(ctx):
+            mf = ctx.manifest().copy()
             for fn in mf.keys():
                 if not match(fn):
                     del mf[fn]
             return mf
 
-        if not match:
-            match = match_.always(self.root, self.getcwd())
-
+        ctx1 = self[node1]
+        ctx2 = self[node2]
+        working = ctx2 == self[None]
+        parentworking = working and ctx1 == self['.']
+        match = match or match_.always(self.root, self.getcwd())
         listignored, listclean, listunknown = ignored, clean, unknown
-        modified, added, removed, deleted, unknown = [], [], [], [], []
-        ignored, clean = [], []
 
-        compareworking = False
-        if not node1 or (not node2 and node1 == self.dirstate.parents()[0]):
-            compareworking = True
+        if working: # we need to scan the working dir
+            s = self.dirstate.status(match, listignored, listclean, listunknown)
+            cmp, modified, added, removed, deleted, unknown, ignored, clean = s
 
-        if not compareworking:
-            # read the manifest from node1 before the manifest from node2,
-            # so that we'll hit the manifest cache if we're going through
-            # all the revisions in parent->child order.
-            mf1 = mfmatches(node1)
+            # check for any possibly clean files
+            if parentworking and cmp:
+                fixup = []
+                # do a full compare of any files that might have changed
+                for f in cmp:
+                    if (f not in ctx1 or ctx2.flags(f) != ctx1.flags(f)
+                        or ctx1[f].cmp(ctx2[f].data())):
+                        modified.append(f)
+                    else:
+                        fixup.append(f)
 
-        # are we comparing the working directory?
-        if not node2:
-            (lookup, modified, added, removed, deleted, unknown,
-             ignored, clean) = self.dirstate.status(match, listignored,
-                                                    listclean, listunknown)
-            # are we comparing working dir against its parent?
-            if compareworking:
-                if lookup:
-                    fixup = []
-                    # do a full compare of any files that might have changed
-                    ctx = self['.']
-                    ff = self.dirstate.flagfunc(ctx.flags)
-                    for f in lookup:
-                        if (f not in ctx or ff(f) != ctx.flags(f)
-                            or ctx[f].cmp(self.wread(f))):
-                            modified.append(f)
-                        else:
-                            fixup.append(f)
-                            if listclean:
-                                clean.append(f)
+                modified.sort()
+                if listclean:
+                    clean = util.sort(clean + fixup)
 
-                    # update dirstate for files that are actually clean
-                    if fixup:
-                        wlock = None
+                # update dirstate for files that are actually clean
+                if fixup:
+                    wlock = None
+                    try:
                         try:
-                            try:
-                                wlock = self.wlock(False)
-                            except lock.LockException:
-                                pass
-                            if wlock:
-                                for f in fixup:
-                                    self.dirstate.normal(f)
-                        finally:
-                            del wlock
-            else:
+                            wlock = self.wlock(False)
+                            for f in fixup:
+                                self.dirstate.normal(f)
+                        except lock.LockException:
+                            pass
+                    finally:
+                        del wlock
+
+        if not parentworking:
+            mf1 = mfmatches(ctx1)
+            if working:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
-                # XXX: create it in dirstate.py ?
-                mf2 = mfmatches(self.dirstate.parents()[0])
-                ff = self.dirstate.flagfunc(mf2.flags)
-                for f in lookup + modified + added:
-                    mf2[f] = ""
-                    mf2.set(f, ff(f))
+                mf2 = mfmatches(self['.'])
+                mf2.flags = ctx2.flags # delay flag lookup
+                for f in cmp + modified + added:
+                    mf2[f] = None
                 for f in removed:
                     if f in mf2:
                         del mf2[f]
+            else:
+                # we are comparing two revisions
+                deleted, unknown, ignored = [], [], []
+                mf2 = mfmatches(ctx2)
 
-        else:
-            # we are comparing two revisions
-            mf2 = mfmatches(node2)
-
-        if not compareworking:
-            # flush lists from dirstate before comparing manifests
             modified, added, clean = [], [], []
-
-            # make sure to sort the files so we talk to the disk in a
-            # reasonable order
-            getnode = lambda fn: mf1.get(fn, nullid)
             for fn in util.sort(mf2):
                 if fn in mf1:
-                    if (mf1.flags(fn) != mf2.flags(fn) or
-                        (mf1[fn] != mf2[fn] and
-                         (mf2[fn] != "" or fcmp(fn, getnode)))):
+                    if ((mf1[fn] != mf2[fn] and
+                        (mf2[fn] or ctx1[fn].cmp(ctx2[fn].data())))
+                        or mf1.flags(fn) != mf2.flags(fn)):
                         modified.append(fn)
                     elif listclean:
                         clean.append(fn)
                     del mf1[fn]
                 else:
                     added.append(fn)
+            removed = util.sort(mf1.keys())
 
-            removed = mf1.keys()
-
-        # sort and return results:
-        for l in modified, added, removed, deleted, unknown, ignored, clean:
-            l.sort()
-        return (modified, added, removed, deleted, unknown, ignored, clean)
+        return modified, added, removed, deleted, unknown, ignored, clean
 
     def add(self, list):
         wlock = self.wlock()

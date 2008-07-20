@@ -472,13 +472,9 @@ class workingctx(changectx):
             self._date = util.parsedate(date)
         else:
             self._date = util.makedate()
-        if user:
-            self._user = user
-        else:
-            self._user = self._repo.ui.username()
+        self._user = user
         if parents:
-            p1, p2 = parents
-            self._parents = [changectx(self._repo, p) for p in (p1, p2)]
+            self._parents = [changectx(self._repo, p) for p in parents]
         if changes:
             self._status = list(changes)
 
@@ -500,6 +496,9 @@ class workingctx(changectx):
 
     def __nonzero__(self):
         return True
+
+    def __contains__(self, key):
+        return self._dirstate[f] not in "?r"
 
     def __getattr__(self, name):
         if name == '_status':
@@ -541,7 +540,7 @@ class workingctx(changectx):
 
     def manifest(self): return self._manifest
 
-    def user(self): return self._user
+    def user(self): return self._user or self._repo.ui.username()
     def date(self): return self._date
     def description(self): return self._text
     def files(self):
@@ -701,7 +700,7 @@ class memctx(object):
         self._node = None
         self._text = text
         self._date = date and util.parsedate(date) or util.makedate()
-        self._user = user or self._repo.ui.username()
+        self._user = user
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
@@ -724,7 +723,7 @@ class memctx(object):
     def __nonzero__(self):
         return True
 
-    def user(self): return self._user
+    def user(self): return self._user or self._repo.ui.username()
     def date(self): return self._date
     def description(self): return self._text
     def files(self): return self.modified()

@@ -104,7 +104,8 @@ def catcommit(ui, repo, n, prefix, ctx=None):
         ctx = repo[n]
     ui.write("tree %s\n" % short(ctx.changeset()[0])) # use ctx.node() instead ??
     for p in ctx.parents():
-        ui.write("parent %s\n" % short(p.node()))
+        ui.write("parent %s\n" % p)
+
     date = ctx.date()
     description = ctx.description().replace("\0", "")
     lines = description.splitlines()
