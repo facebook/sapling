@@ -338,7 +338,7 @@ class dirstate(object):
         'forget a file'
         self._dirty = True
         try:
-            self._droppath('?')
+            self._droppath(f)
             del self._map[f]
         except KeyError:
             self._ui.warn(_("not in dirstate: %s\n") % f)
