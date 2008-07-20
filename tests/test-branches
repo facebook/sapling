@@ -33,7 +33,7 @@ hg commit -d '5 0' -u test -m "Adding c branch"
 
 echo 'd' >d
 hg add d
-hg branch d
+hg branch 'a branch name much longer than the default justification used by branches'
 hg commit -d '6 0' -u test -m "Adding d branch"
 
 hg branches
