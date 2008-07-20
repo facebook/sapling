@@ -998,9 +998,7 @@ class localrepository(repo.repository):
                         del wlock
 
         if not parentworking:
-            modified, added, clean = [], [], []
             mf1 = mfmatches(ctx1)
-
             if working:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
@@ -1016,10 +1014,11 @@ class localrepository(repo.repository):
                 deleted, unknown, ignored = [], [], []
                 mf2 = mfmatches(ctx2)
 
+            modified, added, clean = [], [], []
             for fn in util.sort(mf2):
                 if fn in mf1:
                     if ((mf1[fn] != mf2[fn] and
-                        (mf2[fn] or ctx1[f].cmp(ctx2[f].data())))
+                        (mf2[fn] or ctx1[fn].cmp(ctx2[fn].data())))
                         or mf1.flags(fn) != mf2.flags(fn)):
                         modified.append(fn)
                     elif listclean:
