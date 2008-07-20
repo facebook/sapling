@@ -389,10 +389,10 @@ def branches(ui, repo, active=False):
             if ui.quiet:
                 ui.write("%s\n" % tag)
             else:
-                rev = str(node).rjust(32 - util.locallen(tag))
+                rev = str(node).rjust(31 - util.locallen(tag))
                 isinactive = ((not isactive) and " (inactive)") or ''
                 data = tag, rev, hexfunc(repo.lookup(node)), isinactive
-                ui.write("%s%s:%s%s\n" % data)
+                ui.write("%s %s:%s%s\n" % data)
 
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file

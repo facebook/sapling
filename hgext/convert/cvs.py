@@ -201,7 +201,7 @@ class convert_cvs(converter_source):
 
                 if not passw:
                     passw = "A"
-                    pf = open(os.path.join(os.environ["HOME"], ".cvspass"))
+                    pf = open(os.path.expanduser("~/.cvspass"))
                     for line in pf.read().splitlines():
                         part1, part2 = line.split(' ', 1)
                         if part1 == '/1':

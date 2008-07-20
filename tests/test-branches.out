@@ -5,14 +5,14 @@ created new head
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 created new head
 marked working directory as branch c
-marked working directory as branch d
-d                              6:9c581c5ff105
+marked working directory as branch a branch name much longer than the default justification used by branches
+a branch name much longer than the default justification used by branches 6:b8cb5af34c4d
 b                              4:22df7444f7c1
 a                              1:dd6b440dd85a
 c                              5:5ca481e59b8c (inactive)
 default                        0:19709c5a4e75 (inactive)
 -------
-d                              6:9c581c5ff105
+a branch name much longer than the default justification used by branches 6:b8cb5af34c4d
 b                              4:22df7444f7c1
 a                              1:dd6b440dd85a
 --- Branch a
