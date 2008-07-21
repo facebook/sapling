@@ -1882,7 +1882,7 @@ def merge(ui, repo, node=None, force=None, rev=None):
 
     if not node:
         branch = repo.changectx(None).branch()
-        bheads = repo.branchheads()
+        bheads = repo.branchheads(branch)
         if len(bheads) > 2:
             raise util.Abort(_("branch '%s' has %d heads - "
                                "please merge with an explicit rev") %
