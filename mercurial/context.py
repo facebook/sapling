@@ -497,7 +497,7 @@ class workingctx(changectx):
         return True
 
     def __contains__(self, key):
-        return self._dirstate[f] not in "?r"
+        return self._dirstate[key] not in "?r"
 
     def __getattr__(self, name):
         if name == '_status':
