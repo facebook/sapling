@@ -133,12 +133,6 @@ class changectx(object):
         return filectx(self._repo, path, fileid=fileid,
                        changectx=self, filelog=filelog)
 
-    def filectxs(self):
-        """generate a file context for each file in this changeset's
-           manifest"""
-        for f in util.sort(mf):
-            yield self.filectx(f, fileid=mf[f])
-
     def ancestor(self, c2):
         """
         return the ancestor context of self and c2
