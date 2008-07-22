@@ -17,7 +17,7 @@ class ErrorResponse(Exception):
     def __init__(self, code, message=None):
         Exception.__init__(self)
         self.code = code
-        if message:
+        if message is not None:
             self.message = message
         else:
             self.message = _statusmessage(code)
