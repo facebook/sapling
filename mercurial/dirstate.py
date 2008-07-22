@@ -474,7 +474,7 @@ class dirstate(object):
 
         seen = {'.hg': 1}
 
-        # step one, find all files that match our criteria
+        # step 1: find all explicit files
         for ff in util.sort(files):
             nf = normalize(normpath(ff))
             if nf in seen:
@@ -495,55 +495,53 @@ class dirstate(object):
                         yield nf, None
                 continue
 
-            if not s_isdir(st.st_mode):
+            if s_isdir(st.st_mode):
+                if not dirignore(nf):
+                    wadd(nf)
+            else:
                 seen[nf] = 1
                 if supported(ff, st.st_mode, verbose=True):
                     yield nf, st
                 elif nf in dmap:
                     yield nf, None
-                continue
 
-            if dirignore(nf):
-                continue
-
-            wadd(nf)
-            while work:
-                nd = work.pop()
-                if hasattr(match, 'dir'):
-                    match.dir(nd)
-                entries = listdir(_join(nd), stat=True)
-                # nd is the top of the repository dir tree
-                if nd == '.':
-                    nd = ''
-                else:
-                    # do not recurse into a repo contained in this
-                    # one. use bisect to find .hg directory so speed
-                    # is good on big directory.
-                    hg = bisect_left(entries, ('.hg'))
-                    if hg < len(entries) and entries[hg][0] == '.hg' \
-                            and entries[hg][1] == stat.S_IFDIR:
-                            continue
-                for f, kind, st in entries:
-                    nf = normalize(pconvert(join(nd, f)))
-                    if nf in seen:
+        # step 2: visit subdirectories
+        while work:
+            nd = work.pop()
+            if hasattr(match, 'dir'):
+                match.dir(nd)
+            entries = listdir(_join(nd), stat=True)
+            # nd is the top of the repository dir tree
+            if nd == '.':
+                nd = ''
+            else:
+                # do not recurse into a repo contained in this
+                # one. use bisect to find .hg directory so speed
+                # is good on big directory.
+                hg = bisect_left(entries, ('.hg'))
+                if hg < len(entries) and entries[hg][0] == '.hg' \
+                        and entries[hg][1] == stat.S_IFDIR:
                         continue
-                    seen[nf] = 1
-                    # don't trip over symlinks
-                    if kind == stat.S_IFDIR:
-                        if not ignore(nf):
-                            wadd(nf)
-                        if nf in dmap and match(nf):
-                            add((nf, None))
-                    elif imatch(nf):
-                        if supported(nf, st.st_mode):
-                            add((nf, st))
-                        elif nf in dmap:
-                            add((nf, None))
-            for e in util.sort(found):
-                yield e
+            for f, kind, st in entries:
+                nf = normalize(pconvert(join(nd, f)))
+                if nf in seen:
+                    continue
+                seen[nf] = 1
+                # don't trip over symlinks
+                if kind == stat.S_IFDIR:
+                    if not ignore(nf):
+                        wadd(nf)
+                    if nf in dmap and match(nf):
+                        add((nf, None))
+                elif imatch(nf):
+                    if supported(nf, st.st_mode):
+                        add((nf, st))
+                    elif nf in dmap:
+                        add((nf, None))
+        for e in util.sort(found):
+            yield e
 
-        # step two run through anything left in the dmap hash and yield
-        # if we haven't already seen it
+        # step 3: report unseen items in the dmap hash
         for f in util.sort(dmap):
             if f in seen or not match(f):
                 continue
