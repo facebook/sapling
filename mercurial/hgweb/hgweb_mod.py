@@ -13,6 +13,7 @@ from mercurial import mdiff, ui, hg, util, patch, hook
 from mercurial import revlog, templater, templatefilters
 from common import get_mtime, style_map, paritygen, countgen, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
+from common import HTTP_UNAUTHORIZED, HTTP_METHOD_NOT_ALLOWED
 from request import wsgirequest
 import webcommands, protocol, webutil
 
@@ -88,10 +89,16 @@ class hgweb(object):
 
         cmd = req.form.get('cmd', [''])[0]
         if cmd and cmd in protocol.__all__:
-            if cmd in perms and not self.check_perm(req, perms[cmd]):
-                return []
-            method = getattr(protocol, cmd)
-            return method(self.repo, req)
+            try:
+                if cmd in perms:
+                    self.check_perm(req, perms[cmd])
+                method = getattr(protocol, cmd)
+                return method(self.repo, req)
+            except ErrorResponse, inst:
+                req.respond(inst.code, protocol.HGTYPE)
+                if not inst.message:
+                    return []
+                return '0\n%s\n' % inst.message,
 
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
@@ -344,35 +351,29 @@ class hgweb(object):
         '''Check permission for operation based on request data (including
         authentication info. Return true if op allowed, else false.'''
 
-        def error(status, message):
-            req.respond(status, protocol.HGTYPE)
-            req.write('0\n%s\n' % message)
-
-        if op == 'pull':
-            return self.allowpull
+        if op == 'pull' and not self.allowpull:
+            raise ErrorResponse(HTTP_OK, '')
+        elif op == 'pull':
+            return
 
         # enforce that you can only push using POST requests
         if req.env['REQUEST_METHOD'] != 'POST':
-            error('405 Method Not Allowed', 'push requires POST request')
-            return False
+            msg = 'push requires POST request'
+            raise ErrorResponse(HTTP_METHOD_NOT_ALLOWED, msg)
 
         # require ssl by default for pushing, auth info cannot be sniffed
         # and replayed
         scheme = req.env.get('wsgi.url_scheme')
         if self.configbool('web', 'push_ssl', True) and scheme != 'https':
-            error(HTTP_OK, 'ssl required')
-            return False
+            raise ErrorResponse(HTTP_OK, 'ssl required')
 
         user = req.env.get('REMOTE_USER')
 
         deny = self.configlist('web', 'deny_push')
         if deny and (not user or deny == ['*'] or user in deny):
-            error('401 Unauthorized', 'push not authorized')
-            return False
+            raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
 
         allow = self.configlist('web', 'allow_push')
         result = allow and (allow == ['*'] or user in allow)
         if not result:
-            error('401 Unauthorized', 'push not authorized')
-
-        return result
+            raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')

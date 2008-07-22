@@ -108,7 +108,6 @@ def capabilities(repo, req):
 
 def unbundle(repo, req):
 
-    errorfmt = '0\n%s\n'
     proto = req.env.get('wsgi.url_scheme') or 'http'
     their_heads = req.form['heads'][0].split(' ')
 
@@ -123,10 +122,7 @@ def unbundle(repo, req):
             # drain incoming bundle, else client will not see
             # response when run outside cgi script
             pass
-        req.respond(HTTP_OK, HGTYPE)
-        return errorfmt % 'unsynced changes',
-
-    req.respond(HTTP_OK, HGTYPE)
+        raise ErrorResponse(HTTP_OK, 'unsynced changes')
 
     # do not lock repo until all changegroup data is
     # streamed. save to temporary file.
@@ -142,7 +138,7 @@ def unbundle(repo, req):
             lock = repo.lock()
             try:
                 if not check_heads():
-                    return errorfmt % 'unsynced changes',
+                    raise ErrorResponse(HTTP_OK, 'unsynced changes')
 
                 fp.seek(0)
                 header = fp.read(6)
@@ -168,11 +164,12 @@ def unbundle(repo, req):
                 finally:
                     val = sys.stdout.getvalue()
                     sys.stdout, sys.stderr = oldio
+                req.respond(HTTP_OK, HGTYPE)
                 return '%d\n%s' % (ret, val),
             finally:
                 del lock
         except ValueError, inst:
-            return errorfmt % inst,
+            raise ErrorResponse(HTTP_OK, inst)
         except (OSError, IOError), inst:
             filename = getattr(inst, 'filename', '')
             # Don't send our filesystem layout to the client
@@ -185,8 +182,7 @@ def unbundle(repo, req):
                 code = HTTP_NOT_FOUND
             else:
                 code = HTTP_SERVER_ERROR
-            req.respond(code)
-            return '0\n%s: %s\n' % (error, filename),
+            raise ErrorResponse(code, '%s: %s' % (error, filename))
     finally:
         fp.close()
         os.unlink(tempname)
