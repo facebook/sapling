@@ -424,16 +424,6 @@ class dirstate(object):
         if hasattr(match, 'bad'):
             badfn = match.bad
 
-        files = util.unique(match.files())
-        if not files or '.' in files:
-            files = ['']
-        dmap = self._map
-
-        def imatch(file_):
-            if file_ not in dmap and self._ignore(file_):
-                return False
-            return match(file_)
-
         def badtype(f, mode):
             kind = 'unknown'
             if stat.S_ISCHR(mode): kind = _('character device')
@@ -444,6 +434,9 @@ class dirstate(object):
             self._ui.warn(_('%s: unsupported file type (type is %s)\n')
                           % (self.pathto(f), kind))
 
+        def imatch(f):
+            return (f in dmap or not ignore(f)) and match(f)
+
         # TODO: don't walk unknown directories if unknown and ignored are False
         ignore = self._ignore
         dirignore = self._dirignore
@@ -452,22 +445,25 @@ class dirstate(object):
             ignore = util.never
             dirignore = util.never
 
+        dmap = self._map
         normpath = util.normpath
         normalize = self.normalize
         listdir = osutil.listdir
         lstat = os.lstat
         bisect_left = bisect.bisect_left
         pconvert = util.pconvert
-        join = os.path.join
         getkind = stat.S_IFMT
         dirkind = stat.S_IFDIR
         regkind = stat.S_IFREG
         lnkkind = stat.S_IFLNK
-        _join = self._join
+        join = self._join
         work = []
         wadd = work.append
 
-        results = {}
+        files = util.unique(match.files())
+        if not files or '.' in files:
+            files = ['']
+        results = {'.hg': None}
 
         # step 1: find all explicit files
         for ff in util.sort(files):
@@ -476,7 +472,7 @@ class dirstate(object):
                 continue
 
             try:
-                st = lstat(_join(nf))
+                st = lstat(join(nf))
                 kind = getkind(st.st_mode)
                 if kind == dirkind:
                     if not dirignore(nf):
@@ -505,11 +501,9 @@ class dirstate(object):
             nd = work.pop()
             if hasattr(match, 'dir'):
                 match.dir(nd)
-            entries = listdir(_join(nd), stat=True)
+            entries = listdir(join(nd), stat=True)
             if nd == '.':
                 nd = ''
-            elif nd == '.hg':
-                continue
             else:
                 # do not recurse into a repo contained in this
                 # one. use bisect to find .hg directory so speed
@@ -533,18 +527,19 @@ class dirstate(object):
                             results[nf] = None
 
         # step 3: report unseen items in the dmap hash
-        for f in util.sort(dmap):
-            if f not in results and match(f):
-                results[f] = None
+        for nf in util.sort(dmap):
+            if nf not in results and match(nf):
+                results[nf] = None
                 try:
-                    st = lstat(_join(f))
+                    st = lstat(join(nf))
                     kind = getkind(st.st_mode)
                     if kind == regkind or kind == lnkkind:
-                        results[f] = st
+                        results[nf] = st
                 except OSError, inst:
                     if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
                         raise
 
+        del results['.hg']
         return results
 
     def status(self, match, ignored, clean, unknown):
