@@ -471,12 +471,12 @@ class dirstate(object):
         work = []
         wadd = work.append
 
-        seen = {'.hg': 1}
+        results = {}
 
         # step 1: find all explicit files
         for ff in util.sort(files):
             nf = normalize(normpath(ff))
-            if nf in seen:
+            if nf in results:
                 continue
 
             try:
@@ -485,11 +485,10 @@ class dirstate(object):
                     if not dirignore(nf):
                         wadd(nf)
                 else:
-                    seen[nf] = 1
                     if supported(ff, st.st_mode, verbose=True):
-                        yield nf, st
+                        results[nf] = st
                     elif nf in dmap:
-                        yield nf, None
+                        results[nf] = None
             except OSError, inst:
                 keep = False
                 prefix = nf + "/"
@@ -501,7 +500,7 @@ class dirstate(object):
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
                     elif badfn(ff, inst.strerror) and imatch(nf):
-                        yield nf, None
+                        results[nf] = None
 
         # step 2: visit subdirectories
         while work:
@@ -511,6 +510,8 @@ class dirstate(object):
             entries = listdir(_join(nd), stat=True)
             if nd == '.':
                 nd = ''
+            elif nd == '.hg':
+                continue
             else:
                 # do not recurse into a repo contained in this
                 # one. use bisect to find .hg directory so speed
@@ -521,31 +522,31 @@ class dirstate(object):
                         continue
             for f, kind, st in entries:
                 nf = normalize(nd and (nd + "/" + f) or f)
-                if nf not in seen:
-                    seen[nf] = 1
+                if nf not in results:
                     if kind == dirkind:
                         if not ignore(nf):
                             wadd(nf)
                         if nf in dmap and match(nf):
-                            yield nf, None
+                            results[nf] = None
                     elif imatch(nf):
                         if supported(nf, st.st_mode):
-                            yield nf, st
+                            results[nf] = st
                         elif nf in dmap:
-                            yield nf, None
+                            results[nf] = None
 
         # step 3: report unseen items in the dmap hash
         for f in util.sort(dmap):
-            if f not in seen and match(f):
+            if f not in results and match(f):
+                results[f] = None
                 try:
                     st = lstat(_join(f))
                     if supported(f, st.st_mode):
-                        yield f, st
-                        continue
+                        results[f] = st
                 except OSError, inst:
                     if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
                         raise
-                yield f, None
+
+        return results
 
     def status(self, match, ignored, clean, unknown):
         listignored, listclean, listunknown = ignored, clean, unknown
@@ -565,7 +566,7 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
-        for fn, st in self.walk(match, listunknown, listignored):
+        for fn, st in self.walk(match, listunknown, listignored).iteritems():
             if fn not in dmap:
                 if (listignored or match.exact(fn)) and self._dirignore(fn):
                     if listignored:

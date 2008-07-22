@@ -598,8 +598,7 @@ class workingctx(changectx):
         return self._parents[0].ancestor(c2) # punt on two parents for now
 
     def walk(self, match):
-        for fn, st in util.sort(self._repo.dirstate.walk(match, True, False)):
-            yield fn
+        return util.sort(self._repo.dirstate.walk(match, True, False).keys())
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular
