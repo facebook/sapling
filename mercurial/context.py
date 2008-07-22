@@ -470,9 +470,8 @@ class workingctx(changectx):
         self._text = text
         if date:
             self._date = util.parsedate(date)
-        else:
-            self._date = util.makedate()
-        self._user = user
+        if user:
+            self._user = user
         if parents:
             self._parents = [changectx(self._repo, p) for p in parents]
         if changes:
@@ -504,6 +503,12 @@ class workingctx(changectx):
         if name == '_status':
             self._status = self._repo.status(unknown=True)
             return self._status
+        elif name == '_user':
+            self._user = self._repo.ui.username()
+            return self._user
+        elif name == '_date':
+            self._date = util.makedate()
+            return self._date
         if name == '_manifest':
             self._buildmanifest()
             return self._manifest

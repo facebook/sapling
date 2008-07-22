@@ -968,6 +968,8 @@ class localrepository(repo.repository):
         if working: # we need to scan the working dir
             s = self.dirstate.status(match, listignored, listclean, listunknown)
             cmp, modified, added, removed, deleted, unknown, ignored, clean = s
+            removed.sort()
+            deleted.sort()
 
             # check for any possibly clean files
             if parentworking and cmp:
@@ -1003,9 +1005,9 @@ class localrepository(repo.repository):
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
                 mf2 = mfmatches(self['.'])
-                mf2.flags = ctx2.flags # delay flag lookup
                 for f in cmp + modified + added:
                     mf2[f] = None
+                    mf2.set(f, ctx2.flags(f))
                 for f in removed:
                     if f in mf2:
                         del mf2[f]
@@ -1017,9 +1019,9 @@ class localrepository(repo.repository):
             modified, added, clean = [], [], []
             for fn in util.sort(mf2):
                 if fn in mf1:
-                    if ((mf1[fn] != mf2[fn] and
-                        (mf2[fn] or ctx1[fn].cmp(ctx2[fn].data())))
-                        or mf1.flags(fn) != mf2.flags(fn)):
+                    if (mf1.flags(fn) != mf2.flags(fn) or
+                        (mf1[fn] != mf2[fn] and
+                         (mf2[fn] or ctx1[fn].cmp(ctx2[fn].data())))):
                         modified.append(fn)
                     elif listclean:
                         clean.append(fn)
