@@ -506,11 +506,11 @@ class dirstate(object):
             if dirignore(nf):
                 continue
 
-            if hasattr(match, 'dir'):
-                match.dir(nf)
             wadd(nf)
             while work:
                 nd = work.pop()
+                if hasattr(match, 'dir'):
+                    match.dir(nd)
                 entries = listdir(_join(nd), stat=True)
                 # nd is the top of the repository dir tree
                 if nd == '.':
@@ -532,8 +532,6 @@ class dirstate(object):
                     if kind == stat.S_IFDIR:
                         if not ignore(nf):
                             wadd(nf)
-                            if hasattr(match, 'dir'):
-                                match.dir(nf)
                         if nf in dmap and match(nf):
                             add((nf, None))
                     elif imatch(nf):
