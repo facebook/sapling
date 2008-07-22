@@ -398,20 +398,6 @@ class dirstate(object):
         st.rename()
         self._dirty = self._dirtypl = False
 
-    def _supported(self, f, mode, verbose=False):
-        if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
-            return True
-        if verbose:
-            kind = 'unknown'
-            if stat.S_ISCHR(mode): kind = _('character device')
-            elif stat.S_ISBLK(mode): kind = _('block device')
-            elif stat.S_ISFIFO(mode): kind = _('fifo')
-            elif stat.S_ISSOCK(mode): kind = _('socket')
-            elif stat.S_ISDIR(mode): kind = _('directory')
-            self._ui.warn(_('%s: unsupported file type (type is %s)\n')
-                          % (self.pathto(f), kind))
-        return False
-
     def _dirignore(self, f):
         if f == '.':
             return False
@@ -448,6 +434,16 @@ class dirstate(object):
                 return False
             return match(file_)
 
+        def badtype(f, mode):
+            kind = 'unknown'
+            if stat.S_ISCHR(mode): kind = _('character device')
+            elif stat.S_ISBLK(mode): kind = _('block device')
+            elif stat.S_ISFIFO(mode): kind = _('fifo')
+            elif stat.S_ISSOCK(mode): kind = _('socket')
+            elif stat.S_ISDIR(mode): kind = _('directory')
+            self._ui.warn(_('%s: unsupported file type (type is %s)\n')
+                          % (self.pathto(f), kind))
+
         # TODO: don't walk unknown directories if unknown and ignored are False
         ignore = self._ignore
         dirignore = self._dirignore
@@ -461,12 +457,12 @@ class dirstate(object):
         listdir = osutil.listdir
         lstat = os.lstat
         bisect_left = bisect.bisect_left
-        isdir = os.path.isdir
         pconvert = util.pconvert
         join = os.path.join
-        isdir = stat.S_ISDIR
+        getkind = stat.S_IFMT
         dirkind = stat.S_IFDIR
-        supported = self._supported
+        regkind = stat.S_IFREG
+        lnkkind = stat.S_IFLNK
         _join = self._join
         work = []
         wadd = work.append
@@ -481,13 +477,15 @@ class dirstate(object):
 
             try:
                 st = lstat(_join(nf))
-                if isdir(st.st_mode):
+                kind = getkind(st.st_mode)
+                if kind == dirkind:
                     if not dirignore(nf):
                         wadd(nf)
+                elif kind == regkind or kind == lnkkind:
+                    results[nf] = st
                 else:
-                    if supported(ff, st.st_mode, verbose=True):
-                        results[nf] = st
-                    elif nf in dmap:
+                    badtype(ff, kind)
+                    if nf in dmap:
                         results[nf] = None
             except OSError, inst:
                 keep = False
@@ -529,7 +527,7 @@ class dirstate(object):
                         if nf in dmap and match(nf):
                             results[nf] = None
                     elif imatch(nf):
-                        if supported(nf, st.st_mode):
+                        if kind == regkind or kind == lnkkind:
                             results[nf] = st
                         elif nf in dmap:
                             results[nf] = None
@@ -540,7 +538,8 @@ class dirstate(object):
                 results[f] = None
                 try:
                     st = lstat(_join(f))
-                    if supported(f, st.st_mode):
+                    kind = getkind(st.st_mode)
+                    if kind == regkind or kind == lnkkind:
                         results[f] = st
                 except OSError, inst:
                     if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
