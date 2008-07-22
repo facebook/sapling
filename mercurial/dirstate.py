@@ -434,14 +434,10 @@ class dirstate(object):
             self._ui.warn(_('%s: unsupported file type (type is %s)\n')
                           % (self.pathto(f), kind))
 
-        def imatch(f):
-            return (f in dmap or not ignore(f)) and match(f)
-
         # TODO: don't walk unknown directories if unknown and ignored are False
         ignore = self._ignore
         dirignore = self._dirignore
         if ignored:
-            imatch = match
             ignore = util.never
             dirignore = util.never
 
@@ -493,8 +489,9 @@ class dirstate(object):
                 if not keep:
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
-                    elif badfn(ff, inst.strerror) and imatch(nf):
-                        results[nf] = None
+                    elif badfn(ff, inst.strerror):
+                        if (nf in dmap or not ignore(nf)) and match(nf):
+                            results[nf] = None
 
         # step 2: visit subdirectories
         while work:
@@ -520,11 +517,14 @@ class dirstate(object):
                             wadd(nf)
                         if nf in dmap and match(nf):
                             results[nf] = None
-                    elif imatch(nf):
-                        if kind == regkind or kind == lnkkind:
+                    elif kind == regkind or kind == lnkkind:
+                        if nf in dmap:
+                            if match(nf):
+                                results[nf] = st
+                        elif match(nf) and not ignore(nf):
                             results[nf] = st
-                        elif nf in dmap:
-                            results[nf] = None
+                    elif nf in dmap and match(nf):
+                        results[nf] = None
 
         # step 3: report unseen items in the dmap hash
         for nf in util.sort(dmap):
