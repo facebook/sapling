@@ -401,35 +401,6 @@ class dirstate(object):
         st.rename()
         self._dirty = self._dirtypl = False
 
-    def _filter(self, files):
-        ret = {}
-        unknown = []
-
-        for x in files:
-            if x == '.':
-                return self._map.copy()
-            if x not in self._map:
-                unknown.append(x)
-            else:
-                ret[x] = self._map[x]
-
-        if not unknown:
-            return ret
-
-        b = util.sort(self._map)
-        blen = len(b)
-
-        for x in unknown:
-            bs = bisect.bisect(b, "%s%s" % (x, '/'))
-            while bs < blen:
-                s = b[bs]
-                if len(s) > len(x) and s.startswith(x):
-                    ret[s] = self._map[s]
-                else:
-                    break
-                bs += 1
-        return ret
-
     def _supported(self, f, mode, verbose=False):
         if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
             return True
@@ -470,14 +441,10 @@ class dirstate(object):
         if hasattr(match, 'bad'):
             badfn = match.bad
 
-        # walk all files by default
-        files = match.files()
-        if not files:
-            files = ['.']
-            dc = self._map.copy()
-        else:
-            files = util.unique(files)
-            dc = self._filter(files)
+        files = util.unique(match.files())
+        if not files or '.' in files:
+            files = ['']
+        dc = self._map
 
         def imatch(file_):
             if file_ not in dc and self._ignore(file_):
@@ -582,28 +549,26 @@ class dirstate(object):
                 if nn in known:
                     continue
                 known[nn] = 1
-                if match(nf):
-                    if supported(ff, st.st_mode, verbose=True):
-                        yield nn, st
-                    elif ff in dc:
-                        yield nf, None
+                if supported(ff, st.st_mode, verbose=True):
+                    yield self.normalize(nf), st
+                elif ff in dc:
+                    yield nf, None
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
         for f in util.sort(dc):
-            if f in known:
+            if f in known or not match(f):
                 continue
             known[f] = 1
-            if imatch(f):
-                try:
-                    st = lstat(_join(f))
-                    if supported(f, st.st_mode):
-                        yield f, st
-                        continue
-                except OSError, inst:
-                    if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
-                        raise
-                yield f, None
+            try:
+                st = lstat(_join(f))
+                if supported(f, st.st_mode):
+                    yield f, st
+                    continue
+            except OSError, inst:
+                if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
+                    raise
+            yield f, None
 
     def status(self, match, ignored, clean, unknown):
         listignored, listclean, listunknown = ignored, clean, unknown
