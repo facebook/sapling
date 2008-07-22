@@ -6,10 +6,10 @@ class _match(object):
         self._cwd = cwd
         self._files = files
         self._fmap = dict.fromkeys(files)
-        self._matchfn = mf
+        self.matchfn = mf
         self._anypats = ap
     def __call__(self, fn):
-        return self._matchfn(fn)
+        return self.matchfn(fn)
     def __iter__(self):
         for f in self._files:
             yield f

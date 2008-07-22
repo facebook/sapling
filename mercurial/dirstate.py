@@ -441,6 +441,7 @@ class dirstate(object):
             ignore = util.never
             dirignore = util.never
 
+        matchfn = match.matchfn
         dmap = self._map
         normpath = util.normpath
         normalize = self.normalize
@@ -490,7 +491,7 @@ class dirstate(object):
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
                     elif badfn(ff, inst.strerror):
-                        if (nf in dmap or not ignore(nf)) and match(nf):
+                        if (nf in dmap or not ignore(nf)) and matchfn(nf):
                             results[nf] = None
 
         # step 2: visit subdirectories
@@ -515,15 +516,15 @@ class dirstate(object):
                     if kind == dirkind:
                         if not ignore(nf):
                             wadd(nf)
-                        if nf in dmap and match(nf):
+                        if nf in dmap and matchfn(nf):
                             results[nf] = None
                     elif kind == regkind or kind == lnkkind:
                         if nf in dmap:
-                            if match(nf):
+                            if matchfn(nf):
                                 results[nf] = st
-                        elif match(nf) and not ignore(nf):
+                        elif matchfn(nf) and not ignore(nf):
                             results[nf] = st
-                    elif nf in dmap and match(nf):
+                    elif nf in dmap and matchfn(nf):
                         results[nf] = None
 
         # step 3: report unseen items in the dmap hash
