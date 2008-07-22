@@ -456,11 +456,6 @@ class dirstate(object):
             ignore = util.never
             dirignore = util.never
 
-        # self._root may end with a path separator when self._root == '/'
-        common_prefix_len = len(self._root)
-        if not util.endswithsep(self._root):
-            common_prefix_len += 1
-
         normpath = util.normpath
         normalize = self.normalize
         listdir = osutil.listdir
@@ -482,12 +477,11 @@ class dirstate(object):
         # step one, find all files that match our criteria
         for ff in util.sort(files):
             nf = normalize(normpath(ff))
-            f = _join(nf)
             if nf in seen:
                 continue
 
             try:
-                st = lstat(f)
+                st = lstat(_join(nf))
             except OSError, inst:
                 keep = False
                 for fn in dmap:
@@ -513,13 +507,12 @@ class dirstate(object):
                 continue
 
             if hasattr(match, 'dir'):
-                match.dir(normpath(f[common_prefix_len:]))
-            wadd(f)
+                match.dir(nf)
+            wadd(nf)
             while work:
-                top = work.pop()
-                entries = listdir(top, stat=True)
+                nd = work.pop()
+                entries = listdir(_join(nd), stat=True)
                 # nd is the top of the repository dir tree
-                nd = normpath(top[common_prefix_len:])
                 if nd == '.':
                     nd = ''
                 else:
@@ -529,18 +522,17 @@ class dirstate(object):
                     names = [e[0] for e in entries]
                     hg = bisect_left(names, '.hg')
                     if hg < len(names) and names[hg] == '.hg':
-                        if isdir(join(top, '.hg')):
+                        if isdir(_join(join(nd, '.hg'))):
                             continue
                 for f, kind, st in entries:
                     nf = normalize(pconvert(join(nd, f)))
                     if nf in seen:
                         continue
                     seen[nf] = 1
-                    p = join(top, f)
                     # don't trip over symlinks
                     if kind == stat.S_IFDIR:
                         if not ignore(nf):
-                            wadd(p)
+                            wadd(nf)
                             if hasattr(match, 'dir'):
                                 match.dir(nf)
                         if nf in dmap and match(nf):
