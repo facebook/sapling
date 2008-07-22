@@ -444,10 +444,10 @@ class dirstate(object):
         files = util.unique(match.files())
         if not files or '.' in files:
             files = ['']
-        dc = self._map
+        dmap = self._map
 
         def imatch(file_):
-            if file_ not in dc and self._ignore(file_):
+            if file_ not in dmap and self._ignore(file_):
                 return False
             return match(file_)
 
@@ -479,21 +479,21 @@ class dirstate(object):
         found = []
         add = found.append
 
-        known = {'.hg': 1}
+        seen = {'.hg': 1}
 
         # step one, find all files that match our criteria
         for ff in util.sort(files):
             nf = normpath(ff)
             nn = self.normalize(nf)
             f = _join(ff)
-            if nn in known:
+            if nn in seen:
                 continue
 
             try:
                 st = lstat(f)
             except OSError, inst:
                 keep = False
-                for fn in dc:
+                for fn in dmap:
                     if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
                         keep = True
                         break
@@ -505,10 +505,10 @@ class dirstate(object):
                 continue
 
             if not s_isdir(st.st_mode):
-                known[nn] = 1
+                seen[nn] = 1
                 if supported(ff, st.st_mode, verbose=True):
                     yield self.normalize(nf), st
-                elif ff in dc:
+                elif ff in dmap:
                     yield nf, None
                 continue
 
@@ -537,9 +537,9 @@ class dirstate(object):
                 for f, kind, st in entries:
                     np = pconvert(join(nd, f))
                     nn = self.normalize(np)
-                    if np in known:
+                    if np in seen:
                         continue
-                    known[nn] = 1
+                    seen[nn] = 1
                     p = join(top, f)
                     # don't trip over symlinks
                     if kind == stat.S_IFDIR:
@@ -547,22 +547,22 @@ class dirstate(object):
                             wadd(p)
                             if hasattr(match, 'dir'):
                                 match.dir(np)
-                        if np in dc and match(np):
+                        if np in dmap and match(np):
                             add((nn, None))
                     elif imatch(np):
                         if supported(np, st.st_mode):
                             add((nn, st))
-                        elif np in dc:
+                        elif np in dmap:
                             add((nn, None))
             for e in util.sort(found):
                 yield e
 
-        # step two run through anything left in the dc hash and yield
+        # step two run through anything left in the dmap hash and yield
         # if we haven't already seen it
-        for f in util.sort(dc):
-            if f in known or not match(f):
+        for f in util.sort(dmap):
+            if f in seen or not match(f):
                 continue
-            known[f] = 1
+            seen[f] = 1
             try:
                 st = lstat(_join(f))
                 if supported(f, st.st_mode):
