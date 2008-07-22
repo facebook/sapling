@@ -968,8 +968,6 @@ class localrepository(repo.repository):
         if working: # we need to scan the working dir
             s = self.dirstate.status(match, listignored, listclean, listunknown)
             cmp, modified, added, removed, deleted, unknown, ignored, clean = s
-            removed.sort()
-            deleted.sort()
 
             # check for any possibly clean files
             if parentworking and cmp:
@@ -982,9 +980,8 @@ class localrepository(repo.repository):
                     else:
                         fixup.append(f)
 
-                modified.sort()
                 if listclean:
-                    clean = util.sort(clean + fixup)
+                    clean += fixup
 
                 # update dirstate for files that are actually clean
                 if fixup:
@@ -1017,7 +1014,7 @@ class localrepository(repo.repository):
                 mf2 = mfmatches(ctx2)
 
             modified, added, clean = [], [], []
-            for fn in util.sort(mf2):
+            for fn in mf2:
                 if fn in mf1:
                     if (mf1.flags(fn) != mf2.flags(fn) or
                         (mf1[fn] != mf2[fn] and
@@ -1028,9 +1025,11 @@ class localrepository(repo.repository):
                     del mf1[fn]
                 else:
                     added.append(fn)
-            removed = util.sort(mf1.keys())
+            removed = mf1.keys()
 
-        return modified, added, removed, deleted, unknown, ignored, clean
+        r = modified, added, removed, deleted, unknown, ignored, clean
+        [l.sort() for l in r]
+        return r
 
     def add(self, list):
         wlock = self.wlock()

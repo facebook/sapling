@@ -8,8 +8,8 @@ dir/bar_2
 foo_2
 adding a
 adding c
-adding b
-adding d
 removing a
+adding b
 removing c
+adding d
 recording removal of a as rename to b (100% similar)

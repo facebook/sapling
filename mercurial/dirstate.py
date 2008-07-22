@@ -469,8 +469,6 @@ class dirstate(object):
         _join = self._join
         work = []
         wadd = work.append
-        found = []
-        add = found.append
 
         seen = {'.hg': 1}
 
@@ -532,14 +530,12 @@ class dirstate(object):
                     if not ignore(nf):
                         wadd(nf)
                     if nf in dmap and match(nf):
-                        add((nf, None))
+                        yield nf, None
                 elif imatch(nf):
                     if supported(nf, st.st_mode):
-                        add((nf, st))
+                        yield nf, st
                     elif nf in dmap:
-                        add((nf, None))
-        for e in util.sort(found):
-            yield e
+                        yield nf, None
 
         # step 3: report unseen items in the dmap hash
         for f in util.sort(dmap):
