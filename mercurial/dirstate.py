@@ -344,14 +344,11 @@ class dirstate(object):
             self._ui.warn(_("not in dirstate: %s\n") % f)
 
     def _normalize(self, path):
-        normpath = os.path.normcase(os.path.normpath(path))
-        if normpath in self._foldmap:
-            return self._foldmap[normpath]
-        elif os.path.exists(path):
-            self._foldmap[normpath] = util.fspath(path, self._root)
-            return self._foldmap[normpath]
-        else:
-            return path
+        if path not in self._foldmap:
+            if not os.path.exists(path):
+                return path
+            self._foldmap[path] = util.fspath(path, self._root)
+        return self._foldmap[path]
 
     def clear(self):
         self._map = {}
@@ -465,6 +462,7 @@ class dirstate(object):
             common_prefix_len += 1
 
         normpath = util.normpath
+        normalize = self.normalize
         listdir = osutil.listdir
         lstat = os.lstat
         bisect_left = bisect.bisect_left
@@ -483,10 +481,9 @@ class dirstate(object):
 
         # step one, find all files that match our criteria
         for ff in util.sort(files):
-            nf = normpath(ff)
-            nn = self.normalize(nf)
-            f = _join(ff)
-            if nn in seen:
+            nf = normalize(normpath(ff))
+            f = _join(nf)
+            if nf in seen:
                 continue
 
             try:
@@ -501,14 +498,14 @@ class dirstate(object):
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
                     elif badfn(ff, inst.strerror) and imatch(nf):
-                        yield ff, None
+                        yield nf, None
                 continue
 
             if not s_isdir(st.st_mode):
-                seen[nn] = 1
+                seen[nf] = 1
                 if supported(ff, st.st_mode, verbose=True):
-                    yield self.normalize(nf), st
-                elif ff in dmap:
+                    yield nf, st
+                elif nf in dmap:
                     yield nf, None
                 continue
 
@@ -535,25 +532,24 @@ class dirstate(object):
                         if isdir(join(top, '.hg')):
                             continue
                 for f, kind, st in entries:
-                    np = pconvert(join(nd, f))
-                    nn = self.normalize(np)
-                    if np in seen:
+                    nf = normalize(pconvert(join(nd, f)))
+                    if nf in seen:
                         continue
-                    seen[nn] = 1
+                    seen[nf] = 1
                     p = join(top, f)
                     # don't trip over symlinks
                     if kind == stat.S_IFDIR:
-                        if not ignore(np):
+                        if not ignore(nf):
                             wadd(p)
                             if hasattr(match, 'dir'):
-                                match.dir(np)
-                        if np in dmap and match(np):
-                            add((nn, None))
-                    elif imatch(np):
-                        if supported(np, st.st_mode):
-                            add((nn, st))
-                        elif np in dmap:
-                            add((nn, None))
+                                match.dir(nf)
+                        if nf in dmap and match(nf):
+                            add((nf, None))
+                    elif imatch(nf):
+                        if supported(nf, st.st_mode):
+                            add((nf, st))
+                        elif nf in dmap:
+                            add((nf, None))
             for e in util.sort(found):
                 yield e
 
