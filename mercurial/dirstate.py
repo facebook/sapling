@@ -464,7 +464,8 @@ class dirstate(object):
         isdir = os.path.isdir
         pconvert = util.pconvert
         join = os.path.join
-        s_isdir = stat.S_ISDIR
+        isdir = stat.S_ISDIR
+        dirkind = stat.S_IFDIR
         supported = self._supported
         _join = self._join
         work = []
@@ -480,10 +481,20 @@ class dirstate(object):
 
             try:
                 st = lstat(_join(nf))
+                if isdir(st.st_mode):
+                    if not dirignore(nf):
+                        wadd(nf)
+                else:
+                    seen[nf] = 1
+                    if supported(ff, st.st_mode, verbose=True):
+                        yield nf, st
+                    elif nf in dmap:
+                        yield nf, None
             except OSError, inst:
                 keep = False
+                prefix = nf + "/"
                 for fn in dmap:
-                    if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
+                    if nf == fn or fn.startswith(prefix):
                         keep = True
                         break
                 if not keep:
@@ -491,17 +502,6 @@ class dirstate(object):
                         fwarn(ff, inst.strerror)
                     elif badfn(ff, inst.strerror) and imatch(nf):
                         yield nf, None
-                continue
-
-            if s_isdir(st.st_mode):
-                if not dirignore(nf):
-                    wadd(nf)
-            else:
-                seen[nf] = 1
-                if supported(ff, st.st_mode, verbose=True):
-                    yield nf, st
-                elif nf in dmap:
-                    yield nf, None
 
         # step 2: visit subdirectories
         while work:
@@ -509,7 +509,6 @@ class dirstate(object):
             if hasattr(match, 'dir'):
                 match.dir(nd)
             entries = listdir(_join(nd), stat=True)
-            # nd is the top of the repository dir tree
             if nd == '.':
                 nd = ''
             else:
@@ -518,39 +517,35 @@ class dirstate(object):
                 # is good on big directory.
                 hg = bisect_left(entries, ('.hg'))
                 if hg < len(entries) and entries[hg][0] == '.hg' \
-                        and entries[hg][1] == stat.S_IFDIR:
+                        and entries[hg][1] == dirkind:
                         continue
             for f, kind, st in entries:
-                nf = normalize(pconvert(join(nd, f)))
-                if nf in seen:
-                    continue
-                seen[nf] = 1
-                # don't trip over symlinks
-                if kind == stat.S_IFDIR:
-                    if not ignore(nf):
-                        wadd(nf)
-                    if nf in dmap and match(nf):
-                        yield nf, None
-                elif imatch(nf):
-                    if supported(nf, st.st_mode):
-                        yield nf, st
-                    elif nf in dmap:
-                        yield nf, None
+                nf = normalize(nd and (nd + "/" + f) or f)
+                if nf not in seen:
+                    seen[nf] = 1
+                    if kind == dirkind:
+                        if not ignore(nf):
+                            wadd(nf)
+                        if nf in dmap and match(nf):
+                            yield nf, None
+                    elif imatch(nf):
+                        if supported(nf, st.st_mode):
+                            yield nf, st
+                        elif nf in dmap:
+                            yield nf, None
 
         # step 3: report unseen items in the dmap hash
         for f in util.sort(dmap):
-            if f in seen or not match(f):
-                continue
-            seen[f] = 1
-            try:
-                st = lstat(_join(f))
-                if supported(f, st.st_mode):
-                    yield f, st
-                    continue
-            except OSError, inst:
-                if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
-                    raise
-            yield f, None
+            if f not in seen and match(f):
+                try:
+                    st = lstat(_join(f))
+                    if supported(f, st.st_mode):
+                        yield f, st
+                        continue
+                except OSError, inst:
+                    if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
+                        raise
+                yield f, None
 
     def status(self, match, ignored, clean, unknown):
         listignored, listclean, listunknown = ignored, clean, unknown
