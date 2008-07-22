@@ -459,11 +459,7 @@ class dirstate(object):
         walk recursively through the directory tree, finding all files
         matched by the match function
 
-        results are yielded in a tuple (src, filename, st), where src
-        is one of:
-        'f' the file was found in the directory tree
-        'm' the file was only in the dirstate and not in the tree
-
+        results are yielded in a tuple (filename, stat), where stat
         and st is the stat result if the file was found in the directory.
         '''
 
@@ -551,12 +547,12 @@ class dirstate(object):
                             if hasattr(match, 'dir'):
                                 match.dir(np)
                         if np in dc and match(np):
-                            add((nn, 'm', st))
+                            add((nn, None))
                     elif imatch(np):
                         if supported(np, st.st_mode):
-                            add((nn, 'f', st))
+                            add((nn, st))
                         elif np in dc:
-                            add((nn, 'm', st))
+                            add((nn, None))
             return util.sort(found)
 
         # step one, find all files that match our criteria
@@ -576,30 +572,38 @@ class dirstate(object):
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
                     elif badfn(ff, inst.strerror) and imatch(nf):
-                        yield 'f', ff, None
+                        yield ff, None
                 continue
             if s_isdir(st.st_mode):
                 if not dirignore(nf):
-                    for f, src, st in findfiles(f):
-                        yield src, f, st
+                    for e in findfiles(f):
+                        yield e
             else:
                 if nn in known:
                     continue
                 known[nn] = 1
                 if match(nf):
                     if supported(ff, st.st_mode, verbose=True):
-                        yield 'f', nn, st
+                        yield nn, st
                     elif ff in dc:
-                        yield 'm', nf, st
+                        yield nf, None
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
-        for k in util.sort(dc):
-            if k in known:
+        for f in util.sort(dc):
+            if f in known:
                 continue
-            known[k] = 1
-            if imatch(k):
-                yield 'm', k, None
+            known[f] = 1
+            if imatch(f):
+                try:
+                    st = lstat(_join(f))
+                    if supported(f, st.st_mode):
+                        yield f, st
+                        continue
+                except OSError, inst:
+                    if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
+                        raise
+                yield f, None
 
     def status(self, match, ignored, clean, unknown):
         listignored, listclean, listunknown = ignored, clean, unknown
@@ -619,7 +623,7 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
-        for src, fn, st in self.walk(match, listunknown, listignored):
+        for fn, st in self.walk(match, listunknown, listignored):
             if fn not in dmap:
                 if (listignored or match.exact(fn)) and self._dirignore(fn):
                     if listignored:
@@ -630,25 +634,9 @@ class dirstate(object):
 
             state, mode, size, time, foo = dmap[fn]
 
-            if src == 'm':
-                nonexistent = True
-                if not st:
-                    try:
-                        st = lstat(_join(fn))
-                    except OSError, inst:
-                        if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
-                            raise
-                        st = None
-                    # We need to re-check that it is a valid file
-                    if st and self._supported(fn, st.st_mode):
-                        nonexistent = False
-                if nonexistent and state in "nma":
-                    dadd(fn)
-                    continue
-            # check the common case first
-            if state == 'n':
-                if not st:
-                    st = lstat(_join(fn))
+            if not st and state in "nma":
+                dadd(fn)
+            elif state == 'n':
                 if (size >= 0 and
                     (size != st.st_size
                      or ((mode ^ st.st_mode) & 0100 and self._checkexec))
