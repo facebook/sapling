@@ -519,10 +519,9 @@ class dirstate(object):
                     # do not recurse into a repo contained in this
                     # one. use bisect to find .hg directory so speed
                     # is good on big directory.
-                    names = [e[0] for e in entries]
-                    hg = bisect_left(names, '.hg')
-                    if hg < len(names) and names[hg] == '.hg':
-                        if isdir(_join(join(nd, '.hg'))):
+                    hg = bisect_left(entries, ('.hg'))
+                    if hg < len(entries) and entries[hg][0] == '.hg' \
+                            and entries[hg][1] == stat.S_IFDIR:
                             continue
                 for f, kind, st in entries:
                     nf = normalize(pconvert(join(nd, f)))
