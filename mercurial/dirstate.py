@@ -474,16 +474,50 @@ class dirstate(object):
         s_isdir = stat.S_ISDIR
         supported = self._supported
         _join = self._join
+        work = []
+        wadd = work.append
+        found = []
+        add = found.append
+
         known = {'.hg': 1}
 
-        # recursion free walker, faster than os.walk.
-        def findfiles(s):
-            work = [s]
-            wadd = work.append
-            found = []
-            add = found.append
+        # step one, find all files that match our criteria
+        for ff in util.sort(files):
+            nf = normpath(ff)
+            nn = self.normalize(nf)
+            f = _join(ff)
+            if nn in known:
+                continue
+
+            try:
+                st = lstat(f)
+            except OSError, inst:
+                keep = False
+                for fn in dc:
+                    if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
+                        keep = True
+                        break
+                if not keep:
+                    if inst.errno != errno.ENOENT:
+                        fwarn(ff, inst.strerror)
+                    elif badfn(ff, inst.strerror) and imatch(nf):
+                        yield ff, None
+                continue
+
+            if not s_isdir(st.st_mode):
+                known[nn] = 1
+                if supported(ff, st.st_mode, verbose=True):
+                    yield self.normalize(nf), st
+                elif ff in dc:
+                    yield nf, None
+                continue
+
+            if dirignore(nf):
+                continue
+
             if hasattr(match, 'dir'):
-                match.dir(normpath(s[common_prefix_len:]))
+                match.dir(normpath(f[common_prefix_len:]))
+            wadd(f)
             while work:
                 top = work.pop()
                 entries = listdir(top, stat=True)
@@ -520,39 +554,8 @@ class dirstate(object):
                             add((nn, st))
                         elif np in dc:
                             add((nn, None))
-            return util.sort(found)
-
-        # step one, find all files that match our criteria
-        for ff in util.sort(files):
-            nf = normpath(ff)
-            nn = self.normalize(nf)
-            f = _join(ff)
-            try:
-                st = lstat(f)
-            except OSError, inst:
-                found = False
-                for fn in dc:
-                    if nf == fn or (fn.startswith(nf) and fn[len(nf)] == '/'):
-                        found = True
-                        break
-                if not found:
-                    if inst.errno != errno.ENOENT:
-                        fwarn(ff, inst.strerror)
-                    elif badfn(ff, inst.strerror) and imatch(nf):
-                        yield ff, None
-                continue
-            if s_isdir(st.st_mode):
-                if not dirignore(nf):
-                    for e in findfiles(f):
-                        yield e
-            else:
-                if nn in known:
-                    continue
-                known[nn] = 1
-                if supported(ff, st.st_mode, verbose=True):
-                    yield self.normalize(nf), st
-                elif ff in dc:
-                    yield nf, None
+            for e in util.sort(found):
+                yield e
 
         # step two run through anything left in the dc hash and yield
         # if we haven't already seen it
