@@ -1,0 +1,26 @@
+% init
+adding foo to series file
+applying foo
+Now at: foo
+adding bar to series file
+applying bar
+Now at: bar
+9373c9d7b61ff62edc4685b85115a54aa92cd6fa:foo
+6dd08b80614ae7ed7f9224fb089e90deb999ae76:bar
+%
+foo
+bar
+%%%
+9373c9d7b61ff62edc4685b85115a54aa92cd6fa:foo
+%
+foo
+%%%
+6dd08b80614ae7ed7f9224fb089e90deb999ae76 foo
+9373c9d7b61ff62edc4685b85115a54aa92cd6fa bar
+%
+6dd08b80614ae7ed7f9224fb089e90deb999ae76 lfoo
+9373c9d7b61ff62edc4685b85115a54aa92cd6fa lbar
+%%%
+6dd08b80614ae7ed7f9224fb089e90deb999ae76 foo
+%
+6dd08b80614ae7ed7f9224fb089e90deb999ae76 lfoo

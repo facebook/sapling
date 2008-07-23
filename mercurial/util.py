@@ -1427,7 +1427,7 @@ class opener(object):
             mode += "b" # for that other OS
 
         nlink = -1
-        if mode[0] != "r":
+        if mode not in ("r", "rb"):
             try:
                 nlink = nlinks(f)
             except OSError:
