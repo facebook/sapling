@@ -60,30 +60,13 @@ class localrepository(repo.repository):
             if r not in self.supported:
                 raise repo.RepoError(_("requirement '%s' not supported") % r)
 
-        # setup store
-        if "store" in requirements:
-            self.encodefn = store.encodefilename
-            self.decodefn = store.decodefilename
-            self.spath = os.path.join(self.path, "store")
-        else:
-            self.encodefn = lambda x: x
-            self.decodefn = lambda x: x
-            self.spath = self.path
+        self.store = store.store(requirements, self.path)
 
-        try:
-            # files in .hg/ will be created using this mode
-            mode = os.stat(self.spath).st_mode
-            # avoid some useless chmods
-            if (0777 & ~util._umask) == (0777 & mode):
-                mode = None
-        except OSError:
-            mode = None
-
-        self._createmode = mode
-        self.opener.createmode = mode
-        sopener = util.opener(self.spath)
-        sopener.createmode = mode
-        self.sopener = store.encodedopener(sopener, self.encodefn)
+        self.spath = self.store.path
+        self.sopener = self.store.opener
+        self.sjoin = self.store.join
+        self._createmode = self.store.createmode
+        self.opener.createmode = self.store.createmode
 
         self.ui = ui.ui(parentui=parentui)
         try:
@@ -480,10 +463,6 @@ class localrepository(repo.repository):
 
     def join(self, f):
         return os.path.join(self.path, f)
-
-    def sjoin(self, f):
-        f = self.encodefn(f)
-        return os.path.join(self.spath, f)
 
     def wjoin(self, f):
         return os.path.join(self.root, f)
@@ -2060,6 +2039,25 @@ class localrepository(repo.repository):
         if stream and not heads and remote.capable('stream'):
             return self.stream_in(remote)
         return self.pull(remote, heads)
+
+    def storefiles(self):
+        '''get all *.i and *.d files in the store
+
+        Returns (list of (filename, size), total_bytes)'''
+
+        lock = None
+        try:
+            self.ui.debug('scanning\n')
+            entries = []
+            total_bytes = 0
+            # get consistent snapshot of repo, lock during scan
+            lock = self.lock()
+            for name, size in self.store.walk():
+                entries.append((name, size))
+                total_bytes += size
+            return entries, total_bytes
+        finally:
+            del lock
 
 # used to avoid circular references so destructors work
 def aftertrans(files):

@@ -55,14 +55,13 @@ class statichttprepository(localrepo.localrepository):
 
         # setup store
         if "store" in requirements:
-            self.encodefn = store.encodefilename
-            self.decodefn = store.decodefilename
             self.spath = self.path + "/store"
         else:
-            self.encodefn = lambda x: x
-            self.decodefn = lambda x: x
             self.spath = self.path
-        self.sopener = store.encodedopener(opener(self.spath), self.encodefn)
+        self.encodefn = store.encodefn(requirements)
+        so = opener(self.spath)
+        self.sopener = lambda path, *args, **kw: so(
+            self.encodefn(path), *args, **kw)
 
         self.manifest = manifest.manifest(self.sopener)
         self.changelog = changelog.changelog(self.sopener)

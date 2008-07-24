@@ -5,6 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+import os, stat, osutil, util
+
 def _buildencodefun():
     e = '_'
     win_reserved = [ord(x) for x in '\\:*?"<>|']
@@ -33,7 +35,91 @@ def _buildencodefun():
 
 encodefilename, decodefilename = _buildencodefun()
 
-def encodedopener(openerfn, fn):
-    def o(path, *args, **kw):
-        return openerfn(fn(path), *args, **kw)
-    return o
+def _dirwalk(path, recurse):
+    '''yields (filename, size)'''
+    for e, kind, st in osutil.listdir(path, stat=True):
+        pe = os.path.join(path, e)
+        if kind == stat.S_IFDIR:
+            if recurse:
+                for x in _dirwalk(pe, True):
+                    yield x
+        elif kind == stat.S_IFREG:
+            yield pe, st.st_size
+
+class _store:
+    '''base class for local repository stores'''
+    def __init__(self, path):
+        self.path = path
+        try:
+            # files in .hg/ will be created using this mode
+            mode = os.stat(self.path).st_mode
+            # avoid some useless chmods
+            if (0777 & ~util._umask) == (0777 & mode):
+                mode = None
+        except OSError:
+            mode = None
+        self.createmode = mode
+
+    def join(self, f):
+        return os.path.join(self.path, f)
+
+    def _revlogfiles(self, relpath='', recurse=False):
+        '''yields (filename, size)'''
+        if relpath:
+            path = os.path.join(self.path, relpath)
+        else:
+            path = self.path
+        striplen = len(self.path) + len(os.sep)
+        filetypes = ('.d', '.i')
+        for f, size in _dirwalk(path, recurse):
+            if (len(f) > 2) and f[-2:] in filetypes:
+                yield util.pconvert(f[striplen:]), size
+
+    def _datafiles(self):
+        for x in self._revlogfiles('data', True):
+            yield x
+
+    def walk(self):
+        '''yields (direncoded filename, size)'''
+        # yield data files first
+        for x in self._datafiles():
+            yield x
+        # yield manifest before changelog
+        meta = util.sort(self._revlogfiles())
+        meta.reverse()
+        for x in meta:
+            yield x
+
+class directstore(_store):
+    def __init__(self, path):
+        _store.__init__(self, path)
+        self.encodefn = lambda x: x
+        self.opener = util.opener(self.path)
+        self.opener.createmode = self.createmode
+
+class encodedstore(_store):
+    def __init__(self, path):
+        _store.__init__(self, os.path.join(path, 'store'))
+        self.encodefn = encodefilename
+        op = util.opener(self.path)
+        op.createmode = self.createmode
+        self.opener = lambda f, *args, **kw: op(self.encodefn(f), *args, **kw)
+
+    def _datafiles(self):
+        for f, size in self._revlogfiles('data', True):
+            yield decodefilename(f), size
+
+    def join(self, f):
+        return os.path.join(self.path, self.encodefn(f))
+
+def encodefn(requirements):
+    if 'store' not in requirements:
+        return lambda x: x
+    else:
+        return encodefilename
+
+def store(requirements, path):
+    if 'store' not in requirements:
+        return directstore(path)
+    else:
+        return encodedstore(path)
