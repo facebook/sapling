@@ -32,20 +32,20 @@ class convert_git(converter_source):
         if not os.path.exists(path + "/objects"):
             raise NoRepo("%s does not look like a Git repo" % path)
 
-        checktool('git-rev-parse', 'git')
+        checktool('git', 'git')
 
         self.path = path
 
     def getheads(self):
         if not self.rev:
-            return self.gitcmd('git-rev-parse --branches').read().splitlines()
+            return self.gitcmd('git rev-parse --branches').read().splitlines()
         else:
-            fh = self.gitcmd("git-rev-parse --verify %s" % self.rev)
+            fh = self.gitcmd("git rev-parse --verify %s" % self.rev)
             return [fh.read()[:-1]]
 
     def catfile(self, rev, type):
         if rev == "0" * 40: raise IOError()
-        fh = self.gitcmd("git-cat-file %s %s" % (type, rev))
+        fh = self.gitcmd("git cat-file %s %s" % (type, rev))
         return fh.read()
 
     def getfile(self, name, rev):
@@ -56,7 +56,7 @@ class convert_git(converter_source):
 
     def getchanges(self, version):
         self.modecache = {}
-        fh = self.gitcmd("git-diff-tree --root -m -r %s" % version)
+        fh = self.gitcmd("git diff-tree --root -m -r %s" % version)
         changes = []
         seen = {}
         for l in fh:
@@ -109,7 +109,7 @@ class convert_git(converter_source):
 
     def gettags(self):
         tags = {}
-        fh = self.gitcmd('git-ls-remote --tags "%s"' % self.path)
+        fh = self.gitcmd('git ls-remote --tags "%s"' % self.path)
         prefix = 'refs/tags/'
         for line in fh:
             line = line.strip()
@@ -126,7 +126,7 @@ class convert_git(converter_source):
     def getchangedfiles(self, version, i):
         changes = []
         if i is None:
-            fh = self.gitcmd("git-diff-tree --root -m -r %s" % version)
+            fh = self.gitcmd("git diff-tree --root -m -r %s" % version)
             for l in fh:
                 if "\t" not in l:
                     continue
@@ -134,7 +134,7 @@ class convert_git(converter_source):
                 changes.append(f)
             fh.close()
         else:
-            fh = self.gitcmd('git-diff-tree --name-only --root -r %s "%s^%s" --'
+            fh = self.gitcmd('git diff-tree --name-only --root -r %s "%s^%s" --'
                              % (version, version, i+1))
             changes = [f.rstrip('\n') for f in fh]
             fh.close()
