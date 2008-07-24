@@ -9,7 +9,7 @@ from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
-import lock, transaction, stat, errno, ui
+import lock, transaction, stat, errno, ui, store
 import os, revlog, time, util, extensions, hook, inspect
 import match as match_
 
@@ -62,8 +62,8 @@ class localrepository(repo.repository):
 
         # setup store
         if "store" in requirements:
-            self.encodefn = util.encodefilename
-            self.decodefn = util.decodefilename
+            self.encodefn = store.encodefilename
+            self.decodefn = store.decodefilename
             self.spath = os.path.join(self.path, "store")
         else:
             self.encodefn = lambda x: x
@@ -83,7 +83,7 @@ class localrepository(repo.repository):
         self.opener.createmode = mode
         sopener = util.opener(self.spath)
         sopener.createmode = mode
-        self.sopener = util.encodedopener(sopener, self.encodefn)
+        self.sopener = store.encodedopener(sopener, self.encodefn)
 
         self.ui = ui.ui(parentui=parentui)
         try:
