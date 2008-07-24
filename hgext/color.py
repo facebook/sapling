@@ -40,7 +40,7 @@ status.deleted = cyan bold underline
 status.unknown = magenta bold underline
 status.ignored = black bold
 
- 'none' turns off all effects
+# 'none' turns off all effects
 status.clean = none
 status.copied = none
 
@@ -144,13 +144,17 @@ def colorqseries(qseriesfunc, ui, repo, *dummy, **opts):
     retval = qseriesfunc(ui, repo, **opts)
     patches = ui.popbuffer().splitlines()
     for patch in patches:
+        patchname = patch
+        if opts['summary']:
+            patchname = patchname.split(': ')[0]
+        if ui.verbose:
+            patchname = patchname.split(' ', 2)[-1]
+
         if opts['missing']:
             effects = _patch_effects['missing']
-        # Determine if patch is applied.  Search for beginning of output
-        # line in the applied patch list, in case --summary has been used
-        # and output line isn't just the patch name.
+        # Determine if patch is applied.
         elif [ applied for applied in repo.mq.applied
-               if patch.startswith(applied.name) ]:
+               if patchname == applied.name ]:
             effects = _patch_effects['applied']
         else:
             effects = _patch_effects['unapplied']
