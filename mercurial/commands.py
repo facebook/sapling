@@ -2781,6 +2781,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     If the requested revision is on a different named branch and the
     working directory is clean, update quietly switches branches.
 
+    If you want to update just one file to an older revision, use revert.
+
     See 'hg help dates' for a list of formats valid for --date.
     """
     if rev and node:
