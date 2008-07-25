@@ -188,6 +188,7 @@ class svn_source(converter_source):
             # Module is either empty or a repository path starting with
             # a slash and not ending with a slash.
             self.module = self.url[len(self.base):]
+            self.prevmodule = None
             self.rootmodule = self.module
             self.commits = {}
             self.paths = {}
@@ -478,9 +479,9 @@ class svn_source(converter_source):
         if not stop:
             stop = svn.ra.get_latest_revnum(self.ra)
         try:
-            self.reparent('')
+            prevmodule = self.reparent('')
             dirent = svn.ra.stat(self.ra, path.strip('/'), stop)
-            self.reparent(self.module)
+            self.reparent(prevmodule)
         except SubversionException:
             dirent = None
         if not dirent:
@@ -532,9 +533,17 @@ class svn_source(converter_source):
         return svn_rev in self.blacklist
 
     def reparent(self, module):
-        svn_url = self.base + module
-        self.ui.debug("reparent to %s\n" % svn_url.encode(self.encoding))
-        svn.ra.reparent(self.ra, svn_url.encode(self.encoding))
+        """Reparent the svn transport and return the previous parent."""
+        if self.prevmodule == module:
+            return module
+        svn_url = (self.base + module).encode(self.encoding)
+        prevmodule = self.prevmodule
+        if prevmodule is None:
+            prevmodule = ''
+        self.ui.debug("reparent to %s\n" % svn_url)
+        svn.ra.reparent(self.ra, svn_url)
+        self.prevmodule = module
+        return prevmodule
 
     def expandpaths(self, rev, paths, parents):
         entries = []
@@ -604,9 +613,9 @@ class svn_source(converter_source):
 
                 # We can avoid the reparent calls if the module has not changed
                 # but it probably does not worth the pain.
-                self.reparent('')
+                prevmodule = self.reparent('')
                 fromkind = svn.ra.check_path(self.ra, entrypath.strip('/'), fromrev)
-                self.reparent(self.module)
+                self.reparent(prevmodule)
 
                 if fromkind == svn.core.svn_node_file:   # a deleted file
                     entries.append(self.recode(entry))
