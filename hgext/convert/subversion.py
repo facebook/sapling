@@ -251,7 +251,7 @@ class svn_source(converter_source):
     def getheads(self):
 
         def isdir(path, revnum):
-            kind = svn.ra.check_path(self.ra, path, revnum)
+            kind = self._checkpath(path, revnum)
             return kind == svn.core.svn_node_dir
 
         def getcfgpath(name, rev):
@@ -559,7 +559,7 @@ class svn_source(converter_source):
             entrypath = self.getrelpath(path)
             entry = entrypath.decode(self.encoding)
 
-            kind = svn.ra.check_path(self.ra, entrypath, revnum)
+            kind = self._checkpath(entrypath, revnum)
             if kind == svn.core.svn_node_file:
                 entries.append(self.recode(entry))
                 if not ent.copyfrom_path or not parents:
@@ -678,7 +678,7 @@ class svn_source(converter_source):
                     # print child, self.module, entrypath
                     if entrypath:
                         # Need to filter out directories here...
-                        kind = svn.ra.check_path(self.ra, entrypath, revnum)
+                        kind = self._checkpath(entrypath, revnum)
                         if kind != svn.core.svn_node_dir:
                             entries.append(self.recode(entrypath))
 
@@ -906,6 +906,11 @@ class svn_source(converter_source):
         # The path is outside our tracked tree...
         self.ui.debug('%r is not under %r, ignoring\n' % (path, module))
         return None
+
+    def _checkpath(self, path, revnum):
+        # ra.check_path does not like leading slashes very much, it leads
+        # to PROPFIND subversion errors
+        return svn.ra.check_path(self.ra, path.strip('/'), revnum)
 
 pre_revprop_change = '''#!/bin/sh
 
