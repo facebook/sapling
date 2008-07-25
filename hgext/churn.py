@@ -115,5 +115,5 @@ cmdtable = {
      [('r', 'rev', [], _('limit statistics to the specified revisions')),
       ('', 'aliases', '', _('file with email aliases')),
       ('', 'progress', None, _('show progress'))],
-    'hg churn [-r revision range] [-a file] [--progress]'),
+    'hg churn [-r REVISIONS] [--aliases FILE] [--progress]'),
 }
