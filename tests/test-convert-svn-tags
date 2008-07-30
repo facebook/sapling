@@ -31,7 +31,7 @@ mkdir unrelated
 cd ..
 
 svnurl=file://$svnpath/svn-repo/projA
-svn import -m "init projA" projA $svnurl | fix_path
+svn import -m "init projA" projA $svnurl | fix_path | sort
 
 echo % update svn repository
 svn co $svnurl A | fix_path

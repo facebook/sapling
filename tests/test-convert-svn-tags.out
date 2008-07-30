@@ -1,9 +1,9 @@
 % initial svn import
-Adding         projA/trunk
-Adding         projA/unrelated
+
 Adding         projA/branches
 Adding         projA/tags
-
+Adding         projA/trunk
+Adding         projA/unrelated
 Committed revision 1.
 % update svn repository
 A    A/trunk

@@ -130,18 +130,6 @@ class logstream:
             self._stdout.close()
             self._stdout = None
 
-def get_log(url, paths, start, end, limit=0, discover_changed_paths=True,
-                strict_node_history=False):
-    args = [url, paths, start, end, limit, discover_changed_paths,
-            strict_node_history]
-    arg = encodeargs(args)
-    hgexe = util.hgexecutable()
-    cmd = '%s debugsvnlog' % util.shellquote(hgexe)
-    stdin, stdout = os.popen2(cmd, 'b')
-    stdin.write(arg)
-    stdin.close()
-    return logstream(stdout)
-
 # SVN conversion code stolen from bzr-svn and tailor
 #
 # Subversion looks like a versioned filesystem, branches structures
@@ -394,7 +382,7 @@ class svn_source(converter_source):
         tagspath = self.tags
         start = svn.ra.get_latest_revnum(self.ra)
         try:
-            for entry in get_log(self.url, [self.tags], start, self.startrev):
+            for entry in self._getlog([self.tags], start, self.startrev):
                 origpaths, revnum, author, date, message = entry
                 copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p, e
                           in origpaths.iteritems() if e.copyfrom_path]
@@ -490,7 +478,7 @@ class svn_source(converter_source):
         # stat() gives us the previous revision on this line of development, but
         # it might be in *another module*. Fetch the log and detect renames down
         # to the latest revision.
-        stream = get_log(self.url, [path], stop, dirent.created_rev)
+        stream = self._getlog([path], stop, dirent.created_rev)
         try:
             for entry in stream:
                 paths, revnum, author, date, message = entry
@@ -812,7 +800,7 @@ class svn_source(converter_source):
         try:
             firstcset = None
             lastonbranch = False
-            stream = get_log(self.url, [self.module], from_revnum, to_revnum)
+            stream = self._getlog([self.module], from_revnum, to_revnum)
             try:
                 for entry in stream:
                     paths, revnum, author, date, message = entry
@@ -909,6 +897,25 @@ class svn_source(converter_source):
         # ra.check_path does not like leading slashes very much, it leads
         # to PROPFIND subversion errors
         return svn.ra.check_path(self.ra, path.strip('/'), revnum)
+
+    def _getlog(self, paths, start, end, limit=0, discover_changed_paths=True,
+                strict_node_history=False):
+        # Normalize path names, svn >= 1.5 only wants paths relative to
+        # supplied URL
+        relpaths = []
+        for p in paths:
+            if not p.startswith('/'):
+                p = self.module + '/' + p
+            relpaths.append(p.strip('/'))
+        args = [self.base, relpaths, start, end, limit, discover_changed_paths,
+                strict_node_history]
+        arg = encodeargs(args)
+        hgexe = util.hgexecutable()
+        cmd = '%s debugsvnlog' % util.shellquote(hgexe)
+        stdin, stdout = os.popen2(cmd, 'b')
+        stdin.write(arg)
+        stdin.close()
+        return logstream(stdout)
 
 pre_revprop_change = '''#!/bin/sh
 

@@ -58,10 +58,19 @@ svn up
 svn rm subproject/trunk/d2
 svn ci -m "changeb and rm d2"
 svn mv $svnurl/subproject/trunk/d1 $svnurl/subproject/branches/d1 -m moved1again
-echo % copy a file from a past revision
-svn copy -r 7 $svnurl/subproject/trunk/d2/d $svnurl/subproject/trunk -m copyfilefrompast
-echo % copy a directory from a past revision
-svn copy -r 7 $svnurl/subproject/trunk/d2 $svnurl/subproject/trunk -m copydirfrompast
+
+if svn help copy | grep 'SRC\[@REV\]' > /dev/null 2>&1; then
+    # SVN >= 1.5 replaced the -r REV syntax with @REV
+    echo % copy a file from a past revision
+    svn copy $svnurl/subproject/trunk/d2/d@7 $svnurl/subproject/trunk -m copyfilefrompast
+    echo % copy a directory from a past revision
+    svn copy $svnurl/subproject/trunk/d2@7 $svnurl/subproject/trunk -m copydirfrompast
+else
+    echo % copy a file from a past revision
+    svn copy -r 7 $svnurl/subproject/trunk/d2/d $svnurl/subproject/trunk -m copyfilefrompast
+    echo % copy a directory from a past revision
+    svn copy -r 7 $svnurl/subproject/trunk/d2 $svnurl/subproject/trunk -m copydirfrompast
+fi
 cd ..
 
 echo % convert trunk and branches
