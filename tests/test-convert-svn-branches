@@ -58,7 +58,7 @@ echo % update old branch
 svn ci -m "change b"
 
 echo % create a cross-branch revision
-svn move -m "move b" trunk/b branches/old/c
+svn move trunk/b branches/old/c
 "$TESTDIR/svn-safe-append.py" c branches/old/c
 svn ci -m "move and update c"
 
