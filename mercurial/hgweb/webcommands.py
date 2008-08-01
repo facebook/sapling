@@ -53,16 +53,15 @@ def rawfile(web, req, tmpl):
 
 def file(web, req, tmpl):
     path = web.cleanpath(req.form.get('file', [''])[0])
-    if path:
-        try:
-            return web.filerevision(tmpl, web.filectx(req))
-        except revlog.LookupError, inst:
-            pass
-
-    try:
+    if not path:
         return web.manifest(tmpl, web.changectx(req), path)
-    except ErrorResponse:
-        raise inst
+    try:
+        return web.filerevision(tmpl, web.filectx(req))
+    except revlog.LookupError, inst:
+        try:
+            return web.manifest(tmpl, web.changectx(req), path)
+        except ErrorResponse:
+            raise inst
 
 def changelog(web, req, tmpl, shortlog = False):
     if 'node' in req.form:
