@@ -166,7 +166,8 @@ def uisetup(ui):
     nocoloropt = ('', 'no-color', None, _("don't colorize output"))
     _decoratecmd(ui, 'status', commands.table, colorstatus, nocoloropt)
     _configcmdeffects(ui, 'status', _status_effects);
-    if ui.config('extensions', 'hgext.mq', default=None) is not None:
+    if ui.config('extensions', 'hgext.mq') is not None or \
+            ui.config('extensions', 'mq') is not None:
         from hgext import mq
         _decoratecmd(ui, 'qseries', mq.cmdtable, colorqseries, nocoloropt)
         _configcmdeffects(ui, 'qseries', _patch_effects);
