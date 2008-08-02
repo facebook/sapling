@@ -12,6 +12,16 @@ from node import short
 import util
 
 def bisect(changelog, state):
+    """find the next node (if any) for testing during a bisect search.
+    returns a (nodes, number, good) tuple.
+
+    'nodes' is the final result of the bisect if 'number' is 0.
+    Otherwise 'number' indicates the remaining possible candidates for
+    the search and 'nodes' contains the next bisect target.
+    'good' is True if bisect is searching for a first good changeset, False
+    if searching for a first bad one.
+    """
+
     clparents = changelog.parentrevs
     skip = dict.fromkeys([changelog.rev(n) for n in state['skip']])
 
@@ -60,17 +70,20 @@ def bisect(changelog, state):
                         children[prev] = [rev]
                         visit.append(prev)
 
+    candidates.sort()
     # have we narrowed it down to one entry?
+    # or have all other possible candidates besides 'bad' have been skipped?
     tot = len(candidates)
-    if tot == 1:
-        return (bad, 0, good)
+    unskipped = [c for c in candidates if (c not in skip) and (c != badrev)]
+    if tot == 1 or not unskipped:
+        return ([changelog.node(rev) for rev in candidates], 0, good)
     perfect = tot / 2
 
     # find the best node to test
     best_rev = None
     best_len = -1
     poison = {}
-    for rev in util.sort(candidates):
+    for rev in candidates:
         if rev in poison:
             for c in children.get(rev, []):
                 poison[c] = True # poison children
@@ -102,4 +115,4 @@ def bisect(changelog, state):
     assert best_rev is not None
     best_node = changelog.node(best_rev)
 
-    return (best_node, tot, good)
+    return ([best_node], tot, good)
