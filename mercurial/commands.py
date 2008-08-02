@@ -324,12 +324,23 @@ def bisect(ui, repo, rev=None, extra=None,
         return
 
     # actually bisect
-    node, changesets, good = hbisect.bisect(repo.changelog, state)
+    nodes, changesets, good = hbisect.bisect(repo.changelog, state)
     if changesets == 0:
-        ui.write(_("The first %s revision is:\n") % (good and "good" or "bad"))
         displayer = cmdutil.show_changeset(ui, repo, {})
-        displayer.show(changenode=node)
-    elif node is not None:
+        transition = (good and "good" or "bad")
+        if len(nodes) == 1:
+            # narrowed it down to a single revision
+            ui.write(_("The first %s revision is:\n") % transition)
+            displayer.show(changenode=nodes[0])
+        else:
+            # multiple possible revisions
+            ui.write(_("Due to skipped revisions, the first "
+                       "%s revision could be any of:\n") % transition)
+            for n in nodes:
+                displayer.show(changenode=n)
+    else:
+        assert len(nodes) == 1 # only a single node can be tested next
+        node = nodes[0]
         # compute the approximate number of remaining tests
         tests, size = 0, 2
         while size <= changesets:
