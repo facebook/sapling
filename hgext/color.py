@@ -40,7 +40,7 @@ status.deleted = cyan bold underline
 status.unknown = magenta bold underline
 status.ignored = black bold
 
- 'none' turns off all effects
+# 'none' turns off all effects
 status.clean = none
 status.copied = none
 
@@ -79,11 +79,12 @@ _effect_params = { 'none': (0, 0),
 
 def render_effects(text, *effects):
     'Wrap text in commands to turn on each effect.'
-    start = []
+    start = [ str(_effect_params['none'][0]) ]
     stop = []
     for effect in effects:
         start.append(str(_effect_params[effect][0]))
         stop.append(str(_effect_params[effect][1]))
+    stop.append(str(_effect_params['none'][1]))
     start = '\033[' + ';'.join(start) + 'm'
     stop = '\033[' + ';'.join(stop) + 'm'
     return start + text + stop
@@ -144,13 +145,17 @@ def colorqseries(qseriesfunc, ui, repo, *dummy, **opts):
     retval = qseriesfunc(ui, repo, **opts)
     patches = ui.popbuffer().splitlines()
     for patch in patches:
+        patchname = patch
+        if opts['summary']:
+            patchname = patchname.split(': ')[0]
+        if ui.verbose:
+            patchname = patchname.split(' ', 2)[-1]
+
         if opts['missing']:
             effects = _patch_effects['missing']
-        # Determine if patch is applied.  Search for beginning of output
-        # line in the applied patch list, in case --summary has been used
-        # and output line isn't just the patch name.
+        # Determine if patch is applied.
         elif [ applied for applied in repo.mq.applied
-               if patch.startswith(applied.name) ]:
+               if patchname == applied.name ]:
             effects = _patch_effects['applied']
         else:
             effects = _patch_effects['unapplied']
@@ -166,7 +171,8 @@ def uisetup(ui):
     nocoloropt = ('', 'no-color', None, _("don't colorize output"))
     _decoratecmd(ui, 'status', commands.table, colorstatus, nocoloropt)
     _configcmdeffects(ui, 'status', _status_effects);
-    if ui.config('extensions', 'hgext.mq', default=None) is not None:
+    if ui.config('extensions', 'hgext.mq') is not None or \
+            ui.config('extensions', 'mq') is not None:
         from hgext import mq
         _decoratecmd(ui, 'qseries', mq.cmdtable, colorqseries, nocoloropt)
         _configcmdeffects(ui, 'qseries', _patch_effects);

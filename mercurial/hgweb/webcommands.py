@@ -91,16 +91,15 @@ def _filerevision(web, tmpl, fctx):
 
 def file(web, req, tmpl):
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
-    if path:
-        try:
-            return _filerevision(web, tmpl, webutil.filectx(web.repo, req))
-        except revlog.LookupError, inst:
-            pass
-
-    try:
+    if not path:
         return manifest(web, req, tmpl)
-    except ErrorResponse:
-        raise inst
+    try:
+        return _filerevision(web, tmpl, webutil.filectx(web.repo, req))
+    except revlog.LookupError, inst:
+        try:
+            return manifest(web, req, tmpl)
+        except ErrorResponse:
+            raise inst
 
 def _search(web, tmpl, query):
 
