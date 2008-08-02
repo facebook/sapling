@@ -347,11 +347,12 @@ class dirstate(object):
             self._ui.warn(_("not in dirstate: %s\n") % f)
 
     def _normalize(self, path):
-        if path not in self._foldmap:
+        norm_path = os.path.normcase(os.path.normpath(path))
+        if norm_path not in self._foldmap:
             if not os.path.exists(path):
                 return path
-            self._foldmap[path] = util.fspath(path, self._root)
-        return self._foldmap[path]
+            self._foldmap[norm_path] = util.fspath(path, self._root)
+        return self._foldmap[norm_path]
 
     def clear(self):
         self._map = {}
