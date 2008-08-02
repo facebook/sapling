@@ -241,3 +241,43 @@ abort: Inconsistent state, 31:58c80a7c8a40 is good and bad
 error
 Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
 5cd978ea5149
+Testing changeset 2:db07c04beaca (4 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 1:5cd978ea5149 (4 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 3:b53bea5e2fcb (4 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Due to skipped revisions, the first bad revision could be any of:
+changeset:   1:5cd978ea5149
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     msg 1
+
+changeset:   2:db07c04beaca
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     msg 2
+
+changeset:   3:b53bea5e2fcb
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     msg 3
+
+changeset:   4:9b2ba8336a65
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     msg 4
+
+Testing changeset 1:5cd978ea5149 (2 changesets remaining, ~1 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Due to skipped revisions, the first bad revision could be any of:
+changeset:   1:5cd978ea5149
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     msg 1
+
+changeset:   2:db07c04beaca
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     msg 2
+
