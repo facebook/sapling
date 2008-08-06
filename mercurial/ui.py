@@ -331,14 +331,16 @@ class ui(object):
 
         Searched in this order: $HGUSER, [ui] section of hgrcs, $EMAIL
         and stop searching if one of these is set.
-        If not found, use ($LOGNAME or $USER or $LNAME or
-        $USERNAME) +"@full.hostname".
+        If not found and ui.askusername is True, ask the user, else use
+        ($LOGNAME or $USER or $LNAME or $USERNAME) + "@full.hostname".
         """
         user = os.environ.get("HGUSER")
         if user is None:
             user = self.config("ui", "username")
         if user is None:
             user = os.environ.get("EMAIL")
+        if user is None and self.configbool("ui", "askusername"):
+            user = self.prompt(_("Enter a commit username:"), default=None)
         if user is None:
             try:
                 user = '%s@%s' % (util.getuser(), socket.getfqdn())

@@ -547,6 +547,12 @@ ui::
     (hashes for the repository base and for tip) in archives created by
     the hg archive command or downloaded via hgweb.
     Default is true.
+  askusername;;
+    Whether to prompt for a username when committing. If True, and
+    neither $HGUSER nor $EMAIL has been specified, then the user will
+    be prompted to enter a username.  If no username is entered, the
+    default USER@HOST is used instead.
+    Default is False.
   debug;;
     Print debugging information. True or False. Default is False.
   editor;;
