@@ -27,8 +27,9 @@ echo % hgweb fileannotate
     | sed "s/[0-9]* years ago/long ago/g"
 
 echo % hgweb highlightcss friendly
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/highlightcss') \
-    | head -n 4
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/highlightcss' > out
+head -n 4 out
+rm out
 
 echo % errors encountered
 cat errors.log
@@ -45,8 +46,9 @@ hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
 echo % hgweb highlightcss fruity
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/highlightcss') \
-    | head -n 4
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/highlightcss' > out
+head -n 4 out
+rm out
 
 echo % errors encountered
 cat errors.log
