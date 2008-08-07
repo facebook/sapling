@@ -236,7 +236,7 @@ class notifier(object):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
         prev = self.repo.changelog.parents(node)[0]
         self.ui.pushbuffer()
-        patch.diff(self.repo, prev, ref)
+        patch.diff(self.repo, prev, ref, opts=patch.diffopts(self.ui))
         difflines = self.ui.popbuffer().splitlines(1)
         if self.ui.configbool('notify', 'diffstat', True):
             s = patch.diffstat(difflines)
