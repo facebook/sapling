@@ -89,7 +89,7 @@ commands.optionalrepo += ' kwdemo'
 
 # hg commands that do not act on keywords
 nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
-                ' log outgoing push rename rollback tip'
+                ' log outgoing push rename rollback tip verify'
                 ' convert email glog')
 
 # hg commands that trigger expansion only when writing to working dir,

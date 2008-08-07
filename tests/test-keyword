@@ -208,6 +208,8 @@ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
 rm log
 echo % status
 hg status
+echo % verify
+hg verify
 
 echo % cat
 cat a b

@@ -281,6 +281,12 @@ M a
 a
 overwriting a expanding keywords
 % status
+% verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+3 files, 3 changesets, 4 total revisions
 % cat
 expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
