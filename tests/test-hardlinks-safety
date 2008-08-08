@@ -9,6 +9,8 @@ hg init a
 cd a
 
 hg qimport -n foo - << EOF
+# HG changeset patch
+# Date 1 0
 diff -r 2588a8b53d66 a
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/a	Wed Jul 23 15:54:29 2008 +0200
@@ -23,6 +25,8 @@ cp -al a b
 cd b
 
 hg qimport -n bar - << EOF
+# HG changeset patch
+# Date 2 0
 diff -r 2588a8b53d66 a
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/b	Wed Jul 23 15:54:29 2008 +0200
