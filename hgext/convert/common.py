@@ -232,11 +232,11 @@ class commandline(object):
         cmdline = [util.shellquote(arg) for arg in cmdline]
         cmdline += ['2>', util.nulldev, '<', util.nulldev]
         cmdline = ' '.join(cmdline)
-        self.ui.debug(cmdline, '\n')
         return cmdline
 
     def _run(self, cmd, *args, **kwargs):
         cmdline = self._cmdline(cmd, *args, **kwargs)
+        self.ui.debug('running: %s\n' % (cmdline,))
         self.prerun()
         try:
             return util.popen(cmdline)
