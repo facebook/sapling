@@ -29,10 +29,6 @@ mtn: committed revision 6c6977a6ef609ec80e40779f89dbd2772c96de62
 mtn: renaming dir to dir2 in workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
 mtn: committed revision 5de5abe7c15eae70cf3acdda23c9c319ea50c1af
-mtn: adding dir2/dir to workspace manifest
-mtn: adding dir2/dir/emptydir to workspace manifest
-mtn: adding dir2/dir/subdir to workspace manifest
-mtn: adding dir2/dir/subdir/f to workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
 mtn: committed revision 27a423be1e406595cc57f50f42a8790fa0a93d8e
 mtn: dropping dir2/dir/subdir/f from workspace manifest

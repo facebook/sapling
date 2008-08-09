@@ -63,7 +63,7 @@ mkdir dir2/dir
 mkdir dir2/dir/subdir
 echo f > dir2/dir/subdir/f
 mkdir dir2/dir/emptydir
-mtn add -R dir2/dir
+mtn add --quiet -R dir2/dir
 mtn ci -m emptydir
 mtn drop -R dir2/dir
 mtn ci -m dropdirectory
