@@ -78,10 +78,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     epoch = util.datestr((0, 0))
 
     if not opts.text and (util.binary(a) or util.binary(b)):
-        def h(v):
-            # md5 is used instead of sha1 because md5 is supposedly faster
-            return util.md5(v).digest()
-        if a and b and len(a) == len(b) and h(a) == h(b):
+        if a and b and len(a) == len(b) and a == b:
             return ""
         l = ['Binary file %s has changed\n' % fn1]
     elif not a:
