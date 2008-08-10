@@ -44,8 +44,8 @@ def opener(*args):
     return wrapper
 
 cl = changelog.changelog(opener('.hg/store'))
-print cl.count(), 'revisions:'
-for r in xrange(cl.count()):
+print len(cl), 'revisions:'
+for r in cl:
     print short(cl.node(r))
 EOF
 

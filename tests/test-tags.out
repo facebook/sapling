@@ -45,16 +45,16 @@ summary:     head
 created new head
 tip                                4:36195b728445
 bar                                1:b204a97e6e8d
-changeset:   5:57e1983b4a60
+changeset:   5:1f98c77278de
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     Removed tag bar
 
-tip                                5:57e1983b4a60
+tip                                5:1f98c77278de
 % remove nonexistent tag
 abort: tag 'foobar' does not exist
-changeset:   5:57e1983b4a60
+changeset:   5:1f98c77278de
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000

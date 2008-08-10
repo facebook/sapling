@@ -1,0 +1,41 @@
+{header}
+<title>{repo|escape}: searching for {query|escape}</title>
+</head>
+<body>
+
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="{staticurl}hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+<li><a href="{url}shortlog{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url}graph{sessionvars%urlparameter}">graph</a></li>
+<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+</ul>
+</div>
+
+<div class="main">
+
+<h2>{repo|escape}</h2>
+<h3>searching for '{query|escape}'</h3>
+
+<form class="search" action="{url}log">
+{sessionvars%hiddenformentry}
+<p><input name="rev" id="search1" type="text" size="30"></p>
+</form>
+
+<table class="bigtable">
+ <tr> 
+  <th class="age">age</td>
+  <th class="author">author</td>
+  <th class="description">description</td>
+ </tr>
+{entries}
+</table>
+
+</div>
+</div>
+
+{footer}

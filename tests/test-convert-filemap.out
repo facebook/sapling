@@ -29,7 +29,7 @@ bc3eca3f47023a3e70ca0d8cc95a22a6827db19d 644   quux
 copied renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
 
 % foo: skip unwanted merges; use 1st parent in 1st merge, 2nd in 2nd
-o  3 "8: change foo" files: foo
+@  3 "8: change foo" files: foo
 |
 o  2 "6: change foo baz" files: foo
 |
@@ -39,7 +39,7 @@ o  0 "0: add foo baz dir/" files: foo
 
 9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
 % bar: merges are not merges anymore
-o  4 "7: second merge; change bar" files: bar
+@  4 "7: second merge; change bar" files: bar
 |
 o  3 "5: change bar baz quux" files: bar
 |
@@ -51,7 +51,7 @@ o  0 "1: add bar quux; copy foo to copied" files: bar
 
 9463f52fe115e377cf2878d4fc548117211063f2 644   bar
 % baz: 1st merge is not a merge anymore; 2nd still is
-o    4 "7: second merge; change bar" files: baz
+@    4 "7: second merge; change bar" files: baz
 |\
 | o  3 "6: change foo baz" files: baz
 | |
@@ -63,7 +63,7 @@ o  0 "0: add foo baz dir/" files: baz
 
 94c1be4dfde2ee8d78db8bbfcf81210813307c3d 644   baz
 % foo quux: we add additional merges when they are interesting
-o  8 "8: change foo" files: foo
+@  8 "8: change foo" files: foo
 |
 o    7 "7: second merge; change bar" files:
 |\
@@ -84,14 +84,14 @@ o  0 "0: add foo baz dir/" files: foo
 9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
 bc3eca3f47023a3e70ca0d8cc95a22a6827db19d 644   quux
 % bar quux: partial conversion
-o  1 "3: change bar quux" files: bar quux
+@  1 "3: change bar quux" files: bar quux
 |
 o  0 "1: add bar quux; copy foo to copied" files: bar quux
 
 b79105bedc55102f394e90a789c9c380117c1b4a 644   bar
 db0421cc6b685a458c8d86c7d5c004f94429ea23 644   quux
 % bar quux: complete the partial conversion
-o  4 "7: second merge; change bar" files: bar
+@  4 "7: second merge; change bar" files: bar
 |
 o  3 "5: change bar baz quux" files: bar quux
 |
@@ -104,11 +104,11 @@ o  0 "1: add bar quux; copy foo to copied" files: bar quux
 9463f52fe115e377cf2878d4fc548117211063f2 644   bar
 bc3eca3f47023a3e70ca0d8cc95a22a6827db19d 644   quux
 % foo: partial conversion
-o  0 "0: add foo baz dir/" files: foo
+@  0 "0: add foo baz dir/" files: foo
 
 2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
 % foo: complete the partial conversion
-o  3 "8: change foo" files: foo
+@  3 "8: change foo" files: foo
 |
 o  2 "6: change foo baz" files: foo
 |
@@ -118,12 +118,12 @@ o  0 "0: add foo baz dir/" files: foo
 
 9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
 % copied: copied file; source not included in new repo
-o  0 "1: add bar quux; copy foo to copied" files: copied
+@  0 "1: add bar quux; copy foo to copied" files: copied
 
 2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   copied
 copied not renamed
 % foo copied: copied file; source included in new repo
-o  4 "8: change foo" files: foo
+@  4 "8: change foo" files: foo
 |
 o  3 "6: change foo baz" files: foo
 |
@@ -136,7 +136,7 @@ o  0 "0: add foo baz dir/" files: foo
 6ca237634e1f6bee1b6db94292fb44f092a25842 644   copied
 9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
 copied renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
-o  4 "8: change foo" files: foo2
+@  4 "8: change foo" files: foo2
 |
 o  3 "6: change foo baz" files: foo2
 |

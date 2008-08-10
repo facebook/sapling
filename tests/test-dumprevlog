@@ -1,0 +1,47 @@
+#!/bin/sh
+
+CONTRIBDIR=$TESTDIR/../contrib
+
+mkdir repo-a
+cd repo-a
+hg init
+
+echo this is file a > a
+hg add a
+hg commit -m first -d '0 0'
+
+echo adding to file a >> a
+hg commit -m second -d '0 0'
+
+echo adding more to file a >> a
+hg commit -m third -d '0 0'
+
+hg verify
+
+echo dumping revlog of file a to stdout:
+python $CONTRIBDIR/dumprevlog .hg/store/data/a.i
+echo dumprevlog done
+
+# dump all revlogs to file repo.dump
+find .hg/store -name "*.i" | sort | xargs python $CONTRIBDIR/dumprevlog > ../repo.dump
+
+cd ..
+
+mkdir repo-b
+cd repo-b
+hg init
+
+echo undumping:
+python $CONTRIBDIR/undumprevlog < ../repo.dump
+echo undumping done
+
+hg verify
+
+cd ..
+
+echo comparing repos:
+hg -R repo-b incoming repo-a
+hg -R repo-a incoming repo-b
+echo comparing done
+
+exit 0

@@ -53,7 +53,7 @@ commit -m 'Merge branch other'
 cd ..
 
 hg convert --datesort git-repo
-
+hg up -q -R git-repo-hg
 hg -R git-repo-hg tip -v
 
 count=10
@@ -117,12 +117,14 @@ splitrepo()
 	echo "include $i" >> "$fmap"
     done
     hg -q convert $opts --filemap "$fmap" --datesort git-repo2 "$repo"
+    hg up -q -R "$repo"
     glog -R "$repo"
     hg -R "$repo" manifest --debug
 }
 
 echo '% full conversion'
 hg -q convert --datesort git-repo2 fullrepo
+hg up -q -R fullrepo
 glog -R fullrepo
 hg -R fullrepo manifest --debug
 

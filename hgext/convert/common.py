@@ -153,26 +153,18 @@ class converter_sink(object):
         mapping equivalent authors identifiers for each system."""
         return None
 
-    def putfile(self, f, e, data):
-        """Put file for next putcommit().
-        f: path to file
-        e: '', 'x', or 'l' (regular file, executable, or symlink)
-        data: file contents"""
-        raise NotImplementedError()
-
-    def delfile(self, f):
-        """Delete file for next putcommit().
-        f: path to file"""
-        raise NotImplementedError()
-
-    def putcommit(self, files, parents, commit):
+    def putcommit(self, files, copies, parents, commit, source):
         """Create a revision with all changed files listed in 'files'
         and having listed parents. 'commit' is a commit object containing
         at a minimum the author, date, and message for this changeset.
-        Called after putfile() and delfile() calls. Note that the sink
-        repository is not told to update itself to a particular revision
-        (or even what that revision would be) before it receives the
-        file data."""
+        'files' is a list of (path, version) tuples, 'copies'is a dictionary
+        mapping destinations to sources, and 'source' is the source repository.
+        Only getfile() and getmode() should be called on 'source'.
+
+        Note that the sink repository is not told to update itself to
+        a particular revision (or even what that revision would be)
+        before it receives the file data.
+        """
         raise NotImplementedError()
 
     def puttags(self, tags):
@@ -181,7 +173,7 @@ class converter_sink(object):
         raise NotImplementedError()
 
     def setbranch(self, branch, pbranches):
-        """Set the current branch name. Called before the first putfile
+        """Set the current branch name. Called before the first putcommit
         on the branch.
         branch: branch name for subsequent commits
         pbranches: (converted parent revision, parent branch) tuples"""

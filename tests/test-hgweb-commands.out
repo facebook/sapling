@@ -138,6 +138,7 @@ adding foo
 
 <div class="buttons">
 <a href="/log/1">changelog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/file/a4f92ed23982/">files</a>
 
@@ -206,6 +207,7 @@ navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a hr
 <div class="buttons">
 <a href="/log/0">changelog</a>
 <a href="/shortlog/0">shortlog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/file/2ef0ac749a14">files</a>
 <a href="/raw-rev/2ef0ac749a14">raw</a>
@@ -312,6 +314,7 @@ drwxr-xr-x da
 <div class="buttons">
 <a href="/log/1">changelog</a>
 <a href="/shortlog/1">shortlog</a>
+<a href="/graph">graph</a>
 <a href="/tags">tags</a>
 <a href="/rev/a4f92ed23982">changeset</a>
 <a href="/file/a4f92ed23982/">files</a>
@@ -425,6 +428,7 @@ drwxr-xr-x da
 summary |
 <a href="/shortlog?style=gitweb">shortlog</a> |
 <a href="/log?style=gitweb">changelog</a> |
+<a href="/graph?style=gitweb">graph</a> |
 <a href="/tags?style=gitweb">tags</a> |
 <a href="/file/a4f92ed23982?style=gitweb">files</a>
 <br/>
@@ -468,6 +472,148 @@ summary |
 </body>
 </html>
 
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow"/>
+<link rel="stylesheet" href="/static/style-gitweb.css" type="text/css" />
+
+
+<title>test: Graph</title>
+<link rel="alternate" type="application/atom+xml"
+   href="/atom-log" title="Atom feed for test"/>
+<link rel="alternate" type="application/rss+xml"
+   href="/rss-log" title="RSS feed for test"/>
+</head>
+<body>
+
+<div class="page_header">
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / graph
+</div>
+
+<form action="/log">
+<input type="hidden" name="style" value="gitweb" />
+<div class="search">
+<input type="text" name="rev"  />
+</div>
+</form>
+<div class="page_nav">
+<a href="/summary?style=gitweb">summary</a> |
+<a href="/shortlog?style=gitweb">shortlog</a> |
+<a href="/log/1?style=gitweb">changelog</a> |
+graph |
+<a href="/tags?style=gitweb">tags</a> |
+<a href="/file/a4f92ed23982?style=gitweb">files</a>
+<br/>
+<a href="/graph/1?style=gitweb?revcount=0">less</a>
+<a href="/graph/1?style=gitweb?revcount=2">more</a>
+| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+</div>
+
+<div class="title">&nbsp;</div>
+
+<div id="noscript">The revision graph only works with JavaScript-enabled browsers.</div>
+
+<div id="wrapper">
+<ul id="nodebgs"></ul>
+<canvas id="graph" width="224" height="90"></canvas>
+<ul id="graphnodes"></ul>
+</div>
+
+<script type="text/javascript" src="/static/graph.js"></script>
+<script>
+<!-- hide script content
+
+document.getElementById('noscript').style.display = 'none';
+
+var data = [["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "long", ["default", true], ["tip"]], ["2ef0ac749a14", [0, 1], [], "base", "test", "long", ["default", false], ["1.0"]]];
+var graph = new Graph();
+graph.scale(39);
+
+graph.edge = function(x0, y0, x1, y1, color) {
+	
+	this.setColor(color, 0.0, 0.65);
+	this.ctx.beginPath();
+	this.ctx.moveTo(x0, y0);
+	this.ctx.lineTo(x1, y1);
+	this.ctx.stroke();
+	
+}
+
+var revlink = '<li style="_STYLE"><span class="desc">';
+revlink += '<a class="list" href="/rev/_NODEID?style=gitweb" title="_NODEID"><b>_DESC</b></a>';
+revlink += '</span> _TAGS';
+revlink += '<span class="info">_DATE ago, by _USER</span></li>';
+
+graph.vertex = function(x, y, color, parity, cur) {
+	
+	this.ctx.beginPath();
+	color = this.setColor(color, 0.25, 0.75);
+	this.ctx.arc(x, y, radius, 0, Math.PI * 2, true);
+	this.ctx.fill();
+	
+	var bg = '<li class="bg parity' + parity + '"></li>';
+	var left = (this.columns + 1) * this.bg_height;
+	var nstyle = 'padding-left: ' + left + 'px;';
+	var item = revlink.replace(/_STYLE/, nstyle);
+	item = item.replace(/_PARITY/, 'parity' + parity);
+	item = item.replace(/_NODEID/, cur[0]);
+	item = item.replace(/_NODEID/, cur[0]);
+	item = item.replace(/_DESC/, cur[3]);
+	item = item.replace(/_USER/, cur[4]);
+	item = item.replace(/_DATE/, cur[5]);
+	
+	var tagspan = '';
+	if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) {
+		tagspan = '<span class="logtags">';
+		if (cur[6][1]) {
+			tagspan += '<span class="branchtag" title="' + cur[6][0] + '">';
+			tagspan += cur[6][0] + '</span> ';
+		} else if (!cur[6][1] && cur[6][0] != 'default') {
+			tagspan += '<span class="inbranchtag" title="' + cur[6][0] + '">';
+			tagspan += cur[6][0] + '</span> ';
+		}
+		if (cur[7].length) {
+			for (var t in cur[7]) {
+				var tag = cur[7][t];
+				tagspan += '<span class="tagtag">' + tag + '</span> ';
+			}
+		}
+		tagspan += '</span>';
+	}
+	
+	item = item.replace(/_TAGS/, tagspan);
+	return [bg, item];
+	
+}
+
+graph.render(data);
+
+// stop hiding script -->
+</script>
+
+<div class="page_nav">
+<a href="/graph/1?style=gitweb?revcount=0">less</a>
+<a href="/graph/1?style=gitweb?revcount=2">more</a>
+| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
+</div>
+
+<div class="page_footer">
+<div class="page_footer_text">test</div>
+<div class="rss_logo">
+<a href="/rss-log">RSS</a>
+<a href="/atom-log">Atom</a>
+</div>
+<br />
+
+</div>
+</body>
+</html>
+
 % capabilities
 200 Script output follows
 
@@ -494,7 +640,7 @@ xœc`@    % stream_out
 405 Method Not Allowed
 
 0
-unbundle requires POST request
+push requires POST request
 % Static files
 200 Script output follows
 
@@ -564,4 +710,43 @@ pre { margin: 0; }
 #filediffEntry { }
 #filediffEntry th { font-weight: normal; background-color: #888; color: #fff; text-align: right; }
 
+/* Graph */
+div#wrapper {
+	position: relative;
+	margin: 0;
+	padding: 0;
+}
+
+canvas {
+	position: absolute;
+	z-index: 5;
+	top: -0.6em;
+	margin: 0;
+}
+
+ul#nodebgs {
+	list-style: none inside none;
+	padding: 0;
+	margin: 0;
+	top: -0.7em;
+}
+ 
+ul#graphnodes li, ul#nodebgs li {
+	height: 39px;
+}
+
+ul#graphnodes {
+	position: absolute;
+	z-index: 10;
+	top: -0.85em;
+	list-style: none inside none;
+	padding: 0;
+}
+
+ul#graphnodes li .info {
+	display: block;
+	font-size: 70%;
+	position: relative;
+	top: -1px;
+}
 % ERRORS ENCOUNTERED

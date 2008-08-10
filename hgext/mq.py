@@ -143,8 +143,7 @@ class queue:
             bad = self.check_guard(guard)
             if bad:
                 raise util.Abort(bad)
-        guards = dict.fromkeys(guards).keys()
-        guards.sort()
+        guards = util.sort(util.unique(guards))
         self.ui.debug('active guards: %s\n' % ' '.join(guards))
         self.active_guards = guards
         self.guards_dirty = True
@@ -322,10 +321,8 @@ class queue:
 
     def printdiff(self, repo, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
-        fns, matchfn, anypats = cmdutil.matchpats(repo, files, opts)
-
-        patch.diff(repo, node1, node2, fns, match=matchfn,
-                   fp=fp, changes=changes, opts=self.diffopts())
+        m = cmdutil.match(repo, files, opts)
+        patch.diff(repo, node1, node2, m, fp, changes, self.diffopts())
 
     def mergeone(self, repo, mergeq, head, patch, rev):
         # first try just applying the patch
@@ -344,7 +341,7 @@ class queue:
         hg.clean(repo, head)
         self.strip(repo, n, update=False, backup='strip')
 
-        ctx = repo.changectx(rev)
+        ctx = repo[rev]
         ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
@@ -510,8 +507,10 @@ class queue:
                     repo.dirstate.merge(f)
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
+
             files = patch.updatedir(self.ui, repo, files)
-            n = repo.commit(files, message, user, date, match=util.never,
+            match = cmdutil.matchfiles(repo, files or [])
+            n = repo.commit(files, message, user, date, match=match,
                             force=True)
 
             if n == None:
@@ -534,6 +533,40 @@ class queue:
                 err = 1
                 break
         return (err, n)
+
+    def _clean_series(self, patches):
+        indices = util.sort([self.find_series(p) for p in patches])
+        for i in indices[-1::-1]:
+            del self.full_series[i]
+        self.parse_series()
+        self.series_dirty = 1
+
+    def finish(self, repo, revs):
+        revs.sort()
+        firstrev = repo[self.applied[0].rev].rev()
+        appliedbase = 0
+        patches = []
+        for rev in util.sort(revs):
+            if rev < firstrev:
+                raise util.Abort(_('revision %d is not managed') % rev)
+            base = revlog.bin(self.applied[appliedbase].rev)
+            node = repo.changelog.node(rev)
+            if node != base:
+                raise util.Abort(_('cannot delete revision %d above '
+                                   'applied patches') % rev)
+            patches.append(self.applied[appliedbase].name)
+            appliedbase += 1
+
+        r = self.qrepo()
+        if r:
+            r.remove(patches, True)
+        else:
+            for p in patches:
+                os.unlink(self.join(p))
+
+        del self.applied[:appliedbase]
+        self.applied_dirty = 1
+        self._clean_series(patches)
 
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):
@@ -580,12 +613,7 @@ class queue:
         if appliedbase:
             del self.applied[:appliedbase]
             self.applied_dirty = 1
-        indices = [self.find_series(p) for p in realpatches]
-        indices.sort()
-        for i in indices[-1::-1]:
-            del self.full_series[i]
-        self.parse_series()
-        self.series_dirty = 1
+        self._clean_series(realpatches)
 
     def check_toppatch(self, repo):
         if len(self.applied) > 0:
@@ -623,11 +651,11 @@ class queue:
         if os.path.exists(self.join(patch)):
             raise util.Abort(_('patch "%s" already exists') % patch)
         if opts.get('include') or opts.get('exclude') or pats:
-            fns, match, anypats = cmdutil.matchpats(repo, pats, opts)
-            m, a, r, d = repo.status(files=fns, match=match)[:4]
+            match = cmdutil.match(repo, pats, opts)
+            m, a, r, d = repo.status(match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force)
-            fns, match, anypats = cmdutil.matchpats(repo, m + a + r)
+            match = cmdutil.match(repo, m + a + r)
         commitfiles = m + a + r
         self.check_toppatch(repo)
         wlock = repo.wlock()
@@ -665,14 +693,14 @@ class queue:
         finally:
             del wlock
 
-    def strip(self, repo, rev, update=True, backup="all"):
+    def strip(self, repo, rev, update=True, backup="all", force=None):
         wlock = lock = None
         try:
             wlock = repo.wlock()
             lock = repo.lock()
 
             if update:
-                self.check_localchanges(repo, refresh=False)
+                self.check_localchanges(repo, force=force, refresh=False)
                 urev = self.qparents(repo, rev)
                 hg.clean(repo, urev)
                 repo.dirstate.write()
@@ -822,7 +850,7 @@ class queue:
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.parents()[0]
                 hg.revert(repo, node, None)
-                unknown = repo.status()[4]
+                unknown = repo.status(unknown=True)[4]
                 # only remove unknown files that we know we touched or
                 # created while patching
                 for f in unknown:
@@ -903,7 +931,7 @@ class queue:
                 qp = self.qparents(repo, rev)
                 changes = repo.changelog.read(qp)
                 mmap = repo.manifest.read(changes[0])
-                m, a, r, d, u = repo.status(qp, top)[:5]
+                m, a, r, d = repo.status(qp, top)[:4]
                 if d:
                     raise util.Abort("deletions found between repo revs")
                 for f in m:
@@ -937,10 +965,7 @@ class queue:
             self.ui.write("No patches applied\n")
             return
         qp = self.qparents(repo, top)
-        if opts.get('git'):
-            self.diffopts().git = True
-        if opts.get('unified') is not None:
-            self.diffopts().context = opts['unified']
+        self._diffopts = patch.diffopts(self.ui, opts)
         self.printdiff(repo, qp, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
@@ -1026,7 +1051,7 @@ class queue:
 
             if opts.get('git'):
                 self.diffopts().git = True
-            fns, matchfn, anypats = cmdutil.matchpats(repo, pats, opts)
+            matchfn = cmdutil.match(repo, pats, opts)
             tip = repo.changelog.tip()
             if top == tip:
                 # if the top of our patch queue is also the tip, there is an
@@ -1039,21 +1064,19 @@ class queue:
                 # patch already
                 #
                 # this should really read:
-                #   mm, dd, aa, aa2, uu = repo.status(tip, patchparent)[:5]
+                #   mm, dd, aa, aa2 = repo.status(tip, patchparent)[:4]
                 # but we do it backwards to take advantage of manifest/chlog
                 # caching against the next repo.status call
                 #
-                mm, aa, dd, aa2, uu = repo.status(patchparent, tip)[:5]
+                mm, aa, dd, aa2 = repo.status(patchparent, tip)[:4]
                 changes = repo.changelog.read(tip)
                 man = repo.manifest.read(changes[0])
                 aaa = aa[:]
                 if opts.get('short'):
-                    filelist = mm + aa + dd
-                    match = dict.fromkeys(filelist).__contains__
+                    match = cmdutil.matchfiles(repo, mm + aa + dd)
                 else:
-                    filelist = None
-                    match = util.always
-                m, a, r, d, u = repo.status(files=filelist, match=match)[:5]
+                    match = cmdutil.matchall(repo)
+                m, a, r, d = repo.status(match=match)[:4]
 
                 # we might end up with files that were added between
                 # tip and the dirstate parent, but then changed in the
@@ -1086,9 +1109,9 @@ class queue:
                 m = util.unique(mm)
                 r = util.unique(dd)
                 a = util.unique(aa)
-                c = [filter(matchfn, l) for l in (m, a, r, [], u)]
-                filelist = util.unique(c[0] + c[1] + c[2])
-                patch.diff(repo, patchparent, files=filelist, match=matchfn,
+                c = [filter(matchfn, l) for l in (m, a, r)]
+                match = cmdutil.matchfiles(repo, util.unique(c[0] + c[1] + c[2]))
+                patch.diff(repo, patchparent, match=match,
                            fp=patchf, changes=c, opts=self.diffopts())
                 patchf.close()
 
@@ -1146,7 +1169,7 @@ class queue:
                 self.applied_dirty = 1
                 self.strip(repo, top, update=False,
                            backup='strip')
-                n = repo.commit(filelist, message, user, date, match=matchfn,
+                n = repo.commit(match.files(), message, user, date, match=match,
                                 force=1)
                 self.applied.append(statusentry(revlog.hex(n), patchfn))
                 self.removeundo(repo)
@@ -1236,8 +1259,7 @@ class queue:
                                    self.guards_path)
                         and not fl.startswith('.')):
                         msng_list.append(fl)
-            msng_list.sort()
-            for x in msng_list:
+            for x in util.sort(msng_list):
                 pfx = self.ui.verbose and ('D ') or ''
                 self.ui.write("%s%s\n" % (pfx, displayname(x)))
 
@@ -1499,9 +1521,8 @@ def delete(ui, repo, *patches, **opts):
     the --rev parameter. At least one patch or revision is required.
 
     With --rev, mq will stop managing the named revisions (converting
-    them to regular mercurial changesets). The patches must be applied
-    and at the base of the stack. This option is useful when the patches
-    have been applied upstream.
+    them to regular mercurial changesets). The qfinish command should be
+    used as an alternative for qdel -r, as the latter option is deprecated.
 
     With --keep, the patch files are preserved in the patch directory."""
     q = repo.mq
@@ -2086,7 +2107,7 @@ def strip(ui, repo, rev, **opts):
     elif rev not in (cl.ancestor(p[0], rev), cl.ancestor(p[1], rev)):
         update = False
 
-    repo.mq.strip(repo, rev, backup=backup, update=update)
+    repo.mq.strip(repo, rev, backup=backup, update=update, force=opts['force'])
     return 0
 
 def select(ui, repo, *args, **opts):
@@ -2191,6 +2212,34 @@ def select(ui, repo, *args, **opts):
         finally:
             q.save_dirty()
 
+def finish(ui, repo, *revrange, **opts):
+    """move applied patches into repository history
+
+    Finishes the specified revisions (corresponding to applied patches) by
+    moving them out of mq control into regular repository history.
+
+    Accepts a revision range or the --all option. If --all is specified, all
+    applied mq revisions are removed from mq control. Otherwise, the given
+    revisions must be at the base of the stack of applied patches.
+
+    This can be especially useful if your changes have been applied to an
+    upstream repository, or if you are about to push your changes to upstream.
+    """
+    if not opts['applied'] and not revrange:
+        raise util.Abort(_('no revisions specified'))
+    elif opts['applied']:
+        revrange = ('qbase:qtip',) + revrange
+
+    q = repo.mq
+    if not q.applied:
+        ui.status(_('no patches applied\n'))
+        return 0
+
+    revs = cmdutil.revrange(repo, revrange)
+    q.finish(repo, revs)
+    q.save_dirty()
+    return 0
+
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         def abort_if_wdir_patched(self, errmsg, force=False):
@@ -2267,7 +2316,7 @@ def reposetup(ui, repo):
             # we might as well use it, but we won't save it.
 
             # update the cache up to the tip
-            self._updatebranchcache(partial, start, cl.count())
+            self._updatebranchcache(partial, start, len(cl))
 
             return partial
 
@@ -2300,10 +2349,8 @@ cmdtable = {
          _('hg qcommit [OPTION]... [FILE]...')),
     "^qdiff":
         (diff,
-         [('g', 'git', None, _('use git extended diff format')),
-          ('U', 'unified', 3, _('number of lines of context to show')),
-         ] + commands.walkopts,
-         _('hg qdiff [-I] [-X] [-U NUM] [-g] [FILE]...')),
+         commands.diffopts + commands.diffopts2 + commands.walkopts,
+         _('hg qdiff [OPTION]... [FILE]...')),
     "qdelete|qremove|qrm":
         (delete,
          [('k', 'keep', None, _('keep patch file')),
@@ -2395,9 +2442,14 @@ cmdtable = {
          _('hg qseries [-ms]')),
     "^strip":
         (strip,
-         [('b', 'backup', None, _('bundle unrelated changesets')),
+         [('f', 'force', None, _('force removal with local changes')),
+          ('b', 'backup', None, _('bundle unrelated changesets')),
           ('n', 'nobackup', None, _('no backups'))],
          _('hg strip [-f] [-b] [-n] REV')),
     "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied": (unapplied, [] + seriesopts, _('hg qunapplied [-s] [PATCH]')),
+    "qfinish":
+        (finish,
+         [('a', 'applied', None, _('finish all applied changesets'))],
+         _('hg qfinish [-a] [REV...]')),
 }

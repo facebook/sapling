@@ -15,13 +15,39 @@ platform-specific details from the core.
 from i18n import _
 import cStringIO, errno, getpass, re, shutil, sys, tempfile
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import urlparse
+import imp, urlparse
+
+# Python compatibility
 
 try:
     set = set
     frozenset = frozenset
 except NameError:
     from sets import Set as set, ImmutableSet as frozenset
+
+_md5 = None
+def md5(s):
+    global _md5
+    if _md5 is None:
+        try:
+            import hashlib
+            _md5 = hashlib.md5
+        except ImportError:
+            import md5
+            _md5 = md5.md5
+    return _md5(s)
+
+_sha1 = None
+def sha1(s):
+    global _sha1
+    if _sha1 is None:
+        try:
+            import hashlib
+            _sha1 = hashlib.sha1
+        except ImportError:
+            import sha
+            _sha1 = sha.sha
+    return _sha1(s)
 
 try:
     _encoding = os.environ.get("HGENCODING")
@@ -217,14 +243,20 @@ def filter(s, cmd):
     return pipefilter(s, cmd)
 
 def binary(s):
-    """return true if a string is binary data using diff's heuristic"""
-    if s and '\0' in s[:4096]:
+    """return true if a string is binary data"""
+    if s and '\0' in s:
         return True
     return False
 
 def unique(g):
     """return the uniq elements of iterable g"""
     return dict.fromkeys(g).keys()
+
+def sort(l):
+    if not isinstance(l, list):
+        l = list(l)
+    l.sort()
+    return l
 
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
@@ -251,12 +283,12 @@ def expand_glob(pats):
         ret.append(p)
     return ret
 
-def patkind(name, dflt_pat='glob'):
+def patkind(name, default):
     """Split a string into an optional pattern kind prefix and the
     actual pattern."""
     for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
         if name.startswith(prefix + ':'): return name.split(':', 1)
-    return dflt_pat, name
+    return default, name
 
 def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
@@ -386,17 +418,7 @@ def canonpath(root, cwd, myname):
 
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None):
-    return _matcher(canonroot, cwd, names, inc, exc, 'glob', src)
-
-def cmdmatcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None,
-               globbed=False, default=None):
-    default = default or 'relpath'
-    if default == 'relpath' and not globbed:
-        names = expand_glob(names)
-    return _matcher(canonroot, cwd, names, inc, exc, default, src)
-
-def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
+def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None, dflt_pat='glob'):
     """build a function to match a set of file patterns
 
     arguments:
@@ -537,13 +559,29 @@ def _matcher(canonroot, cwd, names, inc, exc, dflt_pat, src):
 
 _hgexecutable = None
 
+def main_is_frozen():
+    """return True if we are a frozen executable.
+
+    The code supports py2exe (most common, Windows only) and tools/freeze
+    (portable, not much used).
+    """
+    return (hasattr(sys, "frozen") or # new py2exe
+            hasattr(sys, "importers") or # old py2exe
+            imp.is_frozen("__main__")) # tools/freeze
+
 def hgexecutable():
     """return location of the 'hg' executable.
 
     Defaults to $HG or 'hg' in the search path.
     """
     if _hgexecutable is None:
-        set_hgexecutable(os.environ.get('HG') or find_exe('hg', 'hg'))
+        hg = os.environ.get('HG')
+        if hg:
+            set_hgexecutable(hg)
+        elif main_is_frozen():
+            set_hgexecutable(sys.executable)
+        else:
+            set_hgexecutable(find_exe('hg', 'hg'))
     return _hgexecutable
 
 def set_hgexecutable(path):
@@ -807,7 +845,7 @@ def groupname(gid=None):
 
 # File system features
 
-def checkfolding(path):
+def checkcase(path):
     """
     Check whether the given path is on a case-sensitive filesystem
 
@@ -826,6 +864,53 @@ def checkfolding(path):
         return True
     except:
         return True
+
+_fspathcache = {}
+def fspath(name, root):
+    '''Get name in the case stored in the filesystem
+
+    The name is either relative to root, or it is an absolute path starting
+    with root. Note that this function is unnecessary, and should not be
+    called, for case-sensitive filesystems (simply because it's expensive).
+    '''
+    # If name is absolute, make it relative
+    if name.lower().startswith(root.lower()):
+        l = len(root)
+        if name[l] == os.sep or name[l] == os.altsep:
+            l = l + 1
+        name = name[l:]
+
+    if not os.path.exists(os.path.join(root, name)):
+        return None
+
+    seps = os.sep
+    if os.altsep:
+        seps = seps + os.altsep
+    # Protect backslashes. This gets silly very quickly.
+    seps.replace('\\','\\\\')
+    pattern = re.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
+    dir = os.path.normcase(os.path.normpath(root))
+    result = []
+    for part, sep in pattern.findall(name):
+        if sep:
+            result.append(sep)
+            continue
+
+        if dir not in _fspathcache:
+            _fspathcache[dir] = os.listdir(dir)
+        contents = _fspathcache[dir]
+
+        lpart = part.lower()
+        for n in contents:
+            if n.lower() == lpart:
+                result.append(n)
+                break
+        else:
+            # Cannot happen, as the file exists!
+            result.append(part)
+        dir = os.path.join(dir, lpart)
+
+    return ''.join(result)
 
 def checkexec(path):
     """
@@ -854,12 +939,6 @@ def checkexec(path):
         return False
     return not (new_file_has_exec or exec_flags_cannot_flip)
 
-def execfunc(path, fallback):
-    '''return an is_exec() function with default to fallback'''
-    if checkexec(path):
-        return lambda x: is_exec(os.path.join(path, x))
-    return fallback
-
 def checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
     # mktemp is not racy because symlink creation will fail if the
@@ -871,12 +950,6 @@ def checklink(path):
         return True
     except (OSError, AttributeError):
         return False
-
-def linkfunc(path, fallback):
-    '''return an is_link() function with default to fallback'''
-    if checklink(path):
-        return lambda x: os.path.islink(os.path.join(path, x))
-    return fallback
 
 _umask = os.umask(0)
 os.umask(_umask)
@@ -1044,12 +1117,12 @@ if os.name == 'nt':
         # through the current COMSPEC. cmd.exe suppress enclosing quotes.
         return '"' + cmd + '"'
 
-    def popen(command):
+    def popen(command, mode='r'):
         # Work around "popen spawned process may not write to stdout
         # under windows"
         # http://bugs.python.org/issue1366
         command += " 2> %s" % nulldev
-        return os.popen(quotecommand(command))
+        return os.popen(quotecommand(command), mode)
 
     def explain_exit(code):
         return _("exited with status %d") % code, code
@@ -1210,8 +1283,8 @@ else:
     def quotecommand(cmd):
         return cmd
 
-    def popen(command):
-        return os.popen(command)
+    def popen(command, mode='r'):
+        return os.popen(command, mode)
 
     def testpid(pid):
         '''return False if pid dead, True if running or not sure'''
@@ -1271,39 +1344,6 @@ def find_exe(name, default=None):
         # much more useful error message.
         return name
     return find_in_path(name, os.environ.get('PATH', ''), default=default)
-
-def _buildencodefun():
-    e = '_'
-    win_reserved = [ord(x) for x in '\\:*?"<>|']
-    cmap = dict([ (chr(x), chr(x)) for x in xrange(127) ])
-    for x in (range(32) + range(126, 256) + win_reserved):
-        cmap[chr(x)] = "~%02x" % x
-    for x in range(ord("A"), ord("Z")+1) + [ord(e)]:
-        cmap[chr(x)] = e + chr(x).lower()
-    dmap = {}
-    for k, v in cmap.iteritems():
-        dmap[v] = k
-    def decode(s):
-        i = 0
-        while i < len(s):
-            for l in xrange(1, 4):
-                try:
-                    yield dmap[s[i:i+l]]
-                    i += l
-                    break
-                except KeyError:
-                    pass
-            else:
-                raise KeyError
-    return (lambda s: "".join([cmap[c] for c in s]),
-            lambda s: "".join(list(decode(s))))
-
-encodefilename, decodefilename = _buildencodefun()
-
-def encodedopener(openerfn, fn):
-    def o(path, *args, **kw):
-        return openerfn(fn(path), *args, **kw)
-    return o
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name

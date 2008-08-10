@@ -156,9 +156,7 @@ class notifier(object):
             if fnmatch.fnmatch(self.repo.root, pat):
                 for user in users.split(','):
                     subs[self.fixmail(user)] = 1
-        subs = subs.keys()
-        subs.sort()
-        return subs
+        return util.sort(subs)
 
     def url(self, path=None):
         return self.ui.config('web', 'baseurl') + (path or self.root)
@@ -269,11 +267,11 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     node = bin(node)
     ui.pushbuffer()
     if hooktype == 'changegroup':
-        start = repo.changelog.rev(node)
-        end = repo.changelog.count()
+        start = repo[node].rev()
+        end = len(repo)
         count = end - start
         for rev in xrange(start, end):
-            n.node(repo.changelog.node(rev))
+            n.node(repo[node].rev())
         n.diff(node, repo.changelog.tip())
     else:
         count = 1

@@ -221,8 +221,6 @@ class converter(object):
 
     def copy(self, rev):
         commit = self.commitcache[rev]
-        do_copies = hasattr(self.dest, 'copyfile')
-        filenames = []
 
         changes = self.source.getchanges(rev)
         if isinstance(changes, basestring):
@@ -241,21 +239,6 @@ class converter(object):
                 pbranches.append((self.map[prev],
                                   self.commitcache[prev].branch))
         self.dest.setbranch(commit.branch, pbranches)
-        for f, v in files:
-            filenames.append(f)
-            try:
-                data = self.source.getfile(f, v)
-            except IOError, inst:
-                self.dest.delfile(f)
-            else:
-                e = self.source.getmode(f, v)
-                self.dest.putfile(f, e, data)
-                if do_copies:
-                    if f in copies:
-                        copyf = copies[f]
-                        # Merely marks that a copy happened.
-                        self.dest.copyfile(copyf, f)
-
         try:
             parents = self.splicemap[rev].replace(',', ' ').split()
             self.ui.status('spliced in %s as parents of %s\n' %
@@ -263,7 +246,7 @@ class converter(object):
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
-        newnode = self.dest.putcommit(filenames, parents, commit)
+        newnode = self.dest.putcommit(files, copies, parents, commit, self.source)
         self.source.converted(rev, newnode)
         self.map[rev] = newnode
 

@@ -16,7 +16,7 @@ def _local(path):
     return (os.path.isfile(util.drop_scheme('file', path)) and
             bundlerepo or localrepo)
 
-def parseurl(url, revs):
+def parseurl(url, revs=[]):
     '''parse url#branch, returning url, branch + revs'''
 
     if '#' not in url:
@@ -69,6 +69,15 @@ def defaultdest(source):
     '''return default destination of clone if none is given'''
     return os.path.basename(os.path.normpath(source))
 
+def localpath(path):
+    if path.startswith('file://localhost/'):
+        return path[16:]
+    if path.startswith('file://'):
+        return path[7:]
+    if path.startswith('file:'):
+        return path[5:]
+    return path
+
 def clone(ui, source, dest=None, pull=False, rev=None, update=True,
           stream=False):
     """Make a copy of an existing repository.
@@ -100,7 +109,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     rev: revision to clone up to (implies pull=True)
 
     update: update working directory after clone completes, if
-    destination is local repository
+    destination is local repository (True means update to default rev,
+    anything else is treated as a revision)
     """
 
     if isinstance(source, str):
@@ -115,15 +125,6 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     if dest is None:
         dest = defaultdest(source)
         ui.status(_("destination directory: %s\n") % dest)
-
-    def localpath(path):
-        if path.startswith('file://localhost/'):
-            return path[16:]
-        if path.startswith('file://'):
-            return path[7:]
-        if path.startswith('file:'):
-            return path[5:]
-        return path
 
     dest = localpath(dest)
     source = localpath(source)
@@ -244,7 +245,9 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
             if update:
                 dest_repo.ui.status(_("updating working directory\n"))
-                if not checkout:
+                if update is not True:
+                    checkout = update
+                elif not checkout:
                     try:
                         checkout = dest_repo.lookup("default")
                     except:
@@ -271,15 +274,7 @@ def update(repo, node):
     stats = _merge.update(repo, node, False, False, None)
     _showstats(repo, stats)
     if stats[3]:
-        repo.ui.status(_("There are unresolved merges with"
-                         " locally modified files.\n"))
-        if stats[1]:
-            repo.ui.status(_("You can finish the partial merge using:\n"))
-        else:
-            repo.ui.status(_("You can redo the full merge using:\n"))
-        # len(pl)==1, otherwise _merge.update() would have raised util.Abort:
-        repo.ui.status(_("  hg update %s\n  hg update %s\n")
-                       % (pl[0].rev(), repo.changectx(node).rev()))
+        repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
     return stats[3] > 0
 
 def clean(repo, node, show_stats=True):
@@ -294,11 +289,7 @@ def merge(repo, node, force=None, remind=True):
     _showstats(repo, stats)
     if stats[3]:
         pl = repo.parents()
-        repo.ui.status(_("There are unresolved merges,"
-                         " you can redo the full merge using:\n"
-                         "  hg update -C %s\n"
-                         "  hg merge %s\n")
-                       % (pl[0].rev(), pl[1].rev()))
+        repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3] > 0

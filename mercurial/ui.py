@@ -312,15 +312,11 @@ class ui(object):
         items = self._configitems(section, untrusted=untrusted, abort=True)
         if self.debugflag and not untrusted and self.ucdata:
             uitems = self._configitems(section, untrusted=True, abort=False)
-            keys = uitems.keys()
-            keys.sort()
-            for k in keys:
+            for k in util.sort(uitems):
                 if uitems[k] != items.get(k):
                     self.warn(_("Ignoring untrusted configuration option "
                                 "%s.%s = %s\n") % (section, k, uitems[k]))
-        x = items.items()
-        x.sort()
-        return x
+        return util.sort(items.items())
 
     def walkconfig(self, untrusted=False):
         cdata = self._get_cdata(untrusted)
@@ -335,14 +331,16 @@ class ui(object):
 
         Searched in this order: $HGUSER, [ui] section of hgrcs, $EMAIL
         and stop searching if one of these is set.
-        If not found, use ($LOGNAME or $USER or $LNAME or
-        $USERNAME) +"@full.hostname".
+        If not found and ui.askusername is True, ask the user, else use
+        ($LOGNAME or $USER or $LNAME or $USERNAME) + "@full.hostname".
         """
         user = os.environ.get("HGUSER")
         if user is None:
             user = self.config("ui", "username")
         if user is None:
             user = os.environ.get("EMAIL")
+        if user is None and self.configbool("ui", "askusername"):
+            user = self.prompt(_("Enter a commit username:"), default=None)
         if user is None:
             try:
                 user = '%s@%s' % (util.getuser(), socket.getfqdn())

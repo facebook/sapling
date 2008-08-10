@@ -116,3 +116,57 @@ summary:     Merge ff into foo
 
 a
 ff
+% test merging, add 3 default heads and one test head
+adding a
+adding b
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding c
+created new head
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding d
+created new head
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch test
+adding e
+created new head
+changeset:   4:3a1e01ed1df4
+branch:      test
+tag:         tip
+parent:      0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     e
+
+changeset:   3:980f7dc84c29
+parent:      0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     d
+
+changeset:   2:d36c0562f908
+parent:      0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     c
+
+changeset:   1:d2ae7f538514
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     b
+
+changeset:   0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     a
+
+% implicit merge with test branch as parent
+abort: branch 'test' has one head - please merge with an explicit rev
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+% implicit merge with default branch as parent
+abort: branch 'default' has 3 heads - please merge with an explicit rev
+% 3 branch heads, explicit merge required
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% 2 branch heads, implicit merge works
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)

@@ -70,15 +70,15 @@ R foo
 adding test/bar
 adding test/foo
 % dir, options none
-removing test/foo
 removing test/bar
+removing test/foo
 R test/bar
 R test/foo
 ./foo
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % dir, options -f
-removing test/foo
 removing test/bar
+removing test/foo
 R test/bar
 R test/foo
 ./foo
@@ -91,8 +91,8 @@ R test/bar
 ./test/foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % dir, options -Af
-removing test/foo
 removing test/bar
+removing test/foo
 R test/bar
 R test/foo
 ./foo

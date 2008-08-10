@@ -11,9 +11,7 @@ merging test.txt
 warning: conflicts during merge.
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-There are unresolved merges, you can redo the full merge using:
-  hg update -C 1
-  hg merge 2
+use 'hg resolve' to retry unresolved file merges
 pulling from ../test-a
 searching for changes
 adding changesets
@@ -26,15 +24,14 @@ resolving manifests
  ancestor faaea63e63a9 local 451c744aabcc+ remote a070d41e8360
   searching for copies back to rev 1
  test.txt: versions differ -> m
+preserving test.txt for resolve of test.txt
 picked tool 'internal:merge' for test.txt (binary False symlink False)
 merging test.txt
 my test.txt@451c744aabcc+ other test.txt@a070d41e8360 ancestor test.txt@faaea63e63a9
 warning: conflicts during merge.
 merging test.txt failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-There are unresolved merges, you can redo the full merge using:
-  hg update -C 3
-  hg merge 4
+use 'hg resolve' to retry unresolved file merges
 one
 <<<<<<< local
 two-point-five

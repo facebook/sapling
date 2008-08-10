@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "hgk=" >> $HGRCPATH
+
+hg init repo
+cd repo
+echo a > a
+hg ci -Am adda
+hg debug-cat-file commit 0
+

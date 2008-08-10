@@ -281,6 +281,12 @@ M a
 a
 overwriting a expanding keywords
 % status
+% verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+3 files, 3 changesets, 4 total revisions
 % cat
 expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
@@ -294,6 +300,11 @@ xxx $
 $Xinfo: User Name <user@example.com>: firstline $
 ignore $Id$
 a
+% annotate
+1: expand $Id$
+1: do not process $Id:
+1: xxx $
+2: $Xinfo$
 % remove
 % status
 % rollback
@@ -345,7 +356,7 @@ rolling back last transaction
 % kwexpand a
 overwriting a expanding keywords
 % kwexpand x/a should abort
-abort: outstanding uncommitted changes in given files
+abort: outstanding uncommitted changes
 x/a
  x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
 overwriting x/a expanding keywords

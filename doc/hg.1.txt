@@ -30,64 +30,12 @@ revision::
 
 repository path::
     either the pathname of a local repository or the URI of a remote
-    repository.  There are two available URI protocols, http:// which is
+    repository. There are two available URI protocols, http:// which is
     fast and the static-http:// protocol which is much slower but does not
     require a special server on the web host.
 
 
 include::hg.1.gendoc.txt[]
-
-SPECIFYING SINGLE REVISIONS
----------------------------
-
-    Mercurial accepts several notations for identifying individual
-    revisions.
-
-    A plain integer is treated as a revision number.  Negative
-    integers are treated as offsets from the tip, with -1 denoting the
-    tip.
-
-    A 40-digit hexadecimal string is treated as a unique revision
-    identifier.
-
-    A hexadecimal string less than 40 characters long is treated as a
-    unique revision identifier, and referred to as a short-form
-    identifier.  A short-form identifier is only valid if it is the
-    prefix of one full-length identifier.
-
-    Any other string is treated as a tag name, which is a symbolic
-    name associated with a revision identifier.  Tag names may not
-    contain the ":" character.
-
-    The reserved name "tip" is a special tag that always identifies
-    the most recent revision.
-
-    The reserved name "null" indicates the null revision. This is the
-    revision of an empty repository, and the parent of revision 0.
-
-    The reserved name "." indicates the working directory parent. If
-    no working directory is checked out, it is equivalent to null.
-    If an uncommitted merge is in progress, "." is the revision of
-    the first parent.
-
-SPECIFYING MULTIPLE REVISIONS
------------------------------
-
-    When Mercurial accepts more than one revision, they may be
-    specified individually, or provided as a continuous range,
-    separated by the ":" character.
-
-    The syntax of range notation is [BEGIN]:[END], where BEGIN and END
-    are revision identifiers.  Both BEGIN and END are optional.  If
-    BEGIN is not specified, it defaults to revision number 0.  If END
-    is not specified, it defaults to the tip.  The range ":" thus
-    means "all revisions".
-
-    If BEGIN is greater than END, revisions are treated in reverse
-    order.
-
-    A range acts as a closed interval.  This means that a range of 3:5
-    gives 3, 4 and 5.  Similarly, a range of 4:2 gives 4, 3, and 2.
 
 FILES
 -----
@@ -103,7 +51,7 @@ FILES
  /etc/mercurial/hgrc, $HOME/.hgrc, .hg/hgrc::
     This file contains defaults and configuration. Values in .hg/hgrc
     override those in $HOME/.hgrc, and these override settings made in the
-    global /etc/mercurial/hgrc configuration.  See hgrc(5) for details of
+    global /etc/mercurial/hgrc configuration. See hgrc(5) for details of
     the contents and format of these files.
 
 Some commands (e.g. revert) produce backup files ending in .orig, if

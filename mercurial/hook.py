@@ -96,10 +96,9 @@ def hook(ui, repo, name, throw=False, **args):
         oldstdout = os.dup(sys.__stdout__.fileno())
         os.dup2(sys.__stderr__.fileno(), sys.__stdout__.fileno())
 
-    hooks = [(hname, cmd) for hname, cmd in ui.configitems("hooks")
-             if hname.split(".", 1)[0] == name and cmd]
-    hooks.sort()
-    for hname, cmd in hooks:
+    for hname, cmd in util.sort(ui.configitems('hooks')):
+        if hname.split('.')[0] != name or not cmd:
+            continue
         if callable(cmd):
             r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
         elif cmd.startswith('python:'):

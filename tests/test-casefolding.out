@@ -1,0 +1,13 @@
+% test file addition with bad case
+adding a
+A a
+a
+% test case collision on rename (issue 750)
+adding a
+a
+A: not overwriting - file exists
+% test case collision between revisions (issue 912)
+adding a
+adding A
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved

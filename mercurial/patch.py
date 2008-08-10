@@ -8,8 +8,8 @@
 
 from i18n import _
 from node import hex, nullid, short
-import base85, cmdutil, mdiff, util, context, revlog, diffhelpers, copies
-import cStringIO, email.Parser, os, popen2, re, sha, errno
+import base85, cmdutil, mdiff, util, revlog, diffhelpers, copies
+import cStringIO, email.Parser, os, popen2, re, errno
 import sys, tempfile, zlib
 
 class PatchError(Exception):
@@ -1094,8 +1094,7 @@ def updatedir(ui, repo, patches):
         repo.copy(src, dst)
     removes = removes.keys()
     if removes:
-        removes.sort()
-        repo.remove(removes, True)
+        repo.remove(util.sort(removes), True)
     for f in patches:
         ctype, gp = patches[f]
         if gp and gp.mode:
@@ -1113,9 +1112,7 @@ def updatedir(ui, repo, patches):
     cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
-    files.sort()
-
-    return files
+    return util.sort(files)
 
 def b85diff(to, tn):
     '''print base85-encoded binary diff'''
@@ -1123,7 +1120,7 @@ def b85diff(to, tn):
         if not text:
             return '0' * 40
         l = len(text)
-        s = sha.new('blob %d\0' % l)
+        s = util.sha1('blob %d\0' % l)
         s.update(text)
         return s.hexdigest()
 
@@ -1155,13 +1152,16 @@ def b85diff(to, tn):
     ret.append('\n')
     return ''.join(ret)
 
-def diff(repo, node1=None, node2=None, files=None, match=util.always,
+def diff(repo, node1=None, node2=None, match=None,
          fp=None, changes=None, opts=None):
     '''print diff of changes to files between two nodes, or node and
     working directory.
 
     if node1 is None, use first dirstate parent instead.
     if node2 is None, compare node1 with working directory.'''
+
+    if not match:
+        match = cmdutil.matchall(repo)
 
     if opts is None:
         opts = mdiff.defaultopts
@@ -1170,12 +1170,6 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
     if not node1:
         node1 = repo.dirstate.parents()[0]
-
-    ccache = {}
-    def getctx(r):
-        if r not in ccache:
-            ccache[r] = context.changectx(repo, r)
-        return ccache[r]
 
     flcache = {}
     def getfilectx(f, ctx):
@@ -1186,30 +1180,19 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
 
     # reading the data for node1 early allows it to play nicely
     # with repo.status and the revlog cache.
-    ctx1 = context.changectx(repo, node1)
+    ctx1 = repo[node1]
     # force manifest reading
     man1 = ctx1.manifest()
     date1 = util.datestr(ctx1.date())
 
     if not changes:
-        changes = repo.status(node1, node2, files, match=match)[:5]
-    modified, added, removed, deleted, unknown = changes
+        changes = repo.status(node1, node2, match=match)
+    modified, added, removed = changes[:3]
 
     if not modified and not added and not removed:
         return
 
-    if node2:
-        ctx2 = context.changectx(repo, node2)
-        execf2 = ctx2.manifest().execf
-        linkf2 = ctx2.manifest().linkf
-    else:
-        ctx2 = context.workingctx(repo)
-        execf2 = util.execfunc(repo.root, None)
-        linkf2 = util.linkfunc(repo.root, None)
-        if execf2 is None:
-            mc = ctx2.parents()[0].manifest().copy()
-            execf2 = mc.execf
-            linkf2 = mc.linkf
+    ctx2 = repo[node2]
 
     if repo.ui.quiet:
         r = None
@@ -1218,15 +1201,14 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
         r = [hexfunc(node) for node in [node1, node2] if node]
 
     if opts.git:
-        copy, diverge = copies.copies(repo, ctx1, ctx2, repo.changectx(nullid))
+        copy, diverge = copies.copies(repo, ctx1, ctx2, repo[nullid])
         for k, v in copy.items():
             copy[v] = k
 
-    all = modified + added + removed
-    all.sort()
     gone = {}
+    gitmode = {'l': '120000', 'x': '100755', '': '100644'}
 
-    for f in all:
+    for f in util.sort(modified + added + removed):
         to = None
         tn = None
         dodiff = True
@@ -1237,18 +1219,16 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
             tn = getfilectx(f, ctx2).data()
         a, b = f, f
         if opts.git:
-            def gitmode(x, l):
-                return l and '120000' or (x and '100755' or '100644')
             def addmodehdr(header, omode, nmode):
                 if omode != nmode:
                     header.append('old mode %s\n' % omode)
                     header.append('new mode %s\n' % nmode)
 
             if f in added:
-                mode = gitmode(execf2(f), linkf2(f))
+                mode = gitmode[ctx2.flags(f)]
                 if f in copy:
                     a = copy[f]
-                    omode = gitmode(man1.execf(a), man1.linkf(a))
+                    omode = gitmode[man1.flags(a)]
                     addmodehdr(header, omode, mode)
                     if a in removed and a not in gone:
                         op = 'rename'
@@ -1267,11 +1247,11 @@ def diff(repo, node1=None, node2=None, files=None, match=util.always,
                 if f in copy and copy[f] in added and copy[copy[f]] == f:
                     dodiff = False
                 else:
-                    mode = gitmode(man1.execf(f), man1.linkf(f))
-                    header.append('deleted file mode %s\n' % mode)
+                    header.append('deleted file mode %s\n' %
+                                  gitmode[man1.flags(f)])
             else:
-                omode = gitmode(man1.execf(f), man1.linkf(f))
-                nmode = gitmode(execf2(f), linkf2(f))
+                omode = gitmode[man1.flags(f)]
+                nmode = gitmode[ctx2.flags(f)]
                 addmodehdr(header, omode, nmode)
                 if util.binary(to) or util.binary(tn):
                     dodiff = 'binary'
@@ -1297,7 +1277,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
     revwidth = max([len(str(rev)) for rev in revs])
 
     def single(rev, seqno, fp):
-        ctx = repo.changectx(rev)
+        ctx = repo[rev]
         node = ctx.node()
         parents = [p.node() for p in ctx.parents() if p]
         branch = ctx.branch()

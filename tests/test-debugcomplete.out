@@ -33,6 +33,7 @@ push
 recover
 remove
 rename
+resolve
 revert
 rollback
 root
@@ -79,6 +80,7 @@ debugwalk
 recover
 remove
 rename
+resolve
 revert
 rollback
 root

@@ -29,6 +29,7 @@ list of commands:
  qcommit      commit changes in the queue repository
  qdelete      remove patches from queue
  qdiff        diff of the current patch and subsequent modifications
+ qfinish      move applied patches into repository history
  qfold        fold the named patches into the current patch
  qgoto        push or pop patches until named patch is at top of stack
  qguard       set or print guards for a patch
@@ -95,6 +96,7 @@ B
 abort: local changes found, refresh first
 A somefile
 % qnew with uncommitted changes and missing file (issue 803)
+someotherfile: No such file or directory
 someotherfile: No such file or directory
 A somefile
 issue803.patch
@@ -250,6 +252,12 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
+% strip with local changes, should complain
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+abort: local changes found
+% --force strip with local changes
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+saving bundle to 
 % cd b; hg qrefresh
 adding a
 foo

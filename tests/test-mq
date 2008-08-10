@@ -266,6 +266,14 @@ hg ci -Ama
 hg strip tip 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 hg unbundle .hg/strip-backup/*
 
+echo % strip with local changes, should complain
+hg up
+echo y>y
+hg add y
+hg strip tip | sed 's/\(saving bundle to \).*/\1/'
+echo % --force strip with local changes
+hg strip -f tip 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+
 echo '% cd b; hg qrefresh'
 hg init refresh
 cd refresh

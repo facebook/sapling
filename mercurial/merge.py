@@ -5,9 +5,70 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import nullid, nullrev
+from node import nullid, nullrev, hex, bin
 from i18n import _
-import errno, util, os, filemerge, copies
+import errno, util, os, filemerge, copies, shutil
+
+class mergestate(object):
+    '''track 3-way merge state of individual files'''
+    def __init__(self, repo):
+        self._repo = repo
+        self._read()
+    def reset(self, node):
+        self._state = {}
+        self._local = node
+        shutil.rmtree(self._repo.join("merge"), True)
+    def _read(self):
+        self._state = {}
+        try:
+            localnode = None
+            f = self._repo.opener("merge/state")
+            for i, l in enumerate(f):
+                if i == 0:
+                    localnode = l[:-1]
+                else:
+                    bits = l[:-1].split("\0")
+                    self._state[bits[0]] = bits[1:]
+            self._local = bin(localnode)
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+    def _write(self):
+        f = self._repo.opener("merge/state", "w")
+        f.write(hex(self._local) + "\n")
+        for d, v in self._state.items():
+            f.write("\0".join([d] + v) + "\n")
+    def add(self, fcl, fco, fca, fd, flags):
+        hash = util.sha1(fcl.path()).hexdigest()
+        self._repo.opener("merge/" + hash, "w").write(fcl.data())
+        self._state[fd] = ['u', hash, fcl.path(), fca.path(),
+                           hex(fca.filenode()), fco.path(), flags]
+        self._write()
+    def __contains__(self, dfile):
+        return dfile in self._state
+    def __getitem__(self, dfile):
+        return self._state[dfile][0]
+    def __iter__(self):
+        l = self._state.keys()
+        l.sort()
+        for f in l:
+            yield f
+    def mark(self, dfile, state):
+        self._state[dfile][0] = state
+        self._write()
+    def resolve(self, dfile, wctx, octx):
+        if self[dfile] == 'r':
+            return 0
+        state, hash, lfile, afile, anode, ofile, flags = self._state[dfile]
+        f = self._repo.opener("merge/" + hash)
+        self._repo.wwrite(dfile, f.read(), flags)
+        fcd = wctx[dfile]
+        fco = octx[ofile]
+        fca = self._repo.filectx(afile, fileid=anode)
+        r = filemerge.filemerge(self._repo, self._local, lfile, fcd, fco, fca)
+        if not r:
+            self.mark(dfile, 'r')
+        return r
 
 def _checkunknown(wctx, mctx):
     "check for collisions between unknown files and files in mctx"
@@ -197,19 +258,44 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     return action
 
+def actioncmp(a1, a2):
+    m1 = a1[1]
+    m2 = a2[1]
+    if m1 == m2:
+        return cmp(a1, a2)
+    if m1 == 'r':
+        return -1
+    if m2 == 'r':
+        return 1
+    return cmp(a1, a2)
+
 def applyupdates(repo, action, wctx, mctx):
     "apply the merge action list to the working directory"
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
-    action.sort()
-    # prescan for copy/renames
+    ms = mergestate(repo)
+    ms.reset(wctx.parents()[0].node())
+    moves = []
+    action.sort(actioncmp)
+
+    # prescan for merges
     for a in action:
         f, m = a[:2]
         if m == 'm': # merge
             f2, fd, flags, move = a[2:]
-            if f != fd:
-                repo.ui.debug(_("copying %s to %s\n") % (f, fd))
-                repo.wwrite(fd, repo.wread(f), flags)
+            repo.ui.debug(_("preserving %s for resolve of %s\n") % (f, fd))
+            fcl = wctx[f]
+            fco = mctx[f2]
+            fca = fcl.ancestor(fco) or repo.filectx(f, fileid=nullrev)
+            ms.add(fcl, fco, fca, fd, flags)
+            if f != fd and move:
+                moves.append(f)
+
+    # remove renamed files after safely stored
+    for f in moves:
+        if util.lexists(repo.wjoin(f)):
+            repo.ui.debug(_("removing %s\n") % f)
+            os.unlink(repo.wjoin(f))
 
     audit_path = util.path_auditor(repo.root)
 
@@ -229,7 +315,7 @@ def applyupdates(repo, action, wctx, mctx):
             removed += 1
         elif m == "m": # merge
             f2, fd, flags, move = a[2:]
-            r = filemerge.filemerge(repo, f, fd, f2, wctx, mctx)
+            r = ms.resolve(fd, wctx, mctx)
             if r > 0:
                 unresolved += 1
             else:
@@ -237,10 +323,6 @@ def applyupdates(repo, action, wctx, mctx):
                     updated += 1
                 else:
                     merged += 1
-            util.set_flags(repo.wjoin(fd), flags)
-            if f != fd and move and util.lexists(repo.wjoin(f)):
-                repo.ui.debug(_("removing %s\n") % f)
-                os.unlink(repo.wjoin(f))
         elif m == "g": # get
             flags = a[2]
             repo.ui.note(_("getting %s\n") % f)
@@ -337,7 +419,7 @@ def update(repo, node, branchmerge, force, partial):
 
     wlock = repo.wlock()
     try:
-        wc = repo.workingctx()
+        wc = repo[None]
         if node is None:
             # tip of current branch
             try:
@@ -349,7 +431,7 @@ def update(repo, node, branchmerge, force, partial):
                     raise util.Abort(_("branch %s not found") % wc.branch())
         overwrite = force and not branchmerge
         pl = wc.parents()
-        p1, p2 = pl[0], repo.changectx(node)
+        p1, p2 = pl[0], repo[node]
         pa = p1.ancestor(p2)
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
         fastforward = False
@@ -388,7 +470,7 @@ def update(repo, node, branchmerge, force, partial):
         action = []
         if not force:
             _checkunknown(wc, p2)
-        if not util.checkfolding(repo.path):
+        if not util.checkcase(repo.path):
             _checkcollision(p2)
         action += _forgetremoved(wc, p2, branchmerge)
         action += manifestmerge(repo, wc, p2, pa, overwrite, partial)

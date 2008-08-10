@@ -22,3 +22,23 @@ f
 2 [mq]: d
 1 [mq]: a
 0 base
+adding base
+abort: no revisions specified
+no patches applied
+abort: revision 0 is not managed
+abort: cannot delete revision 2 above applied patches
+Now at: b
+abort: unknown revision 'c'!
+applying c
+Now at: c
+c
+3 imported patch c
+2 [mq]: b
+1 [mq]: a
+0 base
+3 imported patch c
+2 [mq]: b
+1 [mq]: a
+0 base
+series
+status

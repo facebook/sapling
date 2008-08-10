@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import nullrev
+from node import nullrev, short
 from i18n import _
 import util, os, tempfile, simplemerge, re, filecmp
 
@@ -63,8 +63,7 @@ def _picktool(repo, ui, path, binary, symlink):
         if t not in tools:
             tools[t] = int(_toolstr(ui, t, "priority", "0"))
     names = tools.keys()
-    tools = [(-p,t) for t,p in tools.items()]
-    tools.sort()
+    tools = util.sort([(-p,t) for t,p in tools.items()])
     uimerge = ui.config("ui", "merge")
     if uimerge:
         if uimerge not in names:
@@ -101,13 +100,14 @@ def _matcheol(file, origfile):
             if newdata != data:
                 open(file, "wb").write(newdata)
 
-def filemerge(repo, fw, fd, fo, wctx, mctx):
+def filemerge(repo, mynode, orig, fcd, fco, fca):
     """perform a 3-way merge in the working directory
 
-    fw = original filename in the working directory
-    fd = destination filename in the working directory
-    fo = filename in other parent
-    wctx, mctx = working and merge changecontexts
+    mynode = parent node before merge
+    orig = original local filename before merge
+    fco = other file context
+    fca = ancestor file context
+    fcd = local file context for current/destination file
     """
 
     def temp(prefix, ctx):
@@ -125,29 +125,27 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
         except IOError:
             return False
 
-    fco = mctx.filectx(fo)
-    if not fco.cmp(wctx.filectx(fd).data()): # files identical?
+    if not fco.cmp(fcd.data()): # files identical?
         return None
 
     ui = repo.ui
-    fcm = wctx.filectx(fw)
-    fca = fcm.ancestor(fco) or repo.filectx(fw, fileid=nullrev)
-    binary = isbin(fcm) or isbin(fco) or isbin(fca)
-    symlink = fcm.islink() or fco.islink()
-    tool, toolpath = _picktool(repo, ui, fw, binary, symlink)
+    fd = fcd.path()
+    binary = isbin(fcd) or isbin(fco) or isbin(fca)
+    symlink = 'l' in fcd.flags() + fco.flags()
+    tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
     ui.debug(_("picked tool '%s' for %s (binary %s symlink %s)\n") %
-               (tool, fw, binary, symlink))
+               (tool, fd, binary, symlink))
 
     if not tool:
         tool = "internal:local"
         if ui.prompt(_(" no tool found to merge %s\n"
-                       "keep (l)ocal or take (o)ther?") % fw,
+                       "keep (l)ocal or take (o)ther?") % fd,
                      _("[lo]"), _("l")) != _("l"):
             tool = "internal:other"
     if tool == "internal:local":
         return 0
     if tool == "internal:other":
-        repo.wwrite(fd, fco.data(), fco.fileflags())
+        repo.wwrite(fd, fco.data(), fco.flags())
         return 0
     if tool == "internal:fail":
         return 1
@@ -160,11 +158,12 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
     back = a + ".orig"
     util.copyfile(a, back)
 
-    if fw != fo:
-        repo.ui.status(_("merging %s and %s\n") % (fw, fo))
+    if orig != fco.path():
+        repo.ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
     else:
-        repo.ui.status(_("merging %s\n") % fw)
-    repo.ui.debug(_("my %s other %s ancestor %s\n") % (fcm, fco, fca))
+        repo.ui.status(_("merging %s\n") % fd)
+
+    repo.ui.debug(_("my %s other %s ancestor %s\n") % (fcd, fco, fca))
 
     # do we attempt to simplemerge first?
     if _toolbool(ui, tool, "premerge", not (binary or symlink)):
@@ -178,11 +177,11 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
         util.copyfile(back, a) # restore from backup and try again
 
     env = dict(HG_FILE=fd,
-               HG_MY_NODE=str(wctx.parents()[0]),
-               HG_OTHER_NODE=str(mctx),
-               HG_MY_ISLINK=fcm.islink(),
-               HG_OTHER_ISLINK=fco.islink(),
-               HG_BASE_ISLINK=fca.islink())
+               HG_MY_NODE=short(mynode),
+               HG_OTHER_NODE=str(fco.changectx()),
+               HG_MY_ISLINK='l' in fcd.flags(),
+               HG_OTHER_ISLINK='l' in fco.flags(),
+               HG_BASE_ISLINK='l' in fca.flags())
 
     if tool == "internal:merge":
         r = simplemerge.simplemerge(a, b, c, label=['local', 'other'])
@@ -196,7 +195,7 @@ def filemerge(repo, fw, fd, fo, wctx, mctx):
         r = util.system(toolpath + ' ' + args, cwd=repo.root, environ=env)
 
     if not r and _toolbool(ui, tool, "checkconflicts"):
-        if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcm.data()):
+        if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data()):
             r = 1
 
     if not r and _toolbool(ui, tool, "checkchanged"):

@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import bdiff, mpatch, re, struct, util, md5
+import bdiff, mpatch, re, struct, util
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
@@ -78,10 +78,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     epoch = util.datestr((0, 0))
 
     if not opts.text and (util.binary(a) or util.binary(b)):
-        def h(v):
-            # md5 is used instead of sha1 because md5 is supposedly faster
-            return md5.new(v).digest()
-        if a and b and len(a) == len(b) and h(a) == h(b):
+        if a and b and len(a) == len(b) and a == b:
             return ""
         l = ['Binary file %s has changed\n' % fn1]
     elif not a:

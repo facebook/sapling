@@ -13,10 +13,7 @@ merging file1
 warning: conflicts during merge.
 merging file1 failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-There are unresolved merges with locally modified files.
-You can redo the full merge using:
-  hg update 0
-  hg update 1
+use 'hg resolve' to retry unresolved file merges
 diff -r f248da0d4c3e file1
 --- a/file1
 +++ b/file1

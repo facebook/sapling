@@ -10,8 +10,8 @@ adding another-empty-file
 removing empty-file
 adding large-file
 adding tiny-file
-adding small-file
 removing large-file
+adding small-file
 removing tiny-file
 recording removal of tiny-file as rename to small-file (82% similar)
 % should all fail

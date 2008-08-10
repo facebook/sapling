@@ -1,0 +1,138 @@
+% create cvs repository
+% create source directory
+% import source directory
+N src/a
+N src/b/c
+
+No conflicts created by this import
+
+% checkout source directory
+U src/a
+U src/b/c
+% commit a new revision changing b/c
+checking in src/b/c,v
+% convert fresh repo
+initializing destination src-hg repository
+using builtin cvsps
+collecting CVS rlog
+5 log entries
+creating changesets
+3 changeset entries
+connecting to cvsrepo
+scanning source...
+sorting...
+converting...
+2 Initial revision
+1 import
+0 ci0
+updating tags
+a
+c
+c
+% convert fresh repo with --filemap
+initializing destination src-filemap repository
+using builtin cvsps
+collecting CVS rlog
+5 log entries
+creating changesets
+3 changeset entries
+connecting to cvsrepo
+scanning source...
+sorting...
+converting...
+2 Initial revision
+1 import
+rolling back last transaction
+0 ci0
+updating tags
+c
+c
+2 update tags files: .hgtags
+1 ci0 files: b/c
+0 Initial revision files: b/c
+% commit new file revisions
+checking in src/a,v
+checking in src/b/c,v
+% convert again
+using builtin cvsps
+collecting CVS rlog
+7 log entries
+creating changesets
+4 changeset entries
+connecting to cvsrepo
+scanning source...
+sorting...
+converting...
+0 ci1
+a
+a
+c
+c
+c
+% convert again with --filemap
+using builtin cvsps
+collecting CVS rlog
+7 log entries
+creating changesets
+4 changeset entries
+connecting to cvsrepo
+scanning source...
+sorting...
+converting...
+0 ci1
+c
+c
+c
+3 ci1 files: b/c
+2 update tags files: .hgtags
+1 ci0 files: b/c
+0 Initial revision files: b/c
+% commit branch
+U b/c
+T a
+T b/c
+checking in src/b/c,v
+% convert again
+using builtin cvsps
+collecting CVS rlog
+8 log entries
+creating changesets
+5 changeset entries
+connecting to cvsrepo
+scanning source...
+sorting...
+converting...
+0 ci2
+a
+c
+d
+% convert again with --filemap
+using builtin cvsps
+collecting CVS rlog
+8 log entries
+creating changesets
+5 changeset entries
+connecting to cvsrepo
+scanning source...
+sorting...
+converting...
+0 ci2
+c
+d
+4 ci2 files: b/c
+3 ci1 files: b/c
+2 update tags files: .hgtags
+1 ci0 files: b/c
+0 Initial revision files: b/c
+o  5 (branch) ci2 files: b/c
+|
+| o  4 () ci1 files: a b/c
+| |
+| o  3 () update tags files: .hgtags
+| |
+| o  2 () ci0 files: b/c
+|/
+| o  1 (INITIAL) import files:
+|/
+o  0 () Initial revision files: a b/c
+

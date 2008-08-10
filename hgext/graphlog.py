@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
+'''show revision graphs in terminal windows'''
 
 import os
 import sys
@@ -12,6 +13,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial.util import Abort, canonpath
+from mercurial import util
 
 def revision_grapher(repo, start_rev, stop_rev):
     """incremental revision grapher
@@ -52,8 +54,7 @@ def revision_grapher(repo, start_rev, stop_rev):
         for parent in parents:
             if parent not in next_revs:
                 parents_to_add.append(parent)
-        parents_to_add.sort()
-        next_revs[rev_index:rev_index + 1] = parents_to_add
+        next_revs[rev_index:rev_index + 1] = util.sort(parents_to_add)
 
         edges = []
         for parent in parents:
@@ -88,7 +89,7 @@ def filelog_grapher(repo, path, start_rev, stop_rev):
     assert start_rev >= stop_rev
     curr_rev = start_rev
     revs = []
-    filerev = repo.file(path).count() - 1
+    filerev = len(repo.file(path)) - 1
     while filerev >= 0:
         fctx = repo.filectx(path, fileid=filerev)
 
@@ -104,8 +105,7 @@ def filelog_grapher(repo, path, start_rev, stop_rev):
         for parent in parents:
             if parent not in next_revs:
                 parents_to_add.append(parent)
-        parents_to_add.sort()
-        next_revs[rev_index:rev_index + 1] = parents_to_add
+        next_revs[rev_index:rev_index + 1] = util.sort(parents_to_add)
 
         edges = []
         for parent in parents:
@@ -197,7 +197,7 @@ def get_revs(repo, rev_opt):
         revs = revrange(repo, rev_opt)
         return (max(revs), min(revs))
     else:
-        return (repo.changelog.count() - 1, 0)
+        return (len(repo) - 1, 0)
 
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph

@@ -11,9 +11,7 @@ import util, heapq
 
 def _nonoverlap(d1, d2, d3):
     "Return list of elements in d1 not in d2 or d3"
-    l = [d for d in d1 if d not in d3 and d not in d2]
-    l.sort()
-    return l
+    return util.sort([d for d in d1 if d not in d3 and d not in d2])
 
 def _dirname(f):
     s = f.rfind("/")
@@ -49,9 +47,7 @@ def _findoldnames(fctx, limit):
         visit += [(p, depth - 1) for p in fc.parents()]
 
     # return old names sorted by depth
-    old = old.values()
-    old.sort()
-    return [o[1] for o in old]
+    return [o[1] for o in util.sort(old.values())]
 
 def _findlimit(repo, a, b):
     "find the earliest revision that's an ancestor of a or b but not both"
@@ -67,7 +63,7 @@ def _findlimit(repo, a, b):
     #   - quit when interesting revs is zero
 
     cl = repo.changelog
-    working = cl.count() # pseudo rev for the working directory
+    working = len(cl) # pseudo rev for the working directory
     if a is None:
         a = working
     if b is None:
@@ -108,6 +104,10 @@ def copies(repo, c1, c2, ca, checkdirs=False):
     # avoid silly behavior for update from empty dir
     if not c1 or not c2 or c1 == c2:
         return {}, {}
+
+    # avoid silly behavior for parent -> working dir
+    if c2.node() == None and c1.node() == repo.dirstate.parents()[0]:
+        return repo.dirstate.copies(), {}
 
     limit = _findlimit(repo, c1.rev(), c2.rev())
     m1 = c1.manifest()

@@ -52,7 +52,8 @@ class tarit:
         def _write_gzip_header(self):
             self.fileobj.write('\037\213')             # magic header
             self.fileobj.write('\010')                 # compression method
-            fname = self.filename[:-3]
+            # Python 2.6 deprecates self.filename
+            fname = getattr(self, 'name', None) or self.filename
             flags = 0
             if fname:
                 flags = gzip.FNAME
@@ -207,18 +208,17 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
             data = repo.wwritedata(name, data)
         archiver.addfile(name, mode, islink, data)
 
-    ctx = repo.changectx(node)
     if kind not in archivers:
         raise util.Abort(_("unknown archive type '%s'" % kind))
+
+    ctx = repo[node]
     archiver = archivers[kind](dest, prefix, mtime or ctx.date()[0])
-    m = ctx.manifest()
-    items = m.items()
-    items.sort()
+
     if repo.ui.configbool("ui", "archivemeta", True):
         write('.hg_archival.txt', 0644, False,
               lambda: 'repo: %s\nnode: %s\n' % (
                   hex(repo.changelog.node(0)), hex(node)))
-    for filename, filenode in items:
-        write(filename, m.execf(filename) and 0755 or 0644, m.linkf(filename),
-              lambda: repo.file(filename).read(filenode))
+    for f in ctx:
+        ff = ctx.flags(f)
+        write(f, 'x' in ff and 0755 or 0644, 'l' in ff, ctx[f].data)
     archiver.done()

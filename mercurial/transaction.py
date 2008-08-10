@@ -96,9 +96,13 @@ def rollback(opener, file):
     files = {}
     for l in open(file).readlines():
         f, o = l.split('\0')
-        files[f] = o
+        files[f] = int(o)
     for f in files:
         o = files[f]
-        opener(f, "a").truncate(int(o))
+        if o:
+            opener(f, "a").truncate(int(o))
+        else:
+            fn = opener(f).name
+            os.unlink(fn)
     os.unlink(file)
 

@@ -69,6 +69,7 @@ def show_doc(ui):
         if f.startswith("debug"): continue
         d = get_cmd(h[f])
         # synopsis
+        ui.write("[[%s]]\n" % d['cmd'])
         ui.write("%s::\n" % d['synopsis'].replace("hg ","", 1))
         # description
         ui.write("%s\n\n" % d['desc'][1])
@@ -91,11 +92,10 @@ def show_doc(ui):
             ui.write(_("    aliases: %s\n\n") % " ".join(d['aliases']))
 
     # print topics
-    for t in helptable:
+    for t, doc in helptable:
         l = t.split("|")
         section = l[-1]
         underlined(_(section).upper())
-        doc = helptable[t]
         if callable(doc):
             doc = doc()
         ui.write(_(doc))

@@ -389,7 +389,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
     if not ui.interactive:
         raise util.Abort(_('running non-interactively, use commit instead'))
 
-    def recordfunc(ui, repo, files, message, match, opts):
+    def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
 
         It's job is to interactively filter local changes, and accordingly
@@ -402,16 +402,16 @@ def dorecord(ui, repo, committer, *pats, **opts):
         In the end we'll record intresting changes, and everything else will be
         left in place, so the user can continue his work.
         """
-        if files:
+        if match.files():
             changes = None
         else:
-            changes = repo.status(files=files, match=match)[:5]
-            modified, added, removed = changes[:3]
-            files = modified + added + removed
+            changes = repo.status(match=match)[:3]
+            modified, added, removed = changes
+            match = cmdutil.matchfiles(repo, modified + added + removed)
         diffopts = mdiff.diffopts(git=True, nodates=True)
         fp = cStringIO.StringIO()
-        patch.diff(repo, repo.dirstate.parents()[0], files=files,
-                   match=match, changes=changes, opts=diffopts, fp=fp)
+        patch.diff(repo, repo.dirstate.parents()[0], match=match,
+                   changes=changes, opts=diffopts, fp=fp)
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
@@ -423,14 +423,15 @@ def dorecord(ui, repo, committer, *pats, **opts):
             try: contenders.update(dict.fromkeys(h.files()))
             except AttributeError: pass
 
-        newfiles = [f for f in files if f in contenders]
+        newfiles = [f for f in match.files() if f in contenders]
 
         if not newfiles:
             ui.status(_('no changes to record\n'))
             return 0
 
         if changes is None:
-            changes = repo.status(files=newfiles, match=match)[:5]
+            match = cmdutil.matchfiles(repo, newfiles)
+            changes = repo.status(match=match)
         modified = dict.fromkeys(changes[0])
 
         # 2. backup changed files, so we can restore them in the end

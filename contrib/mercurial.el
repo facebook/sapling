@@ -35,8 +35,10 @@
 ;; This code has been developed under XEmacs 21.5, and may not work as
 ;; well under GNU Emacs (albeit tested under 21.4).  Patches to
 ;; enhance the portability of this code, fix bugs, and add features
-;; are most welcome.  You can clone a Mercurial repository for this
-;; package from http://www.serpentine.com/hg/hg-emacs
+;; are most welcome.
+
+;; As of version 22.3, GNU Emacs's VC mode has direct support for
+;; Mercurial, so this package may not prove as useful there.
 
 ;; Please send problem reports and suggestions to bos@serpentine.com.
 

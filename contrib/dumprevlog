@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+# Dump revlogs as raw data stream
+# $ find .hg/store/ -name "*.i" | xargs dumprevlog > repo.dump
+
+import sys
+from mercurial import revlog, node, util
+
+for fp in (sys.stdin, sys.stdout, sys.stderr):
+    util.set_binary(fp)
+
+for f in sys.argv[1:]:
+    binopen = lambda fn: open(fn, 'rb')
+    r = revlog.revlog(binopen, f)
+    print "file:", f
+    for i in r:
+        n = r.node(i)
+        p = r.parents(n)
+        d = r.revision(n)
+        print "node:", node.hex(n)
+        print "linkrev:", r.linkrev(n)
+        print "parents:", node.hex(p[0]), node.hex(p[1])
+        print "length:", len(d)
+        print "-start-"
+        print d
+        print "-end-"

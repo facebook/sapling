@@ -23,8 +23,8 @@ def _collectfiles(repo, striprev):
     """find out the filelogs affected by the strip"""
     files = {}
 
-    for x in xrange(striprev, repo.changelog.count()):
-        for name in repo.changectx(x).files():
+    for x in xrange(striprev, len(repo)):
+        for name in repo[x].files():
             if name in files:
                 continue
             files[name] = 1
@@ -37,7 +37,7 @@ def _collectextranodes(repo, files, link):
     """return the nodes that have to be saved before the strip"""
     def collectone(revlog):
         extra = []
-        startrev = count = revlog.count()
+        startrev = count = len(revlog)
         # find the truncation point of the revlog
         for i in xrange(0, count):
             node = revlog.node(i)
@@ -72,7 +72,6 @@ def _collectextranodes(repo, files, link):
 def strip(ui, repo, node, backup="all"):
     cl = repo.changelog
     # TODO delete the undo files, and handle undo of merge sets
-    pp = cl.parents(node)
     striprev = cl.rev(node)
 
     # Some revisions with rev > striprev may not be descendants of striprev.
@@ -85,7 +84,7 @@ def strip(ui, repo, node, backup="all"):
     tostrip = {striprev: 1}
     saveheads = {}
     savebases = []
-    for r in xrange(striprev + 1, cl.count()):
+    for r in xrange(striprev + 1, len(cl)):
         parents = cl.parentrevs(r)
         if parents[0] in tostrip or parents[1] in tostrip:
             # r is a descendant of striprev

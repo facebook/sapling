@@ -268,6 +268,7 @@ class httprepository(repo.repository):
 
         # 1.0 here is the _protocol_ version
         opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
+        opener.addheaders.append(('Accept', 'application/mercurial-0.1'))
         urllib2.install_opener(opener)
 
     def url(self):

@@ -23,6 +23,7 @@ resolving manifests
    b
  a: versions differ -> m
  b: remote created -> g
+preserving a for resolve of a
 picked tool 'true' for a (binary False symlink False)
 merging a
 my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
@@ -60,6 +61,7 @@ resolving manifests
    b
  a: versions differ -> m
  b: remote created -> g
+preserving a for resolve of a
 picked tool 'true' for a (binary False symlink False)
 merging a
 my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
@@ -113,6 +115,8 @@ resolving manifests
   searching for copies back to rev 1
  a: versions differ -> m
  b: versions differ -> m
+preserving a for resolve of a
+preserving b for resolve of b
 picked tool 'true' for a (binary False symlink False)
 merging a
 my a@802f095af299+ other a@030602aee63d ancestor a@33aaa84a386b

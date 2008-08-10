@@ -55,7 +55,7 @@
 from mercurial.i18n import _
 from mercurial.node import short
 from mercurial import cmdutil, templater, util
-import os, re, time
+import re, time
 
 MySQLdb = None
 
@@ -99,9 +99,7 @@ class bugzilla_2_16(object):
     def filter_real_bug_ids(self, ids):
         '''filter not-existing bug ids from list.'''
         self.run('select bug_id from bugs where bug_id in %s' % buglist(ids))
-        ids = [c[0] for c in self.cursor.fetchall()]
-        ids.sort()
-        return ids
+        return util.sort([c[0] for c in self.cursor.fetchall()])
 
     def filter_unknown_bug_ids(self, node, ids):
         '''filter bug ids from list that already refer to this changeset.'''
@@ -114,9 +112,7 @@ class bugzilla_2_16(object):
             self.ui.status(_('bug %d already knows about changeset %s\n') %
                            (id, short(node)))
             unknown.pop(id, None)
-        ids = unknown.keys()
-        ids.sort()
-        return ids
+        return util.sort(unknown.keys())
 
     def notify(self, ids):
         '''tell bugzilla to send mail.'''
@@ -127,7 +123,7 @@ class bugzilla_2_16(object):
             cmd = self.ui.config('bugzilla', 'notify',
                                'cd /var/www/html/bugzilla && '
                                './processmail %s nobody@nowhere.com') % id
-            fp = os.popen('(%s) 2>&1' % cmd)
+            fp = util.popen('(%s) 2>&1' % cmd)
             out = fp.read()
             ret = fp.close()
             if ret:
@@ -300,7 +296,7 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
                          hooktype)
     try:
         bz = bugzilla(ui, repo)
-        ctx = repo.changectx(node)
+        ctx = repo[node]
         ids = bz.find_bug_ids(ctx)
         if ids:
             for id in ids:

@@ -7,7 +7,11 @@
 # GPL-compatible.
 
 import sys
-import md5
+
+try:
+    from hashlib import md5
+except ImportError:
+    from md5 import md5
 
 for filename in sys.argv[1:]:
     try:
@@ -16,7 +20,7 @@ for filename in sys.argv[1:]:
         sys.stderr.write('%s: Can\'t open: %s\n' % (filename, msg))
         sys.exit(1)
 
-    m = md5.new()
+    m = md5()
     try:
         while 1:
             data = fp.read(8192)

@@ -150,7 +150,6 @@ summary:     b1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 % log -r . with two parents
-warning: working directory has two parents, tag '.' uses the first
 changeset:   3:e62f78d544b4
 parent:      1:3d5bf5654eda
 user:        test

@@ -69,4 +69,5 @@ glog()
 
 echo % show graph log
 glog -R baz-repo-hg
+hg up -q -R baz-repo-hg
 hg -R baz-repo-hg manifest --debug

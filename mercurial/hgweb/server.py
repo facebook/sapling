@@ -122,7 +122,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
         self.saved_headers = []
         self.sent_headers = False
         self.length = None
-        self.server.application(env, self._start_response)
+        for chunk in self.server.application(env, self._start_response):
+            self._write(chunk)
 
     def send_headers(self):
         if not self.saved_status:
@@ -268,12 +269,7 @@ def create_server(ui, repo):
 
             self.addr, self.port = self.socket.getsockname()[0:2]
             self.prefix = prefix
-
             self.fqaddr = socket.getfqdn(address)
-            try:
-                socket.getaddrbyhost(self.fqaddr)
-            except:
-                fqaddr = address
 
     class IPv6HTTPServer(MercurialHTTPServer):
         address_family = getattr(socket, 'AF_INET6', None)

@@ -130,10 +130,8 @@ class gnuarch_source(converter_source, commandline):
             for c in cps:
                 copies[c] = cps[c]
 
-        changes.sort()
         self.lastrev = rev
-
-        return changes, copies
+        return util.sort(changes), copies
 
     def getcommit(self, rev):
         changes = self.changes[rev]

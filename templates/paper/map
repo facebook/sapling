@@ -1,0 +1,72 @@
+default = 'shortlog'
+
+mimetype = 'text/html; charset={encoding}'
+header = header.tmpl
+footer = ../coal/footer.tmpl
+search = ../coal/search.tmpl
+
+changelog = ../coal/shortlog.tmpl
+shortlog = ../coal/shortlog.tmpl
+shortlogentry = ../coal/shortlogentry.tmpl
+graph = ../coal/graph.tmpl
+
+naventry = '<a href="{url}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
+navshortentry = '<a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
+navgraphentry = '<a href="{url}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
+filenaventry = '<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{label|escape}</a> '
+filedifflink = '<a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
+filenodelink = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
+fileellipses = '...'
+changelogentry = ../coal/shortlogentry.tmpl
+searchentry = ../coal/shortlogentry.tmpl
+changeset = ../coal/changeset.tmpl
+manifest = ../coal/manifest.tmpl
+
+direntry = '<tr class="fileline parity{parity}"><td class="name"><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}"><img src="{staticurl}coal-folder.png"> {basename|escape}/</a><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr>'
+fileentry = '<tr class="fileline parity{parity}"><td clase="filename"><a href="{url}file/{node|short}/{file|urlescape}#l1{sessionvars%urlparameter}"><img src="{staticurl}coal-file.png"> {basename|escape}</a></td><td class="size">{size}</td><td class="permissions">{permissions|permissions}</td></tr>'
+
+filerevision = ../coal/filerevision.tmpl
+fileannotate = ../coal/fileannotate.tmpl
+filediff = ../coal/filediff.tmpl
+filelog = ../coal/filelog.tmpl
+fileline = '<tr class="parity{parity}"><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
+filelogentry = ../coal/filelogentry.tmpl
+
+annotateline = '<tr class="parity{parity}"><td class="annotate"><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}" title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a></td><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
+
+diffblock = '<table class="bigtable parity{parity}">{lines}</table>'
+difflineplus = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source plusline">{line|escape}</td></tr>'
+difflineminus = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source minusline">{line|escape}</td></tr>'
+difflineat = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source atline">{line|escape}</td></tr>'
+diffline = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
+
+changelogparent = '<tr><th class="parent">parent {rev}:</th><td class="parent"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
+
+changesetparent = '<a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a> '
+
+filerevparent = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rename%filerename}{node|short}</a> '
+filerevchild = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a> '
+
+filerename = '{file|escape}@'
+filelogrename = '<tr><th>base:</th><td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}@{node|short}</a></td></tr>'
+fileannotateparent = '<tr><td class="metatag">parent:</td><td><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rename%filerename}{node|short}</a></td></tr>'
+changesetchild = '<a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
+changelogchild = '<tr><th class="child">child</th><td class="child"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
+fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
+tags = ../coal/tags.tmpl
+tagentry = '<tr class="tagEntry parity{parity}"><td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{tag|escape}</a></td><td class="node">{node|short}</td></tr>'
+changelogtag = '<tr><th class="tag">tag:</th><td class="tag">{tag|escape}</td></tr>'
+changelogtag = '<span class="tag">{name|escape}</span> '
+changesettag = '<span class="tag">{tag|escape}</span> '
+filediffparent = '<tr><th class="parent">parent {rev}:</th><td class="parent"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
+filelogparent = '<tr><th>parent {rev}:</th><td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
+filediffchild = '<tr><th class="child">child {rev}:</th><td class="child"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
+filelogchild = '<tr><th>child {rev}:</th><td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
+indexentry = '<tr class="parity{parity}"><td><a href="{url}{sessionvars%urlparameter}">{name|escape}</a></td><td>{description}</td><td>{contact|obfuscate}</td><td class="age">{lastchange|age} ago</td><td class="indexlinks">{archives%indexarchiveentry}</td></tr>\n'
+indexarchiveentry = '<a href="{url}archive/{node|short}{extension|urlescape}">&nbsp;&darr;{type|escape}</a>'
+index = ../coal/index.tmpl
+archiveentry = '<li><a href="{url}archive/{node|short}{extension|urlescape}">{type|escape}</a></li>'
+notfound = ../coal/notfound.tmpl
+error = ../coal/error.tmpl
+urlparameter = '{separator}{name}={value|urlescape}'
+hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'

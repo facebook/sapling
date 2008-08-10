@@ -23,7 +23,7 @@ hg co -q 3
 echo other 4 >> d
 hg add d
 hg commit -m 'new head' -d '1500000 0' -u 'person'
-hg merge -q
+hg merge -q foo
 hg commit -m 'merge' -d '1500001 0' -u 'person'
 # second branch starting at nullrev
 hg update null
