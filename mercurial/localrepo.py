@@ -708,7 +708,7 @@ class localrepository(repo.repository):
             #    \- 2 --- 4        as the merge base
             #
 
-            cr = manifest1.get(cf, nullid)
+            cr = manifest1.get(cf)
             nfp = fp2
 
             if manifest2: # branch merge
@@ -716,6 +716,24 @@ class localrepository(repo.repository):
                     if fp1 != nullid or cf in manifest2:
                         cr = manifest2[cf]
                         nfp = fp1
+
+            # find source in nearest ancestor if we've lost track
+            if not cr:
+                self.ui.debug(_(" %s: searching for copy revision for %s\n") %
+                              (fn, cf))
+                p1 = self.dirstate.parents()[0]
+                rev = self.changelog.rev(p1)
+                seen = {-1:None}
+                visit = [rev]
+                while visit:
+                    for p in self.changelog.parentrevs(visit.pop(0)):
+                        if p not in seen:
+                            seen[p] = True
+                            visit.append(p)
+                            ctx = self.changectx(p)
+                            if cf in ctx:
+                                cr = ctx[cf].filenode()
+                                break
 
             self.ui.debug(_(" %s: copy %s:%s\n") % (fn, cf, hex(cr)))
             meta["copy"] = cf
