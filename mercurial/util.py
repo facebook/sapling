@@ -1150,7 +1150,11 @@ else:
                 # switch file to link
                 data = file(f).read()
                 os.unlink(f)
-                os.symlink(data, f)
+                try:
+                    os.symlink(data, f)
+                except:
+                    # failed to make a link, rewrite file
+                    file(f, "w").write(data)
             # no chmod needed at this point
             return
         if stat.S_ISLNK(s):
