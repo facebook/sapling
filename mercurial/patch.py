@@ -1109,7 +1109,7 @@ def updatedir(ui, repo, patches):
             if ctype == 'ADD' and not os.path.exists(dst):
                 repo.wwrite(gp.path, '', flags)
             else:
-                util.set_flags(dst, flags)
+                util.set_flags(dst, 'l' in flags, 'x' in flags)
     cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])

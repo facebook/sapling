@@ -996,7 +996,7 @@ if os.name == 'nt':
         '''return False if pid dead, True if running or not known'''
         return True
 
-    def set_flags(f, flags):
+    def set_flags(f, l, x):
         pass
 
     def set_binary(fd):
@@ -1143,10 +1143,8 @@ else:
         """check whether a file is executable"""
         return (os.lstat(f).st_mode & 0100 != 0)
 
-    def set_flags(f, flags):
+    def set_flags(f, l, x):
         s = os.lstat(f).st_mode
-        x = "x" in flags
-        l = "l" in flags
         if l:
             if not stat.S_ISLNK(s):
                 # switch file to link

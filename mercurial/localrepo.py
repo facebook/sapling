@@ -562,8 +562,12 @@ class localrepository(repo.repository):
             os.unlink(self.wjoin(filename))
         except OSError:
             pass
-        self.wopener(filename, 'w').write(data)
-        util.set_flags(self.wjoin(filename), flags)
+        if 'l' in flags:
+            self.wopener.symlink(data, filename)
+        else:
+            self.wopener(filename, 'w').write(data)
+            if 'x' in flags:
+                util.set_flags(self.wjoin(filename), False, True)
 
     def wwritedata(self, filename, data):
         return self._filter("decode", filename, data)

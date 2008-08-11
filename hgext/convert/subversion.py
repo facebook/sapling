@@ -999,7 +999,7 @@ class svn_sink(converter_sink, commandline):
             fp = open(hook, 'w')
             fp.write(pre_revprop_change)
             fp.close()
-            util.set_flags(hook, "x")
+            util.set_flags(hook, False, True)
 
         xport = transport.SvnRaTransport(url=geturl(path))
         self.uuid = svn.ra.get_uuid(xport.ra)
@@ -1026,7 +1026,7 @@ class svn_sink(converter_sink, commandline):
                 # systematically is just as expensive and much simpler.
                 was_exec = 'x' not in flags
 
-            util.set_flags(self.wjoin(filename), flags)
+            util.set_flags(self.wjoin(filename), False, 'x' in flags)
             if was_exec:
                 if 'x' not in flags:
                     self.delexec.append(filename)
