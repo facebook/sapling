@@ -16,6 +16,7 @@ import win32api
 import errno, os, sys, pywintypes, win32con, win32file, win32process
 import cStringIO, winerror
 import osutil
+import util
 from win32com.shell import shell,shellcon
 
 class WinError:
@@ -207,7 +208,7 @@ def lookup_reg(key, valname=None, scope=None):
         scope = (scope,)
     for s in scope:
         try:
-            val = QueryValueEx(OpenKey(scope, key), valname)[0]
+            val = QueryValueEx(OpenKey(s, key), valname)[0]
             # never let a Unicode string escape into the wild
             return util.tolocal(val.encode('UTF-8'))
         except EnvironmentError:
