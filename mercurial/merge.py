@@ -323,6 +323,10 @@ def applyupdates(repo, action, wctx, mctx):
                     updated += 1
                 else:
                     merged += 1
+            util.set_flags(repo.wjoin(fd), 'l' in flags, 'x' in flags)
+            if f != fd and move and util.lexists(repo.wjoin(f)):
+                repo.ui.debug(_("removing %s\n") % f)
+                os.unlink(repo.wjoin(f))
         elif m == "g": # get
             flags = a[2]
             repo.ui.note(_("getting %s\n") % f)
@@ -348,7 +352,7 @@ def applyupdates(repo, action, wctx, mctx):
                 repo.ui.warn(" %s\n" % nf)
         elif m == "e": # exec
             flags = a[2]
-            util.set_flags(repo.wjoin(f), flags)
+            util.set_flags(repo.wjoin(f), 'l' in flags, 'x' in flags)
 
     return updated, merged, removed, unresolved
 

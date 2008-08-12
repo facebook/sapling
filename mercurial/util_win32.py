@@ -16,6 +16,7 @@ import win32api
 import errno, os, sys, pywintypes, win32con, win32file, win32process
 import cStringIO, winerror
 import osutil
+import util
 from win32com.shell import shell,shellcon
 
 class WinError:
@@ -201,21 +202,17 @@ def lookup_reg(key, valname=None, scope=None):
     except ImportError:
         return None
 
-    def query_val(scope, key, valname):
-        try:
-            keyhandle = OpenKey(scope, key)
-            return QueryValueEx(keyhandle, valname)[0]
-        except EnvironmentError:
-            return None
-
     if scope is None:
         scope = (HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE)
     elif not isinstance(scope, (list, tuple)):
         scope = (scope,)
     for s in scope:
-        val = query_val(s, key, valname)
-        if val is not None:
-            return val
+        try:
+            val = QueryValueEx(OpenKey(s, key), valname)[0]
+            # never let a Unicode string escape into the wild
+            return util.tolocal(val.encode('UTF-8'))
+        except EnvironmentError:
+            pass
 
 def system_rcpath_win32():
     '''return default os-specific hgrc search path'''
