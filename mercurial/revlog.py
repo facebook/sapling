@@ -421,7 +421,7 @@ class revlog(object):
     A revlog consists of two parts, an index and the revision data.
 
     The index is a file with a fixed record size containing
-    information on each revision, includings its nodeid (hash), the
+    information on each revision, including its nodeid (hash), the
     nodeids of its parents, the position and offset of its data within
     the data file, and the revision it's based on. Finally, each entry
     contains a linkrev entry that can serve as a pointer to external
@@ -942,7 +942,7 @@ class revlog(object):
                               self.revision(self.node(rev2)))
 
     def revision(self, node):
-        """return an uncompressed revision of a given"""
+        """return an uncompressed revision of a given node"""
         if node == nullid:
             return ""
         if self._cache and self._cache[0] == node:
