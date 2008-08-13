@@ -85,6 +85,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     --config convert.hg.saverev=True          (boolean)
         allow target to preserve source revision ID
+    --config convert.hg.startrev=0            (hg revision identifier)
+        convert start revision and its descendants
 
     CVS Source
     ----------

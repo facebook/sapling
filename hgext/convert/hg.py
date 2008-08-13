@@ -206,6 +206,21 @@ class mercurial_source(converter_source):
         self.lastctx = None
         self._changescache = None
         self.convertfp = None
+        # Restrict converted revisions to startrev descendants
+        startnode = ui.config('convert', 'hg.startrev')
+        if startnode is not None:
+            try:
+                startnode = self.repo.lookup(startnode)
+            except repo.RepoError:
+                raise util.Abort(_('%s is not a valid start revision') 
+                                 % startnode)
+            startrev = self.repo.changelog.rev(startnode)
+            children = {startnode: 1}
+            for rev in self.repo.changelog.descendants(startrev):
+                children[self.repo.changelog.node(rev)] = 1
+            self.keep = children.__contains__
+        else:
+            self.keep = util.always
 
     def changectx(self, rev):
         if self.lastrev != rev:
@@ -213,11 +228,16 @@ class mercurial_source(converter_source):
             self.lastrev = rev
         return self.lastctx
 
+    def parents(self, ctx):
+        return [p.node() for p in ctx.parents() 
+                if p and self.keep(p.node())]
+
     def getheads(self):
         if self.rev:
-            return [hex(self.repo[self.rev].node())]
+            heads = [self.repo[self.rev].node()]
         else:
-            return [hex(node) for node in self.repo.heads()]
+            heads = self.repo.heads()
+        return [hex(h) for h in heads if self.keep(h)]
 
     def getfile(self, name, rev):
         try:
@@ -230,10 +250,14 @@ class mercurial_source(converter_source):
 
     def getchanges(self, rev):
         ctx = self.changectx(rev)
+        parents = self.parents(ctx)
+        if not parents:
+            files = util.sort(ctx.manifest().keys())
+            return [(f, rev) for f in files], {}
         if self._changescache and self._changescache[0] == rev:
             m, a, r = self._changescache[1]
         else:
-            m, a, r = self.repo.status(ctx.parents()[0].node(), ctx.node())[:3]
+            m, a, r = self.repo.status(parents[0], ctx.node())[:3]
         changes = [(name, rev) for name in m + a + r]
         return util.sort(changes), self.getcopies(ctx, m + a)
 
@@ -241,14 +265,16 @@ class mercurial_source(converter_source):
         copies = {}
         for name in files:
             try:
-                copies[name] = ctx.filectx(name).renamed()[0]
+                copynode = ctx.filectx(name).renamed()[0]
+                if self.keep(copynode):
+                    copies[name] = copynode
             except TypeError:
                 pass
         return copies
 
     def getcommit(self, rev):
         ctx = self.changectx(rev)
-        parents = [hex(p.node()) for p in ctx.parents() if p.node() != nullid]
+        parents = [hex(p) for p in self.parents(ctx)]
         if self.saverev:
             crev = rev
         else:
@@ -259,12 +285,18 @@ class mercurial_source(converter_source):
 
     def gettags(self):
         tags = [t for t in self.repo.tagslist() if t[0] != 'tip']
-        return dict([(name, hex(node)) for name, node in tags])
+        return dict([(name, hex(node)) for name, node in tags
+                     if self.keep(node)])
 
     def getchangedfiles(self, rev, i):
         ctx = self.changectx(rev)
-        i = i or 0
-        changes = self.repo.status(ctx.parents()[i].node(), ctx.node())[:3]
+        parents = self.parents(ctx)
+        if not parents and i is None:
+            i = 0
+            changes = [], ctx.manifest().keys(), []
+        else:
+            i = i or 0
+            changes = self.repo.status(parents[i], ctx.node())[:3]
 
         if i == 0:
             self._changescache = (rev, changes)
