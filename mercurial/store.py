@@ -94,10 +94,9 @@ class encodedstore(basicstore):
     def __init__(self, path, opener):
         self.path = os.path.join(path, 'store')
         self.createmode = _calcmode(self.path)
-        self.encodefn = encodefilename
         op = opener(self.path)
         op.createmode = self.createmode
-        self.opener = lambda f, *args, **kw: op(self.encodefn(f), *args, **kw)
+        self.opener = lambda f, *args, **kw: op(encodefilename(f), *args, **kw)
 
     def datafiles(self):
         for a, b, size in self._walk('data', True):
@@ -108,7 +107,7 @@ class encodedstore(basicstore):
             yield a, b, size
 
     def join(self, f):
-        return os.path.join(self.path, self.encodefn(f))
+        return os.path.join(self.path, encodefilename(f))
 
 def store(requirements, path, opener):
     if 'store' in requirements:
