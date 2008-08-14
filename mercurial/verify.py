@@ -192,7 +192,7 @@ def _verify(repo):
                         err(lr, _("empty or missing copy source revlog %s:%s")
                             % (rp[0], short(rp[1])), f)
                     elif rp[1] == nullid:
-                        err(lr, _("copy source revision is nullid %s:%s")
+                        warn(lr, _("copy source revision is nullid %s:%s")
                             % (rp[0], short(rp[1])), f)
                     else:
                         rev = fl2.rev(rp[1])
