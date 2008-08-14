@@ -1,0 +1,26 @@
+#!/bin/sh
+
+echo % prepare repo
+hg init
+echo "some text" > FOO.txt
+echo "another text" > bar.txt
+echo "more text" > QUICK.txt
+hg add
+hg ci -d '0 0' -mtest1
+
+echo
+echo % verify
+hg verify
+
+echo
+echo % introduce some bugs in repo
+cd .hg/store/data
+mv _f_o_o.txt.i X_f_o_o.txt.i
+mv bar.txt.i xbar.txt.i
+rm _q_u_i_c_k.txt.i
+
+echo
+echo % verify
+hg verify
+
+return 0
