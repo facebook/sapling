@@ -31,8 +31,19 @@ def stream_out(repo, fileobj, untrusted=False):
         fileobj.write('1\n')
         return
 
+    entries = []
+    total_bytes = 0
     try:
-        entries, total_bytes = repo.storefiles()
+        l = None
+        try:
+            repo.ui.debug('scanning\n')
+            # get consistent snapshot of repo, lock during scan
+            l = repo.lock()
+            for name, ename, size in repo.store.walk():
+                entries.append((name, size))
+                total_bytes += size
+        finally:
+            del l
     except (lock.LockHeld, lock.LockUnavailable), inst:
         repo.ui.warn('locking the repository failed: %s\n' % (inst,))
         fileobj.write('2\n')

@@ -2054,25 +2054,6 @@ class localrepository(repo.repository):
             return self.stream_in(remote)
         return self.pull(remote, heads)
 
-    def storefiles(self):
-        '''get all *.i and *.d files in the store
-
-        Returns (list of (filename, size), total_bytes)'''
-
-        lock = None
-        try:
-            self.ui.debug('scanning\n')
-            entries = []
-            total_bytes = 0
-            # get consistent snapshot of repo, lock during scan
-            lock = self.lock()
-            for name, ename, size in self.store.walk():
-                entries.append((name, size))
-                total_bytes += size
-            return entries, total_bytes
-        finally:
-            del lock
-
 # used to avoid circular references so destructors work
 def aftertrans(files):
     renamefiles = [tuple(t) for t in files]
