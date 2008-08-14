@@ -1353,3 +1353,9 @@ class revlog(object):
             di = 0
 
         return (dd, di)
+
+    def files(self):
+        res = [ self.indexfile ]
+        if not self._inline:
+            res.append(self.datafile)
+        return res
