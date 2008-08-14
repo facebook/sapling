@@ -50,19 +50,17 @@ class localrepository(repo.repository):
             raise repo.RepoError(_("repository %s already exists") % path)
         else:
             # find requirements
+            requirements = []
             try:
                 requirements = self.opener("requires").read().splitlines()
+                for r in requirements:
+                    if r not in self.supported:
+                        raise repo.RepoError(_("requirement '%s' not supported") % r)
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
-                requirements = []
-        # check them
-        for r in requirements:
-            if r not in self.supported:
-                raise repo.RepoError(_("requirement '%s' not supported") % r)
 
         self.store = store.store(requirements, self.path)
-
         self.spath = self.store.path
         self.sopener = self.store.opener
         self.sjoin = self.store.join
