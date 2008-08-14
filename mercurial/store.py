@@ -46,6 +46,8 @@ def _calcmode(path):
         mode = None
     return mode
 
+_data = 'data 00manifest.d 00manifest.i 00changelog.d  00changelog.i'
+
 class basicstore:
     '''base class for local repository stores'''
     def __init__(self, path, opener):
@@ -90,6 +92,9 @@ class basicstore:
         for x in meta:
             yield x
 
+    def copylist(self):
+        return ['requires'] + _data.split()
+
 class encodedstore(basicstore):
     def __init__(self, path, opener):
         self.path = os.path.join(path, 'store')
@@ -108,6 +113,10 @@ class encodedstore(basicstore):
 
     def join(self, f):
         return os.path.join(self.path, encodefilename(f))
+
+    def copylist(self):
+        return (['requires', '00changelog.i'] +
+                ['store/' + f for f in _data.split()])
 
 def store(requirements, path, opener):
     if 'store' in requirements:

@@ -164,13 +164,6 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 copy = False
 
         if copy:
-            def force_copy(src, dst):
-                if not os.path.exists(src):
-                    # Tolerate empty source repository and optional files
-                    return
-                util.copyfiles(src, dst)
-
-            src_store = os.path.realpath(src_repo.spath)
             if not os.path.exists(dest):
                 os.mkdir(dest)
             try:
@@ -182,28 +175,18 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                     raise util.Abort(_("destination '%s' already exists")
                                      % dest)
                 raise
-            if src_repo.spath != src_repo.path:
-                # XXX racy
-                dummy_changelog = os.path.join(dest_path, "00changelog.i")
-                # copy the dummy changelog
-                force_copy(src_repo.join("00changelog.i"), dummy_changelog)
-                dest_store = os.path.join(dest_path, "store")
-                os.mkdir(dest_store)
-            else:
-                dest_store = dest_path
-            # copy the requires file
-            force_copy(src_repo.join("requires"),
-                       os.path.join(dest_path, "requires"))
-            # we lock here to avoid premature writing to the target
-            dest_lock = lock.lock(os.path.join(dest_store, "lock"))
 
-            files = ("data",
-                     "00manifest.d", "00manifest.i",
-                     "00changelog.d", "00changelog.i")
-            for f in files:
-                src = os.path.join(src_store, f)
-                dst = os.path.join(dest_store, f)
-                force_copy(src, dst)
+            for f in src_repo.store.copylist():
+                src = os.path.join(src_repo.path, f)
+                if os.path.exists(src):
+                    dst = os.path.join(dest_path, f)
+                    dstbase = os.path.dirname(dst)
+                    if not os.path.exists(dstbase):
+                        os.mkdir(dstbase)
+                    if dst.endswith('data'):
+                        # lock to avoid premature writing to the target
+                        dest_lock = lock.lock(os.path.join(dstbase, "lock"))
+                    util.copyfiles(src, dst)
 
             # we need to re-init the repo after manually copying the data
             # into it
