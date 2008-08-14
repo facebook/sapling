@@ -159,16 +159,18 @@ def _verify(repo):
 
     ui.status(_("checking files\n"))
 
-    storefiles = {} 
-    for f, size in repo.store.datafiles(lambda m: err(None, m)):
-        if size > 0:
+    storefiles = {}
+    for f, f2, size in repo.store.datafiles():
+        if not f:
+            err(None, _("cannot decode filename '%s'") % f2)
+        elif size > 0:
             storefiles[f] = True
 
     files = util.sort(util.unique(filenodes.keys() + filelinkrevs.keys()))
     for f in files:
         fl = repo.file(f)
 
-        for ff in fl.files():    
+        for ff in fl.files():
             try:
                 del storefiles[ff]
             except KeyError:

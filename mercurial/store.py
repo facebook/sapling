@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from i18n import _
 import os, stat, osutil, util
 
 def _buildencodefun():
@@ -59,7 +58,7 @@ class basicstore:
         return os.path.join(self.path, f)
 
     def _walk(self, relpath, recurse):
-        '''yields (filename, size)'''
+        '''yields (unencoded, encoded, size)'''
         path = os.path.join(self.path, relpath)
         striplen = len(self.path) + len(os.sep)
         prefix = path[striplen:]
@@ -71,16 +70,17 @@ class basicstore:
                 for f, kind, st in osutil.listdir(p, stat=True):
                     fp = os.path.join(p, f)
                     if kind == stat.S_IFREG and f[-2:] in ('.d', '.i'):
-                        l.append((util.pconvert(fp[striplen:]), st.st_size))
+                        n = util.pconvert(fp[striplen:])
+                        l.append((n, n, st.st_size))
                     elif kind == stat.S_IFDIR and recurse:
                         visit.append(fp)
         return util.sort(l)
 
-    def datafiles(self, reporterror=None):
+    def datafiles(self):
         return self._walk('data', True)
 
     def walk(self):
-        '''yields (direncoded filename, size)'''
+        '''yields (unencoded, encoded, size)'''
         # yield data files first
         for x in self.datafiles():
             yield x
@@ -99,14 +99,13 @@ class encodedstore(basicstore):
         op.createmode = self.createmode
         self.opener = lambda f, *args, **kw: op(self.encodefn(f), *args, **kw)
 
-    def datafiles(self, reporterror=None):
-        for f, size in self._walk('data', True):
+    def datafiles(self):
+        for a, b, size in self._walk('data', True):
             try:
-                yield decodefilename(f), size
+                a = decodefilename(a)
             except KeyError:
-                if not reporterror:
-                    raise
-                reporterror(_("cannot decode filename '%s'") % f)
+                a = None
+            yield a, b, size
 
     def join(self, f):
         return os.path.join(self.path, self.encodefn(f))

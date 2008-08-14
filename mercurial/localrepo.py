@@ -2066,7 +2066,7 @@ class localrepository(repo.repository):
             total_bytes = 0
             # get consistent snapshot of repo, lock during scan
             lock = self.lock()
-            for name, size in self.store.walk():
+            for name, ename, size in self.store.walk():
                 entries.append((name, size))
                 total_bytes += size
             return entries, total_bytes
