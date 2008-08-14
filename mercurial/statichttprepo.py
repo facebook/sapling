@@ -54,14 +54,10 @@ class statichttprepository(localrepo.localrepository):
                 raise repo.RepoError(_("requirement '%s' not supported") % r)
 
         # setup store
-        if "store" in requirements:
-            self.spath = self.path + "/store"
-        else:
-            self.spath = self.path
-        self.encodefn = store.encodefn(requirements)
-        so = opener(self.spath)
-        self.sopener = lambda path, *args, **kw: so(
-            self.encodefn(path), *args, **kw)
+        self.store = store.store(requirements, self.path, opener)
+        self.spath = self.store.path
+        self.sopener = self.store.opener
+        self.sjoin = self.store.join
 
         self.manifest = manifest.manifest(self.sopener)
         self.changelog = changelog.changelog(self.sopener)

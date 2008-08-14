@@ -119,12 +119,6 @@ class encodedstore(_store):
     def join(self, f):
         return os.path.join(self.path, self.encodefn(f))
 
-def encodefn(requirements):
-    if 'store' not in requirements:
-        return lambda x: x
-    else:
-        return encodefilename
-
 def store(requirements, path, opener):
     if 'store' not in requirements:
         return directstore(path, opener)
