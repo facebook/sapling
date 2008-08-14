@@ -94,16 +94,16 @@ class _store:
             yield x
 
 class directstore(_store):
-    def __init__(self, path):
+    def __init__(self, path, opener):
         _store.__init__(self, path)
-        self.opener = util.opener(self.path)
+        self.opener = opener(self.path)
         self.opener.createmode = self.createmode
 
 class encodedstore(_store):
-    def __init__(self, path):
+    def __init__(self, path, opener):
         _store.__init__(self, os.path.join(path, 'store'))
         self.encodefn = encodefilename
-        op = util.opener(self.path)
+        op = opener(self.path)
         op.createmode = self.createmode
         self.opener = lambda f, *args, **kw: op(self.encodefn(f), *args, **kw)
 
@@ -125,8 +125,8 @@ def encodefn(requirements):
     else:
         return encodefilename
 
-def store(requirements, path):
+def store(requirements, path, opener):
     if 'store' not in requirements:
-        return directstore(path)
+        return directstore(path, opener)
     else:
-        return encodedstore(path)
+        return encodedstore(path, opener)
