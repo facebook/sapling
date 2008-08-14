@@ -69,6 +69,8 @@ class _store:
             path = os.path.join(self.path, relpath)
         else:
             path = self.path
+        if not os.path.isdir(path):
+            return
         striplen = len(self.path) + len(os.sep)
         filetypes = ('.d', '.i')
         for f, size in _dirwalk(path, recurse):
