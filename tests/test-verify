@@ -23,4 +23,4 @@ echo
 echo % verify
 hg verify
 
-return 0
+exit 0

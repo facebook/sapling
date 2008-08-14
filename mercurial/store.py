@@ -47,19 +47,24 @@ def _dirwalk(path, recurse):
         elif kind == stat.S_IFREG:
             yield pe, st.st_size
 
-class _store:
-    '''base class for local repository stores'''
-    def __init__(self, path):
-        self.path = path
-        try:
-            # files in .hg/ will be created using this mode
-            mode = os.stat(self.path).st_mode
+def _calcmode(path):
+    try:
+        # files in .hg/ will be created using this mode
+        mode = os.stat(path).st_mode
             # avoid some useless chmods
-            if (0777 & ~util._umask) == (0777 & mode):
-                mode = None
-        except OSError:
+        if (0777 & ~util._umask) == (0777 & mode):
             mode = None
-        self.createmode = mode
+    except OSError:
+        mode = None
+    return mode
+
+class basicstore:
+    '''base class for local repository stores'''
+    def __init__(self, path, opener):
+        self.path = path
+        self.createmode = _calcmode(path)
+        self.opener = opener(self.path)
+        self.opener.createmode = self.createmode
 
     def join(self, f):
         return os.path.join(self.path, f)
@@ -93,15 +98,10 @@ class _store:
         for x in meta:
             yield x
 
-class directstore(_store):
+class encodedstore(basicstore):
     def __init__(self, path, opener):
-        _store.__init__(self, path)
-        self.opener = opener(self.path)
-        self.opener.createmode = self.createmode
-
-class encodedstore(_store):
-    def __init__(self, path, opener):
-        _store.__init__(self, os.path.join(path, 'store'))
+        self.path = os.path.join(path, 'store')
+        self.createmode = _calcmode(self.path)
         self.encodefn = encodefilename
         op = opener(self.path)
         op.createmode = self.createmode
@@ -120,7 +120,6 @@ class encodedstore(_store):
         return os.path.join(self.path, self.encodefn(f))
 
 def store(requirements, path, opener):
-    if 'store' not in requirements:
-        return directstore(path, opener)
-    else:
+    if 'store' in requirements:
         return encodedstore(path, opener)
+    return basicstore(path, opener)
