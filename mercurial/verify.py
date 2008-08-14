@@ -158,9 +158,22 @@ def _verify(repo):
                 err(lr, _("in manifest but not in changeset"), f)
 
     ui.status(_("checking files\n"))
+
+    storefiles = {} 
+    for f, size in repo.store.datafiles(lambda m: err(None, m)):
+        if size > 0:
+            storefiles[f] = True
+
     files = util.sort(util.unique(filenodes.keys() + filelinkrevs.keys()))
     for f in files:
         fl = repo.file(f)
+
+        for ff in fl.files():    
+            try:
+                del storefiles[ff]
+            except KeyError:
+                err(0, _("missing revlog!"), ff)
+
         checklog(fl, f)
         seen = {}
         for i in fl:
@@ -204,6 +217,9 @@ def _verify(repo):
             fns = [(mf.linkrev(l), n) for n,l in filenodes[f].items()]
             for lr, node in util.sort(fns):
                 err(lr, _("%s in manifests not found") % short(node), f)
+
+    for f in storefiles:
+        warn(_("warning: orphan revlog '%s'") % f)
 
     ui.status(_("%d files, %d changesets, %d total revisions\n") %
                    (len(files), len(cl), revisions))

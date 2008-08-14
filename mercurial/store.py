@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+from i18n import _
 import os, stat, osutil, util
 
 def _buildencodefun():
@@ -77,14 +78,14 @@ class _store:
             if (len(f) > 2) and f[-2:] in filetypes:
                 yield util.pconvert(f[striplen:]), size
 
-    def _datafiles(self):
+    def datafiles(self, reporterror=None):
         for x in self._revlogfiles('data', True):
             yield x
 
     def walk(self):
         '''yields (direncoded filename, size)'''
         # yield data files first
-        for x in self._datafiles():
+        for x in self.datafiles():
             yield x
         # yield manifest before changelog
         meta = util.sort(self._revlogfiles())
@@ -95,7 +96,6 @@ class _store:
 class directstore(_store):
     def __init__(self, path):
         _store.__init__(self, path)
-        self.encodefn = lambda x: x
         self.opener = util.opener(self.path)
         self.opener.createmode = self.createmode
 
@@ -107,9 +107,14 @@ class encodedstore(_store):
         op.createmode = self.createmode
         self.opener = lambda f, *args, **kw: op(self.encodefn(f), *args, **kw)
 
-    def _datafiles(self):
+    def datafiles(self, reporterror=None):
         for f, size in self._revlogfiles('data', True):
-            yield decodefilename(f), size
+            try:
+                yield decodefilename(f), size
+            except KeyError:
+                if not reporterror:
+                    raise
+                reporterror(_("cannot decode filename '%s'") % f)
 
     def join(self, f):
         return os.path.join(self.path, self.encodefn(f))
