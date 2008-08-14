@@ -32,6 +32,7 @@ hg st
 echo % should fail
 hg add a
 hg st
+hg resolve -m a
 hg ci -m merge
 
 echo % issue683

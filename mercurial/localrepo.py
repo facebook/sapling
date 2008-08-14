@@ -12,6 +12,7 @@ import changelog, dirstate, filelog, manifest, context, weakref
 import lock, transaction, stat, errno, ui, store
 import os, revlog, time, util, extensions, hook, inspect
 import match as match_
+import merge as merge_
 
 class localrepository(repo.repository):
     capabilities = util.set(('lookup', 'changegroupsubset'))
@@ -777,6 +778,11 @@ class localrepository(repo.repository):
                 update_dirstate = (self.dirstate.parents()[0] == p1)
                 changes = [files, [], [], [], []]
 
+            ms = merge_.mergestate(self)
+            for f in changes[0]:
+                if f in ms and ms[f] == 'u':
+                    raise util.Abort(_("unresolved merge conflicts "
+                                                    "(see hg resolve)"))
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
             return self._commitctx(wctx, force, force_editor, empty_ok,

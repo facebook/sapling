@@ -43,6 +43,7 @@ two-point-five
 three
 EOF
 rm -f *.orig
+hg resolve -m test.txt
 hg commit -m "Merge 1" -d "1000000 0"
 
 # change test-a again
