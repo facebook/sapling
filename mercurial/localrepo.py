@@ -66,7 +66,6 @@ class localrepository(repo.repository):
         self.spath = self.store.path
         self.sopener = self.store.opener
         self.sjoin = self.store.join
-        self._createmode = self.store.createmode
         self.opener.createmode = self.store.createmode
 
         self.ui = ui.ui(parentui=parentui)
@@ -577,7 +576,7 @@ class localrepository(repo.repository):
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                      self.sjoin("journal"),
                                      aftertrans(renames),
-                                     self._createmode)
+                                     self.store.createmode)
         self._transref = weakref.ref(tr)
         return tr
 
