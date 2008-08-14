@@ -36,17 +36,6 @@ def _buildencodefun():
 
 encodefilename, decodefilename = _buildencodefun()
 
-def _dirwalk(path, recurse):
-    '''yields (filename, size)'''
-    for e, kind, st in osutil.listdir(path, stat=True):
-        pe = os.path.join(path, e)
-        if kind == stat.S_IFDIR:
-            if recurse:
-                for x in _dirwalk(pe, True):
-                    yield x
-        elif kind == stat.S_IFREG:
-            yield pe, st.st_size
-
 def _calcmode(path):
     try:
         # files in .hg/ will be created using this mode
@@ -69,23 +58,26 @@ class basicstore:
     def join(self, f):
         return os.path.join(self.path, f)
 
-    def _revlogfiles(self, relpath='', recurse=False):
+    def _walk(self, relpath, recurse):
         '''yields (filename, size)'''
-        if relpath:
-            path = os.path.join(self.path, relpath)
-        else:
-            path = self.path
-        if not os.path.isdir(path):
-            return
+        path = os.path.join(self.path, relpath)
         striplen = len(self.path) + len(os.sep)
-        filetypes = ('.d', '.i')
-        for f, size in _dirwalk(path, recurse):
-            if (len(f) > 2) and f[-2:] in filetypes:
-                yield util.pconvert(f[striplen:]), size
+        prefix = path[striplen:]
+        l = []
+        if os.path.isdir(path):
+            visit = [path]
+            while visit:
+                p = visit.pop()
+                for f, kind, st in osutil.listdir(p, stat=True):
+                    fp = os.path.join(p, f)
+                    if kind == stat.S_IFREG and f[-2:] in ('.d', '.i'):
+                        l.append((util.pconvert(fp[striplen:]), st.st_size))
+                    elif kind == stat.S_IFDIR and recurse:
+                        visit.append(fp)
+        return util.sort(l)
 
     def datafiles(self, reporterror=None):
-        for x in self._revlogfiles('data', True):
-            yield x
+        return self._walk('data', True)
 
     def walk(self):
         '''yields (direncoded filename, size)'''
@@ -93,7 +85,7 @@ class basicstore:
         for x in self.datafiles():
             yield x
         # yield manifest before changelog
-        meta = util.sort(self._revlogfiles())
+        meta = self._walk('', False)
         meta.reverse()
         for x in meta:
             yield x
@@ -108,7 +100,7 @@ class encodedstore(basicstore):
         self.opener = lambda f, *args, **kw: op(self.encodefn(f), *args, **kw)
 
     def datafiles(self, reporterror=None):
-        for f, size in self._revlogfiles('data', True):
+        for f, size in self._walk('data', True):
             try:
                 yield decodefilename(f), size
             except KeyError:
