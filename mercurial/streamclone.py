@@ -7,6 +7,13 @@
 
 import util, lock
 
+class StreamException(Exception):
+    def __init__(self, code):
+        Exception.__init__(self)
+        self.code = code
+    def __str__(self):
+        return '%i\n' % self.code
+
 # if server supports streaming clone, it advertises "stream"
 # capability with value that is version+flags of repo it is serving.
 # client only streams if it can read that repo format.
@@ -23,13 +30,12 @@ import util, lock
 #
 #   server writes out raw file data.
 
-def stream_out(repo, fileobj, untrusted=False):
+def stream_out(repo, untrusted=False):
     '''stream out all metadata files in repository.
     writes to file-like object, must support write() and optional flush().'''
 
     if not repo.ui.configbool('server', 'uncompressed', untrusted=untrusted):
-        fileobj.write('1\n')
-        return
+        raise StreamException(1)
 
     entries = []
     total_bytes = 0
@@ -45,18 +51,14 @@ def stream_out(repo, fileobj, untrusted=False):
         finally:
             del l
     except (lock.LockHeld, lock.LockUnavailable), inst:
-        repo.ui.warn('locking the repository failed: %s\n' % (inst,))
-        fileobj.write('2\n')
-        return
+        raise StreamException(2)
 
-    fileobj.write('0\n')
+    yield '0\n'
     repo.ui.debug('%d files, %d bytes to transfer\n' %
                   (len(entries), total_bytes))
-    fileobj.write('%d %d\n' % (len(entries), total_bytes))
+    yield '%d %d\n' % (len(entries), total_bytes)
     for name, size in entries:
         repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
-        fileobj.write('%s\0%d\n' % (name, size))
+        yield '%s\0%d\n' % (name, size)
         for chunk in util.filechunkiter(repo.sopener(name), limit=size):
-            fileobj.write(chunk)
-    flush = getattr(fileobj, 'flush', None)
-    if flush: flush()
+            yield chunk
