@@ -168,7 +168,6 @@ class hgweb(object):
                 req.respond(HTTP_OK, ctype)
 
             req.write(content)
-            del tmpl
             return []
 
         except revlog.LookupError, err:
