@@ -209,7 +209,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         archiver.addfile(name, mode, islink, data)
 
     if kind not in archivers:
-        raise util.Abort(_("unknown archive type '%s'" % kind))
+        raise util.Abort(_("unknown archive type '%s'") % kind)
 
     ctx = repo[node]
     archiver = archivers[kind](dest, prefix, mtime or ctx.date()[0])

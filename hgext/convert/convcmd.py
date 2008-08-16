@@ -52,8 +52,8 @@ def convertsource(ui, path, type, rev):
             exceptions.append(inst)
     if not ui.quiet:
         for inst in exceptions:
-            ui.write(_("%s\n") % inst)
-    raise util.Abort('%s: unknown repository type' % path)
+            ui.write("%s\n" % inst)
+    raise util.Abort(_('%s: unknown repository type') % path)
 
 def convertsink(ui, path, type):
     for name, sink in sink_converters:
@@ -62,7 +62,7 @@ def convertsink(ui, path, type):
                 return sink(ui, path)
         except NoRepo, inst:
             ui.note(_("convert: %s\n") % inst)
-    raise util.Abort('%s: unknown repository type' % path)
+    raise util.Abort(_('%s: unknown repository type') % path)
 
 class converter(object):
     def __init__(self, ui, source, dest, revmapfile, opts):
@@ -274,7 +274,7 @@ class converter(object):
                 # tolocal() because util._encoding conver() use it as
                 # 'utf-8'
                 self.ui.status("%d %s\n" % (num, recode(desc)))
-                self.ui.note(_("source: %s\n" % recode(c)))
+                self.ui.note(_("source: %s\n") % recode(c))
                 self.copy(c)
 
             tags = self.source.gettags()

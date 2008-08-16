@@ -23,7 +23,7 @@ class gnuarch_source(converter_source, commandline):
         super(gnuarch_source, self).__init__(ui, path, rev=rev)
 
         if not os.path.exists(os.path.join(path, '{arch}')):
-            raise NoRepo(_("%s does not look like a GNU Arch repo" % path))
+            raise NoRepo(_("%s does not look like a GNU Arch repo") % path)
 
         # Could use checktool, but we want to check for baz or tla.
         self.execmd = None
@@ -54,7 +54,7 @@ class gnuarch_source(converter_source, commandline):
             output = self.run0('tree-version', '-d', self.path)
         self.treeversion = output.strip()
 
-        self.ui.status(_('analyzing tree version %s...\n' % self.treeversion))
+        self.ui.status(_('analyzing tree version %s...\n') % self.treeversion)
 
         # Get name of temporary directory
         version = self.treeversion.split('/')
@@ -80,7 +80,7 @@ class gnuarch_source(converter_source, commandline):
         self.parents[None] = child
 
     def after(self):
-        self.ui.debug(_('cleaning up %s\n' % self.tmppath))
+        self.ui.debug(_('cleaning up %s\n') % self.tmppath)
         shutil.rmtree(self.tmppath, ignore_errors=True)
 
     def getheads(self):
@@ -155,7 +155,7 @@ class gnuarch_source(converter_source, commandline):
             # Initialise 'base-0' revision
             self._obtainrevision(rev)
         else:
-            self.ui.debug(_('applying revision %s...\n' % rev))
+            self.ui.debug(_('applying revision %s...\n') % rev)
             revision = '%s--%s' % (self.treeversion, rev)
             changeset, status = self.runlines('replay', '-d', self.tmppath,
                                               revision)
@@ -166,8 +166,8 @@ class gnuarch_source(converter_source, commandline):
                 self._obtainrevision(rev)
             else:
                 old_rev = self.parents[rev][0]
-                self.ui.debug(_('computing changeset between %s and %s...\n' \
-                                    % (old_rev, rev)))
+                self.ui.debug(_('computing changeset between %s and %s...\n')
+                              % (old_rev, rev))
                 rev_a = '%s--%s' % (self.treeversion, old_rev)
                 rev_b = '%s--%s' % (self.treeversion, rev)
                 self._parsechangeset(changeset, rev)
@@ -217,11 +217,11 @@ class gnuarch_source(converter_source, commandline):
         return changes, copies
 
     def _obtainrevision(self, rev):
-        self.ui.debug(_('obtaining revision %s...\n' % rev))
+        self.ui.debug(_('obtaining revision %s...\n') % rev)
         revision = '%s--%s' % (self.treeversion, rev)
         output = self._execute('get', revision, self.tmppath)
         self.checkexit(output)
-        self.ui.debug(_('analysing revision %s...\n' % rev))
+        self.ui.debug(_('analysing revision %s...\n') % rev)
         files = self._readcontents(self.tmppath)
         self.changes[rev].add_files += files
 

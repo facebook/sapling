@@ -172,7 +172,7 @@ class hgwebdir(object):
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except Exception, e:
-                    u.warn(_('error reading %s/.hg/hgrc: %s\n' % (path, e)))
+                    u.warn(_('error reading %s/.hg/hgrc: %s\n') % (path, e))
                     continue
                 def get(section, name, default=None):
                     return u.config(section, name, default, untrusted=True)
