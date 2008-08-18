@@ -1,0 +1,49 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "rebase=" >> $HGRCPATH
+
+BASE=`pwd`
+
+function addcommit {
+    echo $1 > $1
+    hg add $1
+    hg commit -d "${2} 0" -u test -m $1
+}
+function commit {
+    hg commit -d "${2} 0" -u test -m $1
+}
+
+cd $BASE
+rm -rf a
+hg init a
+cd a
+addcommit "C1" 0
+addcommit "C2" 1
+
+cd ..
+hg clone a b
+cd b
+addcommit "L1" 2
+
+cd ../a
+addcommit "R1" 3
+
+cd ../b
+echo
+echo "% Now b has one revision to be pulled from a"
+hg pull --rebase 2>&1 | sed -e 's/\(saving bundle to \).*/\1/' \
+                -e 's/\(pulling from \).*/\1/'
+
+hg glog --template '{rev}:{desc}\n'
+
+echo
+echo "% Re-run pull --rebase"
+hg pull --rebase 2>&1 | sed 's/\(pulling from \).*/\1/'
+
+echo
+echo "% Invoke pull --rebase with --update"
+hg pull --rebase --update
+
+exit 0

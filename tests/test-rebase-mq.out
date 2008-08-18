@@ -1,0 +1,79 @@
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  3 P1 tags: qtip tip f2.patch
+|
+o  2 P0 tags: f.patch qbase
+|
+| o  1 R1 tags:
+|/
+o  0 C1 tags: qparent
+
+
+% Rebase - try to rebase on an applied mq patch
+abort: cannot rebase onto an applied mq patch
+
+% Rebase - generate a conflict
+merging f
+warning: conflicts during merge.
+merging f failed!
+abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+
+% Fix the 1st conflict
+merging f
+warning: conflicts during merge.
+merging f failed!
+abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+
+% Fix the 2nd conflict
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 2 changes to 1 files
+rebase completed
+@  3 P1 tags: qtip tip f2.patch
+|
+o  2 P0 tags: f.patch qbase
+|
+o  1 R1 tags: qparent
+|
+o  0 C1 tags:
+
+
+% Update to qbase
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% f correctly reflects the merge result
+mq1r1
+% And the patch is correct
+# HG changeset patch
+# User test
+# Date
+# Node ID
+# Parent
+P0
+
+diff -r x -r y f
+--- a/f
++++ b/f
+@@ -1,1 +1,1 @@
+-r1
++mq1r1
+
+% Update to qtip
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% f correctly reflects the merge result
+mq1r1mq2
+% And the patch is correct
+# HG changeset patch
+# User test
+# Date
+# Node ID
+# Parent
+P1
+
+diff -r x -r y f
+--- a/f
++++ b/f
+@@ -1,1 +1,1 @@
+-mq1r1
++mq1r1mq2

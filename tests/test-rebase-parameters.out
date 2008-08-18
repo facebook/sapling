@@ -1,0 +1,194 @@
+% These fail
+
+% Use continue and abort
+hg rebase: cannot use both abort and continue
+hg rebase [-s rev | -b rev] [-d rev] [--collapse] | [-c] | [-a] | [--keep]
+
+move changeset (and descendants) to a different branch
+
+    Rebase uses repeated merging to graft changesets from one part of history
+    onto another. This can be useful for linearizing local changes relative to
+    a master development tree.
+
+    If a rebase is interrupted to manually resolve a merge, it can be continued
+    with --continue or aborted with --abort.
+
+options:
+
+    --keep      keep original revisions
+ -s --source    rebase from a given revision
+ -b --base      rebase from the base of a given revision
+ -d --dest      rebase onto a given revision
+    --collapse  collapse the rebased revisions
+ -c --continue  continue an interrupted rebase
+ -a --abort     abort an interrupted rebase
+    --style     display using template map file
+    --template  display with template
+
+use "hg -v help rebase" to show global options
+
+% Use continue and collapse
+hg rebase: cannot use collapse with continue or abort
+hg rebase [-s rev | -b rev] [-d rev] [--collapse] | [-c] | [-a] | [--keep]
+
+move changeset (and descendants) to a different branch
+
+    Rebase uses repeated merging to graft changesets from one part of history
+    onto another. This can be useful for linearizing local changes relative to
+    a master development tree.
+
+    If a rebase is interrupted to manually resolve a merge, it can be continued
+    with --continue or aborted with --abort.
+
+options:
+
+    --keep      keep original revisions
+ -s --source    rebase from a given revision
+ -b --base      rebase from the base of a given revision
+ -d --dest      rebase onto a given revision
+    --collapse  collapse the rebased revisions
+ -c --continue  continue an interrupted rebase
+ -a --abort     abort an interrupted rebase
+    --style     display using template map file
+    --template  display with template
+
+use "hg -v help rebase" to show global options
+
+% Use continue/abort and dest/source
+hg rebase: abort and continue do not allow specifying revisions
+hg rebase [-s rev | -b rev] [-d rev] [--collapse] | [-c] | [-a] | [--keep]
+
+move changeset (and descendants) to a different branch
+
+    Rebase uses repeated merging to graft changesets from one part of history
+    onto another. This can be useful for linearizing local changes relative to
+    a master development tree.
+
+    If a rebase is interrupted to manually resolve a merge, it can be continued
+    with --continue or aborted with --abort.
+
+options:
+
+    --keep      keep original revisions
+ -s --source    rebase from a given revision
+ -b --base      rebase from the base of a given revision
+ -d --dest      rebase onto a given revision
+    --collapse  collapse the rebased revisions
+ -c --continue  continue an interrupted rebase
+ -a --abort     abort an interrupted rebase
+    --style     display using template map file
+    --template  display with template
+
+use "hg -v help rebase" to show global options
+
+% Use source and base
+hg rebase: cannot specify both a revision and a base
+hg rebase [-s rev | -b rev] [-d rev] [--collapse] | [-c] | [-a] | [--keep]
+
+move changeset (and descendants) to a different branch
+
+    Rebase uses repeated merging to graft changesets from one part of history
+    onto another. This can be useful for linearizing local changes relative to
+    a master development tree.
+
+    If a rebase is interrupted to manually resolve a merge, it can be continued
+    with --continue or aborted with --abort.
+
+options:
+
+    --keep      keep original revisions
+ -s --source    rebase from a given revision
+ -b --base      rebase from the base of a given revision
+ -d --dest      rebase onto a given revision
+    --collapse  collapse the rebased revisions
+ -c --continue  continue an interrupted rebase
+ -a --abort     abort an interrupted rebase
+    --style     display using template map file
+    --template  display with template
+
+use "hg -v help rebase" to show global options
+
+% Rebase with no arguments - from current
+nothing to rebase
+
+% Rebase with no arguments - from the current branch
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+nothing to rebase
+% ----------
+% These work
+
+% Rebase with no arguments (from 3 onto 7)
+3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 5 changesets with 5 changes to 5 files
+rebase completed
+
+% Rebase with base == '.' => same as no arguments (from 3 onto 7)
+3 files updated, 0 files merged, 3 files removed, 0 files unresolved
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 5 changesets with 5 changes to 5 files
+rebase completed
+
+% Rebase with dest == default => same as no arguments (from 3 onto 7)
+3 files updated, 0 files merged, 3 files removed, 0 files unresolved
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 5 changesets with 5 changes to 5 files
+rebase completed
+
+% Specify only source (from 4 onto 7)
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 4 changes to 4 files (-1 heads)
+rebase completed
+
+% Specify only dest (from 3 onto 6)
+3 files updated, 0 files merged, 3 files removed, 0 files unresolved
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 5 changesets with 5 changes to 5 files (+1 heads)
+rebase completed
+
+% Specify only base (from 3 onto 7)
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 5 changesets with 5 changes to 5 files
+rebase completed
+
+% Specify source and dest (from 4 onto 6)
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 4 changes to 4 files
+rebase completed
+
+% Specify base and dest (from 3 onto 6)
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 5 changesets with 5 changes to 5 files (+1 heads)
+rebase completed

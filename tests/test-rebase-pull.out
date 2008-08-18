@@ -1,0 +1,34 @@
+updating working directory
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% Now b has one revision to be pulled from a
+pulling from 
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 2 changes to 2 files
+rebase completed
+@  3:L1
+|
+o  2:R1
+|
+o  1:C2
+|
+o  0:C1
+
+
+% Re-run pull --rebase
+pulling from 
+searching for changes
+no changes found
+
+% Invoke pull --rebase with --update
+abort: --update and --rebase are not compatible

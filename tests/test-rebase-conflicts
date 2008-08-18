@@ -1,0 +1,55 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "rebase=" >> $HGRCPATH
+
+function cleanoutput {
+    sed -e 's/\(Rebase status stored to\).*/\1/'  \
+        -e 's/\(Rebase status restored from\).*/\1/' \
+        -e 's/\(saving bundle to \).*/\1/'
+}
+
+hg init a
+cd a
+echo 'c1' >common
+hg add common
+hg commit -d '0 0' -u test -m "C1"
+
+echo 'c2' >>common
+hg commit -d '1 0' -u test -m "C2"
+
+echo 'c3' >>common
+hg commit -d '2 0' -u test -m "C3"
+
+hg update -C 1
+echo 'l1' >>extra
+hg add extra
+hg commit -d '3 0' -u test -m "L1"
+
+sed -e 's/c2/l2/' common > common.new
+mv common.new common
+hg commit -d '4 0' -u test -m "L2"
+
+hg glog  --template '{rev}: {desc}\n'
+
+echo
+echo '% Try to call --continue'
+hg rebase --continue
+
+echo
+echo '% Conflicting rebase'
+hg rebase -s 3 -d 2
+
+echo
+echo '% Try to continue without solving the conflict'
+hg rebase --continue 
+
+echo
+echo '% Conclude rebase'
+echo 'solved merge' >common
+hg resolve -m common
+hg rebase --continue 2>&1 | cleanoutput
+
+
+hg glog  --template '{rev}: {desc}\n'

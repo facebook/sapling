@@ -1,0 +1,44 @@
+#!/bin/sh
+# This emulates the effects of an hg pull --rebase in which the remote repo 
+# already has one local mq patch
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "rebase=" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+hg init a
+cd a
+hg qinit -c # This must work even with a managed mq queue
+
+echo 'c1' > c1
+hg add c1
+hg commit -d '0 0' -u test -m "C1"
+
+echo 'r1' > r1
+hg add r1
+hg commit -d '1 0' -u test -m "R1"
+
+hg up 0
+hg qnew p0.patch
+echo 'p0' > p0
+hg add p0
+hg qref -m 'P0'
+
+hg qnew p1.patch
+echo 'p1' > p1
+hg add p1
+hg qref -m 'P1'
+hg export qtip > p1.patch 
+
+echo
+echo '% "Mainstream" import p1.patch'
+hg up -C 1
+hg import p1.patch
+rm p1.patch
+
+echo
+echo '% Rebase'
+hg up -C qtip
+hg rebase  2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+hg glog  --template '{rev} {desc} tags: {tags}\n'

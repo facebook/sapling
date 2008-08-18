@@ -1,0 +1,69 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "rebase=" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+hg init a
+cd a
+hg qinit -c # This must work even with a managed mq queue
+
+echo 'c1' > f
+hg add f
+hg commit -d '0 0' -u test -m "C1"
+
+echo 'r1' > f
+hg commit -d '2 0' -u test -m "R1"
+
+hg up 0
+hg qnew f.patch
+echo 'mq1' > f
+hg qref -m 'P0'
+
+hg qnew f2.patch
+echo 'mq2' > f
+hg qref -m 'P1'
+hg glog  --template '{rev} {desc} tags: {tags}\n'
+
+echo
+echo '% Rebase - try to rebase on an applied mq patch'
+hg rebase -s 1 -d 3
+
+echo
+echo '% Rebase - generate a conflict'
+hg rebase -s 2 -d 1
+
+echo
+echo '% Fix the 1st conflict'
+echo 'mq1r1' > f
+hg resolve -m f
+hg rebase -c 2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+
+echo
+echo '% Fix the 2nd conflict'
+echo 'mq1r1mq2' > f
+hg resolve -m f
+hg rebase -c 2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+
+hg glog  --template '{rev} {desc} tags: {tags}\n'
+
+echo
+echo '% Update to qbase'
+hg up qbase
+echo '% f correctly reflects the merge result'
+cat f
+echo '% And the patch is correct'
+cat .hg/patches/f.patch | sed -e "s/^\(# \(Date\|Node ID\|Parent\)\).*/\1/" \
+        -e  "s/^\(diff -r \)\([a-f0-9]* \)\(-r \)\([a-f0-9]* \)/\1x \3y /" \
+        -e  "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo
+echo '% Update to qtip'
+hg up qtip
+echo '% f correctly reflects the merge result'
+cat f
+echo '% And the patch is correct'
+cat .hg/patches/f2.patch | sed -e "s/^\(# \(Date\|Node ID\|Parent\)\).*/\1/" \
+        -e  "s/^\(diff -r \)\([a-f0-9]* \)\(-r \)\([a-f0-9]* \)/\1x \3y /" \
+        -e  "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
