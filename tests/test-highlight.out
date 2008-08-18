@@ -103,10 +103,12 @@ adding get-with-headers.py
  <td>&#116;&#101;&#115;&#116;</td></tr>
 <tr>
  <td class="metatag">date:</td>
- <td>Thu Jan 01 00:00:00 1970 +0000 (long ago)</td></tr>
+ <td>Thu Jan 01 00:00:00 1970 +0000 (long ago)</td>
+</tr>
 <tr>
  <td class="metatag">permissions:</td>
- <td>-rwxr-xr-x</td></tr>
+ <td>-rwxr-xr-x</td>
+</tr>
 <tr>
   <td class="metatag">description:</td>
   <td>a</td>

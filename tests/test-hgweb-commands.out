@@ -230,10 +230,12 @@ navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a hr
 </tr>
 <tr>
  <th class="date">date:</th>
- <td class="date">Thu Jan 01 00:00:00 1970 +0000 (long ago)</td></tr>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (long ago)</td>
+</tr>
 <tr>
  <th class="files">files:</th>
- <td class="files"><a href="/file/2ef0ac749a14/da/foo">da/foo</a> <a href="/file/2ef0ac749a14/foo">foo</a> </td></tr>
+ <td class="files"><a href="/file/2ef0ac749a14/da/foo">da/foo</a> <a href="/file/2ef0ac749a14/foo">foo</a> </td>
+</tr>
 <tr>
  <th class="description">description:</th>
  <td class="description">base</td>
