@@ -39,7 +39,6 @@ body {
   position: absolute !important;
   top:expression(eval(document.body.scrollTop + 27));
 }
-}
 
 .menu ul {
   list-style: none;
