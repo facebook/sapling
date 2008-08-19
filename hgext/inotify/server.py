@@ -12,8 +12,8 @@ import common
 import errno, os, select, socket, stat, struct, sys, time
 
 try:
-    import hgext.inotify.linux as inotify
-    from hgext.inotify.linux import watcher
+    import linux as inotify
+    from linux import watcher
 except ImportError:
     print >> sys.stderr, '*** native support is required for this extension'
     raise
