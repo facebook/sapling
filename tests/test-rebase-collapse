@@ -6,16 +6,17 @@ echo "rebase=" >> $HGRCPATH
 
 BASE=`pwd`
 
-function addcommit {
+addcommit () {
     echo $1 > $1
     hg add $1
     hg commit -d "${2} 0" -u test -m $1
 }
-function commit {
+
+commit () {
     hg commit -d "${2} 0" -u test -m $1
 }
 
-function createrepo {
+createrepo () {
     cd $BASE
     rm -rf a
     hg init a
@@ -50,7 +51,7 @@ echo '% Rebasing'
 hg rebase --base 6 --collapse 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 hg glog  --template '{rev}: {desc}\n'
 
-function createrepocomplex {
+createrepocomplex () {
     cd $BASE
     rm -rf a
     hg init a

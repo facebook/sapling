@@ -6,12 +6,13 @@ echo "rebase=" >> $HGRCPATH
 
 BASE=`pwd`
 
-function addcommit {
+addcommit () {
     echo $1 > $1
     hg add $1
     hg commit -d "${2} 0" -u test -m $1
 }
-function commit {
+
+commit () {
     hg commit -d "${2} 0" -u test -m $1
 }
 

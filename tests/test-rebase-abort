@@ -4,7 +4,7 @@ echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
 
-function cleanoutput {
+cleanoutput () {
     sed -e 's/\(Rebase status stored to\).*/\1/'  \
         -e 's/\(Rebase status restored from\).*/\1/' \
         -e 's/\(saving bundle to \).*/\1/'

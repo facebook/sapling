@@ -4,7 +4,7 @@ echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
 
-function addcommit {
+addcommit () {
     echo $1 > $1
     hg add $1
     hg commit -d "${2} 0" -u test -m $1
