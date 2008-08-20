@@ -33,14 +33,14 @@ options:
 
  -e --edit         edit commit message
  -g --git          use git extended diff format
- -I --include      include names matching the given patterns
- -X --exclude      exclude names matching the given patterns
- -m --message      use <text> as commit message
- -l --logfile      read commit message from <file>
  -U --currentuser  add "From: <current user>" to patch
  -u --user         add "From: <given user>" to patch
  -D --currentdate  add "Date: <current date>" to patch
  -d --date         add "Date: <given date>" to patch
+ -I --include      include names matching the given patterns
+ -X --exclude      exclude names matching the given patterns
+ -m --message      use <text> as commit message
+ -l --logfile      read commit message from <file>
 
 use "hg -v help qrecord" to show global options
 % base commit
