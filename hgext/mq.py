@@ -2326,12 +2326,6 @@ def reposetup(ui, repo):
 
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
-headeropts = [
-    ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
-    ('u', 'user', '', _('add "From: <given user>" to patch')),
-    ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
-    ('d', 'date', '', _('add "Date: <given date>" to patch'))]
-
 cmdtable = {
     "qapplied": (applied, [] + seriesopts, _('hg qapplied [-s] [PATCH]')),
     "qclone":
@@ -2389,7 +2383,11 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('f', 'force', None, _('import uncommitted changes into patch')),
           ('g', 'git', None, _('use git extended diff format')),
-          ] + commands.walkopts + commands.commitopts + headeropts,
+          ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
+          ('u', 'user', '', _('add "From: <given user>" to patch')),
+          ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
+          ('d', 'date', '', _('add "Date: <given date>" to patch'))
+          ] + commands.walkopts + commands.commitopts,
          _('hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]...')),
     "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
     "qprev": (prev, [] + seriesopts, _('hg qprev [-s]')),
@@ -2412,7 +2410,11 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None, _('refresh only files already in the patch')),
-          ] + commands.walkopts + commands.commitopts + headeropts,
+          ('U', 'currentuser', None, _('add/update "From: <current user>" in patch')),
+          ('u', 'user', '', _('add/update "From: <given user>" in patch')),
+          ('D', 'currentdate', None, _('update "Date: <current date>" in patch (if present)')),
+          ('d', 'date', '', _('update "Date: <given date>" in patch (if present)'))
+          ] + commands.walkopts + commands.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     'qrename|qmv':
         (rename, [], _('hg qrename PATCH1 [PATCH2]')),
