@@ -1,3 +1,4 @@
+% no diff if hardlink
 % init
 adding foo to series file
 applying foo
