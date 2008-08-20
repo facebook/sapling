@@ -1,5 +1,21 @@
 #!/bin/sh
 
+# some implementations of cp can't create hardlinks
+cat > cp.py <<EOF
+from mercurial import util
+import sys
+util.copyfiles(sys.argv[1], sys.argv[2], hardlink=True)
+EOF
+
+# test hardlinking outside hg
+mkdir x
+echo foo > x/a
+
+python cp.py x y
+echo bar >> y/a
+echo % no diff if hardlink
+diff x/a y/a
+
 # test mq hardlinking
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
@@ -21,7 +37,7 @@ EOF
 hg qpush
 
 cd ..
-cp -al a b
+python cp.py a b
 cd b
 
 hg qimport -n bar - << EOF
@@ -51,7 +67,7 @@ hg tag -l lfoo
 hg tag foo
 
 cd ..
-cp -al b c
+python cp.py b c
 cd c
 
 hg tag -l -r 0 lbar
