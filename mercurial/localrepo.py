@@ -707,7 +707,7 @@ class localrepository(repo.repository):
             if not cr:
                 self.ui.debug(_(" %s: searching for copy revision for %s\n") %
                               (fn, cf))
-		for a in self['.'].ancestors():
+                for a in self['.'].ancestors():
                     if cf in a:
                         cr = a[cf].filenode()
                         break

@@ -49,26 +49,26 @@ if __name__ == '__main__':
     # Ancestors
     print 'Ancestors of 5'
     for r in repo.changelog.ancestors(5):
-        print r, 
+        print r,
 
     print '\nAncestors of 6 and 5'
     for r in repo.changelog.ancestors(6, 5):
-        print r, 
+        print r,
 
     print '\nAncestors of 5 and 4'
     for r in repo.changelog.ancestors(5, 4):
-        print r, 
+        print r,
 
     # Descendants
     print '\n\nDescendants of 5'
     for r in repo.changelog.descendants(5):
-        print r, 
+        print r,
 
     print '\nDescendants of 5 and 3'
     for r in repo.changelog.descendants(5, 3):
-        print r, 
+        print r,
 
     print '\nDescendants of 5 and 4'
     for r in repo.changelog.descendants(5, 4):
-        print r, 
+        print r,
 

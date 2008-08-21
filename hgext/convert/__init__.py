@@ -127,7 +127,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
             matched. If a match occurs, then the conversion process will
             add the most recent revision on the branch indicated in the
             regex as the second parent of the changeset.
-    
+
     The hgext/convert/cvsps wrapper script allows the builtin changeset
     merging code to be run without doing a conversion. Its parameters and
     output are similar to that of cvsps 2.1.

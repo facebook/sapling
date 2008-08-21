@@ -86,7 +86,7 @@ def rebase(ui, repo, **opts):
         ui.note(_('rebase merging completed\n'))
 
         if collapsef:
-            p1, p2 = defineparents(repo, min(state), target, 
+            p1, p2 = defineparents(repo, min(state), target,
                                                         state, targetancestors)
             concludenode(repo, rev, p1, external, state, collapsef,
                                                 last=True, skipped=skipped)
@@ -96,7 +96,7 @@ def rebase(ui, repo, **opts):
 
         if not opts.get('keep'):
             # Remove no more useful revisions
-            if (util.set(repo.changelog.descendants(min(state))) 
+            if (util.set(repo.changelog.descendants(min(state)))
                                                     - util.set(state.keys())):
                 ui.warn(_("warning: new changesets detected on source branch, "
                                                         "not stripping\n"))
@@ -174,7 +174,7 @@ def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse):
             repo.ui.debug('next revision set to %s\n' % p1)
             skipped[rev] = True
         state[rev] = p1
-       
+
 def defineparents(repo, rev, target, state, targetancestors):
     'Return the new parent relationship of the revision that will be rebased'
     parents = repo[rev].parents()
@@ -224,7 +224,7 @@ def updatemq(repo, state, skipped, **opts):
             if rev not in skipped:
                 repo.ui.debug('import mq patch %d (%s)\n' % (state[rev],
                                                             mqrebase[rev]))
-                repo.mq.qimport(repo, (), patchname=mqrebase[rev], 
+                repo.mq.qimport(repo, (), patchname=mqrebase[rev],
                             git=opts.get('git', False),rev=[str(state[rev])])
         repo.mq.save_dirty()
 
@@ -330,7 +330,7 @@ def buildstate(repo, dest, src, base, collapse):
         cwdancestors.add(cwd)
         rebasingbranch = cwdancestors - targetancestors
         source = min(rebasingbranch)
-        
+
     repo.ui.debug(_('rebase onto %d starting from %d\n') % (dest, source))
     state = dict.fromkeys(repo.changelog.descendants(source), nullrev)
     external = nullrev
@@ -379,7 +379,7 @@ def uisetup(ui):
     # make sure 'hg help cmd' still works
     decorator.__doc__ = cmdentry[0].__doc__
     decoratorentry = (decorator,) + cmdentry[1:]
-    rebaseopt = ('', 'rebase', None, 
+    rebaseopt = ('', 'rebase', None,
                             _("rebase working directory to branch head"))
     decoratorentry[1].append(rebaseopt)
     commands.table[cmdkey] = decoratorentry

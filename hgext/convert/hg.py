@@ -212,7 +212,7 @@ class mercurial_source(converter_source):
             try:
                 startnode = self.repo.lookup(startnode)
             except repo.RepoError:
-                raise util.Abort(_('%s is not a valid start revision') 
+                raise util.Abort(_('%s is not a valid start revision')
                                  % startnode)
             startrev = self.repo.changelog.rev(startnode)
             children = {startnode: 1}
@@ -229,7 +229,7 @@ class mercurial_source(converter_source):
         return self.lastctx
 
     def parents(self, ctx):
-        return [p.node() for p in ctx.parents() 
+        return [p.node() for p in ctx.parents()
                 if p and self.keep(p.node())]
 
     def getheads(self):
