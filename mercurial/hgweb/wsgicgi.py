@@ -62,4 +62,6 @@ def launch(application):
         headers_set[:] = [status, response_headers]
         return write
 
-    application(environ, start_response)
+    content = application(environ, start_response)
+    for chunk in content:
+        write(chunk)
