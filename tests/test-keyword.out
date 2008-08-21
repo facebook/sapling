@@ -374,37 +374,28 @@ xxx $
 $Xinfo$
 % kwexpand nonexistent
 nonexistent:
-% switch off expansion
-% kwshrink with unknown file u
-overwriting a shrinking keywords
-overwriting x/a shrinking keywords
-% cat
-expand $Id$
-do not process $Id:
-xxx $
-$Xinfo$
-ignore $Id$
-% hg cat
+% hg serve
+% expansion
+% hgweb file
+200 Script output follows
+
 expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
 xxx $
 $Xinfo: User Name <user@example.com>: firstline $
-ignore $Id$
-a
-% cat
-expand $Id$
-do not process $Id:
-xxx $
-$Xinfo$
-ignore $Id$
-% hg cat
-expand $Id$
-do not process $Id:
-xxx $
-$Xinfo$
-ignore $Id$
-a
-% hg serve
+% no expansion
+% hgweb annotate
+200 Script output follows
+
+
+User Name <user@example.com>@1: expand $Id$
+User Name <user@example.com>@1: do not process $Id:
+User Name <user@example.com>@1: xxx $
+User Name <user@example.com>@2: $Xinfo$
+
+
+
+
 % hgweb changeset
 200 Script output follows
 
@@ -440,3 +431,33 @@ xa
 
 
 % errors encountered
+% switch off expansion
+% kwshrink with unknown file u
+overwriting a shrinking keywords
+overwriting x/a shrinking keywords
+% cat
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+ignore $Id$
+% hg cat
+expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: firstline $
+ignore $Id$
+a
+% cat
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+ignore $Id$
+% hg cat
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
+ignore $Id$
+a
