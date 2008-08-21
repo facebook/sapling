@@ -241,6 +241,8 @@ abort: Inconsistent state, 31:58c80a7c8a40 is good and bad
 error
 Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
 5cd978ea5149
+% test no action message
+(no action selected)
 Testing changeset 2:db07c04beaca (4 changesets remaining, ~2 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Testing changeset 1:5cd978ea5149 (4 changesets remaining, ~2 tests)
