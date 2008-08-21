@@ -266,10 +266,13 @@ def bisect(ui, repo, rev=None, extra=None,
     To use, mark the earliest changeset you know exhibits the problem
     as bad, then mark the latest changeset which is free from the
     problem as good. Bisect will update your working directory to a
-    revision for testing. Once you have performed tests, mark the
-    working directory as bad or good and bisect will either update to
-    another candidate changeset or announce that it has found the bad
-    revision.
+    revision for testing (unless the --noupdate option is specified).
+    Once you have performed tests, mark the working directory as bad
+    or good and bisect will either update to another candidate changeset
+    or announce that it has found the bad revision.
+    
+    As a shortcut, you can also use the revision argument to mark a
+    revision as good or bad without checking it out first.
     """
     # backward compatibility
     if rev in "good bad reset init".split():
