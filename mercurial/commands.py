@@ -285,7 +285,10 @@ def bisect(ui, repo, rev=None, extra=None,
         else:
             reset = True
     elif extra or good + bad + skip + reset > 1:
-        raise util.Abort("Incompatible arguments")
+        raise util.Abort(_('incompatible arguments'))
+    elif not (good or bad or skip or reset):
+        ui.status(_('(no action selected)\n'))
+        return
 
     if reset:
         p = repo.join("bisect.state")

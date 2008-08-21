@@ -55,6 +55,9 @@ hg bisect -g null
 hg bisect -bU tip
 hg id
 
+echo % test no action message
+hg bisect
+
 # reproduce AssertionError (issue1228 and issue1182)
 hg bisect -r
 hg bisect -b 4
