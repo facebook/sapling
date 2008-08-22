@@ -5,6 +5,7 @@ a
 % test case collision on rename (issue 750)
 adding a
 a
+committed changeset 07f494440405
 A: not overwriting - file exists
 % test case collision between revisions (issue 912)
 adding a

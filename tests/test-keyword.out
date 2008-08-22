@@ -117,6 +117,7 @@ a
 b
 overwriting a expanding keywords
 running hook commit.test: cp a hooktest
+committed changeset ef63ca68695b
 % status
 ? hooktest
 % identify
@@ -223,6 +224,7 @@ c
 c
  c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
 overwriting c expanding keywords
+committed changeset e22d299ac0c2
 % cat a c
 expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
 do not process $Id:
@@ -280,6 +282,7 @@ M a
 % commit
 a
 overwriting a expanding keywords
+committed changeset bb948857c743
 % status
 % verify
 checking changesets
@@ -306,6 +309,7 @@ a
 1: xxx $
 2: $Xinfo$
 % remove
+committed changeset d14c71265376
 % status
 % rollback
 rolling back last transaction
@@ -337,6 +341,7 @@ summary:     firstline
 % commit rejecttest
 a
 overwriting a expanding keywords
+committed changeset 85e279d709ff
 % export
 % import
 applying ../rejecttest.diff
@@ -360,6 +365,7 @@ abort: outstanding uncommitted changes
 x/a
  x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
 overwriting x/a expanding keywords
+committed changeset cfa68229c116
 % cat a
 expand $Id: x/a cfa68229c116 Thu, 01 Jan 1970 00:00:03 +0000 user $
 do not process $Id:
