@@ -437,9 +437,36 @@ xa
 
 
 % errors encountered
+% merge/resolve
+% simplemerge
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+$Id: m 8731e1dadc99 Thu, 01 Jan 1970 00:00:00 +0000 test $
+foo
+% conflict
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+merging m
+warning: conflicts during merge.
+merging m failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+% keyword stays outside conflict zone
+$Id$
+<<<<<<< local
+bar
+=======
+foo
+>>>>>>> other
+% resolve to local
+$Id: m 43dfd2854b5b Thu, 01 Jan 1970 00:00:00 +0000 test $
+bar
 % switch off expansion
 % kwshrink with unknown file u
 overwriting a shrinking keywords
+overwriting m shrinking keywords
 overwriting x/a shrinking keywords
 % cat
 expand $Id$
