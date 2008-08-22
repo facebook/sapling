@@ -8,6 +8,7 @@ adding a
 b
  b: searching for copy revision for a
  b: copy a:b80de5d138758541c5f05265ad144ab9fa86d1db
+committed changeset 5:755e75751bf67eb4378bca61987df035d90a7a06
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

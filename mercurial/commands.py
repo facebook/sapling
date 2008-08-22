@@ -590,11 +590,16 @@ def commit(ui, repo, *pats, **opts):
     parents = cl.parentrevs(rev)
     if rev - 1 in parents:
         # one of the parents was the old tip
-        return
-    if (parents == (nullrev, nullrev) or
-        len(cl.heads(cl.node(parents[0]))) > 1 and
-        (parents[1] == nullrev or len(cl.heads(cl.node(parents[1]))) > 1)):
+        pass
+    elif (parents == (nullrev, nullrev) or
+          len(cl.heads(cl.node(parents[0]))) > 1 and
+          (parents[1] == nullrev or len(cl.heads(cl.node(parents[1]))) > 1)):
         ui.status(_('created new head\n'))
+
+    if ui.debugflag:
+        ui.write(_('committed changeset %d:%s\n') % (rev,hex(node)))
+    elif ui.verbose:
+        ui.write(_('committed changeset %d:%s\n') % (rev,short(node)))
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
