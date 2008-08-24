@@ -5,6 +5,16 @@ echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
+filterpatch()
+{
+    sed -e "s/^\(# Date\).*/\1/" \
+        -e "s/^\(# Node ID\).*/\1/" \
+        -e "s/^\(# Parent\).*/\1/" \
+        -e "s/^\(diff -r \)\([a-f0-9]* \)\(-r \)\([a-f0-9]* \)/\1x \3y /" \
+        -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" \
+        -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/"
+}
+
 hg init a
 cd a
 hg qinit -c # This must work even with a managed mq queue
@@ -54,9 +64,7 @@ hg up qbase
 echo '% f correctly reflects the merge result'
 cat f
 echo '% And the patch is correct'
-cat .hg/patches/f.patch | sed -e "s/^\(# \(Date\|Node ID\|Parent\)\).*/\1/" \
-        -e  "s/^\(diff -r \)\([a-f0-9]* \)\(-r \)\([a-f0-9]* \)/\1x \3y /" \
-        -e  "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+cat .hg/patches/f.patch | filterpatch
 
 echo
 echo '% Update to qtip'
@@ -64,6 +72,5 @@ hg up qtip
 echo '% f correctly reflects the merge result'
 cat f
 echo '% And the patch is correct'
-cat .hg/patches/f2.patch | sed -e "s/^\(# \(Date\|Node ID\|Parent\)\).*/\1/" \
-        -e  "s/^\(diff -r \)\([a-f0-9]* \)\(-r \)\([a-f0-9]* \)/\1x \3y /" \
-        -e  "s/\(\(---\|+++\) [a-zA-Z0-9_/.-]*\).*/\1/"
+cat .hg/patches/f2.patch | filterpatch
+
