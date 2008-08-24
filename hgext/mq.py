@@ -2218,9 +2218,10 @@ def finish(ui, repo, *revrange, **opts):
     Finishes the specified revisions (corresponding to applied patches) by
     moving them out of mq control into regular repository history.
 
-    Accepts a revision range or the --all option. If --all is specified, all
-    applied mq revisions are removed from mq control. Otherwise, the given
-    revisions must be at the base of the stack of applied patches.
+    Accepts a revision range or the --applied option. If --applied is
+    specified, all applied mq revisions are removed from mq control.
+    Otherwise, the given revisions must be at the base of the stack of
+    applied patches.
 
     This can be especially useful if your changes have been applied to an
     upstream repository, or if you are about to push your changes to upstream.
