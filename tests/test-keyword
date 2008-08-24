@@ -301,6 +301,31 @@ echo % hgweb filediff
 echo % errors encountered
 cat errors.log
 
+echo % merge/resolve
+echo '$Id$' > m
+hg add m
+hg commit -m 4kw 
+echo foo >> m
+hg commit -m 5foo
+echo % simplemerge
+hg update 4
+echo foo >> m
+hg commit -m 6foo
+hg merge
+hg commit -m simplemerge
+cat m
+echo % conflict
+hg update 4
+echo bar >> m
+hg commit -m 8bar
+hg merge
+echo % keyword stays outside conflict zone
+cat m
+echo % resolve to local
+HGMERGE=internal:local hg resolve
+hg commit -m localresolve
+cat m
+
 echo % switch off expansion
 echo % kwshrink with unknown file u
 cp a u

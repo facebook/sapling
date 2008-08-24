@@ -94,7 +94,7 @@ nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
-restricted = 'record qfold qimport qnew qpush qrefresh qrecord'
+restricted = 'merge record resolve qfold qimport qnew qpush qrefresh qrecord'
 
 def utcdate(date):
     '''Returns hgdate in cvs-like UTC format.'''
