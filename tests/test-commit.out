@@ -11,19 +11,16 @@ nothing changed
 abort: file bar not found!
 adding dir/file
 dir/file
-committed changeset d2a76177cb42
 adding dir.file
 abort: no match under directory dir!
 abort: no match under directory .!
 abort: no match under directory ../dir2!
 dir/file
-committed changeset 1cd62a2d8db5
 does-not-exist: No such file or directory
 abort: file does-not-exist not found!
 abort: file baz not tracked!
 abort: file quux not tracked!
 dir/file
-committed changeset 49176991390e
 % partial subdir commit test
 adding bar/bar
 adding foo/foo

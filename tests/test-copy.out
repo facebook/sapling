@@ -1,7 +1,6 @@
 A b
 b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
-committed changeset 386a3cc01532
 we should see two history entries
 changeset:   1:386a3cc01532
 tag:         tip

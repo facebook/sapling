@@ -150,5 +150,4 @@ Automatically installed hook
 foo
 calling hook commit.auto: <function autohook>
 Automatically installed hook
-committed changeset 52998019f625
 hooks.commit.auto=<function autohook>

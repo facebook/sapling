@@ -587,7 +587,6 @@ def commit(ui, repo, *pats, **opts):
         return
     cl = repo.changelog
     rev = cl.rev(node)
-    ui.note(_('committed changeset %s\n') % short(node))
     parents = cl.parentrevs(rev)
     if rev - 1 in parents:
         # one of the parents was the old tip

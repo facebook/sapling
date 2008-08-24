@@ -2,12 +2,10 @@ adding dir/bar
 adding foo
 dir/bar
 foo
-committed changeset d44511117907
 adding dir/bar_2
 adding foo_2
 dir/bar_2
 foo_2
-committed changeset a85812e0561a
 adding a
 adding c
 removing a
