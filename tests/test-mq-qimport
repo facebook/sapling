@@ -21,9 +21,13 @@ echo "mq=" >> $HGRCPATH
 echo "[diff]" >> $HGRCPATH
 echo "git=1" >> $HGRCPATH
 
-echo % build diff with CRLF
 hg init repo
 cd repo
+
+echo % qimport non-existing-file
+hg qimport non-existing-file
+
+echo % build diff with CRLF
 python ../writelines.py b 5 'a\n' 5 'a\r\n'
 hg ci -Am addb
 python ../writelines.py b 2 'a\n' 10 'b\n' 2 'a\r\n'

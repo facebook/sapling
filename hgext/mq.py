@@ -1494,7 +1494,7 @@ class queue:
                     else:
                         text = file(filename, 'rb').read()
                 except IOError:
-                    raise util.Abort(_("unable to read %s") % patchname)
+                    raise util.Abort(_("unable to read %s") % filename)
                 if not patchname:
                     patchname = normname(os.path.basename(filename))
                 self.check_reserved_name(patchname)
