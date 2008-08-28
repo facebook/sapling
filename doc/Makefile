@@ -30,7 +30,7 @@ hg.1.gendoc.txt: ../mercurial/commands.py ../mercurial/help.py
 	asciidoc -b html4 $*.txt || asciidoc -b html $*.txt
 
 MANIFEST: man html
-	# versionned files are already in the main MANIFEST
+	# tracked files are already in the main MANIFEST
 	$(RM) $@
 	for i in $(MAN) $(HTML) hg.1.gendoc.txt; do \
 	  echo "doc/$$i" >> $@ ; \
