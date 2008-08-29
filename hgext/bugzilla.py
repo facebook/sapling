@@ -80,11 +80,7 @@ class bugzilla_2_16(object):
         self.conn = MySQLdb.connect(host=host, user=user, passwd=passwd,
                                     db=db, connect_timeout=timeout)
         self.cursor = self.conn.cursor()
-        self.run('select fieldid from fielddefs where name = "longdesc"')
-        ids = self.cursor.fetchall()
-        if len(ids) != 1:
-            raise util.Abort(_('unknown database schema'))
-        self.longdesc_id = ids[0][0]
+        self.longdesc_id = self.get_longdesc_id()
         self.user_ids = {}
 
     def run(self, *args, **kwargs):
@@ -95,6 +91,14 @@ class bugzilla_2_16(object):
         except MySQLdb.MySQLError, err:
             self.ui.note(_('failed query: %s %s\n') % (args, kwargs))
             raise
+
+    def get_longdesc_id(self):
+        '''get identity of longdesc field'''
+        self.run('select fieldid from fielddefs where name = "longdesc"')
+        ids = self.cursor.fetchall()
+        if len(ids) != 1:
+            raise util.Abort(_('unknown database schema'))
+        return ids[0][0]
 
     def filter_real_bug_ids(self, ids):
         '''filter not-existing bug ids from list.'''
@@ -182,11 +186,26 @@ class bugzilla_2_16(object):
                     values (%s, %s, %s, %s)''',
                  (bugid, userid, now, self.longdesc_id))
 
+class bugzilla_3_0(bugzilla_2_16):
+    '''support for bugzilla 3.0 series.'''
+
+    def __init__(self, ui):
+        bugzilla_2_16.__init__(self, ui)
+
+    def get_longdesc_id(self):
+        '''get identity of longdesc field'''
+        self.run('select id from fielddefs where name = "longdesc"')
+        ids = self.cursor.fetchall()
+        if len(ids) != 1:
+            raise util.Abort(_('unknown database schema'))
+        return ids[0][0]
+
 class bugzilla(object):
     # supported versions of bugzilla. different versions have
     # different schemas.
     _versions = {
         '2.16': bugzilla_2_16,
+        '3.0':  bugzilla_3_0
         }
 
     _default_bug_re = (r'bugs?\s*,?\s*(?:#|nos?\.?|num(?:ber)?s?)?\s*'
