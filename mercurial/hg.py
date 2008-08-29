@@ -178,11 +178,11 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
             for f in src_repo.store.copylist():
                 src = os.path.join(src_repo.path, f)
+                dst = os.path.join(dest_path, f)
+                dstbase = os.path.dirname(dst)
+                if dstbase and not os.path.exists(dstbase):
+                    os.mkdir(dstbase)
                 if os.path.exists(src):
-                    dst = os.path.join(dest_path, f)
-                    dstbase = os.path.dirname(dst)
-                    if not os.path.exists(dstbase):
-                        os.mkdir(dstbase)
                     if dst.endswith('data'):
                         # lock to avoid premature writing to the target
                         dest_lock = lock.lock(os.path.join(dstbase, "lock"))

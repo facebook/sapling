@@ -1,7 +1,17 @@
 #!/bin/sh
 
-hg init
+hg init a
+cd a
 hg log
 hg grep wah
 hg manifest
 hg verify
+ls .hg
+ls .hg/store
+
+cd ..
+hg clone a b
+cd b
+hg verify
+ls .hg
+ls .hg/store
