@@ -1,21 +1,52 @@
+
+% prepare repo a
+% list files in store/data (should show a 'b.d')
+.hg/store/data/a.i
+.hg/store/data/b.d
+.hg/store/data/b.i
+
+% default operation
 updating working directory
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-1 files, 1 changesets, 1 total revisions
+2 files, 11 changesets, 11 total revisions
+
+% no update
 a not present
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-1 files, 1 changesets, 1 total revisions
+2 files, 11 changesets, 11 total revisions
+
+% default destination
 destination directory: a
 updating working directory
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
+
+% check that we drop the file:// from the path before
+% writing the .hgrc
 updating working directory
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% check that path aliases are expanded
 a#0
+
+% use --pull
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 11 changesets with 11 changes to 2 files
+updating working directory
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+2 files, 11 changesets, 11 total revisions
