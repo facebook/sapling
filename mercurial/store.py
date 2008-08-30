@@ -50,18 +50,19 @@ _data = 'data 00manifest.d 00manifest.i 00changelog.d  00changelog.i'
 
 class basicstore:
     '''base class for local repository stores'''
-    def __init__(self, path, opener):
+    def __init__(self, path, opener, pathjoiner):
+        self.pathjoiner = pathjoiner
         self.path = path
         self.createmode = _calcmode(path)
         self.opener = opener(self.path)
         self.opener.createmode = self.createmode
 
     def join(self, f):
-        return os.path.join(self.path, f)
+        return self.pathjoiner(self.path, f)
 
     def _walk(self, relpath, recurse):
         '''yields (unencoded, encoded, size)'''
-        path = os.path.join(self.path, relpath)
+        path = self.pathjoiner(self.path, relpath)
         striplen = len(self.path) + len(os.sep)
         prefix = path[striplen:]
         l = []
@@ -70,7 +71,7 @@ class basicstore:
             while visit:
                 p = visit.pop()
                 for f, kind, st in osutil.listdir(p, stat=True):
-                    fp = os.path.join(p, f)
+                    fp = self.pathjoiner(p, f)
                     if kind == stat.S_IFREG and f[-2:] in ('.d', '.i'):
                         n = util.pconvert(fp[striplen:])
                         l.append((n, n, st.st_size))
@@ -96,8 +97,9 @@ class basicstore:
         return ['requires'] + _data.split()
 
 class encodedstore(basicstore):
-    def __init__(self, path, opener):
-        self.path = os.path.join(path, 'store')
+    def __init__(self, path, opener, pathjoiner):
+        self.pathjoiner = pathjoiner
+        self.path = self.pathjoiner(path, 'store')
         self.createmode = _calcmode(self.path)
         op = opener(self.path)
         op.createmode = self.createmode
@@ -112,13 +114,13 @@ class encodedstore(basicstore):
             yield a, b, size
 
     def join(self, f):
-        return os.path.join(self.path, encodefilename(f))
+        return self.pathjoiner(self.path, encodefilename(f))
 
     def copylist(self):
         return (['requires', '00changelog.i'] +
-                ['store/' + f for f in _data.split()])
+                [self.pathjoiner('store', f) for f in _data.split()])
 
-def store(requirements, path, opener):
+def store(requirements, path, opener, pathjoiner):
     if 'store' in requirements:
-        return encodedstore(path, opener)
-    return basicstore(path, opener)
+        return encodedstore(path, opener, pathjoiner)
+    return basicstore(path, opener, pathjoiner)
