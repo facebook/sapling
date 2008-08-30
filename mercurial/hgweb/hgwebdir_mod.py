@@ -89,14 +89,12 @@ class hgwebdir(object):
                         fname = virtual[7:]
                     else:
                         fname = req.form['static'][0]
-                    req.write(staticfile(static, fname, req))
-                    return []
+                    return staticfile(static, fname, req)
 
                 # top-level index
                 elif not virtual:
                     req.respond(HTTP_OK, ctype)
-                    req.write(self.makeindex(req, tmpl))
-                    return []
+                    return ''.join(self.makeindex(req, tmpl)),
 
                 # nested indexes and hgwebs
 
@@ -118,8 +116,7 @@ class hgwebdir(object):
                     subdir = virtual + '/'
                     if [r for r in repos if r.startswith(subdir)]:
                         req.respond(HTTP_OK, ctype)
-                        req.write(self.makeindex(req, tmpl, subdir))
-                        return []
+                        return ''.join(self.makeindex(req, tmpl, subdir)),
 
                     up = virtual.rfind('/')
                     if up < 0:
@@ -128,13 +125,11 @@ class hgwebdir(object):
 
                 # prefixes not found
                 req.respond(HTTP_NOT_FOUND, ctype)
-                req.write(tmpl("notfound", repo=virtual))
-                return []
+                return ''.join(tmpl("notfound", repo=virtual)),
 
             except ErrorResponse, err:
                 req.respond(err.code, ctype)
-                req.write(tmpl('error', error=err.message or ''))
-                return []
+                return ''.join(tmpl('error', error=err.message or '')),
         finally:
             tmpl = None
 

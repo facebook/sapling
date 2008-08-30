@@ -41,37 +41,33 @@ env = {
 	'SERVER_PROTOCOL': 'HTTP/1.0'
 }
 
+def process(app):
+	content = app(env, startrsp)
+	sys.stdout.write(output.getvalue())
+	sys.stdout.write(''.join(content))
+	print '---- ERRORS'
+	print errors.getvalue()
+	
+
 output = StringIO()
 env['PATH_INFO'] = '/'
 env['QUERY_STRING'] = 'style=atom'
-hgweb('.', name = 'repo')(env, startrsp)
-print output.getvalue()
-print '---- ERRORS'
-print errors.getvalue()
+process(hgweb('.', name = 'repo'))
 
 output = StringIO()
 env['PATH_INFO'] = '/file/tip/'
 env['QUERY_STRING'] = 'style=raw'
-hgweb('.', name = 'repo')(env, startrsp)
-print output.getvalue()
-print '---- ERRORS'
-print errors.getvalue()
+process(hgweb('.', name = 'repo'))
 
 output = StringIO()
 env['PATH_INFO'] = '/'
 env['QUERY_STRING'] = 'style=raw'
-hgwebdir({'repo': '.'})(env, startrsp)
-print output.getvalue()
-print '---- ERRORS'
-print errors.getvalue()
+process(hgwebdir({'repo': '.'}))
 
 output = StringIO()
 env['PATH_INFO'] = '/repo/file/tip/'
 env['QUERY_STRING'] = 'style=raw'
-hgwebdir({'repo': '.'})(env, startrsp)
-print output.getvalue()
-print '---- ERRORS'
-print errors.getvalue()
+process(hgwebdir({'repo': '.'}))
 EOF
 
 python request.py | sed "s/http:\/\/127\.0\.0\.1:[0-9]*\//http:\/\/127.0.0.1\//"
