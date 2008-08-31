@@ -28,6 +28,7 @@
 import re
 from mercurial.hgweb import hgweb_mod
 from mercurial import templatefilters
+from mercurial.i18n import _
 
 orig_escape = templatefilters.filters["escape"]
 
@@ -56,7 +57,7 @@ def interhg_refresh(self):
         match = re.match(r'^s%s(.+)(?:(?<=\\\\)|(?<!\\))%s(.*)%s([ilmsux])*$'
                          % (delim, delim, delim), pattern)
         if not match:
-            self.repo.ui.warn("interhg: invalid pattern for %s: %s\n"
+            self.repo.ui.warn(_("interhg: invalid pattern for %s: %s\n")
                               % (key, pattern))
             continue
 
@@ -76,7 +77,7 @@ def interhg_refresh(self):
             regexp = re.compile(regexp, flags)
             interhg_table.append((regexp, format))
         except re.error:
-            self.repo.ui.warn("interhg: invalid regexp for %s: %s\n"
+            self.repo.ui.warn(_("interhg: invalid regexp for %s: %s\n")
                               % (key, regexp))
     return orig_refresh(self)
 
