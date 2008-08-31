@@ -347,7 +347,7 @@ def applyupdates(repo, action, wctx, mctx):
             updated += 1
         elif m == "dr": # divergent renames
             fl = a[2]
-            repo.ui.warn("warning: detected divergent renames of %s to:\n" % f)
+            repo.ui.warn(_("warning: detected divergent renames of %s to:\n") % f)
             for nf in fl:
                 repo.ui.warn(" %s\n" % nf)
         elif m == "e": # exec

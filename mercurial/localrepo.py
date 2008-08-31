@@ -1098,7 +1098,7 @@ class localrepository(repo.repository):
             wlock = self.wlock()
             for f in list:
                 if self.dirstate[f] != 'r':
-                    self.ui.warn("%s not removed!\n" % f)
+                    self.ui.warn(_("%s not removed!\n") % f)
                 else:
                     m = f in manifests[0] and manifests[0] or manifests[1]
                     t = self.file(f).read(m[f])
@@ -2022,7 +2022,7 @@ class localrepository(repo.repository):
             except ValueError, TypeError:
                 raise util.UnexpectedOutput(
                     _('Unexpected response from remote server:'), l)
-            self.ui.debug('adding %s (%s)\n' % (name, util.bytecount(size)))
+            self.ui.debug(_('adding %s (%s)\n') % (name, util.bytecount(size)))
             ofp = self.sopener(name, 'w')
             for chunk in util.filechunkiter(fp, limit=size):
                 ofp.write(chunk)

@@ -8,6 +8,7 @@
 
 import changegroup, os
 from node import nullrev, short
+from i18n import _
 
 def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     """create a bundle with the specified revisions as a backup"""
@@ -16,7 +17,7 @@ def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     if not os.path.isdir(backupdir):
         os.mkdir(backupdir)
     name = os.path.join(backupdir, "%s-%s" % (short(node), suffix))
-    repo.ui.warn("saving bundle to %s\n" % name)
+    repo.ui.warn(_("saving bundle to %s\n") % name)
     return changegroup.writebundle(cg, name, "HG10BZ")
 
 def _collectfiles(repo, striprev):
@@ -125,7 +126,7 @@ def strip(ui, repo, node, backup="all"):
         f.strip(striprev)
 
     if saveheads or extranodes:
-        ui.status("adding branch\n")
+        ui.status(_("adding branch\n"))
         f = open(chgrpfile, "rb")
         gen = changegroup.readbundle(f, chgrpfile)
         repo.addchangegroup(gen, 'strip', 'bundle:' + chgrpfile, True)

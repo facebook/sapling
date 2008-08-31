@@ -259,7 +259,7 @@ def create_server(ui, repo):
                     from OpenSSL import SSL
                     ctx = SSL.Context(SSL.SSLv23_METHOD)
                 except ImportError:
-                    raise util.Abort("SSL support is unavailable")
+                    raise util.Abort(_("SSL support is unavailable"))
                 ctx.use_privatekey_file(ssl_cert)
                 ctx.use_certificate_file(ssl_cert)
                 sock = socket.socket(self.address_family, self.socket_type)

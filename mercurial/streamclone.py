@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import util, lock
+from i18n import _
 
 class StreamException(Exception):
     def __init__(self, code):
@@ -42,7 +43,7 @@ def stream_out(repo, untrusted=False):
     try:
         l = None
         try:
-            repo.ui.debug('scanning\n')
+            repo.ui.debug(_('scanning\n'))
             # get consistent snapshot of repo, lock during scan
             l = repo.lock()
             for name, ename, size in repo.store.walk():
@@ -54,11 +55,11 @@ def stream_out(repo, untrusted=False):
         raise StreamException(2)
 
     yield '0\n'
-    repo.ui.debug('%d files, %d bytes to transfer\n' %
+    repo.ui.debug(_('%d files, %d bytes to transfer\n') %
                   (len(entries), total_bytes))
     yield '%d %d\n' % (len(entries), total_bytes)
     for name, size in entries:
-        repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+        repo.ui.debug(_('sending %s (%d bytes)\n') % (name, size))
         yield '%s\0%d\n' % (name, size)
         for chunk in util.filechunkiter(repo.sopener(name), limit=size):
             yield chunk

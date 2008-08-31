@@ -936,7 +936,7 @@ def finddate(ui, repo, date):
                 results[rev] = d
         elif st == 'iter':
             if rev in results:
-                ui.status("Found revision %s from %s\n" %
+                ui.status(_("Found revision %s from %s\n") %
                           (rev, util.datestr(results[rev])))
                 return str(rev)
 

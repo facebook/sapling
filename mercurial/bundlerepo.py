@@ -39,7 +39,7 @@ class bundlerevlog(revlog.revlog):
         for chunk, start in chunkpositer():
             size = len(chunk)
             if size < 80:
-                raise util.Abort("invalid changegroup")
+                raise util.Abort(_("invalid changegroup"))
             start += 80
             size -= 80
             node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])

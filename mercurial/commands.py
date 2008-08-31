@@ -2129,7 +2129,7 @@ def push(ui, repo, dest=None, **opts):
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, dest)
-    ui.status('pushing to %s\n' % util.hidepassword(dest))
+    ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
     r = repo.push(other, opts['force'], revs=revs)
