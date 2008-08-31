@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial import osutil, ui, util
 import common
 import errno, os, select, socket, stat, struct, sys, time
@@ -290,10 +290,10 @@ class Watcher(object):
                     del self.dir(self.statustrees[oldstatus], root)[fn]
         if self.ui.debugflag and oldstatus != status:
             if isdir:
-                self.ui.note('status: %r dir(%d) -> %s\n' %
+                self.ui.note(_('status: %r dir(%d) -> %s\n') %
                              (wfn, len(oldstatus), status))
             else:
-                self.ui.note('status: %r %s -> %s\n' %
+                self.ui.note(_('status: %r %s -> %s\n') %
                              (wfn, oldstatus, status))
         if not isdir:
             if status and status != 'i':
@@ -382,7 +382,7 @@ class Watcher(object):
 
         if self.repo.dirstate.ignorefunc is not None:
             self.repo.dirstate.ignorefunc = None
-            self.ui.note('rescanning due to .hgignore change\n')
+            self.ui.note(_('rescanning due to .hgignore change\n'))
             self.scan()
 
     def getstat(self, wpath):
@@ -467,7 +467,7 @@ class Watcher(object):
 
     def process_delete(self, wpath, evt):
         if self.ui.debugflag:
-            self.ui.note(('%s event: deleted %s\n') %
+            self.ui.note(_('%s event: deleted %s\n') %
                          (self.event_time(), wpath))
 
         if evt.mask & inotify.IN_ISDIR:
@@ -490,12 +490,12 @@ class Watcher(object):
 
     def handle_event(self, fd, event):
         if self.ui.debugflag:
-            self.ui.note('%s readable: %d bytes\n' %
+            self.ui.note(_('%s readable: %d bytes\n') %
                          (self.event_time(), self.threshold.readable()))
         if not self.threshold():
             if self.registered:
                 if self.ui.debugflag:
-                    self.ui.note('%s below threshold - unhooking\n' %
+                    self.ui.note(_('%s below threshold - unhooking\n') %
                                  (self.event_time()))
                 self.master.poll.unregister(fd)
                 self.registered = False
@@ -506,7 +506,7 @@ class Watcher(object):
     def read_events(self, bufsize=None):
         events = self.watcher.read(bufsize)
         if self.ui.debugflag:
-            self.ui.note('%s reading %d events\n' %
+            self.ui.note(_('%s reading %d events\n') %
                          (self.event_time(), len(events)))
         for evt in events:
             wpath = self.wpath(evt)
@@ -523,7 +523,7 @@ class Watcher(object):
     def handle_timeout(self):
         if not self.registered:
             if self.ui.debugflag:
-                self.ui.note('%s hooking back up with %d bytes readable\n' %
+                self.ui.note(_('%s hooking back up with %d bytes readable\n') %
                              (self.event_time(), self.threshold.readable()))
             self.read_events(0)
             self.master.poll.register(self, select.POLLIN)
@@ -531,7 +531,7 @@ class Watcher(object):
 
         if self.eventq:
             if self.ui.debugflag:
-                self.ui.note('%s processing %d deferred events as %d\n' %
+                self.ui.note(_('%s processing %d deferred events as %d\n') %
                              (self.event_time(), self.deferred,
                               len(self.eventq)))
             for wpath, evts in util.sort(self.eventq.items()):
@@ -671,9 +671,9 @@ class Master(object):
             try:
                 if self.ui.debugflag:
                     if timeout is None:
-                        self.ui.note('polling: no timeout\n')
+                        self.ui.note(_('polling: no timeout\n'))
                     else:
-                        self.ui.note('polling: %sms timeout\n' % timeout)
+                        self.ui.note(_('polling: %sms timeout\n') % timeout)
                 events = self.poll.poll(timeout)
             except select.error, err:
                 if err[0] == errno.EINTR:
