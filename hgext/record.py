@@ -155,6 +155,8 @@ class hunk(object):
 
     def write(self, fp):
         delta = len(self.before) + len(self.after)
+        if self.after and self.after[-1] == '\\ No newline at end of file\n':
+            delta -= 1
         fromlen = delta + self.removed
         tolen = delta + self.added
         fp.write('@@ -%d,%d +%d,%d @@%s\n' %
@@ -206,7 +208,7 @@ def parsepatch(fp):
             if self.context:
                 self.before = self.context
                 self.context = []
-            self.hunk = data
+            self.hunk = hunk
 
         def newfile(self, hdr):
             self.addcontext([])
@@ -467,9 +469,16 @@ def dorecord(ui, repo, committer, *pats, **opts):
 
             # 3b. (apply)
             if dopatch:
-                ui.debug('applying patch\n')
-                ui.debug(fp.getvalue())
-                patch.internalpatch(fp, ui, 1, repo.root)
+                try:
+                    ui.debug('applying patch\n')
+                    ui.debug(fp.getvalue())
+                    patch.internalpatch(fp, ui, 1, repo.root)
+                except patch.PatchError, err:
+                    s = str(err)
+                    if s:
+                        raise util.Abort(s)
+                    else:
+                        raise util.Abort(_('patch failed to apply'))
             del fp
 
             # 4. We prepared working directory according to filtered patch.
