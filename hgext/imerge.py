@@ -74,7 +74,7 @@ class Imerge(object):
 
         status = statusfile.read().split('\0')
         if len(status) < 3:
-            raise util.Abort('invalid imerge status file')
+            raise util.Abort(_('invalid imerge status file'))
 
         try:
             parents = [self.repo.changectx(n) for n in status[:2]]
@@ -154,7 +154,7 @@ class Imerge(object):
         dp = self.repo.dirstate.parents()
         p1, p2 = self.wctx.parents()
         if p1.node() != dp[0] or p2.node() != dp[1]:
-            raise util.Abort('imerge state does not match working directory')
+            raise util.Abort(_('imerge state does not match working directory'))
 
     def next(self):
         remaining = self.remaining()
@@ -164,7 +164,7 @@ class Imerge(object):
         resolved = dict.fromkeys(self.resolved)
         for fn in files:
             if fn not in self.conflicts:
-                raise util.Abort('%s is not in the merge set' % fn)
+                raise util.Abort(_('%s is not in the merge set') % fn)
             resolved[fn] = True
         self.resolved = resolved.keys()
         self.resolved.sort()
@@ -175,7 +175,7 @@ class Imerge(object):
         resolved = dict.fromkeys(self.resolved)
         for fn in files:
             if fn not in resolved:
-                raise util.Abort('%s is not resolved' % fn)
+                raise util.Abort(_('%s is not resolved') % fn)
             del resolved[fn]
         self.resolved = resolved.keys()
         self.resolved.sort()
@@ -194,11 +194,11 @@ class Imerge(object):
 
 def load(im, source):
     if im.merging():
-        raise util.Abort('there is already a merge in progress '
-                         '(update -C <rev> to abort it)' )
+        raise util.Abort(_('there is already a merge in progress '
+                           '(update -C <rev> to abort it)'))
     m, a, r, d =  im.repo.status()[:4]
     if m or a or r or d:
-        raise util.Abort('working directory has uncommitted changes')
+        raise util.Abort(_('working directory has uncommitted changes'))
 
     rc = im.unpickle(source)
     if not rc:
@@ -243,7 +243,7 @@ def next(im):
 
 def resolve(im, *files):
     if not files:
-        raise util.Abort('resolve requires at least one filename')
+        raise util.Abort(_('resolve requires at least one filename'))
     return im.resolve(files)
 
 def save(im, dest):
@@ -286,7 +286,7 @@ def status(im, **opts):
 
 def unresolve(im, *files):
     if not files:
-        raise util.Abort('unresolve requires at least one filename')
+        raise util.Abort(_('unresolve requires at least one filename'))
     return im.unresolve(files)
 
 subcmdtable = {
@@ -380,7 +380,7 @@ def imerge(ui, repo, *args, **opts):
     else:
         rev = opts.get('rev')
         if rev and args:
-            raise util.Abort('please specify just one revision')
+            raise util.Abort(_('please specify just one revision'))
 
         if len(args) == 2 and args[0] == 'load':
             pass
