@@ -150,8 +150,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     store = False # set when a new record can be appended
 
     cmd = [util.shellquote(arg) for arg in cmd]
-    ui.note("running %s\n" % (' '.join(cmd)))
-    ui.debug("prefix=%r directory=%r root=%r\n" % (prefix, directory, root))
+    ui.note(_("running %s\n") % (' '.join(cmd)))
+    ui.debug(_("prefix=%r directory=%r root=%r\n") % (prefix, directory, root))
 
     for line in util.popen(' '.join(cmd)):
         if line.endswith('\n'):

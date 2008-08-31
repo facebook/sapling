@@ -177,7 +177,7 @@ class mercurial_sink(converter_sink):
          def getfilectx(repo, memctx, f):
             return context.memfilectx(f, data, False, False, None)
 
-         self.ui.status("updating tags\n")
+         self.ui.status(_("updating tags\n"))
          date = "%s 0" % int(time.mktime(time.gmtime()))
          extra = {'branch': self.tagsbranch}
          ctx = context.memctx(self.repo, (tagparent, None), "update tags",

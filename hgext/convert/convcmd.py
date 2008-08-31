@@ -184,7 +184,7 @@ class converter(object):
     def writeauthormap(self):
         authorfile = self.authorfile
         if authorfile:
-           self.ui.status('Writing author map file %s\n' % authorfile)
+           self.ui.status(_('Writing author map file %s\n') % authorfile)
            ofile = open(authorfile, 'w+')
            for author in self.authors:
                ofile.write("%s=%s\n" % (author, self.authors[author]))
@@ -201,15 +201,15 @@ class converter(object):
                 dstauthor = dstauthor.strip()
                 if srcauthor in self.authors and dstauthor != self.authors[srcauthor]:
                     self.ui.status(
-                        'Overriding mapping for author %s, was %s, will be %s\n'
+                        _('Overriding mapping for author %s, was %s, will be %s\n')
                         % (srcauthor, self.authors[srcauthor], dstauthor))
                 else:
-                    self.ui.debug('Mapping author %s to %s\n'
+                    self.ui.debug(_('Mapping author %s to %s\n')
                                   % (srcauthor, dstauthor))
                     self.authors[srcauthor] = dstauthor
             except IndexError:
                 self.ui.warn(
-                    'Ignoring bad line in author map file %s: %s\n'
+                    _('Ignoring bad line in author map file %s: %s\n')
                     % (authorfile, line.rstrip()))
         afile.close()
 
@@ -241,7 +241,7 @@ class converter(object):
         self.dest.setbranch(commit.branch, pbranches)
         try:
             parents = self.splicemap[rev].replace(',', ' ').split()
-            self.ui.status('spliced in %s as parents of %s\n' %
+            self.ui.status(_('spliced in %s as parents of %s\n') %
                            (parents, rev))
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
@@ -256,15 +256,15 @@ class converter(object):
             self.source.before()
             self.dest.before()
             self.source.setrevmap(self.map)
-            self.ui.status("scanning source...\n")
+            self.ui.status(_("scanning source...\n"))
             heads = self.source.getheads()
             parents = self.walktree(heads)
-            self.ui.status("sorting...\n")
+            self.ui.status(_("sorting...\n"))
             t = self.toposort(parents)
             num = len(t)
             c = None
 
-            self.ui.status("converting...\n")
+            self.ui.status(_("converting...\n"))
             for c in t:
                 num -= 1
                 desc = self.commitcache[c].desc
@@ -309,7 +309,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     if not dest:
         dest = hg.defaultdest(src) + "-hg"
-        ui.status("assuming destination %s\n" % dest)
+        ui.status(_("assuming destination %s\n") % dest)
 
     destc = convertsink(ui, dest, opts.get('dest_type'))
 

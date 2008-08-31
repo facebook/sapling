@@ -54,7 +54,7 @@ class convert_cvs(converter_source):
                     util.parsedate(self.rev, ['%Y/%m/%d %H:%M:%S'])
                     cmd = '%s -d "1970/01/01 00:00:01" -d "%s"' % (cmd, self.rev)
                 except util.Abort:
-                    raise util.Abort('revision %s is not a patchset number or date' % self.rev)
+                    raise util.Abort(_('revision %s is not a patchset number or date') % self.rev)
 
         d = os.getcwd()
         try:
@@ -181,7 +181,7 @@ class convert_cvs(converter_source):
         user, host = None, None
         cmd = ['cvs', 'server']
 
-        self.ui.status("connecting to %s\n" % root)
+        self.ui.status(_("connecting to %s\n") % root)
 
         if root.startswith(":pserver:"):
             root = root[9:]
@@ -221,7 +221,7 @@ class convert_cvs(converter_source):
                 sck.send("\n".join(["BEGIN AUTH REQUEST", root, user, passw,
                                     "END AUTH REQUEST", ""]))
                 if sck.recv(128) != "I LOVE YOU\n":
-                    raise util.Abort("CVS pserver authentication failed")
+                    raise util.Abort(_("CVS pserver authentication failed"))
 
                 self.writep = self.readp = sck.makefile('r+')
 
@@ -264,7 +264,7 @@ class convert_cvs(converter_source):
         self.writep.flush()
         r = self.readp.readline()
         if not r.startswith("Valid-requests"):
-            raise util.Abort("server sucks")
+            raise util.Abort(_("server sucks"))
         if "UseUnchanged" in r:
             self.writep.write("UseUnchanged\n")
             self.writep.flush()
@@ -283,7 +283,7 @@ class convert_cvs(converter_source):
             while count > 0:
                 data = fp.read(min(count, chunksize))
                 if not data:
-                    raise util.Abort("%d bytes missing from remote file" % count)
+                    raise util.Abort(_("%d bytes missing from remote file") % count)
                 count -= len(data)
                 output.write(data)
             return output.getvalue()
@@ -318,14 +318,14 @@ class convert_cvs(converter_source):
                 if line == "ok\n":
                     return (data, "x" in mode and "x" or "")
                 elif line.startswith("E "):
-                    self.ui.warn("cvs server: %s\n" % line[2:])
+                    self.ui.warn(_("cvs server: %s\n") % line[2:])
                 elif line.startswith("Remove"):
                     l = self.readp.readline()
                     l = self.readp.readline()
                     if l != "ok\n":
-                        raise util.Abort("unknown CVS response: %s" % l)
+                        raise util.Abort(_("unknown CVS response: %s") % l)
                 else:
-                    raise util.Abort("unknown CVS response: %s" % line)
+                    raise util.Abort(_("unknown CVS response: %s") % line)
 
     def getfile(self, file, rev):
         data, mode = self._getfile(file, rev)

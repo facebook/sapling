@@ -66,7 +66,7 @@ class darcs_source(converter_source, commandline):
         self.parents[child] = []
 
     def after(self):
-        self.ui.debug('cleaning up %s\n' % self.tmppath)
+        self.ui.debug(_('cleaning up %s\n') % self.tmppath)
         shutil.rmtree(self.tmppath, ignore_errors=True)
 
     def xml(self, cmd, **kwargs):
