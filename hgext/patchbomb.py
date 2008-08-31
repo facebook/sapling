@@ -398,7 +398,7 @@ def patchbomb(ui, repo, *revs, **opts):
         if bcc:
             m['Bcc'] = ', '.join(bcc)
         if opts.get('test'):
-            ui.status('Displaying ', m['Subject'], ' ...\n')
+            ui.status(_('Displaying '), m['Subject'], ' ...\n')
             ui.flush()
             if 'PAGER' in os.environ:
                 fp = util.popen(os.environ['PAGER'], 'w')
@@ -414,7 +414,7 @@ def patchbomb(ui, repo, *revs, **opts):
             if fp is not ui:
                 fp.close()
         elif opts.get('mbox'):
-            ui.status('Writing ', m['Subject'], ' ...\n')
+            ui.status(_('Writing '), m['Subject'], ' ...\n')
             fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
             generator = email.Generator.Generator(fp, mangle_from_=True)
             date = util.datestr(start_time, '%a %b %d %H:%M:%S %Y')
@@ -425,7 +425,7 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             if not sendmail:
                 sendmail = mail.connect(ui)
-            ui.status('Sending ', m['Subject'], ' ...\n')
+            ui.status(_('Sending '), m['Subject'], ' ...\n')
             # Exim does not remove the Bcc field
             del m['Bcc']
             fp = cStringIO.StringIO()
