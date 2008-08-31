@@ -376,15 +376,11 @@ class patchfile:
 
         if not self.rej:
             return
-        if self.hunks != 1:
-            hunkstr = "s"
-        else:
-            hunkstr = ""
 
         fname = self.fname + ".rej"
         self.ui.warn(
-            _("%d out of %d hunk%s FAILED -- saving rejects to file %s\n") %
-            (len(self.rej), self.hunks, hunkstr, fname))
+            _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
+            (len(self.rej), self.hunks, fname))
         try: os.unlink(fname)
         except:
             pass

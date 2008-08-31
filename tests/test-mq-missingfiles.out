@@ -30,7 +30,7 @@ Patch queue now empty
 % push git patch with missing target
 applying changeb
 unable to find 'b' for patching
-1 out of 1 hunk FAILED -- saving rejects to file b.rej
+1 out of 1 hunks FAILED -- saving rejects to file b.rej
 patch failed, unable to continue (try -v)
 b: No such file or directory
 b not tracked!

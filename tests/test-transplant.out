@@ -110,14 +110,14 @@ created new head
 applying a1e30dd1b8e7
 patching file foo
 Hunk #1 FAILED at 0
-1 out of 1 hunk FAILED -- saving rejects to file foo.rej
+1 out of 1 hunks FAILED -- saving rejects to file foo.rej
 patch failed to apply
 abort: Fix up the merge and run hg transplant --continue
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 applying a1e30dd1b8e7
 patching file foo
 Hunk #1 FAILED at 0
-1 out of 1 hunk FAILED -- saving rejects to file foo.rej
+1 out of 1 hunks FAILED -- saving rejects to file foo.rej
 patch failed to apply
 abort: Fix up the merge and run hg transplant --continue
 a1e30dd1b8e7 transplanted as f1563cf27039
