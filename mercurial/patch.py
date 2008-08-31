@@ -537,11 +537,11 @@ class hunk:
         # if we hit eof before finishing out the hunk, the last line will
         # be zero length.  Lets try to fix it up.
         while len(self.hunk[-1]) == 0:
-                del self.hunk[-1]
-                del self.a[-1]
-                del self.b[-1]
-                self.lena -= 1
-                self.lenb -= 1
+            del self.hunk[-1]
+            del self.a[-1]
+            del self.b[-1]
+            self.lena -= 1
+            self.lenb -= 1
 
     def read_context_hunk(self, lr):
         self.desc = lr.readline()

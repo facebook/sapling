@@ -98,7 +98,7 @@ ext_modules=[
     Extension('mercurial.parsers', ['mercurial/parsers.c']),
     ]
 
-packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert', 
+packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
             'hgext.highlight']
 
 try:
