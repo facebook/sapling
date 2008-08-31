@@ -47,6 +47,7 @@ vdiff on hovered and selected revisions.'''
 import os
 from mercurial import commands, util, patch, revlog, cmdutil
 from mercurial.node import nullid, nullrev, short
+from mercurial.i18n import _
 
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
@@ -149,12 +150,12 @@ def catfile(ui, repo, type=None, r=None, **opts):
 
     else:
         if not type or not r:
-            ui.warn("cat-file: type or revision not supplied\n")
+            ui.warn(_("cat-file: type or revision not supplied\n"))
             commands.help_(ui, 'cat-file')
 
     while r:
         if type != "commit":
-            ui.warn("aborting hg cat-file only understands commits\n")
+            ui.warn(_("aborting hg cat-file only understands commits\n"))
             return 1;
         n = repo.lookup(r)
         catcommit(ui, repo, n, prefix)
@@ -316,7 +317,7 @@ def view(ui, repo, *etc, **opts):
     os.chdir(repo.root)
     optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems() if v])
     cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
-    ui.debug("running %s\n" % cmd)
+    ui.debug(_("running %s\n") % cmd)
     util.system(cmd)
 
 cmdtable = {
