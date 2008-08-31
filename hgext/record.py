@@ -452,7 +452,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
                 fd, tmpname = tempfile.mkstemp(prefix=f.replace('/', '_')+'.',
                                                dir=backupdir)
                 os.close(fd)
-                ui.debug('backup %r as %r\n' % (f, tmpname))
+                ui.debug(_('backup %r as %r\n') % (f, tmpname))
                 util.copyfile(repo.wjoin(f), tmpname)
                 backups[f] = tmpname
 
@@ -470,7 +470,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
             # 3b. (apply)
             if dopatch:
                 try:
-                    ui.debug('applying patch\n')
+                    ui.debug(_('applying patch\n'))
                     ui.debug(fp.getvalue())
                     patch.internalpatch(fp, ui, 1, repo.root)
                 except patch.PatchError, err:
@@ -498,7 +498,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
             # 5. finally restore backed-up files
             try:
                 for realname, tmpname in backups.iteritems():
-                    ui.debug('restoring %r to %r\n' % (tmpname, realname))
+                    ui.debug(_('restoring %r to %r\n') % (tmpname, realname))
                     util.copyfile(tmpname, repo.wjoin(realname))
                     os.unlink(tmpname)
                 os.rmdir(backupdir)
