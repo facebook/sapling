@@ -58,14 +58,14 @@ def countrevs(ui, repo, amap, revs, progress=False):
         user = util.email(ctx2.user())
         user = amap.get(user, user) # remap
         stats[user] = stats.get(user, 0) + lines
-        ui.debug("rev %d: %d lines by %s\n" % (rev, lines, user))
+        ui.debug(_("rev %d: %d lines by %s\n") % (rev, lines, user))
 
         if progress:
             count += 1
             newpct = int(100.0 * count / max(len(revs), 1))
             if pct < newpct:
                 pct = newpct
-                ui.write("\rGenerating stats: %d%%" % pct)
+                ui.write(_("\rGenerating stats: %d%%") % pct)
                 sys.stdout.flush()
 
     if progress:
