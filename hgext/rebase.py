@@ -170,8 +170,8 @@ def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse):
         state[rev] = repo[newrev].rev()
     else:
         if not collapse:
-            repo.ui.note('no changes, revision %d skipped\n' % rev)
-            repo.ui.debug('next revision set to %s\n' % p1)
+            repo.ui.note(_('no changes, revision %d skipped\n') % rev)
+            repo.ui.debug(_('next revision set to %s\n') % p1)
             skipped[rev] = True
         state[rev] = p1
 
@@ -209,7 +209,7 @@ def updatemq(repo, state, skipped, **opts):
     mqrebase = {}
     for p in repo.mq.applied:
         if repo[p.rev].rev() in state:
-            repo.ui.debug('revision %d is an mq patch (%s), finalize it.\n' %
+            repo.ui.debug(_('revision %d is an mq patch (%s), finalize it.\n') %
                                         (repo[p.rev].rev(), p.name))
             mqrebase[repo[p.rev].rev()] = p.name
 
@@ -222,8 +222,8 @@ def updatemq(repo, state, skipped, **opts):
         mq.reverse()
         for rev in mq:
             if rev not in skipped:
-                repo.ui.debug('import mq patch %d (%s)\n' % (state[rev],
-                                                            mqrebase[rev]))
+                repo.ui.debug(_('import mq patch %d (%s)\n')
+                              % (state[rev], mqrebase[rev]))
                 repo.mq.qimport(repo, (), patchname=mqrebase[rev],
                             git=opts.get('git', False),rev=[str(state[rev])])
         repo.mq.save_dirty()
