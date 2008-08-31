@@ -468,9 +468,16 @@ def dorecord(ui, repo, committer, *pats, **opts):
 
             # 3b. (apply)
             if dopatch:
-                ui.debug('applying patch\n')
-                ui.debug(fp.getvalue())
-                patch.internalpatch(fp, ui, 1, repo.root)
+                try:
+                    ui.debug('applying patch\n')
+                    ui.debug(fp.getvalue())
+                    patch.internalpatch(fp, ui, 1, repo.root)
+                except patch.PatchError, err:
+                    s = str(err)
+                    if s:
+                        raise util.Abort(s)
+                    else:
+                        raise util.Abort(_('patch failed to apply'))
             del fp
 
             # 4. We prepared working directory according to filtered patch.
