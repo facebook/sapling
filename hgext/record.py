@@ -155,6 +155,8 @@ class hunk(object):
 
     def write(self, fp):
         delta = len(self.before) + len(self.after)
+        if self.after and self.after[-1] == '\\ No newline at end of file\n':
+            delta -= 1
         fromlen = delta + self.removed
         tolen = delta + self.added
         fp.write('@@ -%d,%d +%d,%d @@%s\n' %
@@ -206,7 +208,7 @@ def parsepatch(fp):
             if self.context:
                 self.before = self.context
                 self.context = []
-            self.hunk = data
+            self.hunk = hunk
 
         def newfile(self, hdr):
             self.addcontext([])
