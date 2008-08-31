@@ -169,7 +169,7 @@ class transplanter:
     def filter(self, filter, changelog, patchfile):
         '''arbitrarily rewrite changeset before applying it'''
 
-        self.ui.status('filtering %s\n' % patchfile)
+        self.ui.status(_('filtering %s\n') % patchfile)
         user, date, msg = (changelog[1], changelog[2], changelog[4])
 
         fd, headerfile = tempfile.mkstemp(prefix='hg-transplant-')
