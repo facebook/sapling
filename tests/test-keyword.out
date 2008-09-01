@@ -394,10 +394,10 @@ $Xinfo: User Name <user@example.com>: firstline $
 200 Script output follows
 
 
-User Name <user@example.com>@1: expand $Id$
-User Name <user@example.com>@1: do not process $Id:
-User Name <user@example.com>@1: xxx $
-User Name <user@example.com>@2: $Xinfo$
+user@1: expand $Id$
+user@1: do not process $Id:
+user@1: xxx $
+user@2: $Xinfo$
 
 
 
