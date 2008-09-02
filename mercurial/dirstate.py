@@ -101,6 +101,7 @@ class dirstate(object):
 
     def _join(self, f):
         # much faster than os.path.join()
+        # it's safe because f is always a relative path
         return self._rootdir + f
 
     def flagfunc(self, fallback):
