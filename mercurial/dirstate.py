@@ -28,6 +28,7 @@ class dirstate(object):
     def __init__(self, opener, ui, root):
         self._opener = opener
         self._root = root
+        self._rootdir = os.path.join(root, '')
         self._dirty = False
         self._dirtypl = False
         self._ui = ui
@@ -99,13 +100,14 @@ class dirstate(object):
             raise AttributeError, name
 
     def _join(self, f):
-        return os.path.join(self._root, f)
+        # much faster than os.path.join()
+        return self._rootdir + f
 
     def flagfunc(self, fallback):
         if self._checklink:
             if self._checkexec:
                 def f(x):
-                    p = os.path.join(self._root, x)
+                    p = self._join(x)
                     if os.path.islink(p):
                         return 'l'
                     if util.is_exec(p):
@@ -113,7 +115,7 @@ class dirstate(object):
                     return ''
                 return f
             def f(x):
-                if os.path.islink(os.path.join(self._root, x)):
+                if os.path.islink(self._join(x)):
                     return 'l'
                 if 'x' in fallback(x):
                     return 'x'
@@ -123,7 +125,7 @@ class dirstate(object):
             def f(x):
                 if 'l' in fallback(x):
                     return 'l'
-                if util.is_exec(os.path.join(self._root, x)):
+                if util.is_exec(self._join(x)):
                     return 'x'
                 return ''
             return f
