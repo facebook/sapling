@@ -53,7 +53,7 @@ def convertsource(ui, path, type, rev):
     if not ui.quiet:
         for inst in exceptions:
             ui.write("%s\n" % inst)
-    raise util.Abort(_('%s: unknown repository type') % path)
+    raise util.Abort(_('%s: missing or unsupported repository') % path)
 
 def convertsink(ui, path, type):
     for name, sink in sink_converters:

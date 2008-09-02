@@ -2,18 +2,18 @@ hg convert [OPTION]... SOURCE [DEST [REVMAP]]
 
 Convert a foreign SCM repository to a Mercurial one.
 
-    Accepted source formats:
-    - Mercurial
-    - CVS
-    - Darcs
-    - git
-    - Subversion
-    - Monotone
-    - GNU Arch
+    Accepted source formats [identifiers]:
+    - Mercurial [hg]
+    - CVS [cvs]
+    - Darcs [darcs]
+    - git [git]
+    - Subversion [svn]
+    - Monotone [mtn]
+    - GNU Arch [gnuarch]
 
-    Accepted destination formats:
-    - Mercurial
-    - Subversion (history on branches is not preserved)
+    Accepted destination formats [identifiers]:
+    - Mercurial [hg]
+    - Subversion [svn] (history on branches is not preserved)
 
     If no revision is given, all revisions will be converted. Otherwise,
     convert will only import up to the named revision (given in a format
