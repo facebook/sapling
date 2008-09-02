@@ -434,12 +434,15 @@ class dirstate(object):
             self._ui.warn(_('%s: unsupported file type (type is %s)\n')
                           % (self.pathto(f), kind))
 
-        # TODO: don't walk unknown directories if unknown and ignored are False
         ignore = self._ignore
         dirignore = self._dirignore
         if ignored:
             ignore = util.never
             dirignore = util.never
+        elif not unknown:
+            # if unknown and ignored are False, skip step 2
+            ignore = util.always
+            dirignore = util.always
 
         matchfn = match.matchfn
         dmap = self._map
