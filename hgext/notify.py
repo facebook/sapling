@@ -271,7 +271,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         end = len(repo)
         count = end - start
         for rev in xrange(start, end):
-            n.node(repo[node].rev())
+            n.node(repo[rev].node())
         n.diff(node, repo.changelog.tip())
     else:
         count = 1
