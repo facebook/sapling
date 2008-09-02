@@ -233,9 +233,11 @@ class notifier(object):
     def diff(self, node, ref):
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
         prev = self.repo.changelog.parents(node)[0]
+
         self.ui.pushbuffer()
         patch.diff(self.repo, prev, ref, opts=patch.diffopts(self.ui))
-        difflines = self.ui.popbuffer().splitlines(1)
+        difflines = self.ui.popbuffer().splitlines()
+
         if self.ui.configbool('notify', 'diffstat', True):
             s = patch.diffstat(difflines)
             # s may be nil, don't include the header if it is
@@ -249,7 +251,7 @@ class notifier(object):
             difflines = difflines[:maxdiff]
         elif difflines:
             self.ui.write(_('\ndiffs (%d lines):\n\n') % len(difflines))
-        self.ui.write(*difflines)
+        self.ui.write("\n".join(difflines))
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     '''send email notifications to interested subscribers.
