@@ -349,7 +349,7 @@ class dirstate(object):
     def _normalize(self, path):
         norm_path = os.path.normcase(os.path.normpath(path))
         if norm_path not in self._foldmap:
-            if not os.path.exists(path):
+            if not os.path.exists(os.path.join(self._root, path)):
                 return path
             self._foldmap[norm_path] = util.fspath(path, self._root)
         return self._foldmap[norm_path]
