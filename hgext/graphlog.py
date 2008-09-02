@@ -216,8 +216,9 @@ def graphlog(ui, repo, path=None, **opts):
         return
     cs_printer = show_changeset(ui, repo, opts)
     if path:
-        cpath = canonpath(repo.root, os.getcwd(), path)
-        grapher = filelog_grapher(repo, cpath, start_rev, stop_rev)
+        path = canonpath(repo.root, os.getcwd(), path)
+    if path:
+        grapher = filelog_grapher(repo, path, start_rev, stop_rev)
     else:
         grapher = revision_grapher(repo, start_rev, stop_rev)
     repo_parents = repo.dirstate.parents()

@@ -144,3 +144,10 @@ hg glog 5
 
 echo % unused arguments
 hg glog -q foo bar || echo failed
+
+echo % from outer space
+cd ..
+hg glog -l1 repo
+hg glog -l1 repo/0
+hg glog -l1 repo/missing
+
