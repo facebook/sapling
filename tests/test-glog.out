@@ -356,3 +356,16 @@ hg glog [OPTION]... [FILE]
 
 show revision history alongside an ASCII revision graph
 failed
+% from outer space
+@  changeset:   34:0eed7cd895e0
+|  tag:         tip
+|  parent:      32:77f7d8438a3c
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
+|
+o  changeset:   0:7aa22e58e8c1
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     (0) root
+
