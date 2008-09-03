@@ -286,9 +286,6 @@ def bisect(ui, repo, rev=None, extra=None,
             reset = True
     elif extra or good + bad + skip + reset > 1:
         raise util.Abort(_('incompatible arguments'))
-    elif not (good or bad or skip or reset):
-        ui.status(_('(no action selected)\n'))
-        return
 
     if reset:
         p = repo.join("bisect.state")
@@ -327,7 +324,12 @@ def bisect(ui, repo, rev=None, extra=None,
         del wlock
 
     if not state['good'] or not state['bad']:
-        return
+        if (good or bad or skip or reset):
+            return
+        if not state['good']:
+            raise util.Abort(_('cannot bisect (no known good revisions)'))
+        else:
+            raise util.Abort(_('cannot bisect (no known bad revisions)'))
 
     # actually bisect
     nodes, changesets, good = hbisect.bisect(repo.changelog, state)

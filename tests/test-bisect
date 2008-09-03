@@ -55,10 +55,7 @@ hg bisect -g null
 hg bisect -bU tip
 hg id
 
-echo % test no action message
-hg bisect
-
-# reproduce AssertionError (issue1228 and issue1182)
+echo % reproduce AssertionError, issue1228 and issue1182
 hg bisect -r
 hg bisect -b 4
 hg bisect -g 0
@@ -66,8 +63,12 @@ hg bisect -s
 hg bisect -s
 hg bisect -s
 
-# reproduce non converging bisect (issue1182)
+echo % reproduce non converging bisect, issue1182
 hg bisect -r
 hg bisect -g 0
 hg bisect -b 2
 hg bisect -s
+
+echo % test no action
+hg bisect -r
+hg bisect
