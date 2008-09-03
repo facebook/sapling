@@ -50,8 +50,8 @@ def rawfile(web, req, tmpl):
     path = fctx.path()
     text = fctx.data()
     mt = mimetypes.guess_type(path)[0]
-    if mt is None or binary(text):
-        mt = mt or 'application/octet-stream'
+    if mt is None:
+        mt = binary(text) and 'application/octet-stream' or 'text/plain'
 
     req.respond(HTTP_OK, mt, path, len(text))
     return [text]
