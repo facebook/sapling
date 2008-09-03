@@ -1155,6 +1155,12 @@ def commit(ui, repo, commitfunc, pats, opts):
         modified, added, removed = repo.status(match=m)[:3]
         files = util.sort(modified + added + removed)
         slist = None
+
+        def is_dir(f):
+            name = f + '/'
+            i = bisect.bisect(files, name)
+            return i < len(files) and files[i].startswith(name)
+
         for f in m.files():
             if f == '.':
                 continue
@@ -1164,11 +1170,11 @@ def commit(ui, repo, commitfunc, pats, opts):
                 try:
                     mode = os.lstat(rf)[stat.ST_MODE]
                 except OSError:
+                    if is_dir(f): # deleted directory ?
+                        continue
                     raise util.Abort(_("file %s not found!") % rel)
                 if stat.S_ISDIR(mode):
-                    name = f + '/'
-                    i = bisect.bisect(files, name)
-                    if i >= len(files) or not files[i].startswith(name):
+                    if not is_dir(f):
                         raise util.Abort(_("no match under directory %s!")
                                          % rel)
                 elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
