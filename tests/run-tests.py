@@ -202,6 +202,8 @@ def install_hg():
     os.environ["PYTHONPATH"] = pythonpath
 
     use_correct_python()
+    global hgpkg
+    hgpkg = _hgpath()
 
     if coverage:
         vlog("# Installing coverage wrapper")
@@ -456,6 +458,16 @@ BINDIR = os.path.join(INST, "bin")
 PYTHONDIR = os.path.join(INST, "lib", "python")
 COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
+def _hgpath():
+    cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
+    hgpath = os.popen(cmd % python)
+    path = hgpath.read().strip()
+    hgpath.close()
+    return path
+
+expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
+hgpkg = None
+
 def run_children(tests):
     if not options.with_hg:
         install_hg()
@@ -512,6 +524,9 @@ def run_children(tests):
         print "Skipped %s: %s" % (s[0], s[1])
     for s in fails:
         print "Failed %s: %s" % (s[0], s[1])
+
+    if hgpkg != expecthg:
+        print '# Tested unexpected mercurial: %s' % hgpkg
     print "# Ran %d tests, %d skipped, %d failed." % (
         tested, skipped, failed)
     sys.exit(failures != 0)
@@ -524,6 +539,9 @@ def run_tests(tests):
     try:
         if not options.with_hg:
             install_hg()
+
+        if hgpkg != expecthg:
+           print '# Testing unexpected mercurial: %s' % hgpkg
 
         if options.timeout > 0:
             try:
@@ -585,6 +603,8 @@ def run_tests(tests):
                 print "Skipped %s: %s" % s
             for s in fails:
                 print "Failed %s: %s" % s
+            if hgpkg != expecthg:
+                print '# Tested unexpected mercurial: %s' % hgpkg
             print "# Ran %d tests, %d skipped, %d failed." % (
                 tested, skipped, failed)
 

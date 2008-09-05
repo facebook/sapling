@@ -241,8 +241,7 @@ abort: Inconsistent state, 31:58c80a7c8a40 is good and bad
 error
 Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
 5cd978ea5149
-% test no action message
-(no action selected)
+% reproduce AssertionError, issue1228 and issue1182
 Testing changeset 2:db07c04beaca (4 changesets remaining, ~2 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Testing changeset 1:5cd978ea5149 (4 changesets remaining, ~2 tests)
@@ -270,6 +269,7 @@ user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 summary:     msg 4
 
+% reproduce non converging bisect, issue1182
 Testing changeset 1:5cd978ea5149 (2 changesets remaining, ~1 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Due to skipped revisions, the first bad revision could be any of:
@@ -283,3 +283,5 @@ user:        test
 date:        Thu Jan 01 00:00:02 1970 +0000
 summary:     msg 2
 
+% test no action
+abort: cannot bisect (no known good revisions)
