@@ -1,6 +1,6 @@
 adding get-with-headers.py
 % hg serve
-% hgweb filerevision
+% hgweb filerevision, html
 200 Script output follows
 
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
@@ -63,7 +63,7 @@ adding get-with-headers.py
 </body>
 </html>
 
-% hgweb fileannotate
+% hgweb fileannotate, html
 200 Script output follows
 
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
@@ -129,6 +129,10 @@ adding get-with-headers.py
 
 </body>
 </html>
+
+% hgweb fileannotate, raw
+
+% hgweb filerevision, raw
 
 % hgweb highlightcss friendly
 200 Script output follows

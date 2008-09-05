@@ -25,14 +25,25 @@ web_filerevision = webcommands._filerevision
 web_annotate = webcommands.annotate
 
 def filerevision_highlight(web, tmpl, fctx):
-    style = web.config('web', 'pygments_style', 'colorful')
-    highlight.pygmentize('fileline', fctx, style, tmpl)
+    mt = ''.join(tmpl('mimetype', encoding=web.encoding))
+    # only pygmentize for mimetype containing 'html' so we both match
+    # 'text/html' and possibly 'application/xhtml+xml' in the future
+    # so that we don't have to touch the extension when the mimetype
+    # for a template changes; also hgweb optimizes the case that a
+    # raw file is sent using rawfile() and doesn't call us, so we
+    # can't clash with the file's content-type here in case we
+    # pygmentize a html file
+    if 'html' in mt:
+        style = web.config('web', 'pygments_style', 'colorful')
+        highlight.pygmentize('fileline', fctx, style, tmpl)
     return web_filerevision(web, tmpl, fctx)
 
 def annotate_highlight(web, req, tmpl):
-    fctx = webutil.filectx(web.repo, req)
-    style = web.config('web', 'pygments_style', 'colorful')
-    highlight.pygmentize('annotateline', fctx, style, tmpl)
+    mt = ''.join(tmpl('mimetype', encoding=web.encoding))
+    if 'html' in mt:
+        fctx = webutil.filectx(web.repo, req)
+        style = web.config('web', 'pygments_style', 'colorful')
+        highlight.pygmentize('annotateline', fctx, style, tmpl)
     return web_annotate(web, req, tmpl)
 
 def generate_css(web, req, tmpl):

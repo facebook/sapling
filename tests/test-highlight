@@ -18,14 +18,41 @@ echo % hg serve
 hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
-echo % hgweb filerevision
+echo % hgweb filerevision, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/get-with-headers.py') \
     | sed "s/[0-9]* years ago/long ago/g"
 
-echo % hgweb fileannotate
+echo % hgweb fileannotate, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py') \
     | sed "s/[0-9]* years ago/long ago/g"
 
+echo % hgweb fileannotate, raw
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py?style=raw') \
+    | sed "s/test@//" > a
+
+echo "200 Script output follows" > b
+echo "" >> b
+echo "" >> b
+hg annotate "get-with-headers.py" >> b
+echo "" >> b
+echo "" >> b
+echo "" >> b
+echo "" >> b
+
+diff -u b a
+
+echo
+echo % hgweb filerevision, raw
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/get-with-headers.py?style=raw') \
+    > a
+
+echo "200 Script output follows" > b
+echo "" >> b
+hg cat get-with-headers.py >> b
+
+diff -u b a
+
+echo
 echo % hgweb highlightcss friendly
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/highlightcss' > out
 head -n 4 out
