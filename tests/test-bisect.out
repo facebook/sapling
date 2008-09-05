@@ -285,3 +285,4 @@ summary:     msg 2
 
 % test no action
 abort: cannot bisect (no known good revisions)
+failure
