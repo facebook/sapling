@@ -60,7 +60,7 @@ class localrepository(repo.repository):
                 if inst.errno != errno.ENOENT:
                     raise
 
-        self.store = store.store(requirements, self.path, util.opener, os.path.join)
+        self.store = store.store(requirements, self.path, util.opener)
         self.spath = self.store.path
         self.sopener = self.store.opener
         self.sjoin = self.store.join

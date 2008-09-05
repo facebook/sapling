@@ -120,7 +120,8 @@ class encodedstore(basicstore):
         return (['requires', '00changelog.i'] +
                 [self.pathjoiner('store', f) for f in _data.split()])
 
-def store(requirements, path, opener, pathjoiner):
+def store(requirements, path, opener, pathjoiner=None):
+    pathjoiner = pathjoiner or os.path.join
     if 'store' in requirements:
         return encodedstore(path, opener, pathjoiner)
     return basicstore(path, opener, pathjoiner)
