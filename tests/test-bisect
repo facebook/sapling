@@ -71,4 +71,4 @@ hg bisect -s
 
 echo % test no action
 hg bisect -r
-hg bisect
+hg bisect || echo failure
