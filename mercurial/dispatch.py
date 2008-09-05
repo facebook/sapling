@@ -146,6 +146,8 @@ def _runcatch(ui, args):
         ui.warn(_("** or mercurial@selenic.com\n"))
         ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
                % version.get_version())
+        ui.warn(_("** Extensions loaded: %s\n")
+               % ", ".join([x[0] for x in extensions.extensions()]))
         raise
 
     return -1
