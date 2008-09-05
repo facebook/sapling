@@ -12,9 +12,35 @@ echo bletch>baz/bletch
 hg commit -Am 3 -d '1000000000 0'
 echo "[web]" >> .hg/hgrc
 echo "name = test-archive" >> .hg/hgrc
-echo "allow_archive = gz bz2, zip" >> .hg/hgrc
+cp .hg/hgrc .hg/hgrc-base
+
+# check http return codes
+test_archtype() {
+    echo "allow_archive = $1" >> .hg/hgrc
+    hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+    cat hg.pid >> $DAEMON_PIDS
+    echo % $1 allowed should give 200
+    "$TESTDIR/get-with-headers.py" localhost:$HGPORT "/archive/tip.$2" | head -n 1
+    echo % $3 and $4 disallowed should both give 403
+    "$TESTDIR/get-with-headers.py" localhost:$HGPORT "/archive/tip.$3" | head -n 1
+    "$TESTDIR/get-with-headers.py" localhost:$HGPORT "/archive/tip.$4" | head -n 1
+    kill `cat hg.pid`
+    cat errors.log
+    cp .hg/hgrc-base .hg/hgrc
+}
+
+echo
+test_archtype gz tar.gz tar.bz2 zip
+test_archtype bz2 tar.bz2 zip tar.gz
+test_archtype zip zip tar.gz tar.bz2
+
+echo "allow_archive = gz bz2 zip" >> .hg/hgrc
 hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
 cat hg.pid >> $DAEMON_PIDS
+
+echo % invalid arch type should give 404
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT "/archive/tip.invalid" | head -n 1
+echo
 
 TIP=`hg id -v | cut -f1 -d' '`
 QTIP=`hg id -q`

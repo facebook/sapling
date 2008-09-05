@@ -12,7 +12,7 @@ from mercurial.node import short, hex, nullid
 from mercurial.util import binary, datestr
 from mercurial.repo import RepoError
 from common import paritygen, staticfile, get_contact, ErrorResponse
-from common import HTTP_OK, HTTP_NOT_FOUND
+from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod, util
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
@@ -535,10 +535,14 @@ def archive(web, req, tmpl):
     allowed = web.configlist("web", "allow_archive")
     key = req.form['node'][0]
 
-    if not (type_ in web.archives and (type_ in allowed or
-        web.configbool("web", "allow" + type_, False))):
+    if type_ not in web.archives:
         msg = 'Unsupported archive type: %s' % type_
         raise ErrorResponse(HTTP_NOT_FOUND, msg)
+
+    if not ((type_ in allowed or
+        web.configbool("web", "allow" + type_, False))):
+        msg = 'Archive type not allowed: %s' % type_
+        raise ErrorResponse(HTTP_FORBIDDEN, msg)
 
     reponame = re.sub(r"\W+", "-", os.path.basename(web.reponame))
     cnode = web.repo.lookup(key)
