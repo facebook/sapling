@@ -403,5 +403,5 @@ cmdtable = {
     (imerge,
      [('r', 'rev', '', _('revision to merge')),
       ('a', 'auto', None, _('automatically merge where possible'))],
-      'hg imerge [command]')
+      _('hg imerge [command]'))
 }
