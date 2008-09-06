@@ -58,7 +58,7 @@ def reposetup(ui, repo):
                                           list_clean, list_unknown)
                     if result is not None:
                         return result
-            except socket.error, err:
+            except (OSError, socket.error), err:
                 if err[0] == errno.ECONNREFUSED:
                     ui.warn(_('(found dead inotify server socket; '
                                    'removing it)\n'))
