@@ -2370,15 +2370,15 @@ cmdtable = {
     'qheader': (header, [], _('hg qheader [PATCH]')),
     "^qimport":
         (qimport,
-         [('e', 'existing', None, 'import file in patch dir'),
-          ('n', 'name', '', 'patch file name'),
-          ('f', 'force', None, 'overwrite existing files'),
-          ('r', 'rev', [], 'place existing revisions under mq control'),
+         [('e', 'existing', None, _('import file in patch dir')),
+          ('n', 'name', '', _('patch file name')),
+          ('f', 'force', None, _('overwrite existing files')),
+          ('r', 'rev', [], _('place existing revisions under mq control')),
           ('g', 'git', None, _('use git extended diff format'))],
          _('hg qimport [-e] [-n NAME] [-f] [-g] [-r REV]... FILE...')),
     "^qinit":
         (init,
-         [('c', 'create-repo', None, 'create queue repository')],
+         [('c', 'create-repo', None, _('create queue repository'))],
          _('hg qinit [-c]')),
     "qnew":
         (new,
