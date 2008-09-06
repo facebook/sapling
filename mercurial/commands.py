@@ -3234,7 +3234,7 @@ table = {
          [('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
           ('u', 'unmark', None, _('unmark files as resolved'))],
-          ('hg resolve [OPTION] [FILES...]')),
+          _('hg resolve [OPTION] [FILES...]')),
     "revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
