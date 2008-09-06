@@ -1,0 +1,5 @@
+% inserve
+abort: AF_UNIX path too long
+% status
+failed to contact inotify server: AF_UNIX path too long
+deactivating inotify

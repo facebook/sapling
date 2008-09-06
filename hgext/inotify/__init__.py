@@ -63,9 +63,8 @@ def reposetup(ui, repo):
                     ui.warn(_('(found dead inotify server socket; '
                                    'removing it)\n'))
                     os.unlink(repo.join('inotify.sock'))
-                elif err[0] != errno.ENOENT:
-                    raise
-                if ui.configbool('inotify', 'autostart'):
+                if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and \
+                        ui.configbool('inotify', 'autostart'):
                     query = None
                     ui.debug(_('(starting inotify server)\n'))
                     try:
@@ -79,16 +78,20 @@ def reposetup(ui, repo):
                     except Exception, inst:
                         ui.warn(_('could not start inotify server: '
                                        '%s\n') % inst)
-                        ui.print_exc()
-
                     if query:
                         try:
                             return query(ui, repo, files or [], match,
                                          list_ignored, list_clean, list_unknown)
                         except socket.error, err:
                             ui.warn(_('could not talk to new inotify '
-                                           'server: %s\n') % err[1])
-                            ui.print_exc()
+                                           'server: %s\n') % err[-1])
+                else:
+                    ui.warn(_('failed to contact inotify server: %s\n')
+                             % err[-1])
+                ui.print_exc()
+                # replace by old status function
+                ui.warn(_('deactivating inotify\n'))
+                self.status = super(inotifydirstate, self).status
 
             return super(inotifydirstate, self).status(
                 files, match or util.always, list_ignored, list_clean,

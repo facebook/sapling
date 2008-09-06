@@ -1,0 +1,15 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" inotify || exit 80
+
+echo "[extensions]" >> $HGRCPATH
+echo "inotify=" >> $HGRCPATH
+
+p="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+hg init $p
+cd $p
+
+echo % inserve
+hg inserve
+echo % status
+hg status
