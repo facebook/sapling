@@ -8,6 +8,7 @@
 
 import convcmd
 from mercurial import commands
+from mercurial.i18n import _
 
 # Commands definition was moved elsewhere to ease demandload job.
 
@@ -181,14 +182,14 @@ commands.norepo += " convert debugsvnlog"
 cmdtable = {
     "convert":
         (convert,
-         [('A', 'authors', '', 'username mapping filename'),
-          ('d', 'dest-type', '', 'destination repository type'),
-          ('', 'filemap', '', 'remap file names using contents of file'),
-          ('r', 'rev', '', 'import up to target revision REV'),
-          ('s', 'source-type', '', 'source repository type'),
-          ('', 'splicemap', '', 'splice synthesized history into place'),
-          ('', 'datesort', None, 'try to sort changesets by date')],
-         'hg convert [OPTION]... SOURCE [DEST [REVMAP]]'),
+         [('A', 'authors', '', _('username mapping filename')),
+          ('d', 'dest-type', '', _('destination repository type')),
+          ('', 'filemap', '', _('remap file names using contents of file')),
+          ('r', 'rev', '', _('import up to target revision REV')),
+          ('s', 'source-type', '', _('source repository type')),
+          ('', 'splicemap', '', _('splice synthesized history into place')),
+          ('', 'datesort', None, _('try to sort changesets by date'))],
+         _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]')),
     "debugsvnlog":
         (debugsvnlog,
          [],
