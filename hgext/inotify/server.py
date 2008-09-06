@@ -9,7 +9,7 @@
 from mercurial.i18n import _
 from mercurial import osutil, ui, util
 import common
-import errno, os, select, socket, stat, struct, sys, time
+import errno, os, select, socket, stat, struct, sys, tempfile, time
 
 try:
     import linux as inotify
@@ -554,13 +554,31 @@ class Server(object):
         self.timeout = timeout
         self.sock = socket.socket(socket.AF_UNIX)
         self.sockpath = self.repo.join('inotify.sock')
+        self.realsockpath = None
         try:
             self.sock.bind(self.sockpath)
         except socket.error, err:
             if err[0] == errno.EADDRINUSE:
-                raise AlreadyStartedException(_('could not start server: %s') \
+                raise AlreadyStartedException(_('could not start server: %s')
                                               % err[1])
-            raise
+            if err[0] == "AF_UNIX path too long":
+                tempdir = tempfile.mkdtemp(prefix="hg-inotify-")
+                self.realsockpath = os.path.join(tempdir, "inotify.sock")
+                try:
+                    self.sock.bind(self.realsockpath)
+                    os.symlink(self.realsockpath, self.sockpath)
+                except (OSError, socket.error), inst:
+                    try:
+                        os.unlink(self.realsockpath)
+                    except:
+                        pass
+                    os.rmdir(tempdir)
+                    if inst.errno == errno.EEXIST:
+                        raise AlreadyStartedException(_('could not start server: %s')
+                                                      % inst.strerror)
+                    raise
+            else:
+                raise
         self.sock.listen(5)
         self.fileno = self.sock.fileno
 
@@ -633,6 +651,9 @@ class Server(object):
         self.sock.close()
         try:
             os.unlink(self.sockpath)
+            if self.realsockpath:
+                os.unlink(self.realsockpath)
+                os.rmdir(os.path.dirname(self.realsockpath))
         except OSError, err:
             if err.errno != errno.ENOENT:
                 raise

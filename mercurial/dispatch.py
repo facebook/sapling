@@ -90,7 +90,7 @@ def _runcatch(ui, args):
             else:
                 raise
     except socket.error, inst:
-        ui.warn(_("abort: %s\n") % inst[1])
+        ui.warn(_("abort: %s\n") % inst[-1])
     except IOError, inst:
         if hasattr(inst, "code"):
             ui.warn(_("abort: %s\n") % inst)

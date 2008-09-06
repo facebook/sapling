@@ -24,7 +24,10 @@ def serve(ui, repo, **opts):
 
     class service:
         def init(self):
-            self.master = server.Master(ui, repo, timeout)
+            try:
+                self.master = server.Master(ui, repo, timeout)
+            except server.AlreadyStartedException, inst:
+                raise util.Abort(str(inst))
 
         def run(self):
             try:
@@ -55,14 +58,13 @@ def reposetup(ui, repo):
                                           clean, unknown)
                     if result is not None:
                         return result
-            except socket.error, err:
+            except (OSError, socket.error), err:
                 if err[0] == errno.ECONNREFUSED:
                     ui.warn(_('(found dead inotify server socket; '
                                    'removing it)\n'))
                     os.unlink(repo.join('inotify.sock'))
-                elif err[0] != errno.ENOENT:
-                    raise
-                if ui.configbool('inotify', 'autostart'):
+                if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and \
+                        ui.configbool('inotify', 'autostart'):
                     query = None
                     ui.debug(_('(starting inotify server)\n'))
                     try:
@@ -76,16 +78,20 @@ def reposetup(ui, repo):
                     except Exception, inst:
                         ui.warn(_('could not start inotify server: '
                                        '%s\n') % inst)
-                        ui.print_exc()
-
                     if query:
                         try:
                             return query(ui, repo, files or [], match,
                                          ignored, clean, unknown)
                         except socket.error, err:
                             ui.warn(_('could not talk to new inotify '
-                                           'server: %s\n') % err[1])
-                            ui.print_exc()
+                                           'server: %s\n') % err[-1])
+                else:
+                    ui.warn(_('failed to contact inotify server: %s\n')
+                             % err[-1])
+                ui.print_exc()
+                # replace by old status function
+                ui.warn(_('deactivating inotify\n'))
+                self.status = super(inotifydirstate, self).status
 
             return super(inotifydirstate, self).status(
                 match, ignored, clean, unknown)
