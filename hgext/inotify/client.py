@@ -14,7 +14,14 @@ import os, select, socket, stat, struct, sys
 def query(ui, repo, names, match, list_ignored, list_clean, list_unknown=True):
     sock = socket.socket(socket.AF_UNIX)
     sockpath = repo.join('inotify.sock')
-    sock.connect(sockpath)
+    try:
+        sock.connect(sockpath)
+    except socket.error, err:
+        if err[0] == "AF_UNIX path too long":
+            sockpath = os.readlink(sockpath)
+            sock.connect(sockpath)
+        else:
+            raise
 
     def genquery():
         for n in names or []:
