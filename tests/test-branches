@@ -11,6 +11,11 @@ hg add a
 hg branch a
 hg commit -d '1 0' -u test -m "Adding a branch"
 
+hg branch q
+echo 'aa' >a
+hg branch -C
+hg commit -d '2 0' -u test -m "Adding to a branch"
+
 hg update -C 0
 echo 'b' >b
 hg add b

@@ -1,21 +1,34 @@
 marked working directory as branch a
+marked working directory as branch q
+reset working directory to branch a
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch b
 created new head
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-created new head
+1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 marked working directory as branch c
 marked working directory as branch a branch name much longer than the default justification used by branches
-a branch name much longer than the default justification used by branches 6:b8cb5af34c4d
-b                              4:22df7444f7c1
-a                              1:dd6b440dd85a
-c                              5:5ca481e59b8c (inactive)
+a branch name much longer than the default justification used by branches 7:10ff5895aa57
+b                              4:aee39cd168d0
+c                              6:589736a22561 (inactive)
+a                              5:d8cbc61dbaa6 (inactive)
 default                        0:19709c5a4e75 (inactive)
 -------
-a branch name much longer than the default justification used by branches 6:b8cb5af34c4d
-b                              4:22df7444f7c1
-a                              1:dd6b440dd85a
+a branch name much longer than the default justification used by branches 7:10ff5895aa57
+b                              4:aee39cd168d0
 --- Branch a
+changeset:   5:d8cbc61dbaa6
+branch:      a
+parent:      2:881fe2b92ad0
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   2:881fe2b92ad0
+branch:      a
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     Adding to a branch
+
 changeset:   1:dd6b440dd85a
 branch:      a
 user:        test
@@ -23,20 +36,13 @@ date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     Adding a branch
 
 ---- Branch b
-changeset:   4:22df7444f7c1
-branch:      b
-parent:      2:ac22033332d1
-user:        test
-date:        Thu Jan 01 00:00:04 1970 +0000
-summary:     Adding b branch head 2
-
-changeset:   3:aee39cd168d0
+changeset:   4:aee39cd168d0
 branch:      b
 user:        test
 date:        Thu Jan 01 00:00:03 1970 +0000
 summary:     Adding b branch head 1
 
-changeset:   2:ac22033332d1
+changeset:   3:ac22033332d1
 branch:      b
 parent:      0:19709c5a4e75
 user:        test

@@ -373,10 +373,17 @@ def branch(ui, repo, label=None, **opts):
     Unless --force is specified, branch will not let you set a
     branch name that shadows an existing branch.
 
+    Use --clean to reset the working directory branch to that of the
+    parent of the working directory, negating a previous branch change.
+
     Use the command 'hg update' to switch to an existing branch.
     """
 
-    if label:
+    if opts.get('clean'):
+        label = repo[None].parents()[0].branch()
+        repo.dirstate.setbranch(label)
+        ui.status(_('reset working directory to branch %s\n') % label)
+    elif label:
         if not opts.get('force') and label in repo.branchtags():
             if label not in [p.branch() for p in repo.parents()]:
                 raise util.Abort(_('a branch of the same name already exists'
@@ -2987,8 +2994,9 @@ table = {
     "branch":
         (branch,
          [('f', 'force', None,
-           _('set branch name even if it shadows an existing branch'))],
-         _('hg branch [-f] [NAME]')),
+           _('set branch name even if it shadows an existing branch')),
+          ('C', 'clean', None, _('reset branch name to parent branch name'))],
+         _('hg branch [-fC] [NAME]')),
     "branches":
         (branches,
          [('a', 'active', False,
