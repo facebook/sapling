@@ -74,6 +74,9 @@ class statichttprepository(localrepo.localrepository):
     def local(self):
         return False
 
+    def lock(self, wait=True):
+        raise util.Abort(_('cannot lock static-http repository'))
+
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new static-http repository'))
