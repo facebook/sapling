@@ -221,7 +221,13 @@ class localrepository(repo.repository):
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
 
-        self._tag(names, node, message, local, user, date)
+        parents = self[None].parents()
+        parent = None
+        # use tip instead of the parent rev if there's no working copy
+        # (avoid creating a new head)
+        if len(parents) == 1 and parents[0].node() == nullid:
+            parent = self['tip'].node()
+        self._tag(names, node, message, local, user, date, parent=parent)
 
     def tags(self):
         '''return a mapping of tag to node'''
