@@ -422,16 +422,18 @@ class httprepository(repo.repository):
         fp = httpsendfile(tempname, "rb")
         try:
             try:
-                rfp = self.do_cmd(
-                    'unbundle', data=fp,
-                    headers={'Content-Type': 'application/octet-stream'},
-                    heads=' '.join(map(hex, heads)))
+                resp = self.do_read(
+                     'unbundle', data=fp,
+                     headers={'Content-Type': 'application/octet-stream'},
+                     heads=' '.join(map(hex, heads)))
+                resp_code, output = resp.split('\n', 1)
                 try:
-                    ret = int(rfp.readline())
-                    self.ui.write(rfp.read())
-                    return ret
-                finally:
-                    rfp.close()
+                    ret = int(resp_code)
+                except ValueError, err:
+                    raise util.UnexpectedOutput(
+                            _('push failed (unexpected response):'), resp)
+                self.ui.write(output)
+                return ret
             except socket.error, err:
                 if err[0] in (errno.ECONNRESET, errno.EPIPE):
                     raise util.Abort(_('push failed: %s') % err[1])
