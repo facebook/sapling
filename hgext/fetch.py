@@ -16,7 +16,7 @@ def fetch(ui, repo, source='default', **opts):
     This finds all changes from the repository at the specified path
     or URL and adds them to the local repository.
 
-    If the pulled changes add a new head, the head is automatically
+    If the pulled changes add a new branch head, the head is automatically
     merged, and the result of the merge is committed.  Otherwise, the
     working directory is updated to include the new changes.
 
@@ -33,9 +33,10 @@ def fetch(ui, repo, source='default', **opts):
         opts['date'] = util.parsedate(date)
 
     parent, p2 = repo.dirstate.parents()
-    if parent != repo.changelog.tip():
-        raise util.Abort(_('working dir not at tip '
-                           '(use "hg update" to check out tip)'))
+    branch = repo[parent].branch()
+    if parent != repo[branch].node():
+        raise util.Abort(_('working dir not at branch tip '
+                           '(use "hg update" to check out branch tip)'))
 
     if p2 != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
@@ -50,9 +51,9 @@ def fetch(ui, repo, source='default', **opts):
             raise util.Abort(_('outstanding uncommitted changes'))
         if del_:
             raise util.Abort(_('working directory is missing some files'))
-        if len(repo.heads()) > 1:
-            raise util.Abort(_('multiple heads in this repository '
-                               '(use "hg heads" and "hg merge" to merge)'))
+        if len(repo.branchheads(branch)) > 1:
+            raise util.Abort(_('multiple heads in this branch '
+                               '(use "hg heads ." and "hg merge" to merge)'))
 
         cmdutil.setremoteconfig(ui, opts)
 
@@ -67,27 +68,35 @@ def fetch(ui, repo, source='default', **opts):
             else:
                 revs = [other.lookup(rev) for rev in opts['rev']]
 
+        # Are there any changes at all?
         modheads = repo.pull(other, heads=revs)
         if modheads == 0:
             return 0
-        if modheads == 1:
-            return hg.clean(repo, repo.changelog.tip())
 
-        newheads = repo.heads(parent)
-        newchildren = [n for n in repo.heads(parent) if n != parent]
+        # Is this a simple fast-forward along the current branch?
+        newheads = repo.branchheads(branch)
+        newchildren = repo.changelog.nodesbetween([parent], newheads)[2]
+        if len(newheads) == 1:
+            if newchildren[0] != parent:
+                return hg.clean(repo, newchildren[0])
+            else:
+                return
+
+        # Are there more than one additional branch heads?
+        newchildren = [n for n in newchildren if n != parent]
         newparent = parent
         if newchildren:
             newparent = newchildren[0]
             hg.clean(repo, newparent)
-
-        newheads = [n for n in repo.heads() if n != newparent]
+        newheads = [n for n in newheads if n != newparent]
         if len(newheads) > 1:
-            ui.status(_('not merging with %d other new heads '
-                        '(use "hg heads" and "hg merge" to merge them)') %
+            ui.status(_('not merging with %d other new branch heads '
+                        '(use "hg heads ." and "hg merge" to merge them)\n') %
                       (len(newheads) - 1))
             return
-        err = False
 
+        # Otherwise, let's merge.
+        err = False
         if newheads:
             # By default, we consider the repository we're pulling
             # *from* as authoritative, so we merge our changes into

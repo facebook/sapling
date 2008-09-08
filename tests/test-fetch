@@ -7,6 +7,7 @@ hidehash() { sed "s/changeset 3:............ merges/changeset 3:... merges/"; }
 echo "[extensions]" >> $HGRCPATH
 echo "fetch=" >> $HGRCPATH
 
+echo % test fetch with default branches only
 hg init a
 echo a > a/a
 hg --cwd a commit -d '1 0' -Ama
@@ -65,5 +66,94 @@ hg --cwd g fetch -d '7 0' --switch -m 'automated merge' ../f
 rm i/g
 echo % should abort, because i is modified
 hg --cwd i fetch ../h
+
+
+echo % test fetch with named branches
+hg init nbase
+echo base > nbase/a
+hg -R nbase ci -d '1 0' -Am base
+hg -R nbase branch a
+echo a > nbase/a
+hg -R nbase ci -d '2 0' -m a
+hg -R nbase up -C 0
+hg -R nbase branch b
+echo b > nbase/b
+hg -R nbase ci -Ad '3 0' -m b
+
+echo
+echo % pull in change on foreign branch
+hg clone nbase n1
+hg clone nbase n2
+hg -R n1 up -C a
+echo aa > n1/a
+hg -R n1 ci -d '4 0' -m a1
+
+hg -R n2 up -C b
+hg -R n2 fetch -d '9 0' -m 'merge' n1
+echo '% parent should be 2 (no automatic update)'
+hg -R n2 parents --template '{rev}\n'
+rm -fr n1 n2
+
+echo
+echo % pull in changes on both foreign and local branches
+hg clone nbase n1
+hg clone nbase n2
+hg -R n1 up -C a
+echo aa > n1/a
+hg -R n1 ci -d '4 0' -m a1
+hg -R n1 up -C b
+echo bb > n1/b
+hg -R n1 ci -d '5 0' -m b1
+
+hg -R n2 up -C b
+hg -R n2 fetch -d '9 0' -m 'merge' n1
+echo '% parent should be 4 (fast forward)'
+hg -R n2 parents --template '{rev}\n'
+rm -fr n1 n2
+
+echo
+echo '% pull changes on foreign (2 new heads) and local (1 new head) branches'
+echo % with a local change
+hg clone nbase n1
+hg clone nbase n2
+hg -R n1 up -C a
+echo a1 > n1/a
+hg -R n1 ci -d '4 0' -m a1
+hg -R n1 up -C b
+echo bb > n1/b
+hg -R n1 ci -d '5 0' -m b1
+hg -R n1 up -C 1
+echo a2 > n1/a
+hg -R n1 ci -d '6 0' -m a2
+
+hg -R n2 up -C b
+echo change >> n2/c
+hg -R n2 ci -Ad '7 0' -m local
+hg -R n2 fetch -d '9 0' -m 'merge' n1
+echo '% parent should be 7 (new merge changeset)'
+hg -R n2 parents --template '{rev}\n'
+rm -fr n1 n2
+
+echo '% pull in changes on foreign (merge of local branch) and local (2 new'
+echo '% heads) with a local change'
+hg clone nbase n1
+hg clone nbase n2
+hg -R n1 up -C a
+hg -R n1 merge b
+hg -R n1 ci -d '4 0' -m merge
+hg -R n1 up -C 2
+echo c > n1/a
+hg -R n1 ci -d '5 0' -m c
+hg -R n1 up -C 2
+echo cc > n1/a
+hg -R n1 ci -d '6 0' -m cc
+
+hg -R n2 up -C b
+echo change >> n2/b
+hg -R n2 ci -Ad '7 0' -m local
+hg -R n2 fetch -d '9 0' -m 'merge' n1
+echo '% parent should be 3 (fetch did not merge anything)'
+hg -R n2 parents --template '{rev}\n'
+rm -fr n1 n2
 
 true
