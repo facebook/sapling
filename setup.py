@@ -7,7 +7,7 @@
 
 import sys
 if not hasattr(sys, 'version_info') or sys.version_info < (2, 3, 0, 'final'):
-    raise SystemExit, "Mercurial requires python 2.3 or later."
+    raise SystemExit("Mercurial requires python 2.3 or later.")
 
 import os
 import shutil

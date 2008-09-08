@@ -65,7 +65,7 @@ class changectx(object):
             self._parents = [changectx(self._repo, x) for x in p]
             return self._parents
         else:
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def __contains__(self, key):
         return key in self._manifest
@@ -215,7 +215,7 @@ class filectx(object):
             self._repopath = self._path
             return self._repopath
         else:
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def __nonzero__(self):
         try:
@@ -521,7 +521,7 @@ class workingctx(changectx):
             self._parents = [changectx(self._repo, x) for x in p]
             return self._parents
         else:
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def _buildmanifest(self):
         """generate a manifest corresponding to the working directory"""
@@ -630,7 +630,7 @@ class workingfilectx(filectx):
             self._filelog = self._repo.file(self._repopath)
             return self._filelog
         else:
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def __nonzero__(self):
         return True

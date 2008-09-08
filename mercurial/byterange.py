@@ -110,7 +110,7 @@ class RangeableFileObject:
         in self.fo.  This includes methods."""
         if hasattr(self.fo, name):
             return getattr(self.fo, name)
-        raise AttributeError, name
+        raise AttributeError(name)
 
     def tell(self):
         """Return the position within the range.
@@ -257,7 +257,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
     def ftp_open(self, req):
         host = req.get_host()
         if not host:
-            raise IOError, ('ftp error', 'no host given')
+            raise IOError('ftp error', 'no host given')
         host, port = splitport(host)
         if port is None:
             port = ftplib.FTP_PORT
@@ -329,7 +329,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
             headers = mimetools.Message(sf)
             return addinfourl(fp, headers, req.get_full_url())
         except ftplib.all_errors, msg:
-            raise IOError, ('ftp error', msg), sys.exc_info()[2]
+            raise IOError('ftp error', msg), sys.exc_info()[2]
 
     def connect_ftp(self, user, passwd, host, port, dirs):
         fw = ftpwrapper(user, passwd, host, port, dirs)
@@ -359,7 +359,7 @@ class ftpwrapper(urllib.ftpwrapper):
             try:
                 self.ftp.nlst(file)
             except ftplib.error_perm, reason:
-                raise IOError, ('ftp error', reason), sys.exc_info()[2]
+                raise IOError('ftp error', reason), sys.exc_info()[2]
             # Restore the transfer mode!
             self.ftp.voidcmd(cmd)
             # Try to retrieve as a file
@@ -373,7 +373,7 @@ class ftpwrapper(urllib.ftpwrapper):
                     fp = RangeableFileObject(fp, (rest,''))
                     return (fp, retrlen)
                 elif not str(reason).startswith('550'):
-                    raise IOError, ('ftp error', reason), sys.exc_info()[2]
+                    raise IOError('ftp error', reason), sys.exc_info()[2]
         if not conn:
             # Set transfer mode to ASCII!
             self.ftp.voidcmd('TYPE A')

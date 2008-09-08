@@ -96,7 +96,7 @@ class localrepository(repo.repository):
             self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
             return self.dirstate
         else:
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def __getitem__(self, changeid):
         if changeid == None:

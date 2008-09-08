@@ -97,7 +97,7 @@ class dirstate(object):
                 self.normalize = lambda x: x
             return self.normalize
         else:
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def _join(self, f):
         # much faster than os.path.join()
