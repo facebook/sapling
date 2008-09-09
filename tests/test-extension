@@ -80,3 +80,25 @@ echo "debugextension = $debugpath" >> $HGRCPATH
 hg help debugextension
 hg --debug help debugextension
 echo 'debugextension = !' >> $HGRCPATH
+
+echo % issue811
+debugpath=`pwd`/debugissue811.py
+cat > debugissue811.py <<EOF
+'''show all loaded extensions
+'''
+from mercurial import extensions, commands
+
+def debugextensions(ui):
+    "yet another debug command"
+    ui.write("%s\n" % '\n'.join([x for x, y in extensions.extensions()]))
+
+cmdtable = {"debugextensions": (debugextensions, (), "hg debugextensions")}
+commands.norepo += " debugextensions"
+EOF
+echo "debugissue811 = $debugpath" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+echo "hgext.mq=" >> $HGRCPATH
+echo "hgext/mq=" >> $HGRCPATH
+
+echo % show extensions
+hg debugextensions

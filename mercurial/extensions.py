@@ -29,7 +29,7 @@ def find(name):
         raise KeyError(name)
 
 def load(ui, name, path):
-    if name.startswith('hgext.'):
+    if name.startswith('hgext.') or name.startswith('hgext/'):
         shortname = name[6:]
     else:
         shortname = name

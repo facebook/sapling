@@ -57,3 +57,7 @@ global options:
     --profile         print command execution profile
     --version         output version information and exit
  -h --help            display help and exit
+% issue811
+% show extensions
+debugissue811
+mq
