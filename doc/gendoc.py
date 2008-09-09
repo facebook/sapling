@@ -92,9 +92,7 @@ def show_doc(ui):
             ui.write(_("    aliases: %s\n\n") % " ".join(d['aliases']))
 
     # print topics
-    for t, doc in helptable:
-        l = t.split("|")
-        section = l[-1]
+    for names, section, doc in helptable:
         underlined(_(section).upper())
         if callable(doc):
             doc = doc()

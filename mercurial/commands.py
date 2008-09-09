@@ -1339,14 +1339,10 @@ def help_(ui, name=None, with_version=False):
             addglobalopts(True)
 
     def helptopic(name):
-        v = None
-        for i, d in help.helptable:
-            l = i.split('|')
-            if name in l:
-                v = i
-                header = l[-1]
-                doc = d
-        if not v:
+        for names, header, doc in help.helptable:
+            if name in names:
+                break
+        else:
             raise cmdutil.UnknownCommand(name)
 
         # description
@@ -1423,9 +1419,8 @@ def help_(ui, name=None, with_version=False):
     if ui.verbose:
         ui.write(_("\nspecial help topics:\n"))
         topics = []
-        for i, d in help.helptable:
-            l = i.split('|')
-            topics.append((", ".join(l[:-1]), l[-1]))
+        for names, header, doc in help.helptable:
+            topics.append((", ".join(names), header))
         topics_len = max([len(s[0]) for s in topics])
         for t, desc in topics:
             ui.write(" %-*s  %s\n" % (topics_len, t, desc))

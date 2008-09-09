@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 helptable = (
-    ("dates|Date Formats",
+    (["dates"], "Date Formats",
     r'''
     Some commands allow the user to specify a date:
     backout, commit, import, tag: Specify the commit date.
@@ -45,7 +45,7 @@ helptable = (
     "-{days}" - within a given number of days of today
     '''),
 
-    ("patterns|File Name Patterns",
+    (["patterns"], "File Name Patterns",
     r'''
     Mercurial accepts several notations for identifying one or more
     files at a time.
@@ -91,7 +91,7 @@ helptable = (
 
     '''),
 
-    ('environment|env|Environment Variables',
+    (['environment', 'env'], 'Environment Variables',
     r'''
 HG::
     Path to the 'hg' executable, automatically passed when running hooks,
@@ -162,7 +162,7 @@ PYTHONPATH::
     appropriately if Mercurial is not installed system-wide.
     '''),
 
-    ('revs|revisions|Specifying Single Revisions',
+    (['revs', 'revisions'], 'Specifying Single Revisions',
     r'''
     Mercurial accepts several notations for identifying individual
     revisions.
@@ -195,7 +195,7 @@ PYTHONPATH::
     the first parent.
     '''),
 
-    ('mrevs|multirevs|Specifying Multiple Revisions',
+    (['mrevs', 'multirevs'], 'Specifying Multiple Revisions',
     r'''
     When Mercurial accepts more than one revision, they may be
     specified individually, or provided as a continuous range,
