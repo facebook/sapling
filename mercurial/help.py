@@ -5,9 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+from i18n import _
+
 helptable = (
-    (["dates"], "Date Formats",
-    r'''
+    (["dates"], _("Date Formats"),
+     _(r'''
     Some commands allow the user to specify a date:
     backout, commit, import, tag: Specify the commit date.
     log, revert, update: Select revision(s) by date.
@@ -43,10 +45,10 @@ helptable = (
     ">{date}" - on or after a given date
     "{date} to {date}" - a date range, inclusive
     "-{days}" - within a given number of days of today
-    '''),
+    ''')),
 
-    (["patterns"], "File Name Patterns",
-    r'''
+    (["patterns"], _("File Name Patterns"),
+     _(r'''
     Mercurial accepts several notations for identifying one or more
     files at a time.
 
@@ -89,10 +91,10 @@ helptable = (
 
     re:.*\.c$      any name ending in ".c", anywhere in the repository
 
-    '''),
+    ''')),
 
-    (['environment', 'env'], 'Environment Variables',
-    r'''
+    (['environment', 'env'], _('Environment Variables'),
+     _(r'''
 HG::
     Path to the 'hg' executable, automatically passed when running hooks,
     extensions or external tools. If unset or empty, an executable named
@@ -160,10 +162,10 @@ EDITOR::
 PYTHONPATH::
     This is used by Python to find imported modules and may need to be set
     appropriately if Mercurial is not installed system-wide.
-    '''),
+    ''')),
 
-    (['revs', 'revisions'], 'Specifying Single Revisions',
-    r'''
+    (['revs', 'revisions'], _('Specifying Single Revisions'),
+     _(r'''
     Mercurial accepts several notations for identifying individual
     revisions.
 
@@ -193,10 +195,10 @@ PYTHONPATH::
     no working directory is checked out, it is equivalent to null.
     If an uncommitted merge is in progress, "." is the revision of
     the first parent.
-    '''),
+    ''')),
 
-    (['mrevs', 'multirevs'], 'Specifying Multiple Revisions',
-    r'''
+    (['mrevs', 'multirevs'], _('Specifying Multiple Revisions'),
+     _(r'''
     When Mercurial accepts more than one revision, they may be
     specified individually, or provided as a continuous range,
     separated by the ":" character.
@@ -212,5 +214,5 @@ PYTHONPATH::
 
     A range acts as a closed interval. This means that a range of 3:5
     gives 3, 4 and 5. Similarly, a range of 4:2 gives 4, 3, and 2.
-    '''),
+    ''')),
 )

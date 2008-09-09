@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from repo import RepoError, NoCapability
-from i18n import _
+from i18n import _, gettext
 import os, re, sys, urllib
 import hg, util, revlog, bundlerepo, extensions, copies
 import difflib, patch, time, help, mdiff, tempfile
@@ -1289,7 +1289,7 @@ def help_(ui, name=None, with_version=False):
             ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
 
         # description
-        doc = i[0].__doc__
+        doc = gettext(i[0].__doc__)
         if not doc:
             doc = _("(No help text available)")
         if ui.quiet:
@@ -1315,7 +1315,7 @@ def help_(ui, name=None, with_version=False):
             f = f.lstrip("^")
             if not ui.debugflag and f.startswith("debug"):
                 continue
-            doc = e[0].__doc__
+            doc = gettext(e[0].__doc__)
             if not doc:
                 doc = _("(No help text available)")
             h[f] = doc.splitlines(0)[0].rstrip()
@@ -1360,7 +1360,8 @@ def help_(ui, name=None, with_version=False):
         except KeyError:
             raise cmdutil.UnknownCommand(name)
 
-        doc = (mod.__doc__ or _('No help text available')).splitlines(0)
+        doc = gettext(mod.__doc__) or _('No help text available')
+        doc = doc.splitlines(0)
         ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
         for d in doc[1:]:
             ui.write(d, '\n')
