@@ -7,7 +7,7 @@
 
 '''interactive change selection during commit or qrefresh'''
 
-from mercurial.i18n import _
+from mercurial.i18n import gettext, _
 from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
 import copy, cStringIO, errno, operator, os, re, tempfile
@@ -282,22 +282,24 @@ def filterpatch(ui, chunks):
         if resp_file[0] is not None:
             return resp_file[0]
         while True:
-            r = (ui.prompt(query + _(' [Ynsfdaq?] '), '(?i)[Ynsfdaq?]?$')
-                 or 'y').lower()
-            if r == '?':
-                c = record.__doc__.find('y - record this change')
-                for l in record.__doc__[c:].splitlines():
-                    if l: ui.write(_(l.strip()), '\n')
+            choices = _('[Ynsfdaq?]')
+            r = (ui.prompt("%s %s " % (query, choices), '(?i)%s?$' % choices)
+                 or _('y')).lower()
+            if r == _('?'):
+                doc = gettext(record.__doc__)
+                c = doc.find(_('y - record this change'))
+                for l in doc[c:].splitlines():
+                    if l: ui.write(l.strip(), '\n')
                 continue
-            elif r == 's':
+            elif r == _('s'):
                 r = resp_file[0] = 'n'
-            elif r == 'f':
+            elif r == _('f'):
                 r = resp_file[0] = 'y'
-            elif r == 'd':
+            elif r == _('d'):
                 r = resp_all[0] = 'n'
-            elif r == 'a':
+            elif r == _('a'):
                 r = resp_all[0] = 'y'
-            elif r == 'q':
+            elif r == _('q'):
                 raise util.Abort(_('user quit'))
             return r
     while chunks:
@@ -315,7 +317,7 @@ def filterpatch(ui, chunks):
                 chunk.pretty(ui)
             r = prompt(_('examine changes to %s?') %
                        _(' and ').join(map(repr, chunk.files())))
-            if r == 'y':
+            if r == _('y'):
                 applied[chunk.filename()] = [chunk]
                 if chunk.allhunks():
                     applied[chunk.filename()] += consumefile()
@@ -327,7 +329,7 @@ def filterpatch(ui, chunks):
                 chunk.pretty(ui)
             r = prompt(_('record this change to %r?') %
                        chunk.filename())
-            if r == 'y':
+            if r == _('y'):
                 if fixoffset:
                     chunk = copy.copy(chunk)
                     chunk.toline += fixoffset
