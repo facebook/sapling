@@ -1,9 +1,7 @@
 % fail
-failed to contact inotify server: AF_UNIX path too long
+failed to contact inotify server: No such file or directory
 deactivating inotify
 abort: could not start server: File exists
 % inserve
 % status
-failed to contact inotify server: AF_UNIX path too long
-deactivating inotify
 ? hg.pid
