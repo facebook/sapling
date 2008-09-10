@@ -9,9 +9,9 @@ cd a
 echo 'base' > base
 hg ci -Ambase -d '1 0'
 
-hg qnew a
-hg qnew b
-hg qnew c
+hg qnew -d '1 0' a
+hg qnew -d '1 0' b
+hg qnew -d '1 0' c
 
 hg qdel
 
@@ -41,14 +41,14 @@ hg init b
 cd b
 
 echo 'base' > base
-hg ci -Ambase
+hg ci -Ambase -d '1 0'
 
 hg qfinish
 hg qfinish -a
 
-hg qnew a
-hg qnew b
-hg qnew c
+hg qnew -d '1 0' a
+hg qnew -d '1 0' b
+hg qnew c # XXX fails to apply by /usr/bin/patch if we put a date
 
 hg qfinish 0
 hg qfinish b
