@@ -255,7 +255,8 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #ifdef AT_SYMLINK_NOFOLLOW
 	dfd = open(path, O_RDONLY);
-	dir = fdopendir(dfd);
+	if (dfd != -1)
+		dir = fdopendir(dfd);
 #else
 	dir = opendir(path);
 	dfd = -1;
