@@ -422,7 +422,7 @@ class dirstate(object):
         '''
 
         def fwarn(f, msg):
-            self._ui.warn('%s: %s\n' % (self.pathto(ff), msg))
+            self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
             return False
         badfn = fwarn
         if hasattr(match, 'bad'):
