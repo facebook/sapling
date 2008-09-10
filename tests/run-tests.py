@@ -471,6 +471,8 @@ hgpkg = None
 def run_children(tests):
     if not options.with_hg:
         install_hg()
+        if hgpkg != expecthg:
+            print '# Testing unexpected mercurial: %s' % hgpkg
 
     optcopy = dict(options.__dict__)
     optcopy['jobs'] = 1
@@ -540,8 +542,8 @@ def run_tests(tests):
         if not options.with_hg:
             install_hg()
 
-        if hgpkg != expecthg:
-           print '# Testing unexpected mercurial: %s' % hgpkg
+            if hgpkg != expecthg:
+                print '# Testing unexpected mercurial: %s' % hgpkg
 
         if options.timeout > 0:
             try:
