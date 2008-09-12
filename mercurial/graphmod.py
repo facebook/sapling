@@ -27,6 +27,7 @@ def graph(repo, start_rev, stop_rev):
     """
 
     assert start_rev >= stop_rev
+    assert stop_rev >= 0
     curr_rev = start_rev
     revs = []
     cl = repo.changelog
