@@ -10,7 +10,7 @@ def _mode_to_kind(mode):
     if stat.S_ISSOCK(mode): return stat.S_IFSOCK
     return mode
 
-def listdir(path, stat=False):
+def listdir(path, stat=False, skip=None):
     '''listdir(path, stat=False) -> list_of_tuples
 
     Return a sorted list containing information about the entries
@@ -30,6 +30,8 @@ def listdir(path, stat=False):
     names.sort()
     for fn in names:
         st = os.lstat(prefix + fn)
+        if fn == skip and stat.S_ISDIR(st.st_mode):
+            return []
         if stat:
             result.append((fn, _mode_to_kind(st.st_mode), st))
         else:

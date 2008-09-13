@@ -9,7 +9,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import nullid
 from i18n import _
-import struct, os, bisect, stat, util, errno, ignore
+import struct, os, stat, util, errno, ignore
 import cStringIO, osutil, sys
 
 _unknown = ('?', 0, 0, 0)
@@ -458,7 +458,6 @@ class dirstate(object):
         normalize = self.normalize
         listdir = osutil.listdir
         lstat = os.lstat
-        bisect_left = bisect.bisect_left
         pconvert = util.pconvert
         getkind = stat.S_IFMT
         dirkind = stat.S_IFDIR
@@ -510,17 +509,11 @@ class dirstate(object):
             nd = work.pop()
             if hasattr(match, 'dir'):
                 match.dir(nd)
-            entries = listdir(join(nd), stat=True)
             if nd == '.':
                 nd = ''
+                entries = listdir(join(nd), stat=True)
             else:
-                # do not recurse into a repo contained in this
-                # one. use bisect to find .hg directory so speed
-                # is good on big directory.
-                hg = bisect_left(entries, ('.hg'))
-                if hg < len(entries) and entries[hg][0] == '.hg' \
-                        and entries[hg][1] == dirkind:
-                        continue
+                entries = listdir(join(nd), stat=True, skip ='.hg')
             for f, kind, st in entries:
                 nf = normalize(nd and (nd + "/" + f) or f)
                 if nf not in results:

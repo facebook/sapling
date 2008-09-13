@@ -114,17 +114,18 @@ int entkind(struct dirent *ent)
 
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	static char *kwlist[] = { "path", "stat", NULL };
+	static char *kwlist[] = { "path", "stat", "skip", NULL };
 	PyObject *statflag = NULL, *list, *elem, *stat, *ret = NULL;
-	char fullpath[PATH_MAX + 10], *path;
+	char fullpath[PATH_MAX + 10], *path, *skip = NULL;
 	int pathlen, keepstat, kind, dfd = -1, err;
 	struct stat st;
 	struct dirent *ent;
 	DIR *dir;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O:listdir", kwlist,
-					 &path, &pathlen, &statflag))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|Os:listdir", kwlist,
+					 &path, &pathlen, &statflag, &skip))
 		goto error_parse;
+
 	if (pathlen >= PATH_MAX)
 		goto error_parse;
 
@@ -177,6 +178,12 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 			kind = st.st_mode & S_IFMT;
 		}
 
+		/* quit early? */
+		if (skip && kind == S_IFDIR && !strcmp(ent->d_name, skip)) {
+			ret = PyList_New(0);
+			goto error;
+		}
+
 		if (keepstat) {
 			stat = PyObject_CallObject((PyObject *)&listdir_stat_type, NULL);
 			if (!stat)
@@ -192,7 +199,6 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 		Py_DECREF(elem);
 	}
 
-	PyList_Sort(list);
 	ret = list;
 	Py_INCREF(ret);
 
