@@ -96,12 +96,6 @@ static PyTypeObject listdir_stat_type = {
 	listdir_stat_new,          /* tp_new */
 };
 
-#ifdef AT_SYMLINK_NOFOLLOW
-#define USEFDOPEN 1
-#else
-#define USEFDOPEN 0
-#endif
-
 int entkind(struct dirent *ent)
 {
 #ifdef DT_REG
@@ -115,6 +109,7 @@ int entkind(struct dirent *ent)
 	case DT_SOCK: return S_IFSOCK;
 	}
 #endif
+	return -1;
 }
 
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -122,7 +117,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	static char *kwlist[] = { "path", "stat", NULL };
 	PyObject *statflag = NULL, *list, *elem, *stat, *ret = NULL;
 	char fullpath[PATH_MAX + 10], *path;
-	int pathlen, keepstat, kind, dfd, err;
+	int pathlen, keepstat, kind, dfd = -1, err;
 	struct stat st;
 	struct dirent *ent;
 	DIR *dir;
@@ -130,20 +125,23 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O:listdir", kwlist,
 					 &path, &pathlen, &statflag))
 		goto error_parse;
+	if (pathlen >= PATH_MAX)
+		goto error_parse;
 
 	strncpy(fullpath, path, PATH_MAX);
 	fullpath[pathlen] = '/';
 	keepstat = statflag && PyObject_IsTrue(statflag);
 
-	if (USEFDOPEN) {
-		dfd = open(path, O_RDONLY);
-		if (dfd == -1) {
-			PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
-			goto error_parse;
-		}
-		dir = fdopendir(dfd);
-	} else
-		dir = opendir(path);
+#ifdef AT_SYMLINK_NOFOLLOW
+	dfd = open(path, O_RDONLY);
+	if (dfd == -1) {
+		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
+		goto error_parse;
+	}
+	dir = fdopendir(dfd);
+#else
+	dir = opendir(path);
+#endif
 	if (!dir) {
 		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
 		goto error_dir;
@@ -159,15 +157,15 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 
 		kind = entkind(ent);
 		if (kind == -1 || keepstat) {
-			if (USEFDOPEN)
-				err = fstatat(dfd, ent->d_name, &st,
-					      AT_SYMLINK_NOFOLLOW);
-			else {
-				strncpy(fullpath + pathlen + 1, ent->d_name,
-					PATH_MAX - pathlen);
-				fullpath[PATH_MAX] = 0;
-				err = lstat(fullpath, &st);
-			}
+#ifdef AT_SYMLINK_NOFOLLOW
+			err = fstatat(dfd, ent->d_name, &st,
+				      AT_SYMLINK_NOFOLLOW);
+#else
+			strncpy(fullpath + pathlen + 1, ent->d_name,
+				PATH_MAX - pathlen);
+			fullpath[PATH_MAX] = 0;
+			err = lstat(fullpath, &st);
+#endif
 			if (err == -1) {
 				strncpy(fullpath + pathlen + 1, ent->d_name,
 					PATH_MAX - pathlen);
@@ -203,8 +201,9 @@ error:
 error_list:
 	closedir(dir);
 error_dir:
-	if (USEFDOPEN)
- 		close(dfd);
+#ifdef AT_SYMLINK_NOFOLLOW
+	close(dfd);
+#endif
 error_parse:
 	return ret;
 }
