@@ -16,12 +16,10 @@ _unknown = ('?', 0, 0, 0)
 _format = ">cllll"
 
 def _finddirs(path):
-    pos = len(path)
-    while 1:
-        pos = path.rfind('/', 0, pos)
-        if pos == -1:
-            break
+    pos = path.rfind('/')
+    while pos != -1:
         yield path[:pos]
+        pos = path.rfind('/', 0, pos)
 
 class dirstate(object):
 
@@ -65,10 +63,16 @@ class dirstate(object):
             return self._pl
         elif name == '_dirs':
             dirs = {}
-            for f,s in self._map.items():
+            for f,s in self._map.iteritems():
                 if s[0] != 'r':
-                    for base in _finddirs(f):
-                        dirs[base] = dirs.get(base, 0) + 1
+                    pos = f.rfind('/')
+                    while pos != -1:
+                        f = f[:pos]
+                        if f in dirs:
+                            dirs[f] += 1
+                            break
+                        dirs[f] = 1
+                        pos = f.rfind('/')
             self._dirs = dirs
             return self._dirs
         elif name == '_ignore':
@@ -242,8 +246,8 @@ class dirstate(object):
             for base in _finddirs(f):
                 if dirs[base] == 1:
                     del dirs[base]
-                else:
-                    dirs[base] -= 1
+                    return
+                dirs[base] -= 1
 
     def _addpath(self, f, check=False):
         oldstate = self[f]
