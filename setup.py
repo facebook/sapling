@@ -102,6 +102,12 @@ packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
             'hgext.highlight']
 
 try:
+    import msvcrt
+    ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
+except ImportError:
+    pass
+
+try:
     import posix
     ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
 

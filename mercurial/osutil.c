@@ -9,17 +9,41 @@
 
 #define _ATFILE_SOURCE
 #include <Python.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <dirent.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#endif
 
+#ifdef _WIN32
+/*
+stat struct compatible with hg expectations
+Mercurial only uses st_mode, st_size and st_mtime
+the rest is kept to minimize changes between implementations
+*/
+struct hg_stat {
+	int st_dev;
+	int st_mode;
+	int st_nlink;
+	__int64 st_size;
+	int st_mtime;
+	int st_ctime;
+};
+struct listdir_stat {
+	PyObject_HEAD
+	struct hg_stat st;
+};
+#else
 struct listdir_stat {
 	PyObject_HEAD
 	struct stat st;
 };
+#endif
 
 #define listdir_slot(name) \
     static PyObject *listdir_stat_##name(PyObject *self, void *x) \
@@ -30,7 +54,15 @@ struct listdir_stat {
 listdir_slot(st_dev)
 listdir_slot(st_mode)
 listdir_slot(st_nlink)
+#ifdef _WIN32
+static PyObject *listdir_stat_st_size(PyObject *self, void *x)
+{
+	return PyLong_FromLongLong(
+		(PY_LONG_LONG)((struct listdir_stat *)self)->st.st_size);
+}
+#else
 listdir_slot(st_size)
+#endif
 listdir_slot(st_mtime)
 listdir_slot(st_ctime)
 
@@ -95,6 +127,142 @@ static PyTypeObject listdir_stat_type = {
 	0,                         /* tp_alloc */
 	listdir_stat_new,          /* tp_new */
 };
+
+#ifdef _WIN32
+
+static int to_python_time(const FILETIME *tm)
+{
+	/* number of seconds between epoch and January 1 1601 */
+	const __int64 a0 = (__int64)134774L * (__int64)24L * (__int64)3600L;
+	/* conversion factor from 100ns to 1s */
+	const __int64 a1 = 10000000;
+	/* explicit (int) cast to suspend compiler warnings */
+	return (int)((((__int64)tm->dwHighDateTime << 32)
+			+ tm->dwLowDateTime) / a1 - a0);
+}
+
+static PyObject *make_item(const WIN32_FIND_DATAA *fd, int wantstat)
+{
+	PyObject *py_st;
+	struct hg_stat *stp;
+
+	int kind = (fd->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		? _S_IFDIR : _S_IFREG;
+
+	if (!wantstat)
+		return Py_BuildValue("si", fd->cFileName, kind);
+
+	py_st = PyObject_CallObject((PyObject *)&listdir_stat_type, NULL);
+	if (!py_st)
+		return NULL;
+
+	stp = &((struct listdir_stat *)py_st)->st;
+	/*
+	use kind as st_mode
+	rwx bits on Win32 are meaningless
+	and Hg does not use them anyway
+	*/
+	stp->st_mode  = kind;
+	stp->st_mtime = to_python_time(&fd->ftLastWriteTime);
+	stp->st_ctime = to_python_time(&fd->ftCreationTime);
+	if (kind == _S_IFREG)
+		stp->st_size =	((__int64)fd->nFileSizeHigh << 32)
+				+ fd->nFileSizeLow;
+	return Py_BuildValue("siN", fd->cFileName,
+		kind, py_st);
+}
+
+static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	PyObject *rval = NULL; /* initialize - return value */
+	PyObject *statobj = NULL; /* initialize - optional arg */
+	PyObject *list;
+	HANDLE fh;
+	WIN32_FIND_DATAA fd;
+	char *path, *pattern, *skip = NULL;
+	int plen, wantstat;
+
+	static char *kwlist[] = {"path", "stat", "skip", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|Os:listdir",
+			kwlist, &path, &plen, &statobj, &skip))
+		goto error_parse;
+
+	wantstat = statobj && PyObject_IsTrue(statobj);
+
+	/* build the path + \* pattern string */
+	pattern = malloc(plen+3); /* path + \* + \0 */
+	if (!pattern) {
+		PyErr_NoMemory();
+		goto error_parse;
+	}
+	strcpy(pattern, path);
+
+	if (plen > 0) {
+		char c = path[plen-1];
+		if (c != ':' && c != '/' && c != '\\')
+			pattern[plen++] = '\\';
+	}
+	strcpy(pattern + plen, "*");
+
+	fh = FindFirstFileA(pattern, &fd);
+	if (fh == INVALID_HANDLE_VALUE) {
+		PyErr_SetExcFromWindowsErrWithFilename(PyExc_OSError,
+							GetLastError(),
+							path);
+		goto error_file;
+	}
+
+	list = PyList_New(0);
+	if (!list)
+		goto error_list;
+
+	do {
+		PyObject *item;
+
+		if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+			if (!strcmp(fd.cFileName, ".")
+			|| !strcmp(fd.cFileName, ".."))
+				continue;
+
+			if (skip && !strcmp(fd.cFileName, skip)) {
+				rval = PyList_New(0);
+				goto error;
+			}
+		}
+
+		item = make_item(&fd, wantstat);
+		if (!item)
+			goto error;
+
+		if (PyList_Append(list, item)) {
+			Py_XDECREF(item);
+			goto error;
+		}
+
+		Py_XDECREF(item);
+	} while (FindNextFileA(fh, &fd));
+
+	if (GetLastError() != ERROR_NO_MORE_FILES) {
+		PyErr_SetExcFromWindowsErrWithFilename(PyExc_OSError,
+							GetLastError(),
+							path);
+		goto error;
+	}
+
+	rval = list;
+	Py_XINCREF(rval);
+error:
+	Py_XDECREF(list);
+error_list:
+	FindClose(fh);
+error_file:
+	free(pattern);
+error_parse:
+	return rval;
+}
+
+#else
 
 int entkind(struct dirent *ent)
 {
@@ -213,6 +381,8 @@ error_dir:
 error_parse:
 	return ret;
 }
+
+#endif /* ndef _WIN32 */
 
 static char osutil_doc[] = "Native operating system services.";
 
