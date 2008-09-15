@@ -370,6 +370,25 @@ proc readrefs {} {
 	lappend tagids($direct) $tag
 	lappend idtags($tag) $direct
     }
+
+    set status [catch {exec $env(HG) --config ui.report_untrusted=false heads} heads]
+    if { $status != 0 } {
+        puts $::errorInfo
+        if { ![string equal $::errorCode NONE] } {
+            exit 2
+        }
+    }
+    regsub -all "\r\n" $heads "\n" heads
+
+    set lines [split $heads "\n"]
+    foreach f $lines {
+        set match ""
+        regexp {changeset:\s+(\S+):(\S+)$} $f match id sha
+        if {$match != ""} {
+        lappend idheads($sha) $id
+        }
+    }
+
 }
 
 proc readotherrefs {base dname excl} {
@@ -1045,7 +1064,7 @@ proc drawcommitline {level} {
 }
 
 proc drawtags {id x xt y1} {
-    global idtags idheads idotherrefs
+    global idtags idheads idotherrefs commitinfo
     global linespc lthickness
     global canv mainfont idline rowtextx
 
@@ -1057,8 +1076,11 @@ proc drawtags {id x xt y1} {
 	set ntags [llength $marks]
     }
     if {[info exists idheads($id)]} {
-	set marks [concat $marks $idheads($id)]
-	set nheads [llength $idheads($id)]
+	set headmark [lindex $commitinfo($id) 7]
+	if {$headmark ne "default"} {
+	    lappend marks $headmark
+	    set nheads 1
+	}
     }
     if {[info exists idotherrefs($id)]} {
 	set marks [concat $marks $idotherrefs($id)]
