@@ -20,11 +20,11 @@ cat hg.pid >> $DAEMON_PIDS
 
 echo % hgweb filerevision, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/get-with-headers.py') \
-    | sed "s/[0-9]* years ago/long ago/g"
+    | sed "s/[0-9]* years ago/long ago/g" | sed "s/class=\"k\"/class=\"kn\"/g"
 
 echo % hgweb fileannotate, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py') \
-    | sed "s/[0-9]* years ago/long ago/g"
+    | sed "s/[0-9]* years ago/long ago/g" | sed "s/class=\"k\"/class=\"kn\"/g"
 
 echo % hgweb fileannotate, raw
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py?style=raw') \

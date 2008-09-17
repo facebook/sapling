@@ -6,7 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import bin, hex, nullid
-from revlog import revlog
+from revlog import revlog, RevlogError
+from i18n import _
 import util
 
 def _string_escape(text):
@@ -176,6 +177,9 @@ class changelog(revlog):
     def add(self, manifest, files, desc, transaction, p1=None, p2=None,
                   user=None, date=None, extra={}):
 
+        user = user.strip()
+        if "\n" in user:
+            raise RevlogError(_("username %s contains a newline") % `user`)
         user, desc = util.fromlocal(user), util.fromlocal(desc)
 
         if date:
