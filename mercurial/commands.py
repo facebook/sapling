@@ -2789,7 +2789,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     """update working directory
 
     Update the working directory to the specified revision, or the
-    tip of the current branch if none is specified.
+    tip of the current branch if none is specified. Use null as
+    the revision to remove the working copy (like 'hg clone -U').
 
     If the requested revision is a descendant of the working
     directory, any outstanding changes in the working directory will
