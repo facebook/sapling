@@ -34,7 +34,7 @@ static uint32_t htonl(uint32_t x)
 }
 #else
 #include <sys/types.h>
-#ifdef __BEOS__
+#if defined __BEOS__ && !defined __HAIKU__
 #include <ByteOrder.h>
 #else
 #include <arpa/inet.h>

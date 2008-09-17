@@ -52,7 +52,7 @@ static uint32_t ntohl(uint32_t x)
 #else
 /* not windows */
 # include <sys/types.h>
-# ifdef __BEOS__
+# if defined __BEOS__ && !defined __HAIKU__
 #  include <ByteOrder.h>
 # else
 #  include <arpa/inet.h>
