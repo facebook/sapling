@@ -5,3 +5,14 @@ cd t
 hg init
 echo "invalid" > .hg/hgrc
 hg status 2>&1 |sed -e "s:/.*\(/t/.*\):...\1:"
+
+#issue 1199, escaping
+
+cd ..
+hg init "foo%bar"
+hg clone "foo%bar" foobar
+p=`pwd`
+cd foobar
+cat .hg/hgrc |sed -e "s:$p:...:"
+hg paths |sed -e "s:$p:...:"
+hg showconfig |sed -e "s:$p:...:"
