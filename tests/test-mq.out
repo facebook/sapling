@@ -500,7 +500,7 @@ Patch queue now empty
 abort: local changes found, refresh first
 % apply force, should not discard changes with empty patch
 applying empty
-/usr/bin/patch: **** Only garbage was found in the patch input.
+patch: **** Only garbage was found in the patch input.
 patch failed, unable to continue (try -v)
 patch empty is empty
 Now at: empty

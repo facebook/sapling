@@ -520,7 +520,7 @@ echo % qpush should fail, local changes
 hg qpush
 
 echo % apply force, should not discard changes with empty patch
-hg qpush -f
+hg qpush -f 2>&1 | sed 's,^.*/patch,patch,g'
 hg diff --config diff.nodates=True
 hg qdiff --config diff.nodates=True
 hg log -l1 -p

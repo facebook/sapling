@@ -223,7 +223,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         if dest_repo.local():
             fp = dest_repo.opener("hgrc", "w", text=True)
             fp.write("[paths]\n")
-            fp.write("default = %s\n" % abspath)
+            # percent needs to be escaped for ConfigParser
+            fp.write("default = %s\n" % abspath.replace('%', '%%'))
             fp.close()
 
             if update:
