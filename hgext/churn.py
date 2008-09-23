@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 '''allow graphing the number of lines changed per contributor'''
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial import patch, cmdutil, util, node
 import os, sys
 
@@ -115,5 +115,5 @@ cmdtable = {
      [('r', 'rev', [], _('limit statistics to the specified revisions')),
       ('', 'aliases', '', _('file with email aliases')),
       ('', 'progress', None, _('show progress'))],
-    'hg churn [-r REVISIONS] [--aliases FILE] [--progress]'),
+    _('hg churn [-r REVISIONS] [--aliases FILE] [--progress]')),
 }
