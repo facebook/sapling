@@ -109,11 +109,12 @@ rolling back last transaction
 1:cd2a86ecc814
 % pull -u -r otherrev url#rev updates to rev
 % parents
-changeset:   2:faba9097cad4
-branch:      foo
+changeset:   3:4cd725637392
+tag:         tip
+parent:      0:1f0dee641bb7
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     new head of branch foo
+summary:     add bar
 
 % heads
 changeset:   3:4cd725637392

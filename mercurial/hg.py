@@ -20,10 +20,11 @@ def parseurl(url, revs=[]):
     '''parse url#branch, returning url, branch + revs'''
 
     if '#' not in url:
-        return url, (revs or None), None
+        return url, (revs or None), revs and revs[-1] or None
 
-    url, rev = url.split('#', 1)
-    return url, revs + [rev], rev
+    url, branch = url.split('#', 1)
+    checkout = revs and revs[-1] or branch
+    return url, revs + [branch], checkout
 
 schemes = {
     'bundle': bundlerepo,
@@ -120,7 +121,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     else:
         src_repo = source
         origsource = source = src_repo.url()
-        checkout = None
+        checkout = rev and rev[-1] or None
 
     if dest is None:
         dest = defaultdest(source)
@@ -231,12 +232,13 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 dest_repo.ui.status(_("updating working directory\n"))
                 if update is not True:
                     checkout = update
-                elif not checkout:
+                for test in (checkout, 'default', 'tip'):
                     try:
-                        checkout = dest_repo.lookup("default")
+                        uprev = dest_repo.lookup(test)
+                        break
                     except:
-                        checkout = dest_repo.changelog.tip()
-                _update(dest_repo, checkout)
+                        continue
+                _update(dest_repo, uprev)
 
         return src_repo, dest_repo
     finally:
