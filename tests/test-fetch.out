@@ -170,3 +170,11 @@ added 3 changesets with 2 changes to 1 files (+2 heads)
 not merging with 1 other new branch heads (use "hg heads ." and "hg merge" to merge them)
 % parent should be 3 (fetch did not merge anything)
 3
+% pull in change on different branch than dirstate
+adding a
+updating working directory
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+marked working directory as branch topic
+abort: working dir not at branch tip (use "hg update" to check out branch tip)
+% parent should be 0 (fetch did not update or merge anything)
+0

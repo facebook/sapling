@@ -33,8 +33,9 @@ def fetch(ui, repo, source='default', **opts):
         opts['date'] = util.parsedate(date)
 
     parent, p2 = repo.dirstate.parents()
-    branch = repo[parent].branch()
-    if parent != repo[branch].node():
+    branch = repo.dirstate.branch()
+    branchnode = repo.branchtags().get(branch)
+    if parent != branchnode:
         raise util.Abort(_('working dir not at branch tip '
                            '(use "hg update" to check out branch tip)'))
 

@@ -156,4 +156,17 @@ echo '% parent should be 3 (fetch did not merge anything)'
 hg -R n2 parents --template '{rev}\n'
 rm -fr n1 n2
 
+echo % pull in change on different branch than dirstate
+hg init n1
+echo a > n1/a
+hg -R n1 ci -Am initial
+hg clone n1 n2
+echo b > n1/a
+hg -R n1 ci -m next
+hg -R n2 branch topic
+hg -R n2 fetch -d '0 0' -m merge n1
+echo '% parent should be 0 (fetch did not update or merge anything)'
+hg -R n2 parents --template '{rev}\n'
+rm -fr n1 n2
+
 true
