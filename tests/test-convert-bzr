@@ -1,0 +1,81 @@
+#!/bin/sh
+
+source "$TESTDIR/bzr-definitions"
+
+echo % create and rename on the same file in the same step
+mkdir test-createandrename
+cd test-createandrename
+bzr init -q source
+cd source
+echo a > a
+bzr add -q a
+bzr commit -q -m 'Initial add: a'
+bzr mv a b
+echo a2 >> a
+bzr add -q a
+bzr commit -q -m 'rename a into b, create a'
+cd ..
+hg convert source source-hg
+glog -R source-hg
+echo "% test --rev option"
+hg convert -r 1 source source-1-hg
+glog -R source-1-hg
+cd ..
+
+echo % merge
+mkdir test-merge
+cd test-merge
+
+cat > helper.py <<EOF
+import sys
+from bzrlib import workingtree
+wt = workingtree.WorkingTree.open('.')
+
+message, stamp = sys.argv[1:]
+wt.commit(message, timestamp=int(stamp))
+EOF
+
+bzr init -q source
+cd source
+echo content > a
+echo content2 > b
+bzr add -q a b
+bzr commit -q -m 'Initial add'
+cd ..
+bzr branch -q source source-improve
+cd source
+echo more >> a
+python ../helper.py 'Editing a' 100
+cd ../source-improve
+echo content3 >> b
+python ../helper.py 'Editing b' 200
+cd ../source
+bzr merge -q ../source-improve
+bzr commit -q -m 'Merged improve branch'
+cd ..
+hg convert --datesort source source-hg
+glog -R source-hg
+cd ..
+
+echo % symlinks and executable files
+mkdir test-symlinks
+cd test-symlinks
+bzr init -q source
+cd source
+touch program
+chmod +x program
+ln -s program altname
+bzr add -q altname program
+bzr commit -q -m 'Initial setup'
+touch newprog
+chmod +x newprog
+rm altname
+ln -s newprog altname
+chmod -x program
+bzr add -q newprog
+bzr commit -q -m 'Symlink changed, x bits changed'
+cd ..
+hg convert source source-hg
+manifest source-hg 0
+manifest source-hg tip
+cd ..

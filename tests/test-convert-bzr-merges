@@ -1,0 +1,37 @@
+#!/bin/sh
+
+source "$TESTDIR/bzr-definitions"
+
+echo % test multiple merges at once
+mkdir test-multimerge
+cd test-multimerge
+bzr init -q source
+cd source
+echo content > file
+bzr add -q file
+bzr commit -q -m 'Initial add'
+cd ..
+bzr branch -q source source-branch1
+cd source-branch1
+echo morecontent >> file
+echo evenmorecontent > file-branch1
+bzr add -q file-branch1
+bzr commit -q -m 'Added branch1 file'
+cd ../source
+echo content > file-parent
+bzr add -q file-parent
+bzr commit -q -m 'Added parent file'
+cd ..
+bzr branch -q source source-branch2
+cd source-branch2
+echo somecontent > file-branch2
+bzr add -q file-branch2
+bzr commit -q -m 'Added brach2 file'
+cd ../source
+bzr merge -q ../source-branch1
+bzr merge -q --force ../source-branch2
+bzr commit -q -m 'Merged branches'
+cd ..
+hg convert --datesort source source-hg
+glog -R source-hg
+manifest source-hg tip

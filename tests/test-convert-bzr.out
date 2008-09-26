@@ -1,0 +1,51 @@
+% create and rename on the same file in the same step
+a => b
+initializing destination source-hg repository
+scanning source...
+sorting...
+converting...
+1 Initial add: a
+0 rename a into b, create a
+o  1 "rename a into b, create a" files: a b
+|
+o  0 "Initial add: a" files: a
+
+% test --rev option
+initializing destination source-1-hg repository
+scanning source...
+sorting...
+converting...
+0 Initial add: a
+o  0 "Initial add: a" files: a
+
+% merge
+initializing destination source-hg repository
+scanning source...
+sorting...
+converting...
+3 Initial add
+2 Editing a
+1 Editing b
+0 Merged improve branch
+o    3 "Merged improve branch" files:
+|\
+| o  2 "Editing b" files: b
+| |
+o |  1 "Editing a" files: a
+|/
+o  0 "Initial add" files: a b
+
+% symlinks and executable files
+initializing destination source-hg repository
+scanning source...
+sorting...
+converting...
+1 Initial setup
+0 Symlink changed, x bits changed
+% manifest of 0
+644   altname
+755 * program
+% manifest of tip
+644   altname
+755 * newprog
+644   program

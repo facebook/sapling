@@ -24,6 +24,9 @@ def matchoutput(cmd, regexp, ignorestatus=False):
 def has_baz():
     return matchoutput('baz --version 2>&1', r'baz Bazaar version')
 
+def has_bzr():
+    return matchoutput('bzr --version 2>&1', r'Bazaar \(bzr\)')
+
 def has_cvs():
     re = r'Concurrent Versions System.*?server'
     return matchoutput('cvs --version 2>&1', re)
@@ -146,6 +149,7 @@ def has_pygments():
 
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
+    "bzr": (has_bzr, "Canonical's Bazaar client"),
     "cvs": (has_cvs, "cvs client/server"),
     "cvsps": (has_cvsps, "cvsps utility"),
     "darcs": (has_darcs, "darcs client"),

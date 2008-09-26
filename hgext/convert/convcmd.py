@@ -13,6 +13,7 @@ from hg import mercurial_source, mercurial_sink
 from subversion import debugsvnlog, svn_source, svn_sink
 from monotone import monotone_source
 from gnuarch import gnuarch_source
+from bzr import bzr_source
 import filemap
 
 import os, shutil
@@ -35,6 +36,7 @@ source_converters = [
     ('darcs', darcs_source),
     ('mtn', monotone_source),
     ('gnuarch', gnuarch_source),
+    ('bzr', bzr_source),
     ]
 
 sink_converters = [

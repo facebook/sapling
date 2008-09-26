@@ -10,6 +10,7 @@ Convert a foreign SCM repository to a Mercurial one.
     - Subversion [svn]
     - Monotone [mtn]
     - GNU Arch [gnuarch]
+    - Bazaar [bzr]
 
     Accepted destination formats [identifiers]:
     - Mercurial [hg]

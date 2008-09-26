@@ -23,6 +23,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     - Subversion [svn]
     - Monotone [mtn]
     - GNU Arch [gnuarch]
+    - Bazaar [bzr]
 
     Accepted destination formats [identifiers]:
     - Mercurial [hg]
