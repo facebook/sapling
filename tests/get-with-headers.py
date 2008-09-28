@@ -4,6 +4,14 @@ __doc__ = """This does HTTP get requests given a host:port and path and returns
 a subset of the headers plus the body of the result."""
 
 import httplib, sys
+
+try:
+    import msvcrt, os
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+except ImportError:
+    pass
+
 headers = [h.lower() for h in sys.argv[3:]]
 conn = httplib.HTTPConnection(sys.argv[1])
 conn.request("GET", sys.argv[2])
