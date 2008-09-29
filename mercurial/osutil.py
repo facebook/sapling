@@ -1,13 +1,14 @@
-import os, stat
+import os
+import stat as _stat
 
 def _mode_to_kind(mode):
-    if stat.S_ISREG(mode): return stat.S_IFREG
-    if stat.S_ISDIR(mode): return stat.S_IFDIR
-    if stat.S_ISLNK(mode): return stat.S_IFLNK
-    if stat.S_ISBLK(mode): return stat.S_IFBLK
-    if stat.S_ISCHR(mode): return stat.S_IFCHR
-    if stat.S_ISFIFO(mode): return stat.S_IFIFO
-    if stat.S_ISSOCK(mode): return stat.S_IFSOCK
+    if _stat.S_ISREG(mode): return _stat.S_IFREG
+    if _stat.S_ISDIR(mode): return _stat.S_IFDIR
+    if _stat.S_ISLNK(mode): return _stat.S_IFLNK
+    if _stat.S_ISBLK(mode): return _stat.S_IFBLK
+    if _stat.S_ISCHR(mode): return _stat.S_IFCHR
+    if _stat.S_ISFIFO(mode): return _stat.S_IFIFO
+    if _stat.S_ISSOCK(mode): return _stat.S_IFSOCK
     return mode
 
 def listdir(path, stat=False, skip=None):
@@ -30,7 +31,7 @@ def listdir(path, stat=False, skip=None):
     names.sort()
     for fn in names:
         st = os.lstat(prefix + fn)
-        if fn == skip and stat.S_ISDIR(st.st_mode):
+        if fn == skip and _stat.S_ISDIR(st.st_mode):
             return []
         if stat:
             result.append((fn, _mode_to_kind(st.st_mode), st))
