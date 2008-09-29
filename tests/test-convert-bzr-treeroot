@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source "$TESTDIR/bzr-definitions"
+. "$TESTDIR/bzr-definitions"
 
 cat > treeset.py <<EOF
 import sys

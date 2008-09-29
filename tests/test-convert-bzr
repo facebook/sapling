@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source "$TESTDIR/bzr-definitions"
+. "$TESTDIR/bzr-definitions"
 
 echo % create and rename on the same file in the same step
 mkdir test-createandrename
