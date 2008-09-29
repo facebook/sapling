@@ -68,17 +68,23 @@ class converter_source(object):
         raise NotImplementedError()
 
     def getfile(self, name, rev):
-        """Return file contents as a string"""
+        """Return file contents as a string. rev is the identifier returned
+        by a previous call to getchanges().
+        """
         raise NotImplementedError()
 
     def getmode(self, name, rev):
-        """Return file mode, eg. '', 'x', or 'l'"""
+        """Return file mode, eg. '', 'x', or 'l'. rev is the identifier
+        returned by a previous call to getchanges().
+        """
         raise NotImplementedError()
 
     def getchanges(self, version):
-        """Returns a tuple of (files, copies)
-        Files is a sorted list of (filename, id) tuples for all files changed
-        in version, where id is the source revision id of the file.
+        """Returns a tuple of (files, copies). 
+
+        files is a sorted list of (filename, id) tuples for all files
+        changed between version and it's first parent returned by
+        getcommit(). id is the source revision id of the file.
 
         copies is a dictionary of dest: source
         """
