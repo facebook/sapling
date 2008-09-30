@@ -1,0 +1,16 @@
+Handle directory adds.
+Handle symlinks in commit.
+Handle execute in commit.
+Handle auto-props on file adds.
+Handle directory deletes.
+Test coverage is horrible. Figure out a strategy to have some real tests.
+Be more explicit about deletes in diff-replay because then we can probably
+handle a rename like ``mv Foo foo '' properly.
+Use replay_range on svn 1.5, it will make replay-over-serf faster.
+Add convertedrev to extra on hg-side commit.
+
+Known upstream issues:
+Using serf as the http library causes no revisions to convert. (svn trunk and 1.5.x branch as of 
+r33158 both have this. No idea bout 1.4.x, since I always just use neon there).
+This is fixed in Subversion trunk in revision 33173. I don't know if it has been backported to 
+the 1.5.x branch yet.
