@@ -98,7 +98,7 @@ class dirstate(object):
             if self._checkcase:
                 self.normalize = self._normalize
             else:
-                self.normalize = lambda x: x
+                self.normalize = lambda x, y=False: x
             return self.normalize
         else:
             raise AttributeError(name)
@@ -350,13 +350,16 @@ class dirstate(object):
         except KeyError:
             self._ui.warn(_("not in dirstate: %s\n") % f)
 
-    def _normalize(self, path):
+    def _normalize(self, path, knownpath=False):
         norm_path = os.path.normcase(os.path.normpath(path))
-        if norm_path not in self._foldmap:
-            if not os.path.exists(os.path.join(self._root, path)):
-                return path
-            self._foldmap[norm_path] = util.fspath(path, self._root)
-        return self._foldmap[norm_path]
+        fold_path = self._foldmap.get(norm_path, None)
+        if fold_path is None:
+            if knownpath or not os.path.exists(os.path.join(self._root, path)):
+                fold_path = path
+            else:
+                fold_path = self._foldmap.setdefault(norm_path,
+                                util.fspath(path, self._root))
+        return fold_path
 
     def clear(self):
         self._map = {}
@@ -515,7 +518,7 @@ class dirstate(object):
             else:
                 entries = listdir(join(nd), stat=True, skip ='.hg')
             for f, kind, st in entries:
-                nf = normalize(nd and (nd + "/" + f) or f)
+                nf = normalize(nd and (nd + "/" + f) or f, True)
                 if nf not in results:
                     if kind == dirkind:
                         if not ignore(nf):
