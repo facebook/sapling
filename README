@@ -9,6 +9,19 @@ Right now it is *not* ready for production use. You should only be using this if
 you're ready to hack on it, and go diving into the internals of Mercurial and/or 
 Subversion.
 
+Installation
+------------
+You need to have Subversion installed with the SWIG Python bindings.
+You need a recent Mercurial. At present, the required memctx code is in mercurial_, crew_, and crew-stable_, but not mercurial-stable. Install Mercurial from one of mercurial or the crew repos if you have not already. Personally, I use crew_.
+
+.. _mercurial: http://selenic.com/repo/hg
+.. _crew: http://hg.intevation.org/mercurial/crew
+.. _crew-stable: http://hg.intevation.org/mercurial/crew-stable
+
+If you are unfamiliar with installing Mercurial extensions, please see the UsingExtensions_ page in the Mercurial wiki. Look at the example for specifying an absolute path near the bottom of the page. You want to give the path to the top level of your clone of this repository.
+
+.. _UsingExtensions: http://www.selenic.com/mercurial/wiki/index.cgi/UsingExtensions
+
 Basic Use
 -----------
 Get a new clone of an svn server::
