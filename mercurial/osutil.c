@@ -207,9 +207,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	fh = FindFirstFileA(pattern, &fd);
 	if (fh == INVALID_HANDLE_VALUE) {
-		PyErr_SetExcFromWindowsErrWithFilename(PyExc_OSError,
-							GetLastError(),
-							path);
+		PyErr_SetFromWindowsErrWithFilename(GetLastError(), path);
 		goto error_file;
 	}
 
@@ -244,9 +242,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	} while (FindNextFileA(fh, &fd));
 
 	if (GetLastError() != ERROR_NO_MORE_FILES) {
-		PyErr_SetExcFromWindowsErrWithFilename(PyExc_OSError,
-							GetLastError(),
-							path);
+		PyErr_SetFromWindowsErrWithFilename(GetLastError(), path);
 		goto error;
 	}
 
@@ -294,9 +290,10 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 					 &path, &pathlen, &statflag, &skip))
 		goto error_parse;
 
-	if (pathlen >= PATH_MAX)
+	if (pathlen >= PATH_MAX) {
+		PyErr_SetString(PyExc_ValueError, "path too long");
 		goto error_parse;
-
+	}
 	strncpy(fullpath, path, PATH_MAX);
 	fullpath[pathlen] = '/';
 	keepstat = statflag && PyObject_IsTrue(statflag);
