@@ -25,7 +25,11 @@ def has_baz():
     return matchoutput('baz --version 2>&1', r'baz Bazaar version')
 
 def has_bzr():
-    return matchoutput('bzr --version 2>&1', r'Bazaar \(bzr\)')
+    try:
+        import bzrlib
+        return True
+    except ImportError:
+        return False
 
 def has_cvs():
     re = r'Concurrent Versions System.*?server'
