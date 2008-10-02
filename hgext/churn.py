@@ -1,14 +1,16 @@
-# churn.py - create a graph showing who changed the most lines
+# churn.py - create a graph of revisions count grouped by template
 #
 # Copyright 2006 Josef "Jeff" Sipek <jeffpc@josefsipek.net>
+# Copyright 2008 Alexander Solovyov <piranha@piranha.org.ua>
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
-'''allow graphing the number of lines changed per contributor'''
+'''allow graphing the number of lines (or count of revisions) grouped by template'''
 
 from mercurial.i18n import _
-from mercurial import patch, cmdutil, util, node
+from mercurial import patch, cmdutil, util, templater
 import os, sys
+import time, datetime
 
 def get_tty_width():
     if 'COLUMNS' in os.environ:
@@ -31,56 +33,107 @@ def get_tty_width():
         pass
     return 80
 
-def countrevs(ui, repo, amap, revs, progress=False):
-    stats = {}
-    count = pct = 0
-    if not revs:
-        revs = range(len(repo))
+def maketemplater(ui, repo, tmpl):
+    tmpl = templater.parsestring(tmpl, quoted=False)
+    try:
+        t = cmdutil.changeset_templater(ui, repo, False, None, False)
+    except SyntaxError, inst:
+        raise util.Abort(inst.args[0])
+    t.use_template(tmpl)
+    return t
 
-    for rev in revs:
-        ctx2 = repo[rev]
-        parents = ctx2.parents()
-        if len(parents) > 1:
-            ui.note(_('Revision %d is a merge, ignoring...\n') % (rev,))
+def changedlines(ui, repo, ctx1, ctx2):
+    lines = 0
+    ui.pushbuffer()
+    patch.diff(repo, ctx1.node(), ctx2.node())
+    diff = ui.popbuffer()
+    for l in diff.split('\n'):
+        if (l.startswith("+") and not l.startswith("+++ ") or
+            l.startswith("-") and not l.startswith("--- ")):
+            lines += 1
+    return lines
+
+def countrate(ui, repo, amap, *pats, **opts):
+    """Calculate stats"""
+    if opts.get('dateformat'):
+        def getkey(ctx):
+            t, tz = ctx.date()
+            date = datetime.datetime(*time.gmtime(float(t) - tz)[:6])
+            return date.strftime(opts['dateformat'])
+    else:
+        tmpl = opts.get('template', '{author|email}')
+        tmpl = maketemplater(ui, repo, tmpl)
+        def getkey(ctx):
+            ui.pushbuffer()
+            tmpl.show(changenode=ctx.node())
+            return ui.popbuffer()
+
+    count = pct = 0
+    rate = {}
+    df = False
+    if opts.get('date'):
+        df = util.matchdate(opts['date'])
+
+    get = util.cachefunc(lambda r: repo[r].changeset())
+    changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
+    for st, rev, fns in changeiter:
+        if not st == 'add':
+            continue
+        if df and not df(get(rev)[2][0]): # doesn't match date format
             continue
 
-        ctx1 = parents[0]
-        lines = 0
-        ui.pushbuffer()
-        patch.diff(repo, ctx1.node(), ctx2.node())
-        diff = ui.popbuffer()
+        ctx = repo[rev]
+        key = getkey(ctx)
+        key = amap.get(key, key) # alias remap
+        if opts.get('lines'):
+            parents = ctx.parents()
+            if len(parents) > 1:
+                ui.note(_('Revision %d is a merge, ignoring...\n') % (rev,))
+                continue
 
-        for l in diff.split('\n'):
-            if (l.startswith("+") and not l.startswith("+++ ") or
-                l.startswith("-") and not l.startswith("--- ")):
-                lines += 1
+            ctx1 = parents[0]
+            lines = changedlines(ui, repo, ctx1, ctx)
+            rate[key] = rate.get(key, 0) + lines
+        else:
+            rate[key] = rate.get(key, 0) + 1
 
-        user = util.email(ctx2.user())
-        user = amap.get(user, user) # remap
-        stats[user] = stats.get(user, 0) + lines
-        ui.debug(_("rev %d: %d lines by %s\n") % (rev, lines, user))
-
-        if progress:
+        if opts.get('progress'):
             count += 1
-            newpct = int(100.0 * count / max(len(revs), 1))
+            newpct = int(100.0 * count / max(len(repo), 1))
             if pct < newpct:
                 pct = newpct
                 ui.write(_("\rGenerating stats: %d%%") % pct)
                 sys.stdout.flush()
 
-    if progress:
+    if opts.get('progress'):
         ui.write("\r")
         sys.stdout.flush()
 
-    return stats
+    return rate
 
-def churn(ui, repo, **opts):
-    '''graphs the number of lines changed
 
-    The map file format used to specify aliases is fairly simple:
+def stats(ui, repo, *pats, **opts):
+    '''Graph count of revisions grouped by template
 
-    <alias email> <actual email>'''
+    Will graph count of revisions grouped by template or alternatively by
+    date, if dateformat is used. In this case it will override template.
 
+    By default statistics are counted for number of revisions.
+
+    Examples:
+
+      # display count of revisions for every committer
+      hg stats -t '{author|email}'
+
+      # display daily activity graph
+      hg stats -f '%H' -s
+
+      # display activity of developers by month
+      hg stats -f '%Y-%m' -s
+
+      # display count of lines changed in every year
+      hg stats -l -f '%Y' -s
+    '''
     def pad(s, l):
         return (s + " " * l)[:l]
 
@@ -92,28 +145,50 @@ def churn(ui, repo, **opts):
             alias, actual = l.split()
             amap[alias] = actual
 
-    revs = util.sort([int(r) for r in cmdutil.revrange(repo, opts['rev'])])
-    stats = countrevs(ui, repo, amap, revs, opts.get('progress'))
-    if not stats:
+    rate = countrate(ui, repo, amap, *pats, **opts).items()
+    if not rate:
         return
 
-    stats = util.sort([(-l, u, l) for u,l in stats.items()])
-    maxchurn = float(max(1, stats[0][2]))
-    maxuser = max([len(u) for k, u, l in stats])
+    keyfn = (not opts.get('sort')) and (lambda (k,v): (v,k)) or None
+    rate.sort(key=keyfn, reverse=not opts.get('sort'))
+
+    maxcount = float(max(v for k, v in rate))
+    maxname = max(len(k) for k, v in rate)
 
     ttywidth = get_tty_width()
     ui.debug(_("assuming %i character terminal\n") % ttywidth)
-    width = ttywidth - maxuser - 2 - 6 - 2 - 2
+    width = ttywidth - maxname - 2 - 6 - 2 - 2
 
-    for k, user, churn in stats:
-        print "%s %6d %s" % (pad(user, maxuser), churn,
-                             "*" * int(churn * width / maxchurn))
+    for date, count in rate:
+        print "%s %6d %s" % (pad(date, maxname), count,
+                             "*" * int(count * width / maxcount))
+
+def churn(ui, repo, **opts):
+    '''graphs the number of lines changed
+
+    The map file format used to specify aliases is fairly simple:
+
+    <alias email> <actual email>'''
+    stats(ui, repo, lines=True, sort=False, template='{author|email}', **opts)
+
 
 cmdtable = {
+    "stats":
+        (stats,
+         [('r', 'rev', [], _('count rate for the specified revision or range')),
+          ('d', 'date', '', _('count rate for revs matching date spec')),
+          ('t', 'template', '{author|email}', _('template to group changesets')),
+          ('f', 'dateformat', '',
+              _('strftime-compatible format for grouping by date')),
+          ('l', 'lines', False, _('count rate by number of changed lines')),
+          ('s', 'sort', False, _('sort by key (default: sort by count)')),
+          ('', 'aliases', '', _('file with email aliases')),
+          ('', 'progress', None, _('show progress'))],
+         _("hg stats [-d DATE] [-r REV] [FILE]")),
     "churn":
-    (churn,
-     [('r', 'rev', [], _('limit statistics to the specified revisions')),
-      ('', 'aliases', '', _('file with email aliases')),
-      ('', 'progress', None, _('show progress'))],
-    _('hg churn [-r REVISIONS] [--aliases FILE] [--progress]')),
+        (churn,
+         [('r', 'rev', [], _('limit statistics to the specified revisions')),
+          ('', 'aliases', '', _('file with email aliases')),
+          ('', 'progress', None, _('show progress'))],
+         'hg churn [-r REVISIONS] [--aliases FILE] [--progress]'),
 }

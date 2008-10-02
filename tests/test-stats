@@ -1,0 +1,35 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "churn=" >> $HGRCPATH
+
+COLUMNS=80; export COLUMNS
+
+echo % create test repository
+hg init repo
+cd repo
+echo a > a
+hg ci -Am adda -u user1 -d 6:00
+echo b >> a
+echo b > b
+hg ci -m changeba -u user2 -d 9:00 a
+hg ci -Am addb -u user2 -d 9:30
+echo c >> a
+echo c >> b
+echo c > c
+hg ci -m changeca -u user3 -d 12:00 a
+hg ci -m changecb -u user3 -d 12:15 b
+hg ci -Am addc -u user3 -d 12:30
+
+echo % all stats
+hg stats
+echo % stats by hour
+hg stats -f '%H' -s
+echo % stats with aliases
+cat > ../aliases <<EOF
+06 09
+EOF
+hg stats -f '%H' -s --aliases ../aliases
+echo % stats with column specifier
+COLUMNS=40 hg stats -f '%Y' -s
+
