@@ -8,6 +8,7 @@ import traceback
 from mercurial import context
 from mercurial import hg
 from mercurial import ui
+from mercurial import util
 from mercurial import revlog
 from mercurial import node
 from svn import delta
@@ -27,7 +28,7 @@ def pickle_atomic(data, file_path, dir=None):
     except:
         raise
     else:
-        os.rename(path, file_path)
+        util.rename(path, file_path)
 
 def stash_exception_on_self(fn):
     """Stash any exception raised in the method on self.

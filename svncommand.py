@@ -4,6 +4,7 @@ import stat
 
 from mercurial import hg
 from mercurial import node
+from mercurial import util as merc_util
 
 import svnwrap
 import hg_delta_editor
@@ -101,7 +102,7 @@ def verify_revision(ui, args, repo, force=False, **opts):
     rev = int(args[0])
     wc_path = os.path.dirname(repo.path)
     svn_url = open(os.path.join(repo.path, 'svn', 'url')).read()
-    svn = svnwrap.SubversionRepo(svn_url)
+    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
     util.wipe_all_files(wc_path)
     if update(ui, args, repo, clean=True) == 0:
         util.wipe_all_files(wc_path)

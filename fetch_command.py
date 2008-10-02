@@ -3,13 +3,13 @@ import re
 import operator
 import os
 import shutil
-import stat
 import tempfile
 
 from mercurial import patch
 from mercurial import node
 from mercurial import context
 from mercurial import revlog
+from mercurial import util as merc_util
 from svn import core
 from svn import delta
 
@@ -40,7 +40,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                   ' of SWIG.')
         have_replay = False
     initializing_repo = False
-    svn = svnwrap.SubversionRepo(svn_url)
+    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
     author_host = "@%s" % svn.uuid
     tag_locations = tag_locations.split(',')
     hg_editor = hg_delta_editor.HgChangeReceiver(hg_repo_path,

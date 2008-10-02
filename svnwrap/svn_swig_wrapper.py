@@ -1,7 +1,6 @@
 import cStringIO
 import getpass
 import os
-import pwd
 import shutil
 import sys
 import tempfile
@@ -69,8 +68,9 @@ class SubversionRepo(object):
     This uses the SWIG Python bindings, and will only work on svn >= 1.4.
     It takes a required param, the URL.
     """
-    def __init__(self, url=''):
+    def __init__(self, url='', username=''):
         self.svn_url = url
+        self.uname = username
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool)
 
@@ -89,7 +89,6 @@ class SubversionRepo(object):
         # while we're in here we'll recreate our pool
         self.pool = core.Pool()
         self.client_context = client.create_context()
-        self.uname = str(pwd.getpwuid(os.getuid())[0])
         core.svn_auth_set_parameter(self.auth_baton,
                                     core.SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                     self.uname)

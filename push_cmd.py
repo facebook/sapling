@@ -94,7 +94,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
         file_data[file] = base_data, new_data, action
 
     # TODO check for directory deletes here
-    svn = svnwrap.SubversionRepo(svn_url)
+    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
     parent_branch = rev_ctx.parents()[0].branch()
     branch_path = 'trunk'
     if parent_branch and parent_branch != 'default':
