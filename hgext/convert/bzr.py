@@ -196,7 +196,7 @@ class bzr_source(converter_source):
         <http://bazaar-vcs.org/GhostRevision>
         """
         parentmap = self.sourcerepo.get_parent_map(ids)
-        parents = tuple(parent for parent in ids if parent in parentmap)
+        parents = tuple([parent for parent in ids if parent in parentmap])
         return parents
 
     def recode(self, s, encoding=None):
