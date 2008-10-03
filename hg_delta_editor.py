@@ -82,6 +82,7 @@ class HgChangeReceiver(delta.Editor):
         if os.path.exists(self.tag_locations_file):
             f = open(self.tag_locations_file)
             self.tag_locations = pickle.load(f)
+            f.close()
         else:
             self.tag_locations = tag_locations
         pickle_atomic(self.tag_locations, self.tag_locations_file,
