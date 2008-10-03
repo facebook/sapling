@@ -2107,7 +2107,7 @@ class localrepository(repo.repository):
             try:
                 name, size = l.split('\0', 1)
                 size = int(size)
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 raise util.UnexpectedOutput(
                     _('Unexpected response from remote server:'), l)
             self.ui.debug('adding %s (%s)\n' % (name, util.bytecount(size)))
