@@ -98,4 +98,7 @@ hg log -P 2
 echo '% log -r ""'
 hg log -r ''
 
+echo '% log -r <some unknown node id>'
+hg log -r 1000000000000000000000000000000000000000
+
 exit 0

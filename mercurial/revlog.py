@@ -852,7 +852,7 @@ class revlog(object):
                 node = bin(id)
                 r = self.rev(node)
                 return node
-            except TypeError:
+            except (TypeError, LookupError):
                 pass
 
     def _partialmatch(self, id):
