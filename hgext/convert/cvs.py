@@ -252,7 +252,7 @@ class convert_cvs(converter_source):
             # popen2 does not support argument lists under Windows
             cmd = [util.shellquote(arg) for arg in cmd]
             cmd = util.quotecommand(' '.join(cmd))
-            self.writep, self.readp = os.popen2(cmd, 'b')
+            self.writep, self.readp = util.popen2(cmd, 'b')
 
         self.realroot = root
 

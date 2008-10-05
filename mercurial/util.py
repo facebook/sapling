@@ -50,6 +50,33 @@ def sha1(s):
     return _sha1(s)
 
 try:
+    import subprocess
+    def popen2(cmd, mode='t', bufsize=-1):
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize, close_fds=True,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        return p.stdin, p.stdout
+    def popen3(cmd, mode='t', bufsize=-1):
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize, close_fds=True,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        return p.stdin, p.stdout, p.stderr
+    def Popen3(cmd, capturestderr=False, bufsize=-1):
+        stderr = capturestderr and subprocess.PIPE or None
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize, close_fds=True,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=stderr)
+        p.fromchild = p.stdout
+        p.tochild = p.stdin
+        p.childerr = p.stderr
+        return p
+except ImportError:
+    subprocess = None
+    import popen2 as _popen2
+    popen2 = _popen2.popen2
+    Popen3 = _popen2.Popen3
+
+
+try:
     _encoding = os.environ.get("HGENCODING")
     if sys.platform == 'darwin' and not _encoding:
         # On darwin, getpreferredencoding ignores the locale environment and
@@ -183,7 +210,7 @@ def cachefunc(func):
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
-    (pin, pout) = os.popen2(cmd, 'b')
+    (pin, pout) = popen2(cmd, 'b')
     def writer():
         try:
             pin.write(s)

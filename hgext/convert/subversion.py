@@ -914,7 +914,7 @@ class svn_source(converter_source):
         arg = encodeargs(args)
         hgexe = util.hgexecutable()
         cmd = '%s debugsvnlog' % util.shellquote(hgexe)
-        stdin, stdout = os.popen2(cmd, 'b')
+        stdin, stdout = util.popen2(cmd, 'b')
         stdin.write(arg)
         stdin.close()
         return logstream(stdout)

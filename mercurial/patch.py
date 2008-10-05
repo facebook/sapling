@@ -9,7 +9,7 @@
 from i18n import _
 from node import hex, nullid, short
 import base85, cmdutil, mdiff, util, revlog, diffhelpers, copies
-import cStringIO, email.Parser, os, popen2, re, errno
+import cStringIO, email.Parser, os, re, errno
 import sys, tempfile, zlib
 
 class PatchError(Exception):
@@ -1308,7 +1308,7 @@ def diffstat(patchlines):
         return
     fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
     try:
-        p = popen2.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
+        p = util.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
         try:
             for line in patchlines:
                 p.tochild.write(line + "\n")
