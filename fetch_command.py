@@ -20,7 +20,7 @@ import util
 
 def print_your_svn_is_old_message(ui):
     ui.status("In light of that, I'll fall back and do diffs, but it won't do "
-              "as good a job. You should really upgrade your server.")
+              "as good a job. You should really upgrade your server.\n")
 
 
 @util.register_subcommand('pull')
