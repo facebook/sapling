@@ -89,11 +89,18 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
         branch_path = 'branches/%s' % parent_branch
 
     added_dirs = []
+    props = {}
     for file in rev_ctx.files():
         new_data = base_data = ''
         action = ''
         if file in rev_ctx:
             new_data = rev_ctx.filectx(file).data()
+
+            if 'x' in rev_ctx.filectx(file).flags():
+                props.setdefault(file, {})['svn:executable'] = '*'
+            if 'l' in rev_ctx.filectx(file).flags():
+                props.setdefault(file, {})['svn:special'] = '*'
+
             if file not in parent:
                 target_files.append(file)
                 action = 'add'
@@ -106,11 +113,19 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                     except core.SubversionException, e:
                         # dir must not exist
                         added_dirs.append(dirname[:-1])
-                # TODO check for mime-type autoprops here
-                # TODO check for directory adds here
             else:
                 target_files.append(file)
                 base_data = parent.filectx(file).data()
+                if 'x' in parent.filectx(file).flags():
+                    if 'svn:executable' in props.setdefault(file, {}):
+                        del props[file]['svn:executable']
+                    else:
+                        props.setdefault(file, {})['svn:executable'] = None
+                if 'l' in parent.filectx(file).flags():
+                    if props.setdefault(file, {})['svn:special']:
+                        del props[file]['svn:special']
+                    else:
+                        props.setdefault(file, {})['svn:special'] = None
                 action = 'modify'
         else:
             target_files.append(file)
@@ -123,12 +138,18 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     for tf, ntf in zip(target_files, new_target_files):
         if tf in file_data:
             file_data[ntf] = file_data[tf]
+            if tf in props:
+                props[ntf] = props[tf]
+                del props[tf]
+            if merc_util.binary(file_data[ntf][1]):
+                props.setdefault(ntf, {}).update(props.get(ntf, {}))
+                props.setdefault(ntf, {})['svn:mime-type']
             del file_data[tf]
     added_dirs = ['%s/%s' % (branch_path, f) for f in added_dirs]
     new_target_files += added_dirs
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
-                   base_revision, set(added_dirs))
+                   base_revision, set(added_dirs), props)
     except core.SubversionException, e:
         if hasattr(e, 'apr_err') and e.apr_err == 160028:
             raise merc_util.Abort('Base text was out of date, maybe rebase?')

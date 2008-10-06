@@ -241,7 +241,8 @@ class SubversionRepo(object):
                 yield revisions[0]
                 revisions.pop(0)
 
-    def commit(self, paths, message, file_data, base_revision, dirs):
+    def commit(self, paths, message, file_data, base_revision, dirs,
+               properties):
         """Commits the appropriate targets from revision in editor's store.
         """
         self.init_ra_and_client()
@@ -270,6 +271,12 @@ class SubversionRepo(object):
             elif action == 'delete':
                 baton = editor.delete_entry(path, base_revision, parent, pool)
                 compute_delta = False
+
+            if path in properties:
+                if properties[path].get('svn:special', None):
+                    new_text = 'link %s' % new_text
+                for p, v in properties[path].iteritems():
+                    editor.change_file_prop(baton, p, v)
 
             if compute_delta:
                 handler, wh_baton = editor.apply_textdelta(baton, None,
