@@ -1,6 +1,8 @@
 #!/bin/sh
 #
 # Build a Mercurial RPM in place.
+# Known to work on:
+# - Fedora 9
 #
 # Bryan O'Sullivan <bos@serpentine.com>
 
@@ -12,7 +14,7 @@ if [ -z "$root" ]; then
     exit 1
 fi
 
-rpmdir=/tmp/"`basename $root | sed 's/ /_/'`"-rpm
+rpmdir=/tmp/"`basename $root | sed 's/ /_/'`"-rpm # FIXME: Insecure /tmp handling
 
 cd "$root"
 rm -rf $rpmdir
@@ -24,7 +26,7 @@ if [ ! -f $specfile ]; then
     exit 1
 fi
 
-tmpspec=/tmp/`basename "$specfile"`.$$
+tmpspec=/tmp/`basename "$specfile"`.$$ # FIXME: Insecure /tmp handling
 # Use the most recent tag as the version.
 version=`hg tags | perl -e 'while(<STDIN>){if(/^(\d\S+)/){print$1;exit}}'`
 # Compute the release number as the difference in revision numbers
@@ -58,5 +60,6 @@ if [ $? = 0 ]; then
     rm -rf $tmpspec $rpmdir/BUILD
     mv $rpmdir/RPMS/*/* $rpmdir && rm -r $rpmdir/RPMS
     echo
-    echo "Packages are in $rpmdir"
+    echo "Packages are in $rpmdir:"
+    ls -l $rpmdir/*.rpm
 fi

@@ -55,6 +55,9 @@ lisp_dir=$RPM_BUILD_ROOT%{_datadir}/emacs/site-lisp
 mkdir -p $lisp_dir
 install contrib/mercurial.el $lisp_dir
 
+# We don't want this, do we?
+rm -f $RPM_BUILD_ROOT%{pythonlib}/../mercurial-*-py2.5.egg-info
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -69,7 +72,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/emacs/site-lisp/mercurial.el
 %{_bindir}/hg
 %{_bindir}/hgk
-%{_bindir}/hgmerge
 %{_bindir}/hg-ssh
 %{_bindir}/hg-viz
 %{_bindir}/git-rev-tree
@@ -80,3 +82,6 @@ rm -rf $RPM_BUILD_ROOT
 %{pythonlib}/*.so
 %{hgext}/*.py*
 %{hgext}/convert/*.py*
+%{hgext}/inotify/*.py*
+%{hgext}/highlight/*.py*
+%{hgext}/inotify/linux/
