@@ -143,7 +143,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                 del props[tf]
             if merc_util.binary(file_data[ntf][1]):
                 props.setdefault(ntf, {}).update(props.get(ntf, {}))
-                props.setdefault(ntf, {})['svn:mime-type']
+                props.setdefault(ntf, {})['svn:mime-type'] = 'application/octet-stream'
             del file_data[tf]
     added_dirs = ['%s/%s' % (branch_path, f) for f in added_dirs]
     new_target_files += added_dirs
