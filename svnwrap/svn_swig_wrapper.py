@@ -256,7 +256,7 @@ class SubversionRepo(object):
         checksum = []
         def driver_cb(parent, path, pool):
             if path in dirs:
-                return baton
+                return editor.add_directory(path, parent, None, -1, pool)
             base_text, new_text, action = file_data[path]
             compute_delta = True
             if action == 'modify':

@@ -14,7 +14,6 @@ import utility_commands
 def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
     """Push revisions starting at a specified head back to Subversion.
     """
-    #assert False # safety while the command is partially implemented.
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
@@ -66,14 +65,31 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
                                                               svn_commit_hashes)
     return 0
 
+class PrefixMatch(object):
+    def __init__(self, prefix):
+        self.p = prefix
+    
+    def files(self):
+        return []
+    
+    def __call__(self, fn):
+        return fn.startswith(self.p)
 
 def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     """Build and send a commit from Mercurial to Subversion.
     """
     target_files = []
     file_data = {}
+    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
+    parent = rev_ctx.parents()[0]
+    parent_branch = rev_ctx.parents()[0].branch()
+    branch_path = 'trunk'
+
+    if parent_branch and parent_branch != 'default':
+        branch_path = 'branches/%s' % parent_branch
+
+    added_dirs = []
     for file in rev_ctx.files():
-        parent = rev_ctx.parents()[0]
         new_data = base_data = ''
         action = ''
         if file in rev_ctx:
@@ -81,6 +97,15 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
             if file not in parent:
                 target_files.append(file)
                 action = 'add'
+                dirname = '/'.join(file.split('/')[:-1] + [''])
+                # check for new directories
+                if not list(parent.walk(PrefixMatch(dirname))):
+                    # check and see if the dir exists svn-side.
+                    try:
+                        assert svn.list_dir('%s/%s' % (branch_path, dirname))
+                    except core.SubversionException, e:
+                        # dir must not exist
+                        added_dirs.append(dirname[:-1])
                 # TODO check for mime-type autoprops here
                 # TODO check for directory adds here
             else:
@@ -94,19 +119,16 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
         file_data[file] = base_data, new_data, action
 
     # TODO check for directory deletes here
-    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
-    parent_branch = rev_ctx.parents()[0].branch()
-    branch_path = 'trunk'
-    if parent_branch and parent_branch != 'default':
-        branch_path = 'branches/%s' % parent_branch
     new_target_files = ['%s/%s' % (branch_path, f) for f in target_files]
     for tf, ntf in zip(target_files, new_target_files):
         if tf in file_data:
             file_data[ntf] = file_data[tf]
             del file_data[tf]
+    added_dirs = ['%s/%s' % (branch_path, f) for f in added_dirs]
+    new_target_files += added_dirs
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
-                   base_revision, set([]))
+                   base_revision, set(added_dirs))
     except core.SubversionException, e:
         if hasattr(e, 'apr_err') and e.apr_err == 160028:
             raise merc_util.Abort('Base text was out of date, maybe rebase?')
