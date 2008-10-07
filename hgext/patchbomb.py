@@ -159,7 +159,7 @@ def patchbomb(ui, repo, *revs, **opts):
         if not node:
             raise ValueError
 
-        if opts['attach']:
+        if opts.get('attach'):
              body = ('\n'.join(desc[1:]).strip() or
                    'Patch subject is complete summary.')
              body += '\n\n\n'
@@ -190,7 +190,7 @@ def patchbomb(ui, repo, *revs, **opts):
             else:
                 patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
             disposition = 'inline'
-            if opts['attach']:
+            if opts.get('attach'):
                 disposition = 'attachment'
             p['Content-Disposition'] = disposition + '; filename=' + patchname
             msg.attach(p)
