@@ -1,3 +1,5 @@
 syntax:glob
 *.pyc
 .DS_Store
+*.swp
+.coverage

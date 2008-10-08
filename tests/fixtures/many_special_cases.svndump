@@ -1,0 +1,508 @@
+SVN-fs-dump-format-version: 2
+
+UUID: df2126f7-00ab-4d49-b42c-7e981dde0bcf
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-10-07T22:49:12.059692Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 111
+Content-length: 111
+
+K 7
+svn:log
+V 11
+Empty dirs.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-07T22:49:41.118037Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 9
+Add alpha
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-07T23:23:02.991743Z
+PROPS-END
+
+Node-path: trunk/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 12
+Text-content-md5: 3c72ebf8bbd7fa88b1fdcee5398b5a17
+Content-length: 22
+
+PROPS-END
+file: alpha
+
+
+Revision-number: 3
+Prop-content-length: 107
+Content-length: 107
+
+K 7
+svn:log
+V 8
+Add beta
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-07T23:28:22.651398Z
+PROPS-END
+
+Node-path: trunk/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 13
+Text-content-md5: 981d1eb5fd0bbe05354c292105944863
+Content-length: 23
+
+PROPS-END
+Data of beta
+
+
+Revision-number: 4
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 13
+Make a branch
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T01:35:39.984789Z
+PROPS-END
+
+Node-path: branches/the_branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Revision-number: 5
+Prop-content-length: 123
+Content-length: 123
+
+K 7
+svn:log
+V 23
+add delta on the branch
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T01:39:05.520779Z
+PROPS-END
+
+Node-path: branches/the_branch/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Content-length: 16
+
+PROPS-END
+delta
+
+
+Revision-number: 6
+Prop-content-length: 119
+Content-length: 119
+
+K 7
+svn:log
+V 19
+Add gamma on trunk.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T01:39:29.950892Z
+PROPS-END
+
+Node-path: trunk/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 7
+Prop-content-length: 192
+Content-length: 192
+
+K 7
+svn:log
+V 92
+Add a dir that is part of another file so I can delete it to test a case in the delete code.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T21:58:28.902105Z
+PROPS-END
+
+Node-path: trunk/gam
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/gam/bar
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: c157a79031e1c40f85931829bc5fc552
+Content-length: 14
+
+PROPS-END
+bar
+
+
+Node-path: trunk/gam/baz
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: 258622b1688250cb619f3c9ccaefb7eb
+Content-length: 14
+
+PROPS-END
+baz
+
+
+Node-path: trunk/gam/foo
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: d3b07384d113edec49eaa6238ad5ff00
+Content-length: 14
+
+PROPS-END
+foo
+
+
+Revision-number: 8
+Prop-content-length: 150
+Content-length: 150
+
+K 7
+svn:log
+V 50
+delete gam to test that previously-mentioned case.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T21:58:43.789735Z
+PROPS-END
+
+Node-path: trunk/gam
+Node-action: delete
+
+
+Revision-number: 9
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 13
+Add a symlink
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T22:44:17.202691Z
+PROPS-END
+
+Node-path: trunk/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 10
+Text-content-md5: 9d4142e2eb58c20531a1ac599bb0f7fd
+Content-length: 43
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link alpha
+
+Revision-number: 10
+Prop-content-length: 149
+Content-length: 149
+
+K 7
+svn:log
+V 49
+redirect an existing symlink to a different file.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T22:45:46.927432Z
+PROPS-END
+
+Node-path: trunk/delta
+Node-kind: file
+Node-action: change
+Text-content-length: 9
+Text-content-md5: 404afec23f4019f7d784b2f78ff5503d
+Content-length: 9
+
+link beta
+
+Revision-number: 11
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 17
+remove a symlink.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T22:46:50.607212Z
+PROPS-END
+
+Node-path: trunk/delta
+Node-action: delete
+
+
+Revision-number: 12
+Prop-content-length: 123
+Content-length: 123
+
+K 7
+svn:log
+V 23
+add an executable file.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T22:47:47.863563Z
+PROPS-END
+
+Node-path: trunk/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 36
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Content-length: 42
+
+K 14
+svn:executable
+V 1
+*
+PROPS-END
+delta
+
+
+Revision-number: 13
+Prop-content-length: 127
+Content-length: 127
+
+K 7
+svn:log
+V 27
+remove execute from a file.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T22:48:13.734895Z
+PROPS-END
+
+Node-path: trunk/delta
+Node-kind: file
+Node-action: change
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 14
+Prop-content-length: 124
+Content-length: 124
+
+K 7
+svn:log
+V 24
+add executable to a file
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T22:48:33.143919Z
+PROPS-END
+
+Node-path: trunk/delta
+Node-kind: file
+Node-action: change
+Prop-content-length: 36
+Content-length: 36
+
+K 14
+svn:executable
+V 1
+*
+PROPS-END
+
+
+Revision-number: 15
+Prop-content-length: 131
+Content-length: 131
+
+K 7
+svn:log
+V 31
+Add epsilon as a copy of alpha.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-08T23:15:08.250550Z
+PROPS-END
+
+Node-path: trunk/epsilon
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk/alpha
+Text-copy-source-md5: 3c72ebf8bbd7fa88b1fdcee5398b5a17
+Prop-content-length: 34
+Text-content-length: 14
+Text-content-md5: dc626a565ffebe5389e0109508e8ee31
+Content-length: 48
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+file: epsilon
+
+
