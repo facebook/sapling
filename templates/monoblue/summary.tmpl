@@ -1,0 +1,65 @@
+#header#
+    <title>#repo|escape#: Summary</title>
+    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for #repo|escape#"/>
+    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+</head>
+
+<body>
+<div id="container">
+    <div class="page-header">
+        <h1><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / summary</h1>
+
+        <form action="{url}log">
+            {sessionvars%hiddenformentry}
+            <dl class="search">
+                <dt><label>Search: </label></dt>
+                <dd><input type="text" name="rev" /></dd>
+            </dl>
+        </form>
+
+        <ul class="page-nav">
+            <li class="current">summary</li>
+            <li><a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a></li>
+            <li><a href="{url}log{sessionvars%urlparameter}">changelog</a></li>
+            <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+            <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+            <li><a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a></li>
+        </ul>
+    </div>
+
+    <h2 class="no-link no-border">Mercurial Repository Overview</h2>
+    <dl class="overview">
+        <dt>name</dt>
+        <dd>#repo|escape#</dd>
+        <dt>description</dt>
+        <dd>#desc#</dd>
+        <dt>owner</dt>
+        <dd>#owner|obfuscate#</dd>
+        <dt>last change</dt>
+        <dd>#lastchange|rfc822date#</dd>
+    </dl>
+
+    <h2><a href="{url}shortlog{sessionvars%urlparameter}">Changes</a></h2>
+    <table>
+#shortlog#
+        <tr class="light">
+            <td colspan="4"><a class="list" href="{url}shortlog{sessionvars%urlparameter}">...</a></td>
+        </tr>
+    </table>
+
+    <h2><a href="{url}tags{sessionvars%urlparameter}">Tags</a></h2>
+    <table>
+#tags#
+        <tr class="light">
+            <td colspan="3"><a class="list" href="{url}tags{sessionvars%urlparameter}">...</a></td>
+        </tr>
+    </table>
+
+    <h2 class="no-link">Branches</h2>
+    <table>
+    {branches%branchentry}
+        <tr class="light">
+          <td colspan="4"><a class="list"  href="#">...</a></td>
+        </tr>
+    </table>
+#footer#

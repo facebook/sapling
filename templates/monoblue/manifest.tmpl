@@ -1,0 +1,50 @@
+#header#
+<title>#repo|escape#: files</title>
+    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for #repo|escape#"/>
+    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+</head>
+
+<body>
+<div id="container">
+    <div class="page-header">
+        <h1><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / files</h1>
+
+        <form action="{url}log">
+            {sessionvars%hiddenformentry}
+            <dl class="search">
+                <dt><label>Search: </label></dt>
+                <dd><input type="text" name="rev" /></dd>
+            </dl>
+        </form>
+
+        <ul class="page-nav">
+            <li><a href="{url}summary{sessionvars%urlparameter}">summary</a></li>
+            <li><a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a></li>
+            <li><a href="{url}changelog{sessionvars%urlparameter}">changelog</a></li>
+            <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+            <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+            <li class="current">files</li>
+        </ul>
+    </div>
+
+    <ul class="submenu">
+        <li><a href="{url}rev/#node|short#{sessionvars%urlparameter}">changeset</a> #archives%archiveentry#</li>
+        {archives%archiveentry}
+    </ul>
+
+    <h2 class="no-link no-border">files</h2>
+    <p class="files">#path|escape# <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}</span></p>
+
+    <table>
+        <tr class="parity#upparity#">
+            <td>drwxr-xr-x</td>
+            <td></td>
+            <td></td>
+            <td><a href="{url}file/#node|short##up|urlescape#{sessionvars%urlparameter}">[up]</a></td>
+            <td class="link">&nbsp;</td>
+        </tr>
+        #dentries%direntry#
+        #fentries%fileentry#
+    </table>
+
+#footer#
