@@ -11,7 +11,7 @@ import test_push_command
 def suite():
     return unittest.TestSuite([test_fetch_command.suite(),
                                test_fetch_command_regexes.suite(),
-                               test_fetch_command_regexes.suite(),
+                               test_push_command.suite(),
                               ])
 
 if __name__ == '__main__':
