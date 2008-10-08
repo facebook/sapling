@@ -1,4 +1,5 @@
 import fetch_command
+import unittest
 
 two_empties = """Index: __init__.py
 ===================================================================
@@ -14,21 +15,6 @@ Index: bar/test_muhaha.py
 \ No newline at end of file
 """
 
-def test_empty_file_re():
-    matches = fetch_command.empty_file_patch_wont_make_re.findall(two_empties)
-    assert sorted(matches) == ['__init__.py', 'bar/__init__.py']
-
-def test_any_matches_just_one():
-    pat = '''Index: trunk/django/contrib/admin/urls/__init__.py
-===================================================================
-'''
-    matches = fetch_command.any_file_re.findall(pat)
-    assert len(matches) == 1
-
-def test_any_file_re():
-    matches = fetch_command.any_file_re.findall(two_empties)
-    assert sorted(matches) == ['__init__.py', 'bar/__init__.py',
-                               'bar/test_muhaha.py']
 binary_delta = """Index: trunk/functional_tests/doc_tests/test_doctest_fixtures/doctest_fixtures_fixtures.pyc
 ===================================================================
 Cannot display: file marked as a binary type.
@@ -42,7 +28,27 @@ Added: svn:mime-type
 Index: trunk/functional_tests/doc_tests/test_doctest_fixtures/doctest_fixtures.rst
 ===================================================================
 """
-def test_binary_file_re():
-    matches = fetch_command.binary_file_re.findall(binary_delta)
-    print matches
-    assert matches == ['trunk/functional_tests/doc_tests/test_doctest_fixtures/doctest_fixtures_fixtures.pyc']
+
+class RegexTests(unittest.TestCase):
+    def test_empty_file_re(self):
+        matches = fetch_command.empty_file_patch_wont_make_re.findall(two_empties)
+        assert sorted(matches) == ['__init__.py', 'bar/__init__.py']
+    
+    def test_any_matches_just_one(self):
+        pat = '''Index: trunk/django/contrib/admin/urls/__init__.py
+===================================================================
+'''
+        matches = fetch_command.any_file_re.findall(pat)
+        assert len(matches) == 1
+    
+    def test_any_file_re(self):
+        matches = fetch_command.any_file_re.findall(two_empties)
+        assert sorted(matches) == ['__init__.py', 'bar/__init__.py',
+                                   'bar/test_muhaha.py']
+
+    def test_binary_file_re(self):
+        matches = fetch_command.binary_file_re.findall(binary_delta)
+        assert matches == ['trunk/functional_tests/doc_tests/test_doctest_fixtures/doctest_fixtures_fixtures.pyc']
+
+def suite():
+    return unittest.TestLoader().loadTestsFromTestCase(RegexTests)

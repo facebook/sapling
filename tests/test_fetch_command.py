@@ -8,7 +8,7 @@ from mercurial import ui
 from mercurial import node
 
 import fetch_command
-import util
+import test_util
 
 class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
@@ -22,7 +22,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         os.chdir(self.oldwd)
 
     def test_fresh_fetch_single_rev(self):
-        util.load_svndump_fixture(self.repo_path, 'single_rev.svndump')
+        test_util.load_svndump_fixture(self.repo_path, 'single_rev.svndump')
         fetch_command.fetch_revisions(ui.ui(), 
                                       svn_url='file://%s' % self.repo_path, 
                                       hg_repo_path=self.wc_path)
@@ -32,7 +32,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(repo['tip'], repo[0])
 
     def test_fresh_fetch_two_revs(self):
-        util.load_svndump_fixture(self.repo_path, 'two_revs.svndump')
+        test_util.load_svndump_fixture(self.repo_path, 'two_revs.svndump')
         fetch_command.fetch_revisions(ui.ui(), 
                                       svn_url='file://%s' % self.repo_path, 
                                       hg_repo_path=self.wc_path)
@@ -45,7 +45,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(repo['tip'], repo[1])
 
     def test_branches(self):
-        util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
+        test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
         fetch_command.fetch_revisions(ui.ui(), 
                                       svn_url='file://%s' % self.repo_path, 
                                       hg_repo_path=self.wc_path)
@@ -60,7 +60,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(len(repo.heads()), 1)
 
     def test_two_branches_with_heads(self):
-        util.load_svndump_fixture(self.repo_path, 'two_heads.svndump')
+        test_util.load_svndump_fixture(self.repo_path, 'two_heads.svndump')
         fetch_command.fetch_revisions(ui.ui(), 
                                       svn_url='file://%s' % self.repo_path, 
                                       hg_repo_path=self.wc_path)
@@ -77,3 +77,6 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(len(repo['tip'].parents()), 1)
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
+
+def suite():
+    return unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout)
