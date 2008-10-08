@@ -56,8 +56,9 @@ class Revision(object):
         # TODO parse this into a datetime
         self.date = date
         self.paths = {}
-        for p in paths:
-            self.paths[p[len(strip_path):]] = paths[p]
+        if paths:
+            for p in paths:
+                self.paths[p[len(strip_path):]] = paths[p]
 
     def __str__(self):
         return 'r%d by %s' % (self.revnum, self.author)
@@ -253,7 +254,8 @@ class SubversionRepo(object):
                                                    message,
                                                    commit_cb,
                                                    None,
-                                                   False)
+                                                   False,
+                                                   self.pool)
         checksum = []
         def driver_cb(parent, path, pool):
             if path in dirs:
