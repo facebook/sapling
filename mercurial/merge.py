@@ -185,8 +185,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 if overwrite:
                     act("clobbering", "g", f, rflags)
                 # or are we going back in time and clean?
-                elif backwards and not n[20:]:
-                    act("reverting", "g", f, rflags)
+                elif backwards:
+                    if not n[20:] or not p2[f].cmp(p1[f].data()):
+                        act("reverting", "g", f, rflags)
                 # are both different from the ancestor?
                 elif n != a and m2[f] != a:
                     act("versions differ", "m", f, f, f, rflags, False)
