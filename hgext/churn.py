@@ -85,7 +85,9 @@ def countrate(ui, repo, amap, *pats, **opts):
         ctx = repo[rev]
         key = getkey(ctx)
         key = amap.get(key, key) # alias remap
-        if opts.get('lines'):
+        if opts.get('changesets'):
+            rate[key] = rate.get(key, 0) + 1
+        else:
             parents = ctx.parents()
             if len(parents) > 1:
                 ui.note(_('Revision %d is a merge, ignoring...\n') % (rev,))
@@ -94,8 +96,6 @@ def countrate(ui, repo, amap, *pats, **opts):
             ctx1 = parents[0]
             lines = changedlines(ui, repo, ctx1, ctx)
             rate[key] = rate.get(key, 0) + lines
-        else:
-            rate[key] = rate.get(key, 0) + 1
 
         if opts.get('progress'):
             count += 1
@@ -112,28 +112,32 @@ def countrate(ui, repo, amap, *pats, **opts):
     return rate
 
 
-def stats(ui, repo, *pats, **opts):
+def churn(ui, repo, *pats, **opts):
     '''Graph count of revisions grouped by template
 
-    Will graph count of revisions grouped by template or alternatively by
-    date, if dateformat is used. In this case it will override template.
+    Will graph count of changed lines or revisions grouped by template or
+    alternatively by date, if dateformat is used. In this case it will override
+    template.
 
-    By default statistics are counted for number of revisions.
+    By default statistics are counted for number of changed lines.
 
     Examples:
 
-      # display count of revisions for every committer
-      hg stats -t '{author|email}'
+      # display count of changed lines for every committer
+      hg churn -t '{author|email}'
 
       # display daily activity graph
-      hg stats -f '%H' -s
+      hg churn -f '%H' -s -c
 
       # display activity of developers by month
-      hg stats -f '%Y-%m' -s
+      hg churn -f '%Y-%m' -s -c
 
       # display count of lines changed in every year
-      hg stats -l -f '%Y' -s
-    '''
+      hg churn -f '%Y' -s
+
+    The map file format used to specify aliases is fairly simple:
+
+    <alias email> <actual email>'''
     def pad(s, l):
         return (s + " " * l)[:l]
 
@@ -163,32 +167,18 @@ def stats(ui, repo, *pats, **opts):
         print "%s %6d %s" % (pad(date, maxname), count,
                              "*" * int(count * width / maxcount))
 
-def churn(ui, repo, **opts):
-    '''graphs the number of lines changed
-
-    The map file format used to specify aliases is fairly simple:
-
-    <alias email> <actual email>'''
-    stats(ui, repo, lines=True, sort=False, template='{author|email}', **opts)
-
 
 cmdtable = {
-    "stats":
-        (stats,
+    "churn":
+        (churn,
          [('r', 'rev', [], _('count rate for the specified revision or range')),
           ('d', 'date', '', _('count rate for revs matching date spec')),
           ('t', 'template', '{author|email}', _('template to group changesets')),
           ('f', 'dateformat', '',
               _('strftime-compatible format for grouping by date')),
-          ('l', 'lines', False, _('count rate by number of changed lines')),
+          ('c', 'changesets', False, _('count rate by number of changesets')),
           ('s', 'sort', False, _('sort by key (default: sort by count)')),
           ('', 'aliases', '', _('file with email aliases')),
           ('', 'progress', None, _('show progress'))],
-         _("hg stats [-d DATE] [-r REV] [FILE]")),
-    "churn":
-        (churn,
-         [('r', 'rev', [], _('limit statistics to the specified revisions')),
-          ('', 'aliases', '', _('file with email aliases')),
-          ('', 'progress', None, _('show progress'))],
-         'hg churn [-r REVISIONS] [--aliases FILE] [--progress]'),
+         _("hg stats [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]")),
 }

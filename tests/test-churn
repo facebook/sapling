@@ -9,19 +9,22 @@ echo % create test repository
 hg init repo
 cd repo
 echo a > a
-hg ci -Am adda -u user1
+hg ci -Am adda -u user1 -d 6:00
 echo b >> a
 echo b > b
-hg ci -Am addb -u user2
+hg ci -m changeba -u user2 -d 9:00 a
+hg ci -Am addb -u user2 -d 9:30
 echo c >> a
 echo c >> b
 echo c > c
-hg ci -Am addc -u user3
+hg ci -m changeca -u user3 -d 12:00 a
+hg ci -m changecb -u user3 -d 12:15 b
+hg ci -Am addc -u user3 -d 12:30
 
 echo % churn all
 hg churn
-echo % churn up to rev 1
-hg churn -r :1
+echo % churn up to rev 2
+hg churn -r :2
 echo % churn with aliases
 cat > ../aliases <<EOF
 user1 alias1
@@ -30,4 +33,6 @@ EOF
 hg churn --aliases ../aliases
 echo % churn with column specifier
 COLUMNS=40 hg churn
+echo % churn by hour
+hg churn -f '%H' -s
 
