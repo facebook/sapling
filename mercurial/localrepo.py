@@ -959,6 +959,13 @@ class localrepository(repo.repository):
         match = match or match_.always(self.root, self.getcwd())
         listignored, listclean, listunknown = ignored, clean, unknown
 
+        if not parentworking:
+            def bad(f, msg):
+                if f not in ctx1:
+                    self.ui.warn('%s: %s\n' % (self.dirstate.pathto(f), msg))
+                return False
+            match.bad = bad
+
         if working: # we need to scan the working dir
             s = self.dirstate.status(match, listignored, listclean, listunknown)
             cmp, modified, added, removed, deleted, unknown, ignored, clean = s
