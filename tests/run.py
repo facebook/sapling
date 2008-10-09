@@ -7,11 +7,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import test_fetch_command
 import test_fetch_command_regexes
 import test_push_command
+import test_tags
 
 def suite():
     return unittest.TestSuite([test_fetch_command.suite(),
                                test_fetch_command_regexes.suite(),
                                test_push_command.suite(),
+                               test_tags.suite(),
                               ])
 
 if __name__ == '__main__':

@@ -293,6 +293,7 @@ class HgChangeReceiver(delta.Editor):
             del self.tags[t]
         self.tags.update(added_tags)
         self.branches.update(added_branches)
+        self._save_metadata()
 
     def commit_current_delta(self):
         if hasattr(self, '_exception_info'):
