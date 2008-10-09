@@ -826,6 +826,52 @@ def openhardlinks():
     '''return true if it is safe to hold open file handles to hardlinks'''
     return True
 
+def _statfiles(files):
+    'Stat each file in files and yield stat or None if file does not exist.'
+    lstat = os.lstat
+    for nf in files:
+        try:
+            st = lstat(nf)
+        except OSError, err:
+            if err.errno not in (errno.ENOENT, errno.ENOTDIR):
+                raise
+            st = None
+        yield st
+
+def _statfiles_clustered(files):
+    '''Stat each file in files and yield stat or None if file does not exist.
+    Cluster and cache stat per directory to minimize number of OS stat calls.'''
+    lstat = os.lstat
+    ncase = os.path.normcase
+    sep   = os.sep
+    dircache = {} # dirname -> filename -> status | None if file does not exist
+    for nf in files:
+        nf  = ncase(nf)
+        pos = nf.rfind(sep)
+        if pos == -1:
+            dir, base = '.', nf
+        else:
+            dir, base = nf[:pos], nf[pos+1:]
+        cache = dircache.get(dir, None)
+        if cache is None:
+            try:
+                dmap = dict([(ncase(n), s)
+                    for n, k, s in osutil.listdir(dir, True)])
+            except OSError, err:
+                # handle directory not found in Python version prior to 2.5
+                # Python <= 2.4 returns native Windows code 3 in errno
+                # Python >= 2.5 returns ENOENT and adds winerror field
+                if err.errno not in (3, errno.ENOENT, errno.ENOTDIR):
+                    raise
+                dmap = {}
+            cache = dircache.setdefault(dir, dmap)
+        yield cache.get(base, None)
+
+if sys.platform == 'win32':
+    statfiles = _statfiles_clustered
+else:
+    statfiles = _statfiles
+
 getuser_fallback = None
 
 def getuser():

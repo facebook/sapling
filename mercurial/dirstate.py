@@ -522,17 +522,11 @@ class dirstate(object):
                         results[nf] = None
 
         # step 3: report unseen items in the dmap hash
-        visit = [f for f in dmap if f not in results and match(f)]
-        for nf in util.sort(visit):
-            results[nf] = None
-            try:
-                st = lstat(join(nf))
-                kind = getkind(st.st_mode)
-                if kind == regkind or kind == lnkkind:
-                    results[nf] = st
-            except OSError, inst:
-                if inst.errno not in (errno.ENOENT, errno.ENOTDIR):
-                    raise
+        visit = util.sort([f for f in dmap if f not in results and match(f)])
+        for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
+            if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
+                st = None
+            results[nf] = st
 
         del results['.hg']
         return results
