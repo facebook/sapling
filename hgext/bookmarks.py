@@ -219,6 +219,15 @@ def reposetup(ui, repo):
                 write(repo, marks)
             return result
 
+        def tags(self):
+            """Merge bookmarks with normal tags"""
+            if self.tagscache:
+                return self.tagscache
+
+            tagscache = super(bookmark_repo, self).tags()
+            tagscache.update(parse(repo))
+            return tagscache
+
     repo.__class__ = bookmark_repo
 
 def pushnonbookmarked(orig, ui, repo, *args, **opts):
