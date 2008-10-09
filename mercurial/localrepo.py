@@ -860,6 +860,13 @@ class localrepository(repo.repository):
                     else:
                         remove.append(f)
 
+            updated, added = [], []
+            for f in util.sort(changed):
+                if f in m1 or f in m2:
+                    updated.append(f)
+                else:
+                    added.append(f)
+
             # update manifest
             m1.update(new)
             removed = []
@@ -888,9 +895,10 @@ class localrepository(repo.repository):
                     edittext.append("HG: branch merge")
                 if branchname:
                     edittext.append("HG: branch '%s'" % util.tolocal(branchname))
-                edittext.extend(["HG: changed %s" % f for f in changed])
+                edittext.extend(["HG: added %s" % f for f in added])
+                edittext.extend(["HG: changed %s" % f for f in updated])
                 edittext.extend(["HG: removed %s" % f for f in removed])
-                if not changed and not remove:
+                if not added and not updated and not removed:
                     edittext.append("HG: no files changed")
                 edittext.append("")
                 # run editor in the repository root

@@ -106,3 +106,16 @@ abort: cannot partially commit a merge (do not specify files or patterns)
 % should fail because we are specifying a pattern
 abort: cannot partially commit a merge (do not specify files or patterns)
 % should succeed
+% test commit message content
+
+
+HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+HG: --
+HG: user: test
+HG: branch 'default'
+HG: added added
+HG: changed changed
+HG: removed removed
+transaction abort!
+rollback completed
+abort: empty commit message

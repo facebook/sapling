@@ -106,5 +106,21 @@ echo % should fail because we are specifying a pattern
 hg ci -mmerge -I a
 echo % should succeed
 hg ci -mmerge
+cd ..
+
+
+echo % test commit message content
+hg init commitmsg
+cd commitmsg
+echo changed > changed
+echo removed > removed
+hg ci -qAm init
+
+hg rm removed
+echo changed >> changed
+echo added > added
+hg add added
+HGEDITOR=cat hg ci -A
+cd ..
 
 exit 0
