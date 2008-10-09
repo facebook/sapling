@@ -21,23 +21,19 @@ class TestBasicRepoLayout(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
+        
+    def _load_fixture_and_fetch(self, fixture_name):
+        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path, 
+                                                self.wc_path)
 
     def test_fresh_fetch_single_rev(self):
-        test_util.load_svndump_fixture(self.repo_path, 'single_rev.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self._load_fixture_and_fetch('single_rev.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
                          'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
         self.assertEqual(repo['tip'], repo[0])
 
     def test_fresh_fetch_two_revs(self):
-        test_util.load_svndump_fixture(self.repo_path, 'two_revs.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self._load_fixture_and_fetch('two_revs.svndump')
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
@@ -46,11 +42,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(repo['tip'], repo[1])
 
     def test_branches(self):
-        test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self._load_fixture_and_fetch('simple_branch.svndump')
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
@@ -61,11 +53,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(len(repo.heads()), 1)
 
     def test_two_branches_with_heads(self):
-        test_util.load_svndump_fixture(self.repo_path, 'two_heads.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self._load_fixture_and_fetch('two_heads.svndump')
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
@@ -80,24 +68,13 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(len(repo.heads()), 2)
 
     def test_many_special_cases_replay(self):
-        test_util.load_svndump_fixture(self.repo_path,
-                                       'many_special_cases.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self._load_fixture_and_fetch('many_special_cases.svndump')
         # TODO there must be a better way than repo[0] for this check
         self._many_special_cases_checks(repo)
 
 
     def test_many_special_cases_diff(self):
-        test_util.load_svndump_fixture(self.repo_path,
-                                       'many_special_cases.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path,
-                                      stupid = True)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self._load_fixture_and_fetch('many_special_cases.svndump')
         # TODO there must be a better way than repo[0] for this check
         self._many_special_cases_checks(repo)
 
@@ -113,8 +90,6 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(len(repo['tip'].parents()), 1)
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
-
-
 
 
 class TestStupidPull(unittest.TestCase):
