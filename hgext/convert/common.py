@@ -2,7 +2,7 @@
 import base64, errno
 import os
 import cPickle as pickle
-from mercurial import util
+from mercurial import util, strutil
 from mercurial.i18n import _
 
 def encodeargs(args):
@@ -332,7 +332,7 @@ class mapfile(dict):
                 raise
             return
         for line in fp:
-            key, value = line[:-1].split(' ', 1)
+            key, value = strutil.rsplit(line[:-1], ' ', 1)
             if key not in self:
                 self.order.append(key)
             super(mapfile, self).__setitem__(key, value)
