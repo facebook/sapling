@@ -253,6 +253,8 @@ class Watcher(object):
             if not st:
                 return '!'
             st_mode, st_size, st_mtime = st
+            if size == -1:
+                return 'l'
             if size and (size != st_size or (mode ^ st_mode) & 0100):
                 return 'm'
             if time != int(st_mtime):
