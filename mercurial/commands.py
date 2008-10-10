@@ -260,7 +260,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
             ui.status(_('(use "backout --merge" '
                         'if you want to auto-merge)\n'))
 
-def bisect(ui, repo, rev=None, extra=None,
+def bisect(ui, repo, rev=None, extra=None, command=None,
                reset=None, good=None, bad=None, skip=None, noupdate=None):
     """subdivision search of changesets
 
@@ -275,67 +275,12 @@ def bisect(ui, repo, rev=None, extra=None,
 
     As a shortcut, you can also use the revision argument to mark a
     revision as good or bad without checking it out first.
+
+    If you supply a command it will be used for automatic bisection. Its
+    exit status will be used as flag to mark revision as bad or good (good
+    in case of 0 and bad in any other case).
     """
-    # backward compatibility
-    if rev in "good bad reset init".split():
-        ui.warn(_("(use of 'hg bisect <cmd>' is deprecated)\n"))
-        cmd, rev, extra = rev, extra, None
-        if cmd == "good":
-            good = True
-        elif cmd == "bad":
-            bad = True
-        else:
-            reset = True
-    elif extra or good + bad + skip + reset > 1:
-        raise util.Abort(_('incompatible arguments'))
-
-    if reset:
-        p = repo.join("bisect.state")
-        if os.path.exists(p):
-            os.unlink(p)
-        return
-
-    # load state
-    state = {'good': [], 'bad': [], 'skip': []}
-    if os.path.exists(repo.join("bisect.state")):
-        for l in repo.opener("bisect.state"):
-            kind, node = l[:-1].split()
-            node = repo.lookup(node)
-            if kind not in state:
-                raise util.Abort(_("unknown bisect kind %s") % kind)
-            state[kind].append(node)
-
-    # update state
-    node = repo.lookup(rev or '.')
-    if good:
-        state['good'].append(node)
-    elif bad:
-        state['bad'].append(node)
-    elif skip:
-        state['skip'].append(node)
-
-    # save state
-    f = repo.opener("bisect.state", "w", atomictemp=True)
-    wlock = repo.wlock()
-    try:
-        for kind in state:
-            for node in state[kind]:
-                f.write("%s %s\n" % (kind, hex(node)))
-        f.rename()
-    finally:
-        del wlock
-
-    if not state['good'] or not state['bad']:
-        if (good or bad or skip or reset):
-            return
-        if not state['good']:
-            raise util.Abort(_('cannot bisect (no known good revisions)'))
-        else:
-            raise util.Abort(_('cannot bisect (no known bad revisions)'))
-
-    # actually bisect
-    nodes, changesets, good = hbisect.bisect(repo.changelog, state)
-    if changesets == 0:
+    def print_result(nodes, good):
         displayer = cmdutil.show_changeset(ui, repo, {})
         transition = (good and "good" or "bad")
         if len(nodes) == 1:
@@ -348,6 +293,74 @@ def bisect(ui, repo, rev=None, extra=None,
                        "%s revision could be any of:\n") % transition)
             for n in nodes:
                 displayer.show(changenode=n)
+
+    def check_state(state, interactive=True):
+        if not state['good'] or not state['bad']:
+            if (good or bad or skip or reset) and interactive:
+                return
+            if not state['good']:
+                raise util.Abort(_('cannot bisect (no known good revisions)'))
+            else:
+                raise util.Abort(_('cannot bisect (no known bad revisions)'))
+        return True
+
+    # backward compatibility
+    if rev in "good bad reset init".split():
+        ui.warn(_("(use of 'hg bisect <cmd>' is deprecated)\n"))
+        cmd, rev, extra = rev, extra, None
+        if cmd == "good":
+            good = True
+        elif cmd == "bad":
+            bad = True
+        else:
+            reset = True
+    elif extra or good + bad + skip + reset + bool(command) > 1:
+        raise util.Abort(_('incompatible arguments'))
+
+    if reset:
+        p = repo.join("bisect.state")
+        if os.path.exists(p):
+            os.unlink(p)
+        return
+
+    state = hbisect.load_state(repo)
+
+    if command:
+        changesets = 1
+        while changesets:
+            # check state
+            status = bool(list(os.popen3(command)[2]))
+            node = repo.lookup(rev or '.')
+            transition = (status and 'bad' or 'good')
+            state[transition].append(node)
+            ui.note(_('Changeset %s: %s\n') % (short(node), transition))
+            check_state(state, interactive=False)
+            # bisect
+            nodes, changesets, good = hbisect.bisect(repo.changelog, state)
+            # update to next check
+            cmdutil.bail_if_changed(repo)
+            hg.clean(repo, nodes[0], show_stats=False)
+        hbisect.save_state(repo, state)
+        return print_result(nodes, not status)
+
+    # update state
+    node = repo.lookup(rev or '.')
+    if good:
+        state['good'].append(node)
+    elif bad:
+        state['bad'].append(node)
+    elif skip:
+        state['skip'].append(node)
+
+    hbisect.save_state(repo, state)
+
+    if not check_state(state):
+        return
+
+    # actually bisect
+    nodes, changesets, good = hbisect.bisect(repo.changelog, state)
+    if changesets == 0:
+        print_result(nodes, good)
     else:
         assert len(nodes) == 1 # only a single node can be tested next
         node = nodes[0]
@@ -3008,8 +3021,9 @@ table = {
           ('g', 'good', False, _('mark changeset good')),
           ('b', 'bad', False, _('mark changeset bad')),
           ('s', 'skip', False, _('skip testing changeset')),
+          ('c', 'command', '', _('Use command to check changeset state')),
           ('U', 'noupdate', False, _('do not update to target'))],
-         _("hg bisect [-gbsr] [REV]")),
+         _("hg bisect [-gbsr] [REV] [-c COMMAND]")),
     "branch":
         (branch,
          [('f', 'force', None,

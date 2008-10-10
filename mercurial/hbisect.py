@@ -7,8 +7,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
+import os
 from i18n import _
-from node import short
+from node import short, hex
 import util
 
 def bisect(changelog, state):
@@ -116,3 +117,28 @@ def bisect(changelog, state):
     best_node = changelog.node(best_rev)
 
     return ([best_node], tot, good)
+
+
+def load_state(repo):
+    state = {'good': [], 'bad': [], 'skip': []}
+    if os.path.exists(repo.join("bisect.state")):
+        for l in repo.opener("bisect.state"):
+            kind, node = l[:-1].split()
+            node = repo.lookup(node)
+            if kind not in state:
+                raise util.Abort(_("unknown bisect kind %s") % kind)
+            state[kind].append(node)
+    return state
+
+
+def save_state(repo, state):
+    f = repo.opener("bisect.state", "w", atomictemp=True)
+    wlock = repo.wlock()
+    try:
+        for kind in state:
+            for node in state[kind]:
+                f.write("%s %s\n" % (kind, hex(node)))
+        f.rename()
+    finally:
+        del wlock
+
