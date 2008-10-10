@@ -90,7 +90,6 @@ def reposetup(ui, repo):
                              % err[-1])
                 ui.print_exc()
                 # replace by old status function
-                ui.warn(_('deactivating inotify\n'))
                 self.status = super(inotifydirstate, self).status
 
             return super(inotifydirstate, self).status(
