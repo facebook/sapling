@@ -39,8 +39,8 @@ class TestTags(unittest.TestCase):
         self._test_tag_revision_info(repo)
         svncommand.generate_hg_tags(ui.ui(), self.wc_path)
         repo = hg.repository(ui.ui(), self.wc_path)
-        self.assertEqual(repo['tip'].node(), repo['tag:tag_r3'].node())
-        self.assertEqual(repo['tip'].node(), repo['tag:copied_tag'].node())
+        self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
+        self.assertEqual(repo['tip'].node(), repo['tag/copied_tag'].node())
     
     def test_tags_stupid(self):
         self.test_tags(stupid=True)
@@ -51,8 +51,8 @@ class TestTags(unittest.TestCase):
         self._test_tag_revision_info(repo)
         svncommand.generate_hg_tags(ui.ui(), self.wc_path)
         repo = hg.repository(ui.ui(), self.wc_path)
-        self.assertEqual(repo['tip'].node(), repo['tag:tag_r3'].node())
-        self.assert_('tag:copied_tag' not in repo.tags())
+        self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
+        self.assert_('tag/copied_tag' not in repo.tags())
     
     def test_remove_tag_stupid(self):
         self.test_remove_tag(stupid=True)
@@ -63,9 +63,9 @@ class TestTags(unittest.TestCase):
         self._test_tag_revision_info(repo)
         svncommand.generate_hg_tags(ui.ui(), self.wc_path)
         repo = hg.repository(ui.ui(), self.wc_path)
-        self.assertEqual(repo['tip'].node(), repo['tag:tag_r3'].node())
-        self.assertEqual(repo['tip'].node(), repo['tag:other_tag_r3'].node())
-        self.assert_('tag:copied_tag' not in repo.tags())
+        self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
+        self.assertEqual(repo['tip'].node(), repo['tag/other_tag_r3'].node())
+        self.assert_('tag/copied_tag' not in repo.tags())
     
     def test_rename_tag_stupid(self):
         self.test_rename_tag(stupid=True)
@@ -76,9 +76,9 @@ class TestTags(unittest.TestCase):
         svncommand.generate_hg_tags(ui.ui(), self.wc_path)
         repo = hg.repository(ui.ui(), self.wc_path)
         self.assertEqual(repo['tip'].node(), repo['branch_from_tag'].node())
-        self.assertEqual(repo[1].node(), repo['tag:tag_r3'].node())
+        self.assertEqual(repo[1].node(), repo['tag/tag_r3'].node())
         self.assertEqual(repo['branch_from_tag'].parents()[0].node(), 
-                         repo['tag:copied_tag'].node())
+                         repo['tag/copied_tag'].node())
     
     def test_branch_from_tag_stupid(self):
         self.test_branch_from_tag(stupid=True)
