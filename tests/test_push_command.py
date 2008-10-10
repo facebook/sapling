@@ -152,9 +152,12 @@ if push_works:
 #
 #    def test_push_symlink_file(self):
 #        assert False
+else:
+    class PushTests(unittest.TestCase):
+        """Dummy so the test runner doesn't get upset.
+        """
+        pass
 
 def suite():
-    if push_works:
-        return unittest.TestLoader().loadTestsFromTestCase(PushTests)
-    return []
+    return unittest.TestLoader().loadTestsFromTestCase(PushTests)
 
