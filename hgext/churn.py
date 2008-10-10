@@ -153,11 +153,11 @@ def churn(ui, repo, *pats, **opts):
     if not rate:
         return
 
-    keyfn = (not opts.get('sort')) and (lambda (k,v): (v,k)) or None
-    rate.sort(key=keyfn, reverse=not opts.get('sort'))
+    sortfn = ((not opts.get('sort')) and (lambda a, b: cmp(b[1], a[1])) or None)
+    rate.sort(sortfn)
 
-    maxcount = float(max(v for k, v in rate))
-    maxname = max(len(k) for k, v in rate)
+    maxcount = float(max([v for k, v in rate]))
+    maxname = max([len(k) for k, v in rate])
 
     ttywidth = get_tty_width()
     ui.debug(_("assuming %i character terminal\n") % ttywidth)
