@@ -21,6 +21,7 @@ import re
 import sys
 import cPickle as pickle
 import tempfile
+import urllib
 
 from mercurial import strutil, util
 from mercurial.i18n import _
@@ -54,7 +55,7 @@ def geturl(path):
         path = os.path.normpath(os.path.abspath(path))
         if os.name == 'nt':
             path = '/' + util.normpath(path)
-        return 'file://%s' % path
+        return 'file://%s' % urllib.quote(path)
     return path
 
 def optrev(number):
@@ -172,10 +173,10 @@ class svn_source(converter_source):
             self.transport = transport.SvnRaTransport(url=self.url)
             self.ra = self.transport.ra
             self.ctx = self.transport.client
-            self.base = svn.ra.get_repos_root(self.ra)
+            self.baseurl = svn.ra.get_repos_root(self.ra)
             # Module is either empty or a repository path starting with
             # a slash and not ending with a slash.
-            self.module = self.url[len(self.base):]
+            self.module = urllib.unquote(self.url[len(self.baseurl):])
             self.prevmodule = None
             self.rootmodule = self.module
             self.commits = {}
@@ -230,7 +231,7 @@ class svn_source(converter_source):
 
     def exists(self, path, optrev):
         try:
-            svn.client.ls(self.url.rstrip('/') + '/' + path,
+            svn.client.ls(self.url.rstrip('/') + '/' + urllib.quote(path),
                                  optrev, False, self.ctx)
             return True
         except SubversionException, err:
@@ -279,8 +280,8 @@ class svn_source(converter_source):
         # Check if branches bring a few more heads to the list
         if branches:
             rpath = self.url.strip('/')
-            branchnames = svn.client.ls(rpath + '/' + branches, rev, False,
-                                        self.ctx)
+            branchnames = svn.client.ls(rpath + '/' + urllib.quote(branches), 
+                                        rev, False, self.ctx)
             for branch in branchnames.keys():
                 module = '%s/%s/%s' % (oldmodule, branches, branch)
                 if not isdir(module, self.last_changed):
@@ -324,8 +325,8 @@ class svn_source(converter_source):
         else:
             # Perform a full checkout on roots
             uuid, module, revnum = self.revsplit(rev)
-            entries = svn.client.ls(self.base + module, optrev(revnum),
-                                    True, self.ctx)
+            entries = svn.client.ls(self.baseurl + urllib.quote(module), 
+                                    optrev(revnum), True, self.ctx)
             files = [n for n,e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
             copies = {}
@@ -524,12 +525,12 @@ class svn_source(converter_source):
         """Reparent the svn transport and return the previous parent."""
         if self.prevmodule == module:
             return module
-        svn_url = (self.base + module).encode(self.encoding)
+        svnurl = self.baseurl + urllib.quote(module)
         prevmodule = self.prevmodule
         if prevmodule is None:
             prevmodule = ''
-        self.ui.debug("reparent to %s\n" % svn_url)
-        svn.ra.reparent(self.ra, svn_url)
+        self.ui.debug("reparent to %s\n" % svnurl)
+        svn.ra.reparent(self.ra, svnurl)
         self.prevmodule = module
         return prevmodule
 
@@ -872,8 +873,9 @@ class svn_source(converter_source):
     def _find_children(self, path, revnum):
         path = path.strip('/')
         pool = Pool()
-        rpath = '/'.join([self.base, path]).strip('/')
-        return ['%s/%s' % (path, x) for x in svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool).keys()]
+        rpath = '/'.join([self.baseurl, urllib.quote(path)]).strip('/')
+        return ['%s/%s' % (path, x) for x in 
+                svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool).keys()]
 
     def getrelpath(self, path, module=None):
         if module is None:
@@ -909,7 +911,7 @@ class svn_source(converter_source):
             if not p.startswith('/'):
                 p = self.module + '/' + p
             relpaths.append(p.strip('/'))
-        args = [self.base, relpaths, start, end, limit, discover_changed_paths,
+        args = [self.baseurl, relpaths, start, end, limit, discover_changed_paths,
                 strict_node_history]
         arg = encodeargs(args)
         hgexe = util.hgexecutable()

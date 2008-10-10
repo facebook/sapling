@@ -30,23 +30,23 @@ mkdir trunk
 mkdir tags
 cd ..
 
-svnurl=file://$svnpath/svn-repo/projB
+svnurl=file://$svnpath/svn-repo/proj%20B
 svn import -m "init projB" projB $svnurl | fix_path
 
 
 echo % update svn repository
 svn co $svnurl/trunk B | fix_path
 cd B
-echo hello > letter.txt
-svn add letter.txt
+echo hello > 'letter .txt'
+svn add 'letter .txt'
 svn ci -m hello
 
-"$TESTDIR/svn-safe-append.py" world letter.txt
+"$TESTDIR/svn-safe-append.py" world 'letter .txt'
 svn ci -m world
 
 svn copy -m "tag v0.1" $svnurl/trunk $svnurl/tags/v0.1
 
-"$TESTDIR/svn-safe-append.py" 'nice day today!' letter.txt
+"$TESTDIR/svn-safe-append.py" 'nice day today!' 'letter .txt'
 svn ci -m "nice day"
 cd ..
 
@@ -55,7 +55,7 @@ hg convert $svnurl B-hg
 
 echo % update svn repository again
 cd B
-"$TESTDIR/svn-safe-append.py" "see second letter" letter.txt
+"$TESTDIR/svn-safe-append.py" "see second letter" 'letter .txt'
 echo "nice to meet you" > letter2.txt
 svn add letter2.txt
 svn ci -m "second letter"

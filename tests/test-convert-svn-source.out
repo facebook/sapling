@@ -7,16 +7,16 @@ Adding         projB/tags
 Committed revision 1.
 % update svn repository
 Checked out revision 1.
-A         letter.txt
-Adding         letter.txt
+A         letter .txt
+Adding         letter .txt
 Transmitting file data .
 Committed revision 2.
-Sending        letter.txt
+Sending        letter .txt
 Transmitting file data .
 Committed revision 3.
 
 Committed revision 4.
-Sending        letter.txt
+Sending        letter .txt
 Transmitting file data .
 Committed revision 5.
 % convert to hg once
@@ -31,7 +31,7 @@ converting...
 updating tags
 % update svn repository again
 A         letter2.txt
-Sending        letter.txt
+Sending        letter .txt
 Adding         letter2.txt
 Transmitting file data ..
 Committed revision 6.
@@ -51,15 +51,15 @@ o  7 update tags files: .hgtags
 |
 o  6 work in progress files: letter2.txt
 |
-o  5 second letter files: letter.txt letter2.txt
+o  5 second letter files: letter .txt letter2.txt
 |
 o  4 update tags files: .hgtags
 |
-o  3 nice day files: letter.txt
+o  3 nice day files: letter .txt
 |
-o  2 world files: letter.txt
+o  2 world files: letter .txt
 |
-o  1 hello files: letter.txt
+o  1 hello files: letter .txt
 |
 o  0 init projB files:
 
