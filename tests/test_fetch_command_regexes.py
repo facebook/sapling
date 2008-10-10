@@ -29,18 +29,37 @@ Index: trunk/functional_tests/doc_tests/test_doctest_fixtures/doctest_fixtures.r
 ===================================================================
 """
 
+special_delta = """Index: delta
+===================================================================
+--- delta(revision 0)
++++ delta(revision 9)
+@@ -0,0 +1 @@
++link alpha
+\ No newline at end of file
+
+Property changes on: delta
+___________________________________________________________________
+Name: svn:special
+   + *
+
+"""
+
 class RegexTests(unittest.TestCase):
     def test_empty_file_re(self):
         matches = fetch_command.empty_file_patch_wont_make_re.findall(two_empties)
         assert sorted(matches) == ['__init__.py', 'bar/__init__.py']
-    
+
     def test_any_matches_just_one(self):
         pat = '''Index: trunk/django/contrib/admin/urls/__init__.py
 ===================================================================
 '''
         matches = fetch_command.any_file_re.findall(pat)
         assert len(matches) == 1
-    
+
+    def test_special_re(self):
+        matches = fetch_command.property_special_set_re.findall(special_delta)
+        assert len(matches) == 1
+
     def test_any_file_re(self):
         matches = fetch_command.any_file_re.findall(two_empties)
         assert sorted(matches) == ['__init__.py', 'bar/__init__.py',

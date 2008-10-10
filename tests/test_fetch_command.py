@@ -21,9 +21,9 @@ class TestBasicRepoLayout(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
-        
+
     def _load_fixture_and_fetch(self, fixture_name):
-        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path, 
+        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
                                                 self.wc_path)
 
     def test_fresh_fetch_single_rev(self):

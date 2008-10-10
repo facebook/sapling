@@ -151,13 +151,13 @@ Cannot display: file marked as a binary type.''')
 
 property_exec_set_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
-Added: svn:executable
+(?:Added|Name): svn:executable
    \+ \*
 ''')
 
 property_exec_removed_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
-Deleted: svn:executable
+(?:Deleted|Name): svn:executable
    - \*
 ''')
 
@@ -167,13 +167,13 @@ any_file_re = re.compile(r'''^Index: ([^\n]*)\n=*\n''', re.MULTILINE)
 
 property_special_set_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
-Added: svn:special
+(?:Added|Name): svn:special
    \+ \*
 ''')
 
 property_special_removed_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
-Added: svn:special
+(?:Deleted|Name): svn:special
    \- \*
 ''')
 
