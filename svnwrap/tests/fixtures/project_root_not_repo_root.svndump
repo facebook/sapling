@@ -1,0 +1,361 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 1916bd89-caf8-4f3d-96a7-7d5a7968f6ea
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-10-09T15:32:50.842663Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 111
+Content-length: 111
+
+K 7
+svn:log
+V 11
+Empty dirs.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-09T15:32:51.151627Z
+PROPS-END
+
+Node-path: dummyproj
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: dummyproj/branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: dummyproj/tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: dummyproj/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+Initial Files.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-09T15:32:52.149125Z
+PROPS-END
+
+Node-path: dummyproj/trunk/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 15
+Text-content-md5: 8717538ba2f18a613eaa4892e8d178f7
+Content-length: 25
+
+PROPS-END
+This is alpha.
+
+
+Node-path: dummyproj/trunk/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 14
+Text-content-md5: 952a13b33256f343982d0a8f0e0af277
+Content-length: 24
+
+PROPS-END
+This is beta.
+
+
+Node-path: dummyproj/trunk/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 15
+Text-content-md5: e48d0bca73f04e800e7bd9fb58d49a62
+Content-length: 25
+
+PROPS-END
+This is delta.
+
+
+Revision-number: 3
+Prop-content-length: 110
+Content-length: 110
+
+K 7
+svn:log
+V 10
+Tag rev 1.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-09T15:32:54.131909Z
+PROPS-END
+
+Node-path: dummyproj/tags/rev1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: dummyproj/trunk
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: dummyproj/tags/rev1/alpha
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/alpha
+Text-copy-source-md5: 8717538ba2f18a613eaa4892e8d178f7
+
+
+Node-path: dummyproj/tags/rev1/beta
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/beta
+Text-copy-source-md5: 952a13b33256f343982d0a8f0e0af277
+
+
+Node-path: dummyproj/tags/rev1/delta
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/delta
+Text-copy-source-md5: e48d0bca73f04e800e7bd9fb58d49a62
+
+
+Revision-number: 4
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 16
+Branch to crazy.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-09T15:32:56.132149Z
+PROPS-END
+
+Node-path: dummyproj/branches/crazy
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: dummyproj/trunk
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: dummyproj/branches/crazy/alpha
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/alpha
+Text-copy-source-md5: 8717538ba2f18a613eaa4892e8d178f7
+
+
+Node-path: dummyproj/branches/crazy/beta
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/beta
+Text-copy-source-md5: 952a13b33256f343982d0a8f0e0af277
+
+
+Node-path: dummyproj/branches/crazy/delta
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/delta
+Text-copy-source-md5: e48d0bca73f04e800e7bd9fb58d49a62
+
+
+Revision-number: 5
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 9
+Add gamma
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-09T15:32:57.142842Z
+PROPS-END
+
+Node-path: dummyproj/trunk/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 15
+Text-content-md5: 255b705986e84fbb13db9c5a832739ae
+Content-length: 25
+
+PROPS-END
+This is gamma.
+
+
+Revision-number: 6
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 9
+Add omega
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-09T15:32:58.146324Z
+PROPS-END
+
+Node-path: dummyproj/branches/crazy/omega
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 15
+Text-content-md5: 22219e00c8dbb47ce790f0eb658e8014
+Content-length: 25
+
+PROPS-END
+This is omega.
+
+
+Revision-number: 7
+Prop-content-length: 121
+Content-length: 121
+
+K 7
+svn:log
+V 21
+Branch to more_crazy.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-09T15:33:00.138992Z
+PROPS-END
+
+Node-path: dummyproj/branches/more_crazy
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: dummyproj/trunk
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: dummyproj/branches/more_crazy/alpha
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/alpha
+Text-copy-source-md5: 8717538ba2f18a613eaa4892e8d178f7
+
+
+Node-path: dummyproj/branches/more_crazy/beta
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/beta
+Text-copy-source-md5: 952a13b33256f343982d0a8f0e0af277
+
+
+Node-path: dummyproj/branches/more_crazy/delta
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: dummyproj/trunk/delta
+Text-copy-source-md5: e48d0bca73f04e800e7bd9fb58d49a62
+
+
+Node-path: dummyproj/branches/more_crazy/gamma
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: dummyproj/trunk/gamma
+Text-copy-source-md5: 255b705986e84fbb13db9c5a832739ae
+
+
