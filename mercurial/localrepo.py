@@ -788,6 +788,11 @@ class localrepository(repo.repository):
             del lock, wlock
 
     def commitctx(self, ctx):
+        """Add a new revision to current repository.
+
+        Revision information is passed in the context.memctx argument.
+        commitctx() does not touch the working directory.
+        """
         wlock = lock = None
         try:
             wlock = self.wlock()

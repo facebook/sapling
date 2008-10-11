@@ -686,18 +686,31 @@ class workingfilectx(filectx):
     def cmp(self, text): return self._repo.wread(self._path) == text
 
 class memctx(object):
-    """A memctx is a subset of changectx supposed to be built on memory
-    and passed to commit functions.
+    """Use memctx to perform in-memory commits via localrepo.commitctx().
 
-    NOTE: this interface and the related memfilectx are experimental and
-    may change without notice.
+    Revision information is supplied at initialization time while
+    related files data and is made available through a callback
+    mechanism.  'repo' is the current localrepo, 'parents' is a
+    sequence of two parent revisions identifiers (pass None for every
+    missing parent), 'text' is the commit message and 'files' lists
+    names of files touched by the revision (normalized and relative to
+    repository root).
 
-    parents - a pair of parent nodeids.
-    filectxfn - a callable taking (repo, memctx, path) arguments and
-    returning a memctx object.
-    date - any valid date string or (unixtime, offset), or None.
-    user - username string, or None.
-    extra - a dictionary of extra values, or None.
+    filectxfn(repo, memctx, path) is a callable receiving the
+    repository, the current memctx object and the normalized path of
+    requested file, relative to repository root. It is fired by the
+    commit function for every file in 'files', but calls order is
+    undefined. If the file is available in the revision being
+    committed (updated or added), filectxfn returns a memfilectx
+    object. If the file was removed, filectxfn raises an
+    IOError. Moved files are represented by marking the source file
+    removed and the new file added with copy information (see
+    memfilectx).
+
+    user receives the committer name and defaults to current
+    repository username, date is the commit date in any format
+    supported by util.parsedate() and defaults to current date, extra
+    is a dictionary of metadata or is left empty.
     """
     def __init__(self, repo, parents, text, files, filectxfn, user=None,
                  date=None, extra=None):
@@ -752,11 +765,18 @@ class memctx(object):
         return self._filectxfn(self._repo, self, path)
 
 class memfilectx(object):
-    """A memfilectx is a subset of filectx supposed to be built by client
-    code and passed to commit functions.
+    """memfilectx represents an in-memory file to commit.
+
+    See memctx for more details.
     """
     def __init__(self, path, data, islink, isexec, copied):
-        """copied is the source file path, or None."""
+        """
+        path is the normalized file path relative to repository root.
+        data is the file content as a string.
+        islink is True if the file is a symbolic link.
+        isexec is True if the file is executable.
+        copied is the source file path if current file was copied in the
+        revision being committed, or None."""
         self._path = path
         self._data = data
         self._flags = (islink and 'l' or '') + (isexec and 'x' or '')
