@@ -2,7 +2,14 @@
 
 cat > echo.py <<EOF
 #!/usr/bin/env python
-import os
+import os, sys
+try:
+    import msvcrt
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+except ImportError:
+    pass
+
 for k in ('HG_FILE', 'HG_MY_ISLINK', 'HG_OTHER_ISLINK', 'HG_BASE_ISLINK'):
     print k, os.environ[k]
 EOF

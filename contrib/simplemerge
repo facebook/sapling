@@ -42,6 +42,9 @@ def showhelp():
         sys.stdout.write(' %-*s  %s\n' % (opts_len, first, second))
 
 try:
+    for fp in (sys.stdin, sys.stdout, sys.stderr):
+        util.set_binary(fp)
+    
     opts = {}
     try:
         args = fancyopts.fancyopts(sys.argv[1:], options, opts)

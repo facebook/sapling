@@ -46,6 +46,13 @@ TIP=`hg id -v | cut -f1 -d' '`
 QTIP=`hg id -q`
 cat > getarchive.py <<EOF
 import os, sys, urllib2
+try:
+    # Set stdout to binary mode for win32 platforms
+    import msvcrt
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+except ImportError:
+    pass
+    
 node, archive = sys.argv[1:]
 f = urllib2.urlopen('http://127.0.0.1:%s/?cmd=archive;node=%s;type=%s'
                     % (os.environ['HGPORT'], node, archive))

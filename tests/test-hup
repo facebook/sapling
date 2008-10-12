@@ -1,5 +1,7 @@
 #!/bin/sh
 
+"$TESTDIR/hghave" fifo || exit 80
+
 hg init
 mkfifo p
 

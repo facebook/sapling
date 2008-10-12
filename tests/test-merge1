@@ -2,6 +2,14 @@
 
 cat <<EOF > merge
 import sys, os
+
+try:
+    import msvcrt
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+except ImportError:
+    pass
+
 print "merging for", os.path.basename(sys.argv[1])
 EOF
 HGMERGE="python ../merge"; export HGMERGE
