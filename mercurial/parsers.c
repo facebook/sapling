@@ -15,14 +15,13 @@ static int hexdigit(char c)
 {
 	if (c >= '0' && c <= '9')
 		return c - '0';
-
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
 	if (c >= 'A' && c <= 'F')
 		return c - 'A' + 10;
 
-	if (c >= 'a' && c <= 'f')
-		return c - 'a' + 10;
-
-	return -1;
+	PyErr_SetString(PyExc_ValueError, "input contains non-hex character");
+	return 0;
 }
 
 /*
@@ -30,43 +29,21 @@ static int hexdigit(char c)
  */
 static PyObject *unhexlify(const char *str, int len)
 {
-	PyObject *ret = NULL;
+	PyObject *ret;
 	const char *c;
 	char *d;
 
-	if (len % 2) {
-		PyErr_SetString(PyExc_ValueError,
-				"input is not even in length");
-		goto bail;
-	}
-
 	ret = PyString_FromStringAndSize(NULL, len / 2);
 	if (!ret)
-		goto bail;
+		return NULL;
 
-	d = PyString_AsString(ret);
-	if (!d)
-		goto bail;
-
+	d = PyString_AS_STRING(ret);
 	for (c = str; c < str + len;) {
 		int hi = hexdigit(*c++);
 		int lo = hexdigit(*c++);
-
-		if (hi == -1 || lo == -1) {
-			PyErr_SetString(PyExc_ValueError,
-					"input contains non-hex character");
-			goto bail;
-		}
-
 		*d++ = (hi << 4) | lo;
 	}
 
-	goto done;
-
-bail:
-	Py_XDECREF(ret);
-	ret = NULL;
-done:
 	return ret;
 }
 
