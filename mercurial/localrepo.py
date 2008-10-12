@@ -965,12 +965,23 @@ class localrepository(repo.repository):
                     del mf[fn]
             return mf
 
-        ctx1 = self[node1]
-        ctx2 = self[node2]
+        if isinstance(node1, context.changectx):
+            ctx1 = node1
+        else:
+            ctx1 = self[node1]
+        if isinstance(node2, context.changectx):
+            ctx2 = node2
+        else:
+            ctx2 = self[node2]
+
         working = ctx2 == self[None]
         parentworking = working and ctx1 == self['.']
         match = match or match_.always(self.root, self.getcwd())
         listignored, listclean, listunknown = ignored, clean, unknown
+
+        # load earliest manifest first for caching reasons
+        if not working and ctx2.rev() < ctx1.rev():
+            ctx2.manifest()
 
         if not parentworking:
             def bad(f, msg):

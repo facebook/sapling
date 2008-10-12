@@ -1174,21 +1174,18 @@ def diff(repo, node1=None, node2=None, match=None,
             flcache[f] = flctx._filelog
         return flctx
 
-    # reading the data for node1 early allows it to play nicely
-    # with repo.status and the revlog cache.
     ctx1 = repo[node1]
-    # force manifest reading
-    man1 = ctx1.manifest()
-    date1 = util.datestr(ctx1.date())
+    ctx2 = repo[node2]
 
     if not changes:
-        changes = repo.status(node1, node2, match=match)
+        changes = repo.status(ctx1, ctx2, match=match)
     modified, added, removed = changes[:3]
 
     if not modified and not added and not removed:
         return
 
-    ctx2 = repo[node2]
+    date1 = util.datestr(ctx1.date())
+    man1 = ctx1.manifest()
 
     if repo.ui.quiet:
         r = None
