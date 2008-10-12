@@ -128,15 +128,117 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 
 	Py_INCREF(Py_None);
 	return Py_None;
-
 quit:
 	return NULL;
+}
+
+#ifdef _WIN32
+# ifdef _MSC_VER
+/* msvc 6.0 has problems */
+#  define inline __inline
+typedef unsigned long uint32_t;
+# else
+#  include <stdint.h>
+# endif
+static uint32_t ntohl(uint32_t x)
+{
+	return ((x & 0x000000ffUL) << 24) |
+		((x & 0x0000ff00UL) <<  8) |
+		((x & 0x00ff0000UL) >>  8) |
+		((x & 0xff000000UL) >> 24);
+}
+#else
+/* not windows */
+# include <sys/types.h>
+# if defined __BEOS__ && !defined __HAIKU__
+#  include <ByteOrder.h>
+# else
+#  include <arpa/inet.h>
+# endif
+# include <inttypes.h>
+#endif
+
+static PyObject *parse_dirstate(PyObject *self, PyObject *args)
+{
+	PyObject *dmap, *cmap, *parents = NULL, *ret = NULL;
+	PyObject *fname = NULL, *cname = NULL, *entry = NULL;
+	char *str, *cur, *end, *cpos;
+	int state, mode, size, mtime, flen;
+	int len;
+	char decode[16]; /* for alignment */
+
+	if (!PyArg_ParseTuple(args, "O!O!s#:parse_dirstate",
+			      &PyDict_Type, &dmap,
+			      &PyDict_Type, &cmap,
+			      &str, &len))
+		goto quit;
+
+	/* read parents */
+	if (len < 40)
+		goto quit;
+
+	parents = Py_BuildValue("s#s#", str, 20, str + 20, 20);
+	if (!parents)
+		goto quit;
+
+	/* read filenames */
+	cur = str + 40;
+	end = str + len;
+
+	while (cur < end - 17) {
+		/* unpack header */
+		state = *cur;
+		memcpy(decode, cur + 1, 16);
+		mode = ntohl(*(uint32_t *)(decode));
+		size = ntohl(*(uint32_t *)(decode + 4));
+		mtime = ntohl(*(uint32_t *)(decode + 8));
+		flen = ntohl(*(uint32_t *)(decode + 12));
+		cur += 17;
+		if (cur + flen > end)
+			goto quit;
+
+		entry = Py_BuildValue("ciii", state, mode, size, mtime);
+		PyObject_GC_UnTrack(entry); /* don't waste time with this */
+		if (!entry)
+			goto quit;
+
+		cpos = memchr(cur, 0, flen);
+		if (cpos) {
+			fname = PyString_FromStringAndSize(cur, cpos - cur);
+			cname = PyString_FromStringAndSize(cpos + 1,
+							   flen - (cpos - cur) - 1);
+			if (!fname || !cname ||
+			    PyDict_SetItem(cmap, fname, cname) == -1 ||
+			    PyDict_SetItem(dmap, fname, entry) == -1)
+				goto quit;
+			Py_DECREF(cname);
+		} else {
+			fname = PyString_FromStringAndSize(cur, flen);
+			if (!fname ||
+			    PyDict_SetItem(dmap, fname, entry) == -1)
+				goto quit;
+		}
+		cur += flen;
+		Py_DECREF(fname);
+		Py_DECREF(entry);
+		fname = cname = entry = NULL;
+	}
+
+	ret = parents;
+	Py_INCREF(ret);
+quit:
+	Py_XDECREF(fname);
+	Py_XDECREF(cname);
+	Py_XDECREF(entry);
+	Py_XDECREF(parents);
+	return ret;
 }
 
 static char parsers_doc[] = "Efficient content parsing.";
 
 static PyMethodDef methods[] = {
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
+	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{NULL, NULL}
 };
 

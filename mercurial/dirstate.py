@@ -10,7 +10,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import nullid
 from i18n import _
 import struct, os, stat, util, errno, ignore
-import cStringIO, osutil, sys
+import cStringIO, osutil, sys, parsers
 
 _unknown = ('?', 0, 0, 0)
 _format = ">cllll"
@@ -190,8 +190,6 @@ class dirstate(object):
     def _read(self):
         self._map = {}
         self._copymap = {}
-        if not self._dirtypl:
-            self._pl = [nullid, nullid]
         try:
             st = self._opener("dirstate").read()
         except IOError, err:
@@ -200,27 +198,9 @@ class dirstate(object):
         if not st:
             return
 
+        p = parsers.parse_dirstate(self._map, self._copymap, st);
         if not self._dirtypl:
-            self._pl = [st[:20], st[20: 40]]
-
-        # deref fields so they will be local in loop
-        dmap = self._map
-        copymap = self._copymap
-        unpack = struct.unpack
-        e_size = struct.calcsize(_format)
-        pos1 = 40
-        l = len(st)
-
-        # the inner loop
-        while pos1 < l:
-            pos2 = pos1 + e_size
-            e = unpack(">cllll", st[pos1:pos2]) # a literal here is faster
-            pos1 = pos2 + e[4]
-            f = st[pos2:pos1]
-            if '\0' in f:
-                f, c = f.split('\0')
-                copymap[f] = c
-            dmap[f] = e # we hold onto e[4] because making a subtuple is slow
+            self._pl = p
 
     def invalidate(self):
         for a in "_map _copymap _foldmap _branch _pl _dirs _ignore".split():
@@ -274,7 +254,7 @@ class dirstate(object):
         self._dirty = True
         self._addpath(f)
         s = os.lstat(self._join(f))
-        self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime, 0)
+        self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -297,7 +277,7 @@ class dirstate(object):
                 return
         self._dirty = True
         self._addpath(f)
-        self._map[f] = ('n', 0, -1, -1, 0)
+        self._map[f] = ('n', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -305,7 +285,7 @@ class dirstate(object):
         'mark a file normal, but dirty'
         self._dirty = True
         self._addpath(f)
-        self._map[f] = ('n', 0, -2, -1, 0)
+        self._map[f] = ('n', 0, -2, -1)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -313,7 +293,7 @@ class dirstate(object):
         'mark a file added'
         self._dirty = True
         self._addpath(f, True)
-        self._map[f] = ('a', 0, -1, -1, 0)
+        self._map[f] = ('a', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -328,7 +308,7 @@ class dirstate(object):
                 size = -1
             elif entry[0] == 'n' and entry[2] == -2:
                 size = -2
-        self._map[f] = ('r', 0, size, 0, 0)
+        self._map[f] = ('r', 0, size, 0)
         if size == 0 and f in self._copymap:
             del self._copymap[f]
 
@@ -337,7 +317,7 @@ class dirstate(object):
         self._dirty = True
         s = os.lstat(self._join(f))
         self._addpath(f)
-        self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime, 0)
+        self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -373,9 +353,9 @@ class dirstate(object):
         self.clear()
         for f in files:
             if 'x' in files.flags(f):
-                self._map[f] = ('n', 0777, -1, 0, 0)
+                self._map[f] = ('n', 0777, -1, 0)
             else:
-                self._map[f] = ('n', 0666, -1, 0, 0)
+                self._map[f] = ('n', 0666, -1, 0)
         self._pl = (parent, nullid)
         self._dirty = True
 
@@ -401,7 +381,7 @@ class dirstate(object):
             if f in copymap:
                 f = "%s\0%s" % (f, copymap[f])
             if e[3] > limit and e[0] == 'n':
-                e = (e[0], 0, -1, -1, 0)
+                e = (e[0], 0, -1, -1)
             e = pack(_format, e[0], e[1], e[2], e[3], len(f))
             write(e)
             write(f)
@@ -577,7 +557,7 @@ class dirstate(object):
                     uadd(fn)
                 continue
 
-            state, mode, size, time, foo = dmap[fn]
+            state, mode, size, time = dmap[fn]
 
             if not st and state in "nma":
                 dadd(fn)
