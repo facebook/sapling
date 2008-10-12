@@ -37,7 +37,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                   ' work until you upgrade to 1.5.0 or newer. Falling back to'
                   ' a slower method that may be buggier. Please upgrade, or'
                   ' contribute a patch to use the ctypes bindings instead'
-                  ' of SWIG.')
+                  ' of SWIG.\n')
         have_replay = False
     initializing_repo = False
     svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
