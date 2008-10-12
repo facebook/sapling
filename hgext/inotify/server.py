@@ -266,15 +266,14 @@ class Watcher(object):
             return 'i'
         return type_
 
-    def updatestatus(self, wfn, st=None, status=None, oldstatus=None):
+    def updatestatus(self, wfn, st=None, status=None):
         if st:
             status = self.filestatus(wfn, st)
         else:
             self.statcache.pop(wfn, None)
         root, fn = self.split(wfn)
         d = self.dir(self.tree, root)
-        if oldstatus is None:
-            oldstatus = d.get(fn)
+        oldstatus = d.get(fn)
         isdir = False
         if oldstatus:
             try:
@@ -343,7 +342,7 @@ class Watcher(object):
             if status == 'r' and not st:
                 self.updatestatus(wfn, st, status=status)
             else:
-                self.updatestatus(wfn, st, oldstatus=status)
+                self.updatestatus(wfn, st)
         self.check_deleted('!')
         self.check_deleted('r')
 
