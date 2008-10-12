@@ -21,7 +21,7 @@ static int hexdigit(char c)
 
 	if (c >= 'a' && c <= 'f')
 		return c - 'a' + 10;
-	
+
 	return -1;
 }
 
@@ -60,9 +60,9 @@ static PyObject *unhexlify(const char *str, int len)
 
 		*d++ = (hi << 4) | lo;
 	}
-	
+
 	goto done;
-	
+
 bail:
 	Py_XDECREF(ret);
 	ret = NULL;
