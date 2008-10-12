@@ -382,8 +382,8 @@ class Watcher(object):
         # But it's easier to do nothing than to open that can of
         # worms.
 
-        if self.repo.dirstate.ignorefunc is not None:
-            self.repo.dirstate.ignorefunc = None
+        if '_ignore' in self.repo.dirstate.__dict__:
+            delattr(self.repo.dirstate, '_ignore')
             self.ui.note(_('rescanning due to .hgignore change\n'))
             self.scan()
 
