@@ -1,5 +1,7 @@
 # this is hack to make sure no escape characters are inserted into the output
-import os; del os.environ['TERM'] 
+import os;
+if 'TERM' in os.environ:
+    del os.environ['TERM'] 
 import doctest
 
 import mercurial.changelog
