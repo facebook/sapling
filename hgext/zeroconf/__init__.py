@@ -65,6 +65,7 @@ def publish(name, desc, path, port):
     # advertise to Mercurial clients
     svc = Zeroconf.ServiceInfo('_hg._tcp.local.',
                                name + '._hg._tcp.local.',
+                               server = host,
                                port = port,
                                properties = {'description': desc,
                                              'path': "/" + path},
