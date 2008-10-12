@@ -99,7 +99,7 @@ ext_modules=[
     ]
 
 packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
-            'hgext.highlight']
+            'hgext.highlight', 'hgext.zeroconf', ]
 
 try:
     import msvcrt
