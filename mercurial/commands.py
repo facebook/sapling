@@ -123,8 +123,8 @@ def annotate(ui, repo, *pats, **opts):
         for f in funcmap:
             l = [f(n) for n, dummy in lines]
             if l:
-                m = max(map(len, l))
-                pieces.append(["%*s" % (m, x) for x in l])
+                ml = max(map(len, l))
+                pieces.append(["%*s" % (ml, x) for x in l])
 
         if pieces:
             for p, l in zip(zip(*pieces), lines):
