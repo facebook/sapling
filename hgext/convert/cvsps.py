@@ -41,6 +41,45 @@ class logentry(object):
 class logerror(Exception):
     pass
 
+def getrepopath(cvspath):
+    """Return the repository path from a CVS path.
+
+    >>> getrepopath('/foo/bar')
+    '/foo/bar'
+    >>> getrepopath('c:/foo/bar')
+    'c:/foo/bar'
+    >>> getrepopath(':pserver:10/foo/bar')
+    '/foo/bar'
+    >>> getrepopath(':pserver:10c:/foo/bar')
+    '/foo/bar'
+    >>> getrepopath(':pserver:/foo/bar')
+    '/foo/bar'
+    >>> getrepopath(':pserver:c:/foo/bar')
+    'c:/foo/bar'
+    >>> getrepopath(':pserver:truc@foo.bar:/foo/bar')
+    '/foo/bar'
+    >>> getrepopath(':pserver:truc@foo.bar:c:/foo/bar')
+    'c:/foo/bar'
+    """
+    # According to CVS manual, CVS paths are expressed like:
+    # [:method:][[user][:password]@]hostname[:[port]]/path/to/repository
+    #
+    # Unfortunately, Windows absolute paths start with a drive letter
+    # like 'c:' making it harder to parse. Here we assume that drive
+    # letters are only one character long and any CVS component before
+    # the repository path is at least 2 characters long, and use this
+    # to disambiguate.
+    parts = cvspath.split(':')
+    if len(parts) == 1:
+        return parts[0]
+    # Here there is an ambiguous case if we have a port number
+    # immediately followed by a Windows driver letter. We assume this
+    # never happens and decide it must be CVS path component,
+    # therefore ignoring it.
+    if len(parts[-2]) > 1:
+        return parts[-1].lstrip('0123456789')
+    return parts[-2] + ':' + parts[-1]
+
 def createlog(ui, directory=None, root="", rlog=True, cache=None):
     '''Collect the CVS rlog'''
 
@@ -83,8 +122,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         except IOError:
             raise logerror('Not a CVS sandbox')
 
-        if prefix and not prefix.endswith('/'):
-            prefix += '/'
+        if prefix and not prefix.endswith(os.sep):
+            prefix += os.sep
 
         # Use the Root file in the sandbox, if it exists
         try:
@@ -134,10 +173,10 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     cmd = ['cvs', '-q']
     if root:
         cmd.append('-d%s' % root)
-        p = root.split(':')[-1]
+        p = util.normpath(getrepopath(root))
         if not p.endswith('/'):
             p += '/'
-        prefix = p + prefix
+        prefix = p + util.normpath(prefix)
     cmd.append(['log', 'rlog'][rlog])
     if date:
         # no space between option and date string
@@ -165,7 +204,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 rcs = match.group(1)
                 tags = {}
                 if rlog:
-                    filename = rcs[:-2]
+                    filename = util.normpath(rcs[:-2])
                     if filename.startswith(prefix):
                         filename = filename[len(prefix):]
                     if filename.startswith('/'):
@@ -191,7 +230,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             # expect 'Working file' (only when using log instead of rlog)
             match = re_10.match(line)
             assert match, _('RCS file must be followed by working file')
-            filename = match.group(1)
+            filename = util.normpath(match.group(1))
             state = 2
 
         elif state == 2:
