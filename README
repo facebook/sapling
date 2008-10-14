@@ -22,6 +22,10 @@ If you are unfamiliar with installing Mercurial extensions, please see the Using
 
 .. _UsingExtensions: http://www.selenic.com/mercurial/wiki/index.cgi/UsingExtensions
 
+Before using hgsubversion, I *strongly* encourage you to run the automated tests. Just use nose_ if you have it (or ``easy_install nose`` if you want it), or use ``python tests/run.py`` to run the suite with the conventional test runner. Note that because I use nose, there's a lot of stdout spew in the tests right now. The important part is that all the tests pass.
+
+.. _nose: http://code.google.com/p/python-nose/
+
 Basic Use
 -----------
 Get a new clone of an svn server::
