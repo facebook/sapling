@@ -501,6 +501,8 @@ class localrepository(repo.repository):
         if filter not in self.filterpats:
             l = []
             for pat, cmd in self.ui.configitems(filter):
+                if cmd == '!':
+                    continue
                 mf = util.matcher(self.root, "", [pat], [], [])[1]
                 fn = None
                 params = cmd

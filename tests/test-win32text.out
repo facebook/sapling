@@ -185,3 +185,20 @@ no changes needed to linefeed
 M linefeed
 reverting linefeed
 % just linefeed<CR><LF>
+# disable extension again
+[extensions]
+win32text = 
+[decode]
+** = cleverdecode:
+[encode]
+** = cleverencode:
+[decode]
+** = !
+[encode]
+** = !
+
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+hello<NUL><CR><LF>
+some<LF>text<LF>
+rem empty<LF>
+
