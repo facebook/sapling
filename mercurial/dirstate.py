@@ -21,6 +21,20 @@ def _finddirs(path):
         yield path[:pos]
         pos = path.rfind('/', 0, pos)
 
+def _incdirs(dirs, path):
+    for base in _finddirs(path):
+        if base in dirs:
+            dirs[base] += 1
+            return
+        dirs[base] = 1
+
+def _decdirs(dirs, path):
+    for base in _finddirs(path):
+        if dirs[base] > 1:
+            dirs[base] -= 1
+            return
+        del dirs[base]
+
 class dirstate(object):
 
     def __init__(self, opener, ui, root):
@@ -65,14 +79,7 @@ class dirstate(object):
             dirs = {}
             for f,s in self._map.iteritems():
                 if s[0] != 'r':
-                    pos = f.rfind('/')
-                    while pos != -1:
-                        f = f[:pos]
-                        if f in dirs:
-                            dirs[f] += 1
-                            break
-                        dirs[f] = 1
-                        pos = f.rfind('/')
+                    _incdirs(dirs, f)
             self._dirs = dirs
             return self._dirs
         elif name == '_ignore':
@@ -222,12 +229,7 @@ class dirstate(object):
 
     def _droppath(self, f):
         if self[f] not in "?r" and "_dirs" in self.__dict__:
-            dirs = self._dirs
-            for base in _finddirs(f):
-                if dirs[base] == 1:
-                    del dirs[base]
-                    return
-                dirs[base] -= 1
+            _decdirs(self._dirs, f)
 
     def _addpath(self, f, check=False):
         oldstate = self[f]
@@ -245,9 +247,7 @@ class dirstate(object):
                     raise util.Abort(
                         _('file %r in dirstate clashes with %r') % (d, f))
         if oldstate in "?r" and "_dirs" in self.__dict__:
-            dirs = self._dirs
-            for base in _finddirs(f):
-                dirs[base] = dirs.get(base, 0) + 1
+            _incdirs(self._dirs, f)
 
     def normal(self, f):
         'mark a file normal and clean'
