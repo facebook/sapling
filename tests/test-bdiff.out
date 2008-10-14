@@ -17,4 +17,7 @@
 *** 'abc' 'abc'
 *** 'a\n' 'a\n'
 *** 'a\nb' 'a\nb'
+6 6 'y\n\n'
+6 6 'y\n\n'
+9 9 'y\n\n'
 done

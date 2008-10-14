@@ -240,6 +240,7 @@ static void recurse(struct line *a, struct line *b, struct pos *pos,
 static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 {
 	struct hunklist l;
+	struct hunk *curr;
 	struct pos *pos;
 	int t;
 
@@ -259,6 +260,30 @@ static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 	}
 
 	free(pos);
+
+	for (curr = l.base; curr != l.head; curr++) {
+		struct hunk *next = curr+1;
+		int shift = 0;
+
+		if (next == l.head)
+			break;
+
+		if (curr->a2 == next->a1)
+			while (curr->a2+shift < an && curr->b2+shift < bn
+			       && !cmp(a+curr->a2+shift, b+curr->b2+shift))
+				shift++;
+		else if (curr->b2 == next->b1)
+			while (curr->b2+shift < bn && curr->a2+shift < an
+			       && !cmp(b+curr->b2+shift, a+curr->a2+shift))
+				shift++;
+		if (!shift)
+			continue;
+		curr->b2 += shift;
+		next->b1 += shift;
+		curr->a2 += shift;
+		next->a1 += shift;
+	}
+
 	return l;
 }
 

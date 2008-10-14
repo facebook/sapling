@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys
+import sys, struct
 from mercurial import bdiff, mpatch
 
 def test1(a, b):
@@ -38,5 +38,17 @@ test("ab", "ab")
 test("abc", "abc")
 test("a\n", "a\n")
 test("a\nb", "a\nb")
+
+#issue1295
+def showdiff(a, b):
+    bin = bdiff.bdiff(a, b)
+    pos = 0
+    while pos < len(bin):
+        p1, p2, l = struct.unpack(">lll", bin[pos:pos + 12])
+        pos += 12
+        print p1, p2, repr(bin[pos:pos + l])
+        pos += l
+showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\nx\n\nz\n")
+showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\ny\n\nx\n\nz\n")
 
 print "done"
