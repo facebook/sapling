@@ -87,8 +87,12 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     else:
                         stupid_svn_server_pull_rev(ui, svn, hg_editor, r)
                     converted = True
-                    open(hg_editor.last_revision_handled_file,
-                         'w').write(str(r.revnum))
+                    tmpfile = '%s_tmp' % hg_editor.last_revision_handled_file
+                    fp = open(tmpfile, 'w')
+                    fp.write(str(r.revnum))
+                    fp.close()
+                    merc_util.rename(tmpfile,
+                                     hg_editor.last_revision_handled_file)
                 except core.SubversionException, e:
                     if hasattr(e, 'message') and (
                         'Server sent unexpected return value (502 Bad Gateway)'
