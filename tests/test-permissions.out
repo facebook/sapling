@@ -20,3 +20,7 @@ diff -r c1fab96507ef a
 @@ -1,1 +1,1 @@
 -foo
 +barber
+M a
+? dir/a
+dir: Permission denied
+M a

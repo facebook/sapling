@@ -492,11 +492,18 @@ class dirstate(object):
             nd = work.pop()
             if hasattr(match, 'dir'):
                 match.dir(nd)
+            skip = None
             if nd == '.':
                 nd = ''
-                entries = listdir(join(nd), stat=True)
             else:
-                entries = listdir(join(nd), stat=True, skip ='.hg')
+                skip = '.hg'
+            try:
+                entries = listdir(join(nd), stat=True, skip=skip)
+            except OSError, inst:
+                if inst.errno == errno.EACCES:
+                    fwarn(nd, inst.strerror)
+                    continue
+                raise
             for f, kind, st in entries:
                 nf = normalize(nd and (nd + "/" + f) or f, True)
                 if nf not in results:
