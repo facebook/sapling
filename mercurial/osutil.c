@@ -172,29 +172,19 @@ static PyObject *make_item(const WIN32_FIND_DATAA *fd, int wantstat)
 		kind, py_st);
 }
 
-static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *_listdir(char *path, int plen, int wantstat, char *skip)
 {
 	PyObject *rval = NULL; /* initialize - return value */
-	PyObject *statobj = NULL; /* initialize - optional arg */
 	PyObject *list;
 	HANDLE fh;
 	WIN32_FIND_DATAA fd;
-	char *path, *pattern, *skip = NULL;
-	int plen, wantstat;
-
-	static char *kwlist[] = {"path", "stat", "skip", NULL};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|Os:listdir",
-			kwlist, &path, &plen, &statobj, &skip))
-		goto error_parse;
-
-	wantstat = statobj && PyObject_IsTrue(statobj);
+	char *pattern;
 
 	/* build the path + \* pattern string */
 	pattern = malloc(plen+3); /* path + \* + \0 */
 	if (!pattern) {
 		PyErr_NoMemory();
-		goto error_parse;
+		goto error_nomem;
 	}
 	strcpy(pattern, path);
 
@@ -254,7 +244,7 @@ error_list:
 	FindClose(fh);
 error_file:
 	free(pattern);
-error_parse:
+error_nomem:
 	return rval;
 }
 
@@ -276,33 +266,27 @@ int entkind(struct dirent *ent)
 	return -1;
 }
 
-static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 {
-	static char *kwlist[] = { "path", "stat", "skip", NULL };
-	PyObject *statflag = NULL, *list, *elem, *stat, *ret = NULL;
-	char fullpath[PATH_MAX + 10], *path, *skip = NULL;
-	int pathlen, keepstat, kind, dfd = -1, err;
+	PyObject *list, *elem, *stat, *ret = NULL;
+	char fullpath[PATH_MAX + 10];
+	int kind, dfd = -1, err;
 	struct stat st;
 	struct dirent *ent;
 	DIR *dir;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|Os:listdir", kwlist,
-					 &path, &pathlen, &statflag, &skip))
-		goto error_parse;
-
 	if (pathlen >= PATH_MAX) {
 		PyErr_SetString(PyExc_ValueError, "path too long");
-		goto error_parse;
+		goto error_value;
 	}
 	strncpy(fullpath, path, PATH_MAX);
 	fullpath[pathlen] = '/';
-	keepstat = statflag && PyObject_IsTrue(statflag);
 
 #ifdef AT_SYMLINK_NOFOLLOW
 	dfd = open(path, O_RDONLY);
 	if (dfd == -1) {
 		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
-		goto error_parse;
+		goto error_value;
 	}
 	dir = fdopendir(dfd);
 #else
@@ -375,11 +359,35 @@ error_dir:
 #ifdef AT_SYMLINK_NOFOLLOW
 	close(dfd);
 #endif
-error_parse:
+error_value:
 	return ret;
 }
 
 #endif /* ndef _WIN32 */
+
+static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	PyObject *statobj = NULL; /* initialize - optional arg */
+	PyObject *skipobj = NULL; /* initialize - optional arg */
+	char *path, *skip = NULL;
+	int wantstat, plen;
+
+	static char *kwlist[] = {"path", "stat", "skip", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|OO:listdir",
+			kwlist, &path, &plen, &statobj, &skipobj))
+		return NULL;
+
+	wantstat = statobj && PyObject_IsTrue(statobj);
+
+	if (skipobj && skipobj != Py_None) {
+		skip = PyString_AsString(skipobj);
+		if (!skip)
+			return NULL;
+	}
+
+	return _listdir(path, plen, wantstat, skip);
+}
 
 static char osutil_doc[] = "Native operating system services.";
 
