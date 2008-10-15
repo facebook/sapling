@@ -12,8 +12,12 @@ hgcat()
     hg --cwd src-hg cat -r tip "$1"
 }
 
+# Test legacy configuration with external cvsps
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
+echo "graphlog = " >> $HGRCPATH
+echo "[convert]" >> $HGRCPATH
+echo "cvsps=cvsps -A -u --cvs-direct -q" >> $HGRCPATH
 
 echo % create cvs repository
 mkdir cvsrepo
@@ -96,6 +100,4 @@ echo % convert again with --filemap
 hg convert --filemap filemap src src-filemap | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
 hgcat b/c
 hg -R src-filemap log --template '#rev# #desc# files: #files#\n'
-
-echo "graphlog = " >> $HGRCPATH
 hg -R src-hg glog --template '#rev# (#branches#) #desc# files: #files#\n'

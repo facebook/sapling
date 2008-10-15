@@ -17,7 +17,7 @@ class convert_cvs(converter_source):
             raise NoRepo("%s does not look like a CVS checkout" % path)
 
         checktool('cvs')
-        self.cmd = ui.config('convert', 'cvsps', 'cvsps -A -u --cvs-direct -q')
+        self.cmd = ui.config('convert', 'cvsps', 'builtin')
         cvspsexe = self.cmd.split(None, 1)[0]
         self.builtin = cvspsexe == 'builtin'
 
