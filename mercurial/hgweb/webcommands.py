@@ -276,12 +276,11 @@ def manifest(web, req, tmpl):
         if f[:l] != path:
             continue
         remain = f[l:]
-        if "/" in remain:
-            short = remain[:remain.index("/") + 1] # bleah
-            files[short] = (f, None)
-        else:
-            short = os.path.basename(remain)
-            files[short] = (f, n)
+        idx = remain.find('/')
+        if idx != -1:
+            remain = remain[:idx+1]
+            n = None
+        files[remain] = (f, n)
 
     if not files:
         raise ErrorResponse(HTTP_NOT_FOUND, 'path not found: ' + path)
