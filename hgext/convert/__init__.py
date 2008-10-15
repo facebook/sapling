@@ -104,11 +104,12 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     sandbox is ignored.
 
     Because CVS does not have changesets, it is necessary to collect
-    individual commits to CVS and merge them into changesets. CVS source
-    can use the external 'cvsps' program (this is a legacy option and may
-    be removed in future) or use its internal changeset merging code.
-    External cvsps is default, and options may be passed to it by setting
-        --config convert.cvsps='cvsps -A -u --cvs-direct -q'
+    individual commits to CVS and merge them into changesets. CVS
+    source uses its internal changeset merging code by default but can
+    be configured to call the external 'cvsps' program by setting:
+        --config convert.cvsps=cvsps -A -u --cvs-direct -q
+    This is a legacy option and may be removed in future.
+
     The options shown are the defaults.
 
     Internal cvsps is selected by setting
