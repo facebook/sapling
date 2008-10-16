@@ -234,11 +234,178 @@ quit:
 	return ret;
 }
 
+
+static inline uint64_t ntohll(uint64_t x)
+{
+	return (((uint64_t)ntohl((uint32_t)x)) << 32) |
+		(uint64_t)ntohl((uint32_t)(x >> 32));
+}
+
+const char nullid[20];
+const int nullrev = -1;
+
+/* RevlogNG format (all in big endian, data may be inlined):
+ *    6 bytes: offset
+ *    2 bytes: flags
+ *    4 bytes: compressed length
+ *    4 bytes: uncompressed length
+ *    4 bytes: base revision
+ *    4 bytes: link revision
+ *    4 bytes: parent 1 revision
+ *    4 bytes: parent 2 revision
+ *   32 bytes: nodeid (only 20 bytes used)
+ */
+static int _parse_index_ng (const char *data, int size, int inlined,
+			    PyObject *index, PyObject *nodemap)
+{
+	PyObject *entry = NULL, *node_id = NULL, *n_obj = NULL;
+	PyObject *nullrev_obj = NULL, *nullid_obj = NULL;
+	int comp_len, uncomp_len, base_rev, link_rev, parent_1, parent_2;
+	uint64_t offset_flags;
+	int n = 0;
+	const char *end = data + size;
+
+	while (data < end) {
+		offset_flags = ntohll(*((uint64_t *) data));
+		if (n == 0) /* mask out version number for the first entry */
+			offset_flags &= 0xFFFF;
+
+		comp_len = ntohl(*((uint32_t *) (data + 8)));
+		uncomp_len = ntohl(*((uint32_t *) (data + 12)));
+		base_rev = ntohl(*((uint32_t *) (data + 16)));
+		link_rev = ntohl(*((uint32_t *) (data + 20)));
+		parent_1 = ntohl(*((uint32_t *) (data + 24)));
+		parent_2 = ntohl(*((uint32_t *) (data + 28)));
+		node_id = PyString_FromStringAndSize(data + 32, 20);
+		n_obj = PyInt_FromLong(n);
+		if (!node_id || !n_obj ||
+		    PyDict_SetItem(nodemap, node_id, n_obj) != 0)
+			goto quit;
+		Py_DECREF(n_obj);
+		
+		entry = Py_BuildValue("LiiiiiiN", offset_flags, comp_len,
+				      uncomp_len, base_rev, link_rev,
+				      parent_1, parent_2, node_id);
+		PyObject_GC_UnTrack(entry); /* don't waste time with this */
+		if (!entry)
+			goto quit;
+
+		/* append to or set value in the index list */
+		if (inlined) {
+			if (PyList_Append(index, entry) != 0)
+				goto quit;
+			Py_DECREF(entry);
+		} else {
+			PyList_SET_ITEM(index, n, entry); /* steals reference */
+		}
+
+		data += 64 + (inlined ? comp_len : 0);
+		n++;
+	}
+	if (data > end) {
+		if (!PyErr_Occurred())
+			PyErr_SetString(PyExc_ValueError, "corrupt index file");
+		goto quit;
+	}
+
+	/* create the nullid/nullrev entry in the nodemap and the 
+	 * magic nullid entry in the index at [-1] */
+	nullid_obj = PyString_FromStringAndSize(nullid, 20);
+	nullrev_obj = PyInt_FromLong(nullrev);
+	if (!nodemap || !nullid_obj || !nullrev_obj ||
+	    PyDict_SetItem(nodemap, nullid_obj, nullrev_obj) != 0)
+		goto quit;
+	Py_DECREF(nullrev_obj);
+		
+	entry = Py_BuildValue("iiiiiiiN", 0, 0, 0, -1, -1, -1, -1, nullid_obj);
+	PyObject_GC_UnTrack(entry); /* don't waste time with this */
+	if (!entry)
+		goto quit;
+	if (inlined) {
+		if (PyList_Append(index, entry) != 0)
+			goto quit;
+		Py_DECREF(entry);
+	} else {
+		PyList_SET_ITEM(index, n, entry); /* steals reference */
+	}
+
+	return 1;
+
+quit:
+	Py_XDECREF(n_obj);
+	Py_XDECREF(node_id);
+	Py_XDECREF(entry);
+	Py_XDECREF(nullrev_obj);
+	Py_XDECREF(nullid_obj);
+	return 0;
+}
+
+
+
+/* This function parses a index file and returns a Python tuple of the
+ * following format: (index, nodemap, cache)
+ *
+ * index: a list of tuples containing the RevlogNG records
+ * nodemap: a dict mapping node ids to indices in the index list
+ * cache: if data is inlined, a tuple (index_file_content, 0) else None
+ */
+static PyObject *parse_index(PyObject *self, PyObject *args)
+{
+	const char *data;
+	int size, inlined;
+	PyObject *rval = NULL, *index = NULL, *nodemap = NULL, *cache = NULL; 
+	PyObject *data_obj = NULL, *inlined_obj;
+
+	if (!PyArg_ParseTuple(args, "s#O", &data, &size, &inlined_obj))
+		return NULL;
+	inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
+
+	/* If no data is inlined, we know the size of the index list in 
+	 * advance: size divided by size of one one revlog record (64 bytes) 
+	 * plus one for the nullid */  
+	index = inlined ? PyList_New(0) : PyList_New(size / 64 + 1);
+	if (!index)
+		goto quit;
+
+	nodemap = PyDict_New();
+
+	/* set up the cache return value */
+	if (inlined) {
+		/* Note that the reference to data_obj is only borrowed */
+		data_obj = PyTuple_GET_ITEM(args, 0);
+		cache = Py_BuildValue("iO", 0, data_obj);
+		if (!cache)
+			goto quit;
+	} else {
+		cache = Py_None;
+		Py_INCREF(Py_None);
+	}
+
+	/* actually populate the index and the nodemap with data */
+	if (!_parse_index_ng (data, size, inlined, index, nodemap))
+		goto quit;
+
+	rval = Py_BuildValue("NNN", index, nodemap, cache);
+	if (!rval)
+		goto quit;
+	return rval;
+
+quit:
+	Py_XDECREF(index);
+	Py_XDECREF(nodemap);
+	Py_XDECREF(cache);
+	Py_XDECREF(rval);
+	Py_XDECREF(data_obj);
+	return NULL;
+}
+
+
 static char parsers_doc[] = "Efficient content parsing.";
 
 static PyMethodDef methods[] = {
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
+	{"parse_index", parse_index, METH_VARARGS, "parse a revlog index\n"},
 	{NULL, NULL}
 };
 
