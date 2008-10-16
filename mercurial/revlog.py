@@ -12,7 +12,7 @@ of the GNU General Public License, incorporated herein by reference.
 
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
-import changegroup, errno, ancestor, mdiff
+import changegroup, errno, ancestor, mdiff, parsers
 import struct, util, zlib
 
 _pack = struct.pack
@@ -374,38 +374,9 @@ class revlogio(object):
             index[0] = e
             return index, nodemap, None
 
-        s = self.size
-        cache = None
-        index = []
-        nodemap =  {nullid: nullrev}
-        n = off = 0
-        # if we're not using lazymap, always read the whole index
         data = fp.read()
-        l = len(data) - s
-        append = index.append
-        if inline:
-            cache = (0, data)
-            while off <= l:
-                e = _unpack(indexformatng, data[off:off + s])
-                nodemap[e[7]] = n
-                append(e)
-                n += 1
-                if e[1] < 0:
-                    break
-                off += e[1] + s
-        else:
-            while off <= l:
-                e = _unpack(indexformatng, data[off:off + s])
-                nodemap[e[7]] = n
-                append(e)
-                n += 1
-                off += s
-
-        e = list(index[0])
-        type = gettype(e[0])
-        e[0] = offset_type(0, type)
-        index[0] = e
-
+        # call the C implementation to parse the index data
+        index, nodemap, cache = parsers.parse_index(data, inline)
         return index, nodemap, cache
 
     def packentry(self, entry, node, version, rev):
@@ -492,8 +463,10 @@ class revlog(object):
             d = self._io.parseindex(f, self._inline)
             self.index, self.nodemap, self._chunkcache = d
 
-        # add the magic null revision at -1
-        self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
+        # add the magic null revision at -1 (if it hasn't been done already)
+        if (self.index == [] or isinstance(self.index, lazyindex) or
+            self.index[-1][7] != nullid) :
+            self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
 
     def _loadindex(self, start, end):
         """load a block of indexes all at once from the lazy parser"""
