@@ -214,12 +214,23 @@ email::
     recipients on command line, message on stdin). Normally, setting
     this to "sendmail" or "/usr/sbin/sendmail" is enough to use
     sendmail to send messages.
+  charsets;;
+    Optional. Comma-separated list of charsets considered
+    convenient for recipients. Addresses, headers, and parts not
+    containing patches of outgoing messages will be encoded in
+    the first charset to which conversion from local encoding
+    (ui.encoding, ui.fallbackencoding) succeeds. If correct
+    conversion, including to ui.encoding, fails, the text in
+    question is sent as is in fake ascii. Defaults to empty list.
 
   Email example:
 
     [email]
     from = Joseph User <joe.user@example.com>
     method = /usr/sbin/sendmail
+    # charsets for western europeans
+    # us-ascii, utf-8 omitted, as they are tried first and last
+    charsets = iso-8859-1, iso-8859-15, windows-1252
 
 [[extensions]]
 extensions::
