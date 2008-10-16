@@ -276,9 +276,11 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     As a shortcut, you can also use the revision argument to mark a
     revision as good or bad without checking it out first.
 
-    If you supply a command it will be used for automatic bisection. Its
-    exit status will be used as flag to mark revision as bad or good (good
-    in case of 0 and bad in any other case).
+    If you supply a command it will be used for automatic bisection. Its exit
+    status will be used as flag to mark revision as bad or good. In case exit
+    status is 0 the revision is marked as good, 125 - skipped, 127 (command not
+    found) - bisection will be aborted and any other status bigger than 0 will
+    mark revision as bad.
     """
     def print_result(nodes, good):
         displayer = cmdutil.show_changeset(ui, repo, {})
@@ -328,10 +330,18 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     if command:
         changesets = 1
         while changesets:
-            # check state
-            status = bool(list(os.popen3(command)[2]))
+            # update state
+            status = os.spawnlp(os.P_WAIT, command)
             node = repo.lookup(rev or '.')
-            transition = (status and 'bad' or 'good')
+            if status == 125:
+                transition = "skip"
+            elif status == 0:
+                transition = "good"
+            # status < 0 means process was killed
+            elif status == 127 or status < 0:
+                break
+            else:
+                transition = "bad"
             state[transition].append(node)
             ui.note(_('Changeset %s: %s\n') % (short(node), transition))
             check_state(state, interactive=False)
