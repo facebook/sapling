@@ -440,7 +440,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                                          date,
                                          extra)
             ha = hg_editor.repo.commitctx(current_ctx)
-            hg_editor.revmap[r.revnum, b] = ha
+            hg_editor.add_to_revmap(r.revnum, b, ha)
             hg_editor._save_metadata()
             ui.status('committed as %s on branch %s\n' %
                       (node.hex(ha),  b or 'default'))

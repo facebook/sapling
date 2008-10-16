@@ -49,6 +49,13 @@ def stash_exception_on_self(fn):
 
 
 class HgChangeReceiver(delta.Editor):
+    def add_to_revmap(self, revnum, branch, node_hash):
+        f = open(self.revmap_file, 'a')
+        f.write(str(revnum) + ' ' + node.hex(node_hash) + ' ' + (branch or '') + '\n')
+        f.flush()
+        f.close()
+        self.revmap[revnum, branch] = node_hash
+
     def __init__(self, path, ui_=None, subdir='', author_host='',
                  tag_locations=['tags']):
         """path is the path to the target hg repo.
@@ -67,7 +74,13 @@ class HgChangeReceiver(delta.Editor):
         self.revmap = {}
         if os.path.exists(self.revmap_file):
             f = open(self.revmap_file)
-            self.revmap = pickle.load(f)
+            for l in f:
+                revnum, node_hash, branch = l.split(' ', 2)
+                if branch == '\n':
+                    branch = None
+                else:
+                    branch = branch[:-1]
+                self.revmap[int(revnum), branch] = node.bin(node_hash)
             f.close()
         self.branches = {}
         if os.path.exists(self.branch_info_file):
@@ -106,6 +119,7 @@ class HgChangeReceiver(delta.Editor):
         else:
             self.repo = hg.repository(self.ui, repo_path, create=True)
             os.makedirs(os.path.dirname(self.uuid_file))
+            open(self.revmap_file, 'w') # make empty file
 
     def clear_current_info(self):
         '''Clear the info relevant to a replayed revision so that the next
@@ -124,7 +138,6 @@ class HgChangeReceiver(delta.Editor):
         '''Save the Subversion metadata. This should really be called after
         every revision is created.
         '''
-        pickle_atomic(self.revmap, self.revmap_file, self.meta_data_dir)
         pickle_atomic(self.branches, self.branch_info_file, self.meta_data_dir)
         pickle_atomic(self.tags, self.tag_info_file, self.meta_data_dir)
 
@@ -373,8 +386,7 @@ class HgChangeReceiver(delta.Editor):
             self.ui.status('committed as %s on branch %s\n' %
                            (node.hex(new_hash), (branch or 'default')))
             if (rev.revnum, branch) not in self.revmap:
-                self.revmap[rev.revnum, branch] = new_hash
-                self._save_metadata()
+                self.add_to_revmap(rev.revnum, branch, new_hash)
         # now we handle branches that need to be committed without any files
         for branch in self.commit_branches_empty:
             ha = self.get_parent_revision(rev.revnum, branch)
@@ -403,8 +415,7 @@ class HgChangeReceiver(delta.Editor):
             self.ui.status('committed as %s on branch %s\n' %
                            (node.hex(new_hash), (branch or 'default')))
             if (rev.revnum, branch) not in self.revmap:
-                self.revmap[rev.revnum, branch] = new_hash
-                self._save_metadata()
+                self.add_to_revmap(rev.revnum, branch, new_hash)
         self.clear_current_info()
 
     @property
