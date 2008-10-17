@@ -82,6 +82,29 @@ echo % patch file contents
 cat .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % qrefresh --short
+echo 'orphan' > orphanchild
+hg add orphanchild
+hg qrefresh nonexistingfilename
+hg qrefresh --short 1/base
+hg qrefresh --short 2/base
+
+echo % qdiff
+hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % patch file contents
+cat .hg/patches/mqbase | \
+sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+    -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+
+echo % diff shows orphan ...
+hg st
+hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+              -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" \
+              -e "s/^\(diff\).*/\1/"
+
 cd ..
 
 

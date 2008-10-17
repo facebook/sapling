@@ -1073,7 +1073,9 @@ class queue:
                 man = repo.manifest.read(changes[0])
                 aaa = aa[:]
                 if opts.get('short'):
-                    match = cmdutil.matchfiles(repo, mm + aa + dd)
+                    # if amending a patch, we always match already-in-patch files
+                    match = cmdutil.matchfiles(repo, mm + aa + dd + matchfn.files())
+                    matchfn = match # FIXME: Why have two matchers if we only need one?
                 else:
                     match = cmdutil.matchall(repo)
                 m, a, r, d = repo.status(match=match)[:4]
@@ -1750,6 +1752,9 @@ def refresh(ui, repo, *pats, **opts):
     the modifications that match those patterns; the remaining modifications
     will remain in the working directory.
 
+    If --short is specified, files currently included in the patch will 
+    be refreshed just like matched files and remain in the patch.
+
     hg add/remove/copy/rename work as usual, though you might want to use
     git-style patches (--git or [diff] git=1) to track copies and renames.
     """
@@ -2411,7 +2416,7 @@ cmdtable = {
         (refresh,
          [('e', 'edit', None, _('edit commit message')),
           ('g', 'git', None, _('use git extended diff format')),
-          ('s', 'short', None, _('refresh only files already in the patch')),
+          ('s', 'short', None, _('refresh only files already in the patch and specified files')),
           ('U', 'currentuser', None, _('add/update "From: <current user>" in patch')),
           ('u', 'user', '', _('add/update "From: <given user>" in patch')),
           ('D', 'currentdate', None, _('update "Date: <current date>" in patch (if present)')),

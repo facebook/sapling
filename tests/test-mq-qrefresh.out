@@ -159,6 +159,48 @@ diff -r b55ecdccb5cf 2/base
 @@ -1,1 +1,1 @@
 -base
 +patched
+% qrefresh --short
+% qdiff
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@
+-base
++patched
+diff -r b55ecdccb5cf orphanchild
+--- /dev/null
++++ b/orphanchild
+@@ -0,0 +1,1 @@
++orphan
+% patch file contents
+mqbase
+
+diff -r b55ecdccb5cf 1/base
+--- a/1/base
++++ b/1/base
+@@ -1,1 +1,1 @@
+-base
++patched
+diff -r b55ecdccb5cf 2/base
+--- a/2/base
++++ b/2/base
+@@ -1,1 +1,1 @@
+-base
++patched
+% diff shows orphan ...
+A orphanchild
+? base
+diff
+--- /dev/null
++++ b/orphanchild
+@@ -0,0 +1,1 @@
++orphan
 % create test repo
 adding a
 % capture changes
