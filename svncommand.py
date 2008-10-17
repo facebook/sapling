@@ -64,19 +64,6 @@ def generate_hg_tags(ui, hg_repo_path, **opts):
         source_ha = hg_editor.get_parent_revision(source[1]+1, source[0])
         f.write('%s tag/%s\n' % (node.hex(source_ha), tag))
 
-def parse_revmap(revmap_filename):
-    revmap = {}
-    f = open(revmap_filename)
-    for l in f:
-        revnum, node_hash, branch = l.split(' ', 2)
-        if branch == '\n':
-            branch = None
-        else:
-            branch = branch[:-1]
-        revmap[int(revnum), branch] = node.bin(node_hash)
-    f.close()
-    return revmap
-
 @register_subcommand('up')
 def update(ui, args, repo, clean=False, **opts):
     """Update to a specified Subversion revision number.
@@ -85,7 +72,7 @@ def update(ui, args, repo, clean=False, **opts):
     rev = int(args[0])
     path = os.path.join(repo.path, 'svn', 'rev_map')
     answers = []
-    for k,v in parse_revmap(path).iteritems():
+    for k,v in util.parse_revmap(path).iteritems():
         if k[0] == rev:
             answers.append((v, k[1]))
     if len(answers) == 1:
@@ -152,7 +139,7 @@ def verify_all_revisions(ui, args, repo, **opts):
     args = list(args)
     if args:
         start_rev = int(args.pop(0))
-    revmap = parse_revmap(os.path.join(repo.path, 'svn', 'rev_map'))
+    revmap = util.parse_revmap(os.path.join(repo.path, 'svn', 'rev_map'))
     revs = sorted(revmap.keys())
     for revnum, br in revs:
         if revnum < start_rev:

@@ -14,6 +14,8 @@ from mercurial import node
 from svn import delta
 from svn import core
 
+import util as our_util
+
 def pickle_atomic(data, file_path, dir=None):
     """pickle some data to a path atomically.
 
@@ -73,15 +75,7 @@ class HgChangeReceiver(delta.Editor):
             self.subdir = self.subdir[1:]
         self.revmap = {}
         if os.path.exists(self.revmap_file):
-            f = open(self.revmap_file)
-            for l in f:
-                revnum, node_hash, branch = l.split(' ', 2)
-                if branch == '\n':
-                    branch = None
-                else:
-                    branch = branch[:-1]
-                self.revmap[int(revnum), branch] = node.bin(node_hash)
-            f.close()
+            self.revmap = our_util.parse_revmap(self.revmap_file)
         self.branches = {}
         if os.path.exists(self.branch_info_file):
             f = open(self.branch_info_file)
@@ -119,7 +113,10 @@ class HgChangeReceiver(delta.Editor):
         else:
             self.repo = hg.repository(self.ui, repo_path, create=True)
             os.makedirs(os.path.dirname(self.uuid_file))
-            open(self.revmap_file, 'w') # make empty file
+            f = open(self.revmap_file, 'w')
+            f.write('%s\n' % our_util.REVMAP_FILE_VERSION)
+            f.flush()
+            f.close()
 
     def clear_current_info(self):
         '''Clear the info relevant to a replayed revision so that the next
