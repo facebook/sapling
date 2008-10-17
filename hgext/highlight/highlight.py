@@ -29,6 +29,9 @@ def pygmentize(field, fctx, style, tmpl):
     if util.binary(text):
         return
 
+    # avoid UnicodeDecodeError in pygments
+    text = util.tolocal(text)
+
     # To get multi-line strings right, we can't format line-by-line
     try:
         lexer = guess_lexer_for_filename(fctx.path(), text[:1024],
