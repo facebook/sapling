@@ -566,9 +566,15 @@ def static(web, req, tmpl):
     fname = req.form['file'][0]
     # a repo owner may set web.static in .hg/hgrc to get any file
     # readable by the user running the CGI script
-    static = web.config("web", "static",
-                        os.path.join(web.templatepath, "static"),
-                        untrusted=False)
+    static = web.config("web", "static", None, untrusted=False)
+    if not static:
+        tp = web.templatepath
+        if isinstance(tp, str):
+            tp = [tp]
+        for path in tp:
+            static = os.path.join(path, 'static')
+            if os.path.isdir(static):
+                break
     return [staticfile(static, fname, req)]
 
 def graph(web, req, tmpl):

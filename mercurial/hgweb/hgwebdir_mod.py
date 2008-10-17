@@ -84,11 +84,11 @@ class hgwebdir(object):
 
                 # a static file
                 if virtual.startswith('static/') or 'static' in req.form:
-                    static = os.path.join(templater.templatepath(), 'static')
                     if virtual.startswith('static/'):
                         fname = virtual[7:]
                     else:
                         fname = req.form['static'][0]
+                    static = templater.templatepath('static')
                     return staticfile(static, fname, req)
 
                 # top-level index

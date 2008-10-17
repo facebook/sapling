@@ -9,6 +9,8 @@ from i18n import _
 import re, sys, os
 from mercurial import util
 
+path = ['templates', '../templates']
+
 def parsestring(s, quoted=True):
     '''parse a string using simple c-like syntax.
     string must be in quotes if quoted is True.'''
@@ -150,18 +152,27 @@ class templater(object):
 def templatepath(name=None):
     '''return location of template file or directory (if no name).
     returns None if not found.'''
+    normpaths = []
 
     # executable version (py2exe) doesn't support __file__
     if hasattr(sys, 'frozen'):
         module = sys.executable
     else:
         module = __file__
-    for f in 'templates', '../templates':
-        fl = f.split('/')
-        if name: fl.append(name)
-        p = os.path.join(os.path.dirname(module), *fl)
-        if (name and os.path.exists(p)) or os.path.isdir(p):
+    for f in path:
+        if f.startswith('/'):
+            p = f
+        else:
+            fl = f.split('/')
+            p = os.path.join(os.path.dirname(module), *fl)
+        if name:
+            p = os.path.join(p, name)
+        if name and os.path.exists(p):
             return os.path.normpath(p)
+        elif os.path.isdir(p):
+            normpaths.append(os.path.normpath(p))
+
+    return normpaths
 
 def stringify(thing):
     '''turn nested template iterator into string.'''

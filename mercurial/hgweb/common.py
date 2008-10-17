@@ -82,10 +82,13 @@ def style_map(templatepath, style):
     """
     locations = style and [os.path.join(style, "map"), "map-"+style] or []
     locations.append("map")
-    for location in locations:
-        mapfile = os.path.join(templatepath, location)
-        if os.path.isfile(mapfile):
-            return mapfile
+    if isinstance(templatepath, str):
+        templatepath = [templatepath]
+    for path in templatepath:
+        for location in locations:
+            mapfile = os.path.join(path, location)
+            if os.path.isfile(mapfile):
+                return mapfile
     raise RuntimeError("No hgweb templates found in %r" % templatepath)
 
 def paritygen(stripecount, offset=0):
