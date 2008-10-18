@@ -143,17 +143,24 @@ GP_PATCH  = 1 << 0  # we have to run patch
 GP_FILTER = 1 << 1  # there's some copy/rename operation
 GP_BINARY = 1 << 2  # there's a binary patch
 
+class patchmeta:
+    """Patched file metadata
+
+    'op' is the performed operation within ADD, DELETE, RENAME, MODIFY
+    or COPY.  'path' is patched file path. 'oldpath' is set to the
+    origin file when 'op' is either COPY or RENAME, None
+    otherwise. 'mode' is set to the new mode of patched file or None.
+    """
+    def __init__(self, path):
+        self.path = path
+        self.oldpath = None
+        self.mode = None
+        self.op = 'MODIFY'
+        self.lineno = 0
+        self.binary = False
+
 def readgitpatch(fp, firstline=None):
     """extract git-style metadata about patches from <patchname>"""
-    class gitpatch:
-        "op is one of ADD, DELETE, RENAME, MODIFY or COPY"
-        def __init__(self, path):
-            self.path = path
-            self.oldpath = None
-            self.mode = None
-            self.op = 'MODIFY'
-            self.lineno = 0
-            self.binary = False
 
     def reader(fp, firstline):
         if firstline is not None:
@@ -177,7 +184,7 @@ def readgitpatch(fp, firstline=None):
                 if gp:
                     gitpatches.append(gp)
                 src, dst = m.group(1, 2)
-                gp = gitpatch(dst)
+                gp = patchmeta(dst)
                 gp.lineno = lineno
         elif gp:
             if line.startswith('--- '):
