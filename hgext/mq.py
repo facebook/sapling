@@ -2331,6 +2331,23 @@ def reposetup(ui, repo):
         repo.__class__ = mqrepo
         repo.mq = queue(ui, repo.join(""))
 
+def uisetup(ui):
+    # override import to disallow importing over patch
+    importalias, importcmd = cmdutil.findcmd(ui, 'import', commands.table)
+    for alias, cmd in commands.table.iteritems():
+        if cmd is importcmd:
+            importkey = alias
+            break
+    orig_import = importcmd[0]
+    def mqimport(ui, repo, patch1, *patches, **opts):
+        if hasattr(repo, 'abort_if_wdir_patched'):
+            repo.abort_if_wdir_patched(_('cannot import over an applied patch'),
+                                       opts.get('force'))
+            orig_import(ui, repo, patch1, *patches, **opts)
+    importcmd = list(importcmd)
+    importcmd[0] = mqimport
+    commands.table[importkey] = tuple(importcmd)
+
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
 cmdtable = {

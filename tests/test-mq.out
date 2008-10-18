@@ -169,6 +169,8 @@ abort: cannot commit over an applied mq patch
 % push should fail
 pushing to ../../k
 abort: source has mq patches applied
+% import should fail
+abort: cannot import over an applied patch
 % qunapplied
 test2.patch
 % qpush/qpop with index
