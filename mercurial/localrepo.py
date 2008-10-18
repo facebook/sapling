@@ -1808,8 +1808,7 @@ class localrepository(repo.repository):
                 for fname in extranodes:
                     if isinstance(fname, int):
                         continue
-                    add_extra_nodes(fname,
-                                    msng_filenode_set.setdefault(fname, {}))
+                    msng_filenode_set.setdefault(fname, {})
                     changedfiles[fname] = 1
             # Go through all our files in order sorted by name.
             for fname in util.sort(changedfiles):
@@ -1820,6 +1819,7 @@ class localrepository(repo.repository):
                 # missing.
                 if fname in msng_filenode_set:
                     prune_filenodes(fname, filerevlog)
+                    add_extra_nodes(fname, msng_filenode_set[fname])
                     msng_filenode_lst = msng_filenode_set[fname].keys()
                 else:
                     msng_filenode_lst = []
