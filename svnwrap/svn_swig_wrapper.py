@@ -40,9 +40,15 @@ def _create_auth_baton(pool):
         ]
     # Platform-dependant authentication methods
     if hasattr(client, 'get_windows_simple_provider'):
-        providers.append(client.get_windows_simple_provider())
+        try:
+            providers.append(client.get_windows_simple_provider())
+        except:
+            pass
     if hasattr(client, 'get_keychain_simple_provider'):
-        providers.append(client.get_keychain_simple_provider())
+        try:
+            providers.append(client.get_keychain_simple_provider())
+        except:
+            pass
     providers.extend([client.get_simple_prompt_provider(user_pass_prompt, 2),
                      ])
     return core.svn_auth_open(providers, pool)
