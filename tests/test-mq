@@ -199,6 +199,14 @@ hg commit
 echo % push should fail
 hg push ../../k
 
+echo % import should fail
+hg st .
+echo foo >> ../a
+hg diff > ../../import.diff
+hg revert --no-backup ../a
+hg import ../../import.diff
+hg st
+
 echo % qunapplied
 hg qunapplied
 
