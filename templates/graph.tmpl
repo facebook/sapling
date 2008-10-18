@@ -26,7 +26,7 @@ navigate: <small class="navigate">#changenav%navgraphentry#</small>
 </p>
 </form>
 
-<div id="noscript">The revision graph only works with JavaScript-enabled browsers.</div>
+<noscript>The revision graph only works with JavaScript-enabled browsers.</noscript>
 
 <div id="wrapper">
 <ul id="nodebgs"></ul>
@@ -37,8 +37,6 @@ navigate: <small class="navigate">#changenav%navgraphentry#</small>
 <script type="text/javascript" src="#staticurl#graph.js"></script>
 <script type="text/javascript">
 <!-- hide script content
-
-document.getElementById('noscript').style.display = 'none';
 
 var data = {jsdata|json};
 var graph = new Graph();

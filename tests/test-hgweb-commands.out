@@ -518,7 +518,7 @@ graph |
 
 <div class="title">&nbsp;</div>
 
-<div id="noscript">The revision graph only works with JavaScript-enabled browsers.</div>
+<noscript>The revision graph only works with JavaScript-enabled browsers.</noscript>
 
 <div id="wrapper">
 <ul id="nodebgs"></ul>
@@ -529,8 +529,6 @@ graph |
 <script type="text/javascript" src="/static/graph.js"></script>
 <script>
 <!-- hide script content
-
-document.getElementById('noscript').style.display = 'none';
 
 var data = [["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "long", ["default", true], ["tip"]], ["2ef0ac749a14", [0, 1], [], "base", "test", "long", ["default", false], ["1.0"]]];
 var graph = new Graph();
