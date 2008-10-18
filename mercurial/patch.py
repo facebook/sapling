@@ -988,8 +988,7 @@ def iterhunks(ui, fp, sourcefile=None):
     if hunknum == 0 and dopatch and not gitworkdone:
         raise NoHunks
 
-def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
-              rejmerge=None, updatedir=None):
+def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
     """reads a patch from fp and tries to apply it.  The dict 'changed' is
        filled in with all of the filenames changed by the patch.  Returns 0
        for a clean patch, -1 if any rejects were found and 1 if there was
@@ -1004,8 +1003,6 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
         if not current_file:
             return 0
         current_file.close()
-        if rejmerge:
-            rejmerge(current_file)
         return len(current_file.rej)
 
     for state, values in iterhunks(ui, fp, sourcefile):
@@ -1047,8 +1044,6 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
 
     rejects += closefile()
 
-    if updatedir and gitpatches:
-        updatedir(gitpatches)
     if rejects:
         return -1
     return err
