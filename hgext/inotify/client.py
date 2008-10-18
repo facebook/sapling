@@ -29,7 +29,7 @@ def query(ui, repo, names, match, ignored, clean, unknown=True):
         states = 'almrx!'
         if ignored:
             raise ValueError('this is insanity')
-        if clean: states += 'n'
+        if clean: states += 'c'
         if unknown: states += '?'
         yield states
 
