@@ -234,13 +234,6 @@ quit:
 	return ret;
 }
 
-
-static inline uint64_t ntohll(uint64_t x)
-{
-	return (((uint64_t)ntohl((uint32_t)x)) << 32) |
-		(uint64_t)ntohl((uint32_t)(x >> 32));
-}
-
 const char nullid[20];
 const int nullrev = -1;
 
@@ -266,9 +259,14 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 	const char *end = data + size;
 
 	while (data < end) {
-		offset_flags = ntohll(*((uint64_t *) data));
-		if (n == 0) /* mask out version number for the first entry */
-			offset_flags &= 0xFFFF;
+                offset_flags = ntohl(*((uint32_t *) (data + 4)));
+                if (n == 0) /* mask out version number for the first entry */
+                        offset_flags &= 0xFFFF;
+                else {
+			uint32_t offset_high =  ntohl(*((uint32_t *) data));
+                        offset_flags |= ((uint64_t) offset_high) << 32;
+		}
+
 
 		comp_len = ntohl(*((uint32_t *) (data + 8)));
 		uncomp_len = ntohl(*((uint32_t *) (data + 12)));
