@@ -176,7 +176,7 @@ def install_hg():
     # Run installer in hg root
     os.chdir(os.path.join(os.path.dirname(sys.argv[0]), '..'))
     cmd = ('%s setup.py clean --all'
-           ' install --force --home="%s" --install-lib="%s"'
+           ' install --force --prefix="%s" --install-lib="%s"'
            ' --install-scripts="%s" >%s 2>&1'
            % (sys.executable, INST, PYTHONDIR, BINDIR, installerrs))
     vlog("# Running", cmd)

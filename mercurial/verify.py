@@ -28,6 +28,9 @@ def _verify(repo):
     cl = repo.changelog
     mf = repo.manifest
 
+    if not repo.cancopy():
+        raise util.Abort(_("cannot verify bundle or remote repos"))
+
     def err(linkrev, msg, filename=None):
         if linkrev != None:
             badrevs[linkrev] = True

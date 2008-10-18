@@ -23,3 +23,5 @@ touch dir/a
 hg status
 chmod -rx dir
 hg status
+# reenable perm to allow deletion
+chmod +rx dir
