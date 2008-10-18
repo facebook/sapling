@@ -1,4 +1,4 @@
-"""a mercurial extension for syntax highlighting in hgweb
+"""syntax highlighting in hgweb, based on Pygments
 
 It depends on the pygments syntax highlighting library:
 http://pygments.org/

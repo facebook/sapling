@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-''' Rebasing feature
+'''move sets of revisions to a different ancestor
 
 This extension lets you rebase changesets in an existing Mercurial repository.
 
@@ -105,6 +105,8 @@ def rebase(ui, repo, **opts):
 
         clearstatus(repo)
         ui.status(_("rebase completed\n"))
+        if os.path.exists(repo.sjoin('undo')):
+            util.unlink(repo.sjoin('undo'))
         if skipped:
             ui.note(_("%d revisions have been skipped\n") % len(skipped))
     finally:

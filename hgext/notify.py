@@ -4,66 +4,65 @@
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
-#
-# hook extension to email notifications to people when changesets are
-# committed to a repo they subscribe to.
-#
-# default mode is to print messages to stdout, for testing and
-# configuring.
-#
-# to use, configure notify extension and enable in hgrc like this:
-#
-#   [extensions]
-#   hgext.notify =
-#
-#   [hooks]
-#   # one email for each incoming changeset
-#   incoming.notify = python:hgext.notify.hook
-#   # batch emails when many changesets incoming at one time
-#   changegroup.notify = python:hgext.notify.hook
-#
-#   [notify]
-#   # config items go in here
-#
-# config items:
-#
-# REQUIRED:
-#   config = /path/to/file # file containing subscriptions
-#
-# OPTIONAL:
-#   test = True            # print messages to stdout for testing
-#   strip = 3              # number of slashes to strip for url paths
-#   domain = example.com   # domain to use if committer missing domain
-#   style = ...            # style file to use when formatting email
-#   template = ...         # template to use when formatting email
-#   incoming = ...         # template to use when run as incoming hook
-#   changegroup = ...      # template when run as changegroup hook
-#   maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
-#   maxsubject = 67        # truncate subject line longer than this
-#   diffstat = True        # add a diffstat before the diff content
-#   sources = serve        # notify if source of incoming changes in this list
-#                          # (serve == ssh or http, push, pull, bundle)
-#   [email]
-#   from = user@host.com   # email address to send as if none given
-#   [web]
-#   baseurl = http://hgserver/... # root of hg web site for browsing commits
-#
-# notify config file has same format as regular hgrc. it has two
-# sections so you can express subscriptions in whatever way is handier
-# for you.
-#
-#   [usersubs]
-#   # key is subscriber email, value is ","-separated list of glob patterns
-#   user@host = pattern
-#
-#   [reposubs]
-#   # key is glob pattern, value is ","-separated list of subscriber emails
-#   pattern = user@host
-#
-# glob patterns are matched against path to repo root.
-#
-# if you like, you can put notify config file in repo that users can
-# push changes to, they can manage their own subscriptions.
+
+'''hook extension to email notifications on commits/pushes
+
+Subscriptions can be managed through hgrc. Default mode is to print
+messages to stdout, for testing and configuring.
+
+To use, configure notify extension and enable in hgrc like this:
+
+   [extensions]
+   hgext.notify =
+
+   [hooks]
+   # one email for each incoming changeset
+   incoming.notify = python:hgext.notify.hook
+   # batch emails when many changesets incoming at one time
+   changegroup.notify = python:hgext.notify.hook
+
+   [notify]
+   # config items go in here
+
+ config items:
+
+ REQUIRED:
+   config = /path/to/file # file containing subscriptions
+
+ OPTIONAL:
+   test = True            # print messages to stdout for testing
+   strip = 3              # number of slashes to strip for url paths
+   domain = example.com   # domain to use if committer missing domain
+   style = ...            # style file to use when formatting email
+   template = ...         # template to use when formatting email
+   incoming = ...         # template to use when run as incoming hook
+   changegroup = ...      # template when run as changegroup hook
+   maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
+   maxsubject = 67        # truncate subject line longer than this
+   diffstat = True        # add a diffstat before the diff content
+   sources = serve        # notify if source of incoming changes in this list
+                          # (serve == ssh or http, push, pull, bundle)
+   [email]
+   from = user@host.com   # email address to send as if none given
+   [web]
+   baseurl = http://hgserver/... # root of hg web site for browsing commits
+
+ notify config file has same format as regular hgrc. it has two
+ sections so you can express subscriptions in whatever way is handier
+ for you.
+
+   [usersubs]
+   # key is subscriber email, value is ","-separated list of glob patterns
+   user@host = pattern
+
+   [reposubs]
+   # key is glob pattern, value is ","-separated list of subscriber emails
+   pattern = user@host
+
+ glob patterns are matched against path to repo root.
+
+ if you like, you can put notify config file in repo that users can
+ push changes to, they can manage their own subscriptions.'''
 
 from mercurial.i18n import _
 from mercurial.node import bin, short

@@ -5,7 +5,7 @@
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
-'''allow graphing the number of lines (or count of revisions) grouped by template'''
+'''command to show certain statistics about revision history'''
 
 from mercurial.i18n import _
 from mercurial import patch, cmdutil, util, templater
@@ -180,5 +180,5 @@ cmdtable = {
           ('s', 'sort', False, _('sort by key (default: sort by count)')),
           ('', 'aliases', '', _('file with email aliases')),
           ('', 'progress', None, _('show progress'))],
-         _("hg stats [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]")),
+         _("hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]")),
 }

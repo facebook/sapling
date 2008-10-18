@@ -51,18 +51,22 @@ def sha1(s):
 
 try:
     import subprocess
+    closefds = os.name == 'posix'
     def popen2(cmd, mode='t', bufsize=-1):
-        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize, close_fds=True,
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                             close_fds=closefds,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         return p.stdin, p.stdout
     def popen3(cmd, mode='t', bufsize=-1):
-        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize, close_fds=True,
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                             close_fds=closefds,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         return p.stdin, p.stdout, p.stderr
     def Popen3(cmd, capturestderr=False, bufsize=-1):
         stderr = capturestderr and subprocess.PIPE or None
-        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize, close_fds=True,
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                             close_fds=closefds,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=stderr)
         p.fromchild = p.stdout
