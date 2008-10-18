@@ -229,88 +229,6 @@ def readgitpatch(fp, firstline=None):
 
     return (dopatch, gitpatches)
 
-def patch(patchname, ui, strip=1, cwd=None, files={}):
-    """apply <patchname> to the working directory.
-    returns whether patch was applied with fuzz factor."""
-    patcher = ui.config('ui', 'patch')
-    args = []
-    try:
-        if patcher:
-            return externalpatch(patcher, args, patchname, ui, strip, cwd,
-                                 files)
-        else:
-            try:
-                return internalpatch(patchname, ui, strip, cwd, files)
-            except NoHunks:
-                patcher = util.find_exe('gpatch') or util.find_exe('patch')
-                ui.debug(_('no valid hunks found; trying with %r instead\n') %
-                         patcher)
-                if util.needbinarypatch():
-                    args.append('--binary')
-                return externalpatch(patcher, args, patchname, ui, strip, cwd,
-                                     files)
-    except PatchError, err:
-        s = str(err)
-        if s:
-            raise util.Abort(s)
-        else:
-            raise util.Abort(_('patch failed to apply'))
-
-def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
-    """use <patcher> to apply <patchname> to the working directory.
-    returns whether patch was applied with fuzz factor."""
-
-    fuzz = False
-    if cwd:
-        args.append('-d %s' % util.shellquote(cwd))
-    fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
-                                       util.shellquote(patchname)))
-
-    for line in fp:
-        line = line.rstrip()
-        ui.note(line + '\n')
-        if line.startswith('patching file '):
-            pf = util.parse_patch_output(line)
-            printed_file = False
-            files.setdefault(pf, (None, None))
-        elif line.find('with fuzz') >= 0:
-            fuzz = True
-            if not printed_file:
-                ui.warn(pf + '\n')
-                printed_file = True
-            ui.warn(line + '\n')
-        elif line.find('saving rejects to file') >= 0:
-            ui.warn(line + '\n')
-        elif line.find('FAILED') >= 0:
-            if not printed_file:
-                ui.warn(pf + '\n')
-                printed_file = True
-            ui.warn(line + '\n')
-    code = fp.close()
-    if code:
-        raise PatchError(_("patch command failed: %s") %
-                         util.explain_exit(code)[0])
-    return fuzz
-
-def internalpatch(patchobj, ui, strip, cwd, files={}):
-    """use builtin patch to apply <patchobj> to the working directory.
-    returns whether patch was applied with fuzz factor."""
-    try:
-        fp = file(patchobj, 'rb')
-    except TypeError:
-        fp = patchobj
-    if cwd:
-        curdir = os.getcwd()
-        os.chdir(cwd)
-    try:
-        ret = applydiff(ui, fp, files, strip=strip)
-    finally:
-        if cwd:
-            os.chdir(curdir)
-    if ret < 0:
-        raise PatchError
-    return ret > 0
-
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
@@ -1117,6 +1035,88 @@ def updatedir(ui, repo, patches):
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
     return util.sort(files)
+
+def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
+    """use <patcher> to apply <patchname> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+
+    fuzz = False
+    if cwd:
+        args.append('-d %s' % util.shellquote(cwd))
+    fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
+                                       util.shellquote(patchname)))
+
+    for line in fp:
+        line = line.rstrip()
+        ui.note(line + '\n')
+        if line.startswith('patching file '):
+            pf = util.parse_patch_output(line)
+            printed_file = False
+            files.setdefault(pf, (None, None))
+        elif line.find('with fuzz') >= 0:
+            fuzz = True
+            if not printed_file:
+                ui.warn(pf + '\n')
+                printed_file = True
+            ui.warn(line + '\n')
+        elif line.find('saving rejects to file') >= 0:
+            ui.warn(line + '\n')
+        elif line.find('FAILED') >= 0:
+            if not printed_file:
+                ui.warn(pf + '\n')
+                printed_file = True
+            ui.warn(line + '\n')
+    code = fp.close()
+    if code:
+        raise PatchError(_("patch command failed: %s") %
+                         util.explain_exit(code)[0])
+    return fuzz
+
+def internalpatch(patchobj, ui, strip, cwd, files={}):
+    """use builtin patch to apply <patchobj> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+    try:
+        fp = file(patchobj, 'rb')
+    except TypeError:
+        fp = patchobj
+    if cwd:
+        curdir = os.getcwd()
+        os.chdir(cwd)
+    try:
+        ret = applydiff(ui, fp, files, strip=strip)
+    finally:
+        if cwd:
+            os.chdir(curdir)
+    if ret < 0:
+        raise PatchError
+    return ret > 0
+
+def patch(patchname, ui, strip=1, cwd=None, files={}):
+    """apply <patchname> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+    patcher = ui.config('ui', 'patch')
+    args = []
+    try:
+        if patcher:
+            return externalpatch(patcher, args, patchname, ui, strip, cwd,
+                                 files)
+        else:
+            try:
+                return internalpatch(patchname, ui, strip, cwd, files)
+            except NoHunks:
+                patcher = util.find_exe('gpatch') or util.find_exe('patch')
+                ui.debug(_('no valid hunks found; trying with %r instead\n') %
+                         patcher)
+                if util.needbinarypatch():
+                    args.append('--binary')
+                return externalpatch(patcher, args, patchname, ui, strip, cwd,
+                                     files)
+    except PatchError, err:
+        s = str(err)
+        if s:
+            raise util.Abort(s)
+        else:
+            raise util.Abort(_('patch failed to apply'))
 
 def b85diff(to, tn):
     '''print base85-encoded binary diff'''
