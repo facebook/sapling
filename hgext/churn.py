@@ -180,5 +180,5 @@ cmdtable = {
           ('s', 'sort', False, _('sort by key (default: sort by count)')),
           ('', 'aliases', '', _('file with email aliases')),
           ('', 'progress', None, _('show progress'))],
-         _("hg stats [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]")),
+         _("hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]")),
 }
