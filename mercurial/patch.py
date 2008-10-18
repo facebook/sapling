@@ -925,7 +925,7 @@ def iterhunks(ui, fp, sourcefile=None):
             try:
                 if context == None and x.startswith('***************'):
                     context = True
-                gpatch = changed.get(bfile[2:], (None, None))[1]
+                gpatch = changed.get(bfile[2:])
                 create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
                 remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
                 current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
@@ -938,7 +938,7 @@ def iterhunks(ui, fp, sourcefile=None):
                 emitfile = False
                 yield 'file', (afile, bfile, current_hunk)
         elif state == BFILE and x.startswith('GIT binary patch'):
-            current_hunk = binhunk(changed[bfile[2:]][1])
+            current_hunk = binhunk(changed[bfile[2:]])
             hunknum += 1
             if emitfile:
                 emitfile = False
@@ -954,11 +954,11 @@ def iterhunks(ui, fp, sourcefile=None):
                     fp, dopatch, gitpatches = scangitpatch(fp, x)
                     yield 'git', gitpatches
                     for gp in gitpatches:
-                        changed[gp.path] = (gp.op, gp)
+                        changed[gp.path] = gp
                 # else error?
                 # copy/rename + modify should modify target, not source
-                gitop = changed.get(bfile[2:], (None, None))[0]
-                if gitop in ('COPY', 'DELETE', 'RENAME'):
+                gp = changed.get(bfile[2:])
+                if gp and gp.op in ('COPY', 'DELETE', 'RENAME'):
                     afile = bfile
                     gitworkdone = True
             newfile = True
@@ -1026,7 +1026,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
             current_hunk = values
             ret = current_file.apply(current_hunk, reverse)
             if ret >= 0:
-                changed.setdefault(current_file.fname, (None, None))
+                changed.setdefault(current_file.fname, None)
                 if ret > 0:
                     err = 1
         elif state == 'file':
@@ -1052,7 +1052,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
                     src, dst = [util.canonpath(cwd, cwd, x)
                                 for x in [gp.oldpath, gp.path]]
                     copyfile(src, dst)
-                changed[gp.path] = (gp.op, gp)
+                changed[gp.path] = gp
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
 
@@ -1087,13 +1087,15 @@ def updatedir(ui, repo, patches):
     if cwd:
         cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
     for f in patches:
-        ctype, gp = patches[f]
-        if ctype == 'RENAME':
+        gp = patches[f]
+        if not gp:
+            continue
+        if gp.op == 'RENAME':
             copies.append((gp.oldpath, gp.path))
             removes[gp.oldpath] = 1
-        elif ctype == 'COPY':
+        elif gp.op == 'COPY':
             copies.append((gp.oldpath, gp.path))
-        elif ctype == 'DELETE':
+        elif gp.op == 'DELETE':
             removes[gp.path] = 1
     for src, dst in copies:
         repo.copy(src, dst)
@@ -1101,12 +1103,12 @@ def updatedir(ui, repo, patches):
     if removes:
         repo.remove(util.sort(removes), True)
     for f in patches:
-        ctype, gp = patches[f]
+        gp = patches[f]
         if gp and gp.mode:
             islink, isexec = gp.mode
             dst = os.path.join(repo.root, gp.path)
             # patch won't create empty files
-            if ctype == 'ADD' and not os.path.exists(dst):
+            if gp.op == 'ADD' and not os.path.exists(dst):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
             else:
