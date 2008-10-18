@@ -105,6 +105,8 @@ def rebase(ui, repo, **opts):
 
         clearstatus(repo)
         ui.status(_("rebase completed\n"))
+        if os.path.exists(repo.sjoin('undo')):
+            util.unlink(repo.sjoin('undo'))
         if skipped:
             ui.note(_("%d revisions have been skipped\n") % len(skipped))
     finally:
