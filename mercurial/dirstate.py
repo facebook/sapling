@@ -205,7 +205,7 @@ class dirstate(object):
         if not st:
             return
 
-        p = parsers.parse_dirstate(self._map, self._copymap, st);
+        p = parsers.parse_dirstate(self._map, self._copymap, st)
         if not self._dirtypl:
             self._pl = p
 
