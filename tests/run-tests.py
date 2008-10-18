@@ -346,7 +346,9 @@ def run_one(test, skips, fails):
         if os.name == 'nt':
             return skip("shell script")
         # do not try to run non-executable programs
-        if not os.access(testpath, os.X_OK):
+        if not os.path.exists(testpath):
+            return fail("does not exist")
+        elif not os.access(testpath, os.X_OK):
             return skip("not executable")
         cmd = '"%s"' % testpath
 
