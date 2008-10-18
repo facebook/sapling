@@ -254,7 +254,7 @@ class dirstate(object):
         self._dirty = True
         self._addpath(f)
         s = os.lstat(self._join(f))
-        self._map[f] = ('n', s.st_mode, s.st_size, s.st_mtime)
+        self._map[f] = ('n', s.st_mode, s.st_size, int(s.st_mtime))
         if f in self._copymap:
             del self._copymap[f]
 
@@ -317,7 +317,7 @@ class dirstate(object):
         self._dirty = True
         s = os.lstat(self._join(f))
         self._addpath(f)
-        self._map[f] = ('m', s.st_mode, s.st_size, s.st_mtime)
+        self._map[f] = ('m', s.st_mode, s.st_size, int(s.st_mtime))
         if f in self._copymap:
             del self._copymap[f]
 
