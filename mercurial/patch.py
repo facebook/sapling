@@ -143,23 +143,31 @@ GP_PATCH  = 1 << 0  # we have to run patch
 GP_FILTER = 1 << 1  # there's some copy/rename operation
 GP_BINARY = 1 << 2  # there's a binary patch
 
-def readgitpatch(fp, firstline=None):
-    """extract git-style metadata about patches from <patchname>"""
-    class gitpatch:
-        "op is one of ADD, DELETE, RENAME, MODIFY or COPY"
-        def __init__(self, path):
-            self.path = path
-            self.oldpath = None
-            self.mode = None
-            self.op = 'MODIFY'
-            self.lineno = 0
-            self.binary = False
+class patchmeta:
+    """Patched file metadata
 
-    def reader(fp, firstline):
-        if firstline is not None:
-            yield firstline
-        for line in fp:
-            yield line
+    'op' is the performed operation within ADD, DELETE, RENAME, MODIFY
+    or COPY.  'path' is patched file path. 'oldpath' is set to the
+    origin file when 'op' is either COPY or RENAME, None otherwise. If
+    file mode is changed, 'mode' is a tuple (islink, isexec) where
+    'islink' is True if the file is a symlink and 'isexec' is True if
+    the file is executable. Otherwise, 'mode' is None.
+    """
+    def __init__(self, path):
+        self.path = path
+        self.oldpath = None
+        self.mode = None
+        self.op = 'MODIFY'
+        self.lineno = 0
+        self.binary = False
+
+    def setmode(self, mode):
+        islink = mode & 020000
+        isexec = mode & 0100
+        self.mode = (islink, isexec)
+
+def readgitpatch(lr):
+    """extract git-style metadata about patches from <patchname>"""
 
     # Filter patch for git information
     gitre = re.compile('diff --git a/(.*) b/(.*)')
@@ -169,7 +177,7 @@ def readgitpatch(fp, firstline=None):
     dopatch = 0
 
     lineno = 0
-    for line in reader(fp, firstline):
+    for line in lr:
         lineno += 1
         if line.startswith('diff --git'):
             m = gitre.match(line)
@@ -177,7 +185,7 @@ def readgitpatch(fp, firstline=None):
                 if gp:
                     gitpatches.append(gp)
                 src, dst = m.group(1, 2)
-                gp = gitpatch(dst)
+                gp = patchmeta(dst)
                 gp.lineno = lineno
         elif gp:
             if line.startswith('--- '):
@@ -201,9 +209,9 @@ def readgitpatch(fp, firstline=None):
                 gp.op = 'DELETE'
             elif line.startswith('new file mode '):
                 gp.op = 'ADD'
-                gp.mode = int(line.rstrip()[-6:], 8)
+                gp.setmode(int(line.rstrip()[-6:], 8))
             elif line.startswith('new mode '):
-                gp.mode = int(line.rstrip()[-6:], 8)
+                gp.setmode(int(line.rstrip()[-6:], 8))
             elif line.startswith('GIT binary patch'):
                 dopatch |= GP_BINARY
                 gp.binary = True
@@ -214,88 +222,6 @@ def readgitpatch(fp, firstline=None):
         dopatch = GP_PATCH
 
     return (dopatch, gitpatches)
-
-def patch(patchname, ui, strip=1, cwd=None, files={}):
-    """apply <patchname> to the working directory.
-    returns whether patch was applied with fuzz factor."""
-    patcher = ui.config('ui', 'patch')
-    args = []
-    try:
-        if patcher:
-            return externalpatch(patcher, args, patchname, ui, strip, cwd,
-                                 files)
-        else:
-            try:
-                return internalpatch(patchname, ui, strip, cwd, files)
-            except NoHunks:
-                patcher = util.find_exe('gpatch') or util.find_exe('patch')
-                ui.debug(_('no valid hunks found; trying with %r instead\n') %
-                         patcher)
-                if util.needbinarypatch():
-                    args.append('--binary')
-                return externalpatch(patcher, args, patchname, ui, strip, cwd,
-                                     files)
-    except PatchError, err:
-        s = str(err)
-        if s:
-            raise util.Abort(s)
-        else:
-            raise util.Abort(_('patch failed to apply'))
-
-def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
-    """use <patcher> to apply <patchname> to the working directory.
-    returns whether patch was applied with fuzz factor."""
-
-    fuzz = False
-    if cwd:
-        args.append('-d %s' % util.shellquote(cwd))
-    fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
-                                       util.shellquote(patchname)))
-
-    for line in fp:
-        line = line.rstrip()
-        ui.note(line + '\n')
-        if line.startswith('patching file '):
-            pf = util.parse_patch_output(line)
-            printed_file = False
-            files.setdefault(pf, (None, None))
-        elif line.find('with fuzz') >= 0:
-            fuzz = True
-            if not printed_file:
-                ui.warn(pf + '\n')
-                printed_file = True
-            ui.warn(line + '\n')
-        elif line.find('saving rejects to file') >= 0:
-            ui.warn(line + '\n')
-        elif line.find('FAILED') >= 0:
-            if not printed_file:
-                ui.warn(pf + '\n')
-                printed_file = True
-            ui.warn(line + '\n')
-    code = fp.close()
-    if code:
-        raise PatchError(_("patch command failed: %s") %
-                         util.explain_exit(code)[0])
-    return fuzz
-
-def internalpatch(patchobj, ui, strip, cwd, files={}):
-    """use builtin patch to apply <patchobj> to the working directory.
-    returns whether patch was applied with fuzz factor."""
-    try:
-        fp = file(patchobj, 'rb')
-    except TypeError:
-        fp = patchobj
-    if cwd:
-        curdir = os.getcwd()
-        os.chdir(cwd)
-    try:
-        ret = applydiff(ui, fp, files, strip=strip)
-    finally:
-        if cwd:
-            os.chdir(curdir)
-    if ret < 0:
-        raise PatchError
-    return ret > 0
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
@@ -529,7 +455,7 @@ class hunk:
             self.lenb = int(self.lenb)
         self.starta = int(self.starta)
         self.startb = int(self.startb)
-        diffhelpers.addlines(lr.fp, self.hunk, self.lena, self.lenb, self.a, self.b)
+        diffhelpers.addlines(lr, self.hunk, self.lena, self.lenb, self.a, self.b)
         # if we hit eof before finishing out the hunk, the last line will
         # be zero length.  Lets try to fix it up.
         while len(self.hunk[-1]) == 0:
@@ -743,17 +669,17 @@ class binhunk:
     def new(self):
         return [self.text]
 
-    def extract(self, fp):
-        line = fp.readline()
+    def extract(self, lr):
+        line = lr.readline()
         self.hunk.append(line)
         while line and not line.startswith('literal '):
-            line = fp.readline()
+            line = lr.readline()
             self.hunk.append(line)
         if not line:
             raise PatchError(_('could not extract binary patch'))
         size = int(line[8:].rstrip())
         dec = []
-        line = fp.readline()
+        line = lr.readline()
         self.hunk.append(line)
         while len(line) > 1:
             l = line[0]
@@ -762,7 +688,7 @@ class binhunk:
             else:
                 l = ord(l) - ord('a') + 27
             dec.append(base85.b85decode(line[1:-1])[:l])
-            line = fp.readline()
+            line = lr.readline()
             self.hunk.append(line)
         text = zlib.decompress(''.join(dec))
         if len(text) != size:
@@ -839,7 +765,8 @@ class linereader:
         self.buf = []
 
     def push(self, line):
-        self.buf.append(line)
+        if line is not None:
+            self.buf.append(line)
 
     def readline(self):
         if self.buf:
@@ -847,6 +774,39 @@ class linereader:
             del self.buf[0]
             return l
         return self.fp.readline()
+
+    def __iter__(self):
+        while 1:
+            l = self.readline()
+            if not l:
+                break
+            yield l
+
+def scangitpatch(lr, firstline):
+    """        
+    Git patches can emit:
+    - rename a to b
+    - change b
+    - copy a to c
+    - change c
+        
+    We cannot apply this sequence as-is, the renamed 'a' could not be
+    found for it would have been renamed already. And we cannot copy
+    from 'b' instead because 'b' would have been changed already. So
+    we scan the git patch for copy and rename commands so we can
+    perform the copies ahead of time.
+    """
+    pos = 0
+    try:
+        pos = lr.fp.tell()
+        fp = lr.fp
+    except IOError:
+        fp = cStringIO.StringIO(lr.fp.read())
+    gitlr = linereader(fp)
+    gitlr.push(firstline)
+    (dopatch, gitpatches) = readgitpatch(gitlr)
+    fp.seek(pos)
+    return dopatch, gitpatches
 
 def iterhunks(ui, fp, sourcefile=None):
     """Read a patch and yield the following events:
@@ -856,24 +816,6 @@ def iterhunks(ui, fp, sourcefile=None):
     - ("git", gitchanges): current diff is in git format, gitchanges
     maps filenames to gitpatch records. Unique event.
     """
-
-    def scangitpatch(fp, firstline):
-        '''git patches can modify a file, then copy that file to
-        a new file, but expect the source to be the unmodified form.
-        So we scan the patch looking for that case so we can do
-        the copies ahead of time.'''
-
-        pos = 0
-        try:
-            pos = fp.tell()
-        except IOError:
-            fp = cStringIO.StringIO(fp.read())
-
-        (dopatch, gitpatches) = readgitpatch(fp, firstline)
-        fp.seek(pos)
-
-        return fp, dopatch, gitpatches
-
     changed = {}
     current_hunk = None
     afile = ""
@@ -911,7 +853,7 @@ def iterhunks(ui, fp, sourcefile=None):
             try:
                 if context == None and x.startswith('***************'):
                     context = True
-                gpatch = changed.get(bfile[2:], (None, None))[1]
+                gpatch = changed.get(bfile[2:])
                 create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
                 remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
                 current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
@@ -924,12 +866,12 @@ def iterhunks(ui, fp, sourcefile=None):
                 emitfile = False
                 yield 'file', (afile, bfile, current_hunk)
         elif state == BFILE and x.startswith('GIT binary patch'):
-            current_hunk = binhunk(changed[bfile[2:]][1])
+            current_hunk = binhunk(changed[bfile[2:]])
             hunknum += 1
             if emitfile:
                 emitfile = False
                 yield 'file', (afile, bfile, current_hunk)
-            current_hunk.extract(fp)
+            current_hunk.extract(lr)
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
             m = gitre.match(x)
@@ -937,14 +879,14 @@ def iterhunks(ui, fp, sourcefile=None):
                 afile, bfile = m.group(1, 2)
                 if not git:
                     git = True
-                    fp, dopatch, gitpatches = scangitpatch(fp, x)
+                    dopatch, gitpatches = scangitpatch(lr, x)
                     yield 'git', gitpatches
                     for gp in gitpatches:
-                        changed[gp.path] = (gp.op, gp)
+                        changed[gp.path] = gp
                 # else error?
                 # copy/rename + modify should modify target, not source
-                gitop = changed.get(bfile[2:], (None, None))[0]
-                if gitop in ('COPY', 'DELETE', 'RENAME'):
+                gp = changed.get(bfile[2:])
+                if gp and gp.op in ('COPY', 'DELETE', 'RENAME'):
                     afile = bfile
                     gitworkdone = True
             newfile = True
@@ -988,8 +930,7 @@ def iterhunks(ui, fp, sourcefile=None):
     if hunknum == 0 and dopatch and not gitworkdone:
         raise NoHunks
 
-def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
-              rejmerge=None, updatedir=None):
+def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
     """reads a patch from fp and tries to apply it.  The dict 'changed' is
        filled in with all of the filenames changed by the patch.  Returns 0
        for a clean patch, -1 if any rejects were found and 1 if there was
@@ -1004,8 +945,6 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
         if not current_file:
             return 0
         current_file.close()
-        if rejmerge:
-            rejmerge(current_file)
         return len(current_file.rej)
 
     for state, values in iterhunks(ui, fp, sourcefile):
@@ -1015,7 +954,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
             current_hunk = values
             ret = current_file.apply(current_hunk, reverse)
             if ret >= 0:
-                changed.setdefault(current_file.fname, (None, None))
+                changed.setdefault(current_file.fname, None)
                 if ret > 0:
                     err = 1
         elif state == 'file':
@@ -1041,14 +980,12 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                     src, dst = [util.canonpath(cwd, cwd, x)
                                 for x in [gp.oldpath, gp.path]]
                     copyfile(src, dst)
-                changed[gp.path] = (gp.op, gp)
+                changed[gp.path] = gp
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
 
     rejects += closefile()
 
-    if updatedir and gitpatches:
-        updatedir(gitpatches)
     if rejects:
         return -1
     return err
@@ -1078,13 +1015,15 @@ def updatedir(ui, repo, patches):
     if cwd:
         cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
     for f in patches:
-        ctype, gp = patches[f]
-        if ctype == 'RENAME':
+        gp = patches[f]
+        if not gp:
+            continue
+        if gp.op == 'RENAME':
             copies.append((gp.oldpath, gp.path))
             removes[gp.oldpath] = 1
-        elif ctype == 'COPY':
+        elif gp.op == 'COPY':
             copies.append((gp.oldpath, gp.path))
-        elif ctype == 'DELETE':
+        elif gp.op == 'DELETE':
             removes[gp.path] = 1
     for src, dst in copies:
         repo.copy(src, dst)
@@ -1092,23 +1031,102 @@ def updatedir(ui, repo, patches):
     if removes:
         repo.remove(util.sort(removes), True)
     for f in patches:
-        ctype, gp = patches[f]
+        gp = patches[f]
         if gp and gp.mode:
-            flags = ''
-            if gp.mode & 0100:
-                flags = 'x'
-            elif gp.mode & 020000:
-                flags = 'l'
+            islink, isexec = gp.mode
             dst = os.path.join(repo.root, gp.path)
             # patch won't create empty files
-            if ctype == 'ADD' and not os.path.exists(dst):
+            if gp.op == 'ADD' and not os.path.exists(dst):
+                flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
             else:
-                util.set_flags(dst, 'l' in flags, 'x' in flags)
+                util.set_flags(dst, islink, isexec)
     cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
     return util.sort(files)
+
+def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
+    """use <patcher> to apply <patchname> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+
+    fuzz = False
+    if cwd:
+        args.append('-d %s' % util.shellquote(cwd))
+    fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
+                                       util.shellquote(patchname)))
+
+    for line in fp:
+        line = line.rstrip()
+        ui.note(line + '\n')
+        if line.startswith('patching file '):
+            pf = util.parse_patch_output(line)
+            printed_file = False
+            files.setdefault(pf, (None, None))
+        elif line.find('with fuzz') >= 0:
+            fuzz = True
+            if not printed_file:
+                ui.warn(pf + '\n')
+                printed_file = True
+            ui.warn(line + '\n')
+        elif line.find('saving rejects to file') >= 0:
+            ui.warn(line + '\n')
+        elif line.find('FAILED') >= 0:
+            if not printed_file:
+                ui.warn(pf + '\n')
+                printed_file = True
+            ui.warn(line + '\n')
+    code = fp.close()
+    if code:
+        raise PatchError(_("patch command failed: %s") %
+                         util.explain_exit(code)[0])
+    return fuzz
+
+def internalpatch(patchobj, ui, strip, cwd, files={}):
+    """use builtin patch to apply <patchobj> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+    try:
+        fp = file(patchobj, 'rb')
+    except TypeError:
+        fp = patchobj
+    if cwd:
+        curdir = os.getcwd()
+        os.chdir(cwd)
+    try:
+        ret = applydiff(ui, fp, files, strip=strip)
+    finally:
+        if cwd:
+            os.chdir(curdir)
+    if ret < 0:
+        raise PatchError
+    return ret > 0
+
+def patch(patchname, ui, strip=1, cwd=None, files={}):
+    """apply <patchname> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+    patcher = ui.config('ui', 'patch')
+    args = []
+    try:
+        if patcher:
+            return externalpatch(patcher, args, patchname, ui, strip, cwd,
+                                 files)
+        else:
+            try:
+                return internalpatch(patchname, ui, strip, cwd, files)
+            except NoHunks:
+                patcher = util.find_exe('gpatch') or util.find_exe('patch')
+                ui.debug(_('no valid hunks found; trying with %r instead\n') %
+                         patcher)
+                if util.needbinarypatch():
+                    args.append('--binary')
+                return externalpatch(patcher, args, patchname, ui, strip, cwd,
+                                     files)
+    except PatchError, err:
+        s = str(err)
+        if s:
+            raise util.Abort(s)
+        else:
+            raise util.Abort(_('patch failed to apply'))
 
 def b85diff(to, tn):
     '''print base85-encoded binary diff'''
