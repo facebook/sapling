@@ -1149,7 +1149,7 @@ class localrepository(repo.repository):
                                "symbolic link\n") % dest)
             else:
                 wlock = self.wlock()
-                if dest not in self.dirstate:
+                if self.dirstate[dest] in '?r':
                     self.dirstate.add(dest)
                 self.dirstate.copy(source, dest)
         finally:

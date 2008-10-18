@@ -398,12 +398,12 @@ def copy(ui, repo, pats, opts, rename=False):
             if state not in 'mn' and not dryrun:
                 repo.dirstate.normallookup(abstarget)
         else:
-            if repo.dirstate[origsrc] == 'a':
+            if repo.dirstate[origsrc] == 'a' and origsrc == abssrc:
                 if not ui.quiet:
                     ui.warn(_("%s has not been committed yet, so no copy "
                               "data will be stored for %s.\n")
                             % (repo.pathto(origsrc, cwd), reltarget))
-                if abstarget not in repo.dirstate and not dryrun:
+                if repo.dirstate[abstarget] in '?r' and not dryrun:
                     repo.add([abstarget])
             elif not dryrun:
                 repo.copy(origsrc, abstarget)
