@@ -865,7 +865,9 @@ def _statfiles_clustered(files):
                 # handle directory not found in Python version prior to 2.5
                 # Python <= 2.4 returns native Windows code 3 in errno
                 # Python >= 2.5 returns ENOENT and adds winerror field
-                if err.errno not in (3, errno.ENOENT, errno.ENOTDIR):
+                # EINVAL is raised if dir is not a directory.
+                if err.errno not in (3, errno.ENOENT, errno.EINVAL,
+                                     errno.ENOTDIR):
                     raise
                 dmap = {}
             cache = dircache.setdefault(dir, dmap)
