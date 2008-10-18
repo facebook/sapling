@@ -94,12 +94,12 @@ def annotate(ui, repo, *pats, **opts):
              ('follow', lambda x: x[0].path()),
             ]
 
-    if (not opts['user'] and not opts['changeset'] and not opts['date']
-        and not opts['follow']):
+    if (not opts.get('user') and not opts.get('changeset') and not opts.get('date')
+        and not opts.get('follow')):
         opts['number'] = 1
 
     linenumber = opts.get('line_number') is not None
-    if (linenumber and (not opts['changeset']) and (not opts['number'])):
+    if (linenumber and (not opts.get('changeset')) and (not opts.get('number'))):
         raise util.Abort(_('at least one of -n/-c is required for -l'))
 
     funcmap = [func for op, func in opmap if opts.get(op)]
@@ -107,12 +107,12 @@ def annotate(ui, repo, *pats, **opts):
         lastfunc = funcmap[-1]
         funcmap[-1] = lambda x: "%s:%s" % (lastfunc(x), x[1])
 
-    ctx = repo[opts['rev']]
+    ctx = repo[opts.get('rev')]
 
     m = cmdutil.match(repo, pats, opts)
     for abs in ctx.walk(m):
         fctx = ctx[abs]
-        if not opts['text'] and util.binary(fctx.data()):
+        if not opts.get('text') and util.binary(fctx.data()):
             ui.write(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
             continue
 
@@ -154,7 +154,7 @@ def archive(ui, repo, dest, **opts):
     The default is the basename of the archive, with suffixes removed.
     '''
 
-    ctx = repo[opts['rev']]
+    ctx = repo[opts.get('rev')]
     if not ctx:
         raise util.Abort(_('repository has no revisions'))
     node = ctx.node()
@@ -163,14 +163,14 @@ def archive(ui, repo, dest, **opts):
         raise util.Abort(_('repository root cannot be destination'))
     matchfn = cmdutil.match(repo, [], opts)
     kind = opts.get('type') or 'files'
-    prefix = opts['prefix']
+    prefix = opts.get('prefix')
     if dest == '-':
         if kind == 'files':
             raise util.Abort(_('cannot archive plain files to stdout'))
         dest = sys.stdout
         if not prefix: prefix = os.path.basename(repo.root) + '-%h'
     prefix = cmdutil.make_filename(repo, prefix, node)
-    archival.archive(repo, dest, node, kind, not opts['no_decode'],
+    archival.archive(repo, dest, node, kind, not opts.get('no_decode'),
                      matchfn, prefix)
 
 def backout(ui, repo, node=None, rev=None, **opts):
@@ -216,7 +216,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if p1 == nullid:
         raise util.Abort(_('cannot back out a change with no parents'))
     if p2 != nullid:
-        if not opts['parent']:
+        if not opts.get('parent'):
             raise util.Abort(_('cannot back out a merge changeset without '
                                '--parent'))
         p = repo.lookup(opts['parent'])
@@ -225,7 +225,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
                              (short(p), short(node)))
         parent = p
     else:
-        if opts['parent']:
+        if opts.get('parent'):
             raise util.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
 
@@ -251,7 +251,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
               (nice(repo.changelog.tip()), nice(node)))
     if op1 != node:
         hg.clean(repo, op1, show_stats=False)
-        if opts['merge']:
+        if opts.get('merge'):
             ui.status(_('merging with changeset %s\n') % nice(repo.changelog.tip()))
             hg.merge(repo, hex(repo.changelog.tip()))
         else:
@@ -478,7 +478,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         dest, revs, checkout = hg.parseurl(
             ui.expandpath(dest or 'default-push', dest or 'default'), revs)
         other = hg.repository(ui, dest)
-        o = repo.findoutgoing(other, force=opts['force'])
+        o = repo.findoutgoing(other, force=opts.get('force'))
 
     if revs:
         cg = repo.changegroupsubset(o, revs, 'bundle')
@@ -508,11 +508,11 @@ def cat(ui, repo, file1, *pats, **opts):
     %d   dirname of file being printed, or '.' if in repo root
     %p   root-relative path name of file being printed
     """
-    ctx = repo[opts['rev']]
+    ctx = repo[opts.get('rev')]
     err = 1
     m = cmdutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):
-        fp = cmdutil.make_file(repo, opts['output'], ctx.node(), pathname=abs)
+        fp = cmdutil.make_file(repo, opts.get('output'), ctx.node(), pathname=abs)
         data = ctx[abs].data()
         if opts.get('decode'):
             data = repo.wwritedata(abs, data)
@@ -566,10 +566,10 @@ def clone(ui, source, dest=None, **opts):
     """
     cmdutil.setremoteconfig(ui, opts)
     hg.clone(ui, source, dest,
-             pull=opts['pull'],
-             stream=opts['uncompressed'],
-             rev=opts['rev'],
-             update=not opts['noupdate'])
+             pull=opts.get('pull'),
+             stream=opts.get('uncompressed'),
+             rev=opts.get('rev'),
+             update=not opts.get('noupdate'))
 
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
@@ -588,7 +588,7 @@ def commit(ui, repo, *pats, **opts):
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
     def commitfunc(ui, repo, message, match, opts):
-        return repo.commit(match.files(), message, opts['user'], opts['date'],
+        return repo.commit(match.files(), message, opts.get('user'), opts.get('date'),
                            match, force_editor=opts.get('force_editor'))
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
@@ -651,7 +651,7 @@ def debugancestor(ui, repo, *args):
 def debugcomplete(ui, cmd='', **opts):
     """returns the completion list associated with the given command"""
 
-    if opts['options']:
+    if opts.get('options'):
         options = []
         otables = [globalopts]
         if cmd:
@@ -981,7 +981,7 @@ def diff(ui, repo, *pats, **opts):
     it detects as binary. With -a, diff will generate a diff anyway,
     probably with undesirable results.
     """
-    node1, node2 = cmdutil.revpair(repo, opts['rev'])
+    node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
 
     m = cmdutil.match(repo, pats, opts)
     patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
@@ -1023,8 +1023,8 @@ def export(ui, repo, *changesets, **opts):
         ui.note(_('exporting patches:\n'))
     else:
         ui.note(_('exporting patch:\n'))
-    patch.export(repo, revs, template=opts['output'],
-                 switch_parent=opts['switch_parent'],
+    patch.export(repo, revs, template=opts.get('output'),
+                 switch_parent=opts.get('switch_parent'),
                  opts=patch.diffopts(ui, opts))
 
 def grep(ui, repo, pattern, *pats, **opts):
@@ -1044,7 +1044,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     use the --all flag.
     """
     reflags = 0
-    if opts['ignore_case']:
+    if opts.get('ignore_case'):
         reflags |= re.I
     try:
         regexp = re.compile(pattern, reflags)
@@ -1052,7 +1052,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         ui.warn(_("grep: invalid match pattern: %s\n") % inst)
         return None
     sep, eol = ':', '\n'
-    if opts['print0']:
+    if opts.get('print0'):
         sep = eol = '\0'
 
     fcache = {}
@@ -1118,21 +1118,21 @@ def grep(ui, repo, pattern, *pats, **opts):
         found = False
         filerevmatches = {}
         r = prev.get(fn, -1)
-        if opts['all']:
+        if opts.get('all'):
             iter = difflinestates(states, prevstates)
         else:
             iter = [('', l) for l in prevstates]
         for change, l in iter:
             cols = [fn, str(r)]
-            if opts['line_number']:
+            if opts.get('line_number'):
                 cols.append(str(l.linenum))
-            if opts['all']:
+            if opts.get('all'):
                 cols.append(change)
-            if opts['user']:
+            if opts.get('user'):
                 cols.append(ui.shortuser(get(r)[1]))
             if opts.get('date'):
                 cols.append(datefunc(get(r)[2]))
-            if opts['files_with_matches']:
+            if opts.get('files_with_matches'):
                 c = (fn, r)
                 if c in filerevmatches:
                     continue
@@ -1177,7 +1177,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if fn in prev or fstate[fn]:
                     r = display(fn, rev, m, fstate[fn])
                     found = found or r
-                    if r and not opts['all']:
+                    if r and not opts.get('all'):
                         skip[fn] = True
                         if copy:
                             skip[copy] = True
@@ -1210,7 +1210,7 @@ def heads(ui, repo, *branchrevs, **opts):
     no child changesets with that tag. They are usually where
     development on the given branch takes place.
     """
-    if opts['rev']:
+    if opts.get('rev'):
         start = repo.lookup(opts['rev'])
     else:
         start = None
@@ -1230,10 +1230,10 @@ def heads(ui, repo, *branchrevs, **opts):
                 if branch != branchrev:
                     ui.warn(_("no changes on branch %s containing %s are "
                               "reachable from %s\n")
-                            % (branch, branchrev, opts['rev']))
+                            % (branch, branchrev, opts.get('rev')))
                 else:
                     ui.warn(_("no changes on branch %s are reachable from %s\n")
-                            % (branch, opts['rev']))
+                            % (branch, opts.get('rev')))
             heads.extend(bheads)
     if not heads:
         return 1
@@ -1553,7 +1553,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     if date:
         opts['date'] = util.parsedate(date)
 
-    if opts.get('exact') or not opts['force']:
+    if opts.get('exact') or not opts.get('force'):
         cmdutil.bail_if_changed(repo)
 
     d = opts["base"]
@@ -1648,7 +1648,7 @@ def incoming(ui, repo, source="default", **opts):
     See pull for valid source format details.
     """
     limit = cmdutil.loglimit(opts)
-    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts['rev'])
+    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
@@ -1683,7 +1683,7 @@ def incoming(ui, repo, source="default", **opts):
                 other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
         o = other.changelog.nodesbetween(incoming, revs)[0]
-        if opts['newest_first']:
+        if opts.get('newest_first'):
             o.reverse()
         displayer = cmdutil.show_changeset(ui, other, opts)
         count = 0
@@ -1691,7 +1691,7 @@ def incoming(ui, repo, source="default", **opts):
             if count >= limit:
                 break
             parents = [p for p in other.changelog.parents(n) if p != nullid]
-            if opts['no_merges'] and len(parents) == 2:
+            if opts.get('no_merges') and len(parents) == 2:
                 continue
             count += 1
             displayer.show(changenode=n)
@@ -1734,7 +1734,7 @@ def locate(ui, repo, *pats, **opts):
     This will avoid the problem of "xargs" treating single filenames
     that contain white space as multiple filenames.
     """
-    end = opts['print0'] and '\0' or '\n'
+    end = opts.get('print0') and '\0' or '\n'
     rev = opts.get('rev') or None
 
     ret = 1
@@ -1743,7 +1743,7 @@ def locate(ui, repo, *pats, **opts):
     for abs in repo[rev].walk(m):
         if not rev and abs not in repo.dirstate:
             continue
-        if opts['fullpath']:
+        if opts.get('fullpath'):
             ui.write(os.path.join(repo.root, abs), end)
         else:
             ui.write(((pats and m.rel(abs)) or abs), end)
@@ -1787,8 +1787,8 @@ def log(ui, repo, *pats, **opts):
     limit = cmdutil.loglimit(opts)
     count = 0
 
-    if opts['copies'] and opts['rev']:
-        endrev = max(cmdutil.revrange(repo, opts['rev'])) + 1
+    if opts.get('copies') and opts.get('rev'):
+        endrev = max(cmdutil.revrange(repo, opts.get('rev'))) + 1
     else:
         endrev = len(repo)
     rcache = {}
@@ -1827,7 +1827,7 @@ def log(ui, repo, *pats, **opts):
     if opts["date"]:
         df = util.matchdate(opts["date"])
 
-    only_branches = opts['only_branch']
+    only_branches = opts.get('only_branch')
 
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
     for st, rev, fns in changeiter:
@@ -1835,9 +1835,9 @@ def log(ui, repo, *pats, **opts):
             changenode = repo.changelog.node(rev)
             parents = [p for p in repo.changelog.parentrevs(rev)
                        if p != nullrev]
-            if opts['no_merges'] and len(parents) == 2:
+            if opts.get('no_merges') and len(parents) == 2:
                 continue
-            if opts['only_merges'] and len(parents) != 2:
+            if opts.get('only_merges') and len(parents) != 2:
                 continue
 
             if only_branches:
@@ -1850,7 +1850,7 @@ def log(ui, repo, *pats, **opts):
                 if not df(changes[2][0]):
                     continue
 
-            if opts['keyword']:
+            if opts.get('keyword'):
                 changes = get(rev)
                 miss = 0
                 for k in [kw.lower() for kw in opts['keyword']]:
@@ -1958,19 +1958,19 @@ def outgoing(ui, repo, dest=None, **opts):
     """
     limit = cmdutil.loglimit(opts)
     dest, revs, checkout = hg.parseurl(
-        ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
+        ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
     cmdutil.setremoteconfig(ui, opts)
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
     other = hg.repository(ui, dest)
     ui.status(_('comparing with %s\n') % util.hidepassword(dest))
-    o = repo.findoutgoing(other, force=opts['force'])
+    o = repo.findoutgoing(other, force=opts.get('force'))
     if not o:
         ui.status(_("no changes found\n"))
         return 1
     o = repo.changelog.nodesbetween(o, revs)[0]
-    if opts['newest_first']:
+    if opts.get('newest_first'):
         o.reverse()
     displayer = cmdutil.show_changeset(ui, repo, opts)
     count = 0
@@ -1978,7 +1978,7 @@ def outgoing(ui, repo, dest=None, **opts):
         if count >= limit:
             break
         parents = [p for p in repo.changelog.parents(n) if p != nullid]
-        if opts['no_merges'] and len(parents) == 2:
+        if opts.get('no_merges') and len(parents) == 2:
             continue
         count += 1
         displayer.show(changenode=n)
@@ -2097,7 +2097,7 @@ def pull(ui, repo, source="default", **opts):
       Alternatively specify "ssh -C" as your ssh command in your hgrc or
       with the --ssh command line option.
     """
-    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts['rev'])
+    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
@@ -2110,8 +2110,8 @@ def pull(ui, repo, source="default", **opts):
                       "so a rev cannot be specified.")
             raise util.Abort(error)
 
-    modheads = repo.pull(other, heads=revs, force=opts['force'])
-    return postincoming(ui, repo, modheads, opts['update'], checkout)
+    modheads = repo.pull(other, heads=revs, force=opts.get('force'))
+    return postincoming(ui, repo, modheads, opts.get('update'), checkout)
 
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -2145,14 +2145,14 @@ def push(ui, repo, dest=None, **opts):
     feature is explicitly enabled on the remote Mercurial server.
     """
     dest, revs, checkout = hg.parseurl(
-        ui.expandpath(dest or 'default-push', dest or 'default'), opts['rev'])
+        ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, dest)
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
-    r = repo.push(other, opts['force'], revs=revs)
+    r = repo.push(other, opts.get('force'), revs=revs)
     return r == 0
 
 def rawcommit(ui, repo, *pats, **opts):
@@ -2173,7 +2173,7 @@ def rawcommit(ui, repo, *pats, **opts):
     message = cmdutil.logmessage(opts)
 
     files = cmdutil.match(repo, pats, opts).files()
-    if opts['files']:
+    if opts.get('files'):
         files += open(opts['files']).read().splitlines()
 
     parents = [repo.lookup(p) for p in opts['parent']]
@@ -2342,15 +2342,15 @@ def revert(ui, repo, *pats, **opts):
             raise util.Abort(_("you can't specify a revision and a date"))
         opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
 
-    if not pats and not opts['all']:
+    if not pats and not opts.get('all'):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to revert the whole repo'))
 
     parent, p2 = repo.dirstate.parents()
-    if not opts['rev'] and p2 != nullid:
+    if not opts.get('rev') and p2 != nullid:
         raise util.Abort(_('uncommitted merge - please provide a '
                            'specific revision'))
-    ctx = repo[opts['rev']]
+    ctx = repo[opts.get('rev')]
     node = ctx.node()
     mf = ctx.manifest()
     if node == parent:
@@ -2432,7 +2432,7 @@ def revert(ui, repo, *pats, **opts):
             target = repo.wjoin(abs)
             def handle(xlist, dobackup):
                 xlist[0].append(abs)
-                if dobackup and not opts['no_backup'] and util.lexists(target):
+                if dobackup and not opts.get('no_backup') and util.lexists(target):
                     bakname = "%s.orig" % rel
                     ui.note(_('saving current version of %s as %s\n') %
                             (rel, bakname))
@@ -2653,11 +2653,11 @@ def status(ui, repo, *pats, **opts):
 
     node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
     cwd = (pats and repo.getcwd()) or ''
-    end = opts['print0'] and '\0' or '\n'
+    end = opts.get('print0') and '\0' or '\n'
     copy = {}
     states = 'modified added removed deleted unknown ignored clean'.split()
     show = [k for k in states if opts[k]]
-    if opts['all']:
+    if opts.get('all'):
         show += ui.quiet and (states[:4] + ['clean']) or states
     if not show:
         show = ui.quiet and states[:4] or states[:5]
@@ -2666,7 +2666,7 @@ def status(ui, repo, *pats, **opts):
                        'ignored' in show, 'clean' in show, 'unknown' in show)
     changestates = zip(states, 'MAR!?IC', stat)
 
-    if (opts['all'] or opts['copies']) and not opts['no_status']:
+    if (opts.get('all') or opts.get('copies')) and not opts.get('no_status'):
         ctxn = repo[nullid]
         ctx1 = repo[node1]
         ctx2 = repo[node2]
@@ -2683,7 +2683,7 @@ def status(ui, repo, *pats, **opts):
     for state, char, files in changestates:
         if state in show:
             format = "%s %%s%s" % (char, end)
-            if opts['no_status']:
+            if opts.get('no_status'):
                 format = "%%s%s" % end
 
             for f in files:
@@ -2719,13 +2719,13 @@ def tag(ui, repo, name1, *names, **opts):
     for n in names:
         if n in ['tip', '.', 'null']:
             raise util.Abort(_('the name \'%s\' is reserved') % n)
-    if opts['rev'] and opts['remove']:
+    if opts.get('rev') and opts.get('remove'):
         raise util.Abort(_("--rev and --remove are incompatible"))
-    if opts['rev']:
+    if opts.get('rev'):
         rev_ = opts['rev']
-    message = opts['message']
-    if opts['remove']:
-        expectedtype = opts['local'] and 'local' or 'global'
+    message = opts.get('message')
+    if opts.get('remove'):
+        expectedtype = opts.get('local') and 'local' or 'global'
         for n in names:
             if not repo.tagtype(n):
                 raise util.Abort(_('tag \'%s\' does not exist') % n)
@@ -2735,7 +2735,7 @@ def tag(ui, repo, name1, *names, **opts):
         rev_ = nullid
         if not message:
             message = _('Removed tag %s') % ', '.join(names)
-    elif not opts['force']:
+    elif not opts.get('force'):
         for n in names:
             if n in repo.tags():
                 raise util.Abort(_('tag \'%s\' already exists '
@@ -2753,7 +2753,7 @@ def tag(ui, repo, name1, *names, **opts):
     if date:
         date = util.parsedate(date)
 
-    repo.tag(names, r, message, opts['local'], opts['user'], date)
+    repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
 
 def tags(ui, repo):
     """list repository tags
@@ -2823,7 +2823,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     finally:
         del lock
 
-    return postincoming(ui, repo, modheads, opts['update'], None)
+    return postincoming(ui, repo, modheads, opts.get('update'), None)
 
 def update(ui, repo, node=None, rev=None, clean=False, date=None):
     """update working directory
