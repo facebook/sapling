@@ -33,6 +33,10 @@ list of commands:
  debugfoobar:
       yet another debug command
 
+enabled extensions:
+
+ debugextension   only debugcommands
+
 special help topics:
  dates             Date Formats
  patterns          File Name Patterns

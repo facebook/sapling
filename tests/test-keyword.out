@@ -51,6 +51,12 @@ list of commands:
  kwfiles    print files currently configured for keyword expansion
  kwshrink   revert expanded keywords in working directory
 
+enabled extensions:
+
+ keyword   keyword expansion in local repositories
+ mq        patch management and development
+ notify    (no help text available)
+
 use "hg -v help keyword" to show aliases and global options
 % hg kwdemo
 [extensions]
