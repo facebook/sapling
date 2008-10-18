@@ -1,5 +1,8 @@
 % qimport non-existing-file
 abort: unable to read non-existing-file
+% import URL
+adding url.diff to series file
+url.diff
 % build diff with CRLF
 adding b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved

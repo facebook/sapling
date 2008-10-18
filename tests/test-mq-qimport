@@ -27,6 +27,15 @@ cd repo
 echo % qimport non-existing-file
 hg qimport non-existing-file
 
+echo % import URL
+echo foo >> foo
+hg add foo
+hg diff > $HGTMP/url.diff
+hg revert --no-backup foo
+rm foo
+hg qimport file://$HGTMP/url.diff
+hg qun
+
 echo % build diff with CRLF
 python ../writelines.py b 5 'a\n' 5 'a\r\n'
 hg ci -Am addb
