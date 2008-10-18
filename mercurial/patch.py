@@ -166,14 +166,8 @@ class patchmeta:
         isexec = mode & 0100
         self.mode = (islink, isexec)
 
-def readgitpatch(fp, firstline=None):
+def readgitpatch(lr):
     """extract git-style metadata about patches from <patchname>"""
-
-    def reader(fp, firstline):
-        if firstline is not None:
-            yield firstline
-        for line in fp:
-            yield line
 
     # Filter patch for git information
     gitre = re.compile('diff --git a/(.*) b/(.*)')
@@ -183,7 +177,7 @@ def readgitpatch(fp, firstline=None):
     dopatch = 0
 
     lineno = 0
-    for line in reader(fp, firstline):
+    for line in lr:
         lineno += 1
         if line.startswith('diff --git'):
             m = gitre.match(line)
@@ -461,7 +455,7 @@ class hunk:
             self.lenb = int(self.lenb)
         self.starta = int(self.starta)
         self.startb = int(self.startb)
-        diffhelpers.addlines(lr.fp, self.hunk, self.lena, self.lenb, self.a, self.b)
+        diffhelpers.addlines(lr, self.hunk, self.lena, self.lenb, self.a, self.b)
         # if we hit eof before finishing out the hunk, the last line will
         # be zero length.  Lets try to fix it up.
         while len(self.hunk[-1]) == 0:
@@ -771,7 +765,8 @@ class linereader:
         self.buf = []
 
     def push(self, line):
-        self.buf.append(line)
+        if line is not None:
+            self.buf.append(line)
 
     def readline(self):
         if self.buf:
@@ -779,6 +774,39 @@ class linereader:
             del self.buf[0]
             return l
         return self.fp.readline()
+
+    def __iter__(self):
+        while 1:
+            l = self.readline()
+            if not l:
+                break
+            yield l
+
+def scangitpatch(lr, firstline):
+    """        
+    Git patches can emit:
+    - rename a to b
+    - change b
+    - copy a to c
+    - change c
+        
+    We cannot apply this sequence as-is, the renamed 'a' could not be
+    found for it would have been renamed already. And we cannot copy
+    from 'b' instead because 'b' would have been changed already. So
+    we scan the git patch for copy and rename commands so we can
+    perform the copies ahead of time.
+    """
+    pos = 0
+    try:
+        pos = lr.fp.tell()
+        fp = lr.fp
+    except IOError:
+        fp = cStringIO.StringIO(lr.fp.read())
+    gitlr = linereader(fp)
+    gitlr.push(firstline)
+    (dopatch, gitpatches) = readgitpatch(gitlr)
+    fp.seek(pos)
+    return fp, dopatch, gitpatches
 
 def iterhunks(ui, fp, sourcefile=None):
     """Read a patch and yield the following events:
@@ -788,24 +816,6 @@ def iterhunks(ui, fp, sourcefile=None):
     - ("git", gitchanges): current diff is in git format, gitchanges
     maps filenames to gitpatch records. Unique event.
     """
-
-    def scangitpatch(fp, firstline):
-        '''git patches can modify a file, then copy that file to
-        a new file, but expect the source to be the unmodified form.
-        So we scan the patch looking for that case so we can do
-        the copies ahead of time.'''
-
-        pos = 0
-        try:
-            pos = fp.tell()
-        except IOError:
-            fp = cStringIO.StringIO(fp.read())
-
-        (dopatch, gitpatches) = readgitpatch(fp, firstline)
-        fp.seek(pos)
-
-        return fp, dopatch, gitpatches
-
     changed = {}
     current_hunk = None
     afile = ""
@@ -869,7 +879,7 @@ def iterhunks(ui, fp, sourcefile=None):
                 afile, bfile = m.group(1, 2)
                 if not git:
                     git = True
-                    fp, dopatch, gitpatches = scangitpatch(fp, x)
+                    fp, dopatch, gitpatches = scangitpatch(lr, x)
                     yield 'git', gitpatches
                     for gp in gitpatches:
                         changed[gp.path] = gp
