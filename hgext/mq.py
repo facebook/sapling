@@ -641,6 +641,9 @@ class queue:
                              % name)
 
     def new(self, repo, patch, *pats, **opts):
+        """options:
+           msg: a string or a no-argument function returning a string
+        """
         msg = opts.get('msg')
         force = opts.get('force')
         user = opts.get('user')
@@ -661,6 +664,8 @@ class queue:
         wlock = repo.wlock()
         try:
             insert = self.full_series_end()
+            if callable(msg):
+                msg = msg()
             commitmsg = msg and msg or ("[mq]: %s" % patch)
             n = repo.commit(commitfiles, commitmsg, user, date, match=match, force=True)
             if n == None:
@@ -1735,11 +1740,14 @@ def new(ui, repo, patch, *args, **opts):
     -e, -m or -l set the patch header as well as the commit message.
     If none is specified, the patch header is empty and the
     commit message is '[mq]: PATCH'"""
+    msg = cmdutil.logmessage(opts)
+    def getmsg(): return ui.edit(msg, ui.username())
     q = repo.mq
-    message = cmdutil.logmessage(opts)
-    if opts['edit']:
-        message = ui.edit(message, ui.username())
-    opts['msg'] = message
+    opts['msg'] = msg
+    if opts.get('edit'):
+        opts['msg'] = getmsg
+    else:
+        opts['msg'] = msg
     setupheaderopts(ui, opts)
     q.new(repo, patch, *args, **opts)
     q.save_dirty()
