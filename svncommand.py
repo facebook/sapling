@@ -83,7 +83,7 @@ def update(ui, args, repo, clean=False, **opts):
         ui.status('Revision %s did not produce an hg revision.\n' % rev)
         return 1
     else:
-        ui.status('Non-ambiguous revision!\n')
+        ui.status('Ambiguous revision!\n')
         ui.status('\n'.join(['%s on %s' % (node.hex(a[0]), a[1]) for a in
                              answers]+['']))
     return 1
