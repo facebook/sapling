@@ -148,8 +148,10 @@ class patchmeta:
 
     'op' is the performed operation within ADD, DELETE, RENAME, MODIFY
     or COPY.  'path' is patched file path. 'oldpath' is set to the
-    origin file when 'op' is either COPY or RENAME, None
-    otherwise. 'mode' is set to the new mode of patched file or None.
+    origin file when 'op' is either COPY or RENAME, None otherwise. If
+    file mode is changed, 'mode' is a tuple (islink, isexec) where
+    'islink' is True if the file is a symlink and 'isexec' is True if
+    the file is executable. Otherwise, 'mode' is None.
     """
     def __init__(self, path):
         self.path = path
@@ -158,6 +160,11 @@ class patchmeta:
         self.op = 'MODIFY'
         self.lineno = 0
         self.binary = False
+
+    def setmode(self, mode):
+        islink = mode & 020000
+        isexec = mode & 0100
+        self.mode = (islink, isexec)
 
 def readgitpatch(fp, firstline=None):
     """extract git-style metadata about patches from <patchname>"""
@@ -208,9 +215,9 @@ def readgitpatch(fp, firstline=None):
                 gp.op = 'DELETE'
             elif line.startswith('new file mode '):
                 gp.op = 'ADD'
-                gp.mode = int(line.rstrip()[-6:], 8)
+                gp.setmode(int(line.rstrip()[-6:], 8))
             elif line.startswith('new mode '):
-                gp.mode = int(line.rstrip()[-6:], 8)
+                gp.setmode(int(line.rstrip()[-6:], 8))
             elif line.startswith('GIT binary patch'):
                 dopatch |= GP_BINARY
                 gp.binary = True
@@ -1096,17 +1103,14 @@ def updatedir(ui, repo, patches):
     for f in patches:
         ctype, gp = patches[f]
         if gp and gp.mode:
-            flags = ''
-            if gp.mode & 0100:
-                flags = 'x'
-            elif gp.mode & 020000:
-                flags = 'l'
+            islink, isexec = gp.mode
             dst = os.path.join(repo.root, gp.path)
             # patch won't create empty files
             if ctype == 'ADD' and not os.path.exists(dst):
+                flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
             else:
-                util.set_flags(dst, 'l' in flags, 'x' in flags)
+                util.set_flags(dst, islink, isexec)
     cmdutil.addremove(repo, cfiles)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
