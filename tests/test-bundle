@@ -129,3 +129,14 @@ hg bundle ../bundle.hg ../orig
 cd ../orig
 hg incoming ../bundle.hg
 cd ..
+
+# test for http://www.selenic.com/mercurial/bts/issue1144
+echo "===== test that verify bundle does not traceback"
+# partial history bundle, fails w/ unkown parent
+hg -R bundle.hg verify
+# full history bundle, refuses to verify non-local repo
+hg -R all.hg verify
+# but, regular verify must continue to work
+hg -R orig verify
+
+
