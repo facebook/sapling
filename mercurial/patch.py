@@ -669,17 +669,17 @@ class binhunk:
     def new(self):
         return [self.text]
 
-    def extract(self, fp):
-        line = fp.readline()
+    def extract(self, lr):
+        line = lr.readline()
         self.hunk.append(line)
         while line and not line.startswith('literal '):
-            line = fp.readline()
+            line = lr.readline()
             self.hunk.append(line)
         if not line:
             raise PatchError(_('could not extract binary patch'))
         size = int(line[8:].rstrip())
         dec = []
-        line = fp.readline()
+        line = lr.readline()
         self.hunk.append(line)
         while len(line) > 1:
             l = line[0]
@@ -688,7 +688,7 @@ class binhunk:
             else:
                 l = ord(l) - ord('a') + 27
             dec.append(base85.b85decode(line[1:-1])[:l])
-            line = fp.readline()
+            line = lr.readline()
             self.hunk.append(line)
         text = zlib.decompress(''.join(dec))
         if len(text) != size:
@@ -806,7 +806,7 @@ def scangitpatch(lr, firstline):
     gitlr.push(firstline)
     (dopatch, gitpatches) = readgitpatch(gitlr)
     fp.seek(pos)
-    return fp, dopatch, gitpatches
+    return dopatch, gitpatches
 
 def iterhunks(ui, fp, sourcefile=None):
     """Read a patch and yield the following events:
@@ -871,7 +871,7 @@ def iterhunks(ui, fp, sourcefile=None):
             if emitfile:
                 emitfile = False
                 yield 'file', (afile, bfile, current_hunk)
-            current_hunk.extract(fp)
+            current_hunk.extract(lr)
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
             m = gitre.match(x)
@@ -879,7 +879,7 @@ def iterhunks(ui, fp, sourcefile=None):
                 afile, bfile = m.group(1, 2)
                 if not git:
                     git = True
-                    fp, dopatch, gitpatches = scangitpatch(lr, x)
+                    dopatch, gitpatches = scangitpatch(lr, x)
                     yield 'git', gitpatches
                     for gp in gitpatches:
                         changed[gp.path] = gp
