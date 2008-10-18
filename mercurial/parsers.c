@@ -238,6 +238,40 @@ quit:
 const char nullid[20];
 const int nullrev = -1;
 
+/* create an index tuple, insert into the nodemap */
+static PyObject * _build_idx_entry(PyObject *nodemap, int n, uint64_t offset_flags,
+                                   int comp_len, int uncomp_len, int base_rev,
+                                   int link_rev, int parent_1, int parent_2,
+                                   const char *c_node_id)
+{
+	int err;
+	PyObject *entry, *node_id, *n_obj;
+
+	node_id = PyString_FromStringAndSize(c_node_id, 20);
+	n_obj = PyInt_FromLong(n);
+	if (!node_id || !n_obj)
+		err = -1;
+	else
+		err = PyDict_SetItem(nodemap, node_id, n_obj);
+
+	Py_XDECREF(n_obj);
+	if (err)
+		goto error_dealloc;
+
+	entry = Py_BuildValue("LiiiiiiN", offset_flags, comp_len,
+			      uncomp_len, base_rev, link_rev,
+			      parent_1, parent_2, node_id);
+	if (!entry)
+		goto error_dealloc;
+	PyObject_GC_UnTrack(entry); /* don't waste time with this */
+
+	return entry;
+
+error_dealloc:
+	Py_XDECREF(node_id);
+	return NULL;
+}
+
 /* RevlogNG format (all in big endian, data may be inlined):
  *    6 bytes: offset
  *    2 bytes: flags
@@ -252,11 +286,11 @@ const int nullrev = -1;
 static int _parse_index_ng (const char *data, int size, int inlined,
 			    PyObject *index, PyObject *nodemap)
 {
-	PyObject *entry = NULL, *node_id = NULL, *n_obj = NULL;
-	PyObject *nullrev_obj = NULL, *nullid_obj = NULL;
-	int comp_len, uncomp_len, base_rev, link_rev, parent_1, parent_2;
+	PyObject *entry;
+	int n = 0, err;
 	uint64_t offset_flags;
-	int n = 0;
+	int comp_len, uncomp_len, base_rev, link_rev, parent_1, parent_2;
+	const char *c_node_id;
 	const char *end = data + size;
 
 	while (data < end) {
@@ -268,35 +302,28 @@ static int _parse_index_ng (const char *data, int size, int inlined,
                         offset_flags |= ((uint64_t) offset_high) << 32;
 		}
 
-
 		comp_len = ntohl(*((uint32_t *) (data + 8)));
 		uncomp_len = ntohl(*((uint32_t *) (data + 12)));
 		base_rev = ntohl(*((uint32_t *) (data + 16)));
 		link_rev = ntohl(*((uint32_t *) (data + 20)));
 		parent_1 = ntohl(*((uint32_t *) (data + 24)));
 		parent_2 = ntohl(*((uint32_t *) (data + 28)));
-		node_id = PyString_FromStringAndSize(data + 32, 20);
-		n_obj = PyInt_FromLong(n);
-		if (!node_id || !n_obj ||
-		    PyDict_SetItem(nodemap, node_id, n_obj) != 0)
-			goto quit;
-		Py_DECREF(n_obj);
-		
-		entry = Py_BuildValue("LiiiiiiN", offset_flags, comp_len,
-				      uncomp_len, base_rev, link_rev,
-				      parent_1, parent_2, node_id);
-		PyObject_GC_UnTrack(entry); /* don't waste time with this */
-		if (!entry)
-			goto quit;
+		c_node_id = data + 32;
 
-		/* append to or set value in the index list */
+		entry = _build_idx_entry(nodemap, n, offset_flags,
+					comp_len, uncomp_len, base_rev,
+					link_rev, parent_1, parent_2,
+					c_node_id);
+		if (!entry)
+			return 0;
+
 		if (inlined) {
-			if (PyList_Append(index, entry) != 0)
-				goto quit;
+			err = PyList_Append(index, entry);
 			Py_DECREF(entry);
-		} else {
+			if (err)
+				return 0;
+		} else
 			PyList_SET_ITEM(index, n, entry); /* steals reference */
-		}
 
 		data += 64 + (inlined ? comp_len : 0);
 		n++;
@@ -304,42 +331,25 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 	if (data > end) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(PyExc_ValueError, "corrupt index file");
-		goto quit;
+		return 0;
 	}
 
 	/* create the nullid/nullrev entry in the nodemap and the 
 	 * magic nullid entry in the index at [-1] */
-	nullid_obj = PyString_FromStringAndSize(nullid, 20);
-	nullrev_obj = PyInt_FromLong(nullrev);
-	if (!nodemap || !nullid_obj || !nullrev_obj ||
-	    PyDict_SetItem(nodemap, nullid_obj, nullrev_obj) != 0)
-		goto quit;
-	Py_DECREF(nullrev_obj);
-		
-	entry = Py_BuildValue("iiiiiiiN", 0, 0, 0, -1, -1, -1, -1, nullid_obj);
-	PyObject_GC_UnTrack(entry); /* don't waste time with this */
+	entry = _build_idx_entry(nodemap, 
+			nullrev, 0, 0, 0, -1, -1, -1, -1, nullid);
 	if (!entry)
-		goto quit;
+		return 0;
 	if (inlined) {
-		if (PyList_Append(index, entry) != 0)
-			goto quit;
+		err = PyList_Append(index, entry);
 		Py_DECREF(entry);
-	} else {
+		if (err)
+			return 0;
+	} else
 		PyList_SET_ITEM(index, n, entry); /* steals reference */
-	}
 
 	return 1;
-
-quit:
-	Py_XDECREF(n_obj);
-	Py_XDECREF(node_id);
-	Py_XDECREF(entry);
-	Py_XDECREF(nullrev_obj);
-	Py_XDECREF(nullid_obj);
-	return 0;
 }
-
-
 
 /* This function parses a index file and returns a Python tuple of the
  * following format: (index, nodemap, cache)
@@ -367,6 +377,8 @@ static PyObject *parse_index(PyObject *self, PyObject *args)
 		goto quit;
 
 	nodemap = PyDict_New();
+	if (!nodemap)
+		goto quit;
 
 	/* set up the cache return value */
 	if (inlined) {
