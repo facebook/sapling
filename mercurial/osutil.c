@@ -270,10 +270,13 @@ static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 {
 	PyObject *list, *elem, *stat, *ret = NULL;
 	char fullpath[PATH_MAX + 10];
-	int kind, dfd = -1, err;
+	int kind, err;
 	struct stat st;
 	struct dirent *ent;
 	DIR *dir;
+#ifdef AT_SYMLINK_NOFOLLOW
+	int dfd = -1;
+#endif
 
 	if (pathlen >= PATH_MAX) {
 		PyErr_SetString(PyExc_ValueError, "path too long");
