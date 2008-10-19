@@ -655,6 +655,10 @@ class queue:
             raise util.Abort(_('patch "%s" already exists') % patch)
         if opts.get('include') or opts.get('exclude') or pats:
             match = cmdutil.match(repo, pats, opts)
+            # detect missing files in pats
+            def badfn(f, msg):
+                raise util.Abort('%s: %s' % (f, msg))
+            match.bad = badfn
             m, a, r, d = repo.status(match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force)
