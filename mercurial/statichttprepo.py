@@ -42,11 +42,18 @@ class statichttprepository(localrepo.localrepository):
         try:
             requirements = self.opener("requires").read().splitlines()
         except IOError, inst:
-            if inst.errno == errno.ENOENT:
+            if inst.errno != errno.ENOENT:
+                raise
+            # check if it is a non-empty old-style repository
+            try:
+                self.opener("00changelog.i").read(1)
+            except IOError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+                # we do not care about empty old-style repositories here
                 msg = _("'%s' does not appear to be an hg repository") % path
                 raise repo.RepoError(msg)
-            else:
-                requirements = []
+            requirements = []
 
         # check them
         for r in requirements:
