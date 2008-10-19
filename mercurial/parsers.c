@@ -164,7 +164,8 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	PyObject *dmap, *cmap, *parents = NULL, *ret = NULL;
 	PyObject *fname = NULL, *cname = NULL, *entry = NULL;
 	char *str, *cur, *end, *cpos;
-	int state, mode, size, mtime, flen;
+	int state, mode, size, mtime;
+	unsigned int flen;
 	int len;
 	char decode[16]; /* for alignment */
 
@@ -195,8 +196,10 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 		mtime = ntohl(*(uint32_t *)(decode + 8));
 		flen = ntohl(*(uint32_t *)(decode + 12));
 		cur += 17;
-		if (cur + flen > end)
+		if (flen > end - cur) {
+			PyErr_SetString(PyExc_ValueError, "overflow in dirstate");
 			goto quit;
+		}
 
 		entry = Py_BuildValue("ciii", state, mode, size, mtime);
 		PyObject_GC_UnTrack(entry); /* don't waste time with this */
@@ -294,6 +297,8 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 	const char *end = data + size;
 
 	while (data < end) {
+		unsigned int step;
+
                 offset_flags = ntohl(*((uint32_t *) (data + 4)));
                 if (n == 0) /* mask out version number for the first entry */
                         offset_flags &= 0xFFFF;
@@ -325,10 +330,13 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 		} else
 			PyList_SET_ITEM(index, n, entry); /* steals reference */
 
-		data += 64 + (inlined ? comp_len : 0);
 		n++;
+		step = 64 + (inlined ? comp_len : 0);
+		if (end - data < step)
+			break;
+		data += step;
 	}
-	if (data > end) {
+	if (data != end) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(PyExc_ValueError, "corrupt index file");
 		return 0;
