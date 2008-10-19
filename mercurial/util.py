@@ -76,9 +76,9 @@ try:
         return p
 except ImportError:
     subprocess = None
-    import popen2 as _popen2
+    from popen2 import Popen3
     popen2 = os.popen2
-    Popen3 = _popen2.Popen3
+    popen3 = os.popen3
 
 
 try:

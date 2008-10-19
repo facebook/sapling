@@ -83,4 +83,5 @@ echo % pull
 hg --cwd b rollback
 hg --traceback --cwd b pull ../a 2>&1 | sed -e 's/\(Message-Id:\).*/\1/' \
   -e 's/changeset \([0-9a-f]*\) in .*/changeset \1/' \
-  -e 's/^Date:.*/Date:/'
+  -e 's/^Date:.*/Date:/' \
+  -e 's/^1 files changed/1 file changed/'
