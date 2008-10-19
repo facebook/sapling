@@ -202,9 +202,9 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 		}
 
 		entry = Py_BuildValue("ciii", state, mode, size, mtime);
-		PyObject_GC_UnTrack(entry); /* don't waste time with this */
 		if (!entry)
 			goto quit;
+		PyObject_GC_UnTrack(entry); /* don't waste time with this */
 
 		cpos = memchr(cur, 0, flen);
 		if (cpos) {
