@@ -20,7 +20,7 @@ for t in "None" "bzip2" "gzip"; do
   hg init t$t
   cd t1
   hg bundle -t $t ../b$t ../t$t
-  head -n 1 ../b$t | cut -b 1-6
+  cut -b 1-6 ../b$t | head -n 1
   cd ../t$t
   hg pull ../b$t
   hg up
