@@ -83,28 +83,44 @@ cat .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
-echo % qrefresh --short
+echo
+echo % qrefresh --short tests:
 echo 'orphan' > orphanchild
 hg add orphanchild
-hg qrefresh nonexistingfilename
+
+echo % - add 1/base and 2/base one by one
+hg qrefresh nonexistingfilename # clear patch
 hg qrefresh --short 1/base
 hg qrefresh --short 2/base
 
-echo % qdiff
+echo % -- qdiff output
 hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
-echo % patch file contents
+echo % -- patch file content
 cat .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
-
-echo % diff shows orphan ...
 hg st
+
+echo % -- diff shows what is not in patch
 hg diff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
               -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" \
               -e "s/^\(diff\).*/\1/"
-
+echo % - before starting exclusive tests
+sed -n '/^diff/s/diff -r [^ ]* //p' .hg/patches/mqbase
+echo % - exclude 2/base
+hg qref -s -X 2/base
+sed -n '/^diff/s/diff -r [^ ]* //p' .hg/patches/mqbase
+echo % -- status shows 2/base as dirty
+hg st
+echo % - remove 1/base and add 2/base again but not orphanchild
+hg qref -s -X orphanchild -X 1/base 2/base orphanchild
+sed -n '/^diff/s/diff -r [^ ]* //p' .hg/patches/mqbase
+echo % - add 1/base with include filter - and thus remove 2/base from patch
+hg qref -s -I 1/ o* */*
+sed -n '/^diff/s/diff -r [^ ]* //p' .hg/patches/mqbase
+echo
 cd ..
 
 

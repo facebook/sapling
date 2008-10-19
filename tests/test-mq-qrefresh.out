@@ -159,8 +159,10 @@ diff -r b55ecdccb5cf 2/base
 @@ -1,1 +1,1 @@
 -base
 +patched
-% qrefresh --short
-% qdiff
+
+% qrefresh --short tests:
+% - add 1/base and 2/base one by one
+% -- qdiff output
 diff -r b55ecdccb5cf 1/base
 --- a/1/base
 +++ b/1/base
@@ -178,7 +180,7 @@ diff -r b55ecdccb5cf orphanchild
 +++ b/orphanchild
 @@ -0,0 +1,1 @@
 +orphan
-% patch file contents
+% -- patch file content
 mqbase
 
 diff -r b55ecdccb5cf 1/base
@@ -193,14 +195,28 @@ diff -r b55ecdccb5cf 2/base
 @@ -1,1 +1,1 @@
 -base
 +patched
-% diff shows orphan ...
 A orphanchild
 ? base
+% -- diff shows what is not in patch
 diff
 --- /dev/null
 +++ b/orphanchild
 @@ -0,0 +1,1 @@
 +orphan
+% - before starting exclusive tests
+1/base
+2/base
+% - exclude 2/base
+1/base
+% -- status shows 2/base as dirty
+M 2/base
+A orphanchild
+? base
+% - remove 1/base and add 2/base again but not orphanchild
+2/base
+% - add 1/base with include filter - and thus remove 2/base from patch
+1/base
+
 % create test repo
 adding a
 % capture changes

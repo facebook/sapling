@@ -1076,7 +1076,6 @@ class queue:
 
             if opts.get('git'):
                 self.diffopts().git = True
-            matchfn = cmdutil.match(repo, pats, opts)
             tip = repo.changelog.tip()
             if top == tip:
                 # if the top of our patch queue is also the tip, there is an
@@ -1086,7 +1085,7 @@ class queue:
                 # changed to speed up the diff
                 #
                 # in short mode, we only diff the files included in the
-                # patch already
+                # patch already plus specified files
                 #
                 # this should really read:
                 #   mm, dd, aa, aa2 = repo.status(tip, patchparent)[:4]
@@ -1097,10 +1096,13 @@ class queue:
                 changes = repo.changelog.read(tip)
                 man = repo.manifest.read(changes[0])
                 aaa = aa[:]
+                matchfn = cmdutil.match(repo, pats, opts)
                 if opts.get('short'):
-                    # if amending a patch, we always match already-in-patch files
+                    # if amending a patch, we start with existing
+                    # files plus specified files - unfiltered
                     match = cmdutil.matchfiles(repo, mm + aa + dd + matchfn.files())
-                    matchfn = match # FIXME: Why have two matchers if we only need one?
+                    # filter with inc/exl options
+                    matchfn = cmdutil.match(repo, opts=opts)
                 else:
                     match = cmdutil.matchall(repo)
                 m, a, r, d = repo.status(match=match)[:4]
