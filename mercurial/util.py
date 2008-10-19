@@ -51,6 +51,7 @@ def sha1(s):
 
 try:
     import subprocess
+    subprocess.Popen  # trigger ImportError early
     closefds = os.name == 'posix'
     def popen2(cmd, mode='t', bufsize=-1):
         p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
@@ -76,7 +77,7 @@ try:
 except ImportError:
     subprocess = None
     import popen2 as _popen2
-    popen2 = _popen2.popen2
+    popen2 = os.popen2
     Popen3 = _popen2.Popen3
 
 
