@@ -205,6 +205,18 @@ def install_hg():
     global hgpkg
     hgpkg = _hgpath()
 
+    vlog("# Installing dummy diffstat")
+    f = open(os.path.join(BINDIR, 'diffstat'), 'w')
+    f.write('#!' + sys.executable + '\n'
+            'import sys\n'
+            'files = 0\n'
+            'for line in sys.stdin:\n'
+            '    if line.startswith("diff "):\n'
+            '        files += 1\n'
+            'sys.stdout.write("files patched: %d\\n" % files)\n')
+    f.close()
+    os.chmod(os.path.join(BINDIR, 'diffstat'), 0700)
+
     if coverage:
         vlog("# Installing coverage wrapper")
         os.environ['COVERAGE_FILE'] = COVERAGE_FILE
