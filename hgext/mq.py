@@ -640,7 +640,7 @@ class queue:
             raise util.Abort(_('"%s" cannot be used as the name of a patch')
                              % name)
 
-    def new(self, repo, patch, *pats, **opts):
+    def new(self, repo, patchfn, *pats, **opts):
         """options:
            msg: a string or a no-argument function returning a string
         """
@@ -650,9 +650,9 @@ class queue:
         date = opts.get('date')
         if date:
             date = util.parsedate(date)
-        self.check_reserved_name(patch)
-        if os.path.exists(self.join(patch)):
-            raise util.Abort(_('patch "%s" already exists') % patch)
+        self.check_reserved_name(patchfn)
+        if os.path.exists(self.join(patchfn)):
+            raise util.Abort(_('patch "%s" already exists') % patchfn)
         if opts.get('include') or opts.get('exclude') or pats:
             match = cmdutil.match(repo, pats, opts)
             # detect missing files in pats
@@ -665,39 +665,55 @@ class queue:
             match = cmdutil.match(repo, m + a + r)
         commitfiles = m + a + r
         self.check_toppatch(repo)
+        insert = self.full_series_end()
         wlock = repo.wlock()
         try:
-            insert = self.full_series_end()
-            if callable(msg):
-                msg = msg()
-            commitmsg = msg and msg or ("[mq]: %s" % patch)
-            n = repo.commit(commitfiles, commitmsg, user, date, match=match, force=True)
-            if n == None:
-                raise util.Abort(_("repo commit failed"))
-            self.full_series[insert:insert] = [patch]
-            self.applied.append(statusentry(revlog.hex(n), patch))
-            self.parse_series()
-            self.series_dirty = 1
-            self.applied_dirty = 1
-            p = self.opener(patch, "w")
-            if date:
-                p.write("# HG changeset patch\n")
-                if user:
-                    p.write("# User " + user + "\n")
-                p.write("# Date %d %d\n" % date)
-                p.write("\n")
-            elif user:
-                p.write("From: " + user + "\n")
-                p.write("\n")
-            if msg:
-                msg = msg + "\n"
-                p.write(msg)
-            p.close()
-            wlock = None
-            r = self.qrepo()
-            if r: r.add([patch])
-            if commitfiles:
-                self.refresh(repo, short=True, git=opts.get('git'))
+            # if patch file write fails, abort early
+            p = self.opener(patchfn, "w")
+            try:
+                if date:
+                    p.write("# HG changeset patch\n")
+                    if user:
+                        p.write("# User " + user + "\n")
+                    p.write("# Date %d %d\n\n" % date)
+                elif user:
+                    p.write("From: " + user + "\n\n")
+
+                if callable(msg):
+                    msg = msg()
+                commitmsg = msg and msg or ("[mq]: %s" % patchfn)
+                n = repo.commit(commitfiles, commitmsg, user, date, match=match, force=True)
+                if n == None:
+                    raise util.Abort(_("repo commit failed"))
+                try:
+                    self.full_series[insert:insert] = [patchfn]
+                    self.applied.append(statusentry(revlog.hex(n), patchfn))
+                    self.parse_series()
+                    self.series_dirty = 1
+                    self.applied_dirty = 1
+                    if msg:
+                        msg = msg + "\n"
+                        p.write(msg)
+                    if commitfiles:
+                        diffopts = self.diffopts()
+                        if opts.get('git'): diffopts.git = True
+                        parent = self.qparents(repo, n)
+                        patch.diff(repo, node1=parent, node2=n, fp=p,
+                                   match=match, opts=diffopts)
+                    p.close()
+                    wlock = None
+                    r = self.qrepo()
+                    if r: r.add([patchfn])
+                except:
+                    repo.rollback()
+                    raise
+            except Exception, inst:
+                patchpath = self.join(patchfn)
+                try:
+                    os.unlink(patchpath)
+                except:
+                    self.ui.warn(_('error unlinking %s\n') % patchpath)
+                raise
             self.removeundo(repo)
         finally:
             del wlock
