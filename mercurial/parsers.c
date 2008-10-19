@@ -406,7 +406,6 @@ quit:
 	Py_XDECREF(nodemap);
 	Py_XDECREF(cache);
 	Py_XDECREF(rval);
-	Py_XDECREF(data_obj);
 	return NULL;
 }
 
