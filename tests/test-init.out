@@ -3,6 +3,7 @@ store created
 00changelog.i created
 revlogv1
 store
+fncache
 adding foo
 # creating repo with old format
 revlogv1

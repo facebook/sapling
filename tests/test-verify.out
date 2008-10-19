@@ -17,7 +17,6 @@ checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
- ?: cannot decode filename 'data/X_f_o_o.txt.i'
  data/FOO.txt.i@0: missing revlog!
  0: empty or missing FOO.txt
  FOO.txt@0: f62022d3d590 in manifests not found
@@ -27,8 +26,6 @@ checking files
  data/bar.txt.i@0: missing revlog!
  0: empty or missing bar.txt
  bar.txt@0: 256559129457 in manifests not found
-warning: orphan revlog 'data/xbar.txt.i'
 3 files, 1 changesets, 0 total revisions
-1 warnings encountered!
-10 integrity errors encountered!
+9 integrity errors encountered!
 (first damaged changeset appears to be 0)

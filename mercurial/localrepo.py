@@ -16,7 +16,7 @@ import merge as merge_
 
 class localrepository(repo.repository):
     capabilities = util.set(('lookup', 'changegroupsubset'))
-    supported = ('revlogv1', 'store')
+    supported = ('revlogv1', 'store', 'fncache')
 
     def __init__(self, parentui, path=None, create=0):
         repo.repository.__init__(self)
@@ -35,6 +35,7 @@ class localrepository(repo.repository):
                 if parentui.configbool('format', 'usestore', True):
                     os.mkdir(os.path.join(self.path, "store"))
                     requirements.append("store")
+                    requirements.append("fncache")
                     # create an invalid changelog
                     self.opener("00changelog.i", "a").write(
                         '\0\0\0\2' # represents revlogv2

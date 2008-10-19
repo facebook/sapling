@@ -2,6 +2,7 @@
 
 CONTRIBDIR=$TESTDIR/../contrib
 
+echo % prepare repo-a
 mkdir repo-a
 cd repo-a
 hg init
@@ -18,11 +19,13 @@ hg commit -m third -d '0 0'
 
 hg verify
 
-echo dumping revlog of file a to stdout:
+echo
+echo % dumping revlog of file a to stdout
 python $CONTRIBDIR/dumprevlog .hg/store/data/a.i
-echo dumprevlog done
+echo % dumprevlog done
 
-# dump all revlogs to file repo.dump
+echo
+echo % dump all revlogs to file repo.dump
 find .hg/store -name "*.i" | sort | xargs python $CONTRIBDIR/dumprevlog > ../repo.dump
 
 cd ..
@@ -31,17 +34,28 @@ mkdir repo-b
 cd repo-b
 hg init
 
-echo undumping:
+echo
+echo % undumping into repo-b
 python $CONTRIBDIR/undumprevlog < ../repo.dump
-echo undumping done
+echo % undumping done
 
+cd ..
+
+echo
+echo % clone --pull repo-b repo-c  to rebuild fncache
+hg clone --pull -U repo-b repo-c
+
+cd repo-c
+
+echo
+echo % verify repo-c
 hg verify
 
 cd ..
 
-echo comparing repos:
-hg -R repo-b incoming repo-a
-hg -R repo-a incoming repo-b
-echo comparing done
+echo
+echo % comparing repos
+hg -R repo-c incoming repo-a
+hg -R repo-a incoming repo-c
 
 exit 0

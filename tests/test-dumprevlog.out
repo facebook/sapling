@@ -1,9 +1,11 @@
+% prepare repo-a
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 3 changesets, 3 total revisions
-dumping revlog of file a to stdout:
+
+% dumping revlog of file a to stdout
 file: .hg/store/data/a.i
 node: 183d2312b35066fb6b3b449b84efc370d50993d0
 linkrev: 0
@@ -32,22 +34,34 @@ adding to file a
 adding more to file a
 
 -end-
-dumprevlog done
-undumping:
+% dumprevlog done
+
+% dump all revlogs to file repo.dump
+
+% undumping into repo-b
 .hg/store/00changelog.i
 .hg/store/00manifest.i
 .hg/store/data/a.i
-undumping done
+% undumping done
+
+% clone --pull repo-b repo-c to rebuild fncache
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 1 files
+
+% verify repo-c
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 3 changesets, 3 total revisions
-comparing repos:
+
+% comparing repos
 comparing with repo-a
 searching for changes
 no changes found
-comparing with repo-b
+comparing with repo-c
 searching for changes
 no changes found
-comparing done
