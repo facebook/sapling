@@ -107,7 +107,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     individual commits to CVS and merge them into changesets. CVS
     source uses its internal changeset merging code by default but can
     be configured to call the external 'cvsps' program by setting:
-        --config convert.cvsps=cvsps -A -u --cvs-direct -q
+        --config convert.cvsps='cvsps -A -u --cvs-direct -q'
     This is a legacy option and may be removed in future.
 
     The options shown are the defaults.

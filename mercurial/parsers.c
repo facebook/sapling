@@ -295,25 +295,27 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 	int comp_len, uncomp_len, base_rev, link_rev, parent_1, parent_2;
 	const char *c_node_id;
 	const char *end = data + size;
+	char decode[64]; /* to enforce alignment with inline data */
 
 	while (data < end) {
 		unsigned int step;
-
-                offset_flags = ntohl(*((uint32_t *) (data + 4)));
+		
+		memcpy(decode, data, 64);
+                offset_flags = ntohl(*((uint32_t *) (decode + 4)));
                 if (n == 0) /* mask out version number for the first entry */
                         offset_flags &= 0xFFFF;
                 else {
-			uint32_t offset_high =  ntohl(*((uint32_t *) data));
+			uint32_t offset_high =  ntohl(*((uint32_t *) decode));
                         offset_flags |= ((uint64_t) offset_high) << 32;
 		}
 
-		comp_len = ntohl(*((uint32_t *) (data + 8)));
-		uncomp_len = ntohl(*((uint32_t *) (data + 12)));
-		base_rev = ntohl(*((uint32_t *) (data + 16)));
-		link_rev = ntohl(*((uint32_t *) (data + 20)));
-		parent_1 = ntohl(*((uint32_t *) (data + 24)));
-		parent_2 = ntohl(*((uint32_t *) (data + 28)));
-		c_node_id = data + 32;
+		comp_len = ntohl(*((uint32_t *) (decode + 8)));
+		uncomp_len = ntohl(*((uint32_t *) (decode + 12)));
+		base_rev = ntohl(*((uint32_t *) (decode + 16)));
+		link_rev = ntohl(*((uint32_t *) (decode + 20)));
+		parent_1 = ntohl(*((uint32_t *) (decode + 24)));
+		parent_2 = ntohl(*((uint32_t *) (decode + 28)));
+		c_node_id = decode + 32;
 
 		entry = _build_idx_entry(nodemap, n, offset_flags,
 					comp_len, uncomp_len, base_rev,
