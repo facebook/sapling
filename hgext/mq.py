@@ -1511,9 +1511,11 @@ class queue:
                 checkfile(patchname)
                 patchf = self.opener(patchname, "w")
                 patchf.write(text)
-            checkseries(patchname)
-            index = self.full_series_end() + i
-            self.full_series[index:index] = [patchname]
+            if not force:
+                checkseries(patchname)
+            if patchname not in self.series:
+                index = self.full_series_end() + i
+                self.full_series[index:index] = [patchname]
             self.parse_series()
             self.ui.warn("adding %s to series file\n" % patchname)
             i += 1

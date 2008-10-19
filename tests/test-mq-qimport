@@ -36,6 +36,22 @@ rm foo
 hg qimport file://$HGTMP/url.diff
 hg qun
 
+echo % import patch that already exists
+echo foo2 >> foo
+hg add foo
+hg diff > ../url.diff
+hg revert --no-backup foo
+rm foo
+hg qimport ../url.diff
+hg qpush
+cat foo
+hg qpop
+echo % qimport -f
+hg qimport -f ../url.diff
+hg qpush
+cat foo
+hg qpop
+
 echo % build diff with CRLF
 python ../writelines.py b 5 'a\n' 5 'a\r\n'
 hg ci -Am addb
