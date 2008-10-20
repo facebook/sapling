@@ -91,7 +91,12 @@ class hgweb(object):
         if cmd and cmd in protocol.__all__:
             try:
                 if cmd in perms:
-                    self.check_perm(req, perms[cmd])
+                    try:
+                        self.check_perm(req, perms[cmd])
+                    except ErrorResponse, inst:
+                        if cmd == 'unbundle':
+                            req.drain()
+                        raise
                 method = getattr(protocol, cmd)
                 return method(self.repo, req)
             except ErrorResponse, inst:

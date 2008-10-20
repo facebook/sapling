@@ -117,11 +117,7 @@ def unbundle(repo, req):
 
     # fail early if possible
     if not check_heads():
-        length = int(req.env.get('CONTENT_LENGTH', 0))
-        for s in util.filechunkiter(req, limit=length):
-            # drain incoming bundle, else client will not see
-            # response when run outside cgi script
-            pass
+        req.drain()
         raise ErrorResponse(HTTP_OK, 'unsynced changes')
 
     # do not lock repo until all changegroup data is

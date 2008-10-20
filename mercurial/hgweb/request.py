@@ -7,6 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import socket, cgi, errno
+from mercurial import util
 from common import ErrorResponse, statusmessage
 
 shortcuts = {
@@ -56,6 +57,12 @@ class wsgirequest(object):
 
     def read(self, count=-1):
         return self.inp.read(count)
+
+    def drain(self):
+        '''need to read all data from request, httplib is half-duplex'''
+        length = int(self.env.get('CONTENT_LENGTH', 0))
+        for s in util.filechunkiter(self.inp, limit=length):
+            pass
 
     def respond(self, status, type=None, filename=None, length=0):
         if self._start_response is not None:
