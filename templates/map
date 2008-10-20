@@ -13,6 +13,7 @@ navgraphentry = '<a href="{url}graph/{node|short}{sessionvars%urlparameter}">{la
 filenaventry = '<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{label|escape}</a> '
 filedifflink = '<a href="#url#diff/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#file|escape#</a> '
 filenodelink = '<a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#file|escape#</a> '
+filenolink = '{file|escape} '
 fileellipses = '...'
 changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl

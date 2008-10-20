@@ -234,7 +234,8 @@ def changeset(web, req, tmpl):
     files = []
     parity = paritygen(web.stripecount)
     for f in ctx.files():
-        files.append(tmpl("filenodelink",
+        template = f in ctx and 'filenodelink' or 'filenolink'
+        files.append(tmpl(template,
                           node=hex(n), file=f,
                           parity=parity.next()))
 
