@@ -270,7 +270,7 @@ def bisect(ui, repo, rev=None, extra=None,
     Once you have performed tests, mark the working directory as bad
     or good and bisect will either update to another candidate changeset
     or announce that it has found the bad revision.
-    
+
     As a shortcut, you can also use the revision argument to mark a
     revision as good or bad without checking it out first.
     """
