@@ -33,19 +33,19 @@ b85encode(PyObject *self, PyObject *args)
 	char *dst;
 	int len, olen, i;
 	unsigned int acc, val, ch;
-        int pad = 0;
+	int pad = 0;
 
 	if (!PyArg_ParseTuple(args, "s#|i", &text, &len, &pad))
 		return NULL;
 
-        if (pad)
-                olen = ((len + 3) / 4 * 5) - 3;
-        else {
-                olen = len % 4;
-                if (olen)
-                        olen++;
-                olen += len / 4 * 5;
-        }
+	if (pad)
+		olen = ((len + 3) / 4 * 5) - 3;
+	else {
+		olen = len % 4;
+		if (olen)
+			olen++;
+		olen += len / 4 * 5;
+	}
 	if (!(out = PyString_FromStringAndSize(NULL, olen + 3)))
 		return NULL;
 
@@ -67,8 +67,8 @@ b85encode(PyObject *self, PyObject *args)
 		dst += 5;
 	}
 
-        if (!pad)
-                _PyString_Resize(&out, olen);
+	if (!pad)
+		_PyString_Resize(&out, olen);
 
 	return out;
 }
@@ -140,9 +140,9 @@ static char base85_doc[] = "Base85 Data Encoding";
 
 static PyMethodDef methods[] = {
 	{"b85encode", b85encode, METH_VARARGS,
-         "Encode text in base85.\n\n"
-         "If the second parameter is true, pad the result to a multiple of "
-         "five characters.\n"},
+	 "Encode text in base85.\n\n"
+	 "If the second parameter is true, pad the result to a multiple of "
+	 "five characters.\n"},
 	{"b85decode", b85decode, METH_VARARGS, "Decode base85 text.\n"},
 	{NULL, NULL}
 };

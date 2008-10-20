@@ -1787,7 +1787,7 @@ def refresh(ui, repo, *pats, **opts):
     the modifications that match those patterns; the remaining modifications
     will remain in the working directory.
 
-    If --short is specified, files currently included in the patch will 
+    If --short is specified, files currently included in the patch will
     be refreshed just like matched files and remain in the patch.
 
     hg add/remove/copy/rename work as usual, though you might want to use

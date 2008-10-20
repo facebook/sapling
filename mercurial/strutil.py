@@ -37,5 +37,5 @@ def rsplit(s, sep=None, maxsplit=-1):
     try:
         return s.rsplit(sep, maxsplit)
     except AttributeError:
-        return  [chunk[::-1] for chunk in 
-                 s[::-1].split(sep, maxsplit)[::-1]]
+        return [chunk[::-1] for chunk in
+                s[::-1].split(sep, maxsplit)[::-1]]

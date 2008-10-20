@@ -80,7 +80,7 @@ class converter_source(object):
         raise NotImplementedError()
 
     def getchanges(self, version):
-        """Returns a tuple of (files, copies). 
+        """Returns a tuple of (files, copies).
 
         files is a sorted list of (filename, id) tuples for all files
         changed between version and it's first parent returned by

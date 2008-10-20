@@ -144,9 +144,9 @@ typedef unsigned __int64 uint64_t;
 static uint32_t ntohl(uint32_t x)
 {
 	return ((x & 0x000000ffUL) << 24) |
-		((x & 0x0000ff00UL) <<  8) |
-		((x & 0x00ff0000UL) >>  8) |
-		((x & 0xff000000UL) >> 24);
+	       ((x & 0x0000ff00UL) <<  8) |
+	       ((x & 0x00ff0000UL) >>  8) |
+	       ((x & 0xff000000UL) >> 24);
 }
 #else
 /* not windows */
@@ -299,14 +299,14 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 
 	while (data < end) {
 		unsigned int step;
-		
+
 		memcpy(decode, data, 64);
-                offset_flags = ntohl(*((uint32_t *) (decode + 4)));
-                if (n == 0) /* mask out version number for the first entry */
-                        offset_flags &= 0xFFFF;
-                else {
+		offset_flags = ntohl(*((uint32_t *) (decode + 4)));
+		if (n == 0) /* mask out version number for the first entry */
+			offset_flags &= 0xFFFF;
+		else {
 			uint32_t offset_high =  ntohl(*((uint32_t *) decode));
-                        offset_flags |= ((uint64_t) offset_high) << 32;
+			offset_flags |= ((uint64_t) offset_high) << 32;
 		}
 
 		comp_len = ntohl(*((uint32_t *) (decode + 8)));
@@ -344,9 +344,9 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 		return 0;
 	}
 
-	/* create the nullid/nullrev entry in the nodemap and the 
+	/* create the nullid/nullrev entry in the nodemap and the
 	 * magic nullid entry in the index at [-1] */
-	entry = _build_idx_entry(nodemap, 
+	entry = _build_idx_entry(nodemap,
 			nullrev, 0, 0, 0, -1, -1, -1, -1, nullid);
 	if (!entry)
 		return 0;
@@ -372,16 +372,16 @@ static PyObject *parse_index(PyObject *self, PyObject *args)
 {
 	const char *data;
 	int size, inlined;
-	PyObject *rval = NULL, *index = NULL, *nodemap = NULL, *cache = NULL; 
+	PyObject *rval = NULL, *index = NULL, *nodemap = NULL, *cache = NULL;
 	PyObject *data_obj = NULL, *inlined_obj;
 
 	if (!PyArg_ParseTuple(args, "s#O", &data, &size, &inlined_obj))
 		return NULL;
 	inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
 
-	/* If no data is inlined, we know the size of the index list in 
-	 * advance: size divided by size of one one revlog record (64 bytes) 
-	 * plus one for the nullid */  
+	/* If no data is inlined, we know the size of the index list in
+	 * advance: size divided by size of one one revlog record (64 bytes)
+	 * plus one for the nullid */
 	index = inlined ? PyList_New(0) : PyList_New(size / 64 + 1);
 	if (!index)
 		goto quit;
