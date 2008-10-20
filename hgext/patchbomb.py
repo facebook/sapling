@@ -62,7 +62,7 @@ to send each message out:
 That should be all. Now your patchbomb is on its way out.'''
 
 import os, errno, socket, tempfile, cStringIO
-import email.MIMEMultipart, email.MIMEText, email.MIMEBase
+import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
 from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
@@ -180,7 +180,8 @@ def patchbomb(ui, repo, *revs, **opts):
             if body:
                 msg.attach(mail.mimeencode(ui, body, _charsets,
                                            opts.get('test')))
-            p = email.MIMEText.MIMEText('\n'.join(patch), 'x-patch')
+            p = mail.mimetextpatch('\n'.join(patch), 'x-patch',
+                                   opts.get('test'))
             binnode = bin(node)
             # if node is mq patch, it will have patch file name as tag
             patchname = [t for t in repo.nodetags(binnode)
@@ -199,7 +200,7 @@ def patchbomb(ui, repo, *revs, **opts):
             msg.attach(p)
         else:
             body += '\n'.join(patch)
-            msg = email.MIMEText.MIMEText(body)
+            msg = mail.mimetextpatch(body, display=opts.get('test'))
 
         subj = desc[0].strip().rstrip('. ')
         if total == 1:
