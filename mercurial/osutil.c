@@ -46,10 +46,10 @@ struct listdir_stat {
 #endif
 
 #define listdir_slot(name) \
-    static PyObject *listdir_stat_##name(PyObject *self, void *x) \
-    { \
-        return PyInt_FromLong(((struct listdir_stat *)self)->st.name); \
-    }
+	static PyObject *listdir_stat_##name(PyObject *self, void *x) \
+	{ \
+		return PyInt_FromLong(((struct listdir_stat *)self)->st.name); \
+	}
 
 listdir_slot(st_dev)
 listdir_slot(st_mode)
