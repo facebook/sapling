@@ -280,7 +280,7 @@ class svn_source(converter_source):
         # Check if branches bring a few more heads to the list
         if branches:
             rpath = self.url.strip('/')
-            branchnames = svn.client.ls(rpath + '/' + urllib.quote(branches), 
+            branchnames = svn.client.ls(rpath + '/' + urllib.quote(branches),
                                         rev, False, self.ctx)
             for branch in branchnames.keys():
                 module = '%s/%s/%s' % (oldmodule, branches, branch)
@@ -325,7 +325,7 @@ class svn_source(converter_source):
         else:
             # Perform a full checkout on roots
             uuid, module, revnum = self.revsplit(rev)
-            entries = svn.client.ls(self.baseurl + urllib.quote(module), 
+            entries = svn.client.ls(self.baseurl + urllib.quote(module),
                                     optrev(revnum), True, self.ctx)
             files = [n for n,e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
@@ -872,7 +872,7 @@ class svn_source(converter_source):
         path = path.strip('/')
         pool = Pool()
         rpath = '/'.join([self.baseurl, urllib.quote(path)]).strip('/')
-        return ['%s/%s' % (path, x) for x in 
+        return ['%s/%s' % (path, x) for x in
                 svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool).keys()]
 
     def getrelpath(self, path, module=None):
