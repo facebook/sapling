@@ -82,6 +82,19 @@ class TestTags(unittest.TestCase):
     
     def test_branch_from_tag_stupid(self):
         self.test_branch_from_tag(stupid=True)
+    
+    def test_tag_by_renaming_branch(self, stupid=False):
+        repo = self._load_fixture_and_fetch('tag_by_rename_branch.svndump', 
+                                            stupid=stupid)
+        svncommand.generate_hg_tags(ui.ui(), self.wc_path)
+        repo = hg.repository(ui.ui(), self.wc_path)
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         '1b941f92acc343939274bd8bbf25984fa9706bb9')
+        self.assertEqual(node.hex(repo['tag/dummy'].node()),
+                         '68f5f7d82b00a2efe3aca28b615ebab98235d55f')
+    
+    def test_tag_by_renaming_branch_stupid(self):
+        self.test_tag_by_renaming_branch(stupid=True)    
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(TestTags)
