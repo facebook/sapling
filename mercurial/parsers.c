@@ -301,12 +301,12 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 		unsigned int step;
 		
 		memcpy(decode, data, 64);
-                offset_flags = ntohl(*((uint32_t *) (decode + 4)));
-                if (n == 0) /* mask out version number for the first entry */
-                        offset_flags &= 0xFFFF;
-                else {
+		offset_flags = ntohl(*((uint32_t *) (decode + 4)));
+		if (n == 0) /* mask out version number for the first entry */
+			offset_flags &= 0xFFFF;
+		else {
 			uint32_t offset_high =  ntohl(*((uint32_t *) decode));
-                        offset_flags |= ((uint64_t) offset_high) << 32;
+			offset_flags |= ((uint64_t) offset_high) << 32;
 		}
 
 		comp_len = ntohl(*((uint32_t *) (decode + 8)));

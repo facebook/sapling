@@ -783,13 +783,13 @@ class linereader:
             yield l
 
 def scangitpatch(lr, firstline):
-    """        
+    """
     Git patches can emit:
     - rename a to b
     - change b
     - copy a to c
     - change c
-        
+
     We cannot apply this sequence as-is, the renamed 'a' could not be
     found for it would have been renamed already. And we cannot copy
     from 'b' instead because 'b' would have been changed already. So
