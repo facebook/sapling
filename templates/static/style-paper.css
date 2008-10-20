@@ -122,7 +122,7 @@ h3 {
 }
 .bigtable tr { border: none; }
 .bigtable .age { width: 6em; }
-.bigtable .author { width: 10em; }
+.bigtable .author { width: 12em; }
 .bigtable .description { }
 .bigtable .node { width: 5em; font-family: monospace;}
 .bigtable .lineno { width: 2em; text-align: right;}
