@@ -145,3 +145,46 @@ SlIBpFisgGkyRjX//TMtfcUAEsGu56+YnE1OlTZmzKm8BSu2rvo4rHAYYaadIFFuTy0LYgIkgLVD
 sgVa2F19D1tx9+hgbAygLgQwaIqcDdgA4BjQgIiz/AEP72++llgDKhKducqodGE4B0ETqF3JFOFC
 Q70eyNw=
 --===
+% utf-8 patch
+adding description
+adding utf
+% no mime encoding for email --test
+% md5sum of 8-bit output
+a6a3c6b9b6009cea23871a7727a282ab  mailtest
+% mime encoded mbox
+This patch series consists of 1 patches.
+
+
+Writing [PATCH] charset=utf-8; content-transfer-encoding: base64 ...
+From quux Thu Jan 01 00:04:01 1970
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+Subject: [PATCH] charset=utf-8; content-transfer-encoding: base64
+X-Mercurial-Node: c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+Message-Id: <c3c9e37db9f4fe4882cd.240@
+Date: Thu, 01 Jan 1970 00:04:00 +0000
+From: quux
+To: foo
+
+IyBIRyBjaGFuZ2VzZXQgcGF0Y2gKIyBVc2VyIHRlc3QKIyBEYXRlIDQgMAojIE5vZGUgSUQgYzNj
+OWUzN2RiOWY0ZmU0ODgyY2RhMzliYWY0MmZlZDZiYWQ4YjE1YQojIFBhcmVudCAgZmYyYzlmYTIw
+MThiMTVmYTc0YjMzMzYzYmRhOTUyNzMyM2UyYTk5ZgpjaGFyc2V0PXV0Zi04OyBjb250ZW50LXRy
+YW5zZmVyLWVuY29kaW5nOiBiYXNlNjQKCmRpZmYgLXIgZmYyYzlmYTIwMThiIC1yIGMzYzllMzdk
+YjlmNCBkZXNjcmlwdGlvbgotLS0gL2Rldi9udWxsCVRodSBKYW4gMDEgMDA6MDA6MDAgMTk3MCAr
+MDAwMAorKysgYi9kZXNjcmlwdGlvbglUaHUgSmFuIDAxIDAwOjAwOjA0IDE5NzAgKzAwMDAKQEAg
+LTAsMCArMSwzIEBACithIG11bHRpbGluZQorCitkZXNjcmlwdGlvbgpkaWZmIC1yIGZmMmM5ZmEy
+MDE4YiAtciBjM2M5ZTM3ZGI5ZjQgdXRmCi0tLSAvZGV2L251bGwJVGh1IEphbiAwMSAwMDowMDow
+MCAxOTcwICswMDAwCisrKyBiL3V0ZglUaHUgSmFuIDAxIDAwOjAwOjA0IDE5NzAgKzAwMDAKQEAg
+LTAsMCArMSwxIEBACitow7ZtbWEhCg==
+
+
+% iso-8859-1 patch
+adding isolatin
+% fake ascii mbox
+This patch series consists of 1 patches.
+
+
+Writing [PATCH] charset=us-ascii; content-transfer-encoding: 8bit ...
+% md5sum of 8-bit output
+45cb4b77e02f39eb91955f5c95913d66  mboxfix
