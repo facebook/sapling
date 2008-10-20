@@ -86,6 +86,17 @@ def validateconfig(ui):
             raise util.Abort(_('%r specified as email transport, '
                                'but not in PATH') % method)
 
+def mimetextpatch(s, subtype='plain', display=False):
+    '''If patch in utf-8 transfer-encode it.'''
+    if not display:
+        for cs in ('us-ascii', 'utf-8'):
+            try:
+                s.decode(cs)
+                return email.MIMEText.MIMEText(s, subtype, cs)
+            except UnicodeDecodeError:
+                pass
+    return email.MIMEText.MIMEText(s, subtype)
+
 def _charsets(ui):
     '''Obtains charsets to send mail parts not containing patches.'''
     charsets = [cs.lower() for cs in ui.configlist('email', 'charsets')]
