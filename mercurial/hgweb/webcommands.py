@@ -417,24 +417,40 @@ def summary(web, req, tmpl):
                 archives=web.archivelist("tip"))
 
 def filediff(web, req, tmpl):
-    fctx = webutil.filectx(web.repo, req)
-    n = fctx.node()
-    path = fctx.path()
-    parents = fctx.parents()
-    p1 = parents and parents[0].node() or nullid
+    fctx, ctx = None, None
+    try:
+        fctx = webutil.filectx(web.repo, req)
+    except LookupError, inst:
+        ctx = webutil.changectx(web.repo, req)
+        path = webutil.cleanpath(web.repo, req.form['file'][0])
+        if path not in ctx.files():
+            raise
+
+    if fctx is not None:
+        n = fctx.node()
+        path = fctx.path()
+        parents = fctx.parents()
+        p1 = parents and parents[0].node() or nullid
+    else:
+        n = ctx.node()
+        # path already defined in except clause
+        parents = ctx.parents()
+        p1 = parents and parents[0].node() or nullid
 
     diffs = web.diff(tmpl, p1, n, [path])
+    rename = fctx and webutil.renamelink(fctx) or []
+    ctx = fctx and fctx or ctx
     return tmpl("filediff",
                 file=path,
                 node=hex(n),
-                rev=fctx.rev(),
-                date=fctx.date(),
-                desc=fctx.description(),
-                author=fctx.user(),
-                rename=webutil.renamelink(fctx),
-                branch=webutil.nodebranchnodefault(fctx),
+                rev=ctx.rev(),
+                date=ctx.date(),
+                desc=ctx.description(),
+                author=ctx.user(),
+                rename=rename,
+                branch=webutil.nodebranchnodefault(ctx),
                 parent=webutil.siblings(parents),
-                child=webutil.siblings(fctx.children()),
+                child=webutil.siblings(ctx.children()),
                 diff=diffs)
 
 diff = filediff

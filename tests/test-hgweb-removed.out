@@ -1,0 +1,130 @@
+% setting up repo
+adding a
+% set up hgweb
+% revision
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: changeset c78f6c5cbea9</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/1">changelog</a>
+<a href="/shortlog/1">shortlog</a>
+<a href="/graph">graph</a>
+<a href="/tags">tags</a>
+<a href="/file/c78f6c5cbea9">files</a>
+<a href="/raw-rev/c78f6c5cbea9">raw</a>
+
+</div>
+
+<h2>changeset: del</h2>
+
+<table id="changesetEntry">
+<tr>
+ <th class="changeset">changeset 1:</th>
+ <td class="changeset"><a href="/rev/c78f6c5cbea9">c78f6c5cbea9</a></td>
+</tr>
+<tr><th class="parent">parent 0:</th><td class="parent"><a href="/rev/cb9a9f314b8b">cb9a9f314b8b</a></td></tr>
+
+<tr><th class="tag">tag:</th><td class="tag">tip</td></tr>
+<tr>
+ <th class="author">author:</th>
+ <td class="author">&#116;&#101;&#115;&#116;</td>
+</tr>
+<tr>
+ <th class="date">date:</th>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (38 years ago)</td>
+</tr>
+<tr>
+ <th class="files">files:</th>
+ <td class="files">a </td>
+</tr>
+<tr>
+ <th class="description">description:</th>
+ <td class="description">del</td>
+</tr>
+</table>
+
+<div id="changesetDiff">
+<pre class="parity0"><span class="minusline"><a class="lineno" href="#l1" id="l1">       1</a>--- a/a	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="plusline"><a class="lineno" href="#l2" id="l2">       2</a>+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="atline"><a class="lineno" href="#l3" id="l3">       3</a>@@ -1,1 +0,0 @@
+</span><span class="minusline"><a class="lineno" href="#l4" id="l4">       4</a>-a
+</span></pre>
+</div>
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+
+
+% diff removed file
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: a diff</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/1">changelog</a>
+<a href="/shortlog/1">shortlog</a>
+<a href="/graph">graph</a>
+<a href="/tags">tags</a>
+<a href="/rev/c78f6c5cbea9">changeset</a>
+<a href="/file/c78f6c5cbea9/a">file</a>
+<a href="/log/c78f6c5cbea9/a">revisions</a>
+<a href="/annotate/c78f6c5cbea9/a">annotate</a>
+<a href="/raw-diff/c78f6c5cbea9/a">raw</a>
+</div>
+
+<h2>a</h2>
+
+<table id="filediffEntry">
+<tr>
+ <th class="revision">revision 1:</th>
+ <td class="revision"><a href="/rev/c78f6c5cbea9">c78f6c5cbea9</a></td>
+</tr>
+<tr><th class="parent">parent 0:</th><td class="parent"><a href="/rev/cb9a9f314b8b">cb9a9f314b8b</a></td></tr>
+
+</table>
+
+<div id="fileDiff">
+<pre class="parity0"><span class="minusline"><a class="lineno" href="#l1" id="l1">       1</a>--- a/a	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="plusline"><a class="lineno" href="#l2" id="l2">       2</a>+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="atline"><a class="lineno" href="#l3" id="l3">       3</a>@@ -1,1 +0,0 @@
+</span><span class="minusline"><a class="lineno" href="#l4" id="l4">       4</a>-a
+</span></pre>
+</div>
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+
+
