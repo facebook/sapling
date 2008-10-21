@@ -1578,6 +1578,20 @@ class localrepository(repo.repository):
         the linkrev.
         """
 
+        if extranodes is None:
+            # can we go through the fast path ?
+            heads.sort()
+            allheads = self.heads()
+            allheads.sort()
+            if heads == allheads:
+                common = []
+                # parents of bases are known from both sides
+                for n in bases:
+                    for p in self.changelog.parents(n):
+                        if p != nullid:
+                            common.append(p)
+                return self._changegroup(common, source)
+
         self.hook('preoutgoing', throw=True, source=source)
 
         # Set up some initial variables
@@ -1854,16 +1868,22 @@ class localrepository(repo.repository):
         return util.chunkbuffer(gengroup())
 
     def changegroup(self, basenodes, source):
+        # to avoid a race we use changegroupsubset() (issue1320)
+        return self.changegroupsubset(basenodes, self.heads(), source)
+
+    def _changegroup(self, common, source):
         """Generate a changegroup of all nodes that we have that a recipient
         doesn't.
 
         This is much easier than the previous function as we can assume that
-        the recipient has any changenode we aren't sending them."""
+        the recipient has any changenode we aren't sending them.
+
+        common is the set of common nodes between remote and self"""
 
         self.hook('preoutgoing', throw=True, source=source)
 
         cl = self.changelog
-        nodes = cl.nodesbetween(basenodes, None)[0]
+        nodes = cl.findmissing(common)
         revset = dict.fromkeys([cl.rev(n) for n in nodes])
         self.changegroupinfo(nodes, source)
 

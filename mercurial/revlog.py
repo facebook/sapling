@@ -590,6 +590,46 @@ class revlog(object):
                     yield i
                     break
 
+    def findmissing(self, common=None, heads=None):
+        '''
+        returns the topologically sorted list of nodes from the set:
+        missing = (ancestors(heads) \ ancestors(common))
+
+        where ancestors() is the set of ancestors from heads, heads included
+
+        if heads is None, the heads of the revlog are used
+        if common is None, nullid is assumed to be a common node
+        '''
+        if common is None:
+            common = [nullid]
+        if heads is None:
+            heads = self.heads()
+
+        common = [self.rev(n) for n in common]
+        heads = [self.rev(n) for n in heads]
+
+        # we want the ancestors, but inclusive
+        has = dict.fromkeys(self.ancestors(*common))
+        has[nullrev] = None
+        for r in common:
+            has[r] = None
+
+        # take all ancestors from heads that aren't in has
+        missing = {}
+        visit = [r for r in heads if r not in has]
+        while visit:
+            r = visit.pop(0)
+            if r in missing:
+                continue
+            else:
+                missing[r] = None
+                for p in self.parentrevs(r):
+                    if p not in has:
+                        visit.append(p)
+        missing = missing.keys()
+        missing.sort()
+        return [self.node(r) for r in missing]
+
     def nodesbetween(self, roots=None, heads=None):
         """Return a tuple containing three elements. Elements 1 and 2 contain
         a final list bases and heads after all the unreachable ones have been
