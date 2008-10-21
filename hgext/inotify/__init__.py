@@ -11,7 +11,7 @@
 
 # todo: socket permissions
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial import cmdutil, util
 import client, errno, os, server, socket
 from weakref import proxy

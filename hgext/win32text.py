@@ -27,7 +27,7 @@
 # pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
 # # or pretxnchangegroup.cr = python:hgext.win32text.forbidcr
 
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.node import bin, short
 from mercurial import util
 import re

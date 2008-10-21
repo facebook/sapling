@@ -11,7 +11,7 @@ from mercurial import hg, util
 from mercurial.repo import RepoError
 from hgweb_mod import hgweb
 from hgwebdir_mod import hgwebdir
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 
 def _splitURI(uri):
     """ Return path and query splited from uri

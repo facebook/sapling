@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os
-from mercurial.i18n import gettext as _
+from mercurial.i18n import _
 from mercurial.repo import RepoError
 from mercurial import ui, hg, util, templater, templatefilters
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen,\
