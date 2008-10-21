@@ -128,7 +128,7 @@ def _encode(ui, s, charsets):
                 except UnicodeEncodeError:
                     pass
                 except LookupError:
-                    ui.warn(_('ignoring invalid sendcharset: %s\n') % cs)
+                    ui.warn(_('ignoring invalid sendcharset: %s\n') % ocs)
     # if ascii, or all conversion attempts fail, send (broken) ascii
     return s, 'us-ascii'
 
