@@ -192,6 +192,8 @@ class mercurial_sink(converter_sink):
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):
         converter_source.__init__(self, ui, path, rev)
+        self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors', False)
+        self.ignored = {}
         self.saverev = ui.configbool('convert', 'hg.saverev', True)
         try:
             self.repo = hg.repository(self.ui, path)
@@ -253,23 +255,35 @@ class mercurial_source(converter_source):
         parents = self.parents(ctx)
         if not parents:
             files = util.sort(ctx.manifest().keys())
-            return [(f, rev) for f in files], {}
+            return [(f, rev) for f in files if f not in self.ignored], {}
         if self._changescache and self._changescache[0] == rev:
             m, a, r = self._changescache[1]
         else:
             m, a, r = self.repo.status(parents[0], ctx.node())[:3]
-        changes = [(name, rev) for name in m + a + r]
-        return util.sort(changes), self.getcopies(ctx, m + a)
+        # getcopies() detects missing revlogs early, run it before
+        # filtering the changes.
+        copies = self.getcopies(ctx, m + a)
+        changes = [(name, rev) for name in m + a + r 
+                   if name not in self.ignored]
+        return util.sort(changes), copies
 
     def getcopies(self, ctx, files):
         copies = {}
         for name in files:
+            if name in self.ignored:
+                continue
             try:
-                copynode = ctx.filectx(name).renamed()[0]
-                if self.keep(copynode):
-                    copies[name] = copynode
+                copysource, copynode = ctx.filectx(name).renamed()
+                if copysource in self.ignored or not self.keep(copynode):
+                    continue
+                copies[name] = copysource
             except TypeError:
                 pass
+            except revlog.LookupError, e:
+                if not self.ignoreerrors:
+                    raise
+                self.ignored[name] = 1
+                self.ui.warn(_('ignoring: %s\n') % e)
         return copies
 
     def getcommit(self, rev):
@@ -297,6 +311,7 @@ class mercurial_source(converter_source):
         else:
             i = i or 0
             changes = self.repo.status(parents[i], ctx.node())[:3]
+        changes = [[f for f in l if f not in self.ignored] for l in changes]
 
         if i == 0:
             self._changescache = (rev, changes)

@@ -36,5 +36,34 @@ cd ..
 hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
 cd new
 hg out ../orig
+cd ..
+
+echo % init broken repository
+hg init broken
+cd broken
+echo a >> a
+echo b >> b
+hg ci -qAm init
+echo a >> a
+echo b >> b
+hg copy b c
+hg ci -qAm changeall
+hg up -qC 0
+echo bc >> b
+hg ci -m changebagain
+HGMERGE=internal:local hg -q merge
+hg ci -m merge
+hg mv b d
+hg ci -m moveb
+echo % break it
+rm .hg/store/data/b.*
+cd ..
+
+hg --config convert.hg.ignoreerrors=True convert broken fixed
+hg -R fixed verify
+echo '% manifest -r 0'
+hg -R fixed manifest -r 0
+echo '% manifest -r tip'
+hg -R fixed manifest -r tip
 
 true

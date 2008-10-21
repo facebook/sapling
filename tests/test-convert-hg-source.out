@@ -20,3 +20,27 @@ converting...
 comparing with ../orig
 searching for changes
 no changes found
+% init broken repository
+created new head
+% break it
+initializing destination fixed repository
+scanning source...
+sorting...
+converting...
+4 init
+3 changebagain
+ignoring: data/b.i@4b3c32ced4f8: no match found
+2 changeall
+1 merge
+0 moveb
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+3 files, 5 changesets, 5 total revisions
+% manifest -r 0
+a
+% manifest -r tip
+a
+c
+d
