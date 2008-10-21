@@ -89,6 +89,14 @@ list of commands:
  verify       verify the integrity of the repository
  version      output version and copyright information
 
+special help topics:
+
+ dates        Date Formats
+ patterns     File Name Patterns
+ environment  Environment Variables
+ revisions    Specifying Single Revisions
+ multirevs    Specifying Multiple Revisions
+
 use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
  addremove    add all new files, delete all missing files
@@ -138,6 +146,14 @@ use "hg -v help" to show aliases and global options
  update       update working directory
  verify       verify the integrity of the repository
  version      output version and copyright information
+
+special help topics:
+
+ dates        Date Formats
+ patterns     File Name Patterns
+ environment  Environment Variables
+ revisions    Specifying Single Revisions
+ multirevs    Specifying Multiple Revisions
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit

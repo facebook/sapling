@@ -1310,7 +1310,8 @@ def help_(ui, name=None, with_version=False):
             f = c.split("|", 1)[0]
             if select and not select(f):
                 continue
-            if select is None and e[0].__module__ != __name__:
+            if (not select and name != 'shortlist' and
+                e[0].__module__ != __name__):
                 continue
             if name == "shortlist" and not f.startswith("^"):
                 continue
@@ -1338,7 +1339,7 @@ def help_(ui, name=None, with_version=False):
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
         exts = list(extensions.extensions())
-        if exts:
+        if exts and name != 'shortlist':
             ui.write(_('\nenabled extensions:\n\n'))
             maxlength = 0
             exthelps = []

@@ -21,10 +21,6 @@ basic commands:
  status     show changed files in the working directory
  update     update working directory
 
-enabled extensions:
-
- record   interactive change selection during commit or qrefresh
-
 use "hg help" for the full list of commands or "hg -v" for details
 % help (mq present)
 hg qrecord [OPTION]... PATCH [FILE]...
