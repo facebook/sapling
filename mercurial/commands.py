@@ -1432,11 +1432,13 @@ def help_(ui, name=None, with_version=False):
                                          and _(" (default: %s)") % default
                                          or "")))
 
-    if ui.verbose:
-        ui.write(_("\nspecial help topics:\n"))
+    if not name:
+        ui.write(_("\nspecial help topics:\n\n"))
         topics = []
         for names, header, doc in help.helptable:
-            topics.append((", ".join(names), header))
+            names = [(-len(name), name) for name in names]
+            names.sort()
+            topics.append((names[0][1], header))
         topics_len = max([len(s[0]) for s in topics])
         for t, desc in topics:
             ui.write(" %-*s  %s\n" % (topics_len, t, desc))
