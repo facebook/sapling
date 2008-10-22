@@ -12,6 +12,12 @@ hg.repository(u, 'top1', create=1)
 mkdir('subdir')
 chdir('subdir')
 hg.repository(u, 'sub1', create=1)
+chdir('sub1')
+hg.repository(u, 'inside_sub1', create=1)
+chdir('.hg')
+hg.repository(u, 'patches', create=1)
+chdir(os.path.pardir)
+chdir(os.path.pardir)
 mkdir('subsubdir')
 chdir('subsubdir')
 hg.repository(u, 'subsub1', create=1)
@@ -22,12 +28,12 @@ if sym:
 
 def runtest():
     reposet = frozenset(walkrepos('.', followsym=True))
-    if sym and (len(reposet) != 3):
+    if sym and (len(reposet) != 5):
         print "reposet = %r" % (reposet,)
-        raise SystemExit(1, "Found %d repositories when I should have found 3" % (len(reposet),))
-    if (not sym) and (len(reposet) != 2):
+        raise SystemExit(1, "Found %d repositories when I should have found 5" % (len(reposet),))
+    if (not sym) and (len(reposet) != 4):
         print "reposet = %r" % (reposet,)
-        raise SystemExit(1, "Found %d repositories when I should have found 2" % (len(reposet),))
+        raise SystemExit(1, "Found %d repositories when I should have found 4" % (len(reposet),))
     sub1set = frozenset((pjoin('.', 'sub1'),
                          pjoin('.', 'circle', 'subdir', 'sub1')))
     if len(sub1set & reposet) != 1:

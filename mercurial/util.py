@@ -1852,7 +1852,7 @@ def walkrepos(path, followsym=False, seen_dirs=None):
         _add_dir_if_not_there(seen_dirs, path)
     for root, dirs, files in os.walk(path, topdown=True, onerror=errhandler):
         if '.hg' in dirs:
-            dirs[:] = [] # don't descend further
+            dirs.remove('.hg') # don't recurse inside the .hg directory
             yield root # found a repository
             qroot = os.path.join(root, '.hg', 'patches')
             if os.path.isdir(os.path.join(qroot, '.hg')):
