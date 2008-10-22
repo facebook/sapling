@@ -380,7 +380,7 @@ class httprepository(repo.repository):
             raise util.UnexpectedOutput(_("unexpected response:"), d)
 
     def between(self, pairs):
-        n = "\n".join(["-".join(map(hex, p)) for p in pairs])
+        n = " ".join(["-".join(map(hex, p)) for p in pairs])
         d = self.do_read("between", pairs=n)
         try:
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
