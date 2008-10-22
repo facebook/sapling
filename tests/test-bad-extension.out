@@ -1,5 +1,5 @@
 *** failed to import extension badext from .../badext.py: bit bucket overflow
 *** failed to import extension badext2: No module named badext2
-hg help [COMMAND]
+hg help [TOPIC]
 
-show help for a command, extension, or list of commands
+show help for a given topic or a help overview

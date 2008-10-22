@@ -57,7 +57,7 @@ list of commands:
  export       dump the header and diffs for one or more changesets
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
- help         show help for a command, extension, or list of commands
+ help         show help for a given topic or a help overview
  identify     identify the working copy or specified revision
  import       import an ordered set of patches
  incoming     show new changesets found in source
@@ -89,7 +89,7 @@ list of commands:
  verify       verify the integrity of the repository
  version      output version and copyright information
 
-special help topics:
+additional help topics:
 
  dates        Date Formats
  patterns     File Name Patterns
@@ -115,7 +115,7 @@ use "hg -v help" to show aliases and global options
  export       dump the header and diffs for one or more changesets
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
- help         show help for a command, extension, or list of commands
+ help         show help for a given topic or a help overview
  identify     identify the working copy or specified revision
  import       import an ordered set of patches
  incoming     show new changesets found in source
@@ -147,7 +147,7 @@ use "hg -v help" to show aliases and global options
  verify       verify the integrity of the repository
  version      output version and copyright information
 
-special help topics:
+additional help topics:
 
  dates        Date Formats
  patterns     File Name Patterns

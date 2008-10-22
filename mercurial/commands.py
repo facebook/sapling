@@ -1242,14 +1242,11 @@ def heads(ui, repo, *branchrevs, **opts):
         displayer.show(changenode=n)
 
 def help_(ui, name=None, with_version=False):
-    """show help for a command, extension, or list of commands
+    """show help for a given topic or a help overview
 
     With no arguments, print a list of commands and short help.
 
-    Given a command name, print help for that command.
-
-    Given an extension name, print help for that extension, and the
-    commands it provides."""
+    Given a topic, extension, or command name, print help for that topic."""
     option_lists = []
 
     def addglobalopts(aliases):
@@ -1434,7 +1431,7 @@ def help_(ui, name=None, with_version=False):
                                          or "")))
 
     if not name:
-        ui.write(_("\nspecial help topics:\n\n"))
+        ui.write(_("\nadditional help topics:\n\n"))
         topics = []
         for names, header, doc in help.helptable:
             names = [(-len(name), name) for name in names]
@@ -3130,7 +3127,7 @@ table = {
          [('r', 'rev', '', _('show only heads which are descendants of rev')),
          ] + templateopts,
          _('hg heads [-r REV] [REV]...')),
-    "help": (help_, [], _('hg help [COMMAND]')),
+    "help": (help_, [], _('hg help [TOPIC]')),
     "identify|id":
         (identify,
          [('r', 'rev', '', _('identify the specified rev')),
