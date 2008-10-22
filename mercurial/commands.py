@@ -1862,6 +1862,16 @@ def log(ui, repo, *pats, **opts):
                 if miss:
                     continue
 
+            if opts['user']:
+                changes = get(rev)
+                miss = 0
+                for k in opts['user']:
+                    if k != changes[1]:
+                        miss = 1
+                        break
+                if miss:
+                    continue
+                
             copies = []
             if opts.get('copies') and rev:
                 for fn in get(rev)[3]:
@@ -3184,6 +3194,7 @@ table = {
           ('r', 'rev', [], _('show the specified revision or range')),
           ('', 'removed', None, _('include revs where files were removed')),
           ('m', 'only-merges', None, _('show only merges')),
+          ('u', 'user', [], _('revs committed by user')),
           ('b', 'only-branch', [],
             _('show only changesets within the given named branch')),
           ('P', 'prune', [], _('do not display revision or any of its ancestors')),
