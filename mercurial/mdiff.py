@@ -78,7 +78,7 @@ def diffline(revs, a, b, opts):
     else:
         parts.append(a)
     return ' '.join(parts) + '\n'
-    
+
 def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     def datetag(date, addtab=True):
         if not opts.git and not opts.nodates:
