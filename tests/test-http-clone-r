@@ -49,7 +49,7 @@ hg debugindex .hg/store/data/fred.i
 hg debugindex .hg/store/00manifest.i
 hg verify
 echo "# Starting server"
-hg serve -p $HGPORT -d --pid-file=../hg1.pid
+hg serve -p $HGPORT -E ../error.log -d --pid-file=../hg1.pid
 cd ..
 cat hg1.pid >> $DAEMON_PIDS
 
@@ -76,3 +76,4 @@ hg verify
 hg pull http://localhost:$HGPORT/ 2>&1 | sed -e 's,:[0-9][0-9]*/,/,'
 hg verify
 cd ..
+cat error.log
