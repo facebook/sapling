@@ -1166,6 +1166,11 @@ def b85diff(to, tn):
     ret.append('\n')
     return ''.join(ret)
 
+def _addmodehdr(header, omode, nmode):
+    if omode != nmode:
+        header.append('old mode %s\n' % omode)
+        header.append('new mode %s\n' % nmode)
+
 def diff(repo, node1=None, node2=None, match=None,
          fp=None, changes=None, opts=None):
     '''print diff of changes to files between two nodes, or node and
@@ -1230,17 +1235,12 @@ def diff(repo, node1=None, node2=None, match=None,
             tn = getfilectx(f, ctx2).data()
         a, b = f, f
         if opts.git:
-            def addmodehdr(header, omode, nmode):
-                if omode != nmode:
-                    header.append('old mode %s\n' % omode)
-                    header.append('new mode %s\n' % nmode)
-
             if f in added:
                 mode = gitmode[ctx2.flags(f)]
                 if f in copy:
                     a = copy[f]
                     omode = gitmode[man1.flags(a)]
-                    addmodehdr(header, omode, mode)
+                    _addmodehdr(header, omode, mode)
                     if a in removed and a not in gone:
                         op = 'rename'
                         gone[a] = 1
@@ -1263,7 +1263,7 @@ def diff(repo, node1=None, node2=None, match=None,
             else:
                 omode = gitmode[man1.flags(f)]
                 nmode = gitmode[ctx2.flags(f)]
-                addmodehdr(header, omode, nmode)
+                _addmodehdr(header, omode, nmode)
                 if util.binary(to) or util.binary(tn):
                     dodiff = 'binary'
             r = None
