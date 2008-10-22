@@ -12,6 +12,8 @@ import base85, cmdutil, mdiff, util, revlog, diffhelpers, copies
 import cStringIO, email.Parser, os, re, errno
 import sys, tempfile, zlib
 
+gitre = re.compile('diff --git a/(.*) b/(.*)')
+
 class PatchError(Exception):
     pass
 
@@ -170,7 +172,6 @@ def readgitpatch(lr):
     """extract git-style metadata about patches from <patchname>"""
 
     # Filter patch for git information
-    gitre = re.compile('diff --git a/(.*) b/(.*)')
     gp = None
     gitpatches = []
     # Can have a git patch with only metadata, causing patch to complain
@@ -823,9 +824,7 @@ def iterhunks(ui, fp, sourcefile=None):
     state = None
     hunknum = 0
     emitfile = False
-
     git = False
-    gitre = re.compile('diff --git (a/.*) (b/.*)')
 
     # our states
     BFILE = 1
@@ -853,7 +852,7 @@ def iterhunks(ui, fp, sourcefile=None):
             try:
                 if context == None and x.startswith('***************'):
                     context = True
-                gpatch = changed.get(bfile[2:])
+                gpatch = changed.get(bfile)
                 create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
                 remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
                 current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
@@ -866,11 +865,11 @@ def iterhunks(ui, fp, sourcefile=None):
                 emitfile = False
                 yield 'file', (afile, bfile, current_hunk)
         elif state == BFILE and x.startswith('GIT binary patch'):
-            current_hunk = binhunk(changed[bfile[2:]])
+            current_hunk = binhunk(changed[bfile])
             hunknum += 1
             if emitfile:
                 emitfile = False
-                yield 'file', (afile, bfile, current_hunk)
+                yield 'file', ('a/' + afile, 'b/' + bfile, current_hunk)
             current_hunk.extract(lr)
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
@@ -885,7 +884,7 @@ def iterhunks(ui, fp, sourcefile=None):
                         changed[gp.path] = gp
                 # else error?
                 # copy/rename + modify should modify target, not source
-                gp = changed.get(bfile[2:])
+                gp = changed.get(bfile)
                 if gp and gp.op in ('COPY', 'DELETE', 'RENAME'):
                     afile = bfile
                     gitworkdone = True
