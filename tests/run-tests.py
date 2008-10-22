@@ -78,8 +78,8 @@ if options.jobs < 1:
     print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
     sys.exit(1)
 if options.interactive and options.jobs > 1:
-    print >> sys.stderr, 'ERROR: cannot mix -interactive and --jobs > 1'
-    sys.exit(1)
+    print '(--interactive overrides --jobs)'
+    options.jobs = 1
 
 def rename(src, dst):
     """Like os.rename(), trade atomicity and opened files friendliness
