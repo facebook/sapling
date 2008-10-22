@@ -54,7 +54,8 @@ div.page-header {
 
   div.page-header form {
     position: absolute;
-    top: 120px;
+    margin-bottom: 2px;
+    bottom: 0;
     right: 20px;
   }
   div.page-header form label {
