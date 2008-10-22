@@ -220,8 +220,16 @@ email::
     containing patches of outgoing messages will be encoded in
     the first charset to which conversion from local encoding
     (ui.encoding, ui.fallbackencoding) succeeds. If correct
-    conversion, including to ui.encoding, fails, the text in
-    question is sent as is in fake ascii. Defaults to empty list.
+    conversion fails, the text in question is sent as is.
+    Defaults to empty (explicit) list.
+
+  Order of outgoing email charsets:
+ 
+    us-ascii             always first, regardless of settings
+    email.charsets       in order given by user
+    ui.fallbackencoding  if not in email.charsets
+    ui.encoding          if not in email.charsets
+    utf-8                always last, regardless of settings
 
   Email example:
 
