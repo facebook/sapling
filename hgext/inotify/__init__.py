@@ -85,6 +85,8 @@ def reposetup(ui, repo):
                         except socket.error, err:
                             ui.warn(_('could not talk to new inotify '
                                            'server: %s\n') % err[-1])
+                elif err[0] == errno.ENOENT:
+                    ui.warn(_('(inotify server not running)\n'))
                 else:
                     ui.warn(_('failed to contact inotify server: %s\n')
                              % err[-1])
