@@ -198,7 +198,7 @@ def _decoratecmd(ui, cmd, table, delegate, *delegateoptions):
 
 def _cmdtableitem(ui, cmd, table):
     '''Return key, value from table for cmd, or None if not found.'''
-    aliases, entry = cmdutil.findcmd(ui, cmd, table)
+    aliases, entry = cmdutil.findcmd(cmd, table)
     for candidatekey, candidateentry in table.iteritems():
         if candidateentry is entry:
             return candidatekey, entry

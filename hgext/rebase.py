@@ -370,7 +370,7 @@ def pulldelegate(pullfunction, repo, *args, **opts):
 def uisetup(ui):
     'Replace pull with a decorator to provide --rebase option'
     # cribbed from color.py
-    aliases, entry = cmdutil.findcmd(ui, 'pull', commands.table)
+    aliases, entry = cmdutil.findcmd('pull', commands.table)
     for candidatekey, candidateentry in commands.table.iteritems():
         if candidateentry is entry:
             cmdkey, cmdentry = candidatekey, entry

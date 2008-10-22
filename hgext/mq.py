@@ -2368,7 +2368,7 @@ def reposetup(ui, repo):
 
 def uisetup(ui):
     # override import to disallow importing over patch
-    importalias, importcmd = cmdutil.findcmd(ui, 'import', commands.table)
+    importalias, importcmd = cmdutil.findcmd('import', commands.table)
     for alias, cmd in commands.table.iteritems():
         if cmd is importcmd:
             importkey = alias

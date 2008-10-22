@@ -655,7 +655,7 @@ def debugcomplete(ui, cmd='', **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = cmdutil.findcmd(ui, cmd, table)
+            aliases, entry = cmdutil.findcmd(cmd, table, False)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -665,7 +665,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    ui.write("%s\n" % "\n".join(util.sort(cmdutil.findpossible(ui, cmd, table))))
+    ui.write("%s\n" % "\n".join(util.sort(cmdutil.findpossible(cmd, table))))
 
 def debugfsinfo(ui, path = "."):
     file('.debugfsinfo', 'w').write('')
@@ -1272,7 +1272,7 @@ def help_(ui, name=None, with_version=False):
             ui.write('\n')
 
         try:
-            aliases, i = cmdutil.findcmd(ui, name, table)
+            aliases, i = cmdutil.findcmd(name, table, False)
         except cmdutil.AmbiguousCommand, inst:
             select = lambda c: c.lstrip('^').startswith(inst.args[0])
             helplist(_('list of commands:\n\n'), select)

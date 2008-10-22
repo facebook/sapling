@@ -18,7 +18,7 @@ class UnknownCommand(Exception):
 class AmbiguousCommand(Exception):
     """Exception raised if command shortcut matches more than one command."""
 
-def findpossible(ui, cmd, table):
+def findpossible(cmd, table, strict=False):
     """
     Return cmd -> (aliases, command table entry)
     for each matching command.
@@ -31,7 +31,7 @@ def findpossible(ui, cmd, table):
         found = None
         if cmd in aliases:
             found = cmd
-        elif not ui.config("ui", "strict"):
+        elif not strict:
             for a in aliases:
                 if a.startswith(cmd):
                     found = a
@@ -47,9 +47,9 @@ def findpossible(ui, cmd, table):
 
     return choice
 
-def findcmd(ui, cmd, table):
+def findcmd(cmd, table, strict=True):
     """Return (aliases, command table entry) for command string."""
-    choice = findpossible(ui, cmd, table)
+    choice = findpossible(cmd, table, strict)
 
     if cmd in choice:
         return choice[cmd]
