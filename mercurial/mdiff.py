@@ -66,6 +66,19 @@ def wsclean(opts, text):
         text = re.sub('\n+', '', text)
     return text
 
+def diffline(revs, a, b, opts):
+    parts = ['diff']
+    if opts.git:
+        parts.append('--git')
+    if revs and not opts.git:
+        parts.append(' '.join(["-r %s" % rev for rev in revs]))
+    if opts.git:
+        parts.append('a/%s' % a)
+        parts.append('b/%s' % b)
+    else:
+        parts.append(a)
+    return ' '.join(parts) + '\n'
+    
 def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     def datetag(date, addtab=True):
         if not opts.git and not opts.nodates:
@@ -113,8 +126,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
             l[ln] += "\n\ No newline at end of file\n"
 
     if r:
-        l.insert(0, "diff %s %s\n" %
-                    (' '.join(["-r %s" % rev for rev in r]), fn1))
+        l.insert(0, diffline(r, fn1, fn2, opts))
 
     return "".join(l)
 

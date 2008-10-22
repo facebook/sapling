@@ -1266,7 +1266,7 @@ def diff(repo, node1=None, node2=None, match=None,
                 if util.binary(to) or util.binary(tn):
                     dodiff = 'binary'
             r = None
-            header.insert(0, 'diff --git a/%s b/%s\n' % (a, b))
+            header.insert(0, mdiff.diffline(r, a, b, opts))
         if dodiff:
             if dodiff == 'binary':
                 text = b85diff(to, tn)
