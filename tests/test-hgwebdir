@@ -16,8 +16,14 @@ hg --cwd b ci -Amb -d'2 0'
 hg init c
 echo c > c/c
 hg --cwd c ci -Amc -d'3 0'
-root=`pwd`
 
+cd b
+hg init d
+echo d > d/d
+hg --cwd d ci -Amd
+cd ..
+
+root=`pwd`
 cd ..
 
 cat > paths.conf <<EOF
@@ -75,6 +81,7 @@ echo % should succeed
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/file/tip/a?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/b/file/tip/b?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/c/file/tip/c?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/b/d/rev/tip/?style=raw'
 
 echo % paths errors 1
 cat error-paths-1.log

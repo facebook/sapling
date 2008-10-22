@@ -1,6 +1,7 @@
 adding a
 adding b
 adding c
+adding d
 % should give a 404 - file does not exist
 404 Not Found
 
@@ -108,6 +109,7 @@ a
 
 /a/
 /b/
+/b/d/
 /c/
 
 200 Script output follows
@@ -119,6 +121,21 @@ b
 200 Script output follows
 
 c
+200 Script output follows
+
+
+# HG changeset patch
+# User test
+# Date 0 0
+# Node ID 43cb50608b2ae8635a62e2e8730adefc32a274ee
+
+d
+
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/d	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++d
+
 % paths errors 1
 % paths errors 2
 % collections errors
