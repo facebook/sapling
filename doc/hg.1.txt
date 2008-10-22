@@ -30,10 +30,7 @@ revision::
 
 repository path::
     either the pathname of a local repository or the URI of a remote
-    repository. There are two available URI protocols, http:// which is
-    fast and the static-http:// protocol which is much slower but does not
-    require a special server on the web host.
-
+    repository.
 
 include::hg.1.gendoc.txt[]
 

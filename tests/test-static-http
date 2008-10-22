@@ -2,7 +2,7 @@
 
 cp "$TESTDIR"/printenv.py .
 
-http_proxy= hg clone static-http://localhost:$HGPORT/ copy
+http_proxy= hg clone http://localhost:$HGPORT/ copy
 echo $?
 test -d copy || echo copy: No such file or directory
 

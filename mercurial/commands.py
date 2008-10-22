@@ -2071,13 +2071,10 @@ def pull(ui, repo, source="default", **opts):
       http://[user[:pass]@]host[:port]/[path]
       https://[user[:pass]@]host[:port]/[path]
       ssh://[user[:pass]@]host[:port]/[path]
-      static-http://host[:port]/[path]
 
     Paths in the local filesystem can either point to Mercurial
     repositories or to bundle files (as created by 'hg bundle' or
-    'hg incoming --bundle'). The static-http:// protocol, albeit slow,
-    allows access to a Mercurial repository where you simply use a web
-    server to publish the .hg directory as static content.
+    'hg incoming --bundle').
 
     An optional identifier after # indicates a particular branch, tag,
     or changeset to pull.

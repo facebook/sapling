@@ -1,4 +1,4 @@
-abort: Connection refused
+abort: error: Connection refused
 255
 copy: No such file or directory
 changeset:   0:53e17d176ae6
@@ -21,7 +21,7 @@ checking files
 1 files, 1 changesets, 1 total revisions
 foo
 adding quux
-changegroup hook: HG_NODE=34401e0e9971e9720b613d9089ffa9a6eefb3d2d HG_SOURCE=pull HG_URL=static-http://localhost/remote 
+changegroup hook: HG_NODE=34401e0e9971e9720b613d9089ffa9a6eefb3d2d HG_SOURCE=pull HG_URL=http://localhost/remote 
 pulling from static-http://localhost/remote
 searching for changes
 adding changesets

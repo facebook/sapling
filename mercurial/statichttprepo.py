@@ -76,7 +76,7 @@ class statichttprepository(localrepo.localrepository):
         self.decodepats = None
 
     def url(self):
-        return 'static-' + self._url
+        return self._url
 
     def local(self):
         return False

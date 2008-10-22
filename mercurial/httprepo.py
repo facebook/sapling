@@ -6,10 +6,10 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import bin, hex
+from node import bin, hex, nullid
 from i18n import _
 import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
-import errno, keepalive, socket, changegroup
+import errno, keepalive, socket, changegroup, statichttprepo
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
@@ -455,6 +455,13 @@ class httpsrepository(httprepository):
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new http repository'))
-    if path.startswith('https:'):
-        return httpsrepository(ui, path)
-    return httprepository(ui, path)
+    try:
+        if path.startswith('https:'):
+            inst = httpsrepository(ui, path)
+        else:
+            inst = httprepository(ui, path)
+        inst.between([(nullid, nullid)])
+        return inst
+    except repo.RepoError:
+        ui.note('(falling back to static-http)\n')
+        return statichttprepo.instance(ui, "static-" + path, create)
