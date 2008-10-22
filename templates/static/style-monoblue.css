@@ -335,16 +335,15 @@ div#monoblue-corner-bottom-right {
 dl.overview {
   margin: 0 0 0 30px;
   font-size: 1.1em;
-  width: 450px;
   overflow: hidden;
 }
   dl.overview dt,
   dl.overview dd {
     margin: 5px 0;
-    width: 300px;
     float: left;
   }
   dl.overview dt {
+    clear: left;
     font-weight: bold;
     width: 150px;
   }
