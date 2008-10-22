@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import imp, os
-import util
+import util, cmdutil
 from i18n import _
 
 _extensions = {}
@@ -87,3 +87,28 @@ def loadall(ui):
             if ui.print_exc():
                 return 1
 
+def wrapcommand(table, command, wrapper):
+    aliases, entry = cmdutil.findcmd(command, table)
+    for alias, e in table.iteritems():
+        if e is entry:
+            key = alias
+            break
+
+    origfn = entry[0]
+    def wrap(*args, **kwargs):
+        return wrapper(origfn, *args, **kwargs)
+
+    wrap.__doc__ = getattr(origfn, '__doc__')
+
+    newentry = list(entry)
+    newentry[0] = wrap
+    table[key] = tuple(newentry)
+    return entry
+
+def wrapfunction(container, funcname, wrapper):
+    def wrap(*args, **kwargs):
+        return wrapper(origfn, *args, **kwargs)
+
+    origfn = getattr(container, funcname)
+    setattr(container, funcname, wrap)
+    return origfn
