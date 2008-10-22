@@ -8,6 +8,7 @@
 
 import Zeroconf, socket, time, os
 from mercurial import ui
+from mercurial import extensions
 from mercurial.hgweb import hgweb_mod
 from mercurial.hgweb import hgwebdir_mod
 
@@ -114,22 +115,20 @@ def getzcpaths():
                                  v.properties.get("path", "/"))
         yield "zc-" + n, u
 
-def config(self, section, key, default=None, untrusted=False):
+def config(orig, self, section, key, default=None, untrusted=False):
     if section == "paths" and key.startswith("zc-"):
         for n, p in getzcpaths():
             if n == key:
                 return p
-    return oldconfig(self, section, key, default, untrusted)
+    return orig(self, section, key, default, untrusted)
 
-def configitems(self, section):
-    r = oldconfigitems(self, section, untrusted=False)
+def configitems(orig, self, section):
+    r = orig(self, section, untrusted=False)
     if section == "paths":
         r += getzcpaths()
     return r
 
-oldconfig = ui.ui.config
-oldconfigitems = ui.ui.configitems
-ui.ui.config = config
-ui.ui.configitems = configitems
+extensions.wrapfunction(ui.ui, 'config', config)
+extensions.wrapfunction(ui.ui, 'configitems', configitems)
 hgweb_mod.hgweb = hgwebzc
 hgwebdir_mod.hgwebdir = hgwebdirzc

@@ -47,10 +47,10 @@ them in the global .hgrc
 '''
 
 import sys, os, signal
-from mercurial import dispatch, util
+from mercurial import dispatch, util, extensions
 
 def uisetup(ui):
-    def pagecmd(ui, options, cmd, cmdfunc):
+    def pagecmd(orig, ui, options, cmd, cmdfunc):
         p = ui.config("pager", "pager", os.environ.get("PAGER"))
         if p and sys.stdout.isatty() and '--debugger' not in sys.argv:
             attend = ui.configlist('pager', 'attend')
@@ -59,7 +59,6 @@ def uisetup(ui):
                 sys.stderr = sys.stdout = util.popen(p, "wb")
                 if ui.configbool('pager', 'quiet'):
                     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-        return oldrun(ui, options, cmd, cmdfunc)
+        return orig(ui, options, cmd, cmdfunc)
 
-    oldrun = dispatch._runcommand
-    dispatch._runcommand = pagecmd
+    extensions.wrapfunction(dispatch, '_runcommand', pagecmd)

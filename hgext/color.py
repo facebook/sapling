@@ -51,7 +51,7 @@ qseries.missing = red bold
 
 import re, sys
 
-from mercurial import commands, cmdutil
+from mercurial import commands, cmdutil, extensions
 from mercurial.i18n import _
 
 # start and stop parameters for effects
@@ -89,14 +89,14 @@ def render_effects(text, *effects):
     stop = '\033[' + ';'.join(stop) + 'm'
     return start + text + stop
 
-def colorstatus(statusfunc, ui, repo, *pats, **opts):
+def colorstatus(orig, ui, repo, *pats, **opts):
     '''run the status command with colored output'''
 
     delimiter = opts['print0'] and '\0' or '\n'
 
     # run status and capture it's output
     ui.pushbuffer()
-    retval = statusfunc(ui, repo, *pats, **opts)
+    retval = orig(ui, repo, *pats, **opts)
     # filter out empty strings
     lines = [ line for line in ui.popbuffer().split(delimiter) if line ]
 
@@ -139,10 +139,10 @@ _status_effects = { 'modified': ('blue', 'bold'),
                     'clean': ('none', ),
                     'copied': ('none', ), }
 
-def colorqseries(qseriesfunc, ui, repo, *dummy, **opts):
+def colorqseries(orig, ui, repo, *dummy, **opts):
     '''run the qseries command with colored output'''
     ui.pushbuffer()
-    retval = qseriesfunc(ui, repo, **opts)
+    retval = orig(ui, repo, **opts)
     patches = ui.popbuffer().splitlines()
     for patch in patches:
         patchname = patch
@@ -168,58 +168,23 @@ _patch_effects = { 'applied': ('blue', 'bold', 'underline'),
 
 def uisetup(ui):
     '''Initialize the extension.'''
-    nocoloropt = ('', 'no-color', None, _("don't colorize output"))
-    _decoratecmd(ui, 'status', commands.table, colorstatus, nocoloropt)
-    _configcmdeffects(ui, 'status', _status_effects);
+    _setupcmd(ui, 'status', commands.table, colorstatus, _status_effects)
     if ui.config('extensions', 'hgext.mq') is not None or \
             ui.config('extensions', 'mq') is not None:
         from hgext import mq
-        _decoratecmd(ui, 'qseries', mq.cmdtable, colorqseries, nocoloropt)
-        _configcmdeffects(ui, 'qseries', _patch_effects);
+        _setupcmd(ui, 'qseries', mq.cmdtable, colorqseries, _patch_effects)
 
-def _decoratecmd(ui, cmd, table, delegate, *delegateoptions):
-    '''Replace the function that implements cmd in table with a decorator.
+def _setupcmd(ui, cmd, table, func, effectsmap):
+    '''patch in command to command table and load effect map'''
+    def nocolor(orig, *args, **kwargs):
+        if kwargs['no_color']:
+            return orig(*args, **kwargs)
+        return func(orig, *args, **kwargs)
 
-    The decorator that becomes the new implementation of cmd calls
-    delegate.  The delegate's first argument is the replaced function,
-    followed by the normal Mercurial command arguments (ui, repo, ...).  If
-    the delegate adds command options, supply them as delegateoptions.
-    '''
-    cmdkey, cmdentry = _cmdtableitem(ui, cmd, table)
-    decorator = lambda ui, repo, *args, **opts: \
-                    _colordecorator(delegate, cmdentry[0],
-                                    ui, repo, *args, **opts)
-    # make sure 'hg help cmd' still works
-    decorator.__doc__ = cmdentry[0].__doc__
-    decoratorentry = (decorator,) + cmdentry[1:]
-    for option in delegateoptions:
-        decoratorentry[1].append(option)
-    table[cmdkey] = decoratorentry
+    entry = extensions.wrapcommand(table, cmd, nocolor)
+    entry[1].append(('', 'no-color', None, _("don't colorize output")))
 
-def _cmdtableitem(ui, cmd, table):
-    '''Return key, value from table for cmd, or None if not found.'''
-    aliases, entry = cmdutil.findcmd(cmd, table)
-    for candidatekey, candidateentry in table.iteritems():
-        if candidateentry is entry:
-            return candidatekey, entry
-
-def _colordecorator(colorfunc, nocolorfunc, ui, repo, *args, **opts):
-    '''Delegate to colorfunc or nocolorfunc, depending on conditions.
-
-    Delegate to colorfunc unless --no-color option is set or output is not
-    to a tty.
-    '''
-    if opts['no_color'] or not sys.stdout.isatty():
-        return nocolorfunc(ui, repo, *args, **opts)
-    return colorfunc(nocolorfunc, ui, repo, *args, **opts)
-
-def _configcmdeffects(ui, cmdname, effectsmap):
-    '''Override default effects for cmdname with those from .hgrc file.
-
-    Entries in the .hgrc file are in the [color] section, and look like
-    'cmdname'.'status' (for instance, 'status.modified = blue bold inverse').
-    '''
     for status in effectsmap:
-        effects = ui.config('color', cmdname + '.' + status)
+        effects = ui.config('color', cmd + '.' + status)
         if effects:
             effectsmap[status] = re.split('\W+', effects)

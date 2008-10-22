@@ -27,7 +27,7 @@
 
 import re
 from mercurial.hgweb import hgweb_mod
-from mercurial import templatefilters
+from mercurial import templatefilters, extensions
 from mercurial.i18n import _
 
 orig_escape = templatefilters.filters["escape"]
@@ -42,9 +42,7 @@ def interhg_escape(x):
 
 templatefilters.filters["escape"] = interhg_escape
 
-orig_refresh = hgweb_mod.hgweb.refresh
-
-def interhg_refresh(self):
+def interhg_refresh(orig, self):
     interhg_table[:] = []
     for key, pattern in self.repo.ui.configitems('interhg'):
         # grab the delimiter from the character after the "s"
@@ -79,6 +77,6 @@ def interhg_refresh(self):
         except re.error:
             self.repo.ui.warn(_("interhg: invalid regexp for %s: %s\n")
                               % (key, regexp))
-    return orig_refresh(self)
+    return orig(self)
 
-hgweb_mod.hgweb.refresh = interhg_refresh
+extensions.wrapfunction(hgweb_mod.hgweb, 'refresh', interhg_refresh)

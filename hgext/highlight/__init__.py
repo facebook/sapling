@@ -20,11 +20,9 @@ The default is 'colorful'.
 
 import highlight
 from mercurial.hgweb import webcommands, webutil, common
+from mercurial import extensions
 
-web_filerevision = webcommands._filerevision
-web_annotate = webcommands.annotate
-
-def filerevision_highlight(web, tmpl, fctx):
+def filerevision_highlight(orig, web, tmpl, fctx):
     mt = ''.join(tmpl('mimetype', encoding=web.encoding))
     # only pygmentize for mimetype containing 'html' so we both match
     # 'text/html' and possibly 'application/xhtml+xml' in the future
@@ -36,15 +34,15 @@ def filerevision_highlight(web, tmpl, fctx):
     if 'html' in mt:
         style = web.config('web', 'pygments_style', 'colorful')
         highlight.pygmentize('fileline', fctx, style, tmpl)
-    return web_filerevision(web, tmpl, fctx)
+    return orig(web, tmpl, fctx)
 
-def annotate_highlight(web, req, tmpl):
+def annotate_highlight(orig, web, req, tmpl):
     mt = ''.join(tmpl('mimetype', encoding=web.encoding))
     if 'html' in mt:
         fctx = webutil.filectx(web.repo, req)
         style = web.config('web', 'pygments_style', 'colorful')
         highlight.pygmentize('annotateline', fctx, style, tmpl)
-    return web_annotate(web, req, tmpl)
+    return orig(web, req, tmpl)
 
 def generate_css(web, req, tmpl):
     pg_style = web.config('web', 'pygments_style', 'colorful')
@@ -52,10 +50,8 @@ def generate_css(web, req, tmpl):
     req.respond(common.HTTP_OK, 'text/css')
     return ['/* pygments_style = %s */\n\n' % pg_style, fmter.get_style_defs('')]
 
-
 # monkeypatch in the new version
-
-webcommands._filerevision = filerevision_highlight
-webcommands.annotate = annotate_highlight
+extensions.wrapfunction(webcommands, '_filerevision', filerevision_highlight)
+extensions.wrapfunction(webcommands, 'annotate', annotate_highlight)
 webcommands.highlightcss = generate_css
 webcommands.__all__.append('highlightcss')

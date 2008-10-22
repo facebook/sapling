@@ -13,7 +13,7 @@ For more information:
 http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject
 '''
 
-from mercurial import util, repair, merge, cmdutil, dispatch, commands
+from mercurial import util, repair, merge, cmdutil, dispatch, commands, extensions
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.i18n import _
@@ -352,7 +352,7 @@ def buildstate(repo, dest, src, base, collapse):
     state[source] = nullrev
     return repo['.'].rev(), repo[dest].rev(), state, external
 
-def pulldelegate(pullfunction, repo, *args, **opts):
+def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     if opts.get('rebase'):
         if opts.get('update'):
@@ -360,31 +360,19 @@ def pulldelegate(pullfunction, repo, *args, **opts):
 
         cmdutil.bail_if_changed(repo)
         revsprepull = len(repo)
-        pullfunction(repo.ui, repo, *args, **opts)
+        orig(ui, repo, *args, **opts)
         revspostpull = len(repo)
         if revspostpull > revsprepull:
-            rebase(repo.ui, repo, **opts)
+            rebase(ui, repo, **opts)
     else:
-        pullfunction(repo.ui, repo, *args, **opts)
+        orig(ui, repo, *args, **opts)
 
 def uisetup(ui):
     'Replace pull with a decorator to provide --rebase option'
-    # cribbed from color.py
-    aliases, entry = cmdutil.findcmd('pull', commands.table)
-    for candidatekey, candidateentry in commands.table.iteritems():
-        if candidateentry is entry:
-            cmdkey, cmdentry = candidatekey, entry
-            break
-
-    decorator = lambda ui, repo, *args, **opts: \
-                    pulldelegate(cmdentry[0], repo, *args, **opts)
-    # make sure 'hg help cmd' still works
-    decorator.__doc__ = cmdentry[0].__doc__
-    decoratorentry = (decorator,) + cmdentry[1:]
-    rebaseopt = ('', 'rebase', None,
-                            _("rebase working directory to branch head"))
-    decoratorentry[1].append(rebaseopt)
-    commands.table[cmdkey] = decoratorentry
+    entry = extensions.wrapcommand(commands.table, 'pull', pullrebase)
+    entry[1].append(('', 'rebase', None,
+                     _("rebase working directory to branch head"))
+)
 
 cmdtable = {
 "rebase":

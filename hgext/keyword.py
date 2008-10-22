@@ -78,7 +78,7 @@ like CVS' $Log$, are not supported. A keyword template map
 "Log = {desc}" expands to the first line of the changeset description.
 '''
 
-from mercurial import commands, cmdutil, dispatch, filelog, revlog
+from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
 from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.hgweb import webcommands
 from mercurial.node import nullid, hex
@@ -416,14 +416,13 @@ def uisetup(ui):
             kwtools['exc'].append(pat)
 
     if kwtools['inc']:
-        def kwdispatch_parse(ui, args):
+        def kwdispatch_parse(orig, ui, args):
             '''Monkeypatch dispatch._parse to obtain running hg command.'''
-            cmd, func, args, options, cmdoptions = dispatch_parse(ui, args)
+            cmd, func, args, options, cmdoptions = orig(ui, args)
             kwtools['hgcmd'] = cmd
             return cmd, func, args, options, cmdoptions
 
-        dispatch_parse = dispatch._parse
-        dispatch._parse = kwdispatch_parse
+        extensions.wrapfunction(dispatch, '_parse', kwdispatch_parse)
 
 def reposetup(ui, repo):
     '''Sets up repo as kwrepo for keyword substitution.
@@ -495,14 +494,14 @@ def reposetup(ui, repo):
                 del wlock, lock
 
     # monkeypatches
-    def kwpatchfile_init(self, ui, fname, missing=False):
+    def kwpatchfile_init(orig, self, ui, fname, missing=False):
         '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
         rejects or conflicts due to expanded keywords in working dir.'''
-        patchfile_init(self, ui, fname, missing)
+        orig(self, ui, fname, missing)
         # shrink keywords read from working dir
         self.lines = kwt.shrinklines(self.fname, self.lines)
 
-    def kw_diff(repo, node1=None, node2=None, match=None,
+    def kw_diff(orig, repo, node1=None, node2=None, match=None,
                 fp=None, changes=None, opts=None):
         '''Monkeypatch patch.diff to avoid expansion except when
         comparing against working dir.'''
@@ -510,37 +509,19 @@ def reposetup(ui, repo):
             kwt.matcher = util.never
         elif node1 is not None and node1 != repo['.'].node():
             kwt.restrict = True
-        patch_diff(repo, node1, node2, match, fp, changes, opts)
+        orig(repo, node1, node2, match, fp, changes, opts)
 
-    def kwweb_annotate(web, req, tmpl):
-        '''Wraps webcommands.annotate turning off keyword expansion.'''
+    def kwweb_skip(orig, web, req, tmpl):
+        '''Wraps webcommands.x turning off keyword expansion.'''
         kwt.matcher = util.never
-        return webcommands_annotate(web, req, tmpl)
-
-    def kwweb_changeset(web, req, tmpl):
-        '''Wraps webcommands.changeset turning off keyword expansion.'''
-        kwt.matcher = util.never
-        return webcommands_changeset(web, req, tmpl)
-
-    def kwweb_filediff(web, req, tmpl):
-        '''Wraps webcommands.filediff turning off keyword expansion.'''
-        kwt.matcher = util.never
-        return webcommands_filediff(web, req, tmpl)
+        return orig(web, req, tmpl)
 
     repo.__class__ = kwrepo
 
-    patchfile_init = patch.patchfile.__init__
-    patch_diff = patch.diff
-    webcommands_annotate = webcommands.annotate
-    webcommands_changeset = webcommands.changeset
-    webcommands_filediff = webcommands.filediff
-
-    patch.patchfile.__init__ = kwpatchfile_init
-    patch.diff = kw_diff
-    webcommands.annotate = kwweb_annotate
-    webcommands.changeset = webcommands.rev = kwweb_changeset
-    webcommands.filediff = webcommands.diff = kwweb_filediff
-
+    extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
+    extensions.wrapfunction(patch, 'diff', kw_diff)
+    for c in 'annotate changeset rev filediff diff'.split():
+        extensions.wrapfunction(webcommands, c, kwweb_skip)
 
 cmdtable = {
     'kwdemo':

@@ -33,7 +33,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short
 from mercurial.repo import RepoError
 from mercurial import commands, cmdutil, hg, patch, revlog, util
-from mercurial import repair
+from mercurial import repair, extensions
 import os, sys, re, errno, urllib
 
 commands.norepo += " qclone"
@@ -2366,22 +2366,14 @@ def reposetup(ui, repo):
         repo.__class__ = mqrepo
         repo.mq = queue(ui, repo.join(""))
 
+def mqimport(orig, ui, repo, *args, **kwargs):
+    if hasattr(repo, 'abort_if_wdir_patched'):
+        repo.abort_if_wdir_patched(_('cannot import over an applied patch'),
+                                   kwargs.get('force'))
+    return orig(ui, repo, *args, **kwargs)
+
 def uisetup(ui):
-    # override import to disallow importing over patch
-    importalias, importcmd = cmdutil.findcmd('import', commands.table)
-    for alias, cmd in commands.table.iteritems():
-        if cmd is importcmd:
-            importkey = alias
-            break
-    orig_import = importcmd[0]
-    def mqimport(ui, repo, patch1, *patches, **opts):
-        if hasattr(repo, 'abort_if_wdir_patched'):
-            repo.abort_if_wdir_patched(_('cannot import over an applied patch'),
-                                       opts.get('force'))
-            orig_import(ui, repo, patch1, *patches, **opts)
-    importcmd = list(importcmd)
-    importcmd[0] = mqimport
-    commands.table[importkey] = tuple(importcmd)
+    extensions.wrapcommand(commands.table, 'import', mqimport)
 
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
