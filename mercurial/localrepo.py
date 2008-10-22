@@ -1343,27 +1343,29 @@ class localrepository(repo.repository):
                         unknown.append(b)
 
         # do binary search on the branches we found
+        search = [(t, b) for (t, b, p1, p2) in search]
         while search:
-            n = search.pop(0)
+            newsearch = []
             reqcnt += 1
-            l = remote.between([(n[0], n[1])])[0]
-            l.append(n[1])
-            p = n[0]
-            f = 1
-            for i in l:
-                self.ui.debug(_("narrowing %d:%d %s\n") % (f, len(l), short(i)))
-                if i in m:
-                    if f <= 2:
-                        self.ui.debug(_("found new branch changeset %s\n") %
-                                          short(p))
-                        fetch[p] = 1
-                        base[i] = 1
-                    else:
-                        self.ui.debug(_("narrowed branch search to %s:%s\n")
-                                      % (short(p), short(i)))
-                        search.append((p, i))
-                    break
-                p, f = i, f * 2
+            for n, l in zip(search, remote.between(search)):
+                l.append(n[1])
+                p = n[0]
+                f = 1
+                for i in l:
+                    self.ui.debug(_("narrowing %d:%d %s\n") % (f, len(l), short(i)))
+                    if i in m:
+                        if f <= 2:
+                            self.ui.debug(_("found new branch changeset %s\n") %
+                                              short(p))
+                            fetch[p] = 1
+                            base[i] = 1
+                        else:
+                            self.ui.debug(_("narrowed branch search to %s:%s\n")
+                                          % (short(p), short(i)))
+                            newsearch.append((p, i))
+                        break
+                    p, f = i, f * 2
+                search = newsearch
 
         # sanity check our fetch list
         for f in fetch.keys():
