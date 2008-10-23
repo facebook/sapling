@@ -28,8 +28,8 @@ scanning source...
 sorting...
 converting...
 4 init
+ignoring: data/b.i@1e88685f5dde: no match found
 3 changebagain
-ignoring: data/b.i@4b3c32ced4f8: no match found
 2 changeall
 1 merge
 0 moveb

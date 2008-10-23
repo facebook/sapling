@@ -255,6 +255,10 @@ class mercurial_source(converter_source):
         parents = self.parents(ctx)
         if not parents:
             files = util.sort(ctx.manifest().keys())
+            if self.ignoreerrors:
+                # calling getcopies() is a simple way to detect missing
+                # revlogs and populate self.ignored
+                self.getcopies(ctx, files)
             return [(f, rev) for f in files if f not in self.ignored], {}
         if self._changescache and self._changescache[0] == rev:
             m, a, r = self._changescache[1]
