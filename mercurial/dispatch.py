@@ -172,7 +172,7 @@ def _parse(ui, args):
     if args:
         cmd, args = args[0], args[1:]
         aliases, i = cmdutil.findcmd(cmd, commands.table,
-                                     ui.config("ui","strict"))
+                                     ui.config("ui", "strict"))
         cmd = aliases[0]
         defaults = ui.config("defaults", cmd)
         if defaults:
