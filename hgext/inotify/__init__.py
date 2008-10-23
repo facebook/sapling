@@ -64,7 +64,7 @@ def reposetup(ui, repo):
                                    'removing it)\n'))
                     os.unlink(repo.join('inotify.sock'))
                 if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and \
-                        ui.configbool('inotify', 'autostart'):
+                        ui.configbool('inotify', 'autostart', True):
                     query = None
                     ui.debug(_('(starting inotify server)\n'))
                     try:
