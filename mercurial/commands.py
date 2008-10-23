@@ -1094,9 +1094,9 @@ def grep(ui, repo, pattern, *pats, **opts):
             mstart, mend = match.span()
             linenum += body.count('\n', begin, mstart) + 1
             lstart = body.rfind('\n', begin, mstart) + 1 or begin
-            lend = body.find('\n', mend)
+            begin = body.find('\n', mend) + 1 or len(body)
+            lend = begin - 1
             yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
-            begin = lend + 1
 
     class linestate(object):
         def __init__(self, line, linenum, colstart, colend):
