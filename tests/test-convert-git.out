@@ -88,3 +88,13 @@ o  0 "add foo" files: foo
 354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
 9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
 88dfeab657e8cf2cef3dec67b914f49791ae76b1 644   quux
+
+% test binary conversion (issue 1359)
+% convert binary file
+initializing destination git-repo3-hg repository
+scanning source...
+sorting...
+converting...
+0 addbinary
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+4096

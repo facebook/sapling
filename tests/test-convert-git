@@ -130,3 +130,20 @@ splitrepo 'octopus merge' 'foo bar baz'
 
 splitrepo 'only some parents of an octopus merge; "discard" a head' 'foo baz quux'
 
+echo
+echo '% test binary conversion (issue 1359)'
+mkdir git-repo3
+cd git-repo3
+git init-db >/dev/null 2>/dev/null
+python -c 'file("b", "wb").write("".join([chr(i) for i in range(256)])*16)'
+git add b
+commit -a -m addbinary
+cd ..
+
+echo '% convert binary file'
+hg convert git-repo3 git-repo3-hg
+
+cd git-repo3-hg
+hg up -C
+python -c 'print len(file("b", "rb").read())'
+
