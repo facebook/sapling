@@ -338,7 +338,7 @@ class Watcher(object):
             if not wfn.startswith(wtopdir):
                 continue
             status = state[0]
-            st = self.getstat(wfn)
+            st = self.stat(wfn)
             if status == 'r' and not st:
                 self.updatestatus(wfn, st, status=status)
             else:
