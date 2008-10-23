@@ -56,6 +56,18 @@ def reposetup(ui, repo):
                 if not ignored and not self.inotifyserver:
                     result = client.query(ui, repo, files, match, False,
                                           clean, unknown)
+                    if ui.config('inotify', 'debug'):
+                        r2 = super(inotifydirstate, self).status(
+                            match, False, clean, unknown)
+                        for c,a,b in zip('LMARDUIC', result, r2):
+                            for f in a:
+                                if f not in b:
+                                    ui.warn('*** inotify: %s +%s\n' % (c, f))
+                            for f in b:
+                                if f not in a:
+                                    ui.warn('*** inotify: %S -%s\n' % (c, f))
+                        result = r2
+
                     if result is not None:
                         return result
             except (OSError, socket.error), err:
