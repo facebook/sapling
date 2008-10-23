@@ -14,7 +14,7 @@ class convert_git(converter_source):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path
             try:
-                return util.popen(s)
+                return util.popen(s, 'rb')
             finally:
                 if prevgitdir is None:
                     del os.environ['GIT_DIR']
@@ -22,7 +22,7 @@ class convert_git(converter_source):
                     os.environ['GIT_DIR'] = prevgitdir
     else:
         def gitcmd(self, s):
-            return util.popen('GIT_DIR=%s %s' % (self.path, s))
+            return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
 
     def __init__(self, ui, path, rev=None):
         super(convert_git, self).__init__(ui, path, rev=rev)
