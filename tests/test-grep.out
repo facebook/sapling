@@ -32,6 +32,10 @@ color:3:orange
 color:3:+:orange
 color:2:-:orange
 color:1:+:orange
+% match in last line without newline
+adding noeol
+% last character omitted in output to avoid infinite loop
+noeol:4:no infinite loo
 % issue 685
 adding color
 color:0:octarine
