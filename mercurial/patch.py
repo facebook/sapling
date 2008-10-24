@@ -31,9 +31,8 @@ def copyfile(src, dst, basedir=None):
         raise util.Abort(_("cannot create %s: destination already exists") %
                          dst)
 
-    targetdir = os.path.dirname(absdst)
-    if not os.path.isdir(targetdir):
-        os.makedirs(targetdir)
+    if not os.path.isdir(basedir):
+        os.makedirs(basedir)
 
     util.copyfile(abssrc, absdst)
 
