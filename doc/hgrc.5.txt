@@ -265,7 +265,16 @@ format::
     compatibility with systems that fold case or otherwise mangle
     filenames. Enabled by default. Disabling this option will allow
     you to store longer filenames in some situations at the expense of
-    compatibility.
+    compatibility and ensures that the on-disk format of newly created
+    repositories will be compatible with Mercurial before version 0.9.4.
+
+  usefncache;;
+    Enable or disable the "fncache" repository format which enhances
+    the "store" repository format (which has to be enabled to use
+    fncache) to allow longer filenames and avoids using Windows reserved
+    names, e.g. "nul". Enabled by default. Disabling this option ensures
+    that the on-disk format of newly created repositories will be
+    compatible with Mercurial before version 1.1.
 
 [[merge-patterns]]
 merge-patterns::
