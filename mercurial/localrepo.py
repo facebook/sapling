@@ -35,7 +35,8 @@ class localrepository(repo.repository):
                 if parentui.configbool('format', 'usestore', True):
                     os.mkdir(os.path.join(self.path, "store"))
                     requirements.append("store")
-                    requirements.append("fncache")
+                    if parentui.configbool('format', 'usefncache', True):
+                        requirements.append("fncache")
                     # create an invalid changelog
                     self.opener("00changelog.i", "a").write(
                         '\0\0\0\2' # represents revlogv2
