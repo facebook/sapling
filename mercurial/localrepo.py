@@ -1318,7 +1318,7 @@ class localrepository(repo.repository):
                 elif n[1] and n[1] in m: # do we know the base?
                     self.ui.debug(_("found incomplete branch %s:%s\n")
                                   % (short(n[0]), short(n[1])))
-                    search.append(n) # schedule branch range for scanning
+                    search.append(n[0:2]) # schedule branch range for scanning
                     seenbranch[n] = 1
                 else:
                     if n[1] not in seen and n[1] not in fetch:
@@ -1347,7 +1347,6 @@ class localrepository(repo.repository):
                         unknown.append(b)
 
         # do binary search on the branches we found
-        search = [(t, b) for (t, b, p1, p2) in search]
         while search:
             newsearch = []
             reqcnt += 1
