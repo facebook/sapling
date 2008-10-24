@@ -279,7 +279,7 @@ class fncachestore(basicstore):
             fp.close()
 
     def copylist(self):
-        d = _data + ' dh fncache' 
+        d = _data + ' dh fncache'
         return (['requires', '00changelog.i'] +
                 [self.pathjoiner('store', f) for f in d.split()])
 

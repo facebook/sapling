@@ -267,7 +267,7 @@ class mercurial_source(converter_source):
         # getcopies() detects missing revlogs early, run it before
         # filtering the changes.
         copies = self.getcopies(ctx, m + a)
-        changes = [(name, rev) for name in m + a + r 
+        changes = [(name, rev) for name in m + a + r
                    if name not in self.ignored]
         return util.sort(changes), copies
 

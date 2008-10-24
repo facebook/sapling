@@ -85,7 +85,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     Mercurial Source
     -----------------
 
-    --config convert.hg.ignoreerrors=False (boolean) 
+    --config convert.hg.ignoreerrors=False (boolean)
         ignore integrity errors when reading. Use it to fix Mercurial
         repositories with missing revlogs, by converting from and to
         Mercurial.

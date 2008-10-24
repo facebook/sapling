@@ -1894,7 +1894,7 @@ def log(ui, repo, *pats, **opts):
                         break
                 if miss:
                     continue
-                
+
             copies = []
             if opts.get('copies') and rev:
                 for fn in get(rev)[3]:
