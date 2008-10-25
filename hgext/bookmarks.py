@@ -81,6 +81,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
             raise util.Abort(_("a bookmark of this name does not exist"))
         if mark in marks and not force:
             raise util.Abort(_("a bookmark of the same name already exists"))
+        if mark is None:
+            raise util.Abort(_("new bookmark name required"))
         marks[mark] = marks[move]
         del marks[move]
         write(repo, marks)
