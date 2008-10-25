@@ -23,12 +23,12 @@ import mercurial, mercurial.localrepo, mercurial.repair, os
 
 def parse(repo):
     '''Parse .hg/bookmarks file and return a dictionary
-    
-    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format) 
+
+    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format)
     values in the .hg/bookmarks file.
     They are read by the parse() method and returned as a dictionary with
     name => hash values.
-    
+
     The parsed dictionary is cached until a write() operation is done.
     '''
     try:
@@ -44,7 +44,7 @@ def parse(repo):
 
 def write(repo, refs):
     '''Write bookmarks
-    
+
     Write the given bookmark => hash dictionary to the .hg/bookmarks file
     in a format equal to those of localtags.
 
@@ -59,12 +59,12 @@ def write(repo, refs):
 
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None):
     '''mercurial bookmarks
-    
+
     Bookmarks are pointer to certain commits that move when commiting.
     Bookmarks are local. They can be renamed, copied and deleted.
-    It is possible to use bookmark names in 'hg merge' and 'hg update' to 
+    It is possible to use bookmark names in 'hg merge' and 'hg update' to
     update to a given bookmark.
-    
+
     You can use 'hg bookmark [NAME]' to set a bookmark on the current tip
     with the given name. If you specify a second [NAME] the bookmark is
     set to the bookmark that has that name. You can also pass revision
@@ -83,7 +83,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
         del marks[move]
         write(repo, marks)
         return
-    
+
     if delete:
         if mark == None:
             raise util.Abort(_("bookmark name required"))
@@ -98,7 +98,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
             raise Exception("bookmark cannot contain newlines")
         if mark in marks and not force:
             raise util.Abort(_("a bookmark of the same name already exists"))
-        if ((mark in repo.branchtags() or mark == repo.dirstate.branch()) 
+        if ((mark in repo.branchtags() or mark == repo.dirstate.branch())
             and not force):
             raise util.Abort(_("a bookmark cannot have the name of an existing branch"))
         if rev:
@@ -162,7 +162,7 @@ def reposetup(ui, repo):
         def rollback(self):
             if os.path.exists(self.join('undo.bookmarks')):
                 util.rename(self.join('undo.bookmarks'), self.join('bookmarks'))
-            return super(bookmark_repo, self).rollback() 
+            return super(bookmark_repo, self).rollback()
 
         def lookup(self, key):
             if self._bookmarks is None:
