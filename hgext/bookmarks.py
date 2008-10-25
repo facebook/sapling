@@ -59,7 +59,7 @@ def write(repo, refs):
         file.write("%s %s\n" % (hex(node), refspec))
     file.close()
 
-def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None):
+def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
     '''mercurial bookmarks
 
     Bookmarks are pointers to certain commits that move when
@@ -76,15 +76,15 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
     marks = parse(repo)
     cur   = repo.changectx('.').node()
 
-    if move:
-        if move not in marks:
+    if rename:
+        if rename not in marks:
             raise util.Abort(_("a bookmark of this name does not exist"))
         if mark in marks and not force:
             raise util.Abort(_("a bookmark of the same name already exists"))
         if mark is None:
             raise util.Abort(_("new bookmark name required"))
-        marks[mark] = marks[move]
-        del marks[move]
+        marks[mark] = marks[rename]
+        del marks[rename]
         write(repo, marks)
         return
 
@@ -222,6 +222,6 @@ cmdtable = {
          [('f', 'force', False, _('force')),
           ('r', 'rev', '', _('revision')),
           ('d', 'delete', False, _('delete a given bookmark')),
-          ('m', 'move', '', _('move a given bookmark'))],
+          ('m', 'rename', '', _('rename a given bookmark'))],
          _('hg bookmarks [-d] [-m NAME] [-r NAME] [NAME]')),
 }
