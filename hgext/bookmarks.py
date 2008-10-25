@@ -19,7 +19,7 @@ merge, hg update).
 from mercurial.commands import templateopts, hex, short
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, changelog
-from mercurial.node import nullrev
+from mercurial.node import nullid, nullrev
 from mercurial.repo import RepoError
 import mercurial, mercurial.localrepo, mercurial.repair, os
 
@@ -182,6 +182,8 @@ def reposetup(ui, repo):
             move the bookmark"""
             node  = super(bookmark_repo, self).commit(*k, **kw)
             parents = repo.changelog.parents(node)
+            if parents[1] == nullid:
+                parents = (parents[0],)
             marks = parse(repo)
             update = False
             for mark, n in marks.items():
