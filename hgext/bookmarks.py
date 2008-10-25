@@ -4,15 +4,18 @@
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
+
 '''mercurial bookmarks
 
-Mercurial bookmarks are local moveable pointers to changesets. Every bookmark
-points to a changeset identified by its hash. If you commit a changeset
-that is based on a changeset that has a bookmark on it, the bookmark is forwarded
-to the new changeset.
+Mercurial bookmarks are local moveable pointers to changesets. Every
+bookmark points to a changeset identified by its hash. If you commit a
+changeset that is based on a changeset that has a bookmark on it, the
+bookmark is forwarded to the new changeset.
 
-It is possible to use bookmark names in every revision lookup (e.g. hg merge, hg update)
+It is possible to use bookmark names in every revision lookup (e.g. hg
+merge, hg update).
 '''
+
 from mercurial.commands import templateopts, hex, short
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, changelog
@@ -20,14 +23,12 @@ from mercurial.node import nullrev
 from mercurial.repo import RepoError
 import mercurial, mercurial.localrepo, mercurial.repair, os
 
-
 def parse(repo):
     '''Parse .hg/bookmarks file and return a dictionary
 
-    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format)
-    values in the .hg/bookmarks file.
-    They are read by the parse() method and returned as a dictionary with
-    name => hash values.
+    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format) values
+    in the .hg/bookmarks file. They are read by the parse() method and
+    returned as a dictionary with name => hash values.
 
     The parsed dictionary is cached until a write() operation is done.
     '''
@@ -60,10 +61,10 @@ def write(repo, refs):
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None):
     '''mercurial bookmarks
 
-    Bookmarks are pointers to certain commits that move when commiting.
-    Bookmarks are local. They can be renamed, copied and deleted.
-    It is possible to use bookmark names in 'hg merge' and 'hg update' to
-    update to a given bookmark.
+    Bookmarks are pointers to certain commits that move when
+    commiting. Bookmarks are local. They can be renamed, copied and
+    deleted. It is possible to use bookmark names in 'hg merge' and 'hg
+    update' to update to a given bookmark.
 
     You can use 'hg bookmark [NAME]' to set a bookmark on the current tip
     with the given name. If you specify a second [NAME] the bookmark is
@@ -100,7 +101,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
             raise util.Abort(_("a bookmark of the same name already exists"))
         if ((mark in repo.branchtags() or mark == repo.dirstate.branch())
             and not force):
-            raise util.Abort(_("a bookmark cannot have the name of an existing branch"))
+            raise util.Abort(
+                _("a bookmark cannot have the name of an existing branch"))
         if rev:
             marks[mark] = repo.lookup(rev)
         else:
@@ -114,7 +116,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
         else:
             for bmark, n in marks.iteritems():
                 prefix = (n == cur) and '*' or ' '
-                ui.write(" %s %-25s %d:%s\n" % (prefix, bmark, repo.changelog.rev(n), hexfn(n)))
+                ui.write(" %s %-25s %d:%s\n" % (
+                    prefix, bmark, repo.changelog.rev(n), hexfn(n)))
         return
 
 def _revstostrip(changelog, node):
@@ -192,7 +195,8 @@ def reposetup(ui, repo):
             except RepoError, inst:
                 pass
 
-            result = super(bookmark_repo, self).addchangegroup(source, srctype, url, emptyok)
+            result = super(bookmark_repo, self).addchangegroup(
+                source, srctype, url, emptyok)
             if result > 1:
                 # We have more heads than before
                 return result
