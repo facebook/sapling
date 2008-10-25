@@ -114,6 +114,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         return
 
     if mark == None:
+        if rev:
+            raise util.Abort(_("bookmark name required"))
         if len(marks) == 0:
             ui.status("no bookmarks set\n")
         else:
