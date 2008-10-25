@@ -38,7 +38,7 @@ class convert_git(converter_source):
 
     def getheads(self):
         if not self.rev:
-            return self.gitcmd('git rev-parse --branches').read().splitlines()
+            return self.gitcmd('git rev-parse --branches --remotes').read().splitlines()
         else:
             fh = self.gitcmd("git rev-parse --verify %s" % self.rev)
             return [fh.read()[:-1]]
