@@ -52,7 +52,8 @@ def write(repo, refs):
     We also store a backup of the previous state in undo.bookmarks that
     can be copied back on rollback.
     '''
-    util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
+    if os.path.exists(repo.join('bookmarks')):
+        util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
     file = repo.opener('bookmarks', 'w+')
     for refspec, node in refs.items():
         file.write("%s %s\n" % (hex(node), refspec))
