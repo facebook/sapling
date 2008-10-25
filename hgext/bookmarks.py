@@ -7,7 +7,7 @@
 '''mercurial bookmarks
 
 Mercurial bookmarks are local moveable pointers to changesets. Every bookmark
-points to a changesets identified by it's hash. If you commit a changeset
+points to a changeset identified by its hash. If you commit a changeset
 that is based on a changeset that has a bookmark on it, the bookmark is forwarded
 to the new changeset.
 
@@ -60,7 +60,7 @@ def write(repo, refs):
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None):
     '''mercurial bookmarks
 
-    Bookmarks are pointer to certain commits that move when commiting.
+    Bookmarks are pointers to certain commits that move when commiting.
     Bookmarks are local. They can be renamed, copied and deleted.
     It is possible to use bookmark names in 'hg merge' and 'hg update' to
     update to a given bookmark.
@@ -76,7 +76,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
 
     if move:
         if move not in marks:
-            raise util.Abort(_("a bookmark of this name doesnot exists"))
+            raise util.Abort(_("a bookmark of this name does not exist"))
         if mark in marks and not force:
             raise util.Abort(_("a bookmark of the same name already exists"))
         marks[mark] = marks[move]
@@ -88,7 +88,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
         if mark == None:
             raise util.Abort(_("bookmark name required"))
         if mark not in marks:
-            raise util.Abort(_("a bookmark of this name does not exists"))
+            raise util.Abort(_("a bookmark of this name does not exist"))
         del marks[mark]
         write(repo, marks)
         return
