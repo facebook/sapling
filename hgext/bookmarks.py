@@ -98,8 +98,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         return
 
     if mark != None:
-        if mark.strip().count("\n") > 0:
-            raise Exception("bookmark cannot contain newlines")
+        if "\n" in mark:
+            raise util.Abort(_("bookmark name cannot contain newlines"))
         if mark in marks and not force:
             raise util.Abort(_("a bookmark of the same name already exists"))
         if ((mark in repo.branchtags() or mark == repo.dirstate.branch())
