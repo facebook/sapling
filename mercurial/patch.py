@@ -1060,7 +1060,7 @@ def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
         if line.startswith('patching file '):
             pf = util.parse_patch_output(line)
             printed_file = False
-            files.setdefault(pf, (None, None))
+            files.setdefault(pf, None)
         elif line.find('with fuzz') >= 0:
             fuzz = True
             if not printed_file:

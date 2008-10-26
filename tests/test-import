@@ -20,6 +20,18 @@ echo % committer should be same
 hg --cwd b tip | grep someone
 rm -r b
 
+echo % import exported patch with external patcher
+cat > dummypatch.py <<EOF
+print 'patching file a'
+file('a', 'wb').write('line2\n')
+EOF
+chmod +x dummypatch.py
+hg clone -r0 a b
+hg --cwd a export tip > tip.patch
+hg --config ui.patch='python ../dummypatch.py' --cwd b import ../tip.patch
+cat b/a
+rm -r b
+
 echo % import of plain diff should fail without message
 hg clone -r0 a b
 hg --cwd a diff -r0:1 > tip.patch
