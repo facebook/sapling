@@ -184,6 +184,8 @@ def reposetup(ui, repo):
             """Add a revision to the repository and
             move the bookmark"""
             node  = super(bookmark_repo, self).commit(*k, **kw)
+            if node == None:
+                return None
             parents = repo.changelog.parents(node)
             if parents[1] == nullid:
                 parents = (parents[0],)
