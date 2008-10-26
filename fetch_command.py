@@ -103,14 +103,24 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                         raise
 
 
+def cleanup_file_handles(svn, count):
+    if count % 50 == 0:
+        svn.init_ra_and_client()
+
 def replay_convert_rev(hg_editor, svn, r):
     hg_editor.set_current_rev(r)
     svn.get_replay(r.revnum, hg_editor)
+    i = 1
     if hg_editor.missing_plaintexts:
+        hg_editor.ui.status('Fetching %s files that could not use replay.\n' %
+                            len(hg_editor.missing_plaintexts))
         files_to_grab = set()
         dirs_to_list = []
         props = {}
+        hg_editor.ui.status('Getting properties...\n')
         for p in hg_editor.missing_plaintexts:
+            hg_editor.ui.status('.')
+            hg_editor.ui.flush()
             p2 = p
             if svn.subdir:
                 p2 = p2[len(svn.subdir)-1:]
@@ -118,6 +128,8 @@ def replay_convert_rev(hg_editor, svn, r):
             # no idea why. TODO(augie) figure out the why.
             try:
                 pl = svn.proplist(p2, r.revnum, recurse=True)
+                cleanup_file_handles(svn, i)
+                i += 1
             except core.SubversionException, e:
                 pass
             props.update(pl)
@@ -125,8 +137,13 @@ def replay_convert_rev(hg_editor, svn, r):
                 dirs_to_list.append(p)
             else:
                 files_to_grab.add(p)
+        hg_editor.ui.status('\nChecking for additional files in directories...\n')
         while dirs_to_list:
+            hg_editor.ui.status('.')
+            hg_editor.ui.flush()
             p = dirs_to_list.pop(0)
+            cleanup_file_handles(svn, i)
+            i += 1
             l = svn.list_dir(p[:-1], r.revnum)
             for f in l:
 
@@ -134,10 +151,15 @@ def replay_convert_rev(hg_editor, svn, r):
                     dirs_to_list.append(p+f+'/')
                 elif l[f].kind == core.svn_node_file:
                     files_to_grab.add(p+f)
+        hg_editor.ui.status('\nFetching files...\n')
         for p in files_to_grab:
+            hg_editor.ui.status('.')
+            hg_editor.ui.flush()
             p2 = p
             if svn.subdir:
                 p2 = p2[len(svn.subdir)-1:]
+            cleanup_file_handles(svn, i)
+            i += 1
             hg_editor.current_files[p] = svn.get_file(p2, r.revnum)
             hg_editor.current_files_exec[p] = False
             if p in props:
@@ -146,6 +168,7 @@ def replay_convert_rev(hg_editor, svn, r):
                 if 'svn:special' in props[p]:
                     hg_editor.current_files_symlink[p] = True
         hg_editor.missing_plaintexts = set()
+        hg_editor.ui.status('\n')
     hg_editor.commit_current_delta()
 
 

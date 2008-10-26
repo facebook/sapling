@@ -167,6 +167,7 @@ class HgChangeReceiver(delta.Editor):
             if p and p[0] == '/':
                 p = p[1:]
             return p, br
+        return None, None
         raise Exception,'Things went boom: ' + path
 
     def set_current_rev(self, rev):
@@ -496,7 +497,8 @@ class HgChangeReceiver(delta.Editor):
         self.base_revision = None
         if path in self.deleted_files:
             del self.deleted_files[path]
-        if self._is_path_valid(path):
+        if (self._is_path_valid(path) and 
+            self._path_and_branch_for_path(path)[0]):
             self.current_file = path
             self.should_edit_most_recent_plaintext = False
             if copyfrom_path:
