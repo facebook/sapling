@@ -56,22 +56,26 @@ class convert_git(converter_source):
 
     def getchanges(self, version):
         self.modecache = {}
-        fh = self.gitcmd("git diff-tree --root -m -r %s" % version)
+        fh = self.gitcmd("git diff-tree -z --root -m -r %s" % version)
         changes = []
         seen = {}
-        for l in fh:
-            if "\t" not in l:
+        entry = None
+        for l in fh.read().split('\x00'):
+            if not entry:
+                if not l.startswith(':'):
+                    continue
+                entry = l
                 continue
-            m, f = l[:-1].split("\t")
-            if f in seen:
-                continue
-            seen[f] = 1
-            m = m.split()
-            h = m[3]
-            p = (m[1] == "100755")
-            s = (m[1] == "120000")
-            self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
-            changes.append((f, h))
+            f = l
+            if f not in seen:
+                seen[f] = 1
+                entry = entry.split()
+                h = entry[3]
+                p = (entry[1] == "100755")
+                s = (entry[1] == "120000")
+                self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
+                changes.append((f, h))
+            entry = None
         return (changes, {})
 
     def getcommit(self, version):
