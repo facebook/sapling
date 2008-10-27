@@ -2857,14 +2857,21 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     or the tip of the current branch if none is specified. Use null as
     the revision to remove the working copy (like 'hg clone -U').
 
-    If the requested revision is a descendant of the working
-    directory, any outstanding changes in the working directory will
-    be merged into the result. If it is not directly descended but is
-    on the same named branch, update aborts with a suggestion to use
-    merge or update -C instead.
+    When the working dir contains no uncommitted changes, it will be
+    replaced by the state of the requested revision from the repo.  When
+    the requested revision is on a different branch, the working dir
+    will additionally be switched to that branch.
 
-    If the requested revision is on a different named branch and the
-    working directory is clean, update quietly switches branches.
+    When there are uncommitted changes, use option -C to discard them,
+    forcibly replacing the state of the working dir with the requested
+    revision.
+
+    When there are uncommitted changes and option -C is not used, and
+    the parent revision and requested revision are on the same branch,
+    and one of them is an ancestor of the other, then the new working
+    directory will contain the requested revision merged with the
+    uncommitted changes.  Otherwise, the update will fail with a
+    suggestion to use 'merge' or 'update -C' instead.
 
     If you want to update just one file to an older revision, use revert.
 
