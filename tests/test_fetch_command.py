@@ -91,6 +91,12 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
 
+    def test_file_mixed_with_branches(self):
+        repo = self._load_fixture_and_fetch('file_mixed_with_branches.svndump')
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+        assert 'README' not in repo
+
 
 class TestStupidPull(unittest.TestCase):
     def setUp(self):
