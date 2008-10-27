@@ -49,3 +49,18 @@ updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 %% bad host:port for proxy
 abort: error: Connection refused
+XXX "GET http://localhost:20059/?pairs=0000000000000000000000000000000000000000-0000000000000000000000000000000000000000&cmd=between HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=capabilities HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=stream_out HTTP/1.1" - -
+XXX "GET http://localhost:20059/?pairs=0000000000000000000000000000000000000000-0000000000000000000000000000000000000000&cmd=between HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=heads HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=changegroup&roots=0000000000000000000000000000000000000000 HTTP/1.1" - -
+XXX "GET http://localhost:20059/?pairs=0000000000000000000000000000000000000000-0000000000000000000000000000000000000000&cmd=between HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=heads HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=changegroup&roots=0000000000000000000000000000000000000000 HTTP/1.1" - -
+XXX "GET http://localhost:20059/?pairs=0000000000000000000000000000000000000000-0000000000000000000000000000000000000000&cmd=between HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=heads HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=changegroup&roots=0000000000000000000000000000000000000000 HTTP/1.1" - -
+XXX "GET http://localhost:20059/?pairs=0000000000000000000000000000000000000000-0000000000000000000000000000000000000000&cmd=between HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=heads HTTP/1.1" - -
+XXX "GET http://localhost:20059/?cmd=changegroup&roots=0000000000000000000000000000000000000000 HTTP/1.1" - -
