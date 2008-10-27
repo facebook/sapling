@@ -510,6 +510,9 @@ class HgChangeReceiver(delta.Editor):
                 # TODO(augie) handle this better, actually mark a copy
                 (from_file,
                  from_branch) = self._path_and_branch_for_path(copyfrom_path)
+                if not from_file:
+                    self.missing_plaintexts.add(path)
+                    return
                 ha = self.get_parent_revision(copyfrom_revision + 1,
                                               from_branch)
                 ctx = self.repo.changectx(ha)

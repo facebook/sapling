@@ -104,6 +104,11 @@ class TestBasicRepoLayout(unittest.TestCase):
                          'c4e669a763a70f751c71d4534a34a65f398d71d4')
         self.assertEqual(len(repo.changelog), 2)
 
+    def test_file_renamed_in_from_outside_btt(self):
+        repo = self._load_fixture_and_fetch(
+                    'file_renamed_in_from_outside_btt.svndump')
+        self.assert_('LICENSE.file' in repo['tip'])
+
 class TestStupidPull(unittest.TestCase):
     def setUp(self):
         self.oldwd = os.getcwd()
