@@ -5,8 +5,13 @@ revlogv1
 store
 fncache
 adding foo
-# creating repo with old format
+# creating repo with format.usestore=false
 revlogv1
+# creating repo with format.usefncache=false
+store created
+00changelog.i created
+revlogv1
+store
 #test failure
 abort: repository local already exists!
 # init+push to remote2

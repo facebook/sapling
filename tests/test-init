@@ -44,9 +44,13 @@ checknewrepo local
 echo this > local/foo
 hg ci --cwd local -A -m "init" -d "1000000 0"
 
-echo "# creating repo with old format"
+echo "# creating repo with format.usestore=false"
 hg --config format.usestore=false init old
 checknewrepo old
+
+echo "# creating repo with format.usefncache=false"
+hg --config format.usefncache=false init old2
+checknewrepo old2
 
 echo "#test failure"
 hg init local
