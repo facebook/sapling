@@ -137,7 +137,9 @@ def replay_convert_rev(hg_editor, svn, r):
                 dirs_to_list.append(p)
             else:
                 files_to_grab.add(p)
-        hg_editor.ui.status('\nChecking for additional files in directories...\n')
+        if dirs_to_list:
+            hg_editor.ui.status('\nChecking for additional files in'
+                                ' directories...\n')
         while dirs_to_list:
             hg_editor.ui.status('.')
             hg_editor.ui.flush()
