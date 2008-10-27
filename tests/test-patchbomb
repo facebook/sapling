@@ -45,26 +45,26 @@ hg email --date '1970-1-1 0:3' -n -f quux -t foo \
     fixheaders
 
 echo % utf-8 patch
-python -c 'fp = open("utf", "w"); fp.write("h\xC3\xB6mma!\n"); fp.close();'
+python -c 'fp = open("utf", "wb"); fp.write("h\xC3\xB6mma!\n"); fp.close();'
 hg commit -A -d '4 0' -m 'charset=utf-8; content-transfer-encoding: base64'
 
 echo % no mime encoding for email --test
-hg email --date '1970-1-1 0:4' -f quux -t foo -r tip -n | fixheaders > mailtest
+hg email --date '1970-1-1 0:4' -f quux -t foo -c bar -r tip -n | fixheaders > mailtest
 echo % md5sum of 8-bit output
 $TESTDIR/md5sum.py mailtest
 rm mailtest
 
 echo % mime encoded mbox
-hg email --date '1970-1-1 0:4' -f quux -t foo -r tip -m mbox
+hg email --date '1970-1-1 0:4' -f quux -t foo -c bar -r tip -m mbox
 cat mbox | fixheaders
 rm mbox
 
 echo % iso-8859-1 patch
-python -c 'fp = open("isolatin", "w"); fp.write("h\xF6mma!\n"); fp.close();'
+python -c 'fp = open("isolatin", "wb"); fp.write("h\xF6mma!\n"); fp.close();'
 hg commit -A -d '5 0' -m 'charset=us-ascii; content-transfer-encoding: 8bit'
 
 echo % fake ascii mbox
-hg email --date '1970-1-1 0:5' -f quux -t foo -r tip -m mbox
+hg email --date '1970-1-1 0:5' -f quux -t foo -c bar -r tip -m mbox
 fixheaders < mbox > mboxfix
 echo % md5sum of 8-bit output
 $TESTDIR/md5sum.py mboxfix
