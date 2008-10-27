@@ -4,31 +4,32 @@
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
+
 '''mercurial bookmarks
 
-Mercurial bookmarks are local moveable pointers to changesets. Every bookmark
-points to a changesets identified by it's hash. If you commit a changeset
-that is based on a changeset that has a bookmark on it, the bookmark is forwarded
-to the new changeset.
+Mercurial bookmarks are local moveable pointers to changesets. Every
+bookmark points to a changeset identified by its hash. If you commit a
+changeset that is based on a changeset that has a bookmark on it, the
+bookmark is forwarded to the new changeset.
 
-It is possible to use bookmark names in every revision lookup (e.g. hg merge, hg update)
+It is possible to use bookmark names in every revision lookup (e.g. hg
+merge, hg update).
 '''
+
 from mercurial.commands import templateopts, hex, short
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, changelog
-from mercurial.node import nullrev
+from mercurial.node import nullid, nullrev
 from mercurial.repo import RepoError
 import mercurial, mercurial.localrepo, mercurial.repair, os
 
-
 def parse(repo):
     '''Parse .hg/bookmarks file and return a dictionary
-    
-    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format) 
-    values in the .hg/bookmarks file.
-    They are read by the parse() method and returned as a dictionary with
-    name => hash values.
-    
+
+    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format) values
+    in the .hg/bookmarks file. They are read by the parse() method and
+    returned as a dictionary with name => hash values.
+
     The parsed dictionary is cached until a write() operation is done.
     '''
     try:
@@ -44,63 +45,68 @@ def parse(repo):
 
 def write(repo, refs):
     '''Write bookmarks
-    
+
     Write the given bookmark => hash dictionary to the .hg/bookmarks file
     in a format equal to those of localtags.
 
     We also store a backup of the previous state in undo.bookmarks that
     can be copied back on rollback.
     '''
-    util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
+    if os.path.exists(repo.join('bookmarks')):
+        util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
     file = repo.opener('bookmarks', 'w+')
     for refspec, node in refs.items():
         file.write("%s %s\n" % (hex(node), refspec))
     file.close()
 
-def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None):
+def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
     '''mercurial bookmarks
-    
-    Bookmarks are pointer to certain commits that move when commiting.
-    Bookmarks are local. They can be renamed, copied and deleted.
-    It is possible to use bookmark names in 'hg merge' and 'hg update' to 
-    update to a given bookmark.
-    
-    You can use 'hg bookmark [NAME]' to set a bookmark on the current tip
-    with the given name. If you specify a second [NAME] the bookmark is
-    set to the bookmark that has that name. You can also pass revision
-    identifiers to set bookmarks too.
+
+    Bookmarks are pointers to certain commits that move when
+    commiting. Bookmarks are local. They can be renamed, copied and
+    deleted. It is possible to use bookmark names in 'hg merge' and 'hg
+    update' to update to a given bookmark.
+
+    You can use 'hg bookmark NAME' to set a bookmark on the current
+    tip with the given name. If you specify a revision using -r REV
+    (where REV may be an existing bookmark), the bookmark is set to
+    that revision.
     '''
     hexfn = ui.debugflag and hex or short
     marks = parse(repo)
     cur   = repo.changectx('.').node()
 
-    if move:
-        if move not in marks:
-            raise util.Abort(_("a bookmark of this name doesnot exists"))
+    if rename:
+        if rename not in marks:
+            raise util.Abort(_("a bookmark of this name does not exist"))
         if mark in marks and not force:
             raise util.Abort(_("a bookmark of the same name already exists"))
-        marks[mark] = marks[move]
-        del marks[move]
+        if mark is None:
+            raise util.Abort(_("new bookmark name required"))
+        marks[mark] = marks[rename]
+        del marks[rename]
         write(repo, marks)
         return
-    
+
     if delete:
         if mark == None:
             raise util.Abort(_("bookmark name required"))
         if mark not in marks:
-            raise util.Abort(_("a bookmark of this name does not exists"))
+            raise util.Abort(_("a bookmark of this name does not exist"))
         del marks[mark]
         write(repo, marks)
         return
 
     if mark != None:
-        if mark.strip().count("\n") > 0:
-            raise Exception("bookmark cannot contain newlines")
+        if "\n" in mark:
+            raise util.Abort(_("bookmark name cannot contain newlines"))
+        mark = mark.strip()
         if mark in marks and not force:
             raise util.Abort(_("a bookmark of the same name already exists"))
-        if ((mark in repo.branchtags() or mark == repo.dirstate.branch()) 
+        if ((mark in repo.branchtags() or mark == repo.dirstate.branch())
             and not force):
-            raise util.Abort(_("a bookmark cannot have the name of an existing branch"))
+            raise util.Abort(
+                _("a bookmark cannot have the name of an existing branch"))
         if rev:
             marks[mark] = repo.lookup(rev)
         else:
@@ -109,12 +115,15 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, move=None
         return
 
     if mark == None:
+        if rev:
+            raise util.Abort(_("bookmark name required"))
         if len(marks) == 0:
             ui.status("no bookmarks set\n")
         else:
             for bmark, n in marks.iteritems():
                 prefix = (n == cur) and '*' or ' '
-                ui.write(" %s %-25s %d:%s\n" % (prefix, bmark, repo.changelog.rev(n), hexfn(n)))
+                ui.write(" %s %-25s %d:%s\n" % (
+                    prefix, bmark, repo.changelog.rev(n), hexfn(n)))
         return
 
 def _revstostrip(changelog, node):
@@ -162,7 +171,7 @@ def reposetup(ui, repo):
         def rollback(self):
             if os.path.exists(self.join('undo.bookmarks')):
                 util.rename(self.join('undo.bookmarks'), self.join('bookmarks'))
-            return super(bookmark_repo, self).rollback() 
+            return super(bookmark_repo, self).rollback()
 
         def lookup(self, key):
             if self._bookmarks is None:
@@ -175,7 +184,11 @@ def reposetup(ui, repo):
             """Add a revision to the repository and
             move the bookmark"""
             node  = super(bookmark_repo, self).commit(*k, **kw)
+            if node == None:
+                return None
             parents = repo.changelog.parents(node)
+            if parents[1] == nullid:
+                parents = (parents[0],)
             marks = parse(repo)
             update = False
             for mark, n in marks.items():
@@ -192,7 +205,8 @@ def reposetup(ui, repo):
             except RepoError, inst:
                 pass
 
-            result = super(bookmark_repo, self).addchangegroup(source, srctype, url, emptyok)
+            result = super(bookmark_repo, self).addchangegroup(
+                source, srctype, url, emptyok)
             if result > 1:
                 # We have more heads than before
                 return result
@@ -215,6 +229,6 @@ cmdtable = {
          [('f', 'force', False, _('force')),
           ('r', 'rev', '', _('revision')),
           ('d', 'delete', False, _('delete a given bookmark')),
-          ('m', 'move', '', _('move a given bookmark'))],
+          ('m', 'rename', '', _('rename a given bookmark'))],
          _('hg bookmarks [-d] [-m NAME] [-r NAME] [NAME]')),
 }
