@@ -55,3 +55,13 @@ def parse_revmap(revmap_filename):
             raise NotImplementedError
     return revmap
 
+
+class PrefixMatch(object):
+    def __init__(self, prefix):
+        self.p = prefix
+    
+    def files(self):
+        return []
+    
+    def __call__(self, fn):
+        return fn.startswith(self.p)

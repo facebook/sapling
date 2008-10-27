@@ -65,15 +65,6 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
                                                               svn_commit_hashes)
     return 0
 
-class PrefixMatch(object):
-    def __init__(self, prefix):
-        self.p = prefix
-    
-    def files(self):
-        return []
-    
-    def __call__(self, fn):
-        return fn.startswith(self.p)
 
 def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     """Build and send a commit from Mercurial to Subversion.
@@ -106,7 +97,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                 action = 'add'
                 dirname = '/'.join(file.split('/')[:-1] + [''])
                 # check for new directories
-                if not list(parent.walk(PrefixMatch(dirname))):
+                if not list(parent.walk(util.PrefixMatch(dirname))):
                     # check and see if the dir exists svn-side.
                     try:
                         assert svn.list_dir('%s/%s' % (branch_path, dirname))

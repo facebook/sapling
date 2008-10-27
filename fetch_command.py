@@ -394,7 +394,16 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 used_diff = False
                 shutil.rmtree(our_tempdir)
                 os.makedirs(our_tempdir)
-                svn.fetch_all_files_to_dir(diff_path, r.revnum, our_tempdir)
+                try:
+                    svn.fetch_all_files_to_dir(diff_path, r.revnum, our_tempdir)
+                except core.SubversionException, e:
+                    # apr_err 21 means that we couldn't rename a file to be a dir.
+                    # This happens only in the case (at least right now) of a file
+                    # located in brances or tags, which we don't support anyway.
+                    if e.apr_err == 21:
+                        continue
+                    else:
+                        raise
             except core.SubversionException, e:
                 if e.apr_err == 170000 or (e.message.startswith("URL '")
                      and e.message.endswith("' doesn't exist")):

@@ -468,9 +468,13 @@ class HgChangeReceiver(delta.Editor):
                 if br_path != '':
                     br_path2 = br_path + '/'
                 # assuming it is a directory
-                for f in ctx:
-                    if f.startswith(br_path2):
-                        f_p = '%s/%s' % (path, f[len(br_path2):])
+                def delete_x(x):
+                    self.deleted_files[x] = True
+                map(delete_x, [pat for pat in self.current_files.iterkeys()
+                               if pat.startswith(path)])
+                for f in ctx.walk(our_util.PrefixMatch(br_path2)):
+                    f_p = '%s/%s' % (path, f[len(br_path2):])
+                    if f_p not in self.current_files:
                         self.deleted_files[f_p] = True
                         self.current_files[f_p] = ''
                         self.ui.status('D %s\n' % f_p)
@@ -550,6 +554,8 @@ class HgChangeReceiver(delta.Editor):
                 self.current_files[fp_c] = fctx.data()
                 self.current_files_exec[fp_c] = 'x' in fctx.flags()
                 self.current_files_symlink[fp_c] = 'l' in fctx.flags()
+                if fp_c in self.deleted_files:
+                    del self.deleted_files[fp_c]
                 # TODO(augie) tag copies from files
 
     @stash_exception_on_self
