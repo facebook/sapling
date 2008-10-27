@@ -1322,22 +1322,10 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 def diffstat(patchlines):
     if not util.find_exe('diffstat'):
         return
-    fd, name = tempfile.mkstemp(prefix="hg-patchbomb-", suffix=".txt")
-    try:
-        p = util.Popen3('diffstat -p1 -w79 2>/dev/null > ' + name)
-        try:
-            for line in patchlines:
-                p.tochild.write(line + "\n")
-            p.tochild.close()
-            if p.wait(): return
-            fp = os.fdopen(fd, 'r')
-            stat = []
-            for line in fp: stat.append(line.lstrip())
-            last = stat.pop()
-            stat.insert(0, last)
-            stat = ''.join(stat)
-            return stat
-        except: raise
-    finally:
-        try: os.unlink(name)
-        except: pass
+    output = util.filter('\n'.join(patchlines),
+                         'diffstat -p1 -w79 2>%s' % util.nulldev)
+    stat = [l.lstrip() for l in output.splitlines(True)]
+    last = stat.pop()
+    stat.insert(0, last)
+    stat = ''.join(stat)
+    return stat
