@@ -33,8 +33,8 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short
 from mercurial.repo import RepoError
 from mercurial import commands, cmdutil, hg, patch, revlog, util
-from mercurial import repair, extensions
-import os, sys, re, errno, urllib
+from mercurial import repair, extensions, url
+import os, sys, re, errno
 
 commands.norepo += " qclone"
 
@@ -1521,10 +1521,7 @@ class queue:
                             raise util.Abort(_('need --name to import a patch from -'))
                         text = sys.stdin.read()
                     else:
-                        if os.path.exists(filename):
-                            text = file(filename, 'rb').read()
-                        else:
-                            text = urllib.urlopen(filename).read()
+                        text = url.open(self.ui, filename).read()
                 except IOError:
                     raise util.Abort(_("unable to read %s") % filename)
                 if not patchname:

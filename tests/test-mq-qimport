@@ -25,7 +25,7 @@ hg init repo
 cd repo
 
 echo % qimport non-existing-file
-hg qimport non-existing-file
+hg qimport non-existing-file 2>&1 | sed -e 's/\(No such file or directory:\) .*/\1/'
 
 echo % import URL
 echo foo >> foo

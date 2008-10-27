@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from repo import RepoError, NoCapability
 from i18n import _, gettext
-import os, re, sys, urllib
+import os, re, sys
 import hg, util, revlog, bundlerepo, extensions, copies
 import difflib, patch, time, help, mdiff, tempfile, url
 import version, socket
@@ -1590,13 +1590,11 @@ def import_(ui, repo, patch1, *patches, **opts):
 
             if pf == '-':
                 ui.status(_("applying patch from stdin\n"))
-                data = patch.extract(ui, sys.stdin)
+                pf = sys.stdin
             else:
                 ui.status(_("applying %s\n") % p)
-                if os.path.exists(pf):
-                    data = patch.extract(ui, file(pf, 'rb'))
-                else:
-                    data = patch.extract(ui, urllib.urlopen(pf))
+                pf = url.open(ui, pf)
+            data = patch.extract(ui, pf)
             tmpname, message, user, date, branch, nodeid, p1, p2 = data
 
             if tmpname is None:
@@ -2844,10 +2842,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     try:
         lock = repo.lock()
         for fname in fnames:
-            if os.path.exists(fname):
-                f = open(fname, "rb")
-            else:
-                f = urllib.urlopen(fname)
+            f = url.open(ui, fname)
             gen = changegroup.readbundle(f, fname)
             modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
     finally:
