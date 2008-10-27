@@ -39,6 +39,66 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
         self.add_password(realm, authuri, user, passwd)
         return (user, passwd)
 
+class proxyhandler(urllib2.ProxyHandler):
+    def __init__(self, ui):
+        proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
+        # XXX proxyauthinfo = None
+
+        if proxyurl:
+            # proxy can be proper url or host[:port]
+            if not (proxyurl.startswith('http:') or
+                    proxyurl.startswith('https:')):
+                proxyurl = 'http://' + proxyurl + '/'
+            snpqf = urlparse.urlsplit(proxyurl)
+            proxyscheme, proxynetloc, proxypath, proxyquery, proxyfrag = snpqf
+            hpup = netlocsplit(proxynetloc)
+
+            proxyhost, proxyport, proxyuser, proxypasswd = hpup
+            if not proxyuser:
+                proxyuser = ui.config("http_proxy", "user")
+                proxypasswd = ui.config("http_proxy", "passwd")
+
+            # see if we should use a proxy for this url
+            no_list = [ "localhost", "127.0.0.1" ]
+            no_list.extend([p.lower() for
+                            p in ui.configlist("http_proxy", "no")])
+            no_list.extend([p.strip().lower() for
+                            p in os.getenv("no_proxy", '').split(',')
+                            if p.strip()])
+            # "http_proxy.always" config is for running tests on localhost
+            if ui.configbool("http_proxy", "always"):
+                self.no_list = []
+            else:
+                self.no_list = no_list
+
+            proxyurl = urlparse.urlunsplit((
+                proxyscheme, netlocunsplit(proxyhost, proxyport,
+                                           proxyuser, proxypasswd or ''),
+                proxypath, proxyquery, proxyfrag))
+            proxies = {'http': proxyurl, 'https': proxyurl}
+            ui.debug(_('proxying through http://%s:%s\n') %
+                      (proxyhost, proxyport))
+        else:
+            proxies = {}
+
+        # urllib2 takes proxy values from the environment and those
+        # will take precedence if found, so drop them
+        for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
+            try:
+                if env in os.environ:
+                    del os.environ[env]
+            except OSError:
+                pass
+
+        urllib2.ProxyHandler.__init__(self, proxies)
+        self.ui = ui
+
+    def proxy_open(self, req, proxy, type):
+        host = req.get_host().split(':')[0]
+        if host in self.no_list:
+            return None
+        return urllib2.ProxyHandler.proxy_open(self, req, proxy, type)
+
 def netlocsplit(netloc):
     '''split [user[:passwd]@]host[:port] into 4-tuple.'''
 
@@ -200,57 +260,11 @@ class httprepository(repo.repository):
         self.ui = ui
         self.ui.debug(_('using %s\n') % self._url)
 
-        proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
-        # XXX proxyauthinfo = None
         handlers = [httphandler()]
         if has_https:
             handlers.append(httpshandler())
 
-        if proxyurl:
-            # proxy can be proper url or host[:port]
-            if not (proxyurl.startswith('http:') or
-                    proxyurl.startswith('https:')):
-                proxyurl = 'http://' + proxyurl + '/'
-            snpqf = urlparse.urlsplit(proxyurl)
-            proxyscheme, proxynetloc, proxypath, proxyquery, proxyfrag = snpqf
-            hpup = netlocsplit(proxynetloc)
-
-            proxyhost, proxyport, proxyuser, proxypasswd = hpup
-            if not proxyuser:
-                proxyuser = ui.config("http_proxy", "user")
-                proxypasswd = ui.config("http_proxy", "passwd")
-
-            # see if we should use a proxy for this url
-            no_list = [ "localhost", "127.0.0.1" ]
-            no_list.extend([p.lower() for
-                            p in ui.configlist("http_proxy", "no")])
-            no_list.extend([p.strip().lower() for
-                            p in os.getenv("no_proxy", '').split(',')
-                            if p.strip()])
-            # "http_proxy.always" config is for running tests on localhost
-            if (not ui.configbool("http_proxy", "always") and
-                host.lower() in no_list):
-                # avoid auto-detection of proxy settings by appending
-                # a ProxyHandler with no proxies defined.
-                handlers.append(urllib2.ProxyHandler({}))
-                ui.debug(_('disabling proxy for %s\n') % host)
-            else:
-                proxyurl = urlparse.urlunsplit((
-                    proxyscheme, netlocunsplit(proxyhost, proxyport,
-                                               proxyuser, proxypasswd or ''),
-                    proxypath, proxyquery, proxyfrag))
-                handlers.append(urllib2.ProxyHandler({scheme: proxyurl}))
-                ui.debug(_('proxying through http://%s:%s\n') %
-                          (proxyhost, proxyport))
-
-        # urllib2 takes proxy values from the environment and those
-        # will take precedence if found, so drop them
-        for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
-            try:
-                if env in os.environ:
-                    del os.environ[env]
-            except OSError:
-                pass
+        handlers.append(proxyhandler(ui))
 
         passmgr = passwordmgr(ui)
         if user:
