@@ -532,8 +532,10 @@ class HgChangeReceiver(delta.Editor):
                 self.commit_branches_empty[branch] = True
             else:
                 self.commit_branches_empty[branch] = False
-        if not (self._is_path_valid(path) and copyfrom_path and
-                self._is_path_valid(copyfrom_path)):
+        if not self._is_path_valid(path) or not copyfrom_path:
+            return
+        if copyfrom_path and not self._is_path_valid(copyfrom_path):
+            self.missing_plaintexts.add('%s/' % path)
             return
 
         cp_f, br_from = self._path_and_branch_for_path(copyfrom_path)

@@ -97,6 +97,12 @@ class TestBasicRepoLayout(unittest.TestCase):
                          'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
         assert 'README' not in repo
 
+    def test_files_copied_from_outside_btt(self):
+        repo = self._load_fixture_and_fetch(
+            'test_files_copied_from_outside_btt.svndump')
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         'c4e669a763a70f751c71d4534a34a65f398d71d4')
+        self.assertEqual(len(repo.changelog), 2)
 
 class TestStupidPull(unittest.TestCase):
     def setUp(self):
