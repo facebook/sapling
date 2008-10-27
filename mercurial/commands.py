@@ -10,7 +10,7 @@ from repo import RepoError, NoCapability
 from i18n import _, gettext
 import os, re, sys, urllib
 import hg, util, revlog, bundlerepo, extensions, copies
-import difflib, patch, time, help, mdiff, tempfile
+import difflib, patch, time, help, mdiff, tempfile, url
 import version, socket
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 import merge as merge_
@@ -1675,7 +1675,7 @@ def incoming(ui, repo, source="default", **opts):
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
-    ui.status(_('comparing with %s\n') % util.hidepassword(source))
+    ui.status(_('comparing with %s\n') % url.hidepassword(source))
     if revs:
         revs = [other.lookup(rev) for rev in revs]
     incoming = repo.findincoming(other, heads=revs, force=opts["force"])
@@ -1997,7 +1997,7 @@ def outgoing(ui, repo, dest=None, **opts):
         revs = [repo.lookup(rev) for rev in revs]
 
     other = hg.repository(ui, dest)
-    ui.status(_('comparing with %s\n') % util.hidepassword(dest))
+    ui.status(_('comparing with %s\n') % url.hidepassword(dest))
     o = repo.findoutgoing(other, force=opts.get('force'))
     if not o:
         ui.status(_("no changes found\n"))
@@ -2068,13 +2068,13 @@ def paths(ui, repo, search=None):
     if search:
         for name, path in ui.configitems("paths"):
             if name == search:
-                ui.write("%s\n" % util.hidepassword(path))
+                ui.write("%s\n" % url.hidepassword(path))
                 return
         ui.warn(_("not found!\n"))
         return 1
     else:
         for name, path in ui.configitems("paths"):
-            ui.write("%s = %s\n" % (name, util.hidepassword(path)))
+            ui.write("%s = %s\n" % (name, url.hidepassword(path)))
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
@@ -2131,7 +2131,7 @@ def pull(ui, repo, source="default", **opts):
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, source)
-    ui.status(_('pulling from %s\n') % util.hidepassword(source))
+    ui.status(_('pulling from %s\n') % url.hidepassword(source))
     if revs:
         try:
             revs = [other.lookup(rev) for rev in revs]
@@ -2179,7 +2179,7 @@ def push(ui, repo, dest=None, **opts):
     cmdutil.setremoteconfig(ui, opts)
 
     other = hg.repository(ui, dest)
-    ui.status(_('pushing to %s\n') % util.hidepassword(dest))
+    ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
     r = repo.push(other, opts.get('force'), revs=revs)

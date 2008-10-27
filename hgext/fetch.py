@@ -8,7 +8,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import nullid, short
-from mercurial import commands, cmdutil, hg, util
+from mercurial import commands, cmdutil, hg, util, url
 
 def fetch(ui, repo, source='default', **opts):
     '''Pull changes from a remote repository, merge new changes if needed.
@@ -60,7 +60,7 @@ def fetch(ui, repo, source='default', **opts):
 
         other = hg.repository(ui, ui.expandpath(source))
         ui.status(_('pulling from %s\n') %
-                  util.hidepassword(ui.expandpath(source)))
+                  url.hidepassword(ui.expandpath(source)))
         revs = None
         if opts['rev']:
             if not other.local():
@@ -118,7 +118,7 @@ def fetch(ui, repo, source='default', **opts):
             mod, add, rem = repo.status()[:3]
             message = (cmdutil.logmessage(opts) or
                        (_('Automated merge with %s') %
-                        util.removeauth(other.url())))
+                        url.removeauth(other.url())))
             force_editor = opts.get('force_editor') or opts.get('edit')
             n = repo.commit(mod + add + rem, message,
                             opts['user'], opts['date'], force=True,

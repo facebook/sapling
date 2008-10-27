@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import _
 import cStringIO, errno, getpass, re, shutil, sys, tempfile
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import imp, urlparse
+import imp
 
 # Python compatibility
 
@@ -1932,15 +1932,3 @@ def drop_scheme(scheme, path):
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
-
-def hidepassword(url):
-    '''hide user credential in a url string'''
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-    netloc = re.sub('([^:]*):([^@]*)@(.*)', r'\1:***@\3', netloc)
-    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
-
-def removeauth(url):
-    '''remove all authentication information from a url string'''
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-    netloc = netloc[netloc.find('@')+1:]
-    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
