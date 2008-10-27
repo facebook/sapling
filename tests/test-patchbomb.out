@@ -150,7 +150,7 @@ adding description
 adding utf
 % no mime encoding for email --test
 % md5sum of 8-bit output
-a6a3c6b9b6009cea23871a7727a282ab  mailtest
+ad877786716d09fd7843cf0ed5e3d2a8  mailtest
 % mime encoded mbox
 This patch series consists of 1 patches.
 
@@ -166,6 +166,7 @@ Message-Id: <c3c9e37db9f4fe4882cd.240@
 Date: Thu, 01 Jan 1970 00:04:00 +0000
 From: quux
 To: foo
+Cc: bar
 
 IyBIRyBjaGFuZ2VzZXQgcGF0Y2gKIyBVc2VyIHRlc3QKIyBEYXRlIDQgMAojIE5vZGUgSUQgYzNj
 OWUzN2RiOWY0ZmU0ODgyY2RhMzliYWY0MmZlZDZiYWQ4YjE1YQojIFBhcmVudCAgZmYyYzlmYTIw
@@ -187,4 +188,4 @@ This patch series consists of 1 patches.
 
 Writing [PATCH] charset=us-ascii; content-transfer-encoding: 8bit ...
 % md5sum of 8-bit output
-45cb4b77e02f39eb91955f5c95913d66  mboxfix
+90fae277a4a85255e8262174fcefb59f  mboxfix

@@ -41,5 +41,5 @@ http_proxy=localhost:$HGPORT2 hg clone --config http_proxy.always=True http://lo
 echo %% do not use the proxy if it is in the no list
 http_proxy=localhost:$HGPORT1 hg clone --config http_proxy.no=localhost http://localhost:$HGPORT/ g
 
-cat proxy.log | sed -e 's/^.*\] /XXX /'
+cat proxy.log | sed -e 's/^.*\] /XXX /' -e 's/:[0-9][0-9]*/:/'
 exit 0
