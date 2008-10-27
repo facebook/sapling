@@ -53,6 +53,12 @@ hg ci -m 3 -d '0 0'
 hg grep orange
 hg grep --all orange
 
+echo % match in last "line" without newline
+python -c 'fp = open("noeol", "wb"); fp.write("no infinite loop"); fp.close();'
+hg ci -Amnoeol
+echo % last character omitted in output to avoid infinite loop
+hg grep loop
+
 # Got a traceback when using grep on a single
 # revision with renamed files.
 cd ..
@@ -66,3 +72,4 @@ hg ci -Am rename
 hg grep octarine
 # Used to crash here
 hg grep -r 1 octarine
+

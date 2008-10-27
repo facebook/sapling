@@ -122,8 +122,8 @@ def config(orig, self, section, key, default=None, untrusted=False):
                 return p
     return orig(self, section, key, default, untrusted)
 
-def configitems(orig, self, section):
-    r = orig(self, section, untrusted=False)
+def configitems(orig, self, section, untrusted=False):
+    r = orig(self, section, untrusted)
     if section == "paths":
         r += getzcpaths()
     return r
