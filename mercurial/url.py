@@ -250,7 +250,12 @@ def getauthinfo(path):
     scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
     if not urlpath:
         urlpath = '/'
-    urlpath = quotepath(urlpath)
+    if scheme != 'file':
+        # XXX: why are we quoting the path again with some smart
+        # heuristic here? Anyway, it cannot be done with file://
+        # urls since path encoding is os/fs dependent (see
+        # urllib.pathname2url() for details).
+        urlpath = quotepath(urlpath)
     host, port, user, passwd = netlocsplit(netloc)
 
     # urllib cannot handle URLs with embedded user or passwd
@@ -296,7 +301,9 @@ def opener(ui, authinfo=None):
 def open(ui, url, data=None):
     scheme = urlparse.urlsplit(url)[0]
     if not scheme:
-        url, authinfo = 'file://' + util.normpath(os.path.abspath(url)), None
+        path = util.normpath(os.path.abspath(url))
+        url = 'file://' + urllib.pathname2url(path)
+        authinfo = None
     else:
         url, authinfo = getauthinfo(url)
     return opener(ui, authinfo).open(url, data)
