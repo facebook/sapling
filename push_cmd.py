@@ -14,6 +14,8 @@ import utility_commands
 def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
     """Push revisions starting at a specified head back to Subversion.
     """
+    oldencoding = merc_util._encoding
+    merc_util._encoding = 'UTF-8'
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
@@ -63,6 +65,7 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
                                              hge.revmap.iterkeys()))
                 outgoing = utility_commands.outgoing_revisions(ui, repo, hge,
                                                               svn_commit_hashes)
+    merc_util._encoding = oldencoding
     return 0
 
 

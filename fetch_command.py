@@ -29,6 +29,8 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     **opts):
     """Pull new revisions from Subversion.
     """
+    old_encoding = merc_util._encoding
+    merc_util._encoding = 'UTF-8'
     skipto_rev=int(skipto_rev)
     have_replay = not stupid
     if have_replay and not callable(delta.svn_txdelta_apply(None, None,
@@ -101,6 +103,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                         ui.status('Got a 502, retrying (%s)\n' % tries)
                     else:
                         raise
+    merc_util._encoding = old_encoding
 
 
 def cleanup_file_handles(svn, count):
