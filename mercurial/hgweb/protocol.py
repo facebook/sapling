@@ -9,7 +9,7 @@ import cStringIO, zlib, tempfile, errno, os, sys
 from mercurial import util, streamclone
 from mercurial.node import bin, hex
 from mercurial import changegroup as changegroupmod
-from common import HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
+from common import ErrorResponse, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
