@@ -51,7 +51,7 @@ def stream_out(repo, untrusted=False):
                 total_bytes += size
         finally:
             del l
-    except (lock.LockHeld, lock.LockUnavailable), inst:
+    except (lock.LockHeld, lock.LockUnavailable):
         raise StreamException(2)
 
     yield '0\n'

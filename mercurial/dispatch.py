@@ -374,7 +374,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():
         try:
             return cmdfunc()
-        except TypeError, inst:
+        except TypeError:
             # was this an argument error?
             tb = traceback.extract_tb(sys.exc_info()[2])
             if len(tb) != 2: # no

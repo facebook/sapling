@@ -432,7 +432,6 @@ def simplemerge(local, base, other, **opts):
     basetext = readfile(base)
     othertext = readfile(other)
 
-    orig = local
     local = os.path.realpath(local)
     if not opts.get('print'):
         opener = util.opener(os.path.dirname(local))

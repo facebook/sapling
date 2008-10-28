@@ -256,7 +256,6 @@ def _update(repo, node): return update(repo, node)
 
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
-    pl = repo.parents()
     stats = _merge.update(repo, node, False, False, None)
     _showstats(repo, stats)
     if stats[3]:
@@ -274,7 +273,6 @@ def merge(repo, node, force=None, remind=True):
     stats = _merge.update(repo, node, True, force, False)
     _showstats(repo, stats)
     if stats[3]:
-        pl = repo.parents()
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))

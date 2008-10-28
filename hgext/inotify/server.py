@@ -402,7 +402,7 @@ class Watcher(object):
             ret = st.st_mode, st.st_size, st.st_mtime
             self.statcache[wpath] = ret
             return ret
-        except OSError, err:
+        except OSError:
             self.statcache.pop(wpath, None)
             raise
 
@@ -413,7 +413,7 @@ class Watcher(object):
             st = self.stat(wpath)
             if stat.S_ISREG(st[0]):
                 self.updatestatus(wpath, st)
-        except OSError, err:
+        except OSError:
             pass
 
     def modified(self, wpath):

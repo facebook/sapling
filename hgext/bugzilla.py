@@ -88,7 +88,7 @@ class bugzilla_2_16(object):
         self.ui.note(_('query: %s %s\n') % (args, kwargs))
         try:
             self.cursor.execute(*args, **kwargs)
-        except MySQLdb.MySQLError, err:
+        except MySQLdb.MySQLError:
             self.ui.note(_('failed query: %s %s\n') % (args, kwargs))
             raise
 

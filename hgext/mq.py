@@ -185,7 +185,6 @@ class queue:
         patchguards = self.series_guards[idx]
         if not patchguards:
             return True, None
-        default = False
         guards = self.active()
         exactneg = [g for g in patchguards if g[0] == '-' and g[1:] in guards]
         if exactneg:
@@ -707,7 +706,7 @@ class queue:
                 except:
                     repo.rollback()
                     raise
-            except Exception, inst:
+            except Exception:
                 patchpath = self.join(patchfn)
                 try:
                     os.unlink(patchpath)

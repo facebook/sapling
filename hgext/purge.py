@@ -65,7 +65,7 @@ def purge(ui, repo, *dirs, **opts):
         if act:
             try:
                 remove_func(os.path.join(repo.root, name))
-            except OSError, e:
+            except OSError:
                 m = _('%s cannot be removed') % name
                 if opts['abort_on_err']:
                     raise util.Abort(m)

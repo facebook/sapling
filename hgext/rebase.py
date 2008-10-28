@@ -29,7 +29,7 @@ def rebase(ui, repo, **opts):
     If a rebase is interrupted to manually resolve a merge, it can be continued
     with --continue or aborted with --abort.
     """
-    originalwd = target = source = None
+    originalwd = target = None
     external = nullrev
     state = skipped = {}
 

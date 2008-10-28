@@ -66,7 +66,7 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             self.do_write()
-        except StandardError, inst:
+        except StandardError:
             self._start_response("500 Internal Server Error", [])
             self._write("Internal Server Error")
             tb = "".join(traceback.format_exception(*sys.exc_info()))

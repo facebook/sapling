@@ -441,7 +441,6 @@ class dirstate(object):
         normalize = self.normalize
         listdir = osutil.listdir
         lstat = os.lstat
-        pconvert = util.pconvert
         getkind = stat.S_IFMT
         dirkind = stat.S_IFDIR
         regkind = stat.S_IFREG
@@ -536,9 +535,6 @@ class dirstate(object):
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
-        _join = self._join
-        lstat = os.lstat
-        cmap = self._copymap
         dmap = self._map
         ladd = lookup.append
         madd = modified.append

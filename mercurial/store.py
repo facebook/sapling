@@ -154,7 +154,6 @@ class basicstore:
         '''yields (unencoded, encoded, size)'''
         path = self.pathjoiner(self.path, relpath)
         striplen = len(self.path) + len(os.sep)
-        prefix = path[striplen:]
         l = []
         if os.path.isdir(path):
             visit = [path]

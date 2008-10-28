@@ -59,8 +59,6 @@ def rawfile(web, req, tmpl):
 def _filerevision(web, tmpl, fctx):
     f = fctx.path()
     text = fctx.data()
-    fl = fctx.filelog()
-    n = fctx.filenode()
     parity = paritygen(web.stripecount)
 
     if binary(text):
@@ -420,7 +418,7 @@ def filediff(web, req, tmpl):
     fctx, ctx = None, None
     try:
         fctx = webutil.filectx(web.repo, req)
-    except LookupError, inst:
+    except LookupError:
         ctx = webutil.changectx(web.repo, req)
         path = webutil.cleanpath(web.repo, req.form['file'][0])
         if path not in ctx.files():
@@ -458,8 +456,6 @@ diff = filediff
 def annotate(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
-    n = fctx.filenode()
-    fl = fctx.filelog()
     parity = paritygen(web.stripecount)
 
     def annotate(**map):
@@ -520,7 +516,6 @@ def filelog(web, req, tmpl):
 
         for i in xrange(start, end):
             ctx = fctx.filectx(i)
-            n = fl.node(i)
 
             l.insert(0, {"parity": parity.next(),
                          "filerev": i,

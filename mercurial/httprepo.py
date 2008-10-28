@@ -9,7 +9,7 @@
 from node import bin, hex, nullid
 from i18n import _
 import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
-import errno, keepalive, socket, changegroup, statichttprepo
+import errno, socket, changegroup, statichttprepo
 import url
 
 def zgenerator(f):
@@ -17,7 +17,7 @@ def zgenerator(f):
     try:
         for chunk in util.filechunkiter(f):
             yield zd.decompress(chunk)
-    except httplib.HTTPException, inst:
+    except httplib.HTTPException:
         raise IOError(None, _('connection ended unexpectedly'))
     yield zd.flush()
 

@@ -9,7 +9,7 @@
 from mercurial.i18n import _
 from mercurial import ui
 import common
-import os, select, socket, stat, struct, sys
+import os, socket, struct
 
 def query(ui, repo, names, match, ignored, clean, unknown=True):
     sock = socket.socket(socket.AF_UNIX)

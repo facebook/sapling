@@ -39,7 +39,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         try:
             for p in funcname.split('.')[1:]:
                 obj = getattr(obj, p)
-        except AttributeError, err:
+        except AttributeError:
             raise util.Abort(_('%s hook is invalid '
                                '("%s" is not defined)') %
                              (hname, funcname))

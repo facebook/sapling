@@ -8,7 +8,6 @@
 
 import os
 import re
-import sys
 import cPickle as pickle
 from mercurial import util
 from mercurial.i18n import _

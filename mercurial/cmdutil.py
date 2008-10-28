@@ -1154,7 +1154,6 @@ def commit(ui, repo, commitfunc, pats, opts):
     if pats:
         modified, added, removed = repo.status(match=m)[:3]
         files = util.sort(modified + added + removed)
-        slist = None
 
         def is_dir(f):
             name = f + '/'

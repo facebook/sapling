@@ -35,8 +35,6 @@ def graph(repo, start_rev, stop_rev):
     new_color = 1
 
     while curr_rev >= stop_rev:
-        node = cl.node(curr_rev)
-
         # Compute revs and next_revs
         if curr_rev not in revs:
             revs.append(curr_rev) # new head

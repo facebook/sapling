@@ -11,7 +11,7 @@ from i18n import _, gettext
 import os, re, sys
 import hg, util, revlog, bundlerepo, extensions, copies
 import difflib, patch, time, help, mdiff, tempfile, url
-import version, socket
+import version
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 import merge as merge_
 

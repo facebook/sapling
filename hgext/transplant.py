@@ -455,14 +455,6 @@ def transplant(ui, repo, *revs, **opts):
     If a changeset application fails, you can fix the merge by hand and
     then resume where you left off by calling hg transplant --continue.
     '''
-    def getoneitem(opts, item, errmsg):
-        val = opts.get(item)
-        if val:
-            if len(val) > 1:
-                raise util.Abort(errmsg)
-            else:
-                return val[0]
-
     def getremotechanges(repo, url):
         sourcerepo = ui.expandpath(url)
         source = hg.repository(ui, sourcerepo)

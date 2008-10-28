@@ -87,7 +87,6 @@ def filelog_grapher(repo, path, start_rev, stop_rev):
     """
 
     assert start_rev >= stop_rev
-    curr_rev = start_rev
     revs = []
     filerev = len(repo.file(path)) - 1
     while filerev >= 0:

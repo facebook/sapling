@@ -150,7 +150,7 @@ def strip(ui, repo, node, backup="all"):
     for mark, n in marks.items():
         if repo.changelog.rev(n) in revisions:
             update.append(mark)
-    result = oldstrip(ui, repo, node, backup)
+    oldstrip(ui, repo, node, backup)
     if len(update) > 0:
         for m in update:
             marks[m] = repo.changectx('.').node()
