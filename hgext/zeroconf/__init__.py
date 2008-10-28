@@ -82,12 +82,11 @@ class hgwebzc(hgweb_mod.hgweb):
 
 class hgwebdirzc(hgwebdir_mod.hgwebdir):
     def run(self):
-        print os.environ
         for r, p in self.repos:
             u = ui.ui(parentui=self.parentui)
-            u.readconfig(os.path.join(path, '.hg', 'hgrc'))
+            u.readconfig(os.path.join(p, '.hg', 'hgrc'))
             n = os.path.basename(r)
-            publish(n, "hgweb", p, int(repo.ui.config("web", "port", 8000)))
+            publish(n, "hgweb", p, int(u.config("web", "port", 8000)))
         return super(hgwebdirzc, self).run()
 
 # listen
