@@ -298,8 +298,13 @@ def opener(ui, authinfo=None):
     opener.addheaders.append(('Accept', 'application/mercurial-0.1'))
     return opener
 
+scheme_re = re.compile(r'^([a-zA-Z0-9+-.]+)://')
+
 def open(ui, url, data=None):
-    scheme = urlparse.urlsplit(url)[0]
+    scheme = None
+    m = scheme_re.search(url)
+    if m:
+        scheme = m.group(1).lower()
     if not scheme:
         path = util.normpath(os.path.abspath(url))
         url = 'file://' + urllib.pathname2url(path)
