@@ -215,7 +215,7 @@ class httprepository(repo.repository):
 
 class httpsrepository(httprepository):
     def __init__(self, ui, path):
-        if not has_https:
+        if not url.has_https:
             raise util.Abort(_('Python support for SSL and HTTPS '
                                'is not installed'))
         httprepository.__init__(self, ui, path)
