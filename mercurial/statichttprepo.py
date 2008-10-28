@@ -8,34 +8,61 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import changelog, httprangereader
+import changelog, byterange, url
 import repo, localrepo, manifest, util, store
 import urllib, urllib2, errno
 
-class rangereader(httprangereader.httprangereader):
-    def read(self, size=None):
+class httprangereader(object):
+    def __init__(self, url, opener):
+        # we assume opener has HTTPRangeHandler
+        self.url = url
+        self.pos = 0
+        self.opener = opener
+    def seek(self, pos):
+        self.pos = pos
+    def read(self, bytes=None):
+        req = urllib2.Request(self.url)
+        end = ''
+        if bytes:
+            end = self.pos + bytes - 1
+        req.add_header('Range', 'bytes=%d-%s' % (self.pos, end))
+
         try:
-            return httprangereader.httprangereader.read(self, size)
+            f = self.opener.open(req)
+            data = f.read()
         except urllib2.HTTPError, inst:
             num = inst.code == 404 and errno.ENOENT or None
             raise IOError(num, inst)
         except urllib2.URLError, inst:
             raise IOError(None, inst.reason[1])
 
-def opener(base):
-    """return a function that opens files over http"""
-    p = base
-    def o(path, mode="r"):
-        f = "/".join((p, urllib.quote(path)))
-        return rangereader(f)
-    return o
+        if bytes:
+            data = data[:bytes]
+        return data
+
+def build_opener(ui, authinfo):
+    # urllib cannot handle URLs with embedded user or passwd
+    urlopener = url.opener(ui, authinfo)
+    urlopener.add_handler(byterange.HTTPRangeHandler())
+
+    def opener(base):
+        """return a function that opens files over http"""
+        p = base
+        def o(path, mode="r"):
+            f = "/".join((p, urllib.quote(path)))
+            return httprangereader(f, urlopener)
+        return o
+
+    return opener
 
 class statichttprepository(localrepo.localrepository):
     def __init__(self, ui, path):
         self._url = path
         self.ui = ui
 
-        self.path = path.rstrip('/') + "/.hg"
+        self.path, authinfo = url.getauthinfo(path.rstrip('/') + "/.hg")
+
+        opener = build_opener(ui, authinfo)
         self.opener = opener(self.path)
 
         # find requirements
