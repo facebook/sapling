@@ -130,13 +130,13 @@ def _revstostrip(changelog, node):
     srev = changelog.rev(node)
     tostrip = [srev]
     saveheads = []
-    for r in xrange(srev, changelog.rev(changelog.tip()) + 1):
+    for r in xrange(srev, len(changelog)):
         parents = changelog.parentrevs(r)
         if parents[0] in tostrip or parents[1] in tostrip:
             tostrip.append(r)
             if parents[1] != nullrev:
                 for p in parents:
-                    if p not in tostrip and p > striprev:
+                    if p not in tostrip and p > srev:
                         saveheads.append(p)
     return [r for r in tostrip if r not in saveheads]
 
