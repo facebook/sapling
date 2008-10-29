@@ -12,6 +12,9 @@ from svn import ra
 
 svn_config = core.svn_config_get_config(None)
 
+class RaCallbacks(ra.Callbacks):
+    def get_client_string(self, pool):
+        return 'hgsubversion'
 
 def user_pass_prompt(realm, default_username, ms, pool):
     creds = core.svn_auth_cred_simple_t()
@@ -102,8 +105,11 @@ class SubversionRepo(object):
 
         self.client_context.auth_baton = self.auth_baton
         self.client_context.config = svn_config
-        self.ra = client.open_ra_session(self.svn_url.encode('utf8'),
-                                         self.client_context)
+        callbacks = RaCallbacks()
+        callbacks.auth_baton = self.auth_baton
+        self.callbacks = callbacks
+        self.ra = ra.open2(self.svn_url.encode('utf-8'), callbacks,
+                           svn_config)
 
 
     @property
@@ -230,14 +236,15 @@ class SubversionRepo(object):
         if not stop:
             stop = self.HEAD
         while stop > start:
-            ra.get_log(self.ra, paths,
-                        start+1,
-                        stop,
-                        chunk_size, #limit of how many log messages to load
-                        True, # don't need to know changed paths
-                        True, # stop on copies
-                        callback,
-                        self.pool)
+            ra.get_log(self.ra, 
+                       paths,
+                       start+1,
+                       stop,
+                       chunk_size, #limit of how many log messages to load
+                       True, # don't need to know changed paths
+                       True, # stop on copies
+                       callback,
+                       self.pool)
             if len(revisions) < chunk_size:
                 # this means there was no history for the path, so force the
                 # loop to exit
@@ -296,6 +303,7 @@ class SubversionRepo(object):
                 delta.svn_txdelta_send_txstream(txdelta_stream, handler,
                                                 wh_baton, pool)
 
+        editor.open_root(edit_baton, base_revision, self.pool)
         delta.path_driver(editor, edit_baton, base_revision, paths, driver_cb,
                           self.pool)
         editor.close_edit(edit_baton, self.pool)
