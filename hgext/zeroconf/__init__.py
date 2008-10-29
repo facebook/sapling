@@ -46,7 +46,11 @@ def getip():
 def publish(name, desc, path, port):
     global server, localip
     if not server:
-        server = Zeroconf.Zeroconf()
+        try:
+            server = Zeroconf.Zeroconf()
+        except socket.gaierror:
+            # if we have no internet connection, this can happen.
+            return
         ip = getip()
         localip = socket.inet_aton(ip)
 
