@@ -17,6 +17,10 @@ body {
   border-bottom: 15px solid black;
 }
 
+#.main {
+  width:98%;
+}
+
 .overflow {
   width: 100%;
   overflow: auto;
@@ -33,6 +37,11 @@ body {
   top: 27px;
   left: auto;
   right: 27px;
+}
+
+#.menu {
+  position: absolute !important;
+  top:expression(eval(document.body.scrollTop + 27));
 }
 
 .menu ul {
