@@ -31,6 +31,10 @@ sed -e 's/c2/l2/' common > common.new
 mv common.new common
 hg commit -d '4 0' -u test -m "L2"
 
+echo 'l3' >> extra2
+hg add extra2
+hg commit -d '5 0' -u test -m "L3"
+
 hg glog  --template '{rev}: {desc}\n'
 
 echo
@@ -47,9 +51,28 @@ hg rebase --continue
 
 echo
 echo '% Conclude rebase'
-echo 'solved merge' >common
+echo 'resolved merge' >common
 hg resolve -m common
 hg rebase --continue 2>&1 | cleanoutput
 
-
 hg glog  --template '{rev}: {desc}\n'
+
+echo
+echo '% Check correctness'
+echo '  - Rev. 0'
+hg cat -r 0 common
+
+echo '  - Rev. 1'
+hg cat -r 1 common
+
+echo '  - Rev. 2'
+hg cat -r 2 common
+
+echo '  - Rev. 3'
+hg cat -r 3 common
+
+echo '  - Rev. 4'
+hg cat -r 4 common
+
+echo '  - Rev. 5'
+hg cat -r 5 common

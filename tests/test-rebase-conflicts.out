@@ -1,6 +1,8 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
-@  4: L2
+@  5: L3
+|
+o  4: L2
 |
 o  3: L1
 |
@@ -29,9 +31,11 @@ adding branch
 adding changesets
 adding manifests
 adding file changes
-added 2 changesets with 2 changes to 2 files
+added 3 changesets with 3 changes to 3 files
 rebase completed
-@  4: L2
+@  5: L3
+|
+o  4: L2
 |
 o  3: L1
 |
@@ -41,3 +45,22 @@ o  1: C2
 |
 o  0: C1
 
+
+% Check correctness
+  - Rev. 0
+c1
+  - Rev. 1
+c1
+c2
+  - Rev. 2
+c1
+c2
+c3
+  - Rev. 3
+c1
+c2
+c3
+  - Rev. 4
+resolved merge
+  - Rev. 5
+resolved merge

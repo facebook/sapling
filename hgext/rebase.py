@@ -13,11 +13,30 @@ For more information:
 http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject
 '''
 
-from mercurial import util, repair, merge, cmdutil, dispatch, commands, extensions
+from mercurial import util, repair, merge, cmdutil, dispatch, commands
+from mercurial import extensions, ancestor
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.i18n import _
 import os, errno
+
+def rebasemerge(repo, rev, first=False):
+    'return the correct ancestor'
+    oldancestor = ancestor.ancestor
+    
+    def newancestor(a, b, pfunc):
+        ancestor.ancestor = oldancestor
+        anc = ancestor.ancestor(a, b, pfunc)
+        if b == rev:
+            return repo[rev].parents()[0].rev()
+        return ancestor.ancestor(a, b, pfunc)
+
+    if not first:
+        ancestor.ancestor = newancestor
+    else:
+        repo.ui.debug(_("First revision, do not change ancestor\n"))
+    stats = merge.update(repo, rev, True, True, False)
+    return stats
 
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
@@ -116,10 +135,12 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={}):
     """Skip commit if collapsing has been required and rev is not the last
     revision, commit otherwise
     """
-    repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
-
+    repo.ui.debug(_(" set parents\n"))
     if collapse and not last:
+        repo.dirstate.setparents(repo[p1].node())
         return None
+
+    repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
 
     # Commit, record the old nodeid
     m, a, r = repo.status()[:3]
@@ -147,16 +168,25 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={}):
 
 def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse):
     'Rebase a single revision'
-    repo.ui.debug(_("rebasing %d:%s\n") % (rev, repo[rev].node()))
+    repo.ui.debug(_("rebasing %d:%s\n") % (rev, repo[rev]))
 
     p1, p2 = defineparents(repo, rev, target, state, targetancestors)
 
+    repo.ui.debug(_(" future parents are %d and %d\n") % (repo[p1].rev(), 
+                                                            repo[p2].rev()))
+    
     # Merge phase
     if len(repo.parents()) != 2:
         # Update to target and merge it with local
-        merge.update(repo, p1, False, True, False)
+        if repo['.'].rev() != repo[p1].rev():
+            repo.ui.debug(_(" update to %d:%s\n") % (repo[p1].rev(), repo[p1]))
+            merge.update(repo, p1, False, True, False)
+        else:
+            repo.ui.debug(_(" already in target\n"))
         repo.dirstate.write()
-        stats = merge.update(repo, rev, True, False, False)
+        repo.ui.debug(_(" merge against %d:%s\n") % (repo[rev].rev(), repo[rev]))
+        first = repo[rev].rev() == repo[min(state)].rev()
+        stats = rebasemerge(repo, rev, first)
 
         if stats[3] > 0:
             raise util.Abort(_('fix unresolved conflicts with hg resolve then '
