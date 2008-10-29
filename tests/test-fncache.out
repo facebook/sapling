@@ -1,0 +1,43 @@
+% init repo1
+
+% add a; ci
+adding a
+
+% cat .hg/store/fncache
+data/a.i
+
+% add a.i/b; ci
+adding a.i/b
+
+% cat .hg/store/fncache
+data/a.i
+data/a.i.hg/b.i
+
+% add a.i.hg/c; ci
+adding a.i.hg/c
+
+% cat .hg/store/fncache
+data/a.i
+data/a.i.hg/b.i
+data/a.i.hg.hg/c.i
+
+% hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+3 files, 3 changesets, 3 total revisions
+
+% rm .hg/store/fncache
+
+% hg verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+ data/a.i@0: missing revlog!
+ data/a.i.hg.hg/c.i@0: missing revlog!
+ data/a.i.hg/b.i@0: missing revlog!
+3 files, 3 changesets, 3 total revisions
+3 integrity errors encountered!
+(first damaged changeset appears to be 0)

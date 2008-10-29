@@ -1,0 +1,51 @@
+#!/bin/sh
+
+echo "% init repo1"
+hg init repo1
+cd repo1
+
+echo
+echo "% add a; ci"
+echo "some text" > a
+hg add
+hg ci -d '0 0' -m first
+
+echo
+echo "% cat .hg/store/fncache"
+cat .hg/store/fncache
+
+echo
+echo "% add a.i/b; ci"
+mkdir a.i
+echo "some other text" > a.i/b
+hg add
+hg ci -d '0 0' -m second
+
+echo
+echo "% cat .hg/store/fncache"
+cat .hg/store/fncache
+
+echo
+echo "% add a.i.hg/c; ci"
+mkdir a.i.hg
+echo "yet another text" > a.i.hg/c
+hg add
+hg ci -d '0 0' -m third
+
+echo
+echo "% cat .hg/store/fncache"
+cat .hg/store/fncache
+
+echo
+echo "% hg verify"
+hg verify
+
+echo
+echo "% rm .hg/store/fncache"
+rm .hg/store/fncache
+
+echo
+echo "% hg verify"
+hg verify
+
+exit 0
