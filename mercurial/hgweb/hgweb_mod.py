@@ -141,15 +141,16 @@ class hgweb(object):
             else:
                 cmd = ''
 
-            if args and args[0]:
-                node = args.pop(0)
-                req.form['node'] = [node]
-            if args:
-                req.form['file'] = args
-
             if cmd == 'static':
-                req.form['file'] = req.form['node']
-            elif cmd == 'archive':
+                req.form['file'] = ['/'.join(args)]
+            else:
+                if args and args[0]:
+                    node = args.pop(0)
+                    req.form['node'] = [node]
+                if args:
+                    req.form['file'] = args
+
+            if cmd == 'archive':
                 fn = req.form['node'][0]
                 for type_, spec in self.archive_specs.iteritems():
                     ext = spec[2]
