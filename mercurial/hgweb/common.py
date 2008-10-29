@@ -53,12 +53,17 @@ def staticfile(directory, fname, req):
 
     """
     parts = fname.split('/')
-    path = directory
     for part in parts:
         if (part in ('', os.curdir, os.pardir) or
             os.sep in part or os.altsep is not None and os.altsep in part):
             return ""
-        path = os.path.join(path, part)
+    fpath = os.path.join(*parts)
+    if isinstance(directory, str):
+        directory = [directory]
+    for d in directory:
+        path = os.path.join(d, fpath)
+        if os.path.exists(path):
+            break
     try:
         os.stat(path)
         ct = mimetypes.guess_type(path)[0] or "text/plain"

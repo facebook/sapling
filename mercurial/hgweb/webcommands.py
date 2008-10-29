@@ -583,10 +583,7 @@ def static(web, req, tmpl):
         tp = web.templatepath
         if isinstance(tp, str):
             tp = [tp]
-        for path in tp:
-            static = os.path.join(path, 'static')
-            if os.path.isdir(static):
-                break
+        static = [os.path.join(p, 'static') for p in tp]
     return [staticfile(static, fname, req)]
 
 def graph(web, req, tmpl):
