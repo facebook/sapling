@@ -13,6 +13,11 @@ from svn import ra
 svn_config = core.svn_config_get_config(None)
 
 class RaCallbacks(ra.Callbacks):
+    def open_tmp_file(self, pool):
+        (fd, fn) = tempfile.mkstemp()
+        os.close(fd)
+        return fn
+
     def get_client_string(self, pool):
         return 'hgsubversion'
 
@@ -270,9 +275,18 @@ class SubversionRepo(object):
                                                    False,
                                                    self.pool)
         checksum = []
+        # internal dir batons can fall out of scope and get GCed before svn is
+        # done with them. This prevents that (credit to gvn for the idea).
+        batons = [edit_baton, ]
         def driver_cb(parent, path, pool):
+            if not parent:
+                bat = editor.open_root(edit_baton, base_revision, self.pool)
+                batons.append(bat)
+                return bat
             if path in dirs:
-                return editor.add_directory(path, parent, None, -1, pool)
+                bat = editor.add_directory(path, parent, None, -1, pool)
+                batons.append(bat)
+                return bat
             base_text, new_text, action = file_data[path]
             compute_delta = True
             if action == 'modify':
@@ -302,8 +316,9 @@ class SubversionRepo(object):
                     self.pool)
                 delta.svn_txdelta_send_txstream(txdelta_stream, handler,
                                                 wh_baton, pool)
+            # TODO pass md5(new_text) instead of None
+            editor.close_file(baton, None)
 
-        editor.open_root(edit_baton, base_revision, self.pool)
         delta.path_driver(editor, edit_baton, base_revision, paths, driver_cb,
                           self.pool)
         editor.close_edit(edit_baton, self.pool)
