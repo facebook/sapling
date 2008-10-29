@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 import tempfile
+import hashlib
 
 from svn import client
 from svn import core
@@ -316,8 +317,9 @@ class SubversionRepo(object):
                     self.pool)
                 delta.svn_txdelta_send_txstream(txdelta_stream, handler,
                                                 wh_baton, pool)
-            # TODO pass md5(new_text) instead of None
-            editor.close_file(baton, None)
+
+                # TODO pass md5(new_text) instead of None
+                editor.close_file(baton, None, pool)
 
         delta.path_driver(editor, edit_baton, base_revision, paths, driver_cb,
                           self.pool)
