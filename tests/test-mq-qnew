@@ -1,0 +1,47 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+hg init mq
+cd mq
+
+echo a > a
+hg ci -Ama
+
+echo '% qnew should refuse bad patch names'
+hg qnew series
+hg qnew status
+hg qnew guards
+hg qnew .hgignore
+
+hg qinit -c
+
+echo '% qnew with uncommitted changes'
+echo a > somefile
+hg add somefile
+hg qnew uncommitted.patch
+hg st
+hg qseries
+hg revert --no-backup somefile
+rm somefile
+
+echo '% qnew implies add'
+hg qnew test.patch
+hg -R .hg/patches st
+
+echo '% qnew missing'
+hg qnew missing.patch missing
+
+echo '% qnew -m'
+hg qnew -m 'foo bar' mtest.patch
+cat .hg/patches/mtest.patch
+
+echo '% qnew twice'
+hg qnew first.patch
+hg qnew first.patch
+
+touch ../first.patch
+hg qimport ../first.patch
+
+exit 0
