@@ -273,6 +273,7 @@ if push_works:
                                                   svn_url='file://' + self.repo_path)
             tip = self.repo['tip']
             self.assertNotEqual(tip.node(), new_hash)
+            self.assert_('@' in tip.user())
             self.assertEqual(tip['gamma'].flags(), 'x')
             self.assertEqual(tip['gamma'].data(), 'foo')
             self.assertEqual([x for x in tip.manifest().keys() if 'x' not in
@@ -308,6 +309,90 @@ if push_works:
             self.assertEqual(tip['gamma'].data(), 'foo')
             self.assertEqual([x for x in tip.manifest().keys() if 'l' not in
                               tip[x].flags()], ['alpha', 'beta', 'adding_file', ])
+
+        def test_push_with_new_dir(self):
+            self.test_push_to_default(commit=True)
+            repo = self.repo
+            def file_callback(repo, memctx, path):
+                if path == 'newdir/gamma':
+                    return context.memfilectx(path=path,
+                                              data='foo',
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
+                raise IOError()
+            ctx = context.memctx(repo,
+                                 (repo['tip'].node(), node.nullid),
+                                 'message',
+                                 ['newdir/gamma', ],
+                                 file_callback,
+                                 'author',
+                                 '2008-10-29 21:26:00 -0500',
+                                 {'branch': 'default', })
+            new_hash = repo.commitctx(ctx)
+            hg.update(repo, repo['tip'].node())
+            push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
+                                                  hg_repo_path=self.wc_path,
+                                                  svn_url='file://' + self.repo_path)
+            tip = self.repo['tip']
+            self.assertNotEqual(tip.node(), new_hash)
+            self.assertEqual(tip['newdir/gamma'].data(), 'foo')
+
+        def test_push_existing_file_newly_execute(self, execute=True,
+                                                  link=False, expected_flags='x'):
+            self.test_push_to_default()
+            repo = self.repo
+            def file_callback(repo, memctx, path):
+                return context.memfilectx(path=path,
+                                          data='foo',
+                                          islink=link,
+                                          isexec=execute,
+                                          copied=False)
+            ctx = context.memctx(repo,
+                                 (repo['default'].node(), node.nullid),
+                                 'message',
+                                 ['alpha', ],
+                                 file_callback,
+                                 'author',
+                                 '2008-1-1 00:00:00 -0500',
+                                 {'branch': 'default', })
+            new_hash = repo.commitctx(ctx)
+            hg.update(repo, repo['tip'].node())
+            push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
+                                                  hg_repo_path=self.wc_path,
+                                                  svn_url='file://' + self.repo_path)
+            tip = self.repo['tip']
+            self.assertNotEqual(tip.node(), new_hash)
+            self.assertEqual(tip['alpha'].data(), 'foo')
+            self.assertEqual(tip.parents()[0]['alpha'].flags(), '')
+            self.assertEqual(tip['alpha'].flags(), expected_flags)
+            # while we're here, double check pushing an already-executable file
+            # works
+            repo = self.repo
+            def file_callback(repo, memctx, path):
+                return context.memfilectx(path=path,
+                                          data='bar',
+                                          islink=link,
+                                          isexec=execute,
+                                          copied=False)
+            ctx = context.memctx(repo,
+                                 (repo['default'].node(), node.nullid),
+                                 'message',
+                                 ['alpha', ],
+                                 file_callback,
+                                 'author',
+                                 '2008-1-1 00:00:00 -0500',
+                                 {'branch': 'default', })
+            new_hash = repo.commitctx(ctx)
+            hg.update(repo, repo['tip'].node())
+            push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
+                                                  hg_repo_path=self.wc_path,
+                                                  svn_url='file://' + self.repo_path)
+            tip = self.repo['tip']
+            self.assertNotEqual(tip.node(), new_hash)
+            self.assertEqual(tip['alpha'].data(), 'bar')
+            self.assertEqual(tip.parents()[0]['alpha'].flags(), expected_flags)
+            self.assertEqual(tip['alpha'].flags(), expected_flags)
 
 else:
     class PushTests(unittest.TestCase):
