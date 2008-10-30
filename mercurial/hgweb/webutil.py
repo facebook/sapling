@@ -65,6 +65,9 @@ def siblings(siblings=[], hiderev=None, **args):
         return
     for s in siblings:
         d = {'node': hex(s.node()), 'rev': s.rev()}
+        d['user'] = s.user()
+        d['date'] = s.date()
+        d['description'] = s.description()
         if hasattr(s, 'path'):
             d['file'] = s.path()
         d.update(args)
