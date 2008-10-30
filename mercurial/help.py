@@ -215,4 +215,34 @@ PYTHONPATH::
     A range acts as a closed interval. This means that a range of 3:5
     gives 3, 4 and 5. Similarly, a range of 4:2 gives 4, 3, and 2.
     ''')),
+
+    (['gitdiffs'], _('Using git Diffs'),
+     _(r'''
+    In several places, Mercurial supports two separate variations on
+    the unified diff format: normal diffs, as are de facto standardized
+    by GNU's patch utility, and git diffs, invented for the git VCS.
+
+    The git diff format is an addition of some information to the normal
+    diff format, which allows diff to convey changes in file permissions
+    as well as the creation, deletion, renaming and copying of files, as
+    well as diffs for binary files (unsupported by standard diff),
+    operations which are very useful to modern version control systems
+    such as Mercurial, in trying to faithfully replay your changes.
+
+    In building Mercurial, we made a choice to support the git diff
+    format, but we haven't made it the default. This is because for a
+    long time, the format for unified diffs we usually use has been 
+    defined by GNU patch, and it doesn't (yet) support git's extensions
+    to the diff format. This means that, when extracting diffs from a
+    Mercurial repository (through the diff command, for example), you
+    must be careful about things like file copies and renames (file
+    creation and deletion are mostly handled fine by the traditional
+    diff format, with some rare edge cases for which the git extensions
+    can be used). Mercurial's internal operations (like push and pull)
+    are not affected by these differences, because they use a different,
+    binary format for communicating changes.
+
+    To use git diffs, use the --git option for relevant commands, or
+    enable them in a hgrc, setting 'git = True' in the [diff] section.
+    ''')),
 )
