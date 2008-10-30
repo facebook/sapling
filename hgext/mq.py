@@ -661,7 +661,7 @@ class queue:
             m, a, r, d = repo.status(match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force)
-            match = cmdutil.match(repo, m + a + r)
+            match = cmdutil.matchfiles(repo, m + a + r)
         commitfiles = m + a + r
         self.check_toppatch(repo)
         insert = self.full_series_end()

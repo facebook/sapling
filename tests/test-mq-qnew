@@ -44,4 +44,13 @@ hg qnew first.patch
 touch ../first.patch
 hg qimport ../first.patch
 
-exit 0
+echo '% qnew -f from a subdirectory'
+hg qpop -a
+mkdir d
+cd d
+echo b > b
+hg ci -Am t
+echo b >> b
+hg st
+hg qnew -g -f p
+cat ../.hg/patches/p
