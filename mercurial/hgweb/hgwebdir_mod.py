@@ -72,6 +72,28 @@ class hgwebdir(object):
         req = wsgirequest(env, respond)
         return self.run_wsgi(req)
 
+    def read_allowed(self, ui, req):
+        """Check allow_read and deny_read config options of a repo's ui object
+        to determine user permissions.  By default, with neither option set (or
+        both empty), allow all users to read the repo.  There are two ways a
+        user can be denied read access:  (1) deny_read is not empty, and the
+        user is unauthenticated or deny_read contains user (or *), and (2)
+        allow_read is not empty and the user is not in allow_read.  Return True
+        if user is allowed to read the repo, else return False."""
+
+        user = req.env.get('REMOTE_USER')
+
+        deny_read = ui.configlist('web', 'deny_read', default=None, untrusted=True)
+        if deny_read and (not user or deny_read == ['*'] or user in deny_read):
+            return False
+
+        allow_read = ui.configlist('web', 'allow_read', default=None, untrusted=True)
+        # by default, allow reading if no allow_read option has been set
+        if (not allow_read) or (allow_read == ['*']) or (user in allow_read):
+            return True
+
+        return False
+
     def run_wsgi(self, req):
 
         try:
@@ -173,6 +195,9 @@ class hgwebdir(object):
                     return u.config(section, name, default, untrusted=True)
 
                 if u.configbool("web", "hidden", untrusted=True):
+                    continue
+
+                if not self.read_allowed(u, req):
                     continue
 
                 parts = [name]

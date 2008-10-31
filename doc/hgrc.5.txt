@@ -676,6 +676,16 @@ web::
     must be present in this list (separated by whitespace or ",").
     The contents of the allow_push list are examined after the
     deny_push list.
+  allow_read;;
+    If the user has not already been denied repository access due to the
+    contents of deny_read, this list determines whether to grant repository
+    access to the user. If this list is not empty, and the user is
+    unauthenticated or not present in the list (separated by whitespace or ","),
+    then access is denied for the user.  If the list is empty or not set, then
+    access is permitted to all users by default.  Setting allow_read to the
+    special value "*" is equivalent to it not being set (i.e. access is
+    permitted to all users).  The contents of the allow_read list are examined
+    after the deny_read list.
   allowzip;;
     (DEPRECATED) Whether to allow .zip downloading of repo revisions.
     Default is false. This feature creates temporary files.
@@ -693,6 +703,18 @@ web::
     and any authenticated user name present in this list (separated by
     whitespace or ",") is also denied. The contents of the deny_push
     list are examined before the allow_push list.
+  deny_read;;
+    Whether to deny reading/viewing of the repository.  If this list is not
+    empty, unauthenticated users are all denied, and any authenticated user name
+    present in this list (separated by whitespace or ",") is also denied access
+    to the repository.  If set to the special value "*", all remote users are
+    denied access (rarely needed ;).  If deny_read is empty or not set, the
+    determination of repository access depends on the presence and content of
+    the allow_read list (see description).  If both deny_read and allow_read are
+    empty or not set, then access is permitted to all users by default.  If the
+    repository is being served via hgwebdir, denied users will not be able to
+    see it in the list of repositories.  The contents of the deny_read list have
+    priority over (are examined before) the contents of the allow_read list.
   description;;
     Textual description of the repository's purpose or contents.
     Default is "unknown".

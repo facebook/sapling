@@ -161,10 +161,12 @@ class hgweb(object):
         # process the web interface request
 
         try:
-
             tmpl = self.templater(req)
             ctype = tmpl('mimetype', encoding=self.encoding)
             ctype = templater.stringify(ctype)
+
+            # check allow_read / deny_read config options
+            self.check_perm(req, None)
 
             if cmd == '':
                 req.form['cmd'] = [tmpl.cache['default']]
@@ -278,11 +280,24 @@ class hgweb(object):
 
     def check_perm(self, req, op):
         '''Check permission for operation based on request data (including
-        authentication info. Return true if op allowed, else false.'''
+        authentication info). Return if op allowed, else raise an ErrorResponse
+        exception.'''
+
+        user = req.env.get('REMOTE_USER')
+
+        deny_read = self.configlist('web', 'deny_read')
+        if deny_read and (not user or deny_read == ['*'] or user in deny_read):
+            raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
+
+        allow_read = self.configlist('web', 'allow_read')
+        result = (not allow_read) or (allow_read == ['*']) or (user in allow_read)
+        if not result:
+            raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
 
         if op == 'pull' and not self.allowpull:
             raise ErrorResponse(HTTP_OK, '')
-        elif op == 'pull':
+        # op is None when checking allow/deny_read permissions for a web-browser request
+        elif op == 'pull' or op is None:
             return
 
         # enforce that you can only push using POST requests
@@ -295,8 +310,6 @@ class hgweb(object):
         scheme = req.env.get('wsgi.url_scheme')
         if self.configbool('web', 'push_ssl', True) and scheme != 'https':
             raise ErrorResponse(HTTP_OK, 'ssl required')
-
-        user = req.env.get('REMOTE_USER')
 
         deny = self.configlist('web', 'deny_push')
         if deny and (not user or deny == ['*'] or user in deny):
