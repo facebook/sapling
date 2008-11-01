@@ -67,6 +67,22 @@ body {
   right: 2em;
 }
 
+form.search span {
+  display: none;
+  position: absolute;
+  top: 40px;
+  right: 0px;
+  width: 190px;
+  padding: 5px;
+  background: #ffc;
+  font-size: 70%;
+  border: 1px solid yellow;
+  -moz-border-radius: 5px; /* this works only in camino/firefox */
+  -webkit-border-radius: 5px; /* this is just for Safari */
+}
+
+form.search:hover span { display: block; }
+
 a { text-decoration:none; }
 .age { white-space:nowrap; }
 .date { white-space:nowrap; }
