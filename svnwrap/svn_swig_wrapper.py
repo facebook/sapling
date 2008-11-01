@@ -11,8 +11,10 @@ from svn import core
 from svn import delta
 from svn import ra
 
-svn_config = core.svn_config_get_config(None)
+if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO) < (1, 5, 0):
+    raise ImportError, 'You must have Subversion 1.5.0 or newer and matching SWIG bindings.'
 
+svn_config = core.svn_config_get_config(None)
 class RaCallbacks(ra.Callbacks):
     def open_tmp_file(self, pool):
         (fd, fn) = tempfile.mkstemp()
@@ -21,6 +23,7 @@ class RaCallbacks(ra.Callbacks):
 
     def get_client_string(self, pool):
         return 'hgsubversion'
+
 
 def user_pass_prompt(realm, default_username, ms, pool):
     creds = core.svn_auth_cred_simple_t()
@@ -115,8 +118,7 @@ class SubversionRepo(object):
         callbacks.auth_baton = self.auth_baton
         self.callbacks = callbacks
         self.ra = ra.open2(self.svn_url.encode('utf-8'), callbacks,
-                           svn_config)
-
+                           svn_config, self.pool)
 
     @property
     def HEAD(self):
@@ -242,7 +244,7 @@ class SubversionRepo(object):
         if not stop:
             stop = self.HEAD
         while stop > start:
-            ra.get_log(self.ra, 
+            ra.get_log(self.ra,
                        paths,
                        start+1,
                        stop,
