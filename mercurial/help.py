@@ -231,7 +231,7 @@ PYTHONPATH::
 
     In building Mercurial, we made a choice to support the git diff
     format, but we haven't made it the default. This is because for a
-    long time, the format for unified diffs we usually use has been 
+    long time, the format for unified diffs we usually use has been
     defined by GNU patch, and it doesn't (yet) support git's extensions
     to the diff format. This means that, when extracting diffs from a
     Mercurial repository (through the diff command, for example), you

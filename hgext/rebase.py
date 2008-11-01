@@ -23,7 +23,7 @@ import os, errno
 def rebasemerge(repo, rev, first=False):
     'return the correct ancestor'
     oldancestor = ancestor.ancestor
-    
+
     def newancestor(a, b, pfunc):
         ancestor.ancestor = oldancestor
         anc = ancestor.ancestor(a, b, pfunc)
@@ -172,9 +172,9 @@ def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse):
 
     p1, p2 = defineparents(repo, rev, target, state, targetancestors)
 
-    repo.ui.debug(_(" future parents are %d and %d\n") % (repo[p1].rev(), 
+    repo.ui.debug(_(" future parents are %d and %d\n") % (repo[p1].rev(),
                                                             repo[p2].rev()))
-    
+
     # Merge phase
     if len(repo.parents()) != 2:
         # Update to target and merge it with local
