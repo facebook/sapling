@@ -337,10 +337,11 @@ class Watcher(object):
         for wfn, state in ds.iteritems():
             if not wfn.startswith(wtopdir):
                 continue
-            status = state[0]
-            st = self.stat(wfn)
-            if status == 'r' and not st:
-                self.updatestatus(wfn, st, status=status)
+            try:
+                st = self.stat(wfn)
+            except OSError:
+                status = state[0]
+                self.updatestatus(wfn, None, status=status)
             else:
                 self.updatestatus(wfn, st)
         self.check_deleted('!')
