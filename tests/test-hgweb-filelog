@@ -1,0 +1,40 @@
+hg init test
+cd test
+
+echo b > b
+hg ci -Am "b"
+
+echo a > a
+hg ci -Am "first a"
+
+hg rm a
+hg ci -m "del a"
+
+echo b > a
+hg ci -Am "second a"
+
+hg rm a
+hg ci -m "del2 a"
+
+hg log -p
+
+hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+echo % tip - two revisions
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/tip/a')
+
+echo % second version - two revisions
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/3/a')
+
+echo % first deleted - one revision
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/2/a')
+
+echo % first version - one revision
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/1/a')
+
+echo % before addition - error
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/0/a')
+
+echo % errors
+cat errors.log

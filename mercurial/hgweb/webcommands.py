@@ -500,15 +500,30 @@ def annotate(web, req, tmpl):
                 permissions=fctx.manifest().flags(f))
 
 def filelog(web, req, tmpl):
-    fctx = webutil.filectx(web.repo, req)
-    f = fctx.path()
-    fl = fctx.filelog()
-    count = len(fl)
+
+    try:
+        fctx = webutil.filectx(web.repo, req)
+        f = fctx.path()
+        fl = fctx.filelog()
+    except revlog.LookupError:
+        f = webutil.cleanpath(web.repo, req.form['file'][0])
+        fl = web.repo.file(f)
+        numrevs = len(fl)
+        if not numrevs: # file doesn't exist at all
+            raise
+        rev = webutil.changectx(web.repo, req).rev()
+        first = fl.linkrev(fl.node(0))
+        if rev < first: # current rev is from before file existed
+            raise
+        frev = numrevs - 1
+        while fl.linkrev(fl.node(frev)) > rev:
+            frev -= 1
+        fctx = web.repo.filectx(f, fl.linkrev(fl.node(frev)))
+
+    count = fctx.filerev() + 1
     pagelen = web.maxshortchanges
-    pos = fctx.filerev()
-    start = max(0, pos - pagelen + 1)
-    end = min(count, start + pagelen)
-    pos = end - 1
+    start = max(0, fctx.filerev() - pagelen + 1) # first rev on this page
+    end = min(count, start + pagelen) # last rev on this page
     parity = paritygen(web.stripecount, offset=start-end)
 
     def entries(limit=0, **map):
@@ -535,7 +550,7 @@ def filelog(web, req, tmpl):
             yield e
 
     nodefunc = lambda x: fctx.filectx(fileid=x)
-    nav = webutil.revnavgen(pos, pagelen, count, nodefunc)
+    nav = webutil.revnavgen(end - 1, pagelen, count, nodefunc)
     return tmpl("filelog", file=f, node=hex(fctx.node()), nav=nav,
                 entries=lambda **x: entries(limit=0, **x),
                 latestentry=lambda **x: entries(limit=1, **x))
