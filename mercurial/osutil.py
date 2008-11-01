@@ -26,7 +26,9 @@ def listdir(path, stat=False, skip=None):
       (name, type)
     '''
     result = []
-    prefix = path + os.sep
+    prefix = path
+    if not prefix.endswith(os.sep):
+        prefix += os.sep
     names = os.listdir(path)
     names.sort()
     for fn in names:

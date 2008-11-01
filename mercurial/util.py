@@ -856,7 +856,7 @@ def _statfiles_clustered(files):
         if pos == -1:
             dir, base = '.', nf
         else:
-            dir, base = nf[:pos], nf[pos+1:]
+            dir, base = nf[:pos+1], nf[pos+1:]
         cache = dircache.get(dir, None)
         if cache is None:
             try:
