@@ -1,3 +1,5 @@
+import os
+
 from mercurial import commands
 from mercurial import hg
 
@@ -11,7 +13,12 @@ def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
     if not hg_repo_path:
         hg_repo_path = hg.defaultdest(svn_url) + "-hg"
         ui.status("Assuming destination %s\n" % hg_repo_path)
-    return fetch_command.fetch_revisions(ui, svn_url, hg_repo_path, **opts)
+    should_update = not os.path.exists(hg_repo_path)
+    res = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path, **opts)
+    if (res is None or res == 0) and should_update:
+        repo = hg.repository(ui, hg_repo_path)
+        commands.update(ui, repo, repo['tip'].node())
+    return res
 
 commands.norepo += " svnclone"
 cmdtable = {
