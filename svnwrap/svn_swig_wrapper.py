@@ -337,7 +337,9 @@ class SubversionRepo(object):
         except core.SubversionException, e:
             # can I depend on this number being constant?
             if (e.message == "Server doesn't support the replay command"
-                or e.apr_err == 170003):
+                or e.apr_err == 170003 
+                or e.message == 'The requested report is unknown.'
+                or e.apr_err == 200007):
                 raise SubversionRepoCanNotReplay, ('This Subversion server '
                    'is older than 1.4.0, and cannot satisfy replay requests.')
             else:
