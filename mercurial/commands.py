@@ -3035,7 +3035,7 @@ table = {
           ('s', 'skip', False, _('skip testing changeset')),
           ('c', 'command', '', _('Use command to check changeset state')),
           ('U', 'noupdate', False, _('do not update to target'))],
-         _("hg bisect [-gbsr] [REV] [-c COMMAND]")),
+         _("hg bisect [-gbsr] [-c CMD] [REV]")),
     "branch":
         (branch,
          [('f', 'force', None,
@@ -3127,7 +3127,7 @@ table = {
     "debugstate":
         (debugstate,
          [('', 'nodates', None, _('do not display the saved mtime'))],
-         _('hg debugstate [OPTS]')),
+         _('hg debugstate [OPTION]...')),
     "debugwalk": (debugwalk, walkopts, _('hg debugwalk [OPTION]... [FILE]...')),
     "^diff":
         (diff,
@@ -3288,7 +3288,7 @@ table = {
          [('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
           ('u', 'unmark', None, _('unmark files as resolved'))],
-          _('hg resolve [OPTION] [FILES...]')),
+          _('hg resolve [OPTION]... [FILE]...')),
     "revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
