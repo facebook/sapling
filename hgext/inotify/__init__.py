@@ -65,7 +65,7 @@ def reposetup(ui, repo):
                                     ui.warn('*** inotify: %s +%s\n' % (c, f))
                             for f in b:
                                 if f not in a:
-                                    ui.warn('*** inotify: %S -%s\n' % (c, f))
+                                    ui.warn('*** inotify: %s -%s\n' % (c, f))
                         result = r2
 
                     if result is not None:
