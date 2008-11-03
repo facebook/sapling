@@ -72,7 +72,6 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
 def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     """Build and send a commit from Mercurial to Subversion.
     """
-    target_files = []
     file_data = {}
     svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
     parent = rev_ctx.parents()[0]
@@ -96,7 +95,6 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                 props.setdefault(file, {})['svn:special'] = '*'
 
             if file not in parent:
-                target_files.append(file)
                 action = 'add'
                 dirname = '/'.join(file.split('/')[:-1] + [''])
                 # check for new directories
@@ -108,7 +106,6 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                         # dir must not exist
                         added_dirs.append(dirname[:-1])
             else:
-                target_files.append(file)
                 base_data = parent.filectx(file).data()
                 if 'x' in parent.filectx(file).flags():
                     if 'svn:executable' in props.setdefault(file, {}):
@@ -122,14 +119,13 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                         props.setdefault(file, {})['svn:special'] = None
                 action = 'modify'
         else:
-            target_files.append(file)
             base_data = parent.filectx(file).data()
             action = 'delete'
         file_data[file] = base_data, new_data, action
 
     # TODO check for directory deletes here
-    new_target_files = ['%s/%s' % (branch_path, f) for f in target_files]
-    for tf, ntf in zip(target_files, new_target_files):
+    new_target_files = ['%s/%s' % (branch_path, f) for f in rev_ctx.files()]
+    for tf, ntf in zip(rev_ctx.files(), new_target_files):
         if tf in file_data:
             file_data[ntf] = file_data[tf]
             if tf in props:
