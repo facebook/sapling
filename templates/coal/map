@@ -23,7 +23,7 @@ searchentry = shortlogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
 
-direntry = '<tr class="fileline parity{parity}"><td class="name"><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}"><img src="{staticurl}coal-folder.png"> {basename|escape}/</a><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr>'
+direntry = '<tr class="fileline parity{parity}"><td class="name"><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}"><img src="{staticurl}coal-folder.png"> {basename|escape}/</a> <a href="{url}file/{node|short}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">{emptydirs|escape}</a><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr>'
 fileentry = '<tr class="fileline parity{parity}"><td class="filename"><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l1"><img src="{staticurl}coal-file.png"> {basename|escape}</a></td><td class="size">{size}</td><td class="permissions">{permissions|permissions}</td></tr>'
 
 filerevision = filerevision.tmpl

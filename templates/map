@@ -19,7 +19,7 @@ changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-direntry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td>&nbsp;<td>&nbsp;<td><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">#basename|escape#/</a>'
+direntry = '<tr class="parity#parity#"><td><tt>drwxr-xr-x</tt>&nbsp;<td>&nbsp;<td>&nbsp;<td><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">#basename|escape#/</a> <a href="#url#file/#node|short##path|urlescape#/#emptydirs|urlescape#{sessionvars%urlparameter}">#emptydirs|urlescape#</a>'
 fileentry = '<tr class="parity#parity#"><td><tt>#permissions|permissions#</tt>&nbsp;<td align=right><tt class="date">#date|isodate#</tt>&nbsp;<td align=right><tt>#size#</tt>&nbsp;<td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#basename|escape#</a>'
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl

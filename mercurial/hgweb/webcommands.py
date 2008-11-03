@@ -264,6 +264,7 @@ def manifest(web, req, tmpl):
     node = ctx.node()
 
     files = {}
+    dirs = {}
     parity = paritygen(web.stripecount)
 
     if path and path[-1] != "/":
@@ -275,20 +276,25 @@ def manifest(web, req, tmpl):
         if f[:l] != path:
             continue
         remain = f[l:]
-        idx = remain.find('/')
-        if idx != -1:
-            remain = remain[:idx+1]
-            n = None
-        files[remain] = (f, n)
+        elements = remain.split('/')
+        if len(elements) == 1:
+            files[remain] = f
+        else:
+            h = dirs # need to retain ref to dirs (root)
+            for elem in elements[0:-1]:
+                if elem not in h:
+                    h[elem] = {}
+                h = h[elem]
+                if len(h) > 1:
+                    break
+            h[None] = None # denotes files present
 
-    if not files:
+    if not files and not dirs:
         raise ErrorResponse(HTTP_NOT_FOUND, 'path not found: ' + path)
 
     def filelist(**map):
         for f in util.sort(files):
-            full, fnode = files[f]
-            if not fnode:
-                continue
+            full = files[f]
 
             fctx = ctx.filectx(full)
             yield {"file": full,
@@ -299,14 +305,21 @@ def manifest(web, req, tmpl):
                    "permissions": mf.flags(full)}
 
     def dirlist(**map):
-        for f in util.sort(files):
-            full, fnode = files[f]
-            if fnode:
-                continue
+        for d in util.sort(dirs):
 
+            emptydirs = []
+            h = dirs[d]
+            while isinstance(h, dict) and len(h) == 1:
+                k,v = h.items()[0]
+                if v:
+                    emptydirs.append(k)
+                h = v
+
+            path = "%s%s" % (abspath, d)
             yield {"parity": parity.next(),
-                   "path": "%s%s" % (abspath, f),
-                   "basename": f[:-1]}
+                   "path": path,
+                   "emptydirs": "/".join(emptydirs),
+                   "basename": d}
 
     return tmpl("manifest",
                 rev=ctx.rev(),

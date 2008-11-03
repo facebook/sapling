@@ -1,0 +1,51 @@
+% Set up the repo
+adding a1/a2/a3/a4/foo
+adding b1/b2/b3/b4/foo
+adding b1/b2/c3/c4/foo
+adding d1/d2/d3/d4/foo
+adding d1/d2/foo
+% manifest with descending
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: files for changeset 9087c84a0f5d</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/0">changelog</a>
+<a href="/shortlog/0">shortlog</a>
+<a href="/graph">graph</a>
+<a href="/tags">tags</a>
+<a href="/rev/9087c84a0f5d">changeset</a>
+
+</div>
+
+<h2>files for changeset 9087c84a0f5d: /</h2>
+
+<table cellpadding="0" cellspacing="0">
+<tr class="parity0">
+  <td><tt>drwxr-xr-x</tt>&nbsp;
+  <td>&nbsp;
+  <td>&nbsp;
+  <td><a href="/file/9087c84a0f5d/">[up]</a>
+</tr>
+<tr class="parity1"><td><tt>drwxr-xr-x</tt>&nbsp;<td>&nbsp;<td>&nbsp;<td><a href="/file/9087c84a0f5d/a1">a1/</a> <a href="/file/9087c84a0f5d/a1/a2/a3/a4">a2/a3/a4</a><tr class="parity0"><td><tt>drwxr-xr-x</tt>&nbsp;<td>&nbsp;<td>&nbsp;<td><a href="/file/9087c84a0f5d/b1">b1/</a> <a href="/file/9087c84a0f5d/b1/b2">b2</a><tr class="parity1"><td><tt>drwxr-xr-x</tt>&nbsp;<td>&nbsp;<td>&nbsp;<td><a href="/file/9087c84a0f5d/d1">d1/</a> <a href="/file/9087c84a0f5d/d1/d2">d2</a>
+
+</table>
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+% ERRORS ENCOUNTERED

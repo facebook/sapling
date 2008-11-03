@@ -19,7 +19,7 @@ changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
-direntry = '<tr class="parity#parity#"><td style="font-family:monospace">drwxr-xr-x</td><td style="font-family:monospace"></td><td style="font-family:monospace"></td><td><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">#basename|escape#</a></td><td class="link"><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">files</a></td></tr>'
+direntry = '<tr class="parity#parity#"><td style="font-family:monospace">drwxr-xr-x</td><td style="font-family:monospace"></td><td style="font-family:monospace"></td><td><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">#basename|escape#</a> <a href="#url#file/#node|short##path|urlescape#/#emptydirs|urlescape#{sessionvars%urlparameter}">#emptydirs|escape#</a></td><td class="link"><a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">files</a></td></tr>'
 fileentry = '<tr class="parity#parity#"><td style="font-family:monospace">#permissions|permissions#</td><td style="font-family:monospace" align=right>#date|isodate#</td><td style="font-family:monospace" align=right>#size#</td><td class="list"><a class="list" href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#basename|escape#</a></td><td class="link"><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">file</a> | <a href="#url#log/#node|short#/#file|urlescape#{sessionvars%urlparameter}">revisions</a> | <a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}">annotate</a></td></tr>'
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
