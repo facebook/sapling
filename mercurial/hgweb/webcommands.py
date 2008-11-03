@@ -224,24 +224,23 @@ def shortlog(web, req, tmpl):
 
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
-    n = ctx.node()
-    showtags = webutil.showtag(web.repo, tmpl, 'changesettag', n)
+    showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
     parents = ctx.parents()
-    p1 = parents[0].node()
 
     files = []
     parity = paritygen(web.stripecount)
     for f in ctx.files():
         template = f in ctx and 'filenodelink' or 'filenolink'
         files.append(tmpl(template,
-                          node=hex(n), file=f,
+                          node=ctx.hex(), file=f,
                           parity=parity.next()))
 
-    diffs = web.diff(tmpl, p1, n, None)
+    parity = paritygen(web.stripecount)
+    diffs = webutil.diffs(web.repo, tmpl, ctx, None, parity)
     return tmpl('changeset',
                 diff=diffs,
                 rev=ctx.rev(),
-                node=hex(n),
+                node=ctx.hex(),
                 parent=webutil.siblings(parents),
                 child=webutil.siblings(ctx.children()),
                 changesettag=showtags,
@@ -249,8 +248,8 @@ def changeset(web, req, tmpl):
                 desc=ctx.description(),
                 date=ctx.date(),
                 files=files,
-                archives=web.archivelist(hex(n)),
-                tags=webutil.nodetagsdict(web.repo, n),
+                archives=web.archivelist(ctx.hex()),
+                tags=webutil.nodetagsdict(web.repo, ctx.node()),
                 branch=webutil.nodebranchnodefault(ctx),
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx))
@@ -446,9 +445,9 @@ def filediff(web, req, tmpl):
         n = ctx.node()
         # path already defined in except clause
         parents = ctx.parents()
-        p1 = parents and parents[0].node() or nullid
 
-    diffs = web.diff(tmpl, p1, n, [path])
+    parity = paritygen(web.stripecount)
+    diffs = webutil.diffs(web.repo, tmpl, fctx or ctx, [path], parity)
     rename = fctx and webutil.renamelink(fctx) or []
     ctx = fctx and fctx or ctx
     return tmpl("filediff",

@@ -7,6 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os
+from mercurial import match, patch
 from mercurial.node import hex, nullid
 from mercurial.repo import RepoError
 from mercurial import util
@@ -141,3 +142,51 @@ def filectx(repo, req):
         fctx = repo.filectx(path, fileid=changeid)
 
     return fctx
+
+def diffs(repo, tmpl, ctx, files, parity):
+
+    def countgen():
+        start = 1
+        while True:
+            yield start
+            start += 1
+
+    blockcount = countgen()
+    def prettyprintlines(diff):
+        blockno = blockcount.next()
+        for lineno, l in enumerate(diff.splitlines(True)):
+            lineno = "%d.%d" % (blockno, lineno + 1)
+            if l.startswith('+'):
+                ltype = "difflineplus"
+            elif l.startswith('-'):
+                ltype = "difflineminus"
+            elif l.startswith('@'):
+                ltype = "difflineat"
+            else:
+                ltype = "diffline"
+            yield tmpl(ltype,
+                       line=l,
+                       lineid="l%s" % lineno,
+                       linenumber="% 8s" % lineno)
+
+    if files:
+        m = match.exact(repo.root, repo.getcwd(), files)
+    else:
+        m = match.always(repo.root, repo.getcwd())
+
+    diffopts = patch.diffopts(repo.ui, untrusted=True)
+    parents = ctx.parents()
+    node1 = parents and parents[0].node() or nullid
+    node2 = ctx.node()
+
+    block = []
+    for chunk in patch.diff(repo, node1, node2, m, opts=diffopts):
+        if chunk.startswith('diff') and block:
+            yield tmpl('diffblock', parity=parity.next(),
+                       lines=prettyprintlines(''.join(block)))
+            block = []
+        if chunk.startswith('diff'):
+            chunk = ''.join(chunk.splitlines(True)[1:])
+        block.append(chunk)
+    yield tmpl('diffblock', parity=parity.next(),
+               lines=prettyprintlines(''.join(block)))

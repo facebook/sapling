@@ -243,14 +243,14 @@ navigate: <small class="navigate"><a href="/shortlog/2ef0ac749a14">(0)</a> <a hr
 </table>
 
 <div id="changesetDiff">
-<pre class="parity0"><span class="minusline"><a class="lineno" href="#l1" id="l1">       1</a>--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-</span><span class="plusline"><a class="lineno" href="#l2" id="l2">       2</a>+++ b/da/foo	Thu Jan 01 00:00:00 1970 +0000
-</span><span class="atline"><a class="lineno" href="#l3" id="l3">       3</a>@@ -0,0 +1,1 @@
-</span><span class="plusline"><a class="lineno" href="#l4" id="l4">       4</a>+foo
-</span></pre><pre class="parity1"><span class="minusline"><a class="lineno" href="#l1.1" id="l1.1">     1.1</a>--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-</span><span class="plusline"><a class="lineno" href="#l1.2" id="l1.2">     1.2</a>+++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+<pre class="parity0"><span class="minusline"><a class="lineno" href="#l1.1" id="l1.1">     1.1</a>--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="plusline"><a class="lineno" href="#l1.2" id="l1.2">     1.2</a>+++ b/da/foo	Thu Jan 01 00:00:00 1970 +0000
 </span><span class="atline"><a class="lineno" href="#l1.3" id="l1.3">     1.3</a>@@ -0,0 +1,1 @@
 </span><span class="plusline"><a class="lineno" href="#l1.4" id="l1.4">     1.4</a>+foo
+</span></pre><pre class="parity1"><span class="minusline"><a class="lineno" href="#l2.1" id="l2.1">     2.1</a>--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="plusline"><a class="lineno" href="#l2.2" id="l2.2">     2.2</a>+++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="atline"><a class="lineno" href="#l2.3" id="l2.3">     2.3</a>@@ -0,0 +1,1 @@
+</span><span class="plusline"><a class="lineno" href="#l2.4" id="l2.4">     2.4</a>+foo
 </span></pre>
 </div>
 

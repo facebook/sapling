@@ -9,9 +9,9 @@
 import os, mimetypes
 from mercurial.node import hex, nullid
 from mercurial.repo import RepoError
-from mercurial import ui, hg, util, patch, hook, match
+from mercurial import ui, hg, util, hook
 from mercurial import revlog, templater, templatefilters
-from common import get_mtime, style_map, paritygen, countgen, ErrorResponse
+from common import get_mtime, style_map, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from common import HTTP_UNAUTHORIZED, HTTP_METHOD_NOT_ALLOWED
 from request import wsgirequest
@@ -275,48 +275,6 @@ class hgweb(object):
             yield tmpl("filedifflink", node=hex(changeset), file=f)
         if len(files) > self.maxfiles:
             yield tmpl("fileellipses")
-
-    def diff(self, tmpl, node1, node2, files):
-
-        blockcount = countgen()
-        def prettyprintlines(diff):
-            blockno = blockcount.next()
-            for lineno, l in enumerate(diff.splitlines(True)):
-                if blockno == 0:
-                    lineno = lineno + 1
-                else:
-                    lineno = "%d.%d" % (blockno, lineno + 1)
-                if l.startswith('+'):
-                    ltype = "difflineplus"
-                elif l.startswith('-'):
-                    ltype = "difflineminus"
-                elif l.startswith('@'):
-                    ltype = "difflineat"
-                else:
-                    ltype = "diffline"
-                yield tmpl(ltype,
-                           line=l,
-                           lineid="l%s" % lineno,
-                           linenumber="% 8s" % lineno)
-
-        if files:
-            m = match.exact(self.repo.root, self.repo.getcwd(), files)
-        else:
-            m = match.always(self.repo.root, self.repo.getcwd())
-
-        block = []
-        parity = paritygen(self.stripecount)
-        diffopts = patch.diffopts(self.repo.ui, untrusted=True)
-        for chunk in patch.diff(self.repo, node1, node2, m, opts=diffopts):
-            if chunk.startswith('diff') and block:
-                yield tmpl('diffblock', parity=parity.next(),
-                           lines=prettyprintlines(''.join(block)))
-                block = []
-            if chunk.startswith('diff'):
-                chunk = ''.join(chunk.splitlines(True)[1:])
-            block.append(chunk)
-        yield tmpl('diffblock', parity=parity.next(),
-                   lines=prettyprintlines(''.join(block)))
 
     archive_specs = {
         'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', None),
