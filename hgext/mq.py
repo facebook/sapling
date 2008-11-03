@@ -1753,16 +1753,19 @@ def setupheaderopts(ui, opts):
 def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
-    qnew creates a new patch on top of the currently-applied patch
-    (if any). It will refuse to run if there are any outstanding
-    changes unless -f is specified, in which case the patch will
-    be initialised with them. You may also use -I, -X, and/or a list of
-    files after the patch name to add only changes to matching files
-    to the new patch, leaving the rest as uncommitted modifications.
+    qnew creates a new patch on top of the currently-applied patch (if any).
+    It will refuse to run if there are any outstanding changes unless -f is
+    specified, in which case the patch will be initialized with them. You
+    may also use -I, -X, and/or a list of files after the patch name to add
+    only changes to matching files to the new patch, leaving the rest as
+    uncommitted modifications.
 
-    -e, -m or -l set the patch header as well as the commit message.
-    If none is specified, the patch header is empty and the
-    commit message is '[mq]: PATCH'"""
+    -u and -d can be used to set the (given) user and date, respectively.
+    -U and -D set user to current user and date to current date.
+
+    -e, -m or -l set the patch header as well as the commit message. If none
+    is specified, the header is empty and the commit message is '[mq]: PATCH'.
+    """
     msg = cmdutil.logmessage(opts)
     def getmsg(): return ui.edit(msg, ui.username())
     q = repo.mq
