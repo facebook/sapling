@@ -143,6 +143,12 @@ def filectx(repo, req):
 
     return fctx
 
+def listfilediffs(tmpl, files, node, max):
+    for f in files[:max]:
+        yield tmpl('filedifflink', node=hex(node), file=f)
+    if len(files) > max:
+        yield tmpl('fileellipses')
+
 def diffs(repo, tmpl, ctx, files, parity):
 
     def countgen():

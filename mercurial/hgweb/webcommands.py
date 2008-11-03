@@ -130,6 +130,7 @@ def _search(web, tmpl, query):
             count += 1
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
+            files = webutil.listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
 
             yield tmpl('searchentry',
                        parity=parity.next(),
@@ -139,7 +140,7 @@ def _search(web, tmpl, query):
                        changelogtag=showtags,
                        desc=ctx.description(),
                        date=ctx.date(),
-                       files=web.listfilediffs(tmpl, ctx.files(), n),
+                       files=files,
                        rev=ctx.rev(),
                        node=hex(n),
                        tags=webutil.nodetagsdict(web.repo, n),
@@ -178,6 +179,7 @@ def changelog(web, req, tmpl, shortlog = False):
             ctx = web.repo[i]
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
+            files = webutil.listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
 
             l.insert(0, {"parity": parity.next(),
                          "author": ctx.user(),
@@ -186,7 +188,7 @@ def changelog(web, req, tmpl, shortlog = False):
                          "changelogtag": showtags,
                          "desc": ctx.description(),
                          "date": ctx.date(),
-                         "files": web.listfilediffs(tmpl, ctx.files(), n),
+                         "files": files,
                          "rev": i,
                          "node": hex(n),
                          "tags": webutil.nodetagsdict(web.repo, n),

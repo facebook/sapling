@@ -270,12 +270,6 @@ class hgweb(object):
             if i in allowed or self.configbool("web", "allow" + i):
                 yield {"type" : i, "extension" : spec[2], "node" : nodeid}
 
-    def listfilediffs(self, tmpl, files, changeset):
-        for f in files[:self.maxfiles]:
-            yield tmpl("filedifflink", node=hex(changeset), file=f)
-        if len(files) > self.maxfiles:
-            yield tmpl("fileellipses")
-
     archive_specs = {
         'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', None),
         'gz': ('application/x-tar', 'tgz', '.tar.gz', None),
