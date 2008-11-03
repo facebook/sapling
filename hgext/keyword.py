@@ -501,15 +501,15 @@ def reposetup(ui, repo):
         # shrink keywords read from working dir
         self.lines = kwt.shrinklines(self.fname, self.lines)
 
-    def kw_diff(orig, repo, node1=None, node2=None, match=None,
-                fp=None, changes=None, opts=None):
+    def kw_diff(orig, repo, node1=None, node2=None, match=None, changes=None,
+                opts=None):
         '''Monkeypatch patch.diff to avoid expansion except when
         comparing against working dir.'''
         if node2 is not None:
             kwt.matcher = util.never
         elif node1 is not None and node1 != repo['.'].node():
             kwt.restrict = True
-        orig(repo, node1, node2, match, fp, changes, opts)
+        return orig(repo, node1, node2, match, changes, opts)
 
     def kwweb_skip(orig, web, req, tmpl):
         '''Wraps webcommands.x turning off keyword expansion.'''

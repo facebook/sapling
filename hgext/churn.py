@@ -44,9 +44,7 @@ def maketemplater(ui, repo, tmpl):
 
 def changedlines(ui, repo, ctx1, ctx2):
     lines = 0
-    ui.pushbuffer()
-    patch.diff(repo, ctx1.node(), ctx2.node())
-    diff = ui.popbuffer()
+    diff = ''.join(patch.diff(repo, ctx1.node(), ctx2.node()))
     for l in diff.split('\n'):
         if (l.startswith("+") and not l.startswith("+++ ") or
             l.startswith("-") and not l.startswith("--- ")):

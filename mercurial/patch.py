@@ -1169,9 +1169,8 @@ def _addmodehdr(header, omode, nmode):
         header.append('old mode %s\n' % omode)
         header.append('new mode %s\n' % nmode)
 
-def diff(repo, node1=None, node2=None, match=None,
-         fp=None, changes=None, opts=None):
-    '''print diff of changes to files between two nodes, or node and
+def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
+    '''yields diff of changes to files between two nodes, or node and
     working directory.
 
     if node1 is None, use first dirstate parent instead.
@@ -1182,8 +1181,6 @@ def diff(repo, node1=None, node2=None, match=None,
 
     if opts is None:
         opts = mdiff.defaultopts
-    if fp is None:
-        fp = repo.ui
 
     if not node1:
         node1 = repo.dirstate.parents()[0]
@@ -1274,9 +1271,10 @@ def diff(repo, node1=None, node2=None, match=None,
                                     # ctx2 date may be dynamic
                                     tn, util.datestr(ctx2.date()),
                                     a, b, r, opts=opts)
-            if text or len(header) > 1:
-                fp.write(''.join(header))
-            fp.write(text)
+            if header and (text or len(header) > 1):
+                yield ''.join(header)
+            if text:
+                yield text
 
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
            opts=None):
@@ -1312,7 +1310,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         fp.write(ctx.description().rstrip())
         fp.write("\n\n")
 
-        diff(repo, prev, node, fp=fp, opts=opts)
+        for chunk in diff(repo, prev, node, opts=opts):
+            fp.write(chunk)
         if fp not in (sys.stdout, repo.ui):
             fp.close()
 

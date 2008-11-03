@@ -673,8 +673,10 @@ class changeset_printer(object):
     def showpatch(self, node):
         if self.patch:
             prev = self.repo.changelog.parents(node)[0]
-            patch.diff(self.repo, prev, node, match=self.patch, fp=self.ui,
-                       opts=patch.diffopts(self.ui))
+            chunks = patch.diff(self.repo, prev, node, match=self.patch,
+                                opts=patch.diffopts(self.ui))
+            for chunk in chunks:
+                self.ui.write(chunk)
             self.ui.write("\n")
 
     def _meaningful_parentrevs(self, log, rev):

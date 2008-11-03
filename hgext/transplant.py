@@ -138,7 +138,9 @@ class transplanter:
                 else:
                     fd, patchfile = tempfile.mkstemp(prefix='hg-transplant-')
                     fp = os.fdopen(fd, 'w')
-                    patch.diff(source, parents[0], node, fp=fp, opts=diffopts)
+                    gen = patch.diff(source, parents[0], node, opts=diffopts)
+                    for chunk in gen:
+                        fp.write(chunk)
                     fp.close()
 
                 del revmap[rev]
@@ -405,7 +407,8 @@ def browserevs(ui, repo, nodes, opts):
                 action = None
             elif action == 'p':
                 parent = repo.changelog.parents(node)[0]
-                patch.diff(repo, parent, node)
+                for chunk in patch.diff(repo, parent, node):
+                    repo.ui.write(chunk)
                 action = None
             elif action not in ('y', 'n', 'm', 'c', 'q'):
                 ui.write('no such option\n')

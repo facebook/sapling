@@ -1010,7 +1010,9 @@ def diff(ui, repo, *pats, **opts):
     node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
 
     m = cmdutil.match(repo, pats, opts)
-    patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
+    it = patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
+    for chunk in it:
+        repo.ui.write(chunk)
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets

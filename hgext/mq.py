@@ -321,7 +321,10 @@ class queue:
     def printdiff(self, repo, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         m = cmdutil.match(repo, files, opts)
-        patch.diff(repo, node1, node2, m, fp, changes, self.diffopts())
+        chunks = patch.diff(repo, node1, node2, m, changes, self.diffopts())
+        write = fp is None and repo.ui.write or fp.write
+        for chunk in chunks:
+            write(chunk)
 
     def mergeone(self, repo, mergeq, head, patch, rev):
         # first try just applying the patch
@@ -697,8 +700,10 @@ class queue:
                         diffopts = self.diffopts()
                         if opts.get('git'): diffopts.git = True
                         parent = self.qparents(repo, n)
-                        patch.diff(repo, node1=parent, node2=n, fp=p,
-                                   match=match, opts=diffopts)
+                        chunks = patch.diff(repo, node1=parent, node2=n,
+                                            match=match, opts=diffopts)
+                        for chunk in chunks:
+                            p.write(chunk)
                     p.close()
                     wlock = None
                     r = self.qrepo()
@@ -1139,8 +1144,10 @@ class queue:
                 a = util.unique(aa)
                 c = [filter(matchfn, l) for l in (m, a, r)]
                 match = cmdutil.matchfiles(repo, util.unique(c[0] + c[1] + c[2]))
-                patch.diff(repo, patchparent, match=match,
-                           fp=patchf, changes=c, opts=self.diffopts())
+                chunks = patch.diff(repo, patchparent, match=match,
+                                    changes=c, opts=self.diffopts())
+                for chunk in chunks:
+                    patchf.write(chunk)
                 patchf.close()
 
                 repo.dirstate.setparents(*cparents)
