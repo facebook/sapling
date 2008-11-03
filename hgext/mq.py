@@ -1600,7 +1600,8 @@ def qimport(ui, repo, *filename, **opts):
     An existing changeset may be placed under mq control with --rev
     (e.g. qimport --rev tip -n patch will place tip under mq control).
     With --git, patches imported with --rev will use the git diff
-    format.
+    format. See the gitdiffs help topic for information on why this is
+    important for preserving rename/copy information and permission changes.
     """
     q = repo.mq
     q.qimport(repo, filename, patchname=opts['name'],
@@ -1765,6 +1766,10 @@ def new(ui, repo, patch, *args, **opts):
 
     -e, -m or -l set the patch header as well as the commit message. If none
     is specified, the header is empty and the commit message is '[mq]: PATCH'.
+
+    Use the --git option to keep the patch in the git extended diff format.
+    Read the gitdiffs help topic for more information on why this is
+    important for preserving permission changes and copy/rename information.
     """
     msg = cmdutil.logmessage(opts)
     def getmsg(): return ui.edit(msg, ui.username())
@@ -1791,6 +1796,7 @@ def refresh(ui, repo, *pats, **opts):
 
     hg add/remove/copy/rename work as usual, though you might want to use
     git-style patches (--git or [diff] git=1) to track copies and renames.
+    See the gitdiffs help topic for more information on the git diff format.
     """
     q = repo.mq
     message = cmdutil.logmessage(opts)

@@ -1003,6 +1003,9 @@ def diff(ui, repo, *pats, **opts):
     Without the -a option, diff will avoid generating diffs of files
     it detects as binary. With -a, diff will generate a diff anyway,
     probably with undesirable results.
+
+    Use the --git option to generate diffs in the git extended diff
+    format. Read the gitdiffs help topic for more information.
     """
     node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
 
@@ -1035,6 +1038,9 @@ def export(ui, repo, *changesets, **opts):
     Without the -a option, export will avoid generating diffs of files
     it detects as binary. With -a, export will generate a diff anyway,
     probably with undesirable results.
+
+    Use the --git option to generate diffs in the git extended diff
+    format. Read the gitdiffs help topic for more information.
 
     With the --switch-parent option, the diff will be against the second
     parent. It can be useful to review a merge.

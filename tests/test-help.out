@@ -215,6 +215,9 @@ diff repository (or selected files)
     it detects as binary. With -a, diff will generate a diff anyway,
     probably with undesirable results.
 
+    Use the --git option to generate diffs in the git extended diff
+    format. Read the gitdiffs help topic for more information.
+
 options:
 
  -r --rev                  revision
