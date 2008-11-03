@@ -1,0 +1,34 @@
+echo % setting up repo
+hg init test
+cd test
+echo a > a
+echo b > b
+hg ci -Ama
+
+echo % change permissions for git diffs
+chmod 755 a
+hg ci -Amb
+
+echo % set up hgweb
+hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+echo % revision
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/rev/0'
+
+echo % diff removed file
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/a'
+
+echo % set up hgweb with git diffs
+kill `cat hg.pid`
+hg serve --config 'diff.git=1' -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+echo % revision
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/rev/0'
+
+echo % diff removed file
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/a'
+
+echo % errors
+cat errors.log

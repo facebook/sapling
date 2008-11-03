@@ -9,7 +9,7 @@
 import os, mimetypes
 from mercurial.node import hex, nullid
 from mercurial.repo import RepoError
-from mercurial import mdiff, ui, hg, util, patch, hook
+from mercurial import ui, hg, util, patch, hook, match
 from mercurial import revlog, templater, templatefilters
 from common import get_mtime, style_map, paritygen, countgen, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -277,27 +277,11 @@ class hgweb(object):
             yield tmpl("fileellipses")
 
     def diff(self, tmpl, node1, node2, files):
-        def filterfiles(filters, files):
-            l = [x for x in files if x in filters]
-
-            for t in filters:
-                if t and t[-1] != os.sep:
-                    t += os.sep
-                l += [x for x in files if x.startswith(t)]
-            return l
-
-        parity = paritygen(self.stripecount)
-        def diffblock(diff, f, fn):
-            yield tmpl("diffblock",
-                       lines=prettyprintlines(diff),
-                       parity=parity.next(),
-                       file=f,
-                       filenode=hex(fn or nullid))
 
         blockcount = countgen()
         def prettyprintlines(diff):
             blockno = blockcount.next()
-            for lineno, l in enumerate(diff.splitlines(1)):
+            for lineno, l in enumerate(diff.splitlines(True)):
                 if blockno == 0:
                     lineno = lineno + 1
                 else:
@@ -315,33 +299,24 @@ class hgweb(object):
                            lineid="l%s" % lineno,
                            linenumber="% 8s" % lineno)
 
-        r = self.repo
-        c1 = r[node1]
-        c2 = r[node2]
-        date1 = util.datestr(c1.date())
-        date2 = util.datestr(c2.date())
-
-        modified, added, removed, deleted, unknown = r.status(node1, node2)[:5]
         if files:
-            modified, added, removed = map(lambda x: filterfiles(files, x),
-                                           (modified, added, removed))
+            m = match.exact(self.repo.root, self.repo.getcwd(), files)
+        else:
+            m = match.always(self.repo.root, self.repo.getcwd())
 
+        block = []
+        parity = paritygen(self.stripecount)
         diffopts = patch.diffopts(self.repo.ui, untrusted=True)
-        for f in modified:
-            to = c1.filectx(f).data()
-            tn = c2.filectx(f).data()
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f, f,
-                                          opts=diffopts), f, tn)
-        for f in added:
-            to = None
-            tn = c2.filectx(f).data()
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f, f,
-                                          opts=diffopts), f, tn)
-        for f in removed:
-            to = c1.filectx(f).data()
-            tn = None
-            yield diffblock(mdiff.unidiff(to, date1, tn, date2, f, f,
-                                          opts=diffopts), f, tn)
+        for chunk in patch.diff(self.repo, node1, node2, m, opts=diffopts):
+            if chunk.startswith('diff') and block:
+                yield tmpl('diffblock', parity=parity.next(),
+                           lines=prettyprintlines(''.join(block)))
+                block = []
+            if chunk.startswith('diff'):
+                chunk = ''.join(chunk.splitlines(True)[1:])
+            block.append(chunk)
+        yield tmpl('diffblock', parity=parity.next(),
+                   lines=prettyprintlines(''.join(block)))
 
     archive_specs = {
         'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', None),

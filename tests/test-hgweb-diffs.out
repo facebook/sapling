@@ -1,0 +1,272 @@
+% setting up repo
+adding a
+adding b
+% change permissions for git diffs
+% set up hgweb
+% revision
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: changeset 0cd96de13884</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/0">changelog</a>
+<a href="/shortlog/0">shortlog</a>
+<a href="/graph">graph</a>
+<a href="/tags">tags</a>
+<a href="/file/0cd96de13884">files</a>
+<a href="/raw-rev/0cd96de13884">raw</a>
+
+</div>
+
+<h2>changeset: a</h2>
+
+<table id="changesetEntry">
+<tr>
+ <th class="changeset">changeset 0:</th>
+ <td class="changeset"><a href="/rev/0cd96de13884">0cd96de13884</a></td>
+</tr>
+
+<tr><th class="child">child 1:</th><td class="child"><a href="/rev/78e4ebad7cdf">78e4ebad7cdf</a></td></tr>
+
+<tr>
+ <th class="author">author:</th>
+ <td class="author">&#116;&#101;&#115;&#116;</td>
+</tr>
+<tr>
+ <th class="date">date:</th>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (38 years ago)</td>
+</tr>
+<tr>
+ <th class="files">files:</th>
+ <td class="files"><a href="/file/0cd96de13884/a">a</a> <a href="/file/0cd96de13884/b">b</a> </td>
+</tr>
+<tr>
+ <th class="description">description:</th>
+ <td class="description">a</td>
+</tr>
+</table>
+
+<div id="changesetDiff">
+<pre class="parity0"><span class="minusline"><a class="lineno" href="#l1" id="l1">       1</a>--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="plusline"><a class="lineno" href="#l2" id="l2">       2</a>+++ b/a	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="atline"><a class="lineno" href="#l3" id="l3">       3</a>@@ -0,0 +1,1 @@
+</span><span class="plusline"><a class="lineno" href="#l4" id="l4">       4</a>+a
+</span></pre><pre class="parity1"><span class="minusline"><a class="lineno" href="#l1.1" id="l1.1">     1.1</a>--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="plusline"><a class="lineno" href="#l1.2" id="l1.2">     1.2</a>+++ b/b	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="atline"><a class="lineno" href="#l1.3" id="l1.3">     1.3</a>@@ -0,0 +1,1 @@
+</span><span class="plusline"><a class="lineno" href="#l1.4" id="l1.4">     1.4</a>+b
+</span></pre>
+</div>
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+
+
+% diff removed file
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: a diff</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/1">changelog</a>
+<a href="/shortlog/1">shortlog</a>
+<a href="/graph">graph</a>
+<a href="/tags">tags</a>
+<a href="/rev/78e4ebad7cdf">changeset</a>
+<a href="/file/78e4ebad7cdf/a">file</a>
+<a href="/log/78e4ebad7cdf/a">revisions</a>
+<a href="/annotate/78e4ebad7cdf/a">annotate</a>
+<a href="/raw-diff/78e4ebad7cdf/a">raw</a>
+</div>
+
+<h2>a</h2>
+
+<table id="filediffEntry">
+<tr>
+ <th class="revision">revision 1:</th>
+ <td class="revision"><a href="/rev/78e4ebad7cdf">78e4ebad7cdf</a></td>
+</tr>
+
+
+</table>
+
+<div id="fileDiff">
+<pre class="parity0"><span class="minusline"><a class="lineno" href="#l1" id="l1">       1</a>--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="plusline"><a class="lineno" href="#l2" id="l2">       2</a>+++ b/a	Thu Jan 01 00:00:00 1970 +0000
+</span><span class="atline"><a class="lineno" href="#l3" id="l3">       3</a>@@ -0,0 +1,1 @@
+</span><span class="plusline"><a class="lineno" href="#l4" id="l4">       4</a>+a
+</span></pre>
+</div>
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+
+
+% set up hgweb with git diffs
+% revision
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: changeset 0cd96de13884</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/0">changelog</a>
+<a href="/shortlog/0">shortlog</a>
+<a href="/graph">graph</a>
+<a href="/tags">tags</a>
+<a href="/file/0cd96de13884">files</a>
+<a href="/raw-rev/0cd96de13884">raw</a>
+
+</div>
+
+<h2>changeset: a</h2>
+
+<table id="changesetEntry">
+<tr>
+ <th class="changeset">changeset 0:</th>
+ <td class="changeset"><a href="/rev/0cd96de13884">0cd96de13884</a></td>
+</tr>
+
+<tr><th class="child">child 1:</th><td class="child"><a href="/rev/78e4ebad7cdf">78e4ebad7cdf</a></td></tr>
+
+<tr>
+ <th class="author">author:</th>
+ <td class="author">&#116;&#101;&#115;&#116;</td>
+</tr>
+<tr>
+ <th class="date">date:</th>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (38 years ago)</td>
+</tr>
+<tr>
+ <th class="files">files:</th>
+ <td class="files"><a href="/file/0cd96de13884/a">a</a> <a href="/file/0cd96de13884/b">b</a> </td>
+</tr>
+<tr>
+ <th class="description">description:</th>
+ <td class="description">a</td>
+</tr>
+</table>
+
+<div id="changesetDiff">
+<pre class="parity0"><a class="lineno" href="#l1" id="l1">       1</a>new file mode 100644
+<span class="minusline"><a class="lineno" href="#l2" id="l2">       2</a>--- /dev/null
+</span><span class="plusline"><a class="lineno" href="#l3" id="l3">       3</a>+++ b/a
+</span><span class="atline"><a class="lineno" href="#l4" id="l4">       4</a>@@ -0,0 +1,1 @@
+</span><span class="plusline"><a class="lineno" href="#l5" id="l5">       5</a>+a
+</span></pre><pre class="parity1"><a class="lineno" href="#l1.1" id="l1.1">     1.1</a>new file mode 100644
+<span class="minusline"><a class="lineno" href="#l1.2" id="l1.2">     1.2</a>--- /dev/null
+</span><span class="plusline"><a class="lineno" href="#l1.3" id="l1.3">     1.3</a>+++ b/b
+</span><span class="atline"><a class="lineno" href="#l1.4" id="l1.4">     1.4</a>@@ -0,0 +1,1 @@
+</span><span class="plusline"><a class="lineno" href="#l1.5" id="l1.5">     1.5</a>+b
+</span></pre>
+</div>
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+
+
+% diff removed file
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: a diff</title>
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log/1">changelog</a>
+<a href="/shortlog/1">shortlog</a>
+<a href="/graph">graph</a>
+<a href="/tags">tags</a>
+<a href="/rev/78e4ebad7cdf">changeset</a>
+<a href="/file/78e4ebad7cdf/a">file</a>
+<a href="/log/78e4ebad7cdf/a">revisions</a>
+<a href="/annotate/78e4ebad7cdf/a">annotate</a>
+<a href="/raw-diff/78e4ebad7cdf/a">raw</a>
+</div>
+
+<h2>a</h2>
+
+<table id="filediffEntry">
+<tr>
+ <th class="revision">revision 1:</th>
+ <td class="revision"><a href="/rev/78e4ebad7cdf">78e4ebad7cdf</a></td>
+</tr>
+
+
+</table>
+
+<div id="fileDiff">
+<pre class="parity0"><a class="lineno" href="#l1" id="l1">       1</a>new file mode 100755
+<span class="minusline"><a class="lineno" href="#l2" id="l2">       2</a>--- /dev/null
+</span><span class="plusline"><a class="lineno" href="#l3" id="l3">       3</a>+++ b/a
+</span><span class="atline"><a class="lineno" href="#l4" id="l4">       4</a>@@ -0,0 +1,1 @@
+</span><span class="plusline"><a class="lineno" href="#l5" id="l5">       5</a>+a
+</span></pre>
+</div>
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+
+</body>
+</html>
+
+
+
+% errors
