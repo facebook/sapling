@@ -347,20 +347,16 @@ class HgChangeReceiver(delta.Editor):
                 extra['branch'] = branch
             parent_ctx = self.repo.changectx(parents[0])
             def filectxfn(repo, memctx, path):
-                is_link = False
-                is_exec = False
                 copied = None
                 current_file = files[path]
                 if current_file in self.deleted_files:
                     raise IOError()
                 # TODO(augie) tag copies from files
-                if path in parent_ctx:
-                    is_exec = 'x' in parent_ctx.flags(path)
-                    is_link = 'l' in parent_ctx.flags(path)
-                if current_file in self.current_files_exec:
-                    is_exec = self.current_files_exec[current_file]
-                if current_file in self.current_files_symlink:
-                    is_link = self.current_files_symlink[current_file]
+                flags = parent_ctx.flags(path)
+                is_exec = self.current_files_exec.get(current_file, 
+                                                      'x' in flags)
+                is_link = self.current_files_symlink.get(current_file, 
+                                                         'l' in flags)
                 if current_file in self.current_files:
                     data = self.current_files[current_file]
                     if is_link:
