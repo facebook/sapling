@@ -136,6 +136,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                 props.setdefault(ntf, {})['svn:mime-type'] = 'application/octet-stream'
             del file_data[tf]
     added_dirs = ['%s/%s' % (branch_path, f) for f in added_dirs]
+    added_dirs = set(added_dirs)
     new_target_files += added_dirs
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
