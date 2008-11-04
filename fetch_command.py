@@ -149,7 +149,10 @@ def replay_convert_rev(hg_editor, svn, r):
             p = dirs_to_list.pop(0)
             cleanup_file_handles(svn, i)
             i += 1
-            l = svn.list_dir(p[:-1], r.revnum)
+            p2 = p[:-1]
+            if svn.subdir:
+                p2 = p2[len(svn.subdir)-1:]
+            l = svn.list_dir(p2, r.revnum)
             for f in l:
 
                 if l[f].kind == core.svn_node_dir:
