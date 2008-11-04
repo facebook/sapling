@@ -435,7 +435,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                         files_touched.add(d)
         if delete_all_files:
             for p in hg_editor.repo[parent_ha].manifest().iterkeys():
-                files_touched.add(p)
+                if p:
+                    files_touched.add(p)
         if not used_diff:
             for p in reduce(operator.add, [[os.path.join(x[0], y) for y in x[2]]
                                            for x in
@@ -447,7 +448,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 files_touched.add(p_real)
             for p in hg_editor.repo[parent_ha].manifest().iterkeys():
                 # TODO this might not be a required step.
-                files_touched.add(p)
+                if p:
+                    files_touched.add(p)
         date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
         date += ' -0000'
         def filectxfn(repo, memctx, path):
@@ -465,6 +467,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         extra = {}
         if b:
             extra['branch'] = b
+        if '' in files_touched:
+            files_touched.remove('')
         if parent_ha != node.nullid or files_touched:
             # TODO(augie) remove this debug code? Or maybe it's sane to have it.
             for f in files_touched:

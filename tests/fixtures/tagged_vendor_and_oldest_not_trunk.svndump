@@ -1,0 +1,325 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 0e935f28-8caa-dd11-b3dc-00105ae0362c
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-11-04T16:18:04.048615Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 102
+Content-length: 102
+
+K 7
+svn:log
+V 3
+btt
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-04T16:18:29.661251Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 119
+Content-length: 119
+
+K 7
+svn:log
+V 19
+Add the vendor dir.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-04T16:19:16.816658Z
+PROPS-END
+
+Node-path: vendor
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: vendor/foobaz
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: vendor/foobaz/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Node-path: vendor/foobaz/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Node-path: vendor/foobaz/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Content-length: 16
+
+PROPS-END
+delta
+
+
+Node-path: vendor/foobaz/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 3
+Prop-content-length: 139
+Content-length: 139
+
+K 7
+svn:log
+V 39
+Adding oldest data, which is not trunk.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-04T16:22:06.704260Z
+PROPS-END
+
+Node-path: branches/oldest
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: branches/oldest/five
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: 014835e36358e38c7f7897d6571e4529
+Content-length: 15
+
+PROPS-END
+five
+
+
+Node-path: branches/oldest/four
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: 75ffdb827341e578959bfcabde3789d8
+Content-length: 15
+
+PROPS-END
+four
+
+
+Node-path: branches/oldest/one
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: 5bbf5a52328e7439ae6e719dfe712200
+Content-length: 14
+
+PROPS-END
+one
+
+
+Node-path: branches/oldest/three
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: febe6995bad457991331348f7b9c85fa
+Content-length: 16
+
+PROPS-END
+three
+
+
+Node-path: branches/oldest/two
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: c193497a1a06b2c72230e6146ff47080
+Content-length: 14
+
+PROPS-END
+two
+
+
+Revision-number: 4
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 6
+delete
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-04T16:22:49.936769Z
+PROPS-END
+
+Node-path: trunk
+Node-action: delete
+
+
+Revision-number: 5
+Prop-content-length: 124
+Content-length: 124
+
+K 7
+svn:log
+V 24
+create trunk from branch
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-04T16:23:00.562964Z
+PROPS-END
+
+Node-path: tags/foobaz_1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: vendor/foobaz
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: branches/oldest
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Revision-number: 6
+Prop-content-length: 146
+Content-length: 146
+
+K 7
+svn:log
+V 46
+copy data from a vendor branch tag into trunk.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-04T16:23:32.980956Z
+PROPS-END
+
+Node-path: trunk/foobaz
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: tags/foobaz_1
+
+

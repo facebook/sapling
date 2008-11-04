@@ -109,6 +109,18 @@ class TestBasicRepoLayout(unittest.TestCase):
                     'file_renamed_in_from_outside_btt.svndump')
         self.assert_('LICENSE.file' in repo['tip'])
 
+    def test_oldest_not_trunk_and_tag_vendor_branch(self):
+        repo = self._load_fixture_and_fetch(
+            'tagged_vendor_and_oldest_not_trunk.svndump')
+        self.assertEqual(node.hex(repo['oldest'].node()),
+                         'd73002bcdeffe389a8df81ee43303d36e79e8ca4')
+        self.assertEqual(repo['tip'].parents()[0].parents()[0],
+                         repo['oldest'])
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         '9cf09e6ff7fa938188c3bcc9dd87abd7842c080c')
+        #'1316ef606dda89354ee8c4df725e6264177b5129')
+
+
 class TestStupidPull(unittest.TestCase):
     def setUp(self):
         self.oldwd = os.getcwd()
@@ -139,6 +151,21 @@ class TestStupidPull(unittest.TestCase):
         self.assertEqual(len(repo['tip'].parents()), 1)
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
+
+    def test_oldest_not_trunk_and_tag_vendor_branch(self):
+        test_util.load_svndump_fixture(self.repo_path,
+                                'tagged_vendor_and_oldest_not_trunk.svndump')
+        fetch_command.fetch_revisions(ui.ui(),
+                                      svn_url='file://%s' % self.repo_path,
+                                      hg_repo_path=self.wc_path,
+                                      stupid=True)
+        repo = hg.repository(ui.ui(), self.wc_path)
+        self.assertEqual(node.hex(repo['oldest'].node()),
+                         'd73002bcdeffe389a8df81ee43303d36e79e8ca4')
+        self.assertEqual(repo['tip'].parents()[0].parents()[0],
+                         repo['oldest'])
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         '9cf09e6ff7fa938188c3bcc9dd87abd7842c080c')
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),

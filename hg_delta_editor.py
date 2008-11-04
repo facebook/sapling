@@ -246,16 +246,17 @@ class HgChangeReceiver(delta.Editor):
         added_branches = {}
         added_tags = {}
         tags_to_delete = set()
+        branches_to_delete = set()
         for p in paths:
             if self._is_path_valid(p):
                 fi, br = self._path_and_branch_for_path(p)
                 if fi == '' and br not in self.branches:
-                    # TODO handle creating a branch from a tag
                     src_p = paths[p].copyfrom_path
                     src_rev = paths[p].copyfrom_rev
                     src_tag = self._is_path_tag(src_p)
 
-                    if not src_p or not (self._is_path_valid(src_p) or src_tag):
+                    if not ((src_p and self._is_path_valid(src_p)) or
+                            (src_tag and src_tag in self.tags)):
                         # we'll imply you're a branch off of trunk
                         # if you have no path, but if you do, it must be valid
                         # or else we assume trunk as well
@@ -272,6 +273,10 @@ class HgChangeReceiver(delta.Editor):
                         (src_p,
                         src_branch) = self._path_and_branch_for_path(src_p)
                     added_branches[br] = src_branch, src_rev, revision.revnum
+                elif fi == '' and br in self.branches:
+                    br2 = br or 'default'
+                    if br2 not in self.repo.branchtags() and paths[p].action == 'D':
+                        branches_to_delete.add(br)
                 elif br in added_branches:
                     if paths[p].copyfrom_rev > added_branches[br][1]:
                         x,y,z = added_branches[br]
@@ -302,6 +307,8 @@ class HgChangeReceiver(delta.Editor):
                         tags_to_delete.add(t_name)
         for t in tags_to_delete:
             del self.tags[t]
+        for br in branches_to_delete:
+            del self.branches[br]
         self.tags.update(added_tags)
         self.branches.update(added_branches)
         self._save_metadata()
@@ -339,11 +346,8 @@ class HgChangeReceiver(delta.Editor):
             parents = (self.get_parent_revision(rev.revnum, branch),
                        revlog.nullid)
             if branch is not None:
-                if branch not in self.branches:
+                if branch not in self.branches and branch not in self.repo.branchtags():
                     continue
-                if parents == (revlog.nullid, revlog.nullid):
-                    assert False, ('a non-trunk branch should probably have'
-                                   ' parents figured out by this point')
                 extra['branch'] = branch
             parent_ctx = self.repo.changectx(parents[0])
             def filectxfn(repo, memctx, path):
@@ -353,9 +357,9 @@ class HgChangeReceiver(delta.Editor):
                     raise IOError()
                 # TODO(augie) tag copies from files
                 flags = parent_ctx.flags(path)
-                is_exec = self.current_files_exec.get(current_file, 
+                is_exec = self.current_files_exec.get(current_file,
                                                       'x' in flags)
-                is_link = self.current_files_symlink.get(current_file, 
+                is_link = self.current_files_symlink.get(current_file,
                                                          'l' in flags)
                 if current_file in self.current_files:
                     data = self.current_files[current_file]
@@ -497,7 +501,7 @@ class HgChangeReceiver(delta.Editor):
         self.base_revision = None
         if path in self.deleted_files:
             del self.deleted_files[path]
-        if (self._is_path_valid(path) and 
+        if (self._is_path_valid(path) and
             self._path_and_branch_for_path(path)[0]):
             self.current_file = path
             self.should_edit_most_recent_plaintext = False
@@ -533,12 +537,22 @@ class HgChangeReceiver(delta.Editor):
                 self.commit_branches_empty[branch] = False
         if not self._is_path_valid(path) or not copyfrom_path:
             return
-        if copyfrom_path and not self._is_path_valid(copyfrom_path):
-            self.missing_plaintexts.add('%s/' % path)
-            return
+        if copyfrom_path:
+            tag = self._is_path_tag(copyfrom_path)
+            if tag not in self.tags:
+                tag = None
+            if not self._is_path_valid(copyfrom_path) and not tag:
+                self.missing_plaintexts.add('%s/' % path)
+                return
 
-        cp_f, br_from = self._path_and_branch_for_path(copyfrom_path)
-        new_hash = self.get_parent_revision(copyfrom_revision + 1, br_from)
+        if tag:
+            source_branch, source_rev = self.tags[tag]
+            cp_f = ''
+        else:
+            source_rev = copyfrom_revision
+            cp_f, source_branch = self._path_and_branch_for_path(copyfrom_path)
+        new_hash = self.get_parent_revision(source_rev + 1,
+                                            source_branch)
         if new_hash == node.nullid:
             self.missing_plaintexts.add('%s/' % path)
             return
