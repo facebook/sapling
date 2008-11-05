@@ -101,18 +101,27 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
 
     added_dirs = []
     props = {}
+    copies = {}
     for file in rev_ctx.files():
         new_data = base_data = ''
         action = ''
         if file in rev_ctx:
-            new_data = rev_ctx.filectx(file).data()
+            fctx = rev_ctx.filectx(file)
+            new_data = fctx.data()
 
-            if 'x' in rev_ctx.filectx(file).flags():
+            if 'x' in fctx.flags():
                 props.setdefault(file, {})['svn:executable'] = '*'
-            if 'l' in rev_ctx.filectx(file).flags():
+            if 'l' in fctx.flags():
                 props.setdefault(file, {})['svn:special'] = '*'
 
             if file not in parent:
+                renamed = fctx.renamed()
+                if renamed:
+                    # TODO current model (and perhaps svn model) does not support
+                    # this kind of renames: a -> b, b -> c
+                    copies[file] = renamed[0]
+                    base_data = parent[renamed[0]].data()
+
                 action = 'add'
                 dirname = '/'.join(file.split('/')[:-1] + [''])
                 # check for new directories
@@ -133,7 +142,14 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
         file_data[file] = base_data, new_data, action
 
     # TODO check for directory deletes here
-    new_target_files = ['%s/%s' % (branch_path, f) for f in rev_ctx.files()]
+    def svnpath(p):
+        return '%s/%s' % (branch_path, p)
+
+    newcopies = {}
+    for source, dest in copies.iteritems():
+        newcopies[svnpath(source)] = (svnpath(dest), base_revision)
+
+    new_target_files = [svnpath(f) for f in rev_ctx.files()]
     for tf, ntf in zip(rev_ctx.files(), new_target_files):
         if tf in file_data:
             file_data[ntf] = file_data[tf]
@@ -149,7 +165,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     new_target_files += added_dirs
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
-                   base_revision, set(added_dirs), props)
+                   base_revision, set(added_dirs), props, newcopies)
     except core.SubversionException, e:
         if hasattr(e, 'apr_err') and e.apr_err == 160028:
             raise merc_util.Abort('Base text was out of date, maybe rebase?')

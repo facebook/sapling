@@ -264,7 +264,7 @@ class SubversionRepo(object):
                 revisions.pop(0)
 
     def commit(self, paths, message, file_data, base_revision, dirs,
-               properties):
+               properties, copies):
         """Commits the appropriate targets from revision in editor's store.
         """
         self.init_ra_and_client()
@@ -296,7 +296,10 @@ class SubversionRepo(object):
                 baton = editor.open_file(path, parent, base_revision, pool)
             elif action == 'add':
                 try:
-                    baton = editor.add_file(path, parent, None, -1, pool)
+                    frompath, fromrev = copies.get(path, (None, -1))
+                    if frompath:
+                        frompath = self.svn_url + '/' + frompath
+                    baton = editor.add_file(path, parent, frompath, fromrev, pool)
                 except (core.SubversionException, TypeError), e: #pragma: no cover
                     print e.message
                     raise
