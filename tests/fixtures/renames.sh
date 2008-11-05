@@ -23,8 +23,14 @@ echo b > b
 mkdir -p da/db
 echo c > da/daf
 echo d > da/db/dbf
-svn add a b da
+echo deleted > deletedfile
+mkdir deleteddir
+echo deleteddir > deleteddir/f
+svn add a b da deletedfile deleteddir
 svn ci -m "add a and b"
+svn rm deletedfile
+svn rm deleteddir
+svn ci -m "delete files and dirs"
 cd ../branches
 svn cp ../trunk branch1
 svn ci -m "create branch1"
@@ -53,6 +59,10 @@ cd trunk
 # Copy across branch
 svn cp ../branches/branch1/c c
 svn ci -m "copy b from branch1"
+# Copy deleted stuff from the past
+svn cp $svnurl/trunk/deletedfile@2 deletedfile
+svn cp $svnurl/trunk/deleteddir@2 deleteddir
+svn ci -m "copy stuff from the past"
 cd ../..
 
 svnadmin dump testrepo > ../renames.svndump

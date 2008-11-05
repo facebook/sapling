@@ -42,7 +42,7 @@ class TestFetchRenames(unittest.TestCase):
 
         # Map revnum to mappings of dest name to (source name, dest content)
         copies = {
-            3: {
+            4: {
                 'a1': ('a', 'a\n'), 
                 'a2': ('a', 'a\n'),
                 'b1': ('b', 'b\nc\n'),
@@ -51,7 +51,7 @@ class TestFetchRenames(unittest.TestCase):
                 'da2/daf': ('da/daf', 'c\n'),
                 'da2/db/dbf': ('da/db/dbf', 'd\n'),
                 },
-            4: {
+            5: {
                 'c1': ('c', 'c\nc\n'),
                 }
             }
