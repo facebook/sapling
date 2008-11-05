@@ -82,7 +82,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.assertEqual(node.hex(repo[0].node()),
                          'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'a7742757189db8aea5f4c6721cbbfb1a09f00ddf')
+                         '179fb7d9bc77eef78288661f0430e0c1dff56b6f')
         self.assertEqual(node.hex(repo['the_branch'].node()),
                          '8ccaba5f0eae124487e413abd904a013f7f6fdeb')
         self.assertEqual(node.hex(repo['the_branch'].parents()[0].node()),

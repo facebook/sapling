@@ -127,6 +127,8 @@ class HgChangeReceiver(delta.Editor):
         self.current_rev = None
         self.current_files_exec = {}
         self.current_files_symlink = {}
+        # Map fully qualified destination file paths to module source path
+        self.copies = {}
         self.missing_plaintexts = set()
         self.commit_branches_empty = {}
         self.base_revision = None
@@ -351,11 +353,10 @@ class HgChangeReceiver(delta.Editor):
                 extra['branch'] = branch
             parent_ctx = self.repo.changectx(parents[0])
             def filectxfn(repo, memctx, path):
-                copied = None
                 current_file = files[path]
                 if current_file in self.deleted_files:
                     raise IOError()
-                # TODO(augie) tag copies from files
+                copied = self.copies.get(current_file)
                 flags = parent_ctx.flags(path)
                 is_exec = self.current_files_exec.get(current_file,
                                                       'x' in flags)
@@ -501,30 +502,33 @@ class HgChangeReceiver(delta.Editor):
         self.base_revision = None
         if path in self.deleted_files:
             del self.deleted_files[path]
-        if (self._is_path_valid(path) and
-            self._path_and_branch_for_path(path)[0]):
-            self.current_file = path
-            self.should_edit_most_recent_plaintext = False
-            if copyfrom_path:
-                self.ui.status('A+ %s\n' % path)
-                # TODO(augie) handle this better, actually mark a copy
-                (from_file,
-                 from_branch) = self._path_and_branch_for_path(copyfrom_path)
-                if not from_file:
-                    self.missing_plaintexts.add(path)
-                    return
-                ha = self.get_parent_revision(copyfrom_revision + 1,
-                                              from_branch)
-                ctx = self.repo.changectx(ha)
-                if from_file in ctx:
-                    fctx = ctx.filectx(from_file)
-                    cur_file = self.current_file
-                    self.current_files[cur_file] = fctx.data()
-                    self.current_files_symlink[cur_file] = 'l' in fctx.flags()
-                    self.current_files_exec[cur_file] = 'x' in fctx.flags()
-            else:
-                self.ui.status('A %s\n' % path)
-
+        if not self._is_path_valid(path):
+            return
+        fpath, branch = self._path_and_branch_for_path(path)
+        if not fpath:
+            return
+        self.current_file = path
+        self.should_edit_most_recent_plaintext = False
+        if not copyfrom_path:
+            self.ui.status('A %s\n' % path)
+            return
+        self.ui.status('A+ %s\n' % path)
+        (from_file,
+         from_branch) = self._path_and_branch_for_path(copyfrom_path)
+        if not from_file:
+            self.missing_plaintexts.add(path)
+            return
+        ha = self.get_parent_revision(copyfrom_revision + 1,
+                                      from_branch)
+        ctx = self.repo.changectx(ha)
+        if from_file in ctx:
+            fctx = ctx.filectx(from_file)
+            cur_file = self.current_file
+            self.current_files[cur_file] = fctx.data()
+            self.current_files_symlink[cur_file] = 'l' in fctx.flags()
+            self.current_files_exec[cur_file] = 'x' in fctx.flags()
+        if from_branch == branch:
+            self.copies[path] = from_file
 
     @stash_exception_on_self
     def add_directory(self, path, parent_baton, copyfrom_path,
@@ -571,7 +575,8 @@ class HgChangeReceiver(delta.Editor):
                 self.current_files_symlink[fp_c] = 'l' in fctx.flags()
                 if fp_c in self.deleted_files:
                     del self.deleted_files[fp_c]
-                # TODO(augie) tag copies from files
+                if branch == source_branch:
+                    self.copies[fp_c] = f
 
     @stash_exception_on_self
     def change_file_prop(self, file_baton, name, value, pool=None):
