@@ -29,15 +29,10 @@ body {
   margin: 0;
   font-size: 80%;
   text-align: left;
-  position: fixed;
+  position: absolute;
   top: 20px;
   left: 20px;
   right: auto;
-}
-
-#.menu {
-  position: absolute !important;
-  top:expression(eval(document.body.scrollTop + 27));
 }
 
 .menu ul {
