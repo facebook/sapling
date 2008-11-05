@@ -141,16 +141,20 @@ class HgChangeReceiver(delta.Editor):
         pickle_atomic(self.tags, self.tag_info_file, self.meta_data_dir)
 
     def branches_in_paths(self, paths):
-        '''Given a list of paths, return the set of branches that are touched.
+        '''Given a list of paths, return mapping of all branches touched
+        to their branch path.
         '''
-        branches = set([])
+        branches = {}
         for p in paths:
             if self._is_path_valid(p):
-                junk, branch = self._path_and_branch_for_path(p)
-                branches.add(branch)
+                junk, branch, branchpath = self._split_branch_path(p)
+                branches[branch] = branchpath
         return branches
 
     def _path_and_branch_for_path(self, path):
+        return self._split_branch_path(path)[:2]
+
+    def _split_branch_path(self, path):
         '''Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
 
@@ -161,15 +165,15 @@ class HgChangeReceiver(delta.Editor):
             p = path[len('trunk'):]
             if p and p[0] == '/':
                 p = p[1:]
-            return p, None
+            return p, None, 'trunk'
         elif path.startswith('branches/'):
             p = path[len('branches/'):]
             br = p.split('/')[0]
             p = p[len(br)+1:]
             if p and p[0] == '/':
                 p = p[1:]
-            return p, br
-        return None, None
+            return p, br, 'branches/' + br
+        return None, None, None
         raise Exception,'Things went boom: ' + path
 
     def set_current_rev(self, rev):
