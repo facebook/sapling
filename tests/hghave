@@ -118,6 +118,9 @@ def has_svn():
 def has_svn_bindings():
     try:
         import svn.core
+        version = svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR
+        if version < (1, 4):
+            return False
         return True
     except ImportError:
         return False
