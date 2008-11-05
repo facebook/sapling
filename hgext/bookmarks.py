@@ -200,10 +200,7 @@ def reposetup(ui, repo):
             return node
 
         def addchangegroup(self, source, srctype, url, emptyok=False):
-            try:
-                onode = repo.changectx('.').node()
-            except RepoError, inst:
-                pass
+            parents = repo.dirstate.parents()
 
             result = super(bookmark_repo, self).addchangegroup(
                 source, srctype, url, emptyok)
@@ -214,7 +211,7 @@ def reposetup(ui, repo):
             marks = parse(repo)
             update = False
             for mark, n in marks.items():
-                if n == onode:
+                if n in parents:
                     marks[mark] = node
                     update = True
             if update:
