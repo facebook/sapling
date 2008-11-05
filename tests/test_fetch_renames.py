@@ -53,6 +53,10 @@ class TestFetchRenames(unittest.TestCase):
                 },
             5: {
                 'c1': ('c', 'c\nc\n'),
+                },
+            9: {
+                'unchanged2': ('unchanged', 'unchanged\n'),
+                'unchangeddir2/f': ('unchangeddir/f', 'unchanged2\n'),
                 }
             }
         for rev in repo:
@@ -60,7 +64,8 @@ class TestFetchRenames(unittest.TestCase):
             copymap = copies.get(rev, {})
             for f in ctx.manifest():
                 cp = ctx[f].renamed()
-                self.assertEqual(bool(cp), bool(copymap.get(f)))
+                self.assertEqual(bool(cp), bool(copymap.get(f)),
+                                 'copy records differ for %s in %d' % (f, rev))
                 if not cp:
                     continue
                 self.assertEqual(cp[0], copymap[f][0])

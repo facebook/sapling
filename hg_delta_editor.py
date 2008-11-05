@@ -495,6 +495,30 @@ class HgChangeReceiver(delta.Editor):
                 self.base_revision = None
             self.should_edit_most_recent_plaintext = True
 
+    def _aresamefiles(self, parentctx, childctx, files):
+        """Assuming all files exist in childctx and parentctx, return True
+        if none of them was changed in-between.
+        """
+        if parentctx == childctx:
+            return True
+        if parentctx.rev() > childctx.rev():
+            parentctx, childctx = childctx, parentctx
+        
+        def selfandancestors(selfctx):
+            yield selfctx
+            for ctx in selfctx.ancestors():
+                yield ctx
+                
+        files = dict.fromkeys(files)
+        for pctx in selfandancestors(childctx):
+            if pctx.rev() <= parentctx.rev():
+                return True
+            for f in pctx.files():                
+                if f in files:
+                    return False
+        # parentctx is not an ancestor of childctx, files are unrelated
+        return False
+
     @stash_exception_on_self
     def add_file(self, path, parent_baton, copyfrom_path,
                  copyfrom_revision, file_pool=None):
@@ -528,7 +552,12 @@ class HgChangeReceiver(delta.Editor):
             self.current_files_symlink[cur_file] = 'l' in fctx.flags()
             self.current_files_exec[cur_file] = 'x' in fctx.flags()
         if from_branch == branch:
-            self.copies[path] = from_file
+            parentid = self.get_parent_revision(self.current_rev.revnum,
+                                                branch)
+            if parentid != revlog.nullid:
+                parentctx = self.repo.changectx(parentid)
+                if self._aresamefiles(parentctx, ctx, [from_file]):
+                    self.copies[path] = from_file
 
     @stash_exception_on_self
     def add_directory(self, path, parent_baton, copyfrom_path,
@@ -565,18 +594,28 @@ class HgChangeReceiver(delta.Editor):
             cp_f = '%s/' % cp_f
         else:
             cp_f = ''
+        copies = {}
         for f in cp_f_ctx:
-            if f.startswith(cp_f):
-                f2 = f[len(cp_f):]
-                fctx = cp_f_ctx.filectx(f)
-                fp_c = path + '/' + f2
-                self.current_files[fp_c] = fctx.data()
-                self.current_files_exec[fp_c] = 'x' in fctx.flags()
-                self.current_files_symlink[fp_c] = 'l' in fctx.flags()
-                if fp_c in self.deleted_files:
-                    del self.deleted_files[fp_c]
-                if branch == source_branch:
-                    self.copies[fp_c] = f
+            if not f.startswith(cp_f):
+                continue
+            f2 = f[len(cp_f):]
+            fctx = cp_f_ctx.filectx(f)
+            fp_c = path + '/' + f2
+            self.current_files[fp_c] = fctx.data()
+            self.current_files_exec[fp_c] = 'x' in fctx.flags()
+            self.current_files_symlink[fp_c] = 'l' in fctx.flags()
+            if fp_c in self.deleted_files:
+                del self.deleted_files[fp_c]
+            if branch == source_branch:
+                copies[fp_c] = f
+        if copies:
+            # Preserve the directory copy records if no file was changed between
+            # the source and destination revisions, or discard it completely.
+            parentid = self.get_parent_revision(self.current_rev.revnum, branch)
+            if parentid != revlog.nullid:
+                parentctx = self.repo.changectx(parentid)
+                if self._aresamefiles(parentctx, cp_f_ctx, copies.values()):
+                    self.copies.update(copies)
 
     @stash_exception_on_self
     def change_file_prop(self, file_baton, name, value, pool=None):

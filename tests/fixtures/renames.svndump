@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 6ebabe06-44c1-4542-ad93-bd59fbe3743b
+UUID: fa1ccad6-11a6-48b0-ba92-9a083fa61127
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-11-02T10:33:21.311566Z
+2008-11-02T15:08:30.507812Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:21.376729Z
+2008-11-02T15:08:30.609102Z
 PROPS-END
 
 Node-path: branches
@@ -63,7 +63,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:22.217406Z
+2008-11-02T15:08:31.258716Z
 PROPS-END
 
 Node-path: trunk/a
@@ -88,6 +88,39 @@ Content-length: 12
 
 PROPS-END
 b
+
+
+Node-path: trunk/changed
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 8
+Text-content-md5: ec1bebaea2c042beb68f7679ddd106a4
+Content-length: 18
+
+PROPS-END
+changed
+
+
+Node-path: trunk/changeddir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/changeddir/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 9
+Text-content-md5: 2dfdfd8492a2c558ec838d69f73f5f6b
+Content-length: 19
+
+PROPS-END
+changed2
 
 
 Node-path: trunk/da
@@ -165,6 +198,39 @@ PROPS-END
 deleted
 
 
+Node-path: trunk/unchanged
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 10
+Text-content-md5: 85ae5b04dd0a666efad8633d142a4635
+Content-length: 20
+
+PROPS-END
+unchanged
+
+
+Node-path: trunk/unchangeddir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/unchangeddir/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 11
+Text-content-md5: a11092875079a002afb9ecef07f510e7
+Content-length: 21
+
+PROPS-END
+unchanged2
+
+
 Revision-number: 3
 Prop-content-length: 123
 Content-length: 123
@@ -180,8 +246,30 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:23.197795Z
+2008-11-02T15:08:32.203445Z
 PROPS-END
+
+Node-path: trunk/changed
+Node-kind: file
+Node-action: change
+Text-content-length: 16
+Text-content-md5: 1725f40a29aad369a39b0f96c82d50f9
+Content-length: 16
+
+changed
+changed
+
+
+Node-path: trunk/changeddir/f
+Node-kind: file
+Node-action: change
+Text-content-length: 18
+Text-content-md5: 984b8c4ab9193b7659b9f914897a949c
+Content-length: 18
+
+changed2
+changed2
+
 
 Node-path: trunk/deleteddir
 Node-action: delete
@@ -206,7 +294,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:25.160163Z
+2008-11-02T15:08:34.175358Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -240,11 +328,55 @@ Node-copyfrom-path: trunk/b
 Text-copy-source-md5: 3b5d5c3712955042212316173ccf37be
 
 
+Node-path: branches/branch1/changed
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk/changed
+Text-copy-source-md5: 1725f40a29aad369a39b0f96c82d50f9
+
+
+Node-path: branches/branch1/changeddir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/changeddir
+
+
+Node-path: branches/branch1/changeddir/f
+Node-kind: file
+Node-action: delete
+
+Node-path: branches/branch1/changeddir/f
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk/changeddir/f
+Text-copy-source-md5: 984b8c4ab9193b7659b9f914897a949c
+
+
+
+
 Node-path: branches/branch1/da
 Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/da
+
+
+Node-path: branches/branch1/unchanged
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/unchanged
+Text-copy-source-md5: 85ae5b04dd0a666efad8633d142a4635
+
+
+Node-path: branches/branch1/unchangeddir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/unchangeddir
 
 
 Revision-number: 5
@@ -262,7 +394,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:26.173058Z
+2008-11-02T15:08:35.168793Z
 PROPS-END
 
 Node-path: branches/branch1/c
@@ -292,7 +424,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:33.195961Z
+2008-11-02T15:08:42.197170Z
 PROPS-END
 
 Node-path: branches/branch1/c1
@@ -431,7 +563,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:35.147012Z
+2008-11-02T15:08:44.147557Z
 PROPS-END
 
 Node-path: trunk/c
@@ -465,7 +597,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-02T10:33:38.154817Z
+2008-11-02T15:08:47.152642Z
 PROPS-END
 
 Node-path: trunk/deleteddir
@@ -481,5 +613,71 @@ Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/deletedfile
 Text-copy-source-md5: 4d742b2f247bec99b41a60acbebc149a
+
+
+Revision-number: 9
+Prop-content-length: 140
+Content-length: 140
+
+K 7
+svn:log
+V 38
+copy stuff from the past before change
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-02T15:08:50.152360Z
+PROPS-END
+
+Node-path: trunk/changed2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/changed
+Text-copy-source-md5: ec1bebaea2c042beb68f7679ddd106a4
+
+
+Node-path: trunk/changeddir2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/changeddir
+
+
+Revision-number: 10
+Prop-content-length: 136
+Content-length: 136
+
+K 7
+svn:log
+V 34
+copy unchanged stuff from the past
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-02T15:08:53.156849Z
+PROPS-END
+
+Node-path: trunk/unchanged2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/unchanged
+Text-copy-source-md5: 85ae5b04dd0a666efad8633d142a4635
+
+
+Node-path: trunk/unchangeddir2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/unchangeddir
 
 

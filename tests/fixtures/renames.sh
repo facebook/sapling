@@ -18,18 +18,32 @@ svn import project-orig $svnurl -m "init project"
 
 svn co $svnurl project
 cd project/trunk
+# Entries for regular tests
 echo a > a
 echo b > b
 mkdir -p da/db
 echo c > da/daf
 echo d > da/db/dbf
+# Entries to test delete + copy
 echo deleted > deletedfile
 mkdir deleteddir
 echo deleteddir > deleteddir/f
-svn add a b da deletedfile deleteddir
+# Entries to test copy before change
+echo changed > changed
+mkdir changeddir
+echo changed2 > changeddir/f
+# Entries unchanged in the rest of history
+echo unchanged > unchanged
+mkdir unchangeddir
+echo unchanged2 > unchangeddir/f
+svn add a b da deletedfile deleteddir changed changeddir unchanged unchangeddir
 svn ci -m "add a and b"
+# Remove files to be copied later
 svn rm deletedfile
 svn rm deleteddir
+# Update files to be copied before this change
+echo changed >> changed
+echo changed2 >> changeddir/f
 svn ci -m "delete files and dirs"
 cd ../branches
 svn cp ../trunk branch1
@@ -63,6 +77,16 @@ svn ci -m "copy b from branch1"
 svn cp $svnurl/trunk/deletedfile@2 deletedfile
 svn cp $svnurl/trunk/deleteddir@2 deleteddir
 svn ci -m "copy stuff from the past"
+# Copy data from the past before it was changed
+svn cp $svnurl/trunk/changed@2 changed2
+svn cp $svnurl/trunk/changeddir@2 changeddir2
+svn ci -m "copy stuff from the past before change"
+# Copy unchanged stuff from the past. Since no changed occured in these files
+# between the source and parent revision, we record them as copy from parent
+# instead of source rev.
+svn cp $svnurl/trunk/unchanged@2 unchanged2
+svn cp $svnurl/trunk/unchangeddir@2 unchangeddir2
+svn ci -m "copy unchanged stuff from the past"
 cd ../..
 
 svnadmin dump testrepo > ../renames.svndump
