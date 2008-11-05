@@ -36,7 +36,12 @@ echo changed2 > changeddir/f
 echo unchanged > unchanged
 mkdir unchangeddir
 echo unchanged2 > unchangeddir/f
-svn add a b da deletedfile deleteddir changed changeddir unchanged unchangeddir
+# One of the files will be changed afterwards, to test
+# group copies detection
+mkdir groupdir
+echo a > groupdir/a
+echo b > groupdir/b
+svn add a b da deletedfile deleteddir changed changeddir unchanged unchangeddir groupdir
 svn ci -m "add a and b"
 # Remove files to be copied later
 svn rm deletedfile
@@ -44,6 +49,8 @@ svn rm deleteddir
 # Update files to be copied before this change
 echo changed >> changed
 echo changed2 >> changeddir/f
+# Update one of the groupdir files
+echo a >> groupdir/a
 svn ci -m "delete files and dirs"
 cd ../branches
 svn cp ../trunk branch1
@@ -87,6 +94,10 @@ svn ci -m "copy stuff from the past before change"
 svn cp $svnurl/trunk/unchanged@2 unchanged2
 svn cp $svnurl/trunk/unchangeddir@2 unchangeddir2
 svn ci -m "copy unchanged stuff from the past"
+# Copy groupdir, unfortunately one file was changed after r2 so the
+# copy should not be recorded at all
+svn cp $svnurl/trunk/groupdir@2 groupdir2
+svn ci -m "copy groupdir from the past"
 cd ../..
 
 svnadmin dump testrepo > ../renames.svndump
