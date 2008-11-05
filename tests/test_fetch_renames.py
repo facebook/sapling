@@ -23,9 +23,9 @@ class TestFetchRenames(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
 
-    def _load_fixture_and_fetch(self, fixture_name):
+    def _load_fixture_and_fetch(self, fixture_name, stupid):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path)
+                                                self.wc_path, stupid=stupid)
 
     def _debug_print_copies(self, repo):
         w = sys.stderr.write
@@ -36,8 +36,8 @@ class TestFetchRenames(unittest.TestCase):
                 fctx = ctx[f]
                 w('%s: %r %r\n' % (f, fctx.data(), fctx.renamed()))
 
-    def test_rename(self):
-        repo = self._load_fixture_and_fetch('renames.svndump')
+    def _test_rename(self, stupid):
+        repo = self._load_fixture_and_fetch('renames.svndump', stupid)
         # self._debug_print_copies(repo)
 
         # Map revnum to mappings of dest name to (source name, dest content)
@@ -70,6 +70,12 @@ class TestFetchRenames(unittest.TestCase):
                     continue
                 self.assertEqual(cp[0], copymap[f][0])
                 self.assertEqual(ctx[f].data(), copymap[f][1])
+
+    def test_rename(self):
+        self._test_rename(False)
+
+    def test_rename_stupid(self):
+        self._test_rename(True)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchRenames),

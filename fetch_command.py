@@ -217,6 +217,94 @@ def make_diff_path(b):
         return 'trunk'
     return 'branches/' + b
 
+def makecopyfinder(r, branchpath, rootdir):
+    """Return a function detecting copies.
+
+    Returned copyfinder(path) returns None if no copy information can
+    be found or ((source, sourcerev), sourcepath) where "sourcepath" is the
+    copy source path, "sourcerev" the source svn revision and "source" is the
+    copy record path causing the copy to occur. If a single file was copied
+    "sourcepath" and "source" are the same, while file copies dectected from
+    directory copies return the copied source directory in "source".
+    """
+    # filter copy information for current branch
+    branchpath = branchpath + '/'
+    fullbranchpath = rootdir + branchpath
+    copies = []
+    for path, e in r.paths.iteritems():
+        if not e.copyfrom_path:
+            continue
+        if not path.startswith(branchpath):
+            continue
+        if not e.copyfrom_path.startswith(fullbranchpath):
+            # ignore cross branch copies
+            continue
+        dest = path[len(branchpath):]
+        source = e.copyfrom_path[len(fullbranchpath):]
+        copies.append((dest, (source, e.copyfrom_rev)))
+
+    copies.sort()
+    copies.reverse()
+    exactcopies = dict(copies)
+    
+    def finder(path):
+        if path in exactcopies:
+            return exactcopies[path], exactcopies[path][0]
+        # look for parent directory copy, longest first
+        for dest, (source, sourcerev) in copies:
+            dest = dest + '/'
+            if not path.startswith(dest):
+                continue
+            sourcepath = source + '/' + path[len(dest):]
+            return (source, sourcerev), sourcepath
+        return None
+
+    return finder
+
+def getcopies(svn, hg_editor, branch, branchpath, r, files, parentid):
+    """Return a mapping {dest: source} for every file copied into r.
+    """
+    if parentid == revlog.nullid:
+        return {}
+
+    # Extract svn copy information, group them by copy source.
+    # The idea is to duplicate the replay behaviour where copies are
+    # evaluated per copy event (one event for all files in a directory copy,
+    # one event for single file copy). We assume that copy events match
+    # copy sources in revision info.
+    svncopies = {}
+    finder = makecopyfinder(r, branchpath, svn.subdir)
+    for f in files:
+        copy = finder(f)
+        if copy:
+            svncopies.setdefault(copy[0], []).append((f, copy[1]))
+    if not svncopies:
+        return {}
+
+    # cache changeset contexts and map them to source svn revisions
+    parentctx = hg_editor.repo.changectx(parentid)
+    ctxs = {}
+    def getctx(svnrev):
+        if svnrev in ctxs:
+            return ctxs[svnrev]
+        changeid = hg_editor.get_parent_revision(svnrev + 1, branch)
+        ctx = None
+        if changeid != revlog.nullid:
+            ctx = hg_editor.repo.changectx(changeid)
+        ctxs[svnrev] = ctx
+        return ctx
+
+    # check svn copies really make sense in mercurial
+    hgcopies = {}
+    for (sourcepath, rev), copies in svncopies.iteritems():
+        sourcectx = getctx(rev)
+        if sourcectx is None:
+            continue
+        sources = [s[1] for s in copies]
+        if not hg_editor.aresamefiles(sourcectx, parentctx, sources):
+            continue
+        hgcopies.update(copies)
+    return hgcopies
 
 def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
     used_diff = True
@@ -450,6 +538,10 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 # TODO this might not be a required step.
                 if p:
                     files_touched.add(p)
+
+        copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched, 
+                           parent_ha)
+
         date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
         date += ' -0000'
         def filectxfn(repo, memctx, path):
@@ -462,8 +554,9 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             exe = exec_files.get(path, None)
             if exe is None and path in hg_editor.repo[parent_ha]:
                 exe = 'x' in hg_editor.repo[parent_ha].filectx(path).flags()
+            copied = copies.get(path)
             return context.memfilectx(path=path, data=fp.read(), islink=False,
-                                      isexec=exe, copied=False)
+                                      isexec=exe, copied=copied)
         extra = {}
         if b:
             extra['branch'] = b

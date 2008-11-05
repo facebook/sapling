@@ -499,7 +499,7 @@ class HgChangeReceiver(delta.Editor):
                 self.base_revision = None
             self.should_edit_most_recent_plaintext = True
 
-    def _aresamefiles(self, parentctx, childctx, files):
+    def aresamefiles(self, parentctx, childctx, files):
         """Assuming all files exist in childctx and parentctx, return True
         if none of them was changed in-between.
         """
@@ -560,7 +560,7 @@ class HgChangeReceiver(delta.Editor):
                                                 branch)
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
-                if self._aresamefiles(parentctx, ctx, [from_file]):
+                if self.aresamefiles(parentctx, ctx, [from_file]):
                     self.copies[path] = from_file
 
     @stash_exception_on_self
@@ -618,7 +618,7 @@ class HgChangeReceiver(delta.Editor):
             parentid = self.get_parent_revision(self.current_rev.revnum, branch)
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
-                if self._aresamefiles(parentctx, cp_f_ctx, copies.values()):
+                if self.aresamefiles(parentctx, cp_f_ctx, copies.values()):
                     self.copies.update(copies)
 
     @stash_exception_on_self
