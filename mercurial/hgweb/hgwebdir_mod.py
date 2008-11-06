@@ -25,7 +25,7 @@ class hgwebdir(object):
         self.parentui = parentui or ui.ui(report_untrusted=False,
                                           interactive = False)
         self.motd = None
-        self.style = None
+        self.style = 'paper'
         self.stripecount = None
         self.repos_sorted = ('name', False)
         self._baseurl = None

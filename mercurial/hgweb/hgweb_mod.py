@@ -242,7 +242,7 @@ class hgweb(object):
 
         # figure out which style to use
 
-        style = self.config("web", "style", "")
+        style = self.config("web", "style", "paper")
         if 'style' in req.form:
             style = req.form['style'][0]
         mapfile = style_map(self.templatepath, style)
