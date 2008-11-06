@@ -1294,7 +1294,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
         if not fp:
             fp = cmdutil.make_file(repo, template, node, total=total,
-                                   seqno=seqno, revwidth=revwidth)
+                                   seqno=seqno, revwidth=revwidth,
+                                   mode='ab')
         if fp != sys.stdout and hasattr(fp, 'name'):
             repo.ui.note("%s\n" % fp.name)
 

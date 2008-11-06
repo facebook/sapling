@@ -13,3 +13,9 @@ for out in "%nof%N" "%%%H" "%b-%R" "%h" "%r"; do
     echo "# foo-$out.patch"
     hg export -v -o "foo-$out.patch" 2:tip
 done
+
+echo "# exporting 4 changesets to a file"
+hg export -o export_internal 1 2 3 4
+grep HG export_internal | wc -l
+echo "# exporting 4 changesets to a file"
+hg export 1 2 3 4 | grep HG | wc -l

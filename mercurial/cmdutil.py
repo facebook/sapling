@@ -214,9 +214,12 @@ def make_filename(repo, pat, node,
 
 def make_file(repo, pat, node=None,
               total=None, seqno=None, revwidth=None, mode='wb', pathname=None):
+
+    writable = 'w' in mode or 'a' in mode
+
     if not pat or pat == '-':
-        return 'w' in mode and sys.stdout or sys.stdin
-    if hasattr(pat, 'write') and 'w' in mode:
+        return writable and sys.stdout or sys.stdin
+    if hasattr(pat, 'write') and writable:
         return pat
     if hasattr(pat, 'read') and 'r' in mode:
         return pat
