@@ -91,10 +91,10 @@ a { text-decoration:none; }
 .age { white-space:nowrap; }
 .date { white-space:nowrap; }
 .indexlinks { white-space:nowrap; }
-.parity0 { background-color: #f5f5f5; }
+.parity0 { background-color: #f0f0f0; }
 .parity1 { background-color: white; }
 .plusline { color: green; }
-.minusline { color: red; }
+.minusline { color: #dc143c; } /* crimson */
 .atline { color: purple; }
 
 .navigate {
