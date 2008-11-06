@@ -388,6 +388,32 @@ class PushTests(unittest.TestCase):
         self.assertEqual(tip['alpha'].data(), 'bar')
         self.assertEqual(tip.parents()[0]['alpha'].flags(), expected_flags)
         self.assertEqual(tip['alpha'].flags(), expected_flags)
+        # now test removing the property entirely
+        repo = self.repo
+        def file_callback(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data='bar',
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        ctx = context.memctx(repo,
+                             (repo['default'].node(), node.nullid),
+                             'message',
+                             ['alpha', ],
+                             file_callback,
+                             'author',
+                             '2008-01-01 00:00:00 -0500',
+                             {'branch': 'default', })
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
+                                              hg_repo_path=self.wc_path,
+                                              svn_url='file://' + self.repo_path)
+        tip = self.repo['tip']
+        self.assertNotEqual(tip.node(), new_hash)
+        self.assertEqual(tip['alpha'].data(), 'bar')
+        self.assertEqual(tip.parents()[0]['alpha'].flags(), expected_flags)
+        self.assertEqual(tip['alpha'].flags(), '')
 
 
 def suite():

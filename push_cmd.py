@@ -107,11 +107,9 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                         added_dirs.append(dirname[:-1])
             else:
                 base_data = parent.filectx(file).data()
-                if 'x' in parent.filectx(file).flags():
-                    if 'svn:executable' in props.setdefault(file, {}):
-                        del props[file]['svn:executable']
-                    else:
-                        props.setdefault(file, {})['svn:executable'] = None
+                if ('x' in parent.filectx(file).flags()
+                    and 'x' not in rev_ctx.filectx(file).flags()):
+                    props.setdefault(file, {})['svn:executable'] = None
                 if ('l' in parent.filectx(file).flags()
                     and 'l' not in rev_ctx.filectx(file).flags()):
                     props.setdefault(file, {})['svn:special'] = None
