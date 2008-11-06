@@ -29,7 +29,7 @@ foo
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
-<title>/tmp/hgtests.N4Sjj6/test-hgweb/test: error</title>
+<title>test: error</title>
 </head>
 <body>
 
@@ -48,7 +48,7 @@ foo
 
 <div class="main">
 
-<h2><a href="/">/tmp/hgtests.N4Sjj6/test-hgweb/test</a></h2>
+<h2><a href="/">test</a></h2>
 <h3>error</h3>
 
 <form class="search" action="/log">
@@ -99,7 +99,7 @@ error: bork@2ef0ac749a14: not found in manifest
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
-<title>/tmp/hgtests.N4Sjj6/test-hgweb/test: error</title>
+<title>test: error</title>
 </head>
 <body>
 
@@ -118,7 +118,7 @@ error: bork@2ef0ac749a14: not found in manifest
 
 <div class="main">
 
-<h2><a href="/">/tmp/hgtests.N4Sjj6/test-hgweb/test</a></h2>
+<h2><a href="/">test</a></h2>
 <h3>error</h3>
 
 <form class="search" action="/log">

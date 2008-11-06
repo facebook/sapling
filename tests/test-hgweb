@@ -7,7 +7,7 @@ mkdir da
 echo foo > da/foo
 echo foo > foo
 hg ci -Ambase -d '0 0'
-hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 echo % manifest
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/?style=raw')
