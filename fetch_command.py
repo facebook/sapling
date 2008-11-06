@@ -18,7 +18,7 @@ import svnwrap
 import util
 
 
-def print_your_svn_is_old_message(ui):
+def print_your_svn_is_old_message(ui): #pragma: no cover
     ui.status("In light of that, I'll fall back and do diffs, but it won't do "
               "as good a job. You should really upgrade your server.\n")
 
@@ -34,7 +34,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     skipto_rev=int(skipto_rev)
     have_replay = not stupid
     if have_replay and not callable(delta.svn_txdelta_apply(None, None,
-                                                            None)[0]):
+                                                            None)[0]): #pragma: no cover
         ui.status('You are using old Subversion SWIG bindings. Replay will not'
                   ' work until you upgrade to 1.5.0 or newer. Falling back to'
                   ' a slower method that may be buggier. Please upgrade, or'
@@ -81,7 +81,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     if have_replay:
                         try:
                             replay_convert_rev(hg_editor, svn, r)
-                        except svnwrap.SubversionRepoCanNotReplay, e:
+                        except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                             ui.status('%s\n' % e.message)
                             print_your_svn_is_old_message(ui)
                             have_replay = False
@@ -95,7 +95,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     fp.close()
                     merc_util.rename(tmpfile,
                                      hg_editor.last_revision_handled_file)
-                except core.SubversionException, e:
+                except core.SubversionException, e: #pragma: no cover
                     if hasattr(e, 'message') and (
                         'Server sent unexpected return value (502 Bad Gateway)'
                         ' in response to PROPFIND') in e.message:
@@ -133,7 +133,7 @@ def replay_convert_rev(hg_editor, svn, r):
                 pl = svn.proplist(p2, r.revnum, recurse=True)
                 cleanup_file_handles(svn, i)
                 i += 1
-            except core.SubversionException, e:
+            except core.SubversionException, e: #pragma: no cover
                 pass
             props.update(pl)
             if p[-1] == '/':
@@ -391,7 +391,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     if e.apr_err == 170000 or (e.message.startswith("URL '")
                          and e.message.endswith("' doesn't exist")):
                         delete_all_files = True
-                    else:
+                    else: #pragma: no cover
                         raise
 
         except BadPatchApply, e:

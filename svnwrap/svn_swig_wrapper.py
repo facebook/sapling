@@ -11,12 +11,12 @@ from svn import core
 from svn import delta
 from svn import ra
 
-if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO) < (1, 5, 0):
+if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO) < (1, 5, 0): #pragma: no cover
     raise ImportError, 'You must have Subversion 1.5.0 or newer and matching SWIG bindings.'
 
 svn_config = core.svn_config_get_config(None)
 class RaCallbacks(ra.Callbacks):
-    def open_tmp_file(self, pool):
+    def open_tmp_file(self, pool): #pragma: no cover
         (fd, fn) = tempfile.mkstemp()
         os.close(fd)
         return fn
@@ -25,7 +25,7 @@ class RaCallbacks(ra.Callbacks):
         return 'hgsubversion'
 
 
-def user_pass_prompt(realm, default_username, ms, pool):
+def user_pass_prompt(realm, default_username, ms, pool): #pragma: no cover
     creds = core.svn_auth_cred_simple_t()
     creds.may_save = ms
     if default_username:
@@ -51,12 +51,12 @@ def _create_auth_baton(pool):
         client.get_ssl_server_trust_file_provider(),
         ]
     # Platform-dependant authentication methods
-    if hasattr(client, 'get_windows_simple_provider'):
+    if hasattr(client, 'get_windows_simple_provider'): #pragma: no cover
         try:
             providers.append(client.get_windows_simple_provider())
         except:
             pass
-    if hasattr(client, 'get_keychain_simple_provider'):
+    if hasattr(client, 'get_keychain_simple_provider'): #pragma: no cover
         try:
             providers.append(client.get_keychain_simple_provider())
         except:
@@ -297,7 +297,7 @@ class SubversionRepo(object):
             elif action == 'add':
                 try:
                     baton = editor.add_file(path, parent, None, -1, pool)
-                except (core.SubversionException, TypeError), e:
+                except (core.SubversionException, TypeError), e: #pragma: no cover
                     print e.message
                     raise
             elif action == 'delete':
@@ -334,7 +334,7 @@ class SubversionRepo(object):
         try:
             ra.replay(self.ra, revision, oldest_rev_i_have, True, e_ptr,
                       e_baton, self.pool)
-        except core.SubversionException, e:
+        except core.SubversionException, e: #pragma: no cover
             # can I depend on this number being constant?
             if (e.message == "Server doesn't support the replay command"
                 or e.apr_err == 170003
