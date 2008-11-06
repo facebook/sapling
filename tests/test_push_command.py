@@ -328,6 +328,11 @@ class PushTests(unittest.TestCase):
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['newdir/gamma'].data(), 'foo')
 
+    def test_push_existing_file_newly_symlink(self):
+        self.test_push_existing_file_newly_execute(execute=False,
+                                                   link=True,
+                                                   expected_flags='l')
+
     def test_push_existing_file_newly_execute(self, execute=True,
                                               link=False, expected_flags='x'):
         self.test_push_to_default()
