@@ -4,3 +4,4 @@ syntax:glob
 *.swp
 *~
 .coverage
+*.py,cover
