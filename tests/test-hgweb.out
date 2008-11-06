@@ -21,31 +21,55 @@ foo
 % should give a 404 - static file that does not exist
 404 Not Found
 
+<!-- quirksmode -->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
 <link rel="icon" href="/static/hgicon.png" type="image/png">
 <meta name="robots" content="index, nofollow" />
-<link rel="stylesheet" href="/static/style.css" type="text/css" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
-<title>Mercurial Error</title>
+<title>/tmp/hgtests.N4Sjj6/test-hgweb/test: error</title>
 </head>
 <body>
 
-<h2>Mercurial Error</h2>
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+<li><a href="/log">log</a></li>
+<li><a href="/graph">graph</a></li>
+<li><a href="/tags">tags</a></li>
+</ul>
+</div>
 
+<div class="main">
+
+<h2><a href="/">/tmp/hgtests.N4Sjj6/test-hgweb/test</a></h2>
+<h3>error</h3>
+
+<form class="search" action="/log">
+
+<p><input name="rev" id="search1" type="text" size="30"></p>
+<span>find changesets by author, revision, 
+files, or words in the commit message</span>
+</form>
+
+<div class="description">
 <p>
 An error occurred while processing your request:
 </p>
 <p>
 Not Found
 </p>
-
-
-<div class="logo">
-<a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
+</div>
+</div>
+
+
 
 </body>
 </html>
@@ -67,31 +91,55 @@ error: no such method: spam
 error: bork@2ef0ac749a14: not found in manifest
 404 Not Found
 
+<!-- quirksmode -->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
 <link rel="icon" href="/static/hgicon.png" type="image/png">
 <meta name="robots" content="index, nofollow" />
-<link rel="stylesheet" href="/static/style.css" type="text/css" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
-<title>Mercurial Error</title>
+<title>/tmp/hgtests.N4Sjj6/test-hgweb/test: error</title>
 </head>
 <body>
 
-<h2>Mercurial Error</h2>
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+<li><a href="/log">log</a></li>
+<li><a href="/graph">graph</a></li>
+<li><a href="/tags">tags</a></li>
+</ul>
+</div>
 
+<div class="main">
+
+<h2><a href="/">/tmp/hgtests.N4Sjj6/test-hgweb/test</a></h2>
+<h3>error</h3>
+
+<form class="search" action="/log">
+
+<p><input name="rev" id="search1" type="text" size="30"></p>
+<span>find changesets by author, revision, 
+files, or words in the commit message</span>
+</form>
+
+<div class="description">
 <p>
 An error occurred while processing your request:
 </p>
 <p>
 bork@2ef0ac749a14: not found in manifest
 </p>
-
-
-<div class="logo">
-<a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
+</div>
+</div>
+
+
 
 </body>
 </html>

@@ -4,62 +4,89 @@ adding isolatin
 % hgweb filerevision, html
 200 Script output follows
 
+<!-- quirksmode -->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
 <link rel="icon" href="/static/hgicon.png" type="image/png">
 <meta name="robots" content="index, nofollow" />
-<link rel="stylesheet" href="/static/style.css" type="text/css" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <link rel="stylesheet" href="/highlightcss" type="text/css" />
-<title>test:get-with-headers.py</title>
+<title>test: 7697c52ca9b0 get-with-headers.py</title>
 </head>
 <body>
 
-<div class="buttons">
-<a href="/log/0">changelog</a>
-<a href="/shortlog/0">shortlog</a>
-<a href="/graph">graph</a>
-<a href="/tags">tags</a>
-<a href="/rev/7697c52ca9b0">changeset</a>
-<a href="/file/7697c52ca9b0/">files</a>
-<a href="/log/7697c52ca9b0/get-with-headers.py">revisions</a>
-<a href="/annotate/7697c52ca9b0/get-with-headers.py">annotate</a>
-<a href="/raw-file/7697c52ca9b0/get-with-headers.py">raw</a>
-</div>
-
-<h2>get-with-headers.py</h2>
-
-<table>
-<tr>
- <td class="metatag">changeset 0:</td>
- <td><a href="/rev/7697c52ca9b0">7697c52ca9b0</a></td></tr>
-
-
-<tr>
- <td class="metatag">author:</td>
- <td>&#116;&#101;&#115;&#116;</td></tr>
-<tr>
- <td class="metatag">date:</td>
- <td>Thu Jan 01 00:00:00 1970 +0000 (long ago)</td></tr>
-<tr>
- <td class="metatag">permissions:</td>
- <td>-rwxr-xr-x</td></tr>
-<tr>
-  <td class="metatag">description:</td>
-  <td>a</td>
-</tr>
-</table>
-
-<pre>
-<div class="parity0"><a class="lineno" href="#l1" id="l1">     1</a><span class="c">#!/usr/bin/env python</span></div><div class="parity1"><a class="lineno" href="#l2" id="l2">     2</a></div><div class="parity0"><a class="lineno" href="#l3" id="l3">     3</a><span class="n">__doc__</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;This does HTTP get requests given a host:port and path and returns</span></div><div class="parity1"><a class="lineno" href="#l4" id="l4">     4</a><span class="s">a subset of the headers plus the body of the result.&quot;&quot;&quot;</span></div><div class="parity0"><a class="lineno" href="#l5" id="l5">     5</a></div><div class="parity1"><a class="lineno" href="#l6" id="l6">     6</a><span class="kn">import</span> <span class="nn">httplib</span><span class="o">,</span> <span class="nn">sys</span></div><div class="parity0"><a class="lineno" href="#l7" id="l7">     7</a></div><div class="parity1"><a class="lineno" href="#l8" id="l8">     8</a><span class="kn">try</span><span class="p">:</span></div><div class="parity0"><a class="lineno" href="#l9" id="l9">     9</a>    <span class="kn">import</span> <span class="nn">msvcrt</span><span class="o">,</span> <span class="nn">os</span></div><div class="parity1"><a class="lineno" href="#l10" id="l10">    10</a>    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></div><div class="parity0"><a class="lineno" href="#l11" id="l11">    11</a>    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></div><div class="parity1"><a class="lineno" href="#l12" id="l12">    12</a><span class="kn">except</span> <span class="ne">ImportError</span><span class="p">:</span></div><div class="parity0"><a class="lineno" href="#l13" id="l13">    13</a>    <span class="kn">pass</span></div><div class="parity1"><a class="lineno" href="#l14" id="l14">    14</a></div><div class="parity0"><a class="lineno" href="#l15" id="l15">    15</a><span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">3</span><span class="p">:]]</span></div><div class="parity1"><a class="lineno" href="#l16" id="l16">    16</a><span class="n">conn</span> <span class="o">=</span> <span class="n">httplib</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></div><div class="parity0"><a class="lineno" href="#l17" id="l17">    17</a><span class="n">conn</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">2</span><span class="p">])</span></div><div class="parity1"><a class="lineno" href="#l18" id="l18">    18</a><span class="n">response</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">getresponse</span><span class="p">()</span></div><div class="parity0"><a class="lineno" href="#l19" id="l19">    19</a><span class="kn">print</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span></div><div class="parity1"><a class="lineno" href="#l20" id="l20">    20</a><span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">:</span></div><div class="parity0"><a class="lineno" href="#l21" id="l21">    21</a>    <span class="kn">if</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span></div><div class="parity1"><a class="lineno" href="#l22" id="l22">    22</a>        <span class="kn">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">))</span></div><div class="parity0"><a class="lineno" href="#l23" id="l23">    23</a><span class="kn">print</span></div><div class="parity1"><a class="lineno" href="#l24" id="l24">    24</a><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">())</span></div><div class="parity0"><a class="lineno" href="#l25" id="l25">    25</a></div><div class="parity1"><a class="lineno" href="#l26" id="l26">    26</a><span class="kn">if</span> <span class="mf">200</span> <span class="o">&lt;=</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="mf">299</span><span class="p">:</span></div><div class="parity0"><a class="lineno" href="#l27" id="l27">    27</a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">0</span><span class="p">)</span></div><div class="parity1"><a class="lineno" href="#l28" id="l28">    28</a><span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span></div>
-</pre>
-
-
+<div class="container">
+<div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
+<ul>
+<li><a href="/shortlog/7697c52ca9b0">log</a></li>
+<li><a href="/graph/7697c52ca9b0">graph</a></li>
+<li><a href="/tags">tags</a></li>
+</ul>
+<ul>
+<li><a href="/rev/7697c52ca9b0">changeset</a></li>
+<li><a href="/file/7697c52ca9b0/">browse</a></li>
+</ul>
+<ul>
+<li class="active">file</li>
+<li><a href="/diff/7697c52ca9b0/get-with-headers.py">diff</a></li>
+<li><a href="/annotate/7697c52ca9b0/get-with-headers.py">annotate</a></li>
+<li><a href="/log/7697c52ca9b0/get-with-headers.py">file log</a></li>
+<li><a href="/raw-file/7697c52ca9b0/get-with-headers.py">raw</a></li>
+</ul>
+</div>
+
+<div class="main">
+<h2><a href="/">test</a></h2>
+<h3>view get-with-headers.py @ 0:7697c52ca9b0</h3>
+
+<form class="search" action="/log">
+
+<p><input name="rev" id="search1" type="text" size="30"></p>
+<span>find changesets by author, revision, 
+files, or words in the commit message</span>
+</form>
+
+<div class="description">a</div>
+
+<table id="changesetEntry">
+<tr>
+ <th class="author">author</th>
+ <td class="author">&#116;&#101;&#115;&#116;</td>
+</tr>
+<tr>
+ <th class="date">date</th>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (long ago)</td>
+</tr>
+<tr>
+ <th class="author">parents</th>
+ <td class="author"></td>
+</tr>
+<tr>
+ <th class="author">children</th>
+ <td class="author"></td>
+</tr>
+
+</table>
+
+<div class="overflow">
+<table class="bigtable">
+<tr>
+ <th class="lineno">line</th>
+ <th class="source">source</th>
+</tr>
+<tr class="parity0"><td class="lineno"><a href="#l1" id="l1">     1</a></td><td class="source"><span class="c">#!/usr/bin/env python</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l2" id="l2">     2</a></td><td class="source"></td></tr><tr class="parity0"><td class="lineno"><a href="#l3" id="l3">     3</a></td><td class="source"><span class="n">__doc__</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;This does HTTP get requests given a host:port and path and returns</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l4" id="l4">     4</a></td><td class="source"><span class="s">a subset of the headers plus the body of the result.&quot;&quot;&quot;</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l5" id="l5">     5</a></td><td class="source"></td></tr><tr class="parity1"><td class="lineno"><a href="#l6" id="l6">     6</a></td><td class="source"><span class="kn">import</span> <span class="nn">httplib</span><span class="o">,</span> <span class="nn">sys</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l7" id="l7">     7</a></td><td class="source"></td></tr><tr class="parity1"><td class="lineno"><a href="#l8" id="l8">     8</a></td><td class="source"><span class="kn">try</span><span class="p">:</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l9" id="l9">     9</a></td><td class="source">    <span class="kn">import</span> <span class="nn">msvcrt</span><span class="o">,</span> <span class="nn">os</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l10" id="l10">    10</a></td><td class="source">    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l11" id="l11">    11</a></td><td class="source">    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l12" id="l12">    12</a></td><td class="source"><span class="kn">except</span> <span class="ne">ImportError</span><span class="p">:</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l13" id="l13">    13</a></td><td class="source">    <span class="kn">pass</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l14" id="l14">    14</a></td><td class="source"></td></tr><tr class="parity0"><td class="lineno"><a href="#l15" id="l15">    15</a></td><td class="source"><span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">3</span><span class="p">:]]</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l16" id="l16">    16</a></td><td class="source"><span class="n">conn</span> <span class="o">=</span> <span class="n">httplib</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l17" id="l17">    17</a></td><td class="source"><span class="n">conn</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">2</span><span class="p">])</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l18" id="l18">    18</a></td><td class="source"><span class="n">response</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">getresponse</span><span class="p">()</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l19" id="l19">    19</a></td><td class="source"><span class="kn">print</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l20" id="l20">    20</a></td><td class="source"><span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">:</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l21" id="l21">    21</a></td><td class="source">    <span class="kn">if</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l22" id="l22">    22</a></td><td class="source">        <span class="kn">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">))</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l23" id="l23">    23</a></td><td class="source"><span class="kn">print</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l24" id="l24">    24</a></td><td class="source"><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">())</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l25" id="l25">    25</a></td><td class="source"></td></tr><tr class="parity1"><td class="lineno"><a href="#l26" id="l26">    26</a></td><td class="source"><span class="kn">if</span> <span class="mf">200</span> <span class="o">&lt;=</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="mf">299</span><span class="p">:</span></td></tr><tr class="parity0"><td class="lineno"><a href="#l27" id="l27">    27</a></td><td class="source">    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">0</span><span class="p">)</span></td></tr><tr class="parity1"><td class="lineno"><a href="#l28" id="l28">    28</a></td><td class="source"><span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span></td></tr>
+</table>
+</div>
+</div>
+</div>
+
+
 
 </body>
 </html>
@@ -67,62 +94,89 @@ adding isolatin
 % hgweb filerevision, html
 200 Script output follows
 
+<!-- quirksmode -->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
 <link rel="icon" href="/static/hgicon.png" type="image/png">
 <meta name="robots" content="index, nofollow" />
-<link rel="stylesheet" href="/static/style.css" type="text/css" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <link rel="stylesheet" href="/highlightcss" type="text/css" />
-<title>test:isolatin</title>
+<title>test: 7697c52ca9b0 isolatin</title>
 </head>
 <body>
 
-<div class="buttons">
-<a href="/log/0">changelog</a>
-<a href="/shortlog/0">shortlog</a>
-<a href="/graph">graph</a>
-<a href="/tags">tags</a>
-<a href="/rev/7697c52ca9b0">changeset</a>
-<a href="/file/7697c52ca9b0/">files</a>
-<a href="/log/7697c52ca9b0/isolatin">revisions</a>
-<a href="/annotate/7697c52ca9b0/isolatin">annotate</a>
-<a href="/raw-file/7697c52ca9b0/isolatin">raw</a>
-</div>
-
-<h2>isolatin</h2>
-
-<table>
-<tr>
- <td class="metatag">changeset 0:</td>
- <td><a href="/rev/7697c52ca9b0">7697c52ca9b0</a></td></tr>
-
-
-<tr>
- <td class="metatag">author:</td>
- <td>&#116;&#101;&#115;&#116;</td></tr>
-<tr>
- <td class="metatag">date:</td>
- <td>Thu Jan 01 00:00:00 1970 +0000 (long ago)</td></tr>
-<tr>
- <td class="metatag">permissions:</td>
- <td>-rw-r--r--</td></tr>
-<tr>
-  <td class="metatag">description:</td>
-  <td>a</td>
-</tr>
-</table>
-
-<pre>
-<div class="parity0"><a class="lineno" href="#l1" id="l1">     1</a>h?bsch</div>
-</pre>
-
-
+<div class="container">
+<div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
+<ul>
+<li><a href="/shortlog/7697c52ca9b0">log</a></li>
+<li><a href="/graph/7697c52ca9b0">graph</a></li>
+<li><a href="/tags">tags</a></li>
+</ul>
+<ul>
+<li><a href="/rev/7697c52ca9b0">changeset</a></li>
+<li><a href="/file/7697c52ca9b0/">browse</a></li>
+</ul>
+<ul>
+<li class="active">file</li>
+<li><a href="/diff/7697c52ca9b0/isolatin">diff</a></li>
+<li><a href="/annotate/7697c52ca9b0/isolatin">annotate</a></li>
+<li><a href="/log/7697c52ca9b0/isolatin">file log</a></li>
+<li><a href="/raw-file/7697c52ca9b0/isolatin">raw</a></li>
+</ul>
+</div>
+
+<div class="main">
+<h2><a href="/">test</a></h2>
+<h3>view isolatin @ 0:7697c52ca9b0</h3>
+
+<form class="search" action="/log">
+
+<p><input name="rev" id="search1" type="text" size="30"></p>
+<span>find changesets by author, revision, 
+files, or words in the commit message</span>
+</form>
+
+<div class="description">a</div>
+
+<table id="changesetEntry">
+<tr>
+ <th class="author">author</th>
+ <td class="author">&#116;&#101;&#115;&#116;</td>
+</tr>
+<tr>
+ <th class="date">date</th>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (long ago)</td>
+</tr>
+<tr>
+ <th class="author">parents</th>
+ <td class="author"></td>
+</tr>
+<tr>
+ <th class="author">children</th>
+ <td class="author"></td>
+</tr>
+
+</table>
+
+<div class="overflow">
+<table class="bigtable">
+<tr>
+ <th class="lineno">line</th>
+ <th class="source">source</th>
+</tr>
+<tr class="parity0"><td class="lineno"><a href="#l1" id="l1">     1</a></td><td class="source">h?bsch</td></tr>
+</table>
+</div>
+</div>
+</div>
+
+
 
 </body>
 </html>
@@ -130,66 +184,93 @@ adding isolatin
 % hgweb fileannotate, html
 200 Script output follows
 
+<!-- quirksmode -->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
 <link rel="icon" href="/static/hgicon.png" type="image/png">
 <meta name="robots" content="index, nofollow" />
-<link rel="stylesheet" href="/static/style.css" type="text/css" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <link rel="stylesheet" href="/highlightcss" type="text/css" />
 <title>test: get-with-headers.py annotate</title>
 </head>
 <body>
 
-<div class="buttons">
-<a href="/log/0">changelog</a>
-<a href="/shortlog/0">shortlog</a>
-<a href="/graph">graph</a>
-<a href="/tags">tags</a>
-<a href="/rev/7697c52ca9b0">changeset</a>
-<a href="/file/7697c52ca9b0/">files</a>
-<a href="/file/7697c52ca9b0/get-with-headers.py">file</a>
-<a href="/log/7697c52ca9b0/get-with-headers.py">revisions</a>
-<a href="/raw-annotate/7697c52ca9b0/get-with-headers.py">raw</a>
-</div>
-
-<h2>Annotate get-with-headers.py</h2>
-
-<table>
-<tr>
- <td class="metatag">changeset 0:</td>
- <td><a href="/rev/7697c52ca9b0">7697c52ca9b0</a></td></tr>
-
-
-<tr>
- <td class="metatag">author:</td>
- <td>&#116;&#101;&#115;&#116;</td></tr>
-<tr>
- <td class="metatag">date:</td>
- <td>Thu Jan 01 00:00:00 1970 +0000 (long ago)</td>
-</tr>
-<tr>
- <td class="metatag">permissions:</td>
- <td>-rwxr-xr-x</td>
-</tr>
-<tr>
-  <td class="metatag">description:</td>
-  <td>a</td>
-</tr>
-</table>
-
-<br/>
-
-<table cellspacing="0" cellpadding="0">
-<tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l1" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l1" id="l1">     1</a></td><td><pre><span class="c">#!/usr/bin/env python</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l2" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l2" id="l2">     2</a></td><td><pre></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l3" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l3" id="l3">     3</a></td><td><pre><span class="n">__doc__</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;This does HTTP get requests given a host:port and path and returns</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l4" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l4" id="l4">     4</a></td><td><pre><span class="s">a subset of the headers plus the body of the result.&quot;&quot;&quot;</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l5" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l5" id="l5">     5</a></td><td><pre></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l6" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l6" id="l6">     6</a></td><td><pre><span class="kn">import</span> <span class="nn">httplib</span><span class="o">,</span> <span class="nn">sys</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l7" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l7" id="l7">     7</a></td><td><pre></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l8" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l8" id="l8">     8</a></td><td><pre><span class="kn">try</span><span class="p">:</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l9" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l9" id="l9">     9</a></td><td><pre>    <span class="kn">import</span> <span class="nn">msvcrt</span><span class="o">,</span> <span class="nn">os</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l10" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l10" id="l10">    10</a></td><td><pre>    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l11" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l11" id="l11">    11</a></td><td><pre>    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l12" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l12" id="l12">    12</a></td><td><pre><span class="kn">except</span> <span class="ne">ImportError</span><span class="p">:</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l13" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l13" id="l13">    13</a></td><td><pre>    <span class="kn">pass</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l14" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l14" id="l14">    14</a></td><td><pre></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l15" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l15" id="l15">    15</a></td><td><pre><span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">3</span><span class="p">:]]</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l16" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l16" id="l16">    16</a></td><td><pre><span class="n">conn</span> <span class="o">=</span> <span class="n">httplib</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l17" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l17" id="l17">    17</a></td><td><pre><span class="n">conn</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">2</span><span class="p">])</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l18" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l18" id="l18">    18</a></td><td><pre><span class="n">response</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">getresponse</span><span class="p">()</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l19" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l19" id="l19">    19</a></td><td><pre><span class="kn">print</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l20" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l20" id="l20">    20</a></td><td><pre><span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">:</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l21" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l21" id="l21">    21</a></td><td><pre>    <span class="kn">if</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l22" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l22" id="l22">    22</a></td><td><pre>        <span class="kn">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">))</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l23" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l23" id="l23">    23</a></td><td><pre><span class="kn">print</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l24" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l24" id="l24">    24</a></td><td><pre><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">())</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l25" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l25" id="l25">    25</a></td><td><pre></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l26" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l26" id="l26">    26</a></td><td><pre><span class="kn">if</span> <span class="mf">200</span> <span class="o">&lt;=</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="mf">299</span><span class="p">:</span></pre></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l27" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l27" id="l27">    27</a></td><td><pre>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">0</span><span class="p">)</span></pre></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#l28" title="7697c52ca9b0: a">test@0</a></td><td><a class="lineno" href="#l28" id="l28">    28</a></td><td><pre><span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span></pre></td></tr>
-</table>
-
-
+<div class="container">
+<div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
+<ul>
+<li><a href="/shortlog/7697c52ca9b0">log</a></li>
+<li><a href="/graph/7697c52ca9b0">graph</a></li>
+<li><a href="/tags">tags</a></li>
+</ul>
+
+<ul>
+<li><a href="/rev/7697c52ca9b0">changeset</a></li>
+<li><a href="/file/7697c52ca9b0/">browse</a></li>
+</ul>
+<ul>
+<li><a href="/file/7697c52ca9b0/get-with-headers.py">file</a></li>
+<li><a href="/diff/7697c52ca9b0/get-with-headers.py">diff</a></li>
+<li class="active">annotate</li>
+<li><a href="/log/7697c52ca9b0/get-with-headers.py">file log</a></li>
+<li><a href="/raw-annotate/7697c52ca9b0/get-with-headers.py">raw</a></li>
+</ul>
+</div>
+
+<div class="main">
+<h2><a href="/">test</a></h2>
+<h3>annotate get-with-headers.py @ 0:7697c52ca9b0</h3>
+
+<form class="search" action="/log">
+
+<p><input name="rev" id="search1" type="text" size="30"></p>
+<span>find changesets by author, revision, 
+files, or words in the commit message</span>
+</form>
+
+<div class="description">a</div>
+
+<table id="changesetEntry">
+<tr>
+ <th class="author">author</th>
+ <td class="author">&#116;&#101;&#115;&#116;</td>
+</tr>
+<tr>
+ <th class="date">date</th>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (long ago)</td>
+</tr>
+<tr>
+ <th class="author">parents</th>
+ <td class="author"></td>
+</tr>
+<tr>
+ <th class="author">children</th>
+ <td class="author"></td>
+</tr>
+
+</table>
+
+<br/>
+
+<div class="overflow">
+<table class="bigtable">
+<tr>
+ <th class="annotate">rev</th>
+ <th class="lineno">line</th>
+ <th class="line">source</th>
+</tr>
+<tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#1" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l1" id="l1">     1</a></td><td class="source"><span class="c">#!/usr/bin/env python</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#2" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l2" id="l2">     2</a></td><td class="source"></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#3" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l3" id="l3">     3</a></td><td class="source"><span class="n">__doc__</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;This does HTTP get requests given a host:port and path and returns</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#4" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l4" id="l4">     4</a></td><td class="source"><span class="s">a subset of the headers plus the body of the result.&quot;&quot;&quot;</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#5" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l5" id="l5">     5</a></td><td class="source"></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#6" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l6" id="l6">     6</a></td><td class="source"><span class="kn">import</span> <span class="nn">httplib</span><span class="o">,</span> <span class="nn">sys</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#7" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l7" id="l7">     7</a></td><td class="source"></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#8" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l8" id="l8">     8</a></td><td class="source"><span class="kn">try</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#9" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l9" id="l9">     9</a></td><td class="source">    <span class="kn">import</span> <span class="nn">msvcrt</span><span class="o">,</span> <span class="nn">os</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#10" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l10" id="l10">    10</a></td><td class="source">    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#11" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l11" id="l11">    11</a></td><td class="source">    <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#12" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l12" id="l12">    12</a></td><td class="source"><span class="kn">except</span> <span class="ne">ImportError</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#13" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l13" id="l13">    13</a></td><td class="source">    <span class="kn">pass</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#14" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l14" id="l14">    14</a></td><td class="source"></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#15" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l15" id="l15">    15</a></td><td class="source"><span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">3</span><span class="p">:]]</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#16" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l16" id="l16">    16</a></td><td class="source"><span class="n">conn</span> <span class="o">=</span> <span class="n">httplib</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#17" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l17" id="l17">    17</a></td><td class="source"><span class="n">conn</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">2</span><span class="p">])</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#18" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l18" id="l18">    18</a></td><td class="source"><span class="n">response</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">getresponse</span><span class="p">()</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#19" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l19" id="l19">    19</a></td><td class="source"><span class="kn">print</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#20" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l20" id="l20">    20</a></td><td class="source"><span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#21" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l21" id="l21">    21</a></td><td class="source">    <span class="kn">if</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#22" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l22" id="l22">    22</a></td><td class="source">        <span class="kn">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">))</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#23" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l23" id="l23">    23</a></td><td class="source"><span class="kn">print</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#24" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l24" id="l24">    24</a></td><td class="source"><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">())</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#25" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l25" id="l25">    25</a></td><td class="source"></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#26" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l26" id="l26">    26</a></td><td class="source"><span class="kn">if</span> <span class="mf">200</span> <span class="o">&lt;=</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="mf">299</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#27" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l27" id="l27">    27</a></td><td class="source">    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">0</span><span class="p">)</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7697c52ca9b0/get-with-headers.py#28" title="7697c52ca9b0: a">test@0</a></td><td class="lineno"><a href="#l28" id="l28">    28</a></td><td class="source"><span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span></td></tr>
+</table>
+</div>
+</div>
+</div>
+
+
 
 </body>
 </html>
