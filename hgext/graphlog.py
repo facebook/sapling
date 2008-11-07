@@ -225,8 +225,7 @@ def graphlog(ui, repo, path=None, **opts):
     prev_node_index = 0
 
     for (rev, node, node_index, edges, n_columns, n_columns_diff) in grapher:
-        # log_strings is the list of all log strings to draw alongside
-        # the graph.
+        # log_strings is the list of all log strings to draw alongside the graph
         ui.pushbuffer()
         cs_printer.show(rev, node)
         log_strings = ui.popbuffer().split("\n")[:-1]
@@ -260,7 +259,7 @@ def graphlog(ui, repo, path=None, **opts):
         #     o | |            o | |
         fix_nodeline_tail = len(log_strings) <= 2 and not add_padding_line
 
-        # nodeline is the line containing the node character (@ or o).
+        # nodeline is the line containing the node character (typically o)
         nodeline = ["|", " "] * node_index
         if node in repo_parents:
             node_ch = "@"
@@ -274,7 +273,7 @@ def graphlog(ui, repo, path=None, **opts):
                 prev_n_columns_diff, fix_nodeline_tail))
 
         # shift_interline is the line containing the non-vertical
-        # edges between this entry and the next.
+        # edges between this entry and the next
         shift_interline = ["|", " "] * node_index
         if n_columns_diff == -1:
             n_spaces = 1
@@ -288,17 +287,17 @@ def graphlog(ui, repo, path=None, **opts):
         shift_interline.extend(n_spaces * [" "])
         shift_interline.extend([edge_ch, " "] * (n_columns - node_index - 1))
 
-        # Draw edges from the current node to its parents.
+        # draw edges from the current node to its parents
         draw_edges(edges, nodeline, shift_interline)
 
-        # lines is the list of all graph lines to print.
+        # lines is the list of all graph lines to print
         lines = [nodeline]
         if add_padding_line:
             lines.append(get_padding_line(node_index, n_columns, edges))
         lines.append(shift_interline)
 
-        # Make sure that there are as many graph lines as there are
-        # log strings.
+        # make sure that there are as many graph lines as there are
+        # log strings
         while len(log_strings) < len(lines):
             log_strings.append("")
         if len(lines) < len(log_strings):
@@ -306,12 +305,12 @@ def graphlog(ui, repo, path=None, **opts):
             while len(lines) < len(log_strings):
                 lines.append(extra_interline)
 
-        # Print lines.
+        # print lines
         indentation_level = max(n_columns, n_columns + n_columns_diff)
         for (line, logstr) in zip(lines, log_strings):
             ui.write(format_line(line, indentation_level, logstr))
 
-        # ...and start over.
+        # ... and start over
         prev_node_index = node_index
         prev_n_columns_diff = n_columns_diff
 
