@@ -225,10 +225,10 @@ def graphlog(ui, repo, path=None, **opts):
     prev_node_index = 0
 
     for (rev, node, node_index, edges, n_columns, n_columns_diff) in grapher:
-        # log_strings is the list of all log strings to draw alongside the graph
+        # node_lines is the list of all text lines to draw alongside the graph
         ui.pushbuffer()
         cs_printer.show(rev, node)
-        log_strings = ui.popbuffer().split("\n")[:-1]
+        node_lines = ui.popbuffer().split("\n")[:-1]
 
         if n_columns_diff == -1:
             # Transform
@@ -246,7 +246,7 @@ def graphlog(ui, repo, path=None, **opts):
         #     |  / /         |   | |  # <--- padding line
         #     o | |          |  / /
         #                    o | |
-        add_padding_line = (len(log_strings) > 2 and
+        add_padding_line = (len(node_lines) > 2 and
                             n_columns_diff == -1 and
                             [x for (x, y) in edges if x + 1 < y])
 
@@ -257,7 +257,7 @@ def graphlog(ui, repo, path=None, **opts):
         #     | o | |    into  | o / /   # <--- fixed nodeline tail
         #     | |/ /           | |/ /
         #     o | |            o | |
-        fix_nodeline_tail = len(log_strings) <= 2 and not add_padding_line
+        fix_nodeline_tail = len(node_lines) <= 2 and not add_padding_line
 
         # nodeline is the line containing the node character (typically o)
         nodeline = ["|", " "] * node_index
@@ -298,16 +298,16 @@ def graphlog(ui, repo, path=None, **opts):
 
         # make sure that there are as many graph lines as there are
         # log strings
-        while len(log_strings) < len(lines):
-            log_strings.append("")
-        if len(lines) < len(log_strings):
+        while len(node_lines) < len(lines):
+            node_lines.append("")
+        if len(lines) < len(node_lines):
             extra_interline = ["|", " "] * (n_columns + n_columns_diff)
-            while len(lines) < len(log_strings):
+            while len(lines) < len(node_lines):
                 lines.append(extra_interline)
 
         # print lines
         indentation_level = max(n_columns, n_columns + n_columns_diff)
-        for (line, logstr) in zip(lines, log_strings):
+        for (line, logstr) in zip(lines, node_lines):
             ui.write(format_line(line, indentation_level, logstr))
 
         # ... and start over
