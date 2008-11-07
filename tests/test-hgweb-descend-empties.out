@@ -46,7 +46,7 @@ adding d1/d2/foo
 <form class="search" action="/log">
 
 <p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision, 
+<span>find changesets by author, revision,
 files, or words in the commit message</span>
 </form>
 
