@@ -63,6 +63,8 @@ parser.add_option("--tmpdir", type="string",
     help="run tests in the given temporary directory")
 parser.add_option("-v", "--verbose", action="store_true",
     help="output verbose messages")
+parser.add_option("-n", "--nodiff", action="store_true",
+    help="skip showing test changes")
 parser.add_option("--with-hg", type="string",
     help="test existing install at given location")
 
@@ -71,6 +73,7 @@ for option, default in defaults.items():
 parser.set_defaults(**defaults)
 (options, args) = parser.parse_args()
 verbose = options.verbose
+nodiff = options.nodiff
 coverage = options.cover or options.cover_stdlib or options.annotate
 python = sys.executable
 
@@ -308,7 +311,8 @@ def run_one(test, skips, fails):
 
     def fail(msg):
         fails.append((test, msg))
-        print "\nERROR: %s %s" % (test, msg)
+        if not nodiff:
+            print "\nERROR: %s %s" % (test, msg)
         return None
 
     vlog("# Test", test)
@@ -374,6 +378,8 @@ def run_one(test, skips, fails):
     if options.timeout > 0:
         signal.alarm(0)
 
+    mark = '.'
+
     skipped = (ret == SKIPPED_STATUS)
     # If reference output file exists, check test output against it
     if os.path.exists(ref):
@@ -383,22 +389,26 @@ def run_one(test, skips, fails):
     else:
         ref_out = []
     if skipped:
+        mark = 's'
         missing = extract_missing_features(out)
         if not missing:
             missing = ['irrelevant']
         skip(missing[-1])
     elif out != ref_out:
+        mark = '!'
         if ret:
             fail("output changed and returned error code %d" % ret)
         else:
             fail("output changed")
-        show_diff(ref_out, out)
+            if not nodiff:
+                show_diff(ref_out, out)
         ret = 1
     elif ret:
+        mark = '!'
         fail("returned error code %d" % ret)
 
     if not verbose:
-        sys.stdout.write(skipped and 's' or '.')
+        sys.stdout.write(mark)
         sys.stdout.flush()
 
     if ret != 0 and not skipped:
