@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os
+import os, copy
 from mercurial import match, patch
 from mercurial.node import hex, nullid
 from mercurial.repo import RepoError
@@ -196,3 +196,19 @@ def diffs(repo, tmpl, ctx, files, parity):
         block.append(chunk)
     yield tmpl('diffblock', parity=parity.next(),
                lines=prettyprintlines(''.join(block)))
+
+class sessionvars(object):
+    def __init__(self, vars, start='?'):
+        self.start = start
+        self.vars = vars
+    def __getitem__(self, key):
+        return self.vars[key]
+    def __setitem__(self, key, value):
+        self.vars[key] = value
+    def __copy__(self):
+        return sessionvars(copy.copy(self.vars), self.start)
+    def __iter__(self):
+        separator = self.start
+        for key, value in self.vars.iteritems():
+            yield {'name': key, 'value': str(value), 'separator': separator}
+            separator = '&'

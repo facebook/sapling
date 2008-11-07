@@ -228,23 +228,16 @@ class hgweb(object):
         def motd(**map):
             yield self.config("web", "motd", "")
 
-        def sessionvars(**map):
-            fields = []
-            if 'style' in req.form:
-                style = req.form['style'][0]
-                if style != self.config('web', 'style', ''):
-                    fields.append(('style', style))
-
-            separator = req.url[-1] == '?' and ';' or '?'
-            for name, value in fields:
-                yield dict(name=name, value=value, separator=separator)
-                separator = ';'
-
         # figure out which style to use
 
+        vars = {}
         style = self.config("web", "style", "paper")
         if 'style' in req.form:
             style = req.form['style'][0]
+            vars['style'] = style
+
+        start = req.url[-1] == '?' and '&' or '?'
+        sessionvars = webutil.sessionvars(vars, start)
         mapfile = style_map(self.templatepath, style)
 
         if not self.reponame:
