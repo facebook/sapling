@@ -1,5 +1,6 @@
 from mercurial import cmdutil
 from mercurial import node
+from mercurial import util as mutil
 from hgext import rebase
 
 import util
@@ -10,6 +11,45 @@ def print_wc_url(ui, repo, hg_repo_path, **opts):
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     ui.status(hge.url, '\n')
+
+
+@util.register_subcommand('info')
+def run_svn_info(ui, repo, hg_repo_path, **opts):
+    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
+                                           ui_=ui)
+    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
+                                 hge.revmap.iterkeys()))
+    o_r = outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    ha = repo.parents()[0]
+    if o_r:
+        ha = repo[o_r[-1]].parents()[0]
+    r, br = svn_commit_hashes[ha.node()]
+    if br == None:
+        branchpath = '/trunk'
+    else:
+        branchpath = '/branches/%s' % br
+    url = hge.url
+    if url[-1] == '/':
+        url = url[:-1]
+    url = '%s%s' % (url, branchpath)
+    author = '@'.join(ha.user().split('@')[:-1])
+    ui.status('''URL: %(url)s
+Repository Root: %(reporoot)s
+Repository UUID: %(uuid)s
+Revision: %(revision)s
+Node Kind: directory
+Last Changed Author: %(author)s
+Last Changed Rev: %(revision)s
+Last Changed Date: %(date)s\n''' %
+              {'reporoot': None,
+               'uuid': open(hge.uuid_file).read(),
+               'url': url,
+               'author': author,
+               'revision': r,
+               # TODO I'd like to format this to the user's local TZ if possible
+               'date': mutil.datestr(ha.date(),
+                                     '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
+              })
 
 
 @util.register_subcommand('parent')
@@ -36,8 +76,8 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
 @util.register_subcommand('rebase')
 def rebase_commits(ui, repo, hg_repo_path, **opts):
     """Rebases the current unpushed revisions onto the top of the Subversion branch.
-    
-    This moves a line of development from making its own head to the top of 
+
+    This moves a line of development from making its own head to the top of
     Subversion development, linearizing the changes. In order to make sure you
     rebase on top of the current top of Subversion work, you should probably run
     'hg svn pull' before running this.
