@@ -15,6 +15,9 @@ from mercurial.node import nullrev
 from mercurial.util import Abort, canonpath
 from mercurial import util
 
+def get_rev_parents(repo, rev):
+    return [x for x in repo.changelog.parentrevs(rev) if x != nullrev]
+
 def revision_grapher(repo, start_rev, stop_rev):
     """incremental revision grapher
 
@@ -120,13 +123,24 @@ def filelog_grapher(repo, path, start_rev, stop_rev):
         revs = next_revs
         filerev -= 1
 
-def get_rev_parents(repo, rev):
-    return [x for x in repo.changelog.parentrevs(rev) if x != nullrev]
-
 def fix_long_right_edges(edges):
     for (i, (start, end)) in enumerate(edges):
         if end > start:
             edges[i] = (start, end + 1)
+
+def get_nodeline_edges_tail(
+        node_index, p_node_index, n_columns, n_columns_diff, p_diff, fix_tail):
+    if fix_tail and n_columns_diff == p_diff and n_columns_diff != 0:
+        # Still going in the same non-vertical direction.
+        if n_columns_diff == -1:
+            start = max(node_index + 1, p_node_index)
+            tail = ["|", " "] * (start - node_index - 1)
+            tail.extend(["/", " "] * (n_columns - start))
+            return tail
+        else:
+            return ["\\", " "] * (n_columns - node_index - 1)
+    else:
+        return ["|", " "] * (n_columns - node_index - 1)
 
 def draw_edges(edges, nodeline, interline):
     for (start, end) in edges:
@@ -144,24 +158,6 @@ def draw_edges(edges, nodeline, interline):
                 if nodeline[i] != "+":
                     nodeline[i] = "-"
 
-def format_line(line, level, logstr):
-    text = "%-*s %s" % (2 * level, "".join(line), logstr)
-    return "%s\n" % text.rstrip()
-
-def get_nodeline_edges_tail(
-        node_index, p_node_index, n_columns, n_columns_diff, p_diff, fix_tail):
-    if fix_tail and n_columns_diff == p_diff and n_columns_diff != 0:
-        # Still going in the same non-vertical direction.
-        if n_columns_diff == -1:
-            start = max(node_index + 1, p_node_index)
-            tail = ["|", " "] * (start - node_index - 1)
-            tail.extend(["/", " "] * (n_columns - start))
-            return tail
-        else:
-            return ["\\", " "] * (n_columns - node_index - 1)
-    else:
-        return ["|", " "] * (n_columns - node_index - 1)
-
 def get_padding_line(ni, n_columns, edges):
     line = []
     line.extend(["|", " "] * ni)
@@ -178,25 +174,6 @@ def get_padding_line(ni, n_columns, edges):
     line.extend([c, " "])
     line.extend(["|", " "] * (n_columns - ni - 1))
     return line
-
-def get_limit(limit_opt):
-    if limit_opt:
-        try:
-            limit = int(limit_opt)
-        except ValueError:
-            raise Abort(_("limit must be a positive integer"))
-        if limit <= 0:
-            raise Abort(_("limit must be positive"))
-    else:
-        limit = sys.maxint
-    return limit
-
-def get_revs(repo, rev_opt):
-    if rev_opt:
-        revs = revrange(repo, rev_opt)
-        return (max(revs), min(revs))
-    else:
-        return (len(repo) - 1, 0)
 
 def ascii(ui, grapher):
     """prints an ASCII graph of the DAG returned by the grapher
@@ -293,11 +270,31 @@ def ascii(ui, grapher):
         # print lines
         indentation_level = max(n_columns, n_columns + n_columns_diff)
         for (line, logstr) in zip(lines, node_lines):
-            ui.write(format_line(line, indentation_level, logstr))
+            ln = "%-*s %s" % (2 * indentation_level, "".join(line), logstr)
+            ui.write(ln.rstrip() + '\n')
 
         # ... and start over
         prev_node_index = node_index
         prev_n_columns_diff = n_columns_diff
+
+def get_limit(limit_opt):
+    if limit_opt:
+        try:
+            limit = int(limit_opt)
+        except ValueError:
+            raise Abort(_("limit must be a positive integer"))
+        if limit <= 0:
+            raise Abort(_("limit must be positive"))
+    else:
+        limit = sys.maxint
+    return limit
+
+def get_revs(repo, rev_opt):
+    if rev_opt:
+        revs = revrange(repo, rev_opt)
+        return (max(revs), min(revs))
+    else:
+        return (len(repo) - 1, 0)
 
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
