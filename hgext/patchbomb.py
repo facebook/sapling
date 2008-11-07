@@ -175,9 +175,9 @@ def patchbomb(ui, repo, *revs, **opts):
             raise ValueError
 
         if opts.get('attach'):
-             body = ('\n'.join(desc[1:]).strip() or
-                   'Patch subject is complete summary.')
-             body += '\n\n\n'
+            body = ('\n'.join(desc[1:]).strip() or
+                    'Patch subject is complete summary.')
+            body += '\n\n\n'
 
         if opts.get('plain'):
             while patch and patch[0].startswith('# '):
