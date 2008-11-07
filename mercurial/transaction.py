@@ -12,7 +12,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import os
+import os, errno
 
 class transaction(object):
     def __init__(self, report, opener, journal, after=None, createmode=None):
