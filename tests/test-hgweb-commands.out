@@ -511,8 +511,8 @@ graph |
 <a href="/tags?style=gitweb">tags</a> |
 <a href="/file/a4f92ed23982?style=gitweb">files</a>
 <br/>
-<a href="/graph/1?style=gitweb?revcount=0">less</a>
-<a href="/graph/1?style=gitweb?revcount=2">more</a>
+<a href="/graph/1?style=gitweb&revcount=12">less</a>
+<a href="/graph/1?style=gitweb&revcount=50">more</a>
 | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-1</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
 </div>
 
@@ -597,8 +597,8 @@ graph.render(data);
 </script>
 
 <div class="page_nav">
-<a href="/graph/1?style=gitweb?revcount=0">less</a>
-<a href="/graph/1?style=gitweb?revcount=2">more</a>
+<a href="/graph/1?style=gitweb&revcount=12">less</a>
+<a href="/graph/1?style=gitweb&revcount=50">more</a>
 | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-1</a> <a href="/graph/tip?style=gitweb">tip</a> 
 </div>
 

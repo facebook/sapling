@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import os, mimetypes, re, cgi
+import os, mimetypes, re, cgi, copy
 import webutil
 from mercurial import revlog, archival, templatefilters
 from mercurial.node import short, hex, nullid
@@ -619,20 +619,27 @@ def graph(web, req, tmpl):
     rev = webutil.changectx(web.repo, req).rev()
     bg_height = 39
 
+    revcount = 25
+    if 'revcount' in req.form:
+        revcount = int(req.form.get('revcount', [revcount])[0])
+        tmpl.defaults['sessionvars']['revcount'] = revcount
+
+    lessvars = copy.copy(tmpl.defaults['sessionvars'])
+    lessvars['revcount'] = revcount / 2
+    morevars = copy.copy(tmpl.defaults['sessionvars'])
+    morevars['revcount'] = revcount * 2
+
     max_rev = len(web.repo) - 1
-    revcount = min(max_rev, int(req.form.get('revcount', [25])[0]))
+    revcount = min(max_rev, revcount)
     revnode = web.repo.changelog.node(rev)
     revnode_hex = hex(revnode)
     uprev = min(max_rev, rev + revcount)
     downrev = max(0, rev - revcount)
-    lessrev = max(0, rev - revcount / 2)
-
     count = len(web.repo)
     changenav = webutil.revnavgen(rev, revcount, count, web.repo.changectx)
 
     tree = list(graphmod.graph(web.repo, rev, downrev))
     canvasheight = (len(tree) + 1) * bg_height - 27;
-
     data = []
     for i, (ctx, vtx, edges) in enumerate(tree):
         node = short(ctx.node())
@@ -645,7 +652,6 @@ def graph(web, req, tmpl):
         data.append((node, vtx, edges, desc, user, age, branch, ctx.tags()))
 
     return tmpl('graph', rev=rev, revcount=revcount, uprev=uprev,
-                lessrev=lessrev, revcountmore=revcount and 2 * revcount or 1,
-                revcountless=revcount / 2, downrev=downrev,
-                canvasheight=canvasheight, bg_height=bg_height,
-                jsdata=data, node=revnode_hex, changenav=changenav)
+                lessvars=lessvars, morevars=morevars, downrev=downrev,
+                canvasheight=canvasheight, jsdata=data, bg_height=bg_height,
+                node=revnode_hex, changenav=changenav)

@@ -37,8 +37,8 @@ files, or words in the commit message</span>
 </form>
 
 <div class="navigate">
-<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountless}">less</a>
-<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountmore}">more</a>
+<a href="{url}graph/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url}graph/{rev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navgraphentry}
 </div>
 
@@ -102,8 +102,8 @@ graph.render(data);
 </script>
 
 <div class="navigate">
-<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountless}">less</a>
-<a href="{url}graph/{uprev}{sessionvars%urlparameter}?revcount={revcountmore}">more</a>
+<a href="{url}graph/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url}graph/{rev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navgraphentry}
 </div>
 
