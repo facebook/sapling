@@ -627,9 +627,8 @@ def graph(web, req, tmpl):
     downrev = max(0, rev - revcount)
     lessrev = max(0, rev - revcount / 2)
 
-    maxchanges = web.maxshortchanges or web.maxchanges
     count = len(web.repo)
-    changenav = webutil.revnavgen(rev, maxchanges, count, web.repo.changectx)
+    changenav = webutil.revnavgen(rev, revcount, count, web.repo.changectx)
 
     tree = list(graphmod.graph(web.repo, rev, downrev))
     canvasheight = (len(tree) + 1) * bg_height - 27;
