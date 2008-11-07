@@ -421,7 +421,9 @@ class ui(object):
 
         If not interactive -- the default is returned
         """
-        if not self.interactive: return default
+        if not self.interactive:
+            self.note(msg, ' ', default, "\n")
+            return default
         while True:
             try:
                 r = self._readline(msg + ' ')

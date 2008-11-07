@@ -5,6 +5,8 @@ resolving manifests
  overwrite None partial False
  ancestor c334dc3be0da local 521a1e40188f+ remote 3574f3e69b1c
   searching for copies back to rev 1
+ conflicting flags for a
+(n)one, e(x)ec or sym(l)ink? n
  a: update permissions -> e
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -15,6 +17,8 @@ resolving manifests
  overwrite None partial False
  ancestor c334dc3be0da local 3574f3e69b1c+ remote 521a1e40188f
   searching for copies back to rev 1
+ conflicting flags for a
+(n)one, e(x)ec or sym(l)ink? n
  a: remote is newer -> g
 getting a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved

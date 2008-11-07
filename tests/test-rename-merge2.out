@@ -455,6 +455,8 @@ resolving manifests
   searching for copies back to rev 1
  b: versions differ -> m
  rev: versions differ -> m
+remote changed a which local deleted
+use (c)hanged version or leave (d)eleted? c
  a: prompt recreating -> g
 preserving b for resolve of b
 preserving rev for resolve of rev
@@ -480,6 +482,8 @@ resolving manifests
  overwrite None partial False
  ancestor 924404dff337 local 0b76e65c8289+ remote e03727d2d66b
   searching for copies back to rev 1
+ local changed a which remote deleted
+use (c)hanged version or (d)elete? c
  b: versions differ -> m
  rev: versions differ -> m
 preserving b for resolve of b
