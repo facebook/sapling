@@ -198,37 +198,26 @@ def get_revs(repo, rev_opt):
     else:
         return (len(repo) - 1, 0)
 
-def graphlog(ui, repo, path=None, **opts):
-    """show revision history alongside an ASCII revision graph
+def ascii(ui, grapher):
+    """prints an ASCII graph of the DAG returned by the grapher
 
-    Print a revision history alongside a revision graph drawn with
-    ASCII characters.
+    grapher is a generator that emits tuples with the following elements:
 
-    Nodes printed as an @ character are parents of the working
-    directory.
+      - Character to use as node's symbol.
+      - List of lines to display as the node's text.
+      - Column of the current node in the set of ongoing edges.
+      - Edges; a list of (col, next_col) indicating the edges between
+        the current node and its parents.
+      - Number of columns (ongoing edges) in the current revision.
+      - The difference between the number of columns (ongoing edges)
+        in the next revision and the number of columns (ongoing edges)
+        in the current revision. That is: -1 means one column removed;
+        0 means no columns added or removed; 1 means one column added.
     """
-
-    limit = get_limit(opts["limit"])
-    (start_rev, stop_rev) = get_revs(repo, opts["rev"])
-    stop_rev = max(stop_rev, start_rev - limit + 1)
-    if start_rev == nullrev:
-        return
-    cs_printer = show_changeset(ui, repo, opts)
-    if path:
-        path = canonpath(repo.root, os.getcwd(), path)
-    if path:
-        grapher = filelog_grapher(repo, path, start_rev, stop_rev)
-    else:
-        grapher = revision_grapher(repo, start_rev, stop_rev)
-    repo_parents = repo.dirstate.parents()
     prev_n_columns_diff = 0
     prev_node_index = 0
-
-    for (rev, node, node_index, edges, n_columns, n_columns_diff) in grapher:
+    for (node_ch, node_lines, node_index, edges, n_columns, n_columns_diff) in grapher:
         # node_lines is the list of all text lines to draw alongside the graph
-        ui.pushbuffer()
-        cs_printer.show(rev, node)
-        node_lines = ui.popbuffer().split("\n")[:-1]
 
         if n_columns_diff == -1:
             # Transform
@@ -261,10 +250,6 @@ def graphlog(ui, repo, path=None, **opts):
 
         # nodeline is the line containing the node character (typically o)
         nodeline = ["|", " "] * node_index
-        if node in repo_parents:
-            node_ch = "@"
-        else:
-            node_ch = "o"
         nodeline.extend([node_ch, " "])
 
         nodeline.extend(
@@ -313,6 +298,45 @@ def graphlog(ui, repo, path=None, **opts):
         # ... and start over
         prev_node_index = node_index
         prev_n_columns_diff = n_columns_diff
+
+def graphlog(ui, repo, path=None, **opts):
+    """show revision history alongside an ASCII revision graph
+
+    Print a revision history alongside a revision graph drawn with
+    ASCII characters.
+
+    Nodes printed as an @ character are parents of the working
+    directory.
+    """
+
+    limit = get_limit(opts["limit"])
+    (start_rev, stop_rev) = get_revs(repo, opts["rev"])
+    stop_rev = max(stop_rev, start_rev - limit + 1)
+    if start_rev == nullrev:
+        return
+    if path:
+        path = canonpath(repo.root, os.getcwd(), path)
+    if path:
+        revgrapher = filelog_grapher(repo, path, start_rev, stop_rev)
+    else:
+        revgrapher = revision_grapher(repo, start_rev, stop_rev)
+
+    repo_parents = repo.dirstate.parents()
+    cs_printer = show_changeset(ui, repo, opts)
+    def grapher():
+        for (rev, node, node_index, edges, n_columns, n_columns_diff) in revgrapher:
+            # log_strings is the list of all log strings to draw alongside
+            # the graph.
+            ui.pushbuffer()
+            cs_printer.show(rev, node)
+            log_strings = ui.popbuffer().split("\n")[:-1]
+            if node in repo_parents:
+                node_ch = "@"
+            else:
+                node_ch = "o"
+            yield (node_ch, log_strings, node_index, edges, n_columns, n_columns_diff)
+
+    ascii(ui, grapher())
 
 cmdtable = {
     "glog":
