@@ -216,33 +216,39 @@ PYTHONPATH::
     gives 3, 4 and 5. Similarly, a range of 4:2 gives 4, 3, and 2.
     ''')),
 
-    (['gitdiffs'], _('Using git Diffs'),
+    (['gitdiffs'], _('Git Extended Diff Format'),
      _(r'''
-    In several places, Mercurial supports two separate variations on
-    the unified diff format: normal diffs, as are de facto standardized
-    by GNU's patch utility, and git diffs, invented for the git VCS.
+    Mercurial's default format for showing changes between two versions
+    of a file is compatible to the unified format of GNU diff, which
+    can be used by GNU patch and many other standard tools.
 
-    The git diff format is an addition of some information to the normal
-    diff format, which allows diff to convey changes in file permissions
-    as well as the creation, deletion, renaming and copying of files, as
-    well as diffs for binary files (unsupported by standard diff),
-    operations which are very useful to modern version control systems
-    such as Mercurial, in trying to faithfully replay your changes.
+    While this de facto standardized format is often enough, there are
+    cases where additional change information should be included in the
+    generated diff file:
 
-    In building Mercurial, we made a choice to support the git diff
-    format, but we haven't made it the default. This is because for a
-    long time, the format for unified diffs we usually use has been
-    defined by GNU patch, and it doesn't (yet) support git's extensions
-    to the diff format. This means that, when extracting diffs from a
-    Mercurial repository (through the diff command, for example), you
-    must be careful about things like file copies and renames (file
-    creation and deletion are mostly handled fine by the traditional
-    diff format, with some rare edge cases for which the git extensions
-    can be used). Mercurial's internal operations (like push and pull)
-    are not affected by these differences, because they use a different,
-    binary format for communicating changes.
+     - executable status
+     - copy or rename information
+     - changes in binary files
+     - creation or deletion of empty files
 
-    To use git diffs, use the --git option for relevant commands, or
-    enable them in a hgrc, setting 'git = True' in the [diff] section.
+    Mercurial adopted the extended diff format which was invented for
+    the git VCS to support above features.
+
+    The git extended diff format is not produced by default, because
+    there are only very few tools (yet) which understand the additional
+    information provided by them.
+
+    This means that, when generating diffs from a Mercurial repository
+    (e.g. with "hg export"), you should be careful about things like
+    file copies and renames or other things mentioned above, because
+    when applying a standard diff to a different repository, this extra
+    information is lost. Mercurial's internal operations (like push and
+    pull) are not affected by this, because they use a different, binary
+    format for communicating changes.
+
+    To make Mercurial produce the git extended diff format, use the
+    --git option available for many commands, or set 'git = True' in the
+    [diff] section of your hgrc. You do not need to set this option when
+    importing diffs in this format or using them in the mq extension.
     ''')),
 )
