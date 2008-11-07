@@ -513,7 +513,7 @@ graph |
 <br/>
 <a href="/graph/1?style=gitweb?revcount=0">less</a>
 <a href="/graph/1?style=gitweb?revcount=2">more</a>
-| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-1</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
 </div>
 
 <div class="title">&nbsp;</div>
@@ -599,7 +599,7 @@ graph.render(data);
 <div class="page_nav">
 <a href="/graph/1?style=gitweb?revcount=0">less</a>
 <a href="/graph/1?style=gitweb?revcount=2">more</a>
-| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
+| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-1</a> <a href="/graph/tip?style=gitweb">tip</a> 
 </div>
 
 <div class="page_footer">
