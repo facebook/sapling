@@ -68,6 +68,19 @@ from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
 
+class exportee:
+    def __init__(self, container):
+        self.lines = []
+        self.container = container
+        self.name = 'email'
+
+    def write(self, data):
+        self.lines.append(data)
+
+    def close(self):
+        self.container.append(''.join(self.lines).split('\n'))
+        self.lines = []
+
 def patchbomb(ui, repo, *revs, **opts):
     '''send changesets by email
 
@@ -287,20 +300,6 @@ def patchbomb(ui, repo, *revs, **opts):
 
     def getexportmsgs():
         patches = []
-
-        class exportee:
-            def __init__(self, container):
-                self.lines = []
-                self.container = container
-                self.name = 'email'
-
-            def write(self, data):
-                self.lines.append(data)
-
-            def close(self):
-                self.container.append(''.join(self.lines).split('\n'))
-                self.lines = []
-
         commands.export(ui, repo, *revs, **{'output': exportee(patches),
                                             'switch_parent': False,
                                             'text': None,
