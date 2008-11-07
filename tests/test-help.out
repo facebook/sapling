@@ -96,7 +96,7 @@ additional help topics:
  environment  Environment Variables
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
- gitdiffs     Using git Diffs
+ gitdiffs     Git Extended Diff Format
 
 use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
@@ -155,7 +155,7 @@ additional help topics:
  environment  Environment Variables
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
- gitdiffs     Using git Diffs
+ gitdiffs     Git Extended Diff Format
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit

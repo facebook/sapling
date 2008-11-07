@@ -205,7 +205,7 @@ additional help topics:
  environment  Environment Variables
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
- gitdiffs     Using git Diffs
+ gitdiffs     Git Extended Diff Format
 
 use "hg -v help" to show aliases and global options
 Mercurial Distributed SCM
@@ -268,7 +268,7 @@ additional help topics:
  environment  Environment Variables
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
- gitdiffs     Using git Diffs
+ gitdiffs     Git Extended Diff Format
 
 use "hg -v help" to show aliases and global options
 %% not tested: --debugger
