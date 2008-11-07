@@ -148,13 +148,16 @@ class httprepository(repo.repository):
             raise util.UnexpectedOutput(_("unexpected response:"), d)
 
     def between(self, pairs):
-        n = " ".join(["-".join(map(hex, p)) for p in pairs])
-        d = self.do_read("between", pairs=n)
-        try:
-            p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
-            return p
-        except:
-            raise util.UnexpectedOutput(_("unexpected response:"), d)
+        batch = 8 # avoid giant requests
+        r = []
+        for i in xrange(0, len(pairs), batch):
+            n = " ".join(["-".join(map(hex, p)) for p in pairs[i:i + batch]])
+            d = self.do_read("between", pairs=n)
+            try:
+                r += [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
+            except:
+                raise util.UnexpectedOutput(_("unexpected response:"), d)
+        return r
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
