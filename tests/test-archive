@@ -24,7 +24,7 @@ test_archtype() {
     echo % $3 and $4 disallowed should both give 403
     "$TESTDIR/get-with-headers.py" localhost:$HGPORT "/archive/tip.$3" | head -n 1
     "$TESTDIR/get-with-headers.py" localhost:$HGPORT "/archive/tip.$4" | head -n 1
-    kill `cat hg.pid`
+    "$TESTDIR/killdaemons.py"
     cat errors.log
     cp .hg/hgrc-base .hg/hgrc
 }
@@ -62,6 +62,8 @@ http_proxy= python getarchive.py "$TIP" gz | gunzip | tar tf - | sed "s/$QTIP/TI
 http_proxy= python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - | sed "s/$QTIP/TIP/"
 http_proxy= python getarchive.py "$TIP" zip > archive.zip
 unzip -t archive.zip | sed "s/$QTIP/TIP/"
+
+"$TESTDIR/killdaemons.py"
 
 hg archive -t tar test.tar
 tar tf test.tar
