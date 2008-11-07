@@ -15,7 +15,6 @@ try:
     import linux as inotify
     from linux import watcher
 except ImportError:
-    print >> sys.stderr, '*** native support is required for this extension'
     raise
 
 class AlreadyStartedException(Exception): pass

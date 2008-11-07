@@ -80,13 +80,14 @@ def reposetup(ui, repo):
                     query = None
                     ui.debug(_('(starting inotify server)\n'))
                     try:
-                        server.start(ui, repo)
-                        query = client.query
-                    except server.AlreadyStartedException, inst:
-                        # another process may have started its own
-                        # inotify server while this one was starting.
-                        ui.debug(str(inst))
-                        query = client.query
+                        try:
+                            server.start(ui, repo)
+                            query = client.query
+                        except server.AlreadyStartedException, inst:
+                            # another process may have started its own
+                            # inotify server while this one was starting.
+                            ui.debug(str(inst))
+                            query = client.query
                     except Exception, inst:
                         ui.warn(_('could not start inotify server: '
                                        '%s\n') % inst)
