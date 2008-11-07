@@ -102,7 +102,11 @@ def rollback(opener, file):
         if o:
             opener(f, "a").truncate(int(o))
         else:
-            fn = opener(f).name
-            os.unlink(fn)
+            try:
+                fn = opener(f).name
+                os.unlink(fn)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
     os.unlink(file)
 
