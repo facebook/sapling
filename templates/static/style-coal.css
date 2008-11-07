@@ -79,7 +79,7 @@ form.search span {
   width: 190px;
   padding: 5px;
   background: #ffc;
-  font-size: 70%;    
+  font-size: 70%;
   border: 1px solid yellow;
   -moz-border-radius: 5px; /* this works only in camino/firefox */
   -webkit-border-radius: 5px; /* this is just for Safari */
@@ -126,7 +126,7 @@ h3 {
   border-bottom: 1px solid #999;
   border-collapse: collapse;
   font-size: 90%;
-  width: 100%; 
+  width: 100%;
   font-weight: normal;
   text-align: left;
 }
@@ -136,9 +136,9 @@ h3 {
   vertical-align: top;
 }
 
-.bigtable th { 
+.bigtable th {
   padding: 1px 4px 1px 4px;
-  border-bottom: 1px solid #999; 
+  border-bottom: 1px solid #999;
   font-size: smaller;
 }
 .bigtable tr { border: none; }
@@ -158,14 +158,14 @@ h3 {
 .fileline img { border: 0; }
 
 /* Changeset entry */
-#changesetEntry { 
+#changesetEntry {
   border-collapse: collapse;
   font-size: 90%;
   width: 100%;
   margin-bottom: 1em;
 }
 
-#changesetEntry th { 
+#changesetEntry th {
   padding: 1px 4px 1px 4px;
   width: 4em;
   text-align: right;
