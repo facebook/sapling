@@ -16,6 +16,6 @@ done
 
 echo "# exporting 4 changesets to a file"
 hg export -o export_internal 1 2 3 4
-grep HG export_internal | wc -l
+grep HG export_internal | wc -l | sed -e 's/^ *//'
 echo "# exporting 4 changesets to a file"
-hg export 1 2 3 4 | grep HG | wc -l
+hg export 1 2 3 4 | grep HG | wc -l | sed -e 's/^ *//'
