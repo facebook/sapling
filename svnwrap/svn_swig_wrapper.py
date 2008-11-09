@@ -362,39 +362,43 @@ class SubversionRepo(object):
         if other_rev is None:
             other_rev = revision - 1
         tmpdir = tempfile.mkdtemp('svnwrap_temp')
-        # hot tip: the swig bridge doesn't like StringIO for these bad boys
-        out_path = os.path.join(tmpdir, 'diffout')
-        error_path = os.path.join(tmpdir, 'differr')
-        out = open(out_path, 'w')
-        err = open(error_path, 'w')
-        rev_old = core.svn_opt_revision_t()
-        rev_old.kind = core.svn_opt_revision_number
-        rev_old.value.number = other_rev
-        rev_new = core.svn_opt_revision_t()
-        rev_new.kind = core.svn_opt_revision_number
-        rev_new.value.number = revision
-        client.diff3([], url2, rev_old, url, rev_new, True, True,
-                     deleted, ignore_type, 'UTF-8', out, err,
-                     self.client_context, self.pool)
-        out.close()
-        err.close()
-        assert len(open(error_path).read()) == 0
-        diff = open(out_path).read()
-        os.chdir(old_cwd)
-        shutil.rmtree(tmpdir)
-        return diff
+        try:
+            # hot tip: the swig bridge doesn't like StringIO for these bad boys
+            out_path = os.path.join(tmpdir, 'diffout')
+            error_path = os.path.join(tmpdir, 'differr')
+            out = open(out_path, 'w')
+            err = open(error_path, 'w')
+            rev_old = core.svn_opt_revision_t()
+            rev_old.kind = core.svn_opt_revision_number
+            rev_old.value.number = other_rev
+            rev_new = core.svn_opt_revision_t()
+            rev_new.kind = core.svn_opt_revision_number
+            rev_new.value.number = revision
+            client.diff3([], url2, rev_old, url, rev_new, True, True,
+                         deleted, ignore_type, 'UTF-8', out, err,
+                         self.client_context, self.pool)
+            out.close()
+            err.close()
+            assert len(open(error_path).read()) == 0
+            diff = open(out_path).read()
+            os.chdir(old_cwd)
+            return diff
+        finally:
+            shutil.rmtree(tmpdir)
 
     def get_file(self, path, revision):
         out = cStringIO.StringIO()
         tmpdir = tempfile.mkdtemp('svnwrap_temp')
-        # hot tip: the swig bridge doesn't like StringIO for these bad boys
-        out_path = os.path.join(tmpdir, 'diffout')
-        out = open(out_path, 'w')
-        ra.get_file(self.ra, path,revision, out , None)
-        out.close()
-        x = open(out_path).read()
-        shutil.rmtree(tmpdir)
-        return x
+        try:
+            # hot tip: the swig bridge doesn't like StringIO for these bad boys
+            out_path = os.path.join(tmpdir, 'diffout')
+            out = open(out_path, 'w')
+            ra.get_file(self.ra, path,revision, out , None)
+            out.close()
+            x = open(out_path).read()
+            return x
+        finally:
+            shutil.rmtree(tmpdir)
 
     def proplist(self, path, revision, recurse=False):
         rev = core.svn_opt_revision_t()
