@@ -69,6 +69,24 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
     return 0
 
 
+def _findmissing(dirname, svn, branch_path):
+    """Find missing directories in svn. dirname *must* end in a /
+    """
+    assert dirname[-1] == '/'
+    missing = []
+    keep_checking = True
+    # check and see if the dir exists svn-side.
+    path = dirname
+    while keep_checking:
+        try:
+            assert svn.list_dir('%s/%s' % (branch_path, path))
+            keep_checking = False
+        except core.SubversionException, e:
+            # dir must not exist
+            missing.append(path[:-1])
+            path = '/'.join(path.split('/')[:-2] + [''])
+    return missing
+
 def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     """Build and send a commit from Mercurial to Subversion.
     """
@@ -99,12 +117,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                 dirname = '/'.join(file.split('/')[:-1] + [''])
                 # check for new directories
                 if not list(parent.walk(util.PrefixMatch(dirname))):
-                    # check and see if the dir exists svn-side.
-                    try:
-                        assert svn.list_dir('%s/%s' % (branch_path, dirname))
-                    except core.SubversionException, e:
-                        # dir must not exist
-                        added_dirs.append(dirname[:-1])
+                    added_dirs += _findmissing(dirname, svn, branch_path)
             else:
                 base_data = parent.filectx(file).data()
                 if ('x' in parent.filectx(file).flags()

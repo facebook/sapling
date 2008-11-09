@@ -328,6 +328,35 @@ class PushTests(unittest.TestCase):
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['newdir/gamma'].data(), 'foo')
 
+    def test_push_with_new_subdir(self):
+        self.test_push_to_default(commit=True)
+        repo = self.repo
+        def file_callback(repo, memctx, path):
+            if path == 'newdir/subdir/gamma':
+                return context.memfilectx(path=path,
+                                          data='foo',
+                                          islink=False,
+                                          isexec=False,
+                                          copied=False)
+            raise IOError()
+        ctx = context.memctx(repo,
+                             (repo['tip'].node(), node.nullid),
+                             'message',
+                             ['newdir/subdir/gamma', ],
+                             file_callback,
+                             'author',
+                             '2008-10-29 21:26:00 -0500',
+                             {'branch': 'default', })
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
+                                              hg_repo_path=self.wc_path,
+                                              svn_url='file://' + self.repo_path)
+        tip = self.repo['tip']
+        self.assertNotEqual(tip.node(), new_hash)
+        self.assertEqual(tip['newdir/subdir/gamma'].data(), 'foo')
+
+
     def test_push_existing_file_newly_symlink(self):
         self.test_push_existing_file_newly_execute(execute=False,
                                                    link=True,
