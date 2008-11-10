@@ -1,5 +1,4 @@
 import os
-import shutil
 import tempfile
 import unittest
 
@@ -19,7 +18,7 @@ class TestTags(unittest.TestCase):
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        test_util.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
         
     def _load_fixture_and_fetch(self, fixture_name, stupid=False):

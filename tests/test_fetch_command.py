@@ -1,5 +1,4 @@
 import os
-import shutil
 import tempfile
 import unittest
 
@@ -19,7 +18,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        test_util.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
 
     def _load_fixture_and_fetch(self, fixture_name):
@@ -129,16 +128,14 @@ class TestStupidPull(unittest.TestCase):
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        test_util.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
 
     def test_stupid(self):
-        test_util.load_svndump_fixture(self.repo_path, 'two_heads.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path,
-                                      stupid=True)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = test_util.load_fixture_and_fetch('two_heads.svndump',
+                                                self.repo_path,
+                                                self.wc_path,
+                                                True)
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
@@ -153,12 +150,11 @@ class TestStupidPull(unittest.TestCase):
         self.assertEqual(len(repo.heads()), 2)
 
     def test_oldest_not_trunk_and_tag_vendor_branch(self):
-        test_util.load_svndump_fixture(self.repo_path,
-                                'tagged_vendor_and_oldest_not_trunk.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path,
-                                      stupid=True)
+        repo = test_util.load_fixture_and_fetch(
+            'tagged_vendor_and_oldest_not_trunk.svndump',
+            self.repo_path,
+            self.wc_path,
+            True)
         repo = hg.repository(ui.ui(), self.wc_path)
         self.assertEqual(node.hex(repo['oldest'].node()),
                          'd73002bcdeffe389a8df81ee43303d36e79e8ca4')

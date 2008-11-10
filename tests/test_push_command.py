@@ -1,6 +1,6 @@
 import os
-import shutil
 import socket
+import subprocess
 import tempfile
 import unittest
 
@@ -41,14 +41,14 @@ class PushOverSvnserveTests(unittest.TestCase):
             assert False, ('You appear to be running your own svnserve!'
                            ' You can probably ignore this test failure.')
         args = ['svnserve', '-d', '--foreground', '-r', self.repo_path]
-        self.svnserve_pid = os.spawnvp(os.P_NOWAIT, 'svnserve', args)
+        self.svnserve_pid = subprocess.Popen(args).pid
         time.sleep(2)
         fetch_command.fetch_revisions(ui.ui(),
                                       svn_url='svn://localhost/',
                                       hg_repo_path=self.wc_path)
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        test_util.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
         os.system('kill -9 %d' % self.svnserve_pid)
 
@@ -97,18 +97,22 @@ class PushTests(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
-        test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path)
+        test_util.load_fixture_and_fetch('simple_branch.svndump',
+                                         self.repo_path,
+                                         self.wc_path)
 
     # define this as a property so that it reloads anytime we need it
     @property
     def repo(self):
         return hg.repository(ui.ui(), self.wc_path)
 
+    def pushrevisions(self):
+        push_cmd.push_revisions_to_subversion(
+            ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
+            svn_url=test_util.fileurl(self.repo_path))
+
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        test_util.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
 
     def test_push_to_default(self, commit=True):
@@ -135,9 +139,7 @@ class PushTests(unittest.TestCase):
         if not commit:
             return # some tests use this test as an extended setup.
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://'+self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), old_tip)
         self.assertEqual(tip.parents()[0].node(), expected_parent)
@@ -168,9 +170,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default',})
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://'+self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), old_tip)
         self.assertNotEqual(tip.parents()[0].node(), old_tip)
@@ -206,9 +206,7 @@ class PushTests(unittest.TestCase):
         new_hash = repo.commitctx(ctx)
         #commands.update(ui.ui(), self.repo, node='tip')
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://'+self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['adding_file'].data(), 'foo')
@@ -229,9 +227,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertEqual(old_files,
                          set(tip.manifest().keys() + ['alpha']))
@@ -258,9 +254,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assert_('@' in tip.user())
@@ -290,9 +284,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['gamma'].flags(), 'l')
@@ -321,9 +313,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['newdir/gamma'].data(), 'foo')
@@ -382,9 +372,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['alpha'].data(), 'foo')
@@ -409,9 +397,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['alpha'].data(), 'bar')
@@ -435,9 +421,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['alpha'].data(), 'bar')

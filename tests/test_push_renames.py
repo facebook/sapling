@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 import tempfile
 import unittest
@@ -21,10 +20,10 @@ class TestPushRenames(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
-        test_util.load_svndump_fixture(self.repo_path, 'pushrenames.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='file://%s' % self.repo_path,
-                                      hg_repo_path=self.wc_path)
+        test_util.load_fixture_and_fetch('pushrenames.svndump',
+                                         self.repo_path,
+                                         self.wc_path,
+                                         True)
 
     # define this as a property so that it reloads anytime we need it
     @property
@@ -32,7 +31,7 @@ class TestPushRenames(unittest.TestCase):
         return hg.repository(ui.ui(), self.wc_path)
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        test_util.rmtree(self.tmpdir)
         os.chdir(self.oldwd)
 
     def _commitchanges(self, repo, changes):
@@ -118,9 +117,9 @@ class TestPushRenames(unittest.TestCase):
         self._commitchanges(repo, changes)
         
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://'+self.repo_path)
+        push_cmd.push_revisions_to_subversion(
+            ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
+            svn_url=test_util.fileurl(self.repo_path))
         tip = self.repo['tip']
         # self._debug_print_copies(tip)
         self.assertchanges(changes, tip)
