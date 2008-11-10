@@ -390,9 +390,21 @@ class SubversionRepo(object):
             shutil.rmtree(tmpdir)
 
     def get_file(self, path, revision):
+        """Return content and mode of file at given path and revision.
+
+        Content is raw svn content, symlinks content is still prefixed
+        by 'link '. Mode is 'x' if file is executable, 'l' if a symlink,
+        the empty string otherwise. If the file does not exist at this
+        revision, raise IOError.
+        """
+        mode = ''
         out = cStringIO.StringIO()
         try:
-            ra.get_file(self.ra, path, revision, out)
+            info = ra.get_file(self.ra, path, revision, out)
+            if isinstance(info, list):
+                info = info[-1]
+            mode = ("svn:executable" in info) and 'x' or ''
+            mode = ("svn:special" in info) and 'l' or mode
         except core.SubversionException, e:
             notfound = (core.SVN_ERR_FS_NOT_FOUND,
                         core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
@@ -400,7 +412,7 @@ class SubversionRepo(object):
                 raise IOError()
             raise
         data = out.getvalue()
-        return data
+        return data, mode
 
     def proplist(self, path, revision, recurse=False):
         if path[-1] == '/':

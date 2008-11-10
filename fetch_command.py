@@ -119,23 +119,9 @@ def replay_convert_rev(hg_editor, svn, r):
                             len(hg_editor.missing_plaintexts))
         files_to_grab = set()
         dirs_to_list = []
-        props = {}
-        hg_editor.ui.status('Getting properties...\n')
         for p in hg_editor.missing_plaintexts:
             hg_editor.ui.status('.')
             hg_editor.ui.flush()
-            p2 = p
-            if svn.subdir:
-                p2 = p2[len(svn.subdir)-1:]
-            # this *sometimes* raises on me, and I have
-            # no idea why. TODO(augie) figure out the why.
-            try:
-                pl = svn.proplist(p2, r.revnum, recurse=True)
-                cleanup_file_handles(svn, i)
-                i += 1
-            except core.SubversionException, e: #pragma: no cover
-                pass
-            props.update(pl)
             if p[-1] == '/':
                 dirs_to_list.append(p)
             else:
@@ -154,7 +140,6 @@ def replay_convert_rev(hg_editor, svn, r):
                 p2 = p2[len(svn.subdir)-1:]
             l = svn.list_dir(p2, r.revnum)
             for f in l:
-
                 if l[f].kind == core.svn_node_dir:
                     dirs_to_list.append(p+f+'/')
                 elif l[f].kind == core.svn_node_file:
@@ -168,13 +153,10 @@ def replay_convert_rev(hg_editor, svn, r):
                 p2 = p2[len(svn.subdir)-1:]
             cleanup_file_handles(svn, i)
             i += 1
-            hg_editor.current_files[p] = svn.get_file(p2, r.revnum)
-            hg_editor.current_files_exec[p] = False
-            if p in props:
-                if 'svn:executable' in props[p]:
-                    hg_editor.current_files_exec[p] = True
-                if 'svn:special' in props[p]:
-                    hg_editor.current_files_symlink[p] = True
+            data, mode = svn.get_file(p2, r.revnum)
+            hg_editor.current_files[p] = data
+            hg_editor.current_files_exec[p] = 'x' in mode
+            hg_editor.current_files_symlink[p] = 'l' in mode
         hg_editor.missing_plaintexts = set()
         hg_editor.ui.status('\n')
     hg_editor.commit_current_delta()
@@ -347,7 +329,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     except OSError, e:
                         pass
                     f = open(file_path, 'w')
-                    f.write(svn.get_file(diff_path+'/'+m, r.revnum))
+                    f.write(svn.get_file(diff_path+'/'+m, r.revnum)[0])
                     f.close()
                 except IOError:
                     pass
