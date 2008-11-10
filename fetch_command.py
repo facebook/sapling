@@ -340,19 +340,28 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         link_files = {}
         exec_files = {}
         try:
-            if br_p == b:
-                d = svn.get_unified_diff(diff_path, r.revnum, deleted=False,
-                                         # letting patch handle binaries sounded
-                                         # cool, but it breaks patch in sad ways
-                                         ignore_type=False)
-            else:
-                d = svn.get_unified_diff(diff_path, r.revnum,
-                                         other_path=make_diff_path(br_p),
-                                         other_rev=parent_rev,
-                                         deleted=True, ignore_type=True)
-                if d:
-                    ui.status('Branch creation with mods, pulling full rev.\n')
-                    raise BadPatchApply()
+            try:
+                if br_p == b:
+                    # letting patch handle binaries sounded
+                    # cool, but it breaks patch in sad ways
+                    d = svn.get_unified_diff(diff_path, r.revnum, deleted=False,
+                                             ignore_type=False)
+                else:
+                    d = svn.get_unified_diff(diff_path, r.revnum,
+                                             other_path=make_diff_path(br_p),
+                                             other_rev=parent_rev,
+                                             deleted=True, ignore_type=True)
+                    if d:
+                        ui.status('Branch creation with mods, pulling full rev.\n')
+                        raise BadPatchApply()
+            except core.SubversionException, e:
+                # "Can't write to stream: The handle is invalid."
+                # This error happens systematically under Windows, possibly
+                # related to file handles being non-write shareable by default.
+                if e.apr_err != 720006:
+                    raise
+                raise BadPatchApply()
+            
             for m in binary_file_re.findall(d):
                 # we have to pull each binary file by hand as a fulltext,
                 # which sucks but we've got no choice
