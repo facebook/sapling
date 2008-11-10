@@ -391,17 +391,16 @@ class SubversionRepo(object):
 
     def get_file(self, path, revision):
         out = cStringIO.StringIO()
-        tmpdir = tempfile.mkdtemp('svnwrap_temp')
         try:
-            # hot tip: the swig bridge doesn't like StringIO for these bad boys
-            out_path = os.path.join(tmpdir, 'diffout')
-            out = open(out_path, 'w')
-            ra.get_file(self.ra, path,revision, out , None)
-            out.close()
-            x = open(out_path).read()
-            return x
-        finally:
-            shutil.rmtree(tmpdir)
+            ra.get_file(self.ra, path, revision, out)
+        except core.SubversionException, e:
+            notfound = (core.SVN_ERR_FS_NOT_FOUND,
+                        core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+            if e.apr_err in notfound: # File not found
+                raise IOError()
+            raise
+        data = out.getvalue()
+        return data
 
     def proplist(self, path, revision, recurse=False):
         rev = core.svn_opt_revision_t()

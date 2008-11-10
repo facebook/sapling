@@ -349,12 +349,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     f = open(file_path, 'w')
                     f.write(svn.get_file(diff_path+'/'+m, r.revnum))
                     f.close()
-                except core.SubversionException, e:
-                    if (e.message.endswith("' path not found")
-                        or e.message.startswith("File not found: revision")):
-                        pass
-                    else:
-                        raise
+                except IOError:
+                    pass
             d2 = empty_file_patch_wont_make_re.sub('', d)
             d2 = property_exec_set_re.sub('', d2)
             d2 = property_exec_removed_re.sub('', d2)
