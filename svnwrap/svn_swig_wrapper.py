@@ -14,6 +14,12 @@ from svn import ra
 if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO) < (1, 5, 0): #pragma: no cover
     raise ImportError, 'You must have Subversion 1.5.0 or newer and matching SWIG bindings.'
 
+def optrev(revnum):
+    optrev = core.svn_opt_revision_t()
+    optrev.kind = core.svn_opt_revision_number
+    optrev.value.number = revnum
+    return optrev
+
 svn_config = core.svn_config_get_config(None)
 class RaCallbacks(ra.Callbacks):
     def open_tmp_file(self, pool): #pragma: no cover
@@ -371,14 +377,8 @@ class SubversionRepo(object):
             error_path = os.path.join(tmpdir, 'differr')
             out = open(out_path, 'w')
             err = open(error_path, 'w')
-            rev_old = core.svn_opt_revision_t()
-            rev_old.kind = core.svn_opt_revision_number
-            rev_old.value.number = other_rev
-            rev_new = core.svn_opt_revision_t()
-            rev_new.kind = core.svn_opt_revision_number
-            rev_new.value.number = revision
-            client.diff3([], url2, rev_old, url, rev_new, True, True,
-                         deleted, ignore_type, 'UTF-8', out, err,
+            client.diff3([], url2, optrev(other_rev), url, optrev(revision),
+                         True, True, deleted, ignore_type, 'UTF-8', out, err,
                          self.client_context, self.pool)
             out.close()
             err.close()
@@ -403,13 +403,11 @@ class SubversionRepo(object):
         return data
 
     def proplist(self, path, revision, recurse=False):
-        rev = core.svn_opt_revision_t()
-        rev.kind = core.svn_opt_revision_number
-        rev.value.number = revision
         if path[-1] == '/':
             path = path[:-1]
         if path[0] == '/':
             path = path[1:]
+        rev = optrev(revision)
         pl = dict(client.proplist2(self.svn_url+'/'+path, rev, rev, True,
                                    self.client_context, self.pool))
         pl2 = {}
@@ -418,9 +416,7 @@ class SubversionRepo(object):
         return pl2
 
     def fetch_all_files_to_dir(self, path, revision, checkout_path):
-        rev = core.svn_opt_revision_t()
-        rev.kind = core.svn_opt_revision_number
-        rev.value.number = revision
+        rev = optrev(revision)
         client.export3(self.svn_url+'/'+path, checkout_path, rev,
                        rev, True, True, True, 'LF', # should be 'CRLF' on win32
                        self.client_context, self.pool)
