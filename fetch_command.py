@@ -288,8 +288,43 @@ def getcopies(svn, hg_editor, branch, branchpath, r, files, parentid):
         hgcopies.update(copies)
     return hgcopies
 
+def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
+    """Extract all 'branch' content at a given revision.
+
+    Return a tuple (files, filectxfn) where 'files' is the list of all files
+    in the branch at the given revision, and 'filectxfn' is a memctx compatible
+    callable to retrieve individual file information.
+    """
+    files = []
+    try:
+        for path, kind in svn.list_files(branchpath, r.revnum):
+            if kind == 'f':
+                files.append(path)
+    except IOError:
+        # Branch does not exist at this revision. Get parent revision and
+        # remove everything.
+        parentctx = hg_editor.repo[parentid]
+        files = parentctx.manifest().keys()
+        def filectxfn(repo, memctx, path):
+            raise IOError()
+        return files, filectxfn
+
+    copies = getcopies(svn, hg_editor, branch, branchpath, r, files, parentid)
+    
+    linkprefix = 'link '
+    def filectxfn(repo, memctx, path):
+        data, mode = svn.get_file(branchpath + '/' + path, r.revnum)
+        isexec = 'x' in mode
+        islink = 'l' in mode
+        if islink and data.startswith(linkprefix):
+            data = data[len(linkprefix):]
+        copied = copies.get(path)
+        return context.memfilectx(path=path, data=data, islink=islink,
+                                  isexec=isexec, copied=copied)
+
+    return files, filectxfn
+
 def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
-    used_diff = True
     delete_all_files = False
     # this server fails at replay
     branches = hg_editor.branches_in_paths(r.paths)
@@ -445,96 +480,53 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 os.remove(path)
                 link_files[m] = link_path
                 files_touched.add(m)
-        except core.SubversionException, e:
-            if (e.apr_err == 160013 or (hasattr(e, 'message') and
-                  'was not found in the repository at revision ' in e.message)):
-                # Either this revision or the previous one does not exist.
-                try:
-                    ui.status("fetching entire rev previous rev does not exist.\n")
-                    used_diff = False
-                    svn.fetch_all_files_to_dir(diff_path, r.revnum, our_tempdir)
-                except core.SubversionException, e:
-                    if e.apr_err == 170000 or (e.message.startswith("URL '")
-                         and e.message.endswith("' doesn't exist")):
-                        delete_all_files = True
-                    else: #pragma: no cover
-                        raise
+        except (core.SubversionException, BadPatchApply), e:
+            if (hasattr(e, 'apr_err') and e.apr_err != 160013):
+                raise
+            # Either this revision or the previous one does not exist.
+            ui.status("fetching entire rev previous rev does not exist.\n")
+            files_touched, filectxfn = stupid_fetch_branchrev(
+                svn, hg_editor, b, branches[b], r, parent_ha)
+        else:
+            for p in r.paths:
+                if p.startswith(diff_path) and r.paths[p].action == 'D':
+                    p2 =  p[len(diff_path)+1:]
+                    files_touched.add(p2)
+                    p3 = os.path.join(our_tempdir, p2)
+                    if os.path.exists(p3) and not os.path.isdir(p3):
+                        os.unlink(p3)
+                    if p2 and p2[0] == '/':
+                        p2 = p2[1:]
+                    # If this isn't in the parent ctx, it must've been a dir
+                    if not p2 in hg_editor.repo[parent_ha]:
+                        d_files = [f for f in hg_editor.repo[parent_ha].manifest().iterkeys()
+                                   if f.startswith(p2 + '/')]
+                        for d in d_files:
+                            files_touched.add(d)
+            if delete_all_files:
+                for p in hg_editor.repo[parent_ha].manifest().iterkeys():
+                    if p:
+                        files_touched.add(p)
 
-        except BadPatchApply, e:
-            # previous rev didn't exist, so this is most likely the first
-            # revision. We'll have to pull all files by hand.
-            try:
-                ui.status("fetching entire rev because raised.\n")
-                used_diff = False
-                shutil.rmtree(our_tempdir)
-                os.makedirs(our_tempdir)
-                try:
-                    svn.fetch_all_files_to_dir(diff_path, r.revnum, our_tempdir)
-                except core.SubversionException, e:
-                    # apr_err 21 means that we couldn't rename a file to be a dir.
-                    # This happens only in the case (at least right now) of a file
-                    # located in brances or tags, which we don't support anyway.
-                    if e.apr_err == 21:
-                        continue
-                    else:
-                        raise
-            except core.SubversionException, e:
-                if e.apr_err == 170000 or (e.message.startswith("URL '")
-                     and e.message.endswith("' doesn't exist")):
-                    delete_all_files = True
-                else:
-                    raise
-        for p in r.paths:
-            if p.startswith(diff_path) and r.paths[p].action == 'D':
-                p2 =  p[len(diff_path)+1:]
-                files_touched.add(p2)
-                p3 = os.path.join(our_tempdir, p2)
-                if os.path.exists(p3) and not os.path.isdir(p3):
-                    os.unlink(p3)
-                if p2 and p2[0] == '/':
-                    p2 = p2[1:]
-                # If this isn't in the parent ctx, it must've been a dir
-                if not p2 in hg_editor.repo[parent_ha]:
-                    d_files = [f for f in hg_editor.repo[parent_ha].manifest().iterkeys()
-                               if f.startswith(p2 + '/')]
-                    for d in d_files:
-                        files_touched.add(d)
-        if delete_all_files:
-            for p in hg_editor.repo[parent_ha].manifest().iterkeys():
-                if p:
-                    files_touched.add(p)
-        if not used_diff:
-            for p in reduce(operator.add, [[os.path.join(x[0], y) for y in x[2]]
-                                           for x in
-                                           list(os.walk(our_tempdir))]):
-                p_real = p[len(our_tempdir)+1:]
-                if os.path.islink(p):
-                    link_files[p_real] = os.readlink(p)
-                exec_files[p_real] = (os.lstat(p).st_mode & 0100 != 0)
-                files_touched.add(p_real)
-            for p in hg_editor.repo[parent_ha].manifest().iterkeys():
-                # TODO this might not be a required step.
-                if p:
-                    files_touched.add(p)
+            copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched, 
+                               parent_ha)
 
-        copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched, 
-                           parent_ha)
+            def filectxfn(repo, memctx, path):
+                disk_path = os.path.join(our_tempdir, path)
+                if path in link_files:
+                    return context.memfilectx(path=path, data=link_files[path],
+                                              islink=True, isexec=False,
+                                              copied=False)
+                fp = open(disk_path)
+                exe = exec_files.get(path, None)
+                if exe is None and path in hg_editor.repo[parent_ha]:
+                    exe = 'x' in hg_editor.repo[parent_ha].filectx(path).flags()
+                copied = copies.get(path)
+                return context.memfilectx(path=path, data=fp.read(), islink=False,
+                                          isexec=exe, copied=copied)
 
         date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
         date += ' -0000'
-        def filectxfn(repo, memctx, path):
-            disk_path = os.path.join(our_tempdir, path)
-            if path in link_files:
-                return context.memfilectx(path=path, data=link_files[path],
-                                          islink=True, isexec=False,
-                                          copied=False)
-            fp = open(disk_path)
-            exe = exec_files.get(path, None)
-            if exe is None and path in hg_editor.repo[parent_ha]:
-                exe = 'x' in hg_editor.repo[parent_ha].filectx(path).flags()
-            copied = copies.get(path)
-            return context.memfilectx(path=path, data=fp.read(), islink=False,
-                                      isexec=exe, copied=copied)
         extra = {}
         if b:
             extra['branch'] = b

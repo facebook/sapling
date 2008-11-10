@@ -433,6 +433,32 @@ class SubversionRepo(object):
                        rev, True, True, True, 'LF', # should be 'CRLF' on win32
                        self.client_context, self.pool)
 
+    def list_files(self, dirpath, revision):
+        """List the content of a directory at a given revision, recursively.
+
+        Yield tuples (path, kind) where 'path' is the entry path relatively to
+        'dirpath' and 'kind' is 'f' if the entry is a file, 'd' if it is a
+        directory. Raise IOError if the directory cannot be found at given
+        revision.
+        """
+        dirpath = dirpath.strip('/')
+        pool = core.Pool()
+        rpath = '/'.join([self.svn_url, dirpath]).strip('/')
+        rev = optrev(revision)
+        types = {
+            core.svn_node_dir: 'd',
+            core.svn_node_file: 'f',
+            }
+        try:
+            entries = client.ls(rpath, rev, True, self.client_context, pool)
+        except core.SubversionException, e:
+            if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
+                raise IOError('%s cannot be found at r%d' % (dirpath, revision))
+            raise
+        for path, e in entries.iteritems():
+            kind = types.get(e.kind)
+            yield path, kind
+
 class SubversionRepoCanNotReplay(Exception):
     """Exception raised when the svn server is too old to have replay.
     """
