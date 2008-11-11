@@ -8,6 +8,8 @@ touch a b c d e f
 
 echo "[extensions]" >> $HGRCPATH
 echo "inotify=" >> $HGRCPATH
+echo "[inotify]" >> $HGRCPATH
+echo "debug = 1" >> $HGRCPATH
 echo inserv1
 
 echo % inserve
@@ -27,6 +29,7 @@ echo c >> c
 touch g
 hg add g
 hg mv e h
+sleep 1
 hg status
 
 sleep 1

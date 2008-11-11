@@ -19,6 +19,9 @@ except ImportError:
 
 class AlreadyStartedException(Exception): pass
 
+class statusdict(dict):
+    status = None
+
 def join(a, b):
     if a:
         if a[-1] == '/':
@@ -222,7 +225,7 @@ class Watcher(object):
     def dir(self, tree, path):
         if path:
             for name in path.split('/'):
-                tree.setdefault(name, {})
+                tree.setdefault(name, statusdict())
                 tree = tree[name]
         return tree
 
@@ -232,9 +235,11 @@ class Watcher(object):
                 for name in path.split('/'):
                     tree = tree[name]
             except KeyError:
-                return 'x'
+                tree = statusdict()
+                tree.status = 'x'
             except TypeError:
-                return 'd'
+                tree = statusdict()
+                tree.status = 'd'
         return tree
 
     def split(self, path):
@@ -272,7 +277,7 @@ class Watcher(object):
             self.statcache.pop(wfn, None)
         root, fn = self.split(wfn)
         d = self.dir(self.tree, root)
-        oldstatus = d.get(fn)
+        oldstatus = d.setdefault(fn, statusdict()).status
         isdir = False
         if oldstatus:
             try:
@@ -297,11 +302,11 @@ class Watcher(object):
                              (wfn, oldstatus, status))
         if not isdir:
             if status and status != 'i':
-                d[fn] = status
+                d[fn].status = status
                 if status in self.statuskeys:
                     dd = self.dir(self.statustrees[status], root)
                     if oldstatus != status or fn not in dd:
-                        dd[fn] = status
+                        dd.setdefault(fn, statusdict()).status = status
             else:
                 d.pop(fn, None)
 
@@ -363,12 +368,10 @@ class Watcher(object):
 
         for name, val in tree.iteritems():
             path = join(prefix, name)
-            try:
-                if val in states:
-                    yield path, val
-            except TypeError:
-                for p in self.walk(states, val, path):
-                    yield p
+            if val.status is not None and val.status in states:
+                yield path, val
+            for p in self.walk(states, val, path):
+                yield p
 
     def update_hgignore(self):
         # An update of the ignore file can potentially change the
@@ -619,12 +622,10 @@ class Server(object):
             def genresult(states, tree):
                 for fn in names:
                     l = self.watcher.lookup(fn, tree)
-                    try:
-                        if l in states:
-                            yield fn
-                    except TypeError:
-                        for f, s in self.watcher.walk(states, l, fn):
-                            yield f
+                    if l.status is not None and l.status in states:
+                        yield fn
+                    for f, s in self.watcher.walk(states, l, fn):
+                        yield f
 
         results = ['\0'.join(r) for r in [
             genresult('l', self.watcher.statustrees['l']),

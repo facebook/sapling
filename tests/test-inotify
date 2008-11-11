@@ -13,6 +13,9 @@ hg ci -Am m
 
 echo "[extensions]" >> $HGRCPATH
 echo "inotify=" >> $HGRCPATH
+echo "[inotify]" >> $HGRCPATH
+echo "debug=1" >> $HGRCPATH
+echo "log=/tmp/inot.log" >> $HGRCPATH
 
 echo % inserve
 hg inserve -d --pid-file=hg.pid
@@ -27,4 +30,28 @@ hg status -c
 echo % all
 hg status -A
 
+#issue 1375
+#Testing that we can remove a folder and then add a file with the same name
+
+mkdir h f g
+echo h > h/h
+echo f > f/f
+echo g > g/g
+
+hg ci -Am t
+sleep 1
+hg rm h
+hg rm f
+sleep 1
+echo h >h
+ln -s g f
+
+hg add h
+sleep 1
+hg add f
+
+hg status
+hg ci -m0
+hg status
 kill `cat hg.pid`
+
