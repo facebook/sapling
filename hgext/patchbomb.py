@@ -440,34 +440,38 @@ def patchbomb(ui, repo, *revs, **opts):
             generator.flatten(m, 0)
             sendmail(sender, to + bcc + cc, fp.getvalue())
 
-cmdtable = {
-    "email":
-        (patchbomb,
-         [('a', 'attach', None, _('send patches as attachments')),
+emailopts = [
+          ('a', 'attach', None, _('send patches as attachments')),
           ('i', 'inline', None, _('send patches as inline attachments')),
           ('', 'bcc', [], _('email addresses of blind copy recipients')),
           ('c', 'cc', [], _('email addresses of copy recipients')),
           ('d', 'diffstat', None, _('add diffstat output to messages')),
           ('', 'date', '', _('use the given date as the sending date')),
           ('', 'desc', '', _('use the given file as the series description')),
-          ('g', 'git', None, _('use git extended diff format')),
           ('f', 'from', '', _('email address of sender')),
-          ('', 'plain', None, _('omit hg patch header')),
           ('n', 'test', None, _('print messages that would be sent')),
           ('m', 'mbox', '',
            _('write messages to mbox file instead of sending them')),
+          ('s', 'subject', '',
+           _('subject of first message (intro or single patch)')),
+          ('t', 'to', [], _('email addresses of recipients')),
+         ]
+
+
+cmdtable = {
+    "email":
+        (patchbomb,
+         [('g', 'git', None, _('use git extended diff format')),
+          ('', 'plain', None, _('omit hg patch header')),
           ('o', 'outgoing', None,
            _('send changes not found in the target repository')),
           ('b', 'bundle', None,
            _('send changes not in target as a binary bundle')),
           ('r', 'rev', [], _('a revision to send')),
-          ('s', 'subject', '',
-           _('subject of first message (intro or single patch)')),
-          ('t', 'to', [], _('email addresses of recipients')),
           ('', 'force', None,
            _('run even when remote repository is unrelated (with -b)')),
           ('', 'base', [],
            _('a base changeset to specify instead of a destination (with -b)')),
-         ] + commands.remoteopts,
+         ] + emailopts + commands.remoteopts,
          _('hg email [OPTION]... [DEST]...'))
 }
