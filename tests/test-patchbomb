@@ -68,3 +68,41 @@ hg email --date '1970-1-1 0:5' -f quux -t foo -c bar -r tip -m mbox
 fixheaders < mbox > mboxfix
 echo "% md5sum of 8-bit output"
 $TESTDIR/md5sum.py mboxfix
+
+echo "% test diffstat for single patch"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -d -y 2 | \
+  fixheaders
+
+echo "% test diffstat for multiple patches"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -d -y 0:1 | \
+  fixheaders
+
+echo "% test inline for single patch"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i 2 | \
+  fixheaders
+
+echo "% test inline for multiple patches"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i 0:1 | \
+  fixheaders
+
+echo "% test attach for single patch"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a 2 | \
+  fixheaders
+
+echo "% test attach for multiple patches"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a 0:1 | \
+  fixheaders
+
+echo "% tagging csets"
+hg tag -r0 zero zero.foo
+hg tag -r1 one one.patch
+hg tag -r2 two two.diff
+
+echo "% test inline for single named patch"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i 2 | \
+  fixheaders
+
+echo "% test inline for multiple named/unnamed patches"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i 0:1 | \
+  fixheaders
+

@@ -189,3 +189,512 @@ This patch series consists of 1 patches.
 Writing [PATCH] charset=us-ascii; content-transfer-encoding: 8bit ...
 % md5sum of 8-bit output
 90fae277a4a85255e8262174fcefb59f  mboxfix
+% test diffstat for single patch
+This patch series consists of 1 patches.
+
+c
+
+files patched: 1
+
+
+Displaying [PATCH] test ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH] test
+X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
+Message-Id: <ff2c9fa2018b15fa74b3.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+files patched: 1
+
+
+# HG changeset patch
+# User test
+# Date 3 0
+# Node ID ff2c9fa2018b15fa74b33363bda9527323e2a99f
+# Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+c
+
+diff -r 97d72e5f12c7 -r ff2c9fa2018b c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:03 1970 +0000
+@@ -0,0 +1,1 @@
++c
+
+% test diffstat for multiple patches
+This patch series consists of 2 patches.
+
+a
+
+files patched: 1
+
+b
+
+files patched: 1
+
+Final summary:
+
+files patched: 2
+
+
+Write the introductory message for the patch series.
+
+
+Displaying [PATCH 0 of 2] test ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 0 of 2] test
+Message-Id: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+
+files patched: 2
+
+Displaying [PATCH 1 of 2] a ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 1 of 2] a
+X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+Message-Id: <8580ff50825a50c8f716.61@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:01 +0000
+From: quux
+To: foo
+Cc: bar
+
+files patched: 1
+
+
+# HG changeset patch
+# User test
+# Date 1 0
+# Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+# Parent  0000000000000000000000000000000000000000
+a
+
+diff -r 000000000000 -r 8580ff50825a a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+Displaying [PATCH 2 of 2] b ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 2 of 2] b
+X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+Message-Id: <97d72e5f12c7e84f8506.62@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:02 +0000
+From: quux
+To: foo
+Cc: bar
+
+files patched: 1
+
+
+# HG changeset patch
+# User test
+# Date 2 0
+# Node ID 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+# Parent  8580ff50825a50c8f716709acdf8de0deddcd6ab
+b
+
+diff -r 8580ff50825a -r 97d72e5f12c7 b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:02 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
+% test inline for single patch
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] test ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH] test
+X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
+Message-Id: <ff2c9fa2018b15fa74b3.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline; filename=t2.patch
+
+# HG changeset patch
+# User test
+# Date 3 0
+# Node ID ff2c9fa2018b15fa74b33363bda9527323e2a99f
+# Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+c
+
+diff -r 97d72e5f12c7 -r ff2c9fa2018b c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:03 1970 +0000
+@@ -0,0 +1,1 @@
++c
+
+--===
+% test inline for multiple patches
+This patch series consists of 2 patches.
+
+
+Write the introductory message for the patch series.
+
+
+Displaying [PATCH 0 of 2] test ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 0 of 2] test
+Message-Id: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+
+Displaying [PATCH 1 of 2] a ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 1 of 2] a
+X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+Message-Id: <8580ff50825a50c8f716.61@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:01 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline; filename=t2-2.patch
+
+# HG changeset patch
+# User test
+# Date 1 0
+# Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+# Parent  0000000000000000000000000000000000000000
+a
+
+diff -r 000000000000 -r 8580ff50825a a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+--===
+Displaying [PATCH 2 of 2] b ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 2 of 2] b
+X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+Message-Id: <97d72e5f12c7e84f8506.62@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:02 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline; filename=t2-2.patch
+
+# HG changeset patch
+# User test
+# Date 2 0
+# Node ID 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+# Parent  8580ff50825a50c8f716709acdf8de0deddcd6ab
+b
+
+diff -r 8580ff50825a -r 97d72e5f12c7 b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:02 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
+--===
+% test attach for single patch
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] test ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH] test
+X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
+Message-Id: <ff2c9fa2018b15fa74b3.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+Patch subject is complete summary.
+
+
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename=t2.patch
+
+# HG changeset patch
+# User test
+# Date 3 0
+# Node ID ff2c9fa2018b15fa74b33363bda9527323e2a99f
+# Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+c
+
+diff -r 97d72e5f12c7 -r ff2c9fa2018b c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:03 1970 +0000
+@@ -0,0 +1,1 @@
++c
+
+--===
+% test attach for multiple patches
+This patch series consists of 2 patches.
+
+
+Write the introductory message for the patch series.
+
+
+Displaying [PATCH 0 of 2] test ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 0 of 2] test
+Message-Id: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+
+Displaying [PATCH 1 of 2] a ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 1 of 2] a
+X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+Message-Id: <8580ff50825a50c8f716.61@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:01 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+Patch subject is complete summary.
+
+
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename=t2-2.patch
+
+# HG changeset patch
+# User test
+# Date 1 0
+# Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+# Parent  0000000000000000000000000000000000000000
+a
+
+diff -r 000000000000 -r 8580ff50825a a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+--===
+Displaying [PATCH 2 of 2] b ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 2 of 2] b
+X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+Message-Id: <97d72e5f12c7e84f8506.62@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:02 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+Patch subject is complete summary.
+
+
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename=t2-2.patch
+
+# HG changeset patch
+# User test
+# Date 2 0
+# Node ID 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+# Parent  8580ff50825a50c8f716709acdf8de0deddcd6ab
+b
+
+diff -r 8580ff50825a -r 97d72e5f12c7 b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:02 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
+--===
+% tagging csets
+% test inline for single named patch
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] test ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH] test
+X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
+Message-Id: <ff2c9fa2018b15fa74b3.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline; filename=two.diff
+
+# HG changeset patch
+# User test
+# Date 3 0
+# Node ID ff2c9fa2018b15fa74b33363bda9527323e2a99f
+# Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+c
+
+diff -r 97d72e5f12c7 -r ff2c9fa2018b c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:03 1970 +0000
+@@ -0,0 +1,1 @@
++c
+
+--===
+% test inline for multiple named/unnamed patches
+This patch series consists of 2 patches.
+
+
+Write the introductory message for the patch series.
+
+
+Displaying [PATCH 0 of 2] test ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 0 of 2] test
+Message-Id: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+
+Displaying [PATCH 1 of 2] a ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 1 of 2] a
+X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+Message-Id: <8580ff50825a50c8f716.61@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:01 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline; filename=t2-2.patch
+
+# HG changeset patch
+# User test
+# Date 1 0
+# Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+# Parent  0000000000000000000000000000000000000000
+a
+
+diff -r 000000000000 -r 8580ff50825a a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+--===
+Displaying [PATCH 2 of 2] b ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 2 of 2] b
+X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+Message-Id: <97d72e5f12c7e84f8506.62@
+In-Reply-To: <patchbomb.60@
+Date: Thu, 01 Jan 1970 00:01:02 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline; filename=one.patch
+
+# HG changeset patch
+# User test
+# Date 2 0
+# Node ID 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+# Parent  8580ff50825a50c8f716709acdf8de0deddcd6ab
+b
+
+diff -r 8580ff50825a -r 97d72e5f12c7 b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:02 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
+--===
