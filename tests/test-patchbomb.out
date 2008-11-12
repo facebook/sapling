@@ -386,7 +386,7 @@ Cc: bar
 Content-Type: text/x-patch; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Content-Disposition: inline; filename=t2-2.patch
+Content-Disposition: inline; filename=t2-1.patch
 
 # HG changeset patch
 # User test
@@ -522,7 +522,7 @@ Patch subject is complete summary.
 Content-Type: text/x-patch; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Content-Disposition: attachment; filename=t2-2.patch
+Content-Disposition: attachment; filename=t2-1.patch
 
 # HG changeset patch
 # User test
@@ -650,7 +650,7 @@ Cc: bar
 Content-Type: text/x-patch; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Content-Disposition: inline; filename=t2-2.patch
+Content-Disposition: inline; filename=t2-1.patch
 
 # HG changeset patch
 # User test

@@ -159,7 +159,7 @@ def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
                 patchname = patchtags[0]
             elif total > 1:
                 patchname = cmdutil.make_filename(repo, '%b-%n.patch',
-                                                  binnode, idx, total)
+                                                  binnode, seqno=idx, total=total)
             else:
                 patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
         disposition = 'inline'
