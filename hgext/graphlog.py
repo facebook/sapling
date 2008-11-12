@@ -195,6 +195,7 @@ def ascii(ui, grapher):
     prev_node_index = 0
     for (node_ch, node_lines, node_index, edges, n_columns, n_columns_diff) in grapher:
 
+        assert -2 < n_columns_diff < 2
         if n_columns_diff == -1:
             # Transform
             #
