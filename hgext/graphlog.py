@@ -194,7 +194,6 @@ def ascii(ui, grapher):
     prev_n_columns_diff = 0
     prev_node_index = 0
     for (node_ch, node_lines, node_index, edges, n_columns, n_columns_diff) in grapher:
-        # node_lines is the list of all text lines to draw alongside the graph
 
         if n_columns_diff == -1:
             # Transform
