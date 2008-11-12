@@ -81,6 +81,106 @@ class exportee:
         self.container.append(''.join(self.lines).split('\n'))
         self.lines = []
 
+def prompt(ui, prompt, default=None, rest=': ', empty_ok=False):
+    if not ui.interactive:
+        return default
+    if default:
+        prompt += ' [%s]' % default
+    prompt += rest
+    while True:
+        r = ui.prompt(prompt, default=default)
+        if r:
+            return r
+        if default is not None:
+            return default
+        if empty_ok:
+            return r
+        ui.warn(_('Please enter a valid value.\n'))
+
+def cdiffstat(ui, summary, patchlines):
+    s = patch.diffstat(patchlines)
+    if s:
+        if summary:
+            ui.write(summary, '\n')
+            ui.write(s, '\n')
+        ans = prompt(ui, _('Does the diffstat above look okay? '), 'y')
+        if not ans.lower().startswith('y'):
+            raise util.Abort(_('diffstat rejected'))
+    elif s is None:
+        ui.warn(_('no diffstat information available\n'))
+        s = ''
+    return s
+
+def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
+
+    desc = []
+    node = None
+    body = ''
+
+    for line in patch:
+        if line.startswith('#'):
+            if line.startswith('# Node ID'):
+                node = line.split()[-1]
+            continue
+        if line.startswith('diff -r') or line.startswith('diff --git'):
+            break
+        desc.append(line)
+
+    if not patchname and not node:
+        raise ValueError
+
+    if opts.get('attach'):
+        body = ('\n'.join(desc[1:]).strip() or
+                'Patch subject is complete summary.')
+        body += '\n\n\n'
+
+    if opts.get('plain'):
+        while patch and patch[0].startswith('# '):
+            patch.pop(0)
+        if patch:
+            patch.pop(0)
+        while patch and not patch[0].strip():
+            patch.pop(0)
+
+    if opts.get('diffstat'):
+        body += cdiffstat(ui, '\n'.join(desc), patch) + '\n\n'
+
+    if opts.get('attach') or opts.get('inline'):
+        msg = email.MIMEMultipart.MIMEMultipart()
+        if body:
+            msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
+        p = mail.mimetextpatch('\n'.join(patch), 'x-patch', opts.get('test'))
+        binnode = bin(node)
+        # if node is mq patch, it will have patch file name as tag
+        if not patchname:
+            patchtags = [t for t in repo.nodetags(binnode)
+                         if t.endswith('.patch') or t.endswith('.diff')]
+            if patchtags:
+                patchname = patchtags[0]
+            elif total > 1:
+                patchname = cmdutil.make_filename(repo, '%b-%n.patch',
+                                                  binnode, idx, total)
+            else:
+                patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
+        disposition = 'inline'
+        if opts.get('attach'):
+            disposition = 'attachment'
+        p['Content-Disposition'] = disposition + '; filename=' + patchname
+        msg.attach(p)
+    else:
+        body += '\n'.join(patch)
+        msg = mail.mimetextpatch(body, display=opts.get('test'))
+
+    subj = desc[0].strip().rstrip('. ')
+    if total == 1:
+        subj = '[PATCH] ' + (opts.get('subject') or subj)
+    else:
+        tlen = len(str(total))
+        subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, subj)
+    msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
+    msg['X-Mercurial-Node'] = node
+    return msg, subj
+
 def patchbomb(ui, repo, *revs, **opts):
     '''send changesets by email
 
@@ -125,106 +225,6 @@ def patchbomb(ui, repo, *revs, **opts):
     '''
 
     _charsets = mail._charsets(ui)
-
-    def prompt(prompt, default = None, rest = ': ', empty_ok = False):
-        if not ui.interactive:
-            return default
-        if default:
-            prompt += ' [%s]' % default
-        prompt += rest
-        while True:
-            r = ui.prompt(prompt, default=default)
-            if r:
-                return r
-            if default is not None:
-                return default
-            if empty_ok:
-                return r
-            ui.warn(_('Please enter a valid value.\n'))
-
-    def confirm(s, denial):
-        if not prompt(s, default = 'y', rest = '? ').lower().startswith('y'):
-            raise util.Abort(denial)
-
-    def cdiffstat(summary, patchlines):
-        s = patch.diffstat(patchlines)
-        if s:
-            if summary:
-                ui.write(summary, '\n')
-                ui.write(s, '\n')
-            confirm(_('Does the diffstat above look okay'),
-                    _('diffstat rejected'))
-        elif s is None:
-            ui.warn(_('No diffstat information available.\n'))
-            s = ''
-        return s
-
-    def makepatch(patch, idx, total, patchname=None):
-        desc = []
-        node = None
-        body = ''
-        for line in patch:
-            if line.startswith('#'):
-                if line.startswith('# Node ID'):
-                    node = line.split()[-1]
-                continue
-            if line.startswith('diff -r') or line.startswith('diff --git'):
-                break
-            desc.append(line)
-        if not patchname and not node:
-            raise ValueError
-
-        if opts.get('attach'):
-            body = ('\n'.join(desc[1:]).strip() or
-                    'Patch subject is complete summary.')
-            body += '\n\n\n'
-
-        if opts.get('plain'):
-            while patch and patch[0].startswith('# '):
-                patch.pop(0)
-            if patch:
-                patch.pop(0)
-            while patch and not patch[0].strip():
-                patch.pop(0)
-        if opts.get('diffstat'):
-            body += cdiffstat('\n'.join(desc), patch) + '\n\n'
-        if opts.get('attach') or opts.get('inline'):
-            msg = email.MIMEMultipart.MIMEMultipart()
-            if body:
-                msg.attach(mail.mimeencode(ui, body, _charsets,
-                                           opts.get('test')))
-            p = mail.mimetextpatch('\n'.join(patch), 'x-patch',
-                                   opts.get('test'))
-            binnode = bin(node)
-            # if node is mq patch, it will have patch file name as tag
-            if not patchname:
-                patchtags = [t for t in repo.nodetags(binnode)
-                             if t.endswith('.patch') or t.endswith('.diff')]
-                if patchtags:
-                    patchname = patchtags[0]
-                elif total > 1:
-                    patchname = cmdutil.make_filename(repo, '%b-%n.patch',
-                                                      binnode, idx, total)
-                else:
-                    patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
-            disposition = 'inline'
-            if opts.get('attach'):
-                disposition = 'attachment'
-            p['Content-Disposition'] = disposition + '; filename=' + patchname
-            msg.attach(p)
-        else:
-            body += '\n'.join(patch)
-            msg = mail.mimetextpatch(body, display=opts.get('test'))
-
-        subj = desc[0].strip().rstrip('. ')
-        if total == 1:
-            subj = '[PATCH] ' + (opts.get('subject') or subj)
-        else:
-            tlen = len(str(total))
-            subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, subj)
-        msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
-        msg['X-Mercurial-Node'] = node
-        return msg, subj
 
     def outgoing(dest, revs):
         '''Return the revisions present locally but not in dest'''
@@ -312,7 +312,9 @@ def patchbomb(ui, repo, *revs, **opts):
             jumbo.extend(p)
             if patchnames:
                 name = patchnames[i]
-            msgs.append(makepatch(p, i + 1, len(patches), name))
+            msg = makepatch(ui, repo, p, opts, _charsets, i + 1,
+                            len(patches), name)
+            msgs.append(msg)
 
         if len(patches) > 1:
             tlen = len(str(len(patches)))
@@ -320,12 +322,12 @@ def patchbomb(ui, repo, *revs, **opts):
             subj = '[PATCH %0*d of %d] %s' % (
                 tlen, 0, len(patches),
                 opts.get('subject') or
-                prompt('Subject:',
+                prompt(ui, 'Subject:',
                        rest=' [PATCH %0*d of %d] ' % (tlen, 0, len(patches))))
 
             body = ''
             if opts.get('diffstat'):
-                d = cdiffstat(_('Final summary:\n'), jumbo)
+                d = cdiffstat(ui, _('Final summary:\n'), jumbo)
                 if d:
                     body = '\n' + d
 
@@ -339,7 +341,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     def getbundlemsgs(bundle):
         subj = (opts.get('subject')
-                or prompt('Subject:', default='A bundle for your repository'))
+                or prompt(ui, 'Subject:', 'A bundle for your repository'))
 
         body = getdescription('', sender)
         msg = email.MIMEMultipart.MIMEMultipart()
@@ -356,7 +358,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     sender = (opts.get('from') or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
-              prompt('From', ui.username()))
+              prompt(ui, 'From', ui.username()))
 
     patches = opts.get('patches')
     if patches:
@@ -374,7 +376,7 @@ def patchbomb(ui, repo, *revs, **opts):
     def getaddrs(opt, prpt, default = None):
         addrs = opts.get(opt) or (ui.config('email', opt) or
                                   ui.config('patchbomb', opt) or
-                                  prompt(prpt, default = default)).split(',')
+                                  prompt(ui, prpt, default)).split(',')
         return [mail.addressencode(ui, a.strip(), _charsets, opts.get('test'))
                 for a in addrs if a.strip()]
 
