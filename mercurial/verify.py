@@ -70,7 +70,7 @@ def _verify(repo):
             warn(_("warning: `%s' uses revlog format 0") % name)
 
     def checkentry(obj, i, node, seen, linkrevs, f):
-        lr = obj.linkrev(node)
+        lr = obj.linkrev(obj.rev(node))
         if lr < 0 or (havecl and lr not in linkrevs):
             t = "unexpected"
             if lr < 0 or lr >= len(cl):
@@ -135,7 +135,7 @@ def _verify(repo):
                 elif f != "/dev/null":
                     fns = filenodes.setdefault(f, {})
                     if fn not in fns:
-                        fns[fn] = n
+                        fns[fn] = i
         except Exception, inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
 
@@ -155,7 +155,8 @@ def _verify(repo):
         for f in util.sort(filenodes):
             if f not in filelinkrevs:
                 try:
-                    lr = min([repo.file(f).linkrev(n) for n in filenodes[f]])
+                    fl = repo.file(f)
+                    lr = min([fl.linkrev(fl.rev(n)) for n in filenodes[f]])
                 except:
                     lr = None
                 err(lr, _("in manifest but not in changeset"), f)

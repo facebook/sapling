@@ -1703,7 +1703,7 @@ class localrepository(repo.repository):
                 # If a 'missing' manifest thinks it belongs to a changenode
                 # the recipient is assumed to have, obviously the recipient
                 # must have that manifest.
-                linknode = cl.node(mnfst.linkrev(n))
+                linknode = cl.node(mnfst.linkrev(mnfst.rev(n)))
                 if linknode in has_cl_set:
                     has_mnfst_set[n] = 1
             prune_parents(mnfst, has_mnfst_set, msng_mnfst_set)
@@ -1769,7 +1769,7 @@ class localrepository(repo.repository):
             # assume the recipient must have, then the recipient must have
             # that filenode.
             for n in msngset:
-                clnode = cl.node(filerevlog.linkrev(n))
+                clnode = cl.node(filerevlog.linkrev(filerevlog.rev(n)))
                 if clnode in has_cl_set:
                     hasset[n] = 1
             prune_parents(filerevlog, hasset, msngset)
@@ -1892,9 +1892,8 @@ class localrepository(repo.repository):
 
         def gennodelst(log):
             for r in log:
-                n = log.node(r)
-                if log.linkrev(n) in revset:
-                    yield n
+                if log.linkrev(r) in revset:
+                    yield log.node(r)
 
         def changed_file_collector(changedfileset):
             def collect_changed_files(clnode):
@@ -1905,7 +1904,7 @@ class localrepository(repo.repository):
 
         def lookuprevlink_func(revlog):
             def lookuprevlink(n):
-                return cl.node(revlog.linkrev(n))
+                return cl.node(revlog.linkrev(revlog.rev(n)))
             return lookuprevlink
 
         def gengroup():

@@ -126,7 +126,7 @@ def changectx(repo, req):
         ctx = repo[changeid]
     except RepoError:
         man = repo.manifest
-        ctx = repo[man.linkrev(man.lookup(changeid))]
+        ctx = repo[man.linkrev(man.rev(man.lookup(changeid)))]
 
     return ctx
 

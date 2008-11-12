@@ -829,7 +829,7 @@ def debugindex(ui, file_):
         except:
             pp = [nullid, nullid]
         ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
-                i, r.start(i), r.length(i), r.base(i), r.linkrev(node),
+                i, r.start(i), r.length(i), r.base(i), r.linkrev(i),
             short(node), short(pp[0]), short(pp[1])))
 
 def debugindexdot(ui, file_):
@@ -1833,7 +1833,7 @@ def log(ui, repo, *pats, **opts):
             fl = repo.file(fn)
             for i in fl:
                 node = fl.node(i)
-                lr = fl.linkrev(node)
+                lr = fl.linkrev(i)
                 renamed = fl.renamed(node)
                 rcache[fn][lr] = renamed
                 if renamed:
@@ -2053,7 +2053,7 @@ def parents(ui, repo, file_=None, **opts):
         if not filenodes:
             raise util.Abort(_("'%s' not found in manifest!") % file_)
         fl = repo.file(file_)
-        p = [repo.lookup(fl.linkrev(fn)) for fn in filenodes]
+        p = [repo.lookup(fl.linkrev(fl.rev(fn))) for fn in filenodes]
     else:
         p = [cp.node() for cp in ctx.parents()]
 

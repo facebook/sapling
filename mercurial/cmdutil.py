@@ -1017,7 +1017,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 revs = []
                 for j in xrange(i - window, i + 1):
                     n = filelog.node(j)
-                    revs.append((filelog.linkrev(n),
+                    revs.append((filelog.linkrev(j),
                                  follow and filelog.renamed(n)))
                 revs.reverse()
                 for rev in revs:

@@ -526,13 +526,13 @@ def filelog(web, req, tmpl):
         if not numrevs: # file doesn't exist at all
             raise
         rev = webutil.changectx(web.repo, req).rev()
-        first = fl.linkrev(fl.node(0))
+        first = fl.linkrev(0)
         if rev < first: # current rev is from before file existed
             raise
         frev = numrevs - 1
-        while fl.linkrev(fl.node(frev)) > rev:
+        while fl.linkrev(frev) > rev:
             frev -= 1
-        fctx = web.repo.filectx(f, fl.linkrev(fl.node(frev)))
+        fctx = web.repo.filectx(f, fl.linkrev(frev))
 
     count = fctx.filerev() + 1
     pagelen = web.maxshortchanges

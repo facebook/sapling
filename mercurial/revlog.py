@@ -500,8 +500,8 @@ class revlog(object):
             raise LookupError(node, self.indexfile, _('no node'))
     def node(self, rev):
         return self.index[rev][7]
-    def linkrev(self, node):
-        return self.index[self.rev(node)][4]
+    def linkrev(self, rev):
+        return self.index[rev][4]
     def parents(self, node):
         d = self.index[self.rev(node)][5:7]
         return (self.node(d[0]), self.node(d[1]))

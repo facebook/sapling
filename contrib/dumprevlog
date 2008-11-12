@@ -17,7 +17,7 @@ for f in sys.argv[1:]:
         p = r.parents(n)
         d = r.revision(n)
         print "node:", node.hex(n)
-        print "linkrev:", r.linkrev(n)
+        print "linkrev:", r.linkrev(i)
         print "parents:", node.hex(p[0]), node.hex(p[1])
         print "length:", len(d)
         print "-start-"

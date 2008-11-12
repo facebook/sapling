@@ -200,7 +200,7 @@ class filectx(object):
             if '_changectx' in self.__dict__:
                 self._changeid = self._changectx.rev()
             else:
-                self._changeid = self._filelog.linkrev(self._filenode)
+                self._changeid = self._filelog.linkrev(self._filerev)
             return self._changeid
         elif name == '_filenode':
             if '_fileid' in self.__dict__:
@@ -263,9 +263,9 @@ class filectx(object):
             return self._changectx.rev()
         if '_changeid' in self.__dict__:
             return self._changectx.rev()
-        return self._filelog.linkrev(self._filenode)
+        return self._filelog.linkrev(self._filerev)
 
-    def linkrev(self): return self._filelog.linkrev(self._filenode)
+    def linkrev(self): return self._filelog.linkrev(self._filerev)
     def node(self): return self._changectx.node()
     def user(self): return self._changectx.user()
     def date(self): return self._changectx.date()
@@ -647,7 +647,7 @@ class workingfilectx(filectx):
     def rev(self):
         if '_changectx' in self.__dict__:
             return self._changectx.rev()
-        return self._filelog.linkrev(self._filenode)
+        return self._filelog.linkrev(self._filerev)
 
     def data(self): return self._repo.wread(self._path)
     def renamed(self):
