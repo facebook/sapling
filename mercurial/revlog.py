@@ -503,8 +503,9 @@ class revlog(object):
     def linkrev(self, rev):
         return self.index[rev][4]
     def parents(self, node):
-        d = self.index[self.rev(node)][5:7]
-        return (self.node(d[0]), self.node(d[1]))
+        i = self.index
+        d = i[self.rev(node)]
+        return i[d[5]][7], i[d[6]][7] # map revisions to nodes inline
     def parentrevs(self, rev):
         return self.index[rev][5:7]
     def start(self, rev):
