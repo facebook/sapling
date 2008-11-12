@@ -27,13 +27,3 @@ C dir/bar/foo
 C dir/x
 C dir/y
 C e
-adding f/f
-adding g/g
-adding h/h
-adding hg.pid
-removing h/h
-removing f/f
-A f
-A h
-R f/f
-R h/h
