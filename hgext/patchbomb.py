@@ -159,7 +159,7 @@ def patchbomb(ui, repo, *revs, **opts):
             s = ''
         return s
 
-    def makepatch(patch, idx, total):
+    def makepatch(patch, idx, total, patchname=None):
         desc = []
         node = None
         body = ''
@@ -171,7 +171,7 @@ def patchbomb(ui, repo, *revs, **opts):
             if line.startswith('diff -r') or line.startswith('diff --git'):
                 break
             desc.append(line)
-        if not node:
+        if not patchname and not node:
             raise ValueError
 
         if opts.get('attach'):
@@ -197,15 +197,16 @@ def patchbomb(ui, repo, *revs, **opts):
                                    opts.get('test'))
             binnode = bin(node)
             # if node is mq patch, it will have patch file name as tag
-            patchname = [t for t in repo.nodetags(binnode)
-                         if t.endswith('.patch') or t.endswith('.diff')]
-            if patchname:
-                patchname = patchname[0]
-            elif total > 1:
-                patchname = cmdutil.make_filename(repo, '%b-%n.patch',
-                                                  binnode, idx, total)
-            else:
-                patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
+            if not patchname:
+                patchtags = [t for t in repo.nodetags(binnode)
+                             if t.endswith('.patch') or t.endswith('.diff')]
+                if patchtags:
+                    patchname = patchtags[0]
+                elif total > 1:
+                    patchname = cmdutil.make_filename(repo, '%b-%n.patch',
+                                                      binnode, idx, total)
+                else:
+                    patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
             disposition = 'inline'
             if opts.get('attach'):
                 disposition = 'attachment'
@@ -256,7 +257,8 @@ def patchbomb(ui, repo, *revs, **opts):
         mail.validateconfig(ui)
 
     if not (revs or opts.get('rev')
-            or opts.get('outgoing') or opts.get('bundle')):
+            or opts.get('outgoing') or opts.get('bundle')
+            or opts.get('patches')):
         raise util.Abort(_('specify at least one changeset with -r or -o'))
 
     cmdutil.setremoteconfig(ui, opts)
@@ -298,22 +300,19 @@ def patchbomb(ui, repo, *revs, **opts):
             body = ui.edit(body, sender)
         return body
 
-    def getexportmsgs():
-        patches = []
-        commands.export(ui, repo, *revs, **{'output': exportee(patches),
-                                            'switch_parent': False,
-                                            'text': None,
-                                            'git': opts.get('git')})
-
+    def getpatchmsgs(patches, patchnames=None):
         jumbo = []
         msgs = []
 
         ui.write(_('This patch series consists of %d patches.\n\n')
                  % len(patches))
 
+        name = None
         for p, i in zip(patches, xrange(len(patches))):
             jumbo.extend(p)
-            msgs.append(makepatch(p, i + 1, len(patches)))
+            if patchnames:
+                name = patchnames[i]
+            msgs.append(makepatch(p, i + 1, len(patches), name))
 
         if len(patches) > 1:
             tlen = len(str(len(patches)))
@@ -359,10 +358,18 @@ def patchbomb(ui, repo, *revs, **opts):
               ui.config('patchbomb', 'from') or
               prompt('From', ui.username()))
 
-    if opts.get('bundle'):
+    patches = opts.get('patches')
+    if patches:
+        msgs = getpatchmsgs(patches, opts.get('patchnames'))
+    elif opts.get('bundle'):
         msgs = getbundlemsgs(getbundle(dest))
     else:
-        msgs = getexportmsgs()
+        patches = []
+        commands.export(ui, repo, *revs, **{'output': exportee(patches),
+                                            'switch_parent': False,
+                                            'text': None,
+                                            'git': opts.get('git')})
+        msgs = getpatchmsgs(patches)
 
     def getaddrs(opt, prpt, default = None):
         addrs = opts.get(opt) or (ui.config('email', opt) or
