@@ -941,11 +941,6 @@ class revlog(object):
 
         return decompress(c)
 
-    def delta(self, node):
-        """return or calculate a delta between a node and its predecessor"""
-        r = self.rev(node)
-        return self.revdiff(r - 1, r)
-
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
         if rev1 + 1 == rev2 and self.base(rev1) == self.base(rev2):
