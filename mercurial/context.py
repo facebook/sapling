@@ -17,8 +17,12 @@ class changectx(object):
         if changeid == '':
             changeid = '.'
         self._repo = repo
-        self._node = self._repo.lookup(changeid)
-        self._rev = self._repo.changelog.rev(self._node)
+        if isinstance(changeid, (long, int)):
+            self._rev = changeid
+            self._node = self._repo.changelog.node(changeid)
+        else:
+            self._node = self._repo.lookup(changeid)
+            self._rev = self._repo.changelog.rev(self._node)
 
     def __str__(self):
         return short(self.node())
@@ -59,8 +63,8 @@ class changectx(object):
             self._manifestdelta = md
             return self._manifestdelta
         elif name == '_parents':
-            p = self._repo.changelog.parents(self._node)
-            if p[1] == nullid:
+            p = self._repo.changelog.parentrevs(self._rev)
+            if p[1] == nullrev:
                 p = p[:-1]
             self._parents = [changectx(self._repo, x) for x in p]
             return self._parents
