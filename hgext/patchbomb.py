@@ -172,7 +172,7 @@ def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
         msg = mail.mimetextpatch(body, display=opts.get('test'))
 
     subj = desc[0].strip().rstrip('. ')
-    if total == 1:
+    if total == 1 and not opts.get('intro'):
         subj = '[PATCH] ' + (opts.get('subject') or subj)
     else:
         tlen = len(str(total))
@@ -316,7 +316,7 @@ def patchbomb(ui, repo, *revs, **opts):
                             len(patches), name)
             msgs.append(msg)
 
-        if len(patches) > 1:
+        if len(patches) > 1 or opts.get('intro'):
             tlen = len(str(len(patches)))
 
             subj = '[PATCH %0*d of %d] %s' % (
@@ -481,6 +481,8 @@ cmdtable = {
            _('run even when remote repository is unrelated (with -b)')),
           ('', 'base', [],
            _('a base changeset to specify instead of a destination (with -b)')),
+          ('', 'intro', None,
+           _('send an introduction email for a single patch')),
          ] + emailopts + commands.remoteopts,
          _('hg email [OPTION]... [DEST]...'))
 }

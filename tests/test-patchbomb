@@ -93,6 +93,14 @@ echo "% test attach for multiple patches"
 hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a 0:1 | \
   fixheaders
 
+echo "% test intro for single patch"
+hg email --date '1970-1-1 0:1' -n --intro -f quux -t foo -c bar -s test 2 | \
+  fixheaders
+
+echo "% test intro for multiple patches"
+hg email --date '1970-1-1 0:1' -n --intro -f quux -t foo -c bar -s test 0:1 | \
+  fixheaders
+
 echo "% tagging csets"
 hg tag -r0 zero zero.foo
 hg tag -r1 one one.patch
