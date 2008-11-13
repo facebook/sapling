@@ -873,16 +873,16 @@ class revlog(object):
         if len(id) < 40:
             try:
                 # hex(node)[:...]
-                bin_id = bin(id[:len(id) & ~1]) # grab an even number of digits
-                node = None
-                for n in self.nodemap:
-                    if n.startswith(bin_id) and hex(n).startswith(id):
-                        if node is not None:
-                            raise LookupError(id, self.indexfile,
-                                              _('ambiguous identifier'))
-                        node = n
-                if node is not None:
-                    return node
+                l = len(id) / 2  # grab an even number of digits
+                bin_id = bin(id[:l*2])
+                nl = [n for n in self.nodemap if n[:l] == bin_id]
+                nl = [n for n in nl if hex(n).startswith(id)]
+                if len(nl) > 0:
+                    if len(nl) == 1:
+                        return nl[0]
+                    raise LookupError(id, self.indexfile,
+                                      _('ambiguous identifier'))
+                return None
             except TypeError:
                 pass
 
