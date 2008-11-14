@@ -16,7 +16,7 @@ from mercurial.util import Abort, canonpath
 
 def revisions(repo, start, stop):
     """cset DAG generator yielding (rev, node, [parents]) tuples
-    
+
     This generator function walks through the revision history from revision
     start to revision stop (which must be less than or equal to start).
     """
@@ -30,7 +30,7 @@ def revisions(repo, start, stop):
 
 def filerevs(repo, path, start, stop):
     """file cset DAG generator yielding (rev, node, [parents]) tuples
-    
+
     This generator function walks through the revision history of a single
     file from revision start to revision stop (which must be less than or
     equal to start).
@@ -49,13 +49,12 @@ def filerevs(repo, path, start, stop):
 
 def grapher(nodes):
     """grapher for asciigraph on a list of nodes and their parents
-    
+
     nodes must generate tuples (node, parents, char, lines) where
-    
      - parents must generate the parents of node, in sorted order,
        and max length 2,
      - char is the char to print as the node symbol, and
-     - lines are the lines to display next to the node.  
+     - lines are the lines to display next to the node.
     """
     seen = []
     for node, parents, char, lines in nodes:
