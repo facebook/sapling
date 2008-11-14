@@ -437,10 +437,14 @@ class localrepository(repo.repository):
             partial[b] = c.node()
 
     def lookup(self, key):
-        if key == '.':
+        if isinstance(key, int):
+            return self.changelog.node(key)
+        elif key == '.':
             return self.dirstate.parents()[0]
         elif key == 'null':
             return nullid
+        elif key == 'tip':
+            return self.changelog.tip()
         n = self.changelog._match(key)
         if n:
             return n
