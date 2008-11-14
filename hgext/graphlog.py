@@ -13,115 +13,76 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial.util import Abort, canonpath
-from mercurial import util
 
-def get_rev_parents(repo, rev):
-    return [x for x in repo.changelog.parentrevs(rev) if x != nullrev]
-
-def revision_grapher(repo, start_rev, stop_rev):
-    """incremental revision grapher
-
-    This generator function walks through the revision history from
-    revision start_rev to revision stop_rev (which must be less than
-    or equal to start_rev) and for each revision emits tuples with the
-    following elements:
-
-      - Current revision.
-      - Current node.
-      - Column of the current node in the set of ongoing edges.
-      - Edges; a list of (col, next_col) indicating the edges between
-        the current node and its parents.
-      - Number of columns (ongoing edges) in the current revision.
-      - The difference between the number of columns (ongoing edges)
-        in the next revision and the number of columns (ongoing edges)
-        in the current revision. That is: -1 means one column removed;
-        0 means no columns added or removed; 1 means one column added.
+def revisions(repo, start, stop):
+    """cset DAG generator yielding (rev, node, [parents]) tuples
+    
+    This generator function walks through the revision history from revision
+    start to revision stop (which must be less than or equal to start).
     """
+    assert start >= stop
+    cur = start
+    while cur >= stop:
+        ctx = repo[cur]
+        parents = sorted(p.rev() for p in ctx.parents() if p.rev() != nullrev)
+        yield (ctx, parents)
+        cur -= 1
 
-    assert start_rev >= stop_rev
-    curr_rev = start_rev
-    revs = []
-    while curr_rev >= stop_rev:
-        node = repo.changelog.node(curr_rev)
-
-        # Compute revs and next_revs.
-        if curr_rev not in revs:
-            # New head.
-            revs.append(curr_rev)
-        rev_index = revs.index(curr_rev)
-        next_revs = revs[:]
-
-        # Add parents to next_revs.
-        parents = get_rev_parents(repo, curr_rev)
-        parents_to_add = []
-        for parent in parents:
-            if parent not in next_revs:
-                parents_to_add.append(parent)
-        next_revs[rev_index:rev_index + 1] = util.sort(parents_to_add)
-
-        edges = []
-        for parent in parents:
-            edges.append((rev_index, next_revs.index(parent)))
-
-        n_columns_diff = len(next_revs) - len(revs)
-        yield (curr_rev, node, rev_index, edges, len(revs), n_columns_diff)
-
-        revs = next_revs
-        curr_rev -= 1
-
-def filelog_grapher(repo, path, start_rev, stop_rev):
-    """incremental file log grapher
-
-    This generator function walks through the revision history of a
-    single file from revision start_rev to revision stop_rev (which must
-    be less than or equal to start_rev) and for each revision emits
-    tuples with the following elements:
-
-      - Current revision.
-      - Current node.
-      - Column of the current node in the set of ongoing edges.
-      - Edges; a list of (col, next_col) indicating the edges between
-        the current node and its parents.
-      - Number of columns (ongoing edges) in the current revision.
-      - The difference between the number of columns (ongoing edges)
-        in the next revision and the number of columns (ongoing edges)
-        in the current revision. That is: -1 means one column removed;
-        0 means no columns added or removed; 1 means one column added.
+def filerevs(repo, path, start, stop):
+    """file cset DAG generator yielding (rev, node, [parents]) tuples
+    
+    This generator function walks through the revision history of a single
+    file from revision start to revision stop (which must be less than or
+    equal to start).
     """
-
-    assert start_rev >= stop_rev
-    revs = []
+    assert start >= stop
     filerev = len(repo.file(path)) - 1
     while filerev >= 0:
         fctx = repo.filectx(path, fileid=filerev)
-
-        # Compute revs and next_revs.
-        if filerev not in revs:
-            revs.append(filerev)
-        rev_index = revs.index(filerev)
-        next_revs = revs[:]
-
-        # Add parents to next_revs.
         parents = [f.filerev() for f in fctx.parents() if f.path() == path]
-        parents_to_add = []
-        for parent in parents:
-            if parent not in next_revs:
-                parents_to_add.append(parent)
-        next_revs[rev_index:rev_index + 1] = util.sort(parents_to_add)
-
-        edges = []
-        for parent in parents:
-            edges.append((rev_index, next_revs.index(parent)))
-
-        changerev = fctx.linkrev()
-        if changerev <= start_rev:
-            node = repo.changelog.node(changerev)
-            n_columns_diff = len(next_revs) - len(revs)
-            yield (changerev, node, rev_index, edges, len(revs), n_columns_diff)
-        if changerev <= stop_rev:
+        parents.sort()
+        if fctx.rev() <= start:
+            yield (fctx, parents)
+        if fctx.rev() <= stop:
             break
-        revs = next_revs
         filerev -= 1
+
+def grapher(nodes):
+    """grapher for asciigraph on a list of nodes and their parents
+    
+    nodes must generate tuples (node, parents, char, lines) where
+    
+     - parents must generate the parents of node, in sorted order,
+       and max length 2,
+     - char is the char to print as the node symbol, and
+     - lines are the lines to display next to the node.  
+    """
+    seen = []
+    for node, parents, char, lines in nodes:
+        if node not in seen:
+            seen.append(node)
+        nodeidx = seen.index(node)
+
+        knownparents = []
+        newparents = []
+        for parent in parents:
+            if parent in seen:
+                knownparents.append(parent)
+            else:
+                newparents.append(parent)
+
+        ncols = len(seen)
+        nextseen = seen[:]
+        nextseen[nodeidx:nodeidx + 1] = newparents
+        edges = [(nodeidx, nextseen.index(p)) for p in knownparents]
+
+        if len(newparents) > 0:
+            edges.append((nodeidx, nodeidx))
+        if len(newparents) > 1:
+            edges.append((nodeidx, nodeidx + 1))
+        nmorecols = len(nextseen) - ncols
+        seen = nextseen
+        yield (char, lines, nodeidx, edges, ncols, nmorecols)
 
 def fix_long_right_edges(edges):
     for (i, (start, end)) in enumerate(edges):
@@ -307,33 +268,31 @@ def graphlog(ui, repo, path=None, **opts):
     """
 
     limit = get_limit(opts["limit"])
-    (start_rev, stop_rev) = get_revs(repo, opts["rev"])
-    stop_rev = max(stop_rev, start_rev - limit + 1)
-    if start_rev == nullrev:
+    start, stop = get_revs(repo, opts["rev"])
+    stop = max(stop, start - limit + 1)
+    if start == nullrev:
         return
+
     if path:
         path = canonpath(repo.root, os.getcwd(), path)
-    if path:
-        revgrapher = filelog_grapher(repo, path, start_rev, stop_rev)
+    if path: # could be reset in canonpath
+        revdag = filerevs(repo, path, start, stop)
     else:
-        revgrapher = revision_grapher(repo, start_rev, stop_rev)
+        revdag = revisions(repo, start, stop)
 
     repo_parents = repo.dirstate.parents()
-    cs_printer = show_changeset(ui, repo, opts)
-    def grapher():
-        for (rev, node, node_index, edges, n_columns, n_columns_diff) in revgrapher:
+    displayer = show_changeset(ui, repo, opts)
+    def graphabledag():
+        for (ctx, parents) in revdag:
             # log_strings is the list of all log strings to draw alongside
             # the graph.
             ui.pushbuffer()
-            cs_printer.show(repo[rev])
+            displayer.show(ctx)
             log_strings = ui.popbuffer().split("\n")[:-1]
-            if node in repo_parents:
-                node_ch = "@"
-            else:
-                node_ch = "o"
-            yield (node_ch, log_strings, node_index, edges, n_columns, n_columns_diff)
+            char = ctx.node() in repo_parents and '@' or 'o'
+            yield (ctx.rev(), parents, char, log_strings)
 
-    ascii(ui, grapher())
+    ascii(ui, grapher(graphabledag()))
 
 cmdtable = {
     "glog":
