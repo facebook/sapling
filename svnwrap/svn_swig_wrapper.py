@@ -87,6 +87,11 @@ class Revision(object):
     def __str__(self):
         return 'r%d by %s' % (self.revnum, self.author)
 
+_svntypes = {
+    core.svn_node_dir: 'd',
+    core.svn_node_file: 'f',
+    }
+
 class SubversionRepo(object):
     """Wrapper for a Subversion repository.
 
@@ -452,10 +457,6 @@ class SubversionRepo(object):
         pool = core.Pool()
         rpath = '/'.join([self.svn_url, dirpath]).strip('/')
         rev = optrev(revision)
-        types = {
-            core.svn_node_dir: 'd',
-            core.svn_node_file: 'f',
-            }
         try:
             entries = client.ls(rpath, rev, True, self.client_context, pool)
         except core.SubversionException, e:
@@ -463,8 +464,15 @@ class SubversionRepo(object):
                 raise IOError('%s cannot be found at r%d' % (dirpath, revision))
             raise
         for path, e in entries.iteritems():
-            kind = types.get(e.kind)
+            kind = _svntypes.get(e.kind)
             yield path, kind
+
+    def checkpath(self, path, revision):
+        """Return the entry type at the given revision, 'f', 'd' or None
+        if the entry does not exist.
+        """
+        kind = ra.check_path(self.ra, path.strip('/'), revision)
+        return _svntypes.get(kind)
 
 class SubversionRepoCanNotReplay(Exception):
     """Exception raised when the svn server is too old to have replay.
