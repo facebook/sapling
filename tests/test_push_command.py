@@ -339,9 +339,7 @@ class PushTests(unittest.TestCase):
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='file://' + self.repo_path)
+        self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['newdir/subdir/gamma'].data(), 'foo')
