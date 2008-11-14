@@ -7,8 +7,10 @@ import tempfile
 import unittest
 import urllib
 
-from mercurial import ui
+from mercurial import context
 from mercurial import hg
+from mercurial import node
+from mercurial import ui
 
 import fetch_command
 import push_cmd
@@ -95,3 +97,53 @@ class TestBase(unittest.TestCase):
         entries = [e.strip('/') for e in stdout.splitlines()]
         entries.sort()
         return entries
+
+    def commitchanges(self, changes):
+        """Commit changes to mercurial directory
+
+        'changes' is a sequence of tuples (source, dest, data). It can look
+        like:
+        - (source, source, data) to set source content to data
+        - (source, dest, None) to set dest content to source one, and mark it as 
+        copied from source.
+        - (source, dest, data) to set dest content to data, and mark it as copied
+        from source.
+        - (source, None, None) to remove source.
+        """
+        repo = self.repo
+        parentctx = repo['tip']
+
+        changed, removed = [], []
+        for source, dest, newdata in changes:
+            if dest is None:
+                removed.append(source)
+            else:
+                changed.append(dest)
+
+        def filectxfn(repo, memctx, path):
+            if path in removed:
+                raise IOError()
+            entry = [e for e in changes if path == e[1]][0]
+            source, dest, newdata = entry
+            if newdata is None:
+                newdata = parentctx[source].data()
+            copied = None
+            if source != dest:
+                copied = source
+            return context.memfilectx(path=dest,
+                                      data=newdata,
+                                      islink=False,
+                                      isexec=False,
+                                      copied=copied)
+        
+        ctx = context.memctx(repo,
+                             (parentctx.node(), node.nullid),
+                             'automated test',
+                             changed + removed,
+                             filectxfn,
+                             'an_author',
+                             '2008-10-07 20:59:48 -0500')
+        nodeid = repo.commitctx(ctx)
+        repo = self.repo
+        hg.update(repo, nodeid)
+        return nodeid

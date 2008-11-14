@@ -1,17 +1,6 @@
-import os
 import sys
-import tempfile
 import unittest
 
-from mercurial import context
-from mercurial import commands
-from mercurial import hg
-from mercurial import node
-from mercurial import ui
-from mercurial import revlog
-
-import fetch_command
-import push_cmd
 import test_util
 
 class TestPushRenames(test_util.TestBase):
@@ -21,41 +10,6 @@ class TestPushRenames(test_util.TestBase):
                                          self.repo_path,
                                          self.wc_path,
                                          True)
-
-    def _commitchanges(self, repo, changes):
-        parentctx = repo['tip']
-
-        changed, removed = [], []
-        for source, dest, newdata in changes:
-            if dest is None:
-                removed.append(source)
-            else:
-                changed.append(dest)
-
-        def filectxfn(repo, memctx, path):
-            if path in removed:
-                raise IOError()
-            entry = [e for e in changes if path == e[1]][0]
-            source, dest, newdata = entry
-            if newdata is None:
-                newdata = parentctx[source].data()
-            copied = None
-            if source != dest:
-                copied = source
-            return context.memfilectx(path=dest,
-                                      data=newdata,
-                                      islink=False,
-                                      isexec=False,
-                                      copied=copied)
-                
-        ctx = context.memctx(repo,
-                             (parentctx.node(), node.nullid),
-                             'automated test',
-                             changed + removed,
-                             filectxfn,
-                             'an_author',
-                             '2008-10-07 20:59:48 -0500')
-        return repo.commitctx(ctx)
 
     def _debug_print_copies(self, ctx):
         w = sys.stderr.write
@@ -80,7 +34,7 @@ class TestPushRenames(test_util.TestBase):
                     copy = ctx[dest].renamed()
                     self.assertEqual(copy[0], source)
 
-    def test_push_renames(self, commit=True):
+    def test_push_renames(self):
         repo = self.repo
 
         changes = [
@@ -102,12 +56,8 @@ class TestPushRenames(test_util.TestBase):
             ('e', 'e3', 'e\ne3\n'),
             ('e', None, None),
             ]
-        self._commitchanges(repo, changes)
-        
-        hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(
-            ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
-            svn_url=test_util.fileurl(self.repo_path))
+        self.commitchanges(changes)
+        self.pushrevisions()
         tip = self.repo['tip']
         # self._debug_print_copies(tip)
         self.assertchanges(changes, tip)
