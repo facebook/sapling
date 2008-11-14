@@ -36,13 +36,20 @@ def get_cmd(cmd):
     attr = table[cmd]
     cmds = cmd.lstrip("^").split("|")
 
-    d['synopsis'] = attr[2]
     d['cmd'] = cmds[0]
     d['aliases'] = cmd.split("|")[1:]
     d['desc'] = get_desc(attr[0].__doc__)
     d['opts'] = list(get_opts(attr[1]))
-    return d
 
+    s = 'hg ' + cmds[0]
+    if len(attr) > 2:
+        if not attr[2].startswith('hg'):
+            s += attr[2]
+        else:
+            s = attr[2]
+    d['synopsis'] = s
+
+    return d
 
 def show_doc(ui):
     def bold(s, text=""):
