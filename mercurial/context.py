@@ -9,6 +9,15 @@ from node import nullid, nullrev, short, hex
 from i18n import _
 import ancestor, bdiff, revlog, util, os, errno
 
+class propertycache(object):
+    def __init__(self, func):
+        self.func = func
+        self.name = func.__name__
+    def __get__(self, obj, type=None):
+        result = self.func(obj)
+        setattr(obj, self.name, result)
+        return result
+
 class changectx(object):
     """A changecontext object makes access to data related to a particular
     changeset convenient."""
@@ -51,25 +60,24 @@ class changectx(object):
     def __nonzero__(self):
         return self._rev != nullrev
 
-    def __getattr__(self, name):
-        if name == '_changeset':
-            self._changeset = self._repo.changelog.read(self.node())
-            return self._changeset
-        elif name == '_manifest':
-            self._manifest = self._repo.manifest.read(self._changeset[0])
-            return self._manifest
-        elif name == '_manifestdelta':
-            md = self._repo.manifest.readdelta(self._changeset[0])
-            self._manifestdelta = md
-            return self._manifestdelta
-        elif name == '_parents':
-            p = self._repo.changelog.parentrevs(self._rev)
-            if p[1] == nullrev:
-                p = p[:-1]
-            self._parents = [changectx(self._repo, x) for x in p]
-            return self._parents
-        else:
-            raise AttributeError(name)
+    def _changeset(self):
+        return self._repo.changelog.read(self.node())
+    _changeset = propertycache(_changeset)
+
+    def _manifest(self):
+        return self._repo.manifest.read(self._changeset[0])
+    _manifest = propertycache(_manifest)
+
+    def _manifestdelta(self):
+        return self._repo.manifest.readdelta(self._changeset[0])
+    _manifestdelta = propertycache(_manifestdelta)
+
+    def _parents(self):
+        p = self._repo.changelog.parentrevs(self._rev)
+        if p[1] == nullrev:
+            p = p[:-1]
+        return [changectx(self._repo, x) for x in p]
+    _parents = propertycache(_parents)
 
     def __contains__(self, key):
         return key in self._manifest
@@ -193,33 +201,35 @@ class filectx(object):
         if fileid is not None:
             self._fileid = fileid
 
-    def __getattr__(self, name):
-        if name == '_changectx':
-            self._changectx = changectx(self._repo, self._changeid)
-            return self._changectx
-        elif name == '_filelog':
-            self._filelog = self._repo.file(self._path)
-            return self._filelog
-        elif name == '_changeid':
-            if '_changectx' in self.__dict__:
-                self._changeid = self._changectx.rev()
-            else:
-                self._changeid = self._filelog.linkrev(self._filerev)
-            return self._changeid
-        elif name == '_filenode':
-            if '_fileid' in self.__dict__:
-                self._filenode = self._filelog.lookup(self._fileid)
-            else:
-                self._filenode = self._changectx.filenode(self._path)
-            return self._filenode
-        elif name == '_filerev':
-            self._filerev = self._filelog.rev(self._filenode)
-            return self._filerev
-        elif name == '_repopath':
-            self._repopath = self._path
-            return self._repopath
+    def _changectx(self):
+        return changectx(self._repo, self._changeid)
+    _changectx = propertycache(_changectx)
+
+    def _filelog(self):
+        return self._repo.file(self._path)
+    _filelog = propertycache(_filelog)
+
+    def _changeid(self):
+        if '_changectx' in self.__dict__:
+            return self._changectx.rev()
         else:
-            raise AttributeError(name)
+            return self._filelog.linkrev(self._filerev)
+    _changeid = propertycache(_changeid)
+
+    def _filenode(self):
+        if '_fileid' in self.__dict__:
+            return self._filelog.lookup(self._fileid)
+        else:
+            return self._changectx.filenode(self._path)
+    _filenode = propertycache(_filenode)
+
+    def _filerev(self):
+        return self._filelog.rev(self._filenode)
+    _filerev = propertycache(_filerev)
+
+    def _repopath(self):
+        return self._path
+    _repopath = propertycache(_repopath)
 
     def __nonzero__(self):
         try:
@@ -505,29 +515,7 @@ class workingctx(changectx):
     def __contains__(self, key):
         return self._dirstate[key] not in "?r"
 
-    def __getattr__(self, name):
-        if name == '_status':
-            self._status = self._repo.status(unknown=True)
-            return self._status
-        elif name == '_user':
-            self._user = self._repo.ui.username()
-            return self._user
-        elif name == '_date':
-            self._date = util.makedate()
-            return self._date
-        if name == '_manifest':
-            self._buildmanifest()
-            return self._manifest
-        elif name == '_parents':
-            p = self._repo.dirstate.parents()
-            if p[1] == nullid:
-                p = p[:-1]
-            self._parents = [changectx(self._repo, x) for x in p]
-            return self._parents
-        else:
-            raise AttributeError(name)
-
-    def _buildmanifest(self):
+    def _manifest(self):
         """generate a manifest corresponding to the working directory"""
 
         man = self._parents[0].manifest().copy()
@@ -547,7 +535,28 @@ class workingctx(changectx):
             if f in man:
                 del man[f]
 
-        self._manifest = man
+        return man
+    _manifest = propertycache(_manifest)
+
+    def _status(self):
+        return self._repo.status(unknown=True)
+    _status = propertycache(_status)
+
+    def _user(self):
+        return self._repo.ui.username()
+    _user = propertycache(_user)
+
+    def _date(self):
+        return util.makedate()
+    _date = propertycache(_date)
+
+    def _parents(self):
+        p = self._repo.dirstate.parents()
+        if p[1] == nullid:
+            p = p[:-1]
+        self._parents = [changectx(self._repo, x) for x in p]
+        return self._parents
+    _parents = propertycache(_parents)
 
     def manifest(self): return self._manifest
 
@@ -622,19 +631,17 @@ class workingfilectx(filectx):
         if workingctx:
             self._changectx = workingctx
 
-    def __getattr__(self, name):
-        if name == '_changectx':
-            self._changectx = workingctx(self._repo)
-            return self._changectx
-        elif name == '_repopath':
-            self._repopath = (self._repo.dirstate.copied(self._path)
-                              or self._path)
-            return self._repopath
-        elif name == '_filelog':
-            self._filelog = self._repo.file(self._repopath)
-            return self._filelog
-        else:
-            raise AttributeError(name)
+    def _changectx(self):
+        return workingctx(self._repo)
+    _changectx = propertycache(_changectx)
+
+    def _repopath(self):
+        return self._repo.dirstate.copied(self._path) or self._path
+    _repopath = propertycache(_repopath)
+
+    def _filelog(self):
+        return self._repo.file(self._repopath)
+    _filelog = propertycache(_filelog)
 
     def __nonzero__(self):
         return True
