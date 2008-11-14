@@ -10,17 +10,7 @@ import fetch_command
 import test_util
 
 
-class TestBasicRepoLayout(unittest.TestCase):
-    def setUp(self):
-        self.oldwd = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
-        self.repo_path = '%s/testrepo' % self.tmpdir
-        self.wc_path = '%s/testrepo_wc' % self.tmpdir
-
-    def tearDown(self):
-        test_util.rmtree(self.tmpdir)
-        os.chdir(self.oldwd)
-
+class TestBasicRepoLayout(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
                                                 self.wc_path)
@@ -120,17 +110,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         #'1316ef606dda89354ee8c4df725e6264177b5129')
 
 
-class TestStupidPull(unittest.TestCase):
-    def setUp(self):
-        self.oldwd = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
-        self.repo_path = '%s/testrepo' % self.tmpdir
-        self.wc_path = '%s/testrepo_wc' % self.tmpdir
-
-    def tearDown(self):
-        test_util.rmtree(self.tmpdir)
-        os.chdir(self.oldwd)
-
+class TestStupidPull(test_util.TestBase):
     def test_stupid(self):
         repo = test_util.load_fixture_and_fetch('two_heads.svndump',
                                                 self.repo_path,

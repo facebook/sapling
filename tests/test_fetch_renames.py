@@ -12,17 +12,7 @@ import fetch_command
 import test_util
 
 
-class TestFetchRenames(unittest.TestCase):
-    def setUp(self):
-        self.oldwd = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
-        self.repo_path = '%s/testrepo' % self.tmpdir
-        self.wc_path = '%s/testrepo_wc' % self.tmpdir
-
-    def tearDown(self):
-        test_util.rmtree(self.tmpdir)
-        os.chdir(self.oldwd)
-
+class TestFetchRenames(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name, stupid):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
                                                 self.wc_path, stupid=stupid)
@@ -43,7 +33,7 @@ class TestFetchRenames(unittest.TestCase):
         # Map revnum to mappings of dest name to (source name, dest content)
         copies = {
             4: {
-                'a1': ('a', 'a\n'), 
+                'a1': ('a', 'a\n'),
                 'a2': ('a', 'a\n'),
                 'b1': ('b', 'b\nc\n'),
                 'da1/daf': ('da/daf', 'c\n'),

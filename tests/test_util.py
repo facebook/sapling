@@ -2,6 +2,7 @@ import errno
 import os
 import subprocess
 import shutil
+import StringIO
 import stat
 import tempfile
 import unittest
@@ -18,7 +19,7 @@ import push_cmd
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
 
-def fileurl(path):    
+def fileurl(path):
     path = os.path.abspath(path)
     drive, path = os.path.splitdrive(path)
     path = urllib.pathname2url(path)
@@ -63,17 +64,38 @@ def rmtree(path):
                 os.chmod(f, s.st_mode | stat.S_IWRITE)
     shutil.rmtree(path)
 
+
+class MockUI(object):
+    real_ui = ui.ui
+    _isatty = False
+    def __init__(self, parentui=None):
+        self.stream = StringIO.StringIO()
+        self.inner_ui = self.real_ui(parentui=parentui)
+
+    def status(self, *args):
+        self.stream.write(*args)
+
+    def warn(self, *args):
+        self.stream.write(*args)
+
+    def __getattr__(self, attr):
+        return getattr(self.inner_ui, attr)
+
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         self.oldwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
+        self._real_ui = ui.ui
+        ui.ui = MockUI
 
     def tearDown(self):
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
-        
+        ui.ui = self._real_ui
+
     # define this as a property so that it reloads anytime we need it
     @property
     def repo(self):
@@ -88,8 +110,8 @@ class TestBase(unittest.TestCase):
         path = self.repo_path + '/' + path
         path = fileurl(path)
         args = ['svn', 'ls', '-r', rev, '-R', path]
-        p = subprocess.Popen(args, 
-                             stdout=subprocess.PIPE, 
+        p = subprocess.Popen(args,
+                             stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if p.returncode:
@@ -104,7 +126,7 @@ class TestBase(unittest.TestCase):
         'changes' is a sequence of tuples (source, dest, data). It can look
         like:
         - (source, source, data) to set source content to data
-        - (source, dest, None) to set dest content to source one, and mark it as 
+        - (source, dest, None) to set dest content to source one, and mark it as
         copied from source.
         - (source, dest, data) to set dest content to data, and mark it as copied
         from source.
@@ -135,7 +157,7 @@ class TestBase(unittest.TestCase):
                                       islink=False,
                                       isexec=False,
                                       copied=copied)
-        
+
         ctx = context.memctx(repo,
                              (parentctx.node(), node.nullid),
                              'automated test',
