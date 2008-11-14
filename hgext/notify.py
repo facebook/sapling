@@ -165,7 +165,7 @@ class notifier(object):
     def node(self, node):
         '''format one changeset.'''
 
-        self.t.show(changenode=node, changes=self.repo.changelog.read(node),
+        self.t.show(self.repo[node], changes=self.repo.changelog.read(node),
                     baseurl=self.ui.config('web', 'baseurl'),
                     root=self.repo.root,
                     webroot=self.root)

@@ -291,7 +291,7 @@ class bugzilla(object):
             tmpl = templater.parsestring(tmpl, quoted=False)
             t.use_template(tmpl)
         self.ui.pushbuffer()
-        t.show(changenode=ctx.node(), changes=ctx.changeset(),
+        t.show(ctx, changes=ctx.changeset(),
                bug=str(bugid),
                hgweb=self.ui.config('web', 'baseurl'),
                root=self.repo.root,

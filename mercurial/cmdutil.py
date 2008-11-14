@@ -596,26 +596,24 @@ class changeset_printer(object):
             return 1
         return 0
 
-    def show(self, rev=0, changenode=None, copies=(), **props):
+    def show(self, ctx, copies=(), **props):
         if self.buffered:
             self.ui.pushbuffer()
-            self._show(rev, changenode, copies, props)
-            self.hunk[rev] = self.ui.popbuffer()
+            self._show(ctx, copies, props)
+            self.hunk[ctx.rev()] = self.ui.popbuffer()
         else:
-            self._show(rev, changenode, copies, props)
+            self._show(ctx, copies, props)
 
-    def _show(self, rev, changenode, copies, props):
+    def _show(self, ctx, copies, props):
         '''show a single changeset or file revision'''
-        log = self.repo.changelog
-        if changenode is None:
-            changenode = log.node(rev)
-        elif not rev:
-            rev = log.rev(changenode)
+        changenode = ctx.node()
+        rev = ctx.rev()
 
         if self.ui.quiet:
             self.ui.write("%d:%s\n" % (rev, short(changenode)))
             return
 
+        log = self.repo.changelog
         changes = log.read(changenode)
         date = util.datestr(changes[2])
         extra = changes[5]
@@ -716,14 +714,12 @@ class changeset_templater(changeset_printer):
         '''set template string to use'''
         self.t.cache['changeset'] = t
 
-    def _show(self, rev, changenode, copies, props):
+    def _show(self, ctx, copies, props):
         '''show a single changeset or file revision'''
-        log = self.repo.changelog
-        if changenode is None:
-            changenode = log.node(rev)
-        elif not rev:
-            rev = log.rev(changenode)
+        changenode = ctx.node()
+        rev = ctx.rev()
 
+        log = self.repo.changelog
         changes = log.read(changenode)
 
         def showlist(name, values, plural=None, **args):

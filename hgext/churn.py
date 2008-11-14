@@ -63,7 +63,7 @@ def countrate(ui, repo, amap, *pats, **opts):
         tmpl = maketemplater(ui, repo, tmpl)
         def getkey(ctx):
             ui.pushbuffer()
-            tmpl.show(changenode=ctx.node())
+            tmpl.show(ctx)
             return ui.popbuffer()
 
     count = pct = 0

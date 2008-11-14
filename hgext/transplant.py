@@ -398,7 +398,7 @@ def browserevs(ui, repo, nodes, opts):
     transplants = []
     merges = []
     for node in nodes:
-        displayer.show(changenode=node)
+        displayer.show(repo[node])
         action = None
         while not action:
             action = ui.prompt(_('apply changeset? [ynmpcq?]:'))

@@ -9,7 +9,7 @@ from node import hex, nullid, nullrev, short
 from repo import RepoError, NoCapability
 from i18n import _, gettext
 import os, re, sys
-import hg, util, revlog, bundlerepo, extensions, copies
+import hg, util, revlog, bundlerepo, extensions, copies, context
 import difflib, patch, time, help, mdiff, tempfile, url
 import version
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
@@ -288,13 +288,13 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         if len(nodes) == 1:
             # narrowed it down to a single revision
             ui.write(_("The first %s revision is:\n") % transition)
-            displayer.show(changenode=nodes[0])
+            displayer.show(repo[nodes[0]])
         else:
             # multiple possible revisions
             ui.write(_("Due to skipped revisions, the first "
                        "%s revision could be any of:\n") % transition)
             for n in nodes:
-                displayer.show(changenode=n)
+                displayer.show(repo[n])
 
     def check_state(state, interactive=True):
         if not state['good'] or not state['bad']:
@@ -1270,7 +1270,7 @@ def heads(ui, repo, *branchrevs, **opts):
         return 1
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in heads:
-        displayer.show(changenode=n)
+        displayer.show(repo[n])
 
 def help_(ui, name=None, with_version=False):
     """show help for a given topic or a help overview
@@ -1729,7 +1729,7 @@ def incoming(ui, repo, source="default", **opts):
             if opts.get('no_merges') and len(parents) == 2:
                 continue
             count += 1
-            displayer.show(changenode=n)
+            displayer.show(other[n])
     finally:
         if hasattr(other, 'close'):
             other.close()
@@ -1867,7 +1867,6 @@ def log(ui, repo, *pats, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
     for st, rev, fns in changeiter:
         if st == 'add':
-            changenode = repo.changelog.node(rev)
             parents = [p for p in repo.changelog.parentrevs(rev)
                        if p != nullrev]
             if opts.get('no_merges') and len(parents) == 2:
@@ -1913,7 +1912,7 @@ def log(ui, repo, *pats, **opts):
                     rename = getrenamed(fn, rev)
                     if rename:
                         copies.append((fn, rename[0]))
-            displayer.show(rev, changenode, copies=copies)
+            displayer.show(context.changectx(repo, rev), copies=copies)
         elif st == 'iter':
             if count == limit: break
             if displayer.flush(rev):
@@ -2026,7 +2025,7 @@ def outgoing(ui, repo, dest=None, **opts):
         if opts.get('no_merges') and len(parents) == 2:
             continue
         count += 1
-        displayer.show(changenode=n)
+        displayer.show(repo[n])
 
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working dir or revision
@@ -2066,7 +2065,7 @@ def parents(ui, repo, file_=None, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in p:
         if n != nullid:
-            displayer.show(changenode=n)
+            displayer.show(repo[n])
 
 def paths(ui, repo, search=None):
     """show definition of symbolic path names
@@ -2842,7 +2841,7 @@ def tip(ui, repo, **opts):
     that repository becomes the current tip. The "tip" tag is special
     and cannot be renamed or assigned to a different changeset.
     """
-    cmdutil.show_changeset(ui, repo, opts).show(len(repo) - 1)
+    cmdutil.show_changeset(ui, repo, opts).show(repo[len(repo) - 1])
 
 def unbundle(ui, repo, fname1, *fnames, **opts):
     """apply one or more changegroup files

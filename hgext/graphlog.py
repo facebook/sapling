@@ -325,7 +325,7 @@ def graphlog(ui, repo, path=None, **opts):
             # log_strings is the list of all log strings to draw alongside
             # the graph.
             ui.pushbuffer()
-            cs_printer.show(rev, node)
+            cs_printer.show(repo[rev])
             log_strings = ui.popbuffer().split("\n")[:-1]
             if node in repo_parents:
                 node_ch = "@"

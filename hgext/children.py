@@ -28,8 +28,8 @@ def children(ui, repo, file_=None, **opts):
         ctx = repo[rev]
 
     displayer = cmdutil.show_changeset(ui, repo, opts)
-    for node in [cp.node() for cp in ctx.children()]:
-        displayer.show(changenode=node)
+    for cctx in ctx.children():
+        displayer.show(cctx)
 
 
 cmdtable = {

@@ -151,7 +151,7 @@ class kwtemplater(object):
             kw = mobj.group(1)
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
-            self.ct.show(changenode=node, root=self.repo.root, file=path)
+            self.ct.show(self.repo[node], root=self.repo.root, file=path)
             ekw = templatefilters.firstline(self.ui.popbuffer())
             return '$%s: %s $' % (kw, ekw)
         return subfunc(kwsub, data)
