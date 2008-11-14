@@ -360,7 +360,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
     if not os.path.exists(temp_location):
         os.makedirs(temp_location)
     for b in branches:
-        our_tempdir = tempfile.mkdtemp('svn_fetch_temp', dir=temp_location)
+        our_tempdir = None
         diff_path = make_diff_path(b)
         parent_rev, br_p = hg_editor.get_parent_svn_branch_and_rev(r.revnum, b)
         parent_ha = hg_editor.get_parent_revision(r.revnum, b)
@@ -382,6 +382,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     ui.status('Branch creation with mods, pulling full rev.\n')
                     raise BadPatchApply()
 
+            our_tempdir = tempfile.mkdtemp('svn_fetch_temp', dir=temp_location)
             for m in binary_file_re.findall(d):
                 # we have to pull each binary file by hand as a fulltext,
                 # which sucks but we've got no choice
@@ -582,7 +583,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             hg_editor._save_metadata()
             ui.status('committed as %s on branch %s\n' %
                       (node.hex(ha),  b or 'default'))
-        shutil.rmtree(our_tempdir)
+        if our_tempdir is not None:
+            shutil.rmtree(our_tempdir)
 
 
 class BadPatchApply(Exception):
