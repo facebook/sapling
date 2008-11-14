@@ -99,6 +99,7 @@ def wrapcommand(table, command, wrapper):
         return wrapper(origfn, *args, **kwargs)
 
     wrap.__doc__ = getattr(origfn, '__doc__')
+    wrap.__module__ = getattr(origfn, '__module__')
 
     newentry = list(entry)
     newentry[0] = wrap
