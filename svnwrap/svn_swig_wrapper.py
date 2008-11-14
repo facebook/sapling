@@ -14,6 +14,14 @@ from svn import ra
 if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO) < (1, 5, 0): #pragma: no cover
     raise ImportError, 'You must have Subversion 1.5.0 or newer and matching SWIG bindings.'
 
+class SubversionRepoCanNotReplay(Exception):
+    """Exception raised when the svn server is too old to have replay.
+    """
+
+class SubversionRepoCanNotDiff(Exception):
+    """Exception raised when the svn API diff3() command cannot be used
+    """
+
 def optrev(revnum):
     optrev = core.svn_opt_revision_t()
     optrev.kind = core.svn_opt_revision_number
@@ -111,6 +119,7 @@ class SubversionRepo(object):
         self.subdir = url[len(repo_root):]
         if not self.subdir or self.subdir[-1] != '/':
             self.subdir += '/'
+        self.hasdiff3 = True
 
     def init_ra_and_client(self):
         """Initializes the RA and client layers, because sometimes getting
@@ -367,6 +376,8 @@ class SubversionRepo(object):
                          deleted=True, ignore_type=False):
         """Gets a unidiff of path at revision against revision-1.
         """
+        if not self.hasdiff3:
+            raise SubversionRepoCanNotDiff()
         # works around an svn server keeping too many open files (observed
         # in an svnserve from the 1.2 era)
         self.init_ra_and_client()
@@ -380,24 +391,34 @@ class SubversionRepo(object):
             other_rev = revision - 1
         old_cwd = os.getcwd()
         tmpdir = tempfile.mkdtemp('svnwrap_temp')
+        out, err = None, None
         try:
             # hot tip: the swig bridge doesn't like StringIO for these bad boys
             out_path = os.path.join(tmpdir, 'diffout')
             error_path = os.path.join(tmpdir, 'differr')
-            out, err = None, None
+            out = open(out_path, 'w')
+            err = open(error_path, 'w')
             try:
-                out = open(out_path, 'w')
-                err = open(error_path, 'w')
                 client.diff3([], url2, optrev(other_rev), url, optrev(revision),
                              True, True, deleted, ignore_type, 'UTF-8', out, err,
                              self.client_context, self.pool)
-            finally:
-                if out: out.close()
-                if err: err.close()
+            except core.SubversionException, e:
+                # "Can't write to stream: The handle is invalid."
+                # This error happens systematically under Windows, possibly
+                # related to file handles being non-write shareable by default.
+                if e.apr_err != 720006:
+                    raise
+                self.hasdiff3 = False
+                raise SubversionRepoCanNotDiff()
+            out.close()
+            err.close()
+            out, err = None, None
             assert len(open(error_path).read()) == 0
             diff = open(out_path).read()
             return diff
         finally:
+            if out: out.close()
+            if err: err.close()
             shutil.rmtree(tmpdir)
             os.chdir(old_cwd)
 
@@ -473,7 +494,3 @@ class SubversionRepo(object):
         """
         kind = ra.check_path(self.ra, path.strip('/'), revision)
         return _svntypes.get(kind)
-
-class SubversionRepoCanNotReplay(Exception):
-    """Exception raised when the svn server is too old to have replay.
-    """
