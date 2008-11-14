@@ -14,25 +14,13 @@ import fetch_command
 import push_cmd
 import test_util
 
-class TestPushRenames(unittest.TestCase):
+class TestPushRenames(test_util.TestBase):
     def setUp(self):
-        self.oldwd = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
-        self.repo_path = '%s/testrepo' % self.tmpdir
-        self.wc_path = '%s/testrepo_wc' % self.tmpdir
+        test_util.TestBase.setUp(self)
         test_util.load_fixture_and_fetch('pushrenames.svndump',
                                          self.repo_path,
                                          self.wc_path,
                                          True)
-
-    # define this as a property so that it reloads anytime we need it
-    @property
-    def repo(self):
-        return hg.repository(ui.ui(), self.wc_path)
-
-    def tearDown(self):
-        test_util.rmtree(self.tmpdir)
-        os.chdir(self.oldwd)
 
     def _commitchanges(self, repo, changes):
         parentctx = repo['tip']

@@ -3,12 +3,15 @@ import os
 import subprocess
 import shutil
 import stat
+import tempfile
+import unittest
 import urllib
 
 from mercurial import ui
 from mercurial import hg
 
 import fetch_command
+import push_cmd
 
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
@@ -57,3 +60,24 @@ def rmtree(path):
             if (s.st_mode & stat.S_IWRITE) == 0:
                 os.chmod(f, s.st_mode | stat.S_IWRITE)
     shutil.rmtree(path)
+
+class TestBase(unittest.TestCase):
+    def setUp(self):
+        self.oldwd = os.getcwd()
+        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
+        self.repo_path = '%s/testrepo' % self.tmpdir
+        self.wc_path = '%s/testrepo_wc' % self.tmpdir
+
+    def tearDown(self):
+        rmtree(self.tmpdir)
+        os.chdir(self.oldwd)
+
+    # define this as a property so that it reloads anytime we need it
+    @property
+    def repo(self):
+        return hg.repository(ui.ui(), self.wc_path)
+
+    def pushrevisions(self):
+        push_cmd.push_revisions_to_subversion(
+            ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
+            svn_url=fileurl(self.repo_path))

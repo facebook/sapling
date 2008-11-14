@@ -17,12 +17,9 @@ import test_util
 import time
 
 
-class PushOverSvnserveTests(unittest.TestCase):
+class PushOverSvnserveTests(test_util.TestBase):
     def setUp(self):
-        self.oldwd = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
-        self.repo_path = '%s/testrepo' % self.tmpdir
-        self.wc_path = '%s/testrepo_wc' % self.tmpdir
+        test_util.TestBase.setUp(self)
         test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
         open(os.path.join(self.repo_path, 'conf', 'svnserve.conf'),
              'w').write('[general]\nanon-access=write\n[sasl]\n')
@@ -48,14 +45,8 @@ class PushOverSvnserveTests(unittest.TestCase):
                                       hg_repo_path=self.wc_path)
 
     def tearDown(self):
-        test_util.rmtree(self.tmpdir)
-        os.chdir(self.oldwd)
         os.system('kill -9 %d' % self.svnserve_pid)
-
-    # define this as a property so that it reloads anytime we need it
-    @property
-    def repo(self):
-        return hg.repository(ui.ui(), self.wc_path)
+        test_util.TestBase.tearDown(self)
 
     def test_push_to_default(self, commit=True):
         repo = self.repo
@@ -91,29 +82,12 @@ class PushOverSvnserveTests(unittest.TestCase):
         self.assertEqual(tip.branch(), 'default')
 
 
-class PushTests(unittest.TestCase):
+class PushTests(test_util.TestBase):
     def setUp(self):
-        self.oldwd = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
-        self.repo_path = '%s/testrepo' % self.tmpdir
-        self.wc_path = '%s/testrepo_wc' % self.tmpdir
+        test_util.TestBase.setUp(self)
         test_util.load_fixture_and_fetch('simple_branch.svndump',
                                          self.repo_path,
                                          self.wc_path)
-
-    # define this as a property so that it reloads anytime we need it
-    @property
-    def repo(self):
-        return hg.repository(ui.ui(), self.wc_path)
-
-    def pushrevisions(self):
-        push_cmd.push_revisions_to_subversion(
-            ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
-            svn_url=test_util.fileurl(self.repo_path))
-
-    def tearDown(self):
-        test_util.rmtree(self.tmpdir)
-        os.chdir(self.oldwd)
 
     def test_push_to_default(self, commit=True):
         repo = self.repo
