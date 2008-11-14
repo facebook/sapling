@@ -266,59 +266,6 @@ class PushTests(test_util.TestBase):
         self.assertEqual([x for x in tip.manifest().keys() if 'l' not in
                           tip[x].flags()], ['alpha', 'beta', 'adding_file', ])
 
-    def test_push_with_new_dir(self):
-        self.test_push_to_default(commit=True)
-        repo = self.repo
-        def file_callback(repo, memctx, path):
-            if path == 'newdir/gamma':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
-            raise IOError()
-        ctx = context.memctx(repo,
-                             (repo['tip'].node(), node.nullid),
-                             'message',
-                             ['newdir/gamma', ],
-                             file_callback,
-                             'author',
-                             '2008-10-29 21:26:00 -0500',
-                             {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
-        hg.update(repo, repo['tip'].node())
-        self.pushrevisions()
-        tip = self.repo['tip']
-        self.assertNotEqual(tip.node(), new_hash)
-        self.assertEqual(tip['newdir/gamma'].data(), 'foo')
-
-    def test_push_with_new_subdir(self):
-        self.test_push_to_default(commit=True)
-        repo = self.repo
-        def file_callback(repo, memctx, path):
-            if path == 'newdir/subdir/gamma':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
-            raise IOError()
-        ctx = context.memctx(repo,
-                             (repo['tip'].node(), node.nullid),
-                             'message',
-                             ['newdir/subdir/gamma', ],
-                             file_callback,
-                             'author',
-                             '2008-10-29 21:26:00 -0500',
-                             {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
-        hg.update(repo, repo['tip'].node())
-        self.pushrevisions()
-        tip = self.repo['tip']
-        self.assertNotEqual(tip.node(), new_hash)
-        self.assertEqual(tip['newdir/subdir/gamma'].data(), 'foo')
-
-
     def test_push_existing_file_newly_symlink(self):
         self.test_push_existing_file_newly_execute(execute=False,
                                                    link=True,

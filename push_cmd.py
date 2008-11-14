@@ -68,24 +68,60 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
     merc_util._encoding = oldencoding
     return 0
 
+def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
+    """Compute directories to add or delete when moving from parentctx
+    to ctx, assuming only 'changedfiles' files changed.
 
-def _findmissing(dirname, svn, branch_path):
-    """Find missing directories in svn. dirname *must* end in a /
+    Return (added, deleted) where 'added' is the list of all added
+    directories and 'deleted' the list of deleted directories.
+    Intermediate directories are included: if a/b/c is new and requires
+    the addition of a/b and a, those will be listed too. Intermediate
+    deleted directories are also listed, but item order of undefined
+    in either list.
     """
-    assert dirname[-1] == '/'
-    missing = []
-    keep_checking = True
-    # check and see if the dir exists svn-side.
-    path = dirname
-    while keep_checking:
+    def exists(svndir):
         try:
-            assert svn.list_dir('%s/%s' % (branch_path, path))
-            keep_checking = False
-        except core.SubversionException, e:
-            # dir must not exist
-            missing.append(path[:-1])
-            path = '/'.join(path.split('/')[:-2] + [''])
-    return missing
+            svn.list_dir('%s/%s' % (branchpath, svndir))
+            return True
+        except core.SubversionException:
+            return False
+
+    def finddirs(path):
+        pos = path.rfind('/')
+        while pos != -1:
+            yield path[:pos]
+            pos = path.rfind('/', 0, pos)
+
+    def getctxdirs(ctx, keptdirs):
+        dirs = {}
+        for f in ctx.manifest():
+            for d in finddirs(f):
+                if d in dirs:
+                    break
+                if d in keptdirs:
+                    dirs[d] = 1
+        return dirs
+
+    deleted, added = [], []
+    if not changedfiles:
+        return added, deleted
+    changeddirs = {}
+    for f in changedfiles:
+        for d in finddirs(f):
+            changeddirs[d] = 1
+    olddirs = getctxdirs(parentctx, changeddirs)
+    newdirs = getctxdirs(ctx, changeddirs)
+
+    for d in newdirs:
+        if d not in olddirs and not exists(d):
+            added.append(d)
+
+    for d in olddirs:
+        if d not in newdirs and exists(d):
+            deleted.append(d)
+
+    return added, deleted
+        
 
 def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     """Build and send a commit from Mercurial to Subversion.
@@ -99,7 +135,10 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     if parent_branch and parent_branch != 'default':
         branch_path = 'branches/%s' % parent_branch
 
-    added_dirs = []
+    addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent, 
+                                            rev_ctx, rev_ctx.files())
+    deleteddirs = set(deleteddirs)
+
     props = {}
     copies = {}
     for file in rev_ctx.files():
@@ -124,9 +163,6 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
 
                 action = 'add'
                 dirname = '/'.join(file.split('/')[:-1] + [''])
-                # check for new directories
-                if not list(parent.walk(util.PrefixMatch(dirname))):
-                    added_dirs += _findmissing(dirname, svn, branch_path)
             else:
                 base_data = parent.filectx(file).data()
                 if ('x' in parent.filectx(file).flags()
@@ -137,11 +173,25 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                     props.setdefault(file, {})['svn:special'] = None
                 action = 'modify'
         else:
+            pos = file.rfind('/')
+            if pos >= 0:
+                if file[:pos] in deleteddirs:
+                    # This file will be removed when its directory is removed
+                    continue
             base_data = parent.filectx(file).data()
             action = 'delete'
         file_data[file] = base_data, new_data, action
 
-    # TODO check for directory deletes here
+    # Now we are done with files, we can prune deleted directories
+    # against themselves: ignore a/b if a/ is already removed
+    deleteddirs2 = list(deleteddirs)
+    deleteddirs2.sort()
+    deleteddirs2.reverse()
+    for d in deleteddirs2:
+        pos = d.rfind('/')
+        if pos >= 0 and d[:pos] in deleteddirs:
+            deleteddirs.remove(d[:pos])
+
     def svnpath(p):
         return '%s/%s' % (branch_path, p)
 
@@ -149,8 +199,8 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     for source, dest in copies.iteritems():
         newcopies[svnpath(source)] = (svnpath(dest), base_revision)
 
-    new_target_files = [svnpath(f) for f in rev_ctx.files()]
-    for tf, ntf in zip(rev_ctx.files(), new_target_files):
+    new_target_files = [svnpath(f) for f in file_data]
+    for tf, ntf in zip(file_data, new_target_files):
         if tf in file_data:
             file_data[ntf] = file_data[tf]
             if tf in props:
@@ -160,12 +210,14 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                 props.setdefault(ntf, {}).update(props.get(ntf, {}))
                 props.setdefault(ntf, {})['svn:mime-type'] = 'application/octet-stream'
             del file_data[tf]
-    added_dirs = ['%s/%s' % (branch_path, f) for f in added_dirs]
-    added_dirs = set(added_dirs)
-    new_target_files += added_dirs
+
+    addeddirs = [svnpath(d) for d in addeddirs]
+    deleteddirs = [svnpath(d) for d in deleteddirs]
+    new_target_files += addeddirs + deleteddirs
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
-                   base_revision, set(added_dirs), props, newcopies)
+                   base_revision, set(addeddirs), set(deleteddirs), 
+                   props, newcopies)
     except core.SubversionException, e:
         if hasattr(e, 'apr_err') and e.apr_err == 160028:
             raise merc_util.Abort('Base text was out of date, maybe rebase?')

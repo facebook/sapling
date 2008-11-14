@@ -71,7 +71,7 @@ class TestBase(unittest.TestCase):
     def tearDown(self):
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
-
+        
     # define this as a property so that it reloads anytime we need it
     @property
     def repo(self):
@@ -81,3 +81,17 @@ class TestBase(unittest.TestCase):
         push_cmd.push_revisions_to_subversion(
             ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
             svn_url=fileurl(self.repo_path))
+
+    def svnls(self, path, rev='HEAD'):
+        path = self.repo_path + '/' + path
+        path = fileurl(path)
+        args = ['svn', 'ls', '-r', rev, '-R', path]
+        p = subprocess.Popen(args, 
+                             stdout=subprocess.PIPE, 
+                             stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode:
+            raise Exception('svn ls failed on %s: %r' % (path, stderr))
+        entries = [e.strip('/') for e in stdout.splitlines()]
+        entries.sort()
+        return entries

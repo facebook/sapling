@@ -269,8 +269,8 @@ class SubversionRepo(object):
                 yield revisions[0]
                 revisions.pop(0)
 
-    def commit(self, paths, message, file_data, base_revision, dirs,
-               properties, copies):
+    def commit(self, paths, message, file_data, base_revision, addeddirs,
+               deleteddirs, properties, copies):
         """Commits the appropriate targets from revision in editor's store.
         """
         self.init_ra_and_client()
@@ -292,8 +292,12 @@ class SubversionRepo(object):
                 bat = editor.open_root(edit_baton, base_revision, self.pool)
                 batons.append(bat)
                 return bat
-            if path in dirs:
+            if path in addeddirs:
                 bat = editor.add_directory(path, parent, None, -1, pool)
+                batons.append(bat)
+                return bat
+            if path in deleteddirs:
+                bat = editor.delete_entry(path, base_revision, parent, pool)
                 batons.append(bat)
                 return bat
             base_text, new_text, action = file_data[path]

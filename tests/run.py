@@ -8,6 +8,8 @@ import test_fetch_command
 import test_fetch_command_regexes
 import test_fetch_renames
 import test_push_command
+import test_push_renames
+import test_push_dirs
 import test_tags
 
 def suite():
@@ -15,6 +17,8 @@ def suite():
                                test_fetch_command_regexes.suite(),
                                test_fetch_renames.suite(),
                                test_push_command.suite(),
+                               test_push_renames.suite(),
+                               test_push_dirs.suite(),
                                test_tags.suite(),
                               ])
 
