@@ -281,16 +281,15 @@ def graphlog(ui, repo, path=None, **opts):
         revdag = revisions(repo, start, stop)
 
     repo_parents = repo.dirstate.parents()
-    displayer = show_changeset(ui, repo, opts)
+    displayer = show_changeset(ui, repo, opts, buffered=True)
     def graphabledag():
         for (ctx, parents) in revdag:
             # log_strings is the list of all log strings to draw alongside
             # the graph.
-            ui.pushbuffer()
             displayer.show(ctx)
-            log_strings = ui.popbuffer().split("\n")[:-1]
+            lines = displayer.hunk.pop(ctx.rev()).split("\n")[:-1]
             char = ctx.node() in repo_parents and '@' or 'o'
-            yield (ctx.rev(), parents, char, log_strings)
+            yield (ctx.rev(), parents, char, lines)
 
     ascii(ui, grapher(graphabledag()))
 
