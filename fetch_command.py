@@ -306,30 +306,36 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
         return files, filectxfn
 
     files = []
-    branchprefix = branchpath + '/'
-    for path, e in r.paths.iteritems():
-        if not path.startswith(branchprefix):
-            continue
-        kind = svn.checkpath(path, r.revnum)
-        path = path[len(branchprefix):]
-        if kind == 'f':
-            files.append(path)
-        elif kind == 'd':
-            if e.action == 'M':
-                # Ignore property changes for now
-                continue
-            dirpath = branchprefix + path
-            for child, k in svn.list_files(dirpath, r.revnum):
-                if k == 'f':
-                    files.append(path + '/' + child)
-        else:
-            if path in parentctx:
+    if parentid == revlog.nullid:
+        # Initial revision, fetch all files
+        for path, kind in svn.list_files(branchpath, r.revnum):
+            if kind == 'f':
                 files.append(path)
+    else:
+        branchprefix = branchpath + '/'
+        for path, e in r.paths.iteritems():
+            if not path.startswith(branchprefix):
                 continue
-            # Assume it's a deleted directory
-            path = path + '/'
-            deleted = [f for f in parentctx if f.startswith(path)]
-            files += deleted        
+            kind = svn.checkpath(path, r.revnum)
+            path = path[len(branchprefix):]
+            if kind == 'f':
+                files.append(path)
+            elif kind == 'd':
+                if e.action == 'M':
+                    # Ignore property changes for now
+                    continue
+                dirpath = branchprefix + path
+                for child, k in svn.list_files(dirpath, r.revnum):
+                    if k == 'f':
+                        files.append(path + '/' + child)
+            else:
+                if path in parentctx:
+                    files.append(path)
+                    continue
+                # Assume it's a deleted directory
+                path = path + '/'
+                deleted = [f for f in parentctx if f.startswith(path)]
+                files += deleted        
 
     copies = getcopies(svn, hg_editor, branch, branchpath, r, files, parentid)
     
