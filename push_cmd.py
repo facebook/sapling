@@ -103,12 +103,16 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
         return dirs
 
     deleted, added = [], []
-    if not changedfiles:
-        return added, deleted
     changeddirs = {}
     for f in changedfiles:
+        if f in parentctx and f in ctx:
+            # Updated files cannot cause directories to be created
+            # or removed.
+            continue
         for d in finddirs(f):
             changeddirs[d] = 1
+    if not changeddirs:
+        return added, deleted
     olddirs = getctxdirs(parentctx, changeddirs)
     newdirs = getctxdirs(ctx, changeddirs)
 

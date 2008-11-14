@@ -27,6 +27,15 @@ class TestPushDirectories(test_util.TestBase):
                            'd31/d32', 'd31/d32/a', 'd31/d32/d33', 
                            'd31/d32/d33/d34', 'd31/d32/d33/d34/a'])
 
+        # Add one revision with changed files only, no directory addition
+        # or deletion.
+        changes = [
+            ('d1/a', 'd1/a', 'aa\n'),
+            ('d2/a', 'd2/a', 'aa\n'),
+            ]
+        self.commitchanges(changes)
+        self.pushrevisions()
+
         changes = [
             # Remove single file in single directory
             ('d1/a', None, None),
