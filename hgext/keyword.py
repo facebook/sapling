@@ -139,19 +139,13 @@ class kwtemplater(object):
         self.ct = cmdutil.changeset_templater(self.ui, self.repo,
                                               False, '', False)
 
-    def getnode(self, path, fnode):
-        '''Derives changenode from file path and filenode.'''
-        # used by kwfilelog.read and kwexpand
-        c = self.repo.filectx(path, fileid=fnode)
-        return c.node()
-
-    def substitute(self, data, path, node, subfunc):
+    def substitute(self, data, path, ctx, subfunc):
         '''Replaces keywords in data with expanded template.'''
         def kwsub(mobj):
             kw = mobj.group(1)
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
-            self.ct.show(self.repo[node], root=self.repo.root, file=path)
+            self.ct.show(ctx, root=self.repo.root, file=path)
             ekw = templatefilters.firstline(self.ui.popbuffer())
             return '$%s: %s $' % (kw, ekw)
         return subfunc(kwsub, data)
@@ -159,8 +153,8 @@ class kwtemplater(object):
     def expand(self, path, node, data):
         '''Returns data with keywords expanded.'''
         if not self.restrict and self.matcher(path) and not util.binary(data):
-            changenode = self.getnode(path, node)
-            return self.substitute(data, path, changenode, self.re_kw.sub)
+            ctx = self.repo.filectx(path, fileid=node).changectx()
+            return self.substitute(data, path, ctx, self.re_kw.sub)
         return data
 
     def iskwfile(self, path, flagfunc):
@@ -177,7 +171,7 @@ class kwtemplater(object):
             files = [f for f in ctx.files() if f in mf]
             notify = self.ui.debug
         else:                    # kwexpand/kwshrink
-            ctx = self.repo['.']
+            ctx = self.repo[None]
             mf = ctx.manifest()
             notify = self.ui.note
         candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
@@ -190,8 +184,9 @@ class kwtemplater(object):
                 if util.binary(data):
                     continue
                 if expand:
-                    changenode = node or self.getnode(f, mf[f])
-                    data, found = self.substitute(data, f, changenode,
+                    if node is None:
+                        ctx = self.repo.filectx(f, fileid=mf[f]).changectx()
+                    data, found = self.substitute(data, f, ctx,
                                                   self.re_kw.subn)
                 else:
                     found = self.re_kw.search(data)
