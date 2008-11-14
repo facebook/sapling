@@ -11,7 +11,8 @@ import utility_commands
 
 @util.register_subcommand('push')
 @util.register_subcommand('dcommit') # for git expats
-def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
+def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
+                                 stupid=False, **opts):
     """Push revisions starting at a specified head back to Subversion.
     """
     oldencoding = merc_util._encoding
@@ -43,7 +44,8 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url, **opts):
         base_revision = svn_commit_hashes[old_ctx.parents()[0].node()][0]
         commit_from_rev(ui, repo, old_ctx, hge, svn_url, base_revision)
         # 3. Fetch revisions from svn
-        r = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path)
+        r = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path,
+                                          stupid=stupid)
         assert not r or r == 0
         # 4. Find the new head of the target branch
         repo = hg.repository(ui, hge.path)
