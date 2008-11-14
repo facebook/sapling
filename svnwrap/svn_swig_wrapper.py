@@ -362,7 +362,6 @@ class SubversionRepo(object):
         # in an svnserve from the 1.2 era)
         self.init_ra_and_client()
 
-        old_cwd = os.getcwd()
         assert path[0] != '/'
         url = self.svn_url + '/' + path
         url2 = url
@@ -370,24 +369,28 @@ class SubversionRepo(object):
             url2 = self.svn_url + '/' + other_path
         if other_rev is None:
             other_rev = revision - 1
+        old_cwd = os.getcwd()
         tmpdir = tempfile.mkdtemp('svnwrap_temp')
         try:
             # hot tip: the swig bridge doesn't like StringIO for these bad boys
             out_path = os.path.join(tmpdir, 'diffout')
             error_path = os.path.join(tmpdir, 'differr')
-            out = open(out_path, 'w')
-            err = open(error_path, 'w')
-            client.diff3([], url2, optrev(other_rev), url, optrev(revision),
-                         True, True, deleted, ignore_type, 'UTF-8', out, err,
-                         self.client_context, self.pool)
-            out.close()
-            err.close()
+            out, err = None, None
+            try:
+                out = open(out_path, 'w')
+                err = open(error_path, 'w')
+                client.diff3([], url2, optrev(other_rev), url, optrev(revision),
+                             True, True, deleted, ignore_type, 'UTF-8', out, err,
+                             self.client_context, self.pool)
+            finally:
+                if out: out.close()
+                if err: err.close()
             assert len(open(error_path).read()) == 0
             diff = open(out_path).read()
-            os.chdir(old_cwd)
             return diff
         finally:
             shutil.rmtree(tmpdir)
+            os.chdir(old_cwd)
 
     def get_file(self, path, revision):
         """Return content and mode of file at given path and revision.
