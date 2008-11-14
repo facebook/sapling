@@ -165,14 +165,12 @@ class kwtemplater(object):
 
     def overwrite(self, node, expand, files):
         '''Overwrites selected files expanding/shrinking keywords.'''
+        ctx = self.repo[node]
+        mf = ctx.manifest()
         if node is not None:     # commit
-            ctx = self.repo[node]
-            mf = ctx.manifest()
             files = [f for f in ctx.files() if f in mf]
             notify = self.ui.debug
         else:                    # kwexpand/kwshrink
-            ctx = self.repo[None]
-            mf = ctx.manifest()
             notify = self.ui.note
         candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
         if candidates:
