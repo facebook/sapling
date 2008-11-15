@@ -46,6 +46,9 @@ try:
 except ImportError:
     pass
 
+class SvnPathNotFound(Exception):
+    pass
+
 def geturl(path):
     try:
         return svn.client.url_from_path(svn.core.svn_path_canonicalize(path))
@@ -414,9 +417,15 @@ class svn_source(converter_source):
                         remainings.append([source, sourcerev, tagname])
                         continue
                     # From revision may be fake, get one with changes
-                    tagid = self.latest(source, sourcerev)
-                    if tagid:
-                        tags[tagname] = tagid
+                    try:
+                        tagid = self.latest(source, sourcerev)
+                        if tagid:
+                            tags[tagname] = tagid
+                    except SvnPathNotFound:
+                        # It happens when we are following directories we assumed
+                        # were copied with their parents but were really created
+                        # in the tag directory.
+                        pass
                 pendings = remainings
                 tagspath = srctagspath
 
@@ -474,7 +483,7 @@ class svn_source(converter_source):
         except SubversionException:
             dirent = None
         if not dirent:
-            raise util.Abort(_('%s not found up to revision %d') % (path, stop))
+            raise SvnPathNotFound(_('%s not found up to revision %d') % (path, stop))
 
         # stat() gives us the previous revision on this line of development, but
         # it might be in *another module*. Fetch the log and detect renames down
@@ -834,7 +843,7 @@ class svn_source(converter_source):
                         latest = self.latest(self.module, firstrevnum - 1)
                         if latest:
                             firstcset.parents.append(latest)
-                except util.Abort:
+                except SvnPathNotFound:
                     pass
         except SubversionException, (inst, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
