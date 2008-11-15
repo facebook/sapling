@@ -24,7 +24,8 @@ def revisions(repo, start, stop):
     cur = start
     while cur >= stop:
         ctx = repo[cur]
-        parents = sorted(p.rev() for p in ctx.parents() if p.rev() != nullrev)
+        parents = [p.rev() for p in ctx.parents() if p.rev() != nullrev]
+        parents.sort()
         yield (ctx, parents)
         cur -= 1
 
