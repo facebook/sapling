@@ -369,3 +369,15 @@ o  changeset:   0:7aa22e58e8c1
    date:        Thu Jan 01 00:00:00 1970 +0000
    summary:     (0) root
 
+% file log with revs != cset revs
+@  changeset:   2:12c28321755b
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     more
+|
+o  changeset:   1:5ac72c0599bf
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     two
+

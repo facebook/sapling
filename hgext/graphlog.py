@@ -40,7 +40,7 @@ def filerevs(repo, path, start, stop):
     filerev = len(repo.file(path)) - 1
     while filerev >= 0:
         fctx = repo.filectx(path, fileid=filerev)
-        parents = [f.filerev() for f in fctx.parents() if f.path() == path]
+        parents = [f.linkrev() for f in fctx.parents() if f.path() == path]
         parents.sort()
         if fctx.rev() <= start:
             yield (fctx, parents)
