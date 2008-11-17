@@ -5,7 +5,7 @@
 # instance)
 #
 # Copyright (C) 2005 Steve Borho
-# Copyright (C) 2006 Brendan Cully <brendan@kublai.com>
+# Copyright (C) 2006-8 Brendan Cully <brendan@kublai.com>
 #
 # This is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -201,6 +201,30 @@ _hg_modified() {
   typeset -a status_files
   _hg_status m
   _wanted files expl 'modified files' _multi_parts / status_files
+}
+
+_hg_resolve() {
+  local rstate rpah
+
+  [[ -d $PREFIX ]] || PREFIX=$PREFIX:h
+
+  _hg_cmd resolve -l ./$PREFIX 2> /dev/null | while read rstate rpath
+  do
+    [[ $rstate == 'R' ]] && resolved_files+=($rpath)
+    [[ $rstate == 'U' ]] && unresolved_files+=($rpath)
+  done
+}
+
+_hg_resolved() {
+  typeset -a resolved_files unresolved_files
+  _hg_resolve
+  _wanted files expl 'resolved files' _multi_parts / resolved_files
+}
+
+_hg_unresolved() {
+  typeset -a resolved_files unresolved_files
+  _hg_resolve
+  _wanted files expl 'unresolved files' _multi_parts / unresolved_files
 }
 
 _hg_config() {
@@ -580,7 +604,26 @@ _hg_cmd_rename() {
   '*:file:_hg_files'
 }
 
+_hg_cmd_resolve() {
+  local context state line
+  typeset -A opt_args
+
+  _arguments -s -w : $_hg_global_opts \
+  '(--list -l --mark -m --unmark -u)'{-l,--list}'[list state of files needing merge]:*:merged files:->resolve_files' \
+  '(--mark -m --list -l --unmark -u)'{-m,--mark}'[mark files as resolved]:*:unresolved files:_hg_unresolved' \
+  '(--unmark -u --list -l --mark -m)'{-u,--unmark}'[unmark files as resolved]:*:resolved files:_hg_resolved'
+
+  if [[ $state == 'resolve_files' ]]
+  then
+    _alternative 'files:resolved files:_hg_resolved' \
+      'files:unresolved files:_hg_unresolved'
+  fi
+}
+
 _hg_cmd_revert() {
+  local context state line
+  typeset -A opt_args
+
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_dryrun_opts \
   '(--all -a :)'{-a,--all}'[revert all changes when no arguments given]' \
   '(--rev -r)'{-r+,--rev}'[revision to revert to]:revision:_hg_tags' \
