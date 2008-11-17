@@ -46,5 +46,6 @@ ecmerge.args=$base $local $other --mode=merge3 --title0=base --title1=local --ti
 ecmerge.regkey=Software\Elli\xc3\xa9 Computing\Merge
 ecmerge.gui=True
 
+filemerge.executable=/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge
 filemerge.args=-left $other -right $local -ancestor $base -merge $output
 filemerge.gui=True
