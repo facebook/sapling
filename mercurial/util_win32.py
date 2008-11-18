@@ -292,7 +292,7 @@ class posixfile_nt(object):
             raise WinIOError(err, name)
 
     def __iter__(self):
-        for line in self.read().splitlines(True):
+        for line in self.readlines():
             yield line
 
     def read(self, count=-1):
@@ -310,6 +310,11 @@ class posixfile_nt(object):
             return cs.getvalue()
         except pywintypes.error, err:
             raise WinIOError(err)
+
+    def readlines(self, sizehint=None):
+        # splitlines() splits on single '\r' while readlines()
+        # does not. cStringIO has a well behaving readlines() and is fast.
+        return cStringIO.StringIO(self.read()).readlines()
 
     def write(self, data):
         try:
