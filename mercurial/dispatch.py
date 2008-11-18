@@ -7,7 +7,7 @@
 
 from i18n import _
 from repo import RepoError
-import os, sys, atexit, signal, pdb, traceback, socket, errno, shlex, time
+import os, sys, atexit, signal, pdb, socket, errno, shlex, time
 import util, commands, hg, lock, fancyopts, revlog, version, extensions, hook
 import cmdutil
 import ui as _ui
@@ -356,9 +356,9 @@ def _dispatch(ui, args):
                     raise RepoError(_("There is no Mercurial repository here"
                                       " (.hg not found)"))
                 raise
-        d = lambda: func(ui, repo, *args, **cmdoptions)
-    else:
-        d = lambda: func(ui, *args, **cmdoptions)
+        args.insert(0, repo)
+
+    d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
 
     # run pre-hook, and abort if it fails
     ret = hook.hook(lui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
@@ -374,11 +374,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():
         try:
             return cmdfunc()
-        except TypeError:
-            # was this an argument error?
-            tb = traceback.extract_tb(sys.exc_info()[2])
-            if len(tb) != 2: # no
-                raise
+        except util.SignatureError:
             raise ParseError(cmd, _("invalid arguments"))
 
     if options['profile']:

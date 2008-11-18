@@ -13,7 +13,7 @@ platform-specific details from the core.
 """
 
 from i18n import _
-import cStringIO, errno, getpass, re, shutil, sys, tempfile
+import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
 import imp
 
@@ -670,6 +670,21 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
                 os.environ[k] = v
         if cwd is not None and oldcwd != cwd:
             os.chdir(oldcwd)
+
+class SignatureError:
+    pass
+
+def checksignature(func):
+    '''wrap a function with code to check for calling errors'''
+    def check(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except TypeError:
+            if len(traceback.extract_tb(sys.exc_info()[2])) == 1:
+                raise SignatureError
+            raise
+
+    return check
 
 # os.path.lexists is not available on python2.3
 def lexists(filename):
