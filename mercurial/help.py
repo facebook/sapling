@@ -216,34 +216,31 @@ PYTHONPATH::
     gives 3, 4 and 5. Similarly, a range of 4:2 gives 4, 3, and 2.
     ''')),
 
-    (['gitdiffs'], _('Git Extended Diff Format'),
+    (['diffs'], _('Diff Formats'),
      _(r'''
     Mercurial's default format for showing changes between two versions
-    of a file is compatible to the unified format of GNU diff, which
+    of a file is compatible with the unified format of GNU diff, which
     can be used by GNU patch and many other standard tools.
 
-    While this de facto standardized format is often enough, there are
-    cases where additional change information should be included in the
-    generated diff file:
+    While this standard format is often enough, it does not encode the
+    following information:
 
      - executable status
      - copy or rename information
      - changes in binary files
      - creation or deletion of empty files
 
-    Mercurial adopted the extended diff format which was invented for
-    the git VCS to support above features.
+    Mercurial also supports the extended diff format from the git VCS
+    which addresses these limitations. The git diff format is not
+    produced by default because there are very few tools which
+    understand this format.
 
-    The git extended diff format is not produced by default, because
-    there are only very few tools (yet) which understand the additional
-    information provided by them.
-
-    This means that, when generating diffs from a Mercurial repository
+    This means that when generating diffs from a Mercurial repository
     (e.g. with "hg export"), you should be careful about things like
     file copies and renames or other things mentioned above, because
     when applying a standard diff to a different repository, this extra
     information is lost. Mercurial's internal operations (like push and
-    pull) are not affected by this, because they use a different, binary
+    pull) are not affected by this, because they use an internal binary
     format for communicating changes.
 
     To make Mercurial produce the git extended diff format, use the
