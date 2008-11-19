@@ -57,26 +57,35 @@ def _create_auth_baton(pool):
     """Create a Subversion authentication baton. """
     # Give the client context baton a suite of authentication
     # providers.h
-    providers = [
+    platform_specific = ['svn_auth_get_gnome_keyring_simple_provider',
+                       'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
+                         'svn_auth_get_keychain_simple_provider',
+                         'svn_auth_get_keychain_ssl_client_cert_pw_provider',
+                         'svn_auth_get_kwallet_simple_provider',
+                         'svn_auth_get_kwallet_ssl_client_cert_pw_provider',
+                         'svn_auth_get_ssl_client_cert_file_provider',
+                         'svn_auth_get_windows_simple_provider',
+                         'svn_auth_get_windows_ssl_server_trust_provider',
+                         ]
+
+    providers = []
+
+    for p in platform_specific:
+        if hasattr(core, p):
+            try:
+                providers.append(getattr(core, p)())
+            except RuntimeError:
+                pass
+
+    providers += [
         client.get_simple_provider(),
         client.get_username_provider(),
         client.get_ssl_client_cert_file_provider(),
         client.get_ssl_client_cert_pw_file_provider(),
         client.get_ssl_server_trust_file_provider(),
+        client.get_simple_prompt_provider(user_pass_prompt, 2),
         ]
-    # Platform-dependant authentication methods
-    if hasattr(client, 'get_windows_simple_provider'): #pragma: no cover
-        try:
-            providers.append(client.get_windows_simple_provider())
-        except:
-            pass
-    if hasattr(client, 'get_keychain_simple_provider'): #pragma: no cover
-        try:
-            providers.append(client.get_keychain_simple_provider())
-        except:
-            pass
-    providers.extend([client.get_simple_prompt_provider(user_pass_prompt, 2),
-                     ])
+
     return core.svn_auth_open(providers, pool)
 
 
@@ -128,9 +137,6 @@ class SubversionRepo(object):
         # while we're in here we'll recreate our pool
         self.pool = core.Pool()
         self.client_context = client.create_context()
-        core.svn_auth_set_parameter(self.auth_baton,
-                                    core.SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                                    self.uname)
 
         self.client_context.auth_baton = self.auth_baton
         self.client_context.config = svn_config
