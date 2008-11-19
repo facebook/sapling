@@ -64,6 +64,14 @@ def rebase(ui, repo, **opts):
         contf = opts.get('continue')
         abortf = opts.get('abort')
         collapsef = opts.get('collapse', False)
+        extrafn = opts.get('extrafn')
+        if opts.get('keepbranches', None):
+            if extrafn:
+                raise dispatch.ParseError('rebase',
+                        _('cannot use both keepbranches and extrafn'))
+            def extrafn(ctx, extra):
+                extra['branch'] = ctx.branch()
+
         if contf or abortf:
             if contf and abortf:
                 raise dispatch.ParseError('rebase',
@@ -101,14 +109,14 @@ def rebase(ui, repo, **opts):
                 storestatus(repo, originalwd, target, state, collapsef,
                                                                 external)
                 rebasenode(repo, rev, target, state, skipped, targetancestors,
-                                                                collapsef)
+                                                       collapsef, extrafn)
         ui.note(_('rebase merging completed\n'))
 
         if collapsef:
             p1, p2 = defineparents(repo, min(state), target,
                                                         state, targetancestors)
             concludenode(repo, rev, p1, external, state, collapsef,
-                                                last=True, skipped=skipped)
+                         last=True, skipped=skipped, extrafn=extrafn)
 
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
@@ -131,7 +139,8 @@ def rebase(ui, repo, **opts):
     finally:
         del lock, wlock
 
-def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={}):
+def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={},
+                 extrafn=None):
     """Skip commit if collapsing has been required and rev is not the last
     revision, commit otherwise
     """
@@ -155,18 +164,22 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={}):
         else:
             commitmsg = repo[rev].description()
         # Commit might fail if unresolved files exist
+        extra = {'rebase_source': repo[rev].hex()}
+        if extrafn:
+            extrafn(repo[rev], extra)
         newrev = repo.commit(m+a+r,
                             text=commitmsg,
                             user=repo[rev].user(),
                             date=repo[rev].date(),
-                            extra={'rebase_source': repo[rev].hex()})
+                            extra=extra)
         return newrev
     except util.Abort:
         # Invalidate the previous setparents
         repo.dirstate.invalidate()
         raise
 
-def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse):
+def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse,
+               extrafn):
     'Rebase a single revision'
     repo.ui.debug(_("rebasing %d:%s\n") % (rev, repo[rev]))
 
@@ -195,7 +208,8 @@ def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse):
         repo.ui.debug(_('resuming interrupted rebase\n'))
 
 
-    newrev = concludenode(repo, rev, p1, p2, state, collapse)
+    newrev = concludenode(repo, rev, p1, p2, state, collapse,
+                          extrafn=extrafn)
 
     # Update the state
     if newrev is not None:
@@ -409,6 +423,7 @@ cmdtable = {
         (rebase,
         [
         ('', 'keep', False, _('keep original revisions')),
+        ('', 'keepbranches', False, _('keep original branches')),
         ('s', 'source', '', _('rebase from a given revision')),
         ('b', 'base', '', _('rebase from the base of a given revision')),
         ('d', 'dest', '', _('rebase onto a given revision')),
