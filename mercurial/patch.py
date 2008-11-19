@@ -237,9 +237,7 @@ class patchfile:
         self.missing = missing
         if not missing:
             try:
-                fp = self.opener(fname, 'r')
-                self.lines = fp.readlines()
-                fp.close()
+                self.lines = self.readlines(fname)
                 self.exists = True
             except IOError:
                 pass
@@ -253,6 +251,23 @@ class patchfile:
         self.fileprinted = False
         self.printfile(False)
         self.hunks = 0
+
+    def readlines(self, fname):
+        fp = self.opener(fname, 'r')
+        try:
+            return fp.readlines()
+        finally:
+            fp.close()
+
+    def writelines(self, fname, lines):
+        fp = self.opener(fname, 'w')
+        try:
+            fp.writelines(lines)
+        finally:
+            fp.close()
+
+    def unlink(self, fname):
+        os.unlink(fname)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -304,25 +319,24 @@ class patchfile:
         self.ui.warn(
             _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
             (len(self.rej), self.hunks, fname))
-        base = os.path.basename(self.fname)
-        fp = self.opener(fname, 'w')        
-        fp.write("--- %s\n+++ %s\n" % (base, base))
-        for x in self.rej:
-            for l in x.hunk:
-                fp.write(l)
-                if l[-1] != '\n':
-                    fp.write("\n\ No newline at end of file\n")
-        fp.close()
+
+        def rejlines():
+            base = os.path.basename(self.fname)
+            yield "--- %s\n+++ %s\n" % (base, base)
+            for x in self.rej:
+                for l in x.hunk:
+                    yield l
+                    if l[-1] != '\n':
+                        yield "\n\ No newline at end of file\n"
+
+        self.writelines(fname, rejlines())
 
     def write(self, dest=None):
         if not self.dirty:
             return
         if not dest:
             dest = self.fname
-        fp = self.opener(dest, 'w')
-        for l in self.lines:
-            fp.write(l)
-        fp.close()
+        self.writelines(dest, self.lines)
 
     def close(self):
         self.write()
@@ -349,7 +363,7 @@ class patchfile:
 
         if isinstance(h, binhunk):
             if h.rmfile():
-                os.unlink(self.fname)
+                self.unlink(self.fname)
             else:
                 self.lines[:] = h.new()
                 self.offset += len(h.new())
@@ -366,7 +380,7 @@ class patchfile:
         orig_start = start
         if diffhelpers.testhunk(old, self.lines, start) == 0:
             if h.rmfile():
-                os.unlink(self.fname)
+                self.unlink(self.fname)
             else:
                 self.lines[start : start + h.lena] = h.new()
                 self.offset += h.lenb - h.lena
