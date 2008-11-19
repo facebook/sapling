@@ -56,10 +56,26 @@ def svncmd(ui, repo, subcommand, *args, **opts):
 def help_command(ui, args=None, **opts):
     """Get help on the subsubcommands.
     """
-    if args and args[0] in svn_subcommands:
-        print svn_subcommands[args[0]].__doc__.strip()
+    if args:
+        subcommand = args[0]
+        if subcommand not in svn_subcommands:
+            candidates = []
+            for c in svn_subcommands:
+                if c.startswith(subcommand):
+                    candidates.append(c)
+            if len(candidates) == 1:
+                subcommand = candidates[0]
+            elif len(candidates) > 1:
+                ui.status('Ambiguous command. Could have been:\n%s\n' %
+                          ' '.join(candidates))
+                return
+        doc = svn_subcommands[subcommand].__doc__
+        if doc is None:
+            doc = "No documentation available for %s." % subcommand
+        ui.status(doc.strip(), '\n')
         return
-    print 'Valid commands:', ' '.join(sorted(svn_subcommands.keys()))
+    ui.status('Valid commands: ', ' '.join(sorted(svn_subcommands.keys())), 
+              '\n')
 
 @register_subcommand('gentags')
 def generate_hg_tags(ui, hg_repo_path, **opts):
