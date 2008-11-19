@@ -307,9 +307,6 @@ class patchfile:
         self.ui.warn(
             _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
             (len(self.rej), self.hunks, fname))
-        try: os.unlink(fname)
-        except:
-            pass
         fp = file(fname, 'wb')
         base = os.path.basename(self.fname)
         fp.write("--- %s\n+++ %s\n" % (base, base))
