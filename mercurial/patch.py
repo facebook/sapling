@@ -228,26 +228,23 @@ unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 
 class patchfile:
-    def __init__(self, ui, fname, missing=False):
+    def __init__(self, ui, fname, opener, missing=False):
         self.fname = fname
+        self.opener = opener
         self.ui = ui
         self.lines = []
         self.exists = False
         self.missing = missing
         if not missing:
             try:
-                fp = file(fname, 'rb')
+                fp = self.opener(fname, 'r')
                 self.lines = fp.readlines()
+                fp.close()
                 self.exists = True
             except IOError:
                 pass
         else:
             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
-
-        if not self.exists:
-            dirname = os.path.dirname(fname)
-            if dirname and not os.path.isdir(dirname):
-                os.makedirs(dirname)
 
         self.hash = {}
         self.dirty = 0
@@ -307,32 +304,25 @@ class patchfile:
         self.ui.warn(
             _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
             (len(self.rej), self.hunks, fname))
-        fp = file(fname, 'wb')
         base = os.path.basename(self.fname)
+        fp = self.opener(fname, 'w')        
         fp.write("--- %s\n+++ %s\n" % (base, base))
         for x in self.rej:
             for l in x.hunk:
                 fp.write(l)
                 if l[-1] != '\n':
                     fp.write("\n\ No newline at end of file\n")
+        fp.close()
 
     def write(self, dest=None):
-        if self.dirty:
-            if not dest:
-                dest = self.fname
-            st = None
-            try:
-                st = os.lstat(dest)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-            if st and st.st_nlink > 1:
-                os.unlink(dest)
-            fp = file(dest, 'wb')
-            if st and st.st_nlink > 1:
-                os.chmod(dest, st.st_mode)
-            fp.writelines(self.lines)
-            fp.close()
+        if not self.dirty:
+            return
+        if not dest:
+            dest = self.fname
+        fp = self.opener(dest, 'w')
+        for l in self.lines:
+            fp.write(l)
+        fp.close()
 
     def close(self):
         self.write()
@@ -935,6 +925,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
     err = 0
     current_file = None
     gitpatches = None
+    opener = util.opener(os.getcwd())
 
     def closefile():
         if not current_file:
@@ -957,11 +948,11 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
             afile, bfile, first_hunk = values
             try:
                 if sourcefile:
-                    current_file = patchfile(ui, sourcefile)
+                    current_file = patchfile(ui, sourcefile, opener)
                 else:
                     current_file, missing = selectfile(afile, bfile, first_hunk,
                                             strip, reverse)
-                    current_file = patchfile(ui, current_file, missing)
+                    current_file = patchfile(ui, current_file, opener, missing)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
                 current_file, current_hunk = None, None
