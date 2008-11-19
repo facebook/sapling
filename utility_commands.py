@@ -1,3 +1,4 @@
+from mercurial import context
 from mercurial import cmdutil
 from mercurial import node
 from mercurial import util as mutil
@@ -127,8 +128,8 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
         ui.status('No outgoing changes found.\n')
         return 0
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
-    for rev in reversed(o_r):
-        displayer.show(changenode=rev)
+    for node in reversed(o_r):
+        displayer.show(repo[node])
 
 
 def outgoing_revisions(ui, repo, hg_editor, reverse_map):
