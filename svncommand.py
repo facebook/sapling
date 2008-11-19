@@ -1,6 +1,8 @@
 import os
 import pickle
 import stat
+import sys
+import traceback
 
 from mercurial import hg
 from mercurial import node
@@ -37,11 +39,18 @@ def svncmd(ui, repo, subcommand, *args, **opts):
                                            hg_repo_path=path,
                                            repo=repo,
                                            **opts)
-    except TypeError, e:
-        print e
-        print 'Bad arguments for subcommand %s' % subcommand
+    except TypeError:
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) == 1:
+            ui.status('Bad arguments for subcommand %s\n' % subcommand)
+        else:
+            raise
     except KeyError, e:
-        print 'Unknown subcommand %s' % subcommand
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) == 1:
+            ui.status('Unknown subcommand %s\n' % subcommand)
+        else:
+            raise
 
 @register_subcommand('help')
 def help_command(ui, args=None, **opts):
