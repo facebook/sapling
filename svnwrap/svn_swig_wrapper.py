@@ -431,10 +431,10 @@ class SubversionRepo(object):
     def get_file(self, path, revision):
         """Return content and mode of file at given path and revision.
 
-        Content is raw svn content, symlinks content is still prefixed
-        by 'link '. Mode is 'x' if file is executable, 'l' if a symlink,
-        the empty string otherwise. If the file does not exist at this
-        revision, raise IOError.
+        "link " prefix is dropped from symlink content. Mode is 'x' if
+        file is executable, 'l' if a symlink, the empty string
+        otherwise. If the file does not exist at this revision, raise
+        IOError.
         """
         mode = ''
         out = cStringIO.StringIO()
@@ -451,6 +451,10 @@ class SubversionRepo(object):
                 raise IOError()
             raise
         data = out.getvalue()
+        if mode  == 'l':
+            linkprefix = "link "
+            if data.startswith(linkprefix):
+                data = data[len(linkprefix):]
         return data, mode
 
     def proplist(self, path, revision, recurse=False):

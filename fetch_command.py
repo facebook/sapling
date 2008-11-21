@@ -154,9 +154,7 @@ def replay_convert_rev(hg_editor, svn, r):
             cleanup_file_handles(svn, i)
             i += 1
             data, mode = svn.get_file(p2, r.revnum)
-            hg_editor.current_files[p] = data
-            hg_editor.current_files_exec[p] = 'x' in mode
-            hg_editor.current_files_symlink[p] = 'l' in mode
+            hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
         hg_editor.missing_plaintexts = set()
         hg_editor.ui.status('\n')
     hg_editor.commit_current_delta()
@@ -339,13 +337,10 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
 
     copies = getcopies(svn, hg_editor, branch, branchpath, r, files, parentid)
     
-    linkprefix = 'link '
     def filectxfn(repo, memctx, path):
         data, mode = svn.get_file(branchpath + '/' + path, r.revnum)
         isexec = 'x' in mode
         islink = 'l' in mode
-        if islink and data.startswith(linkprefix):
-            data = data[len(linkprefix):]
         copied = copies.get(path)
         return context.memfilectx(path=path, data=data, islink=islink,
                                   isexec=isexec, copied=copied)

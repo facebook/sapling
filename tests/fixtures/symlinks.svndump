@@ -1,0 +1,216 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 0155d33a-8628-44e5-a968-540cca8db82a
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-11-16T15:00:25.793049Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+init project
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-16T15:00:25.873999Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+add symlinks
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-16T15:00:26.214702Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/d
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d/linka
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: c118dba188202a1efc975bef6064180b
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link a
+
+Node-path: trunk/linka
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: c118dba188202a1efc975bef6064180b
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link a
+
+Revision-number: 3
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 15
+moving symlinks
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-16T15:00:29.163300Z
+PROPS-END
+
+Node-path: trunk/d2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/d
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: trunk/linkaa
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/linka
+Text-copy-source-md5: c118dba188202a1efc975bef6064180b
+Prop-content-length: 57
+Content-length: 57
+
+K 11
+svn:special
+V 1
+*
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: trunk/linka
+Node-action: delete
+
+
+Node-path: trunk/d
+Node-action: delete
+
+
+Revision-number: 4
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 15
+update symlinks
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-16T15:00:30.171883Z
+PROPS-END
+
+Node-path: trunk/d2/linka
+Node-kind: file
+Node-action: change
+Text-content-length: 6
+Text-content-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Content-length: 6
+
+link b
+
+Node-path: trunk/linkaa
+Node-kind: file
+Node-action: change
+Text-content-length: 6
+Text-content-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Content-length: 6
+
+link b
+

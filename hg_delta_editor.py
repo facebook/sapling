@@ -122,6 +122,7 @@ class HgChangeReceiver(delta.Editor):
         '''Clear the info relevant to a replayed revision so that the next
         revision can be replayed.
         '''
+        # Map files to raw svn data (symlink prefix is preserved)
         self.current_files = {}
         self.deleted_files = {}
         self.current_rev = None
@@ -180,6 +181,13 @@ class HgChangeReceiver(delta.Editor):
         '''Set the revision we're currently converting.
         '''
         self.current_rev = rev
+
+    def set_file(self, path, data, isexec=False, islink=False):
+        if islink:
+            data = 'link ' + data
+        self.current_files[path] = data
+        self.current_files_exec[path] = isexec
+        self.current_files_symlink[path] = islink
 
     def _normalize_path(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
@@ -362,10 +370,8 @@ class HgChangeReceiver(delta.Editor):
                     raise IOError()
                 copied = self.copies.get(current_file)
                 flags = parent_ctx.flags(path)
-                is_exec = self.current_files_exec.get(current_file,
-                                                      'x' in flags)
-                is_link = self.current_files_symlink.get(current_file,
-                                                         'l' in flags)
+                is_exec = self.current_files_exec.get(current_file, 'x' in flags)
+                is_link = self.current_files_symlink.get(current_file, 'l' in flags)
                 if current_file in self.current_files:
                     data = self.current_files[current_file]
                     if is_link:
@@ -551,10 +557,9 @@ class HgChangeReceiver(delta.Editor):
         ctx = self.repo.changectx(ha)
         if from_file in ctx:
             fctx = ctx.filectx(from_file)
+            flags = fctx.flags()
             cur_file = self.current_file
-            self.current_files[cur_file] = fctx.data()
-            self.current_files_symlink[cur_file] = 'l' in fctx.flags()
-            self.current_files_exec[cur_file] = 'x' in fctx.flags()
+            self.set_file(cur_file, fctx.data(), 'x' in flags, 'l' in flags)
         if from_branch == branch:
             parentid = self.get_parent_revision(self.current_rev.revnum,
                                                 branch)
@@ -605,9 +610,7 @@ class HgChangeReceiver(delta.Editor):
             f2 = f[len(cp_f):]
             fctx = cp_f_ctx.filectx(f)
             fp_c = path + '/' + f2
-            self.current_files[fp_c] = fctx.data()
-            self.current_files_exec[fp_c] = 'x' in fctx.flags()
-            self.current_files_symlink[fp_c] = 'l' in fctx.flags()
+            self.set_file(fp_c, fctx.data(), 'x' in fctx.flags(), 'l' in fctx.flags())
             if fp_c in self.deleted_files:
                 del self.deleted_files[fp_c]
             if branch == source_branch:
@@ -656,7 +659,10 @@ class HgChangeReceiver(delta.Editor):
                         self.missing_plaintexts.add(self.current_file)
                         # short circuit exit since we can't do anything anyway
                         return lambda x: None
-                    base = ctx.filectx(p_).data()
+                    fctx = ctx[p_]
+                    base = fctx.data()
+                    if 'l' in fctx.flags():
+                        base = 'link ' + base
         source = cStringIO.StringIO(base)
         target = cStringIO.StringIO()
         self.stream = target
