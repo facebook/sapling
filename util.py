@@ -65,3 +65,22 @@ class PrefixMatch(object):
     
     def __call__(self, fn):
         return fn.startswith(self.p)
+
+def outgoing_revisions(ui, repo, hg_editor, reverse_map):
+    """Given a repo and an hg_editor, determines outgoing revisions for the
+    current working copy state.
+    """
+    outgoing_rev_hashes = []
+    working_rev = repo.parents()
+    assert len(working_rev) == 1
+    working_rev = working_rev[0]
+    if working_rev.node() in reverse_map:
+        return
+    while (not working_rev.node() in reverse_map
+           and working_rev.node() != node.nullid):
+        outgoing_rev_hashes.append(working_rev.node())
+        working_rev = working_rev.parents()
+        assert len(working_rev) == 1
+        working_rev = working_rev[0]
+    if working_rev.node() != node.nullid:
+        return outgoing_rev_hashes

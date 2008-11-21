@@ -23,8 +23,7 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                  hge.revmap.iterkeys()))
     # Strategy:
     # 1. Find all outgoing commits from this head
-    outgoing = utility_commands.outgoing_revisions(ui, repo, hge,
-                                                   svn_commit_hashes)
+    outgoing = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
     if not (outgoing and len(outgoing)):
         ui.status('No revisions to push.')
         return 0
@@ -65,8 +64,8 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                 hge = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
                 svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                              hge.revmap.iterkeys()))
-                outgoing = utility_commands.outgoing_revisions(ui, repo, hge,
-                                                              svn_commit_hashes)
+                outgoing = util.outgoing_revisions(ui, repo, hge,
+                                                   svn_commit_hashes)
     merc_util._encoding = oldencoding
     return 0
 

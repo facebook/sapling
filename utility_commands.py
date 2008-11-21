@@ -20,7 +20,7 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
     ha = repo.parents()[0]
     if o_r:
         ha = repo[o_r[-1]].parents()[0]
@@ -62,7 +62,7 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     ha = repo.parents()[0]
-    o_r = outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
     if o_r:
         ha = repo[o_r[-1]].parents()[0]
     if ha.node() != node.nullid:
@@ -87,7 +87,7 @@ def rebase_commits(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
     if not o_r:
         ui.status('Nothing to rebase!\n')
         return 0
@@ -123,30 +123,10 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
     if not (o_r and len(o_r)):
         ui.status('No outgoing changes found.\n')
         return 0
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
     for node in reversed(o_r):
         displayer.show(repo[node])
-
-
-def outgoing_revisions(ui, repo, hg_editor, reverse_map):
-    """Given a repo and an hg_editor, determines outgoing revisions for the
-    current working copy state.
-    """
-    outgoing_rev_hashes = []
-    working_rev = repo.parents()
-    assert len(working_rev) == 1
-    working_rev = working_rev[0]
-    if working_rev.node() in reverse_map:
-        return
-    while (not working_rev.node() in reverse_map
-           and working_rev.node() != node.nullid):
-        outgoing_rev_hashes.append(working_rev.node())
-        working_rev = working_rev.parents()
-        assert len(working_rev) == 1
-        working_rev = working_rev[0]
-    if working_rev.node() != node.nullid:
-        return outgoing_rev_hashes
