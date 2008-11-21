@@ -4,15 +4,22 @@
 #
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
-'''show revision graphs in terminal windows'''
+'''show revision graphs in terminal windows
+
+This extension adds a --graph option to the incoming, outgoing and log
+commands. When this options is given, an ascii representation of the
+revision graph is also shown.
+'''
 
 import os
 import sys
 from mercurial.cmdutil import revrange, show_changeset
-from mercurial.commands import templateopts
+from mercurial.commands import templateopts, logopts, remoteopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial.util import Abort, canonpath
+from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
+from mercurial import hg, ui, url
 
 def revisions(repo, start, stop):
     """cset DAG generator yielding (rev, node, [parents]) tuples
@@ -257,6 +264,14 @@ def get_revs(repo, rev_opt):
     else:
         return (len(repo) - 1, 0)
 
+def check_unsupported_flags(opts):
+    for op in ["follow", "follow_first", "date", "copies", "keyword", "remove",
+               "only_merges", "user", "only_branch", "prune", "newest_first",
+               "no_merges", "include", "exclude"]:
+        if op in opts and opts[op]:
+            raise Abort(_("--graph option is incompatible with --%s") % op)
+
+
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
 
@@ -267,6 +282,7 @@ def graphlog(ui, repo, path=None, **opts):
     directory.
     """
 
+    check_unsupported_flags(opts)
     limit = get_limit(opts["limit"])
     start, stop = get_revs(repo, opts["rev"])
     stop = max(stop, start - limit + 1)
@@ -292,6 +308,165 @@ def graphlog(ui, repo, path=None, **opts):
             yield (ctx.rev(), parents, char, lines)
 
     ascii(ui, grapher(graphabledag()))
+
+def outgoing_revs(ui, repo, dest, opts):
+    """cset DAG generator yielding (node, [parents]) tuples
+
+    This generator function walks through the revisions not found
+    in the destination
+    """
+    limit = cmdutil.loglimit(opts)
+    dest, revs, checkout = hg.parseurl(
+        ui.expandpath(dest or 'default-push', dest or 'default'),
+        opts.get('rev'))
+    cmdutil.setremoteconfig(ui, opts)
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
+    other = hg.repository(ui, dest)
+    ui.status(_('comparing with %s\n') % url.hidepassword(dest))
+    o = repo.findoutgoing(other, force=opts.get('force'))
+    if not o:
+        ui.status(_("no changes found\n"))
+        return
+    o = repo.changelog.nodesbetween(o, revs)[0]
+    o.reverse()
+    revdict = {}
+    for n in o:
+        revdict[repo.changectx(n).rev()]=True
+    count = 0
+    for n in o:
+        if count >= limit:
+            break
+        ctx = repo.changectx(n)
+        parents = [p.rev() for p in ctx.parents() if p.rev() in revdict]
+        parents.sort()
+        yield (ctx, parents)
+        count += 1
+
+def goutgoing(ui, repo, dest=None, **opts):
+    """show the outgoing changesets alongside an ASCII revision graph
+
+    Print the outgoing changesets alongside a revision graph drawn with
+    ASCII characters.
+
+    Nodes printed as an @ character are parents of the working
+    directory.
+    """
+    check_unsupported_flags(opts)
+    revdag = outgoing_revs(ui, repo, dest, opts)
+    repo_parents = repo.dirstate.parents()
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    def graphabledag():
+        for (ctx, parents) in revdag:
+            # log_strings is the list of all log strings to draw alongside
+            # the graph.
+            displayer.show(ctx)
+            lines = displayer.hunk.pop(ctx.rev()).split("\n")[:-1]
+            char = ctx.node() in repo_parents and '@' or 'o'
+            yield (ctx.rev(), parents, char, lines)
+
+    ascii(ui, grapher(graphabledag()))
+
+def incoming_revs(other, chlist, opts):
+    """cset DAG generator yielding (node, [parents]) tuples
+
+    This generator function walks through the revisions of the destination
+    not found in repo
+    """
+    limit = cmdutil.loglimit(opts)
+    chlist.reverse()
+    revdict = {}
+    for n in chlist:
+        revdict[other.changectx(n).rev()]=True
+    count = 0
+    for n in chlist:
+        if count >= limit:
+            break
+        ctx = other.changectx(n)
+        parents = [p.rev() for p in ctx.parents() if p.rev() in revdict]
+        parents.sort()
+        yield (ctx, parents)
+        count += 1
+
+def gincoming(ui, repo, source="default", **opts):
+    """show the incoming changesets alongside an ASCII revision graph
+
+    Print the incoming changesets alongside a revision graph drawn with
+    ASCII characters.
+
+    Nodes printed as an @ character are parents of the working
+    directory.
+    """
+
+    check_unsupported_flags(opts)
+    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
+    cmdutil.setremoteconfig(ui, opts)
+
+    other = hg.repository(ui, source)
+    ui.status(_('comparing with %s\n') % url.hidepassword(source))
+    if revs:
+        revs = [other.lookup(rev) for rev in revs]
+    incoming = repo.findincoming(other, heads=revs, force=opts["force"])
+    if not incoming:
+        try:
+            os.unlink(opts["bundle"])
+        except:
+            pass
+        ui.status(_("no changes found\n"))
+        return
+
+    cleanup = None
+    try:
+        fname = opts["bundle"]
+        if fname or not other.local():
+            # create a bundle (uncompressed if other repo is not local)
+            if revs is None:
+                cg = other.changegroup(incoming, "incoming")
+            else:
+                cg = other.changegroupsubset(incoming, revs, 'incoming')
+            bundletype = other.local() and "HG10BZ" or "HG10UN"
+            fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
+            # keep written bundle?
+            if opts["bundle"]:
+                cleanup = None
+            if not other.local():
+                # use the created uncompressed bundlerepo
+                other = bundlerepo.bundlerepository(ui, repo.root, fname)
+
+        chlist = other.changelog.nodesbetween(incoming, revs)[0]
+        revdag = incoming_revs(other, chlist, opts)
+        other_parents = other.dirstate.parents()
+        displayer = show_changeset(ui, other, opts, buffered=True)
+        def graphabledag():
+            for (ctx, parents) in revdag:
+                # log_strings is the list of all log strings to draw alongside
+                # the graph.
+                displayer.show(ctx)
+                lines = displayer.hunk.pop(ctx.rev()).split("\n")[:-1]
+                char = ctx.node() in other_parents and '@' or 'o'
+                yield (ctx.rev(), parents, char, lines)
+
+        ascii(ui, grapher(graphabledag()))
+    finally:
+        if hasattr(other, 'close'):
+            other.close()
+        if cleanup:
+            os.unlink(cleanup)
+
+def uisetup(ui):
+    '''Initialize the extension.'''
+    _wrapcmd(ui, 'log', commands.table, graphlog)
+    _wrapcmd(ui, 'incoming', commands.table, gincoming)
+    _wrapcmd(ui, 'outgoing', commands.table, goutgoing)
+
+def _wrapcmd(ui, cmd, table, wrapfn):
+    '''wrap the command'''
+    def graph(orig, *args, **kwargs):
+        if kwargs['graph']:
+            return wrapfn(*args, **kwargs)
+        return orig(*args, **kwargs)
+    entry = extensions.wrapcommand(table, cmd, graph)
+    entry[1].append(('g', 'graph', None, _("show the revision DAG")))
 
 cmdtable = {
     "glog":
