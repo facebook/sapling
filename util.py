@@ -13,6 +13,16 @@ def register_subcommand(name):
     return inner
 
 
+def generate_help():
+    ret = ['', 'hg svn subcommand\n', 'Subcommands:\n']
+
+    for name, func in sorted(svn_subcommands.items()):
+        short_description = (func.__doc__ or '').split('\n')[0]
+        ret.append(" %-10s  %s" % (name, short_description))
+
+    return "\n".join(ret) + '\n'
+
+
 def wipe_all_files(hg_wc_path):
     files = [f for f in os.listdir(hg_wc_path) if f != '.hg']
     for f in files:

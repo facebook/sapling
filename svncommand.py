@@ -11,7 +11,7 @@ from mercurial import util as merc_util
 import svnwrap
 import hg_delta_editor
 import util
-from util import register_subcommand, svn_subcommands
+from util import register_subcommand, svn_subcommands, generate_help
 # dirty trick to force demandimport to run my decorator anyway.
 from utility_commands import print_wc_url
 from fetch_command import fetch_revisions
@@ -53,6 +53,7 @@ def svncmd(ui, repo, subcommand, *args, **opts):
         else:
             raise
 
+
 @register_subcommand('help')
 def help_command(ui, args=None, **opts):
     """Get help on the subsubcommands.
@@ -75,8 +76,8 @@ def help_command(ui, args=None, **opts):
             doc = "No documentation available for %s." % subcommand
         ui.status(doc.strip(), '\n')
         return
-    ui.status('Valid commands: ', ' '.join(sorted(svn_subcommands.keys())),
-              '\n')
+    ui.status(generate_help())
+
 
 @register_subcommand('gentags')
 def generate_hg_tags(ui, hg_repo_path, **opts):
@@ -154,7 +155,8 @@ def verify_revision(ui, args, repo, force=False, **opts):
 
 @register_subcommand('verify_all_revisions')
 def verify_all_revisions(ui, args, repo, **opts):
-    """Verify all the converted revisions, optionally starting at a revision.
+    """Verify all the converted revisions
+    optionally starting at a revision.
 
     Note: This is *extremely* abusive of the Subversion server. It exports every
     revision of the code one revision at a time.

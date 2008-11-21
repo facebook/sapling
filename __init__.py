@@ -6,6 +6,7 @@ from mercurial import hg
 import svncommand
 import fetch_command
 
+
 def svn(ui, repo, subcommand, *args, **opts):
     return svncommand.svncmd(ui, repo, subcommand, *args, **opts)
 
@@ -27,7 +28,8 @@ cmdtable = {
          [('u', 'svn_url', '', 'Path to the Subversion server.'),
           ('', 'stupid', False, 'Be stupid and use diffy replay.'),
           ],
-         'hg svn subcommand'),
+         svncommand.generate_help(),
+         ),
     "svnclone" :(svn_fetch,
          [('S', 'skipto_rev', '0', 'Skip commits before this revision.'),
           ('', 'stupid', False, 'Be stupid and use diffy replay.'),
