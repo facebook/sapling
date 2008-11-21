@@ -118,42 +118,23 @@ def replay_convert_rev(hg_editor, svn, r):
         hg_editor.ui.status('Fetching %s files that could not use replay.\n' %
                             len(hg_editor.missing_plaintexts))
         files_to_grab = set()
-        dirs_to_list = []
+        rootpath = svn.subdir and svn.subdir[1:] or ''
         for p in hg_editor.missing_plaintexts:
             hg_editor.ui.status('.')
             hg_editor.ui.flush()
             if p[-1] == '/':
-                dirs_to_list.append(p)
+                dirpath = p[len(rootpath):]
+                files_to_grab.update((dirpath + f for f,k in 
+                                      svn.list_files(p, r.revnum) if k == 'f'))
             else:
-                files_to_grab.add(p)
-        if dirs_to_list:
-            hg_editor.ui.status('\nChecking for additional files in'
-                                ' directories...\n')
-        while dirs_to_list:
-            hg_editor.ui.status('.')
-            hg_editor.ui.flush()
-            p = dirs_to_list.pop(0)
-            cleanup_file_handles(svn, i)
-            i += 1
-            p2 = p[:-1]
-            if svn.subdir:
-                p2 = p2[len(svn.subdir)-1:]
-            l = svn.list_dir(p2, r.revnum)
-            for f in l:
-                if l[f].kind == core.svn_node_dir:
-                    dirs_to_list.append(p+f+'/')
-                elif l[f].kind == core.svn_node_file:
-                    files_to_grab.add(p+f)
+                files_to_grab.add(p[len(rootpath):])
         hg_editor.ui.status('\nFetching files...\n')
         for p in files_to_grab:
             hg_editor.ui.status('.')
             hg_editor.ui.flush()
-            p2 = p
-            if svn.subdir:
-                p2 = p2[len(svn.subdir)-1:]
             cleanup_file_handles(svn, i)
             i += 1
-            data, mode = svn.get_file(p2, r.revnum)
+            data, mode = svn.get_file(p, r.revnum)
             hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
         hg_editor.missing_plaintexts = set()
         hg_editor.ui.status('\n')
