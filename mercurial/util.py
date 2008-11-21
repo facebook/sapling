@@ -290,6 +290,37 @@ def sort(l):
     l.sort()
     return l
 
+def increasingchunks(source, min=1024, max=65536):
+    '''return no less than min bytes per chunk while data remains,
+    doubling min after each chunk until it reaches max'''
+    def log2(x):
+        if not x:
+            return 0
+        i = 0
+        while x:
+            x >>= 1
+            i += 1
+        return i - 1
+
+    buf = []
+    blen = 0
+    for chunk in source:
+        buf.append(chunk)
+        blen += len(chunk)
+        if blen >= min:
+            if min < max:
+                min = min << 1
+                nmin = 1 << log2(blen)
+                if nmin > min:
+                    min = nmin
+                if min > max:
+                    min = max
+            yield ''.join(buf)
+            blen = 0
+            buf = []
+    if buf:
+        yield ''.join(buf)
+
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
 
