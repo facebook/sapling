@@ -148,11 +148,21 @@ h3 {
 .bigtable .node { width: 5em; font-family: monospace;}
 .bigtable .lineno { width: 2em; text-align: right;}
 .bigtable .lineno a { color: #999; font-size: smaller; font-family: monospace;}
-.bigtable td.source { font-family: monospace; white-space: pre; }
 .bigtable .permissions { width: 8em; text-align: left;}
 .bigtable .size { width: 5em; text-align: right; }
 .bigtable .annotate { text-align: right; }
 .bigtable td.annotate { font-size: smaller; }
+.bigtable td.source { font-size: inherit; }
+
+.source, .sourcefirst, .sourcelast {
+  font-family: monospace;
+  white-space: pre;
+  font-size: 90%;
+}
+.sourcefirst { border-bottom: 1px solid #999; font-weight: bold; font-size: smaller; }
+.sourcelast { border-top: 1px solid #999; }
+.source a { color: #999; font-size: smaller; font-family: monospace;}
+.bottomline { border-bottom: 1px solid #999; }
 
 .fileline { font-family: monospace; }
 .fileline img { border: 0; }

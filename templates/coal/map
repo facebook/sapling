@@ -30,16 +30,16 @@ filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = '<tr class="parity{parity}"><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
+fileline = '<div class="parity{parity} source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</div>'
 filelogentry = filelogentry.tmpl
 
-annotateline = '<tr class="parity{parity}"><td class="annotate"><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}" title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a></td><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
+annotateline = '<tr class="parity{parity}"><td class="annotate"><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}" title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a></td><td class="source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</td></tr>'
 
-diffblock = '<table class="bigtable parity{parity}">{lines}</table>'
-difflineplus = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source plusline">{line|escape}</td></tr>'
-difflineminus = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source minusline">{line|escape}</td></tr>'
-difflineat = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source atline">{line|escape}</td></tr>'
-diffline = '<tr><td class="lineno"><a href="#{lineid}" id="{lineid}">{linenumber}</a></td><td class="source">{line|escape}</td></tr>'
+diffblock = '<div class="source bottomline parity{parity}">{lines}</div>'
+difflineplus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="plusline">{line|escape}</span>'
+difflineminus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="minusline">{line|escape}</span>'
+difflineat = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="atline">{line|escape}</span>'
+diffline = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}'
 
 changelogparent = '<tr><th class="parent">parent {rev}:</th><td class="parent"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
 
