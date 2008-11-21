@@ -11,6 +11,7 @@ import test_fetch_truncated
 import test_push_command
 import test_push_renames
 import test_push_dirs
+import test_push_eol
 import test_tags
 
 def suite():
@@ -21,6 +22,7 @@ def suite():
                                test_push_command.suite(),
                                test_push_renames.suite(),
                                test_push_dirs.suite(),
+                               test_push_eol.suite(),
                                test_tags.suite(),
                               ])
 

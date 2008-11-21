@@ -101,10 +101,10 @@ class TestBase(unittest.TestCase):
     def repo(self):
         return hg.repository(ui.ui(), self.wc_path)
 
-    def pushrevisions(self):
+    def pushrevisions(self, stupid=False):
         push_cmd.push_revisions_to_subversion(
             ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
-            svn_url=fileurl(self.repo_path))
+            svn_url=fileurl(self.repo_path), stupid=stupid)
 
     def svnls(self, path, rev='HEAD'):
         path = self.repo_path + '/' + path
@@ -169,3 +169,19 @@ class TestBase(unittest.TestCase):
         repo = self.repo
         hg.update(repo, nodeid)
         return nodeid
+
+    def assertchanges(self, changes, ctx):
+        """Assert that all 'changes' (as in defined in commitchanged())
+        went into ctx.
+        """
+        for source, dest, data in changes:
+            if dest is None:
+                self.assertTrue(source not in ctx)
+                continue
+            self.assertTrue(dest in ctx)
+            if data is None:
+                data = ctx.parents()[0][source].data()
+            self.assertEqual(ctx[dest].data(), data)
+            if dest != source:
+                copy = ctx[dest].renamed()
+                self.assertEqual(copy[0], source)

@@ -21,19 +21,6 @@ class TestPushRenames(test_util.TestBase):
                 if ctx[f].renamed():
                     w('%s copied from %s\n' % (f, ctx[f].renamed()[0]))
 
-    def assertchanges(self, changes, ctx):
-        for source, dest, data in changes:
-            if dest is None:
-                self.assertTrue(source not in ctx)
-            else:
-                self.assertTrue(dest in ctx)
-                if data is None:
-                    data = ctx.parents()[0][source].data()
-                self.assertEqual(data, ctx[dest].data())
-                if dest != source:
-                    copy = ctx[dest].renamed()
-                    self.assertEqual(copy[0], source)
-
     def test_push_renames(self):
         repo = self.repo
 
