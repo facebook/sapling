@@ -1,11 +1,9 @@
 import os
 import socket
 import subprocess
-import tempfile
 import unittest
 
 from mercurial import context
-from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
@@ -300,7 +298,7 @@ class PushTests(test_util.TestBase):
         # while we're here, double check pushing an already-executable file
         # works
         repo = self.repo
-        def file_callback(repo, memctx, path):
+        def file_callback2(repo, memctx, path):
             return context.memfilectx(path=path,
                                       data='bar',
                                       islink=link,
@@ -310,7 +308,7 @@ class PushTests(test_util.TestBase):
                              (repo['default'].node(), node.nullid),
                              'message',
                              ['alpha', ],
-                             file_callback,
+                             file_callback2,
                              'author',
                              '2008-1-1 00:00:00 -0500',
                              {'branch': 'default', })
@@ -324,7 +322,7 @@ class PushTests(test_util.TestBase):
         self.assertEqual(tip['alpha'].flags(), expected_flags)
         # now test removing the property entirely
         repo = self.repo
-        def file_callback(repo, memctx, path):
+        def file_callback3(repo, memctx, path):
             return context.memfilectx(path=path,
                                       data='bar',
                                       islink=False,
@@ -334,7 +332,7 @@ class PushTests(test_util.TestBase):
                              (repo['default'].node(), node.nullid),
                              'message',
                              ['alpha', ],
-                             file_callback,
+                             file_callback3,
                              'author',
                              '2008-01-01 00:00:00 -0500',
                              {'branch': 'default', })

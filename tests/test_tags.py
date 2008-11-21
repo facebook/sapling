@@ -1,5 +1,3 @@
-import os
-import tempfile
 import unittest
 
 from mercurial import hg

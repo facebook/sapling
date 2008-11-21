@@ -1,4 +1,3 @@
-from mercurial import context
 from mercurial import cmdutil
 from mercurial import node
 from mercurial import util as mutil

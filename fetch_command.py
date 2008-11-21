@@ -1,6 +1,5 @@
 import cStringIO
 import re
-import operator
 import os
 import shutil
 import tempfile
@@ -124,7 +123,7 @@ def replay_convert_rev(hg_editor, svn, r):
             hg_editor.ui.flush()
             if p[-1] == '/':
                 dirpath = p[len(rootpath):]
-                files_to_grab.update((dirpath + f for f,k in 
+                files_to_grab.update((dirpath + f for f,k in
                                       svn.list_files(p, r.revnum) if k == 'f'))
             else:
                 files_to_grab.add(p[len(rootpath):])
@@ -207,7 +206,7 @@ def makecopyfinder(r, branchpath, rootdir):
     copies.sort()
     copies.reverse()
     exactcopies = dict(copies)
-    
+
     def finder(path):
         if path in exactcopies:
             return exactcopies[path], exactcopies[path][0]
@@ -280,9 +279,9 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
         # Branch does not exist at this revision. Get parent revision and
         # remove everything.
         files = parentctx.manifest().keys()
-        def filectxfn(repo, memctx, path):
+        def filectxfn_rm(repo, memctx, path):
             raise IOError()
-        return files, filectxfn
+        return files, filectxfn_rm
 
     files = []
     if parentid == revlog.nullid:
@@ -314,10 +313,10 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
                 # Assume it's a deleted directory
                 path = path + '/'
                 deleted = [f for f in parentctx if f.startswith(path)]
-                files += deleted        
+                files += deleted
 
     copies = getcopies(svn, hg_editor, branch, branchpath, r, files, parentid)
-    
+
     def filectxfn(repo, memctx, path):
         data, mode = svn.get_file(branchpath + '/' + path, r.revnum)
         isexec = 'x' in mode
@@ -516,7 +515,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     if p:
                         files_touched.add(p)
 
-            copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched, 
+            copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched,
                                parent_ha)
 
             def filectxfn(repo, memctx, path):
