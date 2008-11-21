@@ -16,8 +16,9 @@ from util import register_subcommand, svn_subcommands
 from utility_commands import print_wc_url
 from fetch_command import fetch_revisions
 from push_cmd import commit_from_rev
+from diff_cmd import diff_command
 # shut up, pyflakes, we must import those
-__x = [print_wc_url, fetch_revisions, commit_from_rev, ]
+__x = [print_wc_url, fetch_revisions, commit_from_rev, diff_command]
 
 mode755 = (stat.S_IXUSR | stat.S_IXGRP| stat.S_IXOTH | stat.S_IRUSR |
            stat.S_IRGRP| stat.S_IROTH | stat.S_IWUSR)
@@ -74,7 +75,7 @@ def help_command(ui, args=None, **opts):
             doc = "No documentation available for %s." % subcommand
         ui.status(doc.strip(), '\n')
         return
-    ui.status('Valid commands: ', ' '.join(sorted(svn_subcommands.keys())), 
+    ui.status('Valid commands: ', ' '.join(sorted(svn_subcommands.keys())),
               '\n')
 
 @register_subcommand('gentags')
