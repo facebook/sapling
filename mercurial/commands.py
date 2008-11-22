@@ -1581,6 +1581,9 @@ def import_(ui, repo, patch1, *patches, **opts):
     recorded in the patch. This may happen due to character set
     problems or other deficiencies in the text patch format.
 
+    With --similarity, hg will attempt to discover renames and copies
+    in the patch in the same way as 'addremove'.
+
     To read a patch from standard input, use patch name "-".
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
@@ -1589,6 +1592,13 @@ def import_(ui, repo, patch1, *patches, **opts):
     date = opts.get('date')
     if date:
         opts['date'] = util.parsedate(date)
+
+    try:
+        sim = float(opts.get('similarity') or 0)
+    except ValueError:
+        raise util.Abort(_('similarity must be a number'))
+    if sim < 0 or sim > 100:
+        raise util.Abort(_('similarity must be between 0 and 100'))
 
     if opts.get('exact') or not opts.get('force'):
         cmdutil.bail_if_changed(repo)
@@ -1653,7 +1663,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
                                        files=files)
                 finally:
-                    files = patch.updatedir(ui, repo, files)
+                    files = patch.updatedir(ui, repo, files, similarity=sim/100.)
                 if not opts.get('no_commit'):
                     n = repo.commit(files, message, opts.get('user') or user,
                                     opts.get('date') or date)
@@ -3003,13 +3013,15 @@ diffopts2 = [
     ('U', 'unified', '', _('number of lines of context to show'))
 ]
 
+similarityopts = [
+    ('s', 'similarity', '',
+           _('guess renamed files by similarity (0<=s<=100)'))
+]
+
 table = {
     "^add": (add, walkopts + dryrunopts, _('[OPTION]... [FILE]...')),
     "addremove":
-        (addremove,
-         [('s', 'similarity', '',
-           _('guess renamed files by similarity (0<=s<=100)')),
-         ] + walkopts + dryrunopts,
+        (addremove, similarityopts + walkopts + dryrunopts,
          _('[OPTION]... [FILE]...')),
     "^annotate|blame":
         (annotate,
@@ -3192,7 +3204,7 @@ table = {
            _('apply patch to the nodes from which it was generated')),
           ('', 'import-branch', None,
            _('Use any branch information in patch (implied by --exact)'))] +
-         commitopts + commitopts2,
+         commitopts + commitopts2 + similarityopts,
          _('[OPTION]... PATCH...')),
     "incoming|in":
         (incoming,

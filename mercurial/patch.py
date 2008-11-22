@@ -1004,7 +1004,7 @@ def diffopts(ui, opts={}, untrusted=False):
         ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'),
         context=get('unified', getter=ui.config))
 
-def updatedir(ui, repo, patches):
+def updatedir(ui, repo, patches, similarity=0):
     '''Update dirstate after patch application according to metadata'''
     if not patches:
         return
@@ -1028,7 +1028,7 @@ def updatedir(ui, repo, patches):
     for src, dst in copies:
         repo.copy(src, dst)
     removes = removes.keys()
-    if removes:
+    if (not similarity) and removes:
         repo.remove(util.sort(removes), True)
     for f in patches:
         gp = patches[f]
@@ -1041,7 +1041,7 @@ def updatedir(ui, repo, patches):
                 repo.wwrite(gp.path, '', flags)
             else:
                 util.set_flags(dst, islink, isexec)
-    cmdutil.addremove(repo, cfiles)
+    cmdutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
     return util.sort(files)

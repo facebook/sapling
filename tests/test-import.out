@@ -273,3 +273,23 @@ bb
 % test paths outside repo root
 applying patch from stdin
 abort: ../outside/foo not under root
+% test import with similarity (issue295)
+adding a
+applying ../rename.diff
+patching file a
+patching file b
+removing a
+adding b
+recording removal of a as rename to b (88% similar)
+A b
+  a
+R a
+undeleting a
+forgetting b
+applying ../rename.diff
+patching file a
+patching file b
+removing a
+adding b
+A b
+R a
