@@ -6,7 +6,7 @@ License: GPL
 Group: Development/Tools
 Source: http://www.selenic.com/mercurial/release/%{name}-%{version}.tar.gz
 URL: http://www.selenic.com/mercurial
-BuildRoot: /tmp/build.%{name}-%{version}-%{release}
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 # From the README:
 #
@@ -28,13 +28,13 @@ Mercurial is a fast, lightweight source control management system designed
 for efficient handling of very large distributed projects.
 
 %prep
-rm -rf $RPM_BUILD_ROOT
 %setup -q
 
 %build
 make all
 
 %install
+rm -rf $RPM_BUILD_ROOT
 python setup.py install --root $RPM_BUILD_ROOT --prefix %{_prefix}
 make install-doc DESTDIR=$RPM_BUILD_ROOT MANDIR=%{_mandir}
 
