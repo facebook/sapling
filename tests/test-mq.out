@@ -227,7 +227,7 @@ all patches are currently applied
 patch series already fully applied
   qpush fails
   % does nothing and succeeds
-all patches are currently applied
+qpush: test2.patch is already at the top
   qpush test2.patch succeeds
 % strip
 adding x

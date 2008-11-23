@@ -824,10 +824,14 @@ class queue:
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
-             mergeq=None):
+             mergeq=None, all=False):
         wlock = repo.wlock()
         if repo.dirstate.parents()[0] != repo.changelog.tip():
             self.ui.status(_("(working directory not at tip)\n"))
+
+        if not self.series:
+            self.ui.warn(_('no patches in series\n'))
+            return 0
 
         try:
             patch = self.lookup(patch)
@@ -841,26 +845,36 @@ class queue:
                     if info[0] < len(self.applied) - 1:
                         raise util.Abort(
                             _("cannot push to a previous patch: %s") % patch)
-                    if info[0] < len(self.series) - 1:
-                        self.ui.warn(
-                            _('qpush: %s is already at the top\n') % patch)
-                    else:
-                        self.ui.warn(_('all patches are currently applied\n'))
+                    self.ui.warn(
+                        _('qpush: %s is already at the top\n') % patch)
                     return
+                pushable, reason = self.pushable(patch)
+                if not pushable:
+                    if reason:
+                        reason = _('guarded by %r') % reason
+                    else:
+                        reason = _('no matching guards')
+                    self.ui.warn(_("cannot push '%s' - %s\n") % (patch, reason))
+                    return 1
+            elif all:
+                patch = self.series[-1]
+                if self.isapplied(patch):
+                    self.ui.warn(_('all patches are currently applied\n'))
+                    return 0
 
             # Following the above example, starting at 'top' of B:
             # qpush should be performed (pushes C), but a subsequent
             # qpush without an argument is an error (nothing to
             # apply). This allows a loop of "...while hg qpush..." to
             # work as it detects an error when done
-            if self.series_end() == len(self.series):
+            start = self.series_end()
+            if start == len(self.series):
                 self.ui.warn(_('patch series already fully applied\n'))
                 return 1
             if not force:
                 self.check_localchanges(repo)
 
-            self.applied_dirty = 1;
-            start = self.series_end()
+            self.applied_dirty = 1
             if start > 0:
                 self.check_toppatch(repo)
             if not patch:
@@ -2000,11 +2014,6 @@ def push(ui, repo, patch=None, **opts):
     q = repo.mq
     mergeq = None
 
-    if opts['all']:
-        if not q.series:
-            ui.warn(_('no patches in series\n'))
-            return 0
-        patch = q.series[-1]
     if opts['merge']:
         if opts['name']:
             newpath = repo.join(opts['name'])
@@ -2016,7 +2025,7 @@ def push(ui, repo, patch=None, **opts):
         mergeq = queue(ui, repo.join(""), newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts['force'], list=opts['list'],
-                 mergeq=mergeq)
+                 mergeq=mergeq, all=opts.get('all'))
     return ret
 
 def pop(ui, repo, patch=None, **opts):

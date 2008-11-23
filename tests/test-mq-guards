@@ -39,6 +39,9 @@ echo % should print +a
 hg qguard
 hg qpop
 
+echo % should fail
+hg qpush a.patch
+
 hg qguard a.patch
 echo % should push b.patch
 hg qpush
