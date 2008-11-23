@@ -1,6 +1,12 @@
 #!/bin/sh
 
 "$TESTDIR/hghave" darcs || exit 80
+if darcs --version 2>&1 | grep '^2\.' > /dev/null; then
+    # FIXME: darcs 2 will fail with
+    ### Abort: timeout after 180 seconds.
+    echo 'skipped: test currently disabled for darcs 2'
+    exit 80
+fi
 
 echo "[extensions]" >> $HGRCPATH
 echo "convert=" >> $HGRCPATH
