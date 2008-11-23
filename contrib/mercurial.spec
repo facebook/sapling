@@ -65,8 +65,6 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html doc/ja *.cgi
 %{_mandir}/man?/hg*.gz
-%dir %{pythonlib}
-%dir %{hgext}
 %{_sysconfdir}/bash_completion.d/mercurial.sh
 %{_datadir}/zsh/site-functions/_mercurial
 %{_datadir}/emacs/site-lisp/mercurial.el
@@ -76,12 +74,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/hg-viz
 %{_bindir}/git-rev-tree
 %{_bindir}/mercurial-convert-repo
-%{pythonlib}/templates
-%{pythonlib}/*.py*
-%{pythonlib}/hgweb/*.py*
-%{pythonlib}/*.so
-%{hgext}/*.py*
-%{hgext}/convert/*.py*
-%{hgext}/inotify/*.py*
-%{hgext}/highlight/*.py*
-%{hgext}/inotify/linux/
+%{pythonlib}
+%{hgext}
