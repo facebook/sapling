@@ -1188,65 +1188,79 @@ class queue:
                                     changes=c, opts=self.diffopts())
                 for chunk in chunks:
                     patchf.write(chunk)
-                patchf.rename()
 
-                repo.dirstate.setparents(*cparents)
-                copies = {}
-                for dst in a:
-                    src = repo.dirstate.copied(dst)
-                    if src is not None:
-                        copies.setdefault(src, []).append(dst)
-                    repo.dirstate.add(dst)
-                # remember the copies between patchparent and tip
-                # this may be slow, so don't do it if we're not tracking copies
-                if self.diffopts().git:
-                    for dst in aaa:
-                        f = repo.file(dst)
-                        src = f.renamed(man[dst])
-                        if src:
-                            copies.setdefault(src[0], []).extend(copies.get(dst, []))
-                            if dst in a:
-                                copies[src[0]].append(dst)
-                        # we can't copy a file created by the patch itself
-                        if dst in copies:
-                            del copies[dst]
-                for src, dsts in copies.iteritems():
-                    for dst in dsts:
-                        repo.dirstate.copy(src, dst)
-                for f in r:
-                    repo.dirstate.remove(f)
-                # if the patch excludes a modified file, mark that
-                # file with mtime=0 so status can see it.
-                mm = []
-                for i in xrange(len(m)-1, -1, -1):
-                    if not matchfn(m[i]):
-                        mm.append(m[i])
-                        del m[i]
-                for f in m:
-                    repo.dirstate.normal(f)
-                for f in mm:
-                    repo.dirstate.normallookup(f)
-                for f in forget:
-                    repo.dirstate.forget(f)
+                try:
+                    copies = {}
+                    for dst in a:
+                        src = repo.dirstate.copied(dst)
+                        if src is not None:
+                            copies.setdefault(src, []).append(dst)
+                        repo.dirstate.add(dst)
+                    # remember the copies between patchparent and tip
+                    # this may be slow, so don't do it if we're not tracking copies
+                    if self.diffopts().git:
+                        for dst in aaa:
+                            f = repo.file(dst)
+                            src = f.renamed(man[dst])
+                            if src:
+                                copies.setdefault(src[0], []).extend(copies.get(dst, []))
+                                if dst in a:
+                                    copies[src[0]].append(dst)
+                            # we can't copy a file created by the patch itself
+                            if dst in copies:
+                                del copies[dst]
+                    for src, dsts in copies.iteritems():
+                        for dst in dsts:
+                            repo.dirstate.copy(src, dst)
+                    for f in r:
+                        repo.dirstate.remove(f)
+                    # if the patch excludes a modified file, mark that
+                    # file with mtime=0 so status can see it.
+                    mm = []
+                    for i in xrange(len(m)-1, -1, -1):
+                        if not matchfn(m[i]):
+                            mm.append(m[i])
+                            del m[i]
+                    for f in m:
+                        repo.dirstate.normal(f)
+                    for f in mm:
+                        repo.dirstate.normallookup(f)
+                    for f in forget:
+                        repo.dirstate.forget(f)
 
-                if not msg:
-                    if not ph.message:
-                        message = "[mq]: %s\n" % patchfn
+                    if not msg:
+                        if not ph.message:
+                            message = "[mq]: %s\n" % patchfn
+                        else:
+                            message = "\n".join(ph.message)
                     else:
-                        message = "\n".join(ph.message)
-                else:
-                    message = msg
+                        message = msg
 
-                user = ph.user or changes[1]
+                    user = ph.user or changes[1]
 
-                self.applied.pop()
-                self.applied_dirty = 1
-                self.strip(repo, top, update=False,
-                           backup='strip')
-                n = repo.commit(match.files(), message, user, ph.date,
-                                match=match, force=1)
-                self.applied.append(statusentry(revlog.hex(n), patchfn))
-                self.removeundo(repo)
+                    # assumes strip can roll itself back if interrupted
+                    repo.dirstate.setparents(*cparents)
+                    self.applied.pop()
+                    self.applied_dirty = 1
+                    self.strip(repo, top, update=False,
+                               backup='strip')
+                except:
+                    repo.dirstate.invalidate()
+                    raise
+
+                try:
+                    # might be nice to attempt to roll back strip after this
+                    patchf.rename()
+                    n = repo.commit(match.files(), message, user, ph.date,
+                                    match=match, force=1)
+                    self.applied.append(statusentry(revlog.hex(n), patchfn))
+                except:
+                    ctx = repo[cparents[0]]
+                    repo.dirstate.rebuild(ctx.node(), ctx.manifest())
+                    self.save_dirty()
+                    self.ui.warn(_('refresh interrupted while patch was popped! '
+                                   '(revert --all, qpush to recover)\n'))
+                    raise
             else:
                 self.printdiff(repo, patchparent, fp=patchf)
                 patchf.rename()
@@ -1267,6 +1281,7 @@ class queue:
                 self.push(repo, force=True)
         finally:
             del wlock
+            self.removeundo(repo)
 
     def init(self, repo, create=False):
         if not create and os.path.isdir(self.path):
