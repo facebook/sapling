@@ -1093,7 +1093,7 @@ class queue:
             patchparent = self.qparents(repo, top)
             ph = self.readheaders(patchfn)
 
-            patchf = self.opener(patchfn, 'r+')
+            patchf = self.opener(patchfn, 'r')
 
             # if the patch was a git patch, refresh it as a git patch
             for line in patchf:
@@ -1107,6 +1107,9 @@ class queue:
                 ph.setuser(newuser)
             if newdate:
                 ph.setdate(newdate)
+
+            # only commit new patch when write is complete
+            patchf = self.opener(patchfn, 'w', atomictemp=True)
 
             patchf.seek(0)
             patchf.truncate()
@@ -1185,7 +1188,7 @@ class queue:
                                     changes=c, opts=self.diffopts())
                 for chunk in chunks:
                     patchf.write(chunk)
-                patchf.close()
+                patchf.rename()
 
                 repo.dirstate.setparents(*cparents)
                 copies = {}
@@ -1246,7 +1249,7 @@ class queue:
                 self.removeundo(repo)
             else:
                 self.printdiff(repo, patchparent, fp=patchf)
-                patchf.close()
+                patchf.rename()
                 added = repo.status()[1]
                 for a in added:
                     f = repo.wjoin(a)
