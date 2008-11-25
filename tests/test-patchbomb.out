@@ -54,6 +54,7 @@ Subject: [PATCH 1 of 2] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.121@
 In-Reply-To: <patchbomb.120@
+References: <patchbomb.120@
 Date: Thu, 01 Jan 1970 00:02:01 +0000
 From: quux
 To: foo
@@ -80,6 +81,7 @@ Subject: [PATCH 2 of 2] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.122@
 In-Reply-To: <patchbomb.120@
+References: <patchbomb.120@
 Date: Thu, 01 Jan 1970 00:02:02 +0000
 From: quux
 To: foo
@@ -266,6 +268,7 @@ Subject: [PATCH 1 of 2] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
@@ -295,6 +298,7 @@ Subject: [PATCH 2 of 2] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
@@ -377,6 +381,7 @@ Subject: [PATCH 1 of 2] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
@@ -409,6 +414,7 @@ Subject: [PATCH 2 of 2] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
@@ -504,6 +510,7 @@ Subject: [PATCH 1 of 2] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
@@ -545,6 +552,7 @@ Subject: [PATCH 2 of 2] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
@@ -606,6 +614,7 @@ Subject: [PATCH 1 of 1] c
 X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
 Message-Id: <ff2c9fa2018b15fa74b3.61@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
@@ -651,6 +660,7 @@ Subject: [PATCH 1 of 2] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
@@ -677,6 +687,7 @@ Subject: [PATCH 2 of 2] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
@@ -757,6 +768,7 @@ Subject: [PATCH 1 of 2] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
@@ -789,6 +801,7 @@ Subject: [PATCH 2 of 2] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
 Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo

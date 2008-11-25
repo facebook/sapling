@@ -44,7 +44,8 @@ class templater(object):
     template_re = re.compile(r"(?:(?:#(?=[\w\|%]+#))|(?:{(?=[\w\|%]+})))"
                              r"(\w+)(?:(?:%(\w+))|((?:\|\w+)*))[#}]")
 
-    def __init__(self, mapfile, filters={}, defaults={}, cache={}):
+    def __init__(self, mapfile, filters={}, defaults={}, cache={},
+                 minchunk=1024, maxchunk=65536):
         '''set up template engine.
         mapfile is name of file to read map definitions from.
         filters is dict of functions. each transforms a value into another.
@@ -55,6 +56,7 @@ class templater(object):
         self.base = (mapfile and os.path.dirname(mapfile)) or ''
         self.filters = filters
         self.defaults = defaults
+        self.minchunk, self.maxchunk = minchunk, maxchunk
 
         if not mapfile:
             return
@@ -130,6 +132,13 @@ class templater(object):
                 yield v
 
     def __call__(self, t, **map):
+        stream = self.expand(t, **map)
+        if self.minchunk:
+            stream = util.increasingchunks(stream, min=self.minchunk,
+                                           max=self.maxchunk)
+        return stream
+        
+    def expand(self, t, **map):
         '''Perform expansion. t is name of map element to expand. map contains
         added elements for use during expansion. Is a generator.'''
         tmpl = self._template(t)

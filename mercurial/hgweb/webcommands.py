@@ -227,6 +227,7 @@ def shortlog(web, req, tmpl):
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
+    showbranch = webutil.nodebranchnodefault(ctx)
     parents = ctx.parents()
 
     files = []
@@ -246,6 +247,7 @@ def changeset(web, req, tmpl):
                 parent=webutil.siblings(parents),
                 child=webutil.siblings(ctx.children()),
                 changesettag=showtags,
+                changesetbranch=showbranch,
                 author=ctx.user(),
                 desc=ctx.description(),
                 date=ctx.date(),
@@ -555,8 +557,12 @@ def filelog(web, req, tmpl):
                          "rename": webutil.renamelink(fctx),
                          "parent": webutil.siblings(fctx.parents()),
                          "child": webutil.siblings(fctx.children()),
-                         "desc": ctx.description()})
-
+                         "desc": ctx.description(),
+                         "tags": webutil.nodetagsdict(web.repo, ctx.node()),
+                         "branch": webutil.nodebranchnodefault(ctx),
+                         "inbranch": webutil.nodeinbranch(web.repo, ctx),
+                         "branches": webutil.nodebranchdict(web.repo, ctx)})
+                     
         if limit > 0:
             l = l[:limit]
 

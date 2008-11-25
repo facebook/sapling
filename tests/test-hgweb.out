@@ -40,7 +40,7 @@ foo
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
 <ul>
-<li><a href="/log">log</a></li>
+<li><a href="/shortlog">log</a></li>
 <li><a href="/graph">graph</a></li>
 <li><a href="/tags">tags</a></li>
 </ul>
@@ -110,7 +110,7 @@ error: bork@2ef0ac749a14: not found in manifest
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
 <ul>
-<li><a href="/log">log</a></li>
+<li><a href="/shortlog">log</a></li>
 <li><a href="/graph">graph</a></li>
 <li><a href="/tags">tags</a></li>
 </ul>

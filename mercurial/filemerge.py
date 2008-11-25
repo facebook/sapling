@@ -32,8 +32,11 @@ def _picktool(repo, ui, path, binary, symlink):
         tmsg = tool
         if pat:
             tmsg += " specified for " + pat
-        if pat and not _findtool(ui, tool): # skip search if not matching
-            ui.warn(_("couldn't find merge tool %s\n") % tmsg)
+        if not _findtool(ui, tool):
+            if pat: # explicitly requested tool deserves a warning
+                ui.warn(_("couldn't find merge tool %s\n") % tmsg)
+            else: # configured but non-existing tools are more silent
+                ui.note(_("couldn't find merge tool %s\n") % tmsg)
         elif symlink and not _toolbool(ui, tool, "symlink"):
             ui.warn(_("tool %s can't handle symlinks\n") % tmsg)
         elif binary and not _toolbool(ui, tool, "binary"):
@@ -71,8 +74,8 @@ def _picktool(repo, ui, path, binary, symlink):
         tools.insert(0, (None, uimerge)) # highest priority
     tools.append((None, "hgmerge")) # the old default, if found
     for p,t in tools:
-        toolpath = _findtool(ui, t)
-        if toolpath and check(t, None, symlink, binary):
+        if check(t, None, symlink, binary):
+            toolpath = _findtool(ui, t)
             return (t, '"' + toolpath + '"')
     # internal merge as last resort
     return (not (symlink or binary) and "internal:merge" or None, None)

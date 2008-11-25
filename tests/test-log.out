@@ -5,7 +5,7 @@ date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     a
 
 % -f, directory
-abort: can only follow copies/renames for explicit file names
+abort: cannot follow nonexistent file: "dir"
 % -f, but no args
 changeset:   4:b30c444c7c84
 tag:         tip

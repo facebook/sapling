@@ -39,7 +39,7 @@ adding a
 <div class="main">
 
 <h2><a href="/">test</a></h2>
-<h3>changeset 1:c78f6c5cbea9 <span class="tag">tip</span> </h3>
+<h3>changeset 1:c78f6c5cbea9  <span class="tag">tip</span> </h3>
 
 <form class="search" action="/log">
 
@@ -73,17 +73,13 @@ files, or words in the commit message</span>
 </table>
 
 <div class="overflow">
-<table class="bigtable">
-<tr>
- <th class="lineno">line</th>
- <th class="source">diff</th>
-</tr>
-</table>
-<table class="bigtable parity0"><tr><td class="lineno"><a href="#l1.1" id="l1.1">     1.1</a></td><td class="source minusline">--- a/a	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l1.2" id="l1.2">     1.2</a></td><td class="source plusline">+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l1.3" id="l1.3">     1.3</a></td><td class="source atline">@@ -1,1 +0,0 @@
-</td></tr><tr><td class="lineno"><a href="#l1.4" id="l1.4">     1.4</a></td><td class="source minusline">-a
-</td></tr></table>
+<div class="sourcefirst">   line diff</div>
+
+<div class="source bottomline parity0"><a href="#l1.1" id="l1.1">     1.1</a> <span class="minusline">--- a/a	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l1.2" id="l1.2">     1.2</a> <span class="plusline">+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l1.3" id="l1.3">     1.3</a> <span class="atline">@@ -1,1 +0,0 @@
+</span><a href="#l1.4" id="l1.4">     1.4</a> <span class="minusline">-a
+</span></div>
 </div>
 
 </div>
@@ -166,18 +162,13 @@ files, or words in the commit message</span>
 </table>
 
 <div class="overflow">
-<table class="bigtable">
-<tr>
- <th class="lineno">line</th>
- <th class="source">diff</th>
-</tr>
-</table>
+<div class="sourcefirst">   line diff</div>
 
-<table class="bigtable parity0"><tr><td class="lineno"><a href="#l1.1" id="l1.1">     1.1</a></td><td class="source minusline">--- a/a	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l1.2" id="l1.2">     1.2</a></td><td class="source plusline">+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l1.3" id="l1.3">     1.3</a></td><td class="source atline">@@ -1,1 +0,0 @@
-</td></tr><tr><td class="lineno"><a href="#l1.4" id="l1.4">     1.4</a></td><td class="source minusline">-a
-</td></tr></table>
+<div class="source bottomline parity0"><a href="#l1.1" id="l1.1">     1.1</a> <span class="minusline">--- a/a	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l1.2" id="l1.2">     1.2</a> <span class="plusline">+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l1.3" id="l1.3">     1.3</a> <span class="atline">@@ -1,1 +0,0 @@
+</span><a href="#l1.4" id="l1.4">     1.4</a> <span class="minusline">-a
+</span></div>
 </div>
 </div>
 </div>

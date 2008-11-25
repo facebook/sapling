@@ -4,6 +4,7 @@ fixheaders()
 {
     sed -e 's/\(Message-Id:.*@\).*/\1/'  \
         -e 's/\(In-Reply-To:.*@\).*/\1/' \
+        -e 's/\(References:.*@\).*/\1/'  \
         -e 's/===.*/===/'
 }
 

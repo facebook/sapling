@@ -63,6 +63,8 @@ class manifest(revlog):
             while i < lenm and m[i] != c:
                 i += 1
             return i
+        if not s:
+            return (lo, lo)
         lenm = len(m)
         if not hi:
             hi = lenm

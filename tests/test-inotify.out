@@ -27,3 +27,8 @@ C dir/bar/foo
 C dir/x
 C dir/y
 C e
+% path patterns
+M dir/x
+? hg.pid
+M dir/x
+M x

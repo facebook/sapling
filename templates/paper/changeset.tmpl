@@ -26,7 +26,7 @@
 <div class="main">
 
 <h2><a href="{url}{sessionvars%urlparameter}">{repo|escape}</a></h2>
-<h3>changeset {rev}:{node|short} {changesettag}</h3>
+<h3>changeset {rev}:{node|short} {changesetbranch%changelogbranchname} {changesettag}</h3>
 
 <form class="search" action="{url}log">
 {sessionvars%hiddenformentry}
@@ -60,12 +60,8 @@ files, or words in the commit message</span>
 </table>
 
 <div class="overflow">
-<table class="bigtable">
-<tr>
- <th class="lineno">line</th>
- <th class="source">diff</th>
-</tr>
-</table>
+<div class="sourcefirst">   line diff</div>
+
 {diff}
 </div>
 

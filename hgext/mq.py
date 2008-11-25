@@ -56,6 +56,67 @@ class statusentry:
     def __str__(self):
         return self.rev + ':' + self.name
 
+class patchheader(object):
+    def __init__(self, message, comments, user, date, haspatch):
+        self.message = message
+        self.comments = comments
+        self.user = user
+        self.date = date
+        self.haspatch = haspatch
+
+    def setuser(self, user):
+        if not self.setheader(['From: ', '# User '], user):
+            try:
+                patchheaderat = self.comments.index('# HG changeset patch')
+                self.comments.insert(patchheaderat + 1,'# User ' + user)
+            except ValueError:
+                self.comments = ['From: ' + user, ''] + self.comments
+        self.user = user
+
+    def setdate(self, date):
+        if self.setheader(['# Date '], date):
+            self.date = date
+
+    def setmessage(self, message):
+        if self.comments:
+            self._delmsg()
+        self.message = [message]
+        self.comments += self.message
+
+    def setheader(self, prefixes, new):
+        '''Update all references to a field in the patch header.
+        If none found, add it email style.'''
+        res = False
+        for prefix in prefixes:
+            for i in xrange(len(self.comments)):
+                if self.comments[i].startswith(prefix):
+                    self.comments[i] = prefix + new
+                    res = True
+                    break
+        return res
+
+    def __str__(self):
+        if not self.comments:
+            return ''
+        return '\n'.join(self.comments) + '\n\n'
+
+    def _delmsg(self):
+        '''Remove existing message, keeping the rest of the comments fields.
+        If comments contains 'subject: ', message will prepend
+        the field and a blank line.'''
+        if self.message:
+            subj = 'subject: ' + self.message[0].lower()
+            for i in xrange(len(self.comments)):
+                if subj == self.comments[i].lower():
+                    del self.comments[i]
+                    self.message = self.message[2:]
+                    break
+        ci = 0
+        for mi in xrange(len(self.message)):
+            while self.message[mi] != self.comments[ci]:
+                ci += 1
+            del self.comments[ci]
+
 class queue:
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
@@ -307,7 +368,7 @@ class queue:
         if format and format.startswith("tag") and subject:
             message.insert(0, "")
             message.insert(0, subject)
-        return (message, comments, user, date, diffstart > 1)
+        return patchheader(message, comments, user, date, diffstart > 1)
 
     def removeundo(self, repo):
         undo = repo.sjoin('undo')
@@ -351,13 +412,13 @@ class queue:
         if n == None:
             raise util.Abort(_("repo commit failed"))
         try:
-            message, comments, user, date, patchfound = mergeq.readheaders(patch)
+            ph = mergeq.readheaders(patch)
         except:
             raise util.Abort(_("unable to read %s") % patch)
 
         patchf = self.opener(patch, "w")
+        comments = str(ph)
         if comments:
-            comments = "\n".join(comments) + '\n\n'
             patchf.write(comments)
         self.printdiff(repo, head, n, fp=patchf)
         patchf.close()
@@ -477,12 +538,13 @@ class queue:
             pf = os.path.join(patchdir, patchname)
 
             try:
-                message, comments, user, date, patchfound = self.readheaders(patchname)
+                ph = self.readheaders(patchname)
             except:
                 self.ui.warn(_("Unable to read %s\n") % patchname)
                 err = 1
                 break
 
+            message = ph.message
             if not message:
                 message = _("imported patch %s\n") % patchname
             else:
@@ -512,7 +574,7 @@ class queue:
 
             files = patch.updatedir(self.ui, repo, files)
             match = cmdutil.matchfiles(repo, files or [])
-            n = repo.commit(files, message, user, date, match=match,
+            n = repo.commit(files, message, ph.user, ph.date, match=match,
                             force=True)
 
             if n == None:
@@ -522,7 +584,7 @@ class queue:
                 self.applied.append(statusentry(revlog.hex(n), patchname))
 
             if patcherr:
-                if not patchfound:
+                if not ph.haspatch:
                     self.ui.warn(_("patch %s is empty\n") % patchname)
                     err = 0
                 else:
@@ -824,10 +886,14 @@ class queue:
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
-             mergeq=None):
+             mergeq=None, all=False):
         wlock = repo.wlock()
         if repo.dirstate.parents()[0] != repo.changelog.tip():
             self.ui.status(_("(working directory not at tip)\n"))
+
+        if not self.series:
+            self.ui.warn(_('no patches in series\n'))
+            return 0
 
         try:
             patch = self.lookup(patch)
@@ -841,26 +907,36 @@ class queue:
                     if info[0] < len(self.applied) - 1:
                         raise util.Abort(
                             _("cannot push to a previous patch: %s") % patch)
-                    if info[0] < len(self.series) - 1:
-                        self.ui.warn(
-                            _('qpush: %s is already at the top\n') % patch)
-                    else:
-                        self.ui.warn(_('all patches are currently applied\n'))
+                    self.ui.warn(
+                        _('qpush: %s is already at the top\n') % patch)
                     return
+                pushable, reason = self.pushable(patch)
+                if not pushable:
+                    if reason:
+                        reason = _('guarded by %r') % reason
+                    else:
+                        reason = _('no matching guards')
+                    self.ui.warn(_("cannot push '%s' - %s\n") % (patch, reason))
+                    return 1
+            elif all:
+                patch = self.series[-1]
+                if self.isapplied(patch):
+                    self.ui.warn(_('all patches are currently applied\n'))
+                    return 0
 
             # Following the above example, starting at 'top' of B:
             # qpush should be performed (pushes C), but a subsequent
             # qpush without an argument is an error (nothing to
             # apply). This allows a loop of "...while hg qpush..." to
             # work as it detects an error when done
-            if self.series_end() == len(self.series):
+            start = self.series_end()
+            if start == len(self.series):
                 self.ui.warn(_('patch series already fully applied\n'))
                 return 1
             if not force:
                 self.check_localchanges(repo)
 
-            self.applied_dirty = 1;
-            start = self.series_end()
+            self.applied_dirty = 1
             if start > 0:
                 self.check_toppatch(repo)
             if not patch:
@@ -1001,6 +1077,8 @@ class queue:
         if len(self.applied) == 0:
             self.ui.write(_("No patches applied\n"))
             return 1
+        msg = opts.get('msg', '').rstrip()
+        newuser = opts.get('user')
         newdate = opts.get('date')
         if newdate:
             newdate = '%d %d' % util.parsedate(newdate)
@@ -1013,9 +1091,9 @@ class queue:
                 raise util.Abort(_("cannot refresh a revision with children"))
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
-            message, comments, user, date, patchfound = self.readheaders(patchfn)
+            ph = self.readheaders(patchfn)
 
-            patchf = self.opener(patchfn, 'r+')
+            patchf = self.opener(patchfn, 'r')
 
             # if the patch was a git patch, refresh it as a git patch
             for line in patchf:
@@ -1023,59 +1101,21 @@ class queue:
                     self.diffopts().git = True
                     break
 
-            msg = opts.get('msg', '').rstrip()
-            if msg and comments:
-                # Remove existing message, keeping the rest of the comments
-                # fields.
-                # If comments contains 'subject: ', message will prepend
-                # the field and a blank line.
-                if message:
-                    subj = 'subject: ' + message[0].lower()
-                    for i in xrange(len(comments)):
-                        if subj == comments[i].lower():
-                            del comments[i]
-                            message = message[2:]
-                            break
-                ci = 0
-                for mi in xrange(len(message)):
-                    while message[mi] != comments[ci]:
-                        ci += 1
-                    del comments[ci]
-
-            def setheaderfield(comments, prefixes, new):
-                # Update all references to a field in the patch header.
-                # If none found, add it email style.
-                res = False
-                for prefix in prefixes:
-                    for i in xrange(len(comments)):
-                        if comments[i].startswith(prefix):
-                            comments[i] = prefix + new
-                            res = True
-                            break
-                return res
-
-            newuser = opts.get('user')
-            if newuser:
-                if not setheaderfield(comments, ['From: ', '# User '], newuser):
-                    try:
-                        patchheaderat = comments.index('# HG changeset patch')
-                        comments.insert(patchheaderat + 1,'# User ' + newuser)
-                    except ValueError:
-                        comments = ['From: ' + newuser, ''] + comments
-                user = newuser
-
-            if newdate:
-                if setheaderfield(comments, ['# Date '], newdate):
-                    date = newdate
-
             if msg:
-                comments.append(msg)
+                ph.setmessage(msg)
+            if newuser:
+                ph.setuser(newuser)
+            if newdate:
+                ph.setdate(newdate)
+
+            # only commit new patch when write is complete
+            patchf = self.opener(patchfn, 'w', atomictemp=True)
 
             patchf.seek(0)
             patchf.truncate()
 
+            comments = str(ph)
             if comments:
-                comments = "\n".join(comments) + '\n\n'
                 patchf.write(comments)
 
             if opts.get('git'):
@@ -1148,69 +1188,82 @@ class queue:
                                     changes=c, opts=self.diffopts())
                 for chunk in chunks:
                     patchf.write(chunk)
-                patchf.close()
 
-                repo.dirstate.setparents(*cparents)
-                copies = {}
-                for dst in a:
-                    src = repo.dirstate.copied(dst)
-                    if src is not None:
-                        copies.setdefault(src, []).append(dst)
-                    repo.dirstate.add(dst)
-                # remember the copies between patchparent and tip
-                # this may be slow, so don't do it if we're not tracking copies
-                if self.diffopts().git:
-                    for dst in aaa:
-                        f = repo.file(dst)
-                        src = f.renamed(man[dst])
-                        if src:
-                            copies.setdefault(src[0], []).extend(copies.get(dst, []))
-                            if dst in a:
-                                copies[src[0]].append(dst)
-                        # we can't copy a file created by the patch itself
-                        if dst in copies:
-                            del copies[dst]
-                for src, dsts in copies.iteritems():
-                    for dst in dsts:
-                        repo.dirstate.copy(src, dst)
-                for f in r:
-                    repo.dirstate.remove(f)
-                # if the patch excludes a modified file, mark that
-                # file with mtime=0 so status can see it.
-                mm = []
-                for i in xrange(len(m)-1, -1, -1):
-                    if not matchfn(m[i]):
-                        mm.append(m[i])
-                        del m[i]
-                for f in m:
-                    repo.dirstate.normal(f)
-                for f in mm:
-                    repo.dirstate.normallookup(f)
-                for f in forget:
-                    repo.dirstate.forget(f)
+                try:
+                    copies = {}
+                    for dst in a:
+                        src = repo.dirstate.copied(dst)
+                        if src is not None:
+                            copies.setdefault(src, []).append(dst)
+                        repo.dirstate.add(dst)
+                    # remember the copies between patchparent and tip
+                    # this may be slow, so don't do it if we're not tracking copies
+                    if self.diffopts().git:
+                        for dst in aaa:
+                            f = repo.file(dst)
+                            src = f.renamed(man[dst])
+                            if src:
+                                copies.setdefault(src[0], []).extend(copies.get(dst, []))
+                                if dst in a:
+                                    copies[src[0]].append(dst)
+                            # we can't copy a file created by the patch itself
+                            if dst in copies:
+                                del copies[dst]
+                    for src, dsts in copies.iteritems():
+                        for dst in dsts:
+                            repo.dirstate.copy(src, dst)
+                    for f in r:
+                        repo.dirstate.remove(f)
+                    # if the patch excludes a modified file, mark that
+                    # file with mtime=0 so status can see it.
+                    mm = []
+                    for i in xrange(len(m)-1, -1, -1):
+                        if not matchfn(m[i]):
+                            mm.append(m[i])
+                            del m[i]
+                    for f in m:
+                        repo.dirstate.normal(f)
+                    for f in mm:
+                        repo.dirstate.normallookup(f)
+                    for f in forget:
+                        repo.dirstate.forget(f)
 
-                if not msg:
-                    if not message:
-                        message = "[mq]: %s\n" % patchfn
+                    if not msg:
+                        if not ph.message:
+                            message = "[mq]: %s\n" % patchfn
+                        else:
+                            message = "\n".join(ph.message)
                     else:
-                        message = "\n".join(message)
-                else:
-                    message = msg
+                        message = msg
 
-                if not user:
-                    user = changes[1]
+                    user = ph.user or changes[1]
 
-                self.applied.pop()
-                self.applied_dirty = 1
-                self.strip(repo, top, update=False,
-                           backup='strip')
-                n = repo.commit(match.files(), message, user, date, match=match,
-                                force=1)
-                self.applied.append(statusentry(revlog.hex(n), patchfn))
-                self.removeundo(repo)
+                    # assumes strip can roll itself back if interrupted
+                    repo.dirstate.setparents(*cparents)
+                    self.applied.pop()
+                    self.applied_dirty = 1
+                    self.strip(repo, top, update=False,
+                               backup='strip')
+                except:
+                    repo.dirstate.invalidate()
+                    raise
+
+                try:
+                    # might be nice to attempt to roll back strip after this
+                    patchf.rename()
+                    n = repo.commit(match.files(), message, user, ph.date,
+                                    match=match, force=1)
+                    self.applied.append(statusentry(revlog.hex(n), patchfn))
+                except:
+                    ctx = repo[cparents[0]]
+                    repo.dirstate.rebuild(ctx.node(), ctx.manifest())
+                    self.save_dirty()
+                    self.ui.warn(_('refresh interrupted while patch was popped! '
+                                   '(revert --all, qpush to recover)\n'))
+                    raise
             else:
                 self.printdiff(repo, patchparent, fp=patchf)
-                patchf.close()
+                patchf.rename()
                 added = repo.status()[1]
                 for a in added:
                     f = repo.wjoin(a)
@@ -1228,6 +1281,7 @@ class queue:
                 self.push(repo, force=True)
         finally:
             del wlock
+            self.removeundo(repo)
 
     def init(self, repo, create=False):
         if not create and os.path.isdir(self.path):
@@ -1259,7 +1313,8 @@ class queue:
                 summary=False):
         def displayname(patchname):
             if summary:
-                msg = self.readheaders(patchname)[0]
+                ph = self.readheaders(patchname)
+                msg = ph.message
                 msg = msg and ': ' + msg[0] or ': '
             else:
                 msg = ''
@@ -1815,8 +1870,8 @@ def refresh(ui, repo, *pats, **opts):
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
         patch = q.applied[-1].name
-        (message, comment, user, date, hasdiff) = q.readheaders(patch)
-        message = ui.edit('\n'.join(message), user or ui.username())
+        ph = q.readheaders(patch)
+        message = ui.edit('\n'.join(ph.message), ph.user or ui.username())
     setupheaderopts(ui, opts)
     ret = q.refresh(repo, pats, msg=message, **opts)
     q.save_dirty()
@@ -1874,7 +1929,8 @@ def fold(ui, repo, *files, **opts):
 
     for p in patches:
         if not message:
-            messages.append(q.readheaders(p)[0])
+            ph = q.readheaders(p)
+            messages.append(ph.message)
         pf = q.join(p)
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
@@ -1882,7 +1938,8 @@ def fold(ui, repo, *files, **opts):
         patch.updatedir(ui, repo, files)
 
     if not message:
-        message, comments, user = q.readheaders(parent)[0:3]
+        ph = q.readheaders(parent)
+        message, user = ph.message, ph.user
         for msg in messages:
             message.append('* * *')
             message.extend(msg)
@@ -1965,9 +2022,9 @@ def header(ui, repo, patch=None):
             ui.write('No patches applied\n')
             return 1
         patch = q.lookup('qtip')
-    message = repo.mq.readheaders(patch)[0]
+    ph = repo.mq.readheaders(patch)
 
-    ui.write('\n'.join(message) + '\n')
+    ui.write('\n'.join(ph.message) + '\n')
 
 def lastsavename(path):
     (directory, base) = os.path.split(path)
@@ -2001,11 +2058,6 @@ def push(ui, repo, patch=None, **opts):
     q = repo.mq
     mergeq = None
 
-    if opts['all']:
-        if not q.series:
-            ui.warn(_('no patches in series\n'))
-            return 0
-        patch = q.series[-1]
     if opts['merge']:
         if opts['name']:
             newpath = repo.join(opts['name'])
@@ -2017,7 +2069,7 @@ def push(ui, repo, patch=None, **opts):
         mergeq = queue(ui, repo.join(""), newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts['force'], list=opts['list'],
-                 mergeq=mergeq)
+                 mergeq=mergeq, all=opts.get('all'))
     return ret
 
 def pop(ui, repo, patch=None, **opts):

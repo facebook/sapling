@@ -1033,6 +1033,8 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 if node is None:
                     # A zero count may be a directory or deleted file, so
                     # try to find matching entries on the slow path.
+                    if follow:
+                        raise util.Abort(_('cannot follow nonexistent file: "%s"') % file_)
                     slowpath = True
                     break
                 else:

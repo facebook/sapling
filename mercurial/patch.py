@@ -228,26 +228,21 @@ unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 
 class patchfile:
-    def __init__(self, ui, fname, missing=False):
+    def __init__(self, ui, fname, opener, missing=False):
         self.fname = fname
+        self.opener = opener
         self.ui = ui
         self.lines = []
         self.exists = False
         self.missing = missing
         if not missing:
             try:
-                fp = file(fname, 'rb')
-                self.lines = fp.readlines()
+                self.lines = self.readlines(fname)
                 self.exists = True
             except IOError:
                 pass
         else:
             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
-
-        if not self.exists:
-            dirname = os.path.dirname(fname)
-            if dirname and not os.path.isdir(dirname):
-                os.makedirs(dirname)
 
         self.hash = {}
         self.dirty = 0
@@ -256,6 +251,23 @@ class patchfile:
         self.fileprinted = False
         self.printfile(False)
         self.hunks = 0
+
+    def readlines(self, fname):
+        fp = self.opener(fname, 'r')
+        try:
+            return fp.readlines()
+        finally:
+            fp.close()
+
+    def writelines(self, fname, lines):
+        fp = self.opener(fname, 'w')
+        try:
+            fp.writelines(lines)
+        finally:
+            fp.close()
+
+    def unlink(self, fname):
+        os.unlink(fname)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -307,35 +319,24 @@ class patchfile:
         self.ui.warn(
             _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
             (len(self.rej), self.hunks, fname))
-        try: os.unlink(fname)
-        except:
-            pass
-        fp = file(fname, 'wb')
-        base = os.path.basename(self.fname)
-        fp.write("--- %s\n+++ %s\n" % (base, base))
-        for x in self.rej:
-            for l in x.hunk:
-                fp.write(l)
-                if l[-1] != '\n':
-                    fp.write("\n\ No newline at end of file\n")
+
+        def rejlines():
+            base = os.path.basename(self.fname)
+            yield "--- %s\n+++ %s\n" % (base, base)
+            for x in self.rej:
+                for l in x.hunk:
+                    yield l
+                    if l[-1] != '\n':
+                        yield "\n\ No newline at end of file\n"
+
+        self.writelines(fname, rejlines())
 
     def write(self, dest=None):
-        if self.dirty:
-            if not dest:
-                dest = self.fname
-            st = None
-            try:
-                st = os.lstat(dest)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-            if st and st.st_nlink > 1:
-                os.unlink(dest)
-            fp = file(dest, 'wb')
-            if st and st.st_nlink > 1:
-                os.chmod(dest, st.st_mode)
-            fp.writelines(self.lines)
-            fp.close()
+        if not self.dirty:
+            return
+        if not dest:
+            dest = self.fname
+        self.writelines(dest, self.lines)
 
     def close(self):
         self.write()
@@ -362,7 +363,7 @@ class patchfile:
 
         if isinstance(h, binhunk):
             if h.rmfile():
-                os.unlink(self.fname)
+                self.unlink(self.fname)
             else:
                 self.lines[:] = h.new()
                 self.offset += len(h.new())
@@ -379,7 +380,7 @@ class patchfile:
         orig_start = start
         if diffhelpers.testhunk(old, self.lines, start) == 0:
             if h.rmfile():
-                os.unlink(self.fname)
+                self.unlink(self.fname)
             else:
                 self.lines[start : start + h.lena] = h.new()
                 self.offset += h.lenb - h.lena
@@ -938,6 +939,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
     err = 0
     current_file = None
     gitpatches = None
+    opener = util.opener(os.getcwd())
 
     def closefile():
         if not current_file:
@@ -960,11 +962,11 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
             afile, bfile, first_hunk = values
             try:
                 if sourcefile:
-                    current_file = patchfile(ui, sourcefile)
+                    current_file = patchfile(ui, sourcefile, opener)
                 else:
                     current_file, missing = selectfile(afile, bfile, first_hunk,
                                             strip, reverse)
-                    current_file = patchfile(ui, current_file, missing)
+                    current_file = patchfile(ui, current_file, opener, missing)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
                 current_file, current_hunk = None, None
@@ -1002,7 +1004,7 @@ def diffopts(ui, opts={}, untrusted=False):
         ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'),
         context=get('unified', getter=ui.config))
 
-def updatedir(ui, repo, patches):
+def updatedir(ui, repo, patches, similarity=0):
     '''Update dirstate after patch application according to metadata'''
     if not patches:
         return
@@ -1026,7 +1028,7 @@ def updatedir(ui, repo, patches):
     for src, dst in copies:
         repo.copy(src, dst)
     removes = removes.keys()
-    if removes:
+    if (not similarity) and removes:
         repo.remove(util.sort(removes), True)
     for f in patches:
         gp = patches[f]
@@ -1039,7 +1041,7 @@ def updatedir(ui, repo, patches):
                 repo.wwrite(gp.path, '', flags)
             else:
                 util.set_flags(dst, islink, isexec)
-    cmdutil.addremove(repo, cfiles)
+    cmdutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
     return util.sort(files)

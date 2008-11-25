@@ -179,7 +179,7 @@ files, or words in the commit message</span>
  <tr class="parity0">
   <td class="age">many years</td>
   <td class="author">test</td>
-  <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="tag">tip</span> </td>
+  <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> <span class="tag">tip</span> </td>
  </tr>
  <tr class="parity1">
   <td class="age">many years</td>
@@ -235,7 +235,7 @@ files, or words in the commit message</span>
 <div class="main">
 
 <h2><a href="/">test</a></h2>
-<h3>changeset 0:2ef0ac749a14 <span class="tag">1.0</span> </h3>
+<h3>changeset 0:2ef0ac749a14  <span class="tag">1.0</span> </h3>
 
 <form class="search" action="/log">
 
@@ -269,21 +269,17 @@ files, or words in the commit message</span>
 </table>
 
 <div class="overflow">
-<table class="bigtable">
-<tr>
- <th class="lineno">line</th>
- <th class="source">diff</th>
-</tr>
-</table>
-<table class="bigtable parity0"><tr><td class="lineno"><a href="#l1.1" id="l1.1">     1.1</a></td><td class="source minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l1.2" id="l1.2">     1.2</a></td><td class="source plusline">+++ b/da/foo	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l1.3" id="l1.3">     1.3</a></td><td class="source atline">@@ -0,0 +1,1 @@
-</td></tr><tr><td class="lineno"><a href="#l1.4" id="l1.4">     1.4</a></td><td class="source plusline">+foo
-</td></tr></table><table class="bigtable parity1"><tr><td class="lineno"><a href="#l2.1" id="l2.1">     2.1</a></td><td class="source minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l2.2" id="l2.2">     2.2</a></td><td class="source plusline">+++ b/foo	Thu Jan 01 00:00:00 1970 +0000
-</td></tr><tr><td class="lineno"><a href="#l2.3" id="l2.3">     2.3</a></td><td class="source atline">@@ -0,0 +1,1 @@
-</td></tr><tr><td class="lineno"><a href="#l2.4" id="l2.4">     2.4</a></td><td class="source plusline">+foo
-</td></tr></table>
+<div class="sourcefirst">   line diff</div>
+
+<div class="source bottomline parity0"><a href="#l1.1" id="l1.1">     1.1</a> <span class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l1.2" id="l1.2">     1.2</a> <span class="plusline">+++ b/da/foo	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l1.3" id="l1.3">     1.3</a> <span class="atline">@@ -0,0 +1,1 @@
+</span><a href="#l1.4" id="l1.4">     1.4</a> <span class="plusline">+foo
+</span></div><div class="source bottomline parity1"><a href="#l2.1" id="l2.1">     2.1</a> <span class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l2.2" id="l2.2">     2.2</a> <span class="plusline">+++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+</span><a href="#l2.3" id="l2.3">     2.3</a> <span class="atline">@@ -0,0 +1,1 @@
+</span><a href="#l2.4" id="l2.4">     2.4</a> <span class="plusline">+foo
+</span></div>
 </div>
 
 </div>
@@ -400,14 +396,10 @@ files, or words in the commit message</span>
 </table>
 
 <div class="overflow">
-<table class="bigtable">
-<tr>
- <th class="lineno">line</th>
- <th class="source">source</th>
-</tr>
-<tr class="parity0"><td class="lineno"><a href="#l1" id="l1">     1</a></td><td class="source">foo
-</td></tr>
-</table>
+<div class="sourcefirst"> line source</div>
+<div class="parity0 source"><a href="#l1" id="l1">     1</a> foo
+</div>
+<div class="sourcelast"></div>
 </div>
 </div>
 </div>

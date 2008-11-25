@@ -17,6 +17,9 @@ def launch(application):
 
     environ = dict(os.environ.items())
     environ.setdefault('PATH_INFO', '')
+    if '.cgi' in environ['PATH_INFO']:
+        environ['PATH_INFO'] = environ['PATH_INFO'].split('.cgi', 1)[1]
+
     environ['wsgi.input'] = sys.stdin
     environ['wsgi.errors'] = sys.stderr
     environ['wsgi.version'] = (1, 0)

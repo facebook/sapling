@@ -487,10 +487,10 @@ def reposetup(ui, repo):
                 del wlock, lock
 
     # monkeypatches
-    def kwpatchfile_init(orig, self, ui, fname, missing=False):
+    def kwpatchfile_init(orig, self, ui, fname, opener, missing=False):
         '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
         rejects or conflicts due to expanded keywords in working dir.'''
-        orig(self, ui, fname, missing)
+        orig(self, ui, fname, opener, missing)
         # shrink keywords read from working dir
         self.lines = kwt.shrinklines(self.fname, self.lines)
 

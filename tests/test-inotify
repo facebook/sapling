@@ -27,4 +27,12 @@ hg status -c
 echo % all
 hg status -A
 
+echo '% path patterns'
+echo x > dir/x
+hg status .
+hg status dir
+cd dir
+hg status .
+cd ..
+
 kill `cat hg.pid`
