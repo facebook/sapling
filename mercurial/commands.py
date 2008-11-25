@@ -1700,7 +1700,8 @@ def incoming(ui, repo, source="default", **opts):
     ui.status(_('comparing with %s\n') % url.hidepassword(source))
     if revs:
         revs = [other.lookup(rev) for rev in revs]
-    incoming = repo.findincoming(other, heads=revs, force=opts["force"])
+    common, incoming, rheads = repo.findcommonincoming(other, heads=revs,
+                                                       force=opts["force"])
     if not incoming:
         try:
             os.unlink(opts["bundle"])
@@ -1714,6 +1715,10 @@ def incoming(ui, repo, source="default", **opts):
         fname = opts["bundle"]
         if fname or not other.local():
             # create a bundle (uncompressed if other repo is not local)
+
+            if revs is None and other.capable('changegroupsubset'):
+                revs = rheads
+
             if revs is None:
                 cg = other.changegroup(incoming, "incoming")
             else:

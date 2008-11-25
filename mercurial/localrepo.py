@@ -1266,6 +1266,22 @@ class localrepository(repo.repository):
         (and so we know that the rest of the nodes are missing in remote, see
         outgoing)
         """
+        return self.findcommonincoming(remote, base, heads, force)[1]
+
+    def findcommonincoming(self, remote, base=None, heads=None, force=False):
+        """Return a tuple (common, missing roots, heads) used to identify
+        missing nodes from remote.
+
+        If base dict is specified, assume that these nodes and their parents
+        exist on the remote side and that no child of a node of base exists
+        in both remote and self.
+        Furthermore base will be updated to include the nodes that exists
+        in self and remote but no children exists in self and remote.
+        If a list of heads is specified, return only nodes which are heads
+        or ancestors of these heads.
+
+        All the ancestors of base are in self and in remote.
+        """
         m = self.changelog.nodemap
         search = []
         fetch = {}
@@ -1280,8 +1296,8 @@ class localrepository(repo.repository):
         if self.changelog.tip() == nullid:
             base[nullid] = 1
             if heads != [nullid]:
-                return [nullid]
-            return []
+                return [nullid], [nullid], list(heads)
+            return [nullid], [], []
 
         # assume we're closer to the tip than the root
         # and start by examining the heads
@@ -1294,8 +1310,9 @@ class localrepository(repo.repository):
             else:
                 base[h] = 1
 
+        heads = unknown
         if not unknown:
-            return []
+            return base.keys(), [], []
 
         req = dict.fromkeys(unknown)
         reqcnt = 0
@@ -1390,7 +1407,7 @@ class localrepository(repo.repository):
 
         self.ui.debug(_("%d total queries\n") % reqcnt)
 
-        return fetch.keys()
+        return base.keys(), fetch.keys(), heads
 
     def findoutgoing(self, remote, base=None, heads=None, force=False):
         """Return list of nodes that are roots of subsets not in remote
@@ -1443,7 +1460,8 @@ class localrepository(repo.repository):
     def pull(self, remote, heads=None, force=False):
         lock = self.lock()
         try:
-            fetch = self.findincoming(remote, heads=heads, force=force)
+            common, fetch, rheads = self.findcommonincoming(remote, heads=heads,
+                                                            force=force)
             if fetch == [nullid]:
                 self.ui.status(_("requesting all changes\n"))
 
@@ -1451,10 +1469,13 @@ class localrepository(repo.repository):
                 self.ui.status(_("no changes found\n"))
                 return 0
 
+            if heads is None and remote.capable('changegroupsubset'):
+                heads = rheads
+
             if heads is None:
                 cg = remote.changegroup(fetch, 'pull')
             else:
-                if 'changegroupsubset' not in remote.capabilities:
+                if not remote.capable('changegroupsubset'):
                     raise util.Abort(_("Partial pull cannot be done because other repository doesn't support changegroupsubset."))
                 cg = remote.changegroupsubset(fetch, heads, 'pull')
             return self.addchangegroup(cg, 'pull', remote.url())

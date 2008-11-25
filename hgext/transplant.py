@@ -461,13 +461,16 @@ def transplant(ui, repo, *revs, **opts):
     def getremotechanges(repo, url):
         sourcerepo = ui.expandpath(url)
         source = hg.repository(ui, sourcerepo)
-        incoming = repo.findincoming(source, force=True)
+        common, incoming, rheads = repo.findcommonincoming(source, force=True)
         if not incoming:
             return (source, None, None)
 
         bundle = None
         if not source.local():
-            cg = source.changegroup(incoming, 'incoming')
+            if source.capable('changegroupsubset'):
+                cg = source.changegroupsubset(incoming, rheads, 'incoming')
+            else:
+                cg = source.changegroup(incoming, 'incoming')
             bundle = changegroup.writebundle(cg, None, 'HG10UN')
             source = bundlerepo.bundlerepository(ui, repo.root, bundle)
 
