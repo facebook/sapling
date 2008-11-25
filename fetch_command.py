@@ -172,10 +172,166 @@ _*
    \- \*
 ''')
 
-def make_diff_path(b):
-    if b == None:
-        return 'trunk'
-    return 'branches/' + b
+def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
+    """Extract all 'branch' content at a given revision.
+
+    Return a tuple (files, filectxfn) where 'files' is the list of all files
+    in the branch at the given revision, and 'filectxfn' is a memctx compatible
+    callable to retrieve individual file information.
+    """
+    def make_diff_path(b):
+        if b == None:
+            return 'trunk'
+        return 'branches/' + b
+
+    parent_rev, br_p = hg_editor.get_parent_svn_branch_and_rev(r.revnum, branch)
+    diff_path = make_diff_path(branch)
+    files_touched = set()
+    if br_p == branch:
+        # letting patch handle binaries sounded
+        # cool, but it breaks patch in sad ways
+        d = svn.get_unified_diff(diff_path, r.revnum, deleted=False,
+                                 ignore_type=False)
+    else:
+        d = svn.get_unified_diff(diff_path, r.revnum,
+                                 other_path=make_diff_path(br_p),
+                                 other_rev=parent_rev,
+                                 deleted=True, ignore_type=True)
+        if d:
+            ui.status('Branch creation with mods, pulling full rev.\n')
+            raise BadPatchApply()
+    opener = merc_util.opener(tempdir)
+    for m in binary_file_re.findall(d):
+        # we have to pull each binary file by hand as a fulltext,
+        # which sucks but we've got no choice
+        files_touched.add(m)
+        try:
+            f = opener(m, 'w')
+            f.write(svn.get_file(diff_path+'/'+m, r.revnum)[0])
+            f.close()
+        except IOError:
+            pass
+    d2 = empty_file_patch_wont_make_re.sub('', d)
+    d2 = property_exec_set_re.sub('', d2)
+    d2 = property_exec_removed_re.sub('', d2)
+    for f in any_file_re.findall(d):
+        if f in files_touched:
+            # this check is here because modified binary files will get
+            # created before here.
+            continue
+        files_touched.add(f)
+        data = ''
+        if f in hg_editor.repo[parentid]:
+            data = hg_editor.repo[parentid][f].data()
+        fp = opener(f, 'w')
+        fp.write(data)
+        fp.close()
+    if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
+        old_cwd = os.getcwd()
+        os.chdir(tempdir)
+        changed = {}
+        try:
+            patch_st = patch.applydiff(ui, cStringIO.StringIO(d2),
+                                       changed, strip=0)
+        except patch.PatchError:
+            # TODO: this happens if the svn server has the wrong mime
+            # type stored and doesn't know a file is binary. It would
+            # be better to do one file at a time and only do a
+            # full fetch on files that had problems.
+            os.chdir(old_cwd)
+            raise BadPatchApply()
+        for x in changed.iterkeys():
+            ui.status('M  %s\n' % x)
+            files_touched.add(x)
+        os.chdir(old_cwd)
+        # if this patch didn't apply right, fall back to exporting the
+        # entire rev.
+        if patch_st == -1:
+            parent_ctx = hg_editor.repo[parentid]
+            parent_manifest = parent_ctx.manifest()
+            for fn in files_touched:
+                if (fn in parent_manifest and
+                    'l' in parent_ctx.filectx(fn).flags()):
+                    # I think this might be an underlying bug in svn -
+                    # I get diffs of deleted symlinks even though I
+                    # specifically said no deletes above.
+                    ui.status('Pulling whole rev because of a deleted'
+                              'symlink')
+                    raise BadPatchApply()
+            assert False, ('This should only happen on case-insensitive'
+                           ' volumes.')
+        elif patch_st == 1:
+            # When converting Django, I saw fuzz on .po files that was
+            # causing revisions to end up failing verification. If that
+            # can be fixed, maybe this won't ever be reached.
+            ui.status('There was some fuzz, not using diff after all.')
+            raise BadPatchApply()
+    else:
+        ui.status('Not using patch for %s, diff had no hunks.\n' %
+                  r.revnum)
+
+    # we create the files if they don't exist here because we know
+    # that we'll never have diff info for a deleted file, so if the
+    # property is set, we should force the file to exist no matter what.
+    exec_files = {}
+    for m in property_exec_removed_re.findall(d):
+        exec_files[m] = False
+    for m in property_exec_set_re.findall(d):
+        exec_files[m] = True
+    for m in exec_files:
+        files_touched.add(m)
+        f = os.path.join(tempdir, m)
+        if not os.path.exists(f):
+            data = ''
+            if  m in hg_editor.repo[parentid]:
+                data = hg_editor.repo[parentid][m].data()
+            fp = opener(m, 'w')
+            fp.write(data)
+            fp.close()
+    link_files = {}
+    for m in property_special_set_re.findall(d):
+        # TODO(augie) when a symlink is removed, patching will fail.
+        # We're seeing that above - there's gotta be a better
+        # workaround than just bailing like that.
+        path = os.path.join(tempdir, m)
+        assert os.path.exists(path)
+        link_path = open(path).read()
+        link_path = link_path[len('link '):]
+        os.remove(path)
+        link_files[m] = link_path
+        files_touched.add(m)
+
+    deleted_files = set()
+    for p in r.paths:
+        if p.startswith(diff_path) and r.paths[p].action == 'D':
+            p2 = p[len(diff_path)+1:].strip('/')
+            if p2 in hg_editor.repo[parentid]:
+                deleted_files.add(p2)
+                continue
+            # If this isn't in the parent ctx, it must've been a dir
+            deleted_files.update([f for f in hg_editor.repo[parentid] 
+                                  if f.startswith(p2 + '/')])
+    files_touched.update(deleted_files)
+
+    copies = getcopies(svn, hg_editor, branch, diff_path, r, files_touched,
+                       parentid)
+
+    def filectxfn(repo, memctx, path):
+        if path in deleted_files:
+            raise IOError()
+        if path in link_files:
+            return context.memfilectx(path=path, data=link_files[path],
+                                      islink=True, isexec=False,
+                                      copied=False)
+        data = opener(path).read()
+        exe = exec_files.get(path, None)
+        if exe is None and path in hg_editor.repo[parentid]:
+            exe = 'x' in hg_editor.repo[parentid].filectx(path).flags()
+        copied = copies.get(path)
+        return context.memfilectx(path=path, data=data, islink=False,
+                                  isexec=exe, copied=copied)
+
+    return list(files_touched), filectxfn
 
 def makecopyfinder(r, branchpath, rootdir):
     """Return a function detecting copies.
@@ -334,157 +490,11 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
     if not os.path.exists(temp_location):
         os.makedirs(temp_location)
     for b in branches:
-        our_tempdir = None
-        diff_path = make_diff_path(b)
-        parent_rev, br_p = hg_editor.get_parent_svn_branch_and_rev(r.revnum, b)
+        our_tempdir = tempfile.mkdtemp('svn_fetch_temp', dir=temp_location)
         parent_ha = hg_editor.get_parent_revision(r.revnum, b)
-        files_touched = set()
         try:
-            if br_p == b:
-                # letting patch handle binaries sounded
-                # cool, but it breaks patch in sad ways
-                d = svn.get_unified_diff(diff_path, r.revnum, deleted=False,
-                                         ignore_type=False)
-            else:
-                d = svn.get_unified_diff(diff_path, r.revnum,
-                                         other_path=make_diff_path(br_p),
-                                         other_rev=parent_rev,
-                                         deleted=True, ignore_type=True)
-                if d:
-                    ui.status('Branch creation with mods, pulling full rev.\n')
-                    raise BadPatchApply()
-
-            our_tempdir = tempfile.mkdtemp('svn_fetch_temp', dir=temp_location)
-            opener = merc_util.opener(our_tempdir)
-            for m in binary_file_re.findall(d):
-                # we have to pull each binary file by hand as a fulltext,
-                # which sucks but we've got no choice
-                files_touched.add(m)
-                try:
-                    f = opener(m, 'w')
-                    f.write(svn.get_file(diff_path+'/'+m, r.revnum)[0])
-                    f.close()
-                except IOError:
-                    pass
-            d2 = empty_file_patch_wont_make_re.sub('', d)
-            d2 = property_exec_set_re.sub('', d2)
-            d2 = property_exec_removed_re.sub('', d2)
-            for f in any_file_re.findall(d):
-                if f in files_touched:
-                    # this check is here because modified binary files will get
-                    # created before here.
-                    continue
-                files_touched.add(f)
-                data = ''
-                if f in hg_editor.repo[parent_ha]:
-                    data = hg_editor.repo[parent_ha][f].data()
-                fp = opener(f, 'w')
-                fp.write(data)
-                fp.close()
-            if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
-                old_cwd = os.getcwd()
-                os.chdir(our_tempdir)
-                changed = {}
-                try:
-                    patch_st = patch.applydiff(ui, cStringIO.StringIO(d2),
-                                               changed, strip=0)
-                except patch.PatchError:
-                    # TODO: this happens if the svn server has the wrong mime
-                    # type stored and doesn't know a file is binary. It would
-                    # be better to do one file at a time and only do a
-                    # full fetch on files that had problems.
-                    os.chdir(old_cwd)
-                    raise BadPatchApply()
-                for x in changed.iterkeys():
-                    ui.status('M  %s\n' % x)
-                    files_touched.add(x)
-                os.chdir(old_cwd)
-                # if this patch didn't apply right, fall back to exporting the
-                # entire rev.
-                if patch_st == -1:
-                    parent_ctx = hg_editor.repo[parent_ha]
-                    parent_manifest = parent_ctx.manifest()
-                    for fn in files_touched:
-                        if (fn in parent_manifest and
-                            'l' in parent_ctx.filectx(fn).flags()):
-                            # I think this might be an underlying bug in svn -
-                            # I get diffs of deleted symlinks even though I
-                            # specifically said no deletes above.
-                            ui.status('Pulling whole rev because of a deleted'
-                                      'symlink')
-                            raise BadPatchApply()
-                    assert False, ('This should only happen on case-insensitive'
-                                   ' volumes.')
-                elif patch_st == 1:
-                    # When converting Django, I saw fuzz on .po files that was
-                    # causing revisions to end up failing verification. If that
-                    # can be fixed, maybe this won't ever be reached.
-                    ui.status('There was some fuzz, not using diff after all.')
-                    raise BadPatchApply()
-            else:
-                ui.status('Not using patch for %s, diff had no hunks.\n' %
-                          r.revnum)
-
-            # we create the files if they don't exist here because we know
-            # that we'll never have diff info for a deleted file, so if the
-            # property is set, we should force the file to exist no matter what.
-            exec_files = {}
-            for m in property_exec_removed_re.findall(d):
-                exec_files[m] = False
-            for m in property_exec_set_re.findall(d):
-                exec_files[m] = True
-            for m in exec_files:
-                files_touched.add(m)
-                f = os.path.join(our_tempdir, m)
-                if not os.path.exists(f):
-                    data = ''
-                    if  m in hg_editor.repo[parent_ha]:
-                        data = hg_editor.repo[parent_ha][m].data()
-                    fp = opener(m, 'w')
-                    fp.write(data)
-                    fp.close()
-            link_files = {}
-            for m in property_special_set_re.findall(d):
-                # TODO(augie) when a symlink is removed, patching will fail.
-                # We're seeing that above - there's gotta be a better
-                # workaround than just bailing like that.
-                path = os.path.join(our_tempdir, m)
-                assert os.path.exists(path)
-                link_path = open(path).read()
-                link_path = link_path[len('link '):]
-                os.remove(path)
-                link_files[m] = link_path
-                files_touched.add(m)
-
-            deleted_files = set()
-            for p in r.paths:
-                if p.startswith(diff_path) and r.paths[p].action == 'D':
-                    p2 = p[len(diff_path)+1:].strip('/')
-                    if p2 in hg_editor.repo[parent_ha]:
-                        deleted_files.add(p2)
-                        continue
-                    # If this isn't in the parent ctx, it must've been a dir
-                    deleted_files.update([f for f in hg_editor.repo[parent_ha] 
-                                          if f.startswith(p2 + '/')])
-            files_touched.update(deleted_files)
-
-            copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched,
-                               parent_ha)
-
-            def filectxfn(repo, memctx, path):
-                if path in deleted_files:
-                    raise IOError()
-                if path in link_files:
-                    return context.memfilectx(path=path, data=link_files[path],
-                                              islink=True, isexec=False,
-                                              copied=False)
-                data = opener(path).read()
-                exe = exec_files.get(path, None)
-                if exe is None and path in hg_editor.repo[parent_ha]:
-                    exe = 'x' in hg_editor.repo[parent_ha].filectx(path).flags()
-                copied = copies.get(path)
-                return context.memfilectx(path=path, data=data, islink=False,
-                                          isexec=exe, copied=copied)
+            files_touched, filectxfn = stupid_diff_branchrev(
+                ui, svn, hg_editor, b, r, parent_ha, our_tempdir)
         except (core.SubversionException,
                 BadPatchApply,
                 svnwrap.SubversionRepoCanNotDiff), e:
