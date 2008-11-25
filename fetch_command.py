@@ -455,16 +455,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 os.remove(path)
                 link_files[m] = link_path
                 files_touched.add(m)
-        except (core.SubversionException,
-                BadPatchApply,
-                svnwrap.SubversionRepoCanNotDiff), e:
-            if (hasattr(e, 'apr_err') and e.apr_err != 160013):
-                raise
-            # Either this revision or the previous one does not exist.
-            ui.status("fetching entire rev previous rev does not exist.\n")
-            files_touched, filectxfn = stupid_fetch_branchrev(
-                svn, hg_editor, b, branches[b], r, parent_ha)
-        else:
+
             for p in r.paths:
                 if p.startswith(diff_path) and r.paths[p].action == 'D':
                     p2 =  p[len(diff_path)+1:]
@@ -497,6 +488,15 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 copied = copies.get(path)
                 return context.memfilectx(path=path, data=fp.read(), islink=False,
                                           isexec=exe, copied=copied)
+        except (core.SubversionException,
+                BadPatchApply,
+                svnwrap.SubversionRepoCanNotDiff), e:
+            if (hasattr(e, 'apr_err') and e.apr_err != 160013):
+                raise
+            # Either this revision or the previous one does not exist.
+            ui.status("fetching entire rev previous rev does not exist.\n")
+            files_touched, filectxfn = stupid_fetch_branchrev(
+                svn, hg_editor, b, branches[b], r, parent_ha)
 
         date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
         date += ' -0000'
