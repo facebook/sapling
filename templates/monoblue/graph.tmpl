@@ -59,7 +59,7 @@
 
     var revlink = '<li style="_STYLE"><span class="desc">';
     revlink += '<a href="{url}rev/_NODEID{sessionvars%urlparameter}" title="_NODEID">_DESC</a>';
-    revlink += '</span><span class="info">_DATE ago, by _USER</span></li>';
+    revlink += '</span>_TAGS<span class="info">_DATE ago, by _USER</span></li>';
 
     graph.vertex = function(x, y, color, parity, cur) {
 
@@ -79,6 +79,26 @@
         item = item.replace(/_USER/, cur[4]);
         item = item.replace(/_DATE/, cur[5]);
 
+        var tagspan = '';
+        if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) {
+            tagspan = '<span class="logtags">';
+            if (cur[6][1]) {
+                tagspan += '<span class="branchtag" title="' + cur[6][0] + '">';
+                tagspan += cur[6][0] + '</span> ';
+            } else if (!cur[6][1] && cur[6][0] != 'default') {
+                tagspan += '<span class="inbranchtag" title="' + cur[6][0] + '">';
+                tagspan += cur[6][0] + '</span> ';
+            }
+            if (cur[7].length) {
+                for (var t in cur[7]) {
+                    var tag = cur[7][t];
+                    tagspan += '<span class="tagtag">' + tag + '</span> ';
+                }
+            }
+            tagspan += '</span>';
+        }
+
+        item = item.replace(/_TAGS/, tagspan); 
         return [bg, item];
 
     }

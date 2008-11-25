@@ -119,6 +119,10 @@ a { text-decoration:none; }
   vertical-align: baseline;
 }
 
+ul#graphnodes .branchhead {
+  font-size: 75%;
+}
+
 .branchname {
   color: #000;
   font-size: 60%; 
