@@ -456,26 +456,24 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 link_files[m] = link_path
                 files_touched.add(m)
 
+            deleted_files = set()
             for p in r.paths:
                 if p.startswith(diff_path) and r.paths[p].action == 'D':
-                    p2 =  p[len(diff_path)+1:]
-                    files_touched.add(p2)
-                    p3 = os.path.join(our_tempdir, p2)
-                    if os.path.exists(p3) and not os.path.isdir(p3):
-                        os.unlink(p3)
-                    if p2 and p2[0] == '/':
-                        p2 = p2[1:]
+                    p2 = p[len(diff_path)+1:].strip('/')
+                    if p2 in hg_editor.repo[parent_ha]:
+                        deleted_files.add(p2)
+                        continue
                     # If this isn't in the parent ctx, it must've been a dir
-                    if not p2 in hg_editor.repo[parent_ha]:
-                        d_files = [f for f in hg_editor.repo[parent_ha].manifest().iterkeys()
-                                   if f.startswith(p2 + '/')]
-                        for d in d_files:
-                            files_touched.add(d)
+                    deleted_files.update([f for f in hg_editor.repo[parent_ha] 
+                                          if f.startswith(p2 + '/')])
+            files_touched.update(deleted_files)
 
             copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched,
                                parent_ha)
 
             def filectxfn(repo, memctx, path):
+                if path in deleted_files:
+                    raise IOError()
                 disk_path = os.path.join(our_tempdir, path)
                 if path in link_files:
                     return context.memfilectx(path=path, data=link_files[path],
