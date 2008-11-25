@@ -8,9 +8,9 @@ import test_util
 
 
 class TestBasicRepoLayout(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name):
+    def _load_fixture_and_fetch(self, fixture_name, subdir=''):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path)
+                                                self.wc_path, subdir=subdir)
 
     def test_fresh_fetch_single_rev(self):
         repo = self._load_fixture_and_fetch('single_rev.svndump')
@@ -94,6 +94,16 @@ class TestBasicRepoLayout(test_util.TestBase):
         repo = self._load_fixture_and_fetch(
                     'file_renamed_in_from_outside_btt.svndump')
         self.assert_('LICENSE.file' in repo['tip'])
+
+    def test_renamed_dir_in_from_outside_btt_not_repo_root(self):
+        repo = self._load_fixture_and_fetch(
+                    'fetch_missing_files_subdir.svndump', subdir='foo')
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         '2fae2544a5858d0bc6c04976683b3dcc0416d6e3')
+        self.assert_('bar/alpha' in repo['tip'])
+        self.assert_('foo' in repo['tip'])
+        self.assert_('bar/alpha' not in repo['tip'].parents()[0])
+        self.assert_('foo' in repo['tip'].parents()[0])
 
     def test_oldest_not_trunk_and_tag_vendor_branch(self):
         repo = self._load_fixture_and_fetch(

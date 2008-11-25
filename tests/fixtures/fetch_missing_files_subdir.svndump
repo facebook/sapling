@@ -1,0 +1,184 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 90158077-d23c-442d-9351-5dd160359962
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-11-25T21:55:11.516061Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 112
+Content-length: 112
+
+K 7
+svn:log
+V 12
+initial add.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-25T22:00:55.483808Z
+PROPS-END
+
+Node-path: foo
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: foo/branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: foo/tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: foo/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: foo/trunk/foo
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: d3b07384d113edec49eaa6238ad5ff00
+Content-length: 14
+
+PROPS-END
+foo
+
+
+Revision-number: 2
+Prop-content-length: 130
+Content-length: 130
+
+K 7
+svn:log
+V 30
+commit bar in the wrong place.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-25T22:01:32.415795Z
+PROPS-END
+
+Node-path: foo/bar
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: foo/bar/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Node-path: foo/bar/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Node-path: foo/bar/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Content-length: 16
+
+PROPS-END
+delta
+
+
+Node-path: foo/bar/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 3
+Prop-content-length: 126
+Content-length: 126
+
+K 7
+svn:log
+V 26
+move bar to the sane place
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-11-25T22:02:24.410165Z
+PROPS-END
+
+Node-path: foo/trunk/bar
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: foo/bar
+
+
+Node-path: foo/bar
+Node-action: delete
+
+

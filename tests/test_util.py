@@ -40,8 +40,10 @@ def load_svndump_fixture(path, fixture_name):
     proc.stdin.flush()
     proc.communicate()
 
-def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False):
+def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir=''):
     load_svndump_fixture(repo_path, fixture_name)
+    if subdir:
+        repo_path += '/' + subdir
     fetch_command.fetch_revisions(ui.ui(),
                                   svn_url=fileurl(repo_path),
                                   hg_repo_path=wc_path,

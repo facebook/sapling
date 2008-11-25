@@ -124,7 +124,8 @@ def replay_convert_rev(hg_editor, svn, r):
             if p[-1] == '/':
                 dirpath = p[len(rootpath):]
                 files_to_grab.update((dirpath + f for f,k in
-                                      svn.list_files(p, r.revnum) if k == 'f'))
+                                      svn.list_files(dirpath, r.revnum) 
+                                      if k == 'f'))
             else:
                 files_to_grab.add(p[len(rootpath):])
         hg_editor.ui.status('\nFetching files...\n')
