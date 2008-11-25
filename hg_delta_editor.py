@@ -627,9 +627,9 @@ class HgChangeReceiver(delta.Editor):
     @stash_exception_on_self
     def change_file_prop(self, file_baton, name, value, pool=None):
         if name == 'svn:executable':
-            self.current_files_exec[self.current_file] = bool(value)
+            self.current_files_exec[self.current_file] = bool(value is not None)
         elif name == 'svn:special':
-            self.current_files_symlink[self.current_file] = bool(value)
+            self.current_files_symlink[self.current_file] = bool(value is not None)
 
     @stash_exception_on_self
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):

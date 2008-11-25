@@ -147,14 +147,12 @@ Cannot display: file marked as a binary type.''')
 property_exec_set_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
 (?:Added|Name): svn:executable
-   \+ \*
-''')
+   \+''')
 
 property_exec_removed_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
 (?:Deleted|Name): svn:executable
-   - \*
-''')
+   -''')
 
 empty_file_patch_wont_make_re = re.compile(r'''Index: ([^\n]*)\n=*\n(?=Index:)''')
 
@@ -163,14 +161,12 @@ any_file_re = re.compile(r'''^Index: ([^\n]*)\n=*\n''', re.MULTILINE)
 property_special_set_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
 (?:Added|Name): svn:special
-   \+ \*
-''')
+   \+''')
 
 property_special_removed_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
 (?:Deleted|Name): svn:special
-   \- \*
-''')
+   \-''')
 
 def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx, tempdir):
     """Extract all 'branch' content at a given revision.
