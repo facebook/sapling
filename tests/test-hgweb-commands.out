@@ -179,7 +179,7 @@ files, or words in the commit message</span>
  <tr class="parity0">
   <td class="age">many years</td>
   <td class="author">test</td>
-  <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="tag">tip</span> </td>
+  <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> <span class="tag">tip</span> </td>
  </tr>
  <tr class="parity1">
   <td class="age">many years</td>

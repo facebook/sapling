@@ -111,6 +111,22 @@ a { text-decoration:none; }
   vertical-align: baseline;
 }
 
+.branchhead {
+  color: #000;
+  font-size: 80%;
+  font-weight: normal;
+  margin-left: .5em;
+  vertical-align: baseline;
+}
+
+.branchname {
+  color: #000;
+  font-size: 60%; 
+  font-weight: normal;
+  margin-left: .5em;
+  vertical-align: baseline;
+}
+
 /* Common */
 pre { margin: 0; }
 
