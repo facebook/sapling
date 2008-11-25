@@ -177,7 +177,8 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
     in the branch at the given revision, and 'filectxfn' is a memctx compatible
-    callable to retrieve individual file information.
+    callable to retrieve individual file information. Raise BadPatchApply upon
+    error.
     """
     def make_diff_path(b):
         if b == None:
@@ -187,19 +188,25 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
     parent_rev, br_p = hg_editor.get_parent_svn_branch_and_rev(r.revnum, branch)
     diff_path = make_diff_path(branch)
     files_touched = set()
-    if br_p == branch:
-        # letting patch handle binaries sounded
-        # cool, but it breaks patch in sad ways
-        d = svn.get_unified_diff(diff_path, r.revnum, deleted=False,
-                                 ignore_type=False)
-    else:
-        d = svn.get_unified_diff(diff_path, r.revnum,
-                                 other_path=make_diff_path(br_p),
-                                 other_rev=parent_rev,
-                                 deleted=True, ignore_type=True)
-        if d:
-            ui.status('Branch creation with mods, pulling full rev.\n')
-            raise BadPatchApply()
+    try:
+        if br_p == branch:
+            # letting patch handle binaries sounded
+            # cool, but it breaks patch in sad ways
+            d = svn.get_unified_diff(diff_path, r.revnum, deleted=False,
+                                     ignore_type=False)
+        else:
+            d = svn.get_unified_diff(diff_path, r.revnum,
+                                     other_path=make_diff_path(br_p),
+                                     other_rev=parent_rev,
+                                     deleted=True, ignore_type=True)
+            if d:
+                raise BadPatchApply('branch creation with mods')
+    except svnwrap.SubversionRepoCanNotDiff:
+        raise BadPatchApply('subversion diffing code is not supported')
+    except core.SubversionException, e:
+        if (hasattr(e, 'apr_err') and e.apr_err != 160013):
+            raise
+        raise BadPatchApply('previous revision does not exist')
     opener = merc_util.opener(tempdir)
     for m in binary_file_re.findall(d):
         # we have to pull each binary file by hand as a fulltext,
@@ -239,7 +246,7 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
             # be better to do one file at a time and only do a
             # full fetch on files that had problems.
             os.chdir(old_cwd)
-            raise BadPatchApply()
+            raise BadPatchApply('patching failed')
         for x in changed.iterkeys():
             ui.status('M  %s\n' % x)
             files_touched.add(x)
@@ -255,17 +262,14 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
                     # I think this might be an underlying bug in svn -
                     # I get diffs of deleted symlinks even though I
                     # specifically said no deletes above.
-                    ui.status('Pulling whole rev because of a deleted'
-                              'symlink')
-                    raise BadPatchApply()
+                    raise BadPatchApply('deleted symlinked prevent patching')
             assert False, ('This should only happen on case-insensitive'
                            ' volumes.')
         elif patch_st == 1:
             # When converting Django, I saw fuzz on .po files that was
             # causing revisions to end up failing verification. If that
             # can be fixed, maybe this won't ever be reached.
-            ui.status('There was some fuzz, not using diff after all.')
-            raise BadPatchApply()
+            raise BadPatchApply('patching succeeded with fuzz')
     else:
         ui.status('Not using patch for %s, diff had no hunks.\n' %
                   r.revnum)
@@ -495,13 +499,9 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         try:
             files_touched, filectxfn = stupid_diff_branchrev(
                 ui, svn, hg_editor, b, r, parent_ha, our_tempdir)
-        except (core.SubversionException,
-                BadPatchApply,
-                svnwrap.SubversionRepoCanNotDiff), e:
-            if (hasattr(e, 'apr_err') and e.apr_err != 160013):
-                raise
+        except BadPatchApply, e:
             # Either this revision or the previous one does not exist.
-            ui.status("fetching entire rev previous rev does not exist.\n")
+            ui.status("fetching entire rev: %s.\n" % e.message)
             files_touched, filectxfn = stupid_fetch_branchrev(
                 svn, hg_editor, b, branches[b], r, parent_ha)
 
