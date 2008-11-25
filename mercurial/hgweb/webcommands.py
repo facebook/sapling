@@ -555,8 +555,12 @@ def filelog(web, req, tmpl):
                          "rename": webutil.renamelink(fctx),
                          "parent": webutil.siblings(fctx.parents()),
                          "child": webutil.siblings(fctx.children()),
-                         "desc": ctx.description()})
-
+                         "desc": ctx.description(),
+                         "tags": webutil.nodetagsdict(web.repo, ctx.node()),
+                         "branch": webutil.nodebranchnodefault(ctx),
+                         "inbranch": webutil.nodeinbranch(web.repo, ctx),
+                         "branches": webutil.nodebranchdict(web.repo, ctx)})
+                     
         if limit > 0:
             l = l[:limit]
 
