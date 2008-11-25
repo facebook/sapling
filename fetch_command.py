@@ -172,7 +172,7 @@ _*
    \- \*
 ''')
 
-def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
+def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx, tempdir):
     """Extract all 'branch' content at a given revision.
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
@@ -228,8 +228,8 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
             continue
         files_touched.add(f)
         data = ''
-        if f in hg_editor.repo[parentid]:
-            data = hg_editor.repo[parentid][f].data()
+        if f in parentctx:
+            data = parentctx[f].data()
         fp = opener(f, 'w')
         fp.write(data)
         fp.close()
@@ -254,11 +254,8 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
         # if this patch didn't apply right, fall back to exporting the
         # entire rev.
         if patch_st == -1:
-            parent_ctx = hg_editor.repo[parentid]
-            parent_manifest = parent_ctx.manifest()
             for fn in files_touched:
-                if (fn in parent_manifest and
-                    'l' in parent_ctx.filectx(fn).flags()):
+                if 'l' in parentctx.flags(fn):
                     # I think this might be an underlying bug in svn -
                     # I get diffs of deleted symlinks even though I
                     # specifically said no deletes above.
@@ -287,8 +284,8 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
         f = os.path.join(tempdir, m)
         if not os.path.exists(f):
             data = ''
-            if  m in hg_editor.repo[parentid]:
-                data = hg_editor.repo[parentid][m].data()
+            if  m in parentctx:
+                data = parentctx[m].data()
             fp = opener(m, 'w')
             fp.write(data)
             fp.close()
@@ -309,16 +306,15 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
     for p in r.paths:
         if p.startswith(diff_path) and r.paths[p].action == 'D':
             p2 = p[len(diff_path)+1:].strip('/')
-            if p2 in hg_editor.repo[parentid]:
+            if p2 in parentctx:
                 deleted_files.add(p2)
                 continue
             # If this isn't in the parent ctx, it must've been a dir
-            deleted_files.update([f for f in hg_editor.repo[parentid] 
-                                  if f.startswith(p2 + '/')])
+            deleted_files.update([f for f in parentctx if f.startswith(p2 + '/')])
     files_touched.update(deleted_files)
 
     copies = getcopies(svn, hg_editor, branch, diff_path, r, files_touched,
-                       parentid)
+                       parentctx)
 
     def filectxfn(repo, memctx, path):
         if path in deleted_files:
@@ -328,9 +324,7 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentid, tempdir):
                                       islink=True, isexec=False,
                                       copied=False)
         data = opener(path).read()
-        exe = exec_files.get(path, None)
-        if exe is None and path in hg_editor.repo[parentid]:
-            exe = 'x' in hg_editor.repo[parentid].filectx(path).flags()
+        exe = exec_files.get(path, 'x' in parentctx.flags(path))
         copied = copies.get(path)
         return context.memfilectx(path=path, data=data, islink=False,
                                   isexec=exe, copied=copied)
@@ -381,10 +375,10 @@ def makecopyfinder(r, branchpath, rootdir):
 
     return finder
 
-def getcopies(svn, hg_editor, branch, branchpath, r, files, parentid):
+def getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx):
     """Return a mapping {dest: source} for every file copied into r.
     """
-    if parentid == revlog.nullid:
+    if parentctx.node() == revlog.nullid:
         return {}
 
     # Extract svn copy information, group them by copy source.
@@ -402,7 +396,6 @@ def getcopies(svn, hg_editor, branch, branchpath, r, files, parentid):
         return {}
 
     # cache changeset contexts and map them to source svn revisions
-    parentctx = hg_editor.repo.changectx(parentid)
     ctxs = {}
     def getctx(svnrev):
         if svnrev in ctxs:
@@ -426,14 +419,13 @@ def getcopies(svn, hg_editor, branch, branchpath, r, files, parentid):
         hgcopies.update(copies)
     return hgcopies
 
-def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
+def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
     in the branch at the given revision, and 'filectxfn' is a memctx compatible
     callable to retrieve individual file information.
     """
-    parentctx = hg_editor.repo[parentid]
     kind = svn.checkpath(branchpath, r.revnum)
     if kind is None:
         # Branch does not exist at this revision. Get parent revision and
@@ -444,7 +436,7 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
         return files, filectxfn_rm
 
     files = []
-    if parentid == revlog.nullid:
+    if parentctx.node() == revlog.nullid:
         # Initial revision, fetch all files
         for path, kind in svn.list_files(branchpath, r.revnum):
             if kind == 'f':
@@ -475,7 +467,7 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
                 deleted = [f for f in parentctx if f.startswith(path)]
                 files += deleted
 
-    copies = getcopies(svn, hg_editor, branch, branchpath, r, files, parentid)
+    copies = getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx)
 
     def filectxfn(repo, memctx, path):
         data, mode = svn.get_file(branchpath + '/' + path, r.revnum)
@@ -495,15 +487,15 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         os.makedirs(temp_location)
     for b in branches:
         our_tempdir = tempfile.mkdtemp('svn_fetch_temp', dir=temp_location)
-        parent_ha = hg_editor.get_parent_revision(r.revnum, b)
+        parentctx = hg_editor.repo[hg_editor.get_parent_revision(r.revnum, b)]
         try:
             files_touched, filectxfn = stupid_diff_branchrev(
-                ui, svn, hg_editor, b, r, parent_ha, our_tempdir)
+                ui, svn, hg_editor, b, r, parentctx, our_tempdir)
         except BadPatchApply, e:
             # Either this revision or the previous one does not exist.
             ui.status("fetching entire rev: %s.\n" % e.message)
             files_touched, filectxfn = stupid_fetch_branchrev(
-                svn, hg_editor, b, branches[b], r, parent_ha)
+                svn, hg_editor, b, branches[b], r, parentctx)
 
         date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
         date += ' -0000'
@@ -512,13 +504,13 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             extra['branch'] = b
         if '' in files_touched:
             files_touched.remove('')
-        if parent_ha != node.nullid or files_touched:
+        if parentctx.node() != node.nullid or files_touched:
             # TODO(augie) remove this debug code? Or maybe it's sane to have it.
             for f in files_touched:
                 if f:
                     assert f[0] != '/'
             current_ctx = context.memctx(hg_editor.repo,
-                                         [parent_ha, revlog.nullid],
+                                         [parentctx.node(), revlog.nullid],
                                          r.message or '...',
                                          files_touched,
                                          filectxfn,
