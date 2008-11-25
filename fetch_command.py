@@ -474,17 +474,16 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             def filectxfn(repo, memctx, path):
                 if path in deleted_files:
                     raise IOError()
-                disk_path = os.path.join(our_tempdir, path)
                 if path in link_files:
                     return context.memfilectx(path=path, data=link_files[path],
                                               islink=True, isexec=False,
                                               copied=False)
-                fp = open(disk_path)
+                data = opener(path).read()
                 exe = exec_files.get(path, None)
                 if exe is None and path in hg_editor.repo[parent_ha]:
                     exe = 'x' in hg_editor.repo[parent_ha].filectx(path).flags()
                 copied = copies.get(path)
-                return context.memfilectx(path=path, data=fp.read(), islink=False,
+                return context.memfilectx(path=path, data=data, islink=False,
                                           isexec=exe, copied=copied)
         except (core.SubversionException,
                 BadPatchApply,
