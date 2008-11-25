@@ -340,8 +340,6 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         parent_rev, br_p = hg_editor.get_parent_svn_branch_and_rev(r.revnum, b)
         parent_ha = hg_editor.get_parent_revision(r.revnum, b)
         files_touched = set()
-        link_files = {}
-        exec_files = {}
         try:
             if br_p == b:
                 # letting patch handle binaries sounded
@@ -358,17 +356,13 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     raise BadPatchApply()
 
             our_tempdir = tempfile.mkdtemp('svn_fetch_temp', dir=temp_location)
+            opener = merc_util.opener(our_tempdir)
             for m in binary_file_re.findall(d):
                 # we have to pull each binary file by hand as a fulltext,
                 # which sucks but we've got no choice
-                file_path = os.path.join(our_tempdir, m)
                 files_touched.add(m)
                 try:
-                    try:
-                        os.makedirs(os.path.dirname(file_path))
-                    except OSError, e:
-                        pass
-                    f = open(file_path, 'w')
+                    f = opener(m, 'w')
                     f.write(svn.get_file(diff_path+'/'+m, r.revnum)[0])
                     f.close()
                 except IOError:
@@ -376,25 +370,18 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             d2 = empty_file_patch_wont_make_re.sub('', d)
             d2 = property_exec_set_re.sub('', d2)
             d2 = property_exec_removed_re.sub('', d2)
-            old_cwd = os.getcwd()
-            os.chdir(our_tempdir)
             for f in any_file_re.findall(d):
-                files_touched.add(f)
-                # this check is here because modified binary files will get
-                # created before here.
-                if os.path.exists(f):
+                if f in files_touched:
+                    # this check is here because modified binary files will get
+                    # created before here.
                     continue
-                dn = os.path.dirname(f)
-                if dn and not os.path.exists(dn):
-                    os.makedirs(dn)
-                if f in hg_editor.repo[parent_ha].manifest():
-                    data = hg_editor.repo[parent_ha].filectx(f).data()
-                    fi = open(f, 'w')
-                    fi.write(data)
-                    fi.close()
-                else:
-                    open(f, 'w').close()
-            os.chdir(old_cwd)
+                files_touched.add(f)
+                data = ''
+                if f in hg_editor.repo[parent_ha]:
+                    data = hg_editor.repo[parent_ha][f].data()
+                fp = opener(f, 'w')
+                fp.write(data)
+                fp.close()
             if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
                 old_cwd = os.getcwd()
                 os.chdir(our_tempdir)
@@ -442,36 +429,22 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             # we create the files if they don't exist here because we know
             # that we'll never have diff info for a deleted file, so if the
             # property is set, we should force the file to exist no matter what.
+            exec_files = {}
             for m in property_exec_removed_re.findall(d):
-                f = os.path.join(our_tempdir, m)
-                if not os.path.exists(f):
-                    d = os.path.dirname(f)
-                    if not os.path.exists(d):
-                        os.makedirs(d)
-                    if not m in hg_editor.repo[parent_ha].manifest():
-                        open(f, 'w').close()
-                    else:
-                        data = hg_editor.repo[parent_ha].filectx(m).data()
-                        fp = open(f, 'w')
-                        fp.write(data)
-                        fp.close()
                 exec_files[m] = False
-                files_touched.add(m)
             for m in property_exec_set_re.findall(d):
+                exec_files[m] = True
+            for m in exec_files:
+                files_touched.add(m)
                 f = os.path.join(our_tempdir, m)
                 if not os.path.exists(f):
-                    d = os.path.dirname(f)
-                    if not os.path.exists(d):
-                        os.makedirs(d)
-                    if m not in hg_editor.repo[parent_ha].manifest():
-                        open(f, 'w').close()
-                    else:
-                        data = hg_editor.repo[parent_ha].filectx(m).data()
-                        fp = open(f, 'w')
-                        fp.write(data)
-                        fp.close()
-                exec_files[m] = True
-                files_touched.add(m)
+                    data = ''
+                    if  m in hg_editor.repo[parent_ha]:
+                        data = hg_editor.repo[parent_ha][m].data()
+                    fp = opener(m, 'w')
+                    fp.write(data)
+                    fp.close()
+            link_files = {}
             for m in property_special_set_re.findall(d):
                 # TODO(augie) when a symlink is removed, patching will fail.
                 # We're seeing that above - there's gotta be a better
