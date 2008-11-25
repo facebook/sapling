@@ -402,6 +402,7 @@ def patchbomb(ui, repo, *revs, **opts):
             m['Message-Id'] = genmsgid('patchbomb')
         if parent:
             m['In-Reply-To'] = parent
+            m['References'] = parent
         else:
             parent = m['Message-Id']
         m['Date'] = util.datestr(start_time, "%a, %d %b %Y %H:%M:%S %1%2")
