@@ -235,7 +235,7 @@ files, or words in the commit message</span>
 <div class="main">
 
 <h2><a href="/">test</a></h2>
-<h3>changeset 0:2ef0ac749a14 <span class="tag">1.0</span> </h3>
+<h3>changeset 0:2ef0ac749a14  <span class="tag">1.0</span> </h3>
 
 <form class="search" action="/log">
 

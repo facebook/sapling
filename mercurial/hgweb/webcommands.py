@@ -227,6 +227,7 @@ def shortlog(web, req, tmpl):
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
+    showbranch = webutil.nodebranchnodefault(ctx)
     parents = ctx.parents()
 
     files = []
@@ -246,6 +247,7 @@ def changeset(web, req, tmpl):
                 parent=webutil.siblings(parents),
                 child=webutil.siblings(ctx.children()),
                 changesettag=showtags,
+                changesetbranch=showbranch,
                 author=ctx.user(),
                 desc=ctx.description(),
                 date=ctx.date(),

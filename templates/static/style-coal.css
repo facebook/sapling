@@ -131,6 +131,10 @@ ul#graphnodes .branchhead {
   vertical-align: baseline;
 }
 
+h3 .branchname {
+  font-size: 80%;
+}
+
 /* Common */
 pre { margin: 0; }
 
