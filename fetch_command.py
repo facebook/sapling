@@ -394,8 +394,6 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     fi.close()
                 else:
                     open(f, 'w').close()
-                if f.startswith(our_tempdir):
-                    f = f[len(our_tempdir)+1:]
             os.chdir(old_cwd)
             if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
                 old_cwd = os.getcwd()
