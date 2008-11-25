@@ -348,8 +348,8 @@ def demo(ui, repo, *args, **opts):
     ui.note(_('unhooked all commit hooks\n'))
     ui.note('hg -R "%s" ci -m "%s"\n' % (tmpdir, msg))
     repo.commit(text=msg)
-    format = ui.verbose and ' in %s' % path or ''
-    demostatus('%s keywords expanded%s' % (kwstatus, format))
+    fmt = ui.verbose and ' in %s' % path or ''
+    demostatus('%s keywords expanded%s' % (kwstatus, fmt))
     ui.write(repo.wread(fn))
     ui.debug(_('\nremoving temporary repo %s\n') % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
@@ -382,9 +382,9 @@ def files(ui, repo, *pats, **opts):
     if opts.get('all') or opts.get('ignore'):
         kwfstats += (('I', [f for f in files if f not in kwfiles]),)
     for char, filenames in kwfstats:
-        format = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
+        fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
         for f in filenames:
-            ui.write(format % repo.pathto(f, cwd))
+            ui.write(fmt % repo.pathto(f, cwd))
 
 def shrink(ui, repo, *pats, **opts):
     '''revert expanded keywords in working directory
