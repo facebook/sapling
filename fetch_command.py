@@ -328,7 +328,6 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentid):
     return files, filectxfn
 
 def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
-    delete_all_files = False
     # this server fails at replay
     branches = hg_editor.branches_in_paths(r.paths)
     temp_location = os.path.join(hg_editor.path, '.hg', 'svn', 'temp')
@@ -481,10 +480,6 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                                    if f.startswith(p2 + '/')]
                         for d in d_files:
                             files_touched.add(d)
-            if delete_all_files:
-                for p in hg_editor.repo[parent_ha].manifest().iterkeys():
-                    if p:
-                        files_touched.add(p)
 
             copies = getcopies(svn, hg_editor, b, branches[b], r, files_touched,
                                parent_ha)
