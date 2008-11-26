@@ -21,11 +21,12 @@
 This extension modifies the status command to add color to its output to
 reflect file status, the qseries command to add color to reflect patch status
 (applied, unapplied, missing), and to diff-related commands to highlight
-additions, removals, diff headers, and trailing whitespace.  Other effects in
-addition to color, like bold and underlined text, are also available.
-Effects are rendered with the ECMA-48 SGR control function (aka ANSI escape
-codes).  This module also provides the render_text function, which can be
-used to add effects to any text.
+additions, removals, diff headers, and trailing whitespace.
+
+Other effects in addition to color, like bold and underlined text, are also
+available.  Effects are rendered with the ECMA-48 SGR control function (aka
+ANSI escape codes).  This module also provides the render_text function,
+which can be used to add effects to any text.
 
 To enable this extension, add this to your .hgrc file:
 [extensions]
@@ -57,7 +58,7 @@ diff.hunk = magenta
 diff.deleted = red
 diff.inserted = green
 diff.changed = white
-diff.whitespace = bold red_background
+diff.trailingwhitespace = bold red_background
 '''
 
 import os, re, sys
@@ -176,11 +177,17 @@ def colorwrap(orig, s):
     '''wrap ui.write for colored diff output'''
     lines = s.split('\n')
     for i, line in enumerate(lines):
+        stripline = line
+        if line and line[0] in '+-':
+            # highlight trailing whitespace, but only in changed lines
+            stripline = line.rstrip()
         for prefix, style in _diff_prefixes:
-            if line.startswith(prefix):
-                effects = _diff_effects[style]
-                lines[i] = render_effects(line, *_diff_effects[style])
+            if stripline.startswith(prefix):
+                lines[i] = render_effects(stripline, *_diff_effects[style])
                 break
+        if line != stripline:
+            lines[i] += render_effects(
+                line[len(stripline):], *_diff_effects['trailingwhitespace'])
     orig('\n'.join(lines))
 
 def colorshowpatch(orig, self, node):
@@ -217,7 +224,8 @@ _diff_effects = {'diffline': ('bold',),
                  'hunk': ('magenta',),
                  'deleted': ('red',),
                  'inserted': ('green',),
-                 'changed': ('white',)}
+                 'changed': ('white',),
+                 'trailingwhitespace': ('bold', 'red_background'),}
 
 def uisetup(ui):
     '''Initialize the extension.'''
