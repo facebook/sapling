@@ -51,7 +51,7 @@ qseries.missing = red bold
 
 import re, sys
 
-from mercurial import commands, cmdutil, extensions
+from mercurial import commands, extensions
 from mercurial.i18n import _
 
 # start and stop parameters for effects
@@ -105,7 +105,7 @@ def colorstatus(orig, ui, repo, *pats, **opts):
         # output with status abbreviations
         opts['no_status'] = False
         ui.pushbuffer()
-        statusfunc(ui, repo, *pats, **opts)
+        orig(ui, repo, *pats, **opts)
         # filter out empty strings
         lines_with_status = [ line for
                               line in ui.popbuffer().split(delimiter) if line ]
