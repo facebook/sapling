@@ -96,19 +96,20 @@ def hook(ui, repo, name, throw=False, **args):
         oldstdout = os.dup(sys.__stdout__.fileno())
         os.dup2(sys.__stderr__.fileno(), sys.__stdout__.fileno())
 
-    for hname, cmd in util.sort(ui.configitems('hooks')):
-        if hname.split('.')[0] != name or not cmd:
-            continue
-        if callable(cmd):
-            r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
-        elif cmd.startswith('python:'):
-            r = _pythonhook(ui, repo, name, hname, cmd[7:].strip(),
-                            args, throw) or r
-        else:
-            r = _exthook(ui, repo, hname, cmd, args, throw) or r
-
-    if _redirect:
-        os.dup2(oldstdout, sys.__stdout__.fileno())
-        os.close(oldstdout)
+    try:
+        for hname, cmd in util.sort(ui.configitems('hooks')):
+            if hname.split('.')[0] != name or not cmd:
+                continue
+            if callable(cmd):
+                r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
+            elif cmd.startswith('python:'):
+                r = _pythonhook(ui, repo, name, hname, cmd[7:].strip(),
+                                args, throw) or r
+            else:
+                r = _exthook(ui, repo, hname, cmd, args, throw) or r
+    finally:
+        if _redirect:
+            os.dup2(oldstdout, sys.__stdout__.fileno())
+            os.close(oldstdout)
 
     return r
