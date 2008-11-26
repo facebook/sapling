@@ -31,7 +31,7 @@ echo % should give a 404 - file does not exist
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/bork?style=raw'
 
 echo % stop and restart
-kill `cat hg.pid`
+"$TESTDIR/killdaemons.py"
 hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log
 cat hg.pid >> $DAEMON_PIDS
 # Test the access/error files are opened in append mode
