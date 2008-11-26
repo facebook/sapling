@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.i18n import _
-from mercurial import osutil, ui, util
+from mercurial import osutil, util
 import common
 import errno, os, select, socket, stat, struct, sys, tempfile, time
 

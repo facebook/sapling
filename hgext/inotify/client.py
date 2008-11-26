@@ -7,7 +7,6 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from mercurial.i18n import _
-from mercurial import ui
 import common
 import os, socket, struct
 
