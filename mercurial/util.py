@@ -607,7 +607,7 @@ def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None, dflt_pat='glo
     if inc:
         dummy, inckinds, dummy = normalizepats(inc, 'glob')
         incmatch = matchfn(inckinds, '(?:/|$)')
-    excmatch = lambda fn: False
+    excmatch = never
     if exc:
         dummy, exckinds, dummy = normalizepats(exc, 'glob')
         excmatch = matchfn(exckinds, '(?:/|$)')
