@@ -94,23 +94,18 @@ def colorstatus(orig, ui, repo, *pats, **opts):
 
     delimiter = opts['print0'] and '\0' or '\n'
 
-    # run status and capture it's output
+    nostatus = opts.get('no_status')
+    opts['no_status'] = False
+    # run status and capture its output
     ui.pushbuffer()
     retval = orig(ui, repo, *pats, **opts)
     # filter out empty strings
-    lines = [ line for line in ui.popbuffer().split(delimiter) if line ]
+    lines_with_status = [ line for line in ui.popbuffer().split(delimiter) if line ]
 
-    if opts['no_status']:
-        # if --no-status, run the command again without that option to get
-        # output with status abbreviations
-        opts['no_status'] = False
-        ui.pushbuffer()
-        orig(ui, repo, *pats, **opts)
-        # filter out empty strings
-        lines_with_status = [ line for
-                              line in ui.popbuffer().split(delimiter) if line ]
+    if nostatus:
+        lines = [l[2:] for l in lines_with_status]
     else:
-        lines_with_status = lines
+        lines = lines_with_status
 
     # apply color to output and display it
     for i in xrange(0, len(lines)):
