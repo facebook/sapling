@@ -49,7 +49,7 @@ qseries.unapplied = black bold
 qseries.missing = red bold
 '''
 
-import re, sys
+import os, re, sys
 
 from mercurial import commands, extensions
 from mercurial.i18n import _
@@ -113,7 +113,7 @@ def colorstatus(orig, ui, repo, *pats, **opts):
         effects = _status_effects[status]
         if effects:
             lines[i] = render_effects(lines[i], *effects)
-        sys.stdout.write(lines[i] + delimiter)
+        ui.write(lines[i] + delimiter)
     return retval
 
 _status_abbreviations = { 'M': 'modified',
@@ -154,7 +154,7 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
             effects = _patch_effects['applied']
         else:
             effects = _patch_effects['unapplied']
-        sys.stdout.write(render_effects(patch, *effects) + '\n')
+        ui.write(render_effects(patch, *effects) + '\n')
     return retval
 
 _patch_effects = { 'applied': ('blue', 'bold', 'underline'),
@@ -171,13 +171,22 @@ def uisetup(ui):
 
 def _setupcmd(ui, cmd, table, func, effectsmap):
     '''patch in command to command table and load effect map'''
-    def nocolor(orig, *args, **kwargs):
-        if kwargs['no_color']:
-            return orig(*args, **kwargs)
-        return func(orig, *args, **kwargs)
+    def nocolor(orig, *args, **opts):
+
+        if (opts['no_color'] or opts['color'] == 'never' or
+            (opts['color'] == 'auto' and (os.environ.get('TERM') == 'dumb'
+                                          or not sys.__stdout__.isatty()))):
+            return orig(*args, **opts)
+
+        if func is not None:
+            return func(orig, *args, **opts)
+        return orig(*args, **opts)
 
     entry = extensions.wrapcommand(table, cmd, nocolor)
-    entry[1].append(('', 'no-color', None, _("don't colorize output")))
+    entry[1].extend([
+        ('', 'color', 'auto', _("when to colorize (always, auto, or never)")),
+        ('', 'no-color', None, _("don't colorize output")),
+    ])
 
     for status in effectsmap:
         effects = ui.config('color', cmd + '.' + status)
