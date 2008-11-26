@@ -1583,7 +1583,7 @@ class queue:
                         text = sys.stdin.read()
                     else:
                         text = url.open(self.ui, filename).read()
-                except IOError:
+                except (OSError, IOError):
                     raise util.Abort(_("unable to read %s") % filename)
                 if not patchname:
                     patchname = normname(os.path.basename(filename))

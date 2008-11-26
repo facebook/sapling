@@ -1,5 +1,5 @@
 % qimport non-existing-file
-abort: No such file or directory:
+abort: unable to read non-existing-file
 % import URL
 adding url.diff to series file
 url.diff
