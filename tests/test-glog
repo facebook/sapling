@@ -70,6 +70,8 @@
 # |/
 # o  (0) root
 
+"$TESTDIR/hghave" no-outer-repo || exit 80
+
 set -e
 
 commit()

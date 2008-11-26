@@ -154,6 +154,9 @@ def has_pygments():
     except ImportError:
         return False
 
+def has_outer_repo():
+    return matchoutput('hg root 2>&1', r'')
+
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
     "bzr": (has_bzr, "Canonical's Bazaar client"),
@@ -169,6 +172,7 @@ checks = {
     "inotify": (has_inotify, "inotify extension support"),
     "lsprof": (has_lsprof, "python lsprof module"),
     "mtn": (has_mtn, "monotone client (> 0.31)"),
+    "outer-repo": (has_outer_repo, "outer repo"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),

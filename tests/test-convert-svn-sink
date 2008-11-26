@@ -1,6 +1,6 @@
 #!/bin/sh
 
-"$TESTDIR/hghave" svn svn-bindings || exit 80
+"$TESTDIR/hghave" svn svn-bindings no-outer-repo || exit 80
 
 fixpath()
 {

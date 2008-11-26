@@ -1,6 +1,8 @@
 #!/bin/sh
 # test command parsing and dispatch
 
+"$TESTDIR/hghave" no-outer-repo || exit 80
+
 hg init a
 cd a
 echo a > a
