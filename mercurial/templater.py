@@ -137,7 +137,7 @@ class templater(object):
             stream = util.increasingchunks(stream, min=self.minchunk,
                                            max=self.maxchunk)
         return stream
-        
+
     def expand(self, t, **map):
         '''Perform expansion. t is name of map element to expand. map contains
         added elements for use during expansion. Is a generator.'''

@@ -53,7 +53,7 @@ def reposetup(ui, repo):
         def status(self, match, ignored, clean, unknown=True):
             files = match.files()
             if '.' in files:
-                files = [] 
+                files = []
             try:
                 if not ignored and not self.inotifyserver:
                     result = client.query(ui, repo, files, match, False,

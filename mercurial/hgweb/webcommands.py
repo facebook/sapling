@@ -562,7 +562,7 @@ def filelog(web, req, tmpl):
                          "branch": webutil.nodebranchnodefault(ctx),
                          "inbranch": webutil.nodeinbranch(web.repo, ctx),
                          "branches": webutil.nodebranchdict(web.repo, ctx)})
-                     
+
         if limit > 0:
             l = l[:limit]
 
