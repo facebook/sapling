@@ -3,8 +3,15 @@
 # Build a Mercurial RPM in place.
 # Known to work on:
 # - Fedora 9
+# - Fedora 10
 #
 # Bryan O'Sullivan <bos@serpentine.com>
+
+if hg --version > /dev/null 2>&1; then :
+else
+    echo 'hg command not available!' 1>&2
+    exit 1
+fi
 
 root="`hg root 2>/dev/null`"
 specfile=contrib/mercurial.spec
