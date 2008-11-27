@@ -160,7 +160,7 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
         if opts.showfunc:
             # walk backwards from the start of the context
             # to find a line starting with an alphanumeric char.
-            for x in xrange(astart, -1, -1):
+            for x in xrange(astart - 1, -1, -1):
                 t = l1[x].rstrip()
                 if funcre.match(t):
                     func = ' ' + t[:40]

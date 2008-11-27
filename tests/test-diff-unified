@@ -44,6 +44,15 @@ hg diff --nodates -U 1
 echo '% invalid diff.unified'
 hg --config diff.unified=foo diff --nodates
 
+echo % test off-by-one error with diff -p
+hg init diffp
+cd diffp
+echo a > a
+hg ci -Ama
+rm a
+echo b > a
+echo a >> a
+echo c >> a
+hg diff -U0 -p
+
 exit 0
-
-
