@@ -103,18 +103,18 @@ class convert_cvs(converter_source):
                             if maxrev and int(id) > maxrev:
                                 # ignore everything
                                 state = 3
-                        elif l.startswith("Date"):
+                        elif l.startswith("Date:"):
                             date = util.parsedate(l[6:-1], ["%Y/%m/%d %H:%M:%S"])
                             date = util.datestr(date)
-                        elif l.startswith("Branch"):
+                        elif l.startswith("Branch:"):
                             branch = l[8:-1]
                             self.parent[id] = self.lastbranch.get(branch, 'bad')
                             self.lastbranch[branch] = id
-                        elif l.startswith("Ancestor branch"):
+                        elif l.startswith("Ancestor branch:"):
                             ancestor = l[17:-1]
                             # figure out the parent later
                             self.parent[id] = self.lastbranch[ancestor]
-                        elif l.startswith("Author"):
+                        elif l.startswith("Author:"):
                             author = self.recode(l[8:-1])
                         elif l.startswith("Tag:") or l.startswith("Tags:"):
                             t = l[l.index(':')+1:]
