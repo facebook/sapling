@@ -47,3 +47,12 @@ diff -r cf9f4ba66af2 a
  a
 % invalid diff.unified
 abort: diff context lines count must be an integer, not 'foo'
+% test off-by-one error with diff -p
+adding a
+diff -r cb9a9f314b8b a
+--- a/a	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Nov 27 17:46:15 2008 +0000
+@@ -1,0 +1,1 @@
++b
+@@ -2,0 +3,1 @@ a
++c
