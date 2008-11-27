@@ -53,6 +53,6 @@ rm a
 echo b > a
 echo a >> a
 echo c >> a
-hg diff -U0 -p
+hg diff -U0 -p --nodates
 
 exit 0
