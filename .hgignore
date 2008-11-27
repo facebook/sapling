@@ -30,3 +30,4 @@ cscope.*
 
 syntax: regexp
 ^\.pc/
+^\.(pydev)?project
