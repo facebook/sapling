@@ -20,7 +20,7 @@ echo % diff removed file
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/a'
 
 echo % set up hgweb with git diffs
-kill `cat hg.pid`
+"$TESTDIR/killdaemons.py"
 hg serve --config 'diff.git=1' -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 

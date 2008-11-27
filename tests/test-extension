@@ -1,6 +1,8 @@
 #!/bin/sh
 # Test basic extension support
 
+"$TESTDIR/hghave" no-outer-repo || exit 80
+
 cat > foobar.py <<EOF
 import os
 from mercurial import commands
