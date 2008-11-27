@@ -201,20 +201,22 @@ class convert_cvs(converter_source):
 
                 if not passw:
                     passw = "A"
-                    pf = open(os.path.expanduser("~/.cvspass"))
-                    for line in pf.read().splitlines():
-                        part1, part2 = line.split(' ', 1)
-                        if part1 == '/1':
-                            # /1 :pserver:user@example.com:2401/cvsroot/foo Ah<Z
-                            part1, part2 = part2.split(' ', 1)
-                            format = format1
-                        else:
-                            # :pserver:user@example.com:/cvsroot/foo Ah<Z
-                            format = format0
-                        if part1 == format:
-                            passw = part2
-                            break
-                    pf.close()
+                    cvspass = os.path.expanduser("~/.cvspass")
+                    if os.path.exists(cvspass):
+                        pf = open(cvspass)
+                        for line in pf.read().splitlines():
+                            part1, part2 = line.split(' ', 1)
+                            if part1 == '/1':
+                                # /1 :pserver:user@example.com:2401/cvsroot/foo Ah<Z
+                                part1, part2 = part2.split(' ', 1)
+                                format = format1
+                            else:
+                                # :pserver:user@example.com:/cvsroot/foo Ah<Z
+                                format = format0
+                            if part1 == format:
+                                passw = part2
+                                break
+                        pf.close()
 
                 sck = socket.socket()
                 sck.connect((serv, port))
