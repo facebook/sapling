@@ -435,7 +435,7 @@ def gincoming(ui, repo, source="default", **opts):
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
         revdag = incoming_revs(other, chlist, opts)
-        other_parents = other.dirstate.parents()
+        other_parents = []
         displayer = show_changeset(ui, other, opts, buffered=True)
         def graphabledag():
             for (ctx, parents) in revdag:

@@ -13,7 +13,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import hex, nullid, short
 from i18n import _
 import changegroup, util, os, struct, bz2, zlib, tempfile, shutil, mdiff
-import repo, localrepo, changelog, manifest, filelog, revlog
+import repo, localrepo, changelog, manifest, filelog, revlog, context
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundlefile,
@@ -213,19 +213,20 @@ class bundlerepository(localrepo.localrepository):
             self.changelog = bundlechangelog(self.sopener, self.bundlefile)
             self.manstart = self.bundlefile.tell()
             return self.changelog
-        if name == 'manifest':
+        elif name == 'manifest':
             self.bundlefile.seek(self.manstart)
             self.manifest = bundlemanifest(self.sopener, self.bundlefile,
                                            self.changelog.rev)
             self.filestart = self.bundlefile.tell()
             return self.manifest
-        if name == 'manstart':
+        elif name == 'manstart':
             self.changelog
             return self.manstart
-        if name == 'filestart':
+        elif name == 'filestart':
             self.manifest
             return self.filestart
-        return localrepo.localrepository.__getattr__(self, name)
+        else:
+            raise AttributeError(name)
 
     def url(self):
         return self._url
@@ -266,6 +267,9 @@ class bundlerepository(localrepo.localrepository):
 
     def cancopy(self):
         return False
+
+    def getcwd(self):
+        return os.getcwd() # always outside the repo
 
 def instance(ui, path, create):
     if create:

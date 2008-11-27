@@ -982,7 +982,7 @@ class localrepository(repo.repository):
         else:
             ctx2 = self[node2]
 
-        working = ctx2 == self[None]
+        working = ctx2.rev() is None
         parentworking = working and ctx1 == self['.']
         match = match or match_.always(self.root, self.getcwd())
         listignored, listclean, listunknown = ignored, clean, unknown
