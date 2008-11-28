@@ -43,4 +43,6 @@ Pull new revisions into an already-converted repo::
 
  $ hg svn pull
 
-For more information, see 'hg svn help' while in a converted repo.
+For more information, see 'hg help svn' while in a converted repo.
+
+
