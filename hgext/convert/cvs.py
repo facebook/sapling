@@ -1,6 +1,6 @@
 # CVS conversion code inspired by hg-cvs-import and git-cvsimport
 
-import os, locale, re, socket
+import os, locale, re, socket, errno
 from cStringIO import StringIO
 from mercurial import util
 from mercurial.i18n import _
@@ -202,7 +202,7 @@ class convert_cvs(converter_source):
                 if not passw:
                     passw = "A"
                     cvspass = os.path.expanduser("~/.cvspass")
-                    if os.path.exists(cvspass):
+                    try:
                         pf = open(cvspass)
                         for line in pf.read().splitlines():
                             part1, part2 = line.split(' ', 1)
@@ -217,6 +217,11 @@ class convert_cvs(converter_source):
                                 passw = part2
                                 break
                         pf.close()
+                    except IOError, inst:
+                        if inst.errno != errno.ENOENT:
+                            if not getattr(inst, 'filename', None):
+                                inst.filename = cvspass
+                            raise
 
                 sck = socket.socket()
                 sck.connect((serv, port))
