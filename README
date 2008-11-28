@@ -37,6 +37,8 @@ Real example::
 
  $ hg svnclone http://python-nose.googlecode.com/svn nose-hg
 
+Note, you should pull from the root subversion directory, not specific folders (such as trunk).
+
 Pull new revisions into an already-converted repo::
 
  $ hg svn pull
