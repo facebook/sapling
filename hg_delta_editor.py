@@ -489,7 +489,8 @@ class HgChangeReceiver(delta.Editor):
     @stash_exception_on_self
     def open_file(self, path, parent_baton, base_revision, p=None):
         self.current_file = 'foobaz'
-        if self._is_path_valid(path):
+        fpath, branch = self._path_and_branch_for_path(path)
+        if fpath:
             self.current_file = path
             self.ui.status('M %s\n' % path)
             if base_revision != -1:
@@ -529,8 +530,6 @@ class HgChangeReceiver(delta.Editor):
         self.base_revision = None
         if path in self.deleted_files:
             del self.deleted_files[path]
-        if not self._is_path_valid(path):
-            return
         fpath, branch = self._path_and_branch_for_path(path)
         if not fpath:
             return

@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: ec581cb1-163d-4e59-b0b6-af7afd6f1624
+UUID: 20b2173d-0f26-4070-9891-00196be06b32
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-11-25T22:20:33.360252Z
+2008-11-25T23:08:28.726784Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-25T22:20:33.498908Z
+2008-11-25T23:08:28.798249Z
 PROPS-END
 
 Node-path: branches
@@ -63,7 +63,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-25T22:20:34.165016Z
+2008-11-25T23:08:29.163194Z
 PROPS-END
 
 Node-path: trunk/a
@@ -93,7 +93,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-25T22:20:35.178215Z
+2008-11-25T23:08:30.176855Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -132,7 +132,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-25T22:20:37.174989Z
+2008-11-25T23:08:32.174817Z
 PROPS-END
 
 Node-path: branches/branch2
@@ -185,7 +185,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-25T22:20:38.167521Z
+2008-11-25T23:08:33.166454Z
 PROPS-END
 
 Node-path: branches/c
@@ -197,6 +197,35 @@ Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
 Content-length: 12
 
 PROPS-END
+c
+
+
+Revision-number: 6
+Prop-content-length: 109
+Content-length: 109
+
+K 7
+svn:log
+V 8
+change c
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-25T23:08:34.144541Z
+PROPS-END
+
+Node-path: branches/c
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 63fad9092ad37713ebe26b3193f89c41
+Content-length: 4
+
+c
 c
 
 

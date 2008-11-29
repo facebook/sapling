@@ -423,15 +423,6 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
     in the branch at the given revision, and 'filectxfn' is a memctx compatible
     callable to retrieve individual file information.
     """
-    kind = svn.checkpath(branchpath, r.revnum)
-    if kind != 'd':
-        # Branch does not exist at this revision. Get parent revision and
-        # remove everything.
-        files = parentctx.manifest().keys()
-        def filectxfn_rm(repo, memctx, path):
-            raise IOError()
-        return files, filectxfn_rm
-
     files = []
     if parentctx.node() == revlog.nullid:
         # Initial revision, fetch all files
@@ -485,14 +476,22 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
     for b in branches:
         our_tempdir = tempfile.mkdtemp('svn_fetch_temp', dir=temp_location)
         parentctx = hg_editor.repo[hg_editor.get_parent_revision(r.revnum, b)]
-        try:
-            files_touched, filectxfn = stupid_diff_branchrev(
-                ui, svn, hg_editor, b, r, parentctx, our_tempdir)
-        except BadPatchApply, e:
-            # Either this revision or the previous one does not exist.
-            ui.status("fetching entire rev: %s.\n" % e.message)
-            files_touched, filectxfn = stupid_fetch_branchrev(
-                svn, hg_editor, b, branches[b], r, parentctx)
+        kind = svn.checkpath(branches[b], r.revnum)
+        if kind != 'd':
+            # Branch does not exist at this revision. Get parent revision and
+            # remove everything.
+            files_touched = parentctx.manifest().keys()
+            def filectxfn(repo, memctx, path):
+                raise IOError()
+        else:
+            try:            
+                files_touched, filectxfn = stupid_diff_branchrev(
+                    ui, svn, hg_editor, b, r, parentctx, our_tempdir)
+            except BadPatchApply, e:
+                # Either this revision or the previous one does not exist.
+                ui.status("fetching entire rev: %s.\n" % e.message)
+                files_touched, filectxfn = stupid_fetch_branchrev(
+                    svn, hg_editor, b, branches[b], r, parentctx)
 
         date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
         date += ' -0000'

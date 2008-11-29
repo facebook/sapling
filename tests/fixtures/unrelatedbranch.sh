@@ -37,6 +37,9 @@ svn ci -m "add b to branch2"
 echo c > c
 svn add c
 svn ci -m "add c in branches/"
+# Even update it
+echo c >> c
+svn ci -m "change c"
 cd ../..
 
 svnadmin dump testrepo > ../unrelatedbranch.svndump
