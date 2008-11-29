@@ -147,8 +147,8 @@ class HgChangeReceiver(delta.Editor):
         '''
         branches = {}
         for p in paths:
-            if self._is_path_valid(p):
-                junk, branch, branchpath = self._split_branch_path(p)
+            relpath, branch, branchpath = self._split_branch_path(p)
+            if relpath is not None:
                 branches[branch] = branchpath
         return branches
 
@@ -170,12 +170,12 @@ class HgChangeReceiver(delta.Editor):
         elif path.startswith('branches/'):
             p = path[len('branches/'):]
             br = p.split('/')[0]
-            p = p[len(br)+1:]
-            if p and p[0] == '/':
-                p = p[1:]
-            return p, br, 'branches/' + br
+            if br:
+                p = p[len(br)+1:]
+                if p and p[0] == '/':
+                    p = p[1:]
+                return p, br, 'branches/' + br
         return None, None, None
-        raise Exception,'Things went boom: ' + path
 
     def set_current_rev(self, rev):
         '''Set the revision we're currently converting.
@@ -202,13 +202,7 @@ class HgChangeReceiver(delta.Editor):
         return path
 
     def _is_path_valid(self, path):
-        path = self._normalize_path(path)
-        if path.startswith('trunk'):
-            return True
-        elif path.startswith('branches/'):
-            br = path.split('/')[1]
-            return len(br) > 0
-        return False
+        return self._split_branch_path(path)[0] is not None
 
     def _is_path_tag(self, path):
         """If path represents the path to a tag, returns the tag name.
@@ -262,8 +256,8 @@ class HgChangeReceiver(delta.Editor):
         tags_to_delete = set()
         branches_to_delete = set()
         for p in paths:
-            if self._is_path_valid(p):
-                fi, br = self._path_and_branch_for_path(p)
+            fi, br = self._path_and_branch_for_path(p)
+            if fi is not None:
                 if fi == '' and br not in self.branches:
                     src_p = paths[p].copyfrom_path
                     src_rev = paths[p].copyfrom_rev
@@ -280,12 +274,12 @@ class HgChangeReceiver(delta.Editor):
                         # this is a branch created from a tag. Note that this
                         # really does happen (see Django)
                         src_branch, src_rev = self.tags[src_tag]
-                        added_branches[br] = (src_branch, src_rev,
-                                              revision.revnum)
                     else:
                         # Not from a tag, and from a valid repo path
                         (src_p,
                         src_branch) = self._path_and_branch_for_path(src_p)
+                        if src_p is None:
+                            continue
                     added_branches[br] = src_branch, src_rev, revision.revnum
                 elif fi == '' and br in self.branches:
                     br2 = br or 'default'
@@ -303,9 +297,8 @@ class HgChangeReceiver(delta.Editor):
                 # if you commit to a tag, I'm calling you stupid and ignoring
                 # you.
                 if src_p is not None and src_rev is not None:
-                    if self._is_path_valid(src_p):
-                        file, branch = self._path_and_branch_for_path(src_p)
-                    else:
+                    file, branch = self._path_and_branch_for_path(src_p)
+                    if file is None:
                         # some crazy people make tags from other tags
                         file = ''
                         from_tag = self._is_path_tag(src_p)
@@ -468,8 +461,8 @@ class HgChangeReceiver(delta.Editor):
 
     @stash_exception_on_self
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
-        if self._is_path_valid(path):
-            br_path, branch = self._path_and_branch_for_path(path)
+        br_path, branch = self._path_and_branch_for_path(path)
+        if br_path is not None:
             ha = self.get_parent_revision(self.current_rev.revnum, branch)
             if ha == revlog.nullid:
                 return
@@ -571,13 +564,13 @@ class HgChangeReceiver(delta.Editor):
     @stash_exception_on_self
     def add_directory(self, path, parent_baton, copyfrom_path,
                       copyfrom_revision, dir_pool=None):
-        if self._is_path_valid(path):
-            junk, branch = self._path_and_branch_for_path(path)
-            if not copyfrom_path and not junk:
+        br_path, branch = self._path_and_branch_for_path(path)
+        if br_path is not None:
+            if not copyfrom_path and not br_path:
                 self.commit_branches_empty[branch] = True
             else:
                 self.commit_branches_empty[branch] = False
-        if not self._is_path_valid(path) or not copyfrom_path:
+        if br_path is None or not copyfrom_path:
             return
         if copyfrom_path:
             tag = self._is_path_tag(copyfrom_path)
@@ -633,10 +626,9 @@ class HgChangeReceiver(delta.Editor):
 
     @stash_exception_on_self
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
-        if self._is_path_valid(path):
-            p_, branch = self._path_and_branch_for_path(path)
-            if p_ == '':
-                self.commit_branches_empty[branch] = False
+        p_, branch = self._path_and_branch_for_path(path)
+        if p_ == '':
+            self.commit_branches_empty[branch] = False
 
     @stash_exception_on_self
     def apply_textdelta(self, file_baton, base_checksum, pool=None):
