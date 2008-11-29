@@ -230,6 +230,8 @@ class HgChangeReceiver(delta.Editor):
             if branch in self.branches:
                 parent_branch = self.branches[branch][0]
                 parent_branch_rev = self.branches[branch][1]
+                if parent_branch_rev <= 0:
+                    return None, None
                 branch_created_rev = self.branches[branch][2]
                 if parent_branch == 'trunk':
                     parent_branch = None
@@ -265,11 +267,9 @@ class HgChangeReceiver(delta.Editor):
 
                     if not ((src_p and self._is_path_valid(src_p)) or
                             (src_tag and src_tag in self.tags)):
-                        # we'll imply you're a branch off of trunk
-                        # if you have no path, but if you do, it must be valid
-                        # or else we assume trunk as well
+                        # The branch starts here and is not a copy
                         src_branch = None
-                        src_rev = revision.revnum
+                        src_rev = 0
                     elif src_tag:
                         # this is a branch created from a tag. Note that this
                         # really does happen (see Django)
