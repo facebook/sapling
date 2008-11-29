@@ -424,7 +424,7 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
     callable to retrieve individual file information.
     """
     kind = svn.checkpath(branchpath, r.revnum)
-    if kind is None:
+    if kind != 'd':
         # Branch does not exist at this revision. Get parent revision and
         # remove everything.
         files = parentctx.manifest().keys()

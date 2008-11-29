@@ -33,6 +33,10 @@ svn cp ../trunk branch2
 echo b > branch2/b
 svn add branch2/b
 svn ci -m "add b to branch2"
+# Add a file in the branch root for fun
+echo c > c
+svn add c
+svn ci -m "add c in branches/"
 cd ../..
 
 svnadmin dump testrepo > ../unrelatedbranch.svndump
