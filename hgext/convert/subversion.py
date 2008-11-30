@@ -32,8 +32,8 @@ from mercurial.i18n import _
 
 from cStringIO import StringIO
 
-from common import NoRepo, commit, converter_source, encodeargs, decodeargs
-from common import commandline, converter_sink, mapfile
+from common import NoRepo, MissingTool, commit, encodeargs, decodeargs
+from common import commandline, converter_source, converter_sink, mapfile
 
 try:
     from svn.core import SubversionException, Pool
@@ -155,7 +155,16 @@ class svn_source(converter_source):
         try:
             SubversionException
         except NameError:
-            raise NoRepo('Subversion python bindings could not be loaded')
+            raise MissingTool(_('Subversion python bindings could not be loaded'))
+
+        try:
+            version = svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR
+            if version < (1, 4):
+                raise MissingTool(_('Subversion python bindings %d.%d found, '
+                                    '1.4 or later required') % version)
+        except AttributeError:
+            raise MissingTool(_('Subversion python bindings are too old, 1.4 '
+                                'or later required'))
 
         self.encoding = locale.getpreferredencoding()
         self.lastrevs = {}
