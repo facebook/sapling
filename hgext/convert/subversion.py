@@ -851,7 +851,6 @@ class svn_source(converter_source):
             raise
 
     def _getfile(self, file, rev):
-        io = StringIO()
         # TODO: ra.get_file transmits the whole file instead of diffs.
         mode = ''
         try:
@@ -859,7 +858,12 @@ class svn_source(converter_source):
             if self.module != new_module:
                 self.module = new_module
                 self.reparent(self.module)
+            io = StringIO()
             info = svn.ra.get_file(self.ra, file, revnum, io)
+            data = io.getvalue()
+            # ra.get_files() seems to keep a reference on the input buffer
+            # preventing collection. Release it explicitely.
+            io.close()
             if isinstance(info, list):
                 info = info[-1]
             mode = ("svn:executable" in info) and 'x' or ''
@@ -870,7 +874,6 @@ class svn_source(converter_source):
             if e.apr_err in notfound: # File not found
                 raise IOError()
             raise
-        data = io.getvalue()
         if mode == 'l':
             link_prefix = "link "
             if data.startswith(link_prefix):
