@@ -73,12 +73,13 @@ def reposetup(ui, repo):
                     if result is not None:
                         return result
             except (OSError, socket.error), err:
+                autostart = ui.configbool('inotify', 'autostart', True)
+
                 if err[0] == errno.ECONNREFUSED:
                     ui.warn(_('(found dead inotify server socket; '
                                    'removing it)\n'))
                     os.unlink(repo.join('inotify.sock'))
-                if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and \
-                        ui.configbool('inotify', 'autostart', True):
+                if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
                     query = None
                     ui.debug(_('(starting inotify server)\n'))
                     try:
@@ -100,8 +101,9 @@ def reposetup(ui, repo):
                         except socket.error, err:
                             ui.warn(_('could not talk to new inotify '
                                            'server: %s\n') % err[-1])
-                elif err[0] == errno.ENOENT:
-                    ui.warn(_('(inotify server not running)\n'))
+                elif err[0] in (errno.ECONNREFUSED, errno.ENOENT):
+                    # silently ignore normal errors if autostart is False
+                    ui.debug(_('(inotify server not running)\n'))
                 else:
                     ui.warn(_('failed to contact inotify server: %s\n')
                              % err[-1])
