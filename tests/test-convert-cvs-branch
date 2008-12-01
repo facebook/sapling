@@ -28,8 +28,9 @@ echo % Create a new project
 
 mkdir src
 cd src
-echo "1" > a > b
-cvscall import -m "init" src v0 r0
+echo "1" > a
+echo "1" > b
+cvscall import -m "init" src v0 r0 | sort
 cd ..
 cvscall co src
 cd src
