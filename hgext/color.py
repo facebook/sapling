@@ -67,39 +67,34 @@ from mercurial import cmdutil, commands, extensions
 from mercurial.i18n import _
 
 # start and stop parameters for effects
-_effect_params = { 'none': (0, 0),
-                   'black': (30, 39),
-                   'red': (31, 39),
-                   'green': (32, 39),
-                   'yellow': (33, 39),
-                   'blue': (34, 39),
-                   'magenta': (35, 39),
-                   'cyan': (36, 39),
-                   'white': (37, 39),
-                   'bold': (1, 22),
-                   'italic': (3, 23),
-                   'underline': (4, 24),
-                   'inverse': (7, 27),
-                   'black_background': (40, 49),
-                   'red_background': (41, 49),
-                   'green_background': (42, 49),
-                   'yellow_background': (43, 49),
-                   'blue_background': (44, 49),
-                   'purple_background': (45, 49),
-                   'cyan_background': (46, 49),
-                   'white_background': (47, 49), }
+_effect_params = {'none': 0,
+                  'black': 30,
+                  'red': 31,
+                  'green': 32,
+                  'yellow': 33,
+                  'blue': 34,
+                  'magenta': 35,
+                  'cyan': 36,
+                  'white': 37,
+                  'bold': 1,
+                  'italic': 3,
+                  'underline': 4,
+                  'inverse': 7,
+                  'black_background': 40,
+                  'red_background': 41,
+                  'green_background': 42,
+                  'yellow_background': 43,
+                  'blue_background': 44,
+                  'purple_background': 45,
+                  'cyan_background': 46,
+                  'white_background': 47}
 
 def render_effects(text, *effects):
     'Wrap text in commands to turn on each effect.'
-    start = [ str(_effect_params['none'][0]) ]
-    stop = []
-    for effect in effects:
-        start.append(str(_effect_params[effect][0]))
-        stop.append(str(_effect_params[effect][1]))
-    stop.append(str(_effect_params['none'][1]))
+    start = [str(_effect_params[e]) for e in ('none',) + effects]
     start = '\033[' + ';'.join(start) + 'm'
-    stop = '\033[' + ';'.join(stop) + 'm'
-    return start + text + stop
+    stop = '\033[' + str(_effect_params['none']) + 'm'
+    return ''.join([start, text, stop])
 
 def colorstatus(orig, ui, repo, *pats, **opts):
     '''run the status command with colored output'''
