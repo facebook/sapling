@@ -51,7 +51,21 @@ class hgwebdir(object):
                 if cp.has_option('web', 'baseurl'):
                     self._baseurl = cp.get('web', 'baseurl')
             if cp.has_section('paths'):
-                self.repos.extend(cleannames(cp.items('paths')))
+                paths = cleannames(cp.items('paths'))
+                for prefix, root in paths:
+                    roothead, roottail = os.path.split(root)
+                    if roottail != '*':
+                        self.repos.append((prefix, root))
+                        continue
+                    # "foo = /bar/*" makes every subrepo of /bar/ to be
+                    # mounted as foo/subrepo
+                    roothead = os.path.normpath(roothead)
+                    for path in util.walkrepos(roothead, followsym=True):
+                        path = os.path.normpath(path)
+                        name = util.pconvert(path[len(roothead):]).strip('/')
+                        if prefix:
+                            name = prefix + '/' + name
+                        self.repos.append((name, path))
             if cp.has_section('collections'):
                 for prefix, root in cp.items('collections'):
                     for path in util.walkrepos(root, followsym=True):

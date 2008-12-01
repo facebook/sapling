@@ -51,6 +51,7 @@ cat > paths.conf <<EOF
 [paths]
 t/a/=$root/a
 b=$root/b
+coll=$root/*
 EOF
 
 hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
@@ -66,6 +67,9 @@ echo % should succeed, slashy names
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/a/?style=atom' \
 	| sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/a/file/tip/a?style=raw'
+# Test [paths] '*' extension
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/a/file/tip/a?style=raw'
 
 cat > collections.conf <<EOF
 [collections]

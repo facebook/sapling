@@ -29,11 +29,27 @@ from flup.server.fcgi import WSGIServer
 # repos, collections of repos in a directory tree, or both.
 #
 # [paths]
-# virtual/path = /real/path
-# virtual/path = /real/path
+# virtual/path1 = /real/path1
+# virtual/path2 = /real/path2
+# virtual/root = /real/root/*
+# / = /real/root2/*
 #
 # [collections]
 # /prefix/to/strip/off = /root/of/tree/full/of/repos
+#
+# paths example: 
+#
+# * First two lines mount one repository into one virtual path, like
+# '/real/path1' into 'virtual/path1'.
+#
+# * The third entry tells every mercurial repository found in
+# '/real/root', recursively, should be mounted in 'virtual/root'. This
+# format is preferred over the [collections] one, using absolute paths
+# as configuration keys is not supported on every platform (including
+# Windows).
+#
+# * The last entry is a special case mounting all repositories in
+# '/real/root2' in the root of the virtual directory.
 #
 # collections example: say directory tree /foo contains repos /foo/bar,
 # /foo/quux/baz.  Give this config section:

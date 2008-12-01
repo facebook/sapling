@@ -30,6 +30,10 @@ error: repository c not found
 
 
 /b/
+/coll/a/
+/coll/b/
+/coll/b/d/
+/coll/c/
 /t/a/
 
 200 Script output follows
@@ -100,6 +104,17 @@ error: repository c not found
  </entry>
 
 </feed>
+200 Script output follows
+
+a
+200 Script output follows
+
+
+/coll/a/
+/coll/b/
+/coll/b/d/
+/coll/c/
+
 200 Script output follows
 
 a
