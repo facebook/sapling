@@ -1,0 +1,65 @@
+Branches
+--------
+In order to handle branches that are not immediate children of /branches/, the
+following information must be stored in the revmap:
+
+revision path
+
+Where path is the actual relative path of the branch in svn. An example, with
+the previous format for clarification:
+New                          | Old
+3 <hash> trunk               | 3 <hash>
+4 <hash> branches/foo        | 4 <hash> foo
+
+Tags
+----
+Note that if a tag is committed to, we can handle that case by making a branch
+and then marking it as deleted. The revmap line would look something like this:
+10 <hash> tags/the_tag
+And the commit would be done on the hg branch 'modified-tag/the_tag'. Note that 
+if this was 'tags/releases/1.0.0', then the branch would be 
+'modified-tag/releases/1.0.0'.
+
+Detecting Closing of Branches
+-----------------------------
+Subversion users typically remove branches when done with them. This means that
+if a commit performs a delete operation on the '' path inside a branch, we can
+be sure that the branch no longer exists. The branch should then be marked as
+inactive.
+
+Closing Branches
+----------------
+As of this writing, Mercurial marks branches as inactive by merging them so they
+have no active heads. In order to mark a branch as closed, the active head on
+the branch will be used as the first parent of the new changeset, and the second
+changeset will be either the active head on the hg branch 'closed-branches' or
+be the nullrev. The commit to mark the branch as inactive will happen on the
+'closed-branches' branch in Mercurial.
+
+Recovery
+--------
+hgsubversion stores several pieces of essential metadata in .hg/svn/. In order
+to rebuild this data, the key 'convert_revision' should be stored in the extra
+dictionary of the converted revision. The key should contain data in the format:
+'svn:<uuid>/abs/path@<rev>' where <uuid> is the repo UUID, /abs/path is the
+absolute path to the location the edits were made in Subversion (that is, if it
+was a trunk commit on /foo/trunk, then /foo/trunk is what gets stored here, even
+though the project root does not equal the repo root), and <rev> is the revision
+number of the change in Subversion. This key (and its contents) have been
+chosen to be compatible with the convert extension so that repos originally
+converted to hg using convert can be maintained using hgsubversion if desired.
+
+Tags (tag_info) can be reconstructed by listing the tags directory and then
+running log on each tag to determine its parent changeset. 
+
+The last revision converted (last_rev) can be converted simply by using the
+highest revision number encountered while rebuilding the revision map.
+
+The legacy tag_locations file does not need to be replaced - it will be
+obsoleted as part of the long-term branch refactor.
+
+The url will have to be provided by the user. The uuid can be re-requested from 
+the repository.
+
+branch_info can be rebuilt during the rebuild of the revision map by recording
+the revisions of all active heads of server-side branches.
