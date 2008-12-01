@@ -1428,7 +1428,7 @@ def help_(ui, name=None, with_version=False):
 
     if name and name != 'shortlist':
         i = None
-        for f in (helpcmd, helptopic, helpext):
+        for f in (helptopic, helpcmd, helpext):
             try:
                 f(name)
                 i = None
