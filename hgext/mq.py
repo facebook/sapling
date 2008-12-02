@@ -1193,7 +1193,9 @@ class queue:
                     copies = {}
                     for dst in a:
                         src = repo.dirstate.copied(dst)
-                        if src is not None:
+                        # during qfold, the source file for copies may
+                        # be removed. Treat this as a simple add.
+                        if src is not None and src in repo.dirstate:
                             copies.setdefault(src, []).append(dst)
                         repo.dirstate.add(dst)
                     # remember the copies between patchparent and tip
