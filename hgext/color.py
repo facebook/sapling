@@ -16,15 +16,16 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-'''add color output to the status and qseries commands
+'''add color output to status, qseries, and diff-related commands
 
 This extension modifies the status command to add color to its output to
-reflect file status, and the qseries command to add color to reflect patch
-status (applied, unapplied, missing).  Other effects in addition to color,
-like bold and underlined text, are also available.  Effects are rendered
-with the ECMA-48 SGR control function (aka ANSI escape codes).  This module
-also provides the render_text function, which can be used to add effects to
-any text.
+reflect file status, the qseries command to add color to reflect patch status
+(applied, unapplied, missing), and to diff-related commands to highlight
+additions, removals, diff headers, and trailing whitespace.  Other effects in
+addition to color, like bold and underlined text, are also available.
+Effects are rendered with the ECMA-48 SGR control function (aka ANSI escape
+codes).  This module also provides the render_text function, which can be
+used to add effects to any text.
 
 To enable this extension, add this to your .hgrc file:
 [extensions]
@@ -47,11 +48,21 @@ status.copied = none
 qseries.applied = blue bold underline
 qseries.unapplied = black bold
 qseries.missing = red bold
+
+diff.diffline = bold
+diff.extended = cyan bold
+diff.file_a = red bold
+diff.file_b = green bold
+diff.hunk = magenta
+diff.deleted = red
+diff.inserted = green
+diff.changed = white
+diff.whitespace = bold red_background
 '''
 
 import os, re, sys
 
-from mercurial import commands, extensions
+from mercurial import cmdutil, commands, extensions
 from mercurial.i18n import _
 
 # start and stop parameters for effects
@@ -161,12 +172,65 @@ _patch_effects = { 'applied': ('blue', 'bold', 'underline'),
                    'missing': ('red', 'bold'),
                    'unapplied': ('black', 'bold'), }
 
+def colorwrap(orig, s):
+    '''wrap ui.write for colored diff output'''
+    lines = s.split('\n')
+    for i, line in enumerate(lines):
+        for prefix, style in _diff_prefixes:
+            if line.startswith(prefix):
+                effects = _diff_effects[style]
+                lines[i] = render_effects(line, *_diff_effects[style])
+                break
+    orig('\n'.join(lines))
+
+def colorshowpatch(orig, self, node):
+    '''wrap cmdutil.changeset_printer.showpatch with colored output'''
+    oldwrite = extensions.wrapfunction(self.ui, 'write', colorwrap)
+    try:
+        orig(self, node)
+    finally:
+        self.ui.write = oldwrite
+
+def colordiff(orig, ui, repo, *pats, **opts):
+    '''run the diff command with colored output'''
+    oldwrite = extensions.wrapfunction(ui, 'write', colorwrap)
+    try:
+        orig(ui, repo, *pats, **opts)
+    finally:
+        ui.write = oldwrite
+
+_diff_prefixes = [('diff', 'diffline'),
+                  ('copy', 'extended'),
+                  ('rename', 'extended'),
+                  ('new', 'extended'),
+                  ('deleted', 'extended'),
+                  ('---', 'file_a'),
+                  ('+++', 'file_b'),
+                  ('@', 'hunk'),
+                  ('-', 'deleted'),
+                  ('+', 'inserted')]
+
+_diff_effects = {'diffline': ('bold',),
+                 'extended': ('cyan', 'bold'),
+                 'file_a': ('red', 'bold'),
+                 'file_b': ('green', 'bold'),
+                 'hunk': ('magenta',),
+                 'deleted': ('red',),
+                 'inserted': ('green',),
+                 'changed': ('white',)}
+
 def uisetup(ui):
     '''Initialize the extension.'''
+    _setupcmd(ui, 'diff', commands.table, colordiff, _diff_effects)
+    _setupcmd(ui, 'incoming', commands.table, None, _diff_effects)
+    _setupcmd(ui, 'log', commands.table, None, _diff_effects)
+    _setupcmd(ui, 'outgoing', commands.table, None, _diff_effects)
+    _setupcmd(ui, 'tip', commands.table, None, _diff_effects)
     _setupcmd(ui, 'status', commands.table, colorstatus, _status_effects)
     if ui.config('extensions', 'hgext.mq') is not None or \
             ui.config('extensions', 'mq') is not None:
         from hgext import mq
+        _setupcmd(ui, 'qdiff', mq.cmdtable, colordiff, _diff_effects)
         _setupcmd(ui, 'qseries', mq.cmdtable, colorqseries, _patch_effects)
 
 def _setupcmd(ui, cmd, table, func, effectsmap):
@@ -178,9 +242,14 @@ def _setupcmd(ui, cmd, table, func, effectsmap):
                                           or not sys.__stdout__.isatty()))):
             return orig(*args, **opts)
 
-        if func is not None:
-            return func(orig, *args, **opts)
-        return orig(*args, **opts)
+        oldshowpatch = extensions.wrapfunction(cmdutil.changeset_printer,
+                                               'showpatch', colorshowpatch)
+        try:
+            if func is not None:
+                return func(orig, *args, **opts)
+            return orig(*args, **opts)
+        finally:
+            cmdutil.changeset_printer.showpatch = oldshowpatch
 
     entry = extensions.wrapcommand(table, cmd, nocolor)
     entry[1].extend([
