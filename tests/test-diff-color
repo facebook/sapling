@@ -1,0 +1,36 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "color=" >> $HGRCPATH
+
+hg init repo
+cd repo
+cat > a <<EOF
+c
+c
+a
+a
+b
+a
+a
+c
+c
+EOF
+hg ci -Am adda
+cat > a <<EOF
+c
+c
+a
+a
+dd
+a
+a
+c
+c
+EOF
+
+echo '% default context'
+hg diff --nodates --color=always
+
+echo '% --unified=2'
+hg diff --nodates -U 2  --color=always
