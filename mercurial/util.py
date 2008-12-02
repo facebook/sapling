@@ -81,6 +81,8 @@ except ImportError:
     popen3 = os.popen3
 
 
+_encodingfixup = {'646': 'ascii', 'ANSI_X3.4-1968': 'ascii'}
+
 try:
     _encoding = os.environ.get("HGENCODING")
     if sys.platform == 'darwin' and not _encoding:
@@ -91,6 +93,7 @@ try:
         _encoding = locale.getlocale()[1]
     if not _encoding:
         _encoding = locale.getpreferredencoding() or 'ascii'
+        _encoding = _encodingfixup.get(_encoding, _encoding)
 except locale.Error:
     _encoding = 'ascii'
 _encodingmode = os.environ.get("HGENCODINGMODE", "strict")
