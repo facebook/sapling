@@ -1932,7 +1932,8 @@ def fold(ui, repo, *files, **opts):
     for p in patches:
         if not message:
             ph = q.readheaders(p)
-            messages.append(ph.message)
+            if ph.message:
+                messages.append(ph.message)
         pf = q.join(p)
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
