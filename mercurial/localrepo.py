@@ -1496,11 +1496,11 @@ class localrepository(repo.repository):
         return self.push_addchangegroup(remote, force, revs)
 
     def prepush(self, remote, force, revs):
-        base = {}
+        common = {}
         remote_heads = remote.heads()
-        inc = self.findincoming(remote, base, remote_heads, force=force)
+        inc = self.findincoming(remote, common, remote_heads, force=force)
 
-        update, updated_heads = self.findoutgoing(remote, base, remote_heads)
+        update, updated_heads = self.findoutgoing(remote, common, remote_heads)
         if revs is not None:
             msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
         else:
@@ -1546,7 +1546,8 @@ class localrepository(repo.repository):
 
 
         if revs is None:
-            cg = self.changegroup(update, 'push')
+            # use the fast path, no race possible on push
+            cg = self._changegroup(common.keys(), 'push')
         else:
             cg = self.changegroupsubset(update, revs, 'push')
         return cg, remote_heads
