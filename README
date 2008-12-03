@@ -12,7 +12,7 @@ Subversion.
 Installation
 ------------
 You need to have Subversion installed with the SWIG Python bindings from Subversion 1.5 or later.
-You need a recent Mercurial. At present, the required memctx and rebase code is in mercurial_ and  crew_, but not crew-stable_ or mercurial-stable_. Install Mercurial from one of mercurial or crew if you have not already. Personally, I use crew_.
+You need Mercurial 1.1 or later.
 
 .. _mercurial: http://selenic.com/repo/hg
 .. _mercurial-stable: http://selenic.com/repo/hg-stable
