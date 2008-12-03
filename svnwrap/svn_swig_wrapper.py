@@ -437,9 +437,11 @@ class SubversionRepo(object):
         IOError.
         """
         mode = ''
-        out = cStringIO.StringIO()
         try:
+            out = cStringIO.StringIO()
             info = ra.get_file(self.ra, path, revision, out)
+            data = out.getvalue()
+            out.close()
             if isinstance(info, list):
                 info = info[-1]
             mode = ("svn:executable" in info) and 'x' or ''
@@ -450,7 +452,6 @@ class SubversionRepo(object):
             if e.apr_err in notfound: # File not found
                 raise IOError()
             raise
-        data = out.getvalue()
         if mode  == 'l':
             linkprefix = "link "
             if data.startswith(linkprefix):
