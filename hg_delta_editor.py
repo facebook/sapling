@@ -188,6 +188,8 @@ class HgChangeReceiver(delta.Editor):
         self.current_files[path] = data
         self.current_files_exec[path] = isexec
         self.current_files_symlink[path] = islink
+        if path in self.deleted_files:
+            del self.deleted_files[path]
 
     def _normalize_path(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
@@ -507,17 +509,17 @@ class HgChangeReceiver(delta.Editor):
             return True
         if parentctx.rev() > childctx.rev():
             parentctx, childctx = childctx, parentctx
-        
+
         def selfandancestors(selfctx):
             yield selfctx
             for ctx in selfctx.ancestors():
                 yield ctx
-                
+
         files = dict.fromkeys(files)
         for pctx in selfandancestors(childctx):
             if pctx.rev() <= parentctx.rev():
                 return True
-            for f in pctx.files():                
+            for f in pctx.files():
                 if f in files:
                     return False
         # parentctx is not an ancestor of childctx, files are unrelated
