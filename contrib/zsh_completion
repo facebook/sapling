@@ -116,54 +116,18 @@ _hg_cache_policy() {
 _hg_get_commands() {
   typeset -ga _hg_cmd_list
   typeset -gA _hg_alias_list
-  local hline cmd cmdalias helpstate
-  local helpmode=$1
+  local hline cmd cmdalias
 
-  _call_program help hg --verbose help $helpmode 2>/dev/null | while read -A hline
+  _call_program hg hg debugcomplete -v 2>/dev/null | while read -A hline
   do
-    if [ "$hline" = "list of commands:" ]
-    then
-      helpstate="commands"
-      continue
-    elif [ "$hline" = "enabled extensions:" ]
-    then
-      helpstate="extensions"
-      continue
-    elif [ "$hline" = "additional help topics:" ]
-    then
-      helpstate="topics"
-      continue
-    fi
+    cmd=$hline[1]
+    _hg_cmd_list+=($cmd)
 
-    if [ "$helpstate" = commands ]
-    then
-      cmd="$hline[1]"
-      case $cmd in
-        *:)
-          cmd=${cmd%:}
-          _hg_cmd_list+=($cmd)
-        ;;
-        *,)
-          cmd=${cmd%,}
-          _hg_cmd_list+=($cmd)
-          integer i=2
-          while (( i <= $#hline ))
-          do
-            cmdalias=${hline[$i]%(:|,)}
-            _hg_cmd_list+=($cmdalias)
-            _hg_alias_list+=($cmdalias $cmd)
-            (( i++ ))
-          done
-        ;;
-      esac
-    elif [ -z "$helpmode" -a "$helpstate" = extensions ]
-    then
-      cmd="$hline[1]"
-      if [ -n "$cmd" ]
-      then
-        _hg_get_commands $cmd
-      fi
-    fi
+    for cmdalias in $hline[2,-1]
+    do
+      _hg_cmd_list+=($cmdalias)
+      _hg_alias_list+=($cmdalias $cmd)
+    done
   done
 }
 
