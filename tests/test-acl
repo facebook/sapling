@@ -14,7 +14,11 @@ do_push()
 	cat acl.config
 	echo '"""'
     fi
-    LOGNAME=$user hg --cwd a --debug push ../b
+    # On AIX /etc/profile sets LOGNAME read-only. So
+    #  LOGNAME=$user hg --cws a --debug push ../b
+    # fails with "This variable is read only."
+    # Use env to work around this.
+    env LOGNAME=$user hg --cwd a --debug push ../b
     hg --cwd b rollback
     hg --cwd b --quiet tip
     echo
