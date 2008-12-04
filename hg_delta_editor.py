@@ -58,7 +58,8 @@ class HgChangeReceiver(delta.Editor):
         f.close()
         self.revmap[revnum, branch] = node_hash
 
-    def __init__(self, path, ui_=None, subdir='', author_host='',
+    def __init__(self, path=None, repo=None, ui_=None,
+                 subdir='', author_host='',
                  tag_locations=['tags']):
         """path is the path to the target hg repo.
 
@@ -68,8 +69,15 @@ class HgChangeReceiver(delta.Editor):
         if not ui_:
             ui_ = ui.ui()
         self.ui = ui_
-        self.path = path
-        self.__setup_repo(path)
+        if repo:
+            self.repo = repo
+            self.path = os.path.normpath(os.path.join(self.repo.path, '..'))
+        elif path:
+            self.path = path
+            self.__setup_repo(path)
+        else:
+            raise TypeError("Expected either path or repo argument")
+
         self.subdir = subdir
         if self.subdir and self.subdir[0] == '/':
             self.subdir = self.subdir[1:]

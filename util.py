@@ -94,3 +94,7 @@ def outgoing_revisions(ui, repo, hg_editor, reverse_map):
         working_rev = working_rev[0]
     if working_rev.node() != node.nullid:
         return outgoing_rev_hashes
+
+
+def is_svn_repo(repo):
+    return os.path.exists(os.path.join(repo.path, 'svn'))

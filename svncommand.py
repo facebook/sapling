@@ -1,5 +1,4 @@
 import os
-import pickle
 import stat
 import sys
 import traceback
@@ -9,7 +8,6 @@ from mercurial import node
 from mercurial import util as merc_util
 
 import svnwrap
-import hg_delta_editor
 import util
 from util import register_subcommand, svn_subcommands, generate_help
 # dirty trick to force demandimport to run my decorator anyway.
@@ -77,19 +75,6 @@ def help_command(ui, args=None, **opts):
         ui.status(doc.strip(), '\n')
         return
     ui.status(generate_help())
-
-
-@register_subcommand('gentags')
-def generate_hg_tags(ui, hg_repo_path, **opts):
-    """Save tags to .hg/localtags
-    """
-    hg_editor = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
-    f = open(hg_editor.tag_info_file)
-    tag_info = pickle.load(f)
-    f = open(os.path.join(hg_repo_path, '.hg', 'localtags'), 'w')
-    for tag, source in tag_info.iteritems():
-        source_ha = hg_editor.get_parent_revision(source[1]+1, source[0])
-        f.write('%s tag/%s\n' % (node.hex(source_ha), tag))
 
 @register_subcommand('up')
 def update(ui, args, repo, clean=False, **opts):

@@ -5,6 +5,14 @@ from mercurial import hg
 
 import svncommand
 import fetch_command
+import tag_repo
+import util
+
+def reposetup(ui, repo):
+    if not util.is_svn_repo(repo):
+        return
+
+    repo.__class__ = tag_repo.generate_repo_class(ui, repo)
 
 
 def svn(ui, repo, subcommand, *args, **opts):

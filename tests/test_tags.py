@@ -7,11 +7,18 @@ from mercurial import ui
 import test_util
 
 import svncommand
+import tag_repo
 
 class TestTags(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name, stupid=False):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
                                                 self.wc_path, stupid=stupid)
+
+    def getrepo(self):
+        ui_ = ui.ui()
+        repo = hg.repository(ui_, self.wc_path)
+        repo.__class__ = tag_repo.generate_repo_class(ui_, repo)
+        return repo
 
     def _test_tag_revision_info(self, repo):
         self.assertEqual(node.hex(repo[0].node()),
@@ -24,8 +31,7 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('basic_tag_tests.svndump',
                                             stupid=stupid)
         self._test_tag_revision_info(repo)
-        svncommand.generate_hg_tags(ui.ui(), self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self.getrepo()
         self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
         self.assertEqual(repo['tip'].node(), repo['tag/copied_tag'].node())
 
@@ -36,8 +42,7 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('remove_tag_test.svndump',
                                             stupid=stupid)
         self._test_tag_revision_info(repo)
-        svncommand.generate_hg_tags(ui.ui(), self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self.getrepo()
         self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
         self.assert_('tag/copied_tag' not in repo.tags())
 
@@ -48,8 +53,7 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('rename_tag_test.svndump',
                                             stupid=stupid)
         self._test_tag_revision_info(repo)
-        svncommand.generate_hg_tags(ui.ui(), self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self.getrepo()
         self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
         self.assertEqual(repo['tip'].node(), repo['tag/other_tag_r3'].node())
         self.assert_('tag/copied_tag' not in repo.tags())
@@ -60,8 +64,7 @@ class TestTags(test_util.TestBase):
     def test_branch_from_tag(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
                                             stupid=stupid)
-        svncommand.generate_hg_tags(ui.ui(), self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self.getrepo()
         self.assertEqual(repo['tip'].node(), repo['branch_from_tag'].node())
         self.assertEqual(repo[1].node(), repo['tag/tag_r3'].node())
         self.assertEqual(repo['branch_from_tag'].parents()[0].node(),
@@ -73,8 +76,7 @@ class TestTags(test_util.TestBase):
     def test_tag_by_renaming_branch(self, stupid=False):
         repo = self._load_fixture_and_fetch('tag_by_rename_branch.svndump',
                                             stupid=stupid)
-        svncommand.generate_hg_tags(ui.ui(), self.wc_path)
-        repo = hg.repository(ui.ui(), self.wc_path)
+        repo = self.getrepo()
         self.assertEqual(node.hex(repo['tip'].node()),
                          '1b941f92acc343939274bd8bbf25984fa9706bb9')
         self.assertEqual(node.hex(repo['tag/dummy'].node()),
