@@ -1,10 +1,10 @@
 % create cvs repository
 % Create a new project
+
+
 N src/a
 N src/b
-
 No conflicts created by this import
-
 cvs checkout: Updating src
 U src/a
 U src/b
