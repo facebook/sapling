@@ -229,9 +229,9 @@ def pushnonbookmarked(orig, ui, repo, *args, **opts):
         else:
             heads = repo.heads()
 
-	markheads = parse(repo).values()
+        markheads = parse(repo).values()
         opts['rev'] = [head for head in heads if not(head in markheads)]
-        
+
     orig(ui, repo, *args, **opts)
 
 def uisetup(ui):
