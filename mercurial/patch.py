@@ -774,9 +774,7 @@ class linereader:
 
     def readline(self):
         if self.buf:
-            l = self.buf[0]
-            del self.buf[0]
-            return l
+            return self.buf.pop(0)
         return self.fp.readline()
 
     def __iter__(self):
