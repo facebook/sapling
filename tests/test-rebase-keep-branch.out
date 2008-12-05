@@ -1,0 +1,33 @@
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+marked working directory as branch notdefault
+created new head
+@  4:r1:notdefault
+|
+| o  3:l2:
+| |
+| o  2:l1:
+|/
+o  1:c2:
+|
+o  0:c1:
+
+
+% Rebase a branch while preserving the branch name
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+rebase completed
+@  4:r1:notdefault
+|
+o  3:l2:
+|
+o  2:l1:
+|
+o  1:c2:
+|
+o  0:c1:
+
