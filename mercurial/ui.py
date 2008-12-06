@@ -350,7 +350,7 @@ class ui(object):
         if not user:
             raise util.Abort(_("Please specify a username."))
         if "\n" in user:
-            raise util.Abort(_("username %s contains a newline\n") % `user`)
+            raise util.Abort(_("username %s contains a newline\n") % repr(user))
         return user
 
     def shortuser(self, user):

@@ -179,7 +179,7 @@ class changelog(revlog):
 
         user = user.strip()
         if "\n" in user:
-            raise RevlogError(_("username %s contains a newline") % `user`)
+            raise RevlogError(_("username %s contains a newline") % repr(user))
         user, desc = util.fromlocal(user), util.fromlocal(desc)
 
         if date:
