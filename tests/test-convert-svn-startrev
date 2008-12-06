@@ -12,6 +12,7 @@ echo "convert = " >> $HGRCPATH
 echo "hgext.graphlog =" >> $HGRCPATH
 
 svnadmin create svn-repo
+cat "$TESTDIR/svn/startrev.svndump" | svnadmin load svn-repo > /dev/null
 
 svnpath=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
@@ -20,43 +21,7 @@ expr $svnpath : "\/" > /dev/null
 if [ $? -ne 0 ]; then
     svnpath='/'$svnpath
 fi
-
-echo % initial svn import
-mkdir projA
-cd projA
-mkdir trunk
-mkdir branches
-mkdir tags
-cd ..
-
-svnurl=file://$svnpath/svn-repo/projA
-svn import -m "init projA" projA $svnurl | fix_path
-
-echo % update svn repository
-svn co $svnurl A | fix_path
-cd A
-echo a > trunk/a
-echo b > trunk/b
-svn add trunk/a trunk/b
-svn ci -m createab
-svn rm trunk/b
-svn ci -m removeb
-svn up
-"$TESTDIR/svn-safe-append.py" a trunk/a
-svn ci -m changeaa
-
-echo % branch
-svn up
-svn copy trunk branches/branch1
-"$TESTDIR/svn-safe-append.py" a branches/branch1/a
-svn ci -m "branch, changeaaa"
-
-"$TESTDIR/svn-safe-append.py" a branches/branch1/a
-echo c > branches/branch1/c
-svn add branches/branch1/c
-svn ci -m "addc,changeaaaa"
-svn up
-cd ..
+svnurl=file://$svnpath/svn-repo
 
 convert()
 {

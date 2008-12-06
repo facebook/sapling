@@ -12,6 +12,7 @@ echo "convert = " >> $HGRCPATH
 echo "hgext.graphlog =" >> $HGRCPATH
 
 svnadmin create svn-repo
+cat "$TESTDIR/svn/branches.svndump" | svnadmin load svn-repo > /dev/null
 
 svnpath=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
@@ -20,73 +21,10 @@ expr $svnpath : "\/" > /dev/null
 if [ $? -ne 0 ]; then
     svnpath='/'$svnpath
 fi
-
-echo % initial svn import
-mkdir projA
-cd projA
-mkdir trunk
-mkdir branches
-mkdir tags
-cd ..
-
-svnurl=file://$svnpath/svn-repo/projA
-svn import -m "init projA" projA $svnurl | fix_path
-
-echo % update svn repository
-svn co $svnurl A | fix_path
-cd A
-echo a > trunk/a
-echo b > trunk/b
-echo c > trunk/c
-# Add a file within branches, used to confuse branch detection
-echo d > branches/notinbranch
-svn add trunk/a trunk/b trunk/c branches/notinbranch
-svn ci -m hello
-
-echo % branch to old
-svn copy trunk branches/old
-svn rm branches/old/c
-svn ci -m "branch trunk, remove c"
-svn up
-
-echo % update trunk
-"$TESTDIR/svn-safe-append.py" a trunk/a
-svn ci -m "change a"
-
-echo % update old branch
-"$TESTDIR/svn-safe-append.py" b branches/old/b
-svn ci -m "change b"
-
-echo % create a cross-branch revision
-svn move trunk/b branches/old/c
-"$TESTDIR/svn-safe-append.py" c branches/old/c
-svn ci -m "move and update c"
-
-echo % update old branch again
-"$TESTDIR/svn-safe-append.py" b branches/old/b
-svn ci -m "change b again"
-
-echo % move back and forth between branch of similar names
-# This used to generate fake copy records
-svn up
-svn move branches/old branches/old2
-svn ci -m "move to old2"
-svn move branches/old2 branches/old
-svn ci -m "move back to old"
-
-echo % update trunk again
-"$TESTDIR/svn-safe-append.py" a trunk/a
-svn ci -m "last change to a"
-cd ..
+svnurl=file://$svnpath/svn-repo
 
 echo % convert trunk and branches
-hg convert --datesort $svnurl A-hg
-
-echo % branch again from a converted revision
-cd A
-svn copy -r 1 $svnurl/trunk branches/old3
-svn ci -m "branch trunk@1 into old3"
-cd ..
+hg convert --datesort -r 10 $svnurl A-hg
 
 echo % convert again
 hg convert --datesort $svnurl A-hg
