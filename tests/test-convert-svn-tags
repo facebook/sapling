@@ -12,6 +12,7 @@ echo "convert = " >> $HGRCPATH
 echo "hgext.graphlog =" >> $HGRCPATH
 
 svnadmin create svn-repo
+cat "$TESTDIR/svn/tags.svndump" | svnadmin load svn-repo > /dev/null
 
 svnpath=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
@@ -20,47 +21,7 @@ expr $svnpath : "\/" > /dev/null
 if [ $? -ne 0 ]; then
     svnpath='/'$svnpath
 fi
-
-echo % initial svn import
-mkdir projA
-cd projA
-mkdir trunk
-mkdir branches
-mkdir tags
-mkdir unrelated
-cd ..
-
-svnurl=file://$svnpath/svn-repo/projA
-svn import -m "init projA" projA $svnurl | fix_path | sort
-
-echo % update svn repository
-svn co $svnurl A | fix_path
-cd A
-echo a > trunk/a
-svn add trunk/a
-svn ci -m adda
-"$TESTDIR/svn-safe-append.py" a trunk/a
-svn ci -m changea
-"$TESTDIR/svn-safe-append.py" a trunk/a
-svn ci -m changea2
-# Add an unrelated commit to test that tags are bound to the
-# correct "from" revision and not a dummy one
-"$TESTDIR/svn-safe-append.py" a unrelated/dummy
-svn add unrelated/dummy
-svn ci -m unrelatedchange
-echo % tag current revision
-svn up
-svn copy trunk tags/trunk.v1
-svn copy trunk tags/trunk.badtag
-svn ci -m "tagging trunk.v1 trunk.badtag"
-"$TESTDIR/svn-safe-append.py" a trunk/a
-svn ci -m changea3
-echo % fix the bad tag
-# trunk.badtag should not show in converted tags
-svn up
-svn mv tags/trunk.badtag tags/trunk.goodtag
-svn ci -m "fix trunk.badtag"
-cd ..
+svnurl=file://$svnpath/svn-repo
 
 echo % convert
 hg convert --datesort $svnurl A-hg

@@ -12,6 +12,7 @@ echo "convert = " >> $HGRCPATH
 echo "hgext.graphlog =" >> $HGRCPATH
 
 svnadmin create svn-repo
+cat "$TESTDIR/svn/move.svndump" | svnadmin load svn-repo > /dev/null
 
 svnpath=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
@@ -20,58 +21,7 @@ expr $svnpath : "\/" > /dev/null
 if [ $? -ne 0 ]; then
     svnpath='/'$svnpath
 fi
-
-echo % initial svn import
-mkdir projA
-cd projA
-mkdir trunk
-echo a > trunk/a
-mkdir trunk/d1
-mkdir trunk/d2
-echo b > trunk/d1/b
-echo c > trunk/d1/c
-echo d > trunk/d2/d
-cd ..
-
-svnurl=file://$svnpath/svn-repo/projA
-svn import -m "init projA" projA $svnurl | fix_path
-
-# Build a module renaming chain which used to confuse the converter.
-echo % update svn repository
-svn co $svnurl A | fix_path
-cd A
-"$TESTDIR/svn-safe-append.py" a trunk/a
-"$TESTDIR/svn-safe-append.py" c trunk/d1/c
-svn ci -m commitbeforemove
-svn mv $svnurl/trunk $svnurl/subproject -m movedtrunk
-svn up
-mkdir subproject/trunk
-svn add subproject/trunk
-svn ci -m createtrunk
-mkdir subproject/branches
-svn add subproject/branches
-svn ci -m createbranches
-svn mv $svnurl/subproject/d1 $svnurl/subproject/trunk/d1 -m moved1
-svn mv $svnurl/subproject/d2 $svnurl/subproject/trunk/d2 -m moved2
-svn up
-"$TESTDIR/svn-safe-append.py" b subproject/trunk/d1/b
-svn rm subproject/trunk/d2
-svn ci -m "changeb and rm d2"
-svn mv $svnurl/subproject/trunk/d1 $svnurl/subproject/branches/d1 -m moved1again
-
-if svn help copy | grep 'SRC\[@REV\]' > /dev/null 2>&1; then
-    # SVN >= 1.5 replaced the -r REV syntax with @REV
-    echo % copy a file from a past revision
-    svn copy $svnurl/subproject/trunk/d2/d@7 $svnurl/subproject/trunk -m copyfilefrompast
-    echo % copy a directory from a past revision
-    svn copy $svnurl/subproject/trunk/d2@7 $svnurl/subproject/trunk -m copydirfrompast
-else
-    echo % copy a file from a past revision
-    svn copy -r 7 $svnurl/subproject/trunk/d2/d $svnurl/subproject/trunk -m copyfilefrompast
-    echo % copy a directory from a past revision
-    svn copy -r 7 $svnurl/subproject/trunk/d2 $svnurl/subproject/trunk -m copydirfrompast
-fi
-cd ..
+svnurl=file://$svnpath/svn-repo
 
 echo % convert trunk and branches
 hg convert --datesort $svnurl/subproject A-hg
