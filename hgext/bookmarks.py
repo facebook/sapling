@@ -96,9 +96,15 @@ def setcurrent(repo, mark):
     Set the name of the bookmark that we are on (hg update <bookmark>).
     The name is recoreded in .hg/bookmarks.current
     '''
-    if repo._bookmarkcurrent == mark:
+    if current(repo) == mark:
         return
+
     refs = parse(repo)
+
+    'do not update if we do update to an rev equal to the current bookmark'
+    if (mark not in refs and
+        current(repo) and refs[current(repo)] == repo.changectx('.').node()):
+        return
     if mark not in refs:
         mark = ''
     file = repo.opener('bookmarks.current', 'w+')
