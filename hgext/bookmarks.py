@@ -14,6 +14,15 @@ bookmark is forwarded to the new changeset.
 
 It is possible to use bookmark names in every revision lookup (e.g. hg
 merge, hg update).
+
+The bookmark extension offers the possiblity to have a more git-like experience
+by adding the following configuration option to your .hgrc:
+
+[bookmarks]
+track.current = True
+
+This will cause bookmarks to track the bookmark that you are currently on, and
+just updates it. This is similar to git's approach of branching.
 '''
 
 from mercurial.commands import templateopts, hex, short
@@ -56,9 +65,46 @@ def write(repo, refs):
     if os.path.exists(repo.join('bookmarks')):
         util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
     file = repo.opener('bookmarks', 'w+')
+    if current(repo) not in refs:
+        setcurrent(repo, None)
     for refspec, node in refs.items():
         file.write("%s %s\n" % (hex(node), refspec))
     file.close()
+
+def current(repo):
+    '''Get the current bookmark
+
+    If we use gittishsh branches we have a current bookmark that
+    we are on. This function returns the name of the bookmark. It
+    is stored in .hg/bookmarks.current
+    '''
+    if repo._bookmarkcurrent:
+        return repo._bookmarkcurrent
+    mark = None
+    if os.path.exists(repo.join('bookmarks.current')):
+        file = repo.opener('bookmarks.current')
+        mark = file.readline()
+        if mark == '':
+            mark = None
+        file.close()
+    repo._bookmarkcurrent = mark
+    return mark
+
+def setcurrent(repo, mark):
+    '''Set the name of the bookmark that we are currently on
+
+    Set the name of the bookmark that we are on (hg update <bookmark>).
+    The name is recoreded in .hg/bookmarks.current
+    '''
+    if repo._bookmarkcurrent == mark:
+        return
+    refs = parse(repo)
+    if mark not in refs:
+        mark = ''
+    file = repo.opener('bookmarks.current', 'w+')
+    file.write(mark)
+    file.close()
+    repo._bookmarkcurrent = mark
 
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
     '''mercurial bookmarks
@@ -122,7 +168,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             ui.status("no bookmarks set\n")
         else:
             for bmark, n in marks.iteritems():
-                prefix = (n == cur) and '*' or ' '
+                if ui.configbool('bookmarks', 'track.current'):
+                    prefix = (bmark == current(repo) and n == cur) and '*' or ' '
+                else:
+                    prefix = (n == cur) and '*' or ' '
+
                 ui.write(" %s %-25s %d:%s\n" % (
                     prefix, bmark, repo.changelog.rev(n), hexfn(n)))
         return
@@ -167,6 +217,7 @@ def reposetup(ui, repo):
     # init a bookmark cache as otherwise we would get a infinite reading
     # in lookup()
     repo._bookmarks = None
+    repo._bookmarkcurrent = None
 
     class bookmark_repo(repo.__class__):
         def rollback(self):
@@ -193,9 +244,14 @@ def reposetup(ui, repo):
             marks = parse(repo)
             update = False
             for mark, n in marks.items():
-                if n in parents:
-                    marks[mark] = node
-                    update = True
+                if ui.configbool('bookmarks', 'track.current'):
+                    if mark == current(repo) and n in parents:
+                        marks[mark] = node
+                        update = True
+                else:
+                    if n in parents:
+                        marks[mark] = node
+                        update = True
             if update:
                 write(repo, marks)
             return node
@@ -243,10 +299,25 @@ def pushnonbookmarked(orig, ui, repo, *args, **opts):
 
     orig(ui, repo, *args, **opts)
 
+def updatecurbookmark(orig, ui, repo, *args, **opts):
+    '''Set the current bookmark
+
+    If the user updates to a bookmark we update the .hg/bookmarks.current
+    file.
+    '''
+    res = orig(ui, repo, *args, **opts)
+    rev = opts['rev']
+    if not rev and len(args) > 0:
+        rev = args[0]
+    setcurrent(repo, rev)
+    return res
+
 def uisetup(ui):
     'Replace push with a decorator to provide --non-bookmarked option'
     entry = extensions.wrapcommand(commands.table, 'push', pushnonbookmarked)
     entry[1].append(('', 'non-bookmarked', None, _("push all heads that are not bookmarked")))
+    if ui.configbool('bookmarks', 'track.current'):
+        extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
 
 cmdtable = {
     "bookmarks":
