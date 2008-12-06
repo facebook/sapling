@@ -705,7 +705,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         if cwd is not None and oldcwd != cwd:
             os.chdir(oldcwd)
 
-class SignatureError:
+class SignatureError(Exception):
     pass
 
 def checksignature(func):
