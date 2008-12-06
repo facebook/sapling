@@ -724,12 +724,6 @@ class svn_source(converter_source):
 
         self.child_cset = None
 
-        def isdescendantof(parent, child):
-            if not child or not parent or not child.startswith(parent):
-                return False
-            subpath = child[len(parent):]
-            return len(subpath) > 1 and subpath[0] == '/'
-
         def parselogentry(orig_paths, revnum, author, date, message):
             """Return the parsed commit object or None, and True if
             the revision is a branch root.
@@ -752,21 +746,10 @@ class svn_source(converter_source):
             if root_paths:
                 path, ent = root_paths[-1]
                 if ent.copyfrom_path:
-                    # If dir was moved while one of its file was removed
-                    # the log may look like:
-                    # A /dir   (from /dir:x)
-                    # A /dir/a (from /dir/a:y)
-                    # A /dir/b (from /dir/b:z)
-                    # ...
-                    # for all remaining children.
-                    # Let's take the highest child element from rev as source.
-                    copies = [(p,e) for p,e in orig_paths[:-1]
-                          if isdescendantof(ent.copyfrom_path, e.copyfrom_path)]
-                    fromrev = max([e.copyfrom_rev for p,e in copies] + [ent.copyfrom_rev])
                     branched = True
                     newpath = ent.copyfrom_path + self.module[len(path):]
                     # ent.copyfrom_rev may not be the actual last revision
-                    previd = self.latest(newpath, fromrev)
+                    previd = self.latest(newpath, ent.copyfrom_rev)
                     if previd is not None:
                         prevmodule, prevnum = self.revsplit(previd)[1:]
                         if prevnum >= self.startrev:

@@ -37,8 +37,8 @@ o  branch=old3 11 branch trunk@1 into old3 files:
 | | |
 | o |  branch= 3 change a files: a
 | | |
-| | o  branch=old 2 branch trunk, remove c files:
-| |/
++---o  branch=old 2 branch trunk, remove c files: a b
+| |
 | o  branch= 1 hello files: a b c
 |/
 o  branch= 0 init projA files:
