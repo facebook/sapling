@@ -101,7 +101,7 @@ def setcurrent(repo, mark):
 
     refs = parse(repo)
 
-    'do not update if we do update to an rev equal to the current bookmark'
+    # do not update if we do update to a rev equal to the current bookmark
     if (mark not in refs and
         current(repo) and refs[current(repo)] == repo.changectx('.').node()):
         return
