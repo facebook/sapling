@@ -17,7 +17,6 @@ merge, hg update).
 '''
 
 from mercurial.commands import templateopts, hex, short
-from mercurial import extensions
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, changelog
 from mercurial.node import nullid, nullrev
@@ -220,24 +219,6 @@ def reposetup(ui, repo):
             return result
 
     repo.__class__ = bookmark_repo
-
-def pushnonbookmarked(orig, ui, repo, *args, **opts):
-    'Call push with only the heads that are not bookmarked'
-    if opts.get('non_bookmarked'):
-        if opts.get('rev'):
-            heads = [repo.lookup(r) for r in opts.get('rev')]
-        else:
-            heads = repo.heads()
-
-	markheads = parse(repo).values()
-        opts['rev'] = [head for head in heads if not(head in markheads)]
-        
-    orig(ui, repo, *args, **opts)
-
-def uisetup(ui):
-    'Replace push with a decorator to provide --non-bookmarked option'
-    entry = extensions.wrapcommand(commands.table, 'push', pushnonbookmarked)
-    entry[1].append(('', 'non-bookmarked', None, _("push all heads that are not bookmarked")))
 
 cmdtable = {
     "bookmarks":
