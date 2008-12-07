@@ -292,19 +292,6 @@ def reposetup(ui, repo):
 
     repo.__class__ = bookmark_repo
 
-def pushnonbookmarked(orig, ui, repo, *args, **opts):
-    'Call push with only the heads that are not bookmarked'
-    if opts.get('non_bookmarked'):
-        if opts.get('rev'):
-            heads = [repo.lookup(r) for r in opts.get('rev')]
-        else:
-            heads = repo.heads()
-
-        markheads = parse(repo).values()
-        opts['rev'] = [head for head in heads if not(head in markheads)]
-
-    orig(ui, repo, *args, **opts)
-
 def updatecurbookmark(orig, ui, repo, *args, **opts):
     '''Set the current bookmark
 
@@ -318,27 +305,10 @@ def updatecurbookmark(orig, ui, repo, *args, **opts):
     setcurrent(repo, rev)
     return res
 
-def bookmarkonlylog(orig, ui, repo, *args, **opts):
-    'Show revisions that are ancestors of given bookmark'
-    if opts.get('only_bookmark'):
-        if opts.get('rev'):
-            raise util.Abort(_("you cannot use --rev and --only-bookmark"
-                               " options simultaneously"))
-        mark = opts['only_bookmark']
-        if not mark in parse(repo):
-            raise util.Abort(_("invalid bookmark name"))
-        opts['rev'] = ['%s:null' % mark]
-    orig(ui, repo, *args, **opts)
-
 def uisetup(ui):
     'Replace push with a decorator to provide --non-bookmarked option'
-    entry = extensions.wrapcommand(commands.table, 'push', pushnonbookmarked)
-    entry[1].append(('', 'non-bookmarked', None, _("push all heads that are not bookmarked")))
     if ui.configbool('bookmarks', 'track.current'):
         extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
-    entry = extensions.wrapcommand(commands.table, 'log', bookmarkonlylog)
-    entry[1].append(('B', 'only-bookmark', '',
-                     _("show only ancestors of given bookmark")))
 
 cmdtable = {
     "bookmarks":
