@@ -185,6 +185,7 @@ class bugzilla_2_16(object):
         self.run('''insert into bugs_activity (bug_id, who, bug_when, fieldid)
                     values (%s, %s, %s, %s)''',
                  (bugid, userid, now, self.longdesc_id))
+        self.conn.commit()
 
 class bugzilla_3_0(bugzilla_2_16):
     '''support for bugzilla 3.0 series.'''
