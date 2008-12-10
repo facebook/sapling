@@ -107,11 +107,11 @@ class HgChangeReceiver(delta.Editor):
         self.author_host = author_host
 
     def __setup_repo(self, repo_path):
-        '''Verify the repo is going to work out for us.
+        """Verify the repo is going to work out for us.
 
         This method will fail an assertion if the repo exists but doesn't have
         the Subversion metadata.
-        '''
+        """
         if os.path.isdir(repo_path) and len(os.listdir(repo_path)):
             self.repo = hg.repository(self.ui, repo_path)
             assert os.path.isfile(self.revmap_file)
@@ -141,6 +141,7 @@ class HgChangeReceiver(delta.Editor):
         self.missing_plaintexts = set()
         self.commit_branches_empty = {}
         self.base_revision = None
+        self.branches_to_delete = set()
 
     def _save_metadata(self):
         '''Save the Subversion metadata. This should really be called after
@@ -164,11 +165,11 @@ class HgChangeReceiver(delta.Editor):
         return self._split_branch_path(path)[:2]
 
     def _split_branch_path(self, path):
-        '''Figure out which branch inside our repo this path represents, and
+        """Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
 
         Raises an exception if it can't perform its job.
-        '''
+        """
         path = self._normalize_path(path)
         if path.startswith('trunk'):
             p = path[len('trunk'):]
@@ -186,8 +187,8 @@ class HgChangeReceiver(delta.Editor):
         return None, None, None
 
     def set_current_rev(self, rev):
-        '''Set the revision we're currently converting.
-        '''
+        """Set the revision we're currently converting.
+        """
         self.current_rev = rev
 
     def set_file(self, path, data, isexec=False, islink=False):
@@ -236,19 +237,23 @@ class HgChangeReceiver(delta.Editor):
                 continue
             if num <= number and num > real_num:
                 real_num = num
-        if real_num == 0:
-            if branch in self.branches:
-                parent_branch = self.branches[branch][0]
-                parent_branch_rev = self.branches[branch][1]
-                if parent_branch_rev <= 0:
-                    return None, None
-                branch_created_rev = self.branches[branch][2]
-                if parent_branch == 'trunk':
-                    parent_branch = None
-                if branch_created_rev <= number+1 and branch != parent_branch:
-                    return self.get_parent_svn_branch_and_rev(
-                                                    parent_branch_rev+1,
-                                                    parent_branch)
+        if branch in self.branches:
+            parent_branch = self.branches[branch][0]
+            parent_branch_rev = self.branches[branch][1]
+            # check to see if this branch already existed and is the same
+            if parent_branch_rev < real_num:
+                return real_num, branch
+            # if that wasn't true, then this is the a new branch with the
+            # same name as some old deleted branch
+            if parent_branch_rev <= 0 and real_num == 0:
+                return None, None
+            branch_created_rev = self.branches[branch][2]
+            if parent_branch == 'trunk':
+                parent_branch = None
+            if branch_created_rev <= number+1 and branch != parent_branch:
+                return self.get_parent_svn_branch_and_rev(
+                                                parent_branch_rev+1,
+                                                parent_branch)
         if real_num != 0:
             return real_num, branch
         return None, None
@@ -265,12 +270,12 @@ class HgChangeReceiver(delta.Editor):
         paths = revision.paths
         added_branches = {}
         added_tags = {}
+        self.branches_to_delete = set()
         tags_to_delete = set()
-        branches_to_delete = set()
         for p in sorted(paths):
             fi, br = self._path_and_branch_for_path(p)
             if fi is not None:
-                if fi == '' and br not in self.branches:
+                if fi == '' and paths[p].action != 'D':
                     src_p = paths[p].copyfrom_path
                     src_rev = paths[p].copyfrom_rev
                     src_tag = self._is_path_tag(src_p)
@@ -294,7 +299,7 @@ class HgChangeReceiver(delta.Editor):
                 elif fi == '' and br in self.branches:
                     br2 = br or 'default'
                     if br2 not in self.repo.branchtags() and paths[p].action == 'D':
-                        branches_to_delete.add(br)
+                        self.branches_to_delete.add(br)
             else:
                 t_name = self._is_path_tag(p)
                 if t_name == False:
@@ -320,7 +325,7 @@ class HgChangeReceiver(delta.Editor):
                         tags_to_delete.add(t_name)
         for t in tags_to_delete:
             del self.tags[t]
-        for br in branches_to_delete:
+        for br in self.branches_to_delete:
             del self.branches[br]
         self.tags.update(added_tags)
         self.branches.update(added_branches)
@@ -359,9 +364,12 @@ class HgChangeReceiver(delta.Editor):
             parents = (self.get_parent_revision(rev.revnum, branch),
                        revlog.nullid)
             if branch is not None:
-                if branch not in self.branches and branch not in self.repo.branchtags():
+                if (branch not in self.branches
+                    and branch not in self.repo.branchtags()):
                     continue
                 extra['branch'] = branch
+            if (branch in self.branches_to_delete):
+                continue
             parent_ctx = self.repo.changectx(parents[0])
             def filectxfn(repo, memctx, path):
                 current_file = files[path]
@@ -396,6 +404,29 @@ class HgChangeReceiver(delta.Editor):
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         # now we handle branches that need to be committed without any files
+        for branch in self.branches_to_delete:
+            closed = revlog.nullid
+            if 'closed-branches' in self.repo.branchtags():
+                closed = self.repo['closed-branches'].node()
+            ha = self.get_parent_revision(rev.revnum, branch)
+            parentctx = self.repo.changectx(ha)
+            if parentctx.children():
+                continue
+            parents = (ha, closed)
+            def del_all_files(*args):
+                raise IOError
+            files = parentctx.manifest().keys()
+            current_ctx = context.memctx(self.repo,
+                                         parents,
+                                         rev.message or ' ',
+                                         files,
+                                         del_all_files,
+                                         '%s%s' % (rev.author,
+                                                   self.author_host),
+                                         date,
+                                         {'branch': 'closed-branches'})
+            new_hash = self.repo.commitctx(current_ctx)
+            self.ui.status('Marked branch %s as closed.' % (branch or 'default'))
         for branch in self.commit_branches_empty:
             ha = self.get_parent_revision(rev.revnum, branch)
             if ha == node.nullid:
@@ -404,8 +435,11 @@ class HgChangeReceiver(delta.Editor):
             def del_all_files(*args):
                 raise IOError
             extra = {}
-            if branch:
-                extra['branch'] = branch
+            if parent_ctx.children():
+                # Target isn't an active head, no need to do things to it.
+                continue
+            if branch in self.branches_to_delete:
+                extra['branch'] = 'closed-branch'
             # True here means nuke all files
             files = []
             if self.commit_branches_empty[branch]:
@@ -468,6 +502,8 @@ class HgChangeReceiver(delta.Editor):
     @stash_exception_on_self
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
+        if br_path == '':
+            self.branches_to_delete.add(branch)
         if br_path is not None:
             ha = self.get_parent_revision(self.current_rev.revnum, branch)
             if ha == revlog.nullid:

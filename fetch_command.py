@@ -32,8 +32,8 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     merc_util._encoding = 'UTF-8'
     skipto_rev=int(skipto_rev)
     have_replay = not stupid
-    if have_replay and not callable(delta.svn_txdelta_apply(None, None,
-                                                            None)[0]): #pragma: no cover
+    if have_replay and not callable(
+        delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
         ui.status('You are using old Subversion SWIG bindings. Replay will not'
                   ' work until you upgrade to 1.5.0 or newer. Falling back to'
                   ' a slower method that may be buggier. Please upgrade, or'
@@ -124,7 +124,7 @@ def replay_convert_rev(hg_editor, svn, r):
             if p[-1] == '/':
                 dirpath = p[len(rootpath):]
                 files_to_grab.update((dirpath + f for f,k in
-                                      svn.list_files(dirpath, r.revnum) 
+                                      svn.list_files(dirpath, r.revnum)
                                       if k == 'f'))
             else:
                 files_to_grab.add(p[len(rootpath):])
@@ -176,7 +176,7 @@ def mempatchproxy(parentctx, files):
     class mempatch(patchfile):
         def __init__(self, ui, fname, opener, missing=False):
             patchfile.__init__(self, ui, fname, None, False)
-            
+
         def readlines(self, fname):
             if fname not in parentctx:
                 raise IOError('Cannot find %r to patch' % fname)
@@ -328,7 +328,7 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
                     data = data[len('link '):]
             elif path in parentctx:
                 data = parentctx[path].data()
-            
+
         copied = copies.get(path)
         return context.memfilectx(path=path, data=data, islink=islink,
                                   isexec=isexe, copied=copied)
@@ -477,17 +477,19 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
 def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
     # this server fails at replay
     branches = hg_editor.branches_in_paths(r.paths)
+    deleted_branches = {}
+    date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
+    date += ' -0000'
     for b in branches:
         parentctx = hg_editor.repo[hg_editor.get_parent_revision(r.revnum, b)]
         kind = svn.checkpath(branches[b], r.revnum)
         if kind != 'd':
             # Branch does not exist at this revision. Get parent revision and
             # remove everything.
-            files_touched = parentctx.manifest().keys()
-            def filectxfn(repo, memctx, path):
-                raise IOError()
+            deleted_branches[b] = parentctx.node()
+            continue
         else:
-            try:            
+            try:
                 files_touched, filectxfn = stupid_diff_branchrev(
                     ui, svn, hg_editor, b, r, parentctx)
             except BadPatchApply, e:
@@ -496,8 +498,6 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 files_touched, filectxfn = stupid_fetch_branchrev(
                     svn, hg_editor, b, branches[b], r, parentctx)
 
-        date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
-        date += ' -0000'
         extra = {}
         if b:
             extra['branch'] = b
@@ -522,6 +522,31 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             hg_editor._save_metadata()
             ui.status('committed as %s on branch %s\n' %
                       (node.hex(ha),  b or 'default'))
+    for b, parent in deleted_branches.iteritems():
+        if parent == node.nullid:
+            continue
+        parentctx = hg_editor.repo[parent]
+        if parentctx.children():
+            continue
+        files_touched = parentctx.manifest().keys()
+        def filectxfn(repo, memctx, path):
+            raise IOError()
+        closed = node.nullid
+        if 'closed-branches' in hg_editor.repo.branchtags():
+            closed = hg_editor.repo['closed-branches'].node()
+        parents = (parent, closed)
+        current_ctx = context.memctx(hg_editor.repo,
+                                     parents,
+                                     r.message or '...',
+                                     files_touched,
+                                     filectxfn,
+                                     '%s%s' % (r.author,
+                                               hg_editor.author_host),
+                                     date,
+                                     {'branch': 'closed-branches'})
+        ha = hg_editor.repo.commitctx(current_ctx)
+        ui.status('Marked branch %s as closed.' % (b or 'default'))
+        hg_editor._save_metadata()
 
 class BadPatchApply(Exception):
     pass

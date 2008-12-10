@@ -1,6 +1,8 @@
 import sys
 import unittest
 
+from mercurial import node
+
 import test_util
 
 
@@ -28,6 +30,17 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_unorderedbranch_stupid(self):
         self.test_unorderedbranch(True)
+        
+    def test_renamed_branch_to_trunk(self, stupid=False):
+        repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump', 
+                                            stupid)
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         'b479347c1f56d1fafe5e32a7ce0d1b7099637784')
+        self.assertEqual(repo['tip'].parents()[0].branch(), 'dev_branch')
+        self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
+
+    def test_renamed_branch_to_trunk_stupid(self):
+        self.test_renamed_branch_to_trunk(stupid=True)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
