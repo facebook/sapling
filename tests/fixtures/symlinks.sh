@@ -35,6 +35,12 @@ ln -s b linkaa
 rm d2/linka
 ln -s b d2/linka
 svn ci -m "update symlinks"
+# Replace a symlink with a regular file
+rm linkaa
+echo data > linkaa
+svn propdel svn:special linkaa
+svn rm d2/linka
+svn ci -m "undo link"
 cd ../..
 
 svnadmin dump testrepo > ../symlinks.svndump

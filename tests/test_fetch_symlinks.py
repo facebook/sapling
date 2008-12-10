@@ -18,15 +18,31 @@ class TestFetchSymlinks(test_util.TestBase):
                     continue
                 self.assertFalse(r[f].data().startswith('link '))
         # Check symlinks in tip
-        tip = repo['tip']
         links = {
-            'linkaa': 'b',
-            'd2/linka': 'b',
+            0: {
+                'linka': 'a',
+                'd/linka': 'a',
+                },
+            1: {
+                'linkaa': 'a',
+                'd2/linka': 'a',
+                },
+            2: {
+                'linkaa': 'b',
+                'd2/linka': 'b',
+                },
+            3: {
+                },
             }
-        for f in tip.manifest():
-            self.assertEqual(f in links, 'l' in tip[f].flags())
-            if f in links:
-                self.assertEqual(links[f], tip[f].data())
+            
+        for rev in repo:
+            ctx = repo[rev]
+            for f in ctx.manifest():
+                self.assertEqual(f in links[rev], 'l' in ctx[f].flags())
+                if f in links[rev]:
+                    self.assertEqual(links[rev][f], ctx[f].data())
+            for f in links[rev]:
+                self.assertTrue(f in ctx)
 
     def test_symlinks_stupid(self):
         self.test_symlinks(True)

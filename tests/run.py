@@ -9,6 +9,7 @@ import test_fetch_command
 import test_fetch_command_regexes
 import test_fetch_exec
 import test_fetch_renames
+import test_fetch_symlinks
 import test_fetch_truncated
 import test_push_command
 import test_push_renames
@@ -22,6 +23,7 @@ def suite():
                                test_fetch_command_regexes.suite(),
                                test_fetch_exec.suite(),
                                test_fetch_renames.suite(),
+                               test_fetch_symlinks.suite(),
                                test_fetch_truncated.suite(),
                                test_push_command.suite(),
                                test_push_renames.suite(),
