@@ -61,6 +61,21 @@ class TestFetchRenames(test_util.TestBase):
     def test_rename_stupid(self):
         self._test_rename(True)
 
+    def _test_case(self, stupid):
+        repo = self._load_fixture_and_fetch('filecase.svndump', stupid)
+        files = {
+            0: ['A', 'a', 'e/a', 'b', 'd/a', 'D/a', 'f/a', 'F'],
+            1: ['A', 'a', 'E/a', 'B', 'd/A', 'D/a', 'f/a', 'F'],
+            }
+        for rev in repo:
+            self.assertEqual(sorted(files[rev]), sorted(repo[rev].manifest()))
+
+    def test_case(self):
+        self._test_case(False)
+
+    def test_case_stupid(self):
+        self._test_case(True)
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchRenames),
           ]

@@ -1,0 +1,268 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 43703c40-3731-4eff-a4bd-16f771fbf860
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-12-07T13:00:57.919880Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+init project
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-07T13:00:58.039069Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 110
+Content-length: 110
+
+K 7
+svn:log
+V 9
+add files
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-07T13:00:59.209541Z
+PROPS-END
+
+Node-path: trunk/A
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: bf072e9119077b4e76437a93986787ef
+Content-length: 12
+
+PROPS-END
+A
+
+
+Node-path: trunk/D
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/D/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/F
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: d2a33790e5bf28b33cdbf61722a06989
+Content-length: 12
+
+PROPS-END
+F
+
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Content-length: 12
+
+PROPS-END
+b
+
+
+Node-path: trunk/d
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/e
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/e/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/f
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/f/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 11
+change case
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-07T13:01:03.159028Z
+PROPS-END
+
+Node-path: trunk/B
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/b
+Text-copy-source-md5: 3b5d5c3712955042212316173ccf37be
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: trunk/E
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/e
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: trunk/d/A
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/d/a
+Text-copy-source-md5: 60b725f10c9c85c70d97880dfe8191b3
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: trunk/d/a
+Node-action: delete
+
+
+Node-path: trunk/b
+Node-action: delete
+
+
+Node-path: trunk/e
+Node-action: delete
+
+
