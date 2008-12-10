@@ -407,7 +407,8 @@ class ui(object):
                 import readline
                 # force demandimport to really load the module
                 readline.read_history_file
-            except ImportError:
+                # windows sometimes raises something other than ImportError
+            except Exception:
                 pass
         line = raw_input(prompt)
         # When stdin is in binary mode on Windows, it can cause
