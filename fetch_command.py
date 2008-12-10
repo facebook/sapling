@@ -225,13 +225,12 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
             raise
         raise BadPatchApply('previous revision does not exist')
     files_data = {}
+    binary_files = {}
     for m in binary_file_re.findall(d):
         # we have to pull each binary file by hand as a fulltext,
         # which sucks but we've got no choice
-        try:
-            files_data[m] = svn.get_file(diff_path+'/'+m, r.revnum)[0]
-        except IOError:
-            files_data[m] = None
+        binary_files[m] = 1
+        files_data[m] = ''
     d2 = empty_file_patch_wont_make_re.sub('', d)
     d2 = property_exec_set_re.sub('', d2)
     d2 = property_exec_removed_re.sub('', d2)
@@ -321,14 +320,16 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
         data = files_data[path]
         if data is None:
             raise IOError()
-        if path in link_files:
-            return context.memfilectx(path=path, data=data,
-                                      islink=True, isexec=False,
-                                      copied=False)
-        exe = exec_files.get(path, 'x' in parentctx.flags(path))
+        if path not in binary_files:
+            isexe = exec_files.get(path, 'x' in parentctx.flags(path))
+            islink = path in link_files
+        else:
+            data, mode = svn.get_file(diff_path + '/' + path, r.revnum)
+            isexe = 'x' in mode
+            islink = 'l' in mode
         copied = copies.get(path)
-        return context.memfilectx(path=path, data=data, islink=False,
-                                  isexec=exe, copied=copied)
+        return context.memfilectx(path=path, data=data, islink=islink,
+                                  isexec=isexe, copied=copied)
 
     return list(files_data), filectxfn
 
