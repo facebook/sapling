@@ -53,6 +53,8 @@ class TestFetchRenames(test_util.TestBase):
                 self.assertEqual(cp[0], copymap[f][0])
                 self.assertEqual(ctx[f].data(), copymap[f][1])
 
+        self.assertEqual(repo['tip']['changed3'].data(), 'changed\nchanged3\n')
+
     def test_rename(self):
         self._test_rename(False)
 

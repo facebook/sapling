@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 5bdf7fc6-44b3-4b30-aeea-f6314d371318
+UUID: 113560bd-ec36-42a6-acef-e4688a33b129
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-11-04T12:22:31.270639Z
+2008-12-05T22:48:38.139917Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:31.366894Z
+2008-12-05T22:48:38.525864Z
 PROPS-END
 
 Node-path: branches
@@ -63,7 +63,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:32.285042Z
+2008-12-05T22:48:39.313010Z
 PROPS-END
 
 Node-path: trunk/a
@@ -279,7 +279,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:33.209059Z
+2008-12-05T22:48:40.224632Z
 PROPS-END
 
 Node-path: trunk/changed
@@ -338,7 +338,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:35.187557Z
+2008-12-05T22:48:42.184704Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -459,7 +459,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:36.173340Z
+2008-12-05T22:48:43.175723Z
 PROPS-END
 
 Node-path: branches/branch1/c
@@ -489,7 +489,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:43.200262Z
+2008-12-05T22:48:50.200094Z
 PROPS-END
 
 Node-path: branches/branch1/c1
@@ -628,7 +628,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:45.148291Z
+2008-12-05T22:48:52.154125Z
 PROPS-END
 
 Node-path: trunk/c
@@ -662,7 +662,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:48.155393Z
+2008-12-05T22:48:55.160439Z
 PROPS-END
 
 Node-path: trunk/deleteddir
@@ -695,7 +695,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:51.155926Z
+2008-12-05T22:48:59.163460Z
 PROPS-END
 
 Node-path: trunk/changed2
@@ -704,6 +704,20 @@ Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/changed
 Text-copy-source-md5: ec1bebaea2c042beb68f7679ddd106a4
+
+
+Node-path: trunk/changed3
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/changed
+Text-copy-source-md5: ec1bebaea2c042beb68f7679ddd106a4
+Text-content-length: 17
+Text-content-md5: 7d93e8c4d61c2a7b05c20b7d8bf11f83
+Content-length: 17
+
+changed
+changed3
 
 
 Node-path: trunk/changeddir2
@@ -728,7 +742,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:54.156623Z
+2008-12-05T22:49:02.160163Z
 PROPS-END
 
 Node-path: trunk/unchanged2
@@ -761,7 +775,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-11-04T12:22:56.152302Z
+2008-12-05T22:49:04.157303Z
 PROPS-END
 
 Node-path: trunk/groupdir2

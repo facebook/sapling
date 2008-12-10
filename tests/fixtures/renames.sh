@@ -87,6 +87,10 @@ svn ci -m "copy stuff from the past"
 # Copy data from the past before it was changed
 svn cp $svnurl/trunk/changed@2 changed2
 svn cp $svnurl/trunk/changeddir@2 changeddir2
+# Harder, copy from the past before change and change it again
+# This confused the stupid diff path
+svn cp $svnurl/trunk/changed@2 changed3
+echo changed3 >> changed3
 svn ci -m "copy stuff from the past before change"
 # Copy unchanged stuff from the past. Since no changed occured in these files
 # between the source and parent revision, we record them as copy from parent
