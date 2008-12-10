@@ -7,6 +7,7 @@
 '''converting foreign VCS repositories to Mercurial'''
 
 import convcmd
+import cvsps
 from mercurial import commands
 from mercurial.i18n import _
 
@@ -183,7 +184,18 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 def debugsvnlog(ui, **opts):
     return convcmd.debugsvnlog(ui, **opts)
 
-commands.norepo += " convert debugsvnlog"
+def debugcvsps(ui, *args, **opts):
+    '''Create changeset information from CVS
+
+    This command is intended as a debugging tool for the CVS to Mercurial
+    converter, and can be used as a direct replacement for cvsps.
+
+    Hg debugcvsps reads the CVS rlog for current directory (or any named
+    directory) in the CVS repository, and converts the log to a series of
+    changesets based on matching commit log entries and dates.'''
+    return cvsps.debugcvsps(ui, *args, **opts)
+
+commands.norepo += " convert debugsvnlog debugcvsps"
 
 cmdtable = {
     "convert":
@@ -200,4 +212,22 @@ cmdtable = {
         (debugsvnlog,
          [],
          'hg debugsvnlog'),
+    "debugcvsps":
+        (debugcvsps,
+         [
+          # Main options shared with cvsps-2.1
+          ('b', 'branches', [], _('Only return changes on specified branches')),
+          ('p', 'prefix', '', _('Prefix to remove from file names')),
+          ('r', 'revisions', [], _('Only return changes after or between specified tags')),
+          ('u', 'update-cache', None, _("Update cvs log cache")),
+          ('x', 'new-cache', None, _("Create new cvs log cache")),
+          ('z', 'fuzz', 60, _('Set commit time fuzz in seconds')),
+          ('', 'root', '', _('Specify cvsroot')),
+          # Options specific to builtin cvsps
+          ('', 'parents', '', _('Show parent changesets')),
+          ('', 'ancestors', '', _('Show current changeset in ancestor branches')),
+          # Options that are ignored for compatibility with cvsps-2.1
+          ('A', 'cvs-direct', None, 'Ignored for compatibility'),
+         ],
+         'hg debugcvsps [OPTION]... [PATH]...'),
 }
