@@ -267,7 +267,7 @@ class HgChangeReceiver(delta.Editor):
         added_tags = {}
         tags_to_delete = set()
         branches_to_delete = set()
-        for p in paths:
+        for p in sorted(paths):
             fi, br = self._path_and_branch_for_path(p)
             if fi is not None:
                 if fi == '' and br not in self.branches:
@@ -295,10 +295,6 @@ class HgChangeReceiver(delta.Editor):
                     br2 = br or 'default'
                     if br2 not in self.repo.branchtags() and paths[p].action == 'D':
                         branches_to_delete.add(br)
-                elif br in added_branches:
-                    if paths[p].copyfrom_rev > added_branches[br][1]:
-                        x,y,z = added_branches[br]
-                        added_branches[br] = x, paths[p].copyfrom_rev, z
             else:
                 t_name = self._is_path_tag(p)
                 if t_name == False:

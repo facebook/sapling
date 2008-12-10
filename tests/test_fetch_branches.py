@@ -20,6 +20,15 @@ class TestFetchBranches(test_util.TestBase):
     def test_unrelatedbranch_stupid(self):
         self.test_unrelatedbranch(True)
 
+    def test_unorderedbranch(self, stupid=False):
+        repo = self._load_fixture_and_fetch('unorderedbranch.svndump', stupid)
+        r = repo['branch']
+        self.assertEqual(0, r.parents()[0].rev())
+        self.assertEqual(['a', 'c', 'z'], sorted(r.manifest()))
+
+    def test_unorderedbranch_stupid(self):
+        self.test_unorderedbranch(True)
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
           ]
