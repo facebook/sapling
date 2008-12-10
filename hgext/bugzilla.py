@@ -4,53 +4,107 @@
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
-#
-# hook extension to update comments of bugzilla bugs when changesets
-# that refer to bugs by id are seen.  this hook does not change bug
-# status, only comments.
-#
-# to configure, add items to '[bugzilla]' section of hgrc.
-#
-# to use, configure bugzilla extension and enable like this:
-#
-#   [extensions]
-#   hgext.bugzilla =
-#
-#   [hooks]
-#   # run bugzilla hook on every change pulled or pushed in here
-#   incoming.bugzilla = python:hgext.bugzilla.hook
-#
-# config items:
-#
-# section name is 'bugzilla'.
-#  [bugzilla]
-#
-# REQUIRED:
-#   host = bugzilla # mysql server where bugzilla database lives
-#   password = **   # user's password
-#   version = 2.16  # version of bugzilla installed
-#
-# OPTIONAL:
-#   bzuser = ...    # fallback bugzilla user name to record comments with
-#   db = bugs       # database to connect to
-#   notify = ...    # command to run to get bugzilla to send mail
-#   regexp = ...    # regexp to match bug ids (must contain one "()" group)
-#   strip = 0       # number of slashes to strip for url paths
-#   style = ...     # style file to use when formatting comments
-#   template = ...  # template to use when formatting comments
-#   timeout = 5     # database connection timeout (seconds)
-#   user = bugs     # user to connect to database as
-#   [web]
-#   baseurl = http://hgserver/... # root of hg web site for browsing commits
-#
-# if hg committer names are not same as bugzilla user names, use
-# "usermap" feature to map from committer email to bugzilla user name.
-# usermap can be in hgrc or separate config file.
-#
-#   [bugzilla]
-#   usermap = filename # cfg file with "committer"="bugzilla user" info
-#   [usermap]
-#   committer_email = bugzilla_user_name
+
+'''Bugzilla integration
+
+This hook extension adds comments on bugs in Bugzilla when changesets
+that refer to bugs by Bugzilla ID are seen. The hook does not change bug
+status.
+
+The hook updates the Bugzilla database directly. Only Bugzilla installations
+using MySQL are supported.
+
+The hook relies on a Bugzilla script to send bug change notification emails.
+That script changes between Bugzilla versions; the 'processmail' script used
+prior to 2.18 is replaced in 2.18 and subsequent versions by
+'config/sendbugmail.pl'. Note that these will be run by Mercurial as the user
+pushing the change; you will need to ensure the Bugzilla install file
+permissions are set appropriately.
+
+Configuring the extension:
+
+    [bugzilla]
+    host       Hostname of the MySQL server holding the Bugzilla database.
+    db         Name of the Bugzilla database in MySQL. Default 'bugs'.
+    user       Username to use to access MySQL server. Default 'bugs'.
+    password   Password to use to access MySQL server.
+    timeout    Database connection timeout (seconds). Default 5.
+    version    Bugzilla version. Specify '3.0' for Bugzilla versions from
+               3.0 onwards, and '2.16' for versions prior to 3.0.
+    bzuser     Fallback Bugzilla user name to record comments with, if
+               changeset committer cannot be found as a Bugzilla user.
+    notify     The command to run to get Bugzilla to send bug change
+               notification emails. Substitutes one string parameter,
+               the bug ID. Default 'cd /var/www/html/bugzilla && '
+                                   './processmail %s nobody@nowhere.com'.
+    regexp     Regular expression to match bug IDs in changeset commit message.
+               Must contain one "()" group. The default expression matches
+               'Bug 1234', 'Bug no. 1234', 'Bug number 1234',
+               'Bugs 1234,5678', 'Bug 1234 and 5678' and variations thereof.
+               Matching is case insensitive.
+    style      The style file to use when formatting comments.
+    template   Template to use when formatting comments. Overrides
+               style if specified. In addition to the usual Mercurial
+               keywords, the extension specifies:
+                   {bug}       The Bugzilla bug ID.
+                   {root}      The full pathname of the Mercurial repository.
+                   {webroot}   Stripped pathname of the Mercurial repository.
+                   {hgweb}     Base URL for browsing Mercurial repositories.
+               Default 'changeset {node|short} in repo {root} refers '
+                       'to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}'
+    strip      The number of slashes to strip from the front of {root}
+               to produce {webroot}. Default 0.
+    usermap    Path of file containing Mercurial committer ID to Bugzilla user
+               ID mappings. If specified, the file should contain one mapping
+               per line, "committer"="Bugzilla user". See also the
+               [usermap] section.
+
+    [usermap]
+    Any entries in this section specify mappings of Mercurial committer ID
+    to Bugzilla user ID. See also [bugzilla].usermap.
+    "committer"="Bugzilla user"
+
+    [web]
+    baseurl    Base URL for browsing Mercurial repositories. Reference from
+               templates as {hgweb}.
+
+Activating the extension:
+
+    [extensions]
+    hgext.bugzilla =
+
+    [hooks]
+    # run bugzilla hook on every change pulled or pushed in here
+    incoming.bugzilla = python:hgext.bugzilla.hook
+
+Example configuration:
+
+This example configuration is for a collection of Mercurial repositories
+in /var/local/hg/repos/ used with a local Bugzilla 3.2 installation in
+/opt/bugzilla-3.2.
+
+    [bugzilla]
+    host=localhost
+    password=XYZZY
+    version=3.0
+    bzuser=unknown@domain.com
+    notify=cd /opt/bugzilla-3.2 && perl -T contrib/sendbugmail.pl %%s bugmail@domain.com
+    template=Changeset {node|short} in {root|basename}.\\n{hgweb}/{webroot}/rev/{node|short}\\n\\n{desc}\\n
+    strip=5
+
+    [web]
+    baseurl=http://dev.domain.com/hg
+
+    [usermap]
+    user@emaildomain.com=user.name@bugzilladomain.com
+
+Commits add a comment to the Bugzilla bug record of the form:
+
+    Changeset 3b16791d6642 in repository-name.
+    http://dev.domain.com/hg/repository-name/rev/3b16791d6642
+
+    Changeset commit comment. Bug 1234.
+'''
 
 from mercurial.i18n import _
 from mercurial.node import short
