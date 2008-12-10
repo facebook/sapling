@@ -180,7 +180,11 @@ def mempatchproxy(parentctx, files):
         def readlines(self, fname):
             if fname not in parentctx:
                 raise IOError('Cannot find %r to patch' % fname)
-            return cStringIO.StringIO(parentctx[fname].data()).readlines()
+            fctx = parentctx[fname]
+            data = fctx.data()
+            if 'l' in fctx.flags():
+                data = 'link ' + data
+            return cStringIO.StringIO(data).readlines()
 
         def writelines(self, fname, lines):
             files[fname] = ''.join(lines)
@@ -226,23 +230,19 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
         raise BadPatchApply('previous revision does not exist')
     files_data = {}
     binary_files = {}
+    touched_files = {}
     for m in binary_file_re.findall(d):
         # we have to pull each binary file by hand as a fulltext,
         # which sucks but we've got no choice
         binary_files[m] = 1
-        files_data[m] = ''
+        touched_files[m] = 1
     d2 = empty_file_patch_wont_make_re.sub('', d)
     d2 = property_exec_set_re.sub('', d2)
     d2 = property_exec_removed_re.sub('', d2)
     for f in any_file_re.findall(d):
-        if f in files_data:
-            continue
         # Here we ensure that all files, including the new empty ones
-        # will be marked with proper data.
-        # TODO: load file data when necessary
-        files_data[f] = ''
-        if f in parentctx:
-            files_data[f] = parentctx[f].data()
+        # are marked as touched. Content is loaded on demand.
+        touched_files[f] = 1
     if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
         try:
             oldpatchfile = patch.patchfile
@@ -266,12 +266,6 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
         # if this patch didn't apply right, fall back to exporting the
         # entire rev.
         if patch_st == -1:
-            for fn in files_data:
-                if 'l' in parentctx.flags(fn):
-                    # I think this might be an underlying bug in svn -
-                    # I get diffs of deleted symlinks even though I
-                    # specifically said no deletes above.
-                    raise BadPatchApply('deleted symlinked prevent patching')
             assert False, ('This should only happen on case-insensitive'
                            ' volumes.')
         elif patch_st == 1:
@@ -289,20 +283,17 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
     for m in property_exec_set_re.findall(d):
         exec_files[m] = True
     for m in exec_files:
-        if m in files_data:
-            continue
-        data = ''
-        if  m in parentctx:
-            data = parentctx[m].data()
-        files_data[m] = data
+        touched_files[m] = 1
     link_files = {}
     for m in property_special_set_re.findall(d):
         # TODO(augie) when a symlink is removed, patching will fail.
         # We're seeing that above - there's gotta be a better
         # workaround than just bailing like that.
         assert m in files_data
-        files_data[m] = files_data[m][len('link '):]
         link_files[m] = True
+    for m in property_special_removed_re.findall(d):
+        assert m in files_data
+        link_files[m] = False
 
     for p in r.paths:
         if p.startswith(diff_path) and r.paths[p].action == 'D':
@@ -313,25 +304,36 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
             # If this isn't in the parent ctx, it must've been a dir
             files_data.update([(f, None) for f in parentctx if f.startswith(p2 + '/')])
 
-    copies = getcopies(svn, hg_editor, branch, diff_path, r, files_data,
+    for f in files_data:
+        touched_files[f] = 1
+
+    copies = getcopies(svn, hg_editor, branch, diff_path, r, touched_files,
                        parentctx)
 
     def filectxfn(repo, memctx, path):
-        data = files_data[path]
-        if data is None:
+        if path in files_data and files_data[path] is None:
             raise IOError()
-        if path not in binary_files:
-            isexe = exec_files.get(path, 'x' in parentctx.flags(path))
-            islink = path in link_files
-        else:
+
+        if path in binary_files:
             data, mode = svn.get_file(diff_path + '/' + path, r.revnum)
             isexe = 'x' in mode
             islink = 'l' in mode
+        else:
+            isexe = exec_files.get(path, 'x' in parentctx.flags(path))
+            islink = link_files.get(path, 'l' in parentctx.flags(path))
+            data = ''
+            if path in files_data:
+                data = files_data[path]
+                if islink:
+                    data = data[len('link '):]
+            elif path in parentctx:
+                data = parentctx[path].data()
+            
         copied = copies.get(path)
         return context.memfilectx(path=path, data=data, islink=islink,
                                   isexec=isexe, copied=copied)
 
-    return list(files_data), filectxfn
+    return list(touched_files), filectxfn
 
 def makecopyfinder(r, branchpath, rootdir):
     """Return a function detecting copies.
