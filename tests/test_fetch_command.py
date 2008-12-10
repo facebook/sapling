@@ -115,12 +115,6 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.assertEqual(node.hex(repo['tip'].node()),
                          '9cf09e6ff7fa938188c3bcc9dd87abd7842c080c')
 
-    def test_empty_prop_val_executable(self):
-        repo = self._load_fixture_and_fetch('executable_file_empty_prop.svndump')
-        self.assertEqual(node.hex(repo['tip'].node()),
-                         'b19e2bdd93da30b09c2396cfdb987cc85271249a')
-        self.assertEqual(repo['tip']['foo'].flags(), 'x')
-
 
 class TestStupidPull(test_util.TestBase):
     def test_stupid(self):
@@ -154,17 +148,6 @@ class TestStupidPull(test_util.TestBase):
                          repo['oldest'])
         self.assertEqual(node.hex(repo['tip'].node()),
                          '9cf09e6ff7fa938188c3bcc9dd87abd7842c080c')
-    
-    def test_empty_prop_val_executable(self):
-        repo = test_util.load_fixture_and_fetch(
-            'executable_file_empty_prop.svndump',
-            self.repo_path,
-            self.wc_path,
-            True)
-        self.assertEqual(repo['tip']['foo'].flags(), 'x')
-        self.assertEqual(node.hex(repo['tip'].node()),
-                         'b19e2bdd93da30b09c2396cfdb987cc85271249a')
-
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
