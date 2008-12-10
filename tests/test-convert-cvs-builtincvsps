@@ -102,3 +102,7 @@ hg -R src-filemap log --template '#rev# #desc# files: #files#\n'
 
 echo "graphlog = " >> $HGRCPATH
 hg -R src-hg glog --template '#rev# (#branches#) #desc# files: #files#\n'
+
+echo % testing debugcvsps
+cd src
+hg debugcvsps | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/' 
