@@ -32,7 +32,7 @@ def copyfile(src, dst, basedir):
     if dstdir and not os.path.isdir(dstdir):
         try:
             os.makedirs(dstdir)
-        except:
+        except IOError:
             raise util.Abort(
                 _("cannot create %s: unable to create destination directory")
                 % dst)            
