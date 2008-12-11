@@ -8,9 +8,10 @@ import test_util
 
 
 class TestBasicRepoLayout(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, subdir=''):
+    def _load_fixture_and_fetch(self, fixture_name, subdir='', stupid=False):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, subdir=subdir)
+                                                self.wc_path, subdir=subdir,
+                                                stupid=stupid)
 
     def test_fresh_fetch_single_rev(self):
         repo = self._load_fixture_and_fetch('single_rev.svndump')
@@ -60,7 +61,8 @@ class TestBasicRepoLayout(test_util.TestBase):
 
 
     def test_many_special_cases_diff(self):
-        repo = self._load_fixture_and_fetch('many_special_cases.svndump')
+        repo = self._load_fixture_and_fetch('many_special_cases.svndump',
+                                            stupid=True)
         # TODO there must be a better way than repo[0] for this check
         self._many_special_cases_checks(repo)
 
