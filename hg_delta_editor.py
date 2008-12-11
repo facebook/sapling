@@ -354,7 +354,6 @@ class HgChangeReceiver(delta.Editor):
             if b not in branch_batches:
                 branch_batches[b] = []
             branch_batches[b].append((p, f))
-
         for branch, files in branch_batches.iteritems():
             if branch in self.commit_branches_empty and files:
                 del self.commit_branches_empty[branch]
@@ -434,20 +433,16 @@ class HgChangeReceiver(delta.Editor):
             parent_ctx = self.repo.changectx(ha)
             def del_all_files(*args):
                 raise IOError
-            extra = {}
-            if parent_ctx.children():
-                # Target isn't an active head, no need to do things to it.
-                continue
-            if branch in self.branches_to_delete:
-                extra['branch'] = 'closed-branch'
-            # True here means nuke all files
-            files = []
+           # True here meant nuke all files, shouldn't happen with branch closing
             if self.commit_branches_empty[branch]:
-                files = parent_ctx.manifest().keys()
+               assert False, 'Got asked to commit non-closed branch as empty with no files. Please report this issue.'
+            extra = {}
+            if branch:
+                extra['branch'] = branch
             current_ctx = context.memctx(self.repo,
                                          (ha, node.nullid),
                                          rev.message or ' ',
-                                         files,
+                                         [],
                                          del_all_files,
                                          '%s%s' % (rev.author,
                                                    self.author_host),

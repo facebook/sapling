@@ -117,6 +117,15 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.assertEqual(node.hex(repo['tip'].node()),
                          '9cf09e6ff7fa938188c3bcc9dd87abd7842c080c')
 
+    def test_propedit_with_nothing_else(self, stupid=False):
+        repo = self._load_fixture_and_fetch('branch_prop_edit.svndump',
+                                            stupid=stupid)
+        self.assertEqual(repo['tip'].description(), 'Commit bogus propchange.')
+        self.assertEqual(repo['tip'].branch(), 'dev_branch')
+
+    def test_propedit_with_nothing_else_stupid(self):
+        self.test_propedit_with_nothing_else(stupid=True)
+
 
 class TestStupidPull(test_util.TestBase):
     def test_stupid(self):
