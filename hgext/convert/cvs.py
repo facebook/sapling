@@ -328,9 +328,6 @@ class convert_cvs(converter_source):
                     self.ui.warn(_("cvs server: %s\n") % line[2:])
                 elif line.startswith("Remove"):
                     l = self.readp.readline()
-                    l = self.readp.readline()
-                    if l != "ok\n":
-                        raise util.Abort(_("unknown CVS response: %s") % l)
                 else:
                     raise util.Abort(_("unknown CVS response: %s") % line)
 
