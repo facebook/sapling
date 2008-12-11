@@ -71,3 +71,15 @@ echo % display rejections
 cat b.rej
 cd ..
 
+echo % test push creating directory during git copy or rename
+hg init missingdir
+cd missingdir
+echo a > a
+hg ci -Am adda
+mkdir d
+hg copy a d/a2
+hg mv a d/a
+hg qnew -g -f patch
+hg qpop
+hg qpush
+cd ..
