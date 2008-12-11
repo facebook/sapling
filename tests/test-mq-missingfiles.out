@@ -47,3 +47,8 @@ GIT binary patch
 literal 2
 Jc${No0000400IC2
 
+% test push creating directory during git copy or rename
+adding a
+Patch queue now empty
+applying patch
+Now at: patch

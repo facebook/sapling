@@ -22,17 +22,20 @@ class NoHunks(PatchError):
 
 # helper functions
 
-def copyfile(src, dst, basedir=None):
-    if not basedir:
-        basedir = os.getcwd()
-
-    abssrc, absdst = [os.path.join(basedir, n) for n in (src, dst)]
+def copyfile(src, dst, basedir):
+    abssrc, absdst = [util.canonpath(basedir, basedir, x) for x in [src, dst]]
     if os.path.exists(absdst):
         raise util.Abort(_("cannot create %s: destination already exists") %
                          dst)
 
-    if not os.path.isdir(basedir):
-        os.makedirs(basedir)
+    dstdir = os.path.dirname(absdst)
+    if dstdir and not os.path.isdir(dstdir):
+        try:
+            os.makedirs(dstdir)
+        except IOError:
+            raise util.Abort(
+                _("cannot create %s: unable to create destination directory")
+                % dst)            
 
     util.copyfile(abssrc, absdst)
 
@@ -977,9 +980,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
             cwd = os.getcwd()
             for gp in gitpatches:
                 if gp.op in ('COPY', 'RENAME'):
-                    src, dst = [util.canonpath(cwd, cwd, x)
-                                for x in [gp.oldpath, gp.path]]
-                    copyfile(src, dst)
+                    copyfile(gp.oldpath, gp.path, cwd)
                 changed[gp.path] = gp
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
