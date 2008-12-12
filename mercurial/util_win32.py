@@ -19,7 +19,7 @@ import osutil
 import util
 from win32com.shell import shell,shellcon
 
-class WinError:
+class WinError(Exception):
     winerror_map = {
         winerror.ERROR_ACCESS_DENIED: errno.EACCES,
         winerror.ERROR_ACCOUNT_DISABLED: errno.EACCES,

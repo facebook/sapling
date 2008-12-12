@@ -136,3 +136,71 @@ o  5 (branch) ci2 files: b/c
 |/
 o  0 () Initial revision files: a b/c
 
+% testing debugcvsps
+collecting CVS rlog
+8 log entries
+creating changesets
+5 changeset entries
+---------------------
+PatchSet 1 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Log:
+Initial revision
+
+Members: 
+	a:INITIAL->1.1 
+	b/c:INITIAL->1.1 
+
+---------------------
+PatchSet 2 
+Date:
+Author:
+Branch: INITIAL
+Tag: start 
+Log:
+import
+
+Members: 
+	a:1.1->1.1.1.1 
+	b/c:1.1->1.1.1.1 
+
+---------------------
+PatchSet 3 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Log:
+ci0
+
+Members: 
+	b/c:1.1->1.2 
+
+---------------------
+PatchSet 4 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Log:
+ci1
+
+Members: 
+	a:1.1->1.2 
+	b/c:1.2->1.3 
+
+---------------------
+PatchSet 5 
+Date:
+Author:
+Branch: branch
+Tag: (none) 
+Log:
+ci2
+
+Members: 
+	b/c:1.1->1.1.2.1 
+

@@ -705,7 +705,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         if cwd is not None and oldcwd != cwd:
             os.chdir(oldcwd)
 
-class SignatureError:
+class SignatureError(Exception):
     pass
 
 def checksignature(func):
@@ -1901,7 +1901,7 @@ def walkrepos(path, followsym=False, seen_dirs=None):
         _add_dir_if_not_there(seen_dirs, path)
     for root, dirs, files in os.walk(path, topdown=True, onerror=errhandler):
         if '.hg' in dirs:
-            dirs.remove('.hg') # don't recurse inside the .hg directory
+            dirs[:] = [] # don't descend further
             yield root # found a repository
             qroot = os.path.join(root, '.hg', 'patches')
             if os.path.isdir(os.path.join(qroot, '.hg')):

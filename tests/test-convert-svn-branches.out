@@ -1,77 +1,3 @@
-% initial svn import
-Adding         projA/trunk
-Adding         projA/branches
-Adding         projA/tags
-
-Committed revision 1.
-% update svn repository
-A    A/trunk
-A    A/branches
-A    A/tags
-Checked out revision 1.
-A         trunk/a
-A         trunk/b
-A         trunk/c
-A         branches/notinbranch
-Adding         branches/notinbranch
-Adding         trunk/a
-Adding         trunk/b
-Adding         trunk/c
-Transmitting file data ....
-Committed revision 2.
-% branch to old
-A         branches/old
-D         branches/old/c
-Adding         branches/old
-Adding         branches/old/a
-Adding         branches/old/b
-Deleting       branches/old/c
-
-Committed revision 3.
-At revision 3.
-% update trunk
-Sending        trunk/a
-Transmitting file data .
-Committed revision 4.
-% update old branch
-Sending        branches/old/b
-Transmitting file data .
-Committed revision 5.
-% create a cross-branch revision
-A         branches/old/c
-D         trunk/b
-Adding         branches/old/c
-Deleting       trunk/b
-Transmitting file data .
-Committed revision 6.
-% update old branch again
-Sending        branches/old/b
-Transmitting file data .
-Committed revision 7.
-% move back and forth between branch of similar names
-At revision 7.
-A         branches/old2
-D         branches/old/a
-D         branches/old/b
-D         branches/old/c
-D         branches/old
-Deleting       branches/old
-Adding         branches/old2
-
-Committed revision 8.
-A         branches/old
-D         branches/old2/a
-D         branches/old2/b
-D         branches/old2/c
-D         branches/old2
-Adding         branches/old
-Deleting       branches/old2
-
-Committed revision 9.
-% update trunk again
-Sending        trunk/a
-Transmitting file data .
-Committed revision 10.
 % convert trunk and branches
 initializing destination A-hg repository
 scanning source...
@@ -88,12 +14,6 @@ converting...
 2 move to old2
 1 move back to old
 0 last change to a
-% branch again from a converted revision
-Checked out revision 1.
-A         branches/old3
-Adding         branches/old3
-
-Committed revision 11.
 % convert again
 scanning source...
 sorting...
@@ -117,8 +37,8 @@ o  branch=old3 11 branch trunk@1 into old3 files:
 | | |
 | o |  branch= 3 change a files: a
 | | |
-| | o  branch=old 2 branch trunk, remove c files:
-| |/
++---o  branch=old 2 branch trunk, remove c files: a b
+| |
 | o  branch= 1 hello files: a b c
 |/
 o  branch= 0 init projA files:

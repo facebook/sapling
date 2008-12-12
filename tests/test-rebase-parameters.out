@@ -15,15 +15,16 @@ move changeset (and descendants) to a different branch
 
 options:
 
-    --keep      keep original revisions
- -s --source    rebase from a given revision
- -b --base      rebase from the base of a given revision
- -d --dest      rebase onto a given revision
-    --collapse  collapse the rebased revisions
- -c --continue  continue an interrupted rebase
- -a --abort     abort an interrupted rebase
-    --style     display using template map file
-    --template  display with template
+    --keep          keep original revisions
+    --keepbranches  keep original branches
+ -s --source        rebase from a given revision
+ -b --base          rebase from the base of a given revision
+ -d --dest          rebase onto a given revision
+    --collapse      collapse the rebased revisions
+ -c --continue      continue an interrupted rebase
+ -a --abort         abort an interrupted rebase
+    --style         display using template map file
+    --template      display with template
 
 use "hg -v help rebase" to show global options
 
@@ -42,15 +43,16 @@ move changeset (and descendants) to a different branch
 
 options:
 
-    --keep      keep original revisions
- -s --source    rebase from a given revision
- -b --base      rebase from the base of a given revision
- -d --dest      rebase onto a given revision
-    --collapse  collapse the rebased revisions
- -c --continue  continue an interrupted rebase
- -a --abort     abort an interrupted rebase
-    --style     display using template map file
-    --template  display with template
+    --keep          keep original revisions
+    --keepbranches  keep original branches
+ -s --source        rebase from a given revision
+ -b --base          rebase from the base of a given revision
+ -d --dest          rebase onto a given revision
+    --collapse      collapse the rebased revisions
+ -c --continue      continue an interrupted rebase
+ -a --abort         abort an interrupted rebase
+    --style         display using template map file
+    --template      display with template
 
 use "hg -v help rebase" to show global options
 
@@ -69,15 +71,16 @@ move changeset (and descendants) to a different branch
 
 options:
 
-    --keep      keep original revisions
- -s --source    rebase from a given revision
- -b --base      rebase from the base of a given revision
- -d --dest      rebase onto a given revision
-    --collapse  collapse the rebased revisions
- -c --continue  continue an interrupted rebase
- -a --abort     abort an interrupted rebase
-    --style     display using template map file
-    --template  display with template
+    --keep          keep original revisions
+    --keepbranches  keep original branches
+ -s --source        rebase from a given revision
+ -b --base          rebase from the base of a given revision
+ -d --dest          rebase onto a given revision
+    --collapse      collapse the rebased revisions
+ -c --continue      continue an interrupted rebase
+ -a --abort         abort an interrupted rebase
+    --style         display using template map file
+    --template      display with template
 
 use "hg -v help rebase" to show global options
 
@@ -96,15 +99,16 @@ move changeset (and descendants) to a different branch
 
 options:
 
-    --keep      keep original revisions
- -s --source    rebase from a given revision
- -b --base      rebase from the base of a given revision
- -d --dest      rebase onto a given revision
-    --collapse  collapse the rebased revisions
- -c --continue  continue an interrupted rebase
- -a --abort     abort an interrupted rebase
-    --style     display using template map file
-    --template  display with template
+    --keep          keep original revisions
+    --keepbranches  keep original branches
+ -s --source        rebase from a given revision
+ -b --base          rebase from the base of a given revision
+ -d --dest          rebase onto a given revision
+    --collapse      collapse the rebased revisions
+ -c --continue      continue an interrupted rebase
+ -a --abort         abort an interrupted rebase
+    --style         display using template map file
+    --template      display with template
 
 use "hg -v help rebase" to show global options
 

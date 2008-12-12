@@ -105,6 +105,7 @@ class notifier(object):
         self.stripcount = int(self.ui.config('notify', 'strip', 0))
         self.root = self.strip(self.repo.root)
         self.domain = self.ui.config('notify', 'domain')
+        self.test = self.ui.configbool('notify', 'test', True)
         self.charsets = mail._charsets(self.ui)
         self.subs = self.subscribers()
 
@@ -157,7 +158,8 @@ class notifier(object):
                 for user in users.split(','):
                     subs[self.fixmail(user)] = 1
         subs = util.sort(subs)
-        return [mail.addressencode(self.ui, s, self.charsets) for s in subs]
+        return [mail.addressencode(self.ui, s, self.charsets, self.test)
+                for s in subs]
 
     def url(self, path=None):
         return self.ui.config('web', 'baseurl') + (path or self.root)
@@ -186,7 +188,7 @@ class notifier(object):
         # create fresh mime message from msg body
         text = msg.get_payload()
         # for notification prefer readability over data precision
-        msg = mail.mimeencode(self.ui, text, self.charsets)
+        msg = mail.mimeencode(self.ui, text, self.charsets, self.test)
 
         def fix_subject(subject):
             '''try to make subject line exist and be useful.'''
@@ -201,7 +203,8 @@ class notifier(object):
             maxsubject = int(self.ui.config('notify', 'maxsubject', 67))
             if maxsubject and len(subject) > maxsubject:
                 subject = subject[:maxsubject-3] + '...'
-            msg['Subject'] = mail.headencode(self.ui, subject, self.charsets)
+            msg['Subject'] = mail.headencode(self.ui, subject,
+                                             self.charsets, self.test)
 
         def fix_sender(sender):
             '''try to make message have proper sender.'''
@@ -210,7 +213,8 @@ class notifier(object):
                 sender = self.ui.config('email', 'from') or self.ui.username()
             if '@' not in sender or '@localhost' in sender:
                 sender = self.fixmail(sender)
-            msg['From'] = mail.addressencode(self.ui, sender, self.charsets)
+            msg['From'] = mail.addressencode(self.ui, sender,
+                                             self.charsets, self.test)
 
         msg['Date'] = util.datestr(format="%a, %d %b %Y %H:%M:%S %1%2")
         fix_subject(subject)
@@ -224,7 +228,7 @@ class notifier(object):
         msg['To'] = ', '.join(self.subs)
 
         msgtext = msg.as_string(0)
-        if self.ui.configbool('notify', 'test', True):
+        if self.test:
             self.ui.write(msgtext)
             if not msgtext.endswith('\n'):
                 self.ui.write('\n')
