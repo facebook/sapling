@@ -546,7 +546,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                                      date,
                                      {'branch': 'closed-branches'})
         ha = hg_editor.repo.commitctx(current_ctx)
-        ui.status('Marked branch %s as closed.' % (b or 'default'))
+        ui.status('Marked branch %s as closed.\n' % (b or 'default'))
         hg_editor._save_metadata()
 
 class BadPatchApply(Exception):

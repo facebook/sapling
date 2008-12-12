@@ -425,7 +425,7 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          {'branch': 'closed-branches'})
             new_hash = self.repo.commitctx(current_ctx)
-            self.ui.status('Marked branch %s as closed.' % (branch or 'default'))
+            self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))
         for branch in self.commit_branches_empty:
             ha = self.get_parent_revision(rev.revnum, branch)
             if ha == node.nullid:
