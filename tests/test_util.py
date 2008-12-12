@@ -75,7 +75,7 @@ class MockUI(object):
         self.inner_ui = self.real_ui(parentui=parentui)
 
     def status(self, *args):
-        self.stream.write(*args)
+        self.stream.write(''.join(args))
 
     def warn(self, *args):
         self.stream.write(*args)
