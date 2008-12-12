@@ -23,6 +23,12 @@ def generate_help():
     return "\n".join(ret) + '\n'
 
 
+def normalize_url(svn_url):
+    while svn_url[-1] == '/':
+        svn_url = svn_url[:-1]
+    return svn_url
+
+
 def wipe_all_files(hg_wc_path):
     files = [f for f in os.listdir(hg_wc_path) if f != '.hg']
     for f in files:
@@ -69,10 +75,10 @@ def parse_revmap(revmap_filename):
 class PrefixMatch(object):
     def __init__(self, prefix):
         self.p = prefix
-    
+
     def files(self):
         return []
-    
+
     def __call__(self, fn):
         return fn.startswith(self.p)
 

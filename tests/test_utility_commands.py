@@ -4,7 +4,7 @@ from mercurial import ui
 from mercurial import hg
 
 import utility_commands
-
+import fetch_command
 import test_util
 
 expected_info_output = '''URL: file://%(repo)s/%(branch)s
@@ -43,6 +43,20 @@ class UtilityTests(test_util.TestBase):
 
     def test_url_output(self):
         self._load_fixture_and_fetch('two_revs.svndump')
+        hg.update(self.repo, 'tip')
+        u = ui.ui()
+        utility_commands.print_wc_url(u, self.repo, self.wc_path)
+        expected = 'file://%s\n' % urllib.quote(self.repo_path)
+        self.assertEqual(u.stream.getvalue(), expected)
+
+    def test_url_is_normalized(self):
+        """Verify url gets normalized on initial clone.
+        """
+        test_util.load_svndump_fixture(self.repo_path, 'two_revs.svndump')
+        fetch_command.fetch_revisions(ui.ui(),
+                                      svn_url=test_util.fileurl(self.repo_path)+'/',
+                                      hg_repo_path=self.wc_path,
+                                      stupid=False)
         hg.update(self.repo, 'tip')
         u = ui.ui()
         utility_commands.print_wc_url(u, self.repo, self.wc_path)

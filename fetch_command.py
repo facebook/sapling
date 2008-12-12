@@ -28,6 +28,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     **opts):
     """Pull new revisions from Subversion.
     """
+    svn_url = util.normalize_url(svn_url)
     old_encoding = merc_util._encoding
     merc_util._encoding = 'UTF-8'
     skipto_rev=int(skipto_rev)

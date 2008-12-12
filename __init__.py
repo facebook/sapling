@@ -23,6 +23,7 @@ def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
         hg_repo_path = hg.defaultdest(svn_url) + "-hg"
         ui.status("Assuming destination %s\n" % hg_repo_path)
     should_update = not os.path.exists(hg_repo_path)
+    svn_url = util.normalize_url(svn_url)
     res = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path, **opts)
     if (res is None or res == 0) and should_update:
         repo = hg.repository(ui, hg_repo_path)
