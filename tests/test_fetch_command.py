@@ -8,11 +8,6 @@ import test_util
 
 
 class TestBasicRepoLayout(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, subdir='', stupid=False):
-        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, subdir=subdir,
-                                                stupid=stupid)
-
     def test_fresh_fetch_single_rev(self):
         repo = self._load_fixture_and_fetch('single_rev.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),

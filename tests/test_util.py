@@ -80,6 +80,9 @@ class MockUI(object):
     def warn(self, *args):
         self.stream.write(*args)
 
+    def write(self, *args):
+        self.stream.write(*args)
+
     def __getattr__(self, attr):
         return getattr(self.inner_ui, attr)
 
@@ -97,6 +100,11 @@ class TestBase(unittest.TestCase):
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
         ui.ui = self._real_ui
+
+    def _load_fixture_and_fetch(self, fixture_name, subdir='', stupid=False):
+        return load_fixture_and_fetch(fixture_name, self.repo_path,
+                                      self.wc_path, subdir=subdir,
+                                      stupid=stupid)
 
     # define this as a property so that it reloads anytime we need it
     @property

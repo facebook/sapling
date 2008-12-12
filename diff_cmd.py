@@ -37,6 +37,13 @@ def diff_command(ui, repo, hg_repo_path, **opts):
     if o_r:
         parent = repo[o_r[-1]].parents()[0]
     base_rev, _junk = svn_commit_hashes[parent.node()]
-    it = patch.diff(repo, parent.node(), None, 
-                    opts=patch.diffopts(ui, opts))
+    it = patch.diff(repo, parent.node(), None,
+                    opts=patch.diffopts(ui, opts={'git': True,
+                                                  'show_function': False,
+                                                  'ignore_all_space': False,
+                                                  'ignore_space_change': False,
+                                                  'ignore_blank_lines': False,
+                                                  'unified': True,
+                                                  'text': False,
+                                                  }))
     ui.write(filterdiff(''.join(it), base_rev))
