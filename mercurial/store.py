@@ -111,6 +111,9 @@ def hybridencode(path):
         sdirs = []
         for p in parts[:-1]:
             d = p[:DIR_PREFIX_LEN]
+            if d[-1] in '. ':
+                # Windows can't access dirs ending in period or space
+                d = d[:-1] + '_'
             t = '/'.join(sdirs) + '/' + d
             if len(t) > _MAX_SHORTENED_DIRS_LEN:
                 break

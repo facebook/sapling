@@ -10,3 +10,9 @@ B = 'dh/enterpri/openesba/contrib-/corba-bc/netbeans/wsdlexte/src/main/java/org.
 A = 'data/AUX.THE-QUICK-BROWN-FOX-JU:MPS-OVER-THE-LAZY-DOG-THE-QUICK-BROWN-FOX-JUMPS-OVER-THE-LAZY-DOG.TXT.i'
 B = 'dh/au~78.the-quick-brown-fox-ju~3amps-over-the-lazy-dog-the-quick-brown-fox-jud4dcadd033000ab2b26eb66bae1906bcb15d4a70.i'
 
+A = 'data/Project Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt'
+B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilenaf93030515d9849cfdca52937c2204d19f83913e5.txt'
+
+A = 'data/Project.Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt'
+B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilena0fd7c506f5c9d58204444fc67e9499006bd2d445.txt'
+
