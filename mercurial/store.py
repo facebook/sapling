@@ -61,6 +61,9 @@ def auxencode(path):
                 # encode third letter ('aux' -> 'au~78')
                 ec = "~%02x" % ord(n[2])
                 n = n[0:2] + ec + n[3:]
+            if n[-1] in '. ':
+                # encode last period or space ('foo...' -> 'foo..~2e')
+                n = n[:-1] + "~%02x" % ord(n[-1])
         res.append(n)
     return '/'.join(res)
 

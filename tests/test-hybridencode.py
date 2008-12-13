@@ -16,3 +16,4 @@ show('data/enterprise/openesbaddons/contrib-imola/corba-bc/netbeansplugin/wsdlEx
 show('data/AUX.THE-QUICK-BROWN-FOX-JU:MPS-OVER-THE-LAZY-DOG-THE-QUICK-BROWN-FOX-JUMPS-OVER-THE-LAZY-DOG.TXT.i')
 show('data/Project Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt')
 show('data/Project.Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt')
+show('data/foo.../foo   / /a./_. /__/.x../    bla/something.i')
