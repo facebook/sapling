@@ -19,6 +19,13 @@ def svn(ui, repo, subcommand, *args, **opts):
     return svncommand.svncmd(ui, repo, subcommand, *args, **opts)
 
 def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
+    '''Clone Subversion repository to local Mercurial repository.
+
+    If no destination directory name is specified, it defaults to the
+    basename of the source plus "-hg".
+
+    You can specify few paths for storing tags using comma separated values.
+    '''
     if not hg_repo_path:
         hg_repo_path = hg.defaultdest(svn_url) + "-hg"
         ui.status("Assuming destination %s\n" % hg_repo_path)
@@ -34,16 +41,16 @@ commands.norepo += " svnclone"
 cmdtable = {
     "svn":
         (svn,
-         [('u', 'svn_url', '', 'Path to the Subversion server.'),
+         [('u', 'svn-url', '', 'Path to the Subversion server.'),
           ('', 'stupid', False, 'Be stupid and use diffy replay.'),
           ],
          svncommand.generate_help(),
          ),
-    "svnclone" :(svn_fetch,
-         [('S', 'skipto_rev', '0', 'Skip commits before this revision.'),
+    "svnclone":
+        (svn_fetch,
+         [('S', 'skipto-rev', '0', 'Skip commits before this revision.'),
           ('', 'stupid', False, 'Be stupid and use diffy replay.'),
-          ('T', 'tag_locations', 'tags', 'Relative path to where tags get '
-           'stored, as comma sep. values if there is more than one such path.')
+          ('T', 'tag-locations', 'tags', 'Relative path to where tags get stored.')
          ],
-         'hg svn_fetch svn_url, dest'),
+         'hg svnclone source [dest]'),
 }
