@@ -61,6 +61,9 @@ def auxencode(path):
                 # encode third letter ('aux' -> 'au~78')
                 ec = "~%02x" % ord(n[2])
                 n = n[0:2] + ec + n[3:]
+            if n[-1] in '. ':
+                # encode last period or space ('foo...' -> 'foo..~2e')
+                n = n[:-1] + "~%02x" % ord(n[-1])
         res.append(n)
     return '/'.join(res)
 
@@ -111,6 +114,9 @@ def hybridencode(path):
         sdirs = []
         for p in parts[:-1]:
             d = p[:DIR_PREFIX_LEN]
+            if d[-1] in '. ':
+                # Windows can't access dirs ending in period or space
+                d = d[:-1] + '_'
             t = '/'.join(sdirs) + '/' + d
             if len(t) > _MAX_SHORTENED_DIRS_LEN:
                 break
