@@ -734,7 +734,7 @@ class memctx(object):
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
-        files = util.sort(list(files))
+        files = util.sort(util.unique(files))
         self._status = [files, [], [], [], []]
         self._filectxfn = filectxfn
 
