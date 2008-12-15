@@ -39,7 +39,7 @@ def serve(ui, repo, **opts):
     cmdutil.service(opts, initfn=service.init, runfn=service.run)
 
 def reposetup(ui, repo):
-    if not repo.local():
+    if not hasattr(repo, 'dirstate'):
         return
 
     # XXX: weakref until hg stops relying on __del__
