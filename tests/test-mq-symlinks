@@ -23,3 +23,10 @@ $TESTDIR/readlink.py a
 hg qpop
 hg qpush
 $TESTDIR/readlink.py a
+
+hg qnew removesl.patch
+hg rm a
+hg qrefresh --git
+hg qpop
+hg qpush
+hg st -c

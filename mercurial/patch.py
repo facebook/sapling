@@ -210,6 +210,8 @@ def readgitpatch(lr):
                 gp.path = line[8:].rstrip()
             elif line.startswith('deleted file'):
                 gp.op = 'DELETE'
+                # is the deleted file a symlink?
+                gp.setmode(int(line.rstrip()[-6:], 8))
             elif line.startswith('new file mode '):
                 gp.op = 'ADD'
                 gp.setmode(int(line.rstrip()[-6:], 8))
@@ -364,7 +366,7 @@ class patchfile:
             self.rej.append(h)
             return -1
 
-        if isinstance(h, binhunk):
+        if isinstance(h, githunk):
             if h.rmfile():
                 self.unlink(self.fname)
             else:
@@ -654,12 +656,12 @@ class hunk:
     def new(self, fuzz=0, toponly=False):
         return self.fuzzit(self.b, fuzz, toponly)
 
-class binhunk:
-    'A binary patch file. Only understands literals so far.'
+class githunk(object):
+    """A git hunk"""
     def __init__(self, gitpatch):
         self.gitpatch = gitpatch
         self.text = None
-        self.hunk = ['GIT binary patch\n']
+        self.hunk = []
 
     def createfile(self):
         return self.gitpatch.op in ('ADD', 'RENAME', 'COPY')
@@ -672,6 +674,12 @@ class binhunk:
 
     def new(self):
         return [self.text]
+
+class binhunk(githunk):
+    'A binary patch file. Only understands literals so far.'
+    def __init__(self, gitpatch):
+        super(binhunk, self).__init__(gitpatch)
+        self.hunk = ['GIT binary patch\n']
 
     def extract(self, lr):
         line = lr.readline()
@@ -699,6 +707,18 @@ class binhunk:
             raise PatchError(_('binary patch is %d bytes, not %d') %
                              len(text), size)
         self.text = text
+
+class symlinkhunk(githunk):
+    """A git symlink hunk"""
+    def __init__(self, gitpatch, hunk):
+        super(symlinkhunk, self).__init__(gitpatch)
+        self.hunk = hunk
+
+    def complete(self):
+        return True
+
+    def fix_newline(self):
+        return
 
 def parsefilename(str):
     # --- filename \t|space stuff
@@ -857,6 +877,10 @@ def iterhunks(ui, fp, sourcefile=None):
                 create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
                 remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
                 current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
+                if remove:
+                    gpatch = changed.get(afile[2:])
+                    if gpatch and gpatch.mode[0]:
+                        current_hunk = symlinkhunk(gpatch, current_hunk)
             except PatchError, err:
                 ui.debug(err)
                 current_hunk = None
@@ -1038,7 +1062,7 @@ def updatedir(ui, repo, patches, similarity=0):
             if gp.op == 'ADD' and not os.path.exists(dst):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
-            else:
+            elif gp.op != 'DELETE':
                 util.set_flags(dst, islink, isexec)
     cmdutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()

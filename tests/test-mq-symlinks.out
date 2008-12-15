@@ -4,3 +4,7 @@ Now at: base.patch
 applying symlink.patch
 Now at: symlink.patch
 a -> b
+Now at: symlink.patch
+applying removesl.patch
+Now at: removesl.patch
+C b
