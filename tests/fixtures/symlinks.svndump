@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: f4b30fa8-841e-4d12-8994-eb41ecdeab2e
+UUID: bcc1a3f4-ccae-49ba-b1c5-003ce86e3e31
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-12-07T12:10:46.975375Z
+2008-12-15T21:58:13.685247Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-07T12:10:47.047283Z
+2008-12-15T21:58:13.747067Z
 PROPS-END
 
 Node-path: branches
@@ -63,7 +63,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-07T12:10:48.218632Z
+2008-12-15T21:58:14.243223Z
 PROPS-END
 
 Node-path: trunk/a
@@ -117,6 +117,21 @@ V 1
 PROPS-END
 link a
 
+Node-path: trunk/linka2
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: c118dba188202a1efc975bef6064180b
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link a
+
 Revision-number: 3
 Prop-content-length: 117
 Content-length: 117
@@ -132,7 +147,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-07T12:10:51.153329Z
+2008-12-15T21:58:17.162148Z
 PROPS-END
 
 Node-path: trunk/d2
@@ -193,7 +208,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-07T12:10:52.174562Z
+2008-12-15T21:58:18.188491Z
 PROPS-END
 
 Node-path: trunk/d2/linka
@@ -229,11 +244,23 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-07T12:10:53.200258Z
+2008-12-15T21:58:19.297689Z
 PROPS-END
 
 Node-path: trunk/d2/linka
 Node-action: delete
+
+
+Node-path: trunk/linka2
+Node-kind: file
+Node-action: replace
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: edc3d3797971f12c7f5e1d106dd5cee2
+Content-length: 16
+
+PROPS-END
+data2
 
 
 Node-path: trunk/linkaa

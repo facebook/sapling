@@ -200,6 +200,13 @@ class HgChangeReceiver(delta.Editor):
         if path in self.deleted_files:
             del self.deleted_files[path]
 
+    def delete_file(self, path):
+        self.deleted_files[path] = True
+        self.current_files[path] = ''
+        self.current_files_exec[path] = False
+        self.current_files_symlink[path] = False
+        self.ui.status('D %s\n' % path)
+
     def _normalize_path(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
         have one.
@@ -516,12 +523,8 @@ class HgChangeReceiver(delta.Editor):
                 for f in ctx.walk(our_util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current_files:
-                        self.deleted_files[f_p] = True
-                        self.current_files[f_p] = ''
-                        self.ui.status('D %s\n' % f_p)
-            self.deleted_files[path] = True
-            self.current_files[path] = ''
-            self.ui.status('D %s\n' % path)
+                        self.delete_file(f_p)
+            self.delete_file(path)
 
     @stash_exception_on_self
     def open_file(self, path, parent_baton, base_revision, p=None):

@@ -21,14 +21,17 @@ class TestFetchSymlinks(test_util.TestBase):
         links = {
             0: {
                 'linka': 'a',
+                'linka2': 'a',
                 'd/linka': 'a',
                 },
             1: {
                 'linkaa': 'a',
+                'linka2': 'a',
                 'd2/linka': 'a',
                 },
             2: {
                 'linkaa': 'b',
+                'linka2': 'a',
                 'd2/linka': 'b',
                 },
             3: {

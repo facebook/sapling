@@ -20,9 +20,10 @@ svn co $svnurl project
 cd project/trunk
 echo a > a
 ln -s a linka
+ln -s a linka2
 mkdir d
 ln -s a d/linka
-svn add a linka d
+svn add a linka linka2 d
 svn ci -m "add symlinks"
 # Move symlinks
 svn mv linka linkaa
@@ -39,6 +40,12 @@ svn ci -m "update symlinks"
 rm linkaa
 echo data > linkaa
 svn propdel svn:special linkaa
+# Replace another symlink with a regular file in another way
+# It should mark linka2 as R(eplaced)
+svn rm linka2
+echo data2 > linka2
+svn add linka2
+svn propdel svn:special linka2
 svn rm d2/linka
 svn ci -m "undo link"
 cd ../..
