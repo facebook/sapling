@@ -425,14 +425,10 @@ def reposetup(ui, repo):
     keyword substitutions.
     Monkeypatches patch and webcommands.'''
 
-    try:
-        if (not repo.local() or not kwtools['inc']
-            or kwtools['hgcmd'] in nokwcommands.split()
-            or '.hg' in util.splitpath(repo.root)
-            or repo._url.startswith('bundle:')):
-            return
-    except AttributeError:
-        pass
+    if (not hasattr(repo, 'dirstate') or not kwtools['inc']
+        or kwtools['hgcmd'] in nokwcommands.split()
+        or '.hg' in util.splitpath(repo.root)):
+        return
 
     kwtools['templater'] = kwt = kwtemplater(ui, repo)
 
