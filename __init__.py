@@ -24,7 +24,8 @@ def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
     If no destination directory name is specified, it defaults to the
     basename of the source plus "-hg".
 
-    You can specify few paths for storing tags using comma separated values.
+    You can specify multiple paths for the location of tags using comma
+    separated values.
     '''
     if not hg_repo_path:
         hg_repo_path = hg.defaultdest(svn_url) + "-hg"
@@ -50,7 +51,7 @@ cmdtable = {
         (svn_fetch,
          [('S', 'skipto-rev', '0', 'Skip commits before this revision.'),
           ('', 'stupid', False, 'Be stupid and use diffy replay.'),
-          ('T', 'tag-locations', 'tags', 'Relative path to where tags get stored.')
+          ('T', 'tag-locations', 'tags', 'Relative path to Subversion tags.')
          ],
          'hg svnclone source [dest]'),
 }
