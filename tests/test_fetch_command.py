@@ -121,6 +121,15 @@ class TestBasicRepoLayout(test_util.TestBase):
     def test_propedit_with_nothing_else_stupid(self):
         self.test_propedit_with_nothing_else(stupid=True)
 
+    def test_entry_deletion(self, stupid=False):
+        repo = self._load_fixture_and_fetch('delentries.svndump',
+                                            stupid=stupid)
+        files = list(sorted(repo['tip'].manifest()))
+        self.assertEqual(['aa', 'd1/c', 'd1/d2prefix'], files)
+
+    def test_entry_deletion_stupid(self):
+        self.test_entry_deletion(stupid=True)
+
 
 class TestStupidPull(test_util.TestBase):
     def test_stupid(self):
