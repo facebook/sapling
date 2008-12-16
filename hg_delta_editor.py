@@ -27,7 +27,7 @@ def pickle_atomic(data, file_path, dir=None):
         f = os.fdopen(f, 'w')
         pickle.dump(data, f)
         f.close()
-    except:
+    except: #pragma: no cover
         raise
     else:
         util.rename(path, file_path)
@@ -43,7 +43,7 @@ def stash_exception_on_self(fn):
     def fun(self, *args, **kwargs):
         try:
             return fn(self, *args, **kwargs)
-        except:
+        except: #pragma: no cover
             if not hasattr(self, '_exception_info'):
                 self._exception_info = sys.exc_info()
             raise
@@ -75,7 +75,7 @@ class HgChangeReceiver(delta.Editor):
         elif path:
             self.path = path
             self.__setup_repo(path)
-        else:
+        else: #pragma: no cover
             raise TypeError("Expected either path or repo argument")
 
         self.subdir = subdir
@@ -339,7 +339,7 @@ class HgChangeReceiver(delta.Editor):
         self._save_metadata()
 
     def commit_current_delta(self):
-        if hasattr(self, '_exception_info'):
+        if hasattr(self, '_exception_info'):  #pragma: no cover
             traceback.print_exception(*self._exception_info)
             raise ReplayException()
         if self.missing_plaintexts:
@@ -441,7 +441,7 @@ class HgChangeReceiver(delta.Editor):
             def del_all_files(*args):
                 raise IOError
            # True here meant nuke all files, shouldn't happen with branch closing
-            if self.commit_branches_empty[branch]:
+            if self.commit_branches_empty[branch]: #pragma: no cover
                assert False, 'Got asked to commit non-closed branch as empty with no files. Please report this issue.'
             extra = {}
             if branch:
@@ -699,7 +699,7 @@ class HgChangeReceiver(delta.Editor):
         self.stream = target
 
         handler, baton = delta.svn_txdelta_apply(source, target, None)
-        if not callable(handler):
+        if not callable(handler): #pragma: no cover
             # TODO(augie) Raise a real exception, don't just fail an assertion.
             assert False, 'handler not callable, bindings are broken'
         def txdelt_window(window):
@@ -710,13 +710,13 @@ class HgChangeReceiver(delta.Editor):
                 # window being None means commit this file
                 if not window:
                     self.current_files[self.current_file] = target.getvalue()
-            except core.SubversionException, e:
+            except core.SubversionException, e: #pragma: no cover
                 if e.message == 'Delta source ended unexpectedly':
                     self.missing_plaintexts.add(self.current_file)
-                else:
+                else: #pragma: no cover
                     self._exception_info = sys.exc_info()
                     raise
-            except:
+            except: #pragma: no cover
                 print len(base), self.current_file
                 self._exception_info = sys.exc_info()
                 raise
