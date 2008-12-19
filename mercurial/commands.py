@@ -156,7 +156,7 @@ def archive(ui, repo, dest, **opts):
 
     ctx = repo[opts.get('rev')]
     if not ctx:
-        raise util.Abort(_('repository has no revisions'))
+        raise util.Abort(_('no working directory: please specify a revision'))
     node = ctx.node()
     dest = cmdutil.make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
