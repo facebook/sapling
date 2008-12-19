@@ -44,8 +44,11 @@ hg resolve baz
 echo % after
 hg resolve -l
 
-echo % resolve all
+echo % resolve all warning
 hg resolve
+
+echo % resolve all
+hg resolve -a
 
 echo % after
 hg resolve -l
