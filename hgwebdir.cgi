@@ -44,7 +44,7 @@ import mercurial.hgweb.wsgicgi as wsgicgi
 #
 # * The third entry mounts every mercurial repository found in '/real/root'
 # in 'virtual/root'. This format is preferred over the [collections] one,
-# since using absolute paths as configuration keys is not support on every
+# since using absolute paths as configuration keys is not supported on every
 # platform (especially on Windows).
 #
 # * The fourth entry is a special case mounting all repositories in
