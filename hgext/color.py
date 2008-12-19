@@ -204,6 +204,7 @@ def colordiff(orig, ui, repo, *pats, **opts):
 _diff_prefixes = [('diff', 'diffline'),
                   ('copy', 'extended'),
                   ('rename', 'extended'),
+                  ('old', 'extended'),
                   ('new', 'extended'),
                   ('deleted', 'extended'),
                   ('---', 'file_a'),
