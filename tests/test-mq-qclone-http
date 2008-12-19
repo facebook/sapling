@@ -23,8 +23,8 @@ root=`pwd`
 cd ..
 
 cat > collections.conf <<EOF
-[collections]
-$root=$root
+[paths]
+/=$root/**
 EOF
 
 hg serve -p $HGPORT -d --pid-file=hg.pid --webdir-conf collections.conf \
@@ -37,3 +37,19 @@ hg qclone http://localhost:$HGPORT/a b
 hg --cwd b log --template "{desc}\n"
 hg --cwd b qpush -a
 hg --cwd b log --template "{desc}\n"
+
+cat > collections1.conf <<EOF
+[paths]
+/=$root/*
+EOF
+
+hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf collections1.conf \
+    -A access-paths.log -E error-paths-1.log
+cat hg.pid >> $DAEMON_PIDS
+
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
+
+hg qclone http://localhost:$HGPORT1/a c
+hg --cwd c log --template "{desc}\n"
+hg --cwd c qpush -a
+hg --cwd c log --template "{desc}\n"
