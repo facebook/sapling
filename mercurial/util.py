@@ -1876,7 +1876,7 @@ def ellipsis(text, maxlength=400):
     else:
         return "%s..." % (text[:maxlength-3])
 
-def walkrepos(path, followsym=False, seen_dirs=None):
+def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     '''yield every hg repository under path, recursively.'''
     def errhandler(err):
         if err.filename == path:
@@ -1901,11 +1901,16 @@ def walkrepos(path, followsym=False, seen_dirs=None):
         _add_dir_if_not_there(seen_dirs, path)
     for root, dirs, files in os.walk(path, topdown=True, onerror=errhandler):
         if '.hg' in dirs:
-            dirs[:] = [] # don't descend further
             yield root # found a repository
-            qroot = os.path.join(root, '.hg', 'patches')
-            if os.path.isdir(os.path.join(qroot, '.hg')):
-                yield qroot # we have a patch queue repo here
+            if recurse:
+                # avoid recursing inside the .hg directory
+                # the mq repository is added in any case
+                dirs.remove('.hg')
+                qroot = os.path.join(root, '.hg', 'patches')
+                if os.path.isdir(os.path.join(qroot, '.hg')):
+                    yield qroot # we have a patch queue repo here
+            else:
+                dirs[:] = [] # don't descend further
         elif followsym:
             newdirs = []
             for d in dirs:

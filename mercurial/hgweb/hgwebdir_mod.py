@@ -54,13 +54,18 @@ class hgwebdir(object):
                 paths = cleannames(cp.items('paths'))
                 for prefix, root in paths:
                     roothead, roottail = os.path.split(root)
-                    if roottail != '*':
-                        self.repos.append((prefix, root))
-                        continue
                     # "foo = /bar/*" makes every subrepo of /bar/ to be
                     # mounted as foo/subrepo
+                    # and "foo = /bar/**" does even recurse inside the
+                    # subdirectories, remember to use it without working dir.
+                    try:
+                        recurse = {'*': False, '**': True}[roottail]
+                    except KeyError:
+                        self.repos.append((prefix, root))
+                        continue
                     roothead = os.path.normpath(roothead)
-                    for path in util.walkrepos(roothead, followsym=True):
+                    for path in util.walkrepos(roothead, followsym=True,
+                                               recurse=recurse):
                         path = os.path.normpath(path)
                         name = util.pconvert(path[len(roothead):]).strip('/')
                         if prefix:

@@ -8,16 +8,25 @@ cd webdir
 hg init a
 echo a > a/a
 hg --cwd a ci -Ama -d'1 0'
+# create a mercurial queue repository
+hg --cwd a qinit --config extensions.hgext.mq= -c
 
 hg init b
 echo b > b/b
 hg --cwd b ci -Amb -d'2 0'
 
+# create a nested repository
+cd b
+hg init d
+echo d > d/d
+hg --cwd d ci -Amd -d'3 0'
+cd ..
+
 hg init c
 echo c > c/c
 hg --cwd c ci -Amc -d'3 0'
-root=`pwd`
 
+root=`pwd`
 cd ..
 
 cat > paths.conf <<EOF
@@ -46,6 +55,7 @@ cat > paths.conf <<EOF
 t/a/=$root/a
 b=$root/b
 coll=$root/*
+rcoll=$root/**
 EOF
 
 hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
@@ -64,6 +74,10 @@ echo % should succeed, slashy names
 # Test [paths] '*' extension
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/a/file/tip/a?style=raw'
+#test [paths] '**' extension
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/b/d/file/tip/d?style=raw'
+
 
 cat > collections.conf <<EOF
 [collections]
@@ -74,7 +88,7 @@ hg serve -p $HGPORT2 -d --pid-file=hg.pid --webdir-conf collections.conf \
     -A access-collections.log -E error-collections.log
 cat hg.pid >> $DAEMON_PIDS
 
-echo % should succeed
+echo % collections: should succeed
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/file/tip/a?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/b/file/tip/b?style=raw'
