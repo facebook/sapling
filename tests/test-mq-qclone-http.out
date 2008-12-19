@@ -3,6 +3,7 @@ adding b
 [mq]: b.patch
 a
 b.patch
+% test with recursive collection
 200 Script output follows
 
 
@@ -27,10 +28,12 @@ applying b.patch
 Now at: b.patch
 imported patch b.patch
 a
+% test with normal collection
 200 Script output follows
 
 
 /a/
+/a/.hg/patches/
 
 requesting all changes
 adding changesets
@@ -41,10 +44,37 @@ requesting all changes
 adding changesets
 adding manifests
 adding file changes
-added 2 changesets with 2 changes to 2 files
+added 1 changesets with 3 changes to 3 files
 updating working directory
-2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
-no patches in series
+applying b.patch
+Now at: b.patch
+imported patch b.patch
+a
+% test with old-style collection
+200 Script output follows
+
+
+/a/
+/a/.hg/patches/
+
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 2 changes to 2 files
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 3 changes to 3 files
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+a
+applying b.patch
+Now at: b.patch
+imported patch b.patch
 a

@@ -22,6 +22,8 @@ root=`pwd`
 
 cd ..
 
+echo % test with recursive collection
+
 cat > collections.conf <<EOF
 [paths]
 /=$root/**
@@ -38,6 +40,8 @@ hg --cwd b log --template "{desc}\n"
 hg --cwd b qpush -a
 hg --cwd b log --template "{desc}\n"
 
+echo % test with normal collection
+
 cat > collections1.conf <<EOF
 [paths]
 /=$root/*
@@ -53,3 +57,21 @@ hg qclone http://localhost:$HGPORT1/a c
 hg --cwd c log --template "{desc}\n"
 hg --cwd c qpush -a
 hg --cwd c log --template "{desc}\n"
+
+echo % test with old-style collection
+
+cat > collections2.conf <<EOF
+[collections]
+$root=$root
+EOF
+
+hg serve -p $HGPORT2 -d --pid-file=hg.pid --webdir-conf collections2.conf \
+    -A access-paths.log -E error-paths-1.log
+cat hg.pid >> $DAEMON_PIDS
+
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/?style=raw'
+
+hg qclone http://localhost:$HGPORT2/a d
+hg --cwd d log --template "{desc}\n"
+hg --cwd d qpush -a
+hg --cwd d log --template "{desc}\n"
