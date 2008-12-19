@@ -1902,13 +1902,12 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     for root, dirs, files in os.walk(path, topdown=True, onerror=errhandler):
         if '.hg' in dirs:
             yield root # found a repository
+            qroot = os.path.join(root, '.hg', 'patches')
+            if os.path.isdir(os.path.join(qroot, '.hg')):
+                yield qroot # we have a patch queue repo here
             if recurse:
                 # avoid recursing inside the .hg directory
-                # the mq repository is added in any case
                 dirs.remove('.hg')
-                qroot = os.path.join(root, '.hg', 'patches')
-                if os.path.isdir(os.path.join(qroot, '.hg')):
-                    yield qroot # we have a patch queue repo here
             else:
                 dirs[:] = [] # don't descend further
         elif followsym:

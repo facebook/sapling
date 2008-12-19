@@ -31,6 +31,7 @@ error: repository c not found
 
 /b/
 /coll/a/
+/coll/a/.hg/patches/
 /coll/b/
 /coll/c/
 /rcoll/a/
@@ -115,6 +116,7 @@ a
 
 
 /coll/a/
+/coll/a/.hg/patches/
 /coll/b/
 /coll/c/
 
@@ -138,6 +140,7 @@ d
 
 
 /a/
+/a/.hg/patches/
 /b/
 /c/
 
