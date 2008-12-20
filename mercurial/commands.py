@@ -156,7 +156,7 @@ def archive(ui, repo, dest, **opts):
 
     ctx = repo[opts.get('rev')]
     if not ctx:
-        raise util.Abort(_('repository has no revisions'))
+        raise util.Abort(_('no working directory: please specify a revision'))
     node = ctx.node()
     dest = cmdutil.make_filename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
@@ -2330,32 +2330,40 @@ def rename(ui, repo, *pats, **opts):
         del wlock
 
 def resolve(ui, repo, *pats, **opts):
-    """resolve file merges from a branch merge or update
+    """retry file merges from a merge or update
 
-    This command will attempt to resolve unresolved merges from the
-    last update or merge command. This will use the local file
-    revision preserved at the last update or merge to cleanly retry
-    the file merge attempt. With no file or options specified, this
-    command will attempt to resolve all unresolved files.
+    This command will cleanly retry unresolved file merges using file
+    revisions preserved from the last update or merge. To attempt to
+    resolve all unresolved files, use the -a switch.
+
+    This command will also allow listing resolved files and manually
+    marking and unmarking files as resolved.
 
     The codes used to show the status of files are:
     U = unresolved
     R = resolved
     """
 
-    if len([x for x in opts if opts[x]]) > 1:
+    all, mark, unmark, show = [opts.get(o) for o in 'all mark unmark list'.split()]
+
+    if (show and (mark or unmark)) or (mark and unmark):
         raise util.Abort(_("too many options specified"))
+    if pats and all:
+        raise util.Abort(_("can't specify --all and patterns"))
+    if not (all or pats or show or mark or unmark):
+        raise util.Abort(_('no files or directories specified; '
+                           'use --all to remerge all files'))
 
     ms = merge_.mergestate(repo)
     m = cmdutil.match(repo, pats, opts)
 
     for f in ms:
         if m(f):
-            if opts.get("list"):
+            if show:
                 ui.write("%s %s\n" % (ms[f].upper(), f))
-            elif opts.get("mark"):
+            elif mark:
                 ms.mark(f, "r")
-            elif opts.get("unmark"):
+            elif unmark:
                 ms.mark(f, "u")
             else:
                 wctx = repo[None]
@@ -3315,7 +3323,8 @@ table = {
          _('[OPTION]... SOURCE... DEST')),
     "resolve":
         (resolve,
-         [('l', 'list', None, _('list state of files needing merge')),
+         [('a', 'all', None, _('remerge all unresolved files')),
+          ('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
           ('u', 'unmark', None, _('unmark files as resolved'))],
           _('[OPTION]... [FILE]...')),

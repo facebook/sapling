@@ -28,6 +28,8 @@ merging baz and foo to baz
 % after
 U bar
 R baz
+% resolve all warning
+abort: no files or directories specified; use --all to remerge all files
 % resolve all
 merging bar
 warning: conflicts during merge.

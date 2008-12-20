@@ -400,8 +400,8 @@ def run_one(test, skips, fails):
             fail("output changed and returned error code %d" % ret)
         else:
             fail("output changed")
-            if not nodiff:
-                show_diff(ref_out, out)
+        if not nodiff:
+            show_diff(ref_out, out)
         ret = 1
     elif ret:
         mark = '!'

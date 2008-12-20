@@ -60,4 +60,4 @@ rev-0.tar created
 abort: unknown archive type 'bogus'
 % server errors
 % empty repo
-abort: repository has no revisions
+abort: no working directory: please specify a revision

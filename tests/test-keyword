@@ -322,7 +322,7 @@ hg merge
 echo % keyword stays outside conflict zone
 cat m
 echo % resolve to local
-HGMERGE=internal:local hg resolve
+HGMERGE=internal:local hg resolve -a
 hg commit -m localresolve
 cat m
 
