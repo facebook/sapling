@@ -2327,13 +2327,14 @@ def rename(ui, repo, *pats, **opts):
         del wlock
 
 def resolve(ui, repo, *pats, **opts):
-    """resolve file merges from a branch merge or update
+    """retry file merges from a merge or update
 
-    This command will attempt to resolve unresolved merges from the
-    last update or merge command. This will use the local file
-    revision preserved at the last update or merge to cleanly retry
-    the file merge attempt. With no file or options specified, this
-    command will attempt to resolve all unresolved files.
+    This command will cleanly retry unresolved file merges using file
+    revisions preserved from the last update or merge. To attempt to
+    resolve all unresolved files, use the -a switch.
+
+    This command will also allow listing resolved files and manually
+    marking and unmarking files as resolved.
 
     The codes used to show the status of files are:
     U = unresolved
