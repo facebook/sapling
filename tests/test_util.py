@@ -90,7 +90,9 @@ class MockUI(object):
 class TestBase(unittest.TestCase):
     def setUp(self):
         self.oldwd = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp('svnwrap_test')
+        self.tmpdir = tempfile.mkdtemp(
+            'svnwrap_test', dir=os.environ.get('HGSUBVERSION_TEST_TEMP', None))
+
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
         self._real_ui = ui.ui
