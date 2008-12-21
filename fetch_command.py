@@ -481,8 +481,11 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
     deleted_branches = {}
     date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
     date += ' -0000'
+    check_deleted_branches = set()
     for b in branches:
         parentctx = hg_editor.repo[hg_editor.get_parent_revision(r.revnum, b)]
+        if parentctx.branch() != (b or 'default'):
+            check_deleted_branches.add(b)
         kind = svn.checkpath(branches[b], r.revnum)
         if kind != 'd':
             # Branch does not exist at this revision. Get parent revision and
@@ -523,12 +526,24 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             hg_editor._save_metadata()
             ui.status('committed as %s on branch %s\n' %
                       (node.hex(ha),  b or 'default'))
+    # These are branches which would have an 'R' status in svn log. This means they were
+    # replaced by some other branch, so we need to verify they get marked as closed.
+    for branch in check_deleted_branches:
+        branchedits = sorted(filter(lambda x: x[0][1] == branch and x[0][0] < r.revnum,
+                                    hg_editor.revmap.iteritems()), reverse=True)
+        is_closed = False
+        if len(branchedits) > 0:
+            branchtip = branchedits[0][1]
+            for child in hg_editor.repo[branchtip].children():
+                if child.branch() == 'closed-branches':
+                    is_closed = True
+                    break
+            if not is_closed:
+                deleted_branches[branch] = branchtip
     for b, parent in deleted_branches.iteritems():
         if parent == node.nullid:
             continue
         parentctx = hg_editor.repo[parent]
-        if parentctx.children():
-            continue
         files_touched = parentctx.manifest().keys()
         def filectxfn(repo, memctx, path):
             raise IOError()

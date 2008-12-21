@@ -361,6 +361,37 @@ class HgChangeReceiver(delta.Editor):
             if b not in branch_batches:
                 branch_batches[b] = []
             branch_batches[b].append((p, f))
+        # close any branches that need it
+        closed_revs = set()
+        for branch in self.branches_to_delete:
+            closed = revlog.nullid
+            if 'closed-branches' in self.repo.branchtags():
+                closed = self.repo['closed-branches'].node()
+            branchedits = sorted(filter(lambda x: x[0][1] == branch and x[0][0] < rev.revnum,
+                                        self.revmap.iteritems()), reverse=True)
+            if len(branchedits) < 1:
+                # can't close a branch that never existed
+                continue
+            ha = branchedits[0][1]
+            closed_revs.add(ha)
+            # self.get_parent_revision(rev.revnum, branch)
+            parentctx = self.repo.changectx(ha)
+            parents = (ha, closed)
+            def del_all_files(*args):
+                raise IOError
+            files = parentctx.manifest().keys()
+            current_ctx = context.memctx(self.repo,
+                                         parents,
+                                         rev.message or ' ',
+                                         files,
+                                         del_all_files,
+                                         '%s%s' % (rev.author,
+                                                   self.author_host),
+                                         date,
+                                         {'branch': 'closed-branches'})
+            new_hash = self.repo.commitctx(current_ctx)
+            self.ui.status('Marked branch %s as closed.\n' % (branch or
+                                                              'default'))
         for branch, files in branch_batches.iteritems():
             if branch in self.commit_branches_empty and files:
                 del self.commit_branches_empty[branch]
@@ -369,13 +400,13 @@ class HgChangeReceiver(delta.Editor):
 
             parents = (self.get_parent_revision(rev.revnum, branch),
                        revlog.nullid)
+            if parents[0] in closed_revs and branch in self.branches_to_delete:
+                continue
             if branch is not None:
                 if (branch not in self.branches
                     and branch not in self.repo.branchtags()):
                     continue
                 extra['branch'] = branch
-            if (branch in self.branches_to_delete):
-                continue
             parent_ctx = self.repo.changectx(parents[0])
             def filectxfn(repo, memctx, path):
                 current_file = files[path]
@@ -410,29 +441,6 @@ class HgChangeReceiver(delta.Editor):
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         # now we handle branches that need to be committed without any files
-        for branch in self.branches_to_delete:
-            closed = revlog.nullid
-            if 'closed-branches' in self.repo.branchtags():
-                closed = self.repo['closed-branches'].node()
-            ha = self.get_parent_revision(rev.revnum, branch)
-            parentctx = self.repo.changectx(ha)
-            if parentctx.children():
-                continue
-            parents = (ha, closed)
-            def del_all_files(*args):
-                raise IOError
-            files = parentctx.manifest().keys()
-            current_ctx = context.memctx(self.repo,
-                                         parents,
-                                         rev.message or ' ',
-                                         files,
-                                         del_all_files,
-                                         '%s%s' % (rev.author,
-                                                   self.author_host),
-                                         date,
-                                         {'branch': 'closed-branches'})
-            new_hash = self.repo.commitctx(current_ctx)
-            self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))
         for branch in self.commit_branches_empty:
             ha = self.get_parent_revision(rev.revnum, branch)
             if ha == node.nullid:

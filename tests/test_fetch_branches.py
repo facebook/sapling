@@ -30,17 +30,29 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_unorderedbranch_stupid(self):
         self.test_unorderedbranch(True)
-        
+
     def test_renamed_branch_to_trunk(self, stupid=False):
-        repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump', 
+        repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump',
                                             stupid)
-        self.assertEqual(node.hex(repo['tip'].node()),
+        self.assertEqual(node.hex(repo['default'].node()),
                          'b479347c1f56d1fafe5e32a7ce0d1b7099637784')
         self.assertEqual(repo['tip'].parents()[0].branch(), 'dev_branch')
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
 
     def test_renamed_branch_to_trunk_stupid(self):
         self.test_renamed_branch_to_trunk(stupid=True)
+
+    def test_replace_trunk_with_branch(self, stupid=False):
+        repo = self._load_fixture_and_fetch('replace_trunk_with_branch.svndump',
+                                            stupid)
+        self.assertEqual(repo['default'].parents()[0].branch(), 'test')
+        self.assertEqual(node.hex(repo['closed-branches'].parents()[0].node()),
+                         'f46d6f10e6329a069503af6c0c12903994c083b2')
+        self.assertEqual(node.hex(repo['default'].node()),
+                         '7bb5386f1a8e752888183cd86e43bdaf9abd1a95')
+
+    def test_replace_trunk_with_branch_stupid(self):
+        self.test_replace_trunk_with_branch(stupid=True)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
