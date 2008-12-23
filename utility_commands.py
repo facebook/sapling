@@ -86,6 +86,10 @@ def rebase_commits(ui, repo, hg_repo_path, **opts):
     rebase on top of the current top of Subversion work, you should probably run
     'hg svn pull' before running this.
     """
+    def extrafn(ctx, extra):
+        """defined here so we can add things easily.
+        """
+        extra['branch'] = ctx.branch()
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
@@ -115,7 +119,8 @@ def rebase_commits(ui, repo, hg_repo_path, **opts):
         return 0
     # TODO this is really hacky, there must be a more direct way
     return rebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
-                         base=node.hex(repo.parents()[0].node()))
+                         base=node.hex(repo.parents()[0].node()),
+                         extrafn=extrafn)
 
 
 @util.register_subcommand('outgoing')

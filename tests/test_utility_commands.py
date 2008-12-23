@@ -1,7 +1,10 @@
+import os
 import urllib # for url quoting
 
 from mercurial import ui
 from mercurial import hg
+from mercurial import revlog
+from mercurial import context
 
 import utility_commands
 import fetch_command
@@ -48,6 +51,32 @@ class UtilityTests(test_util.TestBase):
         utility_commands.print_wc_url(u, self.repo, self.wc_path)
         expected = 'file://%s\n' % urllib.quote(self.repo_path)
         self.assertEqual(u.stream.getvalue(), expected)
+
+    def test_rebase(self):
+        self._load_fixture_and_fetch('two_revs.svndump')
+        parents = (self.repo[0].node(), revlog.nullid, )
+        def filectxfn(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data='added',
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        ctx = context.memctx(self.repo,
+                             parents,
+                             'automated test',
+                             ['added_bogus_file', 'other_added_file', ],
+                             filectxfn,
+                             'testy',
+                             '2008-12-21 16:32:00 -0500',
+                             {'branch': 'localbranch', })
+        self.repo.commitctx(ctx)
+        self.assertEqual(self.repo['tip'].branch(), 'localbranch')
+        beforerebasehash = self.repo['tip'].node()
+        hg.update(self.repo, 'tip')
+        utility_commands.rebase_commits(ui.ui(), self.repo, os.path.dirname(self.repo.path))
+        self.assertEqual(self.repo['tip'].branch(), 'localbranch')
+        self.assertEqual(self.repo['tip'].parents()[0].parents()[0], self.repo[0])
+        self.assertNotEqual(beforerebasehash, self.repo['tip'].node())
 
     def test_url_is_normalized(self):
         """Verify url gets normalized on initial clone.
