@@ -32,8 +32,8 @@ def diff_command(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
     parent = repo.parents()[0]
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, parent.node())
     if o_r:
         parent = repo[o_r[-1]].parents()[0]
     base_rev, _junk = svn_commit_hashes[parent.node()]

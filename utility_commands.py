@@ -23,11 +23,11 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
-    ha = repo.parents()[0]
+    workingctx = repo.parents()[0]
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingctx.node())
     if o_r:
-        ha = repo[o_r[-1]].parents()[0]
-    r, br = svn_commit_hashes[ha.node()]
+        workingctx = repo[o_r[-1]].parents()[0]
+    r, br = svn_commit_hashes[workingctx.node()]
     if br == None:
         branchpath = '/trunk'
     else:
@@ -36,7 +36,7 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
     if url[-1] == '/':
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
-    author = '@'.join(ha.user().split('@')[:-1])
+    author = '@'.join(workingctx.user().split('@')[:-1])
     ui.status('''URL: %(url)s
 Repository Root: %(reporoot)s
 Repository UUID: %(uuid)s
@@ -51,7 +51,7 @@ Last Changed Date: %(date)s\n''' %
                'author': author,
                'revision': r,
                # TODO I'd like to format this to the user's local TZ if possible
-               'date': mutil.datestr(ha.date(),
+               'date': mutil.datestr(workingctx.date(),
                                      '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
               })
 
@@ -65,7 +65,7 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     ha = repo.parents()[0]
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, ha.node())
     if o_r:
         ha = repo[o_r[-1]].parents()[0]
     if ha.node() != node.nullid:
@@ -78,7 +78,7 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
 
 
 @util.register_subcommand('rebase')
-def rebase_commits(ui, repo, hg_repo_path, extrafn=None, **opts):
+def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts):
     """Rebases current unpushed revisions onto Subversion head
 
     This moves a line of development from making its own head to the top of
@@ -92,15 +92,17 @@ def rebase_commits(ui, repo, hg_repo_path, extrafn=None, **opts):
             """
             extra['branch'] = ctx.branch()
         extrafn = extrafn2
+    if sourcerev is None:
+        sourcerev = repo.parents()[0].node()
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, sourcerev=sourcerev)
     if not o_r:
         ui.status('Nothing to rebase!\n')
         return 0
-    if len(repo.parents()[0].children()):
+    if len(repo[sourcerev].children()):
         ui.status('Refusing to rebase non-head commit like a coward\n')
         return 0
     parent_rev = repo[o_r[-1]].parents()[0]
@@ -121,7 +123,7 @@ def rebase_commits(ui, repo, hg_repo_path, extrafn=None, **opts):
         return 0
     # TODO this is really hacky, there must be a more direct way
     return rebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
-                         base=node.hex(repo.parents()[0].node()),
+                         base=node.hex(sourcerev),
                          extrafn=extrafn)
 
 
@@ -133,7 +135,7 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, repo.parents()[0])
     if not (o_r and len(o_r)):
         ui.status('No outgoing changes found.\n')
         return 0

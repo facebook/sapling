@@ -24,13 +24,14 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                  hge.revmap.iterkeys()))
     # Strategy:
     # 1. Find all outgoing commits from this head
-    outgoing = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes)
-    if not (outgoing and len(outgoing)):
-        ui.status('No revisions to push.')
-        return 0
     if len(repo.parents()) != 1:
         ui.status('Cowardly refusing to push branch merge')
         return 1
+    workingrev = repo.parents()[0]
+    outgoing = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingrev.node())
+    if not (outgoing and len(outgoing)):
+        ui.status('No revisions to push.')
+        return 0
     while outgoing:
         oldest = outgoing.pop(-1)
         old_ctx = repo[oldest]
@@ -69,14 +70,22 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                 if ctx.node() == oldest:
                     return
                 extra['branch'] = ctx.branch()
-            hg.clean(repo, needs_transplant)
-            utility_commands.rebase_commits(ui, repo, hg_repo_path, extrafn=extrafn, **opts)
+            utility_commands.rebase_commits(ui, repo, hg_repo_path,
+                                            extrafn=extrafn,
+                                            sourcerev=needs_transplant,
+                                            **opts)
             repo = hg.repository(ui, hge.path)
             for child in repo[replacement.node()].children():
                 rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
                 if rebasesrc in outgoing:
-                    rebsrcindex = outgoing.index(rebasesrc)
-                    outgoing = outgoing[0:rebsrcindex] + [child.node(), ] + outgoing[rebsrcindex+1:]
+                    while rebasesrc in outgoing:
+                        rebsrcindex = outgoing.index(rebasesrc)
+                        outgoing = (outgoing[0:rebsrcindex] +
+                                    [child.node(), ] + outgoing[rebsrcindex+1:])
+                        children = [c for c in child.children() if c.branch() == child.branch()]
+                        if children:
+                            child = children[0]
+                        rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
         hge = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
         svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
     merc_util._encoding = oldencoding
