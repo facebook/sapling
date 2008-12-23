@@ -2607,8 +2607,28 @@ def mqimport(orig, ui, repo, *args, **kwargs):
                                    kwargs.get('force'))
     return orig(ui, repo, *args, **kwargs)
 
+def mqcommand(orig, ui, repo, *args, **kwargs):
+    """Add --mq option to operate on patch repository instead of main"""
+
+    # some commands do not like getting unknown options
+    mq = kwargs['mq']
+    del kwargs['mq']
+
+    if not mq:
+        return orig(ui, repo, *args, **kwargs)
+
+    q = repo.mq
+    r = q.qrepo()
+    if not r:
+        raise util.Abort('no queue repository')
+    return orig(ui, r, *args, **kwargs)
+
 def uisetup(ui):
     extensions.wrapcommand(commands.table, 'import', mqimport)
+    for cmd in ('commit', 'export', 'incoming', 'log', 'outgoing', 'pull',
+                'push', 'status', 'tag', 'tags', 'tip', 'update'):
+        entry = extensions.wrapcommand(commands.table, cmd, mqcommand)
+        entry[1].extend([('Q', 'mq', None, _("operate on patch repository"))])
 
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
