@@ -39,8 +39,16 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
             return 1
         base_n = old_ctx.parents()[0].node()
         old_children = repo[base_n].children()
+        svnbranch = repo[base_n].branch()
+        oldtip = base_n
+        samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
+                              and c.node() in svn_commit_hashes]
+        while samebranchchildren:
+            oldtip = samebranchchildren[0].node()
+            samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
+                                  and c.node() in svn_commit_hashes]
         # 2. Commit oldest revision that needs to be pushed
-        base_revision = svn_commit_hashes[old_ctx.parents()[0].node()][0]
+        base_revision = svn_commit_hashes[base_n][0]
         commit_from_rev(ui, repo, old_ctx, hge, svn_url, base_revision)
         # 3. Fetch revisions from svn
         r = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path,
@@ -48,16 +56,20 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
         assert not r or r == 0
         # 4. Find the new head of the target branch
         repo = hg.repository(ui, hge.path)
-        base_c = repo[base_n]
-        replacement = [c for c in base_c.children() if c not in old_children
-                       and c.branch() == old_ctx.branch()]
-        assert len(replacement) == 1
+        oldtipctx = repo[oldtip]
+        replacement = [c for c in oldtipctx.children() if c not in old_children
+                       and c.branch() == oldtipctx.branch()]
+        assert len(replacement) == 1, 'Replacement node came back as: %r' % replacement
         replacement = replacement[0]
         # 5. Rebase all children of the currently-pushing rev to the new branch
         heads = repo.heads(old_ctx.node())
         for needs_transplant in heads:
+            def extrafn(ctx, extra):
+                if ctx.node() == oldest:
+                    return
+                extra['branch'] = ctx.branch()
             hg.clean(repo, needs_transplant)
-            utility_commands.rebase_commits(ui, repo, hg_repo_path, **opts)
+            utility_commands.rebase_commits(ui, repo, hg_repo_path, extrafn=extrafn, **opts)
             repo = hg.repository(ui, hge.path)
             if needs_transplant in outgoing:
                 hg.clean(repo, repo['tip'].node())
@@ -126,7 +138,7 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
             deleted.append(d)
 
     return added, deleted
-        
+
 
 def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     """Build and send a commit from Mercurial to Subversion.
@@ -140,7 +152,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     if parent_branch and parent_branch != 'default':
         branch_path = 'branches/%s' % parent_branch
 
-    addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent, 
+    addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent,
                                             rev_ctx, rev_ctx.files())
     deleteddirs = set(deleteddirs)
 
@@ -221,7 +233,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     new_target_files += addeddirs + deleteddirs
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
-                   base_revision, set(addeddirs), set(deleteddirs), 
+                   base_revision, set(addeddirs), set(deleteddirs),
                    props, newcopies)
     except core.SubversionException, e:
         if hasattr(e, 'apr_err') and e.apr_err == 160028:

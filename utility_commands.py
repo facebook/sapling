@@ -78,7 +78,7 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
 
 
 @util.register_subcommand('rebase')
-def rebase_commits(ui, repo, hg_repo_path, **opts):
+def rebase_commits(ui, repo, hg_repo_path, extrafn=None, **opts):
     """Rebases current unpushed revisions onto Subversion head
 
     This moves a line of development from making its own head to the top of
@@ -86,10 +86,12 @@ def rebase_commits(ui, repo, hg_repo_path, **opts):
     rebase on top of the current top of Subversion work, you should probably run
     'hg svn pull' before running this.
     """
-    def extrafn(ctx, extra):
-        """defined here so we can add things easily.
-        """
-        extra['branch'] = ctx.branch()
+    if extrafn is None:
+        def extrafn2(ctx, extra):
+            """defined here so we can add things easily.
+            """
+            extra['branch'] = ctx.branch()
+        extrafn = extrafn2
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),

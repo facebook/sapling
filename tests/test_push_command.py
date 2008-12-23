@@ -114,9 +114,47 @@ class PushTests(test_util.TestBase):
         self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), old_tip)
-        self.assertEqual(tip.parents()[0].node(), expected_parent)
+        self.assertEqual(node.hex(tip.parents()[0].node()),
+                         node.hex(expected_parent))
         self.assertEqual(tip['adding_file'].data(), 'foo')
         self.assertEqual(tip.branch(), 'default')
+
+    def test_push_two_revs_different_local_branch(self):
+        def filectxfn(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data=path,
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        oldtiphash = self.repo['default'].node()
+        ctx = context.memctx(self.repo,
+                             (self.repo[0].node(), revlog.nullid, ),
+                             'automated test',
+                             ['gamma', ],
+                             filectxfn,
+                             'testy',
+                             '2008-12-21 16:32:00 -0500',
+                             {'branch': 'localbranch', })
+        newhash = self.repo.commitctx(ctx)
+        ctx = context.memctx(self.repo,
+                             (newhash, revlog.nullid),
+                             'automated test2',
+                             ['delta', ],
+                             filectxfn,
+                             'testy',
+                             '2008-12-21 16:32:00 -0500',
+                             {'branch': 'localbranch', })
+        newhash = self.repo.commitctx(ctx)
+        repo = self.repo
+        hg.update(repo, newhash)
+        push_cmd.push_revisions_to_subversion(ui.ui(),
+                                              repo=repo,
+                                              svn_url=test_util.fileurl(self.repo_path),
+                                              hg_repo_path=self.wc_path)
+        self.assertEqual(self.repo['tip'].parents()[0].parents()[0].node(), oldtiphash)
+        self.assertEqual(self.repo['tip'].files(), ['delta', ])
+        self.assertEqual(self.repo['tip'].manifest().keys(),
+                         ['alpha', 'beta', 'gamma', 'delta'])
 
     def test_push_two_revs(self):
         # set up some work for us
