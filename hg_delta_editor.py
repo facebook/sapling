@@ -395,18 +395,20 @@ class HgChangeReceiver(delta.Editor):
         for branch, files in branch_batches.iteritems():
             if branch in self.commit_branches_empty and files:
                 del self.commit_branches_empty[branch]
-            extra = {}
             files = dict(files)
 
             parents = (self.get_parent_revision(rev.revnum, branch),
                        revlog.nullid)
             if parents[0] in closed_revs and branch in self.branches_to_delete:
                 continue
+            # TODO this needs to be fixed with the new revmap
+            extra = our_util.build_extra(rev.revnum, branch,
+                                         open(self.uuid_file).read(),
+                                         self.subdir)
             if branch is not None:
                 if (branch not in self.branches
                     and branch not in self.repo.branchtags()):
                     continue
-                extra['branch'] = branch
             parent_ctx = self.repo.changectx(parents[0])
             def filectxfn(repo, memctx, path):
                 current_file = files[path]
@@ -451,9 +453,9 @@ class HgChangeReceiver(delta.Editor):
            # True here meant nuke all files, shouldn't happen with branch closing
             if self.commit_branches_empty[branch]: #pragma: no cover
                assert False, 'Got asked to commit non-closed branch as empty with no files. Please report this issue.'
-            extra = {}
-            if branch:
-                extra['branch'] = branch
+            extra = our_util.build_extra(rev.revnum, branch,
+                                     open(self.uuid_file).read(),
+                                     self.subdir)
             current_ctx = context.memctx(self.repo,
                                          (ha, node.nullid),
                                          rev.message or ' ',

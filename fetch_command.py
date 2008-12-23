@@ -502,9 +502,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 files_touched, filectxfn = stupid_fetch_branchrev(
                     svn, hg_editor, b, branches[b], r, parentctx)
 
-        extra = {}
-        if b:
-            extra['branch'] = b
+        extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
         if '' in files_touched:
             files_touched.remove('')
         if parentctx.node() != node.nullid or files_touched:

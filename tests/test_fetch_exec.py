@@ -27,7 +27,7 @@ class TestFetchExec(test_util.TestBase):
     def test_empty_prop_val_executable(self, stupid=False):
         repo = self._load_fixture_and_fetch('executable_file_empty_prop.svndump', stupid)
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'b19e2bdd93da30b09c2396cfdb987cc85271249a')
+                         '08e6b380bf291b361a418203a1cb9427213cd1fd')
         self.assertEqual(repo['tip']['foo'].flags(), 'x')
 
     def test_empty_prop_val_executable_stupid(self):

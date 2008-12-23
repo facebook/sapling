@@ -11,40 +11,46 @@ class TestBasicRepoLayout(test_util.TestBase):
     def test_fresh_fetch_single_rev(self):
         repo = self._load_fixture_and_fetch('single_rev.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
+        self.assertEqual(repo['tip'].extra()['convert_revision'],
+                         'svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/trunk@2')
         self.assertEqual(repo['tip'], repo[0])
 
     def test_fresh_fetch_two_revs(self):
         repo = self._load_fixture_and_fetch('two_revs.svndump')
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
-                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'bf3767835b3b32ecc775a298c2fa27134dd91c11')
+                         'c95251e0dd04697deee99b79cc407d7db76e6a5f')
         self.assertEqual(repo['tip'], repo[1])
 
     def test_branches(self):
         repo = self._load_fixture_and_fetch('simple_branch.svndump')
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
-                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         '9dfb0a19494f45c36e22f3c6d1b21d80638a7f6e')
+                         'f1ff5b860f5dbb9a59ad0921a79da77f10f25109')
         self.assertEqual(len(repo['tip'].parents()), 1)
         self.assertEqual(repo['tip'].parents()[0], repo['default'])
+        self.assertEqual(repo['tip'].extra()['convert_revision'],
+                         'svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/branches/the_branch@4')
+        self.assertEqual(repo['default'].extra()['convert_revision'],
+                         'svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/trunk@3')
         self.assertEqual(len(repo.heads()), 1)
 
     def test_two_branches_with_heads(self):
         repo = self._load_fixture_and_fetch('two_heads.svndump')
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
-                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'a595c77cfcaa3d1ba9e04b2c55c68bc6bf2b0fbf')
+                         '1083037b18d85cd84fa211c5adbaeff0fea2cd9f')
         self.assertEqual(node.hex(repo['the_branch'].node()),
-                         '8ccaba5f0eae124487e413abd904a013f7f6fdeb')
+                         '4e256962fc5df545e2e0a51d0d1dc61c469127e6')
         self.assertEqual(node.hex(repo['the_branch'].parents()[0].node()),
-                         '9dfb0a19494f45c36e22f3c6d1b21d80638a7f6e')
+                         'f1ff5b860f5dbb9a59ad0921a79da77f10f25109')
         self.assertEqual(len(repo['tip'].parents()), 1)
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
@@ -63,13 +69,13 @@ class TestBasicRepoLayout(test_util.TestBase):
 
     def _many_special_cases_checks(self, repo):
         self.assertEqual(node.hex(repo[0].node()),
-                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         '179fb7d9bc77eef78288661f0430e0c1dff56b6f')
+                         'b7bdc73041b1852563deb1ef3f4153c2fe4484f2')
         self.assertEqual(node.hex(repo['the_branch'].node()),
-                         '8ccaba5f0eae124487e413abd904a013f7f6fdeb')
+                         '4e256962fc5df545e2e0a51d0d1dc61c469127e6')
         self.assertEqual(node.hex(repo['the_branch'].parents()[0].node()),
-                         '9dfb0a19494f45c36e22f3c6d1b21d80638a7f6e')
+                         'f1ff5b860f5dbb9a59ad0921a79da77f10f25109')
         self.assertEqual(len(repo['tip'].parents()), 1)
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
@@ -77,14 +83,14 @@ class TestBasicRepoLayout(test_util.TestBase):
     def test_file_mixed_with_branches(self):
         repo = self._load_fixture_and_fetch('file_mixed_with_branches.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         assert 'README' not in repo
 
     def test_files_copied_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(
             'test_files_copied_from_outside_btt.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'c4e669a763a70f751c71d4534a34a65f398d71d4')
+                         '3c78170e30ddd35f2c32faa0d8646ab75bba4f73')
         self.assertEqual(len(repo.changelog), 2)
 
     def test_file_renamed_in_from_outside_btt(self):
@@ -96,7 +102,7 @@ class TestBasicRepoLayout(test_util.TestBase):
         repo = self._load_fixture_and_fetch(
                     'fetch_missing_files_subdir.svndump', subdir='foo')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         '2fae2544a5858d0bc6c04976683b3dcc0416d6e3')
+                         '269dcdd4361b2847e9f4288d4500e55d35df1f52')
         self.assert_('bar/alpha' in repo['tip'])
         self.assert_('foo' in repo['tip'])
         self.assert_('bar/alpha' not in repo['tip'].parents()[0])
@@ -106,11 +112,11 @@ class TestBasicRepoLayout(test_util.TestBase):
         repo = self._load_fixture_and_fetch(
             'tagged_vendor_and_oldest_not_trunk.svndump')
         self.assertEqual(node.hex(repo['oldest'].node()),
-                         'd73002bcdeffe389a8df81ee43303d36e79e8ca4')
+                         '926671740dec045077ab20f110c1595f935334fa')
         self.assertEqual(repo['tip'].parents()[0].parents()[0],
                          repo['oldest'])
         self.assertEqual(node.hex(repo['tip'].node()),
-                         '9cf09e6ff7fa938188c3bcc9dd87abd7842c080c')
+                         '1a6c3f30911d57abb67c257ec0df3e7bc44786f7')
 
     def test_propedit_with_nothing_else(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_prop_edit.svndump',
@@ -139,14 +145,18 @@ class TestStupidPull(test_util.TestBase):
                                                 True)
         # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
-                         'a47d0ce778660a91c31bf2c21c448e9ee296ac90')
+                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'a595c77cfcaa3d1ba9e04b2c55c68bc6bf2b0fbf')
+                         '1083037b18d85cd84fa211c5adbaeff0fea2cd9f')
         self.assertEqual(node.hex(repo['the_branch'].node()),
-                         '8ccaba5f0eae124487e413abd904a013f7f6fdeb')
+                         '4e256962fc5df545e2e0a51d0d1dc61c469127e6')
+        self.assertEqual(repo['the_branch'].extra()['convert_revision'],
+                         'svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/branches/the_branch@5')
         self.assertEqual(node.hex(repo['the_branch'].parents()[0].node()),
-                         '9dfb0a19494f45c36e22f3c6d1b21d80638a7f6e')
+                         'f1ff5b860f5dbb9a59ad0921a79da77f10f25109')
         self.assertEqual(len(repo['tip'].parents()), 1)
+        self.assertEqual(repo['default'].extra()['convert_revision'],
+                         'svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/trunk@6')
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
 
@@ -158,11 +168,11 @@ class TestStupidPull(test_util.TestBase):
             True)
         repo = hg.repository(ui.ui(), self.wc_path)
         self.assertEqual(node.hex(repo['oldest'].node()),
-                         'd73002bcdeffe389a8df81ee43303d36e79e8ca4')
+                         '926671740dec045077ab20f110c1595f935334fa')
         self.assertEqual(repo['tip'].parents()[0].parents()[0],
                          repo['oldest'])
         self.assertEqual(node.hex(repo['tip'].node()),
-                         '9cf09e6ff7fa938188c3bcc9dd87abd7842c080c')
+                         '1a6c3f30911d57abb67c257ec0df3e7bc44786f7')
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),

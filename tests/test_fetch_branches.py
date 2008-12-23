@@ -35,7 +35,7 @@ class TestFetchBranches(test_util.TestBase):
         repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump',
                                             stupid)
         self.assertEqual(node.hex(repo['default'].node()),
-                         'b479347c1f56d1fafe5e32a7ce0d1b7099637784')
+                         '14d252aef315857df241dd3fa4bc7833b09bd2f5')
         self.assertEqual(repo['tip'].parents()[0].branch(), 'dev_branch')
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
 
@@ -47,9 +47,9 @@ class TestFetchBranches(test_util.TestBase):
                                             stupid)
         self.assertEqual(repo['default'].parents()[0].branch(), 'test')
         self.assertEqual(node.hex(repo['closed-branches'].parents()[0].node()),
-                         'f46d6f10e6329a069503af6c0c12903994c083b2')
+                         '2cd09772e0f6ddf2d13c60ef3c1be11ad5a7dfae')
         self.assertEqual(node.hex(repo['default'].node()),
-                         '7bb5386f1a8e752888183cd86e43bdaf9abd1a95')
+                         '8a525ca0671f456e6b1417187bf86c6115d2cb78')
 
     def test_replace_trunk_with_branch_stupid(self):
         self.test_replace_trunk_with_branch(stupid=True)

@@ -99,6 +99,24 @@ def outgoing_revisions(ui, repo, hg_editor, reverse_map, sourcerev):
     if sourcerev.node() != node.nullid:
         return outgoing_rev_hashes
 
+def build_extra(revnum, branch, uuid, subdir):
+    # TODO this needs to be fixed with the new revmap
+    extra = {}
+    branchpath = 'trunk'
+    if branch:
+        extra['branch'] = branch
+        branchpath = 'branches/%s' % branch
+    if subdir and subdir[-1] == '/':
+        subdir = subdir[:-1]
+    if subdir and subdir[0] != '/':
+        subdir = '/' + subdir
+    extra['convert_revision'] = 'svn:%(uuid)s%(path)s@%(rev)s' % {
+        'uuid': uuid,
+        'path': '%s/%s' % (subdir , branchpath),
+        'rev': revnum,
+        }
+    return extra
+
 
 def is_svn_repo(repo):
     return os.path.exists(os.path.join(repo.path, 'svn'))
