@@ -1,5 +1,6 @@
 from mercurial import util as merc_util
 from mercurial import hg
+from mercurial import node
 from svn import core
 
 import util
@@ -71,13 +72,13 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
             hg.clean(repo, needs_transplant)
             utility_commands.rebase_commits(ui, repo, hg_repo_path, extrafn=extrafn, **opts)
             repo = hg.repository(ui, hge.path)
-            if needs_transplant in outgoing:
-                hg.clean(repo, repo['tip'].node())
-                hge = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
-                svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                             hge.revmap.iterkeys()))
-                outgoing = util.outgoing_revisions(ui, repo, hge,
-                                                   svn_commit_hashes)
+            for child in repo[replacement.node()].children():
+                rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
+                if rebasesrc in outgoing:
+                    rebsrcindex = outgoing.index(rebasesrc)
+                    outgoing = outgoing[0:rebsrcindex] + [child.node(), ] + outgoing[rebsrcindex+1:]
+        hge = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
+        svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
     merc_util._encoding = oldencoding
     return 0
 
