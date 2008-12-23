@@ -1,3 +1,5 @@
+import unittest
+
 from mercurial import ui
 
 import diff_cmd
@@ -32,3 +34,9 @@ class DiffTests(test_util.TestBase):
         u = ui.ui()
         diff_cmd.diff_command(u, self.repo, self.wc_path)
         self.assertEqual(u.stream.getvalue(), expected_diff_output)
+
+
+def suite():
+    all = [unittest.TestLoader().loadTestsFromTestCase(DiffTests),
+          ]
+    return unittest.TestSuite(all)

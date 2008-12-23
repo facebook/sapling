@@ -4,6 +4,7 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import test_diff
 import test_fetch_branches
 import test_fetch_command
 import test_fetch_command_regexes
@@ -16,9 +17,11 @@ import test_push_renames
 import test_push_dirs
 import test_push_eol
 import test_tags
+import test_utility_commands
 
 def suite():
-    return unittest.TestSuite([test_fetch_branches.suite(),
+    return unittest.TestSuite([test_diff.suite(),
+                               test_fetch_branches.suite(),
                                test_fetch_command.suite(),
                                test_fetch_command_regexes.suite(),
                                test_fetch_exec.suite(),
@@ -30,6 +33,7 @@ def suite():
                                test_push_dirs.suite(),
                                test_push_eol.suite(),
                                test_tags.suite(),
+                               test_utility_commands.suite(),
                               ])
 
 if __name__ == '__main__':

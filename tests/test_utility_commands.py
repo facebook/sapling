@@ -1,4 +1,5 @@
 import os
+import unittest
 import urllib # for url quoting
 
 from mercurial import ui
@@ -91,3 +92,9 @@ class UtilityTests(test_util.TestBase):
         utility_commands.print_wc_url(u, self.repo, self.wc_path)
         expected = 'file://%s\n' % urllib.quote(self.repo_path)
         self.assertEqual(u.stream.getvalue(), expected)
+
+
+def suite():
+    all = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),
+          ]
+    return unittest.TestSuite(all)
