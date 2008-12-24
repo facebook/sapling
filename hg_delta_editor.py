@@ -334,6 +334,9 @@ class HgChangeReceiver(delta.Editor):
             del self.tags[t]
         for br in self.branches_to_delete:
             del self.branches[br]
+        for t, info in added_tags.items():
+            self.ui.status('Tagged %s@%s as %s\n' %
+                           (info[0] or 'trunk', info[1], t))
         self.tags.update(added_tags)
         self.branches.update(added_branches)
         self._save_metadata()
