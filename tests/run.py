@@ -16,6 +16,7 @@ import test_push_command
 import test_push_renames
 import test_push_dirs
 import test_push_eol
+import test_rebuildmeta
 import test_tags
 import test_utility_commands
 
@@ -32,6 +33,7 @@ def suite():
                                test_push_renames.suite(),
                                test_push_dirs.suite(),
                                test_push_eol.suite(),
+                               test_rebuildmeta.suite(),
                                test_tags.suite(),
                                test_utility_commands.suite(),
                               ])

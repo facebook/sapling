@@ -15,8 +15,9 @@ from utility_commands import print_wc_url
 from fetch_command import fetch_revisions
 from push_cmd import commit_from_rev
 from diff_cmd import diff_command
+from rebuildmeta import rebuildmeta
 # shut up, pyflakes, we must import those
-__x = [print_wc_url, fetch_revisions, commit_from_rev, diff_command]
+__x = [print_wc_url, fetch_revisions, commit_from_rev, diff_command, rebuildmeta]
 
 mode755 = (stat.S_IXUSR | stat.S_IXGRP| stat.S_IXOTH | stat.S_IRUSR |
            stat.S_IRGRP| stat.S_IROTH | stat.S_IWUSR)
@@ -33,7 +34,8 @@ def svncmd(ui, repo, subcommand, *args, **opts):
             subcommand = candidates[0]
     path = os.path.dirname(repo.path)
     try:
-        opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
+        if subcommand != 'rebuildmeta':
+            opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
         return svn_subcommands[subcommand](ui, args=args,
                                            hg_repo_path=path,
                                            repo=repo,

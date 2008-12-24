@@ -62,4 +62,5 @@ The url will have to be provided by the user. The uuid can be re-requested from
 the repository.
 
 branch_info can be rebuilt during the rebuild of the revision map by recording
-the revisions of all active heads of server-side branches.
+the revisions of all active heads of server-side branches. branch_info contains
+a map from branch: (parent_branch, parent_branch_rev, branch_created_rev)

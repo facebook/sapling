@@ -180,12 +180,19 @@ class SubversionRepo(object):
 
         This returns a dictionary of tag: (source path, source rev)
         """
-        tags = self.list_dir('tags').keys()
+        return self.tags_at_rev(self.HEAD)
+
+    def tags_at_rev(self, revision):
+        try:
+            tags = self.list_dir('tags', revision=revision).keys()
+        except core.SubversionException, e:
+            if e.apr_err == 160013:
+                return {}
+            raise
         tag_info = {}
-        head = self.HEAD
         for t in tags:
             tag_info[t] = self._get_copy_source('tags/%s' % t,
-                                                cached_head=head)
+                                                cached_head=revision)
         return tag_info
 
     def _get_copy_source(self, path, cached_head=None):

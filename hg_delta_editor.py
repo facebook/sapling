@@ -302,11 +302,11 @@ class HgChangeReceiver(delta.Editor):
                         src_branch) = self._path_and_branch_for_path(src_p)
                         if src_p is None:
                             continue
-                    added_branches[br] = src_branch, src_rev, revision.revnum
+                    if (br not in self.branches or
+                        not (src_rev == 0 and src_branch == None)):
+                        added_branches[br] = src_branch, src_rev, revision.revnum
                 elif fi == '' and br in self.branches:
-                    br2 = br or 'default'
-                    if br2 not in self.repo.branchtags() and paths[p].action == 'D':
-                        self.branches_to_delete.add(br)
+                    self.branches_to_delete.add(br)
             else:
                 t_name = self._is_path_tag(p)
                 if t_name == False:
