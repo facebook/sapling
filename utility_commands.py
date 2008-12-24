@@ -135,7 +135,7 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, repo.parents()[0])
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, repo.parents()[0].node())
     if not (o_r and len(o_r)):
         ui.status('No outgoing changes found.\n')
         return 0

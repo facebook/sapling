@@ -6,6 +6,7 @@ from mercurial import ui
 from mercurial import hg
 from mercurial import revlog
 from mercurial import context
+from mercurial import node
 
 import utility_commands
 import fetch_command
@@ -44,6 +45,68 @@ class UtilityTests(test_util.TestBase):
                      'rev': 6,
                      })
         self.assertEqual(u.stream.getvalue(), expected)
+
+    def test_parent_output(self):
+        self._load_fixture_and_fetch('two_heads.svndump')
+        u = ui.ui()
+        parents = (self.repo['the_branch'].node(), revlog.nullid, )
+        def filectxfn(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data='added',
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        ctx = context.memctx(self.repo,
+                             parents,
+                             'automated test',
+                             ['added_bogus_file', 'other_added_file', ],
+                             filectxfn,
+                             'testy',
+                             '2008-12-21 16:32:00 -0500',
+                             {'branch': 'localbranch', })
+        new = self.repo.commitctx(ctx)
+        hg.update(self.repo, new)
+        utility_commands.print_parent_revision(u, self.repo, self.wc_path)
+        self.assert_(node.hex(self.repo['the_branch'].node())[:8] in
+                     u.stream.getvalue())
+        self.assert_('the_branch' in u.stream.getvalue())
+        self.assert_('r5' in u.stream.getvalue())
+        hg.update(self.repo, 'default')
+        u = ui.ui()
+        utility_commands.print_parent_revision(u, self.repo, self.wc_path)
+        self.assert_(node.hex(self.repo['default'].node())[:8] in
+                     u.stream.getvalue())
+        self.assert_('trunk' in u.stream.getvalue())
+        self.assert_('r6' in u.stream.getvalue())
+
+    def test_outgoing_output(self):
+        self._load_fixture_and_fetch('two_heads.svndump')
+        u = ui.ui()
+        parents = (self.repo['the_branch'].node(), revlog.nullid, )
+        def filectxfn(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data='added',
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        ctx = context.memctx(self.repo,
+                             parents,
+                             'automated test',
+                             ['added_bogus_file', 'other_added_file', ],
+                             filectxfn,
+                             'testy',
+                             '2008-12-21 16:32:00 -0500',
+                             {'branch': 'localbranch', })
+        new = self.repo.commitctx(ctx)
+        hg.update(self.repo, new)
+        utility_commands.show_outgoing_to_svn(u, self.repo, self.wc_path)
+        self.assert_(node.hex(self.repo['localbranch'].node())[:8] in
+                     u.stream.getvalue())
+        self.assert_('testy' in u.stream.getvalue())
+        hg.update(self.repo, 'default')
+        u = ui.ui()
+        utility_commands.show_outgoing_to_svn(u, self.repo, self.wc_path)
+        self.assertEqual(u.stream.getvalue(), 'No outgoing changes found.\n')
 
     def test_url_output(self):
         self._load_fixture_and_fetch('two_revs.svndump')
