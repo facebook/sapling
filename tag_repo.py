@@ -1,5 +1,3 @@
-import pickle
-
 from mercurial import node
 
 import hg_delta_editor

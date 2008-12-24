@@ -6,7 +6,6 @@ from mercurial import ui
 
 import test_util
 
-import svncommand
 import tag_repo
 
 class TestTags(test_util.TestBase):

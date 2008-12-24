@@ -1,8 +1,6 @@
 import cStringIO
 import re
 import os
-import shutil
-import tempfile
 
 from mercurial import patch
 from mercurial import node
