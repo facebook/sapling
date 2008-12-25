@@ -9,7 +9,7 @@
 from i18n import _
 from node import hex, nullid, short
 import base85, cmdutil, mdiff, util, revlog, diffhelpers, copies
-import cStringIO, email.Parser, os, re, errno
+import cStringIO, email.Parser, os, re, errno, math
 import sys, tempfile, zlib
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
@@ -1344,13 +1344,57 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
     for seqno, rev in enumerate(revs):
         single(rev, seqno+1, fp)
 
-def diffstat(patchlines):
-    if not util.find_exe('diffstat'):
-        return
-    output = util.filter('\n'.join(patchlines),
-                         'diffstat -p1 -w79 2>%s' % util.nulldev)
-    stat = [l.lstrip() for l in output.splitlines(True)]
-    last = stat.pop()
-    stat.insert(0, last)
-    stat = ''.join(stat)
-    return stat
+def diffstatdata(lines):
+    filename = None
+    for line in lines:
+        if line.startswith('diff'):
+            if filename:
+                yield (filename, adds, removes)
+            # set numbers to 0 anyway when starting new file
+            adds = 0
+            removes = 0
+            if line.startswith('diff --git'):
+                filename = gitre.search(line).group(1)
+            else:
+                # format: "diff -r ... -r ... file name"
+                filename = line.split(None, 5)[-1]
+        elif line.startswith('+') and not line.startswith('+++'):
+            adds += 1
+        elif line.startswith('-') and not line.startswith('---'):
+            removes += 1
+    yield (filename, adds, removes)
+
+def diffstat(lines):
+    output = []
+    stats = list(diffstatdata(lines))
+    width = util.termwidth() - 2
+
+    maxtotal, maxname = 0, 0
+    totaladds, totalremoves = 0, 0
+    for filename, adds, removes in stats:
+        totaladds += adds
+        totalremoves += removes
+        maxname = max(maxname, len(filename))
+        maxtotal = max(maxtotal, adds+removes)
+
+    countwidth = len(str(maxtotal))
+    graphwidth = width - countwidth - maxname
+    if graphwidth < 10:
+        graphwidth = 10
+
+    factor = int(math.ceil(float(maxtotal) / graphwidth))
+
+    for filename, adds, removes in stats:
+        # If diffstat runs out of room it doesn't print anything, which
+        # isn't very useful, so always print at least one + or - if there
+        # were at least some changes
+        pluses = '+' * max(adds/factor, int(bool(adds)))
+        minuses = '-' * max(removes/factor, int(bool(removes)))
+        output.append(' %-*s |  %*.d %s%s\n' % (maxname, filename, countwidth,
+                                                adds+removes, pluses, minuses))
+
+    if stats:
+        output.append(' %d files changed, %d insertions(+), %d deletions(-)\n' %
+                      (len(stats), totaladds, totalremoves))
+
+    return ''.join(output)

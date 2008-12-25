@@ -150,7 +150,8 @@ description:
 	b
 diffstat:
 
-files patched: 1
+ a |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
 
 diffs (6 lines):
 

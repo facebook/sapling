@@ -12,27 +12,6 @@ from mercurial import patch, cmdutil, util, templater
 import os, sys
 import time, datetime
 
-def get_tty_width():
-    if 'COLUMNS' in os.environ:
-        try:
-            return int(os.environ['COLUMNS'])
-        except ValueError:
-            pass
-    try:
-        import termios, array, fcntl
-        for dev in (sys.stdout, sys.stdin):
-            try:
-                fd = dev.fileno()
-                if not os.isatty(fd):
-                    continue
-                arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
-                return array.array('h', arri)[1]
-            except ValueError:
-                pass
-    except ImportError:
-        pass
-    return 80
-
 def maketemplater(ui, repo, tmpl):
     tmpl = templater.parsestring(tmpl, quoted=False)
     try:
@@ -157,7 +136,7 @@ def churn(ui, repo, *pats, **opts):
     maxcount = float(max([v for k, v in rate]))
     maxname = max([len(k) for k, v in rate])
 
-    ttywidth = get_tty_width()
+    ttywidth = util.termwidth()
     ui.debug(_("assuming %i character terminal\n") % ttywidth)
     width = ttywidth - maxname - 2 - 6 - 2 - 2
 
