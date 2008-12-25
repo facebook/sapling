@@ -59,7 +59,7 @@ files, or words in the commit message</span>
 </tr>
 <tr>
  <th class="date">date</th>
- <td class="date">Thu Jan 01 00:00:00 1970 +0000 (38 years ago)</td></tr>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td></tr>
 <tr>
  <th class="author">parents</th>
  <td class="author"></td>
@@ -154,7 +154,7 @@ files, or words in the commit message</span>
 </tr>
 <tr>
  <th>date</th>
- <td>Thu Jan 01 00:00:00 1970 +0000 (38 years ago)</td>
+ <td>Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td>
 </tr>
 <tr>
  <th>parents</th>
@@ -241,7 +241,7 @@ files, or words in the commit message</span>
 </tr>
 <tr>
  <th class="date">date</th>
- <td class="date">Thu Jan 01 00:00:00 1970 +0000 (38 years ago)</td></tr>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td></tr>
 <tr>
  <th class="author">parents</th>
  <td class="author"></td>
@@ -338,7 +338,7 @@ files, or words in the commit message</span>
 </tr>
 <tr>
  <th>date</th>
- <td>Thu Jan 01 00:00:00 1970 +0000 (38 years ago)</td>
+ <td>Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td>
 </tr>
 <tr>
  <th>parents</th>

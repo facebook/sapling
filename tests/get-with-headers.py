@@ -3,7 +3,7 @@
 __doc__ = """This does HTTP get requests given a host:port and path and returns
 a subset of the headers plus the body of the result."""
 
-import httplib, sys
+import httplib, sys, re
 
 try:
     import msvcrt, os
@@ -21,7 +21,9 @@ for h in headers:
     if response.getheader(h, None) is not None:
         print "%s: %s" % (h, response.getheader(h))
 print
-sys.stdout.write(response.read())
+data = response.read()
+data = re.sub('\d+ years', 'many years', data)
+sys.stdout.write(data)
 
 if 200 <= response.status <= 299:
     sys.exit(0)
