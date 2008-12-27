@@ -286,3 +286,20 @@ summary:     msg 2
 % test no action
 abort: cannot bisect (no known good revisions)
 failure
+% reproduce AssertionError, issue1445
+Testing changeset 3:b53bea5e2fcb (6 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 2:db07c04beaca (6 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 4:9b2ba8336a65 (6 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 1:5cd978ea5149 (6 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Testing changeset 5:7874a09ea728 (6 changesets remaining, ~2 tests)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+The first bad revision is:
+changeset:   6:a3d5c6fdf0d3
+user:        test
+date:        Thu Jan 01 00:00:06 1970 +0000
+summary:     msg 6
+

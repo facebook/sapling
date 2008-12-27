@@ -72,3 +72,13 @@ hg bisect -s
 echo % test no action
 hg bisect -r
 hg bisect || echo failure
+
+echo % reproduce AssertionError, issue1445
+hg bisect -r
+hg bisect -b 6
+hg bisect -g 0
+hg bisect -s
+hg bisect -s
+hg bisect -s
+hg bisect -s 
+hg bisect -g

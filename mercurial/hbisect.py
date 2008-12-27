@@ -102,7 +102,7 @@ def bisect(changelog, state):
             if value == perfect: # found a perfect candidate? quit early
                 break
 
-        if y < perfect: # all downhill from here?
+        if y < perfect and rev not in skip: # all downhill from here?
             for c in children.get(rev, []):
                 poison[c] = True # poison children
             continue
