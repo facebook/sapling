@@ -252,8 +252,6 @@ def _showstats(repo, stats):
     note = ", ".join([_("%d files %s") % s for s in stats])
     repo.ui.status("%s\n" % note)
 
-def _update(repo, node): return update(repo, node)
-
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
     stats = _merge.update(repo, node, False, False, None)
@@ -261,6 +259,9 @@ def update(repo, node):
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
     return stats[3] > 0
+
+# naming conflict in clone()
+_update = update
 
 def clean(repo, node, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
