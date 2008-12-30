@@ -13,7 +13,7 @@ import fetch_command
 import test_util
 
 expected_info_output = '''URL: file://%(repo)s/%(branch)s
-Repository Root: None
+Repository Root: file://%(repo)s
 Repository UUID: df2126f7-00ab-4d49-b42c-7e981dde0bcf
 Revision: %(rev)s
 Node Kind: directory

@@ -37,6 +37,9 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
     author = '@'.join(workingctx.user().split('@')[:-1])
+    # cleverly figure out repo root w/o actually contacting the server
+    subdir = workingctx.extra()['convert_revision'][40:].split('@')[0]
+    reporoot = url[:len(url)-len(subdir)]
     ui.status('''URL: %(url)s
 Repository Root: %(reporoot)s
 Repository UUID: %(uuid)s
@@ -45,7 +48,7 @@ Node Kind: directory
 Last Changed Author: %(author)s
 Last Changed Rev: %(revision)s
 Last Changed Date: %(date)s\n''' %
-              {'reporoot': None,
+              {'reporoot': reporoot,
                'uuid': open(hge.uuid_file).read(),
                'url': url,
                'author': author,
