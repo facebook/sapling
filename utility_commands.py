@@ -132,7 +132,7 @@ def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts)
 
 @util.register_subcommand('outgoing')
 def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
-    """Commit the current revision and any required parents back to svn.
+    """Show changesets not yet pushed to SVN.
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
