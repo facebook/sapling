@@ -212,8 +212,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     # Now we are done with files, we can prune deleted directories
     # against themselves: ignore a/b if a/ is already removed
     deleteddirs2 = list(deleteddirs)
-    deleteddirs2.sort()
-    deleteddirs2.reverse()
+    deleteddirs2.sort(reverse=True)
     for d in deleteddirs2:
         pos = d.rfind('/')
         if pos >= 0 and d[:pos] in deleteddirs:

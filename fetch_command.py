@@ -360,8 +360,7 @@ def makecopyfinder(r, branchpath, rootdir):
         source = e.copyfrom_path[len(fullbranchpath):]
         copies.append((dest, (source, e.copyfrom_rev)))
 
-    copies.sort()
-    copies.reverse()
+    copies.sort(reverse=True)
     exactcopies = dict(copies)
 
     def finder(path):
