@@ -8,7 +8,7 @@ import hg_delta_editor
 
 @util.register_subcommand('url')
 def print_wc_url(ui, repo, hg_repo_path, **opts):
-    """Url of Subversion repository
+    """Url of Subversion repository.
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
@@ -17,7 +17,7 @@ def print_wc_url(ui, repo, hg_repo_path, **opts):
 
 @util.register_subcommand('info')
 def run_svn_info(ui, repo, hg_repo_path, **opts):
-    """Like svn info details
+    """Like svn info details.
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
@@ -61,7 +61,7 @@ Last Changed Date: %(date)s\n''' %
 
 @util.register_subcommand('parent')
 def print_parent_revision(ui, repo, hg_repo_path, **opts):
-    """Display hg hash and svn revision of nearest svn parent
+    """Display hg hash and svn revision of nearest svn parent.
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
@@ -82,7 +82,7 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
 
 @util.register_subcommand('rebase')
 def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts):
-    """Rebases current unpushed revisions onto Subversion head
+    """Rebases current unpushed revisions onto Subversion head.
 
     This moves a line of development from making its own head to the top of
     Subversion development, linearizing the changes. In order to make sure you
