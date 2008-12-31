@@ -91,6 +91,13 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
     merc_util._encoding = oldencoding
     return 0
 
+def _isdir(svn, branchpath, svndir):
+    try:
+        svn.list_dir('%s/%s' % (branchpath, svndir))
+        return True
+    except core.SubversionException:
+        return False
+
 def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
     """Compute directories to add or delete when moving from parentctx
     to ctx, assuming only 'changedfiles' files changed.
@@ -102,13 +109,6 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
     deleted directories are also listed, but item order of undefined
     in either list.
     """
-    def exists(svndir):
-        try:
-            svn.list_dir('%s/%s' % (branchpath, svndir))
-            return True
-        except core.SubversionException:
-            return False
-
     def finddirs(path):
         pos = path.rfind('/')
         while pos != -1:
@@ -140,11 +140,11 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
     newdirs = getctxdirs(ctx, changeddirs)
 
     for d in newdirs:
-        if d not in olddirs and not exists(d):
+        if d not in olddirs and not _isdir(svn, branchpath, d):
             added.append(d)
 
     for d in olddirs:
-        if d not in newdirs and exists(d):
+        if d not in newdirs and _isdir(svn, branchpath, d):
             deleted.append(d)
 
     return added, deleted
