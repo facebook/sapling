@@ -465,18 +465,23 @@ class SubversionRepo(object):
                 data = data[len(linkprefix):]
         return data, mode
 
-    def proplist(self, path, revision, recurse=False):
-        if path[-1] == '/':
-            path = path[:-1]
-        if path[0] == '/':
-            path = path[1:]
+    def list_props(self, path, revision):
+        """Return a mapping of property names to values, raise IOError if
+        specified path does not exist.
+        """
         rev = optrev(revision)
-        pl = dict(client.proplist2(self.svn_url+'/'+path, rev, rev, True,
-                                   self.client_context, self.pool))
-        pl2 = {}
-        for key, value in pl.iteritems():
-            pl2[key[len(self.svn_url)+1:]] = value
-        return pl2
+        rpath = (self.svn_url + '/' + path.strip('/')).strip('/')
+        try:
+            pl = client.proplist2(rpath, rev, rev, False,
+                                  self.client_context, self.pool)
+        except core.SubversionException, e:
+            # Specified path does not exist at this revision
+            if e.apr_err == core.SVN_ERR_NODE_UNKNOWN_KIND:
+                raise IOError()
+            raise
+        if not pl:
+            return {}
+        return pl[0][1]
 
     def fetch_all_files_to_dir(self, path, revision, checkout_path):
         rev = optrev(revision)
