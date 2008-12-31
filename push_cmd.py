@@ -205,7 +205,6 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                 if file[:pos] in deleteddirs:
                     # This file will be removed when its directory is removed
                     continue
-            base_data = parent.filectx(file).data()
             action = 'delete'
         file_data[file] = base_data, new_data, action
 
