@@ -482,9 +482,9 @@ class HgChangeReceiver(delta.Editor):
         self.clear_current_info()
 
     def authorforsvnauthor(self, author):
-	    if(author in self.authors):
-	        return self.authors[author]
-	    return '%s%s' %(author, self.author_host)
+        if(author in self.authors):
+            return self.authors[author]
+        return '%s%s' %(author, self.author_host)
 
     def readauthors(self, authorfile):
         self.ui.status(
@@ -492,7 +492,7 @@ class HgChangeReceiver(delta.Editor):
             % authorfile)
         f = open(authorfile, 'r')
         for line in f:
-            if line.strip() == '':
+            if not line.strip():
                 continue
             try:
                 srcauth, dstauth = line.split('=', 1)
@@ -511,7 +511,7 @@ class HgChangeReceiver(delta.Editor):
                     ('Ignoring bad line in author map file %s: %s\n')
                     % (authorfile, line.rstrip()))
         f.close()
-        
+
     def writeauthors(self):
         f = open(self.authors_file, 'w+')
         self.ui.status(
@@ -563,7 +563,7 @@ class HgChangeReceiver(delta.Editor):
     @property
     def authors_file(self):
         return self.meta_file_named('authors')
-        
+
     @stash_exception_on_self
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
