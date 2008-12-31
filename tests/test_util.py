@@ -114,9 +114,12 @@ class TestBase(unittest.TestCase):
         return hg.repository(ui.ui(), self.wc_path)
 
     def pushrevisions(self, stupid=False):
+        before = len(self.repo)
         push_cmd.push_revisions_to_subversion(
             ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
             svn_url=fileurl(self.repo_path), stupid=stupid)
+        after = len(self.repo)
+        self.assertEqual(0, after - before)
 
     def svnls(self, path, rev='HEAD'):
         path = self.repo_path + '/' + path
