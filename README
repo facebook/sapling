@@ -2,28 +2,37 @@
 
 About
 -----
-hgsubversion is an extension for Mercurial that allows using Mercurial as a 
-Subversion client.
+hgsubversion is an extension for Mercurial that allows using Mercurial
+as a Subversion client.
 
-Right now it is *not* ready for production use. You should only be using this if 
-you're ready to hack on it, and go diving into the internals of Mercurial and/or 
-Subversion.
+Right now it is *not* ready for production use. You should only be
+using this if you're ready to hack on it, and go diving into the
+internals of Mercurial and/or Subversion.
 
 Installation
 ------------
-You need to have Subversion installed with the SWIG Python bindings from Subversion 1.5 or later.
-You need Mercurial 1.1.1 or later.
+You need to have Subversion installed with the SWIG Python bindings
+from Subversion 1.5 or later. You need Mercurial 1.1.1 or later.
 
 .. _mercurial: http://selenic.com/repo/hg
 .. _mercurial-stable: http://selenic.com/repo/hg-stable
 .. _crew: http://hg.intevation.org/mercurial/crew
 .. _crew-stable: http://hg.intevation.org/mercurial/crew-stable
 
-If you are unfamiliar with installing Mercurial extensions, please see the UsingExtensions_ page in the Mercurial wiki. Look at the example for specifying an absolute path near the bottom of the page. You want to give the path to the top level of your clone of this repository.
+If you are unfamiliar with installing Mercurial extensions, please see
+the UsingExtensions_ page in the Mercurial wiki. Look at the example
+for specifying an absolute path near the bottom of the page. You want
+to give the path to the top level of your clone of this repository.
 
-.. _UsingExtensions: http://www.selenic.com/mercurial/wiki/index.cgi/UsingExtensions
+.. _UsingExtensions: http://www.selenic.com/mercurial/wiki/index.cgi/
+                     UsingExtensions
 
-Before using hgsubversion, I *strongly* encourage you to run the automated tests. Just use nose_ if you have it (or ``easy_install nose`` if you want it), or use ``python tests/run.py`` to run the suite with the conventional test runner. Note that because I use nose, there's a lot of stdout spew in the tests right now. The important part is that all the tests pass.
+Before using hgsubversion, I *strongly* encourage you to run the
+automated tests. Just use nose_ if you have it (or ``easy_install
+nose`` if you want it), or use ``python tests/run.py`` to run the
+suite with the conventional test runner. Note that because I use nose,
+there's a lot of stdout spew in the tests right now. The important
+part is that all the tests pass.
 
 .. _nose: http://code.google.com/p/python-nose/
 
@@ -37,12 +46,11 @@ Real example::
 
  $ hg svnclone http://python-nose.googlecode.com/svn nose-hg
 
-Note, you should pull from the root subversion directory, not specific folders (such as trunk).
+Note, you should pull from the root subversion directory, not specific
+folders (such as trunk).
 
 Pull new revisions into an already-converted repo::
 
  $ hg svn pull
 
 For more information, see 'hg help svn' while in a converted repo.
-
-
