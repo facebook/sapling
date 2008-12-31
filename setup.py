@@ -9,6 +9,23 @@ import sys
 if not hasattr(sys, 'version_info') or sys.version_info < (2, 3, 0, 'final'):
     raise SystemExit("Mercurial requires python 2.3 or later.")
 
+# Solaris Python packaging brain damage
+try:
+    import hashlib
+    sha = hashlib.sha1()
+except:
+    try:
+        import sha
+    except:
+        raise SystemExit(
+            "Couldn't import standard hashlib (incomplete Python install).")
+
+try:
+    import zlib
+except:
+    raise SystemExit(
+        "Couldn't import standard zlib (incomplete Python install).")
+
 import os
 import shutil
 import tempfile
