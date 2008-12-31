@@ -66,7 +66,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
         for p in r.paths:
             if hg_editor._is_path_valid(p):
                 valid = True
-                continue
+                break
         if initializing_repo and start > 0:
             assert False, 'This feature not ready yet.'
         if valid:
