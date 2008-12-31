@@ -350,7 +350,7 @@ class HgChangeReceiver(delta.Editor):
         files_to_commit = self.current_files.keys()
         files_to_commit.extend(self.current_files_symlink.keys())
         files_to_commit.extend(self.current_files_exec.keys())
-        files_to_commit = sorted(list(set(files_to_commit)))
+        files_to_commit = sorted(set(files_to_commit))
         branch_batches = {}
         rev = self.current_rev
         date = rev.date.replace('T', ' ').replace('Z', '').split('.')[0]
