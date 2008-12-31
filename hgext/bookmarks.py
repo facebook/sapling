@@ -64,9 +64,9 @@ def write(repo, refs):
     '''
     if os.path.exists(repo.join('bookmarks')):
         util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
-    file = repo.opener('bookmarks', 'w+')
     if current(repo) not in refs:
         setcurrent(repo, None)
+    file = repo.opener('bookmarks', 'w+')
     for refspec, node in refs.items():
         file.write("%s %s\n" % (hex(node), refspec))
     file.close()
@@ -138,6 +138,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             raise util.Abort(_("new bookmark name required"))
         marks[mark] = marks[rename]
         del marks[rename]
+        if current(repo) == rename:
+            setcurrent(repo, mark)
         write(repo, marks)
         return
 
