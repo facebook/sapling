@@ -229,6 +229,8 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
         if (hasattr(e, 'apr_err') and e.apr_err != 160013):
             raise
         raise BadPatchApply('previous revision does not exist')
+    if '\0' in d:
+        raise BadPatchApply('binary diffs are not supported')
     files_data = {}
     binary_files = {}
     touched_files = {}

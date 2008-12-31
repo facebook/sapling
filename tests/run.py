@@ -4,6 +4,7 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import test_binaryfiles
 import test_diff
 import test_fetch_branches
 import test_fetch_command
@@ -22,7 +23,8 @@ import test_tags
 import test_utility_commands
 
 def suite():
-    return unittest.TestSuite([test_diff.suite(),
+    return unittest.TestSuite([test_binaryfiles.suite(),
+                               test_diff.suite(),
                                test_fetch_branches.suite(),
                                test_fetch_command.suite(),
                                test_fetch_command_regexes.suite(),
