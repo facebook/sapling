@@ -23,6 +23,7 @@ def print_your_svn_is_old_message(ui): #pragma: no cover
 @util.register_subcommand('pull')
 def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     tag_locations='tags',
+                    authors=None,
                     **opts):
     """Pull new revisions from Subversion.
     """
@@ -47,7 +48,8 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                                                  ui_=ui,
                                                  subdir=svn.subdir,
                                                  author_host=author_host,
-                                                 tag_locations=tag_locations)
+                                                 tag_locations=tag_locations,
+                                                 authors=authors)
     if os.path.exists(hg_editor.uuid_file):
         uuid = open(hg_editor.uuid_file).read()
         assert uuid == svn.uuid

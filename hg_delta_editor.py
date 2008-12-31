@@ -60,7 +60,8 @@ class HgChangeReceiver(delta.Editor):
 
     def __init__(self, path=None, repo=None, ui_=None,
                  subdir='', author_host='',
-                 tag_locations=['tags']):
+                 tag_locations=['tags'],
+                 authors=None):
         """path is the path to the target hg repo.
 
         subdir is the subdirectory of the edits *on the svn server*.
@@ -105,6 +106,13 @@ class HgChangeReceiver(delta.Editor):
 
         self.clear_current_info()
         self.author_host = author_host
+        self.authors = {}
+        if os.path.exists(self.authors_file):
+            self.readauthors(self.authors_file)
+        if authors and os.path.exists(authors):
+            self.readauthors(authors)
+        if self.authors:
+            self.writeauthors()
 
     def __setup_repo(self, repo_path):
         """Verify the repo is going to work out for us.
@@ -388,8 +396,7 @@ class HgChangeReceiver(delta.Editor):
                                          rev.message or ' ',
                                          files,
                                          del_all_files,
-                                         '%s%s' % (rev.author,
-                                                   self.author_host),
+                                         self.authorforsvnauthor(rev.author),
                                          date,
                                          {'branch': 'closed-branches'})
             new_hash = self.repo.commitctx(current_ctx)
@@ -437,7 +444,7 @@ class HgChangeReceiver(delta.Editor):
                                          rev.message or '...',
                                          files.keys(),
                                          filectxfn,
-                                         '%s%s' %(rev.author, self.author_host),
+                                         self.authorforsvnauthor(rev.author),
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
@@ -464,8 +471,7 @@ class HgChangeReceiver(delta.Editor):
                                          rev.message or ' ',
                                          [],
                                          del_all_files,
-                                         '%s%s' % (rev.author,
-                                                   self.author_host),
+                                         self.authorforsvnauthor(rev.author),
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
@@ -474,6 +480,46 @@ class HgChangeReceiver(delta.Editor):
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         self.clear_current_info()
+
+    def authorforsvnauthor(self, author):
+	    if(author in self.authors):
+	        return self.authors[author]
+	    return '%s%s' %(author, self.author_host)
+
+    def readauthors(self, authorfile):
+        self.ui.status(
+            ('Reading authormap %s\n')
+            % authorfile)
+        f = open(authorfile, 'r')
+        for line in f:
+            if line.strip() == '':
+                continue
+            try:
+                srcauth, dstauth = line.split('=', 1)
+                srcauth = srcauth.strip()
+                dstauth = dstauth.strip()
+                if srcauth in self.authors and dstauth != self.authors[srcauth]:
+                    self.ui.status(
+                        ('Overriding mapping for author %s, was %s, now %s\n')
+                        % (srcauth, self.authors[srcauth], dstauth))
+                else:
+                    self.ui.debug(('Mapping author %s to %s\n')
+                        % (srcauth, dstauth))
+                    self.authors[srcauth] = dstauth
+            except IndexError:
+                self.ui.warn(
+                    ('Ignoring bad line in author map file %s: %s\n')
+                    % (authorfile, line.rstrip()))
+        f.close()
+        
+    def writeauthors(self):
+        f = open(self.authors_file, 'w+')
+        self.ui.status(
+            ('Writing author map file %s\n')
+            % self.authors_file)
+        for author in self.authors:
+            f.write("%s=%s\n" % (author, self.authors[author]))
+        f.close()
 
     @property
     def meta_data_dir(self):
@@ -514,6 +560,10 @@ class HgChangeReceiver(delta.Editor):
     def url(self):
         return open(self.svn_url_file).read()
 
+    @property
+    def authors_file(self):
+        return self.meta_file_named('authors')
+        
     @stash_exception_on_self
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
