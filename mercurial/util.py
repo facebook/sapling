@@ -814,9 +814,15 @@ class path_auditor(object):
             return
         normpath = os.path.normcase(path)
         parts = splitpath(normpath)
-        if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '')
+        if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '.hg.', '')
             or os.pardir in parts):
             raise Abort(_("path contains illegal component: %s") % path)
+        if '.hg' in path:
+            for p in '.hg', '.hg.':
+                if p in parts[1:-1]:
+                    pos = parts.index(p)
+                    base = os.path.join(*parts[:pos])
+                    raise Abort(_('path %r is inside repo %r') % (path, base))
         def check(prefix):
             curpath = os.path.join(self.root, prefix)
             try:

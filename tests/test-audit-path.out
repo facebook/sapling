@@ -6,3 +6,22 @@ abort: path 'b/b' traverses symbolic link 'b'
 % should succeed
 % should still fail - maybe
 abort: path 'b/b' traverses symbolic link 'b'
+% unbundle tampered bundle
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 5 changes to 5 files (+3 heads)
+(run 'hg heads' to see heads, 'hg merge' to merge)
+% attack .hg/test
+.hg/test
+abort: path contains illegal component: .hg/test
+% attack foo/.hg/test
+foo/.hg/test
+abort: path 'foo/.hg/test' is inside repo 'foo'
+% attack back/test where back symlinks to ..
+back
+back/test
+abort: path 'back/test' traverses symbolic link 'back'
+% attack ../test
+../test
+abort: path contains illegal component: ../test
