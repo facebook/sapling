@@ -1797,7 +1797,7 @@ def locate(ui, repo, *pats, **opts):
         if not rev and abs not in repo.dirstate:
             continue
         if opts.get('fullpath'):
-            ui.write(os.path.join(repo.root, abs), end)
+            ui.write(repo.wjoin(abs), end)
         else:
             ui.write(((pats and m.rel(abs)) or abs), end)
         ret = 0

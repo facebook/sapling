@@ -1057,7 +1057,7 @@ def updatedir(ui, repo, patches, similarity=0):
         gp = patches[f]
         if gp and gp.mode:
             islink, isexec = gp.mode
-            dst = os.path.join(repo.root, gp.path)
+            dst = repo.wjoin(gp.path)
             # patch won't create empty files
             if gp.op == 'ADD' and not os.path.exists(dst):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')

@@ -80,9 +80,7 @@ def snapshot_wdir(ui, repo, files, tmproot):
     '''snapshot files from working directory.
     if not using snapshot, -I/-X does not work and recursive diff
     in tools like kdiff3 and meld displays too many files.'''
-    repo_root = repo.root
-
-    dirname = os.path.basename(repo_root)
+    dirname = os.path.basename(repo.root)
     if dirname == "":
         dirname = "root"
     base = os.path.join(tmproot, dirname)
@@ -105,8 +103,7 @@ def snapshot_wdir(ui, repo, files, tmproot):
             fp.write(chunk)
         fp.close()
 
-        fns_and_mtime.append((dest, os.path.join(repo_root, fn),
-            os.path.getmtime(dest)))
+        fns_and_mtime.append((dest, repo.wjoin(fn), os.path.getmtime(dest)))
 
 
     return dirname, fns_and_mtime
