@@ -12,6 +12,7 @@ from svn import delta
 
 import hg_delta_editor
 import svnwrap
+import svnexternals
 import util
 
 
@@ -425,6 +426,55 @@ def getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx):
         hgcopies.update(copies)
     return hgcopies
 
+def stupid_fetch_externals(svn, branchpath, r, parentctx):
+    """Extract svn:externals for the current revision and branch
+
+    Return an externalsfile instance or None if there are no externals
+    to convert and never were.
+    """
+    externals = svnexternals.externalsfile()
+    if '.hgsvnexternals' in parentctx:
+        externals.read(parentctx['.hgsvnexternals'].data())
+    # Detect property additions only, changes are handled by checking
+    # existing entries individually. Projects are unlikely to store
+    # externals on many different root directories, so we trade code
+    # duplication and complexity for a constant lookup price at every
+    # revision in the common case.
+    dirs = set(externals)
+    if parentctx.node() == revlog.nullid:
+        dirs.update([p for p,k in svn.list_files(branchpath, r.revnum) if k == 'd'])
+        dirs.add('')
+    else:
+        branchprefix = branchpath + '/'
+        for path, e in r.paths.iteritems():
+            if e.action == 'D':
+                continue
+            if not path.startswith(branchprefix) and path != branchpath:
+                continue
+            kind = svn.checkpath(path, r.revnum)
+            if kind != 'd':
+                continue
+            path = path[len(branchprefix):]
+            dirs.add(path)
+            if e.action == 'M':
+                continue
+            for child, k in svn.list_files(branchprefix + path, r.revnum):
+                if k == 'd':
+                    dirs.add((path + '/' + child).strip('/'))
+
+    # Retrieve new or updated values
+    for dir in dirs:
+        try:
+            values = svn.list_props(branchpath + '/' + dir, r.revnum)
+            externals[dir] = values.get('svn:externals', '')
+        except IOError:
+            externals[dir] = ''
+
+    if not externals and '.hgsvnexternals' not in parentctx:
+        # Do not create empty externals files
+        return None
+    return externals
+
 def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
@@ -449,7 +499,6 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
                 files.append(path)
             elif kind == 'd':
                 if e.action == 'M':
-                    # Ignore property changes for now
                     continue
                 dirpath = branchprefix + path
                 for child, k in svn.list_files(dirpath, r.revnum):
@@ -495,14 +544,24 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             continue
         else:
             try:
-                files_touched, filectxfn = stupid_diff_branchrev(
+                files_touched, filectxfn2 = stupid_diff_branchrev(
                     ui, svn, hg_editor, b, r, parentctx)
             except BadPatchApply, e:
                 # Either this revision or the previous one does not exist.
                 ui.status("fetching entire rev: %s.\n" % e.message)
-                files_touched, filectxfn = stupid_fetch_branchrev(
+                files_touched, filectxfn2 = stupid_fetch_branchrev(
                     svn, hg_editor, b, branches[b], r, parentctx)
 
+            externals = stupid_fetch_externals(svn, branches[b], r, parentctx)
+            if externals is not None:
+                files_touched.append('.hgsvnexternals')
+
+            def filectxfn(repo, memctx, path):
+                if path == '.hgsvnexternals':
+                    return context.memfilectx(path=path, data=externals.write(), 
+                                              islink=False, isexec=False, copied=None)
+                return filectxfn2(repo, memctx, path)
+            
         extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
         if '' in files_touched:
             files_touched.remove('')

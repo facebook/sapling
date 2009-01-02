@@ -14,6 +14,7 @@ from mercurial import node
 from svn import delta
 from svn import core
 
+import svnexternals
 import util as our_util
 
 def pickle_atomic(data, file_path, dir=None):
@@ -144,12 +145,14 @@ class HgChangeReceiver(delta.Editor):
         self.current_rev = None
         self.current_files_exec = {}
         self.current_files_symlink = {}
+        self.dir_batons = {}
         # Map fully qualified destination file paths to module source path
         self.copies = {}
         self.missing_plaintexts = set()
         self.commit_branches_empty = {}
         self.base_revision = None
         self.branches_to_delete = set()
+        self.externals = {}
 
     def _save_metadata(self):
         '''Save the Subversion metadata. This should really be called after
@@ -349,12 +352,41 @@ class HgChangeReceiver(delta.Editor):
         self.branches.update(added_branches)
         self._save_metadata()
 
+    def _updateexternals(self):
+        if not self.externals:
+            return
+        # Accumulate externals records for all branches
+        revnum = self.current_rev.revnum
+        branches = {}
+        for path, entry in self.externals.iteritems():
+            if not self._is_path_valid(path):
+                continue
+            p, b, bp = self._split_branch_path(path)
+            if bp not in branches:
+                external = svnexternals.externalsfile()
+                parent = self.get_parent_revision(revnum, b)
+                pctx = self.repo[parent]
+                if '.hgsvnexternals' in pctx:
+                    external.read(pctx['.hgsvnexternals'].data())
+                branches[bp] = external
+            else:
+                external = branches[bp]
+            external[p] = entry
+
+        # Register the file changes
+        for bp, external in branches.iteritems():
+            path = bp + '/.hgsvnexternals'
+            self.current_files[path] = external.write()
+            self.current_files_symlink[path] = False
+            self.current_files_exec[path] = False
+
     def commit_current_delta(self):
         if hasattr(self, '_exception_info'):  #pragma: no cover
             traceback.print_exception(*self._exception_info)
             raise ReplayException()
         if self.missing_plaintexts:
             raise MissingPlainTextError()
+        self._updateexternals()
         files_to_commit = self.current_files.keys()
         files_to_commit.extend(self.current_files_symlink.keys())
         files_to_commit.extend(self.current_files_exec.keys())
@@ -420,6 +452,11 @@ class HgChangeReceiver(delta.Editor):
                     and branch not in self.repo.branchtags()):
                     continue
             parent_ctx = self.repo.changectx(parents[0])
+            if '.hgsvnexternals' not in parent_ctx and '.hgsvnexternals' in files:
+                # Do not register empty externals files
+                if not self.current_files[files['.hgsvnexternals']]:
+                    del files['.hgsvnexternals']
+
             def filectxfn(repo, memctx, path):
                 current_file = files[path]
                 if current_file in self.deleted_files:
@@ -579,6 +616,7 @@ class HgChangeReceiver(delta.Editor):
                 if br_path != '':
                     br_path2 = br_path + '/'
                 # assuming it is a directory
+                self.externals[path] = None
                 def delete_x(x):
                     self.deleted_files[x] = True
                 map(delete_x, [pat for pat in self.current_files.iterkeys()
@@ -666,6 +704,7 @@ class HgChangeReceiver(delta.Editor):
     @stash_exception_on_self
     def add_directory(self, path, parent_baton, copyfrom_path,
                       copyfrom_revision, dir_pool=None):
+        self.dir_batons[path] = path
         br_path, branch = self._path_and_branch_for_path(path)
         if br_path is not None:
             if not copyfrom_path and not br_path:
@@ -673,14 +712,14 @@ class HgChangeReceiver(delta.Editor):
             else:
                 self.commit_branches_empty[branch] = False
         if br_path is None or not copyfrom_path:
-            return
+            return path
         if copyfrom_path:
             tag = self._is_path_tag(copyfrom_path)
             if tag not in self.tags:
                 tag = None
             if not self._is_path_valid(copyfrom_path) and not tag:
                 self.missing_plaintexts.add('%s/' % path)
-                return
+                return path
 
         if tag:
             source_branch, source_rev = self.tags[tag]
@@ -692,7 +731,7 @@ class HgChangeReceiver(delta.Editor):
                                             source_branch)
         if new_hash == node.nullid:
             self.missing_plaintexts.add('%s/' % path)
-            return
+            return path
         cp_f_ctx = self.repo.changectx(new_hash)
         if cp_f != '/' and cp_f != '':
             cp_f = '%s/' % cp_f
@@ -718,6 +757,7 @@ class HgChangeReceiver(delta.Editor):
                 parentctx = self.repo.changectx(parentid)
                 if self.aresamefiles(parentctx, cp_f_ctx, copies.values()):
                     self.copies.update(copies)
+        return path
 
     @stash_exception_on_self
     def change_file_prop(self, file_baton, name, value, pool=None):
@@ -727,10 +767,25 @@ class HgChangeReceiver(delta.Editor):
             self.current_files_symlink[self.current_file] = bool(value is not None)
 
     @stash_exception_on_self
+    def change_dir_prop(self, dir_baton, name, value, pool=None):
+        if dir_baton is None:
+            return
+        path = self.dir_batons[dir_baton]
+        if name == 'svn:externals':
+            self.externals[path] = value
+
+    @stash_exception_on_self
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
+        self.dir_batons[path] = path
         p_, branch = self._path_and_branch_for_path(path)
         if p_ == '':
             self.commit_branches_empty[branch] = False
+        return path
+
+    @stash_exception_on_self
+    def close_directory(self, dir_baton, dir_pool=None):
+        if dir_baton is not None:
+            del self.dir_batons[dir_baton]
 
     @stash_exception_on_self
     def apply_textdelta(self, file_baton, base_checksum, pool=None):

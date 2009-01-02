@@ -1,0 +1,305 @@
+SVN-fs-dump-format-version: 2
+
+UUID: a5e66397-f826-4e1c-bc26-5123bb064477
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-12-27T12:49:06.601814Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+init project
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-27T12:49:06.652695Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: externals
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 130
+Content-length: 130
+
+K 7
+svn:log
+V 28
+configure externals projects
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-27T12:49:07.236694Z
+PROPS-END
+
+Node-path: externals/project1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: externals/project1/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: externals/project2
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: externals/project2/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 120
+Content-length: 120
+
+K 7
+svn:log
+V 18
+set externals on .
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-27T12:49:08.250996Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: change
+Prop-content-length: 71
+Content-length: 71
+
+K 13
+svn:externals
+V 36
+../externals/project1 deps/project1
+
+PROPS-END
+
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 4
+Prop-content-length: 123
+Content-length: 123
+
+K 7
+svn:log
+V 21
+update externals on .
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-27T12:49:09.190834Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: change
+Prop-content-length: 107
+Content-length: 107
+
+K 13
+svn:externals
+V 72
+../externals/project1 deps/project1
+../externals/project2 deps/project2
+
+PROPS-END
+
+
+Revision-number: 5
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 13
+add on subdir
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-27T12:49:10.289216Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: change
+Prop-content-length: 71
+Content-length: 71
+
+K 13
+svn:externals
+V 36
+../externals/project2 deps/project2
+
+PROPS-END
+
+
+Node-path: trunk/subdir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 71
+Content-length: 71
+
+K 13
+svn:externals
+V 36
+../externals/project1 deps/project1
+
+PROPS-END
+
+
+Node-path: trunk/subdir2
+Node-kind: dir
+Node-action: add
+Prop-content-length: 71
+Content-length: 71
+
+K 13
+svn:externals
+V 36
+../externals/project1 deps/project1
+
+PROPS-END
+
+
+Revision-number: 6
+Prop-content-length: 125
+Content-length: 125
+
+K 7
+svn:log
+V 23
+remove externals subdir
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-27T12:49:11.184732Z
+PROPS-END
+
+Node-path: trunk/subdir
+Node-action: delete
+
+
+Revision-number: 7
+Prop-content-length: 126
+Content-length: 126
+
+K 7
+svn:log
+V 24
+remove externals subdir2
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-27T12:49:12.194114Z
+PROPS-END
+
+Node-path: trunk/subdir2
+Node-kind: dir
+Node-action: change
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
