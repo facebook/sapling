@@ -376,9 +376,12 @@ class HgChangeReceiver(delta.Editor):
         # Register the file changes
         for bp, external in branches.iteritems():
             path = bp + '/.hgsvnexternals'
-            self.current_files[path] = external.write()
-            self.current_files_symlink[path] = False
-            self.current_files_exec[path] = False
+            if external:
+                self.current_files[path] = external.write()
+                self.current_files_symlink[path] = False
+                self.current_files_exec[path] = False
+            else:
+                self.delete_file(path)
 
     def commit_current_delta(self):
         if hasattr(self, '_exception_info'):  #pragma: no cover

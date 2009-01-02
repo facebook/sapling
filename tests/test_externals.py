@@ -127,6 +127,14 @@ class TestPushExternals(test_util.TestBase):
         self.assertTrue('subdir2/a' in self.repo['tip'])
         self.assertTrue('subdir1/a' not in self.repo['tip'])
 
+        # Test externals removal
+        changes = [
+            ('.hgsvnexternals', None, None),
+            ]
+        self.commitchanges(changes)
+        self.pushrevisions(stupid)
+        self.assertchanges(changes, self.repo['tip'])
+
     def test_push_externals_stupid(self):
         self.test_push_externals(True)
 

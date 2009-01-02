@@ -558,6 +558,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
 
             def filectxfn(repo, memctx, path):
                 if path == '.hgsvnexternals':
+                    if not externals:
+                        raise IOError()
                     return context.memfilectx(path=path, data=externals.write(), 
                                               islink=False, isexec=False, copied=None)
                 return filectxfn2(repo, memctx, path)
