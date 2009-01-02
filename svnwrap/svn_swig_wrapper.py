@@ -319,13 +319,20 @@ class SubversionRepo(object):
                 bat = editor.open_root(edit_baton, base_revision, self.pool)
                 batons.append(bat)
                 return bat
-            if path in addeddirs:
-                bat = editor.add_directory(path, parent, None, -1, pool)
-                batons.append(bat)
-                return bat
             if path in deleteddirs:
                 bat = editor.delete_entry(path, base_revision, parent, pool)
                 batons.append(bat)
+                return bat
+            if path not in file_data:
+                if path in addeddirs:
+                    bat = editor.add_directory(path, parent, None, -1, pool)
+                else:
+                    bat = editor.open_directory(path, parent, base_revision, pool)
+                batons.append(bat)
+                props = properties.get(path, {})
+                if 'svn:externals' in props:
+                    value = props['svn:externals']
+                    editor.change_dir_prop(bat, 'svn:externals', value, pool)
                 return bat
             base_text, new_text, action = file_data[path]
             compute_delta = True

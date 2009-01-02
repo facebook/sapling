@@ -57,3 +57,16 @@ class externalsfile(dict):
                     continue
                 self.setdefault(target, []).append(line[1:])
             
+def diff(ext1, ext2):
+    """Compare 2 externalsfile and yield tuples like (dir, value1, value2)
+    where value1 is the external value in ext1 for dir or None, and
+    value2 the same in ext2.
+    """
+    for d in ext1:
+        if d not in ext2:
+            yield d, '\n'.join(ext1[d]), None
+        elif ext1[d] != ext2[d]:
+            yield d, '\n'.join(ext1[d]), '\n'.join(ext2[d])
+    for d in ext2:
+        if d not in ext1:
+            yield d, None, '\n'.join(ext2[d])

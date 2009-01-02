@@ -5,6 +5,7 @@ from svn import core
 
 import util
 import hg_delta_editor
+import svnexternals
 import svnwrap
 import fetch_command
 import utility_commands
@@ -98,9 +99,10 @@ def _isdir(svn, branchpath, svndir):
     except core.SubversionException:
         return False
 
-def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
+def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     """Compute directories to add or delete when moving from parentctx
-    to ctx, assuming only 'changedfiles' files changed.
+    to ctx, assuming only 'changedfiles' files changed, and 'extchanges'
+    external references changed (as returned by svnexternals.diff()).
 
     Return (added, deleted) where 'added' is the list of all added
     directories and 'deleted' the list of deleted directories.
@@ -109,13 +111,15 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
     deleted directories are also listed, but item order of undefined
     in either list.
     """
-    def finddirs(path):
+    def finddirs(path, includeself=False):
+        if includeself:
+            yield path
         pos = path.rfind('/')
         while pos != -1:
             yield path[:pos]
             pos = path.rfind('/', 0, pos)
 
-    def getctxdirs(ctx, keptdirs):
+    def getctxdirs(ctx, keptdirs, extdirs):
         dirs = {}
         for f in ctx.manifest():
             for d in finddirs(f):
@@ -123,6 +127,9 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
                     break
                 if d in keptdirs:
                     dirs[d] = 1
+        for extdir in extdirs:
+            for d in finddirs(extdir, True):
+                dirs[d] = 1
         return dirs
 
     deleted, added = [], []
@@ -134,10 +141,16 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
             continue
         for d in finddirs(f):
             changeddirs[d] = 1
+    for e in extchanges:
+        if not e[1] or not e[2]:
+            for d in finddirs(e[0], True):
+                changeddirs[d] = 1
     if not changeddirs:
         return added, deleted
-    olddirs = getctxdirs(parentctx, changeddirs)
-    newdirs = getctxdirs(ctx, changeddirs)
+    olddirs = getctxdirs(parentctx, changeddirs, 
+                         [e[0] for e in extchanges if e[1]])
+    newdirs = getctxdirs(ctx, changeddirs,
+                         [e[0] for e in extchanges if e[2]])
 
     for d in newdirs:
         if d not in olddirs and not _isdir(svn, branchpath, d):
@@ -149,6 +162,11 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles):
 
     return added, deleted
 
+def _externals(ctx):
+    ext = svnexternals.externalsfile()
+    if '.hgsvnexternals' in ctx:
+        ext.read(ctx['.hgsvnexternals'].data())
+    return ext
 
 def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     """Build and send a commit from Mercurial to Subversion.
@@ -162,13 +180,17 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     if parent_branch and parent_branch != 'default':
         branch_path = 'branches/%s' % parent_branch
 
-    addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent,
-                                            rev_ctx, rev_ctx.files())
+    extchanges = list(svnexternals.diff(_externals(parent), 
+                                        _externals(rev_ctx)))
+    addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent, rev_ctx,
+                                            rev_ctx.files(), extchanges)
     deleteddirs = set(deleteddirs)
 
     props = {}
     copies = {}
     for file in rev_ctx.files():
+        if file == '.hgsvnexternals':
+            continue
         new_data = base_data = ''
         action = ''
         if file in rev_ctx:
@@ -208,6 +230,15 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
             action = 'delete'
         file_data[file] = base_data, new_data, action
 
+    def svnpath(p):
+        return '%s/%s' % (branch_path, p)
+
+    changeddirs = []
+    for d, v1, v2 in extchanges:
+        props.setdefault(svnpath(d), {})['svn:externals'] = v2
+        if d not in deleteddirs and d not in addeddirs:
+            changeddirs.append(svnpath(d))
+
     # Now we are done with files, we can prune deleted directories
     # against themselves: ignore a/b if a/ is already removed
     deleteddirs2 = list(deleteddirs)
@@ -216,9 +247,6 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
         pos = d.rfind('/')
         if pos >= 0 and d[:pos] in deleteddirs:
             deleteddirs.remove(d[:pos])
-
-    def svnpath(p):
-        return '%s/%s' % (branch_path, p)
 
     newcopies = {}
     for source, dest in copies.iteritems():
@@ -238,7 +266,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
 
     addeddirs = [svnpath(d) for d in addeddirs]
     deleteddirs = [svnpath(d) for d in deleteddirs]
-    new_target_files += addeddirs + deleteddirs
+    new_target_files += addeddirs + deleteddirs + changeddirs
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
                    base_revision, set(addeddirs), set(deleteddirs),

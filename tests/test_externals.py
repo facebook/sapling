@@ -81,7 +81,58 @@ class TestFetchExternals(test_util.TestBase):
     def test_externals_stupid(self):
         self.test_externals(True)
 
+
+class TestPushExternals(test_util.TestBase):
+    def setUp(self):
+        test_util.TestBase.setUp(self)
+        test_util.load_fixture_and_fetch('pushexternals.svndump',
+                                         self.repo_path,
+                                         self.wc_path)
+
+    def test_push_externals(self, stupid=False):
+        # Add a new reference on an existing and non-existing directory
+        changes = [
+            ('.hgsvnexternals', '.hgsvnexternals', 
+             """\
+[dir]
+ ../externals/project2 deps/project2
+[subdir1]
+ ../externals/project1 deps/project1
+[subdir2]
+ ../externals/project2 deps/project2
+"""),
+            ('subdir1/a', 'subdir1/a', 'a'),
+            ('subdir2/a', 'subdir2/a', 'a'),
+            ]
+        self.commitchanges(changes)
+        self.pushrevisions(stupid)
+        self.assertchanges(changes, self.repo['tip'])
+
+        # Remove all references from one directory, add a new one
+        # to the other (test multiline entries)
+        changes = [
+            ('.hgsvnexternals', '.hgsvnexternals', 
+             """\
+[subdir1]
+ ../externals/project1 deps/project1
+ ../externals/project2 deps/project2
+"""),
+            # This removal used to trigger the parent directory removal
+            ('subdir1/a', None, None),
+            ]
+        self.commitchanges(changes)
+        self.pushrevisions(stupid)
+        self.assertchanges(changes, self.repo['tip'])
+        # Check subdir2/a is still there even if the externals were removed
+        self.assertTrue('subdir2/a' in self.repo['tip'])
+        self.assertTrue('subdir1/a' not in self.repo['tip'])
+
+    def test_push_externals_stupid(self):
+        self.test_push_externals(True)
+
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExternals),
+           unittest.TestLoader().loadTestsFromTestCase(TestPushExternals),
           ]
     return unittest.TestSuite(all)
