@@ -12,8 +12,8 @@ import utility_commands
 import fetch_command
 import test_util
 
-expected_info_output = '''URL: file://%(repo)s/%(branch)s
-Repository Root: file://%(repo)s
+expected_info_output = '''URL: %(repourl)s/%(branch)s
+Repository Root: %(repourl)s
 Repository UUID: df2126f7-00ab-4d49-b42c-7e981dde0bcf
 Revision: %(rev)s
 Node Kind: directory
@@ -30,7 +30,7 @@ class UtilityTests(test_util.TestBase):
         utility_commands.run_svn_info(u, self.repo, self.wc_path)
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
-                     'repo': urllib.quote(self.repo_path),
+                     'repourl': test_util.fileurl(self.repo_path),
                      'branch': 'branches/the_branch',
                      'rev': 5,
                      })
@@ -40,7 +40,7 @@ class UtilityTests(test_util.TestBase):
         utility_commands.run_svn_info(u, self.repo, self.wc_path)
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
-                     'repo': urllib.quote(self.repo_path),
+                     'repourl': test_util.fileurl(self.repo_path),
                      'branch': 'trunk',
                      'rev': 6,
                      })
@@ -113,7 +113,7 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'tip')
         u = ui.ui()
         utility_commands.print_wc_url(u, self.repo, self.wc_path)
-        expected = 'file://%s\n' % urllib.quote(self.repo_path)
+        expected = test_util.fileurl(self.repo_path) + '\n'
         self.assertEqual(u.stream.getvalue(), expected)
 
     def test_rebase(self):
@@ -153,7 +153,7 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'tip')
         u = ui.ui()
         utility_commands.print_wc_url(u, self.repo, self.wc_path)
-        expected = 'file://%s\n' % urllib.quote(self.repo_path)
+        expected = test_util.fileurl(self.repo_path) + '\n'
         self.assertEqual(u.stream.getvalue(), expected)
 
 
