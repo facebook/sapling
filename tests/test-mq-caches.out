@@ -5,7 +5,7 @@ tip: 0
 No branch cache
 
 # some regular revisions
-Patch queue now empty
+patch queue now empty
 tip: 1
 3f910abad313ff802d3a23a7529433872df9b3ae 1
 3f910abad313ff802d3a23a7529433872df9b3ae bar
@@ -13,7 +13,7 @@ tip: 1
 
 # add some mq patches
 applying p1
-Now at: p1
+now at: p1
 tip: 2
 3f910abad313ff802d3a23a7529433872df9b3ae 1
 3f910abad313ff802d3a23a7529433872df9b3ae bar
@@ -43,11 +43,11 @@ branch bar: 2
 qbase: 1
 
 # detect an invalid cache
-Patch queue now empty
+patch queue now empty
 applying p0
 applying p1
 applying p2
-Now at: p2
+now at: p2
 tip: 3
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff 0
 9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo

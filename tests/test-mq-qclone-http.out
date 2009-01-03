@@ -25,7 +25,7 @@ updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 applying b.patch
-Now at: b.patch
+now at: b.patch
 imported patch b.patch
 a
 % test with normal collection
@@ -50,7 +50,7 @@ updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 applying b.patch
-Now at: b.patch
+now at: b.patch
 imported patch b.patch
 a
 % test with old-style collection
@@ -75,6 +75,6 @@ updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 applying b.patch
-Now at: b.patch
+now at: b.patch
 imported patch b.patch
 a

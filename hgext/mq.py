@@ -963,10 +963,10 @@ class queue:
                 raise
             top = self.applied[-1].name
             if ret[0]:
-                self.ui.write(_("Errors during apply, please fix and "
+                self.ui.write(_("errors during apply, please fix and "
                                 "refresh %s\n") % top)
             else:
-                self.ui.write(_("Now at: %s\n") % top)
+                self.ui.write(_("now at: %s\n") % top)
             return ret[0]
         finally:
             del wlock
@@ -1067,16 +1067,16 @@ class queue:
             del self.applied[start:end]
             self.strip(repo, rev, update=False, backup='strip')
             if len(self.applied):
-                self.ui.write(_("Now at: %s\n") % self.applied[-1].name)
+                self.ui.write(_("now at: %s\n") % self.applied[-1].name)
             else:
-                self.ui.write(_("Patch queue now empty\n"))
+                self.ui.write(_("patch queue now empty\n"))
         finally:
             del wlock
 
     def diff(self, repo, pats, opts):
         top = self.check_toppatch(repo)
         if not top:
-            self.ui.write(_("No patches applied\n"))
+            self.ui.write(_("no patches applied\n"))
             return
         qp = self.qparents(repo, top)
         self._diffopts = patch.diffopts(self.ui, opts)
@@ -1084,7 +1084,7 @@ class queue:
 
     def refresh(self, repo, pats=None, **opts):
         if len(self.applied) == 0:
-            self.ui.write(_("No patches applied\n"))
+            self.ui.write(_("no patches applied\n"))
             return 1
         msg = opts.get('msg', '').rstrip()
         newuser = opts.get('user')
@@ -1797,7 +1797,7 @@ def top(ui, repo, **opts):
         return q.qseries(repo, start=t-1, length=1, status='A',
                          summary=opts.get('summary'))
     else:
-        ui.write(_("No patches applied\n"))
+        ui.write(_("no patches applied\n"))
         return 1
 
 def next(ui, repo, **opts):
@@ -1805,7 +1805,7 @@ def next(ui, repo, **opts):
     q = repo.mq
     end = q.series_end()
     if end == len(q.series):
-        ui.write(_("All patches applied\n"))
+        ui.write(_("all patches applied\n"))
         return 1
     return q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
 
@@ -1814,10 +1814,10 @@ def prev(ui, repo, **opts):
     q = repo.mq
     l = len(q.applied)
     if l == 1:
-        ui.write(_("Only one patch applied\n"))
+        ui.write(_("only one patch applied\n"))
         return 1
     if not l:
-        ui.write(_("No patches applied\n"))
+        ui.write(_("no patches applied\n"))
         return 1
     return q.qseries(repo, start=l-2, length=1, status='A',
                      summary=opts.get('summary'))
@@ -1881,7 +1881,7 @@ def refresh(ui, repo, *pats, **opts):
     message = cmdutil.logmessage(opts)
     if opts['edit']:
         if not q.applied:
-            ui.write(_("No patches applied\n"))
+            ui.write(_("no patches applied\n"))
             return 1
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
@@ -2036,7 +2036,7 @@ def header(ui, repo, patch=None):
         patch = q.lookup(patch)
     else:
         if not q.applied:
-            ui.write('No patches applied\n')
+            ui.write('no patches applied\n')
             return 1
         patch = q.lookup('qtip')
     ph = repo.mq.readheaders(patch)
@@ -2123,7 +2123,7 @@ def rename(ui, repo, patch, name=None, **opts):
         patch = q.lookup(patch)
     else:
         if not q.applied:
-            ui.write(_('No patches applied\n'))
+            ui.write(_('no patches applied\n'))
             return
         patch = q.lookup('qtip')
     absdest = q.join(name)
@@ -2137,7 +2137,7 @@ def rename(ui, repo, patch, name=None, **opts):
         raise util.Abort(_('A patch named %s already exists in the series file') % name)
 
     if ui.verbose:
-        ui.write('Renaming %s to %s\n' % (patch, name))
+        ui.write('renaming %s to %s\n' % (patch, name))
     i = q.find_series(patch)
     guards = q.guard_re.findall(q.full_series[i])
     q.full_series[i] = name + ''.join([' #' + g for g in guards])

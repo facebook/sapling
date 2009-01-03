@@ -108,28 +108,28 @@ working dir diff:
  a
 +a
 % qpop
-Patch queue now empty
+patch queue now empty
 % qpush
 applying test.patch
-Now at: test.patch
+now at: test.patch
 % pop/push outside repo
-Patch queue now empty
+patch queue now empty
 applying test.patch
-Now at: test.patch
+now at: test.patch
 % qrefresh in subdir
 % pop/push -a in subdir
-Patch queue now empty
+patch queue now empty
 applying test.patch
 applying test2.patch
-Now at: test2.patch
+now at: test2.patch
 % qseries
 test.patch
 test2.patch
-Now at: test.patch
+now at: test.patch
 0 A test.patch: foo bar
 1 U test2.patch: 
 applying test2.patch
-Now at: test2.patch
+now at: test2.patch
 % qapplied
 test.patch
 test2.patch
@@ -138,11 +138,11 @@ test2.patch
 % qprev
 test.patch
 % qnext
-All patches applied
+all patches applied
 % pop, qnext, qprev, qapplied
-Now at: test.patch
+now at: test.patch
 test2.patch
-Only one patch applied
+only one patch applied
 test.patch
 % commit should fail
 abort: cannot commit over an applied mq patch
@@ -155,19 +155,19 @@ abort: cannot import over an applied patch
 test2.patch
 % qpush/qpop with index
 applying test2.patch
-Now at: test2.patch
-Now at: test.patch
+now at: test2.patch
+now at: test.patch
 applying test1b.patch
-Now at: test1b.patch
+now at: test1b.patch
 applying test2.patch
-Now at: test2.patch
-Now at: test1b.patch
-Now at: test.patch
+now at: test2.patch
+now at: test1b.patch
+now at: test.patch
 applying test1b.patch
 applying test2.patch
-Now at: test2.patch
+now at: test2.patch
 % push should succeed
-Patch queue now empty
+patch queue now empty
 pushing to ../../k
 searching for changes
 adding changesets
@@ -178,9 +178,9 @@ added 1 changesets with 1 changes to 1 files
 applying test.patch
 applying test1b.patch
 applying test2.patch
-Now at: test2.patch
+now at: test2.patch
   % pops all patches and succeeds
-Patch queue now empty
+patch queue now empty
   qpop -a succeeds
   % does nothing and succeeds
 no patches applied
@@ -190,15 +190,15 @@ no patches applied
   qpop fails
   % pushes a patch and succeeds
 applying test.patch
-Now at: test.patch
+now at: test.patch
   qpush succeeds
   % pops a patch and succeeds
-Patch queue now empty
+patch queue now empty
   qpop succeeds
   % pushes up to test1b.patch and succeeds
 applying test.patch
 applying test1b.patch
-Now at: test1b.patch
+now at: test1b.patch
   qpush test1b.patch succeeds
   % does nothing and succeeds
 qpush: test1b.patch is already at the top
@@ -213,12 +213,12 @@ abort: cannot push to a previous patch: test.patch
 abort: patch test2.patch is not applied
   qpop test2.patch fails
   % pops up to test.patch and succeeds
-Now at: test.patch
+now at: test.patch
   qpop test.patch succeeds
   % pushes all patches and succeeds
 applying test1b.patch
 applying test2.patch
-Now at: test2.patch
+now at: test2.patch
   qpush -a succeeds
   % does nothing and succeeds
 all patches are currently applied
@@ -269,14 +269,14 @@ diff -r cb9a9f314b8b b/f
 +f
 M a
 % qpush failure
-Patch queue now empty
+patch queue now empty
 applying foo
 applying bar
 file foo already exists
 1 out of 1 hunks FAILED -- saving rejects to file foo.rej
 patch failed, unable to continue (try -v)
 patch failed, rejects left in working dir
-Errors during apply, please fix and refresh bar
+errors during apply, please fix and refresh bar
 ? foo
 ? foo.rej
 % mq tags
@@ -284,7 +284,7 @@ Errors during apply, please fix and refresh bar
 1 qbase foo
 2 qtip bar tip
 % bad node in status
-Now at: foo
+now at: foo
 changeset:   0:cb9a9f314b8b
 mq status file refers to unknown node
 tag:         tip
@@ -308,9 +308,9 @@ copy file
 diff --git a/new b/copy
 copy from new
 copy to copy
-Now at: new
+now at: new
 applying copy
-Now at: copy
+now at: copy
 diff --git a/new b/copy
 copy from new
 copy to copy
@@ -325,10 +325,10 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-Patch queue now empty
+patch queue now empty
 (working directory not at tip)
 applying bar
-Now at: bar
+now at: bar
 diff --git a/bar b/bar
 new file mode 100644
 --- /dev/null
@@ -359,10 +359,10 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-Patch queue now empty
+patch queue now empty
 (working directory not at tip)
 applying bar
-Now at: bar
+now at: bar
 diff --git a/foo b/bleh
 rename from foo
 rename to bleh
@@ -386,16 +386,16 @@ new file mode 100644
 % refresh omitting an added file
 C newfile
 A newfile
-Now at: bar
+now at: bar
 % create a git patch
 diff --git a/alexander b/alexander
 % create a git binary patch
 8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 diff --git a/bucephalus b/bucephalus
 % check binary patches can be popped and pushed
-Now at: addalexander
+now at: addalexander
 applying addbucephalus
-Now at: addbucephalus
+now at: addbucephalus
 8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 % strip again
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -461,7 +461,7 @@ main repo:
     rev 0: add foo
 patch repo:
     rev 0: checkpoint
-Patch queue now empty
+patch queue now empty
 main repo:
     rev 0: add foo
 patch repo:
@@ -475,13 +475,13 @@ patch repo:
     rev 0: checkpoint
 % test applying on an empty file (issue 1033)
 adding a
-Patch queue now empty
+patch queue now empty
 applying changea
-Now at: changea
+now at: changea
 % test qpush with --force, issue1087
 adding bye.txt
 adding hello.txt
-Patch queue now empty
+patch queue now empty
 % qpush should fail, local changes
 abort: local changes found, refresh first
 % apply force, should not discard changes with empty patch
@@ -489,7 +489,7 @@ applying empty
 patch: **** Only garbage was found in the patch input.
 patch failed, unable to continue (try -v)
 patch empty is empty
-Now at: empty
+now at: empty
 diff -r bf5fc3f07a0a hello.txt
 --- a/hello.txt
 +++ b/hello.txt
@@ -512,12 +512,12 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     imported patch empty
 
 
-Patch queue now empty
+patch queue now empty
 % qpush should fail, local changes
 abort: local changes found, refresh first
 % apply force, should discard changes in hello, but not bye
 applying empty
-Now at: empty
+now at: empty
 M bye.txt
 diff -r ba252371dbc1 bye.txt
 --- a/bye.txt
@@ -541,4 +541,4 @@ diff -r 9ecee4f634e3 hello.txt
 % test popping revisions not in working dir ancestry
 0 A empty
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-Patch queue now empty
+patch queue now empty

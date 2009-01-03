@@ -1,14 +1,14 @@
 adding base
 abort: qdelete requires at least one revision or patch name
 abort: cannot delete applied patch c
-Now at: b
+now at: b
 a
 b
 a
 b
 series
 status
-Now at: a
+now at: a
 a
 b
 series
@@ -27,10 +27,10 @@ abort: no revisions specified
 no patches applied
 abort: revision 0 is not managed
 abort: cannot delete revision 2 above applied patches
-Now at: b
+now at: b
 abort: unknown revision 'c'!
 applying c
-Now at: c
+now at: c
 c
 3 imported patch c
 2 [mq]: b

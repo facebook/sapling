@@ -213,15 +213,15 @@ diff -r ef63ca68695b -r 40a904bbbe4c c
 +$Id$
 +tests for different changenodes
 % qpop
-Patch queue now empty
+patch queue now empty
 % qgoto - should imply qpush
 applying mqtest.diff
-Now at: mqtest.diff
+now at: mqtest.diff
 % cat
 $Id: c,v 40a904bbbe4c 1970/01/01 00:00:01 user $
 tests for different changenodes
 % qpop and move on
-Patch queue now empty
+patch queue now empty
 % copy
 % kwfiles added
 a

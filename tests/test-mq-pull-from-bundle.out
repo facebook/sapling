@@ -13,7 +13,7 @@ comparing with bundle:fresh+main.hg
 1: main: one updated.
 ====== Setup queue
 adding two
-Patch queue now empty
+patch queue now empty
 ====== Bundle queue
 1 changesets found
 ====== Clone base
