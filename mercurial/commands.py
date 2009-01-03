@@ -2830,8 +2830,6 @@ def tag(ui, repo, name1, *names, **opts):
 def tags(ui, repo):
     """list repository tags
 
-    List the repository tags.
-
     This lists both regular and local tags. When the -v/--verbose switch
     is used, a third column "local" is printed for local tags.
     """
