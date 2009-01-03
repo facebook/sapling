@@ -965,10 +965,10 @@ class queue:
                 raise
             top = self.applied[-1].name
             if ret[0]:
-                self.ui.write(
-                    "Errors during apply, please fix and refresh %s\n" % top)
+                self.ui.write(_("Errors during apply, please fix and "
+                                "refresh %s\n") % top)
             else:
-                self.ui.write("Now at: %s\n" % top)
+                self.ui.write(_("Now at: %s\n") % top)
             return ret[0]
         finally:
             del wlock
@@ -1599,7 +1599,7 @@ class queue:
                 index = self.full_series_end() + i
                 self.full_series[index:index] = [patchname]
             self.parse_series()
-            self.ui.warn("adding %s to series file\n" % patchname)
+            self.ui.warn(_("adding %s to series file\n") % patchname)
             i += 1
             added.append(patchname)
             patchname = None
@@ -1783,7 +1783,7 @@ def top(ui, repo, **opts):
         return q.qseries(repo, start=t-1, length=1, status='A',
                          summary=opts.get('summary'))
     else:
-        ui.write("No patches applied\n")
+        ui.write(_("No patches applied\n"))
         return 1
 
 def next(ui, repo, **opts):
@@ -1791,7 +1791,7 @@ def next(ui, repo, **opts):
     q = repo.mq
     end = q.series_end()
     if end == len(q.series):
-        ui.write("All patches applied\n")
+        ui.write(_("All patches applied\n"))
         return 1
     return q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
 
@@ -1800,10 +1800,10 @@ def prev(ui, repo, **opts):
     q = repo.mq
     l = len(q.applied)
     if l == 1:
-        ui.write("Only one patch applied\n")
+        ui.write(_("Only one patch applied\n"))
         return 1
     if not l:
-        ui.write("No patches applied\n")
+        ui.write(_("No patches applied\n"))
         return 1
     return q.qseries(repo, start=l-2, length=1, status='A',
                      summary=opts.get('summary'))
