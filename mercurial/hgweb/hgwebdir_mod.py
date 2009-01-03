@@ -130,7 +130,7 @@ class hgwebdir(object):
                     else:
                         fname = req.form['static'][0]
                     static = templater.templatepath('static')
-                    return staticfile(static, fname, req)
+                    return (staticfile(static, fname, req),)
 
                 # top-level index
                 elif not virtual:
