@@ -101,7 +101,7 @@ def cdiffstat(ui, summary, patchlines):
     if summary:
         ui.write(summary, '\n')
         ui.write(s, '\n')
-    ans = prompt(ui, _('Does the diffstat above look okay? '), 'y')
+    ans = prompt(ui, _('does the diffstat above look okay? '), 'y')
     if not ans.lower().startswith('y'):
         raise util.Abort(_('diffstat rejected'))
     return s

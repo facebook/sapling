@@ -340,7 +340,7 @@ class ui(object):
         if user is None:
             user = os.environ.get("EMAIL")
         if user is None and self.configbool("ui", "askusername"):
-            user = self.prompt(_("Enter a commit username:"), default=None)
+            user = self.prompt(_("enter a commit username:"), default=None)
         if user is None:
             try:
                 user = '%s@%s' % (util.getuser(), socket.getfqdn())
