@@ -165,8 +165,9 @@ class hgweb(object):
             ctype = tmpl('mimetype', encoding=self.encoding)
             ctype = templater.stringify(ctype)
 
-            # check allow_read / deny_read config options
-            self.check_perm(req, None)
+            # check read permissions non-static content
+            if cmd != 'static':
+                self.check_perm(req, None)
 
             if cmd == '':
                 req.form['cmd'] = [tmpl.cache['default']]
@@ -288,7 +289,7 @@ class hgweb(object):
             raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
 
         if op == 'pull' and not self.allowpull:
-            raise ErrorResponse(HTTP_OK, '')
+            raise ErrorResponse(HTTP_UNAUTHORIZED, 'pull not authorized')
         # op is None when checking allow/deny_read permissions for a web-browser request
         elif op == 'pull' or op is None:
             return
