@@ -587,7 +587,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
 
 def debugcvsps(ui, *args, **opts):
-    '''Read CVS rlog for current directory or named path in repository, and 
+    '''Read CVS rlog for current directory or named path in repository, and
     convert the log to changesets based on matching commit log entries and dates.'''
 
     if opts["new_cache"]:
