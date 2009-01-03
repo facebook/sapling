@@ -289,7 +289,7 @@ class hgweb(object):
             raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
 
         if op == 'pull' and not self.allowpull:
-            raise ErrorResponse(HTTP_OK, '')
+            raise ErrorResponse(HTTP_UNAUTHORIZED, 'pull not authorized')
         # op is None when checking allow/deny_read permissions for a web-browser request
         elif op == 'pull' or op is None:
             return

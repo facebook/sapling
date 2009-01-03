@@ -2,11 +2,11 @@ adding a
 updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % expect error, cloning not allowed
-abort: error: 
+abort: authorization failed
 requesting all changes
 % serve errors
 % expect error, pulling not allowed
-abort: error: 
+abort: authorization failed
 pulling from http://localhost/
 searching for changes
 % serve errors
