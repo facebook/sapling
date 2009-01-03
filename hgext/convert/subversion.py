@@ -601,7 +601,7 @@ class svn_source(converter_source):
                         part = "/".join(parts[:i])
                         info = part, copyfrom.get(part, None)
                         if info[1] is not None:
-                            self.ui.debug(_("Found parent directory %s\n") % info[1])
+                            self.ui.debug(_("found parent directory %s\n") % info[1])
                             rc = info
                     return rc
 
@@ -616,7 +616,7 @@ class svn_source(converter_source):
                     self.ui.debug(entrypath[len(frompath):] + '\n')
                     entrypath = froment.copyfrom_path + entrypath[len(frompath):]
                     fromrev = froment.copyfrom_rev
-                    self.ui.debug(_("Info: %s %s %s %s\n") % (frompath, froment, ent, entrypath))
+                    self.ui.debug(_("info: %s %s %s %s\n") % (frompath, froment, ent, entrypath))
 
                 # We can avoid the reparent calls if the module has not changed
                 # but it probably does not worth the pain.
@@ -757,7 +757,7 @@ class svn_source(converter_source):
                             self.ui.note(_('found parent of branch %s at %d: %s\n') %
                                          (self.module, prevnum, prevmodule))
                 else:
-                    self.ui.debug(_("No copyfrom path, don't know what to do.\n"))
+                    self.ui.debug(_("no copyfrom path, don't know what to do.\n"))
 
             paths = []
             # filter out unrelated paths

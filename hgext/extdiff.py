@@ -166,7 +166,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
             if os.path.getmtime(copy_fn) != mtime:
-                ui.debug(_('File changed while diffing. '
+                ui.debug(_('file changed while diffing. '
                          'Overwriting: %s (src: %s)\n') % (working_fn, copy_fn))
                 util.copyfile(copy_fn, working_fn)
 

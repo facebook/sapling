@@ -34,7 +34,7 @@ def rebasemerge(repo, rev, first=False):
     if not first:
         ancestor.ancestor = newancestor
     else:
-        repo.ui.debug(_("First revision, do not change ancestor\n"))
+        repo.ui.debug(_("first revision, do not change ancestor\n"))
     stats = merge.update(repo, rev, True, True, False)
     return stats
 

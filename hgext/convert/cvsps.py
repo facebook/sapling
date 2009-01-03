@@ -263,7 +263,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             if re_31.match(line):
                 state = 5
             else:
-                assert not re_32.match(line), _('Must have at least some revisions')
+                assert not re_32.match(line), _('must have at least some revisions')
 
         elif state == 5:
             # expecting revision number and possibly (ignored) lock indication

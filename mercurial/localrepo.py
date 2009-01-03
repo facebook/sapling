@@ -1579,7 +1579,7 @@ class localrepository(repo.repository):
         if self.ui.verbose or source == 'bundle':
             self.ui.status(_("%d changesets found\n") % len(nodes))
         if self.ui.debugflag:
-            self.ui.debug(_("List of changesets:\n"))
+            self.ui.debug(_("list of changesets:\n"))
             for node in nodes:
                 self.ui.debug("%s\n" % hex(node))
 
