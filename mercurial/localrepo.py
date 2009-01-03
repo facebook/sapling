@@ -882,16 +882,15 @@ class localrepository(repo.repository):
 
             # update manifest
             m1.update(new)
-            removed = []
+            removed = [f for f in util.sort(remove) if f in m1 or f in m2]
+            removed1 = []
 
-            for f in util.sort(remove):
+            for f in removed:
                 if f in m1:
                     del m1[f]
-                    removed.append(f)
-                elif f in m2:
-                    removed.append(f)
+                    removed1.append(f)
             mn = self.manifest.add(m1, trp, linkrev, c1[0], c2[0],
-                                   (new, removed))
+                                   (new, removed1))
 
             # add changeset
             if (not empty_ok and not text) or force_editor:

@@ -17,3 +17,33 @@ hg rm -f a
 hg ci -Amc
 
 hg st -A
+cd ..
+
+# a test for issue 1433, related to issue586
+echo % create test repos
+hg init repoa
+touch repoa/a
+hg -R repoa ci -Am adda
+
+hg init repob
+touch repob/b
+hg -R repob ci -Am addb
+
+hg init repoc
+cd repoc
+hg pull ../repoa
+hg update
+mkdir tst
+hg mv * tst
+hg ci -m "import a in tst"
+hg pull -f ../repob
+echo % merge both repos
+hg merge
+mkdir src
+echo % move b content
+hg mv b src
+hg ci -m "import b in src"
+hg manifest
+
+
+
