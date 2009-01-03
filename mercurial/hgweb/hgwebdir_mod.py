@@ -102,11 +102,11 @@ class hgwebdir(object):
 
         user = req.env.get('REMOTE_USER')
 
-        deny_read = ui.configlist('web', 'deny_read', default=None, untrusted=True)
+        deny_read = ui.configlist('web', 'deny_read', untrusted=True)
         if deny_read and (not user or deny_read == ['*'] or user in deny_read):
             return False
 
-        allow_read = ui.configlist('web', 'allow_read', default=None, untrusted=True)
+        allow_read = ui.configlist('web', 'allow_read', untrusted=True)
         # by default, allow reading if no allow_read option has been set
         if (not allow_read) or (allow_read == ['*']) or (user in allow_read):
             return True
