@@ -1333,7 +1333,7 @@ def help_(ui, name=None, with_version=False):
         # description
         doc = gettext(i[0].__doc__)
         if not doc:
-            doc = _("(No help text available)")
+            doc = _("(no help text available)")
         if ui.quiet:
             doc = doc.splitlines(0)[0]
         ui.write("\n%s\n" % doc.rstrip())
@@ -1362,7 +1362,7 @@ def help_(ui, name=None, with_version=False):
                 continue
             doc = gettext(e[0].__doc__)
             if not doc:
-                doc = _("(No help text available)")
+                doc = _("(no help text available)")
             h[f] = doc.splitlines(0)[0].rstrip()
             cmds[f] = c.lstrip("^")
 
@@ -1405,7 +1405,7 @@ def help_(ui, name=None, with_version=False):
 
         # description
         if not doc:
-            doc = _("(No help text available)")
+            doc = _("(no help text available)")
         if callable(doc):
             doc = doc()
 
@@ -1418,7 +1418,7 @@ def help_(ui, name=None, with_version=False):
         except KeyError:
             raise cmdutil.UnknownCommand(name)
 
-        doc = gettext(mod.__doc__) or _('No help text available')
+        doc = gettext(mod.__doc__) or _('no help text available')
         doc = doc.splitlines(0)
         ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
         for d in doc[1:]:
@@ -3077,7 +3077,7 @@ table = {
           ('g', 'good', False, _('mark changeset good')),
           ('b', 'bad', False, _('mark changeset bad')),
           ('s', 'skip', False, _('skip testing changeset')),
-          ('c', 'command', '', _('Use command to check changeset state')),
+          ('c', 'command', '', _('use command to check changeset state')),
           ('U', 'noupdate', False, _('do not update to target'))],
          _("[-gbsr] [-c CMD] [REV]")),
     "branch":

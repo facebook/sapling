@@ -90,7 +90,7 @@ def countrate(ui, repo, amap, *pats, **opts):
 
 
 def churn(ui, repo, *pats, **opts):
-    '''Graph count of revisions grouped by template
+    '''graph count of revisions grouped by template
 
     Will graph count of changed lines or revisions grouped by template or
     alternatively by date, if dateformat is used. In this case it will override

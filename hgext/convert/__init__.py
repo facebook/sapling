@@ -14,7 +14,7 @@ from mercurial.i18n import _
 # Commands definition was moved elsewhere to ease demandload job.
 
 def convert(ui, src, dest=None, revmapfile=None, **opts):
-    """Convert a foreign SCM repository to a Mercurial one.
+    """convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats [identifiers]:
     - Mercurial [hg]
@@ -185,7 +185,7 @@ def debugsvnlog(ui, **opts):
     return convcmd.debugsvnlog(ui, **opts)
 
 def debugcvsps(ui, *args, **opts):
-    '''Create changeset information from CVS
+    '''create changeset information from CVS
 
     This command is intended as a debugging tool for the CVS to Mercurial
     converter, and can be used as a direct replacement for cvsps.
@@ -216,18 +216,18 @@ cmdtable = {
         (debugcvsps,
          [
           # Main options shared with cvsps-2.1
-          ('b', 'branches', [], _('Only return changes on specified branches')),
-          ('p', 'prefix', '', _('Prefix to remove from file names')),
-          ('r', 'revisions', [], _('Only return changes after or between specified tags')),
-          ('u', 'update-cache', None, _("Update cvs log cache")),
-          ('x', 'new-cache', None, _("Create new cvs log cache")),
-          ('z', 'fuzz', 60, _('Set commit time fuzz in seconds')),
-          ('', 'root', '', _('Specify cvsroot')),
+          ('b', 'branches', [], _('only return changes on specified branches')),
+          ('p', 'prefix', '', _('prefix to remove from file names')),
+          ('r', 'revisions', [], _('only return changes after or between specified tags')),
+          ('u', 'update-cache', None, _("update cvs log cache")),
+          ('x', 'new-cache', None, _("create new cvs log cache")),
+          ('z', 'fuzz', 60, _('set commit time fuzz in seconds')),
+          ('', 'root', '', _('specify cvsroot')),
           # Options specific to builtin cvsps
-          ('', 'parents', '', _('Show parent changesets')),
-          ('', 'ancestors', '', _('Show current changeset in ancestor branches')),
+          ('', 'parents', '', _('show parent changesets')),
+          ('', 'ancestors', '', _('show current changeset in ancestor branches')),
           # Options that are ignored for compatibility with cvsps-2.1
-          ('A', 'cvs-direct', None, 'Ignored for compatibility'),
+          ('A', 'cvs-direct', None, 'ignored for compatibility'),
          ],
          'hg debugcvsps [OPTION]... [PATH]...'),
 }

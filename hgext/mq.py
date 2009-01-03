@@ -2015,7 +2015,7 @@ def guard(ui, repo, *args, **opts):
         status(q.series.index(q.lookup(patch)))
 
 def header(ui, repo, patch=None):
-    """Print the header of the topmost or specified patch"""
+    """print the header of the topmost or specified patch"""
     q = repo.mq
 
     if patch:

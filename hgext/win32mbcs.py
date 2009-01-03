@@ -8,7 +8,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 #
-"""Allow to use MBCS path with problematic encoding.
+"""allow to use MBCS path with problematic encoding.
 
 Some MBCS encodings are not good for some path operations
 (i.e. splitting path, case conversion, etc.) with its encoded bytes.

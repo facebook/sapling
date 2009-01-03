@@ -11,7 +11,7 @@ from mercurial.node import nullid, short
 from mercurial import commands, cmdutil, hg, util, url
 
 def fetch(ui, repo, source='default', **opts):
-    '''Pull changes from a remote repository, merge new changes if needed.
+    '''pull changes from a remote repository, merge new changes if needed.
 
     This finds all changes from the repository at the specified path
     or URL and adds them to the local repository.
