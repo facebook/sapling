@@ -165,8 +165,9 @@ class hgweb(object):
             ctype = tmpl('mimetype', encoding=self.encoding)
             ctype = templater.stringify(ctype)
 
-            # check allow_read / deny_read config options
-            self.check_perm(req, None)
+            # check read permissions non-static content
+            if cmd != 'static':
+                self.check_perm(req, None)
 
             if cmd == '':
                 req.form['cmd'] = [tmpl.cache['default']]
