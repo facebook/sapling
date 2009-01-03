@@ -79,7 +79,7 @@ def countrate(ui, repo, amap, *pats, **opts):
             newpct = int(100.0 * count / max(len(repo), 1))
             if pct < newpct:
                 pct = newpct
-                ui.write(_("\rGenerating stats: %d%%") % pct)
+                ui.write(_("\rgenerating stats: %d%%") % pct)
                 sys.stdout.flush()
 
     if opts.get('progress'):
