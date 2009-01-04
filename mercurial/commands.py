@@ -328,29 +328,34 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     state = hbisect.load_state(repo)
 
     if command:
+        commandpath = util.find_exe(command)
         changesets = 1
-        while changesets:
-            # update state
-            status = os.spawnlp(os.P_WAIT, command)
-            node = repo.lookup(rev or '.')
-            if status == 125:
-                transition = "skip"
-            elif status == 0:
-                transition = "good"
-            # status < 0 means process was killed
-            elif status == 127 or status < 0:
-                break
-            else:
-                transition = "bad"
-            state[transition].append(node)
-            ui.note(_('Changeset %s: %s\n') % (short(node), transition))
-            check_state(state, interactive=False)
-            # bisect
-            nodes, changesets, good = hbisect.bisect(repo.changelog, state)
-            # update to next check
-            cmdutil.bail_if_changed(repo)
-            hg.clean(repo, nodes[0], show_stats=False)
-        hbisect.save_state(repo, state)
+        try:
+            while changesets:
+                # update state
+                status = os.spawnl(os.P_WAIT, commandpath)
+                if status == 125:
+                    transition = "skip"
+                elif status == 0:
+                    transition = "good"
+                # status < 0 means process was killed
+                elif status == 127:
+                    raise util.Abort(_("failed to execute %s") % command)
+                elif status < 0:
+                    raise util.Abort(_("%s killed") % command)
+                else:
+                    transition = "bad"
+                node = repo.lookup(rev or '.')
+                state[transition].append(node)
+                ui.note(_('Changeset %s: %s\n') % (short(node), transition))
+                check_state(state, interactive=False)
+                # bisect
+                nodes, changesets, good = hbisect.bisect(repo.changelog, state)
+                # update to next check
+                cmdutil.bail_if_changed(repo)
+                hg.clean(repo, nodes[0], show_stats=False)
+        finally:
+            hbisect.save_state(repo, state)
         return print_result(nodes, not status)
 
     # update state
