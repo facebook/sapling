@@ -25,6 +25,7 @@ def print_your_svn_is_old_message(ui): #pragma: no cover
 def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     tag_locations='tags',
                     authors=None,
+                    filemap=None,
                     **opts):
     """Pull new revisions from Subversion.
     """
@@ -50,7 +51,8 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                                                  subdir=svn.subdir,
                                                  author_host=author_host,
                                                  tag_locations=tag_locations,
-                                                 authors=authors)
+                                                 authors=authors,
+                                                 filemap=filemap)
     if os.path.exists(hg_editor.uuid_file):
         uuid = open(hg_editor.uuid_file).read()
         assert uuid == svn.uuid
@@ -493,6 +495,8 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
         for path, e in r.paths.iteritems():
             if not path.startswith(branchprefix):
                 continue
+            if not hg_editor._is_path_valid(branchprefix + path):
+                continue
             kind = svn.checkpath(path, r.revnum)
             path = path[len(branchprefix):]
             if kind == 'f':
@@ -560,13 +564,19 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                 if path == '.hgsvnexternals':
                     if not externals:
                         raise IOError()
-                    return context.memfilectx(path=path, data=externals.write(), 
+                    return context.memfilectx(path=path, data=externals.write(),
                                               islink=False, isexec=False, copied=None)
                 return filectxfn2(repo, memctx, path)
-            
+
         extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
         if '' in files_touched:
             files_touched.remove('')
+        removedFiles = []
+        for file in files_touched:
+            if not hg_editor._is_file_included(file):
+                removedFiles.append(file)
+        for file in removedFiles:
+            files_touched.remove(file)
         if parentctx.node() != node.nullid or files_touched:
             # TODO(augie) remove this debug code? Or maybe it's sane to have it.
             for f in files_touched:

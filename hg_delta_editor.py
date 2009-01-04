@@ -62,7 +62,8 @@ class HgChangeReceiver(delta.Editor):
     def __init__(self, path=None, repo=None, ui_=None,
                  subdir='', author_host='',
                  tag_locations=['tags'],
-                 authors=None):
+                 authors=None,
+                 filemap=None):
         """path is the path to the target hg repo.
 
         subdir is the subdirectory of the edits *on the svn server*.
@@ -114,6 +115,10 @@ class HgChangeReceiver(delta.Editor):
             self.readauthors(authors)
         if self.authors:
             self.writeauthors()
+        self.includepaths = {}
+        self.excludepaths = {}
+        if filemap and os.path.exists(filemap):
+            self.readfilemap(filemap)
 
     def __setup_repo(self, repo_path):
         """Verify the repo is going to work out for us.
@@ -229,9 +234,41 @@ class HgChangeReceiver(delta.Editor):
         if path and path[0] == '/':
             path = path[1:]
         return path
+        
+    def _is_file_included(self, subpath):
+        def checkpathinmap(path, mapping):
+            def rpairs(name):
+                yield '.', name
+                e = len(name)
+                while e != -1:
+                    yield name[:e], name[e+1:]
+                    e = name.rfind('/', 0, e)
+            
+            for pre, suf in rpairs(path):
+                try:
+                    return mapping[pre]
+                except KeyError, err:
+                    pass
+            return None
+        
+        if len(self.includepaths) and len(subpath):
+            inc = checkpathinmap(subpath, self.includepaths)
+        else:
+            inc = subpath
+        if len(self.excludepaths) and len(subpath):
+            exc = checkpathinmap(subpath, self.excludepaths)
+        else:
+            exc = None
+        if inc is None or exc is not None:
+            return False
+        return True
 
     def _is_path_valid(self, path):
-        return self._split_branch_path(path)[0] is not None
+        subpath = self._split_branch_path(path)[0]
+        if subpath is None:
+            return False
+        return self._is_file_included(subpath)
+        
 
     def _is_path_tag(self, path):
         """If path represents the path to a tag, returns the tag name.
@@ -559,6 +596,40 @@ class HgChangeReceiver(delta.Editor):
             % self.authors_file)
         for author in self.authors:
             f.write("%s=%s\n" % (author, self.authors[author]))
+        f.close()
+
+    def readfilemap(self, filemapfile):
+        self.ui.status(
+            ('Reading filemap %s\n')
+            % filemapfile)
+        def addpathtomap(path, mapping, mapname):
+            if path in mapping:
+                self.ui.warn(
+                    ('%d alreading in %s list\n')
+                    % (path, mapname))
+            else:
+                mapping[path] = path
+        
+        f = open(filemapfile, 'r')
+        for line in f:
+            if line.strip() == '':
+                continue
+            try:
+                cmd, path = line.split(' ', 1)
+                cmd = cmd.strip()
+                path = path.strip()
+                if cmd == 'include':
+                    addpathtomap(path, self.includepaths, 'include')
+                elif cmd == 'exclude':
+                    addpathtomap(path, self.excludepaths, 'exclude')
+                else:
+                    self.ui.warn(
+                        ('Unknown filemap command %s\n')
+                        % cmd)
+            except IndexError:
+                self.ui.warn(
+                    ('Ignoring bad line in filemap %s: %s\n')
+                    % (filemapfile, line.rstrip()))
         f.close()
 
     @property

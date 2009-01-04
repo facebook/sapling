@@ -45,6 +45,7 @@ cmdtable = {
          [('u', 'svn-url', '', 'Path to the Subversion server.'),
           ('', 'stupid', False, 'Be stupid and use diffy replay.'),
           ('A', 'authors', '', 'username mapping filename'),
+          ('', 'filemap', '', 'remap file to exclude paths or include only certain paths'),
           ],
          svncommand.generate_help(),
          ),
@@ -54,6 +55,7 @@ cmdtable = {
           ('', 'stupid', False, 'Be stupid and use diffy replay.'),
           ('T', 'tag-locations', 'tags', 'Relative path to Subversion tags.'),
           ('A', 'authors', '', 'username mapping filename'),
+          ('', 'filemap', '', 'remap file to exclude paths or include only certain paths'),
          ],
          'hg svnclone source [dest]'),
 }
