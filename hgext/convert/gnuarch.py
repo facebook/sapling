@@ -267,7 +267,8 @@ class gnuarch_source(converter_source, commandline):
                 util.strdate(catlog['Standard-date'],
                              '%Y-%m-%d %H:%M:%S'))
             self.changes[rev].author = catlog['Creator']
-            self.changes[rev].summary = catlog['Summary']
+            self.changes[rev].summary = '\n\n'.join(catlog['Summary'],
+                                                    catlog.get_payload())
             if catlog.has_key('Continuation-of'):
                 self.changes[rev].continuationof = catlog['Continuation-of']
         except Exception, err:
