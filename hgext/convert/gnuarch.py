@@ -50,8 +50,13 @@ class gnuarch_source(converter_source, commandline):
         self.modecache = {}
         self.catlogparser = Parser()
         self.locale = locale.getpreferredencoding()
+        self.archives = []
 
     def before(self):
+        # Get registered archives
+        self.archives = [i.rstrip('\n')
+                         for i in self.runlines0('archives', '-n')]
+
         if self.execmd == 'tla':
             output = self.run0('tree-version', self.path)
         else:
