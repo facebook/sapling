@@ -168,8 +168,6 @@ class gnuarch_source(converter_source, commandline):
                 old_rev = self.parents[rev][0]
                 self.ui.debug(_('computing changeset between %s and %s...\n')
                               % (old_rev, rev))
-                rev_a = '%s--%s' % (self.treeversion, old_rev)
-                rev_b = '%s--%s' % (self.treeversion, rev)
                 self._parsechangeset(changeset, rev)
 
     def _getfile(self, name, rev):
