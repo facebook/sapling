@@ -263,14 +263,23 @@ class gnuarch_source(converter_source, commandline):
     def _parsecatlog(self, data, rev):
         try:
             catlog = self.catlogparser.parsestr(data)
+
+            # Commit date
             self.changes[rev].date = util.datestr(
                 util.strdate(catlog['Standard-date'],
                              '%Y-%m-%d %H:%M:%S'))
-            self.changes[rev].author = catlog['Creator']
-            self.changes[rev].summary = '\n\n'.join(catlog['Summary'],
-                                                    catlog.get_payload())
+
+            # Commit author
+            self.changes[rev].author = self.recode(catlog['Creator'])
+
+            # Commit description
+            self.changes[rev].summary = '\n\n'.join((catlog['Summary'],
+                                                    catlog.get_payload()))
+            self.changes[rev].summary = self.recode(self.changes[rev].summary)
+
+            # Commit revision origin when dealing with a branch or tag
             if catlog.has_key('Continuation-of'):
-                self.changes[rev].continuationof = catlog['Continuation-of']
+                self.changes[rev].continuationof = self.recode(catlog['Continuation-of'])
         except Exception, err:
             raise util.Abort(_('could not parse cat-log of %s') % rev)
 
