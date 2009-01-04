@@ -4,6 +4,7 @@ from common import NoRepo, commandline, commit, converter_source
 from mercurial.i18n import _
 from mercurial import util
 import os, shutil, tempfile, stat
+from email.Parser import Parser
 
 class gnuarch_source(converter_source, commandline):
 
@@ -46,6 +47,7 @@ class gnuarch_source(converter_source, commandline):
         self.parents = {}
         self.tags = {}
         self.modecache = {}
+        self.catlogparser = Parser()
 
     def before(self):
         if self.execmd == 'tla':
@@ -70,7 +72,7 @@ class gnuarch_source(converter_source, commandline):
             self.changes[rev] = self.gnuarch_rev(rev)
 
             # Read author, date and summary
-            catlog = self.runlines0('cat-log', '-d', self.path, rev)
+            catlog = self.run0('cat-log', '-d', self.path, rev)
             self._parsecatlog(catlog, rev)
 
             self.parents[rev] = child
@@ -229,20 +231,15 @@ class gnuarch_source(converter_source, commandline):
         return path
 
     def _parsecatlog(self, data, rev):
-        summary = []
-        for l in data:
-            l = l.strip()
-            if summary:
-                summary.append(l)
-            elif l.startswith('Summary:'):
-                summary.append(l[len('Summary: '):])
-            elif l.startswith('Standard-date:'):
-                date = l[len('Standard-date: '):]
-                strdate = util.strdate(date, '%Y-%m-%d %H:%M:%S')
-                self.changes[rev].date = util.datestr(strdate)
-            elif l.startswith('Creator:'):
-                self.changes[rev].author = l[len('Creator: '):]
-        self.changes[rev].summary = '\n'.join(summary)
+        try:
+            catlog = self.catlogparser.parsestr(data)
+            self.changes[rev].date = util.datestr(
+                util.strdate(catlog['Standard-date'],
+                             '%Y-%m-%d %H:%M:%S'))
+            self.changes[rev].author = catlog['Creator']
+            self.changes[rev].summary = catlog['Summary']
+	except Exception, err:
+            raise util.Abort(_('could not parse cat-log of %s') % rev)
 
     def _parsechangeset(self, data, rev):
         for l in data:
