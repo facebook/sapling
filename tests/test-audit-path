@@ -41,4 +41,8 @@ echo % attack ../test
 hg manifest -r3
 hg update -Cr3
 
+echo % attack /tmp/test
+hg manifest -r4
+hg update -Cr4 2>&1 | sed -e "s|$HGTMP|[HGTMP]|"
+
 exit 0
