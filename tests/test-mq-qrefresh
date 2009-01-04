@@ -123,15 +123,12 @@ sed -n '/^diff/s/diff -r [^ ]* //p' .hg/patches/mqbase
 echo
 cd ..
 
-
-
-echo "[diff]" >> $HGRCPATH
-echo "git=True" >> $HGRCPATH
-
 # Test qrefresh --git losing copy metadata
 echo % create test repo
 hg init repo
 cd repo
+echo "[diff]" >> .hg/hgrc
+echo "git=True" >> .hg/hgrc
 echo a > a
 hg ci -Am adda
 hg copy a ab
@@ -146,3 +143,27 @@ hg qref
 hg qdiff
 cd ..
 
+# Test issue 1441: qrefresh confused after hg rename
+echo % issue1441 without git patches
+hg init repo-1441
+cd repo-1441
+echo a > a
+hg add a
+hg qnew -f p
+hg mv a b
+hg qrefresh
+hg qdiff --nodates
+cd ..
+
+echo % issue1441 with git patches
+hg init repo-1441-git
+cd repo-1441-git
+echo "[diff]" >> .hg/hgrc
+echo "git=True" >> .hg/hgrc
+echo a > a
+hg add a
+hg qnew -f p
+hg mv a b
+hg qrefresh
+hg qdiff --nodates
+cd ..
