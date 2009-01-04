@@ -14,6 +14,7 @@ class gnuarch_source(converter_source, commandline):
             self.summary = ''
             self.date = None
             self.author = ''
+            self.continuationof = None
             self.add_files = []
             self.mod_files = []
             self.del_files = []
@@ -239,6 +240,8 @@ class gnuarch_source(converter_source, commandline):
                              '%Y-%m-%d %H:%M:%S'))
             self.changes[rev].author = catlog['Creator']
             self.changes[rev].summary = catlog['Summary']
+            if catlog.has_key('Continuation-of'):
+                self.changes[rev].continuationof = catlog['Continuation-of']
 	except Exception, err:
             raise util.Abort(_('could not parse cat-log of %s') % rev)
 
