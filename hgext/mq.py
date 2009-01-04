@@ -1190,17 +1190,16 @@ class queue:
                     patchf.write(chunk)
 
                 try:
-                    copies = {}
-                    for dst in a:
-                        src = repo.dirstate.copied(dst)
-                        # during qfold, the source file for copies may
-                        # be removed. Treat this as a simple add.
-                        if src is not None and src in repo.dirstate:
-                            copies.setdefault(src, []).append(dst)
-                        repo.dirstate.add(dst)
-                    # remember the copies between patchparent and tip
-                    # this may be slow, so don't do it if we're not tracking copies
                     if self.diffopts().git:
+                        copies = {}
+                        for dst in a:
+                            src = repo.dirstate.copied(dst)
+                            # during qfold, the source file for copies may
+                            # be removed. Treat this as a simple add.
+                            if src is not None and src in repo.dirstate:
+                                copies.setdefault(src, []).append(dst)
+                            repo.dirstate.add(dst)
+                        # remember the copies between patchparent and tip
                         for dst in aaa:
                             f = repo.file(dst)
                             src = f.renamed(man[dst])
@@ -1211,9 +1210,15 @@ class queue:
                             # we can't copy a file created by the patch itself
                             if dst in copies:
                                 del copies[dst]
-                    for src, dsts in copies.iteritems():
-                        for dst in dsts:
-                            repo.dirstate.copy(src, dst)
+                        for src, dsts in copies.iteritems():
+                            for dst in dsts:
+                                repo.dirstate.copy(src, dst)
+                    else:
+                        for dst in a:
+                            repo.dirstate.add(dst)
+                        # Drop useless copy information
+                        for f in list(repo.dirstate.copies()):
+                            repo.dirstate.copy(None, f)
                     for f in r:
                         repo.dirstate.remove(f)
                     # if the patch excludes a modified file, mark that
