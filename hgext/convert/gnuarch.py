@@ -66,7 +66,7 @@ class gnuarch_source(converter_source, commandline):
 
         # Generate parents dictionary
         child = []
-        output, status = self.runlines('revisions', self.treeversion)
+        output, status = self.runlines('revisions', '-f', self.treeversion)
         self.checkexit(status, 'archive registered?')
         for l in output:
             rev = l.strip()
@@ -156,14 +156,13 @@ class gnuarch_source(converter_source, commandline):
         return os.system(cmdline)
 
     def _update(self, rev):
-        if rev == 'base-0':
+        if rev[-6:] == 'base-0':
             # Initialise 'base-0' revision
             self._obtainrevision(rev)
         else:
             self.ui.debug(_('applying revision %s...\n') % rev)
-            revision = '%s--%s' % (self.treeversion, rev)
             changeset, status = self.runlines('replay', '-d', self.tmppath,
-                                              revision)
+                                              rev)
             if status:
                 # Something went wrong while merging (baz or tla
                 # issue?), get latest revision and try from there
@@ -221,8 +220,7 @@ class gnuarch_source(converter_source, commandline):
 
     def _obtainrevision(self, rev):
         self.ui.debug(_('obtaining revision %s...\n') % rev)
-        revision = '%s--%s' % (self.treeversion, rev)
-        output = self._execute('get', revision, self.tmppath)
+        output = self._execute('get', rev, self.tmppath)
         self.checkexit(output)
         self.ui.debug(_('analysing revision %s...\n') % rev)
         files = self._readcontents(self.tmppath)
