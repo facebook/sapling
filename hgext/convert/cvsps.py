@@ -191,7 +191,13 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     ui.note(_("running %s\n") % (' '.join(cmd)))
     ui.debug(_("prefix=%r directory=%r root=%r\n") % (prefix, directory, root))
 
-    for line in util.popen(' '.join(cmd)):
+    pfp = util.popen(' '.join(cmd))
+    peek = pfp.readline()
+    while True:
+        line = peek
+        if line == '':
+            break
+        peek = pfp.readline()
         if line.endswith('\n'):
             line = line[:-1]
         #ui.debug('state=%d line=%r\n' % (state, line))
@@ -312,7 +318,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 e.branches = [tuple([int(y) for y in x.strip().split('.')])
                                 for x in m.group(1).split(';')]
                 state = 8
-            elif re_31.match(line):
+            elif re_31.match(line) and re_50.match(peek):
                 state = 5
                 store = True
             elif re_32.match(line):

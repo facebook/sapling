@@ -216,10 +216,15 @@ class dirstate(object):
         self._dirty = False
 
     def copy(self, source, dest):
+        """Mark dest as a copy of source. Unmark dest if source is None.
+        """
         if source == dest:
             return
         self._dirty = True
-        self._copymap[dest] = source
+        if source is not None:
+            self._copymap[dest] = source
+        elif dest in self._copymap:
+            del self._copymap[dest]
 
     def copied(self, file):
         return self._copymap.get(file, None)

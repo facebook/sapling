@@ -253,3 +253,16 @@ copy to ac
 @@ -1,1 +1,2 @@
  a
 +c
+% issue1441 without git patches
+diff -r 000000000000 b
+--- /dev/null
++++ b/b
+@@ -0,0 +1,1 @@
++a
+% issue1441 with git patches
+diff --git a/b b/b
+new file mode 100644
+--- /dev/null
++++ b/b
+@@ -0,0 +1,1 @@
++a
