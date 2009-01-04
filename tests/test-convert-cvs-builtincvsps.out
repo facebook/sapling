@@ -124,6 +124,22 @@ d
 2 update tags files: .hgtags
 1 ci0 files: b/c
 0 Initial revision files: b/c
+% commit a new revision with funny log message
+checking in src/a,v
+% convert again
+using builtin cvsps
+collecting CVS rlog
+9 log entries
+creating changesets
+6 changeset entries
+connecting to cvsrepo
+scanning source...
+sorting...
+converting...
+0 funny
+o  6 (branch) funny
+|  ----------------------------
+|  log message files: a
 o  5 (branch) ci2 files: b/c
 |
 | o  4 () ci1 files: a b/c
@@ -138,9 +154,9 @@ o  0 () Initial revision files: a b/c
 
 % testing debugcvsps
 collecting CVS rlog
-8 log entries
+9 log entries
 creating changesets
-5 changeset entries
+6 changeset entries
 ---------------------
 PatchSet 1 
 Date:
@@ -203,4 +219,18 @@ ci2
 
 Members: 
 	b/c:1.1->1.1.2.1 
+
+---------------------
+PatchSet 6 
+Date:
+Author:
+Branch: branch
+Tag: (none) 
+Log:
+funny
+----------------------------
+log message
+
+Members: 
+	a:1.2->1.2.2.1 
 
