@@ -26,6 +26,9 @@ def graph(repo, start_rev, stop_rev):
       - The changeset date/time
     """
 
+    if start_rev == nullrev and not stop_rev:
+        return
+
     assert start_rev >= stop_rev
     assert stop_rev >= 0
     curr_rev = start_rev

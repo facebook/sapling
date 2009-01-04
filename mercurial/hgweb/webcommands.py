@@ -292,7 +292,7 @@ def manifest(web, req, tmpl):
                     break
             h[None] = None # denotes files present
 
-    if not files and not dirs:
+    if mf and not files and not dirs:
         raise ErrorResponse(HTTP_NOT_FOUND, 'path not found: ' + path)
 
     def filelist(**map):
