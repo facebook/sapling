@@ -270,7 +270,7 @@ class gnuarch_source(converter_source, commandline):
             self.changes[rev].summary = catlog['Summary']
             if catlog.has_key('Continuation-of'):
                 self.changes[rev].continuationof = catlog['Continuation-of']
-	except Exception, err:
+        except Exception, err:
             raise util.Abort(_('could not parse cat-log of %s') % rev)
 
     def _parsechangeset(self, data, rev):
