@@ -3,7 +3,7 @@
 from common import NoRepo, commandline, commit, converter_source
 from mercurial.i18n import _
 from mercurial import util
-import os, shutil, tempfile, stat
+import os, shutil, tempfile, stat, locale
 from email.Parser import Parser
 
 class gnuarch_source(converter_source, commandline):
@@ -48,6 +48,7 @@ class gnuarch_source(converter_source, commandline):
         self.tags = {}
         self.modecache = {}
         self.catlogparser = Parser()
+        self.locale = locale.getpreferredencoding()
 
     def before(self):
         if self.execmd == 'tla':
