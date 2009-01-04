@@ -73,7 +73,9 @@ class gnuarch_source(converter_source, commandline):
             self.changes[rev] = self.gnuarch_rev(rev)
 
             # Read author, date and summary
-            catlog = self.run0('cat-log', '-d', self.path, rev)
+            catlog, status = self.run('cat-log', '-d', self.path, rev)
+            if status:
+                catlog = self.run0('cat-archive-log', rev)
             self._parsecatlog(catlog, rev)
 
             self.parents[rev] = child
