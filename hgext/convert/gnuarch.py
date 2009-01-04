@@ -141,7 +141,7 @@ class gnuarch_source(converter_source, commandline):
     def getcommit(self, rev):
         changes = self.changes[rev]
         return commit(author = changes.author, date = changes.date,
-                      desc = changes.summary, parents = self.parents[rev])
+                      desc = changes.summary, parents = self.parents[rev], rev=rev)
 
     def gettags(self):
         return self.tags
