@@ -35,7 +35,7 @@ def copyfile(src, dst, basedir):
         except IOError:
             raise util.Abort(
                 _("cannot create %s: unable to create destination directory")
-                % dst)            
+                % dst)
 
     util.copyfile(abssrc, absdst)
 
