@@ -55,6 +55,14 @@ baz mv src/a-link-2 c
 baz mv src test
 baz commit -s "move and rename a-link-2 file and src directory"
 
+echo % move and add the moved file again
+echo e > e
+baz add e
+baz commit -s "add e"
+baz mv e f
+echo ee > e
+baz add e
+baz commit -s "move e and recreate it again"
 cd ..
 
 echo % converting baz repo to Mercurial
@@ -71,3 +79,4 @@ echo % show graph log
 glog -R baz-repo-hg
 hg up -q -R baz-repo-hg
 hg -R baz-repo-hg manifest --debug
+hg -R baz-repo-hg log -r 5 -r 7 -C --debug | grep copies
