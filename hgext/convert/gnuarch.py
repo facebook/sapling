@@ -121,17 +121,16 @@ class gnuarch_source(converter_source, commandline):
             to = self.changes[rev].ren_files[src]
             changes.append((src, rev))
             changes.append((to, rev))
-            copies[src] = to
+            copies[to] = src
 
         for src in self.changes[rev].ren_dirs:
             to = self.changes[rev].ren_dirs[src]
             chgs, cps = self._rendirchanges(src, to);
             changes += [(f, rev) for f in chgs]
-            for c in cps:
-                copies[c] = cps[c]
+            copies.update(cps)
 
         self.lastrev = rev
-        return util.sort(changes), copies
+        return util.sort(util.unique(changes)), copies
 
     def getcommit(self, rev):
         changes = self.changes[rev]
@@ -213,7 +212,7 @@ class gnuarch_source(converter_source, commandline):
             d = os.path.join(dest, f)
             changes.append(s)
             changes.append(d)
-            copies[s] = d
+            copies[d] = s
         return changes, copies
 
     def _obtainrevision(self, rev):
