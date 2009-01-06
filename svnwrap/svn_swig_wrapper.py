@@ -476,6 +476,7 @@ class SubversionRepo(object):
         """Return a mapping of property names to values, raise IOError if
         specified path does not exist.
         """
+        self.init_ra_and_client()
         rev = optrev(revision)
         rpath = (self.svn_url + '/' + path.strip('/')).strip('/')
         try:
