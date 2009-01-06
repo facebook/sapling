@@ -25,3 +25,25 @@ hg qrefresh
 hg qgoto a.patch
 hg qgoto c.patch
 hg qgoto b.patch
+
+echo
+echo % Using index
+hg qgoto 0
+hg qgoto 2
+
+echo
+echo % No warnings when using index
+hg qnew bug314159
+echo d >> c
+hg qrefresh
+hg qnew bug141421
+echo e >> c
+hg qrefresh
+hg qgoto 1
+hg qgoto 3
+
+echo
+echo % Detect ambiguous non-index
+hg qgoto 14
+
+exit 0

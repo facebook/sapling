@@ -838,14 +838,11 @@ class queue:
                 if s == 'qbase':
                     return self.series[0]
             return None
+
         if patch == None:
             return None
-
-        # we don't want to return a partial match until we make
-        # sure the file name passed in does not exist (checked below)
-        res = partial_name(patch)
-        if res and res == patch:
-            return res
+        if patch in self.series:
+            return patch
 
         if not os.path.isfile(self.join(patch)):
             try:
@@ -853,10 +850,11 @@ class queue:
             except(ValueError, OverflowError):
                 pass
             else:
-                if sno < len(self.series):
+                if -len(self.series) <= sno < len(self.series):
                     return self.series[sno]
+
             if not strict:
-                # return any partial match made above
+                res = partial_name(patch)
                 if res:
                     return res
                 minus = patch.rfind('-')
