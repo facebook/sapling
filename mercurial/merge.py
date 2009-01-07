@@ -369,7 +369,9 @@ def recordupdates(repo, action, branchmerge):
                 repo.dirstate.forget(f)
         elif m == "f": # forget
             repo.dirstate.forget(f)
-        elif m in "ge": # get or exec change
+        elif m == "e": # exec change
+            repo.dirstate.normaldirty(f)
+        elif m == "g": # get
             if branchmerge:
                 repo.dirstate.normaldirty(f)
             else:

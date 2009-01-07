@@ -1,0 +1,17 @@
+#!/bin/sh
+
+rm -rf a
+hg init a
+cd a
+
+echo foo > foo
+hg ci -qAm0
+chmod +x foo
+hg ci -m1
+hg co -q 0
+echo dirty > foo
+sleep 1
+hg up -q
+cat foo
+hg st -A
+
