@@ -228,7 +228,7 @@ class commandline(object):
             except TypeError:
                 pass
         cmdline = [util.shellquote(arg) for arg in cmdline]
-        if not self.ui.debug:
+        if not self.ui.debugflag:
             cmdline += ['2>', util.nulldev]
         cmdline += ['<', util.nulldev]
         cmdline = ' '.join(cmdline)
