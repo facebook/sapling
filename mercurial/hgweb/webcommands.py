@@ -545,23 +545,24 @@ def filelog(web, req, tmpl):
     def entries(limit=0, **map):
         l = []
 
+        repo = web.repo
         for i in xrange(start, end):
-            ctx = fctx.filectx(i)
+            iterfctx = fctx.filectx(i)
 
             l.insert(0, {"parity": parity.next(),
                          "filerev": i,
                          "file": f,
-                         "node": hex(ctx.node()),
-                         "author": ctx.user(),
-                         "date": ctx.date(),
-                         "rename": webutil.renamelink(fctx),
-                         "parent": webutil.siblings(fctx.parents()),
-                         "child": webutil.siblings(fctx.children()),
-                         "desc": ctx.description(),
-                         "tags": webutil.nodetagsdict(web.repo, ctx.node()),
-                         "branch": webutil.nodebranchnodefault(ctx),
-                         "inbranch": webutil.nodeinbranch(web.repo, ctx),
-                         "branches": webutil.nodebranchdict(web.repo, ctx)})
+                         "node": hex(iterfctx.node()),
+                         "author": iterfctx.user(),
+                         "date": iterfctx.date(),
+                         "rename": webutil.renamelink(iterfctx),
+                         "parent": webutil.siblings(iterfctx.parents()),
+                         "child": webutil.siblings(iterfctx.children()),
+                         "desc": iterfctx.description(),
+                         "tags": webutil.nodetagsdict(repo, iterfctx.node()),
+                         "branch": webutil.nodebranchnodefault(iterfctx),
+                         "inbranch": webutil.nodeinbranch(repo, iterfctx),
+                         "branches": webutil.nodebranchdict(repo, iterfctx)})
 
         if limit > 0:
             l = l[:limit]
