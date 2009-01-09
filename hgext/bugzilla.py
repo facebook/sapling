@@ -29,14 +29,18 @@ Configuring the extension:
     user       Username to use to access MySQL server. Default 'bugs'.
     password   Password to use to access MySQL server.
     timeout    Database connection timeout (seconds). Default 5.
-    version    Bugzilla version. Specify '3.0' for Bugzilla versions from
-               3.0 onwards, and '2.16' for versions prior to 3.0.
+    version    Bugzilla version. Specify '3.0' for Bugzilla versions 3.0 and
+               later, '2.18' for Bugzilla versions from 2.18 and '2.16' for
+               versions prior to 2.18.
     bzuser     Fallback Bugzilla user name to record comments with, if
                changeset committer cannot be found as a Bugzilla user.
+    bzdir      Bugzilla install directory. Used by default notify.
+               Default '/var/www/html/bugzilla'.
     notify     The command to run to get Bugzilla to send bug change
-               notification emails. Substitutes one string parameter,
-               the bug ID. Default 'cd /var/www/html/bugzilla && '
-                                   './processmail %s nobody@nowhere.com'.
+               notification emails. Substitutes from a map with 3 keys,
+               'bzdir', 'id' (bug id) and 'user' (committer bugzilla email).
+               Default depends on version; from 2.18 it is
+               "cd %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s".
     regexp     Regular expression to match bug IDs in changeset commit message.
                Must contain one "()" group. The default expression matches
                'Bug 1234', 'Bug no. 1234', 'Bug number 1234',
@@ -88,7 +92,7 @@ in /var/local/hg/repos/ used with a local Bugzilla 3.2 installation in
     password=XYZZY
     version=3.0
     bzuser=unknown@domain.com
-    notify=cd /opt/bugzilla-3.2 && perl -T contrib/sendbugmail.pl %%s bugmail@domain.com
+    bzdir=/opt/bugzilla-3.2
     template=Changeset {node|short} in {root|basename}.\\n{hgweb}/{webroot}/rev/{node|short}\\n\\n{desc}\\n
     strip=5
 
@@ -136,6 +140,7 @@ class bugzilla_2_16(object):
         self.cursor = self.conn.cursor()
         self.longdesc_id = self.get_longdesc_id()
         self.user_ids = {}
+        self.default_notify = "cd %(bzdir)s && ./processmail %(id)s %(user)s"
 
     def run(self, *args, **kwargs):
         '''run a query.'''
@@ -172,15 +177,23 @@ class bugzilla_2_16(object):
             unknown.pop(id, None)
         return util.sort(unknown.keys())
 
-    def notify(self, ids):
+    def notify(self, ids, committer):
         '''tell bugzilla to send mail.'''
 
         self.ui.status(_('telling bugzilla to send mail:\n'))
+        (user, userid) = self.get_bugzilla_user(committer)
         for id in ids:
             self.ui.status(_('  bug %s\n') % id)
-            cmd = self.ui.config('bugzilla', 'notify',
-                               'cd /var/www/html/bugzilla && '
-                               './processmail %s nobody@nowhere.com') % id
+            cmdfmt = self.ui.config('bugzilla', 'notify', self.default_notify)
+            bzdir = self.ui.config('bugzilla', 'bzdir', '/var/www/html/bugzilla')
+            try:
+                # Backwards-compatible with old notify string, which
+                # took one string. This will throw with a new format
+                # string.
+                cmd = cmdfmt % id
+            except TypeError:
+                cmd = cmdfmt % {'bzdir': bzdir, 'id': id, 'user': user}
+            self.ui.note(_('running notify command %s\n') % cmd)
             fp = util.popen('(%s) 2>&1' % cmd)
             out = fp.read()
             ret = fp.close()
@@ -215,9 +228,10 @@ class bugzilla_2_16(object):
                 return bzuser
         return user
 
-    def add_comment(self, bugid, text, committer):
-        '''add comment to bug. try adding comment as committer of
-        changeset, otherwise as default bugzilla user.'''
+    def get_bugzilla_user(self, committer):
+        '''see if committer is a registered bugzilla user. Return
+        bugzilla username and userid if so. If not, return default
+        bugzilla username and userid.'''
         user = self.map_committer(committer)
         try:
             userid = self.get_user_id(user)
@@ -228,9 +242,16 @@ class bugzilla_2_16(object):
                     raise util.Abort(_('cannot find bugzilla user id for %s') %
                                      user)
                 userid = self.get_user_id(defaultuser)
+                user = defaultuser
             except KeyError:
                 raise util.Abort(_('cannot find bugzilla user id for %s or %s') %
                                  (user, defaultuser))
+        return (user, userid)
+
+    def add_comment(self, bugid, text, committer):
+        '''add comment to bug. try adding comment as committer of
+        changeset, otherwise as default bugzilla user.'''
+        (user, userid) = self.get_bugzilla_user(committer)
         now = time.strftime('%Y-%m-%d %H:%M:%S')
         self.run('''insert into longdescs
                     (bug_id, who, bug_when, thetext)
@@ -241,11 +262,18 @@ class bugzilla_2_16(object):
                  (bugid, userid, now, self.longdesc_id))
         self.conn.commit()
 
-class bugzilla_3_0(bugzilla_2_16):
-    '''support for bugzilla 3.0 series.'''
+class bugzilla_2_18(bugzilla_2_16):
+    '''support for bugzilla 2.18 series.'''
 
     def __init__(self, ui):
         bugzilla_2_16.__init__(self, ui)
+        self.default_notify = "cd %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s"
+
+class bugzilla_3_0(bugzilla_2_18):
+    '''support for bugzilla 3.0 series.'''
+
+    def __init__(self, ui):
+        bugzilla_2_18.__init__(self, ui)
 
     def get_longdesc_id(self):
         '''get identity of longdesc field'''
@@ -260,6 +288,7 @@ class bugzilla(object):
     # different schemas.
     _versions = {
         '2.16': bugzilla_2_16,
+        '2.18': bugzilla_2_18,
         '3.0':  bugzilla_3_0
         }
 
@@ -375,7 +404,7 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
         if ids:
             for id in ids:
                 bz.update(id, ctx)
-            bz.notify(ids)
+            bz.notify(ids, util.email(ctx.user()))
     except MySQLdb.MySQLError, err:
         raise util.Abort(_('database error: %s') % err[1])
 
