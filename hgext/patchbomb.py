@@ -63,22 +63,9 @@ That should be all. Now your patchbomb is on its way out.'''
 import os, errno, socket, tempfile, cStringIO
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
-from mercurial import cmdutil, commands, hg, mail, patch, util
+from mercurial import cmdutil, commands, hg, mail, mdiff, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
-
-class exportee:
-    def __init__(self, container):
-        self.lines = []
-        self.container = container
-        self.name = 'email'
-
-    def write(self, data):
-        self.lines.append(data)
-
-    def close(self):
-        self.container.append(''.join(self.lines).split('\n'))
-        self.lines = []
 
 def prompt(ui, prompt, default=None, rest=': ', empty_ok=False):
     if not ui.interactive:
@@ -234,6 +221,13 @@ def patchbomb(ui, repo, *revs, **opts):
         o = repo.changelog.nodesbetween(o, revs or None)[0]
         return [str(repo.changelog.rev(r)) for r in o]
 
+    def getpatches(revs):
+        for r in cmdutil.revrange(repo, revs):
+            output = cStringIO.StringIO()
+            p = patch.export(repo, [r], fp=output,
+                             opts=mdiff.diffopts(git=opts.get('git')))
+            yield output.getvalue().split('\n')
+
     def getbundle(dest):
         tmpdir = tempfile.mkdtemp(prefix='hg-email-bundle-')
         tmpfn = os.path.join(tmpdir, 'bundle')
@@ -355,18 +349,14 @@ def patchbomb(ui, repo, *revs, **opts):
               ui.config('patchbomb', 'from') or
               prompt(ui, 'From', ui.username()))
 
+    # internal option used by pbranches
     patches = opts.get('patches')
     if patches:
         msgs = getpatchmsgs(patches, opts.get('patchnames'))
     elif opts.get('bundle'):
         msgs = getbundlemsgs(getbundle(dest))
     else:
-        patches = []
-        commands.export(ui, repo, *revs, **{'output': exportee(patches),
-                                            'switch_parent': False,
-                                            'text': None,
-                                            'git': opts.get('git')})
-        msgs = getpatchmsgs(patches)
+        msgs = getpatchmsgs(list(getpatches(revs)))
 
     def getaddrs(opt, prpt, default = None):
         addrs = opts.get(opt) or (ui.config('email', opt) or

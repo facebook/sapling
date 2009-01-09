@@ -1338,8 +1338,6 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
         for chunk in diff(repo, prev, node, opts=opts):
             fp.write(chunk)
-        if fp not in (sys.stdout, repo.ui):
-            fp.close()
 
     for seqno, rev in enumerate(revs):
         single(rev, seqno+1, fp)
