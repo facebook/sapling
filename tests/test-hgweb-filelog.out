@@ -1,8 +1,24 @@
 adding b
 adding a
 adding a
-changeset:   4:52e848cdcd88
+changeset:   5:a3b6a9e4507e
 tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     mv b
+
+diff -r 52e848cdcd88 -r a3b6a9e4507e b
+--- a/b	Thu Jan 01 00:00:00 1970 +0000
++++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+@@ -1,1 +0,0 @@
+-b
+diff -r 52e848cdcd88 -r a3b6a9e4507e c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
+changeset:   4:52e848cdcd88
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     del2 a
@@ -431,6 +447,75 @@ a@6563da9dcf87: not found in manifest
 </div>
 
 
+
+</body>
+</html>
+
+% should show base link, use spartan because it shows it
+200 Script output follows
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png">
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style.css" type="text/css" />
+
+<title>test: c history</title>
+<link rel="alternate" type="application/atom+xml"
+   href="/atom-log/tip/c" title="Atom feed for test:c">
+<link rel="alternate" type="application/rss+xml"
+   href="/rss-log/tip/c" title="RSS feed for test:c">
+</head>
+<body>
+
+<div class="buttons">
+<a href="/log?style=spartan">changelog</a>
+<a href="/shortlog?style=spartan">shortlog</a>
+<a href="/graph?style=spartan">graph</a>
+<a href="/tags?style=spartan">tags</a>
+<a href="/file/a3b6a9e4507e/c?style=spartan">file</a>
+<a href="/annotate/a3b6a9e4507e/c?style=spartan">annotate</a>
+<a type="application/rss+xml" href="/rss-log/tip/c">rss</a>
+<a type="application/atom+xml" href="/atom-log/tip/c" title="Atom feed for test:c">atom</a>
+</div>
+
+<h2>c revision history</h2>
+
+<p>navigate: <small class="navigate"><a href="/log/a3b6a9e4507e/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
+
+<table class="logEntry parity0">
+ <tr>
+  <th class="age">many years ago:</th>
+  <th class="firstline"><a href="/rev/a3b6a9e4507e?style=spartan">mv b</a></th>
+ </tr>
+ <tr>
+  <th class="revision">revision 0:</td>
+  <td class="node">
+   <a href="/file/a3b6a9e4507e/c?style=spartan">a3b6a9e4507e</a>
+   <a href="/diff/a3b6a9e4507e/c?style=spartan">(diff)</a>
+   <a href="/annotate/a3b6a9e4507e/c?style=spartan">(annotate)</a>
+  </td>
+ </tr>
+ <tr><th>base:</th><td><a href="/file/1e88685f5dde/b?style=spartan">b@1e88685f5dde</a></td></tr>
+ <tr>
+  <th class="author">author:</th>
+  <td class="author">&#116;&#101;&#115;&#116;</td>
+ </tr>
+ <tr>
+  <th class="date">date:</th>
+  <td class="date">Thu Jan 01 00:00:00 1970 +0000</td>
+ </tr>
+</table>
+
+
+
+
+
+<div class="logo">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
 
 </body>
 </html>
