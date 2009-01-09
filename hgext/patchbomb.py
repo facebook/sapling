@@ -297,7 +297,7 @@ def patchbomb(ui, repo, *revs, **opts):
                  % len(patches))
 
         name = None
-        for p, i in zip(patches, xrange(len(patches))):
+        for i, p in enumerate(patches):
             jumbo.extend(p)
             if patchnames:
                 name = patchnames[i]
