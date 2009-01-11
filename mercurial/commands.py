@@ -11,7 +11,6 @@ from i18n import _, gettext
 import os, re, sys
 import hg, util, revlog, bundlerepo, extensions, copies, context
 import difflib, patch, time, help, mdiff, tempfile, url
-import version
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 import merge as merge_
 
@@ -2961,7 +2960,7 @@ def verify(ui, repo):
 def version_(ui):
     """output version and copyright information"""
     ui.write(_("Mercurial Distributed SCM (version %s)\n")
-             % version.get_version())
+             % util.version())
     ui.status(_(
         "\nCopyright (C) 2005-2008 Matt Mackall <mpm@selenic.com> and others\n"
         "This is free software; see the source for copying conditions. "

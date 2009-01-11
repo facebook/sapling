@@ -8,7 +8,7 @@
 from i18n import _
 from repo import RepoError
 import os, sys, atexit, signal, pdb, socket, errno, shlex, time
-import util, commands, hg, lock, fancyopts, revlog, version, extensions, hook
+import util, commands, hg, lock, fancyopts, revlog, extensions, hook
 import cmdutil
 import ui as _ui
 
@@ -145,7 +145,7 @@ def _runcatch(ui, args):
                  "http://www.selenic.com/mercurial/bts\n"))
         ui.warn(_("** or mercurial@selenic.com\n"))
         ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
-               % version.get_version())
+               % util.version())
         ui.warn(_("** Extensions loaded: %s\n")
                % ", ".join([x[0] for x in extensions.extensions()]))
         raise

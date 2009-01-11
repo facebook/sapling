@@ -142,6 +142,14 @@ def locallen(s):
     """Find the length in characters of a local string"""
     return len(s.decode(_encoding, "replace"))
 
+def version():
+    """Return version information if available."""
+    try:
+        import __version__
+        return __version__.version
+    except ImportError:
+        return 'unknown'
+
 # used by parsedate
 defaultdateformats = (
     '%Y-%m-%d %H:%M:%S',

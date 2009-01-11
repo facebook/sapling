@@ -1,10 +1,6 @@
 os = <unloaded module 'os'>
 os.system = <built-in function system>
 os = <module 'os' from '?'>
-mercurial.version = <unloaded module 'version'>
-mercurial.version.get_version = <function get_version at 0x?>
-mercurial.version = <module 'mercurial.version' from '?'>
-mercurial = <module 'mercurial' from '?'>
 util = <unloaded module 'util'>
 util.system = <function system at 0x?>
 util = <module 'mercurial.util' from '?'>
