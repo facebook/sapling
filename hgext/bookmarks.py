@@ -67,7 +67,7 @@ def write(repo, refs):
     if current(repo) not in refs:
         setcurrent(repo, None)
     file = repo.opener('bookmarks', 'w+')
-    for refspec, node in refs.items():
+    for refspec, node in refs.iteritems():
         file.write("%s %s\n" % (hex(node), refspec))
     file.close()
 
@@ -206,7 +206,7 @@ def strip(ui, repo, node, backup="all"):
     revisions = _revstostrip(repo.changelog, node)
     marks = parse(repo)
     update = []
-    for mark, n in marks.items():
+    for mark, n in marks.iteritems():
         if repo.changelog.rev(n) in revisions:
             update.append(mark)
     oldstrip(ui, repo, node, backup)

@@ -788,7 +788,7 @@ def debugstate(ui, repo, nodates=None):
     """show the contents of the current dirstate"""
     timestr = ""
     showdate = not nodates
-    for file_, ent in util.sort(repo.dirstate._map.items()):
+    for file_, ent in util.sort(repo.dirstate._map.iteritems()):
         if showdate:
             if ent[3] == -1:
                 # Pad or slice to locale representation
@@ -1348,7 +1348,7 @@ def help_(ui, name=None, with_version=False):
     def helplist(header, select=None):
         h = {}
         cmds = {}
-        for c, e in table.items():
+        for c, e in table.iteritems():
             f = c.split("|", 1)[0]
             if select and not select(f):
                 continue
@@ -2746,7 +2746,7 @@ def status(ui, repo, *pats, **opts):
         if node2 is None:
             added = stat[0] + stat[1] # merged?
 
-        for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
+        for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].iteritems():
             if k in added:
                 copy[k] = v
             elif v in added:

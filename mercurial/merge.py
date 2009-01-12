@@ -36,7 +36,7 @@ class mergestate(object):
     def _write(self):
         f = self._repo.opener("merge/state", "w")
         f.write(hex(self._local) + "\n")
-        for d, v in self._state.items():
+        for d, v in self._state.iteritems():
             f.write("\0".join([d] + v) + "\n")
     def add(self, fcl, fco, fca, fd, flags):
         hash = util.sha1(fcl.path()).hexdigest()
@@ -166,7 +166,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             dirs = repo.ui.configbool("merge", "followdirs", True)
             copy, diverge = copies.copies(repo, p1, p2, pa, dirs)
         copied = dict.fromkeys(copy.values())
-        for of, fl in diverge.items():
+        for of, fl in diverge.iteritems():
             act("divergent renames", "dr", of, fl)
 
     # Compare manifests

@@ -265,7 +265,7 @@ class localrepository(repo.repository):
                     h.append(n)
                 filetags[key] = (bin_n, h)
 
-            for k, nh in filetags.items():
+            for k, nh in filetags.iteritems():
                 if k not in globaltags:
                     globaltags[k] = nh
                     tagtypes[k] = tagtype
@@ -301,7 +301,7 @@ class localrepository(repo.repository):
 
         self.tagscache = {}
         self._tagstypecache = {}
-        for k,nh in globaltags.items():
+        for k, nh in globaltags.iteritems():
             n = nh[0]
             if n != nullid:
                 self.tagscache[k] = n
@@ -343,7 +343,7 @@ class localrepository(repo.repository):
     def tagslist(self):
         '''return a list of tags ordered by revision'''
         l = []
-        for t, n in self.tags().items():
+        for t, n in self.tags().iteritems():
             try:
                 r = self.changelog.rev(n)
             except:
@@ -355,7 +355,7 @@ class localrepository(repo.repository):
         '''return the tags associated with a node'''
         if not self.nodetagscache:
             self.nodetagscache = {}
-            for t, n in self.tags().items():
+            for t, n in self.tags().iteritems():
                 self.nodetagscache.setdefault(n, []).append(t)
         return self.nodetagscache.get(node, [])
 
@@ -388,7 +388,7 @@ class localrepository(repo.repository):
 
         # the branch cache is stored on disk as UTF-8, but in the local
         # charset internally
-        for k, v in partial.items():
+        for k, v in partial.iteritems():
             self.branchcache[util.tolocal(k)] = v
         self._ubranchcache = partial
         return self.branchcache
@@ -1756,7 +1756,7 @@ class localrepository(repo.repository):
                     # we only need to see a diff.
                     deltamf = mnfst.readdelta(mnfstnode)
                     # For each line in the delta
-                    for f, fnode in deltamf.items():
+                    for f, fnode in deltamf.iteritems():
                         f = changedfiles.get(f, None)
                         # And if the file is in the list of files we care
                         # about.

@@ -60,7 +60,7 @@ def ignore(root, files, warn):
                         warn(_("%s: ignoring invalid syntax '%s'\n") % (f, s))
                     continue
                 pat = syntax + line
-                for s, rels in syntaxes.items():
+                for s, rels in syntaxes.iteritems():
                     if line.startswith(rels):
                         pat = line
                         break
@@ -83,7 +83,7 @@ def ignore(root, files, warn):
             util.matcher(root, inc=allpats, src='.hgignore'))
     except util.Abort:
         # Re-raise an exception where the src is the right file
-        for f, patlist in pats.items():
+        for f, patlist in pats.iteritems():
             files, ignorefunc, anypats = (
                 util.matcher(root, inc=patlist, src=f))
 

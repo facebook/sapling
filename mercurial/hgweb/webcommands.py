@@ -275,7 +275,7 @@ def manifest(web, req, tmpl):
     l = len(path)
     abspath = "/" + path
 
-    for f, n in mf.items():
+    for f, n in mf.iteritems():
         if f[:l] != path:
             continue
         remain = f[l:]
@@ -386,7 +386,7 @@ def summary(web, req, tmpl):
         parity = paritygen(web.stripecount)
 
         b = web.repo.branchtags()
-        l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.items()]
+        l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.iteritems()]
         for r,n,t in util.sort(l):
             yield {'parity': parity.next(),
                    'branch': t,

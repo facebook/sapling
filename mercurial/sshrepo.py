@@ -115,7 +115,7 @@ class sshrepository(repo.repository):
     def do_cmd(self, cmd, **args):
         self.ui.debug(_("sending %s command\n") % cmd)
         self.pipeo.write("%s\n" % cmd)
-        for k, v in args.items():
+        for k, v in args.iteritems():
             self.pipeo.write("%s %d\n" % (k, len(v)))
             self.pipeo.write(v)
         self.pipeo.flush()
