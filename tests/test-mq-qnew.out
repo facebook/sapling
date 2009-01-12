@@ -15,6 +15,7 @@ A test.patch
 abort: missing: No such file or directory
 % qnew -m
 foo bar
+
 % qnew twice
 abort: patch "first.patch" already exists
 abort: patch "first.patch" already exists

@@ -756,7 +756,7 @@ class queue:
                     self.series_dirty = 1
                     self.applied_dirty = 1
                     if msg:
-                        msg = msg + "\n"
+                        msg = msg + "\n\n"
                         p.write(msg)
                     if commitfiles:
                         diffopts = self.diffopts()
