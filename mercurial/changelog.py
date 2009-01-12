@@ -8,7 +8,7 @@
 from node import bin, hex, nullid
 from revlog import revlog, RevlogError
 from i18n import _
-import util
+import util, error
 
 def _string_escape(text):
     """
@@ -179,7 +179,8 @@ class changelog(revlog):
 
         user = user.strip()
         if "\n" in user:
-            raise RevlogError(_("username %s contains a newline") % repr(user))
+            raise error.RevlogError(_("username %s contains a newline")
+                                    % repr(user))
         user, desc = util.fromlocal(user), util.fromlocal(desc)
 
         if date:

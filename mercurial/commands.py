@@ -9,7 +9,7 @@ from node import hex, nullid, nullrev, short
 from repo import RepoError, NoCapability
 from i18n import _, gettext
 import os, re, sys
-import hg, util, revlog, bundlerepo, extensions, copies, context
+import hg, util, revlog, bundlerepo, extensions, copies, context, error
 import difflib, patch, time, help, mdiff, tempfile, url
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 import merge as merge_
@@ -1214,7 +1214,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                         copied = getfile(fn).renamed(ctx.filenode(fn))
                         if copied:
                             copies.setdefault(rev, {})[fn] = copied[0]
-                except revlog.LookupError:
+                except error.LookupError:
                     pass
         elif st == 'iter':
             for fn, m in util.sort(matches[rev].items()):
@@ -1887,7 +1887,7 @@ def log(ui, repo, *pats, **opts):
 
         try:
             return repo[rev][fn].renamed()
-        except revlog.LookupError:
+        except error.LookupError:
             pass
         return None
 
@@ -2086,7 +2086,7 @@ def parents(ui, repo, file_=None, **opts):
                 continue
             try:
                 filenodes.append(cp.filenode(file_))
-            except revlog.LookupError:
+            except error.LookupError:
                 pass
         if not filenodes:
             raise util.Abort(_("'%s' not found in manifest!") % file_)
@@ -2857,7 +2857,7 @@ def tags(ui, repo):
         try:
             hn = hexfunc(n)
             r = "%5d:%s" % (repo.changelog.rev(n), hn)
-        except revlog.LookupError:
+        except error.LookupError:
             r = "    ?:%s" % hn
         else:
             spaces = " " * (30 - util.locallen(t))

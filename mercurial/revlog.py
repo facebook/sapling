@@ -13,7 +13,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import changegroup, errno, ancestor, mdiff, parsers
-import struct, util, zlib
+import struct, util, zlib, error
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -29,18 +29,8 @@ REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 
-class RevlogError(Exception):
-    pass
-
-class LookupError(RevlogError, KeyError):
-    def __init__(self, name, index, message):
-        self.name = name
-        if isinstance(name, str) and len(name) == 20:
-            name = short(name)
-        RevlogError.__init__(self, _('%s@%s: %s') % (index, name, message))
-
-    def __str__(self):
-        return RevlogError.__str__(self)
+RevlogError = error.RevlogError
+LookupError = error.LookupError
 
 def getoffset(q):
     return int(q >> 16)

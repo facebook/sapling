@@ -8,7 +8,7 @@
 from i18n import _
 from repo import RepoError
 import os, sys, atexit, signal, pdb, socket, errno, shlex, time
-import util, commands, hg, lock, fancyopts, revlog, extensions, hook
+import util, commands, hg, lock, fancyopts, extensions, hook, error
 import cmdutil
 import ui as _ui
 
@@ -76,7 +76,7 @@ def _runcatch(ui, args):
     except lock.LockUnavailable, inst:
         ui.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
-    except revlog.RevlogError, inst:
+    except error.RevlogError, inst:
         ui.warn(_("abort: %s!\n") % inst)
     except util.SignalInterrupt:
         ui.warn(_("killed!\n"))

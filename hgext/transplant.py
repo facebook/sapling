@@ -16,7 +16,7 @@ from a changeset hash to its hash in the source repository.
 from mercurial.i18n import _
 import os, tempfile
 from mercurial import bundlerepo, changegroup, cmdutil, hg, merge
-from mercurial import patch, revlog, util
+from mercurial import patch, revlog, util, error
 
 class transplantentry:
     def __init__(self, lnode, rnode):
@@ -380,7 +380,7 @@ class transplanter:
 def hasnode(repo, node):
     try:
         return repo.changelog.rev(node) != None
-    except revlog.RevlogError:
+    except error.RevlogError:
         return False
 
 def browserevs(ui, repo, nodes, opts):

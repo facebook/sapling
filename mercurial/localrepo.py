@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
 import lock, transaction, stat, errno, ui, store
-import os, revlog, time, util, extensions, hook, inspect
+import os, time, util, extensions, hook, inspect, error
 import match as match_
 import merge as merge_
 
@@ -177,7 +177,7 @@ class localrepository(repo.repository):
         else:
             try:
                 prevtags = self.filectx('.hgtags', parent).data()
-            except revlog.LookupError:
+            except error.LookupError:
                 pass
             fp = self.wfile('.hgtags', 'wb')
             if prevtags:
@@ -332,7 +332,7 @@ class localrepository(repo.repository):
             rev = c.rev()
             try:
                 fnode = c.filenode('.hgtags')
-            except revlog.LookupError:
+            except error.LookupError:
                 continue
             ret.append((rev, node, fnode))
             if fnode in last:

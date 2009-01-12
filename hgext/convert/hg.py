@@ -17,7 +17,7 @@ import os, time
 from mercurial.i18n import _
 from mercurial.repo import RepoError
 from mercurial.node import bin, hex, nullid
-from mercurial import hg, revlog, util, context
+from mercurial import hg, util, context, error
 
 from common import NoRepo, commit, converter_source, converter_sink
 
@@ -244,7 +244,7 @@ class mercurial_source(converter_source):
     def getfile(self, name, rev):
         try:
             return self.changectx(rev)[name].data()
-        except revlog.LookupError, err:
+        except error.LookupError, err:
             raise IOError(err)
 
     def getmode(self, name, rev):
@@ -283,7 +283,7 @@ class mercurial_source(converter_source):
                 copies[name] = copysource
             except TypeError:
                 pass
-            except revlog.LookupError, e:
+            except error.LookupError, e:
                 if not self.ignoreerrors:
                     raise
                 self.ignored[name] = 1

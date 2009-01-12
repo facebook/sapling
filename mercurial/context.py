@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, short, hex
 from i18n import _
-import ancestor, bdiff, revlog, util, os, errno
+import ancestor, bdiff, error, util, os, errno
 
 class propertycache(object):
     def __init__(self, func):
@@ -125,15 +125,15 @@ class changectx(object):
             try:
                 return self._manifest[path], self._manifest.flags(path)
             except KeyError:
-                raise revlog.LookupError(self._node, path,
-                                         _('not found in manifest'))
+                raise error.LookupError(self._node, path,
+                                        _('not found in manifest'))
         if '_manifestdelta' in self.__dict__ or path in self.files():
             if path in self._manifestdelta:
                 return self._manifestdelta[path], self._manifestdelta.flags(path)
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
-            raise revlog.LookupError(self._node, path,
-                                     _('not found in manifest'))
+            raise error.LookupError(self._node, path,
+                                    _('not found in manifest'))
 
         return node, flag
 
@@ -143,7 +143,7 @@ class changectx(object):
     def flags(self, path):
         try:
             return self._fileinfo(path)[1]
-        except revlog.LookupError:
+        except error.LookupError:
             return ''
 
     def filectx(self, path, fileid=None, filelog=None):
@@ -235,7 +235,7 @@ class filectx(object):
         try:
             n = self._filenode
             return True
-        except revlog.LookupError:
+        except error.LookupError:
             # file is missing
             return False
 
@@ -316,7 +316,7 @@ class filectx(object):
             try:
                 if fnode == p.filenode(name):
                     return None
-            except revlog.LookupError:
+            except error.LookupError:
                 pass
         return renamed
 

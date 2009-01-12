@@ -7,7 +7,7 @@
 
 import os, mimetypes, re, cgi, copy
 import webutil
-from mercurial import revlog, archival, templatefilters
+from mercurial import error, archival, templatefilters
 from mercurial.node import short, hex, nullid
 from mercurial.util import binary, datestr
 from mercurial.repo import RepoError
@@ -39,7 +39,7 @@ def rawfile(web, req, tmpl):
 
     try:
         fctx = webutil.filectx(web.repo, req)
-    except revlog.LookupError, inst:
+    except error.LookupError, inst:
         try:
             content = manifest(web, req, tmpl)
             req.respond(HTTP_OK, web.ctype)
@@ -93,7 +93,7 @@ def file(web, req, tmpl):
         return manifest(web, req, tmpl)
     try:
         return _filerevision(web, tmpl, webutil.filectx(web.repo, req))
-    except revlog.LookupError, inst:
+    except error.LookupError, inst:
         try:
             return manifest(web, req, tmpl)
         except ErrorResponse:
@@ -521,7 +521,7 @@ def filelog(web, req, tmpl):
         fctx = webutil.filectx(web.repo, req)
         f = fctx.path()
         fl = fctx.filelog()
-    except revlog.LookupError:
+    except error.LookupError:
         f = webutil.cleanpath(web.repo, req.form['file'][0])
         fl = web.repo.file(f)
         numrevs = len(fl)

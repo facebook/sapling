@@ -6,9 +6,9 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import bin, hex, nullid
-from revlog import revlog, RevlogError
+from revlog import revlog
 from i18n import _
-import array, struct, mdiff, parsers, util
+import array, struct, mdiff, parsers, util, error
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):
@@ -125,7 +125,8 @@ class manifest(revlog):
         def checkforbidden(l):
             for f in l:
                 if '\n' in f or '\r' in f:
-                    raise RevlogError(_("'\\n' and '\\r' disallowed in filenames"))
+                    raise error.RevlogError(
+                        _("'\\n' and '\\r' disallowed in filenames"))
 
         # if we're using the listcache, make sure it is valid and
         # parented by the same node we're diffing against

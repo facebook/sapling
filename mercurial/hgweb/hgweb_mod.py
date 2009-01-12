@@ -9,8 +9,8 @@
 import os, mimetypes
 from mercurial.node import hex, nullid
 from mercurial.repo import RepoError
-from mercurial import ui, hg, util, hook
-from mercurial import revlog, templater, templatefilters
+from mercurial import ui, hg, util, hook, error
+from mercurial import templater, templatefilters
 from common import get_mtime, style_map, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from common import HTTP_UNAUTHORIZED, HTTP_METHOD_NOT_ALLOWED
@@ -185,13 +185,13 @@ class hgweb(object):
 
             return content
 
-        except revlog.LookupError, err:
+        except error.LookupError, err:
             req.respond(HTTP_NOT_FOUND, ctype)
             msg = str(err)
             if 'manifest' not in msg:
                 msg = 'revision not found: %s' % err.name
             return tmpl('error', error=msg)
-        except (RepoError, revlog.RevlogError), inst:
+        except (RepoError, error.RevlogError), inst:
             req.respond(HTTP_SERVER_ERROR, ctype)
             return tmpl('error', error=str(inst))
         except ErrorResponse, inst:
