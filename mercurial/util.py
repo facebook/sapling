@@ -185,9 +185,6 @@ extendeddateformats = defaultdateformats + (
     "%b %Y",
     )
 
-class SignalInterrupt(Exception):
-    """Exception raised on SIGTERM and SIGHUP."""
-
 # differences from SafeConfigParser:
 # - case-sensitive keys
 # - allows values that are not strings (this means that you may not

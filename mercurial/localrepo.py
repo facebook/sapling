@@ -412,7 +412,7 @@ class localrepository(repo.repository):
                 if not l: continue
                 node, label = l.split(" ", 1)
                 partial[label.strip()] = bin(node)
-        except (KeyboardInterrupt, util.SignalInterrupt):
+        except KeyboardInterrupt:
             raise
         except Exception, inst:
             if self.ui.debugflag:

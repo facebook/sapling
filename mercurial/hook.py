@@ -49,7 +49,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                              (hname, funcname))
     try:
         r = obj(ui=ui, repo=repo, hooktype=name, **args)
-    except (KeyboardInterrupt, util.SignalInterrupt):
+    except KeyboardInterrupt:
         raise
     except Exception, exc:
         if isinstance(exc, util.Abort):

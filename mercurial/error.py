@@ -56,3 +56,6 @@ class UnknownCommand(Exception):
 class AmbiguousCommand(Exception):
     """Exception raised if command shortcut matches more than one command."""
 
+# derived from KeyboardInterrupt to simplify some breakout code
+class SignalInterrupt(KeyboardInterrupt):
+    """Exception raised on SIGTERM and SIGHUP."""

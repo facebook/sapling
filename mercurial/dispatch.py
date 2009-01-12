@@ -26,7 +26,7 @@ def dispatch(args):
 
 def _runcatch(ui, args):
     def catchterm(*args):
-        raise util.SignalInterrupt
+        raise error.SignalInterrupt
 
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)
@@ -74,7 +74,7 @@ def _runcatch(ui, args):
                (inst.desc or inst.filename, inst.strerror))
     except error.RevlogError, inst:
         ui.warn(_("abort: %s!\n") % inst)
-    except util.SignalInterrupt:
+    except error.SignalInterrupt:
         ui.warn(_("killed!\n"))
     except KeyboardInterrupt:
         try:
