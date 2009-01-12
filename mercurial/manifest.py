@@ -5,10 +5,8 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import bin, hex, nullid
-from revlog import revlog
 from i18n import _
-import array, struct, mdiff, parsers, util, error
+import array, struct, mdiff, parsers, util, error, revlog
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):
@@ -23,11 +21,11 @@ class manifestdict(dict):
     def copy(self):
         return manifestdict(dict.copy(self), dict.copy(self._flags))
 
-class manifest(revlog):
+class manifest(revlog.revlog):
     def __init__(self, opener):
         self.mapcache = None
         self.listcache = None
-        revlog.__init__(self, opener, "00manifest.i")
+        revlog.revlog.__init__(self, opener, "00manifest.i")
 
     def parse(self, lines):
         mfdict = manifestdict()
@@ -39,7 +37,8 @@ class manifest(revlog):
         return self.parse(mdiff.patchtext(self.revdiff(r - 1, r)))
 
     def read(self, node):
-        if node == nullid: return manifestdict() # don't upset local cache
+        if node == revlog.nullid:
+            return manifestdict() # don't upset local cache
         if self.mapcache and self.mapcache[0] == node:
             return self.mapcache[1]
         text = self.revision(node)
@@ -101,7 +100,7 @@ class manifest(revlog):
             return None, None
         l = text[start:end]
         f, n = l.split('\0')
-        return bin(n[:40]), n[40:-1]
+        return revlog.bin(n[:40]), n[40:-1]
 
     def add(self, map, transaction, link, p1=None, p2=None,
             changed=None):
@@ -136,7 +135,8 @@ class manifest(revlog):
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            text = ["%s\000%s%s\n" % (f, hex(map[f]), map.flags(f))
+            hex, flags = revlog.hex, map.flags
+            text = ["%s\000%s%s\n" % (f, hex(map[f]), flags(f))
                     for f in files]
             self.listcache = array.array('c', "".join(text))
             cachedelta = None
@@ -164,7 +164,7 @@ class manifest(revlog):
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
                 if w[1] == 0:
-                    l = "%s\000%s%s\n" % (f, hex(map[f]), map.flags(f))
+                    l = "%s\000%s%s\n" % (f, revlog.hex(map[f]), map.flags(f))
                 else:
                     l = ""
                 if start == end and w[1] == 1:

@@ -6,9 +6,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import bin, hex, nullid
-from revlog import revlog, RevlogError
 from i18n import _
-import util, error
+import util, error, revlog
 
 def _string_escape(text):
     """
@@ -75,9 +74,9 @@ class appender:
         self.data.append(str(s))
         self.offset += len(s)
 
-class changelog(revlog):
+class changelog(revlog.revlog):
     def __init__(self, opener):
-        revlog.__init__(self, opener, "00changelog.i")
+        revlog.revlog.__init__(self, opener, "00changelog.i")
 
     def delayupdate(self):
         "delay visibility of index updates to other readers"
@@ -119,7 +118,7 @@ class changelog(revlog):
     def checkinlinesize(self, tr, fp=None):
         if self.opener == self._delayopener:
             return
-        return revlog.checkinlinesize(self, tr, fp)
+        return revlog.revlog.checkinlinesize(self, tr, fp)
 
     def decode_extra(self, text):
         extra = {}

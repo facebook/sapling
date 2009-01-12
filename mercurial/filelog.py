@@ -5,12 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import bin, nullid
-from revlog import revlog
+import revlog
 
-class filelog(revlog):
+class filelog(revlog.revlog):
     def __init__(self, opener, path):
-        revlog.__init__(self, opener,
+        revlog.revlog.__init__(self, opener,
                         "/".join(("data", self.encodedir(path + ".i"))))
 
     # This avoids a collision between a file named foo and a dir named
@@ -55,11 +54,11 @@ class filelog(revlog):
         return self.addrevision(text, transaction, link, p1, p2)
 
     def renamed(self, node):
-        if self.parents(node)[0] != nullid:
+        if self.parents(node)[0] != revlog.nullid:
             return False
         m = self._readmeta(node)
         if m and "copy" in m:
-            return (m["copy"], bin(m["copyrev"]))
+            return (m["copy"], revlog.bin(m["copyrev"]))
         return False
 
     def size(self, rev):
@@ -70,7 +69,7 @@ class filelog(revlog):
         if self.renamed(node):
             return len(self.read(node))
 
-        return revlog.size(self, rev)
+        return revlog.revlog.size(self, rev)
 
     def cmp(self, node, text):
         """compare text with a given file revision"""
@@ -80,4 +79,4 @@ class filelog(revlog):
             t2 = self.read(node)
             return t2 != text
 
-        return revlog.cmp(self, node, text)
+        return revlog.revlog.cmp(self, node, text)
