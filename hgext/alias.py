@@ -9,9 +9,8 @@ To use, create entries in your hgrc of the form
 mycmd = cmd --args
 '''
 
-from mercurial.cmdutil import findcmd, UnknownCommand, AmbiguousCommand
-from mercurial import commands
 from mercurial.i18n import _
+from mercurial import commands, cmdutil, error
 
 cmdtable = {}
 
@@ -43,16 +42,16 @@ class lazycommand(object):
             return
 
         try:
-            self._cmd = findcmd(self._target, commands.table, False)[1]
+            self._cmd = cmdutil.findcmd(self._target, commands.table, False)[1]
             if self._cmd == self:
                 raise RecursiveCommand()
             if self._target in commands.norepo.split(' '):
                 commands.norepo += ' %s' % self._name
             return
-        except UnknownCommand:
+        except error.UnknownCommand:
             msg = _('*** [alias] %s: command %s is unknown') % \
                   (self._name, self._target)
-        except AmbiguousCommand:
+        except error.AmbiguousCommand:
             msg = _('*** [alias] %s: command %s is ambiguous') % \
                   (self._name, self._target)
         except RecursiveCommand:

@@ -1321,7 +1321,7 @@ def help_(ui, name=None, with_version=False):
 
         try:
             aliases, i = cmdutil.findcmd(name, table, False)
-        except cmdutil.AmbiguousCommand, inst:
+        except error.AmbiguousCommand, inst:
             select = lambda c: c.lstrip('^').startswith(inst.args[0])
             helplist(_('list of commands:\n\n'), select)
             return
@@ -1410,7 +1410,7 @@ def help_(ui, name=None, with_version=False):
             if name in names:
                 break
         else:
-            raise cmdutil.UnknownCommand(name)
+            raise error.UnknownCommand(name)
 
         # description
         if not doc:
@@ -1425,7 +1425,7 @@ def help_(ui, name=None, with_version=False):
         try:
             mod = extensions.find(name)
         except KeyError:
-            raise cmdutil.UnknownCommand(name)
+            raise error.UnknownCommand(name)
 
         doc = gettext(mod.__doc__) or _('no help text available')
         doc = doc.splitlines(0)
@@ -1450,7 +1450,7 @@ def help_(ui, name=None, with_version=False):
                 f(name)
                 i = None
                 break
-            except cmdutil.UnknownCommand, inst:
+            except error.UnknownCommand, inst:
                 i = inst
         if i:
             raise i

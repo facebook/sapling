@@ -50,3 +50,9 @@ class LockUnavailable(LockError):
 class ResponseError(Exception):
     """Raised to print an error with part of output and exit."""
 
+class UnknownCommand(Exception):
+    """Exception raised if command is not in the command table."""
+
+class AmbiguousCommand(Exception):
+    """Exception raised if command shortcut matches more than one command."""
+

@@ -55,10 +55,10 @@ def _runcatch(ui, args):
         else:
             ui.warn(_("hg: %s\n") % inst.args[1])
             commands.help_(ui, 'shortlist')
-    except cmdutil.AmbiguousCommand, inst:
+    except error.AmbiguousCommand, inst:
         ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
-    except cmdutil.UnknownCommand, inst:
+    except error.UnknownCommand, inst:
         ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         commands.help_(ui, 'shortlist')
     except error.RepoError, inst:

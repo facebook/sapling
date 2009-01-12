@@ -8,15 +8,10 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, bisect, stat
-import mdiff, bdiff, util, templater, templatefilters, patch, errno
+import mdiff, bdiff, util, templater, templatefilters, patch, errno, error
 import match as _match
 
 revrangesep = ':'
-
-class UnknownCommand(Exception):
-    """Exception raised if command is not in the command table."""
-class AmbiguousCommand(Exception):
-    """Exception raised if command shortcut matches more than one command."""
 
 def findpossible(cmd, table, strict=False):
     """
@@ -57,12 +52,12 @@ def findcmd(cmd, table, strict=True):
     if len(choice) > 1:
         clist = choice.keys()
         clist.sort()
-        raise AmbiguousCommand(cmd, clist)
+        raise error.AmbiguousCommand(cmd, clist)
 
     if choice:
         return choice.values()[0]
 
-    raise UnknownCommand(cmd)
+    raise error.UnknownCommand(cmd)
 
 def bail_if_changed(repo):
     if repo.dirstate.parents()[1] != nullid:
