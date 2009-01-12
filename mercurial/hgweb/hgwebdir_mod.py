@@ -8,8 +8,7 @@
 
 import os
 from mercurial.i18n import _
-from mercurial.repo import RepoError
-from mercurial import ui, hg, util, templater, templatefilters
+from mercurial import ui, hg, util, templater, templatefilters, error
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen,\
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
@@ -150,7 +149,7 @@ class hgwebdir(object):
                         except IOError, inst:
                             msg = inst.strerror
                             raise ErrorResponse(HTTP_SERVER_ERROR, msg)
-                        except RepoError, inst:
+                        except error.RepoError, inst:
                             raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
 
                     # browse subdirectories

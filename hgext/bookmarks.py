@@ -30,7 +30,6 @@ from mercurial import extensions
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, changelog
 from mercurial.node import nullid, nullrev
-from mercurial.repo import RepoError
 import mercurial, mercurial.localrepo, mercurial.repair, os
 
 def parse(repo):

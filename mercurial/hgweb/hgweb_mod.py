@@ -8,7 +8,6 @@
 
 import os, mimetypes
 from mercurial.node import hex, nullid
-from mercurial.repo import RepoError
 from mercurial import ui, hg, util, hook, error
 from mercurial import templater, templatefilters
 from common import get_mtime, style_map, ErrorResponse
@@ -191,7 +190,7 @@ class hgweb(object):
             if 'manifest' not in msg:
                 msg = 'revision not found: %s' % err.name
             return tmpl('error', error=msg)
-        except (RepoError, error.RevlogError), inst:
+        except (error.RepoError, error.RevlogError), inst:
             req.respond(HTTP_SERVER_ERROR, ctype)
             return tmpl('error', error=str(inst))
         except ErrorResponse, inst:

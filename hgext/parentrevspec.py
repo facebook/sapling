@@ -24,6 +24,7 @@ For example, if you can refer to a revision as "foo", then:
   foo~2 = foo^1^1 = foo^^ = first parent of first parent of foo
 '''
 import mercurial.repo
+from mercurial import error
 
 def reposetup(ui, repo):
     if not repo.local():
@@ -34,7 +35,7 @@ def reposetup(ui, repo):
             try:
                 _super = super(parentrevspecrepo, self)
                 return _super.lookup(key)
-            except mercurial.repo.RepoError:
+            except error.RepoError:
                 pass
 
             circ = key.find('^')
@@ -50,7 +51,7 @@ def reposetup(ui, repo):
             base = key[:end]
             try:
                 node = _super.lookup(base)
-            except mercurial.repo.RepoError:
+            except error.RepoError:
                 # eek - reraise the first error
                 return _super.lookup(key)
 

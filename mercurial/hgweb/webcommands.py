@@ -10,7 +10,6 @@ import webutil
 from mercurial import error, archival, templatefilters
 from mercurial.node import short, hex, nullid
 from mercurial.util import binary, datestr
-from mercurial.repo import RepoError
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod, util
@@ -169,7 +168,7 @@ def changelog(web, req, tmpl, shortlog = False):
             hi = len(web.repo) - 1
         try:
             ctx = web.repo[hi]
-        except RepoError:
+        except error.RepoError:
             return _search(web, tmpl, hi) # XXX redirect to 404 page?
 
     def changelist(limit=0, **map):

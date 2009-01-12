@@ -8,12 +8,6 @@
 
 from i18n import _
 
-class RepoError(Exception):
-    pass
-
-class NoCapability(RepoError):
-    pass
-
 class repository(object):
     def capable(self, name):
         '''tell whether repo supports named capability.
@@ -31,9 +25,9 @@ class repository(object):
     def requirecap(self, name, purpose):
         '''raise an exception if the given capability is not present'''
         if not self.capable(name):
-            raise NoCapability(_('cannot %s; remote repository does not '
-                                 'support the %r capability') %
-                               (purpose, name))
+            raise error.CapabilityError(
+                _('cannot %s; remote repository does not '
+                  'support the %r capability') % (purpose, name))
 
     def local(self):
         return False

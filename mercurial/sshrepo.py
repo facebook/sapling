@@ -7,7 +7,7 @@
 
 from node import bin, hex
 from i18n import _
-import repo, os, re, util
+import repo, os, re, util, error
 
 class remotelock(object):
     def __init__(self, repo):
@@ -26,7 +26,7 @@ class sshrepository(repo.repository):
 
         m = re.match(r'^ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?$', path)
         if not m:
-            self.raise_(repo.RepoError(_("couldn't parse location %s") % path))
+            self.raise_(error.RepoError(_("couldn't parse location %s") % path))
 
         self.user = m.group(2)
         self.host = m.group(3)
@@ -45,7 +45,7 @@ class sshrepository(repo.repository):
             ui.note(_('running %s\n') % cmd)
             res = util.system(cmd)
             if res != 0:
-                self.raise_(repo.RepoError(_("could not create remote repo")))
+                self.raise_(error.RepoError(_("could not create remote repo")))
 
         self.validate_repo(ui, sshcmd, args, remotecmd)
 
@@ -78,7 +78,7 @@ class sshrepository(repo.repository):
             lines.append(l)
             max_noise -= 1
         else:
-            self.raise_(repo.RepoError(_("no suitable response from remote hg")))
+            self.raise_(error.RepoError(_("no suitable response from remote hg")))
 
         self.capabilities = util.set()
         lines.reverse()
@@ -157,7 +157,7 @@ class sshrepository(repo.repository):
         if int(success):
             return bin(data)
         else:
-            self.raise_(repo.RepoError(data))
+            self.raise_(error.RepoError(data))
 
     def heads(self):
         d = self.call("heads")
@@ -198,7 +198,7 @@ class sshrepository(repo.repository):
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
         if d:
             # remote may send "unsynced changes"
-            self.raise_(repo.RepoError(_("push refused: %s") % d))
+            self.raise_(error.RepoError(_("push refused: %s") % d))
 
         while 1:
             d = cg.read(4096)
@@ -211,7 +211,7 @@ class sshrepository(repo.repository):
         r = self._recv()
         if r:
             # remote may send "unsynced changes"
-            self.raise_(repo.RepoError(_("push failed: %s") % r))
+            self.raise_(error.RepoError(_("push failed: %s") % r))
 
         r = self._recv()
         try:
@@ -222,7 +222,7 @@ class sshrepository(repo.repository):
     def addchangegroup(self, cg, source, url):
         d = self.call("addchangegroup")
         if d:
-            self.raise_(repo.RepoError(_("push refused: %s") % d))
+            self.raise_(error.RepoError(_("push refused: %s") % d))
         while 1:
             d = cg.read(4096)
             if not d:

@@ -6,7 +6,6 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import hex, nullid, nullrev, short
-from repo import RepoError, NoCapability
 from i18n import _, gettext
 import os, re, sys
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
@@ -1671,7 +1670,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                         p2 = repo.lookup(p2)
                         if p1 == wp[0].node():
                             repo.dirstate.setparents(p1, p2)
-                    except RepoError:
+                    except error.RepoError:
                         pass
                 if opts.get('exact') or opts.get('import_branch'):
                     repo.dirstate.setbranch(branch or 'default')
@@ -2179,10 +2178,10 @@ def pull(ui, repo, source="default", **opts):
     if revs:
         try:
             revs = [other.lookup(rev) for rev in revs]
-        except NoCapability:
-            error = _("Other repository doesn't support revision lookup, "
-                      "so a rev cannot be specified.")
-            raise util.Abort(error)
+        except error.CapabilityError:
+            err = _("Other repository doesn't support revision lookup, "
+                    "so a rev cannot be specified.")
+            raise util.Abort(err)
 
     modheads = repo.pull(other, heads=revs, force=opts.get('force'))
     return postincoming(ui, repo, modheads, opts.get('update'), checkout)
@@ -2649,7 +2648,7 @@ def serve(ui, repo, **opts):
 
     if opts["stdio"]:
         if repo is None:
-            raise RepoError(_("There is no Mercurial repository here"
+            raise error.RepoError(_("There is no Mercurial repository here"
                               " (.hg not found)"))
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
@@ -2664,8 +2663,8 @@ def serve(ui, repo, **opts):
                 repo.ui.setconfig("web", o, str(opts[o]))
 
     if repo is None and not ui.config("web", "webdir_conf"):
-        raise RepoError(_("There is no Mercurial repository here"
-                          " (.hg not found)"))
+        raise error.RepoError(_("There is no Mercurial repository here"
+                                " (.hg not found)"))
 
     class service:
         def init(self):

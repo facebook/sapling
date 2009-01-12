@@ -15,7 +15,6 @@
 
 import os, time
 from mercurial.i18n import _
-from mercurial.repo import RepoError
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, error
 
@@ -33,7 +32,7 @@ class mercurial_sink(converter_sink):
                 self.repo = hg.repository(self.ui, path)
                 if not self.repo.local():
                     raise NoRepo(_('%s is not a local Mercurial repo') % path)
-            except RepoError, err:
+            except error.RepoError, err:
                 ui.print_exc()
                 raise NoRepo(err.args[0])
         else:
@@ -43,7 +42,7 @@ class mercurial_sink(converter_sink):
                 if not self.repo.local():
                     raise NoRepo(_('%s is not a local Mercurial repo') % path)
                 self.created.append(path)
-            except RepoError, err:
+            except error.RepoError, err:
                 ui.print_exc()
                 raise NoRepo("could not create hg repo %s as sink" % path)
         self.lock = None
@@ -159,7 +158,7 @@ class mercurial_sink(converter_sink):
          try:
              parentctx = self.repo[self.tagsbranch]
              tagparent = parentctx.node()
-         except RepoError, inst:
+         except error.RepoError, inst:
              parentctx = None
              tagparent = nullid
 
@@ -200,8 +199,8 @@ class mercurial_source(converter_source):
             # try to provoke an exception if this isn't really a hg
             # repo, but some other bogus compatible-looking url
             if not self.repo.local():
-                raise RepoError()
-        except RepoError:
+                raise error.RepoError()
+        except error.RepoError:
             ui.print_exc()
             raise NoRepo("%s is not a local Mercurial repo" % path)
         self.lastrev = None
@@ -213,7 +212,7 @@ class mercurial_source(converter_source):
         if startnode is not None:
             try:
                 startnode = self.repo.lookup(startnode)
-            except repo.RepoError:
+            except error.RepoError:
                 raise util.Abort(_('%s is not a valid start revision')
                                  % startnode)
             startrev = self.repo.changelog.rev(startnode)

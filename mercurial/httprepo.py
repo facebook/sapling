@@ -9,8 +9,7 @@
 from node import bin, hex, nullid
 from i18n import _
 import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
-import errno, socket, changegroup, statichttprepo
-import url
+import errno, socket, changegroup, statichttprepo, error, url
 
 def zgenerator(f):
     zd = zlib.decompressobj()
@@ -48,7 +47,7 @@ class httprepository(repo.repository):
         if self.caps is None:
             try:
                 self.caps = util.set(self.do_read('capabilities').split())
-            except repo.RepoError:
+            except error.RepoError:
                 self.caps = util.set()
             self.ui.debug(_('capabilities: %s\n') %
                           (' '.join(self.caps or ['none'])))
@@ -99,19 +98,19 @@ class httprepository(repo.repository):
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
             self.ui.debug(_("Requested URL: '%s'\n") % cu)
-            raise repo.RepoError(_("'%s' does not appear to be an hg repository")
-                               % self._url)
+            raise error.RepoError(_("'%s' does not appear to be an hg repository")
+                                  % self._url)
 
         if proto.startswith('application/mercurial-'):
             try:
                 version = proto.split('-', 1)[1]
                 version_info = tuple([int(n) for n in version.split('.')])
             except ValueError:
-                raise repo.RepoError(_("'%s' sent a broken Content-Type "
-                                     "header (%s)") % (self._url, proto))
+                raise error.RepoError(_("'%s' sent a broken Content-Type "
+                                        "header (%s)") % (self._url, proto))
             if version_info > (0, 1):
-                raise repo.RepoError(_("'%s' uses newer protocol %s") %
-                                   (self._url, version))
+                raise error.RepoError(_("'%s' uses newer protocol %s") %
+                                      (self._url, version))
 
         return resp
 
@@ -129,7 +128,7 @@ class httprepository(repo.repository):
         success, data = d[:-1].split(' ', 1)
         if int(success):
             return bin(data)
-        raise repo.RepoError(data)
+        raise error.RepoError(data)
 
     def heads(self):
         d = self.do_read("heads")
@@ -233,6 +232,6 @@ def instance(ui, path, create):
             inst = httprepository(ui, path)
         inst.between([(nullid, nullid)])
         return inst
-    except repo.RepoError:
+    except error.RepoError:
         ui.note('(falling back to static-http)\n')
         return statichttprepo.instance(ui, "static-" + path, create)

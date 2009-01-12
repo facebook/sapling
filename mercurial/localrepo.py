@@ -47,9 +47,9 @@ class localrepository(repo.repository):
                     reqfile.write("%s\n" % r)
                 reqfile.close()
             else:
-                raise repo.RepoError(_("repository %s not found") % path)
+                raise error.RepoError(_("repository %s not found") % path)
         elif create:
-            raise repo.RepoError(_("repository %s already exists") % path)
+            raise error.RepoError(_("repository %s already exists") % path)
         else:
             # find requirements
             requirements = []
@@ -57,7 +57,7 @@ class localrepository(repo.repository):
                 requirements = self.opener("requires").read().splitlines()
                 for r in requirements:
                     if r not in self.supported:
-                        raise repo.RepoError(_("requirement '%s' not supported") % r)
+                        raise error.RepoError(_("requirement '%s' not supported") % r)
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
@@ -460,7 +460,7 @@ class localrepository(repo.repository):
                 key = hex(key)
         except:
             pass
-        raise repo.RepoError(_("unknown revision '%s'") % key)
+        raise error.RepoError(_("unknown revision '%s'") % key)
 
     def local(self):
         return True
@@ -566,7 +566,7 @@ class localrepository(repo.repository):
 
         # abort here if the journal already exists
         if os.path.exists(self.sjoin("journal")):
-            raise repo.RepoError(_("journal already exists - run hg recover"))
+            raise error.RepoError(_("journal already exists - run hg recover"))
 
         # save dirstate for rollback
         try:
@@ -1393,7 +1393,8 @@ class localrepository(repo.repository):
         # sanity check our fetch list
         for f in fetch.keys():
             if f in m:
-                raise repo.RepoError(_("already have changeset ") + short(f[:4]))
+                raise error.RepoError(_("already have changeset ")
+                                      + short(f[:4]))
 
         if base.keys() == [nullid]:
             if force:

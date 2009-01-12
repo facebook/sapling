@@ -31,9 +31,8 @@ refresh contents of top applied patch     qrefresh
 
 from mercurial.i18n import _
 from mercurial.node import bin, hex, short
-from mercurial.repo import RepoError
 from mercurial import commands, cmdutil, hg, patch, revlog, util
-from mercurial import repair, extensions, url
+from mercurial import repair, extensions, url, error
 import os, sys, re, errno
 
 commands.norepo += " qclone"
@@ -1741,7 +1740,7 @@ def clone(ui, source, dest=None, **opts):
     patchespath = opts['patches'] or patchdir(sr)
     try:
         pr = hg.repository(ui, patchespath)
-    except RepoError:
+    except error.RepoError:
         raise util.Abort(_('versioned patch repository not found'
                            ' (see qinit -c)'))
     qbase, destrev = None, None
@@ -1757,7 +1756,7 @@ def clone(ui, source, dest=None, **opts):
     elif sr.capable('lookup'):
         try:
             qbase = sr.lookup('qbase')
-        except RepoError:
+        except error.RepoError:
             pass
     ui.note(_('cloning main repo\n'))
     sr, dr = hg.clone(ui, sr.url(), dest,
