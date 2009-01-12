@@ -2076,7 +2076,7 @@ class localrepository(repo.repository):
         try:
             resp = int(l)
         except ValueError:
-            raise util.UnexpectedOutput(
+            raise error.ResponseError(
                 _('Unexpected response from remote server:'), l)
         if resp == 1:
             raise util.Abort(_('operation forbidden by server'))
@@ -2089,7 +2089,7 @@ class localrepository(repo.repository):
         try:
             total_files, total_bytes = map(int, l.split(' ', 1))
         except (ValueError, TypeError):
-            raise util.UnexpectedOutput(
+            raise error.ResponseError(
                 _('Unexpected response from remote server:'), l)
         self.ui.status(_('%d files to transfer, %s of data\n') %
                        (total_files, util.bytecount(total_bytes)))
@@ -2101,7 +2101,7 @@ class localrepository(repo.repository):
                 name, size = l.split('\0', 1)
                 size = int(size)
             except (ValueError, TypeError):
-                raise util.UnexpectedOutput(
+                raise error.ResponseError(
                     _('Unexpected response from remote server:'), l)
             self.ui.debug(_('adding %s (%s)\n') % (name, util.bytecount(size)))
             ofp = self.sopener(name, 'w')

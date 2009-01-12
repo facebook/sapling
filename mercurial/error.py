@@ -46,3 +46,7 @@ class LockHeld(LockError):
 
 class LockUnavailable(LockError):
     pass
+
+class ResponseError(Exception):
+    """Raised to print an error with part of output and exit."""
+

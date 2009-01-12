@@ -135,7 +135,7 @@ class httprepository(repo.repository):
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            raise util.UnexpectedOutput(_("unexpected response:"), d)
+            raise error.ResponseError(_("unexpected response:"), d)
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -144,7 +144,7 @@ class httprepository(repo.repository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            raise util.UnexpectedOutput(_("unexpected response:"), d)
+            raise error.ResponseError(_("unexpected response:"), d)
 
     def between(self, pairs):
         batch = 8 # avoid giant requests
@@ -155,7 +155,7 @@ class httprepository(repo.repository):
             try:
                 r += [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             except:
-                raise util.UnexpectedOutput(_("unexpected response:"), d)
+                raise error.ResponseError(_("unexpected response:"), d)
         return r
 
     def changegroup(self, nodes, kind):
@@ -200,7 +200,7 @@ class httprepository(repo.repository):
                 try:
                     ret = int(resp_code)
                 except ValueError, err:
-                    raise util.UnexpectedOutput(
+                    raise error.ResponseError(
                             _('push failed (unexpected response):'), resp)
                 self.ui.write(output)
                 return ret

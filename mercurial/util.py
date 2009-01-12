@@ -335,9 +335,6 @@ def increasingchunks(source, min=1024, max=65536):
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
 
-class UnexpectedOutput(Abort):
-    """Raised to print an error with part of output and exit."""
-
 def always(fn): return True
 def never(fn): return False
 

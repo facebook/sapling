@@ -132,7 +132,7 @@ class sshrepository(repo.repository):
         try:
             l = int(l)
         except:
-            self.raise_(util.UnexpectedOutput(_("unexpected response:"), l))
+            self.raise_(error.ResponseError(_("unexpected response:"), l))
         return self.pipei.read(l)
 
     def _send(self, data, flush=False):
@@ -164,7 +164,7 @@ class sshrepository(repo.repository):
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            self.raise_(util.UnexpectedOutput(_("unexpected response:"), d))
+            self.raise_(error.ResponseError(_("unexpected response:"), d))
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -173,7 +173,7 @@ class sshrepository(repo.repository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            self.raise_(util.UnexpectedOutput(_("unexpected response:"), d))
+            self.raise_(error.ResponseError(_("unexpected response:"), d))
 
     def between(self, pairs):
         n = " ".join(["-".join(map(hex, p)) for p in pairs])
@@ -182,7 +182,7 @@ class sshrepository(repo.repository):
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            self.raise_(util.UnexpectedOutput(_("unexpected response:"), d))
+            self.raise_(error.ResponseError(_("unexpected response:"), d))
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
@@ -217,7 +217,7 @@ class sshrepository(repo.repository):
         try:
             return int(r)
         except:
-            self.raise_(util.UnexpectedOutput(_("unexpected response:"), r))
+            self.raise_(error.ResponseError(_("unexpected response:"), r))
 
     def addchangegroup(self, cg, source, url):
         d = self.call("addchangegroup")
@@ -239,7 +239,7 @@ class sshrepository(repo.repository):
         try:
             return int(r)
         except:
-            self.raise_(util.UnexpectedOutput(_("unexpected response:"), r))
+            self.raise_(error.ResponseError(_("unexpected response:"), r))
 
     def stream_out(self):
         return self.do_cmd('stream_out')

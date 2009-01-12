@@ -111,7 +111,7 @@ def _runcatch(ui, args):
             ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
         else:
             ui.warn(_("abort: %s\n") % inst.strerror)
-    except util.UnexpectedOutput, inst:
+    except error.ResponseError, inst:
         ui.warn(_("abort: %s") % inst.args[0])
         if not isinstance(inst.args[1], basestring):
             ui.warn(" %r\n" % (inst.args[1],))
