@@ -25,12 +25,10 @@ This will cause bookmarks to track the bookmark that you are currently on, and
 just updates it. This is similar to git's approach of branching.
 '''
 
-from mercurial.commands import templateopts, hex, short
-from mercurial import extensions
 from mercurial.i18n import _
-from mercurial import cmdutil, util, commands, changelog
-from mercurial.node import nullid, nullrev
-import mercurial, mercurial.localrepo, mercurial.repair, os
+from mercurial.node import nullid, nullrev, hex, short
+from mercurial import util, commands, localrepo, repair, extensions
+import os
 
 def parse(repo):
     '''Parse .hg/bookmarks file and return a dictionary
@@ -198,7 +196,7 @@ def _revstostrip(changelog, node):
                         saveheads.append(p)
     return [r for r in tostrip if r not in saveheads]
 
-def strip(ui, repo, node, backup="all"):
+def strip(oldstrip, ui, repo, node, backup="all"):
     """Strip bookmarks if revisions are stripped using
     the mercurial.strip method. This usually happens during
     qpush and qpop"""
@@ -214,11 +212,8 @@ def strip(ui, repo, node, backup="all"):
             marks[m] = repo.changectx('.').node()
         write(repo, marks)
 
-oldstrip = mercurial.repair.strip
-mercurial.repair.strip = strip
-
 def reposetup(ui, repo):
-    if not isinstance(repo, mercurial.localrepo.localrepository):
+    if not isinstance(repo, localrepo.localrepository):
         return
 
     # init a bookmark cache as otherwise we would get a infinite reading
@@ -293,6 +288,11 @@ def reposetup(ui, repo):
 
     repo.__class__ = bookmark_repo
 
+def uisetup(ui):
+    extensions.wrapfunction(repair, "strip", strip)
+    if ui.configbool('bookmarks', 'track.current'):
+        extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
+
 def updatecurbookmark(orig, ui, repo, *args, **opts):
     '''Set the current bookmark
 
@@ -305,11 +305,6 @@ def updatecurbookmark(orig, ui, repo, *args, **opts):
         rev = args[0]
     setcurrent(repo, rev)
     return res
-
-def uisetup(ui):
-    'Replace push with a decorator to provide --non-bookmarked option'
-    if ui.configbool('bookmarks', 'track.current'):
-        extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
 
 cmdtable = {
     "bookmarks":
