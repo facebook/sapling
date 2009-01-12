@@ -13,7 +13,7 @@ For more information:
 http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject
 '''
 
-from mercurial import util, repair, merge, cmdutil, dispatch, commands
+from mercurial import util, repair, merge, cmdutil, commands, error
 from mercurial import extensions, ancestor
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
@@ -67,21 +67,21 @@ def rebase(ui, repo, **opts):
         extrafn = opts.get('extrafn')
         if opts.get('keepbranches', None):
             if extrafn:
-                raise dispatch.ParseError('rebase',
-                        _('cannot use both keepbranches and extrafn'))
+                raise error.ParseError(
+                    'rebase', _('cannot use both keepbranches and extrafn'))
             def extrafn(ctx, extra):
                 extra['branch'] = ctx.branch()
 
         if contf or abortf:
             if contf and abortf:
-                raise dispatch.ParseError('rebase',
-                                    _('cannot use both abort and continue'))
+                raise error.ParseError('rebase',
+                                       _('cannot use both abort and continue'))
             if collapsef:
-                raise dispatch.ParseError('rebase',
-                        _('cannot use collapse with continue or abort'))
+                raise error.ParseError(
+                    'rebase', _('cannot use collapse with continue or abort'))
 
             if (srcf or basef or destf):
-                raise dispatch.ParseError('rebase',
+                raise error.ParseError('rebase',
                     _('abort and continue do not allow specifying revisions'))
 
             originalwd, target, state, collapsef, external = restorestatus(repo)
@@ -90,8 +90,8 @@ def rebase(ui, repo, **opts):
                 return
         else:
             if srcf and basef:
-                raise dispatch.ParseError('rebase', _('cannot specify both a '
-                                                        'revision and a base'))
+                raise error.ParseError('rebase', _('cannot specify both a '
+                                                   'revision and a base'))
             cmdutil.bail_if_changed(repo)
             result = buildstate(repo, destf, srcf, basef, collapsef)
             if result:

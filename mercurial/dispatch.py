@@ -12,9 +12,6 @@ import util, commands, hg, lock, fancyopts, extensions, hook, error
 import cmdutil
 import ui as _ui
 
-class ParseError(Exception):
-    """Exception raised on errors in parsing the command line."""
-
 def run():
     "run the command in sys.argv"
     sys.exit(dispatch(sys.argv[1:]))
@@ -52,7 +49,7 @@ def _runcatch(ui, args):
             ui.print_exc()
             raise
 
-    except ParseError, inst:
+    except error.ParseError, inst:
         if inst.args[0]:
             ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
             commands.help_(ui, inst.args[0])
@@ -167,7 +164,7 @@ def _parse(ui, args):
     try:
         args = fancyopts.fancyopts(args, commands.globalopts, options)
     except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(None, inst)
+        raise error.ParseError(None, inst)
 
     if args:
         cmd, args = args[0], args[1:]
@@ -189,7 +186,7 @@ def _parse(ui, args):
     try:
         args = fancyopts.fancyopts(args, c, cmdoptions)
     except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(cmd, inst)
+        raise error.ParseError(cmd, inst)
 
     # separate global options back out
     for o in commands.globalopts:
@@ -375,7 +372,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
         try:
             return cmdfunc()
         except util.SignatureError:
-            raise ParseError(cmd, _("invalid arguments"))
+            raise error.ParseError(cmd, _("invalid arguments"))
 
     if options['profile']:
         import hotshot, hotshot.stats
