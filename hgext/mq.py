@@ -30,8 +30,8 @@ refresh contents of top applied patch     qrefresh
 '''
 
 from mercurial.i18n import _
-from mercurial.node import bin, hex, short
-from mercurial import commands, cmdutil, hg, patch, revlog, util
+from mercurial.node import bin, hex, short, nullid, nullrev
+from mercurial import commands, cmdutil, hg, patch, util
 from mercurial import repair, extensions, url, error
 import os, sys, re, errno
 
@@ -427,16 +427,16 @@ class queue:
     def qparents(self, repo, rev=None):
         if rev is None:
             (p1, p2) = repo.dirstate.parents()
-            if p2 == revlog.nullid:
+            if p2 == nullid:
                 return p1
             if len(self.applied) == 0:
                 return None
-            return revlog.bin(self.applied[-1].rev)
+            return bin(self.applied[-1].rev)
         pp = repo.changelog.parents(rev)
-        if pp[1] != revlog.nullid:
+        if pp[1] != nullid:
             arevs = [ x.rev for x in self.applied ]
-            p0 = revlog.hex(pp[0])
-            p1 = revlog.hex(pp[1])
+            p0 = hex(pp[0])
+            p1 = hex(pp[1])
             if p0 in arevs:
                 return pp[0]
             if p1 in arevs:
@@ -454,7 +454,7 @@ class queue:
             pname = ".hg.patches.merge.marker"
             n = repo.commit(None, '[mq]: merge marker', user=None, force=1)
             self.removeundo(repo)
-            self.applied.append(statusentry(revlog.hex(n), pname))
+            self.applied.append(statusentry(hex(n), pname))
             self.applied_dirty = 1
 
         head = self.qparents(repo)
@@ -472,10 +472,10 @@ class queue:
             if not info:
                 self.ui.warn(_("patch %s is not applied\n") % patch)
                 return (1, None)
-            rev = revlog.bin(info[1])
+            rev = bin(info[1])
             (err, head) = self.mergeone(repo, mergeq, head, patch, rev)
             if head:
-                self.applied.append(statusentry(revlog.hex(head), patch))
+                self.applied.append(statusentry(hex(head), patch))
                 self.applied_dirty = 1
             if err:
                 return (err, head)
@@ -580,7 +580,7 @@ class queue:
                 raise util.Abort(_("repo commit failed"))
 
             if update_status:
-                self.applied.append(statusentry(revlog.hex(n), patchname))
+                self.applied.append(statusentry(hex(n), patchname))
 
             if patcherr:
                 if not ph.haspatch:
@@ -612,7 +612,7 @@ class queue:
         for rev in util.sort(revs):
             if rev < firstrev:
                 raise util.Abort(_('revision %d is not managed') % rev)
-            base = revlog.bin(self.applied[appliedbase].rev)
+            base = bin(self.applied[appliedbase].rev)
             node = repo.changelog.node(rev)
             if node != base:
                 raise util.Abort(_('cannot delete revision %d above '
@@ -657,7 +657,7 @@ class queue:
                 if appliedbase >= len(self.applied):
                     raise util.Abort(_("revision %d is not managed") % rev)
 
-                base = revlog.bin(self.applied[appliedbase].rev)
+                base = bin(self.applied[appliedbase].rev)
                 node = repo.changelog.node(rev)
                 if node != base:
                     raise util.Abort(_("cannot delete revision %d above "
@@ -680,7 +680,7 @@ class queue:
 
     def check_toppatch(self, repo):
         if len(self.applied) > 0:
-            top = revlog.bin(self.applied[-1].rev)
+            top = bin(self.applied[-1].rev)
             pp = repo.dirstate.parents()
             if top not in pp:
                 raise util.Abort(_("working directory revision is not qtip"))
@@ -750,7 +750,7 @@ class queue:
                     raise util.Abort(_("repo commit failed"))
                 try:
                     self.full_series[insert:insert] = [patchfn]
-                    self.applied.append(statusentry(revlog.hex(n), patchfn))
+                    self.applied.append(statusentry(hex(n), patchfn))
                     self.parse_series()
                     self.series_dirty = 1
                     self.applied_dirty = 1
@@ -1005,7 +1005,7 @@ class queue:
 
             if not update:
                 parents = repo.dirstate.parents()
-                rr = [ revlog.bin(x.rev) for x in self.applied ]
+                rr = [ bin(x.rev) for x in self.applied ]
                 for p in parents:
                     if p in rr:
                         self.ui.warn(_("qpop: forcing dirstate update\n"))
@@ -1024,17 +1024,17 @@ class queue:
 
             self.applied_dirty = 1
             end = len(self.applied)
-            rev = revlog.bin(self.applied[start].rev)
+            rev = bin(self.applied[start].rev)
             if update:
                 top = self.check_toppatch(repo)
 
             try:
                 heads = repo.changelog.heads(rev)
-            except revlog.LookupError:
+            except error.LookupError:
                 node = short(rev)
                 raise util.Abort(_('trying to pop unknown node %s') % node)
 
-            if heads != [revlog.bin(self.applied[-1].rev)]:
+            if heads != [bin(self.applied[-1].rev)]:
                 raise util.Abort(_("popping would remove a revision not "
                                    "managed by this patch queue"))
 
@@ -1062,7 +1062,7 @@ class queue:
                     try: os.removedirs(os.path.dirname(repo.wjoin(f)))
                     except: pass
                     repo.dirstate.forget(f)
-                repo.dirstate.setparents(qp, revlog.nullid)
+                repo.dirstate.setparents(qp, nullid)
             del self.applied[start:end]
             self.strip(repo, rev, update=False, backup='strip')
             if len(self.applied):
@@ -1094,7 +1094,7 @@ class queue:
         try:
             self.check_toppatch(repo)
             (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
-            top = revlog.bin(top)
+            top = bin(top)
             if repo.changelog.heads(top) != [top]:
                 raise util.Abort(_("cannot refresh a revision with children"))
             cparents = repo.changelog.parents(top)
@@ -1268,7 +1268,7 @@ class queue:
                     patchf.rename()
                     n = repo.commit(match.files(), message, user, ph.date,
                                     match=match, force=1)
-                    self.applied.append(statusentry(revlog.hex(n), patchfn))
+                    self.applied.append(statusentry(hex(n), patchfn))
                 except:
                     ctx = repo[cparents[0]]
                     repo.dirstate.rebuild(ctx.node(), ctx.manifest())
@@ -1456,7 +1456,7 @@ class queue:
         if not n:
             self.ui.warn(_("repo commit failed\n"))
             return 1
-        self.applied.append(statusentry(revlog.hex(n),'.hg.patches.save.line'))
+        self.applied.append(statusentry(hex(n),'.hg.patches.save.line'))
         self.applied_dirty = 1
         self.removeundo(repo)
 
@@ -1534,14 +1534,14 @@ class queue:
                 raise util.Abort(_('revision %d is the root of more than one '
                                    'branch') % rev[-1])
             if self.applied:
-                base = revlog.hex(repo.changelog.node(rev[0]))
+                base = hex(repo.changelog.node(rev[0]))
                 if base in [n.rev for n in self.applied]:
                     raise util.Abort(_('revision %d is already managed')
                                      % rev[0])
-                if heads != [revlog.bin(self.applied[-1].rev)]:
+                if heads != [bin(self.applied[-1].rev)]:
                     raise util.Abort(_('revision %d is not the parent of '
                                        'the queue') % rev[0])
-                base = repo.changelog.rev(revlog.bin(self.applied[0].rev))
+                base = repo.changelog.rev(bin(self.applied[0].rev))
                 lastparent = repo.changelog.parentrevs(base)[0]
             else:
                 if heads != [repo.changelog.node(rev[0])]:
@@ -1555,7 +1555,7 @@ class queue:
             for r in rev:
                 p1, p2 = repo.changelog.parentrevs(r)
                 n = repo.changelog.node(r)
-                if p2 != revlog.nullrev:
+                if p2 != nullrev:
                     raise util.Abort(_('cannot import merge revision %d') % r)
                 if lastparent and lastparent != r:
                     raise util.Abort(_('revision %d is not the parent of %d')
@@ -1573,7 +1573,7 @@ class queue:
                 patch.export(repo, [n], fp=patchf, opts=self.diffopts())
                 patchf.close()
 
-                se = statusentry(revlog.hex(n), patchname)
+                se = statusentry(hex(n), patchname)
                 self.applied.insert(0, se)
 
                 added.append(patchname)
@@ -1746,7 +1746,7 @@ def clone(ui, source, dest=None, **opts):
     qbase, destrev = None, None
     if sr.local():
         if sr.mq.applied:
-            qbase = revlog.bin(sr.mq.applied[0].rev)
+            qbase = bin(sr.mq.applied[0].rev)
             if not hg.islocal(dest):
                 heads = dict.fromkeys(sr.heads())
                 for h in sr.heads(qbase):
@@ -2221,9 +2221,9 @@ def strip(ui, repo, rev, **opts):
     p = repo.dirstate.parents()
     cl = repo.changelog
     update = True
-    if p[0] == revlog.nullid:
+    if p[0] == nullid:
         update = False
-    elif p[1] == revlog.nullid and rev != cl.ancestor(p[0], rev):
+    elif p[1] == nullid and rev != cl.ancestor(p[0], rev):
         update = False
     elif rev not in (cl.ancestor(p[0], rev), cl.ancestor(p[1], rev)):
         update = False
@@ -2366,7 +2366,7 @@ def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         def abort_if_wdir_patched(self, errmsg, force=False):
             if self.mq.applied and not force:
-                parent = revlog.hex(self.dirstate.parents()[0])
+                parent = hex(self.dirstate.parents()[0])
                 if parent in [s.rev for s in self.mq.applied]:
                     raise util.Abort(errmsg)
 
@@ -2396,11 +2396,11 @@ def reposetup(ui, repo):
             if not q.applied:
                 return tagscache
 
-            mqtags = [(revlog.bin(patch.rev), patch.name) for patch in q.applied]
+            mqtags = [(bin(patch.rev), patch.name) for patch in q.applied]
 
             if mqtags[-1][0] not in self.changelog.nodemap:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
-                             % revlog.short(mqtags[-1][0]))
+                             % short(mqtags[-1][0]))
                 return tagscache
 
             mqtags.append((mqtags[-1][0], 'qtip'))
@@ -2421,10 +2421,10 @@ def reposetup(ui, repo):
                 return super(mqrepo, self)._branchtags(partial, lrev)
 
             cl = self.changelog
-            qbasenode = revlog.bin(q.applied[0].rev)
+            qbasenode = bin(q.applied[0].rev)
             if qbasenode not in cl.nodemap:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
-                             % revlog.short(qbasenode))
+                             % short(qbasenode))
                 return super(mqrepo, self)._branchtags(partial, lrev)
 
             qbase = cl.rev(qbasenode)
