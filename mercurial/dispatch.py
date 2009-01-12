@@ -48,21 +48,11 @@ def _runcatch(ui, args):
             ui.print_exc()
             raise
 
-    except error.ParseError, inst:
-        if inst.args[0]:
-            ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
-            commands.help_(ui, inst.args[0])
-        else:
-            ui.warn(_("hg: %s\n") % inst.args[1])
-            commands.help_(ui, 'shortlist')
+    # Global exception handling, alphabetically
+    # Mercurial-specific first, followed by built-in and library exceptions
     except error.AmbiguousCommand, inst:
         ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
-    except error.UnknownCommand, inst:
-        ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
-        commands.help_(ui, 'shortlist')
-    except error.RepoError, inst:
-        ui.warn(_("abort: %s!\n") % inst)
     except error.LockHeld, inst:
         if inst.errno == errno.ETIMEDOUT:
             reason = _('timed out waiting for lock held by %s') % inst.locker
@@ -72,21 +62,39 @@ def _runcatch(ui, args):
     except error.LockUnavailable, inst:
         ui.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
+    except error.ParseError, inst:
+        if inst.args[0]:
+            ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
+            commands.help_(ui, inst.args[0])
+        else:
+            ui.warn(_("hg: %s\n") % inst.args[1])
+            commands.help_(ui, 'shortlist')
+    except error.RepoError, inst:
+        ui.warn(_("abort: %s!\n") % inst)
+    except error.ResponseError, inst:
+        ui.warn(_("abort: %s") % inst.args[0])
+        if not isinstance(inst.args[1], basestring):
+            ui.warn(" %r\n" % (inst.args[1],))
+        elif not inst.args[1]:
+            ui.warn(_(" empty string\n"))
+        else:
+            ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
     except error.RevlogError, inst:
         ui.warn(_("abort: %s!\n") % inst)
     except error.SignalInterrupt:
         ui.warn(_("killed!\n"))
-    except KeyboardInterrupt:
-        try:
-            ui.warn(_("interrupted!\n"))
-        except IOError, inst:
-            if inst.errno == errno.EPIPE:
-                if ui.debugflag:
-                    ui.warn(_("\nbroken pipe\n"))
-            else:
-                raise
-    except socket.error, inst:
-        ui.warn(_("abort: %s\n") % inst.args[-1])
+    except error.UnknownCommand, inst:
+        ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
+        commands.help_(ui, 'shortlist')
+    except util.Abort, inst:
+        ui.warn(_("abort: %s\n") % inst)
+    except ImportError, inst:
+        m = str(inst).split()[-1]
+        ui.warn(_("abort: could not import module %s!\n") % m)
+        if m in "mpatch bdiff".split():
+            ui.warn(_("(did you forget to compile extensions?)\n"))
+        elif m in "zlib".split():
+            ui.warn(_("(is your Python install correct?)\n"))
     except IOError, inst:
         if hasattr(inst, "code"):
             ui.warn(_("abort: %s\n") % inst)
@@ -111,30 +119,23 @@ def _runcatch(ui, args):
             ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
         else:
             ui.warn(_("abort: %s\n") % inst.strerror)
-    except error.ResponseError, inst:
-        ui.warn(_("abort: %s") % inst.args[0])
-        if not isinstance(inst.args[1], basestring):
-            ui.warn(" %r\n" % (inst.args[1],))
-        elif not inst.args[1]:
-            ui.warn(_(" empty string\n"))
-        else:
-            ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
-    except ImportError, inst:
-        m = str(inst).split()[-1]
-        ui.warn(_("abort: could not import module %s!\n") % m)
-        if m in "mpatch bdiff".split():
-            ui.warn(_("(did you forget to compile extensions?)\n"))
-        elif m in "zlib".split():
-            ui.warn(_("(is your Python install correct?)\n"))
-
-    except util.Abort, inst:
-        ui.warn(_("abort: %s\n") % inst)
+    except KeyboardInterrupt:
+        try:
+            ui.warn(_("interrupted!\n"))
+        except IOError, inst:
+            if inst.errno == errno.EPIPE:
+                if ui.debugflag:
+                    ui.warn(_("\nbroken pipe\n"))
+            else:
+                raise
     except MemoryError:
         ui.warn(_("abort: out of memory\n"))
     except SystemExit, inst:
         # Commands shouldn't sys.exit directly, but give a return code.
         # Just in case catch this and and pass exit code to caller.
         return inst.code
+    except socket.error, inst:
+        ui.warn(_("abort: %s\n") % inst.args[-1])
     except:
         ui.warn(_("** unknown exception encountered, details follow\n"))
         ui.warn(_("** report bug details to "
