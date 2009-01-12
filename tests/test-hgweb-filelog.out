@@ -1,8 +1,20 @@
 adding b
 adding a
 adding a
-changeset:   5:a3b6a9e4507e
+changeset:   6:38d962e6234d
 tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     change c
+
+diff -r a3b6a9e4507e -r 38d962e6234d c
+--- a/c	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:00 1970 +0000
+@@ -1,1 +1,2 @@
+ b
++c
+
+changeset:   5:a3b6a9e4507e
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     mv b
@@ -474,8 +486,8 @@ a@6563da9dcf87: not found in manifest
 <a href="/shortlog?style=spartan">shortlog</a>
 <a href="/graph?style=spartan">graph</a>
 <a href="/tags?style=spartan">tags</a>
-<a href="/file/a3b6a9e4507e/c?style=spartan">file</a>
-<a href="/annotate/a3b6a9e4507e/c?style=spartan">annotate</a>
+<a href="/file/38d962e6234d/c?style=spartan">file</a>
+<a href="/annotate/38d962e6234d/c?style=spartan">annotate</a>
 <a type="application/rss+xml" href="/rss-log/tip/c">rss</a>
 <a type="application/atom+xml" href="/atom-log/tip/c" title="Atom feed for test:c">atom</a>
 </div>
@@ -485,6 +497,31 @@ a@6563da9dcf87: not found in manifest
 <p>navigate: <small class="navigate"><a href="/log/a3b6a9e4507e/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
 
 <table class="logEntry parity0">
+ <tr>
+  <th class="age">many years ago:</th>
+  <th class="firstline"><a href="/rev/38d962e6234d?style=spartan">change c</a></th>
+ </tr>
+ <tr>
+  <th class="revision">revision 1:</td>
+  <td class="node">
+   <a href="/file/38d962e6234d/c?style=spartan">38d962e6234d</a>
+   <a href="/diff/38d962e6234d/c?style=spartan">(diff)</a>
+   <a href="/annotate/38d962e6234d/c?style=spartan">(annotate)</a>
+  </td>
+ </tr>
+ 
+ <tr>
+  <th class="author">author:</th>
+  <td class="author">&#116;&#101;&#115;&#116;</td>
+ </tr>
+ <tr>
+  <th class="date">date:</th>
+  <td class="date">Thu Jan 01 00:00:00 1970 +0000</td>
+ </tr>
+</table>
+
+
+<table class="logEntry parity1">
  <tr>
   <th class="age">many years ago:</th>
   <th class="firstline"><a href="/rev/a3b6a9e4507e?style=spartan">mv b</a></th>

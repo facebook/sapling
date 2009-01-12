@@ -19,6 +19,9 @@ hg ci -m "del2 a"
 hg mv b c
 hg ci -m "mv b"
 
+echo c >> c
+hg ci -m "change c"
+
 hg log -p
 
 hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
