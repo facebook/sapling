@@ -371,7 +371,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():
         try:
             return cmdfunc()
-        except util.SignatureError:
+        except error.SignatureError:
             raise error.ParseError(cmd, _("invalid arguments"))
 
     if options['profile']:

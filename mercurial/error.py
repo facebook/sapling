@@ -59,3 +59,6 @@ class AmbiguousCommand(Exception):
 # derived from KeyboardInterrupt to simplify some breakout code
 class SignalInterrupt(KeyboardInterrupt):
     """Exception raised on SIGTERM and SIGHUP."""
+
+class SignatureError(Exception):
+    pass

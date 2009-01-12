@@ -13,7 +13,7 @@ platform-specific details from the core.
 """
 
 from i18n import _
-import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback
+import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback, error
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
 import imp
 
@@ -707,9 +707,6 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         if cwd is not None and oldcwd != cwd:
             os.chdir(oldcwd)
 
-class SignatureError(Exception):
-    pass
-
 def checksignature(func):
     '''wrap a function with code to check for calling errors'''
     def check(*args, **kwargs):
@@ -717,7 +714,7 @@ def checksignature(func):
             return func(*args, **kwargs)
         except TypeError:
             if len(traceback.extract_tb(sys.exc_info()[2])) == 1:
-                raise SignatureError
+                raise error.SignatureError
             raise
 
     return check
