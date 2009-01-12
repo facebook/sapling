@@ -26,7 +26,7 @@ class sshrepository(repo.repository):
 
         m = re.match(r'^ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?$', path)
         if not m:
-            self.raise_(error.RepoError(_("couldn't parse location %s") % path))
+            self.abort(error.RepoError(_("couldn't parse location %s") % path))
 
         self.user = m.group(2)
         self.host = m.group(3)
@@ -45,7 +45,7 @@ class sshrepository(repo.repository):
             ui.note(_('running %s\n') % cmd)
             res = util.system(cmd)
             if res != 0:
-                self.raise_(error.RepoError(_("could not create remote repo")))
+                self.abort(error.RepoError(_("could not create remote repo")))
 
         self.validate_repo(ui, sshcmd, args, remotecmd)
 
@@ -78,7 +78,7 @@ class sshrepository(repo.repository):
             lines.append(l)
             max_noise -= 1
         else:
-            self.raise_(error.RepoError(_("no suitable response from remote hg")))
+            self.abort(error.RepoError(_("no suitable response from remote hg")))
 
         self.capabilities = util.set()
         lines.reverse()
@@ -95,7 +95,7 @@ class sshrepository(repo.repository):
             if not l: break
             self.ui.status(_("remote: "), l)
 
-    def raise_(self, exception):
+    def abort(self, exception):
         self.cleanup()
         raise exception
 
@@ -132,7 +132,7 @@ class sshrepository(repo.repository):
         try:
             l = int(l)
         except:
-            self.raise_(error.ResponseError(_("unexpected response:"), l))
+            self.abort(error.ResponseError(_("unexpected response:"), l))
         return self.pipei.read(l)
 
     def _send(self, data, flush=False):
@@ -157,14 +157,14 @@ class sshrepository(repo.repository):
         if int(success):
             return bin(data)
         else:
-            self.raise_(error.RepoError(data))
+            self.abort(error.RepoError(data))
 
     def heads(self):
         d = self.call("heads")
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            self.raise_(error.ResponseError(_("unexpected response:"), d))
+            self.abort(error.ResponseError(_("unexpected response:"), d))
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -173,7 +173,7 @@ class sshrepository(repo.repository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            self.raise_(error.ResponseError(_("unexpected response:"), d))
+            self.abort(error.ResponseError(_("unexpected response:"), d))
 
     def between(self, pairs):
         n = " ".join(["-".join(map(hex, p)) for p in pairs])
@@ -182,7 +182,7 @@ class sshrepository(repo.repository):
             p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             return p
         except:
-            self.raise_(error.ResponseError(_("unexpected response:"), d))
+            self.abort(error.ResponseError(_("unexpected response:"), d))
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
@@ -198,7 +198,7 @@ class sshrepository(repo.repository):
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
         if d:
             # remote may send "unsynced changes"
-            self.raise_(error.RepoError(_("push refused: %s") % d))
+            self.abort(error.RepoError(_("push refused: %s") % d))
 
         while 1:
             d = cg.read(4096)
@@ -211,18 +211,18 @@ class sshrepository(repo.repository):
         r = self._recv()
         if r:
             # remote may send "unsynced changes"
-            self.raise_(error.RepoError(_("push failed: %s") % r))
+            self.abort(error.RepoError(_("push failed: %s") % r))
 
         r = self._recv()
         try:
             return int(r)
         except:
-            self.raise_(error.ResponseError(_("unexpected response:"), r))
+            self.abort(error.ResponseError(_("unexpected response:"), r))
 
     def addchangegroup(self, cg, source, url):
         d = self.call("addchangegroup")
         if d:
-            self.raise_(error.RepoError(_("push refused: %s") % d))
+            self.abort(error.RepoError(_("push refused: %s") % d))
         while 1:
             d = cg.read(4096)
             if not d:
@@ -239,7 +239,7 @@ class sshrepository(repo.repository):
         try:
             return int(r)
         except:
-            self.raise_(error.ResponseError(_("unexpected response:"), r))
+            self.abort(error.ResponseError(_("unexpected response:"), r))
 
     def stream_out(self):
         return self.do_cmd('stream_out')
