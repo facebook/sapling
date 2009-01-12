@@ -1011,6 +1011,14 @@ class queue:
                     if p in rr:
                         self.ui.warn(_("qpop: forcing dirstate update\n"))
                         update = True
+            else:
+                parents = [p.hex() for p in repo[None].parents()]
+                needupdate = False
+                for entry in self.applied[start:]:
+                    if entry.rev in parents:
+                        needupdate = True
+                        break
+                update = needupdate
 
             if not force and update:
                 self.check_localchanges(repo)
@@ -1021,7 +1029,13 @@ class queue:
             if update:
                 top = self.check_toppatch(repo)
 
-            if repo.changelog.heads(rev) != [revlog.bin(self.applied[-1].rev)]:
+            try:
+                heads = repo.changelog.heads(rev)
+            except revlog.LookupError:
+                node = short(rev)
+                raise util.Abort(_('trying to pop unknown node %s') % node)
+
+            if heads != [revlog.bin(self.applied[-1].rev)]:
                 raise util.Abort(_("popping would remove a revision not "
                                    "managed by this patch queue"))
 
