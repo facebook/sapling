@@ -993,6 +993,17 @@ class queue:
                 self.ui.warn(_("no patches applied\n"))
                 return not all
 
+            if all:
+                start = 0
+            elif patch:
+                start = info[0] + 1
+            else:
+                start = len(self.applied) - 1
+
+            if start >= len(self.applied):
+                self.ui.warn(_("qpop: %s is already at the top\n") % patch)
+                return
+
             if not update:
                 parents = repo.dirstate.parents()
                 rr = [ revlog.bin(x.rev) for x in self.applied ]
@@ -1004,23 +1015,9 @@ class queue:
             if not force and update:
                 self.check_localchanges(repo)
 
-            self.applied_dirty = 1;
+            self.applied_dirty = 1
             end = len(self.applied)
-            if not patch:
-                if all:
-                    popi = 0
-                else:
-                    popi = len(self.applied) - 1
-            else:
-                popi = info[0] + 1
-                if popi >= end:
-                    self.ui.warn(_("qpop: %s is already at the top\n") % patch)
-                    return
-            info = [ popi ] + [self.applied[popi].rev, self.applied[popi].name]
-
-            start = info[0]
-            rev = revlog.bin(info[1])
-
+            rev = revlog.bin(self.applied[start].rev)
             if update:
                 top = self.check_toppatch(repo)
 
