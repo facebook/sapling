@@ -637,7 +637,7 @@ class localrepository(repo.repository):
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
             l = lock.lock(lockname, 0, releasefn, desc=desc)
-        except lock.LockHeld, inst:
+        except error.LockHeld, inst:
             if not wait:
                 raise
             self.ui.warn(_("waiting for lock on %s held by %r\n") %
@@ -1023,7 +1023,7 @@ class localrepository(repo.repository):
                             wlock = self.wlock(False)
                             for f in fixup:
                                 self.dirstate.normal(f)
-                        except lock.LockException:
+                        except lock.LockError:
                             pass
                     finally:
                         del wlock

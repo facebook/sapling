@@ -8,7 +8,7 @@
 
 from i18n import _
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
-import errno, lock, os, shutil, util, extensions
+import errno, lock, os, shutil, util, extensions, error
 import merge as _merge
 import verify as _verify
 
@@ -161,7 +161,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 # not pointed to by changesets, thus causing verify to
                 # fail
                 src_lock = src_repo.lock()
-            except lock.LockException:
+            except error.LockError:
                 copy = False
 
         if copy:

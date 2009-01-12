@@ -63,13 +63,13 @@ def _runcatch(ui, args):
         commands.help_(ui, 'shortlist')
     except error.RepoError, inst:
         ui.warn(_("abort: %s!\n") % inst)
-    except lock.LockHeld, inst:
+    except error.LockHeld, inst:
         if inst.errno == errno.ETIMEDOUT:
             reason = _('timed out waiting for lock held by %s') % inst.locker
         else:
             reason = _('lock held by %s') % inst.locker
         ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-    except lock.LockUnavailable, inst:
+    except error.LockUnavailable, inst:
         ui.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
     except error.RevlogError, inst:

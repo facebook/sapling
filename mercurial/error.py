@@ -33,3 +33,16 @@ class RepoError(Exception):
 
 class CapabilityError(RepoError):
     pass
+
+class LockError(IOError):
+    def __init__(self, errno, strerror, filename, desc):
+        IOError.__init__(self, errno, strerror, filename)
+        self.desc = desc
+
+class LockHeld(LockError):
+    def __init__(self, errno, filename, desc, locker):
+        LockError.__init__(self, errno, 'Lock held', filename, desc)
+        self.locker = locker
+
+class LockUnavailable(LockError):
+    pass
