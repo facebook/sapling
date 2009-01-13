@@ -39,27 +39,27 @@ class SubversionRepo(object):
         # TODO(augie) need to figure out a way to do auth
         self.repo = repos.RemoteRepository(self.svn_url)
 
-    @property
     def HEAD(self):
         raise NotImplementedError
+    HEAD = property(HEAD)
 
-    @property
     def START(self):
         return 0
+    START = property(START)
 
-    @property
     def branches(self):
         """Get the branches defined in this repo assuming a standard layout.
         """
         raise NotImplementedError
+    branches = property(branches)
 
-    @property
     def tags(self):
         """Get the current tags in this repo assuming a standard layout.
 
         This returns a dictionary of tag: (source path, source rev)
         """
         raise NotImplementedError
+    tags = property(tags)
 
     def _get_copy_source(self, path, cached_head=None):
         """Get copy revision for the given path, assuming it was meant to be

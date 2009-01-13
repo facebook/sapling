@@ -11,8 +11,6 @@ import fetch_command
 import utility_commands
 
 
-@util.register_subcommand('push')
-@util.register_subcommand('dcommit') # for git expats
 def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                  stupid=False, **opts):
     """Push revisions starting at a specified head back to Subversion.
@@ -91,6 +89,9 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
         svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
     merc_util._encoding = oldencoding
     return 0
+push_revisions_to_subversion = util.register_subcommand('push')(push_revisions_to_subversion)
+# for git expats
+push_revisions_to_subversion = util.register_subcommand('dcommit')(push_revisions_to_subversion)
 
 def _isdir(svn, branchpath, svndir):
     try:

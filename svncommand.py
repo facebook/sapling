@@ -54,7 +54,6 @@ def svncmd(ui, repo, subcommand, *args, **opts):
             raise
 
 
-@register_subcommand('help')
 def help_command(ui, args=None, **opts):
     """Get help on the subsubcommands.
     """
@@ -77,8 +76,8 @@ def help_command(ui, args=None, **opts):
         ui.status(doc.strip(), '\n')
         return
     ui.status(generate_help())
+help_command = register_subcommand('help')(help_command)
 
-@register_subcommand('up')
 def update(ui, args, repo, clean=False, **opts):
     """Update to a specified Subversion revision number.
     """
@@ -101,9 +100,9 @@ def update(ui, args, repo, clean=False, **opts):
         ui.status('\n'.join(['%s on %s' % (node.hex(a[0]), a[1]) for a in
                              answers]+['']))
     return 1
+update = register_subcommand('up')(update)
 
 
-@register_subcommand('verify_revision')
 def verify_revision(ui, args, repo, force=False, **opts):
     """Verify a single converted revision.
     Note: This wipes your working copy and then exports the corresponding
@@ -139,8 +138,8 @@ def verify_revision(ui, args, repo, force=False, **opts):
             ui.status('OK.\n')
             return 0
     return 1
+verify_revision = register_subcommand('verify_revision')(verify_revision)
 
-@register_subcommand('verify_all_revisions')
 def verify_all_revisions(ui, args, repo, **opts):
     """Verify all the converted revisions
     optionally starting at a revision.
@@ -168,3 +167,4 @@ def verify_all_revisions(ui, args, repo, **opts):
             print revnum, 'failed'
             return 1
     return 0
+verify_all_revisions = register_subcommand('verify_all_revisions')(verify_all_revisions)

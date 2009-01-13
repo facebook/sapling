@@ -6,7 +6,6 @@ from mercurial import node
 import svnwrap
 import util
 
-@util.register_subcommand('rebuildmeta')
 def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     """Rebuild hgsubversion metadata using values stored in revisions.
     """
@@ -108,6 +107,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     tagsinfofile = open(os.path.join(svnmetadir, 'tag_info'), 'w')
     pickle.dump(tagsinfo, tagsinfofile)
     tagsinfofile.close()
+rebuildmeta = util.register_subcommand('rebuildmeta')(rebuildmeta)
 
 
 def determinebranch(branch):

@@ -146,15 +146,14 @@ class SubversionRepo(object):
         self.ra = ra.open2(self.svn_url.encode('utf-8'), callbacks,
                            svn_config, self.pool)
 
-    @property
     def HEAD(self):
         return ra.get_latest_revnum(self.ra, self.pool)
+    HEAD = property(HEAD)
 
-    @property
     def START(self):
         return 0
+    START = property(START)
 
-    @property
     def branches(self):
         """Get the branches defined in this repo assuming a standard layout.
         """
@@ -173,14 +172,15 @@ class SubversionRepo(object):
             if source is not None and source_rev is not None:
                 branch_info[b] = (source, source_rev, hist.revnum)
         return branch_info
+    branches = property(branches)
 
-    @property
     def tags(self):
         """Get the current tags in this repo assuming a standard layout.
 
         This returns a dictionary of tag: (source path, source rev)
         """
         return self.tags_at_rev(self.HEAD)
+    tags = property(tags)
 
     def tags_at_rev(self, revision):
         try:

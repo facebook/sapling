@@ -21,7 +21,6 @@ def print_your_svn_is_old_message(ui): #pragma: no cover
               "as good a job. You should really upgrade your server.\n")
 
 
-@util.register_subcommand('pull')
 def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     tag_locations='tags',
                     authors=None,
@@ -107,6 +106,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     else:
                         raise
     merc_util._encoding = old_encoding
+fetch_revisions = util.register_subcommand('pull')(fetch_revisions)
 
 
 def cleanup_file_handles(svn, count):

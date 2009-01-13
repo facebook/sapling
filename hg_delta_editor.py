@@ -632,50 +632,49 @@ class HgChangeReceiver(delta.Editor):
                     % (filemapfile, line.rstrip()))
         f.close()
 
-    @property
     def meta_data_dir(self):
         return os.path.join(self.path, '.hg', 'svn')
+    meta_data_dir = property(meta_data_dir)
 
     def meta_file_named(self, name):
         return os.path.join(self.meta_data_dir, name)
 
-    @property
     def revmap_file(self):
         return self.meta_file_named('rev_map')
+    revmap_file = property(revmap_file)
 
-    @property
     def svn_url_file(self):
         return self.meta_file_named('url')
+    svn_url_file = property(svn_url_file)
 
-    @property
     def uuid_file(self):
         return self.meta_file_named('uuid')
+    uuid_file = property(uuid_file)
 
-    @property
     def last_revision_handled_file(self):
         return self.meta_file_named('last_rev')
+    last_revision_handled_file = property(last_revision_handled_file)
 
-    @property
     def branch_info_file(self):
         return self.meta_file_named('branch_info')
+    branch_info_file = property(branch_info_file)
 
-    @property
     def tag_info_file(self):
         return self.meta_file_named('tag_info')
+    tag_info_file = property(tag_info_file)
 
-    @property
     def tag_locations_file(self):
         return self.meta_file_named('tag_locations')
+    tag_locations_file = property(tag_locations_file)
 
-    @property
     def url(self):
         return open(self.svn_url_file).read()
+    url = property(url)
 
-    @property
     def authors_file(self):
         return self.meta_file_named('authors')
+    authors_file = property(authors_file)
 
-    @stash_exception_on_self
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
         if br_path == '':
@@ -700,8 +699,8 @@ class HgChangeReceiver(delta.Editor):
                     if f_p not in self.current_files:
                         self.delete_file(f_p)
             self.delete_file(path)
+    delete_entry = stash_exception_on_self(delete_entry)
 
-    @stash_exception_on_self
     def open_file(self, path, parent_baton, base_revision, p=None):
         self.current_file = 'foobaz'
         fpath, branch = self._path_and_branch_for_path(path)
@@ -713,6 +712,7 @@ class HgChangeReceiver(delta.Editor):
             else:
                 self.base_revision = None
             self.should_edit_most_recent_plaintext = True
+    open_file = stash_exception_on_self(open_file)
 
     def aresamefiles(self, parentctx, childctx, files):
         """Assuming all files exist in childctx and parentctx, return True
@@ -738,7 +738,6 @@ class HgChangeReceiver(delta.Editor):
         # parentctx is not an ancestor of childctx, files are unrelated
         return False
 
-    @stash_exception_on_self
     def add_file(self, path, parent_baton, copyfrom_path,
                  copyfrom_revision, file_pool=None):
         self.current_file = 'foobaz'
@@ -774,8 +773,8 @@ class HgChangeReceiver(delta.Editor):
                 parentctx = self.repo.changectx(parentid)
                 if self.aresamefiles(parentctx, ctx, [from_file]):
                     self.copies[path] = from_file
+    add_file = stash_exception_on_self(add_file)
 
-    @stash_exception_on_self
     def add_directory(self, path, parent_baton, copyfrom_path,
                       copyfrom_revision, dir_pool=None):
         self.dir_batons[path] = path
@@ -832,36 +831,36 @@ class HgChangeReceiver(delta.Editor):
                 if self.aresamefiles(parentctx, cp_f_ctx, copies.values()):
                     self.copies.update(copies)
         return path
+    add_directory = stash_exception_on_self(add_directory)
 
-    @stash_exception_on_self
     def change_file_prop(self, file_baton, name, value, pool=None):
         if name == 'svn:executable':
             self.current_files_exec[self.current_file] = bool(value is not None)
         elif name == 'svn:special':
             self.current_files_symlink[self.current_file] = bool(value is not None)
+    change_file_prop = stash_exception_on_self(change_file_prop)
 
-    @stash_exception_on_self
     def change_dir_prop(self, dir_baton, name, value, pool=None):
         if dir_baton is None:
             return
         path = self.dir_batons[dir_baton]
         if name == 'svn:externals':
             self.externals[path] = value
+    change_dir_prop = stash_exception_on_self(change_dir_prop)
 
-    @stash_exception_on_self
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
         self.dir_batons[path] = path
         p_, branch = self._path_and_branch_for_path(path)
         if p_ == '':
             self.commit_branches_empty[branch] = False
         return path
+    open_directory = stash_exception_on_self(open_directory)
 
-    @stash_exception_on_self
     def close_directory(self, dir_baton, dir_pool=None):
         if dir_baton is not None:
             del self.dir_batons[dir_baton]
+    close_directory = stash_exception_on_self(close_directory)
 
-    @stash_exception_on_self
     def apply_textdelta(self, file_baton, base_checksum, pool=None):
         base = ''
         if not self._is_path_valid(self.current_file):
@@ -913,6 +912,7 @@ class HgChangeReceiver(delta.Editor):
                 self._exception_info = sys.exc_info()
                 raise
         return txdelt_window
+    apply_textdelta = stash_exception_on_self(apply_textdelta)
 
 class MissingPlainTextError(Exception):
     """Exception raised when the repo lacks a source file required for replaying

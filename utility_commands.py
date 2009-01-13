@@ -6,16 +6,15 @@ from hgext import rebase
 import util
 import hg_delta_editor
 
-@util.register_subcommand('url')
 def print_wc_url(ui, repo, hg_repo_path, **opts):
     """Url of Subversion repository.
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     ui.status(hge.url, '\n')
+print_wc_url = util.register_subcommand('url')(print_wc_url)
 
 
-@util.register_subcommand('info')
 def run_svn_info(ui, repo, hg_repo_path, **opts):
     """Like svn info details.
     """
@@ -57,9 +56,9 @@ Last Changed Date: %(date)s\n''' %
                'date': mutil.datestr(workingctx.date(),
                                      '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
               })
+run_svn_info = util.register_subcommand('info')(run_svn_info)
 
 
-@util.register_subcommand('parent')
 def print_parent_revision(ui, repo, hg_repo_path, **opts):
     """Display hg hash and svn revision of nearest svn parent.
     """
@@ -78,9 +77,9 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
     else:
         ui.status('Working copy seems to have no parent svn revision.\n')
     return 0
+print_parent_revision = util.register_subcommand('parent')(print_parent_revision)
 
 
-@util.register_subcommand('rebase')
 def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts):
     """Rebases current unpushed revisions onto Subversion head.
 
@@ -128,9 +127,9 @@ def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts)
     return rebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
                          base=node.hex(sourcerev),
                          extrafn=extrafn)
+rebase_commits = util.register_subcommand('rebase')(rebase_commits)
 
 
-@util.register_subcommand('outgoing')
 def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
     """Show changesets not yet pushed to SVN.
     """
@@ -145,3 +144,4 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
     for node in reversed(o_r):
         displayer.show(repo[node])
+show_outgoing_to_svn = util.register_subcommand('outgoing')(show_outgoing_to_svn)

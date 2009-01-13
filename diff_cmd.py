@@ -24,7 +24,6 @@ def filterdiff(diff, base_revision):
     return diff
 
 
-@util.register_subcommand('diff')
 def diff_command(ui, repo, hg_repo_path, **opts):
     """Show a diff of the most recent revision against its parent from svn.
     """
@@ -47,3 +46,4 @@ def diff_command(ui, repo, hg_repo_path, **opts):
                                                   'text': False,
                                                   }))
     ui.write(filterdiff(''.join(it), base_rev))
+diff_command = util.register_subcommand('diff')(diff_command)
