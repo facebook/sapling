@@ -15,3 +15,10 @@ hg up -q
 cat foo
 hg st -A
 
+echo '% validate update of standalone execute bit change'
+hg up -C 0
+chmod -x foo
+hg ci -m removeexec
+hg up -C 0
+hg up
+hg st
