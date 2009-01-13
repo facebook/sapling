@@ -71,7 +71,7 @@ def buildmethod(case, name, stupid):
 
 attrs = {'_do_case': _do_case,
          }
-for case in (f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')):
+for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
     name = 'test_' + case[:-len('.svndump')]
     attrs[name] = buildmethod(case, name, False)
     name += '_stupid'
