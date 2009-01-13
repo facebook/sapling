@@ -1343,14 +1343,13 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         single(rev, seqno+1, fp)
 
 def diffstatdata(lines):
-    filename = None
+    filename, adds, removes = None, 0, 0
     for line in lines:
         if line.startswith('diff'):
             if filename:
                 yield (filename, adds, removes)
             # set numbers to 0 anyway when starting new file
-            adds = 0
-            removes = 0
+            adds, removes = 0, 0
             if line.startswith('diff --git'):
                 filename = gitre.search(line).group(1)
             else:
@@ -1360,7 +1359,8 @@ def diffstatdata(lines):
             adds += 1
         elif line.startswith('-') and not line.startswith('---'):
             removes += 1
-    yield (filename, adds, removes)
+    if filename: 
+        yield (filename, adds, removes)
 
 def diffstat(lines):
     output = []

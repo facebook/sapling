@@ -164,3 +164,56 @@ diff -r cb9a9f314b8b -r 0647d048b600 a
  a
 +a
 (run 'hg update' to get a working copy)
+% test merge
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+pulling from ../a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 0 changes to 1 files
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Test: foo
+Date:
+Subject: adda2
+From: test@test.com
+X-Hg-Notification: changeset 0a184ce6067f
+Message-Id:
+To: baz@test.com, foo@bar
+
+changeset 0a184ce6067f
+description:
+	adda2
+diffstat:
+
+ a |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diffs (6 lines):
+
+diff -r cb9a9f314b8b -r 0a184ce6067f a
+--- a/a	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:02 1970 +0000
+@@ -1,1 +1,2 @@
+ a
++a
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Test: foo
+Date:
+Subject: merge
+From: test@test.com
+X-Hg-Notification: changeset 22c88b85aa27
+Message-Id:
+To: baz@test.com, foo@bar
+
+changeset 22c88b85aa27
+description:
+	merge
+(run 'hg update' to get a working copy)
