@@ -5,11 +5,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.i18n import _
-import os, tempfile
-from mercurial import bundlerepo, changegroup, cmdutil, hg, merge
-from mercurial import patch, revlog, util
-
 '''patch transplanting tool
 
 This extension allows you to transplant patches from another branch.
@@ -17,6 +12,11 @@ This extension allows you to transplant patches from another branch.
 Transplanted patches are recorded in .hg/transplant/transplants, as a map
 from a changeset hash to its hash in the source repository.
 '''
+
+from mercurial.i18n import _
+import os, tempfile
+from mercurial import bundlerepo, changegroup, cmdutil, hg, merge
+from mercurial import patch, revlog, util
 
 class transplantentry:
     def __init__(self, lnode, rnode):
