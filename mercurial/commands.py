@@ -1015,7 +1015,18 @@ def diff(ui, repo, *pats, **opts):
     Use the --git option to generate diffs in the git extended diff
     format. Read the diffs help topic for more information.
     """
-    node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
+
+    revs = opts.get('rev')
+    change = opts.get('change')
+
+    if revs and change:
+        msg = _('cannot specify --rev and --change at the same time')
+        raise util.Abort(msg)
+    elif change:
+        node2 = repo.lookup(change)
+        node1 = repo[node2].parents()[0].node()
+    else:
+        node1, node2 = cmdutil.revpair(repo, revs)
 
     m = cmdutil.match(repo, pats, opts)
     it = patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
@@ -3172,7 +3183,8 @@ table = {
     "debugwalk": (debugwalk, walkopts, _('[OPTION]... [FILE]...')),
     "^diff":
         (diff,
-         [('r', 'rev', [], _('revision'))
+         [('r', 'rev', [], _('revision')),
+          ('c', 'change', '', _('change made by revision'))
          ] + diffopts + diffopts2 + walkopts,
          _('[OPTION]... [-r REV1 [-r REV2]] [FILE]...')),
     "^export":

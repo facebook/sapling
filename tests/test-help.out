@@ -221,6 +221,7 @@ diff repository (or selected files)
 options:
 
  -r --rev                  revision
+ -c --change               change made by revision
  -a --text                 treat all files as text
  -g --git                  use git extended diff format
     --nodates              don't include dates in diff headers
