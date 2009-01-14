@@ -31,6 +31,8 @@ import shutil
 import tempfile
 from distutils.core import setup, Extension
 from distutils.command.install_data import install_data
+from distutils.command.build import build
+from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
 
 extra = {}
@@ -115,7 +117,38 @@ class install_package_data(install_data):
                                    ('install_lib', 'install_dir'))
         install_data.finalize_options(self)
 
-cmdclass = {'install_data': install_package_data}
+class build_mo(build):
+
+    description = "build translations (.mo files)"
+
+    def run(self):
+        if not find_executable('msgfmt'):
+            self.warn("could not find msgfmt executable, no translations "
+                     "will be built")
+            return
+
+        podir = 'i18n'
+        if not os.path.isdir(podir):
+            self.warn("could not find %s/ directory" % podir)
+            return
+
+        join = os.path.join
+        for po in os.listdir(podir):
+            if not po.endswith('.po'):
+                continue
+            pofile = join(podir, po)
+            modir = join('locale', po[:-3], 'LC_MESSAGES')
+            mofile = join(modir, 'hg.mo')
+            self.mkpath(modir)
+            self.make_file([pofile], mofile, spawn,
+                           (['msgfmt', '-o', mofile, pofile],))
+            self.distribution.data_files.append((join('mercurial', modir),
+                                                 [mofile]))
+
+build.sub_commands.append(('build_mo', None))
+
+cmdclass = {'install_data': install_package_data,
+            'build_mo': build_mo}
 
 ext_modules=[
     Extension('mercurial.base85', ['mercurial/base85.c']),

@@ -28,6 +28,7 @@ Output/Mercurial-*.exe
 tags
 cscope.*
 i18n/hg.pot
+locale/*/LC_MESSAGES/hg.mo
 
 syntax: regexp
 ^\.pc/
