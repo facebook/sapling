@@ -7,7 +7,20 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-import gettext
-t = gettext.translation('hg', fallback=1)
+import gettext, sys, os
+
+# modelled after templater.templatepath:
+if hasattr(sys, 'frozen'):
+    module = sys.executable
+else:
+    module = __file__
+
+base = os.path.dirname(module)
+for dir in ('.', '..'):
+    localedir = os.path.normpath(os.path.join(base, dir, 'locale'))
+    if os.path.isdir(localedir):
+        break
+
+t = gettext.translation('hg', localedir, fallback=True)
 gettext = t.gettext
 _ = gettext
