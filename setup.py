@@ -149,6 +149,12 @@ try:
 except ImportError:
     pass
 
+datafiles = []
+for root in ('templates', 'i18n'):
+    for dir, dirs, files in os.walk(root):
+        datafiles.append((os.path.join('mercurial', dir),
+                          [os.path.join(dir, file_) for file_ in files]))
+
 setup(name='mercurial',
       version=version,
       author='Matt Mackall',
@@ -159,9 +165,7 @@ setup(name='mercurial',
       scripts=scripts,
       packages=packages,
       ext_modules=ext_modules,
-      data_files=[(os.path.join('mercurial', root),
-                   [os.path.join(root, file_) for file_ in files])
-                  for root, dirs, files in os.walk('templates')],
+      data_files=datafiles,
       cmdclass=cmdclass,
       options=dict(py2exe=dict(packages=['hgext', 'email']),
                    bdist_mpkg=dict(zipdist=True,
