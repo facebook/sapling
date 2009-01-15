@@ -44,39 +44,47 @@ class TestFetchExternals(test_util.TestBase):
 
         ref0 = """\
 [.]
- ../externals/project1 deps/project1
+ ^/externals/project1 deps/project1
 """
         self.assertEqual(ref0, repo[0]['.hgsvnexternals'].data())
         ref1 = """\
 [.]
- ../externals/project1 deps/project1
- ../externals/project2 deps/project2
+ ^/externals/project1 deps/project1
+ ^/externals/project2 deps/project2
 """
         self.assertEqual(ref1, repo[1]['.hgsvnexternals'].data())
 
         ref2 = """\
 [.]
- ../externals/project2 deps/project2
+ ^/externals/project2 deps/project2
 [subdir]
- ../externals/project1 deps/project1
+ ^/externals/project1 deps/project1
 [subdir2]
- ../externals/project1 deps/project1
+ ^/externals/project1 deps/project1
 """
         self.assertEqual(ref2, repo[2]['.hgsvnexternals'].data())
 
         ref3 = """\
 [.]
- ../externals/project2 deps/project2
-[subdir2]
- ../externals/project1 deps/project1
+ ^/externals/project2 deps/project2
+[subdir]
+ ^/externals/project1 deps/project1
 """
         self.assertEqual(ref3, repo[3]['.hgsvnexternals'].data())
 
         ref4 = """\
 [.]
- ../externals/project2 deps/project2
+ ^/externals/project2 deps/project2
+[subdir2]
+ ^/externals/project1 deps/project1
 """
         self.assertEqual(ref4, repo[4]['.hgsvnexternals'].data())
+
+        ref5 = """\
+[.]
+ ^/externals/project2 deps/project2
+"""
+        self.assertEqual(ref5, repo[5]['.hgsvnexternals'].data())
 
     def test_externals_stupid(self):
         self.test_externals(True)

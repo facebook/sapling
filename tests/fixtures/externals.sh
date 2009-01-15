@@ -31,32 +31,39 @@ cd ../trunk
 echo a > a
 svn add a
 cat > externals <<EOF
-../externals/project1 deps/project1
+^/externals/project1 deps/project1
 EOF
 svn propset -F externals svn:externals .
 svn ci -m "set externals on ."
 # Add another one
 cat > externals <<EOF
-../externals/project1 deps/project1
-../externals/project2 deps/project2
+^/externals/project1 deps/project1
+^/externals/project2 deps/project2
 EOF
 svn propset -F externals svn:externals .
 svn ci -m "update externals on ."
 # Suppress an external and add one on a subdir
 cat > externals <<EOF
-../externals/project2 deps/project2
+^/externals/project2 deps/project2
 EOF
 svn propset -F externals svn:externals .
 mkdir subdir
 mkdir subdir2
 svn add subdir subdir2
 cat > externals <<EOF
-../externals/project1 deps/project1
+^/externals/project1 deps/project1
 EOF
 svn propset -F externals svn:externals subdir subdir2
 svn ci -m "add on subdir"
+# Test branch with externals
+svn up
+cd ../branches
+svn copy ../trunk branch1
+svn propdel svn:externals branch1/subdir2
+svn ci -m 'externals in subtree'
+cd ../trunk
 # Suppress the subdirectory
-svn rm subdir
+svn rm --force subdir
 svn ci -m 'remove externals subdir'
 # Remove the property on subdir2
 svn propdel svn:externals subdir2

@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: a5e66397-f826-4e1c-bc26-5123bb064477
+UUID: b0dd1dbb-3e41-4ee0-8194-38c44cae026b
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-12-27T12:49:06.601814Z
+2009-01-12T22:58:18.300869Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-27T12:49:06.652695Z
+2009-01-12T22:58:18.364893Z
 PROPS-END
 
 Node-path: branches
@@ -72,7 +72,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-27T12:49:07.236694Z
+2009-01-12T22:58:19.228564Z
 PROPS-END
 
 Node-path: externals/project1
@@ -132,19 +132,19 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-27T12:49:08.250996Z
+2009-01-12T22:58:20.213824Z
 PROPS-END
 
 Node-path: trunk
 Node-kind: dir
 Node-action: change
-Prop-content-length: 71
-Content-length: 71
+Prop-content-length: 70
+Content-length: 70
 
 K 13
 svn:externals
-V 36
-../externals/project1 deps/project1
+V 35
+^/externals/project1 deps/project1
 
 PROPS-END
 
@@ -176,20 +176,20 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-27T12:49:09.190834Z
+2009-01-12T22:58:21.179341Z
 PROPS-END
 
 Node-path: trunk
 Node-kind: dir
 Node-action: change
-Prop-content-length: 107
-Content-length: 107
+Prop-content-length: 105
+Content-length: 105
 
 K 13
 svn:externals
-V 72
-../externals/project1 deps/project1
-../externals/project2 deps/project2
+V 70
+^/externals/project1 deps/project1
+^/externals/project2 deps/project2
 
 PROPS-END
 
@@ -209,19 +209,19 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-27T12:49:10.289216Z
+2009-01-12T22:58:22.266419Z
 PROPS-END
 
 Node-path: trunk
 Node-kind: dir
 Node-action: change
-Prop-content-length: 71
-Content-length: 71
+Prop-content-length: 70
+Content-length: 70
 
 K 13
 svn:externals
-V 36
-../externals/project2 deps/project2
+V 35
+^/externals/project2 deps/project2
 
 PROPS-END
 
@@ -229,13 +229,13 @@ PROPS-END
 Node-path: trunk/subdir
 Node-kind: dir
 Node-action: add
-Prop-content-length: 71
-Content-length: 71
+Prop-content-length: 70
+Content-length: 70
 
 K 13
 svn:externals
-V 36
-../externals/project1 deps/project1
+V 35
+^/externals/project1 deps/project1
 
 PROPS-END
 
@@ -243,18 +243,65 @@ PROPS-END
 Node-path: trunk/subdir2
 Node-kind: dir
 Node-action: add
-Prop-content-length: 71
-Content-length: 71
+Prop-content-length: 70
+Content-length: 70
 
 K 13
 svn:externals
-V 36
-../externals/project1 deps/project1
+V 35
+^/externals/project1 deps/project1
 
 PROPS-END
 
 
 Revision-number: 6
+Prop-content-length: 122
+Content-length: 122
+
+K 7
+svn:log
+V 20
+externals in subtree
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-01-12T22:58:25.185874Z
+PROPS-END
+
+Node-path: branches/branch1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: trunk
+Prop-content-length: 94
+Content-length: 94
+
+K 13
+svn:externals
+V 35
+^/externals/project2 deps/project2
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: branches/branch1/subdir2
+Node-kind: dir
+Node-action: change
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 7
 Prop-content-length: 125
 Content-length: 125
 
@@ -269,14 +316,14 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-27T12:49:11.184732Z
+2009-01-12T22:58:26.188417Z
 PROPS-END
 
 Node-path: trunk/subdir
 Node-action: delete
 
 
-Revision-number: 7
+Revision-number: 8
 Prop-content-length: 126
 Content-length: 126
 
@@ -291,7 +338,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-27T12:49:12.194114Z
+2009-01-12T22:58:27.183612Z
 PROPS-END
 
 Node-path: trunk/subdir2
