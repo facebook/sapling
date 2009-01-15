@@ -97,7 +97,7 @@ try:
     l = os.popen('hg id -it').read().split()
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
         l.pop()
-    version = l[-1] or 'unknown' # latest tag or revision number
+    version = l and l[-1] or 'unknown' # latest tag or revision number
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
 
