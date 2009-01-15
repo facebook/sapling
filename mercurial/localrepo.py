@@ -398,8 +398,21 @@ class localrepository(repo.repository):
 
     def branchtags(self):
         '''return a dict where branch names map to the tipmost head of
-        the branch'''
-        return dict([(k, v[-1]) for (k, v) in self._branchheads().iteritems()])
+        the branch, open heads come before closed'''
+        bt = {}
+        for bn, heads in self._branchheads().iteritems():
+            head = None
+            for i in range(len(heads)-1, -1, -1):
+                h = heads[i]
+                if 'close' not in self.changelog.read(h)[5]:
+                    head = h
+                    break
+            # no open heads were found
+            if head is None:
+                head = heads[-1]
+            bt[bn] = head
+        return bt
+
 
     def _readbranchcache(self):
         partial = {}
@@ -1180,13 +1193,18 @@ class localrepository(repo.repository):
         finally:
             del wlock
 
-    def heads(self, start=None):
+    def heads(self, start=None, closed=True):
         heads = self.changelog.heads(start)
+        def display(head):
+            if closed:
+                return True
+            extras = self.changelog.read(head)[5]
+            return ('close' not in extras)
         # sort the output in rev descending order
-        heads = [(-self.changelog.rev(h), h) for h in heads]
+        heads = [(-self.changelog.rev(h), h) for h in heads if display(h)]
         return [n for (r, n) in util.sort(heads)]
 
-    def branchheads(self, branch=None, start=None):
+    def branchheads(self, branch=None, start=None, closed=True):
         if branch is None:
             branch = self[None].branch()
         branches = self._branchheads()
@@ -1198,6 +1216,9 @@ class localrepository(repo.repository):
         if start is not None:
             # filter out the heads that cannot be reached from startrev
             bheads = self.changelog.nodesbetween([start], bheads)[2]
+        if not closed:
+            bheads = [h for h in bheads if 
+                      ('close' not in self.changelog.read(h)[5])]
         return bheads
 
     def branches(self, nodes):

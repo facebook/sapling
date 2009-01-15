@@ -431,7 +431,7 @@ def branches(ui, repo, active=False):
     """
     hexfunc = ui.debugflag and hex or short
     activebranches = [util.tolocal(repo[n].branch())
-                            for n in repo.heads()]
+                            for n in repo.heads(closed=False)]
     branches = util.sort([(tag in activebranches, repo.changelog.rev(node), tag)
                           for tag, node in repo.branchtags().items()])
     branches.reverse()
@@ -441,9 +441,15 @@ def branches(ui, repo, active=False):
             if ui.quiet:
                 ui.write("%s\n" % tag)
             else:
+                hn = repo.lookup(node)
+                if isactive:
+                    notice = ''
+                elif hn not in repo.branchheads(tag, closed=False):
+                    notice = ' (closed)'
+                else:
+                    notice = ' (inactive)'
                 rev = str(node).rjust(31 - util.locallen(tag))
-                isinactive = ((not isactive) and " (inactive)") or ''
-                data = tag, rev, hexfunc(repo.lookup(node)), isinactive
+                data = tag, rev, hexfunc(hn), notice
                 ui.write("%s %s:%s%s\n" % data)
 
 def bundle(ui, repo, fname, dest=None, **opts):
@@ -1266,9 +1272,10 @@ def heads(ui, repo, *branchrevs, **opts):
         start = repo.lookup(opts['rev'])
     else:
         start = None
+    closed = not opts.get('active')
     if not branchrevs:
         # Assume we're looking repo-wide heads if no revs were specified.
-        heads = repo.heads(start)
+        heads = repo.heads(start, closed=closed)
     else:
         heads = []
         visitedset = util.set()
@@ -1277,7 +1284,7 @@ def heads(ui, repo, *branchrevs, **opts):
             if branch in visitedset:
                 continue
             visitedset.add(branch)
-            bheads = repo.branchheads(branch, start)
+            bheads = repo.branchheads(branch, start, closed=closed)
             if not bheads:
                 if branch != branchrev:
                     ui.warn(_("no changes on branch %s containing %s are "
@@ -3215,6 +3222,8 @@ table = {
     "heads":
         (heads,
          [('r', 'rev', '', _('show only heads which are descendants of rev')),
+          ('a', 'active', False,
+           _('show only the active heads from open branches')),
          ] + templateopts,
          _('[-r REV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),
