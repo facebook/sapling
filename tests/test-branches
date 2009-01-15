@@ -50,3 +50,30 @@ hg log -b a
 
 echo "---- Branch b"
 hg log -b b
+
+echo "---- going to test branch closing"
+hg branches
+hg up -C b
+echo 'xxx1' >> b
+hg commit -d '7 0' -u test -m 'adding cset to branch b'
+hg up -C aee39cd168d0
+echo 'xxx2' >> b
+hg commit -d '8 0' -u test -m 'adding head to branch b'
+echo 'xxx3' >> b
+hg commit -d '9 0' -u test -m 'adding another cset to branch b'
+hg branches
+hg heads
+hg heads -a
+hg commit -d '9 0' -u test --close-branch -m 'prune bad branch'
+hg branches -a
+hg up -C b
+hg commit -d '9 0' -u test --close-branch -m 'close this part branch too'
+echo '--- b branch should be inactive'
+hg branches
+hg branches -a
+echo 'xxx4' >> b
+hg commit -d '9 0' -u test -m 'reopen branch with a change'
+echo '--- branch b is back in action'
+hg branches -a
+hg heads
+hg heads -a
