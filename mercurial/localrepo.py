@@ -360,6 +360,7 @@ class localrepository(repo.repository):
         return self.nodetagscache.get(node, [])
 
     def _branchtags(self, partial, lrev):
+        # TODO: rename this function?
         tiprev = len(self) - 1
         if lrev != tiprev:
             self._updatebranchcache(partial, lrev+1, tiprev+1)
@@ -367,7 +368,7 @@ class localrepository(repo.repository):
 
         return partial
 
-    def branchtags(self):
+    def _branchheads(self):
         tip = self.changelog.tip()
         if self.branchcache is not None and self._branchcachetip == tip:
             return self.branchcache
@@ -385,18 +386,25 @@ class localrepository(repo.repository):
             partial = self._ubranchcache
 
         self._branchtags(partial, lrev)
+        # this private cache holds all heads (not just tips)
+        self._ubranchcache = partial
 
         # the branch cache is stored on disk as UTF-8, but in the local
         # charset internally
         for k, v in partial.iteritems():
             self.branchcache[util.tolocal(k)] = v
-        self._ubranchcache = partial
         return self.branchcache
+
+
+    def branchtags(self):
+        '''return a dict where branch names map to the tipmost head of
+        the branch'''
+        return dict([(k, v[-1]) for (k, v) in self._branchheads().iteritems()])
 
     def _readbranchcache(self):
         partial = {}
         try:
-            f = self.opener("branch.cache")
+            f = self.opener("branchheads.cache")
             lines = f.read().split('\n')
             f.close()
         except (IOError, OSError):
@@ -411,7 +419,7 @@ class localrepository(repo.repository):
             for l in lines:
                 if not l: continue
                 node, label = l.split(" ", 1)
-                partial[label.strip()] = bin(node)
+                partial.setdefault(label.strip(), []).append(bin(node))
         except KeyboardInterrupt:
             raise
         except Exception, inst:
@@ -422,10 +430,11 @@ class localrepository(repo.repository):
 
     def _writebranchcache(self, branches, tip, tiprev):
         try:
-            f = self.opener("branch.cache", "w", atomictemp=True)
+            f = self.opener("branchheads.cache", "w", atomictemp=True)
             f.write("%s %s\n" % (hex(tip), tiprev))
-            for label, node in branches.iteritems():
-                f.write("%s %s\n" % (hex(node), label))
+            for label, nodes in branches.iteritems():
+                for node in nodes:
+                    f.write("%s %s\n" % (hex(node), label))
             f.rename()
         except (IOError, OSError):
             pass
@@ -434,7 +443,12 @@ class localrepository(repo.repository):
         for r in xrange(start, end):
             c = self[r]
             b = c.branch()
-            partial[b] = c.node()
+            bheads = partial.setdefault(b, [])
+            bheads.append(c.node())
+            for p in c.parents():
+                pn = p.node()
+                if pn in bheads:
+                    bheads.remove(pn)
 
     def lookup(self, key):
         if isinstance(key, int):
@@ -1171,50 +1185,16 @@ class localrepository(repo.repository):
     def branchheads(self, branch=None, start=None):
         if branch is None:
             branch = self[None].branch()
-        branches = self.branchtags()
+        branches = self._branchheads()
         if branch not in branches:
             return []
-        # The basic algorithm is this:
-        #
-        # Start from the branch tip since there are no later revisions that can
-        # possibly be in this branch, and the tip is a guaranteed head.
-        #
-        # Remember the tip's parents as the first ancestors, since these by
-        # definition are not heads.
-        #
-        # Step backwards from the brach tip through all the revisions. We are
-        # guaranteed by the rules of Mercurial that we will now be visiting the
-        # nodes in reverse topological order (children before parents).
-        #
-        # If a revision is one of the ancestors of a head then we can toss it
-        # out of the ancestors set (we've already found it and won't be
-        # visiting it again) and put its parents in the ancestors set.
-        #
-        # Otherwise, if a revision is in the branch it's another head, since it
-        # wasn't in the ancestor list of an existing head.  So add it to the
-        # head list, and add its parents to the ancestor list.
-        #
-        # If it is not in the branch ignore it.
-        #
-        # Once we have a list of heads, use nodesbetween to filter out all the
-        # heads that cannot be reached from startrev.  There may be a more
-        # efficient way to do this as part of the previous algorithm.
-
-        set = util.set
-        heads = [self.changelog.rev(branches[branch])]
-        # Don't care if ancestors contains nullrev or not.
-        ancestors = set(self.changelog.parentrevs(heads[0]))
-        for rev in xrange(heads[0] - 1, nullrev, -1):
-            if rev in ancestors:
-                ancestors.update(self.changelog.parentrevs(rev))
-                ancestors.remove(rev)
-            elif self[rev].branch() == branch:
-                heads.append(rev)
-                ancestors.update(self.changelog.parentrevs(rev))
-        heads = [self.changelog.node(rev) for rev in heads]
+        bheads = branches[branch]
+        # the cache returns heads ordered lowest to highest
+        bheads.reverse()
         if start is not None:
-            heads = self.changelog.nodesbetween([start], heads)[2]
-        return heads
+            # filter out the heads that cannot be reached from startrev
+            bheads = self.changelog.nodesbetween([start], bheads)[2]
+        return bheads
 
     def branches(self, nodes):
         if not nodes:
