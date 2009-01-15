@@ -185,10 +185,16 @@ class notifier(object):
 
         # store sender and subject
         sender, subject = msg['From'], msg['Subject']
+        del msg['From'], msg['Subject']
+        # store remaining headers
+        headers = msg.items()
         # create fresh mime message from msg body
         text = msg.get_payload()
         # for notification prefer readability over data precision
         msg = mail.mimeencode(self.ui, text, self.charsets, self.test)
+        # reinstate custom headers
+        for k, v in headers:
+            msg[k] = v
 
         def fix_subject(subject):
             '''try to make subject line exist and be useful.'''
