@@ -52,7 +52,7 @@ cat <<EOF >> $HGRCPATH
 config = $HGTMP/.notify.conf
 domain = test.com
 strip = 3
-template = Subject: {desc|firstline|strip}\nFrom: {author}\n\nchangeset {node|short} in {webroot}\ndescription:\n\t{desc|tabindent|strip}
+template = Subject: {desc|firstline|strip}\nFrom: {author}\nX-Test: foo\n\nchangeset {node|short} in {webroot}\ndescription:\n\t{desc|tabindent|strip}
 
 [web]
 baseurl = http://test/
