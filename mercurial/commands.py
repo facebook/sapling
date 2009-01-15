@@ -613,9 +613,13 @@ def commit(ui, repo, *pats, **opts):
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
+    extra = {}
+    if opts.get('close_branch'):
+        extra['close'] = 1
     def commitfunc(ui, repo, message, match, opts):
-        return repo.commit(match.files(), message, opts.get('user'), opts.get('date'),
-                           match, force_editor=opts.get('force_editor'))
+        return repo.commit(match.files(), message, opts.get('user'),
+            opts.get('date'), match, force_editor=opts.get('force_editor'),
+            extra=extra)
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
@@ -3134,6 +3138,8 @@ table = {
         (commit,
          [('A', 'addremove', None,
            _('mark new/missing files as added/removed before committing')),
+          ('', 'close-branch', None,
+           _('mark a branch as closed, hiding it from the branch list')),
          ] + walkopts + commitopts + commitopts2,
          _('[OPTION]... [FILE]...')),
     "copy|cp":

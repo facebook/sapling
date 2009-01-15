@@ -763,6 +763,8 @@ class localrepository(repo.repository):
                match=None, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = None
+        if extra.get("close"):
+            force = True
         if files:
             files = util.unique(files)
         try:
@@ -837,6 +839,8 @@ class localrepository(repo.repository):
             user = wctx.user()
             text = wctx.description()
 
+            if branchname == 'default' and extra.get('close'):
+                raise util.Abort(_('closing the default branch is invalid'))
             p1, p2 = [p.node() for p in wctx.parents()]
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
