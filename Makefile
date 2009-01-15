@@ -26,6 +26,7 @@ all: build doc
 local:
 	$(PYTHON) setup.py build_ext -i
 	$(PYTHON) setup.py build_py -c -d .
+	$(PYTHON) setup.py build_mo
 	$(PYTHON) hg version
 
 build:
