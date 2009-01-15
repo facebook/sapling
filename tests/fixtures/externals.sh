@@ -61,6 +61,10 @@ cd ../branches
 svn copy ../trunk branch1
 svn propdel svn:externals branch1/subdir2
 svn ci -m 'externals in subtree'
+# Test branch with externals, removing on copy root
+svn copy ../trunk branch2
+svn propdel svn:externals branch2 branch2/subdir2
+svn ci -m 'externals in subtree, removed on root'
 cd ../trunk
 # Suppress the subdirectory
 svn rm --force subdir

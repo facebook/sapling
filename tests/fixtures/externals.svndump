@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: b0dd1dbb-3e41-4ee0-8194-38c44cae026b
+UUID: ab7049d2-24fc-4035-b126-5f7012d66a0d
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2009-01-12T22:58:18.300869Z
+2009-01-12T23:19:30.150669Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:18.364893Z
+2009-01-12T23:19:30.267365Z
 PROPS-END
 
 Node-path: branches
@@ -72,7 +72,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:19.228564Z
+2009-01-12T23:19:31.232927Z
 PROPS-END
 
 Node-path: externals/project1
@@ -132,7 +132,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:20.213824Z
+2009-01-12T23:19:32.212750Z
 PROPS-END
 
 Node-path: trunk
@@ -176,7 +176,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:21.179341Z
+2009-01-12T23:19:33.180250Z
 PROPS-END
 
 Node-path: trunk
@@ -209,7 +209,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:22.266419Z
+2009-01-12T23:19:34.270854Z
 PROPS-END
 
 Node-path: trunk
@@ -269,7 +269,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:25.185874Z
+2009-01-12T23:19:37.185743Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -302,6 +302,48 @@ PROPS-END
 
 
 Revision-number: 7
+Prop-content-length: 139
+Content-length: 139
+
+K 7
+svn:log
+V 37
+externals in subtree, removed on root
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-01-12T23:19:39.198328Z
+PROPS-END
+
+Node-path: branches/branch2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: trunk
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: branches/branch2/subdir2
+Node-kind: dir
+Node-action: change
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 8
 Prop-content-length: 125
 Content-length: 125
 
@@ -316,14 +358,14 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:26.188417Z
+2009-01-12T23:19:40.183807Z
 PROPS-END
 
 Node-path: trunk/subdir
 Node-action: delete
 
 
-Revision-number: 8
+Revision-number: 9
 Prop-content-length: 126
 Content-length: 126
 
@@ -338,7 +380,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T22:58:27.183612Z
+2009-01-12T23:19:41.180477Z
 PROPS-END
 
 Node-path: trunk/subdir2

@@ -458,7 +458,9 @@ def stupid_fetch_externals(svn, branchpath, r, parentctx):
                 continue
             path = path[len(branchprefix):]
             dirs.add(path)
-            if e.action == 'M':
+            if e.action == 'M' or (e.action == 'A' and e.copyfrom_path):
+                # Do not recurse in copied directories, changes are marked
+                # as 'M', except for the copied one.
                 continue
             for child, k in svn.list_files(branchprefix + path, r.revnum):
                 if k == 'd':

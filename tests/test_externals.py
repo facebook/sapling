@@ -73,9 +73,7 @@ class TestFetchExternals(test_util.TestBase):
         self.assertEqual(ref3, repo[3]['.hgsvnexternals'].data())
 
         ref4 = """\
-[.]
- ^/externals/project2 deps/project2
-[subdir2]
+[subdir]
  ^/externals/project1 deps/project1
 """
         self.assertEqual(ref4, repo[4]['.hgsvnexternals'].data())
@@ -83,8 +81,16 @@ class TestFetchExternals(test_util.TestBase):
         ref5 = """\
 [.]
  ^/externals/project2 deps/project2
+[subdir2]
+ ^/externals/project1 deps/project1
 """
         self.assertEqual(ref5, repo[5]['.hgsvnexternals'].data())
+
+        ref6 = """\
+[.]
+ ^/externals/project2 deps/project2
+"""
+        self.assertEqual(ref6, repo[6]['.hgsvnexternals'].data())
 
     def test_externals_stupid(self):
         self.test_externals(True)
