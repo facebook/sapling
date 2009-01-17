@@ -79,7 +79,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
             converted = False
             while not converted and tries < 3:
                 try:
-                    ui.status('converting %s\n' % r)
+                    ui.status(util.describe_revision(r))
                     if have_replay:
                         try:
                             replay_convert_rev(hg_editor, svn, r)
@@ -123,7 +123,7 @@ def replay_convert_rev(hg_editor, svn, r):
         files_to_grab = set()
         rootpath = svn.subdir and svn.subdir[1:] or ''
         for p in hg_editor.missing_plaintexts:
-            hg_editor.ui.status('.')
+            hg_editor.ui.note('.')
             hg_editor.ui.flush()
             if p[-1] == '/':
                 dirpath = p[len(rootpath):]
@@ -132,16 +132,16 @@ def replay_convert_rev(hg_editor, svn, r):
                                       if k == 'f'])
             else:
                 files_to_grab.add(p[len(rootpath):])
-        hg_editor.ui.status('\nFetching files...\n')
+        hg_editor.ui.note('\nFetching files...\n')
         for p in files_to_grab:
-            hg_editor.ui.status('.')
+            hg_editor.ui.note('.')
             hg_editor.ui.flush()
             cleanup_file_handles(svn, i)
             i += 1
             data, mode = svn.get_file(p, r.revnum)
             hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
         hg_editor.missing_plaintexts = set()
-        hg_editor.ui.status('\n')
+        hg_editor.ui.note('\n')
     hg_editor.commit_current_delta()
 
 
@@ -268,7 +268,7 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
             # full fetch on files that had problems.
             raise BadPatchApply('patching failed')
         for x in files_data.iterkeys():
-            ui.status('M  %s\n' % x)
+            ui.note('M  %s\n' % x)
         # if this patch didn't apply right, fall back to exporting the
         # entire rev.
         if patch_st == -1:
@@ -586,7 +586,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     assert f[0] != '/'
             current_ctx = context.memctx(hg_editor.repo,
                                          [parentctx.node(), revlog.nullid],
-                                         r.message or '...',
+                                         r.message or util.default_commit_msg,
                                          files_touched,
                                          filectxfn,
                                          hg_editor.authorforsvnauthor(r.author),
@@ -595,8 +595,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             ha = hg_editor.repo.commitctx(current_ctx)
             hg_editor.add_to_revmap(r.revnum, b, ha)
             hg_editor._save_metadata()
-            ui.status('committed as %s on branch %s\n' %
-                      (node.hex(ha),  b or 'default'))
+            ui.status(util.describe_commit(ha, b))
     # These are branches which would have an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.
     for branch in check_deleted_branches:
@@ -624,7 +623,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         parents = (parent, closed)
         current_ctx = context.memctx(hg_editor.repo,
                                      parents,
-                                     r.message or '...',
+                                     r.message or util.default_commit_msg,
                                      files_touched,
                                      filectxfn,
                                      hg_editor.authorforsvnauthor(r.author),

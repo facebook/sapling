@@ -221,7 +221,7 @@ class HgChangeReceiver(delta.Editor):
         self.current_files[path] = ''
         self.current_files_exec[path] = False
         self.current_files_symlink[path] = False
-        self.ui.status('D %s\n' % path)
+        self.ui.note('D %s\n' % path)
 
     def _normalize_path(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
@@ -525,8 +525,8 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-            self.ui.status('committed as %s on branch %s\n' %
-                           (node.hex(new_hash), (branch or 'default')))
+
+            self.ui.status(our_util.describe_commit(new_hash, branch))
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         # now we handle branches that need to be committed without any files
@@ -552,8 +552,7 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-            self.ui.status('committed as %s on branch %s\n' %
-                           (node.hex(new_hash), (branch or 'default')))
+            self.ui.status(our_util.describe_commit(new_hash, branch))
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         self.clear_current_info()
@@ -564,9 +563,7 @@ class HgChangeReceiver(delta.Editor):
         return '%s%s' %(author, self.author_host)
 
     def readauthors(self, authorfile):
-        self.ui.status(
-            ('Reading authormap %s\n')
-            % authorfile)
+        self.ui.note(('Reading authormap from %s\n') % authorfile)
         f = open(authorfile, 'r')
         for line in f:
             if not line.strip():
@@ -576,12 +573,12 @@ class HgChangeReceiver(delta.Editor):
                 srcauth = srcauth.strip()
                 dstauth = dstauth.strip()
                 if srcauth in self.authors and dstauth != self.authors[srcauth]:
-                    self.ui.status(
-                        ('Overriding mapping for author %s, was %s, now %s\n')
-                        % (srcauth, self.authors[srcauth], dstauth))
+                    self.ui.status(('Overriding author mapping for "%s" ' +
+                                    'from "%s" to "%s"\n')
+                                   % (srcauth, self.authors[srcauth], dstauth))
                 else:
-                    self.ui.debug(('Mapping author %s to %s\n')
-                        % (srcauth, dstauth))
+                    self.ui.debug(('Mapping author "%s" to "%s"\n')
+                                  % (srcauth, dstauth))
                     self.authors[srcauth] = dstauth
             except IndexError:
                 self.ui.warn(
@@ -590,29 +587,28 @@ class HgChangeReceiver(delta.Editor):
         f.close()
 
     def writeauthors(self):
+        self.ui.debug(('Writing author map to %s\n') % self.authors_file)
         f = open(self.authors_file, 'w+')
-        self.ui.status(
-            ('Writing author map file %s\n')
-            % self.authors_file)
         for author in self.authors:
             f.write("%s=%s\n" % (author, self.authors[author]))
         f.close()
 
     def readfilemap(self, filemapfile):
-        self.ui.status(
-            ('Reading filemap %s\n')
+        self.ui.note(
+            ('Reading file map from %s\n')
             % filemapfile)
         def addpathtomap(path, mapping, mapname):
             if path in mapping:
-                self.ui.warn(
-                    ('%d alreading in %s list\n')
-                    % (path, mapname))
+                self.ui.warn(('Duplicate %s entry in %s: "%d"\n') %
+                             (mapname, filemapfile, path))
             else:
+                self.ui.debug(('%sing %s\n') %
+                              (mapname.capitalize().strip('e'), path))
                 mapping[path] = path
-        
+
         f = open(filemapfile, 'r')
         for line in f:
-            if line.strip() == '':
+            if line.strip() == '' or line.strip()[0] == '#':
                 continue
             try:
                 cmd, path = line.split(' ', 1)
@@ -706,7 +702,7 @@ class HgChangeReceiver(delta.Editor):
         fpath, branch = self._path_and_branch_for_path(path)
         if fpath:
             self.current_file = path
-            self.ui.status('M %s\n' % path)
+            self.ui.note('M %s\n' % path)
             if base_revision != -1:
                 self.base_revision = base_revision
             else:
@@ -750,9 +746,9 @@ class HgChangeReceiver(delta.Editor):
         self.current_file = path
         self.should_edit_most_recent_plaintext = False
         if not copyfrom_path:
-            self.ui.status('A %s\n' % path)
+            self.ui.note('A %s\n' % path)
             return
-        self.ui.status('A+ %s\n' % path)
+        self.ui.note('A+ %s\n' % path)
         (from_file,
          from_branch) = self._path_and_branch_for_path(copyfrom_path)
         if not from_file:

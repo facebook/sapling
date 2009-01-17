@@ -109,3 +109,16 @@ def build_extra(revnum, branch, uuid, subdir):
 
 def is_svn_repo(repo):
     return os.path.exists(os.path.join(repo.path, 'svn'))
+
+default_commit_msg = '*** empty log message ***'
+
+def describe_revision(r):
+    try:
+        msg = [s for s in map(str.strip, r.message.splitlines()) if s][0]
+    except:
+        msg = default_commit_msg
+
+    return ('[r%d] %s: %s' % (r.revnum, r.author, msg))[:80] + '\n'
+
+def describe_commit(h, b):
+    return ' committed to "%s" as %s\n' % ((b or 'default'), node.short(h))
