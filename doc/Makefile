@@ -5,6 +5,7 @@ PREFIX=/usr/local
 MANDIR=$(PREFIX)/share/man
 INSTALL=install -c
 PYTHON=python
+ASCIIDOC=asciidoc
 
 all: man html
 
@@ -24,10 +25,10 @@ hg.1.gendoc.txt: ../mercurial/commands.py ../mercurial/help.py
 	mv $*~ $*
 
 %.xml: %.txt
-	asciidoc -d manpage -b docbook $*.txt
+	$(ASCIIDOC) -d manpage -b docbook $*.txt
 
 %.html: %.txt
-	asciidoc -b html4 $*.txt || asciidoc -b html $*.txt
+	$(ASCIIDOC) -b html4 $*.txt || $(ASCIIDOC) -b html $*.txt
 
 MANIFEST: man html
 	# tracked files are already in the main MANIFEST

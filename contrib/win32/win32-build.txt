@@ -27,6 +27,9 @@ It has the following prerequisites, at least as I build it:
   add_path (you need only add_path.exe in the zip file)
       http://www.barisione.org/apps.html#add_path
 
+  Asciidoc - optional
+      http://www.methods.co.nz/asciidoc/
+
 And, of course, Mercurial itself.
 
 Once you have all this installed and built, clone a copy of the
@@ -51,6 +54,14 @@ you can skip the first build step.
 
 Copy mfc71.dll and add_path.exe into the dist directory that just got created.
 
+Before building the installer, you have to build Mercurial HTML documentation 
+(or fix mercurial.iss to not reference the doc directory). Assuming you have an
+"asciidoc.bat" batch file somewhere in your PATH:
+
+  cd doc
+  mingw32-make ASCIIDOC=asciidoc.bat html
+  cd ..
+
 If you use ISTool, you open the C:\hg\hg-release\contrib\win32\mercurial.iss
 file and type Ctrl-F9 to compile the installer file.
 
@@ -66,6 +77,9 @@ following:
   echo [build] > setup.cfg
   echo compiler=mingw32 >> setup.cfg
   python setup.py py2exe -b 1
+  cd doc
+  mingw32-make ASCIIDOC=asciidoc.bat html
+  cd ..
   iscc contrib\win32\mercurial.iss
 
 and run it from the root of the hg repository (c:\hg\hg-release).
