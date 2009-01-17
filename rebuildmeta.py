@@ -7,7 +7,7 @@ import svnwrap
 import util
 
 def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
-    """Rebuild hgsubversion metadata using values stored in revisions.
+    """rebuild hgsubversion metadata using values stored in revisions
     """
     assert len(args) == 1, 'You must pass the svn URI used to create this repo.'
     uuid = None

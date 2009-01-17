@@ -55,7 +55,7 @@ def svncmd(ui, repo, subcommand, *args, **opts):
 
 
 def help_command(ui, args=None, **opts):
-    """Get help on the subsubcommands.
+    """show help for a given subcommands or a help overview
     """
     if args:
         subcommand = args[0]
@@ -79,7 +79,7 @@ def help_command(ui, args=None, **opts):
 help_command = register_subcommand('help')(help_command)
 
 def update(ui, args, repo, clean=False, **opts):
-    """Update to a specified Subversion revision number.
+    """update to a specified Subversion revision number
     """
     assert len(args) == 1
     rev = int(args[0])
@@ -104,7 +104,7 @@ update = register_subcommand('up')(update)
 
 
 def verify_revision(ui, args, repo, force=False, **opts):
-    """Verify a single converted revision.
+    """verify a single converted revision
     Note: This wipes your working copy and then exports the corresponding
     Subversion into your working copy to verify. Use with caution.
     """
@@ -141,8 +141,7 @@ def verify_revision(ui, args, repo, force=False, **opts):
 verify_revision = register_subcommand('verify_revision')(verify_revision)
 
 def verify_all_revisions(ui, args, repo, **opts):
-    """Verify all the converted revisions
-    optionally starting at a revision.
+    """verify converted revisions; all or starting at a revision
 
     Note: This is *extremely* abusive of the Subversion server. It exports every
     revision of the code one revision at a time.

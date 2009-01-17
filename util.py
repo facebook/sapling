@@ -14,10 +14,12 @@ def register_subcommand(name):
 
 
 def generate_help():
-    ret = ['', 'hg svn subcommand\n', 'Subcommands:\n']
+    ret = ['hg svn ...', '',
+           'subcommands for Subversion integration', '',
+           'list of subcommands:', '']
 
     for name, func in sorted(svn_subcommands.items()):
-        short_description = (func.__doc__ or '').split('\n')[0]
+        short_description = (func.__doc__ or '').splitlines()[0]
         ret.append(" %-10s  %s" % (name, short_description))
 
     return "\n".join(ret) + '\n'

@@ -13,7 +13,7 @@ import utility_commands
 
 def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                  stupid=False, **opts):
-    """Push revisions starting at a specified head back to Subversion.
+    """push revisions starting at a specified head back to Subversion.
     """
     oldencoding = merc_util._encoding
     merc_util._encoding = 'UTF-8'

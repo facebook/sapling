@@ -7,7 +7,7 @@ import util
 import hg_delta_editor
 
 def print_wc_url(ui, repo, hg_repo_path, **opts):
-    """Url of Subversion repository.
+    """show the location (URL) of the Subversion repository
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
@@ -16,7 +16,7 @@ print_wc_url = util.register_subcommand('url')(print_wc_url)
 
 
 def run_svn_info(ui, repo, hg_repo_path, **opts):
-    """Like svn info details.
+    """show Subversion details similar to `svn info'
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
@@ -60,7 +60,7 @@ run_svn_info = util.register_subcommand('info')(run_svn_info)
 
 
 def print_parent_revision(ui, repo, hg_repo_path, **opts):
-    """Display hg hash and svn revision of nearest svn parent.
+    """show Mercurial & Subversion parents of the working dir or revision
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
@@ -81,7 +81,7 @@ print_parent_revision = util.register_subcommand('parent')(print_parent_revision
 
 
 def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts):
-    """Rebases current unpushed revisions onto Subversion head.
+    """rebase current unpushed revisions onto the Subversion head
 
     This moves a line of development from making its own head to the top of
     Subversion development, linearizing the changes. In order to make sure you
@@ -131,7 +131,7 @@ rebase_commits = util.register_subcommand('rebase')(rebase_commits)
 
 
 def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
-    """Show changesets not yet pushed to SVN.
+    """show changesets not found in the Subversion repository
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)

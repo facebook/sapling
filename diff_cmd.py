@@ -25,7 +25,7 @@ def filterdiff(diff, base_revision):
 
 
 def diff_command(ui, repo, hg_repo_path, **opts):
-    """Show a diff of the most recent revision against its parent from svn.
+    """show a diff of the most recent revision against its parent from svn
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
