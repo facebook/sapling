@@ -25,6 +25,9 @@ addcommit "C2" 1
 
 cd ..
 hg clone a b
+# This is needed to test pull --rebase
+hg clone a c
+
 cd b
 addcommit "L1" 2
 
@@ -44,7 +47,15 @@ echo "% Re-run pull --rebase"
 hg pull --rebase 2>&1 | sed 's/\(pulling from \).*/\1/'
 
 echo
-echo "% Invoke pull --rebase with --update"
-hg pull --rebase --update
+echo "% Invoke pull --rebase and nothing to rebase"
+cd ../c
+hg pull --rebase 2>&1 | sed 's/\(pulling from \).*/\1/'
+hg glog --template '{rev}\n' -l 1
+
+echo
+echo "% pull --rebase doesn't update if nothing has been pulled"
+hg up 1
+hg pull --rebase 2>&1 | sed 's/\(pulling from \).*/\1/'
+hg glog --template '{rev}\n' -l 1
 
 exit 0

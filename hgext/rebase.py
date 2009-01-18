@@ -400,7 +400,9 @@ def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     if opts.get('rebase'):
         if opts.get('update'):
-            raise util.Abort(_('--update and --rebase are not compatible'))
+            del opts.get['update']
+            ui.debug(_('--update and --rebase are not compatible, ignoring '
+                                        'the update flag\n'))
 
         cmdutil.bail_if_changed(repo)
         revsprepull = len(repo)
@@ -408,6 +410,11 @@ def pullrebase(orig, ui, repo, *args, **opts):
         revspostpull = len(repo)
         if revspostpull > revsprepull:
             rebase(ui, repo, **opts)
+            branch = repo[None].branch()
+            dest = repo[branch].rev()
+            if dest != repo['.'].rev():
+                # there was nothing to rebase we force an update
+                merge.update(repo, dest, False, False, False)
     else:
         orig(ui, repo, *args, **opts)
 

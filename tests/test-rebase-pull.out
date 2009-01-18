@@ -1,5 +1,7 @@
 updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+updating working directory
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 % Now b has one revision to be pulled from a
 pulling from 
@@ -30,5 +32,22 @@ pulling from
 searching for changes
 no changes found
 
-% Invoke pull --rebase with --update
-abort: --update and --rebase are not compatible
+% Invoke pull --rebase and nothing to rebase
+pulling from 
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+nothing to rebase
+@  2
+|
+
+% pull --rebase doesn't update if nothing has been pulled
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+pulling from 
+searching for changes
+no changes found
+o  2
+|
