@@ -80,7 +80,8 @@ def current(repo):
     mark = None
     if os.path.exists(repo.join('bookmarks.current')):
         file = repo.opener('bookmarks.current')
-        mark = file.readline()
+        # No readline() in posixfile_nt, reading everything is cheap
+        mark = (file.readlines() or [''])[0]
         if mark == '':
             mark = None
         file.close()
