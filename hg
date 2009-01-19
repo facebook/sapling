@@ -8,7 +8,14 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 # enable importing on demand to reduce startup time
-from mercurial import demandimport; demandimport.enable()
+try:
+    from mercurial import demandimport; demandimport.enable()
+except ImportError:
+    import sys
+    sys.stderr.write("abort: couldn't find mercurial libraries in [%s]\n" %
+                     ' '.join(sys.path))
+    sys.stderr.write("(check your install and PYTHONPATH)\n")
+    sys.exit(-1)
 
 import sys
 import mercurial.util
