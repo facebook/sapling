@@ -1359,7 +1359,7 @@ def diffstatdata(lines):
             adds += 1
         elif line.startswith('-') and not line.startswith('---'):
             removes += 1
-    if filename: 
+    if filename:
         yield (filename, adds, removes)
 
 def diffstat(lines):

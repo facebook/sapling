@@ -1217,7 +1217,7 @@ class localrepository(repo.repository):
             # filter out the heads that cannot be reached from startrev
             bheads = self.changelog.nodesbetween([start], bheads)[2]
         if not closed:
-            bheads = [h for h in bheads if 
+            bheads = [h for h in bheads if
                       ('close' not in self.changelog.read(h)[5])]
         return bheads
 
