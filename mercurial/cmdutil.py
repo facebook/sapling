@@ -68,8 +68,8 @@ def bail_if_changed(repo):
 
 def logmessage(opts):
     """ get the log message according to -m and -l option """
-    message = opts['message']
-    logfile = opts['logfile']
+    message = opts.get('message')
+    logfile = opts.get('logfile')
 
     if message and logfile:
         raise util.Abort(_('options --message and --logfile are mutually '
