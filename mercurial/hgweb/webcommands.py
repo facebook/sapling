@@ -81,8 +81,8 @@ def _filerevision(web, tmpl, fctx):
                 date=fctx.date(),
                 desc=fctx.description(),
                 branch=webutil.nodebranchnodefault(fctx),
-                parent=webutil.siblings(fctx.parents()),
-                child=webutil.siblings(fctx.children()),
+                parent=webutil.parents(fctx),
+                child=webutil.children(fctx),
                 rename=webutil.renamelink(fctx),
                 permissions=fctx.manifest().flags(f))
 
@@ -134,8 +134,8 @@ def _search(web, tmpl, query):
             yield tmpl('searchentry',
                        parity=parity.next(),
                        author=ctx.user(),
-                       parent=webutil.siblings(ctx.parents()),
-                       child=webutil.siblings(ctx.children()),
+                       parent=webutil.parents(ctx),
+                       child=webutil.children(ctx),
                        changelogtag=showtags,
                        desc=ctx.description(),
                        date=ctx.date(),
@@ -182,8 +182,8 @@ def changelog(web, req, tmpl, shortlog = False):
 
             l.insert(0, {"parity": parity.next(),
                          "author": ctx.user(),
-                         "parent": webutil.siblings(ctx.parents(), i - 1),
-                         "child": webutil.siblings(ctx.children(), i + 1),
+                         "parent": webutil.parents(ctx, i - 1),
+                         "child": webutil.children(ctx, i + 1),
                          "changelogtag": showtags,
                          "desc": ctx.description(),
                          "date": ctx.date(),
@@ -227,7 +227,6 @@ def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
     showbranch = webutil.nodebranchnodefault(ctx)
-    parents = ctx.parents()
 
     files = []
     parity = paritygen(web.stripecount)
@@ -243,8 +242,8 @@ def changeset(web, req, tmpl):
                 diff=diffs,
                 rev=ctx.rev(),
                 node=ctx.hex(),
-                parent=webutil.siblings(parents),
-                child=webutil.siblings(ctx.children()),
+                parent=webutil.parents(ctx),
+                child=webutil.children(ctx),
                 changesettag=showtags,
                 changesetbranch=showbranch,
                 author=ctx.user(),
@@ -442,12 +441,9 @@ def filediff(web, req, tmpl):
     if fctx is not None:
         n = fctx.node()
         path = fctx.path()
-        parents = fctx.parents()
-        p1 = parents and parents[0].node() or nullid
     else:
         n = ctx.node()
         # path already defined in except clause
-        parents = ctx.parents()
 
     parity = paritygen(web.stripecount)
     diffs = webutil.diffs(web.repo, tmpl, fctx or ctx, [path], parity)
@@ -462,8 +458,8 @@ def filediff(web, req, tmpl):
                 author=ctx.user(),
                 rename=rename,
                 branch=webutil.nodebranchnodefault(ctx),
-                parent=webutil.siblings(parents),
-                child=webutil.siblings(ctx.children()),
+                parent=webutil.parents(ctx),
+                child=webutil.children(ctx),
                 diff=diffs)
 
 diff = filediff
@@ -510,8 +506,8 @@ def annotate(web, req, tmpl):
                 desc=fctx.description(),
                 rename=webutil.renamelink(fctx),
                 branch=webutil.nodebranchnodefault(fctx),
-                parent=webutil.siblings(fctx.parents()),
-                child=webutil.siblings(fctx.children()),
+                parent=webutil.parents(fctx),
+                child=webutil.children(fctx),
                 permissions=fctx.manifest().flags(f))
 
 def filelog(web, req, tmpl):
@@ -555,8 +551,8 @@ def filelog(web, req, tmpl):
                          "author": iterfctx.user(),
                          "date": iterfctx.date(),
                          "rename": webutil.renamelink(iterfctx),
-                         "parent": webutil.siblings(iterfctx.parents()),
-                         "child": webutil.siblings(iterfctx.children()),
+                         "parent": webutil.parents(iterfctx),
+                         "child": webutil.children(iterfctx),
                          "desc": iterfctx.description(),
                          "tags": webutil.nodetagsdict(repo, iterfctx.node()),
                          "branch": webutil.nodebranchnodefault(iterfctx),

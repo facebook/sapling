@@ -58,7 +58,7 @@ def revnavgen(pos, pagelen, limit, nodefunc):
 
     return nav
 
-def siblings(siblings=[], hiderev=None, **args):
+def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]
     if len(siblings) == 1 and siblings[0].rev() == hiderev:
         return
@@ -69,8 +69,13 @@ def siblings(siblings=[], hiderev=None, **args):
         d['description'] = s.description()
         if hasattr(s, 'path'):
             d['file'] = s.path()
-        d.update(args)
         yield d
+
+def parents(ctx, hide=None):
+    return _siblings(ctx.parents(), hide)
+
+def children(ctx, hide=None):
+    return _siblings(ctx.children(), hide)
 
 def renamelink(fctx):
     r = fctx.renamed()
