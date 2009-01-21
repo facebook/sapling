@@ -197,7 +197,7 @@ def _verify(repo):
                 t = fl.read(n)
                 rp = fl.renamed(n)
                 if len(t) != fl.size(i):
-                    if not fl._readmeta(n): # ancient copy?
+                    if len(fl.revision(n)) != fl.size(i):
                         err(lr, _("unpacked size is %s, %s expected") %
                             (len(t), fl.size(i)), f)
             except Exception, inst:
