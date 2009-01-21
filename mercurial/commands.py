@@ -448,7 +448,7 @@ def branches(ui, repo, active=False):
                     notice = ' (closed)'
                 else:
                     notice = ' (inactive)'
-                rev = str(node).rjust(31 - util.locallen(tag))
+                rev = str(node).rjust(31 - util.colwidth(tag))
                 data = tag, rev, hexfunc(hn), notice
                 ui.write("%s %s:%s%s\n" % data)
 
@@ -2833,7 +2833,7 @@ def tags(ui, repo):
         except error.LookupError:
             r = "    ?:%s" % hn
         else:
-            spaces = " " * (30 - util.locallen(t))
+            spaces = " " * (30 - util.colwidth(t))
             if ui.verbose:
                 if repo.tagtype(t) == 'local':
                     tagtype = " local"

@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import _
 import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback, error
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import imp
+import imp, unicodedata
 
 # Python compatibility
 
@@ -138,9 +138,17 @@ def fromlocal(s):
     except LookupError, k:
         raise Abort(_("%s, please check your locale settings") % k)
 
-def locallen(s):
-    """Find the length in characters of a local string"""
-    return len(s.decode(_encoding, "replace"))
+_colwidth = None
+def colwidth(s):
+    """Find the column width of string to display."""
+    global _colwidth
+    if _colwidth is None:
+        if hasattr(unicodedata, 'east_asian_width'):
+            _colwidth = lambda s: sum([unicodedata.east_asian_width(c) in 'WF'
+                                       and 2 or 1 for c in s])
+        else:
+            _colwidth = len
+    return _colwidth(s.decode(_encoding, "replace"))
 
 def version():
     """Return version information if available."""
