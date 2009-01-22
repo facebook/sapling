@@ -97,6 +97,7 @@ additional help topics:
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
  diffs        Diff Formats
+ templating   Template Usage
 
 use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
@@ -156,6 +157,7 @@ additional help topics:
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
  diffs        Diff Formats
+ templating   Template Usage
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
