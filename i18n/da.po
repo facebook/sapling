@@ -2,11 +2,20 @@
 # Danske oversættelser for Mercurial
 # Copyright (C) 2009 Matt Mackall and others
 #
+# Translation dictionary:
+#
+# changeset      ændring
+# merge          sammenføje
+# patch          rettelse
+# repo(sitory)   arkiv
+# revision       revision
+# tag            mærke
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "POT-Creation-Date: 2009-01-15 15:24+CET\n"
-"PO-Revision-Date: 2009-01-15 15:28+0100\n"
+"PO-Revision-Date: 2009-01-22 20:48+0100\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -404,7 +413,7 @@ msgstr ""
 
 #: hgext/bugzilla.py:175
 msgid "bug %d already knows about changeset %s\n"
-msgstr "fejl %s kender allerede til ændring %s\n"
+msgstr "fejl %d kender allerede til ændring %s\n"
 
 #: hgext/bugzilla.py:181
 msgid "tell bugzilla to send mail."
@@ -1163,7 +1172,7 @@ msgstr ""
 
 #: hgext/fetch.py:54
 msgid "working directory is missing some files"
-msgstr ""
+msgstr "arbejdsbiblioteket mangler nogle filer"
 
 #: hgext/fetch.py:56
 msgid ""
@@ -1172,11 +1181,11 @@ msgstr ""
 
 #: hgext/fetch.py:62 mercurial/commands.py:2168
 msgid "pulling from %s\n"
-msgstr ""
+msgstr "hiver fra %s\n"
 
 #: hgext/fetch.py:67
 msgid "fetch -r doesn't work for remote repositories yet"
-msgstr ""
+msgstr "fetch -r virker endnu ikke for fjernarkiver"
 
 #: hgext/fetch.py:94
 msgid ""
@@ -1186,11 +1195,11 @@ msgstr ""
 
 #: hgext/fetch.py:109
 msgid "updating to %d:%s\n"
-msgstr ""
+msgstr "opdaterer til %d:%s\n"
 
 #: hgext/fetch.py:113
 msgid "merging with %d:%s\n"
-msgstr ""
+msgstr "sammenføjer med %d:%s\n"
 
 #: hgext/fetch.py:120
 msgid "Automated merge with %s"
@@ -2297,7 +2306,7 @@ msgstr ""
 
 #: hgext/mq.py:184
 msgid "%s appears more than once in %s"
-msgstr ""
+msgstr "%s findes mere end én gang i %s"
 
 #: hgext/mq.py:191
 msgid "guard cannot be an empty string"
@@ -2365,15 +2374,15 @@ msgstr ""
 
 #: hgext/mq.py:417 hgext/mq.py:1603
 msgid "unable to read %s"
-msgstr ""
+msgstr "ikke i stand til at læse %s"
 
 #: hgext/mq.py:466
 msgid "patch %s does not exist\n"
-msgstr ""
+msgstr "rettelsen %s findes ikke\n"
 
 #: hgext/mq.py:474
 msgid "patch %s is not applied\n"
-msgstr ""
+msgstr "rettelsen %s er ikke anvendt\n"
 
 #: hgext/mq.py:487
 msgid ""
@@ -2387,7 +2396,7 @@ msgstr ""
 
 #: hgext/mq.py:537 hgext/transplant.py:208 mercurial/commands.py:1627
 msgid "applying %s\n"
-msgstr ""
+msgstr "anvender %s\n"
 
 #: hgext/mq.py:543
 msgid "Unable to read %s\n"
@@ -2395,17 +2404,17 @@ msgstr ""
 
 #: hgext/mq.py:549
 msgid "imported patch %s\n"
-msgstr ""
+msgstr "importeret rettelse %s\n"
 
 #: hgext/mq.py:552
 msgid ""
 "\n"
 "imported patch %s"
-msgstr ""
+msgstr "\nimporteret rettelse %s"
 
 #: hgext/mq.py:588
 msgid "patch %s is empty\n"
-msgstr ""
+msgstr "rettelse %s er tom\n"
 
 #: hgext/mq.py:591
 msgid "patch failed, rejects left in working dir\n"
@@ -2421,7 +2430,7 @@ msgstr ""
 
 #: hgext/mq.py:619 hgext/mq.py:664
 msgid "cannot delete revision %d above applied patches"
-msgstr ""
+msgstr "kan ikke slette revision %d ovenover anvendte rettelser"
 
 #: hgext/mq.py:637
 msgid "qdelete requires at least one revision or patch name"
@@ -2429,15 +2438,15 @@ msgstr ""
 
 #: hgext/mq.py:645
 msgid "cannot delete applied patch %s"
-msgstr ""
+msgstr "kan ikke slette den anvendte rettelse %s"
 
 #: hgext/mq.py:647
 msgid "patch %s not in series file"
-msgstr ""
+msgstr "rettelse %s er ikke i series filen"
 
 #: hgext/mq.py:653 hgext/mq.py:2016
 msgid "no patches applied"
-msgstr ""
+msgstr "ingen rettelser anvendt"
 
 #: hgext/mq.py:687
 msgid "working directory revision is not qtip"
@@ -2445,15 +2454,15 @@ msgstr ""
 
 #: hgext/mq.py:695
 msgid "local changes found, refresh first"
-msgstr ""
+msgstr "lokale ændringer fundet, genopfrisk først"
 
 #: hgext/mq.py:697
 msgid "local changes found"
-msgstr ""
+msgstr "lokale ændringer fundet"
 
 #: hgext/mq.py:704
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr ""
+msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
 
 #: hgext/mq.py:708
 msgid ""
@@ -2464,7 +2473,7 @@ msgstr ""
 
 #: hgext/mq.py:719 hgext/mq.py:1515
 msgid "patch \"%s\" already exists"
-msgstr ""
+msgstr "rettelsen \"%s\" findes allerede"
 
 #: hgext/mq.py:781
 msgid "error unlinking %s\n"
@@ -2476,7 +2485,7 @@ msgstr ""
 
 #: hgext/mq.py:829
 msgid "patch name \"%s\" is ambiguous:\n"
-msgstr ""
+msgstr "rettelsen \"%s\" er tvetydigt:\n"
 
 #: hgext/mq.py:884
 msgid "patch %s not in series"
@@ -2512,7 +2521,7 @@ msgstr "kan ikke skubbe '%s' - %s\n"
 
 #: hgext/mq.py:922
 msgid "all patches are currently applied\n"
-msgstr ""
+msgstr "alle rettelser er i øjeblikket anvendt\n"
 
 #: hgext/mq.py:932
 msgid "patch series already fully applied\n"
@@ -2520,24 +2529,23 @@ msgstr ""
 
 #: hgext/mq.py:953
 msgid "cleaning up working directory..."
-msgstr ""
+msgstr "rydder op i arbejdsbiblioteket..."
 
 #: hgext/mq.py:966
 msgid "Errors during apply, please fix and refresh %s\n"
 msgstr ""
 
 #: hgext/mq.py:969 hgext/mq.py:1070
-#, fuzzy
 msgid "Now at: %s\n"
-msgstr "nu ved: %s\n"
+msgstr "Nu ved: %s\n"
 
 #: hgext/mq.py:988
 msgid "patch %s is not applied"
-msgstr ""
+msgstr "rettelse %s er ikke anvendt"
 
 #: hgext/mq.py:993 hgext/mq.py:2358
 msgid "no patches applied\n"
-msgstr ""
+msgstr "ingen rettelser anvendt\n"
 
 #: hgext/mq.py:1004
 msgid "qpop: %s is already at the top\n"
@@ -2565,9 +2573,8 @@ msgstr ""
 
 #: hgext/mq.py:1079 hgext/mq.py:1087 hgext/mq.py:1800 hgext/mq.py:1820
 #: hgext/mq.py:1884 hgext/mq.py:2126
-#, fuzzy
 msgid "No patches applied\n"
-msgstr "alle patches er anvendt\n"
+msgstr "Ingen rettelser er anvendt\n"
 
 #: hgext/mq.py:1100
 msgid "cannot refresh a revision with children"
@@ -2585,7 +2592,7 @@ msgstr ""
 
 #: hgext/mq.py:1315 hgext/mq.py:1646 hgext/mq.py:1657
 msgid "patch %s is not in series file"
-msgstr ""
+msgstr "rettelse %s er ikke i series filen"
 
 #: hgext/mq.py:1405
 msgid "No saved patch data found\n"
@@ -2593,7 +2600,7 @@ msgstr ""
 
 #: hgext/mq.py:1407
 msgid "restoring status: %s\n"
-msgstr ""
+msgstr "genopretter status: %s\n"
 
 #: hgext/mq.py:1416
 msgid "save entry has children, leaving it alone\n"
@@ -2682,7 +2689,7 @@ msgstr ""
 
 #: hgext/mq.py:1593
 msgid "patch %s does not exist"
-msgstr ""
+msgstr "rettelse %s eksisterer ikke"
 
 #: hgext/mq.py:1598
 msgid "need --name to import a patch from -"
@@ -2708,11 +2715,11 @@ msgstr ""
 
 #: hgext/mq.py:1642
 msgid "print the patches already applied"
-msgstr ""
+msgstr "udskriver rettelserne som allerede er anvendt"
 
 #: hgext/mq.py:1653
 msgid "print the patches not yet applied"
-msgstr ""
+msgstr "udskriver rettelserne som ikke er anvendt endnu"
 
 #: hgext/mq.py:1664
 msgid ""
@@ -2770,15 +2777,15 @@ msgstr ""
 
 #: hgext/mq.py:1745
 msgid "versioned patch repository not found (see qinit -c)"
-msgstr ""
+msgstr "versionsstyret arkiv til rettelser blev ikke fundet (se qinit -c)"
 
 #: hgext/mq.py:1762
 msgid "cloning main repo\n"
-msgstr ""
+msgstr "kloner hovedarkiv\n"
 
 #: hgext/mq.py:1768
 msgid "cloning patch repo\n"
-msgstr ""
+msgstr "kloner rettelsesarkiv\n"
 
 #: hgext/mq.py:1774
 msgid "stripping applied patches from destination repo\n"
@@ -2794,29 +2801,27 @@ msgstr ""
 
 #: hgext/mq.py:1788
 msgid "print the entire series file"
-msgstr ""
+msgstr "udskriver hele series filen"
 
 #: hgext/mq.py:1793
 msgid "print the name of the current patch"
-msgstr ""
+msgstr "udskriver navnet på den nuværende rettelse"
 
 #: hgext/mq.py:1804
 msgid "print the name of the next patch"
-msgstr ""
+msgstr "udskriver navnet på den næste rettelse"
 
 #: hgext/mq.py:1808
-#, fuzzy
 msgid "All patches applied\n"
-msgstr "alle patches er anvendt\n"
+msgstr "Alle patches er anvendt\n"
 
 #: hgext/mq.py:1813
 msgid "print the name of the previous patch"
-msgstr ""
+msgstr "udskriver navnet på den forgående rettelse"
 
 #: hgext/mq.py:1817
-#, fuzzy
 msgid "Only one patch applied\n"
-msgstr "kun en patch anvendt\n"
+msgstr "Kun én patch anvendt\n"
 
 #: hgext/mq.py:1833
 msgid ""
@@ -2904,7 +2909,7 @@ msgstr ""
 
 #: hgext/mq.py:1928
 msgid "No patches applied"
-msgstr ""
+msgstr "Ingen rettelser anvendt"
 
 #: hgext/mq.py:1941
 msgid "Skipping already folded patch %s"
@@ -4779,14 +4784,13 @@ msgid ""
 msgstr ""
 "tilføj de angivne filer ved næste commit\n"
 "\n"
-"    Opskriv filer til at blive versionsstyret og tilføjet til\n"
-"    repository'et.\n"
+"    Opskriv filer til at blive versionsstyret og tilføjet til arkivet.\n"
 "\n"
-"    Filerne vil bliver tilføjet til repository'et ved næste commit.\n"
-"    For at omgøre en tilføjelse før det, se hg revert.\n"
+"    Filerne vil bliver tilføjet til arkivet ved næste commit. For at\n"
+"    omgøre en tilføjelse før det, se hg revert.\n"
 "\n"
 "    Hvis der ikke er angivet nogen navne tilføjes alle filer i\n"
-"    repository'et.\n"
+"    arkivet.\n"
 "    "
 
 #: mercurial/commands.py:39 mercurial/commands.py:43
@@ -5212,7 +5216,7 @@ msgstr ""
 #: mercurial/commands.py:2642 mercurial/commands.py:2657
 #: mercurial/dispatch.py:356 mercurial/hgweb/server.py:252
 msgid "There is no Mercurial repository here (.hg not found)"
-msgstr "Der er ikke noget Mercurial repository her (fandt ikke .hg)"
+msgstr "Der er ikke noget Mercurial arkiv her (fandt ikke .hg)"
 
 #: mercurial/commands.py:675
 msgid "either two or three arguments required"
@@ -5597,14 +5601,14 @@ msgstr "valgmuligheder:\n"
 
 #: mercurial/commands.py:1370
 msgid "no commands defined\n"
-msgstr ""
+msgstr "ingen kommandoer defineret\n"
 
 #: mercurial/commands.py:1385
 msgid ""
 "\n"
 "enabled extensions:\n"
 "\n"
-msgstr ""
+msgstr "\naktiverede udvidelser:\n\n"
 
 #: mercurial/commands.py:1394
 msgid " %s   %s\n"
@@ -5918,11 +5922,11 @@ msgstr "opdaterer ikke idet nye hoveder er tilføjet\n"
 
 #: mercurial/commands.py:2122
 msgid "(run 'hg heads' to see heads, 'hg merge' to merge)\n"
-msgstr ""
+msgstr "(kør 'hg heads' for at se hoveder, 'hg merge' for at sammenføje)\n"
 
 #: mercurial/commands.py:2124
 msgid "(run 'hg update' to get a working copy)\n"
-msgstr ""
+msgstr "(kør 'hg update' for at få en arbejdskopi)\n"
 
 #: mercurial/commands.py:2127
 msgid ""
@@ -8458,8 +8462,8 @@ msgid ""
 msgstr ""
 "\n"
 "    Nogle kommandoer tillader brugeren at specificere en dato:\n"
-"    backout, commit, import, tag: specificer commit-datøn.\n"
-"    log, revert, update: vælg revisioner eftre dato.\n"
+"    backout, commit, import, tag: specificer commit-datoen.\n"
+"    log, revert, update: vælg revisioner efter dato.\n"
 "\n"
 "    Der er mange gyldige datoformater. Her er nogle eksempler:\n"
 "\n"
@@ -8481,7 +8485,7 @@ msgstr ""
 "\n"
 "    \"1165432709 0\" (Ons 6. dec. 13:18:29 2006 UTC)\n"
 "\n"
-"    Dette er den interne representation af datoer. unixtime er\n"
+"    Dette er den interne repræsentation af datoer. unixtime er\n"
 "    antallet af sekunder siden begyndelsen af epoken (1970-01-01 00:00\n"
 "    UTC). offset er den lokale tidszone, angivet i antal sekunder vest\n"
 "    for UTC (negativ hvis tidszonen er øst for UTC).\n"
@@ -8491,7 +8495,7 @@ msgstr ""
 "    \"<{date}\" - på eller før den angivne dato\n"
 "    \">{date}\" - på eller efter den angivne dato\n"
 "    \"{date} to {date}\" - et datointerval, inklusiv endepunkterne\n"
-"    \"-{days}\" - indenfor et angivet antal date, fra dags dato\n"
+"    \"-{days}\" - indenfor et angivet antal dage, fra dags dato\n"
 "    "
 
 #: mercurial/help.py:50
@@ -8762,7 +8766,7 @@ msgstr "fjernet"
 
 #: mercurial/hg.py:251
 msgid "unresolved"
-msgstr ""
+msgstr "uløst"
 
 #: mercurial/hg.py:252
 msgid "%d files %s"
@@ -8929,7 +8933,7 @@ msgstr ""
 
 #: mercurial/httprepo.py:228
 msgid "cannot create new http repository"
-msgstr "kan ikke lave nyt http repository"
+msgstr "kan ikke lave nyt http arkiv"
 
 #: mercurial/ignore.py:60
 msgid "%s: ignoring invalid syntax '%s'\n"
@@ -8941,11 +8945,11 @@ msgstr ""
 
 #: mercurial/localrepo.py:50
 msgid "repository %s not found"
-msgstr "repository'et %s blev ikke fundet"
+msgstr "arkivet %s blev ikke fundet"
 
 #: mercurial/localrepo.py:52
 msgid "repository %s already exists"
-msgstr ""
+msgstr "arkivet %s eksisterer allerede"
 
 #: mercurial/localrepo.py:60 mercurial/statichttprepo.py:88
 msgid "requirement '%s' not supported"
@@ -9135,11 +9139,11 @@ msgstr ""
 
 #: mercurial/localrepo.py:1400
 msgid "warning: repository is unrelated\n"
-msgstr ""
+msgstr "advarsel: arkivet er urelateret\n"
 
 #: mercurial/localrepo.py:1402
 msgid "repository is unrelated"
-msgstr ""
+msgstr "arkivet er urelateret"
 
 #: mercurial/localrepo.py:1404
 msgid "found new changesets starting at "
@@ -9193,7 +9197,7 @@ msgstr ""
 
 #: mercurial/localrepo.py:2001
 msgid "adding changesets\n"
-msgstr ""
+msgstr "tilføjer ændringer\n"
 
 #: mercurial/localrepo.py:2005
 msgid "received changelog group is empty"
@@ -9201,15 +9205,15 @@ msgstr ""
 
 #: mercurial/localrepo.py:2010
 msgid "adding manifests\n"
-msgstr ""
+msgstr "tilføjer manifester\n"
 
 #: mercurial/localrepo.py:2019
 msgid "adding file changes\n"
-msgstr ""
+msgstr "tilføjer filændringer\n"
 
 #: mercurial/localrepo.py:2024
 msgid "adding %s revisions\n"
-msgstr ""
+msgstr "tilføjer %s ændringer\n"
 
 #: mercurial/localrepo.py:2029
 msgid "received file revlog group is empty"
@@ -9217,11 +9221,11 @@ msgstr ""
 
 #: mercurial/localrepo.py:2039
 msgid " (%+d heads)"
-msgstr ""
+msgstr " (%+d hoveder)"
 
 #: mercurial/localrepo.py:2041
 msgid "added %d changesets with %d changes to %d files%s\n"
-msgstr ""
+msgstr "tilføjede %d ændringer med %d ændringer i %d filer%s\n"
 
 #: mercurial/localrepo.py:2056
 msgid "updating the branch cache\n"
@@ -9906,7 +9910,7 @@ msgstr "duplikeret revision %d (%d)"
 
 #: mercurial/verify.py:101
 msgid "repository uses revlog format %d\n"
-msgstr "repository bruger revlog format %d\n"
+msgstr "arkivet bruger revlog format %d\n"
 
 #: mercurial/verify.py:107
 msgid "checking changesets\n"
