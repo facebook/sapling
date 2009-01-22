@@ -58,16 +58,14 @@ For more information, see 'hg help svn' while in a converted repo.
 Support for svn:externals
 -------------------------
 All svn:externals properties are serialized into a single
-.hgsvnexternals file, with the following syntax:
+.hgsvnexternals file, with the following syntax::
 
---------------------
-[.]
- external_reference_line1_1
- external_reference_line1_2
-[dir2]
- external_reference_line2_1
- external_reference_line2_2
---------------------
+  [.]
+   external_reference_line1_1
+   external_reference_line1_2
+  [dir2]
+   external_reference_line2_1
+   external_reference_line2_2
 
 A header line gives the directory the property applies on, '.' for the
 project root directory. The property content follows, *every line
