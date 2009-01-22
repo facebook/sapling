@@ -26,9 +26,7 @@ def generate_help():
 
 
 def normalize_url(svn_url):
-    while svn_url[-1] == '/':
-        svn_url = svn_url[:-1]
-    return svn_url
+    return svn_url.rstrip('/')
 
 
 def wipe_all_files(hg_wc_path):
