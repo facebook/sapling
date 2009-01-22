@@ -1,6 +1,5 @@
 import os
 import unittest
-import urllib # for url quoting
 
 from mercurial import ui
 from mercurial import hg

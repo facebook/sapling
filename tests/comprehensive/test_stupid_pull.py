@@ -6,8 +6,6 @@ from mercurial import hg
 from mercurial import ui
 
 from tests import test_util
-import rebuildmeta
-import hg_delta_editor
 import fetch_command
 
 

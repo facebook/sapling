@@ -1,15 +1,5 @@
-import cStringIO
-import os
-import shutil
-import sys
-import tempfile
 import unittest
 
-from mercurial import hg
-from mercurial import ui
-from mercurial import node
-
-import fetch_command
 import svnexternals
 import test_util
 

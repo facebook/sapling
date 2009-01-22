@@ -1,5 +1,4 @@
 import os
-import pickle
 import shutil
 
 from mercurial import node

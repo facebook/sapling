@@ -1,7 +1,5 @@
 import unittest
 
-from mercurial import node
-
 import test_util
 
 class TestFetchBinaryFiles(test_util.TestBase):

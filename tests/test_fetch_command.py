@@ -1,8 +1,8 @@
 import unittest
 
 from mercurial import hg
-from mercurial import ui
 from mercurial import node
+from mercurial import ui
 
 import test_util
 
