@@ -58,7 +58,13 @@ to send each message out:
 
   % formail -s sendmail -bm -t < mbox
 
-That should be all. Now your patchbomb is on its way out.'''
+That should be all. Now your patchbomb is on its way out.
+
+You can also either configure the method option in the email section
+to be a sendmail compatable mailer or fill out the [smtp] section so
+that the patchbomb extension can automatically send patchbombs directly
+from the commandline. See the [email] and [smtp] sections in hgrc(5)
+for details.'''
 
 import os, errno, socket, tempfile, cStringIO
 import email.MIMEMultipart, email.MIMEBase
