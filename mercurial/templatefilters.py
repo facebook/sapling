@@ -30,8 +30,10 @@ def age(date):
 
     now = time.time()
     then = date[0]
-    delta = max(1, int(now - then))
+    if then > now:
+        return 'in the future'
 
+    delta = max(1, int(now - then))
     for t, s in agescales:
         n = delta / s
         if n >= 2 or s == 1:
