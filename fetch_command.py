@@ -497,7 +497,7 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
         for path, e in r.paths.iteritems():
             if not path.startswith(branchprefix):
                 continue
-            if not hg_editor._is_path_valid(branchprefix + path):
+            if not hg_editor._is_path_valid(path):
                 continue
             kind = svn.checkpath(path, r.revnum)
             path = path[len(branchprefix):]
