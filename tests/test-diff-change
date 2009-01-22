@@ -38,11 +38,13 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 hg commit -m "lots of text" # 3
 
-sed -i -e 's,^2$,x,' file.txt
+sed -e 's,^2$,x,' file.txt > file.txt.tmp
+mv file.txt.tmp file.txt
 hg commit -m "changed 2 to x" # 4
 
 hg up -r 3 > /dev/null 2>&1 # updated, merged, removed, unresolved
-sed -i -e 's,^8$,y,' file.txt
+sed -e 's,^8$,y,' file.txt > file.txt.tmp
+mv file.txt.tmp file.txt
 hg commit -m "change 8 to y" > /dev/null 2>&1 # 5 # created new head
 
 hg up -C -r 4 > /dev/null 2>&1 # updated, merged, removed, unresolved
