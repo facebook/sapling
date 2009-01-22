@@ -16,6 +16,11 @@ from mercurial import ui
 import fetch_command
 import push_cmd
 
+# Fixtures that need to be pulled at a subdirectory of the repo path
+subdir = {'truncatedhistory.svndump': '/project2',
+          'fetch_missing_files_subdir.svndump': '/foo',
+          }
+
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
 

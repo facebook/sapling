@@ -9,9 +9,6 @@ import test_util
 import rebuildmeta
 import hg_delta_editor
 
-subdir = {'truncatedhistory.svndump': '/project2',
-          'fetch_missing_files_subdir.svndump': '/foo',
-          }
 # List of expected "missing" branches - these are really files that happen
 # to be in the branches dir. This will be fixed at a later date.
 expected_branch_deltas = {'unrelatedbranch.svndump': ['c', ],
@@ -19,7 +16,8 @@ expected_branch_deltas = {'unrelatedbranch.svndump': ['c', ],
                           }
 
 def _do_case(self, name, stupid):
-    self._load_fixture_and_fetch(name, subdir=subdir.get(name, ''), stupid=stupid)
+    subdir = test_util.subdir.get(name, '')
+    self._load_fixture_and_fetch(name, subdir=subdir, stupid=stupid)
     assert len(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
@@ -28,7 +26,7 @@ def _do_case(self, name, stupid):
                             dest,
                             os.path.dirname(dest.path),
                             args=[test_util.fileurl(self.repo_path +
-                                                    subdir.get(name, '')), ])
+                                                    subdir), ])
     dest = hg.repository(u, os.path.dirname(dest.path))
     self.assert_(open(os.path.join(src.path, 'svn', 'last_rev')).read() >=
                      open(os.path.join(dest.path, 'svn', 'last_rev')).read())
