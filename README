@@ -57,7 +57,8 @@ For more information, see 'hg help svn' while in a converted repo.
 
 Support for svn:externals
 -------------------------
-All svn:externals properties are serialized into a single .hgsvnexternals file, with the following syntax:
+All svn:externals properties are serialized into a single
+.hgsvnexternals file, with the following syntax:
 
 --------------------
 [.]
@@ -68,7 +69,10 @@ All svn:externals properties are serialized into a single .hgsvnexternals file, 
  external_reference_line2_2
 --------------------
 
-A header line gives the directory the property applies on, '.' for the project root directory. The property content follows, *every line being prefixed by a single space*.
+A header line gives the directory the property applies on, '.' for the
+project root directory. The property content follows, *every line
+being prefixed by a single space*.
 
-The creation or modification of this file will trigger svn:externals updates on the related subversion repository.
+The creation or modification of this file will trigger svn:externals
+updates on the related subversion repository.
 
