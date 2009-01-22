@@ -248,4 +248,87 @@ PYTHONPATH::
     [diff] section of your hgrc. You do not need to set this option when
     importing diffs in this format or using them in the mq extension.
     ''')),
+    (['templating'], _('Usage of templates'),
+     _(r'''
+    Mercurial allows you to customize output of commands through
+    templates. There is command line option for that and additionally
+    styles, which are simply precanned templates that someone wrote.
+
+    You can customize output for any "log-like" command, which currently
+    are: log, outgoing, incoming, tip, parents, heads and glog (if you have
+    graphlog extension enabled).
+
+    There is three styles packaged with Mercurial: default (which is
+    naturally what you see by default), compact and changelog. Usage:
+
+        > hg log -r1 --style changelog
+
+    Template is a piece of text, where parts marked with special syntax
+    are expanded, for example:
+
+        > hg log -r1 --template "{node}\n"
+        b56ce7b07c52de7d5fd79fb89701ea538af65746
+
+    Strings in curly brackets are called keywords and that's their
+    current list:
+
+    - author: String. The unmodified author of the changeset.
+    - branches: String. The name of the branch on which the changeset
+          was committed. Will be empty if the branch name was default.
+    - date: Date information. The date when the changeset was committed.
+    - desc: String. The text of the changeset description.
+    - files: List of strings. All files modified, added, or removed by
+          this changeset.
+    - file_adds: List of strings. Files added by this changeset.
+    - file_dels: List of strings. Files removed by this changeset.
+    - node: String. The changeset identification hash, as a 40-character
+          hexadecimal string.
+    - parents: List of strings. The parents of the changeset.
+    - rev: Integer. The repository-local changeset revision number.
+    - tags: List of strings. Any tags associated with the changeset.
+
+    But "date" keyword does not produce human-readable output, what
+    means that you should use a filter to process it. Filter is a
+    function which modifies the result of expanding a keyword and
+    Mercurial lets you specify a chain of filters:
+
+       > hg tip --template "{date|isodate}\n"
+       2008-08-21 18:22 +0000
+
+    List of filters:
+
+    - addbreaks: Any text. Add an XHTML "<br/>" tag before the end of
+          every line except the last.
+    - age: Date. Render the age of the date.
+    - basename: Any text. Treat the text as a path, and return the
+          basename. For example, "foo/bar/baz" becomes "baz".
+    - date: Date. Render a date in a Unix date command format, but with
+          timezone included: "Mon Sep 04 15:13:13 2006 0700".
+    - domain: Any text. Finds the first string that looks like an email
+          address, and extract just the domain component.
+    - email: Any text. Extract the first string that looks like an email
+          address.
+    - escape: Any text. Replace the special XML/XHTML characters "&",
+          "<" and ">" with XML entities.
+    - fill68: Any text. Wrap the text to fit in 68 columns.
+    - fill76: Any text. Wrap the text to fit in 76 columns.
+    - firstline: Any text. Yield the first line of text.
+    - hgdate: Date. Render the date as a pair of readable numbers:
+          "1157407993 25200".
+    - isodate: Date. Render the date in ISO 8601 format.
+    - obfuscate: Any text. Yield the input text rendered as a sequence
+          of XML entities.
+    - person: Any text. Yield the text before an email address.
+    - rfc822date: date keyword. Render a date using the same format used
+          in email headers.
+    - short: Changeset hash. Yield the short form of a changeset hash,
+          i.e. a 12-byte hexadecimal string.
+    - shortdate: Date. Render date like "2006-09-04".
+    - strip: Any text. Strip all leading and trailing whitespace.
+    - tabindent: Any text. Yield the text, with every line except the
+          first starting with a tab character.
+    - urlescape: Any text. Escape all "special" characters. For example,
+          foo bar becomes foo%20bar.
+    - user: Any text. Return the "user" portion of an email address.
+    ''')),
 )
