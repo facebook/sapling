@@ -589,12 +589,11 @@ def clone(ui, source, dest=None, **opts):
     If the -U option is used, the new clone will contain only a repository
     (.hg) and no working copy (the working copy parent is the null revision).
 
-    See pull for valid source format details.
+    See 'hg help urls' for valid source format details.
 
     It is possible to specify an ssh:// URL as the destination, but no
     .hg/hgrc and working directory will be created on the remote side.
-    Look at the help text for the pull command for important details
-    about ssh:// URLs.
+    Look at the help text for urls for important details about ssh:// URLs.
     """
     cmdutil.setremoteconfig(ui, opts)
     hg.clone(ui, source, dest,
@@ -1788,8 +1787,7 @@ def init(ui, dest=".", **opts):
     If no directory is given, the current directory is used.
 
     It is possible to specify an ssh:// URL as the destination.
-    Look at the help text for the pull command for important details
-    about ssh:// URLs.
+    See 'hg help urls' for more information.
     """
     cmdutil.setremoteconfig(ui, opts)
     hg.repository(ui, dest, create=1)
@@ -2117,6 +2115,8 @@ def paths(ui, repo, search=None):
      definition of available names.
     Path names are defined in the [paths] section of /etc/mercurial/hgrc
     and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.
+
+    See 'hg help urls' for more information.
     """
     if search:
         for name, path in ui.configitems("paths"):
@@ -2151,34 +2151,8 @@ def pull(ui, repo, source="default", **opts):
     or URL and adds them to the local repository. By default, this
     does not update the copy of the project in the working directory.
 
-    Valid URLs are of the form:
-
-      local/filesystem/path (or file://local/filesystem/path)
-      http://[user[:pass]@]host[:port]/[path]
-      https://[user[:pass]@]host[:port]/[path]
-      ssh://[user[:pass]@]host[:port]/[path]
-
-    Paths in the local filesystem can either point to Mercurial
-    repositories or to bundle files (as created by 'hg bundle' or
-    'hg incoming --bundle').
-
-    An optional identifier after # indicates a particular branch, tag,
-    or changeset to pull.
-
-    Some notes about using SSH with Mercurial:
-    - SSH requires an accessible shell account on the destination machine
-      and a copy of hg in the remote path or specified with as remotecmd.
-    - path is relative to the remote user's home directory by default.
-      Use an extra slash at the start of a path to specify an absolute path:
-        ssh://example.com//tmp/repository
-    - Mercurial doesn't use its own compression via SSH; the right thing
-      to do is to configure it in your ~/.ssh/config, e.g.:
-        Host *.mylocalnetwork.example.com
-          Compression no
-        Host *
-          Compression yes
-      Alternatively specify "ssh -C" as your ssh command in your hgrc or
-      with the --ssh command line option.
+    If SOURCE is omitted, the 'default' path will be used.
+    See 'hg help urls' for more information.
     """
     source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
     cmdutil.setremoteconfig(ui, opts)
@@ -2210,22 +2184,12 @@ def push(ui, repo, dest=None, **opts):
     increase the number of remote heads. This generally indicates the
     the client has forgotten to pull and merge before pushing.
 
-    Valid URLs are of the form:
+    If -r is used, the named changeset and all its ancestors will be pushed
+    to the remote repository.
 
-      local/filesystem/path (or file://local/filesystem/path)
-      ssh://[user[:pass]@]host[:port]/[path]
-      http://[user[:pass]@]host[:port]/[path]
-      https://[user[:pass]@]host[:port]/[path]
-
-    An optional identifier after # indicates a particular branch, tag,
-    or changeset to push. If -r is used, the named changeset and all its
-    ancestors will be pushed to the remote repository.
-
-    Look at the help text for the pull command for important details
-    about ssh:// URLs.
-
-    Pushing to http:// and https:// URLs is only possible, if this
-    feature is explicitly enabled on the remote Mercurial server.
+    Look at the help text for urls for important details about ssh:// URLs.
+    If DESTINATION is omitted, a default path will be used.
+    See 'hg help urls' for more information.
     """
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
