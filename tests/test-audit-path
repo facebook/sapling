@@ -43,6 +43,6 @@ hg update -Cr3
 
 echo % attack /tmp/test
 hg manifest -r4
-hg update -Cr4 2>&1 | sed -e "s|$HGTMP|[HGTMP]|"
+hg update -Cr4 2>&1 | sed -e "s|/.*/test-audit-path|[HGTMP]/test-audit-path|"
 
 exit 0
