@@ -573,12 +573,10 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
         if '' in files_touched:
             files_touched.remove('')
-        removedFiles = []
-        for file in files_touched:
-            if not hg_editor._is_file_included(file):
-                removedFiles.append(file)
-        for file in removedFiles:
-            files_touched.remove(file)
+        excluded = [f for f in files_touched 
+                    if not hg_editor._is_file_included(f)]
+        for f in excluded:
+            files_touched.remove(f)
         if parentctx.node() != node.nullid or files_touched:
             # TODO(augie) remove this debug code? Or maybe it's sane to have it.
             for f in files_touched:
