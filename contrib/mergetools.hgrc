@@ -51,8 +51,9 @@ filemerge.executable=/Developer/Applications/Utilities/FileMerge.app/Contents/Ma
 filemerge.args=-left $other -right $local -ancestor $base -merge $output
 filemerge.gui=True
 
-beyondcompare3.executable=C:\Program Files\Beyond Compare 3\BComp.exe
 beyondcompare3.args=$local $other $base $output /ro /lefttitle=local /centerfile=base /righttitle=other /automerge /reviewconflicts
+beyondcompare3.regkey=Software\Scooter Software\Beyond Compare 3
+beyondcompare3.regname=ExePath
 beyondcompare3.gui=True
 
 winmerge.args=/e /u /dl local /dr other /wr $local $other $output
