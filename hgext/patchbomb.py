@@ -63,7 +63,7 @@ That should be all. Now your patchbomb is on its way out.'''
 import os, errno, socket, tempfile, cStringIO
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
-from mercurial import cmdutil, commands, hg, mail, mdiff, patch, util
+from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
 
@@ -225,7 +225,7 @@ def patchbomb(ui, repo, *revs, **opts):
         for r in cmdutil.revrange(repo, revs):
             output = cStringIO.StringIO()
             p = patch.export(repo, [r], fp=output,
-                             opts=mdiff.diffopts(git=opts.get('git')))
+                             opts=patch.diffopts(ui, opts))
             yield output.getvalue().split('\n')
 
     def getbundle(dest):
