@@ -1,6 +1,7 @@
 PREFIX=/usr/local
 export PREFIX
 PYTHON=python
+PURE=
 
 help:
 	@echo 'Commonly used make targets:'
@@ -24,13 +25,11 @@ help:
 all: build doc
 
 local:
-	$(PYTHON) setup.py build_ext -i
-	$(PYTHON) setup.py build_py -c -d .
-	$(PYTHON) setup.py build_mo
+	$(PYTHON) setup.py $(PURE) build_py -c -d . build_ext -i build_mo
 	$(PYTHON) hg version
 
 build:
-	$(PYTHON) setup.py build
+	$(PYTHON) setup.py $(PURE) build
 
 doc:
 	$(MAKE) -C doc
@@ -44,7 +43,7 @@ clean:
 install: install-bin install-doc
 
 install-bin: build
-	$(PYTHON) setup.py install --prefix="$(PREFIX)" --force
+	$(PYTHON) setup.py $(PURE) install --prefix="$(PREFIX)" --force
 
 install-doc: doc
 	cd doc && $(MAKE) $(MFLAGS) install
@@ -52,7 +51,7 @@ install-doc: doc
 install-home: install-home-bin install-home-doc
 
 install-home-bin: build
-	$(PYTHON) setup.py install --home="$(HOME)" --force
+	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --force
 
 install-home-doc: doc
 	cd doc && $(MAKE) $(MFLAGS) PREFIX="$(HOME)" install
