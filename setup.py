@@ -30,8 +30,10 @@ import os, time
 import shutil
 import tempfile
 from distutils.core import setup, Extension
+from distutils.dist import Distribution
 from distutils.command.install_data import install_data
 from distutils.command.build import build
+from distutils.command.build_py import build_py
 from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
 
@@ -157,8 +159,35 @@ class build_mo(build):
 
 build.sub_commands.append(('build_mo', None))
 
+Distribution.pure = 0
+Distribution.global_options.append(('pure', None, "use pure (slow) Python "
+                                    "code instead of C extensions"))
+
+class hg_build_py(build_py):
+
+    def finalize_options(self):
+        build_py.finalize_options(self)
+
+        if self.distribution.pure:
+            if self.py_modules is None:
+                self.py_modules = []
+            for ext in self.distribution.ext_modules:
+                if ext.name.startswith("mercurial."):
+                    self.py_modules.append("mercurial.pure.%s" % ext.name[10:])
+            self.distribution.ext_modules = []
+
+    def find_modules(self):
+        modules = build_py.find_modules(self)
+        for module in modules:
+            if module[0] == "mercurial.pure":
+                if module[1] != "__init__":
+                    yield ("mercurial", module[1], module[2])
+            else:
+                yield module
+
 cmdclass = {'install_data': install_package_data,
-            'build_mo': build_mo}
+            'build_mo': build_mo,
+            'build_py': hg_build_py}
 
 ext_modules=[
     Extension('mercurial.base85', ['mercurial/base85.c']),
