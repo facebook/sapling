@@ -14,8 +14,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
-"POT-Creation-Date: 2009-01-15 15:24+CET\n"
-"PO-Revision-Date: 2009-01-22 20:48+0100\n"
+"POT-Creation-Date: 2009-01-25 12:26+CET\n"
+"PO-Revision-Date: 2009-01-25 12:28+0100\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -23,6 +23,25 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid " (default: %s)"
+msgstr " (standard: %s)"
+
+msgid "OPTIONS"
+msgstr ""
+
+msgid "COMMANDS"
+msgstr ""
+
+msgid "    options:\n"
+msgstr ""
+
+msgid ""
+"    aliases: %s\n"
+"\n"
+msgstr ""
+"    aliaser %s:\n"
+"\n"
 
 msgid "return tuple of (match function, list enabled)."
 msgstr ""
@@ -194,9 +213,6 @@ msgid ""
 "    If the user updates to a bookmark we update the .hg/bookmarks.current\n"
 "    file.\n"
 "    "
-msgstr ""
-
-msgid "Replace push with a decorator to provide --non-bookmarked option"
 msgstr ""
 
 msgid "force"
@@ -884,6 +900,337 @@ msgstr "vis forældre-ændring"
 msgid "show current changeset in ancestor branches"
 msgstr ""
 
+msgid "%s is not a valid revision in current branch"
+msgstr ""
+
+msgid "%s is not available in %s anymore"
+msgstr ""
+
+msgid "cannot find required \"%s\" tool"
+msgstr ""
+
+msgid "running: %s\n"
+msgstr "kører: %s\n"
+
+msgid "%s error:\n"
+msgstr ""
+
+msgid "%s %s"
+msgstr ""
+
+msgid "could not open map file %r: %s"
+msgstr ""
+
+msgid "%s: missing or unsupported repository"
+msgstr ""
+
+msgid "convert: %s\n"
+msgstr ""
+
+msgid "%s: unknown repository type"
+msgstr ""
+
+msgid "cycle detected between %s and %s"
+msgstr ""
+
+msgid "not all revisions were sorted"
+msgstr ""
+
+msgid "Writing author map file %s\n"
+msgstr ""
+
+msgid "Overriding mapping for author %s, was %s, will be %s\n"
+msgstr ""
+
+msgid "mapping author %s to %s\n"
+msgstr ""
+
+msgid "Ignoring bad line in author map file %s: %s\n"
+msgstr ""
+
+msgid "spliced in %s as parents of %s\n"
+msgstr ""
+
+msgid "scanning source...\n"
+msgstr ""
+
+msgid "sorting...\n"
+msgstr ""
+
+msgid "converting...\n"
+msgstr ""
+
+msgid "source: %s\n"
+msgstr ""
+
+msgid "assuming destination %s\n"
+msgstr ""
+
+msgid "revision %s is not a patchset number or date"
+msgstr ""
+
+msgid "using builtin cvsps\n"
+msgstr ""
+
+msgid "connecting to %s\n"
+msgstr ""
+
+msgid "CVS pserver authentication failed"
+msgstr ""
+
+msgid "server sucks"
+msgstr ""
+
+msgid "%d bytes missing from remote file"
+msgstr ""
+
+msgid "cvs server: %s\n"
+msgstr ""
+
+msgid "unknown CVS response: %s"
+msgstr ""
+
+msgid "collecting CVS rlog\n"
+msgstr ""
+
+msgid "reading cvs log cache %s\n"
+msgstr ""
+
+msgid "cache has %d log entries\n"
+msgstr ""
+
+msgid "error reading cache: %r\n"
+msgstr ""
+
+msgid "running %s\n"
+msgstr "kører %s\n"
+
+msgid "prefix=%r directory=%r root=%r\n"
+msgstr ""
+
+msgid "RCS file must be followed by working file"
+msgstr ""
+
+msgid "must have at least some revisions"
+msgstr ""
+
+msgid "expected revision number"
+msgstr ""
+
+msgid "revision must be followed by date line"
+msgstr ""
+
+msgid "writing cvs log cache %s\n"
+msgstr ""
+
+msgid "%d log entries\n"
+msgstr ""
+
+msgid "creating changesets\n"
+msgstr ""
+
+msgid "%d changeset entries\n"
+msgstr ""
+
+msgid "Python ElementTree module is not available"
+msgstr ""
+
+msgid "cleaning up %s\n"
+msgstr ""
+
+msgid "internal calling inconsistency"
+msgstr ""
+
+msgid "errors in filemap"
+msgstr ""
+
+msgid "%s:%d: %r already in %s list\n"
+msgstr ""
+
+msgid "%s:%d: unknown directive %r\n"
+msgstr ""
+
+msgid "source repository doesn't support --filemap"
+msgstr ""
+
+msgid "%s does not look like a GNU Arch repo"
+msgstr ""
+
+msgid "cannot find a GNU Arch tool"
+msgstr ""
+
+msgid "analyzing tree version %s...\n"
+msgstr ""
+
+msgid ""
+"tree analysis stopped because it points to an unregistered archive %s...\n"
+msgstr ""
+
+msgid "applying revision %s...\n"
+msgstr ""
+
+msgid "computing changeset between %s and %s...\n"
+msgstr ""
+
+msgid "obtaining revision %s...\n"
+msgstr ""
+
+msgid "analysing revision %s...\n"
+msgstr ""
+
+msgid "could not parse cat-log of %s"
+msgstr ""
+
+msgid "%s is not a local Mercurial repo"
+msgstr ""
+
+msgid "initializing destination %s repository\n"
+msgstr ""
+
+msgid "run hg sink pre-conversion action\n"
+msgstr ""
+
+msgid "run hg sink post-conversion action\n"
+msgstr ""
+
+msgid "pulling from %s into %s\n"
+msgstr ""
+
+msgid "updating tags\n"
+msgstr ""
+
+msgid "%s is not a valid start revision"
+msgstr ""
+
+msgid "ignoring: %s\n"
+msgstr "ignorerer: %s\n"
+
+msgid "run hg source pre-conversion action\n"
+msgstr ""
+
+msgid "run hg source post-conversion action\n"
+msgstr ""
+
+msgid "%s does not look like a monotone repo"
+msgstr ""
+
+msgid "copying file in renamed dir from '%s' to '%s'"
+msgstr ""
+
+msgid "Subversion python bindings could not be loaded"
+msgstr ""
+
+msgid "Subversion python bindings %d.%d found, 1.4 or later required"
+msgstr ""
+
+msgid "Subversion python bindings are too old, 1.4 or later required"
+msgstr ""
+
+msgid "svn: revision %s is not an integer"
+msgstr ""
+
+msgid "svn: start revision %s is not an integer"
+msgstr ""
+
+msgid "no revision found in module %s"
+msgstr ""
+
+msgid "expected %s to be at %r, but not found"
+msgstr ""
+
+msgid "found %s at %r\n"
+msgstr ""
+
+msgid "ignoring empty branch %s\n"
+msgstr ""
+
+msgid "found branch %s at %d\n"
+msgstr ""
+
+msgid "svn: start revision is not supported with with more than one branch"
+msgstr ""
+
+msgid "svn: no revision found after start revision %d"
+msgstr ""
+
+msgid "no tags found at revision %d\n"
+msgstr ""
+
+msgid "ignoring foreign branch %r\n"
+msgstr ""
+
+msgid "%s not found up to revision %d"
+msgstr ""
+
+msgid "branch renamed from %s to %s at %d\n"
+msgstr ""
+
+msgid "reparent to %s\n"
+msgstr ""
+
+msgid "copied to %s from %s@%s\n"
+msgstr ""
+
+msgid "gone from %s\n"
+msgstr ""
+
+msgid "found parent directory %s\n"
+msgstr ""
+
+msgid "base, entry %s %s\n"
+msgstr ""
+
+msgid "munge-o-matic\n"
+msgstr ""
+
+msgid "info: %s %s %s %s\n"
+msgstr ""
+
+msgid "unknown path in revision %d: %s\n"
+msgstr ""
+
+msgid "mark %s came from %s:%d\n"
+msgstr ""
+
+msgid "parsing revision %d (%d changes)\n"
+msgstr ""
+
+msgid "found parent of branch %s at %d: %s\n"
+msgstr ""
+
+msgid "no copyfrom path, don't know what to do.\n"
+msgstr ""
+
+msgid "fetching revision log for \"%s\" from %d to %d\n"
+msgstr ""
+
+msgid "skipping blacklisted revision %d\n"
+msgstr ""
+
+msgid "revision %d has no entries\n"
+msgstr ""
+
+msgid "svn: branch has no revision %s"
+msgstr ""
+
+msgid "%r is not under %r, ignoring\n"
+msgstr ""
+
+msgid "initializing svn repo %r\n"
+msgstr ""
+
+msgid "initializing svn wc %r\n"
+msgstr ""
+
+msgid "unexpected svn output:\n"
+msgstr ""
+
+msgid "unable to cope with svn output"
+msgstr ""
+
+msgid "XXX TAGS NOT IMPLEMENTED YET\n"
+msgstr ""
+
 msgid ""
 "\n"
 "The `extdiff' Mercurial extension allows you to use external programs\n"
@@ -1433,9 +1780,6 @@ msgstr ""
 msgid "start interactive history viewer"
 msgstr ""
 
-msgid "running %s\n"
-msgstr "kører %s\n"
-
 msgid "hg view [-l LIMIT] [REVRANGE]"
 msgstr ""
 
@@ -1511,119 +1855,6 @@ msgid ""
 "-- Adam Hupp <adam@hupp.org>\n"
 msgstr ""
 
-msgid ""
-"\n"
-"imerge - interactive merge\n"
-msgstr ""
-
-msgid "invalid imerge status file"
-msgstr ""
-
-msgid "merge parent %s not in repository"
-msgstr ""
-
-msgid "imerge state does not match working directory"
-msgstr ""
-
-msgid "%s is not in the merge set"
-msgstr ""
-
-msgid "%s is not resolved"
-msgstr ""
-
-msgid "write current merge state to file to be resumed elsewhere"
-msgstr ""
-
-msgid "read merge state from file"
-msgstr ""
-
-msgid "there is already a merge in progress (update -C <rev> to abort it)"
-msgstr ""
-
-msgid "working directory has uncommitted changes"
-msgstr ""
-
-msgid "resolve requires at least one filename"
-msgstr ""
-
-msgid "merging %s and %s\n"
-msgstr ""
-
-msgid "all conflicts resolved\n"
-msgstr ""
-
-msgid "unresolve requires at least one filename"
-msgstr ""
-
-msgid "automatically resolve if possible"
-msgstr ""
-
-msgid "hide status prefix"
-msgstr ""
-
-msgid "only show resolved conflicts"
-msgstr ""
-
-msgid "only show unresolved conflicts"
-msgstr ""
-
-msgid "%s: invalid arguments"
-msgstr ""
-
-msgid ""
-"interactive merge\n"
-"\n"
-"    imerge lets you split a merge into pieces. When you start a merge\n"
-"    with imerge, the names of all files with conflicts are recorded.\n"
-"    You can then merge any of these files, and if the merge is\n"
-"    successful, they will be marked as resolved. When all files are\n"
-"    resolved, the merge is complete.\n"
-"\n"
-"    If no merge is in progress, hg imerge [rev] will merge the working\n"
-"    directory with rev (defaulting to the other head if the repository\n"
-"    only has two heads). You may also resume a saved merge with\n"
-"    hg imerge load <file>.\n"
-"\n"
-"    If a merge is in progress, hg imerge will default to merging the\n"
-"    next unresolved file.\n"
-"\n"
-"    The following subcommands are available:\n"
-"\n"
-"    status:\n"
-"      show the current state of the merge\n"
-"      options:\n"
-"        -n --no-status:  do not print the status prefix\n"
-"           --resolved:   only print resolved conflicts\n"
-"           --unresolved: only print unresolved conflicts\n"
-"    next:\n"
-"      show the next unresolved file merge\n"
-"    merge [<file>]:\n"
-"      merge <file>. If the file merge is successful, the file will be\n"
-"      recorded as resolved. If no file is given, the next unresolved\n"
-"      file will be merged.\n"
-"    resolve <file>...:\n"
-"      mark files as successfully merged\n"
-"    unresolve <file>...:\n"
-"      mark files as requiring merging.\n"
-"    save <file>:\n"
-"      save the state of the merge to a file to be resumed elsewhere\n"
-"    load <file>:\n"
-"      load the state of the merge from a file created by save\n"
-"    "
-msgstr ""
-
-msgid "please specify just one revision"
-msgstr ""
-
-msgid "revision to merge"
-msgstr ""
-
-msgid "automatically merge where possible"
-msgstr ""
-
-msgid "hg imerge [command]"
-msgstr ""
-
 msgid "inotify-based status acceleration for Linux systems\n"
 msgstr ""
 
@@ -1661,6 +1892,102 @@ msgid "name of file to write process ID to"
 msgstr ""
 
 msgid "hg inserve [OPT]..."
+msgstr ""
+
+msgid "(inotify: received response from incompatible server version %d)\n"
+msgstr ""
+
+msgid "this system does not seem to support inotify"
+msgstr ""
+
+msgid "*** the current per-user limit on the number of inotify watches is %s\n"
+msgstr ""
+
+msgid "*** this limit is too low to watch every directory in this repository\n"
+msgstr ""
+
+msgid "*** counting directories: "
+msgstr ""
+
+msgid "found %d\n"
+msgstr ""
+
+msgid "*** to raise the limit from %d to %d (run as root):\n"
+msgstr ""
+
+msgid "***  echo %d > %s\n"
+msgstr ""
+
+msgid "cannot watch %s until inotify watch limit is raised"
+msgstr ""
+
+msgid "inotify service not available: %s"
+msgstr ""
+
+msgid "watching %r\n"
+msgstr ""
+
+msgid "watching directories under %r\n"
+msgstr ""
+
+msgid "status: %r dir(%d) -> %s\n"
+msgstr ""
+
+msgid "status: %r %s -> %s\n"
+msgstr ""
+
+msgid "%s dirstate reload\n"
+msgstr ""
+
+msgid "%s end dirstate reload\n"
+msgstr ""
+
+msgid "rescanning due to .hgignore change\n"
+msgstr ""
+
+msgid "%s event: created %s\n"
+msgstr ""
+
+msgid "%s event: deleted %s\n"
+msgstr ""
+
+msgid "%s event: modified %s\n"
+msgstr ""
+
+msgid "filesystem containing %s was unmounted\n"
+msgstr ""
+
+msgid "%s readable: %d bytes\n"
+msgstr ""
+
+msgid "%s below threshold - unhooking\n"
+msgstr ""
+
+msgid "%s reading %d events\n"
+msgstr ""
+
+msgid "%s hooking back up with %d bytes readable\n"
+msgstr ""
+
+msgid "%s processing %d deferred events as %d\n"
+msgstr ""
+
+msgid "could not start server: %s"
+msgstr ""
+
+msgid "received query from incompatible client version %d\n"
+msgstr ""
+
+msgid "answering query for %r\n"
+msgstr ""
+
+msgid "finished setup\n"
+msgstr ""
+
+msgid "polling: no timeout\n"
+msgstr ""
+
+msgid "polling: %sms timeout\n"
 msgstr ""
 
 msgid "interhg: invalid pattern for %s: %s\n"
@@ -2142,10 +2469,11 @@ msgstr ""
 msgid "cleaning up working directory..."
 msgstr "rydder op i arbejdsbiblioteket..."
 
-msgid "Errors during apply, please fix and refresh %s\n"
+msgid "errors during apply, please fix and refresh %s\n"
 msgstr ""
 
-msgid "Now at: %s\n"
+#, fuzzy
+msgid "now at: %s\n"
 msgstr "Nu ved: %s\n"
 
 msgid "patch %s is not applied"
@@ -2169,11 +2497,9 @@ msgstr ""
 msgid "deletions found between repo revs"
 msgstr ""
 
-msgid "Patch queue now empty\n"
-msgstr ""
-
-msgid "No patches applied\n"
-msgstr "Ingen rettelser er anvendt\n"
+#, fuzzy
+msgid "patch queue now empty\n"
+msgstr "rettelse %s er tom\n"
 
 msgid "cannot refresh a revision with children"
 msgstr ""
@@ -2366,13 +2692,15 @@ msgstr "udskriver navnet på den nuværende rettelse"
 msgid "print the name of the next patch"
 msgstr "udskriver navnet på den næste rettelse"
 
-msgid "All patches applied\n"
+#, fuzzy
+msgid "all patches applied\n"
 msgstr "Alle patches er anvendt\n"
 
 msgid "print the name of the previous patch"
 msgstr "udskriver navnet på den forgående rettelse"
 
-msgid "Only one patch applied\n"
+#, fuzzy
+msgid "only one patch applied\n"
 msgstr "Kun én patch anvendt\n"
 
 msgid ""
@@ -3728,6 +4056,15 @@ msgid "hg qrecord [OPTION]... PATCH [FILE]..."
 msgstr ""
 
 msgid ""
+"patch transplanting tool\n"
+"\n"
+"This extension allows you to transplant patches from another branch.\n"
+"\n"
+"Transplanted patches are recorded in .hg/transplant/transplants, as a map\n"
+"from a changeset hash to its hash in the source repository.\n"
+msgstr ""
+
+msgid ""
 "returns True if a node is already an ancestor of parent\n"
 "        or has already been transplanted"
 msgstr ""
@@ -3982,6 +4319,186 @@ msgid ""
 " zc-test = http://example.com:8000/test\n"
 msgstr ""
 
+msgid "archive prefix contains illegal components"
+msgstr "arkivpræfix indeholder ugyldige komponenter"
+
+msgid "cannot give prefix when archiving to files"
+msgstr "kan ikke give præfix ved arkivering til filer"
+
+msgid "unknown archive type '%s'"
+msgstr "ukendt arkivtype '%s'"
+
+msgid "invalid changegroup"
+msgstr ""
+
+msgid "unknown parent"
+msgstr "ukendt forældre"
+
+msgid "integrity check failed on %s:%d"
+msgstr "integritetstjek fejlede på %s:%d"
+
+msgid "%s: not a Mercurial bundle file"
+msgstr "%s er ikke en Mercurial bundle fil"
+
+msgid "%s: unknown bundle version"
+msgstr "%s: ukendt bundle version"
+
+msgid "%s: unknown bundle compression type"
+msgstr "%s: ukendt bundle kompressionstype"
+
+msgid "cannot create new bundle repository"
+msgstr ""
+
+msgid "premature EOF reading chunk (got %d bytes, expected %d)"
+msgstr "for tidlig EOF ved læsning af chunk (fik %d bytes, forventede %d)"
+
+msgid "username %s contains a newline"
+msgstr "brugernavn %s indeholder et linieskift"
+
+msgid "options --message and --logfile are mutually exclusive"
+msgstr ""
+
+msgid "can't read commit message '%s': %s"
+msgstr "Kan ikke lase commit besked '%s': %s"
+
+msgid "too many revisions specified"
+msgstr "der er specificeret for mange revisioner"
+
+msgid "invalid format spec '%%%s' in output file name"
+msgstr ""
+
+msgid "adding %s\n"
+msgstr "tilføjer %s\n"
+
+msgid "removing %s\n"
+msgstr "fjerner %s\n"
+
+msgid "recording removal of %s as rename to %s (%d%% similar)\n"
+msgstr "noterer fjernelse af %s som en omdøbning til %s (%d%% lighed)\n"
+
+msgid "%s: not copying - file is not managed\n"
+msgstr "%s: kopierer ikke - filen er ikke versionsstyret\n"
+
+msgid "%s: not copying - file has been marked for remove\n"
+msgstr "%s: kopierer ikke - filen er markeret til sletning\n"
+
+msgid "%s: not overwriting - %s collides with %s\n"
+msgstr "%s: overskriver ikke - %s kolliderer med %s\n"
+
+msgid "%s: not overwriting - file exists\n"
+msgstr "%s: overskriver ikke - filen eksisterer\n"
+
+msgid "%s: deleted in working copy\n"
+msgstr "%s: slettet i arbejdskopien\n"
+
+msgid "%s: cannot copy - %s\n"
+msgstr "%s: kan ikke kopiere - %s\n"
+
+msgid "%s %s to %s\n"
+msgstr "%s: %s til %s\n"
+
+msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
+msgstr ""
+"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
+"s.\n"
+
+msgid "no source or destination specified"
+msgstr "ingen kilde eller destination angivet"
+
+msgid "no destination specified"
+msgstr "ingen destination angivet"
+
+msgid "with multiple sources, destination must be an existing directory"
+msgstr ""
+"destinationen skal være en eksisterende mappe når der angivet flere kilder"
+
+msgid "destination %s is not a directory"
+msgstr "destinationen %s er ikke en mappe"
+
+msgid "no files to copy"
+msgstr "ingen filer at kopiere"
+
+msgid "(consider using --after)\n"
+msgstr "(overvej at bruge --after)\n"
+
+msgid "changeset:   %d:%s\n"
+msgstr "ændring:     %d:%s\n"
+
+msgid "branch:      %s\n"
+msgstr "gren:        %s\n"
+
+msgid "tag:         %s\n"
+msgstr "mærkat:      %s\n"
+
+msgid "parent:      %d:%s\n"
+msgstr "forældre:    %d:%s\n"
+
+msgid "manifest:    %d:%s\n"
+msgstr ""
+
+msgid "user:        %s\n"
+msgstr "bruger:      %s\n"
+
+msgid "date:        %s\n"
+msgstr "dato:        %s\n"
+
+msgid "files+:"
+msgstr "filer+:"
+
+msgid "files-:"
+msgstr "filer-:"
+
+msgid "files:"
+msgstr ""
+
+msgid "files:       %s\n"
+msgstr "filer:       %s\n"
+
+msgid "copies:      %s\n"
+msgstr "kopier:      %s\n"
+
+msgid "extra:       %s=%s\n"
+msgstr "ekstra:      %s=%s\n"
+
+msgid "description:\n"
+msgstr "beskrivelse:\n"
+
+msgid "summary:     %s\n"
+msgstr "uddrag:      %s\n"
+
+msgid "%s: no key named '%s'"
+msgstr ""
+
+msgid "%s: %s"
+msgstr ""
+
+msgid "Found revision %s from %s\n"
+msgstr ""
+
+msgid "revision matching date not found"
+msgstr ""
+
+msgid "cannot follow nonexistent file: \"%s\""
+msgstr ""
+
+msgid "%s:%s copy source revision cannot be found!\n"
+msgstr ""
+
+msgid "can only follow copies/renames for explicit file names"
+msgstr ""
+
+msgid "file %s not found!"
+msgstr "filen %s blev ikke fundet!"
+
+msgid "no match under directory %s!"
+msgstr ""
+
+msgid "can't commit %s: unsupported file type!"
+msgstr ""
+
+msgid "file %s not tracked!"
+msgstr ""
+
 msgid ""
 "add the specified files on the next commit\n"
 "\n"
@@ -4003,9 +4520,6 @@ msgstr ""
 "    Hvis der ikke er angivet nogen navne tilføjes alle filer i\n"
 "    arkivet.\n"
 "    "
-
-msgid "adding %s\n"
-msgstr "tilføjer %s\n"
 
 msgid ""
 "add all new files, delete all missing files\n"
@@ -4107,6 +4621,9 @@ msgid ""
 "\n"
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
+msgstr ""
+
+msgid "please specify just one revision"
 msgstr ""
 
 msgid "please specify a revision to backout"
@@ -4554,6 +5071,9 @@ msgid ""
 "    "
 msgstr ""
 
+msgid "cannot specify --rev and --change at the same time"
+msgstr ""
+
 msgid ""
 "dump the header and diffs for one or more changesets\n"
 "\n"
@@ -4719,9 +5239,6 @@ msgid ""
 msgstr ""
 "basale kommandoer:\n"
 "\n"
-
-msgid " (default: %s)"
-msgstr " (standard: %s)"
 
 msgid ""
 "\n"
@@ -5133,9 +5650,6 @@ msgstr "er modificeret"
 
 msgid "has been marked for add"
 msgstr "er markeret som tilføjet"
-
-msgid "removing %s\n"
-msgstr "fjerner %s\n"
 
 msgid ""
 "rename files; equivalent of copy + remove\n"
@@ -5691,6 +6205,9 @@ msgstr ""
 msgid "mark new/missing files as added/removed before committing"
 msgstr ""
 
+msgid "mark a branch as closed, hiding it from the branch list"
+msgstr ""
+
 msgid "record a copy that has already occurred"
 msgstr ""
 
@@ -5751,6 +6268,9 @@ msgstr ""
 msgid "[OPTION]..."
 msgstr ""
 
+msgid "change made by revision"
+msgstr ""
+
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr ""
 
@@ -5785,6 +6305,9 @@ msgid "[OPTION]... PATTERN [FILE]..."
 msgstr ""
 
 msgid "show only heads which are descendants of rev"
+msgstr ""
+
+msgid "show only the active heads from open branches"
 msgstr ""
 
 msgid "[-r REV] [REV]..."
@@ -5898,6 +6421,9 @@ msgid "[-r REV]"
 msgstr ""
 
 msgid "force a merge with outstanding changes"
+msgstr ""
+
+msgid "revision to merge"
 msgstr ""
 
 msgid "[-f] [[-r] REV]"
@@ -6035,6 +6561,9 @@ msgstr ""
 msgid "show only ignored files"
 msgstr ""
 
+msgid "hide status prefix"
+msgstr ""
+
 msgid "show source of copied files"
 msgstr ""
 
@@ -6069,620 +6598,6 @@ msgid "overwrite locally modified files (no backup)"
 msgstr ""
 
 msgid "[-C] [-d DATE] [[-r] REV]"
-msgstr ""
-
-msgid "OPTIONS"
-msgstr ""
-
-msgid "COMMANDS"
-msgstr ""
-
-msgid "    options:\n"
-msgstr ""
-
-msgid ""
-"    aliases: %s\n"
-"\n"
-msgstr ""
-"    aliaser %s:\n"
-"\n"
-
-msgid "%s is not a valid revision in current branch"
-msgstr ""
-
-msgid "%s is not available in %s anymore"
-msgstr ""
-
-msgid "cannot find required \"%s\" tool"
-msgstr ""
-
-msgid "running: %s\n"
-msgstr "kører: %s\n"
-
-msgid "%s error:\n"
-msgstr ""
-
-msgid "%s %s"
-msgstr ""
-
-msgid "could not open map file %r: %s"
-msgstr ""
-
-msgid "%s: missing or unsupported repository"
-msgstr ""
-
-msgid "convert: %s\n"
-msgstr ""
-
-msgid "%s: unknown repository type"
-msgstr ""
-
-msgid "cycle detected between %s and %s"
-msgstr ""
-
-msgid "not all revisions were sorted"
-msgstr ""
-
-msgid "Writing author map file %s\n"
-msgstr ""
-
-msgid "Overriding mapping for author %s, was %s, will be %s\n"
-msgstr ""
-
-msgid "mapping author %s to %s\n"
-msgstr ""
-
-msgid "Ignoring bad line in author map file %s: %s\n"
-msgstr ""
-
-msgid "spliced in %s as parents of %s\n"
-msgstr ""
-
-msgid "scanning source...\n"
-msgstr ""
-
-msgid "sorting...\n"
-msgstr ""
-
-msgid "converting...\n"
-msgstr ""
-
-msgid "source: %s\n"
-msgstr ""
-
-msgid "assuming destination %s\n"
-msgstr ""
-
-msgid "revision %s is not a patchset number or date"
-msgstr ""
-
-msgid "using builtin cvsps\n"
-msgstr ""
-
-msgid "connecting to %s\n"
-msgstr ""
-
-msgid "CVS pserver authentication failed"
-msgstr ""
-
-msgid "server sucks"
-msgstr ""
-
-msgid "%d bytes missing from remote file"
-msgstr ""
-
-msgid "cvs server: %s\n"
-msgstr ""
-
-msgid "unknown CVS response: %s"
-msgstr ""
-
-msgid "collecting CVS rlog\n"
-msgstr ""
-
-msgid "reading cvs log cache %s\n"
-msgstr ""
-
-msgid "cache has %d log entries\n"
-msgstr ""
-
-msgid "error reading cache: %r\n"
-msgstr ""
-
-msgid "prefix=%r directory=%r root=%r\n"
-msgstr ""
-
-msgid "RCS file must be followed by working file"
-msgstr ""
-
-msgid "must have at least some revisions"
-msgstr ""
-
-msgid "expected revision number"
-msgstr ""
-
-msgid "revision must be followed by date line"
-msgstr ""
-
-msgid "writing cvs log cache %s\n"
-msgstr ""
-
-msgid "%d log entries\n"
-msgstr ""
-
-msgid "creating changesets\n"
-msgstr ""
-
-msgid "%d changeset entries\n"
-msgstr ""
-
-msgid "Python ElementTree module is not available"
-msgstr ""
-
-msgid "cleaning up %s\n"
-msgstr ""
-
-msgid "internal calling inconsistency"
-msgstr ""
-
-msgid "errors in filemap"
-msgstr ""
-
-msgid "%s:%d: %r already in %s list\n"
-msgstr ""
-
-msgid "%s:%d: unknown directive %r\n"
-msgstr ""
-
-msgid "source repository doesn't support --filemap"
-msgstr ""
-
-msgid "%s does not look like a GNU Arch repo"
-msgstr ""
-
-msgid "cannot find a GNU Arch tool"
-msgstr ""
-
-msgid "analyzing tree version %s...\n"
-msgstr ""
-
-msgid ""
-"tree analysis stopped because it points to an unregistered archive %s...\n"
-msgstr ""
-
-msgid "applying revision %s...\n"
-msgstr ""
-
-msgid "computing changeset between %s and %s...\n"
-msgstr ""
-
-msgid "obtaining revision %s...\n"
-msgstr ""
-
-msgid "analysing revision %s...\n"
-msgstr ""
-
-msgid "could not parse cat-log of %s"
-msgstr ""
-
-msgid "%s is not a local Mercurial repo"
-msgstr ""
-
-msgid "initializing destination %s repository\n"
-msgstr ""
-
-msgid "run hg sink pre-conversion action\n"
-msgstr ""
-
-msgid "run hg sink post-conversion action\n"
-msgstr ""
-
-msgid "pulling from %s into %s\n"
-msgstr ""
-
-msgid "updating tags\n"
-msgstr ""
-
-msgid "%s is not a valid start revision"
-msgstr ""
-
-msgid "ignoring: %s\n"
-msgstr "ignorerer: %s\n"
-
-msgid "run hg source pre-conversion action\n"
-msgstr ""
-
-msgid "run hg source post-conversion action\n"
-msgstr ""
-
-msgid "%s does not look like a monotone repo"
-msgstr ""
-
-msgid "copying file in renamed dir from '%s' to '%s'"
-msgstr ""
-
-msgid "Subversion python bindings could not be loaded"
-msgstr ""
-
-msgid "Subversion python bindings %d.%d found, 1.4 or later required"
-msgstr ""
-
-msgid "Subversion python bindings are too old, 1.4 or later required"
-msgstr ""
-
-msgid "svn: revision %s is not an integer"
-msgstr ""
-
-msgid "svn: start revision %s is not an integer"
-msgstr ""
-
-msgid "no revision found in module %s"
-msgstr ""
-
-msgid "expected %s to be at %r, but not found"
-msgstr ""
-
-msgid "found %s at %r\n"
-msgstr ""
-
-msgid "ignoring empty branch %s\n"
-msgstr ""
-
-msgid "found branch %s at %d\n"
-msgstr ""
-
-msgid "svn: start revision is not supported with with more than one branch"
-msgstr ""
-
-msgid "svn: no revision found after start revision %d"
-msgstr ""
-
-msgid "no tags found at revision %d\n"
-msgstr ""
-
-msgid "ignoring foreign branch %r\n"
-msgstr ""
-
-msgid "%s not found up to revision %d"
-msgstr ""
-
-msgid "branch renamed from %s to %s at %d\n"
-msgstr ""
-
-msgid "reparent to %s\n"
-msgstr ""
-
-msgid "copied to %s from %s@%s\n"
-msgstr ""
-
-msgid "gone from %s\n"
-msgstr ""
-
-msgid "found parent directory %s\n"
-msgstr ""
-
-msgid "base, entry %s %s\n"
-msgstr ""
-
-msgid "munge-o-matic\n"
-msgstr ""
-
-msgid "info: %s %s %s %s\n"
-msgstr ""
-
-msgid "unknown path in revision %d: %s\n"
-msgstr ""
-
-msgid "mark %s came from %s:%d\n"
-msgstr ""
-
-msgid "parsing revision %d (%d changes)\n"
-msgstr ""
-
-msgid "found parent of branch %s at %d: %s\n"
-msgstr ""
-
-msgid "no copyfrom path, don't know what to do.\n"
-msgstr ""
-
-msgid "fetching revision log for \"%s\" from %d to %d\n"
-msgstr ""
-
-msgid "skipping blacklisted revision %d\n"
-msgstr ""
-
-msgid "revision %d has no entries\n"
-msgstr ""
-
-msgid "svn: branch has no revision %s"
-msgstr ""
-
-msgid "%r is not under %r, ignoring\n"
-msgstr ""
-
-msgid "initializing svn repo %r\n"
-msgstr ""
-
-msgid "initializing svn wc %r\n"
-msgstr ""
-
-msgid "unexpected svn output:\n"
-msgstr ""
-
-msgid "unable to cope with svn output"
-msgstr ""
-
-msgid "XXX TAGS NOT IMPLEMENTED YET\n"
-msgstr ""
-
-msgid "(inotify: received response from incompatible server version %d)\n"
-msgstr ""
-
-msgid "this system does not seem to support inotify"
-msgstr ""
-
-msgid "*** the current per-user limit on the number of inotify watches is %s\n"
-msgstr ""
-
-msgid "*** this limit is too low to watch every directory in this repository\n"
-msgstr ""
-
-msgid "*** counting directories: "
-msgstr ""
-
-msgid "found %d\n"
-msgstr ""
-
-msgid "*** to raise the limit from %d to %d (run as root):\n"
-msgstr ""
-
-msgid "***  echo %d > %s\n"
-msgstr ""
-
-msgid "cannot watch %s until inotify watch limit is raised"
-msgstr ""
-
-msgid "inotify service not available: %s"
-msgstr ""
-
-msgid "watching %r\n"
-msgstr ""
-
-msgid "watching directories under %r\n"
-msgstr ""
-
-msgid "status: %r dir(%d) -> %s\n"
-msgstr ""
-
-msgid "status: %r %s -> %s\n"
-msgstr ""
-
-msgid "%s dirstate reload\n"
-msgstr ""
-
-msgid "%s end dirstate reload\n"
-msgstr ""
-
-msgid "rescanning due to .hgignore change\n"
-msgstr ""
-
-msgid "%s event: created %s\n"
-msgstr ""
-
-msgid "%s event: deleted %s\n"
-msgstr ""
-
-msgid "%s event: modified %s\n"
-msgstr ""
-
-msgid "filesystem containing %s was unmounted\n"
-msgstr ""
-
-msgid "%s readable: %d bytes\n"
-msgstr ""
-
-msgid "%s below threshold - unhooking\n"
-msgstr ""
-
-msgid "%s reading %d events\n"
-msgstr ""
-
-msgid "%s hooking back up with %d bytes readable\n"
-msgstr ""
-
-msgid "%s processing %d deferred events as %d\n"
-msgstr ""
-
-msgid "could not start server: %s"
-msgstr ""
-
-msgid "received query from incompatible client version %d\n"
-msgstr ""
-
-msgid "answering query for %r\n"
-msgstr ""
-
-msgid "finished setup\n"
-msgstr ""
-
-msgid "polling: no timeout\n"
-msgstr ""
-
-msgid "polling: %sms timeout\n"
-msgstr ""
-
-msgid "archive prefix contains illegal components"
-msgstr "arkivpræfix indeholder ugyldige komponenter"
-
-msgid "cannot give prefix when archiving to files"
-msgstr "kan ikke give præfix ved arkivering til filer"
-
-msgid "unknown archive type '%s'"
-msgstr "ukendt arkivtype '%s'"
-
-msgid "invalid changegroup"
-msgstr ""
-
-msgid "unknown parent"
-msgstr "ukendt forældre"
-
-msgid "integrity check failed on %s:%d"
-msgstr "integritetstjek fejlede på %s:%d"
-
-msgid "%s: not a Mercurial bundle file"
-msgstr "%s er ikke en Mercurial bundle fil"
-
-msgid "%s: unknown bundle version"
-msgstr "%s: ukendt bundle version"
-
-msgid "%s: unknown bundle compression type"
-msgstr "%s: ukendt bundle kompressionstype"
-
-msgid "cannot create new bundle repository"
-msgstr ""
-
-msgid "premature EOF reading chunk (got %d bytes, expected %d)"
-msgstr "for tidlig EOF ved læsning af chunk (fik %d bytes, forventede %d)"
-
-msgid "username %s contains a newline"
-msgstr "brugernavn %s indeholder et linieskift"
-
-msgid "options --message and --logfile are mutually exclusive"
-msgstr ""
-
-msgid "can't read commit message '%s': %s"
-msgstr "Kan ikke lase commit besked '%s': %s"
-
-msgid "too many revisions specified"
-msgstr "der er specificeret for mange revisioner"
-
-msgid "invalid format spec '%%%s' in output file name"
-msgstr ""
-
-msgid "recording removal of %s as rename to %s (%d%% similar)\n"
-msgstr "noterer fjernelse af %s som en omdøbning til %s (%d%% lighed)\n"
-
-msgid "%s: not copying - file is not managed\n"
-msgstr "%s: kopierer ikke - filen er ikke versionsstyret\n"
-
-msgid "%s: not copying - file has been marked for remove\n"
-msgstr "%s: kopierer ikke - filen er markeret til sletning\n"
-
-msgid "%s: not overwriting - %s collides with %s\n"
-msgstr "%s: overskriver ikke - %s kolliderer med %s\n"
-
-msgid "%s: not overwriting - file exists\n"
-msgstr "%s: overskriver ikke - filen eksisterer\n"
-
-msgid "%s: deleted in working copy\n"
-msgstr "%s: slettet i arbejdskopien\n"
-
-msgid "%s: cannot copy - %s\n"
-msgstr "%s: kan ikke kopiere - %s\n"
-
-msgid "%s %s to %s\n"
-msgstr "%s: %s til %s\n"
-
-msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
-msgstr ""
-"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
-"s.\n"
-
-msgid "no source or destination specified"
-msgstr "ingen kilde eller destination angivet"
-
-msgid "no destination specified"
-msgstr "ingen destination angivet"
-
-msgid "with multiple sources, destination must be an existing directory"
-msgstr ""
-"destinationen skal være en eksisterende mappe når der angivet flere kilder"
-
-msgid "destination %s is not a directory"
-msgstr "destinationen %s er ikke en mappe"
-
-msgid "no files to copy"
-msgstr "ingen filer at kopiere"
-
-msgid "(consider using --after)\n"
-msgstr "(overvej at bruge --after)\n"
-
-msgid "changeset:   %d:%s\n"
-msgstr "ændring:     %d:%s\n"
-
-msgid "branch:      %s\n"
-msgstr "gren:        %s\n"
-
-msgid "tag:         %s\n"
-msgstr "mærkat:      %s\n"
-
-msgid "parent:      %d:%s\n"
-msgstr "forældre:    %d:%s\n"
-
-msgid "manifest:    %d:%s\n"
-msgstr ""
-
-msgid "user:        %s\n"
-msgstr "bruger:      %s\n"
-
-msgid "date:        %s\n"
-msgstr "dato:        %s\n"
-
-msgid "files+:"
-msgstr "filer+:"
-
-msgid "files-:"
-msgstr "filer-:"
-
-msgid "files:"
-msgstr ""
-
-msgid "files:       %s\n"
-msgstr "filer:       %s\n"
-
-msgid "copies:      %s\n"
-msgstr "kopier:      %s\n"
-
-msgid "extra:       %s=%s\n"
-msgstr "ekstra:      %s=%s\n"
-
-msgid "description:\n"
-msgstr "beskrivelse:\n"
-
-msgid "summary:     %s\n"
-msgstr "uddrag:      %s\n"
-
-msgid "%s: no key named '%s'"
-msgstr ""
-
-msgid "%s: %s"
-msgstr ""
-
-msgid "Found revision %s from %s\n"
-msgstr ""
-
-msgid "revision matching date not found"
-msgstr ""
-
-msgid "cannot follow nonexistent file: \"%s\""
-msgstr ""
-
-msgid "%s:%s copy source revision cannot be found!\n"
-msgstr ""
-
-msgid "can only follow copies/renames for explicit file names"
-msgstr ""
-
-msgid "file %s not found!"
-msgstr "filen %s blev ikke fundet!"
-
-msgid "no match under directory %s!"
-msgstr ""
-
-msgid "can't commit %s: unsupported file type!"
-msgstr ""
-
-msgid "file %s not tracked!"
 msgstr ""
 
 msgid "not found in manifest"
@@ -6752,24 +6667,12 @@ msgstr ""
 msgid "abort: %s\n"
 msgstr "afbrudt: %s\n"
 
-msgid "hg %s: %s\n"
-msgstr "hg %s: %s\n"
-
-msgid "hg: %s\n"
-msgstr "hg: %s\n"
-
 msgid ""
 "hg: command '%s' is ambiguous:\n"
 "    %s\n"
 msgstr ""
 "hg: kommandoen '%s' is tvetydig:\n"
 "    %s\n"
-
-msgid "hg: unknown command '%s'\n"
-msgstr "hg: ukendt kommando '%s'\n"
-
-msgid "abort: %s!\n"
-msgstr "afbrudt: %s!\n"
 
 msgid "timed out waiting for lock held by %s"
 msgstr ""
@@ -6783,28 +6686,26 @@ msgstr "afbrudt: %s: %s\n"
 msgid "abort: could not lock %s: %s\n"
 msgstr "afbrudt: kunne ikke låse %s: %s\n"
 
-msgid "killed!\n"
-msgstr "dræbt!\n"
+msgid "hg %s: %s\n"
+msgstr "hg %s: %s\n"
 
-msgid "interrupted!\n"
-msgstr "standset!\n"
+msgid "hg: %s\n"
+msgstr "hg: %s\n"
 
-msgid ""
-"\n"
-"broken pipe\n"
-msgstr ""
-
-msgid "abort: error: %s\n"
-msgstr ""
-
-msgid "broken pipe\n"
-msgstr ""
+msgid "abort: %s!\n"
+msgstr "afbrudt: %s!\n"
 
 msgid "abort: %s"
 msgstr "afbrudt: %s"
 
 msgid " empty string\n"
 msgstr " tom streng\n"
+
+msgid "killed!\n"
+msgstr "dræbt!\n"
+
+msgid "hg: unknown command '%s'\n"
+msgstr "hg: ukendt kommando '%s'\n"
 
 msgid "abort: could not import module %s!\n"
 msgstr "afbrudt: kunne ikke importere modul %s!\n"
@@ -6814,6 +6715,20 @@ msgstr "(glemte du at kompilere udvidelserne?)\n"
 
 msgid "(is your Python install correct?)\n"
 msgstr "(er din Python installeret korrekt?)\n"
+
+msgid "abort: error: %s\n"
+msgstr ""
+
+msgid "broken pipe\n"
+msgstr ""
+
+msgid "interrupted!\n"
+msgstr "standset!\n"
+
+msgid ""
+"\n"
+"broken pipe\n"
+msgstr ""
 
 msgid "abort: out of memory\n"
 msgstr "afbrudt: løbet tør for hukommelse\n"
@@ -7233,6 +7148,97 @@ msgid ""
 "    "
 msgstr ""
 
+msgid "Template Usage"
+msgstr ""
+
+msgid ""
+"\n"
+"    Mercurial allows you to customize output of commands through\n"
+"    templates. You can either pass in a template from the command line,\n"
+"    via the --template option, or select an existing template-style (--"
+"style).\n"
+"\n"
+"    You can customize output for any \"log-like\" command: log, outgoing,\n"
+"    incoming, tip, parents, heads and glog are all template-enabled.\n"
+"\n"
+"    Three styles are packaged with Mercurial: default (the style used\n"
+"    when no explicit preference is passed), compact and changelog. Usage:\n"
+"\n"
+"        $ hg log -r1 --style changelog\n"
+"\n"
+"    A template is a piece of text, with markup to invoke variable "
+"expansion:\n"
+"\n"
+"        $ hg log -r1 --template \"{node}\\n\"\n"
+"        b56ce7b07c52de7d5fd79fb89701ea538af65746\n"
+"\n"
+"    Strings in curly braces are called keywords. The availability of\n"
+"    keywords depends on the exact context of the templater. These keywords\n"
+"    are usually available for templating a log-like command:\n"
+"\n"
+"    - author: String. The unmodified author of the changeset.\n"
+"    - branches: String. The name of the branch on which the changeset\n"
+"          was committed. Will be empty if the branch name was default.\n"
+"    - date: Date information. The date when the changeset was committed.\n"
+"    - desc: String. The text of the changeset description.\n"
+"    - files: List of strings. All files modified, added, or removed by\n"
+"          this changeset.\n"
+"    - file_adds: List of strings. Files added by this changeset.\n"
+"    - file_mods: List of strings. Files modified by this changeset.\n"
+"    - file_dels: List of strings. Files removed by this changeset.\n"
+"    - node: String. The changeset identification hash, as a 40-character\n"
+"          hexadecimal string.\n"
+"    - parents: List of strings. The parents of the changeset.\n"
+"    - rev: Integer. The repository-local changeset revision number.\n"
+"    - tags: List of strings. Any tags associated with the changeset.\n"
+"\n"
+"    The \"date\" keyword does not produce human-readable output. If you\n"
+"    want to use a date in your output, you can use a filter to process it.\n"
+"    Filters are functions which return a string based on the input "
+"variable.\n"
+"    You can also use a chain of filters to get the wanted output:\n"
+"\n"
+"       $ hg tip --template \"{date|isodate}\\n\"\n"
+"       2008-08-21 18:22 +0000\n"
+"\n"
+"    List of filters:\n"
+"\n"
+"    - addbreaks: Any text. Add an XHTML \"<br />\" tag before the end of\n"
+"          every line except the last.\n"
+"    - age: Date. Returns a human-readable age for the given date.\n"
+"    - basename: Any text. Treats the text as a path, and returns the\n"
+"          basename. For example, \"foo/bar/baz\" becomes \"baz\".\n"
+"    - date: Date. Returns a date in a Unix date command format, including\n"
+"          the timezone: \"Mon Sep 04 15:13:13 2006 0700\".\n"
+"    - domain: Any text. Finds the first string that looks like an email\n"
+"          address, and extracts just the domain component.\n"
+"    - email: Any text. Extracts the first string that looks like an email\n"
+"          address.\n"
+"    - escape: Any text. Replaces the special XML/XHTML characters \"&\",\n"
+"          \"<\" and \">\" with XML entities.\n"
+"    - fill68: Any text. Wraps the text to fit in 68 columns.\n"
+"    - fill76: Any text. Wraps the text to fit in 76 columns.\n"
+"    - firstline: Any text. Returns the first line of text.\n"
+"    - hgdate: Date. Returns the date as a pair of numbers:\n"
+"          \"1157407993 25200\" (Unix timestamp, timezone offset).\n"
+"    - isodate: Date. Returns the date in ISO 8601 format.\n"
+"    - obfuscate: Any text. Returns the input text rendered as a sequence\n"
+"          of XML entities.\n"
+"    - person: Any text. Returns the text before an email address.\n"
+"    - rfc822date: Date. Returns a date using the same format used\n"
+"          in email headers.\n"
+"    - short: Changeset hash. Returns the short form of a changeset hash,\n"
+"          i.e. a 12-byte hexadecimal string.\n"
+"    - shortdate: Date. Returns a date like \"2006-09-04\".\n"
+"    - strip: Any text. Strips all leading and trailing whitespace.\n"
+"    - tabindent: Any text. Returns the text, with every line except the\n"
+"          first starting with a tab character.\n"
+"    - urlescape: Any text. Escapes all \"special\" characters. For example,\n"
+"          \"foo bar\" becomes \"foo%20bar\".\n"
+"    - user: Any text. Returns the user portion of an email address.\n"
+"    "
+msgstr ""
+
 msgid "destination directory: %s\n"
 msgstr ""
 
@@ -7464,6 +7470,9 @@ msgid "%s not tracked!\n"
 msgstr ""
 
 msgid "unresolved merge conflicts (see hg resolve)"
+msgstr ""
+
+msgid "closing the default branch is invalid"
 msgstr ""
 
 msgid "nothing changed\n"
@@ -7818,9 +7827,6 @@ msgid "adding branch\n"
 msgstr "tilføjer gren\n"
 
 msgid "cannot %s; remote repository does not support the %r capability"
-msgstr ""
-
-msgid "%s@%s: %s"
 msgstr ""
 
 msgid "unknown compression type %r"
@@ -8193,3 +8199,6 @@ msgstr "fandt %d integritetsfejl!\n"
 
 msgid "(first damaged changeset appears to be %d)\n"
 msgstr "(første beskadigede ændring er tilsyneladende %d)\n"
+
+#~ msgid "No patches applied\n"
+#~ msgstr "Ingen rettelser er anvendt\n"
