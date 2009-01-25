@@ -3,7 +3,7 @@ MAN=$(SOURCES:%.txt=%)
 HTML=$(SOURCES:%.txt=%.html)
 PREFIX=/usr/local
 MANDIR=$(PREFIX)/share/man
-INSTALL=install -c
+INSTALL=install -c -m 644
 PYTHON=python
 ASCIIDOC=asciidoc
 
