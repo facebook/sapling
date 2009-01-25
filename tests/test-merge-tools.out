@@ -1,0 +1,400 @@
+# revision 0
+adding f
+# revision 1
+# revision 2
+created new head
+# revision 3 - simple to merge
+created new head
+
+
+Tool selection
+
+# default is internal merge:
+[merge-tools]
+# hg update -C 1
+# hg merge -r 2
+merging f
+warning: conflicts during merge.
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+<<<<<<< local
+revision 1
+=======
+revision 2
+>>>>>>> other
+space
+# hg stat
+M f
+? f.orig
+
+# simplest hgrc using false for merge:
+[merge-tools]
+false.whatever=
+# hg update -C 1
+# hg merge -r 2
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
+# true with higher .priority gets precedence:
+[merge-tools]
+false.whatever=
+true.priority=1
+# hg update -C 1
+# hg merge -r 2
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+# hg stat
+M f
+
+# unless lowered on command line:
+[merge-tools]
+false.whatever=
+true.priority=1
+# hg update -C 1
+# hg merge -r 2 --config merge-tools.true.priority=-7
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
+# or false set higher on command line:
+[merge-tools]
+false.whatever=
+true.priority=1
+# hg update -C 1
+# hg merge -r 2 --config merge-tools.false.priority=117
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
+# or true.executable not found in PATH:
+[merge-tools]
+false.whatever=
+true.priority=1
+# hg update -C 1
+# hg merge -r 2 --config merge-tools.true.executable=nonexistingmergetool
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
+# or true.executable with bogus path:
+[merge-tools]
+false.whatever=
+true.priority=1
+# hg update -C 1
+# hg merge -r 2 --config merge-tools.true.executable=/bin/nonexistingmergetool
+sh: /bin/nonexistingmergetool: No such file or directory
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
+# but true.executable set to cat found in PATH works:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 2
+revision 1
+space
+revision 0
+space
+revision 2
+space
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+# hg stat
+M f
+
+# and true.executable set to cat with path works:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 2 --config merge-tools.true.executable=/bin/cat
+revision 1
+space
+revision 0
+space
+revision 2
+space
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+# hg stat
+M f
+
+
+Tool selection and merge-patterns
+
+# merge-patterns specifies new tool tac:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 2 --config merge-patterns.f=tac
+space
+revision 1
+space
+revision 0
+space
+revision 2
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+# hg stat
+M f
+
+# merge-patterns specifies executable not found in PATH and gets warning:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistingmergetool
+couldn't find merge tool true specified for f
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
+# merge-patterns specifies executable with bogus path and gets warning:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/bin/nonexistingmergetool
+sh: /bin/nonexistingmergetool: No such file or directory
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
+
+Premerge
+
+# Default is silent simplemerge:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 3
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+revision 3
+# hg stat
+M f
+
+# .premerge=True is same:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 3 --config merge-tools.true.premerge=True
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+revision 3
+# hg stat
+M f
+
+# .premerge=False executes merge-tool:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 3 --config merge-tools.true.premerge=False
+revision 1
+space
+revision 0
+space
+revision 0
+space
+revision 3
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+# hg stat
+M f
+
+
+Tool execution
+
+# set tools.args explicit to include $base $local $other $output:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+==> ... <==
+revision 0
+space
+
+==> ... <==
+revision 1
+space
+
+==> ... <==
+revision 2
+space
+
+==> ... <==
+revision 1
+space
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+revision 1
+space
+# hg stat
+M f
+
+# Merge with "echo mergeresult > $local":
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+mergeresult
+# hg stat
+M f
+
+# - and $local is the file f:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+mergeresult
+# hg stat
+M f
+
+# Merge with "echo mergeresult > $output" - the variable is a bit magic:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+merging f
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+# cat f
+mergeresult
+# hg stat
+M f
+
+
+Merge post-processing
+
+# cat is a bad merge-tool and doesn't change:
+[merge-tools]
+false.whatever=
+true.priority=1
+true.executable=cat
+# hg update -C 1
+# hg merge -r 2 --config merge-tools.true.checkchanged=1
+revision 1
+space
+revision 0
+space
+revision 2
+space
+merging f
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
+# cat f
+revision 1
+space
+# hg stat
+M f
+? f.orig
+
