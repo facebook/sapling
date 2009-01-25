@@ -21,3 +21,23 @@ A c
 R b
 % rename back c as b
 M b
+% test issue 1476
+adding a
+adding b1
+adding b2
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+adding c1
+adding c2
+created new head
+% merge heads
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% commit issue 1476
+copies:      c2 (c1)
+rolling back last transaction
+2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+% merge heads again
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% commit issue 1476 with a rename on the other side
+copies:      b2 (b1)
