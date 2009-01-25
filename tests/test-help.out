@@ -68,7 +68,7 @@ list of commands:
  merge        merge working directory with another revision
  outgoing     show changesets not found in destination
  parents      show the parents of the working dir or revision
- paths        show definition of symbolic path names
+ paths        show aliases for remote repositories
  pull         pull changes from the specified source
  push         push changes to the specified destination
  recover      roll back an interrupted transaction
@@ -98,6 +98,7 @@ additional help topics:
  multirevs    Specifying Multiple Revisions
  diffs        Diff Formats
  templating   Template Usage
+ urls         Url Paths
 
 use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
@@ -128,7 +129,7 @@ use "hg -v help" to show aliases and global options
  merge        merge working directory with another revision
  outgoing     show changesets not found in destination
  parents      show the parents of the working dir or revision
- paths        show definition of symbolic path names
+ paths        show aliases for remote repositories
  pull         pull changes from the specified source
  push         push changes to the specified destination
  recover      roll back an interrupted transaction
@@ -158,6 +159,7 @@ additional help topics:
  multirevs    Specifying Multiple Revisions
  diffs        Diff Formats
  templating   Template Usage
+ urls         Url Paths
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
