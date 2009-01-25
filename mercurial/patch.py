@@ -1137,7 +1137,7 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
             try:
                 return internalpatch(patchname, ui, strip, cwd, files)
             except NoHunks:
-                patcher = util.find_exe('gpatch') or util.find_exe('patch')
+                patcher = util.find_exe('gpatch') or util.find_exe('patch') or 'patch'
                 ui.debug(_('no valid hunks found; trying with %r instead\n') %
                          patcher)
                 if util.needbinarypatch():

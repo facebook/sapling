@@ -653,7 +653,7 @@ def hgexecutable():
         elif main_is_frozen():
             set_hgexecutable(sys.executable)
         else:
-            set_hgexecutable(find_exe('hg', 'hg'))
+            set_hgexecutable(find_exe('hg') or 'hg')
     return _hgexecutable
 
 def set_hgexecutable(path):
@@ -1270,29 +1270,33 @@ if os.name == 'nt':
     def isowner(fp, st=None):
         return True
 
-    def find_in_path(name, path, default=None):
-        '''find name in search path. path can be string (will be split
-        with os.pathsep), or iterable thing that returns strings.  if name
-        found, return path to name. else return default. name is looked up
-        using cmd.exe rules, using PATHEXT.'''
-        if isinstance(path, str):
-            path = path.split(os.pathsep)
-
+    def find_exe(command):
+        '''Find executable for command searching like cmd.exe does.
+        If command is a basename then PATH is searched for command.
+        PATH isn't searched if command is an absolute or relative path.  
+        An extension from PATHEXT is found and added if not present.
+        If command isn't found None is returned.'''
         pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
-        pathext = pathext.lower().split(os.pathsep)
-        isexec = os.path.splitext(name)[1].lower() in pathext
+        pathexts = [ext for ext in pathext.lower().split(os.pathsep)]
+        if os.path.splitext(command)[1].lower() in pathexts:
+            pathexts = ['']
+        
+        def findexisting(pathcommand):
+            'Will append extension (if needed) and return existing file'
+            for ext in pathexts:
+                executable = pathcommand + ext
+                if os.path.exists(executable):
+                    return executable
+            return None
 
-        for p in path:
-            p_name = os.path.join(p, name)
-
-            if isexec and os.path.exists(p_name):
-                return p_name
-
-            for ext in pathext:
-                p_name_ext = p_name + ext
-                if os.path.exists(p_name_ext):
-                    return p_name_ext
-        return default
+        if os.sep in command:
+            return findexisting(command)
+            
+        for path in os.environ.get('PATH', '').split(os.pathsep):
+            executable = findexisting(os.path.join(path, command))
+            if executable is not None:
+                return executable
+        return None
 
     def set_signal_handler():
         try:
@@ -1458,32 +1462,31 @@ else:
             st = fstat(fp)
         return st.st_uid == os.getuid()
 
-    def find_in_path(name, path, default=None):
-        '''find name in search path. path can be string (will be split
-        with os.pathsep), or iterable thing that returns strings.  if name
-        found, return path to name. else return default.'''
-        if isinstance(path, str):
-            path = path.split(os.pathsep)
-        for p in path:
-            p_name = os.path.join(p, name)
-            if os.path.exists(p_name):
-                return p_name
-        return default
+    def find_exe(command):
+        '''Find executable for command searching like which does.
+        If command is a basename then PATH is searched for command.
+        PATH isn't searched if command is an absolute or relative path.  
+        If command isn't found None is returned.'''
+        if sys.platform == 'OpenVMS':
+            return command
+        
+        def findexisting(executable):
+            'Will return executable if existing file'
+            if os.path.exists(executable):
+                return executable
+            return None
+
+        if os.sep in command:
+            return findexisting(command)
+            
+        for path in os.environ.get('PATH', '').split(os.pathsep):
+            executable = findexisting(os.path.join(path, command))
+            if executable is not None:
+                return executable
+        return None
 
     def set_signal_handler():
         pass
-
-def find_exe(name, default=None):
-    '''find path of an executable.
-    if name contains a path component, return it as is.  otherwise,
-    use normal executable search path.'''
-
-    if os.sep in name or sys.platform == 'OpenVMS':
-        # don't check the executable bit.  if the file isn't
-        # executable, whoever tries to actually run it will give a
-        # much more useful error message.
-        return name
-    return find_in_path(name, os.environ.get('PATH', ''), default=default)
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
