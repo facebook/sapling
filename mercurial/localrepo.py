@@ -733,8 +733,8 @@ class localrepository(repo.repository):
             nfp = fp2
 
             if manifest2: # branch merge
-                if fp2 == nullid: # copied on remote side
-                    if fp1 != nullid or cf in manifest2:
+                if fp2 == nullid or cr is None: # copied on remote side
+                    if cf in manifest2:
                         cr = manifest2[cf]
                         nfp = fp1
 
