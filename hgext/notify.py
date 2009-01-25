@@ -196,35 +196,29 @@ class notifier(object):
         for k, v in headers:
             msg[k] = v
 
-        def fix_subject(subject):
-            '''try to make subject line exist and be useful.'''
-
-            if not subject:
-                if count > 1:
-                    subject = _('%s: %d new changesets') % (self.root, count)
-                else:
-                    changes = self.repo.changelog.read(node)
-                    s = changes[4].lstrip().split('\n', 1)[0].rstrip()
-                    subject = '%s: %s' % (self.root, s)
-            maxsubject = int(self.ui.config('notify', 'maxsubject', 67))
-            if maxsubject and len(subject) > maxsubject:
-                subject = subject[:maxsubject-3] + '...'
-            msg['Subject'] = mail.headencode(self.ui, subject,
-                                             self.charsets, self.test)
-
-        def fix_sender(sender):
-            '''try to make message have proper sender.'''
-
-            if not sender:
-                sender = self.ui.config('email', 'from') or self.ui.username()
-            if '@' not in sender or '@localhost' in sender:
-                sender = self.fixmail(sender)
-            msg['From'] = mail.addressencode(self.ui, sender,
-                                             self.charsets, self.test)
-
         msg['Date'] = util.datestr(format="%a, %d %b %Y %H:%M:%S %1%2")
-        fix_subject(subject)
-        fix_sender(sender)
+
+        # try to make subject line exist and be useful
+        if not subject:
+            if count > 1:
+                subject = _('%s: %d new changesets') % (self.root, count)
+            else:
+                changes = self.repo.changelog.read(node)
+                s = changes[4].lstrip().split('\n', 1)[0].rstrip()
+                subject = '%s: %s' % (self.root, s)
+        maxsubject = int(self.ui.config('notify', 'maxsubject', 67))
+        if maxsubject and len(subject) > maxsubject:
+            subject = subject[:maxsubject-3] + '...'
+        msg['Subject'] = mail.headencode(self.ui, subject,
+                                         self.charsets, self.test)
+
+        # try to make message have proper sender
+        if not sender:
+            sender = self.ui.config('email', 'from') or self.ui.username()
+        if '@' not in sender or '@localhost' in sender:
+            sender = self.fixmail(sender)
+        msg['From'] = mail.addressencode(self.ui, sender,
+                                         self.charsets, self.test)
 
         msg['X-Hg-Notification'] = 'changeset ' + short(node)
         if not msg['Message-Id']:
