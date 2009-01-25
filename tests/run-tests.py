@@ -465,7 +465,8 @@ os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
 os.environ['CDPATH'] = ''
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
-HGTMP = os.environ['HGTMP'] = tempfile.mkdtemp('', 'hgtests.', options.tmpdir)
+HGTMP = os.environ['HGTMP'] = os.path.realpath(tempfile.mkdtemp('', 'hgtests.',
+                                               options.tmpdir))
 DAEMON_PIDS = None
 HGRCPATH = None
 
