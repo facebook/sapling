@@ -2748,7 +2748,7 @@ def status(ui, repo, *pats, **opts):
     end = opts.get('print0') and '\0' or '\n'
     copy = {}
     states = 'modified added removed deleted unknown ignored clean'.split()
-    show = [k for k in states if opts[k]]
+    show = [k for k in states if opts.get(k)]
     if opts.get('all'):
         show += ui.quiet and (states[:4] + ['clean']) or states
     if not show:
