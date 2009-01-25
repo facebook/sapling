@@ -24,44 +24,34 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: hgext/acl.py:53
 msgid "return tuple of (match function, list enabled)."
 msgstr ""
 
-#: hgext/acl.py:55
 msgid "acl: %s not enabled\n"
 msgstr "acl: %s er ikke slået til\n"
 
-#: hgext/acl.py:60
 msgid "acl: %s enabled, %d entries for user %s\n"
 msgstr "acl: %s slået til, %d indgange for bruger %s\n"
 
-#: hgext/acl.py:68
 msgid "config error - hook type \"%s\" cannot stop incoming changesets"
 msgstr ""
 "konfigurationsfejl - hook type \"%s\" kan ikke stoppe indgående ændringer"
 
-#: hgext/acl.py:71
 msgid "acl: changes have source \"%s\" - skipping\n"
 msgstr "acl: ændringer har kilde \"%s\" - springer over\n"
 
-#: hgext/acl.py:85
 msgid "acl: user %s denied on %s\n"
 msgstr "acl: bruger %s nægtet adgang til %s\n"
 
-#: hgext/acl.py:86 hgext/acl.py:89
 msgid "acl: access denied for changeset %s"
 msgstr "acl: adgang nægtet til ændring %s"
 
-#: hgext/acl.py:88
 msgid "acl: user %s not allowed on %s\n"
 msgstr "acl: bruger %s ikke tilladt på %s\n"
 
-#: hgext/acl.py:90
 msgid "acl: allowing changeset %s\n"
 msgstr "acl: tillader ændring %s\n"
 
-#: hgext/alias.py:4
 msgid ""
 "allow user-defined command aliases\n"
 "\n"
@@ -71,29 +61,23 @@ msgid ""
 "mycmd = cmd --args\n"
 msgstr ""
 
-#: hgext/alias.py:21
 msgid ""
 "defer command lookup until needed, so that extensions loaded\n"
 "    after alias can be aliased"
 msgstr ""
 
-#: hgext/alias.py:53
 msgid "*** [alias] %s: command %s is unknown"
 msgstr ""
 
-#: hgext/alias.py:56
 msgid "*** [alias] %s: command %s is ambiguous"
 msgstr ""
 
-#: hgext/alias.py:59
 msgid "*** [alias] %s: circular dependency on %s"
 msgstr ""
 
-#: hgext/alias.py:71
 msgid "*** [alias] %s: no definition\n"
 msgstr ""
 
-#: hgext/bookmarks.py:8
 msgid ""
 "mercurial bookmarks\n"
 "\n"
@@ -117,7 +101,6 @@ msgid ""
 "just updates it. This is similar to git's approach of branching.\n"
 msgstr ""
 
-#: hgext/bookmarks.py:37
 msgid ""
 "Parse .hg/bookmarks file and return a dictionary\n"
 "\n"
@@ -130,7 +113,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/bookmarks.py:57
 msgid ""
 "Write bookmarks\n"
 "\n"
@@ -142,7 +124,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/bookmarks.py:75
 msgid ""
 "Get the current bookmark\n"
 "\n"
@@ -152,7 +133,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/bookmarks.py:94
 msgid ""
 "Set the name of the bookmark that we are currently on\n"
 "\n"
@@ -161,7 +141,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/bookmarks.py:116
 msgid ""
 "mercurial bookmarks\n"
 "\n"
@@ -177,48 +156,38 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/bookmarks.py:134 hgext/bookmarks.py:150
 msgid "a bookmark of this name does not exist"
 msgstr ""
 
-#: hgext/bookmarks.py:136 hgext/bookmarks.py:160
 msgid "a bookmark of the same name already exists"
 msgstr ""
 
-#: hgext/bookmarks.py:138
 msgid "new bookmark name required"
 msgstr ""
 
-#: hgext/bookmarks.py:148 hgext/bookmarks.py:174
 msgid "bookmark name required"
 msgstr ""
 
-#: hgext/bookmarks.py:157
 msgid "bookmark name cannot contain newlines"
 msgstr "bogmærkenavn kan ikke indeholde linieskift"
 
-#: hgext/bookmarks.py:164
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr ""
 
-#: hgext/bookmarks.py:203
 msgid ""
 "Strip bookmarks if revisions are stripped using\n"
 "    the mercurial.strip method. This usually happens during\n"
 "    qpush and qpop"
 msgstr ""
 
-#: hgext/bookmarks.py:244
 msgid ""
 "Add a revision to the repository and\n"
 "            move the bookmark"
 msgstr ""
 
-#: hgext/bookmarks.py:287
 msgid "Merge bookmarks with normal tags"
 msgstr ""
 
-#: hgext/bookmarks.py:298
 msgid ""
 "Set the current bookmark\n"
 "\n"
@@ -227,32 +196,24 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/bookmarks.py:311
 msgid "Replace push with a decorator to provide --non-bookmarked option"
 msgstr ""
 
-#: hgext/bookmarks.py:318
 msgid "force"
 msgstr ""
 
-#: hgext/bookmarks.py:319 hgext/extdiff.py:207 mercurial/commands.py:3175
-#: mercurial/commands.py:3410
 msgid "revision"
 msgstr ""
 
-#: hgext/bookmarks.py:320
 msgid "delete a given bookmark"
 msgstr ""
 
-#: hgext/bookmarks.py:321
 msgid "rename a given bookmark"
 msgstr ""
 
-#: hgext/bookmarks.py:322
 msgid "hg bookmarks [-d] [-m NAME] [-r NAME] [NAME]"
 msgstr ""
 
-#: hgext/bugzilla.py:8
 msgid ""
 "Bugzilla integration\n"
 "\n"
@@ -375,165 +336,129 @@ msgid ""
 "    Changeset commit comment. Bug 1234.\n"
 msgstr ""
 
-#: hgext/bugzilla.py:124
 msgid "support for bugzilla version 2.16."
 msgstr ""
 
-#: hgext/bugzilla.py:136
 msgid "connecting to %s:%s as %s, password %s\n"
 msgstr "forbinder til %s:%s som %s, kodeord %s\n"
 
-#: hgext/bugzilla.py:146
 msgid "run a query."
 msgstr ""
 
-#: hgext/bugzilla.py:147
 msgid "query: %s %s\n"
 msgstr "forespørgsel: %s %s\n"
 
-#: hgext/bugzilla.py:151
 msgid "failed query: %s %s\n"
 msgstr "fejlet forespørgsel: %s %s\n"
 
-#: hgext/bugzilla.py:155 hgext/bugzilla.py:279
 msgid "get identity of longdesc field"
 msgstr ""
 
-#: hgext/bugzilla.py:159 hgext/bugzilla.py:283
 msgid "unknown database schema"
 msgstr "ukendt databaseskema"
 
-#: hgext/bugzilla.py:163
 msgid "filter not-existing bug ids from list."
 msgstr ""
 
-#: hgext/bugzilla.py:168
 msgid "filter bug ids from list that already refer to this changeset."
 msgstr ""
 
-#: hgext/bugzilla.py:175
 msgid "bug %d already knows about changeset %s\n"
 msgstr "fejl %d kender allerede til ændring %s\n"
 
-#: hgext/bugzilla.py:181
 msgid "tell bugzilla to send mail."
 msgstr ""
 
-#: hgext/bugzilla.py:183
 msgid "telling bugzilla to send mail:\n"
 msgstr "beder bugzilla om at sende mail:\n"
 
-#: hgext/bugzilla.py:186
 msgid "  bug %s\n"
 msgstr "  fejl %s\n"
 
-#: hgext/bugzilla.py:196
 msgid "running notify command %s\n"
 msgstr "kører notificeringskommando %s\n"
 
-#: hgext/bugzilla.py:202
 msgid "bugzilla notify command %s"
 msgstr ""
 
-#: hgext/bugzilla.py:204 hgext/mq.py:962
 msgid "done\n"
 msgstr "færdig\n"
 
-#: hgext/bugzilla.py:207
 msgid "look up numeric bugzilla user id."
 msgstr ""
 
-#: hgext/bugzilla.py:214
 msgid "looking up user %s\n"
 msgstr "slår bruger %s op\n"
 
-#: hgext/bugzilla.py:225
 msgid "map name of committer to bugzilla user name."
 msgstr ""
 
-#: hgext/bugzilla.py:232
 msgid ""
 "see if committer is a registered bugzilla user. Return\n"
 "        bugzilla username and userid if so. If not, return default\n"
 "        bugzilla username and userid."
 msgstr ""
 
-#: hgext/bugzilla.py:242
 msgid "cannot find bugzilla user id for %s"
 msgstr ""
 
-#: hgext/bugzilla.py:247
 msgid "cannot find bugzilla user id for %s or %s"
 msgstr ""
 
-#: hgext/bugzilla.py:252
 msgid ""
 "add comment to bug. try adding comment as committer of\n"
 "        changeset, otherwise as default bugzilla user."
 msgstr ""
 
-#: hgext/bugzilla.py:266
 msgid "support for bugzilla 2.18 series."
 msgstr ""
 
-#: hgext/bugzilla.py:273
 msgid "support for bugzilla 3.0 series."
 msgstr ""
 
-#: hgext/bugzilla.py:305
 msgid ""
 "return object that knows how to talk to bugzilla version in\n"
 "        use."
 msgstr ""
 
-#: hgext/bugzilla.py:313
 msgid "bugzilla version %s not supported"
 msgstr ""
 
-#: hgext/bugzilla.py:325
 msgid ""
 "find valid bug ids that are referred to in changeset\n"
 "        comments and that do not already have references to this\n"
 "        changeset."
 msgstr ""
 
-#: hgext/bugzilla.py:352
 msgid "update bugzilla bug with reference to changeset."
 msgstr ""
 
-#: hgext/bugzilla.py:355
 msgid ""
 "strip leading prefix of repo root and turn into\n"
 "            url-safe path."
 msgstr ""
 
-#: hgext/bugzilla.py:372
 msgid ""
 "changeset {node|short} in repo {root} refers to bug {bug}.\n"
 "details:\n"
 "\t{desc|tabindent}"
 msgstr ""
 
-#: hgext/bugzilla.py:387
 msgid ""
 "add comment to bugzilla for each changeset that refers to a\n"
 "    bugzilla bug id. only add a comment once per bug, so same change\n"
 "    seen multiple times does not fill bug with duplicate data."
 msgstr ""
 
-#: hgext/bugzilla.py:395
 msgid "python mysql support not available: %s"
 msgstr ""
 
-#: hgext/bugzilla.py:398
 msgid "hook type %s does not pass a changeset id"
 msgstr ""
 
-#: hgext/bugzilla.py:409
 msgid "database error: %s"
 msgstr ""
 
-#: hgext/children.py:16
 msgid ""
 "show the children of the given or working dir revision\n"
 "\n"
@@ -545,31 +470,24 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/children.py:38
 msgid "show children of the specified rev"
 msgstr ""
 
-#: hgext/children.py:40
 msgid "hg children [-r REV] [FILE]"
 msgstr ""
 
-#: hgext/churn.py:8
 msgid "command to show certain statistics about revision history"
 msgstr ""
 
-#: hgext/churn.py:34
 msgid "Calculate stats"
 msgstr ""
 
-#: hgext/churn.py:70
 msgid "Revision %d is a merge, ignoring...\n"
 msgstr ""
 
-#: hgext/churn.py:82
 msgid "\rgenerating stats: %d%%"
 msgstr ""
 
-#: hgext/churn.py:93
 msgid ""
 "graph count of revisions grouped by template\n"
 "\n"
@@ -625,47 +543,36 @@ msgstr ""
 "\n"
 "    <alias email> <faktisk email>"
 
-#: hgext/churn.py:140
 msgid "assuming %i character terminal\n"
 msgstr ""
 
-#: hgext/churn.py:151
 msgid "count rate for the specified revision or range"
 msgstr "lav statistik for de specificerede revisioner"
 
-#: hgext/churn.py:152
 msgid "count rate for revs matching date spec"
 msgstr "lav statistik for revisioner som matcher dato specifikationen"
 
-#: hgext/churn.py:153
 msgid "template to group changesets"
 msgstr "mønster for gruppering af ændringer"
 
-#: hgext/churn.py:155
 msgid "strftime-compatible format for grouping by date"
 msgstr "strftime-kompatibelt format til gruppering efter dato"
 
-#: hgext/churn.py:156
 msgid "count rate by number of changesets"
 msgstr "lav statistik efter antallet af ændringer"
 
-#: hgext/churn.py:157
 msgid "sort by key (default: sort by count)"
 msgstr "sortér efter nøgle (standard: sortering efter antal)"
 
-#: hgext/churn.py:158
 msgid "file with email aliases"
 msgstr "fil med email-aliaser"
 
-#: hgext/churn.py:159
 msgid "show progress"
 msgstr "vis fremskridt"
 
-#: hgext/churn.py:160
 msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]"
 msgstr "hg churn [-d DATO] [-r REVISIONER] [--aliases FIL] [--progress] [FIL]"
 
-#: hgext/color.py:19
 msgid ""
 "add color output to status, qseries, and diff-related commands\n"
 "\n"
@@ -713,51 +620,39 @@ msgid ""
 "diff.trailingwhitespace = bold red_background\n"
 msgstr ""
 
-#: hgext/color.py:93
 msgid "Wrap text in commands to turn on each effect."
 msgstr ""
 
-#: hgext/color.py:100
 msgid "run the status command with colored output"
 msgstr ""
 
-#: hgext/color.py:145
 msgid "run the qseries command with colored output"
 msgstr ""
 
-#: hgext/color.py:172
 msgid "wrap ui.write for colored diff output"
 msgstr ""
 
-#: hgext/color.py:189
 msgid "wrap cmdutil.changeset_printer.showpatch with colored output"
 msgstr ""
 
-#: hgext/color.py:197
 msgid "run the diff command with colored output"
 msgstr ""
 
-#: hgext/color.py:227 hgext/graphlog.py:457
 msgid "Initialize the extension."
 msgstr ""
 
-#: hgext/color.py:241
 msgid "patch in command to command table and load effect map"
 msgstr ""
 
-#: hgext/color.py:260
 msgid "when to colorize (always, auto, or never)"
 msgstr ""
 
-#: hgext/color.py:261
 msgid "don't colorize output"
 msgstr ""
 
-#: hgext/convert/__init__.py:7
 msgid "converting foreign VCS repositories to Mercurial"
 msgstr ""
 
-#: hgext/convert/__init__.py:17
 msgid ""
 "convert a foreign SCM repository to a Mercurial one.\n"
 "\n"
@@ -927,7 +822,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/convert/__init__.py:188
 msgid ""
 "create changeset information from CVS\n"
 "\n"
@@ -939,75 +833,57 @@ msgid ""
 "    changesets based on matching commit log entries and dates."
 msgstr ""
 
-#: hgext/convert/__init__.py:203
 msgid "username mapping filename"
 msgstr ""
 
-#: hgext/convert/__init__.py:204
 msgid "destination repository type"
 msgstr "type for destinations repository"
 
-#: hgext/convert/__init__.py:205
 msgid "remap file names using contents of file"
 msgstr ""
 
-#: hgext/convert/__init__.py:206
 msgid "import up to target revision REV"
 msgstr ""
 
-#: hgext/convert/__init__.py:207
 msgid "source repository type"
 msgstr ""
 
-#: hgext/convert/__init__.py:208
 msgid "splice synthesized history into place"
 msgstr ""
 
-#: hgext/convert/__init__.py:209
 msgid "try to sort changesets by date"
 msgstr ""
 
-#: hgext/convert/__init__.py:210
 msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
 msgstr ""
 
-#: hgext/convert/__init__.py:219
 msgid "only return changes on specified branches"
 msgstr ""
 
-#: hgext/convert/__init__.py:220
 msgid "prefix to remove from file names"
 msgstr ""
 
-#: hgext/convert/__init__.py:221
 msgid "only return changes after or between specified tags"
 msgstr ""
 
-#: hgext/convert/__init__.py:222
 msgid "update cvs log cache"
 msgstr ""
 
-#: hgext/convert/__init__.py:223
 msgid "create new cvs log cache"
 msgstr ""
 
-#: hgext/convert/__init__.py:224
 msgid "set commit time fuzz in seconds"
 msgstr ""
 
-#: hgext/convert/__init__.py:225
 msgid "specify cvsroot"
 msgstr ""
 
-#: hgext/convert/__init__.py:227
 msgid "show parent changesets"
 msgstr "vis forældre-ændring"
 
-#: hgext/convert/__init__.py:228
 msgid "show current changeset in ancestor branches"
 msgstr ""
 
-#: hgext/extdiff.py:8
 msgid ""
 "\n"
 "The `extdiff' Mercurial extension allows you to use external programs\n"
@@ -1050,26 +926,21 @@ msgid ""
 "pretty fast (at least faster than having to compare the entire tree).\n"
 msgstr ""
 
-#: hgext/extdiff.py:54
 msgid "snapshot files as of some revision"
 msgstr ""
 
-#: hgext/extdiff.py:61
 msgid "making snapshot of %d files from rev %s\n"
 msgstr ""
 
-#: hgext/extdiff.py:80
 msgid ""
 "snapshot files from working directory.\n"
 "    if not using snapshot, -I/-X does not work and recursive diff\n"
 "    in tools like kdiff3 and meld displays too many files."
 msgstr ""
 
-#: hgext/extdiff.py:88
 msgid "making snapshot of %d files from working dir\n"
 msgstr ""
 
-#: hgext/extdiff.py:113
 msgid ""
 "Do the actuall diff:\n"
 "\n"
@@ -1080,19 +951,15 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/extdiff.py:164
 msgid "running %r in %s\n"
 msgstr ""
 
-#: hgext/extdiff.py:169
 msgid "file changed while diffing. Overwriting: %s (src: %s)\n"
 msgstr ""
 
-#: hgext/extdiff.py:175
 msgid "cleaning up temp directory\n"
 msgstr ""
 
-#: hgext/extdiff.py:179
 msgid ""
 "use external program to diff repository (or selected files)\n"
 "\n"
@@ -1112,31 +979,24 @@ msgid ""
 "    working directory files are compared to its parent."
 msgstr ""
 
-#: hgext/extdiff.py:205
 msgid "comparison program to run"
 msgstr ""
 
-#: hgext/extdiff.py:206
 msgid "pass option to comparison program"
 msgstr ""
 
-#: hgext/extdiff.py:209
 msgid "hg extdiff [OPT]... [FILE]..."
 msgstr ""
 
-#: hgext/extdiff.py:229
 msgid "use closure to save diff command to use"
 msgstr ""
 
-#: hgext/extdiff.py:247
 msgid "hg %s [OPTION]... [FILE]..."
 msgstr ""
 
-#: hgext/fetch.py:7
 msgid "pulling, updating and merging in one command"
 msgstr ""
 
-#: hgext/fetch.py:14
 msgid ""
 "pull changes from a remote repository, merge new changes if needed.\n"
 "\n"
@@ -1156,92 +1016,70 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/fetch.py:39
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
 msgstr ""
 
-#: hgext/fetch.py:43 hgext/keyword.py:261 mercurial/cmdutil.py:69
 msgid "outstanding uncommitted merge"
 msgstr ""
 
-#: hgext/fetch.py:52 hgext/keyword.py:266 mercurial/cmdutil.py:72
-#: mercurial/merge.py:459
 msgid "outstanding uncommitted changes"
 msgstr ""
 
-#: hgext/fetch.py:54
 msgid "working directory is missing some files"
 msgstr "arbejdsbiblioteket mangler nogle filer"
 
-#: hgext/fetch.py:56
 msgid ""
 "multiple heads in this branch (use \"hg heads .\" and \"hg merge\" to merge)"
 msgstr ""
 
-#: hgext/fetch.py:62 mercurial/commands.py:2168
 msgid "pulling from %s\n"
 msgstr "hiver fra %s\n"
 
-#: hgext/fetch.py:67
 msgid "fetch -r doesn't work for remote repositories yet"
 msgstr "fetch -r virker endnu ikke for fjernarkiver"
 
-#: hgext/fetch.py:94
 msgid ""
 "not merging with %d other new branch heads (use \"hg heads .\" and \"hg merge"
 "\" to merge them)\n"
 msgstr ""
 
-#: hgext/fetch.py:109
 msgid "updating to %d:%s\n"
 msgstr "opdaterer til %d:%s\n"
 
-#: hgext/fetch.py:113
 msgid "merging with %d:%s\n"
 msgstr "sammenføjer med %d:%s\n"
 
-#: hgext/fetch.py:120
 msgid "Automated merge with %s"
 msgstr ""
 
-#: hgext/fetch.py:126
 msgid "new changeset %d:%s merges remote changes with local\n"
 msgstr ""
 
-#: hgext/fetch.py:136
 msgid "a specific revision you would like to pull"
 msgstr ""
 
-#: hgext/fetch.py:137 hgext/mq.py:2516 hgext/mq.py:2543
 msgid "edit commit message"
 msgstr ""
 
-#: hgext/fetch.py:138
 msgid "edit commit message (DEPRECATED)"
 msgstr ""
 
-#: hgext/fetch.py:139
 msgid "switch parents when merging"
 msgstr ""
 
-#: hgext/fetch.py:141
 msgid "hg fetch [SOURCE]"
 msgstr ""
 
-#: hgext/gpg.py:23
 msgid " returns of the good and bad signatures"
 msgstr ""
 
-#: hgext/gpg.py:53
 msgid "error while verifying signature"
 msgstr ""
 
-#: hgext/gpg.py:73
 msgid "create a new gpg instance"
 msgstr ""
 
-#: hgext/gpg.py:81
 msgid ""
 "\n"
 "    walk over every sigs, yields a couple\n"
@@ -1249,43 +1087,33 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/gpg.py:110
 msgid "get the keys who signed a data"
 msgstr ""
 
-#: hgext/gpg.py:127
 msgid "%s Bad signature from \"%s\"\n"
 msgstr ""
 
-#: hgext/gpg.py:130
 msgid "%s Note: Signature has expired (signed by: \"%s\")\n"
 msgstr ""
 
-#: hgext/gpg.py:133
 msgid "%s Note: This key has expired (signed by: \"%s\")\n"
 msgstr ""
 
-#: hgext/gpg.py:139
 msgid "list signed changesets"
 msgstr ""
 
-#: hgext/gpg.py:149
 msgid "%s:%d node does not exist\n"
 msgstr ""
 
-#: hgext/gpg.py:165
 msgid "verify all the signatures there may be for a particular revision"
 msgstr ""
 
-#: hgext/gpg.py:179
 msgid "No valid signature for %s\n"
 msgstr ""
 
-#: hgext/gpg.py:188
 msgid "associate a string to a key (username, comment)"
 msgstr ""
 
-#: hgext/gpg.py:197
 msgid ""
 "add a signature for the current or given revision\n"
 "\n"
@@ -1296,65 +1124,50 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/gpg.py:219 mercurial/commands.py:2423 mercurial/commands.py:2816
 msgid "uncommitted merge - please provide a specific revision"
 msgstr ""
 
-#: hgext/gpg.py:232
 msgid "Error while signing"
 msgstr ""
 
-#: hgext/gpg.py:244
 msgid ""
 "working copy of .hgsigs is changed (please commit .hgsigs manually or use --"
 "force)"
 msgstr ""
 
-#: hgext/gpg.py:258
 msgid "Added signature for changeset %s"
 msgstr ""
 
-#: hgext/gpg.py:267
 msgid "map a manifest into some text"
 msgstr ""
 
-#: hgext/gpg.py:271
 msgid "unknown signature version"
 msgstr ""
 
-#: hgext/gpg.py:276
 msgid "make the signature local"
 msgstr ""
 
-#: hgext/gpg.py:277
 msgid "sign even if the sigfile is modified"
 msgstr ""
 
-#: hgext/gpg.py:278
 msgid "do not commit the sigfile after signing"
 msgstr ""
 
-#: hgext/gpg.py:279
 msgid "the key id to sign with"
 msgstr ""
 
-#: hgext/gpg.py:280
 msgid "commit message"
 msgstr ""
 
-#: hgext/gpg.py:282
 msgid "hg sign [OPTION]... [REVISION]..."
 msgstr ""
 
-#: hgext/gpg.py:283
 msgid "hg sigcheck REVISION"
 msgstr ""
 
-#: hgext/gpg.py:284
 msgid "hg sigs"
 msgstr ""
 
-#: hgext/graphlog.py:7
 msgid ""
 "show revision graphs in terminal windows\n"
 "\n"
@@ -1363,7 +1176,6 @@ msgid ""
 "revision graph is also shown.\n"
 msgstr ""
 
-#: hgext/graphlog.py:25
 msgid ""
 "cset DAG generator yielding (rev, node, [parents]) tuples\n"
 "\n"
@@ -1373,7 +1185,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:40
 msgid ""
 "file cset DAG generator yielding (rev, node, [parents]) tuples\n"
 "\n"
@@ -1383,7 +1194,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:59
 msgid ""
 "grapher for asciigraph on a list of nodes and their parents\n"
 "\n"
@@ -1395,7 +1205,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:147
 msgid ""
 "prints an ASCII graph of the DAG returned by the grapher\n"
 "\n"
@@ -1414,19 +1223,15 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:253 mercurial/cmdutil.py:100
 msgid "limit must be a positive integer"
 msgstr ""
 
-#: hgext/graphlog.py:255 mercurial/cmdutil.py:101
 msgid "limit must be positive"
 msgstr ""
 
-#: hgext/graphlog.py:272
 msgid "--graph option is incompatible with --%s"
 msgstr ""
 
-#: hgext/graphlog.py:276
 msgid ""
 "show revision history alongside an ASCII revision graph\n"
 "\n"
@@ -1438,7 +1243,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:313
 msgid ""
 "cset DAG generator yielding (node, [parents]) tuples\n"
 "\n"
@@ -1447,18 +1251,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:326 hgext/graphlog.py:406 hgext/patchbomb.py:216
-#: mercurial/commands.py:1708 mercurial/commands.py:2034
 msgid "comparing with %s\n"
 msgstr "sammenligner med %s\n"
 
-#: hgext/graphlog.py:329 hgext/graphlog.py:415 hgext/patchbomb.py:219
-#: mercurial/commands.py:1718 mercurial/commands.py:2037
-#: mercurial/localrepo.py:1468 mercurial/localrepo.py:1509
 msgid "no changes found\n"
 msgstr "fandt ingen ændringer\n"
 
-#: hgext/graphlog.py:347
 msgid ""
 "show the outgoing changesets alongside an ASCII revision graph\n"
 "\n"
@@ -1470,7 +1268,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:371
 msgid ""
 "cset DAG generator yielding (node, [parents]) tuples\n"
 "\n"
@@ -1479,7 +1276,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:392
 msgid ""
 "show the incoming changesets alongside an ASCII revision graph\n"
 "\n"
@@ -1491,31 +1287,24 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/graphlog.py:463
 msgid "wrap the command"
 msgstr ""
 
-#: hgext/graphlog.py:469
 msgid "show the revision DAG"
 msgstr ""
 
-#: hgext/graphlog.py:474 hgext/hgk.py:328 mercurial/commands.py:3014
 msgid "limit number of changes displayed"
 msgstr ""
 
-#: hgext/graphlog.py:475 mercurial/commands.py:3013 mercurial/commands.py:3398
 msgid "show patch"
 msgstr ""
 
-#: hgext/graphlog.py:476 mercurial/commands.py:3261
 msgid "show the specified revision or range"
 msgstr ""
 
-#: hgext/graphlog.py:478
 msgid "hg glog [OPTION]... [FILE]"
 msgstr ""
 
-#: hgext/hgcia.py:4
 msgid ""
 "CIA notification\n"
 "\n"
@@ -1554,35 +1343,27 @@ msgid ""
 "baseurl = http://server/path/to/repo\n"
 msgstr ""
 
-#: hgext/hgcia.py:62
 msgid " A CIA message "
 msgstr ""
 
-#: hgext/hgcia.py:168
 msgid " CIA notification class "
 msgstr ""
 
-#: hgext/hgcia.py:209
 msgid "hgcia: sending update to %s\n"
 msgstr ""
 
-#: hgext/hgcia.py:215
 msgid " send CIA notification "
 msgstr ""
 
-#: hgext/hgcia.py:222
 msgid "email.from must be defined when sending by email"
 msgstr ""
 
-#: hgext/hgcia.py:231
 msgid "cia: no user specified"
 msgstr "cia: ingen bruger angivet"
 
-#: hgext/hgcia.py:234
 msgid "cia: no project specified"
 msgstr "cia: intet project angivet"
 
-#: hgext/hgk.py:7
 msgid ""
 "browsing the repository in a graphical way\n"
 "\n"
@@ -1625,120 +1406,90 @@ msgid ""
 "vdiff on hovered and selected revisions."
 msgstr ""
 
-#: hgext/hgk.py:53
 msgid "diff trees from two commits"
 msgstr ""
 
-#: hgext/hgk.py:133
 msgid "output common ancestor information"
 msgstr ""
 
-#: hgext/hgk.py:140
 msgid "cat a specific revision"
 msgstr ""
 
-#: hgext/hgk.py:155
 msgid "cat-file: type or revision not supplied\n"
 msgstr ""
 
-#: hgext/hgk.py:160
 msgid "aborting hg cat-file only understands commits\n"
 msgstr ""
 
-#: hgext/hgk.py:285
 msgid "parse given revisions"
 msgstr ""
 
-#: hgext/hgk.py:301
 msgid "print revisions"
 msgstr ""
 
-#: hgext/hgk.py:310
 msgid "print extension options"
 msgstr ""
 
-#: hgext/hgk.py:318
 msgid "start interactive history viewer"
 msgstr ""
 
-#: hgext/hgk.py:322 hgext/convert/cvsps.py:191 mercurial/sshrepo.py:45
-#: mercurial/sshrepo.py:63
 msgid "running %s\n"
 msgstr "kører %s\n"
 
-#: hgext/hgk.py:329
 msgid "hg view [-l LIMIT] [REVRANGE]"
 msgstr ""
 
-#: hgext/hgk.py:332
 msgid "generate patch"
 msgstr ""
 
-#: hgext/hgk.py:333
 msgid "recursive"
 msgstr ""
 
-#: hgext/hgk.py:334
 msgid "pretty"
 msgstr ""
 
-#: hgext/hgk.py:335 hgext/hgk.py:341
 msgid "stdin"
 msgstr ""
 
-#: hgext/hgk.py:336
 msgid "detect copies"
 msgstr ""
 
-#: hgext/hgk.py:337
 msgid "search"
 msgstr "søg"
 
-#: hgext/hgk.py:338
 msgid "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
 msgstr ""
 
-#: hgext/hgk.py:342
 msgid "hg debug-cat-file [OPTION]... TYPE FILE"
 msgstr ""
 
-#: hgext/hgk.py:344
 msgid "hg debug-config"
 msgstr ""
 
-#: hgext/hgk.py:346
 msgid "hg debug-merge-base node node"
 msgstr ""
 
-#: hgext/hgk.py:349
 msgid "ignored"
 msgstr "Ignoreret"
 
-#: hgext/hgk.py:350
 msgid "hg debug-rev-parse REV"
 msgstr ""
 
-#: hgext/hgk.py:353
 msgid "header"
 msgstr ""
 
-#: hgext/hgk.py:354
 msgid "topo-order"
 msgstr ""
 
-#: hgext/hgk.py:355
 msgid "parents"
 msgstr ""
 
-#: hgext/hgk.py:356
 msgid "max-count"
 msgstr ""
 
-#: hgext/hgk.py:357
 msgid "hg debug-rev-list [options] revs"
 msgstr ""
 
-#: hgext/highlight/__init__.py:1
 msgid ""
 "syntax highlighting in hgweb, based on Pygments\n"
 "\n"
@@ -1760,85 +1511,65 @@ msgid ""
 "-- Adam Hupp <adam@hupp.org>\n"
 msgstr ""
 
-#: hgext/imerge.py:4
 msgid ""
 "\n"
 "imerge - interactive merge\n"
 msgstr ""
 
-#: hgext/imerge.py:77
 msgid "invalid imerge status file"
 msgstr ""
 
-#: hgext/imerge.py:82
 msgid "merge parent %s not in repository"
 msgstr ""
 
-#: hgext/imerge.py:157
 msgid "imerge state does not match working directory"
 msgstr ""
 
-#: hgext/imerge.py:167
 msgid "%s is not in the merge set"
 msgstr ""
 
-#: hgext/imerge.py:178
 msgid "%s is not resolved"
 msgstr ""
 
-#: hgext/imerge.py:186
 msgid "write current merge state to file to be resumed elsewhere"
 msgstr ""
 
-#: hgext/imerge.py:191
 msgid "read merge state from file"
 msgstr ""
 
-#: hgext/imerge.py:197
 msgid "there is already a merge in progress (update -C <rev> to abort it)"
 msgstr ""
 
-#: hgext/imerge.py:201
 msgid "working directory has uncommitted changes"
 msgstr ""
 
-#: hgext/imerge.py:246
 msgid "resolve requires at least one filename"
 msgstr ""
 
-#: hgext/imerge.py:259
 msgid "merging %s and %s\n"
 msgstr ""
 
-#: hgext/imerge.py:283
 msgid "all conflicts resolved\n"
 msgstr ""
 
-#: hgext/imerge.py:289
 msgid "unresolve requires at least one filename"
 msgstr ""
 
-#: hgext/imerge.py:296
 msgid "automatically resolve if possible"
 msgstr ""
 
-#: hgext/imerge.py:302 mercurial/commands.py:3378
 msgid "hide status prefix"
 msgstr ""
 
-#: hgext/imerge.py:303
 msgid "only show resolved conflicts"
 msgstr ""
 
-#: hgext/imerge.py:304
 msgid "only show unresolved conflicts"
 msgstr ""
 
-#: hgext/imerge.py:333
 msgid "%s: invalid arguments"
 msgstr ""
 
-#: hgext/imerge.py:336
 msgid ""
 "interactive merge\n"
 "\n"
@@ -1881,84 +1612,63 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/imerge.py:383 mercurial/commands.py:195 mercurial/commands.py:1959
-#: mercurial/commands.py:1988 mercurial/commands.py:2923
 msgid "please specify just one revision"
 msgstr ""
 
-#: hgext/imerge.py:404 mercurial/commands.py:3277
 msgid "revision to merge"
 msgstr ""
 
-#: hgext/imerge.py:405
 msgid "automatically merge where possible"
 msgstr ""
 
-#: hgext/imerge.py:406
 msgid "hg imerge [command]"
 msgstr ""
 
-#: hgext/inotify/__init__.py:9
 msgid "inotify-based status acceleration for Linux systems\n"
 msgstr ""
 
-#: hgext/inotify/__init__.py:20
 msgid "start an inotify server for this repository"
 msgstr ""
 
-#: hgext/inotify/__init__.py:79
 msgid "(found dead inotify server socket; removing it)\n"
 msgstr ""
 
-#: hgext/inotify/__init__.py:84
 msgid "(starting inotify server)\n"
 msgstr ""
 
-#: hgext/inotify/__init__.py:95
 msgid "could not start inotify server: %s\n"
 msgstr ""
 
-#: hgext/inotify/__init__.py:102
 msgid "could not talk to new inotify server: %s\n"
 msgstr ""
 
-#: hgext/inotify/__init__.py:106
 msgid "(inotify server not running)\n"
 msgstr ""
 
-#: hgext/inotify/__init__.py:108
 msgid "failed to contact inotify server: %s\n"
 msgstr ""
 
-#: hgext/inotify/__init__.py:122 mercurial/commands.py:3347
 msgid "run server in background"
 msgstr ""
 
-#: hgext/inotify/__init__.py:123 mercurial/commands.py:3348
 msgid "used internally by daemon mode"
 msgstr ""
 
-#: hgext/inotify/__init__.py:124
 msgid "minutes to sit idle before exiting"
 msgstr ""
 
-#: hgext/inotify/__init__.py:125 mercurial/commands.py:3357
 msgid "name of file to write process ID to"
 msgstr ""
 
-#: hgext/inotify/__init__.py:126
 msgid "hg inserve [OPT]..."
 msgstr ""
 
-#: hgext/interhg.py:58
 msgid "interhg: invalid pattern for %s: %s\n"
 msgstr ""
 
-#: hgext/interhg.py:78
 msgid "interhg: invalid regexp for %s: %s\n"
 msgstr ""
 
-#: hgext/keyword.py:35
 msgid ""
 "keyword expansion in local repositories\n"
 "\n"
@@ -2008,11 +1718,9 @@ msgid ""
 "\"Log = {desc}\" expands to the first line of the changeset description.\n"
 msgstr ""
 
-#: hgext/keyword.py:100
 msgid "Returns hgdate in cvs-like UTC format."
 msgstr ""
 
-#: hgext/keyword.py:108
 msgid ""
 "\n"
 "    Sets up keyword templates, corresponding keyword regex, and\n"
@@ -2020,48 +1728,38 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/keyword.py:143
 msgid "Replaces keywords in data with expanded template."
 msgstr ""
 
-#: hgext/keyword.py:154
 msgid "Returns data with keywords expanded."
 msgstr ""
 
-#: hgext/keyword.py:161
 msgid ""
 "Returns true if path matches [keyword] pattern\n"
 "        and is not a symbolic link.\n"
 "        Caveat: localrepository._link fails on Windows."
 msgstr ""
 
-#: hgext/keyword.py:167
 msgid "Overwrites selected files expanding/shrinking keywords."
 msgstr ""
 
-#: hgext/keyword.py:192
 msgid "overwriting %s %s keywords\n"
 msgstr ""
 
-#: hgext/keyword.py:198
 msgid "Unconditionally removes all keyword substitutions from text."
 msgstr ""
 
-#: hgext/keyword.py:202
 msgid "Returns text with all keyword substitutions removed."
 msgstr ""
 
-#: hgext/keyword.py:208
 msgid "Returns lines with keyword substitutions removed."
 msgstr ""
 
-#: hgext/keyword.py:216
 msgid ""
 "If in restricted mode returns data read from wdir with\n"
 "        keyword substitutions removed."
 msgstr ""
 
-#: hgext/keyword.py:221
 msgid ""
 "\n"
 "    Subclass of filelog to hook into its read, add, cmp methods.\n"
@@ -2069,37 +1767,29 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/keyword.py:231
 msgid "Expands keywords when reading filelog."
 msgstr ""
 
-#: hgext/keyword.py:236
 msgid "Removes keyword substitutions when adding to filelog."
 msgstr ""
 
-#: hgext/keyword.py:241
 msgid "Removes keyword substitutions for comparison."
 msgstr ""
 
-#: hgext/keyword.py:249
 msgid ""
 "Bails out if [keyword] configuration is not active.\n"
 "    Returns status of working directory."
 msgstr ""
 
-#: hgext/keyword.py:255
 msgid "[keyword] patterns cannot match"
 msgstr ""
 
-#: hgext/keyword.py:256
 msgid "no [keyword] patterns configured"
 msgstr ""
 
-#: hgext/keyword.py:259
 msgid "Selects files and passes them to kwtemplater.overwrite."
 msgstr ""
 
-#: hgext/keyword.py:277
 msgid ""
 "print [keywordmaps] configuration and an expansion example\n"
 "\n"
@@ -2113,33 +1803,27 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/keyword.py:288
 msgid ""
 "\n"
 "\t%s\n"
 msgstr ""
 
-#: hgext/keyword.py:300
 msgid "creating temporary repo at %s\n"
 msgstr ""
 
-#: hgext/keyword.py:337
 msgid ""
 "\n"
 "%s keywords written to %s:\n"
 msgstr ""
 
-#: hgext/keyword.py:348
 msgid "unhooked all commit hooks\n"
 msgstr ""
 
-#: hgext/keyword.py:354
 msgid ""
 "\n"
 "removing temporary repo %s\n"
 msgstr ""
 
-#: hgext/keyword.py:358
 msgid ""
 "expand keywords in working directory\n"
 "\n"
@@ -2149,7 +1833,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/keyword.py:368
 msgid ""
 "print files currently configured for keyword expansion\n"
 "\n"
@@ -2159,7 +1842,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/keyword.py:390
 msgid ""
 "revert expanded keywords in working directory\n"
 "\n"
@@ -2170,17 +1852,14 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/keyword.py:402
 msgid ""
 "Collects [keyword] config in kwtools.\n"
 "    Monkeypatches dispatch._parse if needed."
 msgstr ""
 
-#: hgext/keyword.py:413
 msgid "Monkeypatch dispatch._parse to obtain running hg command."
 msgstr ""
 
-#: hgext/keyword.py:421
 msgid ""
 "Sets up repo as kwrepo for keyword substitution.\n"
 "    Overrides file method to return kwfilelog instead of filelog\n"
@@ -2190,59 +1869,46 @@ msgid ""
 "    Monkeypatches patch and webcommands."
 msgstr ""
 
-#: hgext/keyword.py:487
 msgid ""
 "Monkeypatch/wrap patch.patchfile.__init__ to avoid\n"
 "        rejects or conflicts due to expanded keywords in working dir."
 msgstr ""
 
-#: hgext/keyword.py:495
 msgid ""
 "Monkeypatch patch.diff to avoid expansion except when\n"
 "        comparing against working dir."
 msgstr ""
 
-#: hgext/keyword.py:504
 msgid "Wraps webcommands.x turning off keyword expansion."
 msgstr ""
 
-#: hgext/keyword.py:518
 msgid "show default keyword template maps"
 msgstr ""
 
-#: hgext/keyword.py:519
 msgid "read maps from rcfile"
 msgstr ""
 
-#: hgext/keyword.py:520
 msgid "hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]..."
 msgstr ""
 
-#: hgext/keyword.py:522
 msgid "hg kwexpand [OPTION]... [FILE]..."
 msgstr ""
 
-#: hgext/keyword.py:525
 msgid "show keyword status flags of all files"
 msgstr ""
 
-#: hgext/keyword.py:526
 msgid "show files excluded from expansion"
 msgstr ""
 
-#: hgext/keyword.py:527
 msgid "additionally show untracked files"
 msgstr ""
 
-#: hgext/keyword.py:529
 msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr ""
 
-#: hgext/keyword.py:531
 msgid "hg kwshrink [OPTION]... [FILE]..."
 msgstr ""
 
-#: hgext/mq.py:8
 msgid ""
 "patch management and development\n"
 "\n"
@@ -2291,354 +1957,271 @@ msgstr ""
 "fjern patch fra stakken                          qpop\n"
 "genopfrisk indholdet af den øverste patch        qrefresh\n"
 
-#: hgext/mq.py:87
 msgid ""
 "Update all references to a field in the patch header.\n"
 "        If none found, add it email style."
 msgstr ""
 
-#: hgext/mq.py:104
 msgid ""
 "Remove existing message, keeping the rest of the comments fields.\n"
 "        If comments contains 'subject: ', message will prepend\n"
 "        the field and a blank line."
 msgstr ""
 
-#: hgext/mq.py:184
 msgid "%s appears more than once in %s"
 msgstr "%s findes mere end én gang i %s"
 
-#: hgext/mq.py:191
 msgid "guard cannot be an empty string"
 msgstr ""
 
-#: hgext/mq.py:196
 msgid "guard %r starts with invalid character: %r"
 msgstr ""
 
-#: hgext/mq.py:200
 msgid "invalid character in guard %r: %r"
 msgstr ""
 
-#: hgext/mq.py:208
 msgid "active guards: %s\n"
 msgstr ""
 
-#: hgext/mq.py:232
 msgid "guard %r too short"
 msgstr ""
 
-#: hgext/mq.py:234
 msgid "guard %r starts with invalid char"
 msgstr ""
 
-#: hgext/mq.py:269
 msgid "allowing %s - no guards in effect\n"
 msgstr ""
 
-#: hgext/mq.py:273
 msgid "allowing %s - no matching negative guards\n"
 msgstr ""
 
-#: hgext/mq.py:276
 msgid "allowing %s - guarded by %r\n"
 msgstr ""
 
-#: hgext/mq.py:280
 msgid "skipping %s - guarded by %r\n"
 msgstr ""
 
-#: hgext/mq.py:283
 msgid "skipping %s - no matching guards\n"
 msgstr ""
 
-#: hgext/mq.py:380
 msgid "error removing undo: %s\n"
 msgstr ""
 
-#: hgext/mq.py:399
 msgid "apply failed for patch %s"
 msgstr ""
 
-#: hgext/mq.py:401
 msgid "patch didn't work out, merging %s\n"
 msgstr ""
 
-#: hgext/mq.py:410
 msgid "update returned %d"
 msgstr ""
 
-#: hgext/mq.py:413 hgext/mq.py:581 hgext/mq.py:751
 msgid "repo commit failed"
 msgstr ""
 
-#: hgext/mq.py:417 hgext/mq.py:1603
 msgid "unable to read %s"
 msgstr "ikke i stand til at læse %s"
 
-#: hgext/mq.py:466
 msgid "patch %s does not exist\n"
 msgstr "rettelsen %s findes ikke\n"
 
-#: hgext/mq.py:474
 msgid "patch %s is not applied\n"
 msgstr "rettelsen %s er ikke anvendt\n"
 
-#: hgext/mq.py:487
 msgid ""
 "Apply patchfile  to the working directory.\n"
 "        patchfile: file name of patch"
 msgstr ""
 
-#: hgext/mq.py:496
 msgid "patch failed, unable to continue (try -v)\n"
 msgstr ""
 
-#: hgext/mq.py:537 hgext/transplant.py:208 mercurial/commands.py:1627
 msgid "applying %s\n"
 msgstr "anvender %s\n"
 
-#: hgext/mq.py:543
 msgid "Unable to read %s\n"
 msgstr ""
 
-#: hgext/mq.py:549
 msgid "imported patch %s\n"
 msgstr "importeret rettelse %s\n"
 
-#: hgext/mq.py:552
 msgid ""
 "\n"
 "imported patch %s"
-msgstr "\nimporteret rettelse %s"
+msgstr ""
+"\n"
+"importeret rettelse %s"
 
-#: hgext/mq.py:588
 msgid "patch %s is empty\n"
 msgstr "rettelse %s er tom\n"
 
-#: hgext/mq.py:591
 msgid "patch failed, rejects left in working dir\n"
 msgstr ""
 
-#: hgext/mq.py:596
 msgid "fuzz found when applying patch, stopping\n"
 msgstr ""
 
-#: hgext/mq.py:615 hgext/mq.py:659
 msgid "revision %d is not managed"
 msgstr ""
 
-#: hgext/mq.py:619 hgext/mq.py:664
 msgid "cannot delete revision %d above applied patches"
 msgstr "kan ikke slette revision %d ovenover anvendte rettelser"
 
-#: hgext/mq.py:637
 msgid "qdelete requires at least one revision or patch name"
 msgstr ""
 
-#: hgext/mq.py:645
 msgid "cannot delete applied patch %s"
 msgstr "kan ikke slette den anvendte rettelse %s"
 
-#: hgext/mq.py:647
 msgid "patch %s not in series file"
 msgstr "rettelse %s er ikke i series filen"
 
-#: hgext/mq.py:653 hgext/mq.py:2016
 msgid "no patches applied"
 msgstr "ingen rettelser anvendt"
 
-#: hgext/mq.py:687
 msgid "working directory revision is not qtip"
 msgstr ""
 
-#: hgext/mq.py:695
 msgid "local changes found, refresh first"
 msgstr "lokale ændringer fundet, genopfrisk først"
 
-#: hgext/mq.py:697
 msgid "local changes found"
 msgstr "lokale ændringer fundet"
 
-#: hgext/mq.py:704
 msgid "\"%s\" cannot be used as the name of a patch"
 msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
 
-#: hgext/mq.py:708
 msgid ""
 "options:\n"
 "           msg: a string or a no-argument function returning a string\n"
 "        "
 msgstr ""
 
-#: hgext/mq.py:719 hgext/mq.py:1515
 msgid "patch \"%s\" already exists"
 msgstr "rettelsen \"%s\" findes allerede"
 
-#: hgext/mq.py:781
 msgid "error unlinking %s\n"
 msgstr "fejl ved sletning af %s\n"
 
-#: hgext/mq.py:808
 msgid "returns (index, rev, patch)"
 msgstr ""
 
-#: hgext/mq.py:829
 msgid "patch name \"%s\" is ambiguous:\n"
 msgstr "rettelsen \"%s\" er tvetydigt:\n"
 
-#: hgext/mq.py:884
 msgid "patch %s not in series"
 msgstr ""
 
-#: hgext/mq.py:890
 msgid "(working directory not at tip)\n"
 msgstr ""
 
-#: hgext/mq.py:893
 msgid "no patches in series\n"
 msgstr "ingen patches i serien\n"
 
-#: hgext/mq.py:907
 msgid "cannot push to a previous patch: %s"
 msgstr ""
 
-#: hgext/mq.py:909
 msgid "qpush: %s is already at the top\n"
 msgstr ""
 
-#: hgext/mq.py:914
 msgid "guarded by %r"
 msgstr ""
 
-#: hgext/mq.py:916
 msgid "no matching guards"
 msgstr ""
 
-#: hgext/mq.py:917
 msgid "cannot push '%s' - %s\n"
 msgstr "kan ikke skubbe '%s' - %s\n"
 
-#: hgext/mq.py:922
 msgid "all patches are currently applied\n"
 msgstr "alle rettelser er i øjeblikket anvendt\n"
 
-#: hgext/mq.py:932
 msgid "patch series already fully applied\n"
 msgstr ""
 
-#: hgext/mq.py:953
 msgid "cleaning up working directory..."
 msgstr "rydder op i arbejdsbiblioteket..."
 
-#: hgext/mq.py:966
 msgid "Errors during apply, please fix and refresh %s\n"
 msgstr ""
 
-#: hgext/mq.py:969 hgext/mq.py:1070
 msgid "Now at: %s\n"
 msgstr "Nu ved: %s\n"
 
-#: hgext/mq.py:988
 msgid "patch %s is not applied"
 msgstr "rettelse %s er ikke anvendt"
 
-#: hgext/mq.py:993 hgext/mq.py:2358
 msgid "no patches applied\n"
 msgstr "ingen rettelser anvendt\n"
 
-#: hgext/mq.py:1004
 msgid "qpop: %s is already at the top\n"
 msgstr ""
 
-#: hgext/mq.py:1012
 msgid "qpop: forcing dirstate update\n"
 msgstr ""
 
-#: hgext/mq.py:1036
 msgid "trying to pop unknown node %s"
 msgstr ""
 
-#: hgext/mq.py:1039
 msgid "popping would remove a revision not managed by this patch queue"
 msgstr ""
 
-#: hgext/mq.py:1050
 msgid "deletions found between repo revs"
 msgstr ""
 
-#: hgext/mq.py:1072
 msgid "Patch queue now empty\n"
 msgstr ""
 
-#: hgext/mq.py:1079 hgext/mq.py:1087 hgext/mq.py:1800 hgext/mq.py:1820
-#: hgext/mq.py:1884 hgext/mq.py:2126
 msgid "No patches applied\n"
 msgstr "Ingen rettelser er anvendt\n"
 
-#: hgext/mq.py:1100
 msgid "cannot refresh a revision with children"
 msgstr ""
 
-#: hgext/mq.py:1277
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
 "recover)\n"
 msgstr ""
 
-#: hgext/mq.py:1304
 msgid "patch queue directory already exists"
 msgstr ""
 
-#: hgext/mq.py:1315 hgext/mq.py:1646 hgext/mq.py:1657
 msgid "patch %s is not in series file"
 msgstr "rettelse %s er ikke i series filen"
 
-#: hgext/mq.py:1405
 msgid "No saved patch data found\n"
 msgstr ""
 
-#: hgext/mq.py:1407
 msgid "restoring status: %s\n"
 msgstr "genopretter status: %s\n"
 
-#: hgext/mq.py:1416
 msgid "save entry has children, leaving it alone\n"
 msgstr ""
 
-#: hgext/mq.py:1418
 msgid "removing save entry %s\n"
 msgstr ""
 
-#: hgext/mq.py:1426
 msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
-#: hgext/mq.py:1429
 msgid "queue directory updating\n"
 msgstr ""
 
-#: hgext/mq.py:1432
 msgid "Unable to load queue repository\n"
 msgstr ""
 
-#: hgext/mq.py:1438
 msgid "save: no patches applied, exiting\n"
 msgstr ""
 
-#: hgext/mq.py:1441
 msgid "status is already saved\n"
 msgstr ""
 
-#: hgext/mq.py:1446
 msgid "hg patches saved state"
 msgstr ""
 
-#: hgext/mq.py:1458
 msgid "repo commit failed\n"
 msgstr ""
 
-#: hgext/mq.py:1474
 msgid ""
 "If all_patches is False, return the index of the next pushable patch\n"
 "        in the series, or the series length. If all_patches is True, return "
@@ -2647,59 +2230,45 @@ msgid ""
 "        "
 msgstr ""
 
-#: hgext/mq.py:1511
 msgid "patch %s is already in the series file"
 msgstr ""
 
-#: hgext/mq.py:1520
 msgid "option \"-r\" not valid when importing files"
 msgstr ""
 
-#: hgext/mq.py:1525
 msgid "option \"-n\" not valid when importing multiple patches"
 msgstr ""
 
-#: hgext/mq.py:1535
 msgid "revision %d is the root of more than one branch"
 msgstr ""
 
-#: hgext/mq.py:1540
 msgid "revision %d is already managed"
 msgstr ""
 
-#: hgext/mq.py:1543
 msgid "revision %d is not the parent of the queue"
 msgstr ""
 
-#: hgext/mq.py:1549
 msgid "revision %d has unmanaged children"
 msgstr ""
 
-#: hgext/mq.py:1560
 msgid "cannot import merge revision %d"
 msgstr ""
 
-#: hgext/mq.py:1562
 msgid "revision %d is not the parent of %d"
 msgstr ""
 
-#: hgext/mq.py:1588
 msgid "-e is incompatible with import from -"
 msgstr ""
 
-#: hgext/mq.py:1593
 msgid "patch %s does not exist"
 msgstr "rettelse %s eksisterer ikke"
 
-#: hgext/mq.py:1598
 msgid "need --name to import a patch from -"
 msgstr ""
 
-#: hgext/mq.py:1616
 msgid "adding %s to series file\n"
 msgstr "tilføjer %s til series filen\n"
 
-#: hgext/mq.py:1626
 msgid ""
 "remove patches from queue\n"
 "\n"
@@ -2713,15 +2282,12 @@ msgid ""
 "    With --keep, the patch files are preserved in the patch directory."
 msgstr ""
 
-#: hgext/mq.py:1642
 msgid "print the patches already applied"
 msgstr "udskriver rettelserne som allerede er anvendt"
 
-#: hgext/mq.py:1653
 msgid "print the patches not yet applied"
 msgstr "udskriver rettelserne som ikke er anvendt endnu"
 
-#: hgext/mq.py:1664
 msgid ""
 "import a patch\n"
 "\n"
@@ -2746,7 +2312,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:1692
 msgid ""
 "init a new queue repository\n"
 "\n"
@@ -2757,7 +2322,6 @@ msgid ""
 "    You can use qcommit to commit changes to this queue repository."
 msgstr ""
 
-#: hgext/mq.py:1718
 msgid ""
 "clone main and patch repository at same time\n"
 "\n"
@@ -2775,55 +2339,42 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:1745
 msgid "versioned patch repository not found (see qinit -c)"
 msgstr "versionsstyret arkiv til rettelser blev ikke fundet (se qinit -c)"
 
-#: hgext/mq.py:1762
 msgid "cloning main repo\n"
 msgstr "kloner hovedarkiv\n"
 
-#: hgext/mq.py:1768
 msgid "cloning patch repo\n"
 msgstr "kloner rettelsesarkiv\n"
 
-#: hgext/mq.py:1774
 msgid "stripping applied patches from destination repo\n"
 msgstr ""
 
-#: hgext/mq.py:1777
 msgid "updating destination repo\n"
 msgstr ""
 
-#: hgext/mq.py:1781
 msgid "commit changes in the queue repository"
 msgstr ""
 
-#: hgext/mq.py:1788
 msgid "print the entire series file"
 msgstr "udskriver hele series filen"
 
-#: hgext/mq.py:1793
 msgid "print the name of the current patch"
 msgstr "udskriver navnet på den nuværende rettelse"
 
-#: hgext/mq.py:1804
 msgid "print the name of the next patch"
 msgstr "udskriver navnet på den næste rettelse"
 
-#: hgext/mq.py:1808
 msgid "All patches applied\n"
 msgstr "Alle patches er anvendt\n"
 
-#: hgext/mq.py:1813
 msgid "print the name of the previous patch"
 msgstr "udskriver navnet på den forgående rettelse"
 
-#: hgext/mq.py:1817
 msgid "Only one patch applied\n"
 msgstr "Kun én patch anvendt\n"
 
-#: hgext/mq.py:1833
 msgid ""
 "create a new patch\n"
 "\n"
@@ -2850,7 +2401,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:1867
 msgid ""
 "update the current patch\n"
 "\n"
@@ -2869,11 +2419,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:1887 hgext/mq.py:1933
 msgid "option \"-e\" incompatible with \"-m\" or \"-l\""
 msgstr ""
 
-#: hgext/mq.py:1897
 msgid ""
 "diff of the current patch and subsequent modifications\n"
 "\n"
@@ -2888,7 +2436,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:1911
 msgid ""
 "fold the named patches into the current patch\n"
 "\n"
@@ -2903,31 +2450,24 @@ msgid ""
 "    the current patch header, separated by a line of '* * *'."
 msgstr ""
 
-#: hgext/mq.py:1926
 msgid "qfold requires at least one patch name"
 msgstr ""
 
-#: hgext/mq.py:1928
 msgid "No patches applied"
 msgstr "Ingen rettelser anvendt"
 
-#: hgext/mq.py:1941
 msgid "Skipping already folded patch %s"
 msgstr ""
 
-#: hgext/mq.py:1943
 msgid "qfold cannot fold already applied patch %s"
 msgstr ""
 
-#: hgext/mq.py:1954
 msgid "Error folding patch %s"
 msgstr ""
 
-#: hgext/mq.py:1973
 msgid "push or pop patches until named patch is at top of stack"
 msgstr ""
 
-#: hgext/mq.py:1984
 msgid ""
 "set or print guards for a patch\n"
 "\n"
@@ -2949,23 +2489,18 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:2010
 msgid "cannot mix -l/--list with options or arguments"
 msgstr ""
 
-#: hgext/mq.py:2021
 msgid "no patch to work with"
 msgstr ""
 
-#: hgext/mq.py:2025
 msgid "no patch named %s"
 msgstr "ingen patch ved navn %s"
 
-#: hgext/mq.py:2032
 msgid "print the header of the topmost or specified patch"
 msgstr ""
 
-#: hgext/mq.py:2071
 msgid ""
 "push the next patch onto the stack\n"
 "\n"
@@ -2974,15 +2509,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:2084
 msgid "no saved queues found, please use -n\n"
 msgstr ""
 
-#: hgext/mq.py:2087
 msgid "merging with queue at: %s\n"
 msgstr ""
 
-#: hgext/mq.py:2093
 msgid ""
 "pop the current patch off the stack\n"
 "\n"
@@ -2992,11 +2524,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:2101
 msgid "using patch queue: %s\n"
 msgstr ""
 
-#: hgext/mq.py:2111
 msgid ""
 "rename a patch\n"
 "\n"
@@ -3004,35 +2534,27 @@ msgid ""
 "    With two arguments, renames PATCH1 to PATCH2."
 msgstr ""
 
-#: hgext/mq.py:2134
 msgid "%s already exists"
 msgstr "%s eksisterer allerede"
 
-#: hgext/mq.py:2137
 msgid "A patch named %s already exists in the series file"
 msgstr ""
 
-#: hgext/mq.py:2171
 msgid "restore the queue state saved by a rev"
 msgstr ""
 
-#: hgext/mq.py:2180
 msgid "save current queue state"
 msgstr ""
 
-#: hgext/mq.py:2193
 msgid "destination %s exists and is not a directory"
 msgstr ""
 
-#: hgext/mq.py:2196
 msgid "destination %s exists, use -f to force"
 msgstr ""
 
-#: hgext/mq.py:2200
 msgid "copy %s to %s\n"
 msgstr ""
 
-#: hgext/mq.py:2210
 msgid ""
 "strip a revision and all its descendants from the repository\n"
 "\n"
@@ -3041,7 +2563,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:2236
 msgid ""
 "set or print guarded patches to push\n"
 "\n"
@@ -3076,43 +2597,33 @@ msgid ""
 "    other arguments needed). Use -v for more information."
 msgstr ""
 
-#: hgext/mq.py:2276
 msgid "guards deactivated\n"
 msgstr ""
 
-#: hgext/mq.py:2282
 msgid "number of unguarded, unapplied patches has changed from %d to %d\n"
 msgstr ""
 
-#: hgext/mq.py:2286
 msgid "number of guarded, applied patches has changed from %d to %d\n"
 msgstr ""
 
-#: hgext/mq.py:2303
 msgid "guards in series file:\n"
 msgstr ""
 
-#: hgext/mq.py:2308
 msgid "no guards in series file\n"
 msgstr ""
 
-#: hgext/mq.py:2311
 msgid "active guards:\n"
 msgstr ""
 
-#: hgext/mq.py:2315
 msgid "no active guards\n"
 msgstr ""
 
-#: hgext/mq.py:2322
 msgid "popping guarded patches\n"
 msgstr ""
 
-#: hgext/mq.py:2332
 msgid "reapplying unguarded patches\n"
 msgstr ""
 
-#: hgext/mq.py:2338
 msgid ""
 "move applied patches into repository history\n"
 "\n"
@@ -3130,340 +2641,255 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/mq.py:2352
 msgid "no revisions specified"
 msgstr ""
 
-#: hgext/mq.py:2380
 msgid "cannot commit over an applied mq patch"
 msgstr ""
 
-#: hgext/mq.py:2387
 msgid "source has mq patches applied"
 msgstr ""
 
-#: hgext/mq.py:2403 hgext/mq.py:2427
 msgid "mq status file refers to unknown node %s\n"
 msgstr ""
 
-#: hgext/mq.py:2412
 msgid "Tag %s overrides mq patch of the same name\n"
 msgstr ""
 
-#: hgext/mq.py:2453
 msgid "cannot import over an applied patch"
 msgstr ""
 
-#: hgext/mq.py:2460
 msgid "print first line of patch header"
 msgstr ""
 
-#: hgext/mq.py:2463
 msgid "hg qapplied [-s] [PATCH]"
 msgstr ""
 
-#: hgext/mq.py:2466 mercurial/commands.py:3119
 msgid "use pull protocol to copy metadata"
 msgstr ""
 
-#: hgext/mq.py:2467
 msgid "do not update the new working directories"
 msgstr ""
 
-#: hgext/mq.py:2469 mercurial/commands.py:3121
 msgid "use uncompressed transfer (fast over LAN)"
 msgstr ""
 
-#: hgext/mq.py:2470
 msgid "location of source patch repo"
 msgstr ""
 
-#: hgext/mq.py:2472
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
 msgstr ""
 
-#: hgext/mq.py:2476
 msgid "hg qcommit [OPTION]... [FILE]..."
 msgstr ""
 
-#: hgext/mq.py:2480
 msgid "hg qdiff [OPTION]... [FILE]..."
 msgstr ""
 
-#: hgext/mq.py:2483
 msgid "keep patch file"
 msgstr ""
 
-#: hgext/mq.py:2484
 msgid "stop managing a revision"
 msgstr ""
 
-#: hgext/mq.py:2485
 msgid "hg qdelete [-k] [-r REV]... [PATCH]..."
 msgstr ""
 
-#: hgext/mq.py:2488
 msgid "edit patch header"
 msgstr ""
 
-#: hgext/mq.py:2489
 msgid "keep folded patch files"
 msgstr ""
 
-#: hgext/mq.py:2491
 msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 msgstr ""
 
-#: hgext/mq.py:2494
 msgid "overwrite any local changes"
 msgstr ""
 
-#: hgext/mq.py:2495
 msgid "hg qgoto [OPTION]... PATCH"
 msgstr ""
 
-#: hgext/mq.py:2498
 msgid "list all patches and guards"
 msgstr ""
 
-#: hgext/mq.py:2499
 msgid "drop all guards"
 msgstr ""
 
-#: hgext/mq.py:2500
 msgid "hg qguard [-l] [-n] [PATCH] [+GUARD]... [-GUARD]..."
 msgstr ""
 
-#: hgext/mq.py:2501
 msgid "hg qheader [PATCH]"
 msgstr ""
 
-#: hgext/mq.py:2504
 msgid "import file in patch dir"
 msgstr ""
 
-#: hgext/mq.py:2505
 msgid "patch file name"
 msgstr "patch navn"
 
-#: hgext/mq.py:2506
 msgid "overwrite existing files"
 msgstr ""
 
-#: hgext/mq.py:2507
 msgid "place existing revisions under mq control"
 msgstr ""
 
-#: hgext/mq.py:2508 hgext/mq.py:2518 hgext/mq.py:2544 hgext/patchbomb.py:459
-#: mercurial/commands.py:3020
 msgid "use git extended diff format"
 msgstr ""
 
-#: hgext/mq.py:2509
 msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-r REV]... FILE..."
 msgstr ""
 
-#: hgext/mq.py:2512
 msgid "create queue repository"
 msgstr "opret kø-repository"
 
-#: hgext/mq.py:2513
 msgid "hg qinit [-c]"
 msgstr ""
 
-#: hgext/mq.py:2517
 msgid "import uncommitted changes into patch"
 msgstr ""
 
-#: hgext/mq.py:2519
 msgid "add \"From: <current user>\" to patch"
 msgstr ""
 
-#: hgext/mq.py:2520
 msgid "add \"From: <given user>\" to patch"
 msgstr ""
 
-#: hgext/mq.py:2521
 msgid "add \"Date: <current date>\" to patch"
 msgstr ""
 
-#: hgext/mq.py:2522
 msgid "add \"Date: <given date>\" to patch"
 msgstr ""
 
-#: hgext/mq.py:2524
 msgid "hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]..."
 msgstr ""
 
-#: hgext/mq.py:2525
 msgid "hg qnext [-s]"
 msgstr ""
 
-#: hgext/mq.py:2526
 msgid "hg qprev [-s]"
 msgstr ""
 
-#: hgext/mq.py:2529
 msgid "pop all patches"
 msgstr ""
 
-#: hgext/mq.py:2530
 msgid "queue name to pop"
 msgstr ""
 
-#: hgext/mq.py:2531
 msgid "forget any local changes"
 msgstr ""
 
-#: hgext/mq.py:2532
 msgid "hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]"
 msgstr ""
 
-#: hgext/mq.py:2535
 msgid "apply if the patch has rejects"
 msgstr ""
 
-#: hgext/mq.py:2536
 msgid "list patch name in commit text"
 msgstr ""
 
-#: hgext/mq.py:2537
 msgid "apply all patches"
 msgstr ""
 
-#: hgext/mq.py:2538
 msgid "merge from another queue"
 msgstr ""
 
-#: hgext/mq.py:2539
 msgid "merge queue name"
 msgstr ""
 
-#: hgext/mq.py:2540
 msgid "hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]"
 msgstr ""
 
-#: hgext/mq.py:2545
 msgid "refresh only files already in the patch and specified files"
 msgstr ""
 
-#: hgext/mq.py:2546
 msgid "add/update \"From: <current user>\" in patch"
 msgstr ""
 
-#: hgext/mq.py:2547
 msgid "add/update \"From: <given user>\" in patch"
 msgstr ""
 
-#: hgext/mq.py:2548
 msgid "update \"Date: <current date>\" in patch (if present)"
 msgstr ""
 
-#: hgext/mq.py:2549
 msgid "update \"Date: <given date>\" in patch (if present)"
 msgstr ""
 
-#: hgext/mq.py:2551
 msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
 msgstr ""
 
-#: hgext/mq.py:2553
 msgid "hg qrename PATCH1 [PATCH2]"
 msgstr ""
 
-#: hgext/mq.py:2556
 msgid "delete save entry"
 msgstr ""
 
-#: hgext/mq.py:2557
 msgid "update queue working dir"
 msgstr ""
 
-#: hgext/mq.py:2558
 msgid "hg qrestore [-d] [-u] REV"
 msgstr ""
 
-#: hgext/mq.py:2561
 msgid "copy patch directory"
 msgstr ""
 
-#: hgext/mq.py:2562
 msgid "copy directory name"
 msgstr ""
 
-#: hgext/mq.py:2563
 msgid "clear queue status file"
 msgstr ""
 
-#: hgext/mq.py:2564
 msgid "force copy"
 msgstr ""
 
-#: hgext/mq.py:2565
 msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
 msgstr ""
 
-#: hgext/mq.py:2568
 msgid "disable all guards"
 msgstr ""
 
-#: hgext/mq.py:2569
 msgid "list all guards in series file"
 msgstr ""
 
-#: hgext/mq.py:2570
 msgid "pop to before first guarded applied patch"
 msgstr ""
 
-#: hgext/mq.py:2571
 msgid "pop, then reapply patches"
 msgstr ""
 
-#: hgext/mq.py:2572
 msgid "hg qselect [OPTION]... [GUARD]..."
 msgstr ""
 
-#: hgext/mq.py:2575
 msgid "print patches not in series"
 msgstr ""
 
-#: hgext/mq.py:2577
 msgid "hg qseries [-ms]"
 msgstr ""
 
-#: hgext/mq.py:2580
 msgid "force removal with local changes"
 msgstr ""
 
-#: hgext/mq.py:2581
 msgid "bundle unrelated changesets"
 msgstr ""
 
-#: hgext/mq.py:2582
 msgid "no backups"
 msgstr ""
 
-#: hgext/mq.py:2583
 msgid "hg strip [-f] [-b] [-n] REV"
 msgstr ""
 
-#: hgext/mq.py:2584
 msgid "hg qtop [-s]"
 msgstr ""
 
-#: hgext/mq.py:2585
 msgid "hg qunapplied [-s] [PATCH]"
 msgstr ""
 
-#: hgext/mq.py:2588
 msgid "finish all applied changesets"
 msgstr ""
 
-#: hgext/mq.py:2589
 msgid "hg qfinish [-a] [REV...]"
 msgstr ""
 
-#: hgext/notify.py:8
 msgid ""
 "hook extension to email notifications on commits/pushes\n"
 "\n"
@@ -3528,65 +2954,51 @@ msgid ""
 " push changes to, they can manage their own subscriptions."
 msgstr ""
 
-#: hgext/notify.py:97
 msgid "email notification class."
 msgstr ""
 
-#: hgext/notify.py:124
 msgid "strip leading slashes from local path, turn into web-safe path."
 msgstr ""
 
-#: hgext/notify.py:137
 msgid "try to clean up email addresses."
 msgstr ""
 
-#: hgext/notify.py:149
 msgid "return list of email addresses of subscribers to this repo."
 msgstr ""
 
-#: hgext/notify.py:168
 msgid "format one changeset."
 msgstr ""
 
-#: hgext/notify.py:176
 msgid "true if incoming changes from this source should be skipped."
 msgstr ""
 
-#: hgext/notify.py:181
 msgid "send message."
 msgstr ""
 
-#: hgext/notify.py:194
 msgid "try to make subject line exist and be useful."
 msgstr ""
 
-#: hgext/notify.py:198
 msgid "%s: %d new changesets"
 msgstr ""
 
-#: hgext/notify.py:210
 msgid "try to make message have proper sender."
 msgstr ""
 
-#: hgext/notify.py:236
 msgid "notify: sending %d subscribers %d changes\n"
 msgstr ""
 
-#: hgext/notify.py:256
 msgid ""
 "\n"
 "diffs (truncated from %d to %d lines):\n"
 "\n"
 msgstr ""
 
-#: hgext/notify.py:260
 msgid ""
 "\n"
 "diffs (%d lines):\n"
 "\n"
 msgstr ""
 
-#: hgext/notify.py:264
 msgid ""
 "send email notifications to interested subscribers.\n"
 "\n"
@@ -3594,15 +3006,12 @@ msgid ""
 "    changegroup. else send one email per changeset."
 msgstr ""
 
-#: hgext/notify.py:270
 msgid "notify: no subscribers to repo %s\n"
 msgstr ""
 
-#: hgext/notify.py:273
 msgid "notify: changes have source \"%s\" - skipping\n"
 msgstr ""
 
-#: hgext/pager.py:15
 msgid ""
 "browse command output with external pager\n"
 "\n"
@@ -3639,7 +3048,6 @@ msgid ""
 "them in the global .hgrc\n"
 msgstr ""
 
-#: hgext/parentrevspec.py:7
 msgid ""
 "use suffixes to refer to ancestor revisions\n"
 "\n"
@@ -3660,7 +3068,6 @@ msgid ""
 "  foo~2 = foo^1^1 = foo^^ = first parent of first parent of foo\n"
 msgstr ""
 
-#: hgext/patchbomb.py:1
 msgid ""
 "sending Mercurial changesets as a series of patch emails\n"
 "\n"
@@ -3726,19 +3133,15 @@ msgid ""
 "That should be all. Now your patchbomb is on its way out."
 msgstr ""
 
-#: hgext/patchbomb.py:84
 msgid "Please enter a valid value.\n"
 msgstr ""
 
-#: hgext/patchbomb.py:91
 msgid "does the diffstat above look okay? "
 msgstr ""
 
-#: hgext/patchbomb.py:93
 msgid "diffstat rejected"
 msgstr "diffstat afvist"
 
-#: hgext/patchbomb.py:167
 msgid ""
 "send changesets by email\n"
 "\n"
@@ -3784,136 +3187,104 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/patchbomb.py:212
 msgid "Return the revisions present locally but not in dest"
 msgstr ""
 
-#: hgext/patchbomb.py:251
 msgid "specify at least one changeset with -r or -o"
 msgstr "angiv mindst en ændring med -r eller -o"
 
-#: hgext/patchbomb.py:255
 msgid "--outgoing mode always on with --bundle; do not re-specify --outgoing"
 msgstr ""
 
-#: hgext/patchbomb.py:260
 msgid "too many destinations"
 msgstr "for mange destinationer"
 
-#: hgext/patchbomb.py:266
 msgid "use only one form to specify the revision"
 msgstr ""
 
-#: hgext/patchbomb.py:287
 msgid ""
 "\n"
 "Write the introductory message for the patch series.\n"
 "\n"
 msgstr ""
 
-#: hgext/patchbomb.py:296
 msgid ""
 "This patch series consists of %d patches.\n"
 "\n"
 msgstr ""
 
-#: hgext/patchbomb.py:319
 msgid "Final summary:\n"
 msgstr ""
 
-#: hgext/patchbomb.py:403
 msgid "Displaying "
 msgstr ""
 
-#: hgext/patchbomb.py:419
 msgid "Writing "
 msgstr ""
 
-#: hgext/patchbomb.py:430
 msgid "Sending "
 msgstr ""
 
-#: hgext/patchbomb.py:439
 msgid "send patches as attachments"
 msgstr ""
 
-#: hgext/patchbomb.py:440
 msgid "send patches as inline attachments"
 msgstr ""
 
-#: hgext/patchbomb.py:441
 msgid "email addresses of blind copy recipients"
 msgstr ""
 
-#: hgext/patchbomb.py:442
 msgid "email addresses of copy recipients"
 msgstr ""
 
-#: hgext/patchbomb.py:443
 msgid "add diffstat output to messages"
 msgstr ""
 
-#: hgext/patchbomb.py:444
 msgid "use the given date as the sending date"
 msgstr ""
 
-#: hgext/patchbomb.py:445
 msgid "use the given file as the series description"
 msgstr ""
 
-#: hgext/patchbomb.py:446
 msgid "email address of sender"
 msgstr ""
 
-#: hgext/patchbomb.py:447
 msgid "print messages that would be sent"
 msgstr ""
 
-#: hgext/patchbomb.py:449
 msgid "write messages to mbox file instead of sending them"
 msgstr ""
 
-#: hgext/patchbomb.py:451
 msgid "subject of first message (intro or single patch)"
 msgstr ""
 
-#: hgext/patchbomb.py:452
 msgid "email addresses of recipients"
 msgstr ""
 
-#: hgext/patchbomb.py:460
 msgid "omit hg patch header"
 msgstr ""
 
-#: hgext/patchbomb.py:462
 msgid "send changes not found in the target repository"
 msgstr ""
 
-#: hgext/patchbomb.py:464
 msgid "send changes not in target as a binary bundle"
 msgstr ""
 
-#: hgext/patchbomb.py:465
 msgid "a revision to send"
 msgstr ""
 
-#: hgext/patchbomb.py:467
 msgid "run even when remote repository is unrelated (with -b)"
 msgstr ""
 
-#: hgext/patchbomb.py:469
 msgid "a base changeset to specify instead of a destination (with -b)"
 msgstr ""
 
-#: hgext/patchbomb.py:471
 msgid "send an introduction email for a single patch"
 msgstr ""
 
-#: hgext/patchbomb.py:473
 msgid "hg email [OPTION]... [DEST]..."
 msgstr ""
 
-#: hgext/purge.py:35
 msgid ""
 "removes files not tracked by Mercurial\n"
 "\n"
@@ -3938,43 +3309,33 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/purge.py:67
 msgid "%s cannot be removed"
 msgstr ""
 
-#: hgext/purge.py:70 mercurial/simplemerge.py:418
 msgid "warning: %s\n"
 msgstr ""
 
-#: hgext/purge.py:80
 msgid "Removing file %s\n"
 msgstr ""
 
-#: hgext/purge.py:85
 msgid "Removing directory %s\n"
 msgstr ""
 
-#: hgext/purge.py:91
 msgid "abort if an error occurs"
 msgstr ""
 
-#: hgext/purge.py:92
 msgid "purge ignored files too"
 msgstr ""
 
-#: hgext/purge.py:93
 msgid "print the file names instead of deleting them"
 msgstr ""
 
-#: hgext/purge.py:94
 msgid "end filenames with NUL, for use with xargs (implies -p)"
 msgstr ""
 
-#: hgext/purge.py:97
 msgid "hg purge [OPTION]... [DIR]..."
 msgstr ""
 
-#: hgext/rebase.py:8
 msgid ""
 "move sets of revisions to a different ancestor\n"
 "\n"
@@ -3985,15 +3346,12 @@ msgid ""
 "http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject\n"
 msgstr ""
 
-#: hgext/rebase.py:24
 msgid "return the correct ancestor"
 msgstr ""
 
-#: hgext/rebase.py:37
 msgid "first revision, do not change ancestor\n"
 msgstr ""
 
-#: hgext/rebase.py:42
 msgid ""
 "move changeset (and descendants) to a different branch\n"
 "\n"
@@ -4009,243 +3367,184 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/rebase.py:71
 msgid "cannot use both keepbranches and extrafn"
 msgstr ""
 
-#: hgext/rebase.py:78
 msgid "cannot use both abort and continue"
 msgstr ""
 
-#: hgext/rebase.py:81
 msgid "cannot use collapse with continue or abort"
 msgstr ""
 
-#: hgext/rebase.py:85
 msgid "abort and continue do not allow specifying revisions"
 msgstr ""
 
-#: hgext/rebase.py:93
 msgid "cannot specify both a revision and a base"
 msgstr ""
 
-#: hgext/rebase.py:100
 msgid "nothing to rebase\n"
 msgstr ""
 
-#: hgext/rebase.py:113
 msgid "rebase merging completed\n"
 msgstr ""
 
-#: hgext/rebase.py:128
 msgid "warning: new changesets detected on source branch, not stripping\n"
 msgstr ""
 
-#: hgext/rebase.py:134
 msgid "rebase completed\n"
 msgstr ""
 
-#: hgext/rebase.py:138
 msgid "%d revisions have been skipped\n"
 msgstr ""
 
-#: hgext/rebase.py:144
 msgid ""
 "Skip commit if collapsing has been required and rev is not the last\n"
 "    revision, commit otherwise\n"
 "    "
 msgstr ""
 
-#: hgext/rebase.py:147
 msgid " set parents\n"
 msgstr ""
 
-#: hgext/rebase.py:183
 msgid "Rebase a single revision"
 msgstr ""
 
-#: hgext/rebase.py:184
 msgid "rebasing %d:%s\n"
 msgstr ""
 
-#: hgext/rebase.py:188
 msgid " future parents are %d and %d\n"
 msgstr ""
 
-#: hgext/rebase.py:195
 msgid " update to %d:%s\n"
 msgstr " opdater til %d:%s\n"
 
-#: hgext/rebase.py:198
 msgid " already in target\n"
 msgstr ""
 
-#: hgext/rebase.py:200
 msgid " merge against %d:%s\n"
 msgstr ""
 
-#: hgext/rebase.py:205
 msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
 msgstr ""
 
-#: hgext/rebase.py:208
 msgid "resuming interrupted rebase\n"
 msgstr ""
 
-#: hgext/rebase.py:219
 msgid "no changes, revision %d skipped\n"
 msgstr ""
 
-#: hgext/rebase.py:220
 msgid "next revision set to %s\n"
 msgstr ""
 
-#: hgext/rebase.py:225
 msgid "Return the new parent relationship of the revision that will be rebased"
 msgstr ""
 
-#: hgext/rebase.py:248
 msgid "cannot use revision %d as base, result would have 3 parents"
 msgstr ""
 
-#: hgext/rebase.py:254
 msgid "Update rebased mq patches - finalize and then import them"
 msgstr ""
 
-#: hgext/rebase.py:258
 msgid "revision %d is an mq patch (%s), finalize it.\n"
 msgstr ""
 
-#: hgext/rebase.py:271
 msgid "import mq patch %d (%s)\n"
 msgstr ""
 
-#: hgext/rebase.py:278
 msgid "Store the current status to allow recovery"
 msgstr ""
 
-#: hgext/rebase.py:289
 msgid "rebase status stored\n"
 msgstr ""
 
-#: hgext/rebase.py:292
 msgid "Remove the status files"
 msgstr ""
 
-#: hgext/rebase.py:297
 msgid "Restore a previously stored status"
 msgstr ""
 
-#: hgext/rebase.py:316
 msgid "rebase status resumed\n"
 msgstr ""
 
-#: hgext/rebase.py:321
 msgid "no rebase in progress"
 msgstr ""
 
-#: hgext/rebase.py:324
 msgid "Restore the repository to its original state"
 msgstr ""
 
-#: hgext/rebase.py:326
 msgid "warning: new changesets detected on target branch, not stripping\n"
 msgstr ""
 
-#: hgext/rebase.py:336
 msgid "rebase aborted\n"
 msgstr ""
 
-#: hgext/rebase.py:339
 msgid "Define which revisions are going to be rebased and where"
 msgstr ""
 
-#: hgext/rebase.py:350
 msgid "cannot rebase onto an applied mq patch"
 msgstr ""
 
-#: hgext/rebase.py:356
 msgid "cannot rebase an ancestor"
 msgstr ""
 
-#: hgext/rebase.py:358
 msgid "cannot rebase a descendant"
 msgstr ""
 
-#: hgext/rebase.py:367
 msgid "already working on current\n"
 msgstr ""
 
-#: hgext/rebase.py:372
 msgid "already working on the current branch\n"
 msgstr ""
 
-#: hgext/rebase.py:380
 msgid "rebase onto %d starting from %d\n"
 msgstr ""
 
-#: hgext/rebase.py:392
 msgid "unable to collapse, there is more than one external parent"
 msgstr ""
 
-#: hgext/rebase.py:400
 msgid "Call rebase after pull if the latter has been invoked with --rebase"
 msgstr ""
 
-#: hgext/rebase.py:403
 msgid "--update and --rebase are not compatible"
 msgstr ""
 
-#: hgext/rebase.py:415
 msgid "Replace pull with a decorator to provide --rebase option"
 msgstr ""
 
-#: hgext/rebase.py:418
 msgid "rebase working directory to branch head"
 msgstr ""
 
-#: hgext/rebase.py:425
 msgid "keep original revisions"
 msgstr ""
 
-#: hgext/rebase.py:426
 msgid "keep original branches"
 msgstr ""
 
-#: hgext/rebase.py:427
 msgid "rebase from a given revision"
 msgstr ""
 
-#: hgext/rebase.py:428
 msgid "rebase from the base of a given revision"
 msgstr ""
 
-#: hgext/rebase.py:429
 msgid "rebase onto a given revision"
 msgstr ""
 
-#: hgext/rebase.py:430
 msgid "collapse the rebased revisions"
 msgstr ""
 
-#: hgext/rebase.py:431
 msgid "continue an interrupted rebase"
 msgstr ""
 
-#: hgext/rebase.py:432
 msgid "abort an interrupted rebase"
 msgstr ""
 
-#: hgext/rebase.py:434
 msgid ""
 "hg rebase [-s rev | -b rev] [-d rev] [--collapse] | [-c] | [-a] | [--keep]"
 msgstr ""
 
-#: hgext/record.py:8
 msgid "interactive change selection during commit or qrefresh"
 msgstr ""
 
-#: hgext/record.py:18
 msgid ""
 "like patch.iterhunks, but yield different events\n"
 "\n"
@@ -4256,11 +3555,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/record.py:28
 msgid "scan lr while predicate holds"
 msgstr ""
 
-#: hgext/record.py:69
 msgid ""
 "patch header\n"
 "\n"
@@ -4268,23 +3565,18 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/record.py:90
 msgid "this modifies a binary file (all or nothing)\n"
 msgstr ""
 
-#: hgext/record.py:95
 msgid "this is a binary file\n"
 msgstr ""
 
-#: hgext/record.py:98
 msgid "%d hunks, %d lines changed\n"
 msgstr ""
 
-#: hgext/record.py:130
 msgid "hunk -> (n+,n-)"
 msgstr ""
 
-#: hgext/record.py:136
 msgid ""
 "patch hunk\n"
 "\n"
@@ -4292,26 +3584,21 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/record.py:176
 msgid "patch -> [] of hunks "
 msgstr ""
 
-#: hgext/record.py:178
 msgid "patch parsing state machine"
 msgstr ""
 
-#: hgext/record.py:251
 msgid "Interactively filter patch chunks into applied-only chunks"
 msgstr ""
 
-#: hgext/record.py:256
 msgid ""
 "fetch next portion from chunks until a 'header' is seen\n"
 "        NB: header == new-file mark\n"
 "        "
 msgstr ""
 
-#: hgext/record.py:271
 msgid ""
 "prompt query, and process base inputs\n"
 "\n"
@@ -4324,60 +3611,45 @@ msgid ""
 "        "
 msgstr ""
 
-#: hgext/record.py:285
 msgid "[Ynsfdaq?]"
 msgstr ""
 
-#: hgext/record.py:287 hgext/record.py:320 hgext/record.py:332
-#: mercurial/filemerge.py:208
 msgid "y"
 msgstr ""
 
-#: hgext/record.py:288
 msgid "?"
 msgstr ""
 
-#: hgext/record.py:290
 msgid "y - record this change"
 msgstr ""
 
-#: hgext/record.py:294
 msgid "s"
 msgstr ""
 
-#: hgext/record.py:296
 msgid "f"
 msgstr ""
 
-#: hgext/record.py:298 mercurial/merge.py:221
 msgid "d"
 msgstr ""
 
-#: hgext/record.py:300
 msgid "a"
 msgstr ""
 
-#: hgext/record.py:302
 msgid "q"
 msgstr ""
 
-#: hgext/record.py:303
 msgid "user quit"
 msgstr ""
 
-#: hgext/record.py:318
 msgid "examine changes to %s?"
 msgstr ""
 
-#: hgext/record.py:319
 msgid " and "
 msgstr ""
 
-#: hgext/record.py:330
 msgid "record this change to %r?"
 msgstr ""
 
-#: hgext/record.py:343
 msgid ""
 "interactively select changes to commit\n"
 "\n"
@@ -4404,7 +3676,6 @@ msgid ""
 "    ? - display help"
 msgstr ""
 
-#: hgext/record.py:374
 msgid ""
 "interactively record a new patch\n"
 "\n"
@@ -4412,15 +3683,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/record.py:382
 msgid "'mq' extension not loaded"
 msgstr ""
 
-#: hgext/record.py:394
 msgid "running non-interactively, use commit instead"
 msgstr ""
 
-#: hgext/record.py:397
 msgid ""
 "This is generic record driver.\n"
 "\n"
@@ -4438,129 +3706,98 @@ msgid ""
 "        "
 msgstr ""
 
-#: hgext/record.py:434
 msgid "no changes to record\n"
 msgstr ""
 
-#: hgext/record.py:458
 msgid "backup %r as %r\n"
 msgstr ""
 
-#: hgext/record.py:476
 msgid "applying patch\n"
 msgstr ""
 
-#: hgext/record.py:484 mercurial/patch.py:1152
 msgid "patch failed to apply"
 msgstr ""
 
-#: hgext/record.py:504
 msgid "restoring %r to %r\n"
 msgstr ""
 
-#: hgext/record.py:519
 msgid "hg record [OPTION]... [FILE]..."
 msgstr ""
 
-#: hgext/record.py:536
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
 msgstr ""
 
-#: hgext/transplant.py:75
 msgid ""
 "returns True if a node is already an ancestor of parent\n"
 "        or has already been transplanted"
 msgstr ""
 
-#: hgext/transplant.py:90
 msgid "apply the revisions in revmap one by one in revision order"
 msgstr ""
 
-#: hgext/transplant.py:106
 msgid "skipping already applied revision %s\n"
 msgstr ""
 
-#: hgext/transplant.py:135
 msgid "skipping merge changeset %s:%s\n"
 msgstr ""
 
-#: hgext/transplant.py:155
 msgid "%s merged at %s\n"
 msgstr ""
 
-#: hgext/transplant.py:158
 msgid "%s transplanted to %s\n"
 msgstr ""
 
-#: hgext/transplant.py:172
 msgid "arbitrarily rewrite changeset before applying it"
 msgstr ""
 
-#: hgext/transplant.py:174
 msgid "filtering %s\n"
 msgstr ""
 
-#: hgext/transplant.py:189
 msgid "filter failed"
 msgstr ""
 
-#: hgext/transplant.py:198
 msgid "apply the patch in patchfile to the repository as a transplant"
 msgstr ""
 
-#: hgext/transplant.py:212
 msgid "can only omit patchfile if merging"
 msgstr ""
 
-#: hgext/transplant.py:220
 msgid "%s: empty changeset"
 msgstr ""
 
-#: hgext/transplant.py:234
 msgid "Fix up the merge and run hg transplant --continue"
 msgstr ""
 
-#: hgext/transplant.py:248
 msgid "recover last transaction and apply remaining changesets"
 msgstr ""
 
-#: hgext/transplant.py:251
 msgid "%s transplanted as %s\n"
 msgstr ""
 
-#: hgext/transplant.py:266
 msgid "commit working directory using journal metadata"
 msgstr ""
 
-#: hgext/transplant.py:271
 msgid "transplant log file is corrupt"
 msgstr ""
 
-#: hgext/transplant.py:279
 msgid "working dir not at transplant parent %s"
 msgstr ""
 
-#: hgext/transplant.py:285
 msgid "commit failed"
 msgstr ""
 
-#: hgext/transplant.py:343
 msgid "journal changelog metadata for later recover"
 msgstr ""
 
-#: hgext/transplant.py:361
 msgid "remove changelog journal"
 msgstr ""
 
-#: hgext/transplant.py:387
 msgid "interactively transplant changesets"
 msgstr ""
 
-#: hgext/transplant.py:404
 msgid "apply changeset? [ynmpcq?]:"
 msgstr ""
 
-#: hgext/transplant.py:429
 msgid ""
 "transplant changesets from another branch\n"
 "\n"
@@ -4596,72 +3833,55 @@ msgid ""
 "    "
 msgstr ""
 
-#: hgext/transplant.py:499
 msgid "--continue is incompatible with branch, all or merge"
 msgstr ""
 
-#: hgext/transplant.py:503
 msgid "no source URL, branch tag or revision list provided"
 msgstr ""
 
-#: hgext/transplant.py:506
 msgid "--all requires a branch revision"
 msgstr ""
 
-#: hgext/transplant.py:508
 msgid "--all is incompatible with a revision list"
 msgstr ""
 
-#: hgext/transplant.py:521
 msgid "no revision checked out"
 msgstr ""
 
-#: hgext/transplant.py:524 mercurial/merge.py:448
 msgid "outstanding uncommitted merges"
 msgstr ""
 
-#: hgext/transplant.py:527
 msgid "outstanding local changes"
 msgstr ""
 
-#: hgext/transplant.py:578
 msgid "pull patches from REPOSITORY"
 msgstr ""
 
-#: hgext/transplant.py:579
 msgid "pull patches from branch BRANCH"
 msgstr ""
 
-#: hgext/transplant.py:580
 msgid "pull all changesets up to BRANCH"
 msgstr ""
 
-#: hgext/transplant.py:581
 msgid "skip over REV"
 msgstr ""
 
-#: hgext/transplant.py:582
 msgid "merge at REV"
 msgstr ""
 
-#: hgext/transplant.py:583
 msgid "append transplant info to log message"
 msgstr ""
 
-#: hgext/transplant.py:584
 msgid "continue last transplant session after repair"
 msgstr ""
 
-#: hgext/transplant.py:585
 msgid "filter changesets through FILTER"
 msgstr ""
 
-#: hgext/transplant.py:586
 msgid ""
 "hg transplant [-s REPOSITORY] [-b BRANCH [-a]] [-p REV] [-m REV] [REV]..."
 msgstr ""
 
-#: hgext/win32mbcs.py:11
 msgid ""
 "allow to use MBCS path with problematic encoding.\n"
 "\n"
@@ -4696,19 +3916,15 @@ msgid ""
 "\n"
 msgstr ""
 
-#: hgext/win32mbcs.py:81
 msgid "[win32mbcs] filename conversion fail with %s encoding\n"
 msgstr ""
 
-#: hgext/win32mbcs.py:114
 msgid "[win32mbcs] cannot activate on this platform.\n"
 msgstr ""
 
-#: hgext/win32mbcs.py:121
 msgid "[win32mbcs] activated with encoding: %s\n"
 msgstr ""
 
-#: hgext/win32text.py:47
 msgid ""
 "WARNING: %s already has %s line endings\n"
 "and does not need EOL conversion by the win32text plugin.\n"
@@ -4716,15 +3932,12 @@ msgid ""
 "Mercurial.ini or %s.\n"
 msgstr ""
 
-#: hgext/win32text.py:109
 msgid "Attempt to commit or push text file(s) using %s line endings\n"
 msgstr ""
 
-#: hgext/win32text.py:112
 msgid "in %s: %s\n"
 msgstr ""
 
-#: hgext/win32text.py:117
 msgid ""
 "\n"
 "To prevent this mistake in your local repository,\n"
@@ -4743,7 +3956,6 @@ msgid ""
 "** = %sdecode:\n"
 msgstr ""
 
-#: hgext/zeroconf/__init__.py:9
 msgid ""
 "zeroconf support for mercurial repositories\n"
 "\n"
@@ -4770,7 +3982,6 @@ msgid ""
 " zc-test = http://example.com:8000/test\n"
 msgstr ""
 
-#: mercurial/commands.py:21
 msgid ""
 "add the specified files on the next commit\n"
 "\n"
@@ -4793,12 +4004,9 @@ msgstr ""
 "    arkivet.\n"
 "    "
 
-#: mercurial/commands.py:39 mercurial/commands.py:43
-#: mercurial/commands.py:2485 mercurial/cmdutil.py:297
 msgid "adding %s\n"
 msgstr "tilføjer %s\n"
 
-#: mercurial/commands.py:51
 msgid ""
 "add all new files, delete all missing files\n"
 "\n"
@@ -4816,15 +4024,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:67 mercurial/commands.py:1607
 msgid "similarity must be a number"
 msgstr ""
 
-#: mercurial/commands.py:69 mercurial/commands.py:1609
 msgid "similarity must be between 0 and 100"
 msgstr ""
 
-#: mercurial/commands.py:73
 msgid ""
 "show changeset information per file line\n"
 "\n"
@@ -4841,19 +4046,15 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:88
 msgid "at least one file name or pattern required"
 msgstr ""
 
-#: mercurial/commands.py:103
 msgid "at least one of -n/-c is required for -l"
 msgstr ""
 
-#: mercurial/commands.py:116
 msgid "%s: binary file\n"
 msgstr ""
 
-#: mercurial/commands.py:134
 msgid ""
 "create unversioned archive of a repository revision\n"
 "\n"
@@ -4879,19 +4080,15 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:159
 msgid "no working directory: please specify a revision"
 msgstr ""
 
-#: mercurial/commands.py:163
 msgid "repository root cannot be destination"
 msgstr ""
 
-#: mercurial/commands.py:169
 msgid "cannot archive plain files to stdout"
 msgstr ""
 
-#: mercurial/commands.py:177
 msgid ""
 "reverse effect of earlier changeset\n"
 "\n"
@@ -4912,51 +4109,39 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:201
 msgid "please specify a revision to backout"
 msgstr ""
 
-#: mercurial/commands.py:213
 msgid "cannot back out change on a different branch"
 msgstr ""
 
-#: mercurial/commands.py:217
 msgid "cannot back out a change with no parents"
 msgstr ""
 
-#: mercurial/commands.py:220
 msgid "cannot back out a merge changeset without --parent"
 msgstr ""
 
-#: mercurial/commands.py:224
 msgid "%s is not a parent of %s"
 msgstr "%s er ikke forældre til %s"
 
-#: mercurial/commands.py:229
 msgid "cannot use --parent on non-merge changeset"
 msgstr ""
 
-#: mercurial/commands.py:245
 msgid "Backed out changeset %s"
 msgstr ""
 
-#: mercurial/commands.py:250
 msgid "changeset %s backs out changeset %s\n"
 msgstr ""
 
-#: mercurial/commands.py:255
 msgid "merging with changeset %s\n"
 msgstr ""
 
-#: mercurial/commands.py:258
 msgid "the backout changeset is a new head - do not forget to merge\n"
 msgstr ""
 
-#: mercurial/commands.py:260
 msgid "(use \"backout --merge\" if you want to auto-merge)\n"
 msgstr ""
 
-#: mercurial/commands.py:265
 msgid ""
 "subdivision search of changesets\n"
 "\n"
@@ -4984,47 +4169,36 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:290
 msgid "The first %s revision is:\n"
 msgstr "Den første %s revision er:\n"
 
-#: mercurial/commands.py:294
 msgid "Due to skipped revisions, the first %s revision could be any of:\n"
 msgstr ""
 
-#: mercurial/commands.py:304
 msgid "cannot bisect (no known good revisions)"
 msgstr ""
 
-#: mercurial/commands.py:306
 msgid "cannot bisect (no known bad revisions)"
 msgstr ""
 
-#: mercurial/commands.py:311
 msgid "(use of 'hg bisect <cmd>' is deprecated)\n"
 msgstr ""
 
-#: mercurial/commands.py:320
 msgid "incompatible arguments"
 msgstr ""
 
-#: mercurial/commands.py:343
 msgid "failed to execute %s"
 msgstr ""
 
-#: mercurial/commands.py:345
 msgid "%s killed"
 msgstr "%s dræbt"
 
-#: mercurial/commands.py:350
 msgid "Changeset %s: %s\n"
 msgstr "Ændring: %s: %s\n"
 
-#: mercurial/commands.py:387
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
 msgstr ""
 
-#: mercurial/commands.py:395
 msgid ""
 "set or show the current branch name\n"
 "\n"
@@ -5042,19 +4216,15 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:413
 msgid "reset working directory to branch %s\n"
 msgstr ""
 
-#: mercurial/commands.py:417
 msgid "a branch of the same name already exists (use --force to override)"
 msgstr ""
 
-#: mercurial/commands.py:420
 msgid "marked working directory as branch %s\n"
 msgstr ""
 
-#: mercurial/commands.py:425
 msgid ""
 "list repository named branches\n"
 "\n"
@@ -5067,7 +4237,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:452
 msgid ""
 "create a changegroup file\n"
 "\n"
@@ -5090,15 +4259,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:480
 msgid "--base is incompatible with specifiying a destination"
 msgstr ""
 
-#: mercurial/commands.py:520
 msgid "unknown bundle type specified with --type"
 msgstr ""
 
-#: mercurial/commands.py:525
 msgid ""
 "output the current or given revision of files\n"
 "\n"
@@ -5116,7 +4282,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:552
 msgid ""
 "make a copy of an existing repository\n"
 "\n"
@@ -5164,7 +4329,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:603
 msgid ""
 "commit the specified files or all outstanding changes\n"
 "\n"
@@ -5183,15 +4347,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:634
 msgid "created new head\n"
 msgstr "lavede et nyt hoved\n"
 
-#: mercurial/commands.py:637 mercurial/commands.py:639
 msgid "committed changeset %d:%s\n"
 msgstr ""
 
-#: mercurial/commands.py:642
 msgid ""
 "mark files as copied for the next commit\n"
 "\n"
@@ -5208,53 +4369,39 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:662
 msgid "find the ancestor revision of two revisions in a given index"
 msgstr ""
 
-#: mercurial/commands.py:669 mercurial/commands.py:1512
-#: mercurial/commands.py:2642 mercurial/commands.py:2657
-#: mercurial/dispatch.py:356 mercurial/hgweb/server.py:252
 msgid "There is no Mercurial repository here (.hg not found)"
 msgstr "Der er ikke noget Mercurial arkiv her (fandt ikke .hg)"
 
-#: mercurial/commands.py:675
 msgid "either two or three arguments required"
 msgstr "kræver enten to eller tre argumenter"
 
-#: mercurial/commands.py:680
 msgid "returns the completion list associated with the given command"
 msgstr ""
 
-#: mercurial/commands.py:710
 msgid "rebuild the dirstate as it would look like for the given revision"
 msgstr ""
 
-#: mercurial/commands.py:719
 msgid "validate the correctness of the current dirstate"
 msgstr ""
 
-#: mercurial/commands.py:727
 msgid "%s in state %s, but not in manifest1\n"
 msgstr ""
 
-#: mercurial/commands.py:730
 msgid "%s in state %s, but also in manifest1\n"
 msgstr ""
 
-#: mercurial/commands.py:733
 msgid "%s in state %s, but not in either manifest\n"
 msgstr ""
 
-#: mercurial/commands.py:739
 msgid "%s in manifest1, but listed as state %s"
 msgstr ""
 
-#: mercurial/commands.py:742
 msgid ".hg/dirstate inconsistent with current parent's manifest"
 msgstr ""
 
-#: mercurial/commands.py:746
 msgid ""
 "show combined config settings from all hgrc files\n"
 "\n"
@@ -5267,11 +4414,9 @@ msgid ""
 "    with matching section names."
 msgstr ""
 
-#: mercurial/commands.py:759
 msgid "only one config item permitted"
 msgstr ""
 
-#: mercurial/commands.py:772
 msgid ""
 "manually set the parents of the current working directory\n"
 "\n"
@@ -5280,143 +4425,109 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:788
 msgid "show the contents of the current dirstate"
 msgstr ""
 
-#: mercurial/commands.py:806
 msgid "copy: %s -> %s\n"
 msgstr "kopi: %s -> %s\n"
 
-#: mercurial/commands.py:809
 msgid "dump the contents of a data file revision"
 msgstr ""
 
-#: mercurial/commands.py:814
 msgid "invalid revision identifier %s"
 msgstr "ugyldig revisionsidentification %s"
 
-#: mercurial/commands.py:817
 msgid "parse and display a date"
 msgstr ""
 
-#: mercurial/commands.py:829
 msgid "dump the contents of an index file"
 msgstr ""
 
-#: mercurial/commands.py:844
 msgid "dump an index DAG as a .dot file"
 msgstr ""
 
-#: mercurial/commands.py:856
 msgid "test Mercurial installation"
 msgstr ""
 
-#: mercurial/commands.py:868
 msgid "Checking encoding (%s)...\n"
 msgstr ""
 
-#: mercurial/commands.py:873
 msgid " (check that your locale is properly set)\n"
 msgstr ""
 
-#: mercurial/commands.py:877
 msgid "Checking extensions...\n"
 msgstr ""
 
-#: mercurial/commands.py:882
 msgid " One or more extensions could not be found"
 msgstr ""
 
-#: mercurial/commands.py:883
 msgid " (check that you compiled the extensions)\n"
 msgstr ""
 
-#: mercurial/commands.py:887
 msgid "Checking templates...\n"
 msgstr ""
 
-#: mercurial/commands.py:893
 msgid " (templates seem to have been installed incorrectly)\n"
 msgstr ""
 
-#: mercurial/commands.py:897
 msgid "Checking patch...\n"
 msgstr ""
 
-#: mercurial/commands.py:910
 msgid " patch call failed:\n"
 msgstr ""
 
-#: mercurial/commands.py:915
 msgid " unexpected patch output!\n"
 msgstr ""
 
-#: mercurial/commands.py:919
 msgid " patch test failed!\n"
 msgstr ""
 
-#: mercurial/commands.py:924
 msgid ""
 " (Current patch tool may be incompatible with patch, or misconfigured. "
 "Please check your .hgrc file)\n"
 msgstr ""
 
-#: mercurial/commands.py:927
 msgid ""
 " Internal patcher failure, please report this error to http://www.selenic."
 "com/mercurial/bts\n"
 msgstr ""
 
-#: mercurial/commands.py:935
 msgid "Checking commit editor...\n"
 msgstr ""
 
-#: mercurial/commands.py:940
 msgid " No commit editor set and can't find vi in PATH\n"
 msgstr ""
 
-#: mercurial/commands.py:941 mercurial/commands.py:944
 msgid " (specify a commit editor in your .hgrc file)\n"
 msgstr ""
 
-#: mercurial/commands.py:943
 msgid " Can't find editor '%s' in PATH\n"
 msgstr ""
 
-#: mercurial/commands.py:948
 msgid "Checking username...\n"
 msgstr ""
 
-#: mercurial/commands.py:957
 msgid " (specify a username in your .hgrc file)\n"
 msgstr ""
 
-#: mercurial/commands.py:960
 msgid "No problems detected\n"
 msgstr "Fandt ingen problemer\n"
 
-#: mercurial/commands.py:962
 msgid "%s problems detected, please check your install!\n"
 msgstr ""
 
-#: mercurial/commands.py:968
 msgid "dump rename information"
 msgstr ""
 
-#: mercurial/commands.py:977
 msgid "%s renamed from %s:%s\n"
 msgstr "%s omdøbt fra %s:%s\n"
 
-#: mercurial/commands.py:979
 msgid "%s not renamed\n"
 msgstr "%s ikke omdøbt\n"
 
-#: mercurial/commands.py:982
 msgid "show how files match on given patterns"
 msgstr ""
 
-#: mercurial/commands.py:995
 msgid ""
 "diff repository (or selected files)\n"
 "\n"
@@ -5443,7 +4554,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1026
 msgid ""
 "dump the header and diffs for one or more changesets\n"
 "\n"
@@ -5479,19 +4589,15 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1059
 msgid "export requires at least one changeset"
 msgstr ""
 
-#: mercurial/commands.py:1062
 msgid "exporting patches:\n"
 msgstr ""
 
-#: mercurial/commands.py:1064
 msgid "exporting patch:\n"
 msgstr ""
 
-#: mercurial/commands.py:1070
 msgid ""
 "search for a pattern in specified files and revisions\n"
 "\n"
@@ -5510,11 +4616,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1091
 msgid "grep: invalid match pattern: %s\n"
 msgstr ""
 
-#: mercurial/commands.py:1236
 msgid ""
 "show current repository heads or show branch heads\n"
 "\n"
@@ -5534,15 +4638,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1270
 msgid "no changes on branch %s containing %s are reachable from %s\n"
 msgstr ""
 
-#: mercurial/commands.py:1274
 msgid "no changes on branch %s are reachable from %s\n"
 msgstr ""
 
-#: mercurial/commands.py:1284
 msgid ""
 "show help for a given topic or a help overview\n"
 "\n"
@@ -5551,30 +4652,23 @@ msgid ""
 "    Given a topic, extension, or command name, print help for that topic."
 msgstr ""
 
-#: mercurial/commands.py:1293
 msgid "global options:"
 msgstr ""
 
-#: mercurial/commands.py:1295
 msgid "use \"hg help\" for the full list of commands"
 msgstr "brug \"hg help\" for den fulde liste af kommandoer"
 
-#: mercurial/commands.py:1299
 msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
 msgstr ""
 "brug \"hg help\" for den fulde liste af kommandoer eller \"hg -v\" for "
 "detaljer"
 
-#: mercurial/commands.py:1302
 msgid "use \"hg -v help%s\" to show aliases and global options"
 msgstr "brug \"hg -v help%s\" for at vise aliaser og globale valgmuligheder"
 
-#: mercurial/commands.py:1305
 msgid "use \"hg -v help %s\" to show global options"
 msgstr "brug \"hg -v help %s\" for at vise globale valgmuligheder"
 
-#: mercurial/commands.py:1317 mercurial/commands.py:1435
-#: mercurial/commands.py:1461
 msgid ""
 "list of commands:\n"
 "\n"
@@ -5582,7 +4676,6 @@ msgstr ""
 "liste af kommandoer:\n"
 "\n"
 
-#: mercurial/commands.py:1331
 msgid ""
 "\n"
 "aliases: %s\n"
@@ -5590,43 +4683,36 @@ msgstr ""
 "\n"
 "aliaser %s:\n"
 
-#: mercurial/commands.py:1336 mercurial/commands.py:1365
-#: mercurial/commands.py:1389 mercurial/commands.py:1408
 msgid "(no help text available)"
 msgstr "(ingen hjælpetekst tilgængelig)"
 
-#: mercurial/commands.py:1344
 msgid "options:\n"
 msgstr "valgmuligheder:\n"
 
-#: mercurial/commands.py:1370
 msgid "no commands defined\n"
 msgstr "ingen kommandoer defineret\n"
 
-#: mercurial/commands.py:1385
 msgid ""
 "\n"
 "enabled extensions:\n"
 "\n"
-msgstr "\naktiverede udvidelser:\n\n"
+msgstr ""
+"\n"
+"aktiverede udvidelser:\n"
+"\n"
 
-#: mercurial/commands.py:1394
 msgid " %s   %s\n"
 msgstr ""
 
-#: mercurial/commands.py:1421
 msgid "no help text available"
 msgstr "ingen hjælpetekst tilgængelig"
 
-#: mercurial/commands.py:1423
 msgid "%s extension - %s\n"
 msgstr ""
 
-#: mercurial/commands.py:1454
 msgid "Mercurial Distributed SCM\n"
 msgstr "Mercurial Distribueret SCM\n"
 
-#: mercurial/commands.py:1459
 msgid ""
 "basic commands:\n"
 "\n"
@@ -5634,11 +4720,9 @@ msgstr ""
 "basale kommandoer:\n"
 "\n"
 
-#: mercurial/commands.py:1475 doc/gendoc.py:31
 msgid " (default: %s)"
 msgstr " (standard: %s)"
 
-#: mercurial/commands.py:1479
 msgid ""
 "\n"
 "additional help topics:\n"
@@ -5648,7 +4732,6 @@ msgstr ""
 "yderligere hjælpeemner:\n"
 "\n"
 
-#: mercurial/commands.py:1499
 msgid ""
 "identify the working copy or specified revision\n"
 "\n"
@@ -5663,7 +4746,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1568
 msgid ""
 "import an ordered set of patches\n"
 "\n"
@@ -5697,15 +4779,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1624
 msgid "applying patch from stdin\n"
 msgstr ""
 
-#: mercurial/commands.py:1633
 msgid "no diffs found"
 msgstr ""
 
-#: mercurial/commands.py:1646
 msgid ""
 "message:\n"
 "%s\n"
@@ -5713,15 +4792,12 @@ msgstr ""
 "meddelse:\n"
 "%s\n"
 
-#: mercurial/commands.py:1651
 msgid "not a mercurial patch"
 msgstr ""
 
-#: mercurial/commands.py:1681
 msgid "patch is damaged or loses information"
 msgstr ""
 
-#: mercurial/commands.py:1692
 msgid ""
 "show new changesets found in source\n"
 "\n"
@@ -5736,7 +4812,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1763
 msgid ""
 "create a new repository in the given directory\n"
 "\n"
@@ -5751,7 +4826,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1778
 msgid ""
 "locate files matching specific patterns\n"
 "\n"
@@ -5772,7 +4846,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1813
 msgid ""
 "show revision history of entire repository or files\n"
 "\n"
@@ -5804,7 +4877,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1855
 msgid ""
 "looks up all renames for a file (up to endrev) the first\n"
 "        time the file is given. It indexes on the changerev and only\n"
@@ -5812,7 +4884,6 @@ msgid ""
 "        Returns rename info for fn at changerev rev."
 msgstr ""
 
-#: mercurial/commands.py:1945
 msgid ""
 "output the current or given revision of the project manifest\n"
 "\n"
@@ -5829,7 +4900,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1974
 msgid ""
 "merge working directory with another revision\n"
 "\n"
@@ -5845,29 +4915,23 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:1996
 msgid "branch '%s' has %d heads - please merge with an explicit rev"
 msgstr ""
 
-#: mercurial/commands.py:2003
 msgid "branch '%s' has one head - please merge with an explicit rev"
 msgstr ""
 
-#: mercurial/commands.py:2006
 msgid "there is nothing to merge"
 msgstr ""
 
-#: mercurial/commands.py:2008
 msgid "%s - use \"hg update\" instead"
 msgstr "%s - brug \"hg update\" istedet"
 
-#: mercurial/commands.py:2012
 msgid ""
 "working dir not at a head rev - use \"hg update\" or merge with an explicit "
 "rev"
 msgstr ""
 
-#: mercurial/commands.py:2018
 msgid ""
 "show changesets not found in destination\n"
 "\n"
@@ -5880,7 +4944,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2054
 msgid ""
 "show the parents of the working dir or revision\n"
 "\n"
@@ -5892,15 +4955,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2071
 msgid "can only specify an explicit file name"
 msgstr ""
 
-#: mercurial/commands.py:2082
 msgid "'%s' not found in manifest!"
 msgstr ""
 
-#: mercurial/commands.py:2094
 msgid ""
 "show definition of symbolic path names\n"
 "\n"
@@ -5912,23 +4972,18 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2107
 msgid "not found!\n"
 msgstr "ikke fundet!\n"
 
-#: mercurial/commands.py:2120
 msgid "not updating, since new heads added\n"
 msgstr "opdaterer ikke idet nye hoveder er tilføjet\n"
 
-#: mercurial/commands.py:2122
 msgid "(run 'hg heads' to see heads, 'hg merge' to merge)\n"
 msgstr "(kør 'hg heads' for at se hoveder, 'hg merge' for at sammenføje)\n"
 
-#: mercurial/commands.py:2124
 msgid "(run 'hg update' to get a working copy)\n"
 msgstr "(kør 'hg update' for at få en arbejdskopi)\n"
 
-#: mercurial/commands.py:2127
 msgid ""
 "pull changes from the specified source\n"
 "\n"
@@ -5970,13 +5025,11 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2173
 msgid ""
 "Other repository doesn't support revision lookup, so a rev cannot be "
 "specified."
 msgstr ""
 
-#: mercurial/commands.py:2181
 msgid ""
 "push changes to the specified destination\n"
 "\n"
@@ -6010,11 +5063,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2216
 msgid "pushing to %s\n"
 msgstr "skubber til %s\n"
 
-#: mercurial/commands.py:2223
 msgid ""
 "raw commit interface (DEPRECATED)\n"
 "\n"
@@ -6029,11 +5080,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2235
 msgid "(the rawcommit command is deprecated)\n"
 msgstr ""
 
-#: mercurial/commands.py:2251
 msgid ""
 "roll back an interrupted transaction\n"
 "\n"
@@ -6044,7 +5093,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2263
 msgid ""
 "remove the specified files on the next commit\n"
 "\n"
@@ -6071,33 +5119,24 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2289
 msgid "no files specified"
 msgstr ""
 
-#: mercurial/commands.py:2297
 msgid "not removing %s: file %s (use -f to force removal)\n"
 msgstr "fjerner ikke %s: filen %s (brug -f for at forcere fjernelsen)\n"
 
-#: mercurial/commands.py:2304
 msgid "still exists"
 msgstr "eksisterer stadig"
 
-#: mercurial/commands.py:2307
 msgid "is modified"
 msgstr "er modificeret"
 
-#: mercurial/commands.py:2308
 msgid "has been marked for add"
 msgstr "er markeret som tilføjet"
 
-#: mercurial/commands.py:2312 mercurial/commands.py:2482
-#: mercurial/cmdutil.py:303 mercurial/merge.py:298 mercurial/merge.py:308
-#: mercurial/merge.py:329
 msgid "removing %s\n"
 msgstr "fjerner %s\n"
 
-#: mercurial/commands.py:2318
 msgid ""
 "rename files; equivalent of copy + remove\n"
 "\n"
@@ -6114,7 +5153,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2338
 msgid ""
 "retry file merges from a merge or update\n"
 "\n"
@@ -6131,21 +5169,17 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2355
 msgid "too many options specified"
 msgstr ""
 
-#: mercurial/commands.py:2357
 msgid "can't specify --all and patterns"
 msgstr ""
 
-#: mercurial/commands.py:2359
 msgid "no files or directories specified; use --all to remerge all files"
 msgstr ""
 "ingen filer eller mapper specificeret; brug --all for at gen-sammenføje alle "
 "filerne"
 
-#: mercurial/commands.py:2379
 msgid ""
 "restore individual files or dirs to an earlier state\n"
 "\n"
@@ -6181,41 +5215,32 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2414 mercurial/commands.py:2930
 msgid "you can't specify a revision and a date"
 msgstr "du kan ikke specificeret en revision og en dato"
 
-#: mercurial/commands.py:2418
 msgid "no files or directories specified; use --all to revert the whole repo"
 msgstr ""
 "ingen filer eller mapper specificeret; brug --all for at føre hele repo'et "
 "tilbage"
 
-#: mercurial/commands.py:2481
 msgid "forgetting %s\n"
 msgstr "glemmer %s\n"
 
-#: mercurial/commands.py:2484
 msgid "reverting %s\n"
 msgstr "fører %s tilbage\n"
 
-#: mercurial/commands.py:2487
 msgid "undeleting %s\n"
 msgstr ""
 
-#: mercurial/commands.py:2509
 msgid "saving current version of %s as %s\n"
 msgstr "gemmer nuværende version af %s som %s\n"
 
-#: mercurial/commands.py:2531
 msgid "file not managed: %s\n"
 msgstr ""
 
-#: mercurial/commands.py:2535
 msgid "no changes needed to %s\n"
 msgstr ""
 
-#: mercurial/commands.py:2597
 msgid ""
 "roll back the last transaction\n"
 "\n"
@@ -6244,7 +5269,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2625
 msgid ""
 "print the root (top) of the current working dir\n"
 "\n"
@@ -6252,7 +5276,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2632
 msgid ""
 "export the repository via HTTP\n"
 "\n"
@@ -6263,11 +5286,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2685
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
 msgstr "lytter på http://%s%s/%s (bundet til %s:%d)\n"
 
-#: mercurial/commands.py:2696
 msgid ""
 "show changed files in the working directory\n"
 "\n"
@@ -6300,7 +5321,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2767
 msgid ""
 "add one or more tags for the current or given revision\n"
 "\n"
@@ -6323,39 +5343,30 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2790
 msgid "tag names must be unique"
 msgstr ""
 
-#: mercurial/commands.py:2793
 msgid "the name '%s' is reserved"
 msgstr ""
 
-#: mercurial/commands.py:2795
 msgid "--rev and --remove are incompatible"
 msgstr ""
 
-#: mercurial/commands.py:2803
 msgid "tag '%s' does not exist"
 msgstr ""
 
-#: mercurial/commands.py:2805
 msgid "tag '%s' is not a %s tag"
 msgstr ""
 
-#: mercurial/commands.py:2809
 msgid "Removed tag %s"
 msgstr ""
 
-#: mercurial/commands.py:2813
 msgid "tag '%s' already exists (use -f to force)"
 msgstr ""
 
-#: mercurial/commands.py:2821
 msgid "Added tag %s for changeset %s"
 msgstr ""
 
-#: mercurial/commands.py:2831
 msgid ""
 "list repository tags\n"
 "\n"
@@ -6364,7 +5375,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2862
 msgid ""
 "show the tip revision\n"
 "\n"
@@ -6379,7 +5389,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2876
 msgid ""
 "apply one or more changegroup files\n"
 "\n"
@@ -6388,7 +5397,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2896
 msgid ""
 "update working directory\n"
 "\n"
@@ -6418,7 +5426,6 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2939
 msgid ""
 "verify the integrity of the repository\n"
 "\n"
@@ -6431,15 +5438,12 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/commands.py:2951
 msgid "output version and copyright information"
 msgstr ""
 
-#: mercurial/commands.py:2952
 msgid "Mercurial Distributed SCM (version %s)\n"
 msgstr "Mercurial Distributed SCM (version %s)\n"
 
-#: mercurial/commands.py:2954
 msgid ""
 "\n"
 "Copyright (C) 2005-2008 Matt Mackall <mpm@selenic.com> and others\n"
@@ -6447,1749 +5451,1313 @@ msgid ""
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
 
-#: mercurial/commands.py:2965
 msgid "repository root directory or symbolic path name"
 msgstr ""
 
-#: mercurial/commands.py:2966
 msgid "change working directory"
 msgstr "skift arbejdsbibliotek"
 
-#: mercurial/commands.py:2968
 msgid "do not prompt, assume 'yes' for any required answers"
 msgstr "spørg ikke, antag alle svar er 'ja'"
 
-#: mercurial/commands.py:2969
 msgid "suppress output"
 msgstr "undertryk output"
 
-#: mercurial/commands.py:2970
 msgid "enable additional output"
 msgstr ""
 
-#: mercurial/commands.py:2971
 msgid "set/override config option"
 msgstr ""
 
-#: mercurial/commands.py:2972
 msgid "enable debugging output"
 msgstr ""
 
-#: mercurial/commands.py:2973
 msgid "start debugger"
 msgstr ""
 
-#: mercurial/commands.py:2974
 msgid "set the charset encoding"
 msgstr ""
 
-#: mercurial/commands.py:2975
 msgid "set the charset encoding mode"
 msgstr ""
 
-#: mercurial/commands.py:2976
 msgid "print improved command execution profile"
 msgstr ""
 
-#: mercurial/commands.py:2977
 msgid "print traceback on exception"
 msgstr ""
 
-#: mercurial/commands.py:2978
 msgid "time how long the command takes"
 msgstr ""
 
-#: mercurial/commands.py:2979
 msgid "print command execution profile"
 msgstr ""
 
-#: mercurial/commands.py:2980
 msgid "output version information and exit"
 msgstr ""
 
-#: mercurial/commands.py:2981
 msgid "display help and exit"
 msgstr ""
 
-#: mercurial/commands.py:2985
 msgid "do not perform actions, just print output"
 msgstr "udfør ingen handlinger, udskriv kun outputttet"
 
-#: mercurial/commands.py:2988
 msgid "specify ssh command to use"
 msgstr "specificer ssh kommandoen som skal bruges"
 
-#: mercurial/commands.py:2989
 msgid "specify hg command to run on the remote side"
 msgstr ""
 
-#: mercurial/commands.py:2993
 msgid "include names matching the given patterns"
 msgstr "inkluder navne som matcher det givne mønster"
 
-#: mercurial/commands.py:2994
 msgid "exclude names matching the given patterns"
 msgstr "ekskluder navne som matcher det givne mønster"
 
-#: mercurial/commands.py:2998 mercurial/commands.py:3392
 msgid "use <text> as commit message"
 msgstr "brug <tekst> som commit-besked"
 
-#: mercurial/commands.py:2999
 msgid "read commit message from <file>"
 msgstr "læs commit-beskeden fra <fil>"
 
-#: mercurial/commands.py:3003
 msgid "record datecode as commit date"
 msgstr ""
 
-#: mercurial/commands.py:3004
 msgid "record user as committer"
 msgstr ""
 
-#: mercurial/commands.py:3008
 msgid "display using template map file"
 msgstr ""
 
-#: mercurial/commands.py:3009
 msgid "display with template"
 msgstr ""
 
-#: mercurial/commands.py:3015
 msgid "do not show merges"
 msgstr ""
 
-#: mercurial/commands.py:3019 mercurial/commands.py:3049
 msgid "treat all files as text"
 msgstr "behandl alle filer som tekst"
 
-#: mercurial/commands.py:3021
 msgid "don't include dates in diff headers"
 msgstr ""
 
-#: mercurial/commands.py:3025
 msgid "show which function each change is in"
 msgstr ""
 
-#: mercurial/commands.py:3027
 msgid "ignore white space when comparing lines"
 msgstr ""
 
-#: mercurial/commands.py:3029
 msgid "ignore changes in the amount of white space"
 msgstr ""
 
-#: mercurial/commands.py:3031
 msgid "ignore changes whose lines are all blank"
 msgstr ""
 
-#: mercurial/commands.py:3032
 msgid "number of lines of context to show"
 msgstr ""
 
-#: mercurial/commands.py:3037
 msgid "guess renamed files by similarity (0<=s<=100)"
 msgstr ""
 
-#: mercurial/commands.py:3041 mercurial/commands.py:3044
-#: mercurial/commands.py:3129 mercurial/commands.py:3157
-#: mercurial/commands.py:3172 mercurial/commands.py:3333
-#: mercurial/commands.py:3384
 msgid "[OPTION]... [FILE]..."
 msgstr ""
 
-#: mercurial/commands.py:3047
 msgid "annotate the specified revision"
 msgstr ""
 
-#: mercurial/commands.py:3048
 msgid "follow file copies and renames"
 msgstr ""
 
-#: mercurial/commands.py:3050 mercurial/commands.py:3195
 msgid "list the author (long with -v)"
 msgstr ""
 
-#: mercurial/commands.py:3051 mercurial/commands.py:3196
 msgid "list the date (short with -q)"
 msgstr ""
 
-#: mercurial/commands.py:3052
 msgid "list the revision number (default)"
 msgstr ""
 
-#: mercurial/commands.py:3053
 msgid "list the changeset"
 msgstr ""
 
-#: mercurial/commands.py:3055
 msgid "show line number at the first appearance"
 msgstr ""
 
-#: mercurial/commands.py:3057
 msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
 msgstr ""
 
-#: mercurial/commands.py:3060
 msgid "do not pass files through decoders"
 msgstr ""
 
-#: mercurial/commands.py:3061
 msgid "directory prefix for files in archive"
 msgstr ""
 
-#: mercurial/commands.py:3062
 msgid "revision to distribute"
 msgstr ""
 
-#: mercurial/commands.py:3063
 msgid "type of distribution to create"
 msgstr ""
 
-#: mercurial/commands.py:3065
 msgid "[OPTION]... DEST"
 msgstr ""
 
-#: mercurial/commands.py:3069
 msgid "merge with old dirstate parent after backout"
 msgstr ""
 
-#: mercurial/commands.py:3070
 msgid "parent to choose when backing out merge"
 msgstr ""
 
-#: mercurial/commands.py:3071
 msgid "revision to backout"
 msgstr ""
 
-#: mercurial/commands.py:3073
 msgid "[OPTION]... [-r] REV"
 msgstr ""
 
-#: mercurial/commands.py:3076
 msgid "reset bisect state"
 msgstr "nulstil bisect"
 
-#: mercurial/commands.py:3077
 msgid "mark changeset good"
 msgstr "marker ændring som god"
 
-#: mercurial/commands.py:3078
 msgid "mark changeset bad"
 msgstr "marker ændring som dårlig"
 
-#: mercurial/commands.py:3079
 msgid "skip testing changeset"
 msgstr ""
 
-#: mercurial/commands.py:3080
 msgid "use command to check changeset state"
 msgstr ""
 
-#: mercurial/commands.py:3081
 msgid "do not update to target"
 msgstr ""
 
-#: mercurial/commands.py:3082
 msgid "[-gbsr] [-c CMD] [REV]"
 msgstr ""
 
-#: mercurial/commands.py:3086
 msgid "set branch name even if it shadows an existing branch"
 msgstr ""
 
-#: mercurial/commands.py:3087
 msgid "reset branch name to parent branch name"
 msgstr ""
 
-#: mercurial/commands.py:3088
 msgid "[-fC] [NAME]"
 msgstr ""
 
-#: mercurial/commands.py:3092
 msgid "show only branches that have unmerged heads"
 msgstr ""
 
-#: mercurial/commands.py:3093
 msgid "[-a]"
 msgstr ""
 
-#: mercurial/commands.py:3097 mercurial/commands.py:3231
-#: mercurial/commands.py:3283 mercurial/commands.py:3300
 msgid "run even when remote repository is unrelated"
 msgstr ""
 
-#: mercurial/commands.py:3099
 msgid "a changeset up to which you would like to bundle"
 msgstr ""
 
-#: mercurial/commands.py:3101
 msgid "a base changeset to specify instead of a destination"
 msgstr ""
 
-#: mercurial/commands.py:3102
 msgid "bundle all changesets in the repository"
 msgstr ""
 
-#: mercurial/commands.py:3103
 msgid "bundle compression type to use"
 msgstr ""
 
-#: mercurial/commands.py:3105
 msgid "[-f] [-a] [-r REV]... [--base REV]... FILE [DEST]"
 msgstr ""
 
-#: mercurial/commands.py:3108 mercurial/commands.py:3180
 msgid "print output to file with formatted name"
 msgstr ""
 
-#: mercurial/commands.py:3109
 msgid "print the given revision"
 msgstr ""
 
-#: mercurial/commands.py:3110
 msgid "apply any matching decode filter"
 msgstr ""
 
-#: mercurial/commands.py:3112 mercurial/commands.py:3319
 msgid "[OPTION]... FILE..."
 msgstr ""
 
-#: mercurial/commands.py:3116
 msgid "the clone will only contain a repository (no working copy)"
 msgstr ""
 
-#: mercurial/commands.py:3118
 msgid "a changeset you would like to have after cloning"
 msgstr ""
 
-#: mercurial/commands.py:3123
 msgid "[OPTION]... SOURCE [DEST]"
 msgstr ""
 
-#: mercurial/commands.py:3127
 msgid "mark new/missing files as added/removed before committing"
 msgstr ""
 
-#: mercurial/commands.py:3132
 msgid "record a copy that has already occurred"
 msgstr ""
 
-#: mercurial/commands.py:3134 mercurial/commands.py:3324
 msgid "forcibly copy over an existing managed file"
 msgstr ""
 
-#: mercurial/commands.py:3136
 msgid "[OPTION]... [SOURCE]... DEST"
 msgstr ""
 
-#: mercurial/commands.py:3137
 msgid "[INDEX] REV1 REV2"
 msgstr ""
 
-#: mercurial/commands.py:3141
 msgid "show the command options"
 msgstr ""
 
-#: mercurial/commands.py:3142
 msgid "[-o] CMD"
 msgstr ""
 
-#: mercurial/commands.py:3145
 msgid "try extended date formats"
 msgstr ""
 
-#: mercurial/commands.py:3146
 msgid "[-e] DATE [RANGE]"
 msgstr ""
 
-#: mercurial/commands.py:3147
 msgid "FILE REV"
 msgstr ""
 
-#: mercurial/commands.py:3148
 msgid "[PATH]"
 msgstr ""
 
-#: mercurial/commands.py:3149 mercurial/commands.py:3150
 msgid "FILE"
 msgstr ""
 
-#: mercurial/commands.py:3154
 msgid "parent"
 msgstr ""
 
-#: mercurial/commands.py:3155
 msgid "file list"
 msgstr ""
 
-#: mercurial/commands.py:3160
 msgid "revision to rebuild to"
 msgstr ""
 
-#: mercurial/commands.py:3161
 msgid "[-r REV] [REV]"
 msgstr ""
 
-#: mercurial/commands.py:3164
 msgid "revision to debug"
 msgstr ""
 
-#: mercurial/commands.py:3165
 msgid "[-r REV] FILE"
 msgstr ""
 
-#: mercurial/commands.py:3167
 msgid "REV1 [REV2]"
 msgstr ""
 
-#: mercurial/commands.py:3170
 msgid "do not display the saved mtime"
 msgstr ""
 
-#: mercurial/commands.py:3171 mercurial/commands.py:3363
 msgid "[OPTION]..."
 msgstr ""
 
-#: mercurial/commands.py:3177
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr ""
 
-#: mercurial/commands.py:3181
 msgid "diff against the second parent"
 msgstr ""
 
-#: mercurial/commands.py:3183
 msgid "[OPTION]... [-o OUTFILESPEC] REV..."
 msgstr ""
 
-#: mercurial/commands.py:3186
 msgid "end fields with NUL"
 msgstr ""
 
-#: mercurial/commands.py:3187
 msgid "print all revisions that match"
 msgstr ""
 
-#: mercurial/commands.py:3189 mercurial/commands.py:3255
 msgid "follow changeset history, or file history across copies and renames"
 msgstr ""
 
-#: mercurial/commands.py:3190
 msgid "ignore case when matching"
 msgstr ""
 
-#: mercurial/commands.py:3192
 msgid "print only filenames and revs that match"
 msgstr ""
 
-#: mercurial/commands.py:3193
 msgid "print matching line numbers"
 msgstr ""
 
-#: mercurial/commands.py:3194
 msgid "search in given revision range"
 msgstr ""
 
-#: mercurial/commands.py:3198
 msgid "[OPTION]... PATTERN [FILE]..."
 msgstr ""
 
-#: mercurial/commands.py:3201
 msgid "show only heads which are descendants of rev"
 msgstr ""
 
-#: mercurial/commands.py:3203
 msgid "[-r REV] [REV]..."
 msgstr ""
 
-#: mercurial/commands.py:3204
 msgid "[TOPIC]"
 msgstr ""
 
-#: mercurial/commands.py:3207
 msgid "identify the specified rev"
 msgstr ""
 
-#: mercurial/commands.py:3208
 msgid "show local revision number"
 msgstr ""
 
-#: mercurial/commands.py:3209
 msgid "show global revision id"
 msgstr ""
 
-#: mercurial/commands.py:3210
 msgid "show branch"
 msgstr ""
 
-#: mercurial/commands.py:3211
 msgid "show tags"
 msgstr ""
 
-#: mercurial/commands.py:3212
 msgid "[-nibt] [-r REV] [SOURCE]"
 msgstr ""
 
-#: mercurial/commands.py:3216
 msgid ""
 "directory strip option for patch. This has the same\n"
 "meaning as the corresponding patch option"
 msgstr ""
 
-#: mercurial/commands.py:3218
 msgid "base path"
 msgstr ""
 
-#: mercurial/commands.py:3220
 msgid "skip check for outstanding uncommitted changes"
 msgstr ""
 
-#: mercurial/commands.py:3221
 msgid "don't commit, just update the working directory"
 msgstr ""
 
-#: mercurial/commands.py:3223
 msgid "apply patch to the nodes from which it was generated"
 msgstr ""
 
-#: mercurial/commands.py:3225
 msgid "Use any branch information in patch (implied by --exact)"
 msgstr ""
 
-#: mercurial/commands.py:3227
 msgid "[OPTION]... PATCH..."
 msgstr ""
 
-#: mercurial/commands.py:3232 mercurial/commands.py:3286
 msgid "show newest record first"
 msgstr ""
 
-#: mercurial/commands.py:3233
 msgid "file to store the bundles into"
 msgstr ""
 
-#: mercurial/commands.py:3235 mercurial/commands.py:3302
 msgid "a specific revision up to which you would like to pull"
 msgstr ""
 
-#: mercurial/commands.py:3237
 msgid "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"
 msgstr ""
 
-#: mercurial/commands.py:3242
 msgid "[-e CMD] [--remotecmd CMD] [DEST]"
 msgstr ""
 
-#: mercurial/commands.py:3245
 msgid "search the repository as it stood at rev"
 msgstr ""
 
-#: mercurial/commands.py:3247 mercurial/commands.py:3381
 msgid "end filenames with NUL, for use with xargs"
 msgstr ""
 
-#: mercurial/commands.py:3249
 msgid "print complete paths from the filesystem root"
 msgstr ""
 
-#: mercurial/commands.py:3251
 msgid "[OPTION]... [PATTERN]..."
 msgstr ""
 
-#: mercurial/commands.py:3257
 msgid "only follow the first parent of merge changesets"
 msgstr ""
 
-#: mercurial/commands.py:3258
 msgid "show revs matching date spec"
 msgstr ""
 
-#: mercurial/commands.py:3259
 msgid "show copied files"
 msgstr ""
 
-#: mercurial/commands.py:3260
 msgid "do case-insensitive search for a keyword"
 msgstr ""
 
-#: mercurial/commands.py:3262
 msgid "include revs where files were removed"
 msgstr ""
 
-#: mercurial/commands.py:3263
 msgid "show only merges"
 msgstr ""
 
-#: mercurial/commands.py:3264
 msgid "revs committed by user"
 msgstr ""
 
-#: mercurial/commands.py:3266
 msgid "show only changesets within the given named branch"
 msgstr ""
 
-#: mercurial/commands.py:3267
 msgid "do not display revision or any of its ancestors"
 msgstr ""
 
-#: mercurial/commands.py:3269
 msgid "[OPTION]... [FILE]"
 msgstr ""
 
-#: mercurial/commands.py:3272
 msgid "revision to display"
 msgstr ""
 
-#: mercurial/commands.py:3273
 msgid "[-r REV]"
 msgstr ""
 
-#: mercurial/commands.py:3276
 msgid "force a merge with outstanding changes"
 msgstr ""
 
-#: mercurial/commands.py:3279
 msgid "[-f] [[-r] REV]"
 msgstr ""
 
-#: mercurial/commands.py:3285 mercurial/commands.py:3309
 msgid "a specific revision up to which you would like to push"
 msgstr ""
 
-#: mercurial/commands.py:3288
 msgid "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
 msgstr ""
 
-#: mercurial/commands.py:3291
 msgid "show parents from the specified rev"
 msgstr ""
 
-#: mercurial/commands.py:3293
 msgid "hg parents [-r REV] [FILE]"
 msgstr ""
 
-#: mercurial/commands.py:3294
 msgid "[NAME]"
 msgstr ""
 
-#: mercurial/commands.py:3298
 msgid "update to new tip if changesets were pulled"
 msgstr ""
 
-#: mercurial/commands.py:3304
 msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
 msgstr ""
 
-#: mercurial/commands.py:3307
 msgid "force push"
 msgstr ""
 
-#: mercurial/commands.py:3311
 msgid "[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]"
 msgstr ""
 
-#: mercurial/commands.py:3315
 msgid "record delete for missing files"
 msgstr ""
 
-#: mercurial/commands.py:3317
 msgid "remove (and delete) file even if added or modified"
 msgstr ""
 
-#: mercurial/commands.py:3322
 msgid "record a rename that has already occurred"
 msgstr ""
 
-#: mercurial/commands.py:3326
 msgid "[OPTION]... SOURCE... DEST"
 msgstr ""
 
-#: mercurial/commands.py:3329
 msgid "remerge all unresolved files"
 msgstr ""
 
-#: mercurial/commands.py:3330
 msgid "list state of files needing merge"
 msgstr ""
 
-#: mercurial/commands.py:3331
 msgid "mark files as resolved"
 msgstr ""
 
-#: mercurial/commands.py:3332
 msgid "unmark files as resolved"
 msgstr ""
 
-#: mercurial/commands.py:3336
 msgid "revert all changes when no arguments given"
 msgstr ""
 
-#: mercurial/commands.py:3337 mercurial/commands.py:3409
 msgid "tipmost revision matching date"
 msgstr ""
 
-#: mercurial/commands.py:3338
 msgid "revision to revert to"
 msgstr ""
 
-#: mercurial/commands.py:3339
 msgid "do not save backup copies of files"
 msgstr ""
 
-#: mercurial/commands.py:3341
 msgid "[OPTION]... [-r REV] [NAME]..."
 msgstr ""
 
-#: mercurial/commands.py:3346
 msgid "name of access log file to write to"
 msgstr ""
 
-#: mercurial/commands.py:3349
 msgid "name of error log file to write to"
 msgstr ""
 
-#: mercurial/commands.py:3350
 msgid "port to listen on (default: 8000)"
 msgstr ""
 
-#: mercurial/commands.py:3351
 msgid "address to listen on (default: all interfaces)"
 msgstr ""
 
-#: mercurial/commands.py:3352
 msgid "prefix path to serve from (default: server root)"
 msgstr ""
 
-#: mercurial/commands.py:3354
 msgid "name to show in web pages (default: working dir)"
 msgstr ""
 
-#: mercurial/commands.py:3355
 msgid "name of the webdir config file (serve more than one repo)"
 msgstr ""
 
-#: mercurial/commands.py:3358
 msgid "for remote clients"
 msgstr ""
 
-#: mercurial/commands.py:3359
 msgid "web templates to use"
 msgstr ""
 
-#: mercurial/commands.py:3360
 msgid "template style to use"
 msgstr ""
 
-#: mercurial/commands.py:3361
 msgid "use IPv6 in addition to IPv4"
 msgstr ""
 
-#: mercurial/commands.py:3362
 msgid "SSL certificate file"
 msgstr ""
 
-#: mercurial/commands.py:3366
 msgid "show untrusted configuration options"
 msgstr ""
 
-#: mercurial/commands.py:3367
 msgid "[-u] [NAME]..."
 msgstr ""
 
-#: mercurial/commands.py:3370
 msgid "show status of all files"
 msgstr ""
 
-#: mercurial/commands.py:3371
 msgid "show only modified files"
 msgstr ""
 
-#: mercurial/commands.py:3372
 msgid "show only added files"
 msgstr ""
 
-#: mercurial/commands.py:3373
 msgid "show only removed files"
 msgstr ""
 
-#: mercurial/commands.py:3374
 msgid "show only deleted (but tracked) files"
 msgstr ""
 
-#: mercurial/commands.py:3375
 msgid "show only files without changes"
 msgstr ""
 
-#: mercurial/commands.py:3376
 msgid "show only unknown (not tracked) files"
 msgstr ""
 
-#: mercurial/commands.py:3377
 msgid "show only ignored files"
 msgstr ""
 
-#: mercurial/commands.py:3379
 msgid "show source of copied files"
 msgstr ""
 
-#: mercurial/commands.py:3382
 msgid "show difference from revision"
 msgstr ""
 
-#: mercurial/commands.py:3387
 msgid "replace existing tag"
 msgstr ""
 
-#: mercurial/commands.py:3388
 msgid "make the tag local"
 msgstr ""
 
-#: mercurial/commands.py:3389
 msgid "revision to tag"
 msgstr ""
 
-#: mercurial/commands.py:3390
 msgid "remove a tag"
 msgstr ""
 
-#: mercurial/commands.py:3394
 msgid "[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
 msgstr ""
 
-#: mercurial/commands.py:3400
 msgid "[-p]"
 msgstr ""
 
-#: mercurial/commands.py:3404
 msgid "update to new tip if changesets were unbundled"
 msgstr ""
 
-#: mercurial/commands.py:3405
 msgid "[-u] FILE..."
 msgstr ""
 
-#: mercurial/commands.py:3408
 msgid "overwrite locally modified files (no backup)"
 msgstr ""
 
-#: mercurial/commands.py:3411
 msgid "[-C] [-d DATE] [[-r] REV]"
 msgstr ""
 
-#: doc/gendoc.py:61
 msgid "OPTIONS"
 msgstr ""
 
-#: doc/gendoc.py:66
 msgid "COMMANDS"
 msgstr ""
 
-#: doc/gendoc.py:87
 msgid "    options:\n"
 msgstr ""
 
-#: doc/gendoc.py:99
 msgid ""
 "    aliases: %s\n"
 "\n"
-msgstr "    aliaser %s:\n\n"
+msgstr ""
+"    aliaser %s:\n"
+"\n"
 
-#: hgext/convert/bzr.py:67
 msgid "%s is not a valid revision in current branch"
 msgstr ""
 
-#: hgext/convert/bzr.py:76
 msgid "%s is not available in %s anymore"
 msgstr ""
 
-#: hgext/convert/common.py:27
 msgid "cannot find required \"%s\" tool"
 msgstr ""
 
-#: hgext/convert/common.py:239
 msgid "running: %s\n"
 msgstr "kører: %s\n"
 
-#: hgext/convert/common.py:261
 msgid "%s error:\n"
 msgstr ""
 
-#: hgext/convert/common.py:264
 msgid "%s %s"
 msgstr ""
 
-#: hgext/convert/common.py:348
 msgid "could not open map file %r: %s"
 msgstr ""
 
-#: hgext/convert/convcmd.py:58
 msgid "%s: missing or unsupported repository"
 msgstr ""
 
-#: hgext/convert/convcmd.py:66
 msgid "convert: %s\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:67
 msgid "%s: unknown repository type"
 msgstr ""
 
-#: hgext/convert/convcmd.py:174
 msgid "cycle detected between %s and %s"
 msgstr ""
 
-#: hgext/convert/convcmd.py:182
 msgid "not all revisions were sorted"
 msgstr ""
 
-#: hgext/convert/convcmd.py:189
 msgid "Writing author map file %s\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:206
 msgid "Overriding mapping for author %s, was %s, will be %s\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:209
 msgid "mapping author %s to %s\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:214
 msgid "Ignoring bad line in author map file %s: %s\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:246
 msgid "spliced in %s as parents of %s\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:261
 msgid "scanning source...\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:264
 msgid "sorting...\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:269
 msgid "converting...\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:279
 msgid "source: %s\n"
 msgstr ""
 
-#: hgext/convert/convcmd.py:314
 msgid "assuming destination %s\n"
 msgstr ""
 
-#: hgext/convert/cvs.py:57
 msgid "revision %s is not a patchset number or date"
 msgstr ""
 
-#: hgext/convert/cvs.py:68
 msgid "using builtin cvsps\n"
 msgstr ""
 
-#: hgext/convert/cvs.py:184
 msgid "connecting to %s\n"
 msgstr ""
 
-#: hgext/convert/cvs.py:231
 msgid "CVS pserver authentication failed"
 msgstr ""
 
-#: hgext/convert/cvs.py:274
 msgid "server sucks"
 msgstr ""
 
-#: hgext/convert/cvs.py:293
 msgid "%d bytes missing from remote file"
 msgstr ""
 
-#: hgext/convert/cvs.py:328
 msgid "cvs server: %s\n"
 msgstr ""
 
-#: hgext/convert/cvs.py:332
 msgid "unknown CVS response: %s"
 msgstr ""
 
-#: hgext/convert/cvsps.py:92
 msgid "collecting CVS rlog\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:161
 msgid "reading cvs log cache %s\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:163
 msgid "cache has %d log entries\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:165
 msgid "error reading cache: %r\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:192
 msgid "prefix=%r directory=%r root=%r\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:237
 msgid "RCS file must be followed by working file"
 msgstr ""
 
-#: hgext/convert/cvsps.py:272
 msgid "must have at least some revisions"
 msgstr ""
 
-#: hgext/convert/cvsps.py:279
 msgid "expected revision number"
 msgstr ""
 
-#: hgext/convert/cvsps.py:288
 msgid "revision must be followed by date line"
 msgstr ""
 
-#: hgext/convert/cvsps.py:383
 msgid "writing cvs log cache %s\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:388
 msgid "%d log entries\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:409
 msgid "creating changesets\n"
 msgstr ""
 
-#: hgext/convert/cvsps.py:590
 msgid "%d changeset entries\n"
 msgstr ""
 
-#: hgext/convert/darcs.py:33
 msgid "Python ElementTree module is not available"
 msgstr ""
 
-#: hgext/convert/darcs.py:69 hgext/convert/gnuarch.py:121
 msgid "cleaning up %s\n"
 msgstr ""
 
-#: hgext/convert/darcs.py:118 hgext/convert/gnuarch.py:129
 msgid "internal calling inconsistency"
 msgstr ""
 
-#: hgext/convert/filemap.py:31
 msgid "errors in filemap"
 msgstr ""
 
-#: hgext/convert/filemap.py:37
 msgid "%s:%d: %r already in %s list\n"
 msgstr ""
 
-#: hgext/convert/filemap.py:62
 msgid "%s:%d: unknown directive %r\n"
 msgstr ""
 
-#: hgext/convert/filemap.py:226
 msgid "source repository doesn't support --filemap"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:28
 msgid "%s does not look like a GNU Arch repo"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:38
 msgid "cannot find a GNU Arch tool"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:76
 msgid "analyzing tree version %s...\n"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:80
 msgid ""
 "tree analysis stopped because it points to an unregistered archive %s...\n"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:191
 msgid "applying revision %s...\n"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:201
 msgid "computing changeset between %s and %s...\n"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:250
 msgid "obtaining revision %s...\n"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:253
 msgid "analysing revision %s...\n"
 msgstr ""
 
-#: hgext/convert/gnuarch.py:283
 msgid "could not parse cat-log of %s"
 msgstr ""
 
-#: hgext/convert/hg.py:35 hgext/convert/hg.py:44
 msgid "%s is not a local Mercurial repo"
 msgstr ""
 
-#: hgext/convert/hg.py:41
 msgid "initializing destination %s repository\n"
 msgstr ""
 
-#: hgext/convert/hg.py:54
 msgid "run hg sink pre-conversion action\n"
 msgstr ""
 
-#: hgext/convert/hg.py:59
 msgid "run hg sink post-conversion action\n"
 msgstr ""
 
-#: hgext/convert/hg.py:107
 msgid "pulling from %s into %s\n"
 msgstr ""
 
-#: hgext/convert/hg.py:180
 msgid "updating tags\n"
 msgstr ""
 
-#: hgext/convert/hg.py:217
 msgid "%s is not a valid start revision"
 msgstr ""
 
-#: hgext/convert/hg.py:290
 msgid "ignoring: %s\n"
 msgstr "ignorerer: %s\n"
 
-#: hgext/convert/hg.py:333
 msgid "run hg source pre-conversion action\n"
 msgstr ""
 
-#: hgext/convert/hg.py:336
 msgid "run hg source post-conversion action\n"
 msgstr ""
 
-#: hgext/convert/monotone.py:42
 msgid "%s does not look like a monotone repo"
 msgstr ""
 
-#: hgext/convert/monotone.py:158
 msgid "copying file in renamed dir from '%s' to '%s'"
 msgstr ""
 
-#: hgext/convert/subversion.py:158
 msgid "Subversion python bindings could not be loaded"
 msgstr ""
 
-#: hgext/convert/subversion.py:163
 msgid "Subversion python bindings %d.%d found, 1.4 or later required"
 msgstr ""
 
-#: hgext/convert/subversion.py:166
 msgid "Subversion python bindings are too old, 1.4 or later required"
 msgstr ""
 
-#: hgext/convert/subversion.py:205
 msgid "svn: revision %s is not an integer"
 msgstr ""
 
-#: hgext/convert/subversion.py:213
 msgid "svn: start revision %s is not an integer"
 msgstr ""
 
-#: hgext/convert/subversion.py:223 hgext/convert/subversion.py:284
 msgid "no revision found in module %s"
 msgstr ""
 
-#: hgext/convert/subversion.py:265
 msgid "expected %s to be at %r, but not found"
 msgstr ""
 
-#: hgext/convert/subversion.py:268
 msgid "found %s at %r\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:303
 msgid "ignoring empty branch %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:306
 msgid "found branch %s at %d\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:312
 msgid "svn: start revision is not supported with with more than one branch"
 msgstr ""
 
-#: hgext/convert/subversion.py:316
 msgid "svn: no revision found after start revision %d"
 msgstr ""
 
-#: hgext/convert/subversion.py:442
 msgid "no tags found at revision %d\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:483 hgext/convert/subversion.py:519
 msgid "ignoring foreign branch %r\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:495
 msgid "%s not found up to revision %d"
 msgstr ""
 
-#: hgext/convert/subversion.py:511
 msgid "branch renamed from %s to %s at %d\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:550
 msgid "reparent to %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:582
 msgid "copied to %s from %s@%s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:586
 msgid "gone from %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:604
 msgid "found parent directory %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:608
 msgid "base, entry %s %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:614
 msgid "munge-o-matic\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:619
 msgid "info: %s %s %s %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:660
 msgid "unknown path in revision %d: %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:706
 msgid "mark %s came from %s:%d\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:731
 msgid "parsing revision %d (%d changes)\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:757
 msgid "found parent of branch %s at %d: %s\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:760
 msgid "no copyfrom path, don't know what to do.\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:799
 msgid "fetching revision log for \"%s\" from %d to %d\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:813
 msgid "skipping blacklisted revision %d\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:817
 msgid "revision %d has no entries\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:842
 msgid "svn: branch has no revision %s"
 msgstr ""
 
-#: hgext/convert/subversion.py:899
 msgid "%r is not under %r, ignoring\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:983
 msgid "initializing svn repo %r\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:992
 msgid "initializing svn wc %r\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:1151
 msgid "unexpected svn output:\n"
 msgstr ""
 
-#: hgext/convert/subversion.py:1153
 msgid "unable to cope with svn output"
 msgstr ""
 
-#: hgext/convert/subversion.py:1167
 msgid "XXX TAGS NOT IMPLEMENTED YET\n"
 msgstr ""
 
-#: hgext/inotify/client.py:45
 msgid "(inotify: received response from incompatible server version %d)\n"
 msgstr ""
 
-#: hgext/inotify/server.py:106
 msgid "this system does not seem to support inotify"
 msgstr ""
 
-#: hgext/inotify/server.py:108
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
 msgstr ""
 
-#: hgext/inotify/server.py:110
 msgid "*** this limit is too low to watch every directory in this repository\n"
 msgstr ""
 
-#: hgext/inotify/server.py:112
 msgid "*** counting directories: "
 msgstr ""
 
-#: hgext/inotify/server.py:114
 msgid "found %d\n"
 msgstr ""
 
-#: hgext/inotify/server.py:118
 msgid "*** to raise the limit from %d to %d (run as root):\n"
 msgstr ""
 
-#: hgext/inotify/server.py:120
 msgid "***  echo %d > %s\n"
 msgstr ""
 
-#: hgext/inotify/server.py:121
 msgid "cannot watch %s until inotify watch limit is raised"
 msgstr ""
 
-#: hgext/inotify/server.py:149
 msgid "inotify service not available: %s"
 msgstr ""
 
-#: hgext/inotify/server.py:198
 msgid "watching %r\n"
 msgstr ""
 
-#: hgext/inotify/server.py:210
 msgid "watching directories under %r\n"
 msgstr ""
 
-#: hgext/inotify/server.py:293
 msgid "status: %r dir(%d) -> %s\n"
 msgstr ""
 
-#: hgext/inotify/server.py:296
 msgid "status: %r %s -> %s\n"
 msgstr ""
 
-#: hgext/inotify/server.py:356
 msgid "%s dirstate reload\n"
 msgstr ""
 
-#: hgext/inotify/server.py:359
 msgid "%s end dirstate reload\n"
 msgstr ""
 
-#: hgext/inotify/server.py:386
 msgid "rescanning due to .hgignore change\n"
 msgstr ""
 
-#: hgext/inotify/server.py:461
 msgid "%s event: created %s\n"
 msgstr ""
 
-#: hgext/inotify/server.py:471
 msgid "%s event: deleted %s\n"
 msgstr ""
 
-#: hgext/inotify/server.py:481
 msgid "%s event: modified %s\n"
 msgstr ""
 
-#: hgext/inotify/server.py:488
 msgid "filesystem containing %s was unmounted\n"
 msgstr ""
 
-#: hgext/inotify/server.py:494
 msgid "%s readable: %d bytes\n"
 msgstr ""
 
-#: hgext/inotify/server.py:499
 msgid "%s below threshold - unhooking\n"
 msgstr ""
 
-#: hgext/inotify/server.py:510
 msgid "%s reading %d events\n"
 msgstr ""
 
-#: hgext/inotify/server.py:527
 msgid "%s hooking back up with %d bytes readable\n"
 msgstr ""
 
-#: hgext/inotify/server.py:535
 msgid "%s processing %d deferred events as %d\n"
 msgstr ""
 
-#: hgext/inotify/server.py:563 hgext/inotify/server.py:578
 msgid "could not start server: %s"
 msgstr ""
 
-#: hgext/inotify/server.py:598
 msgid "received query from incompatible client version %d\n"
 msgstr ""
 
-#: hgext/inotify/server.py:606
 msgid "answering query for %r\n"
 msgstr ""
 
-#: hgext/inotify/server.py:684
 msgid "finished setup\n"
 msgstr ""
 
-#: hgext/inotify/server.py:696
 msgid "polling: no timeout\n"
 msgstr ""
 
-#: hgext/inotify/server.py:698
 msgid "polling: %sms timeout\n"
 msgstr ""
 
-#: mercurial/archival.py:33
 msgid "archive prefix contains illegal components"
 msgstr "arkivpræfix indeholder ugyldige komponenter"
 
-#: mercurial/archival.py:162
 msgid "cannot give prefix when archiving to files"
 msgstr "kan ikke give præfix ved arkivering til filer"
 
-#: mercurial/archival.py:212
 msgid "unknown archive type '%s'"
 msgstr "ukendt arkivtype '%s'"
 
-#: mercurial/bundlerepo.py:42
 msgid "invalid changegroup"
 msgstr ""
 
-#: mercurial/bundlerepo.py:52 mercurial/revlog.py:1214
 msgid "unknown parent"
 msgstr "ukendt forældre"
 
-#: mercurial/bundlerepo.py:122 mercurial/revlog.py:989
 msgid "integrity check failed on %s:%d"
 msgstr "integritetstjek fejlede på %s:%d"
 
-#: mercurial/bundlerepo.py:173 mercurial/changegroup.py:136
 msgid "%s: not a Mercurial bundle file"
 msgstr "%s er ikke en Mercurial bundle fil"
 
-#: mercurial/bundlerepo.py:175 mercurial/changegroup.py:138
 msgid "%s: unknown bundle version"
 msgstr "%s: ukendt bundle version"
 
-#: mercurial/bundlerepo.py:206 mercurial/changegroup.py:140
 msgid "%s: unknown bundle compression type"
 msgstr "%s: ukendt bundle kompressionstype"
 
-#: mercurial/bundlerepo.py:276
 msgid "cannot create new bundle repository"
 msgstr ""
 
-#: mercurial/changegroup.py:23
 msgid "premature EOF reading chunk (got %d bytes, expected %d)"
 msgstr "for tidlig EOF ved læsning af chunk (fik %d bytes, forventede %d)"
 
-#: mercurial/changelog.py:182
 msgid "username %s contains a newline"
 msgstr "brugernavn %s indeholder et linieskift"
 
-#: mercurial/cmdutil.py:80
 msgid "options --message and --logfile are mutually exclusive"
 msgstr ""
 
-#: mercurial/cmdutil.py:89
 msgid "can't read commit message '%s': %s"
 msgstr "Kan ikke lase commit besked '%s': %s"
 
-#: mercurial/cmdutil.py:134 mercurial/cmdutil.py:138
 msgid "too many revisions specified"
 msgstr "der er specificeret for mange revisioner"
 
-#: mercurial/cmdutil.py:212
 msgid "invalid format spec '%%%s' in output file name"
 msgstr ""
 
-#: mercurial/cmdutil.py:312
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr "noterer fjernelse af %s som en omdøbning til %s (%d%% lighed)\n"
 
-#: mercurial/cmdutil.py:337
 msgid "%s: not copying - file is not managed\n"
 msgstr "%s: kopierer ikke - filen er ikke versionsstyret\n"
 
-#: mercurial/cmdutil.py:339
 msgid "%s: not copying - file has been marked for remove\n"
 msgstr "%s: kopierer ikke - filen er markeret til sletning\n"
 
-#: mercurial/cmdutil.py:360
 msgid "%s: not overwriting - %s collides with %s\n"
 msgstr "%s: overskriver ikke - %s kolliderer med %s\n"
 
-#: mercurial/cmdutil.py:369
 msgid "%s: not overwriting - file exists\n"
 msgstr "%s: overskriver ikke - filen eksisterer\n"
 
-#: mercurial/cmdutil.py:386
 msgid "%s: deleted in working copy\n"
 msgstr "%s: slettet i arbejdskopien\n"
 
-#: mercurial/cmdutil.py:388
 msgid "%s: cannot copy - %s\n"
 msgstr "%s: kan ikke kopiere - %s\n"
 
-#: mercurial/cmdutil.py:394
 msgid "%s %s to %s\n"
 msgstr "%s: %s til %s\n"
 
-#: mercurial/cmdutil.py:406
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
 msgstr ""
 "%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
 "s.\n"
 
-#: mercurial/cmdutil.py:486
 msgid "no source or destination specified"
 msgstr "ingen kilde eller destination angivet"
 
-#: mercurial/cmdutil.py:488
 msgid "no destination specified"
 msgstr "ingen destination angivet"
 
-#: mercurial/cmdutil.py:493
 msgid "with multiple sources, destination must be an existing directory"
 msgstr ""
 "destinationen skal være en eksisterende mappe når der angivet flere kilder"
 
-#: mercurial/cmdutil.py:496
 msgid "destination %s is not a directory"
 msgstr "destinationen %s er ikke en mappe"
 
-#: mercurial/cmdutil.py:508
 msgid "no files to copy"
 msgstr "ingen filer at kopiere"
 
-#: mercurial/cmdutil.py:517
 msgid "(consider using --after)\n"
 msgstr "(overvej at bruge --after)\n"
 
-#: mercurial/cmdutil.py:627
 msgid "changeset:   %d:%s\n"
 msgstr "ændring:     %d:%s\n"
 
-#: mercurial/cmdutil.py:632
 msgid "branch:      %s\n"
 msgstr "gren:        %s\n"
 
-#: mercurial/cmdutil.py:634
 msgid "tag:         %s\n"
 msgstr "mærkat:      %s\n"
 
-#: mercurial/cmdutil.py:636
 msgid "parent:      %d:%s\n"
 msgstr "forældre:    %d:%s\n"
 
-#: mercurial/cmdutil.py:639
 msgid "manifest:    %d:%s\n"
 msgstr ""
 
-#: mercurial/cmdutil.py:641
 msgid "user:        %s\n"
 msgstr "bruger:      %s\n"
 
-#: mercurial/cmdutil.py:642
 msgid "date:        %s\n"
 msgstr "dato:        %s\n"
 
-#: mercurial/cmdutil.py:646
 msgid "files+:"
 msgstr "filer+:"
 
-#: mercurial/cmdutil.py:646
 msgid "files-:"
 msgstr "filer-:"
 
-#: mercurial/cmdutil.py:646
 msgid "files:"
 msgstr ""
 
-#: mercurial/cmdutil.py:651
 msgid "files:       %s\n"
 msgstr "filer:       %s\n"
 
-#: mercurial/cmdutil.py:654
 msgid "copies:      %s\n"
 msgstr "kopier:      %s\n"
 
-#: mercurial/cmdutil.py:658
 msgid "extra:       %s=%s\n"
 msgstr "ekstra:      %s=%s\n"
 
-#: mercurial/cmdutil.py:664
 msgid "description:\n"
 msgstr "beskrivelse:\n"
 
-#: mercurial/cmdutil.py:668
 msgid "summary:     %s\n"
 msgstr "uddrag:      %s\n"
 
-#: mercurial/cmdutil.py:878
 msgid "%s: no key named '%s'"
 msgstr ""
 
-#: mercurial/cmdutil.py:881
 msgid "%s: %s"
 msgstr ""
 
-#: mercurial/cmdutil.py:940
 msgid "Found revision %s from %s\n"
 msgstr ""
 
-#: mercurial/cmdutil.py:944
 msgid "revision matching date not found"
 msgstr ""
 
-#: mercurial/cmdutil.py:1037
 msgid "cannot follow nonexistent file: \"%s\""
 msgstr ""
 
-#: mercurial/cmdutil.py:1041
 msgid "%s:%s copy source revision cannot be found!\n"
 msgstr ""
 
-#: mercurial/cmdutil.py:1055
 msgid "can only follow copies/renames for explicit file names"
 msgstr ""
 
-#: mercurial/cmdutil.py:1177
 msgid "file %s not found!"
 msgstr "filen %s blev ikke fundet!"
 
-#: mercurial/cmdutil.py:1180
 msgid "no match under directory %s!"
 msgstr ""
 
-#: mercurial/cmdutil.py:1183
 msgid "can't commit %s: unsupported file type!"
 msgstr ""
 
-#: mercurial/cmdutil.py:1186
 msgid "file %s not tracked!"
 msgstr ""
 
-#: mercurial/context.py:129 mercurial/context.py:136
 msgid "not found in manifest"
 msgstr ""
 
-#: mercurial/context.py:504
 msgid "branch name not in UTF-8!"
 msgstr ""
 
-#: mercurial/copies.py:147
 msgid "  searching for copies back to rev %d\n"
 msgstr ""
 
-#: mercurial/copies.py:153
 msgid ""
 "  unmatched files in local:\n"
 "   %s\n"
 msgstr ""
 
-#: mercurial/copies.py:156
 msgid ""
 "  unmatched files in other:\n"
 "   %s\n"
 msgstr ""
 
-#: mercurial/copies.py:172
 msgid "  all copies found (* = to merge, ! = divergent):\n"
 msgstr ""
 
-#: mercurial/copies.py:177
 msgid "   %s -> %s %s\n"
 msgstr ""
 
-#: mercurial/copies.py:183
 msgid "  checking for directory renames\n"
 msgstr ""
 
-#: mercurial/copies.py:219
 msgid "  dir %s -> %s\n"
 msgstr ""
 
-#: mercurial/copies.py:230
 msgid "  file %s -> %s\n"
 msgstr ""
 
-#: mercurial/dirstate.py:244
 msgid "'\\n' and '\\r' disallowed in filenames: %r"
 msgstr ""
 
-#: mercurial/dirstate.py:246
 msgid "directory %r already in dirstate"
 msgstr ""
 
-#: mercurial/dirstate.py:253
 msgid "file %r in dirstate clashes with %r"
 msgstr ""
 
-#: mercurial/dirstate.py:336
 msgid "not in dirstate: %s\n"
 msgstr ""
 
-#: mercurial/dirstate.py:425
 msgid "character device"
 msgstr ""
 
-#: mercurial/dirstate.py:426
 msgid "block device"
 msgstr ""
 
-#: mercurial/dirstate.py:427
 msgid "fifo"
 msgstr ""
 
-#: mercurial/dirstate.py:428
 msgid "socket"
 msgstr ""
 
-#: mercurial/dirstate.py:429
 msgid "directory"
 msgstr ""
 
-#: mercurial/dirstate.py:430
 msgid "%s: unsupported file type (type is %s)\n"
 msgstr ""
 
-#: mercurial/dispatch.py:27 mercurial/dispatch.py:93 mercurial/dispatch.py:96
-#: mercurial/dispatch.py:110 mercurial/dispatch.py:117
-#: mercurial/dispatch.py:135
 msgid "abort: %s\n"
 msgstr "afbrudt: %s\n"
 
-#: mercurial/dispatch.py:57
 msgid "hg %s: %s\n"
 msgstr "hg %s: %s\n"
 
-#: mercurial/dispatch.py:60
 msgid "hg: %s\n"
 msgstr "hg: %s\n"
 
-#: mercurial/dispatch.py:63
 msgid ""
 "hg: command '%s' is ambiguous:\n"
 "    %s\n"
@@ -8197,230 +6765,175 @@ msgstr ""
 "hg: kommandoen '%s' is tvetydig:\n"
 "    %s\n"
 
-#: mercurial/dispatch.py:66
 msgid "hg: unknown command '%s'\n"
 msgstr "hg: ukendt kommando '%s'\n"
 
-#: mercurial/dispatch.py:69 mercurial/dispatch.py:80
 msgid "abort: %s!\n"
 msgstr "afbrudt: %s!\n"
 
-#: mercurial/dispatch.py:72
 msgid "timed out waiting for lock held by %s"
 msgstr ""
 
-#: mercurial/dispatch.py:74
 msgid "lock held by %s"
 msgstr ""
 
-#: mercurial/dispatch.py:75 mercurial/dispatch.py:108
-#: mercurial/dispatch.py:115
 msgid "abort: %s: %s\n"
 msgstr "afbrudt: %s: %s\n"
 
-#: mercurial/dispatch.py:77
 msgid "abort: could not lock %s: %s\n"
 msgstr "afbrudt: kunne ikke låse %s: %s\n"
 
-#: mercurial/dispatch.py:82
 msgid "killed!\n"
 msgstr "dræbt!\n"
 
-#: mercurial/dispatch.py:85
 msgid "interrupted!\n"
 msgstr "standset!\n"
 
-#: mercurial/dispatch.py:89
 msgid ""
 "\n"
 "broken pipe\n"
 msgstr ""
 
-#: mercurial/dispatch.py:102
 msgid "abort: error: %s\n"
 msgstr ""
 
-#: mercurial/dispatch.py:105
 msgid "broken pipe\n"
 msgstr ""
 
-#: mercurial/dispatch.py:119
 msgid "abort: %s"
 msgstr "afbrudt: %s"
 
-#: mercurial/dispatch.py:123
 msgid " empty string\n"
 msgstr " tom streng\n"
 
-#: mercurial/dispatch.py:128
 msgid "abort: could not import module %s!\n"
 msgstr "afbrudt: kunne ikke importere modul %s!\n"
 
-#: mercurial/dispatch.py:130
 msgid "(did you forget to compile extensions?)\n"
 msgstr "(glemte du at kompilere udvidelserne?)\n"
 
-#: mercurial/dispatch.py:132
 msgid "(is your Python install correct?)\n"
 msgstr "(er din Python installeret korrekt?)\n"
 
-#: mercurial/dispatch.py:137
 msgid "abort: out of memory\n"
 msgstr "afbrudt: løbet tør for hukommelse\n"
 
-#: mercurial/dispatch.py:143
 msgid "** unknown exception encountered, details follow\n"
 msgstr "** der opstod en ukendt fejl, detaljer følger\n"
 
-#: mercurial/dispatch.py:144
 msgid "** report bug details to http://www.selenic.com/mercurial/bts\n"
 msgstr "** angiv fejldetaljer på http://www.selenic.com/mercurial/bts\n"
 
-#: mercurial/dispatch.py:146
 msgid "** or mercurial@selenic.com\n"
 msgstr "** eller mercurial@selenic.com\n"
 
-#: mercurial/dispatch.py:147
 msgid "** Mercurial Distributed SCM (version %s)\n"
 msgstr "** Mercurial Distributed SCM (version %s)\n"
 
-#: mercurial/dispatch.py:149
 msgid "** Extensions loaded: %s\n"
 msgstr ""
 
-#: mercurial/dispatch.py:213
 msgid "malformed --config option: %s"
 msgstr ""
 
-#: mercurial/dispatch.py:292
 msgid "extension '%s' overrides commands: %s\n"
 msgstr ""
 
-#: mercurial/dispatch.py:305
 msgid "Option --config may not be abbreviated!"
 msgstr ""
 
-#: mercurial/dispatch.py:307
 msgid "Option --cwd may not be abbreviated!"
 msgstr ""
 
-#: mercurial/dispatch.py:309
 msgid ""
 "Option -R has to be separated from other options (i.e. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
 
-#: mercurial/dispatch.py:326
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
 msgstr ""
 
-#: mercurial/dispatch.py:346
 msgid "repository '%s' is not local"
 msgstr ""
 
-#: mercurial/dispatch.py:378
 msgid "invalid arguments"
 msgstr ""
 
-#: mercurial/dispatch.py:388
 msgid "exception raised - generating profile anyway\n"
 msgstr ""
 
-#: mercurial/dispatch.py:403
 msgid ""
 "lsprof not available - install from http://codespeak.net/svn/user/arigo/hack/"
 "misc/lsprof/"
 msgstr ""
 
-#: mercurial/extensions.py:82
 msgid "*** failed to import extension %s from %s: %s\n"
 msgstr ""
 
-#: mercurial/extensions.py:85
 msgid "*** failed to import extension %s: %s\n"
 msgstr ""
 
-#: mercurial/filemerge.py:37 mercurial/filemerge.py:39
 msgid "couldn't find merge tool %s\n"
 msgstr ""
 
-#: mercurial/filemerge.py:41
 msgid "tool %s can't handle symlinks\n"
 msgstr ""
 
-#: mercurial/filemerge.py:43
 msgid "tool %s can't handle binary\n"
 msgstr ""
 
-#: mercurial/filemerge.py:45
 msgid "tool %s requires a GUI\n"
 msgstr ""
 
-#: mercurial/filemerge.py:139
 msgid "picked tool '%s' for %s (binary %s symlink %s)\n"
 msgstr ""
 
-#: mercurial/filemerge.py:144
 msgid ""
 " no tool found to merge %s\n"
 "keep (l)ocal or take (o)ther?"
 msgstr ""
 
-#: mercurial/filemerge.py:146
 msgid "[lo]"
 msgstr ""
 
-#: mercurial/filemerge.py:146
 msgid "l"
 msgstr ""
 
-#: mercurial/filemerge.py:165
 msgid "merging %s and %s to %s\n"
 msgstr ""
 
-#: mercurial/filemerge.py:167
 msgid "merging %s\n"
 msgstr ""
 
-#: mercurial/filemerge.py:169
 msgid "my %s other %s ancestor %s\n"
 msgstr ""
 
-#: mercurial/filemerge.py:175
 msgid " premerge successful\n"
 msgstr ""
 
-#: mercurial/filemerge.py:206
 msgid ""
 " output file %s appears unchanged\n"
 "was merge successful (yn)?"
 msgstr ""
 
-#: mercurial/filemerge.py:208
 msgid "[yn]"
 msgstr ""
 
-#: mercurial/filemerge.py:208
 msgid "n"
 msgstr ""
 
-#: mercurial/filemerge.py:215
 msgid "merging %s failed!\n"
 msgstr ""
 
-#: mercurial/hbisect.py:55
 msgid "Inconsistent state, %s:%s is good and bad"
 msgstr ""
 
-#: mercurial/hbisect.py:129
 msgid "unknown bisect kind %s"
 msgstr ""
 
-#: mercurial/help.py:11
 msgid "Date Formats"
 msgstr "Datoformater"
 
-#: mercurial/help.py:12
 msgid ""
 "\n"
 "    Some commands allow the user to specify a date:\n"
@@ -8498,11 +7011,9 @@ msgstr ""
 "    \"-{days}\" - indenfor et angivet antal dage, fra dags dato\n"
 "    "
 
-#: mercurial/help.py:50
 msgid "File Name Patterns"
 msgstr ""
 
-#: mercurial/help.py:51
 msgid ""
 "\n"
 "    Mercurial accepts several notations for identifying one or more\n"
@@ -8550,11 +7061,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/help.py:96
 msgid "Environment Variables"
 msgstr "Miljøvariable"
 
-#: mercurial/help.py:97
 msgid ""
 "\n"
 "HG::\n"
@@ -8627,11 +7136,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/help.py:167
 msgid "Specifying Single Revisions"
 msgstr "Angivning af en enkelt revision"
 
-#: mercurial/help.py:168
 msgid ""
 "\n"
 "    Mercurial accepts several notations for identifying individual\n"
@@ -8666,11 +7173,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/help.py:200
 msgid "Specifying Multiple Revisions"
 msgstr "Angivning af flere revisioner"
 
-#: mercurial/help.py:201
 msgid ""
 "\n"
 "    When Mercurial accepts more than one revision, they may be\n"
@@ -8691,11 +7196,9 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/help.py:219
 msgid "Diff Formats"
 msgstr ""
 
-#: mercurial/help.py:220
 msgid ""
 "\n"
 "    Mercurial's default format for showing changes between two versions\n"
@@ -8730,1280 +7233,963 @@ msgid ""
 "    "
 msgstr ""
 
-#: mercurial/hg.py:128
 msgid "destination directory: %s\n"
 msgstr ""
 
-#: mercurial/hg.py:134 mercurial/hg.py:176 mercurial/hg.py:202
 msgid "destination '%s' already exists"
 msgstr ""
 
-#: mercurial/hg.py:209
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
 "by revision"
 msgstr ""
 
-#: mercurial/hg.py:219
 msgid "clone from remote to remote not supported"
 msgstr ""
 
-#: mercurial/hg.py:232
 msgid "updating working directory\n"
 msgstr ""
 
-#: mercurial/hg.py:248
 msgid "updated"
 msgstr "opdateret"
 
-#: mercurial/hg.py:249
 msgid "merged"
 msgstr "sammenføjet"
 
-#: mercurial/hg.py:250
 msgid "removed"
 msgstr "fjernet"
 
-#: mercurial/hg.py:251
 msgid "unresolved"
 msgstr "uløst"
 
-#: mercurial/hg.py:252
 msgid "%d files %s"
 msgstr "%d filer %s"
 
-#: mercurial/hg.py:260 mercurial/hg.py:277
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr ""
 
-#: mercurial/hg.py:279
 msgid "(branch merge, don't forget to commit)\n"
 msgstr ""
 
-#: mercurial/hgweb/hgwebdir_mod.py:211
 msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr ""
 
-#: mercurial/hgweb/server.py:262
 msgid "SSL support is unavailable"
 msgstr "understøttelse for SSL er ikke tilstede"
 
-#: mercurial/hgweb/server.py:279
 msgid "IPv6 not available on this system"
 msgstr "IPv6 er ikke til rådighed på dette system"
 
-#: mercurial/hgweb/server.py:293
 msgid "cannot start server at '%s:%d': %s"
 msgstr "kan ikke starte server på '%s:%d': %s"
 
-#: mercurial/hook.py:21
 msgid "calling hook %s: %s\n"
 msgstr ""
 
-#: mercurial/hook.py:26
 msgid "%s hook is invalid (\"%s\" not in a module)"
 msgstr ""
 
-#: mercurial/hook.py:36
 msgid "%s hook is invalid (import of \"%s\" failed)"
 msgstr ""
 
-#: mercurial/hook.py:43
 msgid "%s hook is invalid (\"%s\" is not defined)"
 msgstr ""
 
-#: mercurial/hook.py:47
 msgid "%s hook is invalid (\"%s\" is not callable)"
 msgstr ""
 
-#: mercurial/hook.py:56
 msgid "error: %s hook failed: %s\n"
 msgstr ""
 
-#: mercurial/hook.py:59
 msgid "error: %s hook raised an exception: %s\n"
 msgstr ""
 
-#: mercurial/hook.py:67
 msgid "%s hook failed"
 msgstr ""
 
-#: mercurial/hook.py:68
 msgid "warning: %s hook failed\n"
 msgstr ""
 
-#: mercurial/hook.py:72
 msgid "running hook %s: %s\n"
 msgstr ""
 
-#: mercurial/hook.py:82
 msgid "%s hook %s"
 msgstr ""
 
-#: mercurial/hook.py:83
 msgid "warning: %s hook %s\n"
 msgstr ""
 
-#: mercurial/httprepo.py:21
 msgid "connection ended unexpectedly"
 msgstr ""
 
-#: mercurial/httprepo.py:31
 msgid "unsupported URL component: \"%s\""
 msgstr ""
 
-#: mercurial/httprepo.py:38
 msgid "using %s\n"
 msgstr "bruger %s\n"
 
-#: mercurial/httprepo.py:53
 msgid "capabilities: %s\n"
 msgstr ""
 
-#: mercurial/httprepo.py:60
 msgid "operation not supported over http"
 msgstr ""
 
-#: mercurial/httprepo.py:65 mercurial/sshrepo.py:116
 msgid "sending %s command\n"
 msgstr "sender %s kommando\n"
 
-#: mercurial/httprepo.py:72
 msgid "sending %s bytes\n"
 msgstr "sender %s bytes\n"
 
-#: mercurial/httprepo.py:76
 msgid "authorization failed"
 msgstr "autorisation fejlede"
 
-#: mercurial/httprepo.py:79
 msgid "http error while sending %s command\n"
 msgstr ""
 
-#: mercurial/httprepo.py:84
 msgid "http error, possibly caused by proxy setting"
 msgstr ""
 
-#: mercurial/httprepo.py:90
 msgid "real URL is %s\n"
 msgstr "den rigtige URL er %s\n"
 
-#: mercurial/httprepo.py:101
 msgid "Requested URL: '%s'\n"
 msgstr ""
 
-#: mercurial/httprepo.py:102 mercurial/statichttprepo.py:81
 msgid "'%s' does not appear to be an hg repository"
 msgstr ""
 
-#: mercurial/httprepo.py:110
 msgid "'%s' sent a broken Content-Type header (%s)"
 msgstr ""
 
-#: mercurial/httprepo.py:113
 msgid "'%s' uses newer protocol %s"
 msgstr "'%s' bruger nyere protokol %s"
 
-#: mercurial/httprepo.py:127 mercurial/sshrepo.py:154
 msgid "look up remote revision"
 msgstr ""
 
-#: mercurial/httprepo.py:139 mercurial/httprepo.py:148
-#: mercurial/httprepo.py:159 mercurial/sshrepo.py:135 mercurial/sshrepo.py:167
-#: mercurial/sshrepo.py:176 mercurial/sshrepo.py:185 mercurial/sshrepo.py:220
-#: mercurial/sshrepo.py:242
 msgid "unexpected response:"
 msgstr ""
 
-#: mercurial/httprepo.py:168 mercurial/sshrepo.py:192
 msgid "look up remote changes"
 msgstr ""
 
-#: mercurial/httprepo.py:205
 msgid "push failed (unexpected response):"
 msgstr ""
 
-#: mercurial/httprepo.py:210 mercurial/sshrepo.py:214
 msgid "push failed: %s"
 msgstr "skub fejlede: %s"
 
-#: mercurial/httprepo.py:222
 msgid "Python support for SSL and HTTPS is not installed"
 msgstr ""
 
-#: mercurial/httprepo.py:228
 msgid "cannot create new http repository"
 msgstr "kan ikke lave nyt http arkiv"
 
-#: mercurial/ignore.py:60
 msgid "%s: ignoring invalid syntax '%s'\n"
 msgstr "%s: ignorerer ugyldig syntaks '%s'\n"
 
-#: mercurial/ignore.py:73
 msgid "skipping unreadable ignore file '%s': %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:50
 msgid "repository %s not found"
 msgstr "arkivet %s blev ikke fundet"
 
-#: mercurial/localrepo.py:52
 msgid "repository %s already exists"
 msgstr "arkivet %s eksisterer allerede"
 
-#: mercurial/localrepo.py:60 mercurial/statichttprepo.py:88
 msgid "requirement '%s' not supported"
 msgstr ""
 
-#: mercurial/localrepo.py:137
 msgid "%r cannot be used in a tag name"
 msgstr ""
 
-#: mercurial/localrepo.py:223
 msgid "working copy of .hgtags is changed (please commit .hgtags manually)"
 msgstr ""
 
-#: mercurial/localrepo.py:241
 msgid "%s, line %s: %s\n"
 msgstr "%s, linie %s: %s\n"
 
-#: mercurial/localrepo.py:249
 msgid "cannot parse entry"
 msgstr ""
 
-#: mercurial/localrepo.py:256
 msgid "node '%s' is not well formed"
 msgstr ""
 
-#: mercurial/localrepo.py:259
 msgid "tag '%s' refers to unknown node"
 msgstr ""
 
-#: mercurial/localrepo.py:463
 msgid "unknown revision '%s'"
 msgstr ""
 
-#: mercurial/localrepo.py:531
 msgid "filtering %s through %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:569
 msgid "journal already exists - run hg recover"
 msgstr ""
 
-#: mercurial/localrepo.py:593
 msgid "rolling back interrupted transaction\n"
 msgstr ""
 
-#: mercurial/localrepo.py:598
 msgid "no interrupted transaction available\n"
 msgstr ""
 
-#: mercurial/localrepo.py:609
 msgid "rolling back last transaction\n"
 msgstr ""
 
-#: mercurial/localrepo.py:616
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:622
 msgid "no rollback information available\n"
 msgstr ""
 
-#: mercurial/localrepo.py:643
 msgid "waiting for lock on %s held by %r\n"
 msgstr ""
 
-#: mercurial/localrepo.py:657
 msgid "repository %s"
 msgstr ""
 
-#: mercurial/localrepo.py:666
 msgid "working directory of %s"
 msgstr ""
 
-#: mercurial/localrepo.py:716
 msgid " %s: searching for copy revision for %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:723
 msgid " %s: copy %s:%s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:765
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
 
-#: mercurial/localrepo.py:777 mercurial/localrepo.py:1125
 msgid "%s not tracked!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:789
 msgid "unresolved merge conflicts (see hg resolve)"
 msgstr ""
 
-#: mercurial/localrepo.py:836
 msgid "nothing changed\n"
 msgstr ""
 
-#: mercurial/localrepo.py:871
 msgid "trouble committing %s!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:902
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
 msgstr ""
 
-#: mercurial/localrepo.py:926
 msgid "empty commit message"
 msgstr ""
 
-#: mercurial/localrepo.py:1075 mercurial/localrepo.py:1153
 msgid "%s does not exist!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1079
 msgid ""
 "%s: files over 10MB may cause memory and performance problems\n"
 "(use 'hg revert %s' to unadd the file)\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1084
 msgid "%s not added: only files and symlinks supported currently\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1088
 msgid "%s already tracked!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1102
 msgid "%s not added!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1121
 msgid "%s still exists!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1139
 msgid "%s not removed!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1155
 msgid "copy failed: %s is not a file or a symbolic link\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1303
 msgid "searching for changes\n"
 msgstr "leder efter ændringer\n"
 
-#: mercurial/localrepo.py:1331
 msgid "examining %s:%s\n"
 msgstr "undersøger %s:%s\n"
 
-#: mercurial/localrepo.py:1336
 msgid "branch already found\n"
 msgstr "gren er allerede fundet\n"
 
-#: mercurial/localrepo.py:1339
 msgid "found incomplete branch %s:%s\n"
 msgstr "fandt ukomplet gren %s:%s\n"
 
-#: mercurial/localrepo.py:1346
 msgid "found new changeset %s\n"
 msgstr "fandt ny ændring %s\n"
 
-#: mercurial/localrepo.py:1361
 msgid "request %d: %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1365
 msgid "received %s:%s\n"
 msgstr "modtog %s:%s\n"
 
-#: mercurial/localrepo.py:1378
 msgid "narrowing %d:%d %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1381
 msgid "found new branch changeset %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1386
 msgid "narrowed branch search to %s:%s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1396
 msgid "already have changeset "
 msgstr ""
 
-#: mercurial/localrepo.py:1400
 msgid "warning: repository is unrelated\n"
 msgstr "advarsel: arkivet er urelateret\n"
 
-#: mercurial/localrepo.py:1402
 msgid "repository is unrelated"
 msgstr "arkivet er urelateret"
 
-#: mercurial/localrepo.py:1404
 msgid "found new changesets starting at "
 msgstr ""
 
-#: mercurial/localrepo.py:1407
 msgid "%d total queries\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1424
 msgid "common changesets up to "
 msgstr ""
 
-#: mercurial/localrepo.py:1465
 msgid "requesting all changes\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1478
 msgid ""
 "Partial pull cannot be done because other repository doesn't support "
 "changegroupsubset."
 msgstr ""
 
-#: mercurial/localrepo.py:1539
 msgid "abort: push creates new remote heads!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1540
 msgid "(did you forget to merge? use push -f to force)\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1544
 msgid "note: unsynced remote changes!\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1580
 msgid "%d changesets found\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1582
 msgid "list of changesets:\n"
 msgstr ""
 
-#: mercurial/localrepo.py:1861 mercurial/localrepo.py:1951
 msgid "empty or missing revlog for %s"
 msgstr ""
 
-#: mercurial/localrepo.py:1978
 msgid "add changeset %s\n"
 msgstr ""
 
-#: mercurial/localrepo.py:2001
 msgid "adding changesets\n"
 msgstr "tilføjer ændringer\n"
 
-#: mercurial/localrepo.py:2005
 msgid "received changelog group is empty"
 msgstr ""
 
-#: mercurial/localrepo.py:2010
 msgid "adding manifests\n"
 msgstr "tilføjer manifester\n"
 
-#: mercurial/localrepo.py:2019
 msgid "adding file changes\n"
 msgstr "tilføjer filændringer\n"
 
-#: mercurial/localrepo.py:2024
 msgid "adding %s revisions\n"
 msgstr "tilføjer %s ændringer\n"
 
-#: mercurial/localrepo.py:2029
 msgid "received file revlog group is empty"
 msgstr ""
 
-#: mercurial/localrepo.py:2039
 msgid " (%+d heads)"
 msgstr " (%+d hoveder)"
 
-#: mercurial/localrepo.py:2041
 msgid "added %d changesets with %d changes to %d files%s\n"
 msgstr "tilføjede %d ændringer med %d ændringer i %d filer%s\n"
 
-#: mercurial/localrepo.py:2056
 msgid "updating the branch cache\n"
 msgstr ""
 
-#: mercurial/localrepo.py:2079 mercurial/localrepo.py:2092
-#: mercurial/localrepo.py:2104
 msgid "Unexpected response from remote server:"
 msgstr ""
 
-#: mercurial/localrepo.py:2081
 msgid "operation forbidden by server"
 msgstr ""
 
-#: mercurial/localrepo.py:2083
 msgid "locking the remote repository failed"
 msgstr ""
 
-#: mercurial/localrepo.py:2085
 msgid "the server sent an unknown error code"
 msgstr ""
 
-#: mercurial/localrepo.py:2086
 msgid "streaming all changes\n"
 msgstr ""
 
-#: mercurial/localrepo.py:2093
 msgid "%d files to transfer, %s of data\n"
 msgstr ""
 
-#: mercurial/localrepo.py:2105
 msgid "adding %s (%s)\n"
 msgstr "tilføjer %s (%s)\n"
 
-#: mercurial/localrepo.py:2113
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
 msgstr ""
 
-#: mercurial/mail.py:19
 msgid "no [smtp]host in hgrc - cannot send mail"
 msgstr ""
 
-#: mercurial/mail.py:21
 msgid "sending mail: smtp host %s, port %s\n"
 msgstr ""
 
-#: mercurial/mail.py:26
 msgid "can't use TLS: Python SSL support not installed"
 msgstr ""
 
-#: mercurial/mail.py:28
 msgid "(using tls)\n"
 msgstr ""
 
-#: mercurial/mail.py:37
 msgid "(authenticating to mail server as %s)\n"
 msgstr ""
 
-#: mercurial/mail.py:57
 msgid "sending mail: %s\n"
 msgstr ""
 
-#: mercurial/mail.py:82
 msgid "smtp specified as email transport, but no smtp host configured"
 msgstr ""
 
-#: mercurial/mail.py:86
 msgid "%r specified as email transport, but not in PATH"
 msgstr ""
 
-#: mercurial/mail.py:131
 msgid "ignoring invalid sendcharset: %s\n"
 msgstr ""
 
-#: mercurial/mail.py:155
 msgid "invalid email address: %s"
 msgstr ""
 
-#: mercurial/mail.py:161
 msgid "invalid local address: %s"
 msgstr ""
 
-#: mercurial/manifest.py:128
 msgid "'\\n' and '\\r' disallowed in filenames"
 msgstr ""
 
-#: mercurial/manifest.py:172
 msgid "failed to remove %s from manifest"
 msgstr ""
 
-#: mercurial/mdiff.py:54
 msgid "diff context lines count must be an integer, not %r"
 msgstr ""
 
-#: mercurial/merge.py:77
 msgid ""
 "untracked file in working directory differs from file in requested revision: "
 "'%s'"
 msgstr ""
 
-#: mercurial/merge.py:86
 msgid "case-folding collision between %s and %s"
 msgstr ""
 
-#: mercurial/merge.py:126
 msgid "resolving manifests\n"
 msgstr ""
 
-#: mercurial/merge.py:127
 msgid " overwrite %s partial %s\n"
 msgstr ""
 
-#: mercurial/merge.py:128
 msgid " ancestor %s local %s remote %s\n"
 msgstr ""
 
-#: mercurial/merge.py:148
 msgid ""
 " conflicting flags for %s\n"
 "(n)one, e(x)ec or sym(l)ink?"
 msgstr ""
 
-#: mercurial/merge.py:219
 msgid ""
 " local changed %s which remote deleted\n"
 "use (c)hanged version or (d)elete?"
 msgstr ""
 
-#: mercurial/merge.py:221 mercurial/merge.py:255
 msgid "[cd]"
 msgstr ""
 
-#: mercurial/merge.py:221 mercurial/merge.py:255
 msgid "c"
 msgstr ""
 
-#: mercurial/merge.py:253
 msgid ""
 "remote changed %s which local deleted\n"
 "use (c)hanged version or leave (d)eleted?"
 msgstr ""
 
-#: mercurial/merge.py:287
 msgid "preserving %s for resolve of %s\n"
 msgstr ""
 
-#: mercurial/merge.py:314
 msgid "update failed to remove %s: %s!\n"
 msgstr ""
 
-#: mercurial/merge.py:333
 msgid "getting %s\n"
 msgstr ""
 
-#: mercurial/merge.py:340
 msgid "moving %s to %s\n"
 msgstr ""
 
-#: mercurial/merge.py:345
 msgid "getting %s to %s\n"
 msgstr ""
 
-#: mercurial/merge.py:351
 msgid "warning: detected divergent renames of %s to:\n"
 msgstr ""
 
-#: mercurial/merge.py:438
 msgid "branch %s not found"
 msgstr ""
 
-#: mercurial/merge.py:451
 msgid "can't merge with ancestor"
 msgstr ""
 
-#: mercurial/merge.py:456
 msgid "nothing to merge (use 'hg update' or check 'hg heads')"
 msgstr ""
 
-#: mercurial/merge.py:465
 msgid "crosses branches (use 'hg merge' or 'hg update -C' to discard changes)"
 msgstr ""
 
-#: mercurial/merge.py:467
 msgid "crosses branches (use 'hg merge' or 'hg update -C')"
 msgstr ""
 
-#: mercurial/merge.py:470
 msgid "crosses named branches (use 'hg update -C' to discard changes)"
 msgstr ""
 
-#: mercurial/patch.py:28
 msgid "cannot create %s: destination already exists"
 msgstr ""
 
-#: mercurial/patch.py:37
 msgid "cannot create %s: unable to create destination directory"
 msgstr ""
 
-#: mercurial/patch.py:96
 msgid "found patch at byte %d\n"
 msgstr ""
 
-#: mercurial/patch.py:101
 msgid "patch generated by hg export\n"
 msgstr ""
 
-#: mercurial/patch.py:250
 msgid "unable to find '%s' for patching\n"
 msgstr ""
 
-#: mercurial/patch.py:282
 msgid "patching file %s\n"
 msgstr ""
 
-#: mercurial/patch.py:325
 msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
 msgstr ""
 
-#: mercurial/patch.py:352
 msgid "bad hunk #%d %s (%d %d %d %d)"
 msgstr ""
 
-#: mercurial/patch.py:365
 msgid "file %s already exists\n"
 msgstr ""
 
-#: mercurial/patch.py:427
 msgid "Hunk #%d succeeded at %d %s(offset %d %s).\n"
 msgstr ""
 
-#: mercurial/patch.py:431
 msgid "Hunk #%d FAILED at %d\n"
 msgstr ""
 
-#: mercurial/patch.py:452 mercurial/patch.py:478 mercurial/patch.py:510
 msgid "bad hunk #%d"
 msgstr ""
 
-#: mercurial/patch.py:497 mercurial/patch.py:539
 msgid "bad hunk #%d old text line %d"
 msgstr ""
 
-#: mercurial/patch.py:691
 msgid "could not extract binary patch"
 msgstr ""
 
-#: mercurial/patch.py:707
 msgid "binary patch is %d bytes, not %d"
 msgstr ""
 
-#: mercurial/patch.py:742
 msgid "unable to strip away %d dirs from %s"
 msgstr ""
 
-#: mercurial/patch.py:781
 msgid "undefined source and destination files"
 msgstr ""
 
-#: mercurial/patch.py:951
 msgid "malformed patch %s %s"
 msgstr ""
 
-#: mercurial/patch.py:1008
 msgid "unsupported parser state: %s"
 msgstr ""
 
-#: mercurial/patch.py:1104
 msgid "patch command failed: %s"
 msgstr ""
 
-#: mercurial/patch.py:1141
 msgid "no valid hunks found; trying with %r instead\n"
 msgstr ""
 
-#: mercurial/repair.py:20
 msgid "saving bundle to %s\n"
 msgstr ""
 
-#: mercurial/repair.py:128
 msgid "adding branch\n"
 msgstr "tilføjer gren\n"
 
-#: mercurial/repo.py:34
 msgid "cannot %s; remote repository does not support the %r capability"
 msgstr ""
 
-#: mercurial/revlog.py:40
 msgid "%s@%s: %s"
 msgstr ""
 
-#: mercurial/revlog.py:108
 msgid "unknown compression type %r"
 msgstr ""
 
-#: mercurial/revlog.py:450
 msgid "index %s unknown flags %#04x for format v0"
 msgstr ""
 
-#: mercurial/revlog.py:453
 msgid "index %s unknown flags %#04x for revlogng"
 msgstr ""
 
-#: mercurial/revlog.py:456
 msgid "index %s unknown format %d"
 msgstr ""
 
-#: mercurial/revlog.py:500
 msgid "no node"
 msgstr ""
 
-#: mercurial/revlog.py:884
 msgid "ambiguous identifier"
 msgstr ""
 
-#: mercurial/revlog.py:901
 msgid "no match found"
 msgstr ""
 
-#: mercurial/revlog.py:967
 msgid "incompatible revision flag %x"
 msgstr ""
 
-#: mercurial/revlog.py:1006
 msgid "%s not found in the transaction"
 msgstr ""
 
-#: mercurial/revlog.py:1220
 msgid "unknown base"
 msgstr ""
 
-#: mercurial/revlog.py:1253
 msgid "consistency error adding group"
 msgstr ""
 
-#: mercurial/simplemerge.py:414
 msgid "%s looks like a binary file."
 msgstr ""
 
-#: mercurial/simplemerge.py:429
 msgid "can only specify two labels."
 msgstr ""
 
-#: mercurial/simplemerge.py:454
 msgid "warning: conflicts during merge.\n"
 msgstr ""
 
-#: mercurial/sshrepo.py:29
 msgid "couldn't parse location %s"
 msgstr ""
 
-#: mercurial/sshrepo.py:48
 msgid "could not create remote repo"
 msgstr ""
 
-#: mercurial/sshrepo.py:77 mercurial/sshrepo.py:96 mercurial/sshrepo.py:108
 msgid "remote: "
 msgstr ""
 
-#: mercurial/sshrepo.py:81
 msgid "no suitable response from remote hg"
 msgstr ""
 
-#: mercurial/sshrepo.py:201 mercurial/sshrepo.py:225
 msgid "push refused: %s"
 msgstr ""
 
-#: mercurial/sshserver.py:164 mercurial/sshserver.py:187
 msgid "unsynced changes"
 msgstr ""
 
-#: mercurial/statichttprepo.py:112
 msgid "cannot lock static-http repository"
 msgstr ""
 
-#: mercurial/statichttprepo.py:116
 msgid "cannot create new static-http repository"
 msgstr ""
 
-#: mercurial/store.py:227
 msgid "invalid entry in fncache, line %s"
 msgstr ""
 
-#: mercurial/streamclone.py:46
 msgid "scanning\n"
 msgstr ""
 
-#: mercurial/streamclone.py:58
 msgid "%d files, %d bytes to transfer\n"
 msgstr "%d filer, skal overføre %d bytes\n"
 
-#: mercurial/streamclone.py:62
 msgid "sending %s (%d bytes)\n"
 msgstr ""
 
-#: mercurial/templater.py:19
 msgid "unmatched quotes"
 msgstr ""
 
-#: mercurial/templater.py:64
 msgid "style not found: %s"
 msgstr ""
 
-#: mercurial/templater.py:83
 msgid "%s:%s: parse error"
 msgstr ""
 
-#: mercurial/templater.py:94
 msgid "template file %s: %s"
 msgstr ""
 
-#: mercurial/templater.py:121
 msgid "Error expanding '%s%%%s'"
 msgstr ""
 
-#: mercurial/transaction.py:83
 msgid "transaction abort!\n"
 msgstr ""
 
-#: mercurial/transaction.py:89
 msgid "failed to truncate %s\n"
 msgstr ""
 
-#: mercurial/transaction.py:93
 msgid "rollback completed\n"
 msgstr ""
 
-#: mercurial/ui.py:124
 msgid "Not trusting file %s from untrusted user %s, group %s\n"
 msgstr ""
 
-#: mercurial/ui.py:151
 msgid ""
 "Failed to parse %s\n"
 "%s"
 msgstr ""
 
-#: mercurial/ui.py:154 mercurial/ui.py:262 mercurial/ui.py:308
 msgid "Ignored: %s\n"
 msgstr "Ignoreret: %s\n"
 
-#: mercurial/ui.py:181
 msgid "unable to open %s: %s"
 msgstr "kunne ikke åbne %s: %s"
 
-#: mercurial/ui.py:188
 msgid ""
 "failed to parse %s\n"
 "%s"
 msgstr ""
 
-#: mercurial/ui.py:258
 msgid ""
 "Error in configuration section [%s] parameter '%s':\n"
 "%s"
 msgstr ""
 
-#: mercurial/ui.py:272 mercurial/ui.py:317
 msgid "Ignoring untrusted configuration option %s.%s = %s\n"
 msgstr ""
 
-#: mercurial/ui.py:304
 msgid ""
 "Error in configuration section [%s]:\n"
 "%s"
 msgstr ""
 
-#: mercurial/ui.py:343
 msgid "enter a commit username:"
 msgstr "angiv et commit brugernavn:"
 
-#: mercurial/ui.py:347
 msgid "No username found, using '%s' instead\n"
 msgstr "Fandt intet brugernavn, bruger '%s' istedet\n"
 
-#: mercurial/ui.py:351
 msgid "Please specify a username."
 msgstr "Angiv venligst et brugernavn."
 
-#: mercurial/ui.py:353
 msgid "username %s contains a newline\n"
 msgstr "brugernavn %s indeholder et linieskift\n"
 
-#: mercurial/ui.py:436
 msgid "unrecognized response\n"
 msgstr ""
 
-#: mercurial/ui.py:438
 msgid "response expected"
 msgstr ""
 
-#: mercurial/ui.py:442
 msgid "password: "
 msgstr "kodeord: "
 
-#: mercurial/ui.py:463
 msgid "edit failed"
 msgstr "redigering fejlede"
 
-#: mercurial/url.py:111
 msgid "http authorization required"
 msgstr ""
 
-#: mercurial/url.py:113
 msgid "http authorization required\n"
 msgstr ""
 
-#: mercurial/url.py:114
 msgid "realm: %s\n"
 msgstr ""
 
-#: mercurial/url.py:116
 msgid "user: %s\n"
 msgstr ""
 
-#: mercurial/url.py:118
 msgid "user:"
 msgstr ""
 
-#: mercurial/url.py:163
 msgid "proxying through http://%s:%s\n"
 msgstr ""
 
-#: mercurial/url.py:289
 msgid "http auth: user %s, password %s\n"
 msgstr ""
 
-#: mercurial/util.py:117 mercurial/util.py:139
 msgid "%s, please check your locale settings"
 msgstr "%s, tjek venligst dine sprogindstillinger"
 
-#: mercurial/util.py:257
 msgid "command '%s' failed: %s"
 msgstr "kommandoen '%s' fejlede: %s"
 
-#: mercurial/util.py:819
 msgid "path contains illegal component: %s"
 msgstr "stien indeholder ugyldig komponent: %s"
 
-#: mercurial/util.py:825 mercurial/util.py:841
 msgid "path %r is inside repo %r"
 msgstr "stien %r er inde i repo %r"
 
-#: mercurial/util.py:837
 msgid "path %r traverses symbolic link %r"
 msgstr "stien %r følger symbolsk link %r"
 
-#: mercurial/util.py:874
 msgid "Hardlinks not supported"
 msgstr "Hardlinks er ikke supporteret"
 
-#: mercurial/util.py:948
 msgid "user name not available - set USERNAME environment variable"
 msgstr "der er ikke noget brugernavn - sæt USERNAME miljøvariabel"
 
-#: mercurial/util.py:1263 mercurial/util.py:1440
 msgid "exited with status %d"
 msgstr "afsluttede med status %d"
 
-#: mercurial/util.py:1443
 msgid "killed by signal %d"
 msgstr "dræbt af signal %d"
 
-#: mercurial/util.py:1446
 msgid "stopped by signal %d"
 msgstr "stoppet af signal %d"
 
-#: mercurial/util.py:1447
 msgid "invalid exit code"
 msgstr "ugyldig returkode"
 
-#: mercurial/util.py:1640
 msgid "could not symlink to %r: %s"
 msgstr "kunne ikke lave et symbolsk link til %r: %s"
 
-#: mercurial/util.py:1796
 msgid "invalid date: %r "
 msgstr "ugyldig dato: %r "
 
-#: mercurial/util.py:1802
 msgid "date exceeds 32 bits: %d"
 msgstr "dato overskrider 32 bit: %d"
 
-#: mercurial/util.py:1804
 msgid "impossible time zone offset: %d"
 msgstr "umuligt tidszone: %d"
 
-#: mercurial/util.py:1845
 msgid "invalid day spec: %s"
 msgstr ""
 
-#: mercurial/util.py:1966
 msgid "%.0f GB"
 msgstr "%.0f GB"
 
-#: mercurial/util.py:1967
 msgid "%.1f GB"
 msgstr "%.1f GB"
 
-#: mercurial/util.py:1968
 msgid "%.2f GB"
 msgstr "%.2f GB"
 
-#: mercurial/util.py:1969
 msgid "%.0f MB"
 msgstr "%.0f MB"
 
-#: mercurial/util.py:1970
 msgid "%.1f MB"
 msgstr "%.1f MB"
 
-#: mercurial/util.py:1971
 msgid "%.2f MB"
 msgstr "%.2f MB"
 
-#: mercurial/util.py:1972
 msgid "%.0f KB"
 msgstr "%.0f KB"
 
-#: mercurial/util.py:1973
 msgid "%.1f KB"
 msgstr "%.1f KB"
 
-#: mercurial/util.py:1974
 msgid "%.2f KB"
 msgstr "%.2f KB"
 
-#: mercurial/util.py:1975
 msgid "%.0f bytes"
 msgstr "%.0f bytes"
 
-#: mercurial/verify.py:32
 msgid "cannot verify bundle or remote repos"
 msgstr ""
 
-#: mercurial/verify.py:47
 msgid "interrupted"
 msgstr "afbrudt"
 
-#: mercurial/verify.py:57
 msgid "empty or missing %s"
 msgstr "tom eller mangler"
 
-#: mercurial/verify.py:62
 msgid "data length off by %d bytes"
 msgstr ""
 
-#: mercurial/verify.py:64
 msgid "index contains %d extra bytes"
 msgstr "indekset indeholder %d ekstra bytes"
 
-#: mercurial/verify.py:68
 msgid "warning: `%s' uses revlog format 1"
 msgstr "advarsel: '%s' bruger revlog format 1"
 
-#: mercurial/verify.py:70
 msgid "warning: `%s' uses revlog format 0"
 msgstr "advarsel: '%s' bruger revlog format 0"
 
-#: mercurial/verify.py:78
 msgid "rev %d point to %s changeset %d"
 msgstr ""
 
-#: mercurial/verify.py:80
 msgid " (expected %s)"
 msgstr " (forventede %s)"
 
-#: mercurial/verify.py:86
 msgid "unknown parent 1 %s of %s"
 msgstr "ukendt forældre 1 %s til %s"
 
-#: mercurial/verify.py:89
 msgid "unknown parent 2 %s of %s"
 msgstr "ukendt forældre 2 %s til %s"
 
-#: mercurial/verify.py:92
 msgid "checking parents of %s"
 msgstr "tjekkre forældrene til %s"
 
-#: mercurial/verify.py:95
 msgid "duplicate revision %d (%d)"
 msgstr "duplikeret revision %d (%d)"
 
-#: mercurial/verify.py:101
 msgid "repository uses revlog format %d\n"
 msgstr "arkivet bruger revlog format %d\n"
 
-#: mercurial/verify.py:107
 msgid "checking changesets\n"
 msgstr "tjekker ændringer\n"
 
-#: mercurial/verify.py:120
 msgid "unpacking changeset %s"
 msgstr "udpakker ændring %s"
 
-#: mercurial/verify.py:122
 msgid "checking manifests\n"
 msgstr ""
 
-#: mercurial/verify.py:134
 msgid "file without name in manifest"
 msgstr ""
 
-#: mercurial/verify.py:140
 msgid "reading manifest delta %s"
 msgstr ""
 
-#: mercurial/verify.py:142
 msgid "crosschecking files in changesets and manifests\n"
 msgstr ""
 
-#: mercurial/verify.py:146
 msgid "changeset refers to unknown manifest %s"
 msgstr ""
 
-#: mercurial/verify.py:152
 msgid "in changeset but not in manifest"
 msgstr ""
 
-#: mercurial/verify.py:162
 msgid "in manifest but not in changeset"
 msgstr ""
 
-#: mercurial/verify.py:164
 msgid "checking files\n"
 msgstr "tjekker filer\n"
 
-#: mercurial/verify.py:169
 msgid "cannot decode filename '%s'"
 msgstr "kan ikke dekode filnavn '%s'"
 
-#: mercurial/verify.py:181
 msgid "missing revlog!"
 msgstr "manglende revlog!"
 
-#: mercurial/verify.py:191
 msgid "%s not in manifests"
 msgstr ""
 
-#: mercurial/verify.py:201
 msgid "unpacked size is %s, %s expected"
 msgstr "udpakket størrelse er %s, forventede %s"
 
-#: mercurial/verify.py:204
 msgid "unpacking %s"
 msgstr "udpakker %s"
 
-#: mercurial/verify.py:211
 msgid "empty or missing copy source revlog %s:%s"
 msgstr ""
 
-#: mercurial/verify.py:214
 msgid "warning: %s@%s: copy source revision is nullid %s:%s"
 msgstr ""
 
-#: mercurial/verify.py:219
 msgid "checking rename of %s"
 msgstr "tjekker omdøbning af %s"
 
-#: mercurial/verify.py:225
 msgid "%s in manifests not found"
 msgstr ""
 
-#: mercurial/verify.py:228
 msgid "warning: orphan revlog '%s'"
 msgstr "advarsel: forældreløs revlog '%s'"
 
-#: mercurial/verify.py:230
 msgid "%d files, %d changesets, %d total revisions\n"
 msgstr "%d filer, %d ændringer, ialt %d revisioner\n"
 
-#: mercurial/verify.py:233
 msgid "%d warnings encountered!\n"
 msgstr "mødte %d advarsler!\n"
 
-#: mercurial/verify.py:235
 msgid "%d integrity errors encountered!\n"
 msgstr "fandt %d integritetsfejl!\n"
 
-#: mercurial/verify.py:237
 msgid "(first damaged changeset appears to be %d)\n"
 msgstr "(første beskadigede ændring er tilsyneladende %d)\n"
