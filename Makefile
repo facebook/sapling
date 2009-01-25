@@ -81,7 +81,7 @@ update-pot:
 	pygettext -d doc -p i18n --docstrings \
 	mercurial/commands.py hgext/*.py hgext/*/__init__.py
 	pygettext -d all -p i18n mercurial hgext doc
-	msgcat i18n/doc.pot i18n/all.pot > i18n/hg.pot
+	msgcat --sort-by-file i18n/doc.pot i18n/all.pot > i18n/hg.pot
 	rm i18n/doc.pot i18n/all.pot
 
 .PHONY: help all local build doc clean install install-bin install-doc \
