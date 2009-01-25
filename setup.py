@@ -141,7 +141,7 @@ class build_mo(build):
             mofile = join(modir, 'hg.mo')
             self.mkpath(modir)
             self.make_file([pofile], mofile, spawn,
-                           (['msgfmt', '-o', mofile, pofile],))
+                           (['msgfmt', '-v', '-c', '-o', mofile, pofile],))
             self.distribution.data_files.append((join('mercurial', modir),
                                                  [mofile]))
 
