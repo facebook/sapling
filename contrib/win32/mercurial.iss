@@ -56,6 +56,8 @@ Type: files; Name: {app}\Mercurial.url
 [Icons]
 Name: {group}\Uninstall Mercurial; Filename: {uninstallexe}
 Name: {group}\Mercurial Command Reference; Filename: {app}\Docs\hg.1.html
+Name: {group}\Mercurial Configuration Files; Filename: {app}\Docs\hgrc.5.html
+Name: {group}\Mercurial Ignore Files; Filename: {app}\Docs\hgignore.5.html
 Name: {group}\Mercurial Web Site; Filename: {app}\Mercurial.url
 
 [Run]
