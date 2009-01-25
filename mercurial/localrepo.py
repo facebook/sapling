@@ -1242,7 +1242,7 @@ class localrepository(repo.repository):
             n, l, i = top, [], 0
             f = 1
 
-            while n != bottom:
+            while n != bottom and n != nullid:
                 p = self.changelog.parents(n)[0]
                 if i == f:
                     l.append(n)
