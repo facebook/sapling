@@ -77,11 +77,17 @@ test-%:
 
 update-pot:
 	mkdir -p i18n
-	pygettext -d doc -p i18n --docstrings \
-	mercurial/commands.py hgext/*.py hgext/*/__init__.py
-	pygettext -d all -p i18n mercurial hgext doc
-	msgcat --sort-by-file i18n/doc.pot i18n/all.pot > i18n/hg.pot
-	rm i18n/doc.pot i18n/all.pot
+	pygettext -d hg -p i18n --docstrings \
+	  mercurial/commands.py hgext/*.py hgext/*/__init__.py
+        # All strings marked for translation in Mercurial contain
+        # ASCII characters only. But some files contain string
+        # literals like this '\037\213'. xgettext thinks it has to
+        # parse these them even though they are not marked for
+        # translation. Extracting with an explicit encoding of
+        # ISO-8859-1 will make xgettext "parse" and ignore them.
+	find mercurial hgext doc -name '*.py' | xargs \
+	  xgettext --from-code ISO-8859-1 --join --sort-by-file \
+	  -d hg -p i18n -o hg.pot
 
 .PHONY: help all local build doc clean install install-bin install-doc \
 	install-home install-home-bin install-home-doc dist dist-notests tests \
