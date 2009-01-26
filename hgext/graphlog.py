@@ -17,9 +17,8 @@ from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts, logopts, remoteopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
-from mercurial.util import Abort, canonpath
 from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
-from mercurial import hg, ui, url
+from mercurial import hg, ui, url, util
 
 def revisions(repo, start, stop):
     """cset DAG generator yielding (rev, node, [parents]) tuples
@@ -250,9 +249,9 @@ def get_limit(limit_opt):
         try:
             limit = int(limit_opt)
         except ValueError:
-            raise Abort(_("limit must be a positive integer"))
+            raise util.Abort(_("limit must be a positive integer"))
         if limit <= 0:
-            raise Abort(_("limit must be positive"))
+            raise util.Abort(_("limit must be positive"))
     else:
         limit = sys.maxint
     return limit
@@ -269,7 +268,7 @@ def check_unsupported_flags(opts):
                "only_merges", "user", "only_branch", "prune", "newest_first",
                "no_merges", "include", "exclude"]:
         if op in opts and opts[op]:
-            raise Abort(_("--graph option is incompatible with --%s") % op)
+            raise util.Abort(_("--graph option is incompatible with --%s") % op)
 
 
 def graphlog(ui, repo, path=None, **opts):
@@ -290,7 +289,7 @@ def graphlog(ui, repo, path=None, **opts):
         return
 
     if path:
-        path = canonpath(repo.root, os.getcwd(), path)
+        path = util.canonpath(repo.root, os.getcwd(), path)
     if path: # could be reset in canonpath
         revdag = filerevs(repo, path, start, stop)
     else:
