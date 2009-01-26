@@ -244,18 +244,6 @@ def ascii(ui, grapher):
         prev_node_index = node_index
         prev_n_columns_diff = n_columns_diff
 
-def get_limit(limit_opt):
-    if limit_opt:
-        try:
-            limit = int(limit_opt)
-        except ValueError:
-            raise util.Abort(_("limit must be a positive integer"))
-        if limit <= 0:
-            raise util.Abort(_("limit must be positive"))
-    else:
-        limit = sys.maxint
-    return limit
-
 def get_revs(repo, rev_opt):
     if rev_opt:
         revs = revrange(repo, rev_opt)
@@ -270,7 +258,6 @@ def check_unsupported_flags(opts):
         if op in opts and opts[op]:
             raise util.Abort(_("--graph option is incompatible with --%s") % op)
 
-
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
 
@@ -282,7 +269,7 @@ def graphlog(ui, repo, path=None, **opts):
     """
 
     check_unsupported_flags(opts)
-    limit = get_limit(opts["limit"])
+    limit = cmdutil.loglimit(opts)
     start, stop = get_revs(repo, opts["rev"])
     stop = max(stop, start - limit + 1)
     if start == nullrev:
