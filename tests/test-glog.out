@@ -381,3 +381,45 @@ o  changeset:   1:5ac72c0599bf
    date:        Thu Jan 01 00:00:00 1970 +0000
    summary:     two
 
+% incoming and outgoing
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 31 changesets with 31 changes to 31 files
+o  34:0eed7cd895e0
+|
+| o  33:2e9d1b521374
+|
+o  32:77f7d8438a3c
+|
+o  27:e9e08174cd30
+
+comparing with repo2
+searching for changes
+@  changeset:   34:0eed7cd895e0
+|  tag:         tip
+|  parent:      32:77f7d8438a3c
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
+|
+| o  changeset:   33:2e9d1b521374
+|    parent:      18:5a8c9a29ef81
+|    user:        test
+|    date:        Thu Jan 01 00:00:33 1970 +0000
+|    summary:     (33) head
+|
+o  changeset:   32:77f7d8438a3c
+|  parent:      27:e9e08174cd30
+|  parent:      31:82ee55204a79
+|  user:        test
+|  date:        Thu Jan 01 00:00:32 1970 +0000
+|  summary:     (32) expand
+|
+o  changeset:   27:e9e08174cd30
+   parent:      21:e758e8f4ace9
+   user:        test
+   date:        Thu Jan 01 00:00:27 1970 +0000
+   summary:     (27) collapse
+
