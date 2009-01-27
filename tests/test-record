@@ -264,3 +264,35 @@ hg record -d '19 0' -my <<EOF
 f
 EOF
 echo; hg tip -p
+
+echo % preserve chmod +x
+
+chmod +x f1
+echo a >> f1
+hg record -d '20 0' -mz <<EOF
+y
+y
+y
+EOF
+echo; hg tip --config diff.git=True -p
+
+echo % preserve execute permission on original
+
+echo b >> f1
+hg record -d '21 0' -maa <<EOF
+y
+y
+y
+EOF
+echo; hg tip --config diff.git=True -p
+
+echo % preserve chmod -x
+
+chmod -x f1
+echo c >> f1
+hg record -d '22 0' -mab <<EOF
+y
+y
+y
+EOF
+echo; hg tip --config diff.git=True -p

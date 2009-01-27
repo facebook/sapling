@@ -475,7 +475,9 @@ def dorecord(ui, repo, committer, *pats, **opts):
                 try:
                     ui.debug(_('applying patch\n'))
                     ui.debug(fp.getvalue())
-                    patch.internalpatch(fp, ui, 1, repo.root)
+                    pfiles = {}
+                    patch.internalpatch(fp, ui, 1, repo.root, files=pfiles)
+                    patch.updatedir(ui, repo, pfiles)
                 except patch.PatchError, err:
                     s = str(err)
                     if s:
