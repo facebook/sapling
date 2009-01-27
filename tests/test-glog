@@ -166,3 +166,10 @@ echo more >two
 hg commit -mmore
 hg glog two
 
+echo % incoming and outgoing
+cd ..
+hg clone -U -r31 repo repo2
+cd repo2
+hg incoming -q --graph | sed -e 's|$HGTMP|[HGTMP]|'
+cd ..
+hg -R repo outgoing --graph repo2

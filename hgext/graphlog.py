@@ -17,9 +17,8 @@ from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts, logopts, remoteopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
-from mercurial.util import Abort, canonpath
 from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
-from mercurial import hg, ui, url
+from mercurial import hg, ui, url, util
 
 def revisions(repo, start, stop):
     """cset DAG generator yielding (rev, node, [parents]) tuples
@@ -245,18 +244,6 @@ def ascii(ui, grapher):
         prev_node_index = node_index
         prev_n_columns_diff = n_columns_diff
 
-def get_limit(limit_opt):
-    if limit_opt:
-        try:
-            limit = int(limit_opt)
-        except ValueError:
-            raise Abort(_("limit must be a positive integer"))
-        if limit <= 0:
-            raise Abort(_("limit must be positive"))
-    else:
-        limit = sys.maxint
-    return limit
-
 def get_revs(repo, rev_opt):
     if rev_opt:
         revs = revrange(repo, rev_opt)
@@ -269,8 +256,7 @@ def check_unsupported_flags(opts):
                "only_merges", "user", "only_branch", "prune", "newest_first",
                "no_merges", "include", "exclude"]:
         if op in opts and opts[op]:
-            raise Abort(_("--graph option is incompatible with --%s") % op)
-
+            raise util.Abort(_("--graph option is incompatible with --%s") % op)
 
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
@@ -283,39 +269,56 @@ def graphlog(ui, repo, path=None, **opts):
     """
 
     check_unsupported_flags(opts)
-    limit = get_limit(opts["limit"])
+    limit = cmdutil.loglimit(opts)
     start, stop = get_revs(repo, opts["rev"])
     stop = max(stop, start - limit + 1)
     if start == nullrev:
         return
 
     if path:
-        path = canonpath(repo.root, os.getcwd(), path)
+        path = util.canonpath(repo.root, os.getcwd(), path)
     if path: # could be reset in canonpath
         revdag = filerevs(repo, path, start, stop)
     else:
         revdag = revisions(repo, start, stop)
 
-    repo_parents = repo.dirstate.parents()
-    displayer = show_changeset(ui, repo, opts, buffered=True)
-    def graphabledag():
-        for (ctx, parents) in revdag:
-            # log_strings is the list of all log strings to draw alongside
-            # the graph.
-            displayer.show(ctx)
-            lines = displayer.hunk.pop(ctx.rev()).split("\n")[:-1]
-            char = ctx.node() in repo_parents and '@' or 'o'
-            yield (ctx.rev(), parents, char, lines)
+    graphdag = graphabledag(ui, repo, revdag, opts)
+    ascii(ui, grapher(graphdag))
 
-    ascii(ui, grapher(graphabledag()))
-
-def outgoing_revs(ui, repo, dest, opts):
-    """cset DAG generator yielding (node, [parents]) tuples
-
-    This generator function walks through the revisions not found
-    in the destination
-    """
+def graphrevs(repo, nodes, opts):
+    nodes.reverse()
+    include = util.set(nodes)
     limit = cmdutil.loglimit(opts)
+    count = 0
+    for node in nodes:
+        if count >= limit:
+            break
+        ctx = repo[node]
+        parents = [p.rev() for p in ctx.parents() if p.node() in include]
+        parents.sort()
+        yield (ctx, parents)
+        count += 1
+
+def graphabledag(ui, repo, revdag, opts):
+    showparents = [ctx.node() for ctx in repo[None].parents()]
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    for (ctx, parents) in revdag:
+        displayer.show(ctx)
+        lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
+        char = ctx.node() in showparents and '@' or 'o'
+        yield (ctx.rev(), parents, char, lines)
+
+def goutgoing(ui, repo, dest=None, **opts):
+    """show the outgoing changesets alongside an ASCII revision graph
+
+    Print the outgoing changesets alongside a revision graph drawn with
+    ASCII characters.
+
+    Nodes printed as an @ character are parents of the working
+    directory.
+    """
+
+    check_unsupported_flags(opts)
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'),
         opts.get('rev'))
@@ -328,65 +331,11 @@ def outgoing_revs(ui, repo, dest, opts):
     if not o:
         ui.status(_("no changes found\n"))
         return
+
     o = repo.changelog.nodesbetween(o, revs)[0]
-    o.reverse()
-    revdict = {}
-    for n in o:
-        revdict[repo.changectx(n).rev()]=True
-    count = 0
-    for n in o:
-        if count >= limit:
-            break
-        ctx = repo.changectx(n)
-        parents = [p.rev() for p in ctx.parents() if p.rev() in revdict]
-        parents.sort()
-        yield (ctx, parents)
-        count += 1
-
-def goutgoing(ui, repo, dest=None, **opts):
-    """show the outgoing changesets alongside an ASCII revision graph
-
-    Print the outgoing changesets alongside a revision graph drawn with
-    ASCII characters.
-
-    Nodes printed as an @ character are parents of the working
-    directory.
-    """
-    check_unsupported_flags(opts)
-    revdag = outgoing_revs(ui, repo, dest, opts)
-    repo_parents = repo.dirstate.parents()
-    displayer = show_changeset(ui, repo, opts, buffered=True)
-    def graphabledag():
-        for (ctx, parents) in revdag:
-            # log_strings is the list of all log strings to draw alongside
-            # the graph.
-            displayer.show(ctx)
-            lines = displayer.hunk.pop(ctx.rev()).split("\n")[:-1]
-            char = ctx.node() in repo_parents and '@' or 'o'
-            yield (ctx.rev(), parents, char, lines)
-
-    ascii(ui, grapher(graphabledag()))
-
-def incoming_revs(other, chlist, opts):
-    """cset DAG generator yielding (node, [parents]) tuples
-
-    This generator function walks through the revisions of the destination
-    not found in repo
-    """
-    limit = cmdutil.loglimit(opts)
-    chlist.reverse()
-    revdict = {}
-    for n in chlist:
-        revdict[other.changectx(n).rev()]=True
-    count = 0
-    for n in chlist:
-        if count >= limit:
-            break
-        ctx = other.changectx(n)
-        parents = [p.rev() for p in ctx.parents() if p.rev() in revdict]
-        parents.sort()
-        yield (ctx, parents)
-        count += 1
+    revdag = graphrevs(repo, o, opts)
+    graphdag = graphabledag(ui, repo, revdag, opts)
+    ascii(ui, grapher(graphdag))
 
 def gincoming(ui, repo, source="default", **opts):
     """show the incoming changesets alongside an ASCII revision graph
@@ -417,6 +366,7 @@ def gincoming(ui, repo, source="default", **opts):
 
     cleanup = None
     try:
+
         fname = opts["bundle"]
         if fname or not other.local():
             # create a bundle (uncompressed if other repo is not local)
@@ -434,19 +384,12 @@ def gincoming(ui, repo, source="default", **opts):
                 other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
-        revdag = incoming_revs(other, chlist, opts)
+        revdag = graphrevs(other, chlist, opts)
         other_parents = []
         displayer = show_changeset(ui, other, opts, buffered=True)
-        def graphabledag():
-            for (ctx, parents) in revdag:
-                # log_strings is the list of all log strings to draw alongside
-                # the graph.
-                displayer.show(ctx)
-                lines = displayer.hunk.pop(ctx.rev()).split("\n")[:-1]
-                char = ctx.node() in other_parents and '@' or 'o'
-                yield (ctx.rev(), parents, char, lines)
+        graphdag = graphabledag(ui, repo, revdag, opts)
+        ascii(ui, grapher(graphdag))
 
-        ascii(ui, grapher(graphabledag()))
     finally:
         if hasattr(other, 'close'):
             other.close()
