@@ -96,7 +96,14 @@ except ImportError:
     pass
 
 try:
-    l = os.popen('hg id -it').read().split()
+    # execute hg out of this directory with a custom environment which
+    # includes the pure Python modules in mercurial/pure
+    pypath = os.environ.get('PYTHONPATH', '')
+    purepath = os.path.join('mercurial', 'pure')
+    os.environ['PYTHONPATH'] = os.pathsep.join(['mercurial', purepath, pypath])
+    cmd = '%s id -it' % os.path.join('.', 'hg')
+    l = os.popen(cmd).read().split()
+    os.environ['PYTHONPATH'] = pypath
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
         l.pop()
     version = l and l[-1] or 'unknown' # latest tag or revision number
