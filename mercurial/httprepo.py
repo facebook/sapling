@@ -38,6 +38,12 @@ class httprepository(repo.repository):
 
         self.urlopener = url.opener(ui, authinfo)
 
+    def __del__(self):
+        for h in self.urlopener.handlers:
+            h.close()
+            if hasattr(h, "close_all"):
+                h.close_all()
+
     def url(self):
         return self.path
 
