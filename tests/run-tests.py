@@ -67,6 +67,8 @@ parser.add_option("-n", "--nodiff", action="store_true",
     help="skip showing test changes")
 parser.add_option("--with-hg", type="string",
     help="test existing install at given location")
+parser.add_option("--pure", action="store_true",
+    help="use pure Python code instead of C extensions")
 
 for option, default in defaults.items():
     defaults[option] = int(os.environ.get(*default))
@@ -175,13 +177,14 @@ def install_hg():
     global python
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
+    pure = options.pure and "--pure" or ""
 
     # Run installer in hg root
     os.chdir(os.path.join(os.path.dirname(sys.argv[0]), '..'))
-    cmd = ('%s setup.py clean --all'
+    cmd = ('%s setup.py %s clean --all'
            ' install --force --prefix="%s" --install-lib="%s"'
            ' --install-scripts="%s" >%s 2>&1'
-           % (sys.executable, INST, PYTHONDIR, BINDIR, installerrs))
+           % (sys.executable, pure, INST, PYTHONDIR, BINDIR, installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
         if not verbose:
