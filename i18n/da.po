@@ -9,14 +9,14 @@
 # patch          rettelse
 # repo(sitory)   arkiv
 # revision       revision
-# tag            mærke
+# tag            mærkat
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-01-25 20:12+0100\n"
-"PO-Revision-Date: 2009-01-25 12:28+0100\n"
+"POT-Creation-Date: 2009-02-01 16:43+0100\n"
+"PO-Revision-Date: 2009-02-03 20:29+0100\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -33,7 +33,7 @@ msgid "OPTIONS"
 msgstr ""
 
 msgid "COMMANDS"
-msgstr ""
+msgstr "KOMMANDOER"
 
 msgid "    options:\n"
 msgstr ""
@@ -1028,25 +1028,25 @@ msgid "connecting to %s\n"
 msgstr ""
 
 msgid "CVS pserver authentication failed"
-msgstr ""
+msgstr "CVS pserver godkendelse fejlede"
 
 msgid "server sucks"
 msgstr ""
 
 #, python-format
 msgid "%d bytes missing from remote file"
-msgstr ""
+msgstr "%d byte mangler i fjernfilen"
 
 #, python-format
 msgid "cvs server: %s\n"
-msgstr ""
+msgstr "cvs server: %s\n"
 
 #, python-format
 msgid "unknown CVS response: %s"
-msgstr ""
+msgstr "ukendt CVS svar: %s"
 
 msgid "collecting CVS rlog\n"
-msgstr ""
+msgstr "samler CVS rlog\n"
 
 #, python-format
 msgid "reading cvs log cache %s\n"
@@ -1089,18 +1089,18 @@ msgid "%d log entries\n"
 msgstr ""
 
 msgid "creating changesets\n"
-msgstr ""
+msgstr "opretter ændringer\n"
 
 #, python-format
 msgid "%d changeset entries\n"
-msgstr ""
+msgstr "%d ændringer\n"
 
 msgid "Python ElementTree module is not available"
 msgstr ""
 
 #, python-format
 msgid "cleaning up %s\n"
-msgstr ""
+msgstr "rydder op %s\n"
 
 msgid "internal calling inconsistency"
 msgstr ""
@@ -1141,15 +1141,15 @@ msgstr ""
 
 #, python-format
 msgid "computing changeset between %s and %s...\n"
-msgstr ""
+msgstr "beregner ændringer mellem %s og %s...\n"
 
 #, python-format
 msgid "obtaining revision %s...\n"
-msgstr ""
+msgstr "henter revision %s...\n"
 
 #, python-format
 msgid "analysing revision %s...\n"
-msgstr ""
+msgstr "analyserer revision %s...\n"
 
 #, python-format
 msgid "could not parse cat-log of %s"
@@ -1523,7 +1523,7 @@ msgstr ""
 
 #, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
-msgstr ""
+msgstr "ny ændring %d:%s fletter fjernændringer sammen med lokale\n"
 
 msgid "a specific revision you would like to pull"
 msgstr ""
@@ -1572,18 +1572,18 @@ msgid "%s Note: This key has expired (signed by: \"%s\")\n"
 msgstr ""
 
 msgid "list signed changesets"
-msgstr ""
+msgstr "vis underskrevne ændringer"
 
 #, python-format
 msgid "%s:%d node does not exist\n"
-msgstr ""
+msgstr "%s:%d knude findes ikke\n"
 
 msgid "verify all the signatures there may be for a particular revision"
-msgstr ""
+msgstr "verificer alle underskrifter der måtte være for en given revision"
 
 #, python-format
 msgid "No valid signature for %s\n"
-msgstr ""
+msgstr "Ingen gyldig signatur for %s\n"
 
 msgid "associate a string to a key (username, comment)"
 msgstr ""
@@ -1602,7 +1602,7 @@ msgid "uncommitted merge - please provide a specific revision"
 msgstr ""
 
 msgid "Error while signing"
-msgstr ""
+msgstr "Fejl ved underskrivning"
 
 msgid ""
 "working copy of .hgsigs is changed (please commit .hgsigs manually or use --"
@@ -1698,12 +1698,6 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "limit must be a positive integer"
-msgstr ""
-
-msgid "limit must be positive"
-msgstr ""
-
 #, python-format
 msgid "--graph option is incompatible with --%s"
 msgstr ""
@@ -1720,21 +1714,6 @@ msgid ""
 msgstr ""
 
 msgid ""
-"cset DAG generator yielding (node, [parents]) tuples\n"
-"\n"
-"    This generator function walks through the revisions not found\n"
-"    in the destination\n"
-"    "
-msgstr ""
-
-#, python-format
-msgid "comparing with %s\n"
-msgstr "sammenligner med %s\n"
-
-msgid "no changes found\n"
-msgstr "fandt ingen ændringer\n"
-
-msgid ""
 "show the outgoing changesets alongside an ASCII revision graph\n"
 "\n"
 "    Print the outgoing changesets alongside a revision graph drawn with\n"
@@ -1745,13 +1724,12 @@ msgid ""
 "    "
 msgstr ""
 
-msgid ""
-"cset DAG generator yielding (node, [parents]) tuples\n"
-"\n"
-"    This generator function walks through the revisions of the destination\n"
-"    not found in repo\n"
-"    "
-msgstr ""
+#, python-format
+msgid "comparing with %s\n"
+msgstr "sammenligner med %s\n"
+
+msgid "no changes found\n"
+msgstr "fandt ingen ændringer\n"
 
 msgid ""
 "show the incoming changesets alongside an ASCII revision graph\n"
@@ -2676,9 +2654,9 @@ msgstr "rydder op i arbejdsbiblioteket..."
 msgid "errors during apply, please fix and refresh %s\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "now at: %s\n"
-msgstr "Nu ved: %s\n"
+msgstr "nu ved: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
@@ -2704,9 +2682,8 @@ msgstr ""
 msgid "deletions found between repo revs"
 msgstr ""
 
-#, fuzzy
 msgid "patch queue now empty\n"
-msgstr "rettelse %s er tom\n"
+msgstr "rettelseskøen er nu tom\n"
 
 msgid "cannot refresh a revision with children"
 msgstr ""
@@ -2912,16 +2889,14 @@ msgstr "udskriver navnet på den nuværende rettelse"
 msgid "print the name of the next patch"
 msgstr "udskriver navnet på den næste rettelse"
 
-#, fuzzy
 msgid "all patches applied\n"
-msgstr "Alle patches er anvendt\n"
+msgstr "alle rettelser er anvendt\n"
 
 msgid "print the name of the previous patch"
 msgstr "udskriver navnet på den forgående rettelse"
 
-#, fuzzy
 msgid "only one patch applied\n"
-msgstr "Kun én patch anvendt\n"
+msgstr "kun én rettelse er anvendt\n"
 
 msgid ""
 "create a new patch\n"
@@ -3448,10 +3423,10 @@ msgid "hg qunapplied [-s] [PATCH]"
 msgstr ""
 
 msgid "finish all applied changesets"
-msgstr ""
+msgstr "afslut alle anvendte ændringer"
 
 msgid "hg qfinish [-a] [REV...]"
-msgstr ""
+msgstr "hg qfinish [-a] [REV...]"
 
 msgid ""
 "hook extension to email notifications on commits/pushes\n"
@@ -3540,11 +3515,11 @@ msgstr ""
 
 #, python-format
 msgid "%s: %d new changesets"
-msgstr ""
+msgstr "%s: %d nye ændringer"
 
 #, python-format
 msgid "notify: sending %d subscribers %d changes\n"
-msgstr ""
+msgstr "notify: sender %d abonnenter %d ændringer\n"
 
 #, python-format
 msgid ""
@@ -4368,7 +4343,7 @@ msgstr ""
 
 #, python-format
 msgid "%s: empty changeset"
-msgstr ""
+msgstr "%s: tom ændring"
 
 msgid "Fix up the merge and run hg transplant --continue"
 msgstr ""
@@ -4400,7 +4375,7 @@ msgid "remove changelog journal"
 msgstr ""
 
 msgid "interactively transplant changesets"
-msgstr ""
+msgstr "transplanter ændringer interaktivt"
 
 msgid "apply changeset? [ynmpcq?]:"
 msgstr ""
@@ -4471,7 +4446,7 @@ msgid "pull all changesets up to BRANCH"
 msgstr ""
 
 msgid "skip over REV"
-msgstr ""
+msgstr "spring over REV"
 
 msgid "merge at REV"
 msgstr ""
@@ -4644,6 +4619,12 @@ msgstr ""
 #, python-format
 msgid "can't read commit message '%s': %s"
 msgstr "Kan ikke lase commit besked '%s': %s"
+
+msgid "limit must be a positive integer"
+msgstr ""
+
+msgid "limit must be positive"
+msgstr ""
 
 msgid "too many revisions specified"
 msgstr "der er specificeret for mange revisioner"
@@ -4942,16 +4923,16 @@ msgid ""
 msgstr ""
 
 msgid "please specify just one revision"
-msgstr ""
+msgstr "angiv venligst kun en revision"
 
 msgid "please specify a revision to backout"
 msgstr ""
 
 msgid "cannot back out change on a different branch"
-msgstr ""
+msgstr "kan ikke bakke en ændring på en anden gren ud"
 
 msgid "cannot back out a change with no parents"
-msgstr ""
+msgstr "kan ikke bakke en ændring ud uden forældre"
 
 msgid "cannot back out a merge changeset without --parent"
 msgstr ""
@@ -4969,7 +4950,7 @@ msgstr ""
 
 #, python-format
 msgid "changeset %s backs out changeset %s\n"
-msgstr ""
+msgstr "ændring %s bakker ændring %s ud\n"
 
 #, python-format
 msgid "merging with changeset %s\n"
@@ -6211,7 +6192,7 @@ msgstr ""
 
 #, python-format
 msgid "Added tag %s for changeset %s"
-msgstr ""
+msgstr "Tilføjede mærkat %s til ændring %s"
 
 msgid ""
 "list repository tags\n"
@@ -6220,6 +6201,11 @@ msgid ""
 "    is used, a third column \"local\" is printed for local tags.\n"
 "    "
 msgstr ""
+"vis arkivmærkater\n"
+"\n"
+"    Viser både normale og lokale mærkater. Når -v/--verbose flaget\n"
+"    bruges, udskrives en tredje kolonne \"local\" for lokale mærkater.\n"
+"    "
 
 msgid ""
 "show the tip revision\n"
@@ -6410,25 +6396,25 @@ msgid "[OPTION]... [FILE]..."
 msgstr ""
 
 msgid "annotate the specified revision"
-msgstr ""
+msgstr "annotér den angivne revision"
 
 msgid "follow file copies and renames"
-msgstr ""
+msgstr "følg kopier og omdøbninger"
 
 msgid "list the author (long with -v)"
-msgstr ""
+msgstr "vis forfatteren (lang med -v)"
 
 msgid "list the date (short with -q)"
-msgstr ""
+msgstr "vis datoen (kort med -q)"
 
 msgid "list the revision number (default)"
-msgstr ""
+msgstr "vis revisionsnummeret (standard)"
 
 msgid "list the changeset"
-msgstr ""
+msgstr "vis ændringen"
 
 msgid "show line number at the first appearance"
-msgstr ""
+msgstr "vil linienummeret for den første forekomst"
 
 msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
 msgstr ""
@@ -6455,7 +6441,7 @@ msgid "parent to choose when backing out merge"
 msgstr ""
 
 msgid "revision to backout"
-msgstr ""
+msgstr "revision som skal bakkes ud"
 
 msgid "[OPTION]... [-r] REV"
 msgstr ""
@@ -6473,10 +6459,10 @@ msgid "skip testing changeset"
 msgstr ""
 
 msgid "use command to check changeset state"
-msgstr ""
+msgstr "brug kommando for at tjekke tilstanden af ændringen"
 
 msgid "do not update to target"
-msgstr ""
+msgstr "undlad at opdatere til målet"
 
 msgid "[-gbsr] [-c CMD] [REV]"
 msgstr ""
@@ -6497,7 +6483,7 @@ msgid "[-a]"
 msgstr ""
 
 msgid "run even when remote repository is unrelated"
-msgstr ""
+msgstr "kør selv hvis fjernarkivet er urelateret"
 
 msgid "a changeset up to which you would like to bundle"
 msgstr ""
@@ -6662,7 +6648,7 @@ msgid "show branch"
 msgstr ""
 
 msgid "show tags"
-msgstr ""
+msgstr "vis mærkater"
 
 msgid "[-nibt] [-r REV] [SOURCE]"
 msgstr ""
@@ -6941,7 +6927,7 @@ msgstr ""
 
 #, python-format
 msgid "  searching for copies back to rev %d\n"
-msgstr ""
+msgstr "  søger efter kopier tilbage til revision %d\n"
 
 #, python-format
 msgid ""
@@ -7618,7 +7604,7 @@ msgid ""
 msgstr ""
 
 msgid "Url Paths"
-msgstr ""
+msgstr "URL-stier"
 
 msgid ""
 "\n"
@@ -7784,11 +7770,11 @@ msgid "warning: %s hook %s\n"
 msgstr ""
 
 msgid "connection ended unexpectedly"
-msgstr ""
+msgstr "forbindelsen blev uventet afsluttet"
 
 #, python-format
 msgid "unsupported URL component: \"%s\""
-msgstr ""
+msgstr "ikke-understøttet URL-komponent: \"%s\""
 
 #, python-format
 msgid "using %s\n"
@@ -7796,10 +7782,10 @@ msgstr "bruger %s\n"
 
 #, python-format
 msgid "capabilities: %s\n"
-msgstr ""
+msgstr "kapaciteter: %s\n"
 
 msgid "operation not supported over http"
-msgstr ""
+msgstr "operationen understøttes ikke over http"
 
 #, python-format
 msgid "sending %s command\n"
@@ -7936,11 +7922,11 @@ msgstr ""
 
 #, python-format
 msgid "repository %s"
-msgstr ""
+msgstr "arkiv %s"
 
 #, python-format
 msgid "working directory of %s"
-msgstr ""
+msgstr "arbejdsbibliotek for %s"
 
 #, python-format
 msgid " %s: searching for copy revision for %s\n"
@@ -8062,13 +8048,13 @@ msgstr ""
 
 #, python-format
 msgid "%d total queries\n"
-msgstr ""
+msgstr "%d forespørgsler i alt\n"
 
 msgid "common changesets up to "
 msgstr ""
 
 msgid "requesting all changes\n"
-msgstr ""
+msgstr "anmoder om alle ændringer\n"
 
 msgid ""
 "Partial pull cannot be done because other repository doesn't support "
@@ -8262,7 +8248,7 @@ msgstr ""
 
 #, python-format
 msgid "getting %s\n"
-msgstr ""
+msgstr "henter %s\n"
 
 #, python-format
 msgid "moving %s to %s\n"
@@ -8316,7 +8302,7 @@ msgstr ""
 
 #, python-format
 msgid "patching file %s\n"
-msgstr ""
+msgstr "retter fil %s\n"
 
 #, python-format
 msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
@@ -8328,7 +8314,7 @@ msgstr ""
 
 #, python-format
 msgid "file %s already exists\n"
-msgstr ""
+msgstr "filen %s eksisterer allerede\n"
 
 #, python-format
 msgid "Hunk #%d succeeded at %d %s(offset %d %s).\n"
@@ -8444,7 +8430,7 @@ msgid "could not create remote repo"
 msgstr ""
 
 msgid "remote: "
-msgstr ""
+msgstr "fjern: "
 
 msgid "no suitable response from remote hg"
 msgstr ""
@@ -8584,10 +8570,10 @@ msgstr ""
 
 #, python-format
 msgid "user: %s\n"
-msgstr ""
+msgstr "bruger: %s\n"
 
 msgid "user:"
-msgstr ""
+msgstr "bruger:"
 
 #, python-format
 msgid "proxying through http://%s:%s\n"
@@ -8595,7 +8581,7 @@ msgstr ""
 
 #, python-format
 msgid "http auth: user %s, password %s\n"
-msgstr ""
+msgstr "http godkendelse: bruger %s, kodeord %s\n"
 
 #, python-format
 msgid "%s, please check your locale settings"
@@ -8696,7 +8682,7 @@ msgstr "%.2f KB"
 
 #, python-format
 msgid "%.0f bytes"
-msgstr "%.0f bytes"
+msgstr "%.0f byte"
 
 msgid "cannot verify bundle or remote repos"
 msgstr ""
@@ -8704,9 +8690,9 @@ msgstr ""
 msgid "interrupted"
 msgstr "afbrudt"
 
-#, fuzzy, python-format
+#, python-format
 msgid "empty or missing %s"
-msgstr "tom eller mangler"
+msgstr "tom eller mangler %s"
 
 #, python-format
 msgid "data length off by %d bytes"
@@ -8839,6 +8825,3 @@ msgstr "fandt %d integritetsfejl!\n"
 #, python-format
 msgid "(first damaged changeset appears to be %d)\n"
 msgstr "(første beskadigede ændring er tilsyneladende %d)\n"
-
-#~ msgid "No patches applied\n"
-#~ msgstr "Ingen rettelser er anvendt\n"
