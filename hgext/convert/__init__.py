@@ -227,7 +227,7 @@ cmdtable = {
           ('', 'parents', '', _('show parent changesets')),
           ('', 'ancestors', '', _('show current changeset in ancestor branches')),
           # Options that are ignored for compatibility with cvsps-2.1
-          ('A', 'cvs-direct', None, 'ignored for compatibility'),
+          ('A', 'cvs-direct', None, _('ignored for compatibility')),
          ],
-         'hg debugcvsps [OPTION]... [PATH]...'),
+         _('hg debugcvsps [OPTION]... [PATH]...')),
 }
