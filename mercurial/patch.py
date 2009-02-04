@@ -52,9 +52,9 @@ def extract(ui, fileobj):
 
     # attempt to detect the start of a patch
     # (this heuristic is borrowed from quilt)
-    diffre = re.compile(r'^(?:Index:[ \t]|diff[ \t]|RCS file: |' +
-                        'retrieving revision [0-9]+(\.[0-9]+)*$|' +
-                        '(---|\*\*\*)[ \t])', re.MULTILINE)
+    diffre = re.compile(r'^(?:Index:[ \t]|diff[ \t]|RCS file: |'
+                        r'retrieving revision [0-9]+(\.[0-9]+)*$|'
+                        r'(---|\*\*\*)[ \t])', re.MULTILINE)
 
     fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
     tmpfp = os.fdopen(fd, 'w')
