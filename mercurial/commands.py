@@ -835,7 +835,7 @@ def debugdate(ui, date, range=None, **opts):
 def debugindex(ui, file_):
     """dump the contents of an index file"""
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
-    ui.write("   rev    offset  length   base linkrev" +
+    ui.write("   rev    offset  length   base linkrev"
              " nodeid       p1           p2\n")
     for i in r:
         node = r.node(i)
