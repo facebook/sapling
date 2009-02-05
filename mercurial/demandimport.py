@@ -24,6 +24,7 @@ These imports will not be delayed:
   b = __import__(a)
 '''
 
+import __builtin__
 _origimport = __import__
 
 class _demandmod(object):
@@ -126,9 +127,9 @@ ignore = [
 
 def enable():
     "enable global demand-loading of modules"
-    __builtins__["__import__"] = _demandimport
+    __builtin__.__import__ = _demandimport
 
 def disable():
     "disable global demand-loading of modules"
-    __builtins__["__import__"] = _origimport
+    __builtin__.__import__ = _origimport
 
