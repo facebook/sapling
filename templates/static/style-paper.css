@@ -54,6 +54,12 @@ body {
   font-weight: bold;
 }
 
+.menu img { 
+  width: 75px;
+  height: 90px;
+  border: 0;
+}
+
 .menu a { color: black; display: block; }
 
 .search {
@@ -62,7 +68,7 @@ body {
   right: 2em;
 }
 
-form.search span {
+form.search div#hint {
   display: none;
   position: absolute;
   top: 40px;
@@ -76,7 +82,7 @@ form.search span {
   -webkit-border-radius: 5px; /* this is just for Safari */
 }
 
-form.search:hover span { display: block; }
+form.search:hover div#hint { display: block; }
 
 a { text-decoration:none; }
 .age { white-space:nowrap; }

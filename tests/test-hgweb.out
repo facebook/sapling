@@ -21,11 +21,10 @@ foo
 % should give a 404 - static file that does not exist
 404 Not Found
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -54,8 +53,8 @@ foo
 <form class="search" action="/log">
 
 <p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">
@@ -91,11 +90,10 @@ error: no such method: spam
 error: bork@2ef0ac749a14: not found in manifest
 404 Not Found
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -124,8 +122,8 @@ error: bork@2ef0ac749a14: not found in manifest
 <form class="search" action="/log">
 
 <p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">

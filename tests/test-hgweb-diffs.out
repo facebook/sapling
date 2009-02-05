@@ -6,11 +6,10 @@ adding b
 % revision
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -21,7 +20,7 @@ adding b
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
  <li><a href="/shortlog/0cd96de13884">log</a></li>
@@ -45,9 +44,9 @@ adding b
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">a</div>
@@ -98,11 +97,10 @@ files, or words in the commit message</span>
 % diff removed file
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -114,7 +112,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
@@ -139,10 +137,10 @@ files, or words in the commit message</span>
 <h3>diff a @ 1:78e4ebad7cdf</h3>
 
 <form class="search" action="/log">
-
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p></p>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">b</div>
@@ -188,11 +186,10 @@ files, or words in the commit message</span>
 % revision
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -203,7 +200,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
  <li><a href="/shortlog/0cd96de13884">log</a></li>
@@ -227,9 +224,9 @@ files, or words in the commit message</span>
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">a</div>
@@ -282,11 +279,10 @@ files, or words in the commit message</span>
 % diff removed file
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -298,7 +294,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
@@ -323,10 +319,10 @@ files, or words in the commit message</span>
 <h3>diff a @ 1:78e4ebad7cdf</h3>
 
 <form class="search" action="/log">
-
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p></p>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">b</div>

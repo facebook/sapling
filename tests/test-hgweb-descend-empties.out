@@ -7,11 +7,10 @@ adding d1/d2/foo
 % manifest with descending
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -23,7 +22,7 @@ adding d1/d2/foo
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/9087c84a0f5d">log</a></li>
@@ -45,9 +44,9 @@ adding d1/d2/foo
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <table class="bigtable">
@@ -61,7 +60,7 @@ files, or words in the commit message</span>
   <td class="size"></td>
   <td class="permissions">drwxr-xr-x</td>
 </tr>
-<tr class="fileline parity1"><td class="name"><a href="/file/9087c84a0f5d/a1"><img src="/static/coal-folder.png"> a1/</a> <a href="/file/9087c84a0f5d/a1/a2/a3/a4">a2/a3/a4</a><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr><tr class="fileline parity0"><td class="name"><a href="/file/9087c84a0f5d/b1"><img src="/static/coal-folder.png"> b1/</a> <a href="/file/9087c84a0f5d/b1/b2">b2</a><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr><tr class="fileline parity1"><td class="name"><a href="/file/9087c84a0f5d/d1"><img src="/static/coal-folder.png"> d1/</a> <a href="/file/9087c84a0f5d/d1/d2">d2</a><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr>
+<tr class="fileline parity1"><td class="name"><a href="/file/9087c84a0f5d/a1"><img src="/static/coal-folder.png" alt="dir."/> a1/</a> <a href="/file/9087c84a0f5d/a1/a2/a3/a4">a2/a3/a4</a></td><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr><tr class="fileline parity0"><td class="name"><a href="/file/9087c84a0f5d/b1"><img src="/static/coal-folder.png" alt="dir."/> b1/</a> <a href="/file/9087c84a0f5d/b1/b2">b2</a></td><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr><tr class="fileline parity1"><td class="name"><a href="/file/9087c84a0f5d/d1"><img src="/static/coal-folder.png" alt="dir."/> d1/</a> <a href="/file/9087c84a0f5d/d1/d2">d2</a></td><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr>
 
 </table>
 </div>

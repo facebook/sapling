@@ -121,19 +121,18 @@ adding foo
 </feed>
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: log</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log" title="Atom feed for test">
+   href="/atom-log" title="Atom feed for test" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log" title="RSS feed for test">
+   href="/rss-log" title="RSS feed for test" />
 </head>
 <body>
 
@@ -141,7 +140,7 @@ adding foo
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li class="active">log</li>
@@ -163,9 +162,9 @@ adding foo
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate">rev 1: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </div>
@@ -200,11 +199,10 @@ files, or words in the commit message</span>
 
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -215,7 +213,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
  <li><a href="/shortlog/2ef0ac749a14">log</a></li>
@@ -239,9 +237,9 @@ files, or words in the commit message</span>
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">base</div>
@@ -326,11 +324,10 @@ drwxr-xr-x da
 
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -342,7 +339,7 @@ drwxr-xr-x da
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/a4f92ed23982">log</a></li>
@@ -368,9 +365,9 @@ drwxr-xr-x da
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">Added tag 1.0 for changeset 2ef0ac749a14</div>

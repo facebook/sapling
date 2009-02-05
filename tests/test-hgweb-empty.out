@@ -1,18 +1,17 @@
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: log</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log" title="Atom feed for test">
+   href="/atom-log" title="Atom feed for test" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log" title="RSS feed for test">
+   href="/rss-log" title="RSS feed for test" />
 </head>
 <body>
 
@@ -20,7 +19,7 @@
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li class="active">log</li>
@@ -42,9 +41,9 @@
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate">rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> </div>
@@ -69,19 +68,18 @@ files, or words in the commit message</span>
 
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: log</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log" title="Atom feed for test">
+   href="/atom-log" title="Atom feed for test" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log" title="RSS feed for test">
+   href="/rss-log" title="RSS feed for test" />
 </head>
 <body>
 
@@ -89,7 +87,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li class="active">log</li>
@@ -111,9 +109,9 @@ files, or words in the commit message</span>
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate">rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> </div>
@@ -138,19 +136,18 @@ files, or words in the commit message</span>
 
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: revision graph</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log" title="Atom feed for test: log">
+   href="/atom-log" title="Atom feed for test: log" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log" title="RSS feed for test: log">
+   href="/rss-log" title="RSS feed for test: log" />
 <!--[if IE]><script type="text/javascript" src="/static/excanvas.js"></script><![endif]-->
 </head>
 <body>
@@ -159,7 +156,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/000000000000">log</a></li>
@@ -178,9 +175,9 @@ files, or words in the commit message</span>
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate">
@@ -189,7 +186,7 @@ files, or words in the commit message</span>
 | rev -1: <a href="/graph/000000000000">(0)</a> <a href="/graph/tip">tip</a> 
 </div>
 
-<noscript>The revision graph only works with JavaScript-enabled browsers.</noscript>
+<noscript><p>The revision graph only works with JavaScript-enabled browsers.</p></noscript>
 
 <div id="wrapper">
 <ul id="nodebgs"></ul>
@@ -282,11 +279,10 @@ graph.render(data);
 
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -298,7 +294,7 @@ graph.render(data);
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/000000000000">log</a></li>
@@ -320,9 +316,9 @@ graph.render(data);
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <table class="bigtable">
