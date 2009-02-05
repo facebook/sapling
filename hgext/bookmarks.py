@@ -317,5 +317,5 @@ cmdtable = {
           ('r', 'rev', '', _('revision')),
           ('d', 'delete', False, _('delete a given bookmark')),
           ('m', 'rename', '', _('rename a given bookmark'))],
-         _('hg bookmarks [-f] [-d] [-m NAME] [-r NAME] [NAME]')),
+         _('hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]')),
 }
