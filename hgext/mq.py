@@ -1737,7 +1737,10 @@ def clone(ui, source, dest=None, **opts):
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(ui, ui.expandpath(source))
-    patchespath = opts['patches'] or patchdir(sr)
+    if opts['patches']:
+        patchespath = ui.expandpath(opts['patches'])
+    else:
+        patchespath = patchdir(sr)
     try:
         pr = hg.repository(ui, patchespath)
     except error.RepoError:

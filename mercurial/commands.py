@@ -645,6 +645,9 @@ def commit(ui, repo, *pats, **opts):
     elif ui.verbose:
         ui.write(_('committed changeset %d:%s\n') % (rev,short(node)))
 
+    ms = merge_.mergestate(repo)
+    ms.reset(node)
+
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
 
