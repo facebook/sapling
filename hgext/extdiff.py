@@ -117,7 +117,19 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
       another one and more than 1 file is changed
     - just invoke the diff for a single file in the working dir
     '''
-    node1, node2 = cmdutil.revpair(repo, opts['rev'])
+
+    revs = opts.get('rev')
+    change = opts.get('change')
+
+    if revs and change:
+        msg = _('cannot specify --rev and --change at the same time')
+        raise util.Abort(msg)
+    elif change:
+        node2 = repo.lookup(change)
+        node1 = repo[node2].parents()[0].node()
+    else:
+        node1, node2 = cmdutil.revpair(repo, revs)
+
     matcher = cmdutil.match(repo, pats, opts)
     modified, added, removed = repo.status(node1, node2, matcher)[:3]
     if not (modified or added or removed):
@@ -205,6 +217,7 @@ cmdtable = {
      [('p', 'program', '', _('comparison program to run')),
       ('o', 'option', [], _('pass option to comparison program')),
       ('r', 'rev', [], _('revision')),
+      ('c', 'change', '', _('change made by revision')),
      ] + commands.walkopts,
      _('hg extdiff [OPT]... [FILE]...')),
     }

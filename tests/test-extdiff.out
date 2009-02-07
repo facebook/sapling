@@ -20,6 +20,7 @@ options:
 
  -o --option   pass option to comparison program
  -r --rev      revision
+ -c --change   change made by revision
  -I --include  include names matching the given patterns
  -X --exclude  exclude names matching the given patterns
 
@@ -27,8 +28,9 @@ use "hg -v help falabala" to show global options
 diffing a.8a5febb7f867/a a.34eed99112ab/a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
-1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+diffing a.2a13a4d2da36/a [tmp]/test-extdiff/a/a
+diffing a.8a5febb7f867/a a.34eed99112ab/a
+diffing a.2a13a4d2da36/a a.46c0e4daeb72/a
 diff-like tools yield a non-zero exit code
-diffing a.34eed99112ab/c [tmp]/test-extdiff/a/c
