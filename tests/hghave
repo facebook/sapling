@@ -27,7 +27,7 @@ def has_baz():
 def has_bzr():
     try:
         import bzrlib
-        return True
+        return bzrlib.__doc__ != None
     except ImportError:
         return False
 
