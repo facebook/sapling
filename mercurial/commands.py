@@ -3325,7 +3325,8 @@ table = {
          [('a', 'all', None, _('remerge all unresolved files')),
           ('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
-          ('u', 'unmark', None, _('unmark files as resolved'))],
+          ('u', 'unmark', None, _('unmark files as resolved'))]
+          + walkopts,
           _('[OPTION]... [FILE]...')),
     "revert":
         (revert,
