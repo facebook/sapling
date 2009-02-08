@@ -2109,13 +2109,14 @@ def parents(ui, repo, file_=None, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in p:
         if n != nullid:
-             displayer.show(repo[n])
+            displayer.show(repo[n])
 
 def paths(ui, repo, search=None):
     """show aliases for remote repositories
 
-     Show definition of symbolic path name NAME. If no name is given, show
-     definition of available names.
+    Show definition of symbolic path name NAME. If no name is given, show
+    definition of available names.
+
     Path names are defined in the [paths] section of /etc/mercurial/hgrc
     and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.
 
