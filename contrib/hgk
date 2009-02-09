@@ -439,7 +439,7 @@ proc makewindow {} {
     global entries sha1entry sha1string sha1but
     global maincursor textcursor curtextcursor
     global rowctxmenu gaudydiff mergemax
-    global hgvdiff bgcolor
+    global hgvdiff bgcolor fgcolor
 
     menu .bar
     .bar add cascade -label "File" -menu .bar.file
@@ -547,7 +547,7 @@ proc makewindow {} {
     .ctop add .ctop.cdet
     frame .ctop.cdet.left
     set ctext .ctop.cdet.left.ctext
-    text $ctext -bg $bgcolor -state disabled -font $textfont \
+    text $ctext -fg $fgcolor -bg $bgcolor -state disabled -font $textfont \
 	-width $geometry(ctextw) -height $geometry(ctexth) \
 	-yscrollcommand ".ctop.cdet.left.sb set" \
 	-xscrollcommand ".ctop.cdet.left.hb set" -wrap none
@@ -581,7 +581,8 @@ proc makewindow {} {
 
     frame .ctop.cdet.right
     set cflist .ctop.cdet.right.cfiles
-    listbox $cflist -bg $bgcolor -selectmode extended -width $geometry(cflistw) \
+    listbox $cflist -fg $fgcolor -bg $bgcolor \
+        -selectmode extended -width $geometry(cflistw) \
 	-yscrollcommand ".ctop.cdet.right.sb set"
     scrollbar .ctop.cdet.right.sb -command "$cflist yview"
     pack .ctop.cdet.right.sb -side right -fill y
@@ -679,7 +680,7 @@ proc click {w} {
 proc savestuff {w} {
     global canv canv2 canv3 ctext cflist mainfont textfont
     global stuffsaved findmergefiles gaudydiff maxgraphpct
-    global maxwidth authorcolors curidfont bgcolor
+    global maxwidth authorcolors curidfont bgcolor fgcolor
 
     if {$stuffsaved} return
     if {![winfo viewable .]} return
@@ -722,6 +723,9 @@ proc savestuff {w} {
 	puts $f "#"
 	puts $f "set authorcolors {$authorcolors}"
 	puts $f "set bgcolor $bgcolor"
+	puts $f "#"
+	puts $f "# The text color used in the diff and file list view"
+	puts $f "set fgcolor $fgcolor"
 	close $f
 	file rename -force "~/.hgk-new" "~/.hgk"
     }
@@ -3893,6 +3897,10 @@ set authorcolors {
     black blue deeppink mediumorchid blue burlywood4 goldenrod slateblue red2 navy dimgrey
 }
 set bgcolor white
+
+# This color should probably be some system color (provided by tk),
+# but as the bgcolor has always been set to white, I choose to ignore
+set fgcolor black
 
 catch {source ~/.hgk}
 
