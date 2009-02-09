@@ -730,6 +730,8 @@ proc savestuff {w} {
 	puts $f "# the last entry will be reused."
 	puts $f "#"
 	puts $f "set authorcolors {$authorcolors}"
+	puts $f "#"
+	puts $f "# The background color in the text windows"
 	puts $f "set bgcolor $bgcolor"
 	puts $f "#"
 	puts $f "# The text color used in the diff and file list view"
