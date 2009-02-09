@@ -168,7 +168,7 @@ class hgwebdir(object):
                 return tmpl("notfound", repo=virtual)
 
             except ErrorResponse, err:
-                req.respond(err.code, ctype)
+                req.respond(err, ctype)
                 return tmpl('error', error=err.message or '')
         finally:
             tmpl = None

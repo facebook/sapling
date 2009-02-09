@@ -99,7 +99,7 @@ class hgweb(object):
                 method = getattr(protocol, cmd)
                 return method(self.repo, req)
             except ErrorResponse, inst:
-                req.respond(inst.code, protocol.HGTYPE)
+                req.respond(inst, protocol.HGTYPE)
                 if not inst.message:
                     return []
                 return '0\n%s\n' % inst.message,
@@ -194,7 +194,7 @@ class hgweb(object):
             req.respond(HTTP_SERVER_ERROR, ctype)
             return tmpl('error', error=str(inst))
         except ErrorResponse, inst:
-            req.respond(inst.code, ctype)
+            req.respond(inst, ctype)
             return tmpl('error', error=inst.message)
 
     def templater(self, req):
