@@ -77,6 +77,7 @@ class wsgirequest(object):
 
             if isinstance(status, ErrorResponse):
                 status = statusmessage(status.code)
+                self.header(status.headers)
             elif status == 200:
                 status = '200 Script output follows'
             elif isinstance(status, int):
