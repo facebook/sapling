@@ -439,7 +439,8 @@ proc makewindow {} {
     global entries sha1entry sha1string sha1but
     global maincursor textcursor curtextcursor
     global rowctxmenu gaudydiff mergemax
-    global hgvdiff bgcolor fgcolor
+    global hgvdiff bgcolor fgcolor diffremcolor diffaddcolor diffmerge1color
+    global diffmerge2color hunksepcolor
 
     menu .bar
     .bar add cascade -label "File" -menu .bar.file
@@ -564,11 +565,16 @@ proc makewindow {} {
 	$ctext tag conf d0 -back "#ff8080"
 	$ctext tag conf d1 -back green
     } else {
-	$ctext tag conf hunksep -fore blue
-	$ctext tag conf d0 -fore red
-	$ctext tag conf d1 -fore "#00a000"
-	$ctext tag conf m0 -fore red
-	$ctext tag conf m1 -fore blue
+	$ctext tag conf hunksep -fore $hunksepcolor
+	$ctext tag conf d0 -fore $diffremcolor
+	$ctext tag conf d1 -fore $diffaddcolor
+
+	# The mX colours seem to be used in merge changesets, where m0
+	# is first parent, m1 is second parent and so on. Git can have
+	# several parents, Hg cannot, so I think the m2..mmax would be
+	# unused.
+	$ctext tag conf m0 -fore $diffmerge1color
+	$ctext tag conf m1 -fore $diffmerge2color
 	$ctext tag conf m2 -fore green
 	$ctext tag conf m3 -fore purple
 	$ctext tag conf m4 -fore brown
@@ -681,6 +687,8 @@ proc savestuff {w} {
     global canv canv2 canv3 ctext cflist mainfont textfont
     global stuffsaved findmergefiles gaudydiff maxgraphpct
     global maxwidth authorcolors curidfont bgcolor fgcolor
+    global diffremcolor diffaddcolor hunksepcolor
+    global diffmerge1color diffmerge2color
 
     if {$stuffsaved} return
     if {![winfo viewable .]} return
@@ -726,6 +734,21 @@ proc savestuff {w} {
 	puts $f "#"
 	puts $f "# The text color used in the diff and file list view"
 	puts $f "set fgcolor $fgcolor"
+	puts $f "#"
+	puts $f "# Color to display + lines in diffs"
+	puts $f "set diffaddcolor $diffaddcolor"
+	puts $f "#"
+	puts $f "# Color to display - lines in diffs"
+	puts $f "set diffremcolor $diffremcolor"
+	puts $f "#"
+	puts $f "# Merge diffs: Color to signal lines from first parent"
+	puts $f "set diffmerge1color $diffmerge1color"
+	puts $f "#"
+	puts $f "# Merge diffs: Color to signal lines from second parent"
+	puts $f "set diffmerge2color $diffmerge2color"
+	puts $f "#"
+	puts $f "# Hunkseparator (@@ -lineno,lines +lineno,lines @@) color"
+	puts $f "set hunksepcolor $hunksepcolor"
 	close $f
 	file rename -force "~/.hgk-new" "~/.hgk"
     }
@@ -3901,6 +3924,11 @@ set bgcolor white
 # This color should probably be some system color (provided by tk),
 # but as the bgcolor has always been set to white, I choose to ignore
 set fgcolor black
+set diffaddcolor "#00a000"
+set diffremcolor red
+set diffmerge1color red
+set diffmerge2color blue
+set hunksepcolor blue
 
 catch {source ~/.hgk}
 
