@@ -92,8 +92,8 @@ echo
 echo Tool selection and merge-patterns
 echo
 
-echo "# merge-patterns specifies new tool tac:"
-domerge -r 2 --config merge-patterns.f=tac
+echo "# merge-patterns specifies new tool false:"
+domerge -r 2 --config merge-patterns.f=false
 
 echo "# merge-patterns specifies executable not found in PATH and gets warning:"
 domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistingmergetool

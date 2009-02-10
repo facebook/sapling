@@ -175,27 +175,23 @@ M f
 
 Tool selection and merge-patterns
 
-# merge-patterns specifies new tool tac:
+# merge-patterns specifies new tool false:
 [merge-tools]
 false.whatever=
 true.priority=1
 true.executable=cat
 # hg update -C 1
-# hg merge -r 2 --config merge-patterns.f=tac
-space
-revision 1
-space
-revision 0
-space
-revision 2
+# hg merge -r 2 --config merge-patterns.f=false
 merging f
-0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-(branch merge, don't forget to commit)
+merging f failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
 # cat f
 revision 1
 space
 # hg stat
 M f
+? f.orig
 
 # merge-patterns specifies executable not found in PATH and gets warning:
 [merge-tools]
