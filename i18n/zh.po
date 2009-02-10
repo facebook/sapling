@@ -5,17 +5,20 @@
 # Copyright (C) 2009 the Mercurial team
 # Dongsheng Song <dongsheng.song@gmail.com>, 2009
 #
-# $Id: zh.po 1133 2009-01-25 06:31:54Z dongsheng.song $
+# $Id: zh.po 1166 2009-02-10 05:53:47Z dongsheng.song@gmail.com $
+#
+# Please test your translation before commit:
+#    msgfmt --statistics -c i18n/zh.po
+#    python setup.py build_py -c -d . build_ext -i build_mo
+#    LC_ALL=zh_CN.UTF-8 ./hg
 #
 # Please format your translation before commit:
 #    msgcat --width=80 --sort-by-file -o zh_new.po zh.po
 #    mv -f zh_new.po zh.po
-#    msgfmt --statistics -c zh.po
 #
 # Please remove '#: filename:line' lines before submit to hg:
 #    msgcat --width=80 --no-location -o zh_new.po zh.po
 #    mv -f zh_new.po zh.po
-#    msgfmt --statistics -c zh.po
 #
 # Dictionary:
 # blame             追溯
@@ -36,8 +39,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial 1.2\n"
-"POT-Creation-Date: 2009-01-25 15:04+CST\n"
-"PO-Revision-Date: 2009-01-24 18:50+0800\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2009-02-10 13:55+0800\n"
+"PO-Revision-Date: 2009-01-26 12:04+0800\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: Chinese translation team <i18n-zh@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
@@ -47,6 +51,7 @@ msgstr ""
 "X-Poedit-Language: Chinese\n"
 "X-Poedit-Country: CHINA\n"
 
+#, python-format
 msgid " (default: %s)"
 msgstr " (默认: %s)"
 
@@ -59,6 +64,7 @@ msgstr "命令"
 msgid "    options:\n"
 msgstr "    选项:\n"
 
+#, python-format
 msgid ""
 "    aliases: %s\n"
 "\n"
@@ -69,27 +75,35 @@ msgstr ""
 msgid "return tuple of (match function, list enabled)."
 msgstr "返回 tuple (匹配函数，启用列表)"
 
+#, python-format
 msgid "acl: %s not enabled\n"
 msgstr "acl: 未启用 %s\n"
 
+#, python-format
 msgid "acl: %s enabled, %d entries for user %s\n"
 msgstr "acl: 已启用 %s, %d 项，用户 %s\n"
 
+#, python-format
 msgid "config error - hook type \"%s\" cannot stop incoming changesets"
 msgstr "配置错误 - 钩子类型 \"%s\" 不能终止进入的改变集"
 
+#, python-format
 msgid "acl: changes have source \"%s\" - skipping\n"
 msgstr "acl: 改变源 \"%s\" - 跳过\n"
 
+#, python-format
 msgid "acl: user %s denied on %s\n"
 msgstr "acl: 用户 %s 被拒绝访问 %s\n"
 
+#, python-format
 msgid "acl: access denied for changeset %s"
 msgstr "acl: 拒绝访问改变集 %s"
 
+#, python-format
 msgid "acl: user %s not allowed on %s\n"
 msgstr "acl: 用户 %s 被拒绝访问 %s\n"
 
+#, python-format
 msgid "acl: allowing changeset %s\n"
 msgstr "acl: 允许改变集 %s\n"
 
@@ -113,15 +127,19 @@ msgid ""
 "    after alias can be aliased"
 msgstr "查找命令会推迟到需要时，所以可以在定义别名后加载模块"
 
+#, python-format
 msgid "*** [alias] %s: command %s is unknown"
 msgstr "*** [alias] %s: 未知命令 %s"
 
+#, python-format
 msgid "*** [alias] %s: command %s is ambiguous"
 msgstr "*** [alias] %s: 不明确的命令 %s"
 
+#, python-format
 msgid "*** [alias] %s: circular dependency on %s"
 msgstr "*** [alias] %s: 循环依赖于 %s"
 
+#, python-format
 msgid "*** [alias] %s: no definition\n"
 msgstr "*** [alias] %s: 无定义\n"
 
@@ -244,16 +262,16 @@ msgid ""
 msgstr ""
 
 msgid "force"
-msgstr ""
+msgstr "强制"
 
 msgid "revision"
 msgstr "版本"
 
 msgid "delete a given bookmark"
-msgstr ""
+msgstr "删除指定书签"
 
 msgid "rename a given bookmark"
-msgstr ""
+msgstr "改名指定书签"
 
 msgid "hg bookmarks [-d] [-m NAME] [-r NAME] [NAME]"
 msgstr ""
@@ -373,32 +391,36 @@ msgid ""
 msgstr ""
 
 msgid "support for bugzilla version 2.16."
-msgstr ""
+msgstr "支持 bugzilla 2.16。"
 
+#, python-format
 msgid "connecting to %s:%s as %s, password %s\n"
-msgstr ""
+msgstr "连接到 %s:%s as %s，密码 %s\n"
 
 msgid "run a query."
-msgstr ""
+msgstr "运行查询。"
 
+#, python-format
 msgid "query: %s %s\n"
-msgstr ""
+msgstr "查询: %s %s\n"
 
+#, python-format
 msgid "failed query: %s %s\n"
-msgstr ""
+msgstr "查询失败: %s %s\n"
 
 msgid "get identity of longdesc field"
 msgstr ""
 
 msgid "unknown database schema"
-msgstr ""
+msgstr "未知的数据库方案"
 
 msgid "filter not-existing bug ids from list."
-msgstr ""
+msgstr "从列表中过滤不存在的问题标识。"
 
 msgid "filter bug ids from list that already refer to this changeset."
 msgstr ""
 
+#, python-format
 msgid "bug %d already knows about changeset %s\n"
 msgstr ""
 
@@ -408,21 +430,25 @@ msgstr ""
 msgid "telling bugzilla to send mail:\n"
 msgstr ""
 
+#, python-format
 msgid "  bug %s\n"
 msgstr ""
 
+#, python-format
 msgid "running notify command %s\n"
 msgstr ""
 
+#, python-format
 msgid "bugzilla notify command %s"
 msgstr ""
 
 msgid "done\n"
-msgstr ""
+msgstr "完成\n"
 
 msgid "look up numeric bugzilla user id."
 msgstr ""
 
+#, python-format
 msgid "looking up user %s\n"
 msgstr ""
 
@@ -435,9 +461,11 @@ msgid ""
 "        bugzilla username and userid."
 msgstr ""
 
+#, python-format
 msgid "cannot find bugzilla user id for %s"
 msgstr ""
 
+#, python-format
 msgid "cannot find bugzilla user id for %s or %s"
 msgstr ""
 
@@ -457,6 +485,7 @@ msgid ""
 "        use."
 msgstr ""
 
+#, python-format
 msgid "bugzilla version %s not supported"
 msgstr ""
 
@@ -486,12 +515,15 @@ msgid ""
 "    seen multiple times does not fill bug with duplicate data."
 msgstr ""
 
+#, python-format
 msgid "python mysql support not available: %s"
 msgstr ""
 
+#, python-format
 msgid "hook type %s does not pass a changeset id"
 msgstr ""
 
+#, python-format
 msgid "database error: %s"
 msgstr ""
 
@@ -518,9 +550,11 @@ msgstr ""
 msgid "Calculate stats"
 msgstr ""
 
+#, python-format
 msgid "Revision %d is a merge, ignoring...\n"
 msgstr ""
 
+#, python-format
 msgid "\rgenerating stats: %d%%"
 msgstr ""
 
@@ -553,6 +587,7 @@ msgid ""
 "    <alias email> <actual email>"
 msgstr ""
 
+#, python-format
 msgid "assuming %i character terminal\n"
 msgstr ""
 
@@ -894,54 +929,70 @@ msgstr ""
 msgid "show current changeset in ancestor branches"
 msgstr ""
 
+#, python-format
 msgid "%s is not a valid revision in current branch"
 msgstr ""
 
+#, python-format
 msgid "%s is not available in %s anymore"
 msgstr ""
 
+#, python-format
 msgid "cannot find required \"%s\" tool"
 msgstr ""
 
+#, python-format
 msgid "running: %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s error:\n"
 msgstr ""
 
+#, python-format
 msgid "%s %s"
 msgstr ""
 
+#, python-format
 msgid "could not open map file %r: %s"
 msgstr ""
 
+#, python-format
 msgid "%s: missing or unsupported repository"
 msgstr ""
 
+#, python-format
 msgid "convert: %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s: unknown repository type"
 msgstr ""
 
+#, python-format
 msgid "cycle detected between %s and %s"
 msgstr ""
 
 msgid "not all revisions were sorted"
 msgstr ""
 
+#, python-format
 msgid "Writing author map file %s\n"
 msgstr ""
 
+#, python-format
 msgid "Overriding mapping for author %s, was %s, will be %s\n"
 msgstr ""
 
+#, python-format
 msgid "mapping author %s to %s\n"
 msgstr ""
 
+#, python-format
 msgid "Ignoring bad line in author map file %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "spliced in %s as parents of %s\n"
 msgstr ""
 
@@ -954,18 +1005,22 @@ msgstr ""
 msgid "converting...\n"
 msgstr ""
 
+#, python-format
 msgid "source: %s\n"
 msgstr ""
 
+#, python-format
 msgid "assuming destination %s\n"
 msgstr ""
 
+#, python-format
 msgid "revision %s is not a patchset number or date"
 msgstr ""
 
 msgid "using builtin cvsps\n"
 msgstr ""
 
+#, python-format
 msgid "connecting to %s\n"
 msgstr ""
 
@@ -975,30 +1030,38 @@ msgstr ""
 msgid "server sucks"
 msgstr ""
 
+#, python-format
 msgid "%d bytes missing from remote file"
 msgstr ""
 
+#, python-format
 msgid "cvs server: %s\n"
 msgstr ""
 
+#, python-format
 msgid "unknown CVS response: %s"
 msgstr ""
 
 msgid "collecting CVS rlog\n"
 msgstr ""
 
+#, python-format
 msgid "reading cvs log cache %s\n"
 msgstr ""
 
+#, python-format
 msgid "cache has %d log entries\n"
 msgstr ""
 
+#, python-format
 msgid "error reading cache: %r\n"
 msgstr ""
 
+#, python-format
 msgid "running %s\n"
 msgstr ""
 
+#, python-format
 msgid "prefix=%r directory=%r root=%r\n"
 msgstr ""
 
@@ -1014,21 +1077,25 @@ msgstr ""
 msgid "revision must be followed by date line"
 msgstr ""
 
+#, python-format
 msgid "writing cvs log cache %s\n"
 msgstr ""
 
+#, python-format
 msgid "%d log entries\n"
 msgstr ""
 
 msgid "creating changesets\n"
 msgstr ""
 
+#, python-format
 msgid "%d changeset entries\n"
 msgstr ""
 
 msgid "Python ElementTree module is not available"
 msgstr ""
 
+#, python-format
 msgid "cleaning up %s\n"
 msgstr ""
 
@@ -1038,46 +1105,58 @@ msgstr ""
 msgid "errors in filemap"
 msgstr ""
 
+#, python-format
 msgid "%s:%d: %r already in %s list\n"
 msgstr ""
 
+#, python-format
 msgid "%s:%d: unknown directive %r\n"
 msgstr ""
 
 msgid "source repository doesn't support --filemap"
 msgstr ""
 
+#, python-format
 msgid "%s does not look like a GNU Arch repo"
 msgstr ""
 
 msgid "cannot find a GNU Arch tool"
 msgstr ""
 
+#, python-format
 msgid "analyzing tree version %s...\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "tree analysis stopped because it points to an unregistered archive %s...\n"
 msgstr ""
 
+#, python-format
 msgid "applying revision %s...\n"
 msgstr ""
 
+#, python-format
 msgid "computing changeset between %s and %s...\n"
 msgstr ""
 
+#, python-format
 msgid "obtaining revision %s...\n"
 msgstr ""
 
+#, python-format
 msgid "analysing revision %s...\n"
 msgstr ""
 
+#, python-format
 msgid "could not parse cat-log of %s"
 msgstr ""
 
+#, python-format
 msgid "%s is not a local Mercurial repo"
 msgstr ""
 
+#, python-format
 msgid "initializing destination %s repository\n"
 msgstr ""
 
@@ -1087,15 +1166,18 @@ msgstr ""
 msgid "run hg sink post-conversion action\n"
 msgstr ""
 
+#, python-format
 msgid "pulling from %s into %s\n"
 msgstr ""
 
 msgid "updating tags\n"
 msgstr ""
 
+#, python-format
 msgid "%s is not a valid start revision"
 msgstr ""
 
+#, python-format
 msgid "ignoring: %s\n"
 msgstr ""
 
@@ -1105,114 +1187,146 @@ msgstr ""
 msgid "run hg source post-conversion action\n"
 msgstr ""
 
+#, python-format
 msgid "%s does not look like a monotone repo"
 msgstr ""
 
+#, python-format
 msgid "copying file in renamed dir from '%s' to '%s'"
 msgstr ""
 
 msgid "Subversion python bindings could not be loaded"
 msgstr ""
 
+#, python-format
 msgid "Subversion python bindings %d.%d found, 1.4 or later required"
 msgstr ""
 
 msgid "Subversion python bindings are too old, 1.4 or later required"
 msgstr ""
 
+#, python-format
 msgid "svn: revision %s is not an integer"
 msgstr ""
 
+#, python-format
 msgid "svn: start revision %s is not an integer"
 msgstr ""
 
+#, python-format
 msgid "no revision found in module %s"
 msgstr ""
 
+#, python-format
 msgid "expected %s to be at %r, but not found"
 msgstr ""
 
+#, python-format
 msgid "found %s at %r\n"
 msgstr ""
 
+#, python-format
 msgid "ignoring empty branch %s\n"
 msgstr ""
 
+#, python-format
 msgid "found branch %s at %d\n"
 msgstr ""
 
 msgid "svn: start revision is not supported with with more than one branch"
 msgstr ""
 
+#, python-format
 msgid "svn: no revision found after start revision %d"
 msgstr ""
 
+#, python-format
 msgid "no tags found at revision %d\n"
 msgstr ""
 
+#, python-format
 msgid "ignoring foreign branch %r\n"
 msgstr ""
 
+#, python-format
 msgid "%s not found up to revision %d"
 msgstr ""
 
+#, python-format
 msgid "branch renamed from %s to %s at %d\n"
 msgstr ""
 
+#, python-format
 msgid "reparent to %s\n"
 msgstr ""
 
+#, python-format
 msgid "copied to %s from %s@%s\n"
 msgstr ""
 
+#, python-format
 msgid "gone from %s\n"
 msgstr ""
 
+#, python-format
 msgid "found parent directory %s\n"
 msgstr ""
 
+#, python-format
 msgid "base, entry %s %s\n"
 msgstr ""
 
 msgid "munge-o-matic\n"
 msgstr ""
 
+#, python-format
 msgid "info: %s %s %s %s\n"
 msgstr ""
 
+#, python-format
 msgid "unknown path in revision %d: %s\n"
 msgstr ""
 
+#, python-format
 msgid "mark %s came from %s:%d\n"
 msgstr ""
 
+#, python-format
 msgid "parsing revision %d (%d changes)\n"
 msgstr ""
 
+#, python-format
 msgid "found parent of branch %s at %d: %s\n"
 msgstr ""
 
 msgid "no copyfrom path, don't know what to do.\n"
 msgstr ""
 
+#, python-format
 msgid "fetching revision log for \"%s\" from %d to %d\n"
 msgstr ""
 
+#, python-format
 msgid "skipping blacklisted revision %d\n"
 msgstr ""
 
+#, python-format
 msgid "revision %d has no entries\n"
 msgstr ""
 
+#, python-format
 msgid "svn: branch has no revision %s"
 msgstr ""
 
+#, python-format
 msgid "%r is not under %r, ignoring\n"
 msgstr ""
 
+#, python-format
 msgid "initializing svn repo %r\n"
 msgstr ""
 
+#, python-format
 msgid "initializing svn wc %r\n"
 msgstr ""
 
@@ -1269,6 +1383,7 @@ msgstr ""
 msgid "snapshot files as of some revision"
 msgstr ""
 
+#, python-format
 msgid "making snapshot of %d files from rev %s\n"
 msgstr ""
 
@@ -1278,6 +1393,7 @@ msgid ""
 "    in tools like kdiff3 and meld displays too many files."
 msgstr ""
 
+#, python-format
 msgid "making snapshot of %d files from working dir\n"
 msgstr ""
 
@@ -1291,9 +1407,11 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
 msgid "running %r in %s\n"
 msgstr ""
 
+#, python-format
 msgid "file changed while diffing. Overwriting: %s (src: %s)\n"
 msgstr ""
 
@@ -1331,6 +1449,7 @@ msgstr ""
 msgid "use closure to save diff command to use"
 msgstr ""
 
+#, python-format
 msgid "hg %s [OPTION]... [FILE]..."
 msgstr ""
 
@@ -1373,26 +1492,32 @@ msgid ""
 "multiple heads in this branch (use \"hg heads .\" and \"hg merge\" to merge)"
 msgstr ""
 
+#, python-format
 msgid "pulling from %s\n"
 msgstr ""
 
 msgid "fetch -r doesn't work for remote repositories yet"
 msgstr ""
 
+#, python-format
 msgid ""
 "not merging with %d other new branch heads (use \"hg heads .\" and \"hg merge"
 "\" to merge them)\n"
 msgstr ""
 
+#, python-format
 msgid "updating to %d:%s\n"
 msgstr ""
 
+#, python-format
 msgid "merging with %d:%s\n"
 msgstr ""
 
+#, python-format
 msgid "Automated merge with %s"
 msgstr ""
 
+#, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
 msgstr "新修改集 '%d:%s' 将远程修改与本地合并\n"
 
@@ -1430,24 +1555,29 @@ msgstr ""
 msgid "get the keys who signed a data"
 msgstr ""
 
+#, python-format
 msgid "%s Bad signature from \"%s\"\n"
 msgstr ""
 
+#, python-format
 msgid "%s Note: Signature has expired (signed by: \"%s\")\n"
 msgstr ""
 
+#, python-format
 msgid "%s Note: This key has expired (signed by: \"%s\")\n"
 msgstr ""
 
 msgid "list signed changesets"
 msgstr ""
 
+#, python-format
 msgid "%s:%d node does not exist\n"
 msgstr ""
 
 msgid "verify all the signatures there may be for a particular revision"
 msgstr ""
 
+#, python-format
 msgid "No valid signature for %s\n"
 msgstr ""
 
@@ -1475,6 +1605,7 @@ msgid ""
 "force)"
 msgstr ""
 
+#, python-format
 msgid "Added signature for changeset %s"
 msgstr ""
 
@@ -1562,12 +1693,7 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "limit must be a positive integer"
-msgstr ""
-
-msgid "limit must be positive"
-msgstr ""
-
+#, python-format
 msgid "--graph option is incompatible with --%s"
 msgstr ""
 
@@ -1583,20 +1709,6 @@ msgid ""
 msgstr ""
 
 msgid ""
-"cset DAG generator yielding (node, [parents]) tuples\n"
-"\n"
-"    This generator function walks through the revisions not found\n"
-"    in the destination\n"
-"    "
-msgstr ""
-
-msgid "comparing with %s\n"
-msgstr ""
-
-msgid "no changes found\n"
-msgstr ""
-
-msgid ""
 "show the outgoing changesets alongside an ASCII revision graph\n"
 "\n"
 "    Print the outgoing changesets alongside a revision graph drawn with\n"
@@ -1607,12 +1719,11 @@ msgid ""
 "    "
 msgstr ""
 
-msgid ""
-"cset DAG generator yielding (node, [parents]) tuples\n"
-"\n"
-"    This generator function walks through the revisions of the destination\n"
-"    not found in repo\n"
-"    "
+#, python-format
+msgid "comparing with %s\n"
+msgstr ""
+
+msgid "no changes found\n"
 msgstr ""
 
 msgid ""
@@ -1688,6 +1799,7 @@ msgstr ""
 msgid " CIA notification class "
 msgstr ""
 
+#, python-format
 msgid "hgcia: sending update to %s\n"
 msgstr ""
 
@@ -1859,15 +1971,18 @@ msgstr ""
 msgid "(starting inotify server)\n"
 msgstr ""
 
+#, python-format
 msgid "could not start inotify server: %s\n"
 msgstr ""
 
+#, python-format
 msgid "could not talk to new inotify server: %s\n"
 msgstr ""
 
 msgid "(inotify server not running)\n"
 msgstr ""
 
+#, python-format
 msgid "failed to contact inotify server: %s\n"
 msgstr ""
 
@@ -1886,12 +2001,14 @@ msgstr "写入进程标识符的文件名称"
 msgid "hg inserve [OPT]..."
 msgstr ""
 
+#, python-format
 msgid "(inotify: received response from incompatible server version %d)\n"
 msgstr ""
 
 msgid "this system does not seem to support inotify"
 msgstr ""
 
+#, python-format
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
 msgstr ""
 
@@ -1901,75 +2018,98 @@ msgstr ""
 msgid "*** counting directories: "
 msgstr ""
 
+#, python-format
 msgid "found %d\n"
 msgstr ""
 
+#, python-format
 msgid "*** to raise the limit from %d to %d (run as root):\n"
 msgstr ""
 
+#, python-format
 msgid "***  echo %d > %s\n"
 msgstr ""
 
+#, python-format
 msgid "cannot watch %s until inotify watch limit is raised"
 msgstr ""
 
+#, python-format
 msgid "inotify service not available: %s"
 msgstr ""
 
+#, python-format
 msgid "watching %r\n"
 msgstr ""
 
+#, python-format
 msgid "watching directories under %r\n"
 msgstr ""
 
+#, python-format
 msgid "status: %r dir(%d) -> %s\n"
 msgstr ""
 
+#, python-format
 msgid "status: %r %s -> %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s dirstate reload\n"
 msgstr ""
 
+#, python-format
 msgid "%s end dirstate reload\n"
 msgstr ""
 
 msgid "rescanning due to .hgignore change\n"
 msgstr ""
 
+#, python-format
 msgid "%s event: created %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s event: deleted %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s event: modified %s\n"
 msgstr ""
 
+#, python-format
 msgid "filesystem containing %s was unmounted\n"
 msgstr ""
 
+#, python-format
 msgid "%s readable: %d bytes\n"
 msgstr ""
 
+#, python-format
 msgid "%s below threshold - unhooking\n"
 msgstr ""
 
+#, python-format
 msgid "%s reading %d events\n"
 msgstr ""
 
+#, python-format
 msgid "%s hooking back up with %d bytes readable\n"
 msgstr ""
 
+#, python-format
 msgid "%s processing %d deferred events as %d\n"
 msgstr ""
 
+#, python-format
 msgid "could not start server: %s"
 msgstr ""
 
+#, python-format
 msgid "received query from incompatible client version %d\n"
 msgstr ""
 
+#, python-format
 msgid "answering query for %r\n"
 msgstr ""
 
@@ -1979,12 +2119,15 @@ msgstr ""
 msgid "polling: no timeout\n"
 msgstr ""
 
+#, python-format
 msgid "polling: %sms timeout\n"
 msgstr ""
 
+#, python-format
 msgid "interhg: invalid pattern for %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "interhg: invalid regexp for %s: %s\n"
 msgstr ""
 
@@ -2062,6 +2205,7 @@ msgstr ""
 msgid "Overwrites selected files expanding/shrinking keywords."
 msgstr ""
 
+#, python-format
 msgid "overwriting %s %s keywords\n"
 msgstr ""
 
@@ -2122,14 +2266,17 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
 msgid ""
 "\n"
 "\t%s\n"
 msgstr ""
 
+#, python-format
 msgid "creating temporary repo at %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "\n"
 "%s keywords written to %s:\n"
@@ -2138,6 +2285,7 @@ msgstr ""
 msgid "unhooked all commit hooks\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "\n"
 "removing temporary repo %s\n"
@@ -2264,63 +2412,81 @@ msgid ""
 "        the field and a blank line."
 msgstr ""
 
+#, python-format
 msgid "%s appears more than once in %s"
 msgstr ""
 
 msgid "guard cannot be an empty string"
 msgstr ""
 
+#, python-format
 msgid "guard %r starts with invalid character: %r"
 msgstr ""
 
+#, python-format
 msgid "invalid character in guard %r: %r"
 msgstr ""
 
+#, python-format
 msgid "active guards: %s\n"
 msgstr ""
 
+#, python-format
 msgid "guard %r too short"
 msgstr ""
 
+#, python-format
 msgid "guard %r starts with invalid char"
 msgstr ""
 
+#, python-format
 msgid "allowing %s - no guards in effect\n"
 msgstr ""
 
+#, python-format
 msgid "allowing %s - no matching negative guards\n"
 msgstr ""
 
+#, python-format
 msgid "allowing %s - guarded by %r\n"
 msgstr ""
 
+#, python-format
 msgid "skipping %s - guarded by %r\n"
 msgstr ""
 
+#, python-format
 msgid "skipping %s - no matching guards\n"
 msgstr ""
 
+#, python-format
 msgid "error removing undo: %s\n"
 msgstr ""
 
+#, python-format
 msgid "apply failed for patch %s"
 msgstr ""
 
+#, python-format
 msgid "patch didn't work out, merging %s\n"
 msgstr ""
 
+#, python-format
 msgid "update returned %d"
 msgstr ""
 
 msgid "repo commit failed"
 msgstr ""
 
+#, python-format
 msgid "unable to read %s"
 msgstr ""
 
+#, python-format
 msgid "patch %s does not exist\n"
 msgstr ""
 
+#, python-format
 msgid "patch %s is not applied\n"
 msgstr ""
 
@@ -2332,20 +2498,25 @@ msgstr ""
 msgid "patch failed, unable to continue (try -v)\n"
 msgstr ""
 
+#, python-format
 msgid "applying %s\n"
 msgstr ""
 
+#, python-format
 msgid "Unable to read %s\n"
 msgstr ""
 
+#, python-format
 msgid "imported patch %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "\n"
 "imported patch %s"
 msgstr ""
 
+#, python-format
 msgid "patch %s is empty\n"
 msgstr ""
 
@@ -2355,18 +2526,22 @@ msgstr ""
 msgid "fuzz found when applying patch, stopping\n"
 msgstr ""
 
+#, python-format
 msgid "revision %d is not managed"
 msgstr ""
 
+#, python-format
 msgid "cannot delete revision %d above applied patches"
 msgstr ""
 
 msgid "qdelete requires at least one revision or patch name"
 msgstr ""
 
+#, python-format
 msgid "cannot delete applied patch %s"
 msgstr ""
 
+#, python-format
 msgid "patch %s not in series file"
 msgstr ""
 
@@ -2382,6 +2557,7 @@ msgstr ""
 msgid "local changes found"
 msgstr ""
 
+#, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
 msgstr ""
 
@@ -2391,18 +2567,22 @@ msgid ""
 "        "
 msgstr ""
 
+#, python-format
 msgid "patch \"%s\" already exists"
 msgstr ""
 
+#, python-format
 msgid "error unlinking %s\n"
 msgstr ""
 
 msgid "returns (index, rev, patch)"
 msgstr ""
 
+#, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
 msgstr ""
 
+#, python-format
 msgid "patch %s not in series"
 msgstr ""
 
@@ -2412,18 +2592,22 @@ msgstr ""
 msgid "no patches in series\n"
 msgstr ""
 
+#, python-format
 msgid "cannot push to a previous patch: %s"
 msgstr ""
 
+#, python-format
 msgid "qpush: %s is already at the top\n"
 msgstr ""
 
+#, python-format
 msgid "guarded by %r"
 msgstr ""
 
 msgid "no matching guards"
 msgstr ""
 
+#, python-format
 msgid "cannot push '%s' - %s\n"
 msgstr ""
 
@@ -2436,24 +2620,29 @@ msgstr ""
 msgid "cleaning up working directory..."
 msgstr ""
 
+#, python-format
 msgid "errors during apply, please fix and refresh %s\n"
 msgstr ""
 
+#, python-format
 msgid "now at: %s\n"
 msgstr ""
 
+#, python-format
 msgid "patch %s is not applied"
 msgstr ""
 
 msgid "no patches applied\n"
 msgstr ""
 
+#, python-format
 msgid "qpop: %s is already at the top\n"
 msgstr ""
 
 msgid "qpop: forcing dirstate update\n"
 msgstr ""
 
+#, python-format
 msgid "trying to pop unknown node %s"
 msgstr ""
 
@@ -2476,21 +2665,25 @@ msgstr ""
 msgid "patch queue directory already exists"
 msgstr ""
 
+#, python-format
 msgid "patch %s is not in series file"
 msgstr ""
 
 msgid "No saved patch data found\n"
 msgstr ""
 
+#, python-format
 msgid "restoring status: %s\n"
 msgstr ""
 
 msgid "save entry has children, leaving it alone\n"
 msgstr ""
 
+#, python-format
 msgid "removing save entry %s\n"
 msgstr ""
 
+#, python-format
 msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
@@ -2520,6 +2713,7 @@ msgid ""
 "        "
 msgstr ""
 
+#, python-format
 msgid "patch %s is already in the series file"
 msgstr ""
 
@@ -2529,33 +2723,41 @@ msgstr ""
 msgid "option \"-n\" not valid when importing multiple patches"
 msgstr ""
 
+#, python-format
 msgid "revision %d is the root of more than one branch"
 msgstr ""
 
+#, python-format
 msgid "revision %d is already managed"
 msgstr ""
 
+#, python-format
 msgid "revision %d is not the parent of the queue"
 msgstr ""
 
+#, python-format
 msgid "revision %d has unmanaged children"
 msgstr ""
 
+#, python-format
 msgid "cannot import merge revision %d"
 msgstr ""
 
+#, python-format
 msgid "revision %d is not the parent of %d"
 msgstr ""
 
 msgid "-e is incompatible with import from -"
 msgstr ""
 
+#, python-format
 msgid "patch %s does not exist"
 msgstr ""
 
 msgid "need --name to import a patch from -"
 msgstr ""
 
+#, python-format
 msgid "adding %s to series file\n"
 msgstr ""
 
@@ -2781,12 +2983,15 @@ msgstr ""
 msgid "No patches applied"
 msgstr ""
 
+#, python-format
 msgid "Skipping already folded patch %s"
 msgstr ""
 
+#, python-format
 msgid "qfold cannot fold already applied patch %s"
 msgstr ""
 
+#, python-format
 msgid "Error folding patch %s"
 msgstr ""
 
@@ -2820,6 +3025,7 @@ msgstr ""
 msgid "no patch to work with"
 msgstr ""
 
+#, python-format
 msgid "no patch named %s"
 msgstr ""
 
@@ -2841,6 +3047,7 @@ msgstr ""
 msgid "no saved queues found, please use -n\n"
 msgstr ""
 
+#, python-format
 msgid "merging with queue at: %s\n"
 msgstr ""
 
@@ -2858,6 +3065,7 @@ msgstr ""
 "    补丁位于堆栈顶部。\n"
 "    "
 
+#, python-format
 msgid "using patch queue: %s\n"
 msgstr ""
 
@@ -2868,9 +3076,11 @@ msgid ""
 "    With two arguments, renames PATCH1 to PATCH2."
 msgstr ""
 
+#, python-format
 msgid "%s already exists"
 msgstr ""
 
+#, python-format
 msgid "A patch named %s already exists in the series file"
 msgstr ""
 
@@ -2880,12 +3090,15 @@ msgstr ""
 msgid "save current queue state"
 msgstr ""
 
+#, python-format
 msgid "destination %s exists and is not a directory"
 msgstr ""
 
+#, python-format
 msgid "destination %s exists, use -f to force"
 msgstr ""
 
+#, python-format
 msgid "copy %s to %s\n"
 msgstr ""
 
@@ -2937,9 +3150,11 @@ msgstr ""
 msgid "guards deactivated\n"
 msgstr ""
 
+#, python-format
 msgid "number of unguarded, unapplied patches has changed from %d to %d\n"
 msgstr ""
 
+#, python-format
 msgid "number of guarded, applied patches has changed from %d to %d\n"
 msgstr ""
 
@@ -2987,9 +3202,11 @@ msgstr ""
 msgid "source has mq patches applied"
 msgstr ""
 
+#, python-format
 msgid "mq status file refers to unknown node %s\n"
 msgstr ""
 
+#, python-format
 msgid "Tag %s overrides mq patch of the same name\n"
 msgstr ""
 
@@ -3310,24 +3527,22 @@ msgstr ""
 msgid "send message."
 msgstr ""
 
-msgid "try to make subject line exist and be useful."
-msgstr ""
-
+#, python-format
 msgid "%s: %d new changesets"
 msgstr ""
 
-msgid "try to make message have proper sender."
-msgstr ""
-
+#, python-format
 msgid "notify: sending %d subscribers %d changes\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "\n"
 "diffs (truncated from %d to %d lines):\n"
 "\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "\n"
 "diffs (%d lines):\n"
@@ -3341,9 +3556,11 @@ msgid ""
 "    changegroup. else send one email per changeset."
 msgstr ""
 
+#, python-format
 msgid "notify: no subscribers to repo %s\n"
 msgstr ""
 
+#, python-format
 msgid "notify: changes have source \"%s\" - skipping\n"
 msgstr ""
 
@@ -3464,7 +3681,13 @@ msgid ""
 "\n"
 "  % formail -s sendmail -bm -t < mbox\n"
 "\n"
-"That should be all. Now your patchbomb is on its way out."
+"That should be all. Now your patchbomb is on its way out.\n"
+"\n"
+"You can also either configure the method option in the email section\n"
+"to be a sendmail compatable mailer or fill out the [smtp] section so\n"
+"that the patchbomb extension can automatically send patchbombs directly\n"
+"from the commandline. See the [email] and [smtp] sections in hgrc(5)\n"
+"for details."
 msgstr ""
 
 msgid "Please enter a valid value.\n"
@@ -3542,6 +3765,7 @@ msgid ""
 "\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "This patch series consists of %d patches.\n"
 "\n"
@@ -3643,15 +3867,19 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
 msgid "%s cannot be removed"
 msgstr ""
 
+#, python-format
 msgid "warning: %s\n"
 msgstr ""
 
+#, python-format
 msgid "Removing file %s\n"
 msgstr ""
 
+#, python-format
 msgid "Removing directory %s\n"
 msgstr ""
 
@@ -3728,6 +3956,7 @@ msgstr ""
 msgid "rebase completed\n"
 msgstr ""
 
+#, python-format
 msgid "%d revisions have been skipped\n"
 msgstr ""
 
@@ -3743,18 +3972,22 @@ msgstr ""
 msgid "Rebase a single revision"
 msgstr ""
 
+#, python-format
 msgid "rebasing %d:%s\n"
 msgstr ""
 
+#, python-format
 msgid " future parents are %d and %d\n"
 msgstr ""
 
+#, python-format
 msgid " update to %d:%s\n"
 msgstr ""
 
 msgid " already in target\n"
 msgstr ""
 
+#, python-format
 msgid " merge against %d:%s\n"
 msgstr ""
 
@@ -3764,24 +3997,29 @@ msgstr ""
 msgid "resuming interrupted rebase\n"
 msgstr ""
 
+#, python-format
 msgid "no changes, revision %d skipped\n"
 msgstr ""
 
+#, python-format
 msgid "next revision set to %s\n"
 msgstr ""
 
 msgid "Return the new parent relationship of the revision that will be rebased"
 msgstr ""
 
+#, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
 msgstr ""
 
 msgid "Update rebased mq patches - finalize and then import them"
 msgstr ""
 
+#, python-format
 msgid "revision %d is an mq patch (%s), finalize it.\n"
 msgstr ""
 
+#, python-format
 msgid "import mq patch %d (%s)\n"
 msgstr ""
 
@@ -3830,6 +4068,7 @@ msgstr ""
 msgid "already working on the current branch\n"
 msgstr ""
 
+#, python-format
 msgid "rebase onto %d starting from %d\n"
 msgstr ""
 
@@ -3905,6 +4144,7 @@ msgstr ""
 msgid "this is a binary file\n"
 msgstr ""
 
+#, python-format
 msgid "%d hunks, %d lines changed\n"
 msgstr ""
 
@@ -3975,12 +4215,14 @@ msgstr ""
 msgid "user quit"
 msgstr ""
 
+#, python-format
 msgid "examine changes to %s?"
 msgstr ""
 
 msgid " and "
 msgstr ""
 
+#, python-format
 msgid "record this change to %r?"
 msgstr ""
 
@@ -4042,6 +4284,7 @@ msgstr ""
 msgid "no changes to record\n"
 msgstr ""
 
+#, python-format
 msgid "backup %r as %r\n"
 msgstr ""
 
@@ -4051,6 +4294,7 @@ msgstr ""
 msgid "patch failed to apply"
 msgstr ""
 
+#, python-format
 msgid "restoring %r to %r\n"
 msgstr ""
 
@@ -4077,21 +4321,26 @@ msgstr ""
 msgid "apply the revisions in revmap one by one in revision order"
 msgstr ""
 
+#, python-format
 msgid "skipping already applied revision %s\n"
 msgstr ""
 
+#, python-format
 msgid "skipping merge changeset %s:%s\n"
 msgstr ""
 
+#, python-format
 msgid "%s merged at %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s transplanted to %s\n"
 msgstr ""
 
 msgid "arbitrarily rewrite changeset before applying it"
 msgstr ""
 
+#, python-format
 msgid "filtering %s\n"
 msgstr ""
 
@@ -4104,6 +4353,7 @@ msgstr ""
 msgid "can only omit patchfile if merging"
 msgstr ""
 
+#, python-format
 msgid "%s: empty changeset"
 msgstr ""
 
@@ -4113,6 +4363,7 @@ msgstr ""
 msgid "recover last transaction and apply remaining changesets"
 msgstr ""
 
+#, python-format
 msgid "%s transplanted as %s\n"
 msgstr ""
 
@@ -4122,6 +4373,7 @@ msgstr ""
 msgid "transplant log file is corrupt"
 msgstr ""
 
+#, python-format
 msgid "working dir not at transplant parent %s"
 msgstr ""
 
@@ -4258,15 +4510,18 @@ msgid ""
 "\n"
 msgstr ""
 
+#, python-format
 msgid "[win32mbcs] filename conversion fail with %s encoding\n"
 msgstr ""
 
 msgid "[win32mbcs] cannot activate on this platform.\n"
 msgstr ""
 
+#, python-format
 msgid "[win32mbcs] activated with encoding: %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "WARNING: %s already has %s line endings\n"
 "and does not need EOL conversion by the win32text plugin.\n"
@@ -4274,12 +4529,15 @@ msgid ""
 "Mercurial.ini or %s.\n"
 msgstr ""
 
+#, python-format
 msgid "Attempt to commit or push text file(s) using %s line endings\n"
 msgstr ""
 
+#, python-format
 msgid "in %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "\n"
 "To prevent this mistake in your local repository,\n"
@@ -4330,6 +4588,7 @@ msgstr ""
 msgid "cannot give prefix when archiving to files"
 msgstr ""
 
+#, python-format
 msgid "unknown archive type '%s'"
 msgstr ""
 
@@ -4339,69 +4598,94 @@ msgstr ""
 msgid "unknown parent"
 msgstr ""
 
+#, python-format
 msgid "integrity check failed on %s:%d"
 msgstr ""
 
+#, python-format
 msgid "%s: not a Mercurial bundle file"
 msgstr ""
 
+#, python-format
 msgid "%s: unknown bundle version"
 msgstr ""
 
+#, python-format
 msgid "%s: unknown bundle compression type"
 msgstr ""
 
 msgid "cannot create new bundle repository"
 msgstr ""
 
+#, python-format
 msgid "premature EOF reading chunk (got %d bytes, expected %d)"
 msgstr ""
 
+#, python-format
 msgid "username %s contains a newline"
 msgstr ""
 
 msgid "options --message and --logfile are mutually exclusive"
 msgstr ""
 
+#, python-format
 msgid "can't read commit message '%s': %s"
+msgstr ""
+
+msgid "limit must be a positive integer"
+msgstr ""
+
+msgid "limit must be positive"
 msgstr ""
 
 msgid "too many revisions specified"
 msgstr ""
 
+#, python-format
 msgid "invalid format spec '%%%s' in output file name"
 msgstr ""
 
+#, python-format
 msgid "adding %s\n"
 msgstr ""
 
+#, python-format
 msgid "removing %s\n"
 msgstr ""
 
+#, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr ""
 
+#, python-format
 msgid "%s: not copying - file is not managed\n"
 msgstr ""
 
+#, python-format
 msgid "%s: not copying - file has been marked for remove\n"
 msgstr ""
 
+#, python-format
 msgid "%s: not overwriting - %s collides with %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s: not overwriting - file exists\n"
 msgstr ""
 
+#, python-format
 msgid "%s: deleted in working copy\n"
 msgstr ""
 
+#, python-format
 msgid "%s: cannot copy - %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s %s to %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
 msgstr ""
 
@@ -4414,6 +4698,7 @@ msgstr ""
 msgid "with multiple sources, destination must be an existing directory"
 msgstr ""
 
+#, python-format
 msgid "destination %s is not a directory"
 msgstr ""
 
@@ -4423,24 +4708,31 @@ msgstr ""
 msgid "(consider using --after)\n"
 msgstr ""
 
+#, python-format
 msgid "changeset:   %d:%s\n"
 msgstr ""
 
+#, python-format
 msgid "branch:      %s\n"
 msgstr ""
 
+#, python-format
 msgid "tag:         %s\n"
 msgstr ""
 
+#, python-format
 msgid "parent:      %d:%s\n"
 msgstr ""
 
+#, python-format
 msgid "manifest:    %d:%s\n"
 msgstr ""
 
+#, python-format
 msgid "user:        %s\n"
 msgstr ""
 
+#, python-format
 msgid "date:        %s\n"
 msgstr ""
 
@@ -4453,51 +4745,64 @@ msgstr ""
 msgid "files:"
 msgstr ""
 
+#, python-format
 msgid "files:       %s\n"
 msgstr ""
 
+#, python-format
 msgid "copies:      %s\n"
 msgstr ""
 
+#, python-format
 msgid "extra:       %s=%s\n"
 msgstr ""
 
 msgid "description:\n"
 msgstr ""
 
+#, python-format
 msgid "summary:     %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s: no key named '%s'"
 msgstr ""
 
+#, python-format
 msgid "%s: %s"
 msgstr ""
 
+#, python-format
 msgid "Found revision %s from %s\n"
 msgstr ""
 
 msgid "revision matching date not found"
 msgstr ""
 
+#, python-format
 msgid "cannot follow nonexistent file: \"%s\""
 msgstr ""
 
+#, python-format
 msgid "%s:%s copy source revision cannot be found!\n"
 msgstr ""
 
 msgid "can only follow copies/renames for explicit file names"
 msgstr ""
 
+#, python-format
 msgid "file %s not found!"
 msgstr ""
 
+#, python-format
 msgid "no match under directory %s!"
 msgstr ""
 
+#, python-format
 msgid "can't commit %s: unsupported file type!"
 msgstr ""
 
+#, python-format
 msgid "file %s not tracked!"
 msgstr ""
 
@@ -4574,6 +4879,7 @@ msgstr ""
 msgid "at least one of -n/-c is required for -l"
 msgstr ""
 
+#, python-format
 msgid "%s: binary file\n"
 msgstr ""
 
@@ -4646,18 +4952,22 @@ msgstr ""
 msgid "cannot back out a merge changeset without --parent"
 msgstr ""
 
+#, python-format
 msgid "%s is not a parent of %s"
 msgstr ""
 
 msgid "cannot use --parent on non-merge changeset"
 msgstr ""
 
+#, python-format
 msgid "Backed out changeset %s"
 msgstr ""
 
+#, python-format
 msgid "changeset %s backs out changeset %s\n"
 msgstr ""
 
+#, python-format
 msgid "merging with changeset %s\n"
 msgstr ""
 
@@ -4694,9 +5004,11 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
 msgid "The first %s revision is:\n"
 msgstr ""
 
+#, python-format
 msgid "Due to skipped revisions, the first %s revision could be any of:\n"
 msgstr ""
 
@@ -4712,15 +5024,19 @@ msgstr ""
 msgid "incompatible arguments"
 msgstr ""
 
+#, python-format
 msgid "failed to execute %s"
 msgstr ""
 
+#, python-format
 msgid "%s killed"
 msgstr ""
 
+#, python-format
 msgid "Changeset %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
 msgstr ""
 
@@ -4741,12 +5057,14 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
 msgid "reset working directory to branch %s\n"
 msgstr ""
 
 msgid "a branch of the same name already exists (use --force to override)"
 msgstr ""
 
+#, python-format
 msgid "marked working directory as branch %s\n"
 msgstr ""
 
@@ -4845,12 +5163,11 @@ msgid ""
 "    (.hg) and no working copy (the working copy parent is the null "
 "revision).\n"
 "\n"
-"    See pull for valid source format details.\n"
+"    See 'hg help urls' for valid source format details.\n"
 "\n"
 "    It is possible to specify an ssh:// URL as the destination, but no\n"
 "    .hg/hgrc and working directory will be created on the remote side.\n"
-"    Look at the help text for the pull command for important details\n"
-"    about ssh:// URLs.\n"
+"    Look at the help text for urls for important details about ssh:// URLs.\n"
 "    "
 msgstr ""
 "复制现有版本库\n"
@@ -4878,12 +5195,12 @@ msgstr ""
 "    如果你使用选项 '-r' 复制指定版本，那么后来的版本不会在新版本库中出现。\n"
 "    此选项暗示 '--pull'，纵然是操作本地版本库。\n"
 "\n"
-"    如果你使用了选项 '-U'，那么新版本库只包含版本库(.hg)，没有工作副本。\n"
+"    如果你使用了选项 '-U'，那么新仓库只包含版本库(.hg)，没有工作副本。\n"
 "\n"
-"    参见 'pull' 以了解有效源版本库格式的详情。\n"
+"    参见 'hg help urls' 以了解有效源格式的详情。\n"
 "\n"
 "    也可以指定位置 'ssh://' 作为目标，但是不会创建文件 .hg/hgrc，并且工作\n"
-"    副本将会创建在远程。参见命令 'pull' 的帮助信息，以了解位置 'ssh://'\n"
+"    副本将会创建在远程。参见主题 'urls' 的帮助信息，以了解位置 'ssh://'\n"
 "    的重要详情。\n"
 "    "
 
@@ -4920,6 +5237,7 @@ msgstr ""
 msgid "created new head\n"
 msgstr ""
 
+#, python-format
 msgid "committed changeset %d:%s\n"
 msgstr ""
 
@@ -4957,15 +5275,19 @@ msgstr ""
 msgid "validate the correctness of the current dirstate"
 msgstr ""
 
+#, python-format
 msgid "%s in state %s, but not in manifest1\n"
 msgstr ""
 
+#, python-format
 msgid "%s in state %s, but also in manifest1\n"
 msgstr ""
 
+#, python-format
 msgid "%s in state %s, but not in either manifest\n"
 msgstr ""
 
+#, python-format
 msgid "%s in manifest1, but listed as state %s"
 msgstr ""
 
@@ -4998,12 +5320,14 @@ msgstr ""
 msgid "show the contents of the current dirstate"
 msgstr ""
 
+#, python-format
 msgid "copy: %s -> %s\n"
 msgstr ""
 
 msgid "dump the contents of a data file revision"
 msgstr ""
 
+#, python-format
 msgid "invalid revision identifier %s"
 msgstr ""
 
@@ -5019,6 +5343,7 @@ msgstr ""
 msgid "test Mercurial installation"
 msgstr ""
 
+#, python-format
 msgid "Checking encoding (%s)...\n"
 msgstr ""
 
@@ -5071,6 +5396,7 @@ msgstr ""
 msgid " (specify a commit editor in your .hgrc file)\n"
 msgstr ""
 
+#, python-format
 msgid " Can't find editor '%s' in PATH\n"
 msgstr ""
 
@@ -5083,15 +5409,18 @@ msgstr ""
 msgid "No problems detected\n"
 msgstr ""
 
+#, python-format
 msgid "%s problems detected, please check your install!\n"
 msgstr ""
 
 msgid "dump rename information"
 msgstr ""
 
+#, python-format
 msgid "%s renamed from %s:%s\n"
 msgstr ""
 
+#, python-format
 msgid "%s not renamed\n"
 msgstr ""
 
@@ -5237,6 +5566,7 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
 msgid "grep: invalid match pattern: %s\n"
 msgstr ""
 
@@ -5259,9 +5589,11 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
 msgid "no changes on branch %s containing %s are reachable from %s\n"
 msgstr ""
 
+#, python-format
 msgid "no changes on branch %s are reachable from %s\n"
 msgstr ""
 
@@ -5282,9 +5614,11 @@ msgstr "使用 \"hg help\" 获得全部命令的列表"
 msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
 msgstr "使用 \"hg help\" 获得全部命令的列表，或 \"hg -v\" 获得详细信息"
 
+#, python-format
 msgid "use \"hg -v help%s\" to show aliases and global options"
 msgstr "使用 \"hg -v help%s\" 显示别名和全局选项"
 
+#, python-format
 msgid "use \"hg -v help %s\" to show global options"
 msgstr "使用 \"hg -v help %s\" 显示全局选项"
 
@@ -5295,6 +5629,7 @@ msgstr ""
 "命令列表:\n"
 "\n"
 
+#, python-format
 msgid ""
 "\n"
 "aliases: %s\n"
@@ -5320,12 +5655,14 @@ msgstr ""
 "启用的扩展:\n"
 "\n"
 
+#, python-format
 msgid " %s   %s\n"
 msgstr ""
 
 msgid "no help text available"
 msgstr "没有可用的帮助信息"
 
+#, python-format
 msgid "%s extension - %s\n"
 msgstr ""
 
@@ -5401,6 +5738,7 @@ msgstr ""
 msgid "no diffs found"
 msgstr ""
 
+#, python-format
 msgid ""
 "message:\n"
 "%s\n"
@@ -5435,8 +5773,7 @@ msgid ""
 "    If no directory is given, the current directory is used.\n"
 "\n"
 "    It is possible to specify an ssh:// URL as the destination.\n"
-"    Look at the help text for the pull command for important details\n"
-"    about ssh:// URLs.\n"
+"    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
 "在指定目录创建新版本库\n"
@@ -5445,8 +5782,8 @@ msgstr ""
 "\n"
 "    如果没有指定目录，就使用当前目录。\n"
 "\n"
-"    可以指定位置 'ssh://' 作为目标。参见命令 'pull' 的帮助信息，以了解\n"
-"    位置 'ssh://' 的重要详情。\n"
+"    可以指定位置 'ssh://' 作为目标。参见命令 'hg help urls' 的帮助信息，\n"
+"    以了解位置 'ssh://' 的重要详情。\n"
 "    "
 
 msgid ""
@@ -5569,15 +5906,18 @@ msgstr ""
 "    中，合并后的内容是新的顶点。否则，必须明确的指定要合并的版本。\n"
 "    "
 
+#, python-format
 msgid "branch '%s' has %d heads - please merge with an explicit rev"
 msgstr ""
 
+#, python-format
 msgid "branch '%s' has one head - please merge with an explicit rev"
 msgstr ""
 
 msgid "there is nothing to merge"
 msgstr ""
 
+#, python-format
 msgid "%s - use \"hg update\" instead"
 msgstr ""
 
@@ -5617,17 +5957,19 @@ msgstr ""
 msgid "can only specify an explicit file name"
 msgstr ""
 
+#, python-format
 msgid "'%s' not found in manifest!"
 msgstr ""
 
 msgid ""
-"show definition of symbolic path names\n"
+"show aliases for remote repositories\n"
 "\n"
-"    Show definition of symbolic path name NAME. If no name is given, show\n"
-"    definition of available names.\n"
-"\n"
+"     Show definition of symbolic path name NAME. If no name is given, show\n"
+"     definition of available names.\n"
 "    Path names are defined in the [paths] section of /etc/mercurial/hgrc\n"
 "    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.\n"
+"\n"
+"    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
 
@@ -5652,34 +5994,8 @@ msgid ""
 "    or URL and adds them to the local repository. By default, this\n"
 "    does not update the copy of the project in the working directory.\n"
 "\n"
-"    Valid URLs are of the form:\n"
-"\n"
-"      local/filesystem/path (or file://local/filesystem/path)\n"
-"      http://[user[:pass]@]host[:port]/[path]\n"
-"      https://[user[:pass]@]host[:port]/[path]\n"
-"      ssh://[user[:pass]@]host[:port]/[path]\n"
-"\n"
-"    Paths in the local filesystem can either point to Mercurial\n"
-"    repositories or to bundle files (as created by 'hg bundle' or\n"
-"    'hg incoming --bundle').\n"
-"\n"
-"    An optional identifier after # indicates a particular branch, tag,\n"
-"    or changeset to pull.\n"
-"\n"
-"    Some notes about using SSH with Mercurial:\n"
-"    - SSH requires an accessible shell account on the destination machine\n"
-"      and a copy of hg in the remote path or specified with as remotecmd.\n"
-"    - path is relative to the remote user's home directory by default.\n"
-"      Use an extra slash at the start of a path to specify an absolute path:\n"
-"        ssh://example.com//tmp/repository\n"
-"    - Mercurial doesn't use its own compression via SSH; the right thing\n"
-"      to do is to configure it in your ~/.ssh/config, e.g.:\n"
-"        Host *.mylocalnetwork.example.com\n"
-"          Compression no\n"
-"        Host *\n"
-"          Compression yes\n"
-"      Alternatively specify \"ssh -C\" as your ssh command in your hgrc or\n"
-"      with the --ssh command line option.\n"
+"    If SOURCE is omitted, the 'default' path will be used.\n"
+"    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
 "从指定版本库取得改变集\n"
@@ -5689,32 +6005,8 @@ msgstr ""
 "    查找位于指定路径或位置的版本库的全部修改，增加到版本版本库。默认不\n"
 "    更新工作目录。\n"
 "\n"
-"    有效的位置格式:\n"
-"\n"
-"      local/filesystem/path (or file://local/filesystem/path)\n"
-"      http://[user[:pass]@]host[:port]/[path]\n"
-"      https://[user[:pass]@]host[:port]/[path]\n"
-"      ssh://[user[:pass]@]host[:port]/[path]\n"
-"\n"
-"    位于本地文件系统中的路径可以指向版本库，也可以指向打包的文件(被\n"
-"    'hg bundle' 或 'hg incoming --bundle' 创建)。\n"
-"\n"
-"    在 '#' 后面可选的标识符用于指定要取得的分支，标签或改变集。\n"
-"\n"
-"    在水银中使用 SSH 的一些提示:\n"
-"    - 使用 SSH 时，需要在远程主机上有可登录帐号，远程路径中还需要有 hg，\n"
-"      或者有指定的远程命令。\n"
-"    - 默认 'path' 是相对于远程主机上的用户家目录。\n"
-"      可以在路径前增加一个斜线指定绝对路径:\n"
-"        ssh://example.com//tmp/repository\n"
-"    - 水银使用 SSH 时不使用压缩，所以你可以在 ~/.ssh/config 中配置 SSH\n"
-"      执行压缩，例如:\n"
-"        Host *.mylocalnetwork.example.com\n"
-"          Compression no\n"
-"        Host *\n"
-"          Compression yes\n"
-"      另一个方法是在你的 hgrc 中将 \"ssh -C\" 作为你的 ssh 命令，或者用于\n"
-"      命令行参数 '--ssh' 中。\n"
+"    如果没有指定位置，就使用路径 'default'。参见 'hg help urls' 以了解\n"
+"    更多信息。\n"
 "    "
 
 msgid ""
@@ -5736,22 +6028,12 @@ msgid ""
 "    increase the number of remote heads. This generally indicates the\n"
 "    the client has forgotten to pull and merge before pushing.\n"
 "\n"
-"    Valid URLs are of the form:\n"
+"    If -r is used, the named changeset and all its ancestors will be pushed\n"
+"    to the remote repository.\n"
 "\n"
-"      local/filesystem/path (or file://local/filesystem/path)\n"
-"      ssh://[user[:pass]@]host[:port]/[path]\n"
-"      http://[user[:pass]@]host[:port]/[path]\n"
-"      https://[user[:pass]@]host[:port]/[path]\n"
-"\n"
-"    An optional identifier after # indicates a particular branch, tag,\n"
-"    or changeset to push. If -r is used, the named changeset and all its\n"
-"    ancestors will be pushed to the remote repository.\n"
-"\n"
-"    Look at the help text for the pull command for important details\n"
-"    about ssh:// URLs.\n"
-"\n"
-"    Pushing to http:// and https:// URLs is only possible, if this\n"
-"    feature is explicitly enabled on the remote Mercurial server.\n"
+"    Look at the help text for urls for important details about ssh:// URLs.\n"
+"    If DESTINATION is omitted, a default path will be used.\n"
+"    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
 "推送改变到指定位置\n"
@@ -5765,21 +6047,14 @@ msgstr ""
 "    推送默认拒绝导致增加远程版本库顶点数目的操作。这通常表明客户端在推送\n"
 "    之前忘记取得远程版本库的修改，并且合并。\n"
 "\n"
-"    有效的位置格式:\n"
+"    如果使用了选项 '-r'，此命名改变集以及其祖先都会被推送到远程版本库。\n"
+"    \n"
 "\n"
-"      local/filesystem/path (or file://local/filesystem/path)\n"
-"      ssh://[user[:pass]@]host[:port]/[path]\n"
-"      http://[user[:pass]@]host[:port]/[path]\n"
-"      https://[user[:pass]@]host[:port]/[path]\n"
-"\n"
-"    在 '#' 后面可选的标识符用于指定要推送的分支，标签或改变集。如果使用了\n"
-"    选项 '-r'，此命名改变集以及其祖先都会被推送到远程版本库。\n"
-"\n"
-"    参见命令 'pull' 的帮助信息，以了解位置 'ssh://' 的重要详情。\n"
-"\n"
-"    仅当远程水银服务器显式启用时，才能推送到位置 'http://' 和 'https://'。\n"
+"    参见主题 'urls' 的帮助信息，以了解位置 'ssh://' 的重要详情。如果没有\n"
+"    给出目标位置，那么使用默认路径。参见 'hg help urls' 以了解更多信息。\n"
 "    "
 
+#, python-format
 msgid "pushing to %s\n"
 msgstr ""
 
@@ -5860,6 +6135,7 @@ msgstr ""
 msgid "no files specified"
 msgstr ""
 
+#, python-format
 msgid "not removing %s: file %s (use -f to force removal)\n"
 msgstr ""
 
@@ -5954,21 +6230,27 @@ msgstr ""
 msgid "no files or directories specified; use --all to revert the whole repo"
 msgstr ""
 
+#, python-format
 msgid "forgetting %s\n"
 msgstr ""
 
+#, python-format
 msgid "reverting %s\n"
 msgstr ""
 
+#, python-format
 msgid "undeleting %s\n"
 msgstr ""
 
+#, python-format
 msgid "saving current version of %s as %s\n"
 msgstr ""
 
+#, python-format
 msgid "file not managed: %s\n"
 msgstr ""
 
+#, python-format
 msgid "no changes needed to %s\n"
 msgstr ""
 
@@ -6024,6 +6306,7 @@ msgstr ""
 "    可以使用选项 \"-A\" 和 \"-E\"，将这些日志输出到文件。\n"
 "    "
 
+#, python-format
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
 msgstr ""
 
@@ -6110,24 +6393,30 @@ msgstr ""
 msgid "tag names must be unique"
 msgstr ""
 
+#, python-format
 msgid "the name '%s' is reserved"
 msgstr ""
 
 msgid "--rev and --remove are incompatible"
 msgstr ""
 
+#, python-format
 msgid "tag '%s' does not exist"
 msgstr ""
 
+#, python-format
 msgid "tag '%s' is not a %s tag"
 msgstr ""
 
+#, python-format
 msgid "Removed tag %s"
 msgstr ""
 
+#, python-format
 msgid "tag '%s' already exists (use -f to force)"
 msgstr ""
 
+#, python-format
 msgid "Added tag %s for changeset %s"
 msgstr ""
 
@@ -6224,6 +6513,7 @@ msgstr ""
 msgid "output version and copyright information"
 msgstr "输出版本和版权信息"
 
+#, python-format
 msgid "Mercurial Distributed SCM (version %s)\n"
 msgstr "分布式软件配置管理工具 - 水银 (版本 %s)\n"
 
@@ -6879,14 +7169,17 @@ msgstr ""
 msgid "branch name not in UTF-8!"
 msgstr ""
 
+#, python-format
 msgid "  searching for copies back to rev %d\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "  unmatched files in local:\n"
 "   %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "  unmatched files in other:\n"
 "   %s\n"
@@ -6895,27 +7188,34 @@ msgstr ""
 msgid "  all copies found (* = to merge, ! = divergent):\n"
 msgstr ""
 
+#, python-format
 msgid "   %s -> %s %s\n"
 msgstr ""
 
 msgid "  checking for directory renames\n"
 msgstr ""
 
+#, python-format
 msgid "  dir %s -> %s\n"
 msgstr ""
 
+#, python-format
 msgid "  file %s -> %s\n"
 msgstr ""
 
+#, python-format
 msgid "'\\n' and '\\r' disallowed in filenames: %r"
 msgstr ""
 
+#, python-format
 msgid "directory %r already in dirstate"
 msgstr ""
 
+#, python-format
 msgid "file %r in dirstate clashes with %r"
 msgstr ""
 
+#, python-format
 msgid "not in dirstate: %s\n"
 msgstr ""
 
@@ -6934,38 +7234,49 @@ msgstr ""
 msgid "directory"
 msgstr ""
 
+#, python-format
 msgid "%s: unsupported file type (type is %s)\n"
 msgstr ""
 
+#, python-format
 msgid "abort: %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "hg: command '%s' is ambiguous:\n"
 "    %s\n"
 msgstr ""
 
+#, python-format
 msgid "timed out waiting for lock held by %s"
 msgstr ""
 
+#, python-format
 msgid "lock held by %s"
 msgstr ""
 
+#, python-format
 msgid "abort: %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "abort: could not lock %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "hg %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "hg: %s\n"
 msgstr ""
 
+#, python-format
 msgid "abort: %s!\n"
 msgstr ""
 
+#, python-format
 msgid "abort: %s"
 msgstr ""
 
@@ -6975,9 +7286,11 @@ msgstr ""
 msgid "killed!\n"
 msgstr ""
 
+#, python-format
 msgid "hg: unknown command '%s'\n"
 msgstr "hg: 未知命令 '%s'\n"
 
+#, python-format
 msgid "abort: could not import module %s!\n"
 msgstr ""
 
@@ -6987,6 +7300,7 @@ msgstr ""
 msgid "(is your Python install correct?)\n"
 msgstr ""
 
+#, python-format
 msgid "abort: error: %s\n"
 msgstr ""
 
@@ -7013,15 +7327,19 @@ msgstr ""
 msgid "** or mercurial@selenic.com\n"
 msgstr ""
 
+#, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
 msgstr "** 分布式软件配置管理工具 - 水银 (版本 %s)\n"
 
+#, python-format
 msgid "** Extensions loaded: %s\n"
 msgstr ""
 
+#, python-format
 msgid "malformed --config option: %s"
 msgstr ""
 
+#, python-format
 msgid "extension '%s' overrides commands: %s\n"
 msgstr ""
 
@@ -7036,9 +7354,11 @@ msgid ""
 "repository may only be abbreviated as --repo!"
 msgstr ""
 
+#, python-format
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
 msgstr ""
 
+#, python-format
 msgid "repository '%s' is not local"
 msgstr ""
 
@@ -7053,27 +7373,35 @@ msgid ""
 "misc/lsprof/"
 msgstr ""
 
+#, python-format
 msgid "*** failed to import extension %s from %s: %s\n"
 msgstr "*** 加载扩展 '%s'，自 '%s': %s\n"
 
+#, python-format
 msgid "*** failed to import extension %s: %s\n"
 msgstr "*** 加载扩展 '%s' 失败: %s\n"
 
+#, python-format
 msgid "couldn't find merge tool %s\n"
 msgstr ""
 
+#, python-format
 msgid "tool %s can't handle symlinks\n"
 msgstr ""
 
+#, python-format
 msgid "tool %s can't handle binary\n"
 msgstr ""
 
+#, python-format
 msgid "tool %s requires a GUI\n"
 msgstr ""
 
+#, python-format
 msgid "picked tool '%s' for %s (binary %s symlink %s)\n"
 msgstr ""
 
+#, python-format
 msgid ""
 " no tool found to merge %s\n"
 "keep (l)ocal or take (o)ther?"
@@ -7085,18 +7413,22 @@ msgstr ""
 msgid "l"
 msgstr ""
 
+#, python-format
 msgid "merging %s and %s to %s\n"
 msgstr ""
 
+#, python-format
 msgid "merging %s\n"
 msgstr ""
 
+#, python-format
 msgid "my %s other %s ancestor %s\n"
 msgstr ""
 
 msgid " premerge successful\n"
 msgstr ""
 
+#, python-format
 msgid ""
 " output file %s appears unchanged\n"
 "was merge successful (yn)?"
@@ -7108,12 +7440,15 @@ msgstr ""
 msgid "n"
 msgstr ""
 
+#, python-format
 msgid "merging %s failed!\n"
 msgstr ""
 
+#, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
 msgstr ""
 
+#, python-format
 msgid "unknown bisect kind %s"
 msgstr ""
 
@@ -7323,7 +7658,7 @@ msgid ""
 msgstr ""
 
 msgid "Specifying Multiple Revisions"
-msgstr ""
+msgstr "指定多个版本"
 
 msgid ""
 "\n"
@@ -7344,9 +7679,23 @@ msgid ""
 "    gives 3, 4 and 5. Similarly, a range of 4:2 gives 4, 3, and 2.\n"
 "    "
 msgstr ""
+"\n"
+"    当水银接受多个版本时，它们可以单独给出，或者以字符 \":\" 分割的连续范围\n"
+"    格式提供。\n"
+"\n"
+"    范围的语法是 '[BEGIN]:[END]'，其中 'BEGIN' 和 'END' 是版本标识。'BEGIN'\n"
+"    和 'END' 都是可选的。'BEGIN' 默认是 0，'END' 默认是 'tip'。因此范围 \":"
+"\"\n"
+"    意味着全部版本。\n"
+"\n"
+"    如果 'BEGIN' 大于 'END'，版本视为反序。\n"
+"\n"
+"    范围是闭区间。即范围 '3:5' 是 '3'，'4'，'5'。同样，范围 '4:2' 是 '4'，\n"
+"    '3'，'2'。\n"
+"    "
 
 msgid "Diff Formats"
-msgstr ""
+msgstr "差异格式"
 
 msgid ""
 "\n"
@@ -7381,10 +7730,304 @@ msgid ""
 "    importing diffs in this format or using them in the mq extension.\n"
 "    "
 msgstr ""
+"\n"
+"    水银显示文件不同版本之间差异的格式与 GNU diff 标准格式兼容，可用于\n"
+"    GNU patch 和许多标准工具。\n"
+"\n"
+"    虽然标准格式在大多数情况下都能满足要求，但是它不包含下述信息:\n"
+"\n"
+"     - 可执行状态\n"
+"     - 复制或改名信息\n"
+"     - 二进制文件的修改\n"
+"     - 创建或删除空文件\n"
+"\n"
+"    水银也支持解决这些限制的 git 扩展差异格式。由于支持 git 差异格式的工具\n"
+"    很少，所以它不是默认格式。\n"
+"\n"
+"    这意味着当从水银版本库(例如 \"hg export\")产生差异时，在其它版本库应用标\n"
+"    准差异时，会丢失文件复制或改名等额外信息，所以你要小心处理。水银的内部\n"
+"    操作(例如 push 和 pull)在传达改变时，使用内部的二进制格式，所以不受影\n"
+"    响。\n"
+"\n"
+"    要让水银产生 git 扩展差异格式，可以对许多命令使用选项 '--git'，或者在\n"
+"    你的 hgrc 文件中的节 '[diff]' 中增加 'git = True'。当你从此格式导入时，\n"
+"    或在 mq 扩展中使用时，不需要设置此选项。\n"
+"    "
 
+msgid "Template Usage"
+msgstr "模版用法"
+
+msgid ""
+"\n"
+"    Mercurial allows you to customize output of commands through\n"
+"    templates. You can either pass in a template from the command line,\n"
+"    via the --template option, or select an existing template-style (--"
+"style).\n"
+"\n"
+"    You can customize output for any \"log-like\" command: log, outgoing,\n"
+"    incoming, tip, parents, heads and glog are all template-enabled.\n"
+"\n"
+"    Three styles are packaged with Mercurial: default (the style used\n"
+"    when no explicit preference is passed), compact and changelog. Usage:\n"
+"\n"
+"        $ hg log -r1 --style changelog\n"
+"\n"
+"    A template is a piece of text, with markup to invoke variable expansion:\n"
+"\n"
+"        $ hg log -r1 --template \"{node}\\n\"\n"
+"        b56ce7b07c52de7d5fd79fb89701ea538af65746\n"
+"\n"
+"    Strings in curly braces are called keywords. The availability of\n"
+"    keywords depends on the exact context of the templater. These keywords\n"
+"    are usually available for templating a log-like command:\n"
+"\n"
+"    - author: String. The unmodified author of the changeset.\n"
+"    - branches: String. The name of the branch on which the changeset\n"
+"          was committed. Will be empty if the branch name was default.\n"
+"    - date: Date information. The date when the changeset was committed.\n"
+"    - desc: String. The text of the changeset description.\n"
+"    - files: List of strings. All files modified, added, or removed by\n"
+"          this changeset.\n"
+"    - file_adds: List of strings. Files added by this changeset.\n"
+"    - file_mods: List of strings. Files modified by this changeset.\n"
+"    - file_dels: List of strings. Files removed by this changeset.\n"
+"    - node: String. The changeset identification hash, as a 40-character\n"
+"          hexadecimal string.\n"
+"    - parents: List of strings. The parents of the changeset.\n"
+"    - rev: Integer. The repository-local changeset revision number.\n"
+"    - tags: List of strings. Any tags associated with the changeset.\n"
+"\n"
+"    The \"date\" keyword does not produce human-readable output. If you\n"
+"    want to use a date in your output, you can use a filter to process it.\n"
+"    Filters are functions which return a string based on the input variable.\n"
+"    You can also use a chain of filters to get the wanted output:\n"
+"\n"
+"       $ hg tip --template \"{date|isodate}\\n\"\n"
+"       2008-08-21 18:22 +0000\n"
+"\n"
+"    List of filters:\n"
+"\n"
+"    - addbreaks: Any text. Add an XHTML \"<br />\" tag before the end of\n"
+"          every line except the last.\n"
+"    - age: Date. Returns a human-readable age for the given date.\n"
+"    - basename: Any text. Treats the text as a path, and returns the\n"
+"          basename. For example, \"foo/bar/baz\" becomes \"baz\".\n"
+"    - date: Date. Returns a date in a Unix date command format, including\n"
+"          the timezone: \"Mon Sep 04 15:13:13 2006 0700\".\n"
+"    - domain: Any text. Finds the first string that looks like an email\n"
+"          address, and extracts just the domain component.\n"
+"    - email: Any text. Extracts the first string that looks like an email\n"
+"          address.\n"
+"    - escape: Any text. Replaces the special XML/XHTML characters \"&\",\n"
+"          \"<\" and \">\" with XML entities.\n"
+"    - fill68: Any text. Wraps the text to fit in 68 columns.\n"
+"    - fill76: Any text. Wraps the text to fit in 76 columns.\n"
+"    - firstline: Any text. Returns the first line of text.\n"
+"    - hgdate: Date. Returns the date as a pair of numbers:\n"
+"          \"1157407993 25200\" (Unix timestamp, timezone offset).\n"
+"    - isodate: Date. Returns the date in ISO 8601 format.\n"
+"    - obfuscate: Any text. Returns the input text rendered as a sequence\n"
+"          of XML entities.\n"
+"    - person: Any text. Returns the text before an email address.\n"
+"    - rfc822date: Date. Returns a date using the same format used\n"
+"          in email headers.\n"
+"    - short: Changeset hash. Returns the short form of a changeset hash,\n"
+"          i.e. a 12-byte hexadecimal string.\n"
+"    - shortdate: Date. Returns a date like \"2006-09-04\".\n"
+"    - strip: Any text. Strips all leading and trailing whitespace.\n"
+"    - tabindent: Any text. Returns the text, with every line except the\n"
+"          first starting with a tab character.\n"
+"    - urlescape: Any text. Escapes all \"special\" characters. For example,\n"
+"          \"foo bar\" becomes \"foo%20bar\".\n"
+"    - user: Any text. Returns the user portion of an email address.\n"
+"    "
+msgstr ""
+"\n"
+"    水银允许你通过模版定制命令的输出。你可以通过命令行选项 '--template'\n"
+"    来使用模版，或者选择已有的模版样式(--style)。\n"
+"\n"
+"    你可以定制任意输出与日志信息类似的命令，即: log，outgoing，incoming，\n"
+"    tip，parents，heads 和 glog 这些启用模版的命令。\n"
+"\n"
+"    水银中内置了 3 种样式: default (默认), compact 和 changelog。用法:\n"
+"\n"
+"        $ hg log -r1 --style changelog\n"
+"\n"
+"    模版是文本片断，其中的标记用于变量扩展:\n"
+"\n"
+"        $ hg log -r1 --template \"{node}\\n\"\n"
+"        b56ce7b07c52de7d5fd79fb89701ea538af65746\n"
+"\n"
+"    花括号中的字符串称为关键字。可用的关键字依赖于模版的上下文。下述关键字\n"
+"    可用于输出与日志信息类似的命令:\n"
+"\n"
+"    - author: 字符串。改变集的作者。\n"
+"    - branches: 字符串。改变集的分支。如果分支名称为 'default' 则为空。\n"
+"    - date: 日期信息。改变集的日期。\n"
+"    - desc: 字符串。改变集的描述。\n"
+"    - files: 字符串列表。改变集中被修改、增加和删除的全部文件。\n"
+"    - file_adds: 字符串列表。改变集中被增加的文件。\n"
+"    - file_mods: 字符串列表。改变集中被修改的文件\n"
+"    - file_dels: 字符串列表。改变集中被删除的文件\n"
+"    - node: 字符串。改变集的哈系标识，40 个字符的 16 进制字符串。\n"
+"    - parents: 字符串列表。改变集的父亲。\n"
+"    - rev: 整数。本地版本库的改变集的版本号。\n"
+"    - tags: 字符串列表。改变集的标签。\n"
+"\n"
+"    关键字 \"date\" 不产生人工可读的输出。如果你想在输出中使用日期，可以使用\n"
+"    过滤器来处理它。过滤器是根据输入变量返回字符串的函数。你还可以使用过滤\n"
+"    链来产生需要的输出:\n"
+"\n"
+"       $ hg tip --template \"{date|isodate}\\n\"\n"
+"       2008-08-21 18:22 +0000\n"
+"\n"
+"    过滤器列表:\n"
+"\n"
+"    - addbreaks: 输入任意文本。除了最后一行，在每行的结尾增加 XHTML 标签\n"
+"          \"<br />\"。\n"
+"    - age: 输入日期。返回指定日期的人工可读的字符串。\n"
+"    - basename: 输入任意文本。将输入视为路径，返回基础名称。例如\n"
+"          \"foo/bar/baz\" 成为 \"baz\"。\n"
+"    - date: 输入日期。返回指定日期的 Unix 命令 'date' 格式字符串，包含时\n"
+"          区，例如: \"Mon Sep 04 15:13:13 2006 0700\"。\n"
+"    - domain: 输入任意文本。找到第一个 email 地址，返回其域名。\n"
+"    - email: 输入任意文本。返回第一个 email 地址。\n"
+"    - escape: 输入任意文本。用 XML 实体来封装 XML/XHTML 的特殊字符 \"&\"，\n"
+"          \"<\" 和 \">\"。\n"
+"    - fill68: 输入任意文本。格式化为 68 列文本。\n"
+"    - fill76: 输入任意文本。格式化为 76 列文本。\n"
+"    - firstline: 输入任意文本。返回首行。\n"
+"    - hgdate: 输入日期。返回一对数字:\n"
+"          \"1157407993 25200\" (Unix 时戳，时区偏移)。\n"
+"    - isodate: 输入日期。返回 ISO 8601 格式的日期。\n"
+"    - obfuscate: 输入任意文本。返回其 XML 实体序列。\n"
+"    - person: 输入任意文本。返回 email 地址前的文本。\n"
+"    - rfc822date: 输入日期。返回 email 头部使用的日期格式。\n"
+"    - short: 改变集哈系。返回改变集哈系的短格式。例如 12 字符的 16 进制\n"
+"          字符串。\n"
+"    - shortdate: 输入日期。返回格式类似于 \"2006-09-04\"。\n"
+"    - strip: 输入任意文本。删除全部行首与行尾空白。\n"
+"    - tabindent: 输入任意文本。除了首行，在每行的开始增加制表符号。\n"
+"    - urlescape: 输入任意文本。封装全部特殊字符。例如\n"
+"          \"foo bar\" 成为 \"foo%20bar\"。\n"
+"    - user: 输入任意文本。返回 email 地址中的用户名称部分。\n"
+"    "
+
+msgid "Url Paths"
+msgstr "统一资源定位路径"
+
+msgid ""
+"\n"
+"    Valid URLs are of the form:\n"
+"\n"
+"      local/filesystem/path (or file://local/filesystem/path)\n"
+"      http://[user[:pass]@]host[:port]/[path]\n"
+"      https://[user[:pass]@]host[:port]/[path]\n"
+"      ssh://[user[:pass]@]host[:port]/[path]\n"
+"\n"
+"    Paths in the local filesystem can either point to Mercurial\n"
+"    repositories or to bundle files (as created by 'hg bundle' or\n"
+"    'hg incoming --bundle').\n"
+"\n"
+"    An optional identifier after # indicates a particular branch, tag,\n"
+"    or changeset to deal with in the remote repository.\n"
+"\n"
+"    Some features, such as pushing to http:// and https:// URLs are\n"
+"    only possible if the feature is explicitly enabled on the\n"
+"    remote Mercurial server.\n"
+"\n"
+"    Some notes about using SSH with Mercurial:\n"
+"    - SSH requires an accessible shell account on the destination machine\n"
+"      and a copy of hg in the remote path or specified with as remotecmd.\n"
+"    - path is relative to the remote user's home directory by default.\n"
+"      Use an extra slash at the start of a path to specify an absolute path:\n"
+"        ssh://example.com//tmp/repository\n"
+"    - Mercurial doesn't use its own compression via SSH; the right thing\n"
+"      to do is to configure it in your ~/.ssh/config, e.g.:\n"
+"        Host *.mylocalnetwork.example.com\n"
+"          Compression no\n"
+"        Host *\n"
+"          Compression yes\n"
+"      Alternatively specify \"ssh -C\" as your ssh command in your hgrc or\n"
+"      with the --ssh command line option.\n"
+"\n"
+"    These urls can all be stored in your hgrc with path aliases under the\n"
+"    [paths] section like so:\n"
+"    [paths]\n"
+"    alias1 = URL1\n"
+"    alias2 = URL2\n"
+"    ...\n"
+"\n"
+"    You can then use the alias for any command that uses a url (for example\n"
+"    'hg pull alias1' would pull from the 'alias1' path).\n"
+"\n"
+"    Two path aliases are more important because they are used as defaults\n"
+"    when you do not provide the url to a command:\n"
+"\n"
+"    default:\n"
+"      When you create a repository with hg clone, the clone command saves\n"
+"      the location of the source repository as the 'default' path. This is\n"
+"      then used when you omit a path from the push and pull commands.\n"
+"\n"
+"    default-push:\n"
+"      The push command will look for a path named 'default-push', and\n"
+"      prefer it over 'default' if both are defined.\n"
+"    "
+msgstr ""
+"\n"
+"    有效的位置格式:\n"
+"\n"
+"      local/filesystem/path (or file://local/filesystem/path)\n"
+"      http://[user[:pass]@]host[:port]/[path]\n"
+"      https://[user[:pass]@]host[:port]/[path]\n"
+"      ssh://[user[:pass]@]host[:port]/[path]\n"
+"\n"
+"    位于本地文件系统中的路径可以指向版本库，也可以指向打包的文件(被\n"
+"    'hg bundle' 或 'hg incoming --bundle' 创建)。\n"
+"\n"
+"    在 '#' 后面可选的标识符用于指定要取得的分支，标签或改变集。\n"
+"\n"
+"    仅当远程水银服务器显式启用时，才能推送到位置 'http://' 和 'https://'。\n"
+"\n"
+"    在水银中使用 SSH 的一些提示:\n"
+"    - 使用 SSH 时，需要在远程主机上有可登录帐号，远程路径中还需要有\n"
+"      hg，或者有指定的远程命令。\n"
+"    - 默认 'path' 是相对于远程主机上的用户家目录。\n"
+"      可以在路径前增加一个斜线指定绝对路径:\n"
+"        ssh://example.com//tmp/repository\n"
+"    - 水银使用 SSH 时不使用压缩，所以你可以在 ~/.ssh/config 中配置\n"
+"      SSH 执行压缩，例如:\n"
+"        Host *.mylocalnetwork.example.com\n"
+"          Compression no\n"
+"        Host *\n"
+"          Compression yes\n"
+"      另一个方法是在你的 hgrc 中将 \"ssh -C\" 作为你的 ssh 命令，或\n"
+"      用于命令行参数 '--ssh' 中。\n"
+"\n"
+"    这些路径可以在你的 'hgrc' 中的节 '[paths]' 中定义别名:\n"
+"    [paths]\n"
+"    alias1 = URL1\n"
+"    alias2 = URL2\n"
+"    ...\n"
+"\n"
+"    然后你就可以在任意命令中使用这些别名作为路径(例如 'hg pull alias1'\n"
+"    会从 'alias1' 定义的路径取得指定版本)。\n"
+"\n"
+"    因为用于默认路径，所以这 2 个路径别名特别重要:\n"
+"\n"
+"    default:\n"
+"      当你使用 'hg clone' 创建版本库时，此命令会将源版本库的路径保存\n"
+"      为别名 'default'，然后你可以对命令 'push' 和 'pull' 省略路径。\n"
+"\n"
+"    default-push:\n"
+"      命令 'push' 会查找别名是 'default-push' 的路径，它覆盖定义 'default'。\n"
+"    "
+
+#, python-format
 msgid "destination directory: %s\n"
 msgstr ""
 
+#, python-format
 msgid "destination '%s' already exists"
 msgstr ""
 
@@ -7411,6 +8054,7 @@ msgstr ""
 msgid "unresolved"
 msgstr ""
 
+#, python-format
 msgid "%d files %s"
 msgstr ""
 
@@ -7420,6 +8064,7 @@ msgstr ""
 msgid "(branch merge, don't forget to commit)\n"
 msgstr ""
 
+#, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr ""
 
@@ -7429,87 +8074,111 @@ msgstr ""
 msgid "IPv6 not available on this system"
 msgstr ""
 
+#, python-format
 msgid "cannot start server at '%s:%d': %s"
 msgstr ""
 
+#, python-format
 msgid "calling hook %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s hook is invalid (\"%s\" not in a module)"
 msgstr ""
 
+#, python-format
 msgid "%s hook is invalid (import of \"%s\" failed)"
 msgstr ""
 
+#, python-format
 msgid "%s hook is invalid (\"%s\" is not defined)"
 msgstr ""
 
+#, python-format
 msgid "%s hook is invalid (\"%s\" is not callable)"
 msgstr ""
 
+#, python-format
 msgid "error: %s hook failed: %s\n"
 msgstr ""
 
+#, python-format
 msgid "error: %s hook raised an exception: %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s hook failed"
 msgstr ""
 
+#, python-format
 msgid "warning: %s hook failed\n"
 msgstr ""
 
+#, python-format
 msgid "running hook %s: %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s hook %s"
 msgstr ""
 
+#, python-format
 msgid "warning: %s hook %s\n"
 msgstr ""
 
 msgid "connection ended unexpectedly"
 msgstr ""
 
+#, python-format
 msgid "unsupported URL component: \"%s\""
 msgstr ""
 
+#, python-format
 msgid "using %s\n"
 msgstr ""
 
+#, python-format
 msgid "capabilities: %s\n"
 msgstr ""
 
 msgid "operation not supported over http"
 msgstr ""
 
+#, python-format
 msgid "sending %s command\n"
 msgstr ""
 
+#, python-format
 msgid "sending %s bytes\n"
 msgstr ""
 
 msgid "authorization failed"
 msgstr ""
 
+#, python-format
 msgid "http error while sending %s command\n"
 msgstr ""
 
 msgid "http error, possibly caused by proxy setting"
 msgstr ""
 
+#, python-format
 msgid "real URL is %s\n"
 msgstr ""
 
+#, python-format
 msgid "Requested URL: '%s'\n"
 msgstr ""
 
+#, python-format
 msgid "'%s' does not appear to be an hg repository"
 msgstr ""
 
+#, python-format
 msgid "'%s' sent a broken Content-Type header (%s)"
 msgstr ""
 
+#, python-format
 msgid "'%s' uses newer protocol %s"
 msgstr ""
 
@@ -7525,6 +8194,7 @@ msgstr ""
 msgid "push failed (unexpected response):"
 msgstr ""
 
+#, python-format
 msgid "push failed: %s"
 msgstr ""
 
@@ -7534,42 +8204,53 @@ msgstr ""
 msgid "cannot create new http repository"
 msgstr ""
 
+#, python-format
 msgid "%s: ignoring invalid syntax '%s'\n"
 msgstr ""
 
+#, python-format
 msgid "skipping unreadable ignore file '%s': %s\n"
 msgstr ""
 
+#, python-format
 msgid "repository %s not found"
 msgstr ""
 
+#, python-format
 msgid "repository %s already exists"
 msgstr ""
 
+#, python-format
 msgid "requirement '%s' not supported"
 msgstr ""
 
+#, python-format
 msgid "%r cannot be used in a tag name"
 msgstr ""
 
 msgid "working copy of .hgtags is changed (please commit .hgtags manually)"
 msgstr ""
 
+#, python-format
 msgid "%s, line %s: %s\n"
 msgstr ""
 
 msgid "cannot parse entry"
 msgstr ""
 
+#, python-format
 msgid "node '%s' is not well formed"
 msgstr ""
 
+#, python-format
 msgid "tag '%s' refers to unknown node"
 msgstr ""
 
+#, python-format
 msgid "unknown revision '%s'"
 msgstr ""
 
+#, python-format
 msgid "filtering %s through %s\n"
 msgstr ""
 
@@ -7585,42 +8266,47 @@ msgstr ""
 msgid "rolling back last transaction\n"
 msgstr ""
 
+#, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
 
 msgid "no rollback information available\n"
 msgstr ""
 
+#, python-format
 msgid "waiting for lock on %s held by %r\n"
 msgstr ""
 
+#, python-format
 msgid "repository %s"
 msgstr ""
 
+#, python-format
 msgid "working directory of %s"
 msgstr ""
 
+#, python-format
 msgid " %s: searching for copy revision for %s\n"
 msgstr ""
 
+#, python-format
 msgid " %s: copy %s:%s\n"
 msgstr ""
 
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
 
+#, python-format
 msgid "%s not tracked!\n"
 msgstr ""
 
 msgid "unresolved merge conflicts (see hg resolve)"
 msgstr ""
 
-msgid "closing the default branch is invalid"
-msgstr ""
-
 msgid "nothing changed\n"
 msgstr ""
 
+#, python-format
 msgid "trouble committing %s!\n"
 msgstr ""
 
@@ -7630,59 +8316,75 @@ msgstr ""
 msgid "empty commit message"
 msgstr ""
 
+#, python-format
 msgid "%s does not exist!\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "%s: files over 10MB may cause memory and performance problems\n"
 "(use 'hg revert %s' to unadd the file)\n"
 msgstr ""
 
+#, python-format
 msgid "%s not added: only files and symlinks supported currently\n"
 msgstr ""
 
+#, python-format
 msgid "%s already tracked!\n"
 msgstr ""
 
+#, python-format
 msgid "%s not added!\n"
 msgstr ""
 
+#, python-format
 msgid "%s still exists!\n"
 msgstr ""
 
+#, python-format
 msgid "%s not removed!\n"
 msgstr ""
 
+#, python-format
 msgid "copy failed: %s is not a file or a symbolic link\n"
 msgstr ""
 
 msgid "searching for changes\n"
 msgstr ""
 
+#, python-format
 msgid "examining %s:%s\n"
 msgstr ""
 
 msgid "branch already found\n"
 msgstr ""
 
+#, python-format
 msgid "found incomplete branch %s:%s\n"
 msgstr ""
 
+#, python-format
 msgid "found new changeset %s\n"
 msgstr ""
 
+#, python-format
 msgid "request %d: %s\n"
 msgstr ""
 
+#, python-format
 msgid "received %s:%s\n"
 msgstr ""
 
+#, python-format
 msgid "narrowing %d:%d %s\n"
 msgstr ""
 
+#, python-format
 msgid "found new branch changeset %s\n"
 msgstr ""
 
+#, python-format
 msgid "narrowed branch search to %s:%s\n"
 msgstr ""
 
@@ -7698,6 +8400,7 @@ msgstr ""
 msgid "found new changesets starting at "
 msgstr ""
 
+#, python-format
 msgid "%d total queries\n"
 msgstr ""
 
@@ -7721,15 +8424,18 @@ msgstr ""
 msgid "note: unsynced remote changes!\n"
 msgstr ""
 
+#, python-format
 msgid "%d changesets found\n"
 msgstr ""
 
 msgid "list of changesets:\n"
 msgstr ""
 
+#, python-format
 msgid "empty or missing revlog for %s"
 msgstr ""
 
+#, python-format
 msgid "add changeset %s\n"
 msgstr ""
 
@@ -7745,15 +8451,18 @@ msgstr ""
 msgid "adding file changes\n"
 msgstr ""
 
+#, python-format
 msgid "adding %s revisions\n"
 msgstr ""
 
 msgid "received file revlog group is empty"
 msgstr ""
 
+#, python-format
 msgid " (%+d heads)"
 msgstr ""
 
+#, python-format
 msgid "added %d changesets with %d changes to %d files%s\n"
 msgstr ""
 
@@ -7775,18 +8484,22 @@ msgstr ""
 msgid "streaming all changes\n"
 msgstr ""
 
+#, python-format
 msgid "%d files to transfer, %s of data\n"
 msgstr ""
 
+#, python-format
 msgid "adding %s (%s)\n"
 msgstr ""
 
+#, python-format
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
 msgstr ""
 
 msgid "no [smtp]host in hgrc - cannot send mail"
 msgstr ""
 
+#, python-format
 msgid "sending mail: smtp host %s, port %s\n"
 msgstr ""
 
@@ -7796,58 +8509,72 @@ msgstr ""
 msgid "(using tls)\n"
 msgstr ""
 
+#, python-format
 msgid "(authenticating to mail server as %s)\n"
 msgstr ""
 
+#, python-format
 msgid "sending mail: %s\n"
 msgstr ""
 
 msgid "smtp specified as email transport, but no smtp host configured"
 msgstr ""
 
+#, python-format
 msgid "%r specified as email transport, but not in PATH"
 msgstr ""
 
+#, python-format
 msgid "ignoring invalid sendcharset: %s\n"
 msgstr ""
 
+#, python-format
 msgid "invalid email address: %s"
 msgstr ""
 
+#, python-format
 msgid "invalid local address: %s"
 msgstr ""
 
 msgid "'\\n' and '\\r' disallowed in filenames"
 msgstr ""
 
+#, python-format
 msgid "failed to remove %s from manifest"
 msgstr ""
 
+#, python-format
 msgid "diff context lines count must be an integer, not %r"
 msgstr ""
 
+#, python-format
 msgid ""
 "untracked file in working directory differs from file in requested revision: "
 "'%s'"
 msgstr ""
 
+#, python-format
 msgid "case-folding collision between %s and %s"
 msgstr ""
 
 msgid "resolving manifests\n"
 msgstr ""
 
+#, python-format
 msgid " overwrite %s partial %s\n"
 msgstr ""
 
+#, python-format
 msgid " ancestor %s local %s remote %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 " conflicting flags for %s\n"
 "(n)one, e(x)ec or sym(l)ink?"
 msgstr ""
 
+#, python-format
 msgid ""
 " local changed %s which remote deleted\n"
 "use (c)hanged version or (d)elete?"
@@ -7859,29 +8586,37 @@ msgstr ""
 msgid "c"
 msgstr ""
 
+#, python-format
 msgid ""
 "remote changed %s which local deleted\n"
 "use (c)hanged version or leave (d)eleted?"
 msgstr ""
 
+#, python-format
 msgid "preserving %s for resolve of %s\n"
 msgstr ""
 
+#, python-format
 msgid "update failed to remove %s: %s!\n"
 msgstr ""
 
+#, python-format
 msgid "getting %s\n"
 msgstr ""
 
+#, python-format
 msgid "moving %s to %s\n"
 msgstr ""
 
+#, python-format
 msgid "getting %s to %s\n"
 msgstr ""
 
+#, python-format
 msgid "warning: detected divergent renames of %s to:\n"
 msgstr ""
 
+#, python-format
 msgid "branch %s not found"
 msgstr ""
 
@@ -7900,87 +8635,111 @@ msgstr ""
 msgid "crosses named branches (use 'hg update -C' to discard changes)"
 msgstr ""
 
+#, python-format
 msgid "cannot create %s: destination already exists"
 msgstr ""
 
+#, python-format
 msgid "cannot create %s: unable to create destination directory"
 msgstr ""
 
+#, python-format
 msgid "found patch at byte %d\n"
 msgstr ""
 
 msgid "patch generated by hg export\n"
 msgstr ""
 
+#, python-format
 msgid "unable to find '%s' for patching\n"
 msgstr ""
 
+#, python-format
 msgid "patching file %s\n"
 msgstr ""
 
+#, python-format
 msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
 msgstr ""
 
+#, python-format
 msgid "bad hunk #%d %s (%d %d %d %d)"
 msgstr ""
 
+#, python-format
 msgid "file %s already exists\n"
 msgstr ""
 
+#, python-format
 msgid "Hunk #%d succeeded at %d %s(offset %d %s).\n"
 msgstr ""
 
+#, python-format
 msgid "Hunk #%d FAILED at %d\n"
 msgstr ""
 
+#, python-format
 msgid "bad hunk #%d"
 msgstr ""
 
+#, python-format
 msgid "bad hunk #%d old text line %d"
 msgstr ""
 
 msgid "could not extract binary patch"
 msgstr ""
 
+#, python-format
 msgid "binary patch is %d bytes, not %d"
 msgstr ""
 
+#, python-format
 msgid "unable to strip away %d dirs from %s"
 msgstr ""
 
 msgid "undefined source and destination files"
 msgstr ""
 
+#, python-format
 msgid "malformed patch %s %s"
 msgstr ""
 
+#, python-format
 msgid "unsupported parser state: %s"
 msgstr ""
 
+#, python-format
 msgid "patch command failed: %s"
 msgstr ""
 
+#, python-format
 msgid "no valid hunks found; trying with %r instead\n"
 msgstr ""
 
+#, python-format
 msgid "saving bundle to %s\n"
 msgstr ""
 
 msgid "adding branch\n"
 msgstr ""
 
+#, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
 msgstr ""
 
+#, python-format
 msgid "unknown compression type %r"
 msgstr ""
 
+#, python-format
 msgid "index %s unknown flags %#04x for format v0"
 msgstr ""
 
+#, python-format
 msgid "index %s unknown flags %#04x for revlogng"
 msgstr ""
 
+#, python-format
 msgid "index %s unknown format %d"
 msgstr ""
 
@@ -7993,9 +8752,11 @@ msgstr ""
 msgid "no match found"
 msgstr ""
 
+#, python-format
 msgid "incompatible revision flag %x"
 msgstr ""
 
+#, python-format
 msgid "%s not found in the transaction"
 msgstr ""
 
@@ -8005,6 +8766,7 @@ msgstr ""
 msgid "consistency error adding group"
 msgstr ""
 
+#, python-format
 msgid "%s looks like a binary file."
 msgstr ""
 
@@ -8014,6 +8776,7 @@ msgstr ""
 msgid "warning: conflicts during merge.\n"
 msgstr ""
 
+#, python-format
 msgid "couldn't parse location %s"
 msgstr ""
 
@@ -8026,6 +8789,7 @@ msgstr ""
 msgid "no suitable response from remote hg"
 msgstr ""
 
+#, python-format
 msgid "push refused: %s"
 msgstr ""
 
@@ -8038,69 +8802,85 @@ msgstr ""
 msgid "cannot create new static-http repository"
 msgstr ""
 
+#, python-format
 msgid "invalid entry in fncache, line %s"
 msgstr ""
 
 msgid "scanning\n"
 msgstr ""
 
+#, python-format
 msgid "%d files, %d bytes to transfer\n"
 msgstr ""
 
+#, python-format
 msgid "sending %s (%d bytes)\n"
 msgstr ""
 
 msgid "unmatched quotes"
 msgstr ""
 
+#, python-format
 msgid "style not found: %s"
 msgstr ""
 
+#, python-format
 msgid "%s:%s: parse error"
 msgstr ""
 
+#, python-format
 msgid "template file %s: %s"
 msgstr ""
 
+#, python-format
 msgid "Error expanding '%s%%%s'"
 msgstr ""
 
 msgid "transaction abort!\n"
 msgstr ""
 
+#, python-format
 msgid "failed to truncate %s\n"
 msgstr ""
 
 msgid "rollback completed\n"
 msgstr ""
 
+#, python-format
 msgid "Not trusting file %s from untrusted user %s, group %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "Failed to parse %s\n"
 "%s"
 msgstr ""
 
+#, python-format
 msgid "Ignored: %s\n"
 msgstr ""
 
+#, python-format
 msgid "unable to open %s: %s"
 msgstr ""
 
+#, python-format
 msgid ""
 "failed to parse %s\n"
 "%s"
 msgstr ""
 
+#, python-format
 msgid ""
 "Error in configuration section [%s] parameter '%s':\n"
 "%s"
 msgstr ""
 
+#, python-format
 msgid "Ignoring untrusted configuration option %s.%s = %s\n"
 msgstr ""
 
+#, python-format
 msgid ""
 "Error in configuration section [%s]:\n"
 "%s"
@@ -8109,12 +8889,14 @@ msgstr ""
 msgid "enter a commit username:"
 msgstr ""
 
+#, python-format
 msgid "No username found, using '%s' instead\n"
 msgstr ""
 
 msgid "Please specify a username."
 msgstr ""
 
+#, python-format
 msgid "username %s contains a newline\n"
 msgstr ""
 
@@ -8136,33 +8918,42 @@ msgstr ""
 msgid "http authorization required\n"
 msgstr ""
 
+#, python-format
 msgid "realm: %s\n"
 msgstr ""
 
+#, python-format
 msgid "user: %s\n"
 msgstr ""
 
 msgid "user:"
 msgstr ""
 
+#, python-format
 msgid "proxying through http://%s:%s\n"
 msgstr ""
 
+#, python-format
 msgid "http auth: user %s, password %s\n"
 msgstr ""
 
+#, python-format
 msgid "%s, please check your locale settings"
 msgstr ""
 
+#, python-format
 msgid "command '%s' failed: %s"
 msgstr ""
 
+#, python-format
 msgid "path contains illegal component: %s"
 msgstr ""
 
+#, python-format
 msgid "path %r is inside repo %r"
 msgstr ""
 
+#, python-format
 msgid "path %r traverses symbolic link %r"
 msgstr ""
 
@@ -8172,60 +8963,78 @@ msgstr ""
 msgid "user name not available - set USERNAME environment variable"
 msgstr ""
 
+#, python-format
 msgid "exited with status %d"
 msgstr ""
 
+#, python-format
 msgid "killed by signal %d"
 msgstr ""
 
+#, python-format
 msgid "stopped by signal %d"
 msgstr ""
 
 msgid "invalid exit code"
 msgstr ""
 
+#, python-format
 msgid "could not symlink to %r: %s"
 msgstr ""
 
+#, python-format
 msgid "invalid date: %r "
 msgstr ""
 
+#, python-format
 msgid "date exceeds 32 bits: %d"
 msgstr ""
 
+#, python-format
 msgid "impossible time zone offset: %d"
 msgstr ""
 
+#, python-format
 msgid "invalid day spec: %s"
 msgstr ""
 
+#, python-format
 msgid "%.0f GB"
 msgstr ""
 
+#, python-format
 msgid "%.1f GB"
 msgstr ""
 
+#, python-format
 msgid "%.2f GB"
 msgstr ""
 
+#, python-format
 msgid "%.0f MB"
 msgstr ""
 
+#, python-format
 msgid "%.1f MB"
 msgstr ""
 
+#, python-format
 msgid "%.2f MB"
 msgstr ""
 
+#, python-format
 msgid "%.0f KB"
 msgstr ""
 
+#, python-format
 msgid "%.1f KB"
 msgstr ""
 
+#, python-format
 msgid "%.2f KB"
 msgstr ""
 
+#, python-format
 msgid "%.0f bytes"
 msgstr ""
 
@@ -8235,45 +9044,58 @@ msgstr ""
 msgid "interrupted"
 msgstr ""
 
+#, python-format
 msgid "empty or missing %s"
 msgstr ""
 
+#, python-format
 msgid "data length off by %d bytes"
 msgstr ""
 
+#, python-format
 msgid "index contains %d extra bytes"
 msgstr ""
 
+#, python-format
 msgid "warning: `%s' uses revlog format 1"
 msgstr ""
 
+#, python-format
 msgid "warning: `%s' uses revlog format 0"
 msgstr ""
 
+#, python-format
 msgid "rev %d point to %s changeset %d"
 msgstr ""
 
+#, python-format
 msgid " (expected %s)"
 msgstr ""
 
+#, python-format
 msgid "unknown parent 1 %s of %s"
 msgstr ""
 
+#, python-format
 msgid "unknown parent 2 %s of %s"
 msgstr ""
 
+#, python-format
 msgid "checking parents of %s"
 msgstr ""
 
+#, python-format
 msgid "duplicate revision %d (%d)"
 msgstr ""
 
+#, python-format
 msgid "repository uses revlog format %d\n"
 msgstr ""
 
 msgid "checking changesets\n"
 msgstr ""
 
+#, python-format
 msgid "unpacking changeset %s"
 msgstr ""
 
@@ -8283,12 +9105,14 @@ msgstr ""
 msgid "file without name in manifest"
 msgstr ""
 
+#, python-format
 msgid "reading manifest delta %s"
 msgstr ""
 
 msgid "crosschecking files in changesets and manifests\n"
 msgstr ""
 
+#, python-format
 msgid "changeset refers to unknown manifest %s"
 msgstr ""
 
@@ -8301,44 +9125,57 @@ msgstr ""
 msgid "checking files\n"
 msgstr ""
 
+#, python-format
 msgid "cannot decode filename '%s'"
 msgstr ""
 
 msgid "missing revlog!"
 msgstr ""
 
+#, python-format
 msgid "%s not in manifests"
 msgstr ""
 
+#, python-format
 msgid "unpacked size is %s, %s expected"
 msgstr ""
 
+#, python-format
 msgid "unpacking %s"
 msgstr ""
 
+#, python-format
 msgid "empty or missing copy source revlog %s:%s"
 msgstr ""
 
+#, python-format
 msgid "warning: %s@%s: copy source revision is nullid %s:%s"
 msgstr ""
 
+#, python-format
 msgid "checking rename of %s"
 msgstr ""
 
+#, python-format
 msgid "%s in manifests not found"
 msgstr ""
 
+#, python-format
 msgid "warning: orphan revlog '%s'"
 msgstr ""
 
+#, python-format
 msgid "%d files, %d changesets, %d total revisions\n"
 msgstr ""
 
+#, python-format
 msgid "%d warnings encountered!\n"
 msgstr ""
 
+#, python-format
 msgid "%d integrity errors encountered!\n"
 msgstr ""
 
+#, python-format
 msgid "(first damaged changeset appears to be %d)\n"
 msgstr ""
