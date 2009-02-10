@@ -1993,13 +1993,10 @@ def guard(ui, repo, *args, **opts):
 
     With no arguments, print the currently active guards.
     With arguments, set guards for the named patch.
-
-    To set a negative guard "-foo" on topmost patch ("--" is needed so
-    hg will not interpret "-foo" as an option):
-      hg qguard -- -foo
+    NOTE: Specifying negative guards now requires '--'.
 
     To set guards on another patch:
-      hg qguard other.patch +2.6.17 -stable
+      hg qguard -- other.patch +2.6.17 -stable
     '''
     def status(idx):
         guards = q.series_guards[idx] or ['unguarded']
@@ -2499,7 +2496,7 @@ cmdtable = {
         (guard,
          [('l', 'list', None, _('list all patches and guards')),
           ('n', 'none', None, _('drop all guards'))],
-         _('hg qguard [-l] [-n] [PATCH] [+GUARD]... [-GUARD]...')),
+         _('hg qguard [-l] [-n] -- [PATCH] [+GUARD]... [-GUARD]...')),
     'qheader': (header, [], _('hg qheader [PATCH]')),
     "^qimport":
         (qimport,
