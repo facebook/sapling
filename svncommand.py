@@ -9,7 +9,7 @@ from mercurial import util as merc_util
 
 import svnwrap
 import util
-from util import register_subcommand, svn_subcommands, generate_help
+from util import register_subcommand, svn_subcommands, generate_help, svn_commands_nourl
 # dirty trick to force demandimport to run my decorator anyway.
 from utility_commands import print_wc_url
 from fetch_command import fetch_revisions
@@ -34,12 +34,13 @@ def svncmd(ui, repo, subcommand, *args, **opts):
             subcommand = candidates[0]
     path = os.path.dirname(repo.path)
     try:
-        if subcommand != 'rebuildmeta':
+        commandfunc = svn_subcommands[subcommand]
+        if commandfunc not in svn_commands_nourl:
             opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
-        return svn_subcommands[subcommand](ui, args=args,
-                                           hg_repo_path=path,
-                                           repo=repo,
-                                           **opts)
+        return commandfunc(ui, args=args,
+                           hg_repo_path=path,
+                           repo=repo,
+                           **opts)
     except TypeError:
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) == 1:

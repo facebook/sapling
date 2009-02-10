@@ -11,6 +11,9 @@ from svn import core
 from svn import delta
 from svn import ra
 
+def version():
+    return '%d.%d.%d' % (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO)
+
 if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO) < (1, 5, 0): #pragma: no cover
     raise ImportError, 'You must have Subversion 1.5.0 or newer and matching SWIG bindings.'
 

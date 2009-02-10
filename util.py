@@ -1,15 +1,29 @@
 import os
 import shutil
 
+from mercurial import hg
 from mercurial import node
 
 svn_subcommands = { }
-
 def register_subcommand(name):
     def inner(fn):
         svn_subcommands[name] = fn
         return fn
     return inner
+
+svn_commands_nourl = set()
+def command_needs_no_url(fn):
+    svn_commands_nourl.add(fn)
+    return fn
+
+
+def version(ui):
+    """Guess the version of hgsubversion.
+    """
+    # TODO make this say something other than "unknown" for installed hgsubversion
+    repo = hg.repository(ui, os.path.dirname(__file__))
+    ver = repo.dirstate.parents()[0]
+    return node.hex(ver)[:12]
 
 
 def generate_help():

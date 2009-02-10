@@ -108,7 +108,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     pickle.dump(tagsinfo, tagsinfofile)
     tagsinfofile.close()
 rebuildmeta = util.register_subcommand('rebuildmeta')(rebuildmeta)
-
+rebuildmeta = util.command_needs_no_url(rebuildmeta)
 
 def determinebranch(branch):
     if branch.startswith('branches'):

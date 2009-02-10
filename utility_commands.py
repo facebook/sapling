@@ -1,8 +1,10 @@
+import mercurial
 from mercurial import cmdutil
 from mercurial import node
 from mercurial import util as mutil
 from hgext import rebase
 
+import svnwrap
 import util
 import hg_delta_editor
 
@@ -145,3 +147,13 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
     for node in reversed(o_r):
         displayer.show(repo[node])
 show_outgoing_to_svn = util.register_subcommand('outgoing')(show_outgoing_to_svn)
+
+
+def version(ui, **opts):
+    """Show current version of hg and hgsubversion.
+    """
+    ui.status('hg: %s\n' % mutil.version())
+    ui.status('svn bindings: %s\n' % svnwrap.version())
+    ui.status('hgsubversion: %s\n' % util.version(ui))
+version = util.register_subcommand('version')(version)
+version = util.command_needs_no_url(version)
