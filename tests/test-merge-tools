@@ -58,7 +58,10 @@ echo Tool selection
 echo
 
 echo "# default is internal merge:"
-domerge -r 2
+beforemerge
+echo "# hg merge -r 2"
+PATH=$BINDIR hg merge -r 2
+aftermerge
 
 echo "# simplest hgrc using false for merge:"
 echo "false.whatever=" >> .hg/hgrc

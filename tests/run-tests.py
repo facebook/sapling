@@ -483,7 +483,7 @@ if options.with_hg:
     INST = options.with_hg
 else:
     INST = os.path.join(HGTMP, "install")
-BINDIR = os.path.join(INST, "bin")
+BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
 PYTHONDIR = os.path.join(INST, "lib", "python")
 COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
