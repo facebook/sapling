@@ -8,3 +8,4 @@ filelog = filelog.tmpl
 filelogentry = filelogentry.tmpl
 tags = tags.tmpl
 tagentry = tagentry.tmpl
+error = error.tmpl
