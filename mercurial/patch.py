@@ -1201,9 +1201,6 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
     if node1 is None, use first dirstate parent instead.
     if node2 is None, compare node1 with working directory.'''
 
-    if not match:
-        match = cmdutil.matchall(repo)
-
     if opts is None:
         opts = mdiff.defaultopts
 
