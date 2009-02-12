@@ -63,6 +63,10 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
         initializing_repo = True
         start = skipto_rev
 
+    if initializing_repo and start > 0:
+        raise merc_util.Abort('Revision skipping at repository initialization '
+                              'remains unimplemented.')
+
     # start converting revisions
     for r in svn.revisions(start=start):
         valid = False
@@ -71,8 +75,6 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
             if hg_editor._is_path_valid(p):
                 valid = True
                 break
-        if initializing_repo and start > 0:
-            assert False, 'This feature not ready yet.'
         if valid:
             # got a 502? Try more than once!
             tries = 0

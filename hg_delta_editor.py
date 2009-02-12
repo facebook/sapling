@@ -539,7 +539,8 @@ class HgChangeReceiver(delta.Editor):
                 raise IOError
            # True here meant nuke all files, shouldn't happen with branch closing
             if self.commit_branches_empty[branch]: #pragma: no cover
-               assert False, 'Got asked to commit non-closed branch as empty with no files. Please report this issue.'
+               raise util.Abort('Empty commit to an open branch attempted. '
+                                'Please report this issue.')
             extra = our_util.build_extra(rev.revnum, branch,
                                      open(self.uuid_file).read(),
                                      self.subdir)
@@ -887,8 +888,8 @@ class HgChangeReceiver(delta.Editor):
 
         handler, baton = delta.svn_txdelta_apply(source, target, None)
         if not callable(handler): #pragma: no cover
-            # TODO(augie) Raise a real exception, don't just fail an assertion.
-            assert False, 'handler not callable, bindings are broken'
+            raise util.Abort('Error in Subversion bindings: '
+                             'cannot call handler!')
         def txdelt_window(window):
             try:
                 if not self._is_path_valid(self.current_file):
