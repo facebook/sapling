@@ -406,15 +406,10 @@ def dorecord(ui, repo, committer, *pats, **opts):
         In the end we'll record intresting changes, and everything else will be
         left in place, so the user can continue his work.
         """
-        if match.files():
-            changes = None
-        else:
-            changes = repo.status(match=match)[:3]
-            modified, added, removed = changes
-            match = cmdutil.matchfiles(repo, modified + added + removed)
+
+        changes = repo.status(match=match)[:3]
         diffopts = mdiff.diffopts(git=True, nodates=True)
-        chunks = patch.diff(repo, repo.dirstate.parents()[0], match=match,
-                            changes=changes, opts=diffopts)
+        chunks = patch.diff(repo, changes=changes, opts=diffopts)
         fp = cStringIO.StringIO()
         fp.write(''.join(chunks))
         fp.seek(0)
@@ -428,15 +423,12 @@ def dorecord(ui, repo, committer, *pats, **opts):
             try: contenders.update(dict.fromkeys(h.files()))
             except AttributeError: pass
 
-        newfiles = [f for f in match.files() if f in contenders]
-
+        changed = changes[0] + changes[1] + changes[2]
+        newfiles = [f for f in changed if f in contenders]
         if not newfiles:
             ui.status(_('no changes to record\n'))
             return 0
 
-        if changes is None:
-            match = cmdutil.matchfiles(repo, newfiles)
-            changes = repo.status(match=match)
         modified = dict.fromkeys(changes[0])
 
         # 2. backup changed files, so we can restore them in the end
