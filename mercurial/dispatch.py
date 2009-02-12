@@ -239,6 +239,17 @@ def _earlygetopt(aliases, args):
             pos += 1
     return values
 
+def runcommand(lui, repo, cmd, fullargs, ui, options, d):
+    # run pre-hook, and abort if it fails
+    ret = hook.hook(lui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
+    if ret:
+        return ret
+    ret = _runcommand(ui, options, cmd, d)
+    # run post-hook, passing command result
+    hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
+              result = ret)
+    return ret
+
 _loaded = {}
 def _dispatch(ui, args):
     # read --config before doing anything else
@@ -358,16 +369,7 @@ def _dispatch(ui, args):
         ui.warn("warning: --repository ignored\n")
 
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
-
-    # run pre-hook, and abort if it fails
-    ret = hook.hook(lui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
-    if ret:
-        return ret
-    ret = _runcommand(ui, options, cmd, d)
-    # run post-hook, passing command result
-    hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
-              result = ret)
-    return ret
+    return runcommand(lui, repo, cmd, fullargs, ui, options, d)
 
 def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():
