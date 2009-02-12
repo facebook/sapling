@@ -526,7 +526,7 @@ class HgChangeReceiver(delta.Editor):
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
 
-            self.ui.status(our_util.describe_commit(new_hash, branch))
+            our_util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         # now we handle branches that need to be committed without any files
@@ -553,7 +553,7 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-            self.ui.status(our_util.describe_commit(new_hash, branch))
+            our_util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         self.clear_current_info()

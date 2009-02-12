@@ -81,7 +81,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
             converted = False
             while not converted and tries < 3:
                 try:
-                    ui.status(util.describe_revision(r))
+                    util.describe_revision(ui, r)
                     if have_replay:
                         try:
                             replay_convert_rev(hg_editor, svn, r)
@@ -120,8 +120,8 @@ def replay_convert_rev(hg_editor, svn, r):
     svn.get_replay(r.revnum, hg_editor)
     i = 1
     if hg_editor.missing_plaintexts:
-        hg_editor.ui.status('Fetching %s files that could not use replay.\n' %
-                            len(hg_editor.missing_plaintexts))
+        hg_editor.ui.debug('Fetching %s files that could not use replay.\n' %
+                           len(hg_editor.missing_plaintexts))
         files_to_grab = set()
         rootpath = svn.subdir and svn.subdir[1:] or ''
         for p in hg_editor.missing_plaintexts:
@@ -595,7 +595,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             ha = hg_editor.repo.commitctx(current_ctx)
             hg_editor.add_to_revmap(r.revnum, b, ha)
             hg_editor._save_metadata()
-            ui.status(util.describe_commit(ha, b))
+            util.describe_commit(ui, ha, b)
     # These are branches which would have an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.
     for branch in check_deleted_branches:
