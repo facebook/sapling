@@ -40,3 +40,5 @@ hg id http://localhost:$HGPORT1/
 
 echo % remote with tags?
 hg id -t http://localhost:$HGPORT1/
+
+true # ends with util.Abort -> returns 255
