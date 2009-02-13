@@ -1538,9 +1538,12 @@ def identify(ui, repo, source=None,
     default = not (num or id or branch or tags)
     output = []
 
+    revs = []
     if source:
         source, revs, checkout = hg.parseurl(ui.expandpath(source), [])
-        srepo = hg.repository(ui, source)
+        repo = hg.repository(ui, source)
+
+    if not repo.local():
         if not rev and revs:
             rev = revs[0]
         if not rev:
@@ -1548,7 +1551,7 @@ def identify(ui, repo, source=None,
         if num or branch or tags:
             raise util.Abort(
                 "can't query remote revision number, branch, or tags")
-        output = [hexfunc(srepo.lookup(rev))]
+        output = [hexfunc(repo.lookup(rev))]
     elif not rev:
         ctx = repo[None]
         parents = ctx.parents()
@@ -1568,7 +1571,7 @@ def identify(ui, repo, source=None,
         if num:
             output.append(str(ctx.rev()))
 
-    if not source and default and not ui.quiet:
+    if repo.local() and default and not ui.quiet:
         b = util.tolocal(ctx.branch())
         if b != 'default':
             output.append("(%s)" % b)
