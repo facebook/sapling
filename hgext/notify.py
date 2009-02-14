@@ -113,7 +113,7 @@ class notifier(object):
         template = (self.ui.config('notify', hooktype) or
                     self.ui.config('notify', 'template'))
         self.t = cmdutil.changeset_templater(self.ui, self.repo,
-                                             False, mapfile, False)
+                                             False, None, mapfile, False)
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
         if template:

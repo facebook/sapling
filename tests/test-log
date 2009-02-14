@@ -95,6 +95,9 @@ hg log --follow-first
 echo % log -P 2
 hg log -P 2
 
+echo '% log -r tip -p --git'
+hg log -r tip -p --git
+
 echo '% log -r ""'
 hg log -r ''
 

@@ -569,11 +569,12 @@ def service(opts, parentfn=None, initfn=None, runfn=None):
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
-    def __init__(self, ui, repo, patch, buffered):
+    def __init__(self, ui, repo, patch, diffopts, buffered):
         self.ui = ui
         self.repo = repo
         self.buffered = buffered
         self.patch = patch
+        self.diffopts = diffopts
         self.header = {}
         self.hunk = {}
         self.lastheader = None
@@ -670,7 +671,7 @@ class changeset_printer(object):
         if self.patch:
             prev = self.repo.changelog.parents(node)[0]
             chunks = patch.diff(self.repo, prev, node, match=self.patch,
-                                opts=patch.diffopts(self.ui))
+                                opts=patch.diffopts(self.ui, self.diffopts))
             for chunk in chunks:
                 self.ui.write(chunk)
             self.ui.write("\n")
@@ -694,8 +695,8 @@ class changeset_printer(object):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, patch, mapfile, buffered):
-        changeset_printer.__init__(self, ui, repo, patch, buffered)
+    def __init__(self, ui, repo, patch, diffopts, mapfile, buffered):
+        changeset_printer.__init__(self, ui, repo, patch, diffopts, buffered)
         filters = templatefilters.filters.copy()
         filters['formatnode'] = (ui.debugflag and (lambda x: x)
                                  or (lambda x: x[:12]))
@@ -912,12 +913,12 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
                            or templater.templatepath(mapfile))
                 if mapname: mapfile = mapname
         try:
-            t = changeset_templater(ui, repo, patch, mapfile, buffered)
+            t = changeset_templater(ui, repo, patch, opts, mapfile, buffered)
         except SyntaxError, inst:
             raise util.Abort(inst.args[0])
         if tmpl: t.use_template(tmpl)
         return t
-    return changeset_printer(ui, repo, patch, buffered)
+    return changeset_printer(ui, repo, patch, opts, buffered)
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""

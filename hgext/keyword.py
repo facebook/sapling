@@ -137,7 +137,7 @@ class kwtemplater(object):
 
         templatefilters.filters['utcdate'] = utcdate
         self.ct = cmdutil.changeset_templater(self.ui, self.repo,
-                                              False, '', False)
+                                              False, None, '', False)
 
     def substitute(self, data, path, ctx, subfunc):
         '''Replaces keywords in data with expanded template.'''

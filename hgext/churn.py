@@ -15,7 +15,7 @@ import time, datetime
 def maketemplater(ui, repo, tmpl):
     tmpl = templater.parsestring(tmpl, quoted=False)
     try:
-        t = cmdutil.changeset_templater(ui, repo, False, None, False)
+        t = cmdutil.changeset_templater(ui, repo, False, None, None, False)
     except SyntaxError, inst:
         raise util.Abort(inst.args[0])
     t.use_template(tmpl)
