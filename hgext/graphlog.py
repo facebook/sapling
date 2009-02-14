@@ -409,7 +409,7 @@ def _wrapcmd(ui, cmd, table, wrapfn):
             return wrapfn(*args, **kwargs)
         return orig(*args, **kwargs)
     entry = extensions.wrapcommand(table, cmd, graph)
-    entry[1].append(('g', 'graph', None, _("show the revision DAG")))
+    entry[1].append(('G', 'graph', None, _("show the revision DAG")))
 
 cmdtable = {
     "glog":

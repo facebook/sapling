@@ -3001,7 +3001,7 @@ templateopts = [
 
 logopts = [
     ('p', 'patch', None, _('show patch')),
-    ('',  'git', None, _('use git extended diff format')),
+    ('g', 'git', None, _('use git extended diff format')),
     ('l', 'limit', '', _('limit number of changes displayed')),
     ('M', 'no-merges', None, _('do not show merges')),
 ] + templateopts
@@ -3392,7 +3392,7 @@ table = {
     "tip":
         (tip,
          [('p', 'patch', None, _('show patch')),
-          ('',  'git', None, _('use git extended diff format')),
+          ('g', 'git', None, _('use git extended diff format')),
          ] + templateopts,
          _('[-p]')),
     "unbundle":
