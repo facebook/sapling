@@ -52,7 +52,7 @@ def getip():
 
     # Generic method, sometimes gives useless results
     dumbip = socket.gethostbyaddr(socket.gethostname())[2][0]
-    if not dumbip.startswith('127.'):
+    if not dumbip.startswith('127.') and ':' not in dumbip:
         return dumbip
 
     # works elsewhere, but actually sends a packet
