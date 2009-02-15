@@ -484,6 +484,7 @@ resolving manifests
   searching for copies back to rev 1
  local changed a which remote deleted
 use (c)hanged version or (d)elete? c
+ a: prompt keep -> a
  b: versions differ -> m
  rev: versions differ -> m
 preserving b for resolve of b

@@ -220,6 +220,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                       "use (c)hanged version or (d)elete?") % f,
                     _("[cd]"), _("c")) == _("d"):
                     act("prompt delete", "r", f)
+                act("prompt keep", "a", f)
             else:
                 act("other deleted", "r", f)
         else:
@@ -367,6 +368,9 @@ def recordupdates(repo, action, branchmerge):
                 repo.dirstate.remove(f)
             else:
                 repo.dirstate.forget(f)
+        elif m == "a": # re-add
+            if not branchmerge:
+                repo.dirstate.add(f)
         elif m == "f": # forget
             repo.dirstate.forget(f)
         elif m == "e": # exec change
