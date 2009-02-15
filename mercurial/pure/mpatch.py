@@ -5,9 +5,11 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import struct, mmap
-
-devzero = file("/dev/zero")
+import struct
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 # This attempts to apply a series of patches in time proportional to
 # the total size of the patches, rather than patches * len(text). This
@@ -30,7 +32,16 @@ def patches(a, bins):
 
     if not tl: return a
 
-    m = mmap.mmap(devzero.fileno(), tl, mmap.MAP_PRIVATE)
+    m = StringIO()
+    def move(dest, src, count):
+        """move count bytes from src to dest
+
+        The file pointer is left at the end of dest.
+        """
+        m.seek(src)
+        buf = m.read(count)
+        m.seek(dest)
+        m.write(buf)
 
     # load our original text
     m.write(a)
@@ -54,7 +65,7 @@ def patches(a, bins):
     def collect(buf, list):
         start = buf
         for l, p in list:
-            m.move(buf, p, l)
+            move(buf, p, l)
             buf += l
         return (buf - start, start)
 
@@ -68,7 +79,8 @@ def patches(a, bins):
         end = pos + plen
         last = 0
         while pos < end:
-            p1, p2, l = struct.unpack(">lll", m[pos:pos + 12])
+            m.seek(pos)
+            p1, p2, l = struct.unpack(">lll", m.read(12))
             pull(new, frags, p1 - last) # what didn't change
             pull([], frags, p2 - p1)    # what got deleted
             new.append((l, pos + 12))        # what got added
@@ -78,7 +90,8 @@ def patches(a, bins):
 
     t = collect(b2, frags)
 
-    return m[t[1]:t[1] + t[0]]
+    m.seek(t[1])
+    return m.read(t[0])
 
 def patchedsize(orig, delta):
     outlen, last, bin = 0, 0, 0
