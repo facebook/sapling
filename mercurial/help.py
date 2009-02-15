@@ -10,9 +10,9 @@ from i18n import _
 helptable = (
     (["dates"], _("Date Formats"),
      _(r'''
-    Some commands allow the user to specify a date:
-    backout, commit, import, tag: Specify the commit date.
-    log, revert, update: Select revision(s) by date.
+    Some commands allow the user to specify a date, e.g.:
+    * backout, commit, import, tag: Specify the commit date.
+    * log, revert, update: Select revision(s) by date.
 
     Many date formats are valid. Here are some examples:
 
