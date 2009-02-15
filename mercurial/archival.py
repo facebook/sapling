@@ -96,6 +96,7 @@ class tarit:
             i.mode = 0777
             i.linkname = data
             data = None
+            i.size = 0
         else:
             i.mode = mode
             data = cStringIO.StringIO(data)
