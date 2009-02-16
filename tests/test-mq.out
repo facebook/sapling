@@ -486,8 +486,6 @@ patch queue now empty
 abort: local changes found, refresh first
 % apply force, should not discard changes with empty patch
 applying empty
-patch: **** Only garbage was found in the patch input.
-patch failed, unable to continue (try -v)
 patch empty is empty
 now at: empty
 diff -r bf5fc3f07a0a hello.txt

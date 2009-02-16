@@ -30,6 +30,7 @@ abort: cannot delete revision 2 above applied patches
 now at: b
 abort: unknown revision 'c'!
 applying c
+patch c is empty
 now at: c
 c
 3 imported patch c

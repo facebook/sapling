@@ -551,9 +551,13 @@ class queue:
                     message.append(_("\nimported patch %s") % patchname)
                 message = '\n'.join(message)
 
-            (patcherr, files, fuzz) = self.patch(repo, pf)
-            all_files.update(files)
-            patcherr = not patcherr
+            if ph.haspatch:
+                (patcherr, files, fuzz) = self.patch(repo, pf)
+                all_files.update(files)
+                patcherr = not patcherr
+            else:
+                self.ui.warn(_("patch %s is empty\n") % patchname)
+                patcherr, files, fuzz = 0, [], 0
 
             if merge and files:
                 # Mark as removed/merged and update dirstate parent info
@@ -583,12 +587,8 @@ class queue:
                 self.applied.append(statusentry(hex(n), patchname))
 
             if patcherr:
-                if not ph.haspatch:
-                    self.ui.warn(_("patch %s is empty\n") % patchname)
-                    err = 0
-                else:
-                    self.ui.warn(_("patch failed, rejects left in working dir\n"))
-                    err = 1
+                self.ui.warn(_("patch failed, rejects left in working dir\n"))
+                err = 1
                 break
 
             if fuzz and strict:
