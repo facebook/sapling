@@ -740,12 +740,10 @@ def rename(src, dst):
         # on windows, rename to existing file is not allowed, so we
         # must delete destination first. but if file is open, unlink
         # schedules it for delete but does not delete it. rename
-        # happens immediately even for open files, so we create
-        # temporary file, delete it, rename destination to that name,
-        # then delete that. then rename is safe to do.
-        fd, temp = tempfile.mkstemp(dir=os.path.dirname(dst) or '.')
-        os.close(fd)
-        os.unlink(temp)
+        # happens immediately even for open files, so we rename
+        # destination to a temporary name, then delete that. then
+        # rename is safe to do.
+        temp = dst + "-force-rename"
         os.rename(dst, temp)
         os.unlink(temp)
         os.rename(src, dst)
