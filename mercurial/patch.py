@@ -751,7 +751,7 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     abase, afile = pathstrip(afile_orig, strip)
-    gooda = not nulla and os.path.exists(afile)
+    gooda = not nulla and util.lexists(afile)
     bbase, bfile = pathstrip(bfile_orig, strip)
     if afile == bfile:
         goodb = gooda
