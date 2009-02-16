@@ -161,6 +161,8 @@ def os_link(src, dst):
                               'move the file to a different disk drive'))
     except pywintypes.error, details:
         raise WinOSError(details)
+    except NotImplementedError: # Another fake error win Win98
+        raise WinOSError((18, 'CreateHardLink', 'Hardlinking not supported'))
 
 def nlinks(pathname):
     """Return number of hardlinks for the given file."""
