@@ -265,6 +265,7 @@ proc readcommit {id} {
 
 proc parsecommit {id contents listed olds} {
     global commitinfo children nchildren parents nparents cdate ncleft
+    global firstparents
 
     set inhdr 1
     set comment {}
@@ -338,6 +339,33 @@ proc parsecommit {id contents listed olds} {
     }
     set commitinfo($id) [list $headline $auname $audate \
 			     $comname $comdate $comment $rev $branch]
+
+    if {[info exists firstparents]} {
+        set i [lsearch $firstparents $id]
+        if {$i != -1} {
+            # remove the parent from firstparents, possible building
+            # an empty list
+            set firstparents [concat \
+                                  [lrange $firstparents 0 [expr $i - 1]] \
+                                  [lrange $firstparents [expr $i + 1] end]]
+            if {$firstparents eq {}} {
+                # we have found all parents of the first changeset
+                # which means that we can safely select the first line
+                after idle {
+                    selectline 0 0
+                }
+            }
+        }
+    } else {
+        # this is the first changeset, save the parents
+        set firstparents $olds
+        if {$firstparents eq {}} {
+            # a repository with a single changeset
+            after idle {
+                selectline 0 0
+            }
+        }
+    }
 }
 
 proc readrefs {} {
