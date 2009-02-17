@@ -5,10 +5,13 @@
 # Copyright (C) 2009 the Mercurial team
 # Dongsheng Song <dongsheng.song@gmail.com>, 2009
 #
-# $Id: zh.po 1166 2009-02-10 05:53:47Z dongsheng.song@gmail.com $
+# $Id: zh.po 1185 2009-02-17 15:10:31Z dongsheng.song $
+#
+# Update with pot file:
+#    msgmerge --update zh.po hg.pot
+#    msgfmt --statistics -c zh.po
 #
 # Please test your translation before commit:
-#    msgfmt --statistics -c i18n/zh.po
 #    python setup.py build_py -c -d . build_ext -i build_mo
 #    LC_ALL=zh_CN.UTF-8 ./hg
 #
@@ -23,14 +26,20 @@
 # Dictionary:
 # blame             追溯
 # branch            分支
+# changes           改变
+# changeset         改变集
 # checkout          检出
 # remove            移除(从版本库删除)
 # delete            删除(只从文件系统删除)
+# patchset          补丁集
+# pushing to        推到
+# pulling from      拉自
 # rename            改名
 # repository        版本库
 # revert            恢复
 # revision          版本
 # tag               标签
+# tip               顶点
 # undo              撤销
 # unversioned       未版本控制
 # versioned         受版本控制
@@ -40,8 +49,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-02-10 13:55+0800\n"
-"PO-Revision-Date: 2009-01-26 12:04+0800\n"
+"POT-Creation-Date: 2009-02-17 21:43+0800\n"
+"PO-Revision-Date: 2009-02-17 23:05+0800\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: Chinese translation team <i18n-zh@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
@@ -929,6 +938,12 @@ msgstr ""
 msgid "show current changeset in ancestor branches"
 msgstr ""
 
+msgid "ignored for compatibility"
+msgstr ""
+
+msgid "hg debugcvsps [OPTION]... [PATH]..."
+msgstr ""
+
 #, python-format
 msgid "%s is not a valid revision in current branch"
 msgstr ""
@@ -1154,107 +1169,107 @@ msgstr ""
 
 #, python-format
 msgid "%s is not a local Mercurial repo"
-msgstr ""
+msgstr "%s 不是本地的水银版本库"
 
 #, python-format
 msgid "initializing destination %s repository\n"
-msgstr ""
+msgstr "初始化目标版本库 %s\n"
 
 msgid "run hg sink pre-conversion action\n"
-msgstr ""
+msgstr "执行动作 hg sink pre-conversion\n"
 
 msgid "run hg sink post-conversion action\n"
-msgstr ""
+msgstr "执行动作 hg sink post-conversion action\n"
 
 #, python-format
 msgid "pulling from %s into %s\n"
-msgstr ""
+msgstr "自 %s 拉到 %s\n"
 
 msgid "updating tags\n"
-msgstr ""
+msgstr "正在更新标签\n"
 
 #, python-format
 msgid "%s is not a valid start revision"
-msgstr ""
+msgstr "%s 不是有效的开始版本"
 
 #, python-format
 msgid "ignoring: %s\n"
-msgstr ""
+msgstr "忽略: %s\n"
 
 msgid "run hg source pre-conversion action\n"
-msgstr ""
+msgstr "执行动作 hg source pre-conversion\n"
 
 msgid "run hg source post-conversion action\n"
-msgstr ""
+msgstr "执行动作 hg source post-conversion\n"
 
 #, python-format
 msgid "%s does not look like a monotone repo"
-msgstr ""
+msgstr "%s 不像是单纯的 monotone 版本库"
 
 #, python-format
 msgid "copying file in renamed dir from '%s' to '%s'"
-msgstr ""
+msgstr "从已改名的目录 '%s' 复制文件到 '%s'"
 
 msgid "Subversion python bindings could not be loaded"
-msgstr ""
+msgstr "不能加载 svn 的 python 绑定"
 
 #, python-format
 msgid "Subversion python bindings %d.%d found, 1.4 or later required"
-msgstr ""
+msgstr "发现 svn 的 python 绑定版本 %d.%d，需要 1.4 或更新的版本"
 
 msgid "Subversion python bindings are too old, 1.4 or later required"
-msgstr ""
+msgstr "svn 的 python 绑定太旧，需要 1.4 或更新的版本"
 
 #, python-format
 msgid "svn: revision %s is not an integer"
-msgstr ""
+msgstr "svn: 版本 %s 不是整数"
 
 #, python-format
 msgid "svn: start revision %s is not an integer"
-msgstr ""
+msgstr "svn: 开始版本 %s 不是整数"
 
 #, python-format
 msgid "no revision found in module %s"
-msgstr ""
+msgstr "没有在模块 %s 中发现版本"
 
 #, python-format
 msgid "expected %s to be at %r, but not found"
-msgstr ""
+msgstr "期望 %s 位于 %r，但是没有发现"
 
 #, python-format
 msgid "found %s at %r\n"
-msgstr ""
+msgstr "发现 %s 位于 %r\n"
 
 #, python-format
 msgid "ignoring empty branch %s\n"
-msgstr ""
+msgstr "忽略空的分支 %s\n"
 
 #, python-format
 msgid "found branch %s at %d\n"
-msgstr ""
+msgstr "发现分支 %s 位于 %d\n"
 
 msgid "svn: start revision is not supported with with more than one branch"
-msgstr ""
+msgstr "svn: 在给出多于一个分支时不支持开始版本"
 
 #, python-format
 msgid "svn: no revision found after start revision %d"
-msgstr ""
+msgstr "svn: 在开始版本 %d 之后没有版本"
 
 #, python-format
 msgid "no tags found at revision %d\n"
-msgstr ""
+msgstr "在版本 %d 没有发现标签\n"
 
 #, python-format
 msgid "ignoring foreign branch %r\n"
-msgstr ""
+msgstr "忽略外部分支 %r\n"
 
 #, python-format
 msgid "%s not found up to revision %d"
-msgstr ""
+msgstr "没有发现 %s，一直到版本 %d"
 
 #, python-format
 msgid "branch renamed from %s to %s at %d\n"
-msgstr ""
+msgstr "分支从 %s 改名为 %s，在 %d\n"
 
 #, python-format
 msgid "reparent to %s\n"
@@ -1262,79 +1277,79 @@ msgstr ""
 
 #, python-format
 msgid "copied to %s from %s@%s\n"
-msgstr ""
+msgstr "复制到 %s，自 %s@%s\n"
 
 #, python-format
 msgid "gone from %s\n"
-msgstr ""
+msgstr "离开 %s\n"
 
 #, python-format
 msgid "found parent directory %s\n"
-msgstr ""
+msgstr "发现父目录 %s\n"
 
 #, python-format
 msgid "base, entry %s %s\n"
-msgstr ""
+msgstr "基本，入口 %s %s\n"
 
 msgid "munge-o-matic\n"
 msgstr ""
 
 #, python-format
 msgid "info: %s %s %s %s\n"
-msgstr ""
+msgstr "信息: %s %s %s %s\n"
 
 #, python-format
 msgid "unknown path in revision %d: %s\n"
-msgstr ""
+msgstr "版本 %d 有未知路径: %s\n"
 
 #, python-format
 msgid "mark %s came from %s:%d\n"
-msgstr ""
+msgstr "标记 %s 来自 %s:%d\n"
 
 #, python-format
 msgid "parsing revision %d (%d changes)\n"
-msgstr ""
+msgstr "解析版本 %d (%d 个改变)\n"
 
 #, python-format
 msgid "found parent of branch %s at %d: %s\n"
-msgstr ""
+msgstr "发现分支 %s 的父亲，在 %d: %s\n"
 
 msgid "no copyfrom path, don't know what to do.\n"
-msgstr ""
+msgstr "没有 copyfrom 路径，不知道该怎么办。\n"
 
 #, python-format
 msgid "fetching revision log for \"%s\" from %d to %d\n"
-msgstr ""
+msgstr "为 \"%s\" 获取版本日志，自 %d 到 %d\n"
 
 #, python-format
 msgid "skipping blacklisted revision %d\n"
-msgstr ""
+msgstr "忽略黑名单版本 %d\n"
 
 #, python-format
 msgid "revision %d has no entries\n"
-msgstr ""
+msgstr "版本 %d 没有入口\n"
 
 #, python-format
 msgid "svn: branch has no revision %s"
-msgstr ""
+msgstr "svn: 分支没有版本 %s"
 
 #, python-format
 msgid "%r is not under %r, ignoring\n"
-msgstr ""
+msgstr "%r 不在 %r 之下，忽略之\n"
 
 #, python-format
 msgid "initializing svn repo %r\n"
-msgstr ""
+msgstr "初始化 svn 版本库 %r\n"
 
 #, python-format
 msgid "initializing svn wc %r\n"
-msgstr ""
+msgstr "初始化 svn 工作副本 %r\n"
 
 msgid "unexpected svn output:\n"
-msgstr ""
+msgstr "意外的 svn 输出:\n"
 
 msgid "unable to cope with svn output"
-msgstr ""
+msgstr "不能处理 svn 的输出"
 
 msgid "XXX TAGS NOT IMPLEMENTED YET\n"
 msgstr ""
@@ -1407,6 +1422,9 @@ msgid ""
 "    "
 msgstr ""
 
+msgid "cannot specify --rev and --change at the same time"
+msgstr "不能同时指定 '--rev' 和 '--change'"
+
 #, python-format
 msgid "running %r in %s\n"
 msgstr ""
@@ -1442,6 +1460,9 @@ msgstr ""
 
 msgid "pass option to comparison program"
 msgstr ""
+
+msgid "change made by revision"
+msgstr "此版本的修改"
 
 msgid "hg extdiff [OPT]... [FILE]..."
 msgstr ""
@@ -1494,7 +1515,7 @@ msgstr ""
 
 #, python-format
 msgid "pulling from %s\n"
-msgstr ""
+msgstr "正在拉自 %s\n"
 
 msgid "fetch -r doesn't work for remote repositories yet"
 msgstr ""
@@ -1724,7 +1745,7 @@ msgid "comparing with %s\n"
 msgstr ""
 
 msgid "no changes found\n"
-msgstr ""
+msgstr "没有发现修改\n"
 
 msgid ""
 "show the incoming changesets alongside an ASCII revision graph\n"
@@ -2290,6 +2311,8 @@ msgid ""
 "\n"
 "removing temporary repo %s\n"
 msgstr ""
+"\n"
+"正在删除临时版本库 %s\n"
 
 msgid ""
 "expand keywords in working directory\n"
@@ -3009,13 +3032,10 @@ msgid ""
 "\n"
 "    With no arguments, print the currently active guards.\n"
 "    With arguments, set guards for the named patch.\n"
-"\n"
-"    To set a negative guard \"-foo\" on topmost patch (\"--\" is needed so\n"
-"    hg will not interpret \"-foo\" as an option):\n"
-"      hg qguard -- -foo\n"
+"    NOTE: Specifying negative guards now requires '--'.\n"
 "\n"
 "    To set guards on another patch:\n"
-"      hg qguard other.patch +2.6.17 -stable\n"
+"      hg qguard -- other.patch +2.6.17 -stable\n"
 "    "
 msgstr ""
 
@@ -3270,7 +3290,7 @@ msgstr ""
 msgid "drop all guards"
 msgstr ""
 
-msgid "hg qguard [-l] [-n] [PATCH] [+GUARD]... [-GUARD]..."
+msgid "hg qguard [-l] [-n] -- [PATCH] [+GUARD]... [-GUARD]..."
 msgstr ""
 
 msgid "hg qheader [PATCH]"
@@ -3877,11 +3897,11 @@ msgstr ""
 
 #, python-format
 msgid "Removing file %s\n"
-msgstr ""
+msgstr "正在删除文件 %s\n"
 
 #, python-format
 msgid "Removing directory %s\n"
-msgstr ""
+msgstr "正在删除目录 %s\n"
 
 msgid "abort if an error occurs"
 msgstr ""
@@ -4078,7 +4098,7 @@ msgstr ""
 msgid "Call rebase after pull if the latter has been invoked with --rebase"
 msgstr ""
 
-msgid "--update and --rebase are not compatible"
+msgid "--update and --rebase are not compatible, ignoring the update flag\n"
 msgstr ""
 
 msgid "Replace pull with a decorator to provide --rebase option"
@@ -4213,7 +4233,7 @@ msgid "q"
 msgstr ""
 
 msgid "user quit"
-msgstr ""
+msgstr "用户退出"
 
 #, python-format
 msgid "examine changes to %s?"
@@ -4651,7 +4671,7 @@ msgstr ""
 
 #, python-format
 msgid "removing %s\n"
-msgstr ""
+msgstr "正在删除 %s\n"
 
 #, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
@@ -4706,63 +4726,63 @@ msgid "no files to copy"
 msgstr ""
 
 msgid "(consider using --after)\n"
-msgstr ""
+msgstr "(考虑使用 --after)\n"
 
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr ""
+msgstr "修改集:      %d:%s\n"
 
 #, python-format
 msgid "branch:      %s\n"
-msgstr ""
+msgstr "分支:        %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
-msgstr ""
+msgstr "标签:        %s\n"
 
 #, python-format
 msgid "parent:      %d:%s\n"
-msgstr ""
+msgstr "父亲:        %d:%s\n"
 
 #, python-format
 msgid "manifest:    %d:%s\n"
-msgstr ""
+msgstr "清单:        %d:%s\n"
 
 #, python-format
 msgid "user:        %s\n"
-msgstr ""
+msgstr "用户:        %s\n"
 
 #, python-format
 msgid "date:        %s\n"
-msgstr ""
+msgstr "日期:        %s\n"
 
 msgid "files+:"
-msgstr ""
+msgstr "文件+:"
 
 msgid "files-:"
-msgstr ""
+msgstr "文件-:"
 
 msgid "files:"
-msgstr ""
+msgstr "文件:"
 
 #, python-format
 msgid "files:       %s\n"
-msgstr ""
+msgstr "文件:        %s\n"
 
 #, python-format
 msgid "copies:      %s\n"
-msgstr ""
+msgstr "复制:        %s\n"
 
 #, python-format
 msgid "extra:       %s=%s\n"
-msgstr ""
+msgstr "额外:        %s=%s\n"
 
 msgid "description:\n"
-msgstr ""
+msgstr "描述:\n"
 
 #, python-format
 msgid "summary:     %s\n"
-msgstr ""
+msgstr "摘要:        %s\n"
 
 #, python-format
 msgid "%s: no key named '%s'"
@@ -5239,7 +5259,7 @@ msgstr ""
 
 #, python-format
 msgid "committed changeset %d:%s\n"
-msgstr ""
+msgstr "提交修改集 %d:%s\n"
 
 msgid ""
 "mark files as copied for the next commit\n"
@@ -5471,9 +5491,6 @@ msgstr ""
 "    使用选项 '--git' 会使用 git 扩展差异格式。请阅读差异帮助主题以了解\n"
 "    更多信息。\n"
 "    "
-
-msgid "cannot specify --rev and --change at the same time"
-msgstr "不能同时指定 '--rev' 和 '--change'"
 
 msgid ""
 "dump the header and diffs for one or more changesets\n"
@@ -5964,8 +5981,9 @@ msgstr ""
 msgid ""
 "show aliases for remote repositories\n"
 "\n"
-"     Show definition of symbolic path name NAME. If no name is given, show\n"
-"     definition of available names.\n"
+"    Show definition of symbolic path name NAME. If no name is given, show\n"
+"    definition of available names.\n"
+"\n"
 "    Path names are defined in the [paths] section of /etc/mercurial/hgrc\n"
 "    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.\n"
 "\n"
@@ -6056,7 +6074,7 @@ msgstr ""
 
 #, python-format
 msgid "pushing to %s\n"
-msgstr ""
+msgstr "正在推到 %s\n"
 
 msgid ""
 "raw commit interface (DEPRECATED)\n"
@@ -6236,23 +6254,23 @@ msgstr ""
 
 #, python-format
 msgid "reverting %s\n"
-msgstr ""
+msgstr "正在恢复 %s\n"
 
 #, python-format
 msgid "undeleting %s\n"
-msgstr ""
+msgstr "正在撤销删除 %s\n"
 
 #, python-format
 msgid "saving current version of %s as %s\n"
-msgstr ""
+msgstr "保存当前版本的 %s 为 %s\n"
 
 #, python-format
 msgid "file not managed: %s\n"
-msgstr ""
+msgstr "文件未被控制: %s\n"
 
 #, python-format
 msgid "no changes needed to %s\n"
-msgstr ""
+msgstr "不需要改变 %s\n"
 
 msgid ""
 "roll back the last transaction\n"
@@ -6831,9 +6849,6 @@ msgstr ""
 msgid "[OPTION]..."
 msgstr ""
 
-msgid "change made by revision"
-msgstr "此版本的修改"
-
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr ""
 
@@ -7240,7 +7255,7 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s\n"
-msgstr ""
+msgstr "中止: %s\n"
 
 #, python-format
 msgid ""
@@ -7258,11 +7273,11 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s: %s\n"
-msgstr ""
+msgstr "中止: %s: %s\n"
 
 #, python-format
 msgid "abort: could not lock %s: %s\n"
-msgstr ""
+msgstr "中止: 不能锁定 %s: %s\n"
 
 #, python-format
 msgid "hg %s: %s\n"
@@ -7274,11 +7289,11 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s!\n"
-msgstr ""
+msgstr "中止: %s!\n"
 
 #, python-format
 msgid "abort: %s"
-msgstr ""
+msgstr "中止: %s"
 
 msgid " empty string\n"
 msgstr ""
@@ -7292,40 +7307,42 @@ msgstr "hg: 未知命令 '%s'\n"
 
 #, python-format
 msgid "abort: could not import module %s!\n"
-msgstr ""
+msgstr "中止: 不能导入模块 %s!\n"
 
 msgid "(did you forget to compile extensions?)\n"
-msgstr ""
+msgstr "(你是否忘记了编译扩展?)\n"
 
 msgid "(is your Python install correct?)\n"
-msgstr ""
+msgstr "(你的 Python 安装正确吗?)\n"
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr ""
+msgstr "中止: 失败: %s\n"
 
 msgid "broken pipe\n"
-msgstr ""
+msgstr "坏掉的管道\n"
 
 msgid "interrupted!\n"
-msgstr ""
+msgstr "中断!\n"
 
 msgid ""
 "\n"
 "broken pipe\n"
 msgstr ""
+"\n"
+"坏掉的管道\n"
 
 msgid "abort: out of memory\n"
-msgstr ""
+msgstr "中止: 内存不足\n"
 
 msgid "** unknown exception encountered, details follow\n"
-msgstr ""
+msgstr "** 遇到了未知异常，详细信息如下\n"
 
 msgid "** report bug details to http://www.selenic.com/mercurial/bts\n"
-msgstr ""
+msgstr "** 报告问题详情到 http://www.selenic.com/mercurial/bts\n"
 
 msgid "** or mercurial@selenic.com\n"
-msgstr ""
+msgstr "** 或 mercurial@selenic.com\n"
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
@@ -7333,37 +7350,38 @@ msgstr "** 分布式软件配置管理工具 - 水银 (版本 %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
-msgstr ""
+msgstr "** 已加载的扩展: %s\n"
 
 #, python-format
 msgid "malformed --config option: %s"
-msgstr ""
+msgstr "非法 '--config' 选项: %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
-msgstr ""
+msgstr "扩展 '%s' 覆盖了命令: %s\n"
 
 msgid "Option --config may not be abbreviated!"
-msgstr ""
+msgstr "选项 '--config' 不能简短!"
 
 msgid "Option --cwd may not be abbreviated!"
-msgstr ""
+msgstr "选项 '--cwd' 不能简短!"
 
 msgid ""
 "Option -R has to be separated from other options (i.e. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
+"选项 -R 必须隔离使用(也就是不能 -qR)，并且 --repository 只能简短为 --repo!"
 
 #, python-format
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
-msgstr ""
+msgstr "时间: 实际 %.3f 秒(用户 %.3f+%.3f 系统 %.3f+%.3f)\n"
 
 #, python-format
 msgid "repository '%s' is not local"
-msgstr ""
+msgstr "非本地版本库 '%s'"
 
 msgid "invalid arguments"
-msgstr ""
+msgstr "非法参数"
 
 msgid "exception raised - generating profile anyway\n"
 msgstr ""
@@ -7372,6 +7390,7 @@ msgid ""
 "lsprof not available - install from http://codespeak.net/svn/user/arigo/hack/"
 "misc/lsprof/"
 msgstr ""
+"lsprof 不可用 - 从 http://codespeak.net/svn/user/arigo/hack/misc/lsprof/ 安装"
 
 #, python-format
 msgid "*** failed to import extension %s from %s: %s\n"
@@ -7383,29 +7402,31 @@ msgstr "*** 加载扩展 '%s' 失败: %s\n"
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
-msgstr ""
+msgstr "不能找到合并工具 '%s'\n"
 
 #, python-format
 msgid "tool %s can't handle symlinks\n"
-msgstr ""
+msgstr "工具 '%s' 不能处理符号链接\n"
 
 #, python-format
 msgid "tool %s can't handle binary\n"
-msgstr ""
+msgstr "工具 '%s' 不能处理二进制\n"
 
 #, python-format
 msgid "tool %s requires a GUI\n"
-msgstr ""
+msgstr "工具 '%s' 需要 GUI\n"
 
 #, python-format
 msgid "picked tool '%s' for %s (binary %s symlink %s)\n"
-msgstr ""
+msgstr "选择工具 '%s'，用于 %s(二进制 %s 符号链接 %s)\n"
 
 #, python-format
 msgid ""
 " no tool found to merge %s\n"
 "keep (l)ocal or take (o)ther?"
 msgstr ""
+" 没有找到工具合并 %s\n"
+"使用本地(l)或者他人(o)的内容?"
 
 msgid "[lo]"
 msgstr ""
@@ -7457,9 +7478,9 @@ msgstr ""
 
 msgid ""
 "\n"
-"    Some commands allow the user to specify a date:\n"
-"    backout, commit, import, tag: Specify the commit date.\n"
-"    log, revert, update: Select revision(s) by date.\n"
+"    Some commands allow the user to specify a date, e.g.:\n"
+"    * backout, commit, import, tag: Specify the commit date.\n"
+"    * log, revert, update: Select revision(s) by date.\n"
 "\n"
 "    Many date formats are valid. Here are some examples:\n"
 "\n"
@@ -7987,7 +8008,7 @@ msgstr ""
 "\n"
 "    在 '#' 后面可选的标识符用于指定要取得的分支，标签或改变集。\n"
 "\n"
-"    仅当远程水银服务器显式启用时，才能推送到位置 'http://' 和 'https://'。\n"
+"    仅当远程水银服务器显式启用时，才能推到 'http://' 和 'https://'。\n"
 "\n"
 "    在水银中使用 SSH 的一些提示:\n"
 "    - 使用 SSH 时，需要在远程主机上有可登录帐号，远程路径中还需要有\n"
@@ -8025,7 +8046,7 @@ msgstr ""
 
 #, python-format
 msgid "destination directory: %s\n"
-msgstr ""
+msgstr "目标目录: %s\n"
 
 #, python-format
 msgid "destination '%s' already exists"
@@ -8040,23 +8061,23 @@ msgid "clone from remote to remote not supported"
 msgstr ""
 
 msgid "updating working directory\n"
-msgstr ""
+msgstr "正在更新工作目录\n"
 
 msgid "updated"
-msgstr ""
+msgstr "已更新"
 
 msgid "merged"
-msgstr ""
+msgstr "已合并"
 
 msgid "removed"
-msgstr ""
+msgstr "已删除"
 
 msgid "unresolved"
-msgstr ""
+msgstr "未解决"
 
 #, python-format
 msgid "%d files %s"
-msgstr ""
+msgstr "%d 个文件%s"
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr ""
@@ -8135,7 +8156,7 @@ msgstr ""
 
 #, python-format
 msgid "using %s\n"
-msgstr ""
+msgstr "使用 %s\n"
 
 #, python-format
 msgid "capabilities: %s\n"
@@ -8146,14 +8167,14 @@ msgstr ""
 
 #, python-format
 msgid "sending %s command\n"
-msgstr ""
+msgstr "发送命令 '%s'\n"
 
 #, python-format
 msgid "sending %s bytes\n"
-msgstr ""
+msgstr "发送 %s 字节\n"
 
 msgid "authorization failed"
-msgstr ""
+msgstr "授权失败"
 
 #, python-format
 msgid "http error while sending %s command\n"
@@ -8164,15 +8185,15 @@ msgstr ""
 
 #, python-format
 msgid "real URL is %s\n"
-msgstr ""
+msgstr "实际 URL 是 '%s'\n"
 
 #, python-format
 msgid "Requested URL: '%s'\n"
-msgstr ""
+msgstr "请求的 URL: '%s'\n"
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
-msgstr ""
+msgstr "'%s' 似乎不是水银版本库"
 
 #, python-format
 msgid "'%s' sent a broken Content-Type header (%s)"
@@ -8218,7 +8239,7 @@ msgstr ""
 
 #, python-format
 msgid "repository %s already exists"
-msgstr ""
+msgstr "版本库 %s 已存在"
 
 #, python-format
 msgid "requirement '%s' not supported"
@@ -8258,20 +8279,20 @@ msgid "journal already exists - run hg recover"
 msgstr ""
 
 msgid "rolling back interrupted transaction\n"
-msgstr ""
+msgstr "回滚中断的事务\n"
 
 msgid "no interrupted transaction available\n"
 msgstr ""
 
 msgid "rolling back last transaction\n"
-msgstr ""
+msgstr "回滚最近的事务\n"
 
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
 
 msgid "no rollback information available\n"
-msgstr ""
+msgstr "没有回滚信息可用\n"
 
 #, python-format
 msgid "waiting for lock on %s held by %r\n"
@@ -8298,27 +8319,27 @@ msgstr ""
 
 #, python-format
 msgid "%s not tracked!\n"
-msgstr ""
+msgstr "%s 没有被跟踪!\n"
 
 msgid "unresolved merge conflicts (see hg resolve)"
-msgstr ""
+msgstr "未解决的合并冲突(参见 'hg resolve')"
 
 msgid "nothing changed\n"
-msgstr ""
+msgstr "没有改变\n"
 
 #, python-format
 msgid "trouble committing %s!\n"
-msgstr ""
+msgstr "提交 '%s' 出错!\n"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
-msgstr ""
+msgstr "HG: 请输入提交日志。以 'HG:' 开始的行会被删除。"
 
 msgid "empty commit message"
-msgstr ""
+msgstr "空的提交日志"
 
 #, python-format
 msgid "%s does not exist!\n"
-msgstr ""
+msgstr "%s 不存在!\n"
 
 #, python-format
 msgid ""
@@ -8351,7 +8372,7 @@ msgid "copy failed: %s is not a file or a symbolic link\n"
 msgstr ""
 
 msgid "searching for changes\n"
-msgstr ""
+msgstr "正在搜索修改\n"
 
 #, python-format
 msgid "examining %s:%s\n"
@@ -8408,7 +8429,7 @@ msgid "common changesets up to "
 msgstr ""
 
 msgid "requesting all changes\n"
-msgstr ""
+msgstr "正在请求全部修改\n"
 
 msgid ""
 "Partial pull cannot be done because other repository doesn't support "
@@ -8426,7 +8447,7 @@ msgstr ""
 
 #, python-format
 msgid "%d changesets found\n"
-msgstr ""
+msgstr "已发现 %d 个改变集\n"
 
 msgid "list of changesets:\n"
 msgstr ""
@@ -8440,16 +8461,16 @@ msgid "add changeset %s\n"
 msgstr ""
 
 msgid "adding changesets\n"
-msgstr ""
+msgstr "正在增加修改集\n"
 
 msgid "received changelog group is empty"
 msgstr ""
 
 msgid "adding manifests\n"
-msgstr ""
+msgstr "正在增加清单\n"
 
 msgid "adding file changes\n"
-msgstr ""
+msgstr "正在增加文件改变\n"
 
 #, python-format
 msgid "adding %s revisions\n"
@@ -8464,7 +8485,7 @@ msgstr ""
 
 #, python-format
 msgid "added %d changesets with %d changes to %d files%s\n"
-msgstr ""
+msgstr "已增加 %d 个改变集，包含 %d 个改变，修改了 %d 个文件%s\n"
 
 msgid "updating the branch cache\n"
 msgstr ""
@@ -8558,7 +8579,7 @@ msgid "case-folding collision between %s and %s"
 msgstr ""
 
 msgid "resolving manifests\n"
-msgstr ""
+msgstr "正在解析清单\n"
 
 #, python-format
 msgid " overwrite %s partial %s\n"
@@ -8602,7 +8623,7 @@ msgstr ""
 
 #, python-format
 msgid "getting %s\n"
-msgstr ""
+msgstr "正在检出 %s\n"
 
 #, python-format
 msgid "moving %s to %s\n"
@@ -8807,44 +8828,44 @@ msgid "invalid entry in fncache, line %s"
 msgstr ""
 
 msgid "scanning\n"
-msgstr ""
+msgstr "正在扫描\n"
 
 #, python-format
 msgid "%d files, %d bytes to transfer\n"
-msgstr ""
+msgstr "需要传输 %d 个文件，%d 字节\n"
 
 #, python-format
 msgid "sending %s (%d bytes)\n"
-msgstr ""
+msgstr "正在发送 %s (%d 字节)\n"
 
 msgid "unmatched quotes"
-msgstr ""
+msgstr "不匹配的引号"
 
 #, python-format
 msgid "style not found: %s"
-msgstr ""
+msgstr "没有找到样式: %s"
 
 #, python-format
 msgid "%s:%s: parse error"
-msgstr ""
+msgstr "%s:%s: 解析出错"
 
 #, python-format
 msgid "template file %s: %s"
-msgstr ""
+msgstr "模版文件 %s: %s"
 
 #, python-format
 msgid "Error expanding '%s%%%s'"
 msgstr ""
 
 msgid "transaction abort!\n"
-msgstr ""
+msgstr "事务中止!\n"
 
 #, python-format
 msgid "failed to truncate %s\n"
-msgstr ""
+msgstr "截断 '%s' 失败\n"
 
 msgid "rollback completed\n"
-msgstr ""
+msgstr "完成回滚\n"
 
 #, python-format
 msgid "Not trusting file %s from untrusted user %s, group %s\n"
@@ -8855,6 +8876,8 @@ msgid ""
 "Failed to parse %s\n"
 "%s"
 msgstr ""
+"解析 '%s' 失败\n"
+"%s"
 
 #, python-format
 msgid "Ignored: %s\n"
@@ -8907,27 +8930,27 @@ msgid "response expected"
 msgstr ""
 
 msgid "password: "
-msgstr ""
+msgstr "密码: "
 
 msgid "edit failed"
 msgstr ""
 
 msgid "http authorization required"
-msgstr ""
+msgstr "需要 http 授权"
 
 msgid "http authorization required\n"
-msgstr ""
+msgstr "需要 http 授权\n"
 
 #, python-format
 msgid "realm: %s\n"
-msgstr ""
+msgstr "领域: %s\n"
 
 #, python-format
 msgid "user: %s\n"
-msgstr ""
+msgstr "用户: %s\n"
 
 msgid "user:"
-msgstr ""
+msgstr "用户:"
 
 #, python-format
 msgid "proxying through http://%s:%s\n"
