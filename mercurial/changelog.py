@@ -96,7 +96,7 @@ class changelog(revlog.revlog):
             fp = self.opener(self.indexfile, 'a')
             fp.write("".join(self._delaybuf))
             fp.close()
-            del self._delaybuf
+            self._delaybuf = []
         # split when we're done
         self.checkinlinesize(tr)
 
@@ -114,6 +114,31 @@ class changelog(revlog.revlog):
             return self._realopener(name + ".a", mode)
         # otherwise, divert to memory
         return appender(fp, self._delaybuf)
+
+    def readpending(self, file):
+        r = revlog.revlog(self.opener, file)
+        self.index = r.index
+        self.nodemap = r.nodemap
+        self._chunkcache = r._chunkcache
+
+    def writepending(self):
+        "create a file containing the unfinalized state for pretxnchangegroup"
+        if self._delaybuf:
+            # make a temporary copy of the index
+            fp1 = self._realopener(self.indexfile)
+            fp2 = self._realopener(self.indexfile + ".a", "w")
+            fp2.write(fp1.read())
+            # add pending data
+            fp2.write("".join(self._delaybuf))
+            fp2.close()
+            # switch modes so finalize can simply rename
+            self._delaybuf = []
+            self._delayname = fp1.name
+
+        if self._delayname:
+            return True
+
+        return False
 
     def checkinlinesize(self, tr, fp=None):
         if self.opener == self._delayopener:

@@ -88,6 +88,10 @@ class localrepository(repo.repository):
     def __getattr__(self, name):
         if name == 'changelog':
             self.changelog = changelog.changelog(self.sopener)
+            if 'HG_PENDING' in os.environ:
+                p = os.environ['HG_PENDING']
+                if p.startswith(self.root):
+                    self.changelog.readpending('00changelog.i.a')
             self.sopener.defversion = self.changelog.version
             return self.changelog
         if name == 'manifest':
@@ -955,10 +959,13 @@ class localrepository(repo.repository):
                 raise util.Abort(_("empty commit message"))
             text = '\n'.join(lines)
 
+            self.changelog.delayupdate()
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
                                    user, wctx.date(), extra)
+            p = lambda: self.changelog.writepending() and self.root or ""
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
-                      parent2=xp2)
+                      parent2=xp2, pending=p)
+            self.changelog.finalize(trp)
             tr.close()
 
             if self.branchcache:
@@ -2034,9 +2041,6 @@ class localrepository(repo.repository):
                 revisions += len(fl) - o
                 files += 1
 
-            # make changelog see real files again
-            cl.finalize(trp)
-
             newheads = len(self.changelog.heads())
             heads = ""
             if oldheads and newheads != oldheads:
@@ -2047,9 +2051,13 @@ class localrepository(repo.repository):
                              % (changesets, revisions, files, heads))
 
             if changesets > 0:
+                p = lambda: self.changelog.writepending() and self.root or ""
                 self.hook('pretxnchangegroup', throw=True,
                           node=hex(self.changelog.node(cor+1)), source=srctype,
-                          url=url)
+                          url=url, pending=p)
+
+            # make changelog see real files again
+            cl.finalize(trp)
 
             tr.close()
         finally:
