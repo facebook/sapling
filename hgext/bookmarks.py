@@ -33,7 +33,7 @@ import os
 def parse(repo):
     '''Parse .hg/bookmarks file and return a dictionary
 
-    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format) values
+    Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values
     in the .hg/bookmarks file. They are read by the parse() method and
     returned as a dictionary with name => hash values.
 
