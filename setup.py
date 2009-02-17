@@ -103,7 +103,7 @@ try:
     pypath = os.environ.get('PYTHONPATH', '')
     purepath = os.path.join('mercurial', 'pure')
     os.environ['PYTHONPATH'] = os.pathsep.join(['mercurial', purepath, pypath])
-    cmd = '%s id -it' % os.path.join('.', 'hg')
+    cmd = '%s hg id -it' % sys.executable
     l = os.popen(cmd).read().split()
     os.environ['PYTHONPATH'] = pypath
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
@@ -112,7 +112,8 @@ try:
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
 
-except OSError:
+except OSError, e:
+    print "warning: could not establish Mercurial version: %s" % e
     version = "unknown"
 
 f = file("mercurial/__version__.py", "w")
