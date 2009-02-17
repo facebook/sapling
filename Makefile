@@ -38,6 +38,7 @@ clean:
 	-$(PYTHON) setup.py clean --all # ignore errors of this command
 	find . -name '*.py[cdo]' -exec rm -f '{}' ';'
 	rm -f MANIFEST mercurial/__version__.py mercurial/*.so tests/*.err
+	rm -rf locale
 	$(MAKE) -C doc clean
 
 install: install-bin install-doc
