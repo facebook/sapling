@@ -273,7 +273,7 @@ def run(cmd):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return the exist code, and output."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
-    if os.name == 'nt':
+    if os.name == 'nt' or sys.platform.startswith('java'):
         tochild, fromchild = os.popen4(cmd)
         tochild.close()
         output = fromchild.read()
