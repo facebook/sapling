@@ -439,7 +439,10 @@ class ui(object):
 
     def getpass(self, prompt=None, default=None):
         if not self.interactive: return default
-        return getpass.getpass(prompt or _('password: '))
+        try:
+            return getpass.getpass(prompt or _('password: '))
+        except EOFError:
+            raise util.Abort(_('response expected'))
     def status(self, *msg):
         if not self.quiet: self.write(*msg)
     def warn(self, *msg):
