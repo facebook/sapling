@@ -41,9 +41,15 @@ def gclone(ui, git_url, hg_repo_path=None):
         if hg_repo_path.endswith('.git'):
             hg_repo_path = hg_repo_path[:-4]
         hg_repo_path += '-hg'
-    subprocess.call(['hg', 'init', hg_repo_path])
-    clone_git(git_url, git_path(hg_repo_path))
+    subprocess.call(['hg', 'init', hg_repo_path])    
+    clone_git(git_url, hg_repo_path)
     import_git_heads(hg_repo_path)
+    
+    # check it out
+    oldwd = os.getcwd()
+    os.chdir(hg_repo_path)
+    subprocess.call(['hg', 'checkout'])    
+    os.chdir(oldwd)
 
 def gpull(ui, repo, source='default', **opts):
     """fetch from a git repo
@@ -53,7 +59,7 @@ def gpull(ui, repo, source='default', **opts):
         lock = repo.lock()
         wlock = repo.wlock()
         ui.write("fetching from the remote\n")
-        git_fetch()
+        git_fetch(git_path())
         import_git_heads()
         # do the pull
     finally:
@@ -72,25 +78,29 @@ def gpush(ui, repo, dest='default', **opts):
         del lock, wlock
 
 def git_path(hg_path=None):
-    return os.path.join(hg_path, '.hg', 'git-remote')
+    if hg_path:
+      return os.path.join(hg_path, '.hg', 'git-remote')
+    else:
+      return os.path.join('.hg', 'git-remote')
 
 def clone_git(git_url, hg_path=None):
     git_initialize(git_path(hg_path), git_url)
     git_fetch(git_path(hg_path))
     
-def git_initialize(git_path, git_url):
+def git_initialize(git_repo_path, git_url):
     # TODO: implement this in pure python - should be strait-forward
-    subprocess.call(['git', '--bare', 'init', git_path])
     oldwd = os.getcwd()
-    os.chdir(git_path)
+    os.makedirs(git_repo_path)
+    os.chdir(git_repo_path)
+    subprocess.call(['git', '--bare', 'init'])
     subprocess.call(['git', 'remote', 'add', 'origin', git_url])
     os.chdir(oldwd)
     
-def git_fetch(git_path, remote='origin'):
+def git_fetch(git_repo_path, remote='origin'):
     # TODO: implement this in pure python
     #       - we'll have to handle ssh and git
     oldwd = os.getcwd()
-    os.chdir(git_path)
+    os.chdir(git_repo_path)
     subprocess.call(['git', 'fetch', remote])
     os.chdir(oldwd)
   
@@ -98,12 +108,15 @@ def git_push():
     # find all the local changesets that aren't mapped
     # create git commit object shas and map them
     # stick those objects in a packfile and push them up (over ssh)
-    
+    return 0
+
 def import_git_heads(hg_path=None):
     # go through each branch
       # add all commits we don't have locally
       # write a SHA<->SHA mapping table
       # update the local branches to match
+    if not hg_path:
+      hg_path = '.'
     return subprocess.call(['hg', 'convert', git_path(hg_path), hg_path])
   
         
