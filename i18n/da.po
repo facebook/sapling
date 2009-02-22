@@ -15,8 +15,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-02-01 16:43+0100\n"
-"PO-Revision-Date: 2009-02-03 20:29+0100\n"
+"POT-Creation-Date: 2009-02-22 22:02+0100\n"
+"PO-Revision-Date: 2009-02-22 22:05+0100\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -138,8 +138,7 @@ msgstr ""
 msgid ""
 "Parse .hg/bookmarks file and return a dictionary\n"
 "\n"
-"    Bookmarks are stored as {HASH}\\s{NAME}\n"
-" (localtags format) values\n"
+"    Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values\n"
 "    in the .hg/bookmarks file. They are read by the parse() method and\n"
 "    returned as a dictionary with name => hash values.\n"
 "\n"
@@ -932,6 +931,12 @@ msgstr "vis forældre-ændring"
 msgid "show current changeset in ancestor branches"
 msgstr ""
 
+msgid "ignored for compatibility"
+msgstr ""
+
+msgid "hg debugcvsps [OPTION]... [PATH]..."
+msgstr ""
+
 #, python-format
 msgid "%s is not a valid revision in current branch"
 msgstr ""
@@ -970,7 +975,7 @@ msgstr ""
 
 #, python-format
 msgid "%s: unknown repository type"
-msgstr ""
+msgstr "%s: ukendt arkivtype"
 
 #, python-format
 msgid "cycle detected between %s and %s"
@@ -1411,6 +1416,9 @@ msgid ""
 "    "
 msgstr ""
 
+msgid "cannot specify --rev and --change at the same time"
+msgstr ""
+
 #, python-format
 msgid "running %r in %s\n"
 msgstr ""
@@ -1445,6 +1453,9 @@ msgid "comparison program to run"
 msgstr ""
 
 msgid "pass option to comparison program"
+msgstr ""
+
+msgid "change made by revision"
 msgstr ""
 
 msgid "hg extdiff [OPT]... [FILE]..."
@@ -3005,13 +3016,10 @@ msgid ""
 "\n"
 "    With no arguments, print the currently active guards.\n"
 "    With arguments, set guards for the named patch.\n"
-"\n"
-"    To set a negative guard \"-foo\" on topmost patch (\"--\" is needed so\n"
-"    hg will not interpret \"-foo\" as an option):\n"
-"      hg qguard -- -foo\n"
+"    NOTE: Specifying negative guards now requires '--'.\n"
 "\n"
 "    To set guards on another patch:\n"
-"      hg qguard other.patch +2.6.17 -stable\n"
+"      hg qguard -- other.patch +2.6.17 -stable\n"
 "    "
 msgstr ""
 
@@ -3254,7 +3262,7 @@ msgstr ""
 msgid "drop all guards"
 msgstr ""
 
-msgid "hg qguard [-l] [-n] [PATCH] [+GUARD]... [-GUARD]..."
+msgid "hg qguard [-l] [-n] -- [PATCH] [+GUARD]... [-GUARD]..."
 msgstr ""
 
 msgid "hg qheader [PATCH]"
@@ -4065,7 +4073,7 @@ msgstr ""
 msgid "Call rebase after pull if the latter has been invoked with --rebase"
 msgstr ""
 
-msgid "--update and --rebase are not compatible"
+msgid "--update and --rebase are not compatible, ignoring the update flag\n"
 msgstr ""
 
 msgid "Replace pull with a decorator to provide --rebase option"
@@ -5393,9 +5401,6 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "cannot specify --rev and --change at the same time"
-msgstr ""
-
 msgid ""
 "dump the header and diffs for one or more changesets\n"
 "\n"
@@ -5815,8 +5820,9 @@ msgstr ""
 msgid ""
 "show aliases for remote repositories\n"
 "\n"
-"     Show definition of symbolic path name NAME. If no name is given, show\n"
-"     definition of available names.\n"
+"    Show definition of symbolic path name NAME. If no name is given, show\n"
+"    definition of available names.\n"
+"\n"
 "    Path names are defined in the [paths] section of /etc/mercurial/hgrc\n"
 "    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.\n"
 "\n"
@@ -6587,9 +6593,6 @@ msgstr ""
 msgid "[OPTION]..."
 msgstr ""
 
-msgid "change made by revision"
-msgstr ""
-
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr ""
 
@@ -7215,9 +7218,9 @@ msgstr "Datoformater"
 
 msgid ""
 "\n"
-"    Some commands allow the user to specify a date:\n"
-"    backout, commit, import, tag: Specify the commit date.\n"
-"    log, revert, update: Select revision(s) by date.\n"
+"    Some commands allow the user to specify a date, e.g.:\n"
+"    * backout, commit, import, tag: Specify the commit date.\n"
+"    * log, revert, update: Select revision(s) by date.\n"
 "\n"
 "    Many date formats are valid. Here are some examples:\n"
 "\n"
@@ -7253,9 +7256,9 @@ msgid ""
 "    "
 msgstr ""
 "\n"
-"    Nogle kommandoer tillader brugeren at specificere en dato:\n"
-"    backout, commit, import, tag: specificer commit-datoen.\n"
-"    log, revert, update: vælg revisioner efter dato.\n"
+"    Nogle kommandoer tillader brugeren at specificere en dato, f.eks.:\n"
+"    * backout, commit, import, tag: specificer commit-datoen.\n"
+"    * log, revert, update: vælg revisioner efter dato.\n"
 "\n"
 "    Der er mange gyldige datoformater. Her er nogle eksempler:\n"
 "\n"
@@ -7683,7 +7686,7 @@ msgid "clone from remote to remote not supported"
 msgstr ""
 
 msgid "updating working directory\n"
-msgstr ""
+msgstr "opdaterer arbejdsbibliotek\n"
 
 msgid "updated"
 msgstr "opdateret"
@@ -7891,11 +7894,11 @@ msgstr ""
 
 #, python-format
 msgid "unknown revision '%s'"
-msgstr ""
+msgstr "ukendt revision '%s'"
 
 #, python-format
 msgid "filtering %s through %s\n"
-msgstr ""
+msgstr "filtrerer %s gennem %s\n"
 
 msgid "journal already exists - run hg recover"
 msgstr ""
@@ -7944,9 +7947,6 @@ msgid "%s not tracked!\n"
 msgstr ""
 
 msgid "unresolved merge conflicts (see hg resolve)"
-msgstr ""
-
-msgid "closing the default branch is invalid"
 msgstr ""
 
 msgid "nothing changed\n"
@@ -8016,7 +8016,7 @@ msgstr "fandt ny ændring %s\n"
 
 #, python-format
 msgid "request %d: %s\n"
-msgstr ""
+msgstr "forespørgsel %d: %s\n"
 
 #, python-format
 msgid "received %s:%s\n"
@@ -8024,18 +8024,18 @@ msgstr "modtog %s:%s\n"
 
 #, python-format
 msgid "narrowing %d:%d %s\n"
-msgstr ""
+msgstr "indskrænker %d:%d %s\n"
 
 #, python-format
 msgid "found new branch changeset %s\n"
-msgstr ""
+msgstr "fandt ny forgreningsændring %s\n"
 
 #, python-format
 msgid "narrowed branch search to %s:%s\n"
-msgstr ""
+msgstr "indskrænker forgreningssøgning til %s:%s\n"
 
 msgid "already have changeset "
-msgstr ""
+msgstr "har allerede ændringen "
 
 msgid "warning: repository is unrelated\n"
 msgstr "advarsel: arkivet er urelateret\n"
@@ -8044,14 +8044,14 @@ msgid "repository is unrelated"
 msgstr "arkivet er urelateret"
 
 msgid "found new changesets starting at "
-msgstr ""
+msgstr "fandt nye ændringer startende ved "
 
 #, python-format
 msgid "%d total queries\n"
 msgstr "%d forespørgsler i alt\n"
 
 msgid "common changesets up to "
-msgstr ""
+msgstr "fælles ændringer op til "
 
 msgid "requesting all changes\n"
 msgstr "anmoder om alle ændringer\n"
@@ -8083,7 +8083,7 @@ msgstr ""
 
 #, python-format
 msgid "add changeset %s\n"
-msgstr ""
+msgstr "tilføj ændring %s\n"
 
 msgid "adding changesets\n"
 msgstr "tilføjer ændringer\n"
