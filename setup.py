@@ -103,6 +103,7 @@ try:
     pypath = os.environ.get('PYTHONPATH', '')
     purepath = os.path.join('mercurial', 'pure')
     os.environ['PYTHONPATH'] = os.pathsep.join(['mercurial', purepath, pypath])
+    os.environ['HGRCPATH'] = '' # do not read any config file
     cmd = '%s hg id -it' % sys.executable
     l = os.popen(cmd).read().split()
     os.environ['PYTHONPATH'] = pypath
