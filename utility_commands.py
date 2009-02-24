@@ -1,3 +1,5 @@
+import os
+
 import mercurial
 from mercurial import cmdutil
 from mercurial import node
@@ -17,6 +19,51 @@ def print_wc_url(ui, repo, hg_repo_path, **opts):
 print_wc_url = util.register_subcommand('url')(print_wc_url)
 
 
+def find_wc_parent_rev(ui, repo, hge, svn_commit_hashes):
+    """Find the svn parent revision of the repo's dirstate.
+    """
+    workingctx = repo.parents()[0]
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingctx.node())
+    if o_r:
+        workingctx = repo[o_r[-1]].parents()[0]
+    return workingctx
+
+
+def generate_ignore(ui, repo, hg_repo_path, force=False, **opts):
+    """generate .hgignore from svn:ignore properties.
+    """
+    ignpath = os.path.join(hg_repo_path, '.hgignore')
+    if not force and os.path.exists(ignpath):
+        raise mutil.Abort('not overwriting existing .hgignore, try --force?')
+    ignorefile = open(ignpath, 'w')
+    ignorefile.write('.hgignore\nsyntax:glob\n')
+    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
+                                           ui_=ui)
+    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
+                                 hge.revmap.iterkeys()))
+    parent = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
+    r, br = svn_commit_hashes[parent.node()]
+    if br == None:
+        branchpath = 'trunk'
+    else:
+        branchpath = 'branches/%s' % br
+    url = hge.url
+    if url[-1] == '/':
+        url = url[:-1]
+    svn = svnwrap.SubversionRepo(url)
+    dirs = [''] + [d[0] for d in svn.list_files(branchpath, r) if d[1] == 'd']
+    for dir in dirs:
+        props = svn.list_props('%s/%s/' % (branchpath,dir), r)
+        if 'svn:ignore' in props:
+            lines = props['svn:ignore'].strip().split('\n')
+            for prop in lines:
+                if dir:
+                    ignorefile.write('%s/%s\n' % (dir, prop))
+                else:
+                    ignorefile.write('%s\n' % prop)
+generate_ignore = util.register_subcommand('genignore')(generate_ignore)
+
+
 def run_svn_info(ui, repo, hg_repo_path, **opts):
     """show Subversion details similar to `svn info'
     """
@@ -24,11 +71,8 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    workingctx = repo.parents()[0]
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingctx.node())
-    if o_r:
-        workingctx = repo[o_r[-1]].parents()[0]
-    r, br = svn_commit_hashes[workingctx.node()]
+    parent = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
+    r, br = svn_commit_hashes[parent.node()]
     if br == None:
         branchpath = '/trunk'
     else:
@@ -37,9 +81,9 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
     if url[-1] == '/':
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
-    author = '@'.join(workingctx.user().split('@')[:-1])
+    author = '@'.join(parent.user().split('@')[:-1])
     # cleverly figure out repo root w/o actually contacting the server
-    subdir = workingctx.extra()['convert_revision'][40:].split('@')[0]
+    subdir = parent.extra()['convert_revision'][40:].split('@')[0]
     reporoot = url[:len(url)-len(subdir)]
     ui.status('''URL: %(url)s
 Repository Root: %(reporoot)s
@@ -55,7 +99,7 @@ Last Changed Date: %(date)s\n''' %
                'author': author,
                'revision': r,
                # TODO I'd like to format this to the user's local TZ if possible
-               'date': mutil.datestr(workingctx.date(),
+               'date': mutil.datestr(parent.date(),
                                      '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
               })
 run_svn_info = util.register_subcommand('info')(run_svn_info)
@@ -68,10 +112,7 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    ha = repo.parents()[0]
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, ha.node())
-    if o_r:
-        ha = repo[o_r[-1]].parents()[0]
+    ha = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
     if ha.node() != node.nullid:
         r, br = svn_commit_hashes[ha.node()]
         ui.status('Working copy parent revision is %s: r%s on %s\n' %

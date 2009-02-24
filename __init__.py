@@ -63,6 +63,7 @@ cmdtable = {
           ('A', 'authors', '', 'username mapping filename'),
           ('', 'filemap', '',
            'remap file to exclude paths or include only certain paths'),
+          ('', 'force', False, 'force an operation to happen'),
           ],
          svncommand.generate_help(),
          ),

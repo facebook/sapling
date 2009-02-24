@@ -155,6 +155,20 @@ class UtilityTests(test_util.TestBase):
         expected = test_util.fileurl(self.repo_path) + '\n'
         self.assertEqual(u.stream.getvalue(), expected)
 
+    def test_genignore(self):
+        """Verify url gets normalized on initial clone.
+        """
+        test_util.load_svndump_fixture(self.repo_path, 'ignores.svndump')
+        fetch_command.fetch_revisions(ui.ui(),
+                                      svn_url=test_util.fileurl(self.repo_path)+'/',
+                                      hg_repo_path=self.wc_path,
+                                      stupid=False)
+        hg.update(self.repo, 'tip')
+        u = ui.ui()
+        utility_commands.generate_ignore(u, self.repo, self.wc_path)
+        self.assertEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
+                         '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
+
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),
