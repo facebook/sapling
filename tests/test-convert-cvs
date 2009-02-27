@@ -85,7 +85,7 @@ echo % commit branch
 cd src
 cvs -q update -r1.1 b/c
 cvs -q tag -b branch
-cvs -q update -r branch
+cvs -q update -r branch > /dev/null
 echo d >> b/c
 cvs -q commit -mci2 . | grep '<--' |\
     sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'

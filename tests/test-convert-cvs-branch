@@ -38,7 +38,7 @@ cd src
 echo % Branch the project
 
 cvscall tag -b BRANCH
-cvscall up -r BRANCH
+cvscall up -r BRANCH > /dev/null
 
 echo % Modify file a, then b, then a 
 
