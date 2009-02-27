@@ -1,6 +1,6 @@
 hg convert [OPTION]... SOURCE [DEST [REVMAP]]
 
-Convert a foreign SCM repository to a Mercurial one.
+convert a foreign SCM repository to a Mercurial one.
 
     Accepted source formats [identifiers]:
     - Mercurial [hg]

@@ -10,9 +10,9 @@ from i18n import _
 helptable = (
     (["dates"], _("Date Formats"),
      _(r'''
-    Some commands allow the user to specify a date:
-    backout, commit, import, tag: Specify the commit date.
-    log, revert, update: Select revision(s) by date.
+    Some commands allow the user to specify a date, e.g.:
+    * backout, commit, import, tag: Specify the commit date.
+    * log, revert, update: Select revision(s) by date.
 
     Many date formats are valid. Here are some examples:
 
@@ -247,5 +247,146 @@ PYTHONPATH::
     --git option available for many commands, or set 'git = True' in the
     [diff] section of your hgrc. You do not need to set this option when
     importing diffs in this format or using them in the mq extension.
+    ''')),
+    (['templating'], _('Template Usage'),
+     _(r'''
+    Mercurial allows you to customize output of commands through
+    templates. You can either pass in a template from the command line,
+    via the --template option, or select an existing template-style (--style).
+
+    You can customize output for any "log-like" command: log, outgoing,
+    incoming, tip, parents, heads and glog are all template-enabled.
+
+    Three styles are packaged with Mercurial: default (the style used
+    when no explicit preference is passed), compact and changelog. Usage:
+
+        $ hg log -r1 --style changelog
+
+    A template is a piece of text, with markup to invoke variable expansion:
+
+        $ hg log -r1 --template "{node}\n"
+        b56ce7b07c52de7d5fd79fb89701ea538af65746
+
+    Strings in curly braces are called keywords. The availability of
+    keywords depends on the exact context of the templater. These keywords
+    are usually available for templating a log-like command:
+
+    - author: String. The unmodified author of the changeset.
+    - branches: String. The name of the branch on which the changeset
+          was committed. Will be empty if the branch name was default.
+    - date: Date information. The date when the changeset was committed.
+    - desc: String. The text of the changeset description.
+    - files: List of strings. All files modified, added, or removed by
+          this changeset.
+    - file_adds: List of strings. Files added by this changeset.
+    - file_mods: List of strings. Files modified by this changeset.
+    - file_dels: List of strings. Files removed by this changeset.
+    - node: String. The changeset identification hash, as a 40-character
+          hexadecimal string.
+    - parents: List of strings. The parents of the changeset.
+    - rev: Integer. The repository-local changeset revision number.
+    - tags: List of strings. Any tags associated with the changeset.
+
+    The "date" keyword does not produce human-readable output. If you
+    want to use a date in your output, you can use a filter to process it.
+    Filters are functions which return a string based on the input variable.
+    You can also use a chain of filters to get the wanted output:
+
+       $ hg tip --template "{date|isodate}\n"
+       2008-08-21 18:22 +0000
+
+    List of filters:
+
+    - addbreaks: Any text. Add an XHTML "<br />" tag before the end of
+          every line except the last.
+    - age: Date. Returns a human-readable age for the given date.
+    - basename: Any text. Treats the text as a path, and returns the
+          basename. For example, "foo/bar/baz" becomes "baz".
+    - date: Date. Returns a date in a Unix date command format, including
+          the timezone: "Mon Sep 04 15:13:13 2006 0700".
+    - domain: Any text. Finds the first string that looks like an email
+          address, and extracts just the domain component.
+    - email: Any text. Extracts the first string that looks like an email
+          address.
+    - escape: Any text. Replaces the special XML/XHTML characters "&",
+          "<" and ">" with XML entities.
+    - fill68: Any text. Wraps the text to fit in 68 columns.
+    - fill76: Any text. Wraps the text to fit in 76 columns.
+    - firstline: Any text. Returns the first line of text.
+    - hgdate: Date. Returns the date as a pair of numbers:
+          "1157407993 25200" (Unix timestamp, timezone offset).
+    - isodate: Date. Returns the date in ISO 8601 format.
+    - obfuscate: Any text. Returns the input text rendered as a sequence
+          of XML entities.
+    - person: Any text. Returns the text before an email address.
+    - rfc822date: Date. Returns a date using the same format used
+          in email headers.
+    - short: Changeset hash. Returns the short form of a changeset hash,
+          i.e. a 12-byte hexadecimal string.
+    - shortdate: Date. Returns a date like "2006-09-04".
+    - strip: Any text. Strips all leading and trailing whitespace.
+    - tabindent: Any text. Returns the text, with every line except the
+          first starting with a tab character.
+    - urlescape: Any text. Escapes all "special" characters. For example,
+          "foo bar" becomes "foo%20bar".
+    - user: Any text. Returns the user portion of an email address.
+    ''')),
+
+    (['urls'], _('Url Paths'),
+     _(r'''
+    Valid URLs are of the form:
+
+      local/filesystem/path (or file://local/filesystem/path)
+      http://[user[:pass]@]host[:port]/[path]
+      https://[user[:pass]@]host[:port]/[path]
+      ssh://[user[:pass]@]host[:port]/[path]
+
+    Paths in the local filesystem can either point to Mercurial
+    repositories or to bundle files (as created by 'hg bundle' or
+    'hg incoming --bundle').
+
+    An optional identifier after # indicates a particular branch, tag,
+    or changeset to deal with in the remote repository.
+
+    Some features, such as pushing to http:// and https:// URLs are
+    only possible if the feature is explicitly enabled on the
+    remote Mercurial server.
+
+    Some notes about using SSH with Mercurial:
+    - SSH requires an accessible shell account on the destination machine
+      and a copy of hg in the remote path or specified with as remotecmd.
+    - path is relative to the remote user's home directory by default.
+      Use an extra slash at the start of a path to specify an absolute path:
+        ssh://example.com//tmp/repository
+    - Mercurial doesn't use its own compression via SSH; the right thing
+      to do is to configure it in your ~/.ssh/config, e.g.:
+        Host *.mylocalnetwork.example.com
+          Compression no
+        Host *
+          Compression yes
+      Alternatively specify "ssh -C" as your ssh command in your hgrc or
+      with the --ssh command line option.
+
+    These urls can all be stored in your hgrc with path aliases under the
+    [paths] section like so:
+    [paths]
+    alias1 = URL1
+    alias2 = URL2
+    ...
+
+    You can then use the alias for any command that uses a url (for example
+    'hg pull alias1' would pull from the 'alias1' path).
+
+    Two path aliases are more important because they are used as defaults
+    when you do not provide the url to a command:
+
+    default:
+      When you create a repository with hg clone, the clone command saves
+      the location of the source repository as the 'default' path. This is
+      then used when you omit a path from the push and pull commands.
+
+    default-push:
+      The push command will look for a path named 'default-push', and
+      prefer it over 'default' if both are defined.
     ''')),
 )

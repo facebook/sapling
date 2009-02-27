@@ -130,7 +130,7 @@ def catcommit(ui, repo, n, prefix, ctx=None):
         ui.write('\0')
 
 def base(ui, repo, node1, node2):
-    """Output common ancestor information"""
+    """output common ancestor information"""
     node1 = repo.lookup(node1)
     node2 = repo.lookup(node2)
     n = repo.changelog.ancestor(node1, node2)
@@ -282,7 +282,7 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
             count += 1
 
 def revparse(ui, repo, *revs, **opts):
-    """Parse given revisions"""
+    """parse given revisions"""
     def revstr(rev):
         if rev == 'HEAD':
             rev = 'tip'

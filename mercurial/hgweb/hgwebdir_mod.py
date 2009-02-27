@@ -8,8 +8,7 @@
 
 import os
 from mercurial.i18n import _
-from mercurial.repo import RepoError
-from mercurial import ui, hg, util, templater, templatefilters
+from mercurial import ui, hg, util, templater, templatefilters, error
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen,\
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
@@ -102,11 +101,11 @@ class hgwebdir(object):
 
         user = req.env.get('REMOTE_USER')
 
-        deny_read = ui.configlist('web', 'deny_read', default=None, untrusted=True)
+        deny_read = ui.configlist('web', 'deny_read', untrusted=True)
         if deny_read and (not user or deny_read == ['*'] or user in deny_read):
             return False
 
-        allow_read = ui.configlist('web', 'allow_read', default=None, untrusted=True)
+        allow_read = ui.configlist('web', 'allow_read', untrusted=True)
         # by default, allow reading if no allow_read option has been set
         if (not allow_read) or (allow_read == ['*']) or (user in allow_read):
             return True
@@ -150,7 +149,7 @@ class hgwebdir(object):
                         except IOError, inst:
                             msg = inst.strerror
                             raise ErrorResponse(HTTP_SERVER_ERROR, msg)
-                        except RepoError, inst:
+                        except error.RepoError, inst:
                             raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
 
                     # browse subdirectories
@@ -169,7 +168,7 @@ class hgwebdir(object):
                 return tmpl("notfound", repo=virtual)
 
             except ErrorResponse, err:
-                req.respond(err.code, ctype)
+                req.respond(err, ctype)
                 return tmpl('error', error=err.message or '')
         finally:
             tmpl = None

@@ -261,6 +261,7 @@ static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 
 	free(pos);
 
+	/* normalize the hunk list, try to push each hunk towards the end */
 	for (curr = l.base; curr != l.head; curr++) {
 		struct hunk *next = curr+1;
 		int shift = 0;

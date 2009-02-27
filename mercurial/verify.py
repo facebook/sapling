@@ -220,7 +220,7 @@ def _verify(repo):
 
         # cross-check
         if f in filenodes:
-            fns = [(mf.linkrev(l), n) for n,l in filenodes[f].items()]
+            fns = [(mf.linkrev(l), n) for n,l in filenodes[f].iteritems()]
             for lr, node in util.sort(fns):
                 err(lr, _("%s in manifests not found") % short(node), f)
 

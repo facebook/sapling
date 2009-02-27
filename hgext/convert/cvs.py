@@ -144,11 +144,11 @@ class convert_cvs(converter_source):
                             if branch == "HEAD":
                                 branch = ""
                             if branch:
-                                latest = None
+                                latest = 0
                                 # the last changeset that contains a base
                                 # file is our parent
                                 for r in oldrevs:
-                                    latest = max(filerevids.get(r, None), latest)
+                                    latest = max(filerevids.get(r, 0), latest)
                                 if latest:
                                     p = [latest]
 

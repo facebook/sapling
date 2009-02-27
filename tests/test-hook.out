@@ -1,18 +1,18 @@
 precommit hook: HG_PARENT1=0000000000000000000000000000000000000000 
-pretxncommit hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 
+pretxncommit hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=true 
 0:29b62aeb769f
 commit hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 
 commit.b hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 
 updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 precommit hook: HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
-pretxncommit hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
+pretxncommit hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PENDING=true 
 1:b702efe96888
 commit hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
 commit.b hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 precommit hook: HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
-pretxncommit hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
+pretxncommit hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PENDING=true 
 2:1324a5531bac
 commit hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
 commit.b hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
@@ -20,7 +20,7 @@ created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 precommit hook: HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
-pretxncommit hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
+pretxncommit hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PENDING=true 
 3:4c52fb2e4022
 commit hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
 commit.b hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
@@ -43,7 +43,7 @@ added 3 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 pretag hook: HG_LOCAL=0 HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_TAG=a 
 precommit hook: HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
-pretxncommit hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
+pretxncommit hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 HG_PENDING=true 
 4:8ea2ef7ad3e8
 commit hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
 commit.b hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
@@ -58,9 +58,9 @@ pretag.forbid hook: HG_LOCAL=1 HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
 abort: pretag.forbid hook exited with status 1
 4:8ea2ef7ad3e8
 precommit hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
-pretxncommit hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
+pretxncommit hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=true 
 5:fad284daf8c0
-pretxncommit.forbid hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
+pretxncommit.forbid hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=true 
 transaction abort!
 rollback completed
 abort: pretxncommit.forbid1 hook exited with status 1
@@ -80,7 +80,7 @@ pulling from ../a
 searching for changes
 abort: prechangegroup.forbid hook exited with status 1
 4:8ea2ef7ad3e8
-pretxnchangegroup.forbid hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_SOURCE=pull HG_URL=file: 
+pretxnchangegroup.forbid hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=true HG_SOURCE=pull HG_URL=file: 
 pulling from ../a
 searching for changes
 adding changesets

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-branches=.hg/branch.cache
+branches=.hg/branchheads.cache
 echo '[extensions]' >> $HGRCPATH
 echo 'hgext.mq=' >> $HGRCPATH
 

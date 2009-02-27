@@ -1,10 +1,10 @@
 a -> a not a symlink
 a -> b
-Now at: base.patch
+now at: base.patch
 applying symlink.patch
-Now at: symlink.patch
+now at: symlink.patch
 a -> b
-Now at: symlink.patch
+now at: symlink.patch
 applying removesl.patch
-Now at: removesl.patch
+now at: removesl.patch
 C b

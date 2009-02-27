@@ -221,6 +221,20 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     b1
 
+% log -r tip -p --git
+changeset:   6:2404bbcab562
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1.1
+
+diff --git a/b1 b/b1
+--- a/b1
++++ b/b1
+@@ -1,1 +1,2 @@
+ b1
++postm
+
 % log -r ""
 abort: 00changelog.i@: ambiguous identifier!
 % log -r <some unknown node id>

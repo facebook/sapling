@@ -206,7 +206,7 @@ class converter(object):
                         _('Overriding mapping for author %s, was %s, will be %s\n')
                         % (srcauthor, self.authors[srcauthor], dstauthor))
                 else:
-                    self.ui.debug(_('Mapping author %s to %s\n')
+                    self.ui.debug(_('mapping author %s to %s\n')
                                   % (srcauthor, dstauthor))
                     self.authors[srcauthor] = dstauthor
             except IndexError:

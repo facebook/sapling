@@ -20,7 +20,7 @@ foo bar
 abort: patch "first.patch" already exists
 abort: patch "first.patch" already exists
 % qnew -f from a subdirectory
-Patch queue now empty
+patch queue now empty
 adding d/b
 M d/b
 diff --git a/d/b b/d/b

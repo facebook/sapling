@@ -131,8 +131,8 @@ diff -r ... 4
 1: [mq]: 2.patch - jane
 0: [mq]: 1.patch - mary
 ==== qnew with HG header
-Now at: 4.patch
-Now at: 5.patch
+now at: 4.patch
+now at: 5.patch
 # HG changeset patch
 # User johndoe
 4: imported patch 5.patch - johndoe
@@ -184,13 +184,13 @@ diff -r ... 5
 1: [mq]: 2.patch - jane
 0: [mq]: 1.patch - mary
 ==== qpop -a / qpush -a
-Patch queue now empty
+patch queue now empty
 applying 1.patch
 applying 2.patch
 applying 3.patch
 applying 4.patch
 applying 5.patch
-Now at: 5.patch
+now at: 5.patch
 4: imported patch 5.patch - johndeere
 3: Four - jane
 2: Three (again) - maria

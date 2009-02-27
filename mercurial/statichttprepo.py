@@ -8,7 +8,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-import changelog, byterange, url
+import changelog, byterange, url, error
 import repo, localrepo, manifest, util, store
 import urllib, urllib2, errno
 
@@ -79,13 +79,13 @@ class statichttprepository(localrepo.localrepository):
                     raise
                 # we do not care about empty old-style repositories here
                 msg = _("'%s' does not appear to be an hg repository") % path
-                raise repo.RepoError(msg)
+                raise error.RepoError(msg)
             requirements = []
 
         # check them
         for r in requirements:
             if r not in self.supported:
-                raise repo.RepoError(_("requirement '%s' not supported") % r)
+                raise error.RepoError(_("requirement '%s' not supported") % r)
 
         # setup store
         def pjoin(a, b):

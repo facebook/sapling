@@ -53,7 +53,7 @@ hg qselect a
 echo % should push a.patch
 hg qpush
 
-hg qguard c.patch -a
+hg qguard -- c.patch -a
 echo % should print -a
 hg qguard c.patch
 
@@ -95,7 +95,7 @@ hg qpush
 hg qpush
 hg qpop -a
 
-hg qguard a.patch +1 +2 -3
+hg qguard -- a.patch +1 +2 -3
 hg qselect 1 2 3
 echo % list patches and guards
 hg qguard -l

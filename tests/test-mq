@@ -289,7 +289,7 @@ hg qpop
 hg strip -qn tip
 hg tip 2>&1 | sed -e 's/unknown node .*/unknown node/'
 hg branches 2>&1 | sed -e 's/unknown node .*/unknown node/'
-hg qpop
+hg qpop 2>&1 | sed -e 's/unknown node .*/unknown node/'
 
 cat >>$HGRCPATH <<EOF
 [diff]
@@ -510,3 +510,8 @@ hg qpush -f
 hg st
 hg diff --config diff.nodates=True
 hg qdiff --config diff.nodates=True
+
+echo % test popping revisions not in working dir ancestry
+hg qseries -v
+hg up qparent
+hg qpop

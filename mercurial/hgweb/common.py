@@ -17,9 +17,10 @@ HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_SERVER_ERROR = 500
 
 class ErrorResponse(Exception):
-    def __init__(self, code, message=None):
+    def __init__(self, code, message=None, headers=[]):
         Exception.__init__(self)
         self.code = code
+        self.headers = headers
         if message is not None:
             self.message = message
         else:

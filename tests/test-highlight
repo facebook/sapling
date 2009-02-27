@@ -68,7 +68,7 @@ rm out
 
 echo % errors encountered
 cat errors.log
-kill `cat hg.pid`
+"$TESTDIR/killdaemons.py"
 
 # Change the pygments style
 cat > .hg/hgrc <<EOF
@@ -87,4 +87,3 @@ rm out
 
 echo % errors encountered
 cat errors.log
-

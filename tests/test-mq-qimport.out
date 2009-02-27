@@ -6,19 +6,19 @@ url.diff
 % import patch that already exists
 abort: patch "url.diff" already exists
 applying url.diff
-Now at: url.diff
+now at: url.diff
 foo
-Patch queue now empty
+patch queue now empty
 % qimport -f
 adding url.diff to series file
 applying url.diff
-Now at: url.diff
+now at: url.diff
 foo2
-Patch queue now empty
+patch queue now empty
 % build diff with CRLF
 adding b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % qimport CRLF diff
 adding b.diff to series file
 applying b.diff
-Now at: b.diff
+now at: b.diff

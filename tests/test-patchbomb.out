@@ -196,7 +196,8 @@ This patch series consists of 1 patches.
 
 c
 
-files patched: 1
+ c |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
 
 
 Displaying [PATCH] test ...
@@ -211,7 +212,8 @@ From: quux
 To: foo
 Cc: bar
 
-files patched: 1
+ c |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
 
 
 # HG changeset patch
@@ -232,15 +234,19 @@ This patch series consists of 2 patches.
 
 a
 
-files patched: 1
+ a |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
 
 b
 
-files patched: 1
+ b |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
 
 Final summary:
 
-files patched: 2
+ a |  1 +
+ b |  1 +
+ 2 files changed, 2 insertions(+), 0 deletions(-)
 
 
 Write the introductory message for the patch series.
@@ -258,7 +264,9 @@ To: foo
 Cc: bar
 
 
-files patched: 2
+ a |  1 +
+ b |  1 +
+ 2 files changed, 2 insertions(+), 0 deletions(-)
 
 Displaying [PATCH 1 of 2] a ...
 Content-Type: text/plain; charset="us-ascii"
@@ -274,7 +282,8 @@ From: quux
 To: foo
 Cc: bar
 
-files patched: 1
+ a |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
 
 
 # HG changeset patch
@@ -304,7 +313,8 @@ From: quux
 To: foo
 Cc: bar
 
-files patched: 1
+ b |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
 
 
 # HG changeset patch

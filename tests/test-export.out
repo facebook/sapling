@@ -62,3 +62,19 @@ foo-11.patch
 4
 # exporting 4 changesets to a file
 4
+# exporting revision -2 to a file
+# HG changeset patch
+# User test
+# Date 0 0
+# Node ID 5f17a83f5fbd9414006a5e563eab4c8a00729efd
+# Parent  747d3c68f8ec44bb35816bfcd59aeb50b9654c2f
+foo-10
+
+diff -r 747d3c68f8ec -r 5f17a83f5fbd foo
+--- a/foo	Thu Jan 01 00:00:00 1970 +0000
++++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+@@ -8,3 +8,4 @@
+ foo-7
+ foo-8
+ foo-9
++foo-10

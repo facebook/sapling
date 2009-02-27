@@ -12,31 +12,10 @@ from mercurial import patch, cmdutil, util, templater
 import os, sys
 import time, datetime
 
-def get_tty_width():
-    if 'COLUMNS' in os.environ:
-        try:
-            return int(os.environ['COLUMNS'])
-        except ValueError:
-            pass
-    try:
-        import termios, array, fcntl
-        for dev in (sys.stdout, sys.stdin):
-            try:
-                fd = dev.fileno()
-                if not os.isatty(fd):
-                    continue
-                arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
-                return array.array('h', arri)[1]
-            except ValueError:
-                pass
-    except ImportError:
-        pass
-    return 80
-
 def maketemplater(ui, repo, tmpl):
     tmpl = templater.parsestring(tmpl, quoted=False)
     try:
-        t = cmdutil.changeset_templater(ui, repo, False, None, False)
+        t = cmdutil.changeset_templater(ui, repo, False, None, None, False)
     except SyntaxError, inst:
         raise util.Abort(inst.args[0])
     t.use_template(tmpl)
@@ -100,7 +79,7 @@ def countrate(ui, repo, amap, *pats, **opts):
             newpct = int(100.0 * count / max(len(repo), 1))
             if pct < newpct:
                 pct = newpct
-                ui.write(_("\rGenerating stats: %d%%") % pct)
+                ui.write(_("\rgenerating stats: %d%%") % pct)
                 sys.stdout.flush()
 
     if opts.get('progress'):
@@ -111,7 +90,7 @@ def countrate(ui, repo, amap, *pats, **opts):
 
 
 def churn(ui, repo, *pats, **opts):
-    '''Graph count of revisions grouped by template
+    '''graph count of revisions grouped by template
 
     Will graph count of changed lines or revisions grouped by template or
     alternatively by date, if dateformat is used. In this case it will override
@@ -157,7 +136,7 @@ def churn(ui, repo, *pats, **opts):
     maxcount = float(max([v for k, v in rate]))
     maxname = max([len(k) for k, v in rate])
 
-    ttywidth = get_tty_width()
+    ttywidth = util.termwidth()
     ui.debug(_("assuming %i character terminal\n") % ttywidth)
     width = ttywidth - maxname - 2 - 6 - 2 - 2
 

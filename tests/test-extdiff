@@ -32,9 +32,14 @@ hg update 0
 echo c >> c
 hg add c
 hg ci -m "new branch" -d '1 0'
-hg update -C 1
-hg merge tip
+hg merge 1
 # should diff cloned file against wc file
-hg falabala > out || echo "diff-like tools yield a non-zero exit code"
+hg falabala > out
 # cleanup the output since the wc is a tmp directory
 sed  's:\(.* \).*\(\/test-extdiff\):\1[tmp]\2:' out
+# test --change option
+hg ci -d '2 0' -mtest3
+hg falabala -c 1
+# check diff are made from the first parent
+hg falabala -c 3 || echo "diff-like tools yield a non-zero exit code"
+#hg log

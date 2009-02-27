@@ -1,7 +1,7 @@
 =======================
 Should fail if no patches applied
-No patches applied
-No patches applied
+no patches applied
+no patches applied
 =======================
 Should display 'First commit message'
 description:

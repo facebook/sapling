@@ -1,7 +1,7 @@
 % try to commit on top of a patch
 abort: cannot commit over an applied mq patch
 % qpop/qrefresh on the wrong revision
-abort: working directory revision is not qtip
+abort: popping would remove a revision not managed by this patch queue
 using patch queue:
 abort: popping would remove a revision not managed by this patch queue
 abort: working directory revision is not qtip

@@ -5,11 +5,6 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from mercurial.i18n import _
-import os, tempfile
-from mercurial import bundlerepo, changegroup, cmdutil, hg, merge
-from mercurial import patch, revlog, util
-
 '''patch transplanting tool
 
 This extension allows you to transplant patches from another branch.
@@ -17,6 +12,11 @@ This extension allows you to transplant patches from another branch.
 Transplanted patches are recorded in .hg/transplant/transplants, as a map
 from a changeset hash to its hash in the source repository.
 '''
+
+from mercurial.i18n import _
+import os, tempfile
+from mercurial import bundlerepo, changegroup, cmdutil, hg, merge
+from mercurial import patch, revlog, util, error
 
 class transplantentry:
     def __init__(self, lnode, rnode):
@@ -69,7 +69,8 @@ class transplanter:
         self.ui = ui
         self.path = repo.join('transplant')
         self.opener = util.opener(self.path)
-        self.transplants = transplants(self.path, 'transplants', opener=self.opener)
+        self.transplants = transplants(self.path, 'transplants',
+                                       opener=self.opener)
 
     def applied(self, repo, node, parent):
         '''returns True if a node is already an ancestor of parent
@@ -109,8 +110,8 @@ class transplanter:
 
                 parents = source.changelog.parents(node)
                 if not opts.get('filter'):
-                    # If the changeset parent is the same as the wdir's parent,
-                    # just pull it.
+                    # If the changeset parent is the same as the
+                    # wdir's parent, just pull it.
                     if parents[0] == p1:
                         pulls.append(node)
                         p1 = node
@@ -124,9 +125,9 @@ class transplanter:
 
                 domerge = False
                 if node in merges:
-                    # pulling all the merge revs at once would mean we couldn't
-                    # transplant after the latest even if transplants before them
-                    # fail.
+                    # pulling all the merge revs at once would mean we
+                    # couldn't transplant after the latest even if
+                    # transplants before them fail.
                     domerge = True
                     if not hasnode(repo, node):
                         repo.pull(source, heads=[node])
@@ -155,8 +156,9 @@ class transplanter:
                             self.ui.status(_('%s merged at %s\n') % (revstr,
                                       revlog.short(n)))
                         elif n:
-                            self.ui.status(_('%s transplanted to %s\n') % (revlog.short(node),
-                                                                       revlog.short(n)))
+                            self.ui.status(_('%s transplanted to %s\n')
+                                           % (revlog.short(node),
+                                              revlog.short(n)))
                     finally:
                         if patchfile:
                             os.unlink(patchfile)
@@ -217,7 +219,8 @@ class transplanter:
                     fuzz = patch.patch(patchfile, self.ui, cwd=repo.root,
                                        files=files)
                     if not files:
-                        self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
+                        self.ui.warn(_('%s: empty changeset')
+                                     % revlog.hex(node))
                         return None
                 finally:
                     files = patch.updatedir(self.ui, repo, files)
@@ -231,7 +234,8 @@ class transplanter:
                 p2 = node
                 self.log(user, date, message, p1, p2, merge=merge)
                 self.ui.write(str(inst) + '\n')
-                raise util.Abort(_('Fix up the merge and run hg transplant --continue'))
+                raise util.Abort(_('Fix up the merge and run '
+                                   'hg transplant --continue'))
         else:
             files = None
         if merge:
@@ -380,7 +384,7 @@ class transplanter:
 def hasnode(repo, node):
     try:
         return repo.changelog.rev(node) != None
-    except revlog.RevlogError:
+    except error.RevlogError:
         return False
 
 def browserevs(ui, repo, nodes, opts):
@@ -496,16 +500,19 @@ def transplant(ui, repo, *revs, **opts):
     def checkopts(opts, revs):
         if opts.get('continue'):
             if filter(lambda opt: opts.get(opt), ('branch', 'all', 'merge')):
-                raise util.Abort(_('--continue is incompatible with branch, all or merge'))
+                raise util.Abort(_('--continue is incompatible with '
+                                   'branch, all or merge'))
             return
         if not (opts.get('source') or revs or
                 opts.get('merge') or opts.get('branch')):
-            raise util.Abort(_('no source URL, branch tag or revision list provided'))
+            raise util.Abort(_('no source URL, branch tag or revision '
+                               'list provided'))
         if opts.get('all'):
             if not opts.get('branch'):
                 raise util.Abort(_('--all requires a branch revision'))
             if revs:
-                raise util.Abort(_('--all is incompatible with a revision list'))
+                raise util.Abort(_('--all is incompatible with a '
+                                   'revision list'))
 
     checkopts(opts, revs)
 
@@ -553,9 +560,11 @@ def transplant(ui, repo, *revs, **opts):
                 revmap[int(r)] = source.lookup(r)
         elif opts.get('all') or not merges:
             if source != repo:
-                alltransplants = incwalk(source, incoming, branches, match=matchfn)
+                alltransplants = incwalk(source, incoming, branches,
+                                         match=matchfn)
             else:
-                alltransplants = transplantwalk(source, p1, branches, match=matchfn)
+                alltransplants = transplantwalk(source, p1, branches,
+                                                match=matchfn)
             if opts.get('all'):
                 revs = alltransplants
             else:
@@ -581,7 +590,9 @@ cmdtable = {
           ('p', 'prune', [], _('skip over REV')),
           ('m', 'merge', [], _('merge at REV')),
           ('', 'log', None, _('append transplant info to log message')),
-          ('c', 'continue', None, _('continue last transplant session after repair')),
+          ('c', 'continue', None, _('continue last transplant session '
+                                    'after repair')),
           ('', 'filter', '', _('filter changesets through FILTER'))],
-         _('hg transplant [-s REPOSITORY] [-b BRANCH [-a]] [-p REV] [-m REV] [REV]...'))
+         _('hg transplant [-s REPOSITORY] [-b BRANCH [-a]] [-p REV] '
+           '[-m REV] [REV]...'))
 }

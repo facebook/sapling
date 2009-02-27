@@ -15,7 +15,7 @@ def launch(application):
     util.set_binary(sys.stdin)
     util.set_binary(sys.stdout)
 
-    environ = dict(os.environ.items())
+    environ = dict(os.environ.iteritems())
     environ.setdefault('PATH_INFO', '')
     if '.cgi' in environ['PATH_INFO']:
         environ['PATH_INFO'] = environ['PATH_INFO'].split('.cgi', 1)[1]

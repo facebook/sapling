@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-import util, lock
+import util, error
 from i18n import _
 
 class StreamException(Exception):
@@ -51,7 +51,7 @@ def stream_out(repo, untrusted=False):
                 total_bytes += size
         finally:
             del l
-    except (lock.LockHeld, lock.LockUnavailable):
+    except error.LockError:
         raise StreamException(2)
 
     yield '0\n'

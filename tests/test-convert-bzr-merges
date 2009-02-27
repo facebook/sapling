@@ -18,6 +18,7 @@ echo evenmorecontent > file-branch1
 bzr add -q file-branch1
 bzr commit -q -m 'Added branch1 file'
 cd ../source
+sleep 1
 echo content > file-parent
 bzr add -q file-parent
 bzr commit -q -m 'Added parent file'
@@ -27,6 +28,7 @@ cd source-branch2
 echo somecontent > file-branch2
 bzr add -q file-branch2
 bzr commit -q -m 'Added brach2 file'
+sleep 1
 cd ../source
 bzr merge -q ../source-branch1
 bzr merge -q --force ../source-branch2

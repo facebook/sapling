@@ -38,8 +38,9 @@ p4merge.regappend=\p4merge.exe
 p4merge.gui=True
 p4merge.priority=-8
 
-tortoisemerge.args=/base: $output /mine:$local /theirs:$other /merged:$output
+tortoisemerge.args=/base:$base /mine:$local /theirs:$other /merged:$output
 tortoisemerge.regkey=Software\TortoiseSVN
+tortoisemerge.checkchanged=True
 tortoisemerge.gui=True
 
 ecmerge.args=$base $local $other --mode=merge3 --title0=base --title1=local --title2=other --to=$output
@@ -49,3 +50,14 @@ ecmerge.gui=True
 filemerge.executable=/Developer/Applications/Utilities/FileMerge.app/Contents/MacOS/FileMerge
 filemerge.args=-left $other -right $local -ancestor $base -merge $output
 filemerge.gui=True
+
+beyondcompare3.args=$local $other $base $output /ro /lefttitle=local /centerfile=base /righttitle=other /automerge /reviewconflicts /solo
+beyondcompare3.regkey=Software\Scooter Software\Beyond Compare 3
+beyondcompare3.regname=ExePath
+beyondcompare3.gui=True
+
+winmerge.args=/e /u /dl local /dr other /wr $local $other $output
+winmerge.regkey=Software\Thingamahoochie\WinMerge
+winmerge.regname=Executable
+winmerge.checkchanged=True
+winmerge.gui=True

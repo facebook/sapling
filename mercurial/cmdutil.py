@@ -8,15 +8,10 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, bisect, stat
-import mdiff, bdiff, util, templater, templatefilters, patch, errno
+import mdiff, bdiff, util, templater, templatefilters, patch, errno, error
 import match as _match
 
 revrangesep = ':'
-
-class UnknownCommand(Exception):
-    """Exception raised if command is not in the command table."""
-class AmbiguousCommand(Exception):
-    """Exception raised if command shortcut matches more than one command."""
 
 def findpossible(cmd, table, strict=False):
     """
@@ -57,12 +52,12 @@ def findcmd(cmd, table, strict=True):
     if len(choice) > 1:
         clist = choice.keys()
         clist.sort()
-        raise AmbiguousCommand(cmd, clist)
+        raise error.AmbiguousCommand(cmd, clist)
 
     if choice:
         return choice.values()[0]
 
-    raise UnknownCommand(cmd)
+    raise error.UnknownCommand(cmd)
 
 def bail_if_changed(repo):
     if repo.dirstate.parents()[1] != nullid:
@@ -73,8 +68,8 @@ def bail_if_changed(repo):
 
 def logmessage(opts):
     """ get the log message according to -m and -l option """
-    message = opts['message']
-    logfile = opts['logfile']
+    message = opts.get('message')
+    logfile = opts.get('logfile')
 
     if message and logfile:
         raise util.Abort(_('options --message and --logfile are mutually '
@@ -574,11 +569,12 @@ def service(opts, parentfn=None, initfn=None, runfn=None):
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
-    def __init__(self, ui, repo, patch, buffered):
+    def __init__(self, ui, repo, patch, diffopts, buffered):
         self.ui = ui
         self.repo = repo
         self.buffered = buffered
         self.patch = patch
+        self.diffopts = diffopts
         self.header = {}
         self.hunk = {}
         self.lastheader = None
@@ -675,7 +671,7 @@ class changeset_printer(object):
         if self.patch:
             prev = self.repo.changelog.parents(node)[0]
             chunks = patch.diff(self.repo, prev, node, match=self.patch,
-                                opts=patch.diffopts(self.ui))
+                                opts=patch.diffopts(self.ui, self.diffopts))
             for chunk in chunks:
                 self.ui.write(chunk)
             self.ui.write("\n")
@@ -699,8 +695,8 @@ class changeset_printer(object):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, patch, mapfile, buffered):
-        changeset_printer.__init__(self, ui, repo, patch, buffered)
+    def __init__(self, ui, repo, patch, diffopts, mapfile, buffered):
+        changeset_printer.__init__(self, ui, repo, patch, diffopts, buffered)
         filters = templatefilters.filters.copy()
         filters['formatnode'] = (ui.debugflag and (lambda x: x)
                                  or (lambda x: x[:12]))
@@ -917,12 +913,12 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
                            or templater.templatepath(mapfile))
                 if mapname: mapfile = mapname
         try:
-            t = changeset_templater(ui, repo, patch, mapfile, buffered)
+            t = changeset_templater(ui, repo, patch, opts, mapfile, buffered)
         except SyntaxError, inst:
             raise util.Abort(inst.args[0])
         if tmpl: t.use_template(tmpl)
         return t
-    return changeset_printer(ui, repo, patch, buffered)
+    return changeset_printer(ui, repo, patch, opts, buffered)
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
@@ -994,7 +990,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
     wanted = {}
-    slowpath = m.anypats() or opts.get('removed')
+    slowpath = m.anypats() or (m.files() and opts.get('removed'))
     fncache = {}
 
     if not slowpath and not m.files():

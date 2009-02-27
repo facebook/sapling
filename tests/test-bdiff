@@ -9,13 +9,13 @@ def test1(a, b):
     if d:
         c = mpatch.patches(a, [d])
     if c != b:
-        print "***", `a`, `b`
+        print "***", repr(a), repr(b)
         print "bad:"
-        print `c`[:200]
-        print `d`
+        print repr(c)[:200]
+        print repr(d)
 
 def test(a, b):
-    print "***", `a`, `b`
+    print "***", repr(a), repr(b)
     test1(a, b)
     test1(b, a)
 

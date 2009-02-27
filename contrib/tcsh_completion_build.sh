@@ -37,7 +37,7 @@ tcsh_file=${1-tcsh_completion}
 
 hg_commands=`hg --debug help | \
         sed -e '1,/^list of commands:/d' \
-            -e '/^global options:/,$d' \
+            -e '/^enabled extensions:/,$d' \
             -e '/^ [^ ]/!d; s/[,:]//g;' | \
         xargs -n5 | \
         sed -e '$!s/$/ \\\\/g; 2,$s/^ */    /g'`

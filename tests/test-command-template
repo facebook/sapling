@@ -30,6 +30,9 @@ hg update null
 echo second > second
 hg add second
 hg commit -m second -d '1000000 0' -u 'User Name <user@hostname>'
+echo third > third
+hg add third
+hg commit -m third -d "2020-01-01 10:01"
 
 # make sure user/global hgrc does not affect tests
 echo '[ui]' > .hg/hgrc
@@ -101,6 +104,7 @@ hg log --template '{author|domain}\n'
 hg log --template '{author|person}\n'
 hg log --template '{author|user}\n'
 hg log --template '{date|age}\n' > /dev/null || exit 1
+hg log -l1 --template '{date|age}\n' 
 hg log --template '{date|date}\n'
 hg log --template '{date|isodate}\n'
 hg log --template '{date|isodatesec}\n'

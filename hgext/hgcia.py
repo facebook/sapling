@@ -188,7 +188,8 @@ class hgcia(object):
         if not template:
             template = self.diffstat and self.dstemplate or self.deftemplate
         template = templater.parsestring(template, quoted=False)
-        t = cmdutil.changeset_templater(self.ui, self.repo, False, style, False)
+        t = cmdutil.changeset_templater(self.ui, self.repo, False, None,
+                                        style, False)
         t.use_template(template)
         self.templater = t
 

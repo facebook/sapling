@@ -24,26 +24,26 @@ def runtest():
     reposet = frozenset(walkrepos('.', followsym=True))
     if sym and (len(reposet) != 3):
         print "reposet = %r" % (reposet,)
-        raise SystemExit(1, "Found %d repositories when I should have found 3" % (len(reposet),))
+        print "Found %d repositories when I should have found 3" % (len(reposet),)
     if (not sym) and (len(reposet) != 2):
         print "reposet = %r" % (reposet,)
-        raise SystemExit(1, "Found %d repositories when I should have found 2" % (len(reposet),))
+        print "Found %d repositories when I should have found 2" % (len(reposet),)
     sub1set = frozenset((pjoin('.', 'sub1'),
                          pjoin('.', 'circle', 'subdir', 'sub1')))
     if len(sub1set & reposet) != 1:
         print "sub1set = %r" % (sub1set,)
         print "reposet = %r" % (reposet,)
-        raise SystemExit(1, "sub1set and reposet should have exactly one path in common.")
+        print "sub1set and reposet should have exactly one path in common."
     sub2set = frozenset((pjoin('.', 'subsub1'),
                          pjoin('.', 'subsubdir', 'subsub1')))
     if len(sub2set & reposet) != 1:
         print "sub2set = %r" % (sub2set,)
         print "reposet = %r" % (reposet,)
-        raise SystemExit(1, "sub1set and reposet should have exactly one path in common.")
+        print "sub1set and reposet should have exactly one path in common."
     sub3 = pjoin('.', 'circle', 'top1')
     if sym and not (sub3 in reposet):
         print "reposet = %r" % (reposet,)
-        raise SystemExit(1, "Symbolic links are supported and %s is not in reposet" % (sub3,))
+        print "Symbolic links are supported and %s is not in reposet" % (sub3,)
 
 runtest()
 if sym:

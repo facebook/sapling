@@ -13,7 +13,7 @@ For more information:
 http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject
 '''
 
-from mercurial import util, repair, merge, cmdutil, dispatch, commands
+from mercurial import util, repair, merge, cmdutil, commands, error
 from mercurial import extensions, ancestor
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
@@ -34,7 +34,7 @@ def rebasemerge(repo, rev, first=False):
     if not first:
         ancestor.ancestor = newancestor
     else:
-        repo.ui.debug(_("First revision, do not change ancestor\n"))
+        repo.ui.debug(_("first revision, do not change ancestor\n"))
     stats = merge.update(repo, rev, True, True, False)
     return stats
 
@@ -67,21 +67,21 @@ def rebase(ui, repo, **opts):
         extrafn = opts.get('extrafn')
         if opts.get('keepbranches', None):
             if extrafn:
-                raise dispatch.ParseError('rebase',
-                        _('cannot use both keepbranches and extrafn'))
+                raise error.ParseError(
+                    'rebase', _('cannot use both keepbranches and extrafn'))
             def extrafn(ctx, extra):
                 extra['branch'] = ctx.branch()
 
         if contf or abortf:
             if contf and abortf:
-                raise dispatch.ParseError('rebase',
-                                    _('cannot use both abort and continue'))
+                raise error.ParseError('rebase',
+                                       _('cannot use both abort and continue'))
             if collapsef:
-                raise dispatch.ParseError('rebase',
-                        _('cannot use collapse with continue or abort'))
+                raise error.ParseError(
+                    'rebase', _('cannot use collapse with continue or abort'))
 
             if (srcf or basef or destf):
-                raise dispatch.ParseError('rebase',
+                raise error.ParseError('rebase',
                     _('abort and continue do not allow specifying revisions'))
 
             originalwd, target, state, collapsef, external = restorestatus(repo)
@@ -90,8 +90,8 @@ def rebase(ui, repo, **opts):
                 return
         else:
             if srcf and basef:
-                raise dispatch.ParseError('rebase', _('cannot specify both a '
-                                                        'revision and a base'))
+                raise error.ParseError('rebase', _('cannot specify both a '
+                                                   'revision and a base'))
             cmdutil.bail_if_changed(repo)
             result = buildstate(repo, destf, srcf, basef, collapsef)
             if result:
@@ -281,7 +281,7 @@ def storestatus(repo, originalwd, target, state, collapse, external):
     f.write(repo[target].hex() + '\n')
     f.write(repo[external].hex() + '\n')
     f.write('%d\n' % int(collapse))
-    for d, v in state.items():
+    for d, v in state.iteritems():
         oldrev = repo[d].hex()
         newrev = repo[v].hex()
         f.write("%s:%s\n" % (oldrev, newrev))
@@ -400,7 +400,9 @@ def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     if opts.get('rebase'):
         if opts.get('update'):
-            raise util.Abort(_('--update and --rebase are not compatible'))
+            del opts.get['update']
+            ui.debug(_('--update and --rebase are not compatible, ignoring '
+                                        'the update flag\n'))
 
         cmdutil.bail_if_changed(repo)
         revsprepull = len(repo)
@@ -408,6 +410,11 @@ def pullrebase(orig, ui, repo, *args, **opts):
         revspostpull = len(repo)
         if revspostpull > revsprepull:
             rebase(ui, repo, **opts)
+            branch = repo[None].branch()
+            dest = repo[branch].rev()
+            if dest != repo['.'].rev():
+                # there was nothing to rebase we force an update
+                merge.update(repo, dest, False, False, False)
     else:
         orig(ui, repo, *args, **opts)
 

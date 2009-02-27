@@ -6,12 +6,10 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import hex, nullid, nullrev, short
-from repo import RepoError, NoCapability
 from i18n import _, gettext
 import os, re, sys
-import hg, util, revlog, bundlerepo, extensions, copies, context
+import hg, util, revlog, bundlerepo, extensions, copies, context, error
 import difflib, patch, time, help, mdiff, tempfile, url
-import version
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 import merge as merge_
 
@@ -328,29 +326,34 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     state = hbisect.load_state(repo)
 
     if command:
+        commandpath = util.find_exe(command)
         changesets = 1
-        while changesets:
-            # update state
-            status = os.spawnlp(os.P_WAIT, command)
-            node = repo.lookup(rev or '.')
-            if status == 125:
-                transition = "skip"
-            elif status == 0:
-                transition = "good"
-            # status < 0 means process was killed
-            elif status == 127 or status < 0:
-                break
-            else:
-                transition = "bad"
-            state[transition].append(node)
-            ui.note(_('Changeset %s: %s\n') % (short(node), transition))
-            check_state(state, interactive=False)
-            # bisect
-            nodes, changesets, good = hbisect.bisect(repo.changelog, state)
-            # update to next check
-            cmdutil.bail_if_changed(repo)
-            hg.clean(repo, nodes[0], show_stats=False)
-        hbisect.save_state(repo, state)
+        try:
+            while changesets:
+                # update state
+                status = os.spawnl(os.P_WAIT, commandpath)
+                if status == 125:
+                    transition = "skip"
+                elif status == 0:
+                    transition = "good"
+                # status < 0 means process was killed
+                elif status == 127:
+                    raise util.Abort(_("failed to execute %s") % command)
+                elif status < 0:
+                    raise util.Abort(_("%s killed") % command)
+                else:
+                    transition = "bad"
+                node = repo.lookup(rev or '.')
+                state[transition].append(node)
+                ui.note(_('Changeset %s: %s\n') % (short(node), transition))
+                check_state(state, interactive=False)
+                # bisect
+                nodes, changesets, good = hbisect.bisect(repo.changelog, state)
+                # update to next check
+                cmdutil.bail_if_changed(repo)
+                hg.clean(repo, nodes[0], show_stats=False)
+        finally:
+            hbisect.save_state(repo, state)
         return print_result(nodes, not status)
 
     # update state
@@ -428,7 +431,7 @@ def branches(ui, repo, active=False):
     """
     hexfunc = ui.debugflag and hex or short
     activebranches = [util.tolocal(repo[n].branch())
-                            for n in repo.heads()]
+                            for n in repo.heads(closed=False)]
     branches = util.sort([(tag in activebranches, repo.changelog.rev(node), tag)
                           for tag, node in repo.branchtags().items()])
     branches.reverse()
@@ -438,9 +441,15 @@ def branches(ui, repo, active=False):
             if ui.quiet:
                 ui.write("%s\n" % tag)
             else:
-                rev = str(node).rjust(31 - util.locallen(tag))
-                isinactive = ((not isactive) and " (inactive)") or ''
-                data = tag, rev, hexfunc(repo.lookup(node)), isinactive
+                hn = repo.lookup(node)
+                if isactive:
+                    notice = ''
+                elif hn not in repo.branchheads(tag, closed=False):
+                    notice = ' (closed)'
+                else:
+                    notice = ' (inactive)'
+                rev = str(node).rjust(31 - util.colwidth(tag))
+                data = tag, rev, hexfunc(hn), notice
                 ui.write("%s %s:%s%s\n" % data)
 
 def bundle(ui, repo, fname, dest=None, **opts):
@@ -580,12 +589,11 @@ def clone(ui, source, dest=None, **opts):
     If the -U option is used, the new clone will contain only a repository
     (.hg) and no working copy (the working copy parent is the null revision).
 
-    See pull for valid source format details.
+    See 'hg help urls' for valid source format details.
 
     It is possible to specify an ssh:// URL as the destination, but no
     .hg/hgrc and working directory will be created on the remote side.
-    Look at the help text for the pull command for important details
-    about ssh:// URLs.
+    Look at the help text for urls for important details about ssh:// URLs.
     """
     cmdutil.setremoteconfig(ui, opts)
     hg.clone(ui, source, dest,
@@ -610,9 +618,13 @@ def commit(ui, repo, *pats, **opts):
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
+    extra = {}
+    if opts.get('close_branch'):
+        extra['close'] = 1
     def commitfunc(ui, repo, message, match, opts):
-        return repo.commit(match.files(), message, opts.get('user'), opts.get('date'),
-                           match, force_editor=opts.get('force_editor'))
+        return repo.commit(match.files(), message, opts.get('user'),
+            opts.get('date'), match, force_editor=opts.get('force_editor'),
+            extra=extra)
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
@@ -632,6 +644,9 @@ def commit(ui, repo, *pats, **opts):
         ui.write(_('committed changeset %d:%s\n') % (rev,hex(node)))
     elif ui.verbose:
         ui.write(_('committed changeset %d:%s\n') % (rev,short(node)))
+
+    ms = merge_.mergestate(repo)
+    ms.reset(node)
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
@@ -688,7 +703,10 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    ui.write("%s\n" % "\n".join(util.sort(cmdutil.findpossible(cmd, table))))
+    cmdlist = cmdutil.findpossible(cmd, table)
+    if ui.verbose:
+        cmdlist = [' '.join(c[0]) for c in cmdlist.values()]
+    ui.write("%s\n" % "\n".join(util.sort(cmdlist)))
 
 def debugfsinfo(ui, path = "."):
     file('.debugfsinfo', 'w').write('')
@@ -780,7 +798,7 @@ def debugstate(ui, repo, nodates=None):
     """show the contents of the current dirstate"""
     timestr = ""
     showdate = not nodates
-    for file_, ent in util.sort(repo.dirstate._map.items()):
+    for file_, ent in util.sort(repo.dirstate._map.iteritems()):
         if showdate:
             if ent[3] == -1:
                 # Pad or slice to locale representation
@@ -820,7 +838,7 @@ def debugdate(ui, date, range=None, **opts):
 def debugindex(ui, file_):
     """dump the contents of an index file"""
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
-    ui.write("   rev    offset  length   base linkrev" +
+    ui.write("   rev    offset  length   base linkrev"
              " nodeid       p1           p2\n")
     for i in r:
         node = r.node(i)
@@ -1007,7 +1025,18 @@ def diff(ui, repo, *pats, **opts):
     Use the --git option to generate diffs in the git extended diff
     format. Read the diffs help topic for more information.
     """
-    node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
+
+    revs = opts.get('rev')
+    change = opts.get('change')
+
+    if revs and change:
+        msg = _('cannot specify --rev and --change at the same time')
+        raise util.Abort(msg)
+    elif change:
+        node2 = repo.lookup(change)
+        node1 = repo[node2].parents()[0].node()
+    else:
+        node1, node2 = cmdutil.revpair(repo, revs)
 
     m = cmdutil.match(repo, pats, opts)
     it = patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
@@ -1196,7 +1225,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                         copied = getfile(fn).renamed(ctx.filenode(fn))
                         if copied:
                             copies.setdefault(rev, {})[fn] = copied[0]
-                except revlog.LookupError:
+                except error.LookupError:
                     pass
         elif st == 'iter':
             for fn, m in util.sort(matches[rev].items()):
@@ -1245,9 +1274,10 @@ def heads(ui, repo, *branchrevs, **opts):
         start = repo.lookup(opts['rev'])
     else:
         start = None
+    closed = not opts.get('active')
     if not branchrevs:
         # Assume we're looking repo-wide heads if no revs were specified.
-        heads = repo.heads(start)
+        heads = repo.heads(start, closed=closed)
     else:
         heads = []
         visitedset = util.set()
@@ -1256,7 +1286,7 @@ def heads(ui, repo, *branchrevs, **opts):
             if branch in visitedset:
                 continue
             visitedset.add(branch)
-            bheads = repo.branchheads(branch, start)
+            bheads = repo.branchheads(branch, start, closed=closed)
             if not bheads:
                 if branch != branchrev:
                     ui.warn(_("no changes on branch %s containing %s are "
@@ -1304,7 +1334,7 @@ def help_(ui, name=None, with_version=False):
 
         try:
             aliases, i = cmdutil.findcmd(name, table, False)
-        except cmdutil.AmbiguousCommand, inst:
+        except error.AmbiguousCommand, inst:
             select = lambda c: c.lstrip('^').startswith(inst.args[0])
             helplist(_('list of commands:\n\n'), select)
             return
@@ -1325,7 +1355,7 @@ def help_(ui, name=None, with_version=False):
         # description
         doc = gettext(i[0].__doc__)
         if not doc:
-            doc = _("(No help text available)")
+            doc = _("(no help text available)")
         if ui.quiet:
             doc = doc.splitlines(0)[0]
         ui.write("\n%s\n" % doc.rstrip())
@@ -1340,7 +1370,7 @@ def help_(ui, name=None, with_version=False):
     def helplist(header, select=None):
         h = {}
         cmds = {}
-        for c, e in table.items():
+        for c, e in table.iteritems():
             f = c.split("|", 1)[0]
             if select and not select(f):
                 continue
@@ -1354,7 +1384,7 @@ def help_(ui, name=None, with_version=False):
                 continue
             doc = gettext(e[0].__doc__)
             if not doc:
-                doc = _("(No help text available)")
+                doc = _("(no help text available)")
             h[f] = doc.splitlines(0)[0].rstrip()
             cmds[f] = c.lstrip("^")
 
@@ -1393,11 +1423,11 @@ def help_(ui, name=None, with_version=False):
             if name in names:
                 break
         else:
-            raise cmdutil.UnknownCommand(name)
+            raise error.UnknownCommand(name)
 
         # description
         if not doc:
-            doc = _("(No help text available)")
+            doc = _("(no help text available)")
         if callable(doc):
             doc = doc()
 
@@ -1408,9 +1438,9 @@ def help_(ui, name=None, with_version=False):
         try:
             mod = extensions.find(name)
         except KeyError:
-            raise cmdutil.UnknownCommand(name)
+            raise error.UnknownCommand(name)
 
-        doc = gettext(mod.__doc__) or _('No help text available')
+        doc = gettext(mod.__doc__) or _('no help text available')
         doc = doc.splitlines(0)
         ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
         for d in doc[1:]:
@@ -1433,7 +1463,7 @@ def help_(ui, name=None, with_version=False):
                 f(name)
                 i = None
                 break
-            except cmdutil.UnknownCommand, inst:
+            except error.UnknownCommand, inst:
                 i = inst
         if i:
             raise i
@@ -1508,9 +1538,12 @@ def identify(ui, repo, source=None,
     default = not (num or id or branch or tags)
     output = []
 
+    revs = []
     if source:
         source, revs, checkout = hg.parseurl(ui.expandpath(source), [])
-        srepo = hg.repository(ui, source)
+        repo = hg.repository(ui, source)
+
+    if not repo.local():
         if not rev and revs:
             rev = revs[0]
         if not rev:
@@ -1518,7 +1551,7 @@ def identify(ui, repo, source=None,
         if num or branch or tags:
             raise util.Abort(
                 "can't query remote revision number, branch, or tags")
-        output = [hexfunc(srepo.lookup(rev))]
+        output = [hexfunc(repo.lookup(rev))]
     elif not rev:
         ctx = repo[None]
         parents = ctx.parents()
@@ -1538,7 +1571,7 @@ def identify(ui, repo, source=None,
         if num:
             output.append(str(ctx.rev()))
 
-    if not source and default and not ui.quiet:
+    if repo.local() and default and not ui.quiet:
         b = util.tolocal(ctx.branch())
         if b != 'default':
             output.append("(%s)" % b)
@@ -1653,7 +1686,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                         p2 = repo.lookup(p2)
                         if p1 == wp[0].node():
                             repo.dirstate.setparents(p1, p2)
-                    except RepoError:
+                    except error.RepoError:
                         pass
                 if opts.get('exact') or opts.get('import_branch'):
                     repo.dirstate.setbranch(branch or 'default')
@@ -1760,8 +1793,7 @@ def init(ui, dest=".", **opts):
     If no directory is given, the current directory is used.
 
     It is possible to specify an ssh:// URL as the destination.
-    Look at the help text for the pull command for important details
-    about ssh:// URLs.
+    See 'hg help urls' for more information.
     """
     cmdutil.setremoteconfig(ui, opts)
     hg.repository(ui, dest, create=1)
@@ -1794,7 +1826,7 @@ def locate(ui, repo, *pats, **opts):
         if not rev and abs not in repo.dirstate:
             continue
         if opts.get('fullpath'):
-            ui.write(os.path.join(repo.root, abs), end)
+            ui.write(repo.wjoin(abs), end)
         else:
             ui.write(((pats and m.rel(abs)) or abs), end)
         ret = 0
@@ -1869,7 +1901,7 @@ def log(ui, repo, *pats, **opts):
 
         try:
             return repo[rev][fn].renamed()
-        except revlog.LookupError:
+        except error.LookupError:
             pass
         return None
 
@@ -2068,7 +2100,7 @@ def parents(ui, repo, file_=None, **opts):
                 continue
             try:
                 filenodes.append(cp.filenode(file_))
-            except revlog.LookupError:
+            except error.LookupError:
                 pass
         if not filenodes:
             raise util.Abort(_("'%s' not found in manifest!") % file_)
@@ -2083,13 +2115,15 @@ def parents(ui, repo, file_=None, **opts):
             displayer.show(repo[n])
 
 def paths(ui, repo, search=None):
-    """show definition of symbolic path names
+    """show aliases for remote repositories
 
     Show definition of symbolic path name NAME. If no name is given, show
     definition of available names.
 
     Path names are defined in the [paths] section of /etc/mercurial/hgrc
     and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.
+
+    See 'hg help urls' for more information.
     """
     if search:
         for name, path in ui.configitems("paths"):
@@ -2124,34 +2158,8 @@ def pull(ui, repo, source="default", **opts):
     or URL and adds them to the local repository. By default, this
     does not update the copy of the project in the working directory.
 
-    Valid URLs are of the form:
-
-      local/filesystem/path (or file://local/filesystem/path)
-      http://[user[:pass]@]host[:port]/[path]
-      https://[user[:pass]@]host[:port]/[path]
-      ssh://[user[:pass]@]host[:port]/[path]
-
-    Paths in the local filesystem can either point to Mercurial
-    repositories or to bundle files (as created by 'hg bundle' or
-    'hg incoming --bundle').
-
-    An optional identifier after # indicates a particular branch, tag,
-    or changeset to pull.
-
-    Some notes about using SSH with Mercurial:
-    - SSH requires an accessible shell account on the destination machine
-      and a copy of hg in the remote path or specified with as remotecmd.
-    - path is relative to the remote user's home directory by default.
-      Use an extra slash at the start of a path to specify an absolute path:
-        ssh://example.com//tmp/repository
-    - Mercurial doesn't use its own compression via SSH; the right thing
-      to do is to configure it in your ~/.ssh/config, e.g.:
-        Host *.mylocalnetwork.example.com
-          Compression no
-        Host *
-          Compression yes
-      Alternatively specify "ssh -C" as your ssh command in your hgrc or
-      with the --ssh command line option.
+    If SOURCE is omitted, the 'default' path will be used.
+    See 'hg help urls' for more information.
     """
     source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
     cmdutil.setremoteconfig(ui, opts)
@@ -2161,10 +2169,10 @@ def pull(ui, repo, source="default", **opts):
     if revs:
         try:
             revs = [other.lookup(rev) for rev in revs]
-        except NoCapability:
-            error = _("Other repository doesn't support revision lookup, "
-                      "so a rev cannot be specified.")
-            raise util.Abort(error)
+        except error.CapabilityError:
+            err = _("Other repository doesn't support revision lookup, "
+                    "so a rev cannot be specified.")
+            raise util.Abort(err)
 
     modheads = repo.pull(other, heads=revs, force=opts.get('force'))
     return postincoming(ui, repo, modheads, opts.get('update'), checkout)
@@ -2183,22 +2191,12 @@ def push(ui, repo, dest=None, **opts):
     increase the number of remote heads. This generally indicates the
     the client has forgotten to pull and merge before pushing.
 
-    Valid URLs are of the form:
+    If -r is used, the named changeset and all its ancestors will be pushed
+    to the remote repository.
 
-      local/filesystem/path (or file://local/filesystem/path)
-      ssh://[user[:pass]@]host[:port]/[path]
-      http://[user[:pass]@]host[:port]/[path]
-      https://[user[:pass]@]host[:port]/[path]
-
-    An optional identifier after # indicates a particular branch, tag,
-    or changeset to push. If -r is used, the named changeset and all its
-    ancestors will be pushed to the remote repository.
-
-    Look at the help text for the pull command for important details
-    about ssh:// URLs.
-
-    Pushing to http:// and https:// URLs is only possible, if this
-    feature is explicitly enabled on the remote Mercurial server.
+    Look at the help text for urls for important details about ssh:// URLs.
+    If DESTINATION is omitted, a default path will be used.
+    See 'hg help urls' for more information.
     """
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
@@ -2631,7 +2629,7 @@ def serve(ui, repo, **opts):
 
     if opts["stdio"]:
         if repo is None:
-            raise RepoError(_("There is no Mercurial repository here"
+            raise error.RepoError(_("There is no Mercurial repository here"
                               " (.hg not found)"))
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
@@ -2646,8 +2644,8 @@ def serve(ui, repo, **opts):
                 repo.ui.setconfig("web", o, str(opts[o]))
 
     if repo is None and not ui.config("web", "webdir_conf"):
-        raise RepoError(_("There is no Mercurial repository here"
-                          " (.hg not found)"))
+        raise error.RepoError(_("There is no Mercurial repository here"
+                                " (.hg not found)"))
 
     class service:
         def init(self):
@@ -2720,7 +2718,7 @@ def status(ui, repo, *pats, **opts):
     end = opts.get('print0') and '\0' or '\n'
     copy = {}
     states = 'modified added removed deleted unknown ignored clean'.split()
-    show = [k for k in states if opts[k]]
+    show = [k for k in states if opts.get(k)]
     if opts.get('all'):
         show += ui.quiet and (states[:4] + ['clean']) or states
     if not show:
@@ -2738,7 +2736,7 @@ def status(ui, repo, *pats, **opts):
         if node2 is None:
             added = stat[0] + stat[1] # merged?
 
-        for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].items():
+        for k, v in copies.copies(repo, ctx1, ctx2, ctxn)[0].iteritems():
             if k in added:
                 copy[k] = v
             elif v in added:
@@ -2822,8 +2820,6 @@ def tag(ui, repo, name1, *names, **opts):
 def tags(ui, repo):
     """list repository tags
 
-    List the repository tags.
-
     This lists both regular and local tags. When the -v/--verbose switch
     is used, a third column "local" is printed for local tags.
     """
@@ -2841,10 +2837,10 @@ def tags(ui, repo):
         try:
             hn = hexfunc(n)
             r = "%5d:%s" % (repo.changelog.rev(n), hn)
-        except revlog.LookupError:
+        except error.LookupError:
             r = "    ?:%s" % hn
         else:
-            spaces = " " * (30 - util.locallen(t))
+            spaces = " " * (30 - util.colwidth(t))
             if ui.verbose:
                 if repo.tagtype(t) == 'local':
                     tagtype = " local"
@@ -2944,7 +2940,7 @@ def verify(ui, repo):
 def version_(ui):
     """output version and copyright information"""
     ui.write(_("Mercurial Distributed SCM (version %s)\n")
-             % version.get_version())
+             % util.version())
     ui.status(_(
         "\nCopyright (C) 2005-2008 Matt Mackall <mpm@selenic.com> and others\n"
         "This is free software; see the source for copying conditions. "
@@ -3005,6 +3001,7 @@ templateopts = [
 
 logopts = [
     ('p', 'patch', None, _('show patch')),
+    ('g', 'git', None, _('use git extended diff format')),
     ('l', 'limit', '', _('limit number of changes displayed')),
     ('M', 'no-merges', None, _('do not show merges')),
 ] + templateopts
@@ -3071,7 +3068,7 @@ table = {
           ('g', 'good', False, _('mark changeset good')),
           ('b', 'bad', False, _('mark changeset bad')),
           ('s', 'skip', False, _('skip testing changeset')),
-          ('c', 'command', '', _('Use command to check changeset state')),
+          ('c', 'command', '', _('use command to check changeset state')),
           ('U', 'noupdate', False, _('do not update to target'))],
          _("[-gbsr] [-c CMD] [REV]")),
     "branch":
@@ -3119,6 +3116,8 @@ table = {
         (commit,
          [('A', 'addremove', None,
            _('mark new/missing files as added/removed before committing')),
+          ('', 'close-branch', None,
+           _('mark a branch as closed, hiding it from the branch list')),
          ] + walkopts + commitopts + commitopts2,
          _('[OPTION]... [FILE]...')),
     "copy|cp":
@@ -3166,7 +3165,8 @@ table = {
     "debugwalk": (debugwalk, walkopts, _('[OPTION]... [FILE]...')),
     "^diff":
         (diff,
-         [('r', 'rev', [], _('revision'))
+         [('r', 'rev', [], _('revision')),
+          ('c', 'change', '', _('change made by revision'))
          ] + diffopts + diffopts2 + walkopts,
          _('[OPTION]... [-r REV1 [-r REV2]] [FILE]...')),
     "^export":
@@ -3193,6 +3193,8 @@ table = {
     "heads":
         (heads,
          [('r', 'rev', '', _('show only heads which are descendants of rev')),
+          ('a', 'active', False,
+           _('show only the active heads from open branches')),
          ] + templateopts,
          _('[-r REV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),
@@ -3323,7 +3325,8 @@ table = {
          [('a', 'all', None, _('remerge all unresolved files')),
           ('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
-          ('u', 'unmark', None, _('unmark files as resolved'))],
+          ('u', 'unmark', None, _('unmark files as resolved'))]
+          + walkopts,
           _('[OPTION]... [FILE]...')),
     "revert":
         (revert,
@@ -3390,6 +3393,7 @@ table = {
     "tip":
         (tip,
          [('p', 'patch', None, _('show patch')),
+          ('g', 'git', None, _('use git extended diff format')),
          ] + templateopts,
          _('[-p]')),
     "unbundle":

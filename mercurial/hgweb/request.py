@@ -76,6 +76,7 @@ class wsgirequest(object):
                     raise TypeError('header value must be string: %r' % v)
 
             if isinstance(status, ErrorResponse):
+                self.header(status.headers)
                 status = statusmessage(status.code)
             elif status == 200:
                 status = '200 Script output follows'

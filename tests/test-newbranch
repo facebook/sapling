@@ -1,6 +1,6 @@
 #!/bin/sh
 
-branchcache=.hg/branch.cache
+branchcache=.hg/branchheads.cache
 
 hg init t
 cd t

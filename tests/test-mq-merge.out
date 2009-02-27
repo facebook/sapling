@@ -8,9 +8,9 @@ a
 b
 merging with queue at: .hg/patches.1
 applying rm_a
-Now at: rm_a
+now at: rm_a
 b
-Patch queue now empty
+patch queue now empty
 
 % init t2
 adding a
@@ -21,4 +21,4 @@ adding a
 merging with queue at refqueue
 (working directory not at tip)
 applying patcha
-Now at: patcha
+now at: patcha

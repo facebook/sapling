@@ -21,6 +21,8 @@ hg -R new incoming test
 hg -R new incoming -r 4 test
 echo "% limit to 2 changesets"
 hg -R new incoming -l 2 test
+echo "% limit to 2 changesets, test with -p --git"
+hg -R new incoming -l 2 -p --git test
 
 # test with --bundle
 http_proxy= hg -R new incoming --bundle test.hg http://localhost:$HGPORT/ | sed -e 's,:[0-9][0-9]*/,/,'

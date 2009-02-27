@@ -19,7 +19,7 @@ echo 'allowpull = false' >> .hg/hgrc
 hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 hg clone http://localhost:$HGPORT/ test3 | sed -e 's,:[0-9][0-9]*/,/,'
-kill `cat hg.pid`
+"$TESTDIR/killdaemons.py"
 echo % serve errors
 cat errors.log
 

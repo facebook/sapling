@@ -7,10 +7,8 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, copy
-from mercurial import match, patch
+from mercurial import match, patch, util, error
 from mercurial.node import hex, nullid
-from mercurial.repo import RepoError
-from mercurial import util
 
 def up(p):
     if p[0] != "/":
@@ -55,12 +53,12 @@ def revnavgen(pos, pagelen, limit, nodefunc):
                 yield {"label": label, "node": node}
 
             yield {"label": "tip", "node": "tip"}
-        except RepoError:
+        except error.RepoError:
             pass
 
     return nav
 
-def siblings(siblings=[], hiderev=None, **args):
+def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]
     if len(siblings) == 1 and siblings[0].rev() == hiderev:
         return
@@ -69,10 +67,16 @@ def siblings(siblings=[], hiderev=None, **args):
         d['user'] = s.user()
         d['date'] = s.date()
         d['description'] = s.description()
+        d['branch'] = s.branch()
         if hasattr(s, 'path'):
             d['file'] = s.path()
-        d.update(args)
         yield d
+
+def parents(ctx, hide=None):
+    return _siblings(ctx.parents(), hide)
+
+def children(ctx, hide=None):
+    return _siblings(ctx.children(), hide)
 
 def renamelink(fctx):
     r = fctx.renamed()
@@ -124,7 +128,7 @@ def changectx(repo, req):
 
     try:
         ctx = repo[changeid]
-    except RepoError:
+    except error.RepoError:
         man = repo.manifest
         ctx = repo[man.linkrev(man.rev(man.lookup(changeid)))]
 
@@ -138,7 +142,7 @@ def filectx(repo, req):
         changeid = req.form['filenode'][0]
     try:
         fctx = repo[changeid][path]
-    except RepoError:
+    except error.RepoError:
         fctx = repo.filectx(path, fileid=changeid)
 
     return fctx

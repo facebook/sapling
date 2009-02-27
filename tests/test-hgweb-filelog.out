@@ -1,8 +1,20 @@
 adding b
 adding a
 adding a
-changeset:   5:a3b6a9e4507e
+changeset:   6:38d962e6234d
 tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     change c
+
+diff -r a3b6a9e4507e -r 38d962e6234d c
+--- a/c	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:00 1970 +0000
+@@ -1,1 +1,2 @@
+ b
++c
+
+changeset:   5:a3b6a9e4507e
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     mv b
@@ -76,19 +88,18 @@ diff -r 000000000000 -r 6563da9dcf87 b
 % tip - two revisions
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: a history</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log/tip/a" title="Atom feed for test:a">
+   href="/atom-log/tip/a" title="Atom feed for test:a" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log/tip/a" title="RSS feed for test:a">
+   href="/rss-log/tip/a" title="RSS feed for test:a" />
 </head>
 <body>
 
@@ -96,7 +107,7 @@ diff -r 000000000000 -r 6563da9dcf87 b
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/01de2d66a28d">log</a></li>
@@ -122,9 +133,9 @@ diff -r 000000000000 -r 6563da9dcf87 b
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
@@ -159,19 +170,18 @@ files, or words in the commit message</span>
 % second version - two revisions
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: a history</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log/tip/a" title="Atom feed for test:a">
+   href="/atom-log/tip/a" title="Atom feed for test:a" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log/tip/a" title="RSS feed for test:a">
+   href="/rss-log/tip/a" title="RSS feed for test:a" />
 </head>
 <body>
 
@@ -179,7 +189,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/01de2d66a28d">log</a></li>
@@ -205,9 +215,9 @@ files, or words in the commit message</span>
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
@@ -242,19 +252,18 @@ files, or words in the commit message</span>
 % first deleted - one revision
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: a history</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log/tip/a" title="Atom feed for test:a">
+   href="/atom-log/tip/a" title="Atom feed for test:a" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log/tip/a" title="RSS feed for test:a">
+   href="/rss-log/tip/a" title="RSS feed for test:a" />
 </head>
 <body>
 
@@ -262,7 +271,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/5ed941583260">log</a></li>
@@ -288,9 +297,9 @@ files, or words in the commit message</span>
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
@@ -320,19 +329,18 @@ files, or words in the commit message</span>
 % first version - one revision
 200 Script output follows
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
 <title>test: a history</title>
 <link rel="alternate" type="application/atom+xml"
-   href="/atom-log/tip/a" title="Atom feed for test:a">
+   href="/atom-log/tip/a" title="Atom feed for test:a" />
 <link rel="alternate" type="application/rss+xml"
-   href="/rss-log/tip/a" title="RSS feed for test:a">
+   href="/rss-log/tip/a" title="RSS feed for test:a" />
 </head>
 <body>
 
@@ -340,7 +348,7 @@ files, or words in the commit message</span>
 <div class="menu">
 <div class="logo">
 <a href="http://www.selenic.com/mercurial/">
-<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li><a href="/shortlog/5ed941583260">log</a></li>
@@ -366,9 +374,9 @@ files, or words in the commit message</span>
 
 <form class="search" action="/log">
 
-<p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
@@ -398,11 +406,10 @@ files, or words in the commit message</span>
 % before addition - error
 404 Not Found
 
-<!-- quirksmode -->
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
 <head>
-<link rel="icon" href="/static/hgicon.png" type="image/png">
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
 <meta name="robots" content="index, nofollow" />
 <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
 
@@ -431,8 +438,8 @@ files, or words in the commit message</span>
 <form class="search" action="/log">
 
 <p><input name="rev" id="search1" type="text" size="30"></p>
-<span>find changesets by author, revision,
-files, or words in the commit message</span>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
 </form>
 
 <div class="description">
@@ -474,8 +481,8 @@ a@6563da9dcf87: not found in manifest
 <a href="/shortlog?style=spartan">shortlog</a>
 <a href="/graph?style=spartan">graph</a>
 <a href="/tags?style=spartan">tags</a>
-<a href="/file/a3b6a9e4507e/c?style=spartan">file</a>
-<a href="/annotate/a3b6a9e4507e/c?style=spartan">annotate</a>
+<a href="/file/38d962e6234d/c?style=spartan">file</a>
+<a href="/annotate/38d962e6234d/c?style=spartan">annotate</a>
 <a type="application/rss+xml" href="/rss-log/tip/c">rss</a>
 <a type="application/atom+xml" href="/atom-log/tip/c" title="Atom feed for test:c">atom</a>
 </div>
@@ -485,6 +492,31 @@ a@6563da9dcf87: not found in manifest
 <p>navigate: <small class="navigate"><a href="/log/a3b6a9e4507e/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
 
 <table class="logEntry parity0">
+ <tr>
+  <th class="age">many years ago:</th>
+  <th class="firstline"><a href="/rev/38d962e6234d?style=spartan">change c</a></th>
+ </tr>
+ <tr>
+  <th class="revision">revision 1:</td>
+  <td class="node">
+   <a href="/file/38d962e6234d/c?style=spartan">38d962e6234d</a>
+   <a href="/diff/38d962e6234d/c?style=spartan">(diff)</a>
+   <a href="/annotate/38d962e6234d/c?style=spartan">(annotate)</a>
+  </td>
+ </tr>
+ 
+ <tr>
+  <th class="author">author:</th>
+  <td class="author">&#116;&#101;&#115;&#116;</td>
+ </tr>
+ <tr>
+  <th class="date">date:</th>
+  <td class="date">Thu Jan 01 00:00:00 1970 +0000</td>
+ </tr>
+</table>
+
+
+<table class="logEntry parity1">
  <tr>
   <th class="age">many years ago:</th>
   <th class="firstline"><a href="/rev/a3b6a9e4507e?style=spartan">mv b</a></th>

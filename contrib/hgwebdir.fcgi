@@ -22,7 +22,6 @@ from mercurial import demandimport; demandimport.enable()
 #os.environ["HGENCODING"] = "UTF-8"
 
 from mercurial.hgweb.hgwebdir_mod import hgwebdir
-from mercurial.hgweb.request import wsgiapplication
 from flup.server.fcgi import WSGIServer
 
 # The config file looks like this.  You can have paths to individual
@@ -60,7 +59,4 @@ from flup.server.fcgi import WSGIServer
 # Alternatively you can pass a list of ('virtual/path', '/real/path') tuples
 # or use a dictionary with entries like 'virtual/path': '/real/path'
 
-def make_web_app():
-    return hgwebdir("hgweb.config")
-
-WSGIServer(wsgiapplication(make_web_app)).run()
+WSGIServer(hgwebdir('hgweb.config')).run()

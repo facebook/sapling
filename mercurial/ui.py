@@ -340,7 +340,7 @@ class ui(object):
         if user is None:
             user = os.environ.get("EMAIL")
         if user is None and self.configbool("ui", "askusername"):
-            user = self.prompt(_("Enter a commit username:"), default=None)
+            user = self.prompt(_("enter a commit username:"), default=None)
         if user is None:
             try:
                 user = '%s@%s' % (util.getuser(), socket.getfqdn())
@@ -350,7 +350,7 @@ class ui(object):
         if not user:
             raise util.Abort(_("Please specify a username."))
         if "\n" in user:
-            raise util.Abort(_("username %s contains a newline\n") % `user`)
+            raise util.Abort(_("username %s contains a newline\n") % repr(user))
         return user
 
     def shortuser(self, user):
@@ -439,7 +439,10 @@ class ui(object):
 
     def getpass(self, prompt=None, default=None):
         if not self.interactive: return default
-        return getpass.getpass(prompt or _('password: '))
+        try:
+            return getpass.getpass(prompt or _('password: '))
+        except EOFError:
+            raise util.Abort(_('response expected'))
     def status(self, *msg):
         if not self.quiet: self.write(*msg)
     def warn(self, *msg):

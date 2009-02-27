@@ -13,9 +13,9 @@ platform-specific details from the core.
 """
 
 from i18n import _
-import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback
+import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback, error
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import imp
+import imp, unicodedata
 
 # Python compatibility
 
@@ -138,9 +138,21 @@ def fromlocal(s):
     except LookupError, k:
         raise Abort(_("%s, please check your locale settings") % k)
 
-def locallen(s):
-    """Find the length in characters of a local string"""
-    return len(s.decode(_encoding, "replace"))
+def colwidth(s):
+    "Find the column width of a UTF-8 string for display"
+    d = s.decode(_encoding, 'replace')
+    if hasattr(unicodedata, 'east_asian_width'):
+        w = unicodedata.east_asian_width
+        return sum([w(c) in 'WF' and 2 or 1 for c in d])
+    return len(d)
+
+def version():
+    """Return version information if available."""
+    try:
+        import __version__
+        return __version__.version
+    except ImportError:
+        return 'unknown'
 
 # used by parsedate
 defaultdateformats = (
@@ -176,9 +188,6 @@ extendeddateformats = defaultdateformats + (
     "%b",
     "%b %Y",
     )
-
-class SignalInterrupt(Exception):
-    """Exception raised on SIGTERM and SIGHUP."""
 
 # differences from SafeConfigParser:
 # - case-sensitive keys
@@ -326,9 +335,6 @@ def increasingchunks(source, min=1024, max=65536):
 
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
-
-class UnexpectedOutput(Abort):
-    """Raised to print an error with part of output and exit."""
 
 def always(fn): return True
 def never(fn): return False
@@ -647,7 +653,7 @@ def hgexecutable():
         elif main_is_frozen():
             set_hgexecutable(sys.executable)
         else:
-            set_hgexecutable(find_exe('hg', 'hg'))
+            set_hgexecutable(find_exe('hg') or 'hg')
     return _hgexecutable
 
 def set_hgexecutable(path):
@@ -705,9 +711,6 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         if cwd is not None and oldcwd != cwd:
             os.chdir(oldcwd)
 
-class SignatureError:
-    pass
-
 def checksignature(func):
     '''wrap a function with code to check for calling errors'''
     def check(*args, **kwargs):
@@ -715,7 +718,7 @@ def checksignature(func):
             return func(*args, **kwargs)
         except TypeError:
             if len(traceback.extract_tb(sys.exc_info()[2])) == 1:
-                raise SignatureError
+                raise error.SignatureError
             raise
 
     return check
@@ -737,12 +740,10 @@ def rename(src, dst):
         # on windows, rename to existing file is not allowed, so we
         # must delete destination first. but if file is open, unlink
         # schedules it for delete but does not delete it. rename
-        # happens immediately even for open files, so we create
-        # temporary file, delete it, rename destination to that name,
-        # then delete that. then rename is safe to do.
-        fd, temp = tempfile.mkstemp(dir=os.path.dirname(dst) or '.')
-        os.close(fd)
-        os.unlink(temp)
+        # happens immediately even for open files, so we rename
+        # destination to a temporary name, then delete that. then
+        # rename is safe to do.
+        temp = dst + "-force-rename"
         os.rename(dst, temp)
         os.unlink(temp)
         os.rename(src, dst)
@@ -757,7 +758,7 @@ def unlink(f):
         pass
 
 def copyfile(src, dest):
-    "copy a file, preserving mode"
+    "copy a file, preserving mode and atime/mtime"
     if os.path.islink(src):
         try:
             os.unlink(dest)
@@ -767,7 +768,7 @@ def copyfile(src, dest):
     else:
         try:
             shutil.copyfile(src, dest)
-            shutil.copymode(src, dest)
+            shutil.copystat(src, dest)
         except shutil.Error, inst:
             raise Abort(str(inst))
 
@@ -814,13 +815,15 @@ class path_auditor(object):
             return
         normpath = os.path.normcase(path)
         parts = splitpath(normpath)
-        if (os.path.splitdrive(path)[0] or parts[0] in ('.hg', '.hg.', '')
+        if (os.path.splitdrive(path)[0]
+            or parts[0].lower() in ('.hg', '.hg.', '')
             or os.pardir in parts):
             raise Abort(_("path contains illegal component: %s") % path)
-        if '.hg' in path:
+        if '.hg' in path.lower():
+            lparts = [p.lower() for p in parts]
             for p in '.hg', '.hg.':
-                if p in parts[1:-1]:
-                    pos = parts.index(p)
+                if p in lparts[1:-1]:
+                    pos = lparts.index(p)
                     base = os.path.join(*parts[:pos])
                     raise Abort(_('path %r is inside repo %r') % (path, base))
         def check(prefix):
@@ -1267,29 +1270,33 @@ if os.name == 'nt':
     def isowner(fp, st=None):
         return True
 
-    def find_in_path(name, path, default=None):
-        '''find name in search path. path can be string (will be split
-        with os.pathsep), or iterable thing that returns strings.  if name
-        found, return path to name. else return default. name is looked up
-        using cmd.exe rules, using PATHEXT.'''
-        if isinstance(path, str):
-            path = path.split(os.pathsep)
-
+    def find_exe(command):
+        '''Find executable for command searching like cmd.exe does.
+        If command is a basename then PATH is searched for command.
+        PATH isn't searched if command is an absolute or relative path.  
+        An extension from PATHEXT is found and added if not present.
+        If command isn't found None is returned.'''
         pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
-        pathext = pathext.lower().split(os.pathsep)
-        isexec = os.path.splitext(name)[1].lower() in pathext
+        pathexts = [ext for ext in pathext.lower().split(os.pathsep)]
+        if os.path.splitext(command)[1].lower() in pathexts:
+            pathexts = ['']
+        
+        def findexisting(pathcommand):
+            'Will append extension (if needed) and return existing file'
+            for ext in pathexts:
+                executable = pathcommand + ext
+                if os.path.exists(executable):
+                    return executable
+            return None
 
-        for p in path:
-            p_name = os.path.join(p, name)
-
-            if isexec and os.path.exists(p_name):
-                return p_name
-
-            for ext in pathext:
-                p_name_ext = p_name + ext
-                if os.path.exists(p_name_ext):
-                    return p_name_ext
-        return default
+        if os.sep in command:
+            return findexisting(command)
+            
+        for path in os.environ.get('PATH', '').split(os.pathsep):
+            executable = findexisting(os.path.join(path, command))
+            if executable is not None:
+                return executable
+        return None
 
     def set_signal_handler():
         try:
@@ -1455,32 +1462,31 @@ else:
             st = fstat(fp)
         return st.st_uid == os.getuid()
 
-    def find_in_path(name, path, default=None):
-        '''find name in search path. path can be string (will be split
-        with os.pathsep), or iterable thing that returns strings.  if name
-        found, return path to name. else return default.'''
-        if isinstance(path, str):
-            path = path.split(os.pathsep)
-        for p in path:
-            p_name = os.path.join(p, name)
-            if os.path.exists(p_name):
-                return p_name
-        return default
+    def find_exe(command):
+        '''Find executable for command searching like which does.
+        If command is a basename then PATH is searched for command.
+        PATH isn't searched if command is an absolute or relative path.  
+        If command isn't found None is returned.'''
+        if sys.platform == 'OpenVMS':
+            return command
+        
+        def findexisting(executable):
+            'Will return executable if existing file'
+            if os.path.exists(executable):
+                return executable
+            return None
+
+        if os.sep in command:
+            return findexisting(command)
+            
+        for path in os.environ.get('PATH', '').split(os.pathsep):
+            executable = findexisting(os.path.join(path, command))
+            if executable is not None:
+                return executable
+        return None
 
     def set_signal_handler():
         pass
-
-def find_exe(name, default=None):
-    '''find path of an executable.
-    if name contains a path component, return it as is.  otherwise,
-    use normal executable search path.'''
-
-    if os.sep in name or sys.platform == 'OpenVMS':
-        # don't check the executable bit.  if the file isn't
-        # executable, whoever tries to actually run it will give a
-        # much more useful error message.
-        return name
-    return find_in_path(name, os.environ.get('PATH', ''), default=default)
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
@@ -1991,3 +1997,24 @@ def drop_scheme(scheme, path):
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
+
+def termwidth():
+    if 'COLUMNS' in os.environ:
+        try:
+            return int(os.environ['COLUMNS'])
+        except ValueError:
+            pass
+    try:
+        import termios, array, fcntl
+        for dev in (sys.stdout, sys.stdin):
+            try:
+                fd = dev.fileno()
+                if not os.isatty(fd):
+                    continue
+                arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
+                return array.array('h', arri)[1]
+            except ValueError:
+                pass
+    except ImportError:
+        pass
+    return 80

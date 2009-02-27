@@ -1,21 +1,21 @@
 adding a
-Now at: a.patch
+now at: a.patch
 applying b.patch
 applying c.patch
-Now at: c.patch
-Now at: b.patch
+now at: c.patch
+now at: b.patch
 
 % Using index
-Now at: a.patch
+now at: a.patch
 applying b.patch
 applying c.patch
-Now at: c.patch
+now at: c.patch
 
 % No warnings when using index
-Now at: b.patch
+now at: b.patch
 applying c.patch
 applying bug314159
-Now at: bug314159
+now at: bug314159
 
 % Detect ambiguous non-index
 patch name "14" is ambiguous:

@@ -67,6 +67,8 @@ parser.add_option("-n", "--nodiff", action="store_true",
     help="skip showing test changes")
 parser.add_option("--with-hg", type="string",
     help="test existing install at given location")
+parser.add_option("--pure", action="store_true",
+    help="use pure Python code instead of C extensions")
 
 for option, default in defaults.items():
     defaults[option] = int(os.environ.get(*default))
@@ -175,13 +177,14 @@ def install_hg():
     global python
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
+    pure = options.pure and "--pure" or ""
 
     # Run installer in hg root
     os.chdir(os.path.join(os.path.dirname(sys.argv[0]), '..'))
-    cmd = ('%s setup.py clean --all'
+    cmd = ('%s setup.py %s clean --all'
            ' install --force --prefix="%s" --install-lib="%s"'
            ' --install-scripts="%s" >%s 2>&1'
-           % (sys.executable, INST, PYTHONDIR, BINDIR, installerrs))
+           % (sys.executable, pure, INST, PYTHONDIR, BINDIR, installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
         if not verbose:
@@ -270,7 +273,7 @@ def run(cmd):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return the exist code, and output."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
-    if os.name == 'nt':
+    if os.name == 'nt' or sys.platform.startswith('java'):
         tochild, fromchild = os.popen4(cmd)
         tochild.close()
         output = fromchild.read()
@@ -462,7 +465,8 @@ os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
 os.environ['CDPATH'] = ''
 
 TESTDIR = os.environ["TESTDIR"] = os.getcwd()
-HGTMP = os.environ['HGTMP'] = tempfile.mkdtemp('', 'hgtests.', options.tmpdir)
+HGTMP = os.environ['HGTMP'] = os.path.realpath(tempfile.mkdtemp('', 'hgtests.',
+                                               options.tmpdir))
 DAEMON_PIDS = None
 HGRCPATH = None
 
@@ -479,7 +483,7 @@ if options.with_hg:
     INST = options.with_hg
 else:
     INST = os.path.join(HGTMP, "install")
-BINDIR = os.path.join(INST, "bin")
+BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
 PYTHONDIR = os.path.join(INST, "lib", "python")
 COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 

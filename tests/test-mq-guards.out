@@ -1,68 +1,68 @@
 adding x
-Patch queue now empty
+patch queue now empty
 % should fail
 abort: no patch named does-not-exist.patch
 % should fail
 abort: no patches applied
 applying a.patch
-Now at: a.patch
+now at: a.patch
 % should guard a.patch
 % should print +a
 a.patch: +a
-Patch queue now empty
+patch queue now empty
 % should fail
 cannot push 'a.patch' - guarded by ['+a']
 a.patch: +a
 % should push b.patch
 applying b.patch
-Now at: b.patch
-Patch queue now empty
+now at: b.patch
+patch queue now empty
 % test selection of an empty guard
 abort: guard cannot be an empty string
 number of unguarded, unapplied patches has changed from 2 to 3
 % should push a.patch
 applying a.patch
-Now at: a.patch
+now at: a.patch
 % should print -a
 c.patch: -a
 % should skip c.patch
 applying b.patch
 skipping c.patch - guarded by '-a'
-Now at: b.patch
+now at: b.patch
 % should display b.patch
 b.patch
 % should push c.patch
 applying c.patch
-Now at: c.patch
-Patch queue now empty
+now at: c.patch
+patch queue now empty
 guards deactivated
 number of unguarded, unapplied patches has changed from 3 to 2
 % should push all
 applying b.patch
 applying c.patch
-Now at: c.patch
-Patch queue now empty
+now at: c.patch
+patch queue now empty
 number of unguarded, unapplied patches has changed from 1 to 2
 % should push a.patch, not b.patch
 applying a.patch
-Now at: a.patch
+now at: a.patch
 applying c.patch
-Now at: c.patch
-Patch queue now empty
+now at: c.patch
+patch queue now empty
 % should push b.patch
 applying b.patch
-Now at: b.patch
+now at: b.patch
 applying c.patch
-Now at: c.patch
+now at: c.patch
 c.patch
-Patch queue now empty
+patch queue now empty
 number of unguarded, unapplied patches has changed from 2 to 3
 % should push a.patch, b.patch
 applying a.patch
-Now at: a.patch
+now at: a.patch
 applying b.patch
-Now at: b.patch
-Patch queue now empty
+now at: b.patch
+patch queue now empty
 number of unguarded, unapplied patches has changed from 3 to 2
 % list patches and guards
 a.patch: +1 +2 -3
@@ -78,15 +78,15 @@ c.patch: unguarded
 3
 % should push b.patch
 applying b.patch
-Now at: b.patch
+now at: b.patch
 applying c.patch
-Now at: c.patch
+now at: c.patch
 guards deactivated
 popping guarded patches
-Patch queue now empty
+patch queue now empty
 reapplying unguarded patches
 applying c.patch
-Now at: c.patch
+now at: c.patch
 % guards in series file: +1 +2 -3
 +1
 +2
@@ -100,7 +100,7 @@ c.patch
 new.patch: +1 +2 -3
 b.patch: +2
 c.patch: unguarded
-Now at: c.patch
+now at: c.patch
 % should show new.patch and b.patch as Guarded, c.patch as Applied
 % and d.patch as Unapplied
 0 G new.patch
@@ -112,7 +112,7 @@ Now at: c.patch
 1 G b.patch
 2 A c.patch
 3 G d.patch
-Patch queue now empty
+patch queue now empty
 new.patch: +1 +2 -3
 b.patch: +2
 c.patch: unguarded
@@ -141,7 +141,7 @@ applying new.patch
 skipping b.patch - guarded by ['+2']
 applying c.patch
 skipping d.patch - guarded by ['+2']
-Now at: c.patch
+now at: c.patch
 % hg qapplied
 new.patch
 c.patch

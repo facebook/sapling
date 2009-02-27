@@ -7,6 +7,7 @@ no bookmarks set
  * X                         0:f7b1eb17ad24
 % look up bookmark
 changeset:   0:f7b1eb17ad24
+tag:         X
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -51,7 +52,10 @@ abort: a bookmark of this name does not exist
  * x  y                      2:0316ce92851d
 % look up stripped bookmark name
 changeset:   2:0316ce92851d
+tag:         X2
+tag:         Y
 tag:         tip
+tag:         x  y
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     2

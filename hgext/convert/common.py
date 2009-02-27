@@ -228,7 +228,9 @@ class commandline(object):
             except TypeError:
                 pass
         cmdline = [util.shellquote(arg) for arg in cmdline]
-        cmdline += ['2>', util.nulldev, '<', util.nulldev]
+        if not self.ui.debugflag:
+            cmdline += ['2>', util.nulldev]
+        cmdline += ['<', util.nulldev]
         cmdline = ' '.join(cmdline)
         return cmdline
 
@@ -323,7 +325,7 @@ class mapfile(dict):
         self._read()
 
     def _read(self):
-        if self.path is None:
+        if not self.path:
             return
         try:
             fp = open(self.path, 'r')

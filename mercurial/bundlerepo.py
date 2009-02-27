@@ -13,7 +13,7 @@ of the GNU General Public License, incorporated herein by reference.
 from node import hex, nullid, short
 from i18n import _
 import changegroup, util, os, struct, bz2, zlib, tempfile, shutil, mdiff
-import repo, localrepo, changelog, manifest, filelog, revlog, context
+import repo, localrepo, changelog, manifest, filelog, revlog, context, error
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundlefile,
@@ -48,8 +48,8 @@ class bundlerevlog(revlog.revlog):
                 continue
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise revlog.LookupError(p1, self.indexfile,
-                                             _("unknown parent"))
+                    raise error.LookupError(p1, self.indexfile,
+                                            _("unknown parent"))
             if linkmapper is None:
                 link = n
             else:
@@ -119,7 +119,7 @@ class bundlerevlog(revlog.revlog):
 
         p1, p2 = self.parents(node)
         if node != revlog.hash(text, p1, p2):
-            raise revlog.RevlogError(_("integrity check failed on %s:%d")
+            raise error.RevlogError(_("integrity check failed on %s:%d")
                                      % (self.datafile, self.rev(node)))
 
         self._cache = (node, self.rev(node), text)
@@ -156,7 +156,7 @@ class bundlerepository(localrepo.localrepository):
         self._tempparent = None
         try:
             localrepo.localrepository.__init__(self, ui, path)
-        except repo.RepoError:
+        except error.RepoError:
             self._tempparent = tempfile.mkdtemp()
             tmprepo = localrepo.instance(ui,self._tempparent,1)
             localrepo.localrepository.__init__(self, ui, self._tempparent)

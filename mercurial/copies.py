@@ -189,7 +189,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
 
     # examine each file copy for a potential directory move, which is
     # when all the files in a directory are moved to a new directory
-    for dst, src in fullcopy.items():
+    for dst, src in fullcopy.iteritems():
         dsrc, ddst = _dirname(src), _dirname(dst)
         if dsrc in invalid:
             # already seen to be uninteresting

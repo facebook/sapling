@@ -14,19 +14,26 @@ bookmark is forwarded to the new changeset.
 
 It is possible to use bookmark names in every revision lookup (e.g. hg
 merge, hg update).
+
+The bookmark extension offers the possiblity to have a more git-like experience
+by adding the following configuration option to your .hgrc:
+
+[bookmarks]
+track.current = True
+
+This will cause bookmarks to track the bookmark that you are currently on, and
+just updates it. This is similar to git's approach of branching.
 '''
 
-from mercurial.commands import templateopts, hex, short
 from mercurial.i18n import _
-from mercurial import cmdutil, util, commands, changelog
-from mercurial.node import nullid, nullrev
-from mercurial.repo import RepoError
-import mercurial, mercurial.localrepo, mercurial.repair, os
+from mercurial.node import nullid, nullrev, hex, short
+from mercurial import util, commands, localrepo, repair, extensions
+import os
 
 def parse(repo):
     '''Parse .hg/bookmarks file and return a dictionary
 
-    Bookmarks are stored as {HASH}\s{NAME}\n (localtags format) values
+    Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values
     in the .hg/bookmarks file. They are read by the parse() method and
     returned as a dictionary with name => hash values.
 
@@ -54,10 +61,54 @@ def write(repo, refs):
     '''
     if os.path.exists(repo.join('bookmarks')):
         util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
+    if current(repo) not in refs:
+        setcurrent(repo, None)
     file = repo.opener('bookmarks', 'w+')
-    for refspec, node in refs.items():
+    for refspec, node in refs.iteritems():
         file.write("%s %s\n" % (hex(node), refspec))
     file.close()
+
+def current(repo):
+    '''Get the current bookmark
+
+    If we use gittishsh branches we have a current bookmark that
+    we are on. This function returns the name of the bookmark. It
+    is stored in .hg/bookmarks.current
+    '''
+    if repo._bookmarkcurrent:
+        return repo._bookmarkcurrent
+    mark = None
+    if os.path.exists(repo.join('bookmarks.current')):
+        file = repo.opener('bookmarks.current')
+        # No readline() in posixfile_nt, reading everything is cheap
+        mark = (file.readlines() or [''])[0]
+        if mark == '':
+            mark = None
+        file.close()
+    repo._bookmarkcurrent = mark
+    return mark
+
+def setcurrent(repo, mark):
+    '''Set the name of the bookmark that we are currently on
+
+    Set the name of the bookmark that we are on (hg update <bookmark>).
+    The name is recoreded in .hg/bookmarks.current
+    '''
+    if current(repo) == mark:
+        return
+
+    refs = parse(repo)
+
+    # do not update if we do update to a rev equal to the current bookmark
+    if (mark not in refs and
+        current(repo) and refs[current(repo)] == repo.changectx('.').node()):
+        return
+    if mark not in refs:
+        mark = ''
+    file = repo.opener('bookmarks.current', 'w+')
+    file.write(mark)
+    file.close()
+    repo._bookmarkcurrent = mark
 
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
     '''mercurial bookmarks
@@ -85,6 +136,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             raise util.Abort(_("new bookmark name required"))
         marks[mark] = marks[rename]
         del marks[rename]
+        if current(repo) == rename:
+            setcurrent(repo, mark)
         write(repo, marks)
         return
 
@@ -121,7 +174,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             ui.status("no bookmarks set\n")
         else:
             for bmark, n in marks.iteritems():
-                prefix = (n == cur) and '*' or ' '
+                if ui.configbool('bookmarks', 'track.current'):
+                    prefix = (bmark == current(repo) and n == cur) and '*' or ' '
+                else:
+                    prefix = (n == cur) and '*' or ' '
+
                 ui.write(" %s %-25s %d:%s\n" % (
                     prefix, bmark, repo.changelog.rev(n), hexfn(n)))
         return
@@ -140,14 +197,14 @@ def _revstostrip(changelog, node):
                         saveheads.append(p)
     return [r for r in tostrip if r not in saveheads]
 
-def strip(ui, repo, node, backup="all"):
+def strip(oldstrip, ui, repo, node, backup="all"):
     """Strip bookmarks if revisions are stripped using
     the mercurial.strip method. This usually happens during
     qpush and qpop"""
     revisions = _revstostrip(repo.changelog, node)
     marks = parse(repo)
     update = []
-    for mark, n in marks.items():
+    for mark, n in marks.iteritems():
         if repo.changelog.rev(n) in revisions:
             update.append(mark)
     oldstrip(ui, repo, node, backup)
@@ -156,16 +213,14 @@ def strip(ui, repo, node, backup="all"):
             marks[m] = repo.changectx('.').node()
         write(repo, marks)
 
-oldstrip = mercurial.repair.strip
-mercurial.repair.strip = strip
-
 def reposetup(ui, repo):
-    if not isinstance(repo, mercurial.localrepo.localrepository):
+    if not isinstance(repo, localrepo.localrepository):
         return
 
     # init a bookmark cache as otherwise we would get a infinite reading
     # in lookup()
     repo._bookmarks = None
+    repo._bookmarkcurrent = None
 
     class bookmark_repo(repo.__class__):
         def rollback(self):
@@ -192,9 +247,14 @@ def reposetup(ui, repo):
             marks = parse(repo)
             update = False
             for mark, n in marks.items():
-                if n in parents:
-                    marks[mark] = node
-                    update = True
+                if ui.configbool('bookmarks', 'track.current'):
+                    if mark == current(repo) and n in parents:
+                        marks[mark] = node
+                        update = True
+                else:
+                    if n in parents:
+                        marks[mark] = node
+                        update = True
             if update:
                 write(repo, marks)
             return node
@@ -218,7 +278,34 @@ def reposetup(ui, repo):
                 write(repo, marks)
             return result
 
+        def tags(self):
+            """Merge bookmarks with normal tags"""
+            if self.tagscache:
+                return self.tagscache
+
+            tagscache = super(bookmark_repo, self).tags()
+            tagscache.update(parse(repo))
+            return tagscache
+
     repo.__class__ = bookmark_repo
+
+def uisetup(ui):
+    extensions.wrapfunction(repair, "strip", strip)
+    if ui.configbool('bookmarks', 'track.current'):
+        extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
+
+def updatecurbookmark(orig, ui, repo, *args, **opts):
+    '''Set the current bookmark
+
+    If the user updates to a bookmark we update the .hg/bookmarks.current
+    file.
+    '''
+    res = orig(ui, repo, *args, **opts)
+    rev = opts['rev']
+    if not rev and len(args) > 0:
+        rev = args[0]
+    setcurrent(repo, rev)
+    return res
 
 cmdtable = {
     "bookmarks":
@@ -227,5 +314,5 @@ cmdtable = {
           ('r', 'rev', '', _('revision')),
           ('d', 'delete', False, _('delete a given bookmark')),
           ('m', 'rename', '', _('rename a given bookmark'))],
-         _('hg bookmarks [-d] [-m NAME] [-r NAME] [NAME]')),
+         _('hg bookmarks [-f] [-d] [-m NAME] [-r NAME] [NAME]')),
 }

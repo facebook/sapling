@@ -9,8 +9,7 @@
 from node import bin, hex, nullid
 from i18n import _
 import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
-import errno, socket, changegroup, statichttprepo
-import url
+import errno, socket, changegroup, statichttprepo, error, url
 
 def zgenerator(f):
     zd = zlib.decompressobj()
@@ -39,6 +38,12 @@ class httprepository(repo.repository):
 
         self.urlopener = url.opener(ui, authinfo)
 
+    def __del__(self):
+        for h in self.urlopener.handlers:
+            h.close()
+            if hasattr(h, "close_all"):
+                h.close_all()
+
     def url(self):
         return self.path
 
@@ -48,7 +53,7 @@ class httprepository(repo.repository):
         if self.caps is None:
             try:
                 self.caps = util.set(self.do_read('capabilities').split())
-            except repo.RepoError:
+            except error.RepoError:
                 self.caps = util.set()
             self.ui.debug(_('capabilities: %s\n') %
                           (' '.join(self.caps or ['none'])))
@@ -99,19 +104,19 @@ class httprepository(repo.repository):
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
             self.ui.debug(_("Requested URL: '%s'\n") % cu)
-            raise repo.RepoError(_("'%s' does not appear to be an hg repository")
-                               % self._url)
+            raise error.RepoError(_("'%s' does not appear to be an hg repository")
+                                  % self._url)
 
         if proto.startswith('application/mercurial-'):
             try:
                 version = proto.split('-', 1)[1]
                 version_info = tuple([int(n) for n in version.split('.')])
             except ValueError:
-                raise repo.RepoError(_("'%s' sent a broken Content-Type "
-                                     "header (%s)") % (self._url, proto))
+                raise error.RepoError(_("'%s' sent a broken Content-Type "
+                                        "header (%s)") % (self._url, proto))
             if version_info > (0, 1):
-                raise repo.RepoError(_("'%s' uses newer protocol %s") %
-                                   (self._url, version))
+                raise error.RepoError(_("'%s' uses newer protocol %s") %
+                                      (self._url, version))
 
         return resp
 
@@ -129,14 +134,14 @@ class httprepository(repo.repository):
         success, data = d[:-1].split(' ', 1)
         if int(success):
             return bin(data)
-        raise repo.RepoError(data)
+        raise error.RepoError(data)
 
     def heads(self):
         d = self.do_read("heads")
         try:
             return map(bin, d[:-1].split(" "))
         except:
-            raise util.UnexpectedOutput(_("unexpected response:"), d)
+            raise error.ResponseError(_("unexpected response:"), d)
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
@@ -145,7 +150,7 @@ class httprepository(repo.repository):
             br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
             return br
         except:
-            raise util.UnexpectedOutput(_("unexpected response:"), d)
+            raise error.ResponseError(_("unexpected response:"), d)
 
     def between(self, pairs):
         batch = 8 # avoid giant requests
@@ -156,7 +161,7 @@ class httprepository(repo.repository):
             try:
                 r += [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
             except:
-                raise util.UnexpectedOutput(_("unexpected response:"), d)
+                raise error.ResponseError(_("unexpected response:"), d)
         return r
 
     def changegroup(self, nodes, kind):
@@ -201,7 +206,7 @@ class httprepository(repo.repository):
                 try:
                     ret = int(resp_code)
                 except ValueError, err:
-                    raise util.UnexpectedOutput(
+                    raise error.ResponseError(
                             _('push failed (unexpected response):'), resp)
                 self.ui.write(output)
                 return ret
@@ -233,6 +238,6 @@ def instance(ui, path, create):
             inst = httprepository(ui, path)
         inst.between([(nullid, nullid)])
         return inst
-    except repo.RepoError:
+    except error.RepoError:
         ui.note('(falling back to static-http)\n')
         return statichttprepo.instance(ui, "static-" + path, create)

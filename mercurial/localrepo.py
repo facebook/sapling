@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
 import lock, transaction, stat, errno, ui, store
-import os, revlog, time, util, extensions, hook, inspect
+import os, time, util, extensions, hook, inspect, error
 import match as match_
 import merge as merge_
 
@@ -47,9 +47,9 @@ class localrepository(repo.repository):
                     reqfile.write("%s\n" % r)
                 reqfile.close()
             else:
-                raise repo.RepoError(_("repository %s not found") % path)
+                raise error.RepoError(_("repository %s not found") % path)
         elif create:
-            raise repo.RepoError(_("repository %s already exists") % path)
+            raise error.RepoError(_("repository %s already exists") % path)
         else:
             # find requirements
             requirements = []
@@ -57,7 +57,7 @@ class localrepository(repo.repository):
                 requirements = self.opener("requires").read().splitlines()
                 for r in requirements:
                     if r not in self.supported:
-                        raise repo.RepoError(_("requirement '%s' not supported") % r)
+                        raise error.RepoError(_("requirement '%s' not supported") % r)
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
@@ -88,6 +88,10 @@ class localrepository(repo.repository):
     def __getattr__(self, name):
         if name == 'changelog':
             self.changelog = changelog.changelog(self.sopener)
+            if 'HG_PENDING' in os.environ:
+                p = os.environ['HG_PENDING']
+                if p.startswith(self.root):
+                    self.changelog.readpending('00changelog.i.a')
             self.sopener.defversion = self.changelog.version
             return self.changelog
         if name == 'manifest':
@@ -177,7 +181,7 @@ class localrepository(repo.repository):
         else:
             try:
                 prevtags = self.filectx('.hgtags', parent).data()
-            except revlog.LookupError:
+            except error.LookupError:
                 pass
             fp = self.wfile('.hgtags', 'wb')
             if prevtags:
@@ -265,7 +269,7 @@ class localrepository(repo.repository):
                     h.append(n)
                 filetags[key] = (bin_n, h)
 
-            for k, nh in filetags.items():
+            for k, nh in filetags.iteritems():
                 if k not in globaltags:
                     globaltags[k] = nh
                     tagtypes[k] = tagtype
@@ -301,7 +305,7 @@ class localrepository(repo.repository):
 
         self.tagscache = {}
         self._tagstypecache = {}
-        for k,nh in globaltags.items():
+        for k, nh in globaltags.iteritems():
             n = nh[0]
             if n != nullid:
                 self.tagscache[k] = n
@@ -332,7 +336,7 @@ class localrepository(repo.repository):
             rev = c.rev()
             try:
                 fnode = c.filenode('.hgtags')
-            except revlog.LookupError:
+            except error.LookupError:
                 continue
             ret.append((rev, node, fnode))
             if fnode in last:
@@ -343,7 +347,7 @@ class localrepository(repo.repository):
     def tagslist(self):
         '''return a list of tags ordered by revision'''
         l = []
-        for t, n in self.tags().items():
+        for t, n in self.tags().iteritems():
             try:
                 r = self.changelog.rev(n)
             except:
@@ -355,11 +359,12 @@ class localrepository(repo.repository):
         '''return the tags associated with a node'''
         if not self.nodetagscache:
             self.nodetagscache = {}
-            for t, n in self.tags().items():
+            for t, n in self.tags().iteritems():
                 self.nodetagscache.setdefault(n, []).append(t)
         return self.nodetagscache.get(node, [])
 
     def _branchtags(self, partial, lrev):
+        # TODO: rename this function?
         tiprev = len(self) - 1
         if lrev != tiprev:
             self._updatebranchcache(partial, lrev+1, tiprev+1)
@@ -367,7 +372,7 @@ class localrepository(repo.repository):
 
         return partial
 
-    def branchtags(self):
+    def _branchheads(self):
         tip = self.changelog.tip()
         if self.branchcache is not None and self._branchcachetip == tip:
             return self.branchcache
@@ -385,18 +390,38 @@ class localrepository(repo.repository):
             partial = self._ubranchcache
 
         self._branchtags(partial, lrev)
+        # this private cache holds all heads (not just tips)
+        self._ubranchcache = partial
 
         # the branch cache is stored on disk as UTF-8, but in the local
         # charset internally
-        for k, v in partial.items():
+        for k, v in partial.iteritems():
             self.branchcache[util.tolocal(k)] = v
-        self._ubranchcache = partial
         return self.branchcache
+
+
+    def branchtags(self):
+        '''return a dict where branch names map to the tipmost head of
+        the branch, open heads come before closed'''
+        bt = {}
+        for bn, heads in self._branchheads().iteritems():
+            head = None
+            for i in range(len(heads)-1, -1, -1):
+                h = heads[i]
+                if 'close' not in self.changelog.read(h)[5]:
+                    head = h
+                    break
+            # no open heads were found
+            if head is None:
+                head = heads[-1]
+            bt[bn] = head
+        return bt
+
 
     def _readbranchcache(self):
         partial = {}
         try:
-            f = self.opener("branch.cache")
+            f = self.opener("branchheads.cache")
             lines = f.read().split('\n')
             f.close()
         except (IOError, OSError):
@@ -411,8 +436,8 @@ class localrepository(repo.repository):
             for l in lines:
                 if not l: continue
                 node, label = l.split(" ", 1)
-                partial[label.strip()] = bin(node)
-        except (KeyboardInterrupt, util.SignalInterrupt):
+                partial.setdefault(label.strip(), []).append(bin(node))
+        except KeyboardInterrupt:
             raise
         except Exception, inst:
             if self.ui.debugflag:
@@ -422,10 +447,11 @@ class localrepository(repo.repository):
 
     def _writebranchcache(self, branches, tip, tiprev):
         try:
-            f = self.opener("branch.cache", "w", atomictemp=True)
+            f = self.opener("branchheads.cache", "w", atomictemp=True)
             f.write("%s %s\n" % (hex(tip), tiprev))
-            for label, node in branches.iteritems():
-                f.write("%s %s\n" % (hex(node), label))
+            for label, nodes in branches.iteritems():
+                for node in nodes:
+                    f.write("%s %s\n" % (hex(node), label))
             f.rename()
         except (IOError, OSError):
             pass
@@ -434,7 +460,12 @@ class localrepository(repo.repository):
         for r in xrange(start, end):
             c = self[r]
             b = c.branch()
-            partial[b] = c.node()
+            bheads = partial.setdefault(b, [])
+            bheads.append(c.node())
+            for p in c.parents():
+                pn = p.node()
+                if pn in bheads:
+                    bheads.remove(pn)
 
     def lookup(self, key):
         if isinstance(key, int):
@@ -460,7 +491,7 @@ class localrepository(repo.repository):
                 key = hex(key)
         except:
             pass
-        raise repo.RepoError(_("unknown revision '%s'") % key)
+        raise error.RepoError(_("unknown revision '%s'") % key)
 
     def local(self):
         return True
@@ -566,7 +597,7 @@ class localrepository(repo.repository):
 
         # abort here if the journal already exists
         if os.path.exists(self.sjoin("journal")):
-            raise repo.RepoError(_("journal already exists - run hg recover"))
+            raise error.RepoError(_("journal already exists - run hg recover"))
 
         # save dirstate for rollback
         try:
@@ -637,7 +668,7 @@ class localrepository(repo.repository):
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
             l = lock.lock(lockname, 0, releasefn, desc=desc)
-        except lock.LockHeld, inst:
+        except error.LockHeld, inst:
             if not wait:
                 raise
             self.ui.warn(_("waiting for lock on %s held by %r\n") %
@@ -749,6 +780,8 @@ class localrepository(repo.repository):
                match=None, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
         wlock = lock = None
+        if extra.get("close"):
+            force = True
         if files:
             files = util.unique(files)
         try:
@@ -926,10 +959,13 @@ class localrepository(repo.repository):
                 raise util.Abort(_("empty commit message"))
             text = '\n'.join(lines)
 
+            self.changelog.delayupdate()
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
                                    user, wctx.date(), extra)
+            p = lambda: self.changelog.writepending() and self.root or ""
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
-                      parent2=xp2)
+                      parent2=xp2, pending=p)
+            self.changelog.finalize(trp)
             tr.close()
 
             if self.branchcache:
@@ -1023,7 +1059,7 @@ class localrepository(repo.repository):
                             wlock = self.wlock(False)
                             for f in fixup:
                                 self.dirstate.normal(f)
-                        except lock.LockException:
+                        except lock.LockError:
                             pass
                     finally:
                         del wlock
@@ -1162,59 +1198,33 @@ class localrepository(repo.repository):
         finally:
             del wlock
 
-    def heads(self, start=None):
+    def heads(self, start=None, closed=True):
         heads = self.changelog.heads(start)
+        def display(head):
+            if closed:
+                return True
+            extras = self.changelog.read(head)[5]
+            return ('close' not in extras)
         # sort the output in rev descending order
-        heads = [(-self.changelog.rev(h), h) for h in heads]
+        heads = [(-self.changelog.rev(h), h) for h in heads if display(h)]
         return [n for (r, n) in util.sort(heads)]
 
-    def branchheads(self, branch=None, start=None):
+    def branchheads(self, branch=None, start=None, closed=True):
         if branch is None:
             branch = self[None].branch()
-        branches = self.branchtags()
+        branches = self._branchheads()
         if branch not in branches:
             return []
-        # The basic algorithm is this:
-        #
-        # Start from the branch tip since there are no later revisions that can
-        # possibly be in this branch, and the tip is a guaranteed head.
-        #
-        # Remember the tip's parents as the first ancestors, since these by
-        # definition are not heads.
-        #
-        # Step backwards from the brach tip through all the revisions. We are
-        # guaranteed by the rules of Mercurial that we will now be visiting the
-        # nodes in reverse topological order (children before parents).
-        #
-        # If a revision is one of the ancestors of a head then we can toss it
-        # out of the ancestors set (we've already found it and won't be
-        # visiting it again) and put its parents in the ancestors set.
-        #
-        # Otherwise, if a revision is in the branch it's another head, since it
-        # wasn't in the ancestor list of an existing head.  So add it to the
-        # head list, and add its parents to the ancestor list.
-        #
-        # If it is not in the branch ignore it.
-        #
-        # Once we have a list of heads, use nodesbetween to filter out all the
-        # heads that cannot be reached from startrev.  There may be a more
-        # efficient way to do this as part of the previous algorithm.
-
-        set = util.set
-        heads = [self.changelog.rev(branches[branch])]
-        # Don't care if ancestors contains nullrev or not.
-        ancestors = set(self.changelog.parentrevs(heads[0]))
-        for rev in xrange(heads[0] - 1, nullrev, -1):
-            if rev in ancestors:
-                ancestors.update(self.changelog.parentrevs(rev))
-                ancestors.remove(rev)
-            elif self[rev].branch() == branch:
-                heads.append(rev)
-                ancestors.update(self.changelog.parentrevs(rev))
-        heads = [self.changelog.node(rev) for rev in heads]
+        bheads = branches[branch]
+        # the cache returns heads ordered lowest to highest
+        bheads.reverse()
         if start is not None:
-            heads = self.changelog.nodesbetween([start], heads)[2]
-        return heads
+            # filter out the heads that cannot be reached from startrev
+            bheads = self.changelog.nodesbetween([start], bheads)[2]
+        if not closed:
+            bheads = [h for h in bheads if
+                      ('close' not in self.changelog.read(h)[5])]
+        return bheads
 
     def branches(self, nodes):
         if not nodes:
@@ -1393,7 +1403,8 @@ class localrepository(repo.repository):
         # sanity check our fetch list
         for f in fetch.keys():
             if f in m:
-                raise repo.RepoError(_("already have changeset ") + short(f[:4]))
+                raise error.RepoError(_("already have changeset ")
+                                      + short(f[:4]))
 
         if base.keys() == [nullid]:
             if force:
@@ -1579,7 +1590,7 @@ class localrepository(repo.repository):
         if self.ui.verbose or source == 'bundle':
             self.ui.status(_("%d changesets found\n") % len(nodes))
         if self.ui.debugflag:
-            self.ui.debug(_("List of changesets:\n"))
+            self.ui.debug(_("list of changesets:\n"))
             for node in nodes:
                 self.ui.debug("%s\n" % hex(node))
 
@@ -1756,7 +1767,7 @@ class localrepository(repo.repository):
                     # we only need to see a diff.
                     deltamf = mnfst.readdelta(mnfstnode)
                     # For each line in the delta
-                    for f, fnode in deltamf.items():
+                    for f, fnode in deltamf.iteritems():
                         f = changedfiles.get(f, None)
                         # And if the file is in the list of files we care
                         # about.
@@ -2030,9 +2041,6 @@ class localrepository(repo.repository):
                 revisions += len(fl) - o
                 files += 1
 
-            # make changelog see real files again
-            cl.finalize(trp)
-
             newheads = len(self.changelog.heads())
             heads = ""
             if oldheads and newheads != oldheads:
@@ -2043,9 +2051,13 @@ class localrepository(repo.repository):
                              % (changesets, revisions, files, heads))
 
             if changesets > 0:
+                p = lambda: self.changelog.writepending() and self.root or ""
                 self.hook('pretxnchangegroup', throw=True,
                           node=hex(self.changelog.node(cor+1)), source=srctype,
-                          url=url)
+                          url=url, pending=p)
+
+            # make changelog see real files again
+            cl.finalize(trp)
 
             tr.close()
         finally:
@@ -2075,7 +2087,7 @@ class localrepository(repo.repository):
         try:
             resp = int(l)
         except ValueError:
-            raise util.UnexpectedOutput(
+            raise error.ResponseError(
                 _('Unexpected response from remote server:'), l)
         if resp == 1:
             raise util.Abort(_('operation forbidden by server'))
@@ -2088,7 +2100,7 @@ class localrepository(repo.repository):
         try:
             total_files, total_bytes = map(int, l.split(' ', 1))
         except (ValueError, TypeError):
-            raise util.UnexpectedOutput(
+            raise error.ResponseError(
                 _('Unexpected response from remote server:'), l)
         self.ui.status(_('%d files to transfer, %s of data\n') %
                        (total_files, util.bytecount(total_bytes)))
@@ -2100,7 +2112,7 @@ class localrepository(repo.repository):
                 name, size = l.split('\0', 1)
                 size = int(size)
             except (ValueError, TypeError):
-                raise util.UnexpectedOutput(
+                raise error.ResponseError(
                     _('Unexpected response from remote server:'), l)
             self.ui.debug(_('adding %s (%s)\n') % (name, util.bytecount(size)))
             ofp = self.sopener(name, 'w')

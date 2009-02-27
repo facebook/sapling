@@ -10,7 +10,7 @@ abort: path 'b/b' traverses symbolic link 'b'
 adding changesets
 adding manifests
 adding file changes
-added 4 changesets with 5 changes to 5 files (+3 heads)
+added 5 changesets with 6 changes to 6 files (+4 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 % attack .hg/test
 .hg/test
@@ -25,3 +25,6 @@ abort: path 'back/test' traverses symbolic link 'back'
 % attack ../test
 ../test
 abort: path contains illegal component: ../test
+% attack /tmp/test
+/tmp/test
+abort: No such file or directory: [HGTMP]/test-audit-path/target//tmp/test

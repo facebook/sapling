@@ -7,8 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
-from mercurial import hg, util
-from mercurial.repo import RepoError
+from mercurial import hg, util, error
 from hgweb_mod import hgweb
 from hgwebdir_mod import hgwebdir
 from mercurial.i18n import _
@@ -249,8 +248,8 @@ def create_server(ui, repo):
                 elif repo is not None:
                     hgwebobj = hgweb(hg.repository(repo.ui, repo.root))
                 else:
-                    raise RepoError(_("There is no Mercurial repository here"
-                                      " (.hg not found)"))
+                    raise error.RepoError(_("There is no Mercurial repository"
+                                            " here (.hg not found)"))
                 return hgwebobj
             self.application = make_handler()
 

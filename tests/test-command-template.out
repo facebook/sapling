@@ -8,7 +8,10 @@ created new head
 # revision with no copies (used to print a traceback)
 
 # compact style works
-7[tip]:-1   29114dbae42b   1970-01-12 13:46 +0000   user
+8[tip]   946e2bd9c565   2020-01-01 10:01 +0000   test
+  third
+
+7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
   second
 
 6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
@@ -32,7 +35,10 @@ created new head
 0   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
   line 1
 
-7[tip]:-1   29114dbae42b   1970-01-12 13:46 +0000   user
+8[tip]   946e2bd9c565   2020-01-01 10:01 +0000   test
+  third
+
+7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
   second
 
 6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
@@ -56,7 +62,10 @@ created new head
 0   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
   line 1
 
-7[tip]:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   user
+8[tip]:7,-1   946e2bd9c565   2020-01-01 10:01 +0000   test
+  third
+
+7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   user
   second
 
 6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
@@ -89,6 +98,7 @@ abort: ./t: no key named 'changeset'
 # error if include fails
 abort: template file ./q: Permission denied
 # include works
+8
 7
 6
 5
@@ -98,6 +108,7 @@ abort: template file ./q: Permission denied
 1
 0
 # ui.style works
+8
 7
 6
 5
@@ -107,11 +118,17 @@ abort: template file ./q: Permission denied
 1
 0
 # issue338
+2020-01-01  test  <test>
+
+	* third:
+	third
+	[946e2bd9c565] [tip]
+
 1970-01-12  User Name  <user@hostname>
 
 	* second:
 	second
-	[29114dbae42b] [tip]
+	[29114dbae42b]
 
 1970-01-18  person  <person>
 
@@ -154,6 +171,7 @@ abort: template file ./q: Permission denied
 	[1e4e1b8f71e0]
 
 # keys work
+author: test
 author: User Name <user@hostname>
 author: person
 author: person
@@ -162,6 +180,7 @@ author: person
 author: other@place
 author: A. N. Other <other@place>
 author: User Name <user@hostname>
+author--verbose: test
 author--verbose: User Name <user@hostname>
 author--verbose: person
 author--verbose: person
@@ -170,6 +189,7 @@ author--verbose: person
 author--verbose: other@place
 author--verbose: A. N. Other <other@place>
 author--verbose: User Name <user@hostname>
+author--debug: test
 author--debug: User Name <user@hostname>
 author--debug: person
 author--debug: person
@@ -181,11 +201,13 @@ author--debug: User Name <user@hostname>
 branches: 
 branches: 
 branches: 
+branches: 
 branches: foo
 branches: 
 branches: 
 branches: 
 branches: 
+branches--verbose: 
 branches--verbose: 
 branches--verbose: 
 branches--verbose: 
@@ -197,11 +219,13 @@ branches--verbose:
 branches--debug: 
 branches--debug: 
 branches--debug: 
+branches--debug: 
 branches--debug: foo
 branches--debug: 
 branches--debug: 
 branches--debug: 
 branches--debug: 
+date: 1577872860.00
 date: 1000000.00
 date: 1500001.00
 date: 1500000.00
@@ -210,6 +234,7 @@ date: 1300000.00
 date: 1200000.00
 date: 1100000.00
 date: 1000000.00
+date--verbose: 1577872860.00
 date--verbose: 1000000.00
 date--verbose: 1500001.00
 date--verbose: 1500000.00
@@ -218,6 +243,7 @@ date--verbose: 1300000.00
 date--verbose: 1200000.00
 date--verbose: 1100000.00
 date--verbose: 1000000.00
+date--debug: 1577872860.00
 date--debug: 1000000.00
 date--debug: 1500001.00
 date--debug: 1500000.00
@@ -226,6 +252,7 @@ date--debug: 1300000.00
 date--debug: 1200000.00
 date--debug: 1100000.00
 date--debug: 1000000.00
+desc: third
 desc: second
 desc: merge
 desc: new head
@@ -238,6 +265,7 @@ other 2
 other 3
 desc: line 1
 line 2
+desc--verbose: third
 desc--verbose: second
 desc--verbose: merge
 desc--verbose: new head
@@ -250,6 +278,7 @@ other 2
 other 3
 desc--verbose: line 1
 line 2
+desc--debug: third
 desc--debug: second
 desc--debug: merge
 desc--debug: new head
@@ -262,6 +291,7 @@ other 2
 other 3
 desc--debug: line 1
 line 2
+file_adds: third
 file_adds: second
 file_adds: 
 file_adds: d
@@ -270,6 +300,7 @@ file_adds:
 file_adds: c
 file_adds: b
 file_adds: a
+file_adds--verbose: third
 file_adds--verbose: second
 file_adds--verbose: 
 file_adds--verbose: d
@@ -278,6 +309,7 @@ file_adds--verbose:
 file_adds--verbose: c
 file_adds--verbose: b
 file_adds--verbose: a
+file_adds--debug: third
 file_adds--debug: second
 file_adds--debug: 
 file_adds--debug: d
@@ -294,6 +326,8 @@ file_dels:
 file_dels: 
 file_dels: 
 file_dels: 
+file_dels: 
+file_dels--verbose: 
 file_dels--verbose: 
 file_dels--verbose: 
 file_dels--verbose: 
@@ -310,6 +344,8 @@ file_dels--debug:
 file_dels--debug: 
 file_dels--debug: 
 file_dels--debug: 
+file_dels--debug: 
+file_mods: 
 file_mods: 
 file_mods: 
 file_mods: 
@@ -322,6 +358,7 @@ file_mods--verbose:
 file_mods--verbose: 
 file_mods--verbose: 
 file_mods--verbose: 
+file_mods--verbose: 
 file_mods--verbose: c
 file_mods--verbose: 
 file_mods--verbose: 
@@ -330,10 +367,12 @@ file_mods--debug:
 file_mods--debug: 
 file_mods--debug: 
 file_mods--debug: 
+file_mods--debug: 
 file_mods--debug: c
 file_mods--debug: 
 file_mods--debug: 
 file_mods--debug: 
+files: third
 files: second
 files: 
 files: d
@@ -342,6 +381,7 @@ files: c
 files: c
 files: b
 files: a
+files--verbose: third
 files--verbose: second
 files--verbose: 
 files--verbose: d
@@ -350,6 +390,7 @@ files--verbose: c
 files--verbose: c
 files--verbose: b
 files--verbose: a
+files--debug: third
 files--debug: second
 files--debug: 
 files--debug: d
@@ -358,6 +399,7 @@ files--debug: c
 files--debug: c
 files--debug: b
 files--debug: a
+manifest: 8:8a0d8faab8b2
 manifest: 7:f2dbc354b94e
 manifest: 6:91015e9dbdd7
 manifest: 5:4dc3def4f9b4
@@ -366,6 +408,7 @@ manifest: 3:cb5a1327723b
 manifest: 2:6e0e82995c35
 manifest: 1:4e8d705b1e53
 manifest: 0:a0c8bcbbb45c
+manifest--verbose: 8:8a0d8faab8b2
 manifest--verbose: 7:f2dbc354b94e
 manifest--verbose: 6:91015e9dbdd7
 manifest--verbose: 5:4dc3def4f9b4
@@ -374,6 +417,7 @@ manifest--verbose: 3:cb5a1327723b
 manifest--verbose: 2:6e0e82995c35
 manifest--verbose: 1:4e8d705b1e53
 manifest--verbose: 0:a0c8bcbbb45c
+manifest--debug: 8:8a0d8faab8b2eee97dcfccabbcb18f413c9d097b
 manifest--debug: 7:f2dbc354b94e5ec0b4f10680ee0cee816101d0bf
 manifest--debug: 6:91015e9dbdd76a6791085d12b0a0ec7fcd22ffbf
 manifest--debug: 5:4dc3def4f9b4c6e8de820f6ee74737f91e96a216
@@ -382,6 +426,7 @@ manifest--debug: 3:cb5a1327723bada42f117e4c55a303246eaf9ccc
 manifest--debug: 2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
 manifest--debug: 1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
 manifest--debug: 0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+node: 946e2bd9c565394777d74d9669045b39e856e3ea
 node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -390,6 +435,7 @@ node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node: 97054abb4ab824450e9164180baf491ae0078465
 node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
 node: 1e4e1b8f71e05681d422154f5421e385fec3454f
+node--verbose: 946e2bd9c565394777d74d9669045b39e856e3ea
 node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node--verbose: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -398,6 +444,7 @@ node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node--verbose: 97054abb4ab824450e9164180baf491ae0078465
 node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
 node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
+node--debug: 946e2bd9c565394777d74d9669045b39e856e3ea
 node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node--debug: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -406,6 +453,7 @@ node--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node--debug: 97054abb4ab824450e9164180baf491ae0078465
 node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
 node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
+parents: 
 parents: -1:000000000000 
 parents: 5:13207e5a10d9 4:32a18f097fcc 
 parents: 3:10e46f2dcbf4 
@@ -414,6 +462,7 @@ parents:
 parents: 
 parents: 
 parents: 
+parents--verbose: 
 parents--verbose: -1:000000000000 
 parents--verbose: 5:13207e5a10d9 4:32a18f097fcc 
 parents--verbose: 3:10e46f2dcbf4 
@@ -422,6 +471,7 @@ parents--verbose:
 parents--verbose: 
 parents--verbose: 
 parents--verbose: 
+parents--debug: 7:29114dbae42b9f078cf2714dbe3a86bba8ec7453 -1:0000000000000000000000000000000000000000 
 parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000 
 parents--debug: 5:13207e5a10d9fd28ec424934298e176197f2c67f 4:32a18f097fcccf76ef282f62f8a85b3adf8d13c4 
 parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000 
@@ -430,6 +480,7 @@ parents--debug: 2:97054abb4ab824450e9164180baf491ae0078465 -1:000000000000000000
 parents--debug: 1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965 -1:0000000000000000000000000000000000000000 
 parents--debug: 0:1e4e1b8f71e05681d422154f5421e385fec3454f -1:0000000000000000000000000000000000000000 
 parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000 
+rev: 8
 rev: 7
 rev: 6
 rev: 5
@@ -438,6 +489,7 @@ rev: 3
 rev: 2
 rev: 1
 rev: 0
+rev--verbose: 8
 rev--verbose: 7
 rev--verbose: 6
 rev--verbose: 5
@@ -446,6 +498,7 @@ rev--verbose: 3
 rev--verbose: 2
 rev--verbose: 1
 rev--verbose: 0
+rev--debug: 8
 rev--debug: 7
 rev--debug: 6
 rev--debug: 5
@@ -462,7 +515,9 @@ tags:
 tags: 
 tags: 
 tags: 
+tags: 
 tags--verbose: tip
+tags--verbose: 
 tags--verbose: 
 tags--verbose: 
 tags--verbose: 
@@ -478,7 +533,9 @@ tags--debug:
 tags--debug: 
 tags--debug: 
 tags--debug: 
+tags--debug: 
 # filters work
+
 hostname
 
 
@@ -487,6 +544,7 @@ hostname
 place
 place
 hostname
+test
 User Name
 person
 person
@@ -495,6 +553,7 @@ person
 other
 A. N. Other
 User Name
+test
 user
 person
 person
@@ -503,6 +562,8 @@ person
 other
 other
 user
+in the future
+Wed Jan 01 10:01:00 2020 +0000
 Mon Jan 12 13:46:40 1970 +0000
 Sun Jan 18 08:40:01 1970 +0000
 Sun Jan 18 08:40:00 1970 +0000
@@ -511,6 +572,7 @@ Fri Jan 16 01:06:40 1970 +0000
 Wed Jan 14 21:20:00 1970 +0000
 Tue Jan 13 17:33:20 1970 +0000
 Mon Jan 12 13:46:40 1970 +0000
+2020-01-01 10:01 +0000
 1970-01-12 13:46 +0000
 1970-01-18 08:40 +0000
 1970-01-18 08:40 +0000
@@ -519,6 +581,7 @@ Mon Jan 12 13:46:40 1970 +0000
 1970-01-14 21:20 +0000
 1970-01-13 17:33 +0000
 1970-01-12 13:46 +0000
+2020-01-01 10:01:00 +0000
 1970-01-12 13:46:40 +0000
 1970-01-18 08:40:01 +0000
 1970-01-18 08:40:00 +0000
@@ -527,6 +590,7 @@ Mon Jan 12 13:46:40 1970 +0000
 1970-01-14 21:20:00 +0000
 1970-01-13 17:33:20 +0000
 1970-01-12 13:46:40 +0000
+Wed, 01 Jan 2020 10:01:00 +0000
 Mon, 12 Jan 1970 13:46:40 +0000
 Sun, 18 Jan 1970 08:40:01 +0000
 Sun, 18 Jan 1970 08:40:00 +0000
@@ -535,6 +599,7 @@ Fri, 16 Jan 1970 01:06:40 +0000
 Wed, 14 Jan 1970 21:20:00 +0000
 Tue, 13 Jan 1970 17:33:20 +0000
 Mon, 12 Jan 1970 13:46:40 +0000
+third
 second
 merge
 new head
@@ -543,6 +608,7 @@ no user, no domain
 no person
 other 1
 line 1
+946e2bd9c565
 29114dbae42b
 c7b487c6c50e
 13207e5a10d9
@@ -551,6 +617,7 @@ c7b487c6c50e
 97054abb4ab8
 b608e9d1a3f0
 1e4e1b8f71e0
+<changeset author="test"/>
 <changeset author="User Name &lt;user@hostname&gt;"/>
 <changeset author="person"/>
 <changeset author="person"/>

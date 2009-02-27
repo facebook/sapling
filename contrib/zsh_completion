@@ -4,14 +4,13 @@
 # it into your zsh function path (/usr/share/zsh/site-functions for
 # instance)
 #
-# Copyright (C) 2005 Steve Borho
+# Copyright (C) 2005-6 Steve Borho
 # Copyright (C) 2006-8 Brendan Cully <brendan@kublai.com>
 #
 # This is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
 # Software Foundation; either version 2 of the License, or (at your
 # option) any later version.
-#
 
 emulate -LR zsh
 setopt extendedglob
@@ -118,27 +117,17 @@ _hg_get_commands() {
   typeset -ga _hg_cmd_list
   typeset -gA _hg_alias_list
   local hline cmd cmdalias
-  _call_program help hg --verbose help | while read -A hline
+
+  _call_program hg hg debugcomplete -v 2>/dev/null | while read -A hline
   do
-    cmd="$hline[1]"
-    case $cmd in
-      *:)
-        cmd=${cmd%:}
-        _hg_cmd_list+=($cmd)
-      ;;
-      *,)
-        cmd=${cmd%,}
-        _hg_cmd_list+=($cmd)
-        integer i=2
-        while (( i <= $#hline ))
-        do
-          cmdalias=${hline[$i]%(:|,)}
-          _hg_cmd_list+=($cmdalias)
-          _hg_alias_list+=($cmdalias $cmd)
-          (( i++ ))
-        done
-      ;;
-    esac
+    cmd=$hline[1]
+    _hg_cmd_list+=($cmd)
+
+    for cmdalias in $hline[2,-1]
+    do
+      _hg_cmd_list+=($cmdalias)
+      _hg_alias_list+=($cmdalias $cmd)
+    done
   done
 }
 

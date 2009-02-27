@@ -191,7 +191,13 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     ui.note(_("running %s\n") % (' '.join(cmd)))
     ui.debug(_("prefix=%r directory=%r root=%r\n") % (prefix, directory, root))
 
-    for line in util.popen(' '.join(cmd)):
+    pfp = util.popen(' '.join(cmd))
+    peek = pfp.readline()
+    while True:
+        line = peek
+        if line == '':
+            break
+        peek = pfp.readline()
         if line.endswith('\n'):
             line = line[:-1]
         #ui.debug('state=%d line=%r\n' % (state, line))
@@ -263,7 +269,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             if re_31.match(line):
                 state = 5
             else:
-                assert not re_32.match(line), _('Must have at least some revisions')
+                assert not re_32.match(line), _('must have at least some revisions')
 
         elif state == 5:
             # expecting revision number and possibly (ignored) lock indication
@@ -312,7 +318,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 e.branches = [tuple([int(y) for y in x.strip().split('.')])
                                 for x in m.group(1).split(';')]
                 state = 8
-            elif re_31.match(line):
+            elif re_31.match(line) and re_50.match(peek):
                 state = 5
                 store = True
             elif re_32.match(line):
@@ -584,3 +590,95 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     ui.status(_('%d changeset entries\n') % len(changesets))
 
     return changesets
+
+
+def debugcvsps(ui, *args, **opts):
+    '''Read CVS rlog for current directory or named path in repository, and
+    convert the log to changesets based on matching commit log entries and dates.'''
+
+    if opts["new_cache"]:
+        cache = "write"
+    elif opts["update_cache"]:
+        cache = "update"
+    else:
+        cache = None
+
+    revisions = opts["revisions"]
+
+    try:
+        if args:
+            log = []
+            for d in args:
+                log += createlog(ui, d, root=opts["root"], cache=cache)
+        else:
+            log = createlog(ui, root=opts["root"], cache=cache)
+    except logerror, e:
+        ui.write("%r\n"%e)
+        return
+
+    changesets = createchangeset(ui, log, opts["fuzz"])
+    del log
+
+    # Print changesets (optionally filtered)
+
+    off = len(revisions)
+    branches = {}    # latest version number in each branch
+    ancestors = {}   # parent branch
+    for cs in changesets:
+
+        if opts["ancestors"]:
+            if cs.branch not in branches and cs.parents and cs.parents[0].id:
+                ancestors[cs.branch] = changesets[cs.parents[0].id-1].branch, cs.parents[0].id
+            branches[cs.branch] = cs.id
+
+        # limit by branches
+        if opts["branches"] and (cs.branch or 'HEAD') not in opts["branches"]:
+            continue
+
+        if not off:
+            # Note: trailing spaces on several lines here are needed to have
+            #       bug-for-bug compatibility with cvsps.
+            ui.write('---------------------\n')
+            ui.write('PatchSet %d \n' % cs.id)
+            ui.write('Date: %s\n' % util.datestr(cs.date, '%Y/%m/%d %H:%M:%S %1%2'))
+            ui.write('Author: %s\n' % cs.author)
+            ui.write('Branch: %s\n' % (cs.branch or 'HEAD'))
+            ui.write('Tag%s: %s \n' % (['', 's'][len(cs.tags)>1],
+                                  ','.join(cs.tags) or '(none)'))
+            if opts["parents"] and cs.parents:
+                if len(cs.parents)>1:
+                    ui.write('Parents: %s\n' % (','.join([str(p.id) for p in cs.parents])))
+                else:
+                    ui.write('Parent: %d\n' % cs.parents[0].id)
+
+            if opts["ancestors"]:
+                b = cs.branch
+                r = []
+                while b:
+                    b, c = ancestors[b]
+                    r.append('%s:%d:%d' % (b or "HEAD", c, branches[b]))
+                if r:
+                    ui.write('Ancestors: %s\n' % (','.join(r)))
+
+            ui.write('Log:\n')
+            ui.write('%s\n\n' % cs.comment)
+            ui.write('Members: \n')
+            for f in cs.entries:
+                fn = f.file
+                if fn.startswith(opts["prefix"]):
+                    fn = fn[len(opts["prefix"]):]
+                ui.write('\t%s:%s->%s%s \n' % (fn, '.'.join([str(x) for x in f.parent]) or 'INITIAL',
+                                          '.'.join([str(x) for x in f.revision]), ['', '(DEAD)'][f.dead]))
+            ui.write('\n')
+
+        # have we seen the start tag?
+        if revisions and off:
+            if revisions[0] == str(cs.id) or \
+                revisions[0] in cs.tags:
+                off = False
+
+        # see if we reached the end tag
+        if len(revisions)>1 and not off:
+            if revisions[1] == str(cs.id) or \
+                revisions[1] in cs.tags:
+                break

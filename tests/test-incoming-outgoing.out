@@ -163,6 +163,32 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
+% limit to 2 changesets, test with -p --git
+comparing with test
+changeset:   0:9cb21d99fe27
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     0
+
+diff --git a/foo b/foo
+new file mode 100644
+--- /dev/null
++++ b/foo
+@@ -0,0 +1,1 @@
++0
+
+changeset:   1:d717f5dfad6a
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     1
+
+diff --git a/foo b/foo
+--- a/foo
++++ b/foo
+@@ -1,1 +1,2 @@
+ 0
++1
+
 comparing with http://localhost/
 changeset:   0:9cb21d99fe27
 user:        test

@@ -6,14 +6,10 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
-from repo import RepoError
 import os, sys, atexit, signal, pdb, socket, errno, shlex, time
-import util, commands, hg, lock, fancyopts, revlog, version, extensions, hook
+import util, commands, hg, lock, fancyopts, extensions, hook, error
 import cmdutil
 import ui as _ui
-
-class ParseError(Exception):
-    """Exception raised on errors in parsing the command line."""
 
 def run():
     "run the command in sys.argv"
@@ -30,7 +26,7 @@ def dispatch(args):
 
 def _runcatch(ui, args):
     def catchterm(*args):
-        raise util.SignalInterrupt
+        raise error.SignalInterrupt
 
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)
@@ -52,45 +48,53 @@ def _runcatch(ui, args):
             ui.print_exc()
             raise
 
-    except ParseError, inst:
+    # Global exception handling, alphabetically
+    # Mercurial-specific first, followed by built-in and library exceptions
+    except error.AmbiguousCommand, inst:
+        ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
+                (inst.args[0], " ".join(inst.args[1])))
+    except error.LockHeld, inst:
+        if inst.errno == errno.ETIMEDOUT:
+            reason = _('timed out waiting for lock held by %s') % inst.locker
+        else:
+            reason = _('lock held by %s') % inst.locker
+        ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
+    except error.LockUnavailable, inst:
+        ui.warn(_("abort: could not lock %s: %s\n") %
+               (inst.desc or inst.filename, inst.strerror))
+    except error.ParseError, inst:
         if inst.args[0]:
             ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
             commands.help_(ui, inst.args[0])
         else:
             ui.warn(_("hg: %s\n") % inst.args[1])
             commands.help_(ui, 'shortlist')
-    except cmdutil.AmbiguousCommand, inst:
-        ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
-                (inst.args[0], " ".join(inst.args[1])))
-    except cmdutil.UnknownCommand, inst:
+    except error.RepoError, inst:
+        ui.warn(_("abort: %s!\n") % inst)
+    except error.ResponseError, inst:
+        ui.warn(_("abort: %s") % inst.args[0])
+        if not isinstance(inst.args[1], basestring):
+            ui.warn(" %r\n" % (inst.args[1],))
+        elif not inst.args[1]:
+            ui.warn(_(" empty string\n"))
+        else:
+            ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
+    except error.RevlogError, inst:
+        ui.warn(_("abort: %s!\n") % inst)
+    except error.SignalInterrupt:
+        ui.warn(_("killed!\n"))
+    except error.UnknownCommand, inst:
         ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         commands.help_(ui, 'shortlist')
-    except RepoError, inst:
-        ui.warn(_("abort: %s!\n") % inst)
-    except lock.LockHeld, inst:
-        if inst.errno == errno.ETIMEDOUT:
-            reason = _('timed out waiting for lock held by %s') % inst.locker
-        else:
-            reason = _('lock held by %s') % inst.locker
-        ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-    except lock.LockUnavailable, inst:
-        ui.warn(_("abort: could not lock %s: %s\n") %
-               (inst.desc or inst.filename, inst.strerror))
-    except revlog.RevlogError, inst:
-        ui.warn(_("abort: %s!\n") % inst)
-    except util.SignalInterrupt:
-        ui.warn(_("killed!\n"))
-    except KeyboardInterrupt:
-        try:
-            ui.warn(_("interrupted!\n"))
-        except IOError, inst:
-            if inst.errno == errno.EPIPE:
-                if ui.debugflag:
-                    ui.warn(_("\nbroken pipe\n"))
-            else:
-                raise
-    except socket.error, inst:
-        ui.warn(_("abort: %s\n") % inst[-1])
+    except util.Abort, inst:
+        ui.warn(_("abort: %s\n") % inst)
+    except ImportError, inst:
+        m = str(inst).split()[-1]
+        ui.warn(_("abort: could not import module %s!\n") % m)
+        if m in "mpatch bdiff".split():
+            ui.warn(_("(did you forget to compile extensions?)\n"))
+        elif m in "zlib".split():
+            ui.warn(_("(is your Python install correct?)\n"))
     except IOError, inst:
         if hasattr(inst, "code"):
             ui.warn(_("abort: %s\n") % inst)
@@ -100,7 +104,7 @@ def _runcatch(ui, args):
             except: # it might be anything, for example a string
                 reason = inst.reason
             ui.warn(_("abort: error: %s\n") % reason)
-        elif hasattr(inst, "args") and inst[0] == errno.EPIPE:
+        elif hasattr(inst, "args") and inst.args[0] == errno.EPIPE:
             if ui.debugflag:
                 ui.warn(_("broken pipe\n"))
         elif getattr(inst, "strerror", None):
@@ -115,37 +119,30 @@ def _runcatch(ui, args):
             ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
         else:
             ui.warn(_("abort: %s\n") % inst.strerror)
-    except util.UnexpectedOutput, inst:
-        ui.warn(_("abort: %s") % inst[0])
-        if not isinstance(inst[1], basestring):
-            ui.warn(" %r\n" % (inst[1],))
-        elif not inst[1]:
-            ui.warn(_(" empty string\n"))
-        else:
-            ui.warn("\n%r\n" % util.ellipsis(inst[1]))
-    except ImportError, inst:
-        m = str(inst).split()[-1]
-        ui.warn(_("abort: could not import module %s!\n") % m)
-        if m in "mpatch bdiff".split():
-            ui.warn(_("(did you forget to compile extensions?)\n"))
-        elif m in "zlib".split():
-            ui.warn(_("(is your Python install correct?)\n"))
-
-    except util.Abort, inst:
-        ui.warn(_("abort: %s\n") % inst)
+    except KeyboardInterrupt:
+        try:
+            ui.warn(_("interrupted!\n"))
+        except IOError, inst:
+            if inst.errno == errno.EPIPE:
+                if ui.debugflag:
+                    ui.warn(_("\nbroken pipe\n"))
+            else:
+                raise
     except MemoryError:
         ui.warn(_("abort: out of memory\n"))
     except SystemExit, inst:
         # Commands shouldn't sys.exit directly, but give a return code.
         # Just in case catch this and and pass exit code to caller.
         return inst.code
+    except socket.error, inst:
+        ui.warn(_("abort: %s\n") % inst.args[-1])
     except:
         ui.warn(_("** unknown exception encountered, details follow\n"))
         ui.warn(_("** report bug details to "
                  "http://www.selenic.com/mercurial/bts\n"))
         ui.warn(_("** or mercurial@selenic.com\n"))
         ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
-               % version.get_version())
+               % util.version())
         ui.warn(_("** Extensions loaded: %s\n")
                % ", ".join([x[0] for x in extensions.extensions()]))
         raise
@@ -167,7 +164,7 @@ def _parse(ui, args):
     try:
         args = fancyopts.fancyopts(args, commands.globalopts, options)
     except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(None, inst)
+        raise error.ParseError(None, inst)
 
     if args:
         cmd, args = args[0], args[1:]
@@ -187,9 +184,9 @@ def _parse(ui, args):
         c.append((o[0], o[1], options[o[1]], o[3]))
 
     try:
-        args = fancyopts.fancyopts(args, c, cmdoptions)
+        args = fancyopts.fancyopts(args, c, cmdoptions, True)
     except fancyopts.getopt.GetoptError, inst:
-        raise ParseError(cmd, inst)
+        raise error.ParseError(cmd, inst)
 
     # separate global options back out
     for o in commands.globalopts:
@@ -345,7 +342,7 @@ def _dispatch(ui, args):
             if not repo.local():
                 raise util.Abort(_("repository '%s' is not local") % path)
             ui.setconfig("bundle", "mainreporoot", repo.root)
-        except RepoError:
+        except error.RepoError:
             if cmd not in commands.optionalrepo.split():
                 if args and not path: # try to infer -R from command args
                     repos = map(_findrepo, args)
@@ -353,10 +350,12 @@ def _dispatch(ui, args):
                     if guess and repos.count(guess) == len(repos):
                         return _dispatch(ui, ['--repository', guess] + fullargs)
                 if not path:
-                    raise RepoError(_("There is no Mercurial repository here"
-                                      " (.hg not found)"))
+                    raise error.RepoError(_("There is no Mercurial repository"
+                                      " here (.hg not found)"))
                 raise
         args.insert(0, repo)
+    elif rpath:
+        ui.warn("warning: --repository ignored\n")
 
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
 
@@ -374,8 +373,8 @@ def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():
         try:
             return cmdfunc()
-        except util.SignatureError:
-            raise ParseError(cmd, _("invalid arguments"))
+        except error.SignatureError:
+            raise error.ParseError(cmd, _("invalid arguments"))
 
     if options['profile']:
         import hotshot, hotshot.stats

@@ -2,10 +2,10 @@
 % init
 adding foo to series file
 applying foo
-Now at: foo
+now at: foo
 adding bar to series file
 applying bar
-Now at: bar
+now at: bar
 430ed4828a74fa4047bc816a25500f7472ab4bfe:foo
 4e7abb4840c46a910f6d7b4d3c3fc7e5209e684c:bar
 %

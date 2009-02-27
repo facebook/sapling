@@ -80,9 +80,7 @@ def snapshot_wdir(ui, repo, files, tmproot):
     '''snapshot files from working directory.
     if not using snapshot, -I/-X does not work and recursive diff
     in tools like kdiff3 and meld displays too many files.'''
-    repo_root = repo.root
-
-    dirname = os.path.basename(repo_root)
+    dirname = os.path.basename(repo.root)
     if dirname == "":
         dirname = "root"
     base = os.path.join(tmproot, dirname)
@@ -105,8 +103,7 @@ def snapshot_wdir(ui, repo, files, tmproot):
             fp.write(chunk)
         fp.close()
 
-        fns_and_mtime.append((dest, os.path.join(repo_root, fn),
-            os.path.getmtime(dest)))
+        fns_and_mtime.append((dest, repo.wjoin(fn), os.path.getmtime(dest)))
 
 
     return dirname, fns_and_mtime
@@ -120,7 +117,19 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
       another one and more than 1 file is changed
     - just invoke the diff for a single file in the working dir
     '''
-    node1, node2 = cmdutil.revpair(repo, opts['rev'])
+
+    revs = opts.get('rev')
+    change = opts.get('change')
+
+    if revs and change:
+        msg = _('cannot specify --rev and --change at the same time')
+        raise util.Abort(msg)
+    elif change:
+        node2 = repo.lookup(change)
+        node1 = repo[node2].parents()[0].node()
+    else:
+        node1, node2 = cmdutil.revpair(repo, revs)
+
     matcher = cmdutil.match(repo, pats, opts)
     modified, added, removed = repo.status(node1, node2, matcher)[:3]
     if not (modified or added or removed):
@@ -169,7 +178,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
             if os.path.getmtime(copy_fn) != mtime:
-                ui.debug(_('File changed while diffing. '
+                ui.debug(_('file changed while diffing. '
                          'Overwriting: %s (src: %s)\n') % (working_fn, copy_fn))
                 util.copyfile(copy_fn, working_fn)
 
@@ -208,6 +217,7 @@ cmdtable = {
      [('p', 'program', '', _('comparison program to run')),
       ('o', 'option', [], _('pass option to comparison program')),
       ('r', 'rev', [], _('revision')),
+      ('c', 'change', '', _('change made by revision')),
      ] + commands.walkopts,
      _('hg extdiff [OPT]... [FILE]...')),
     }

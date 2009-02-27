@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# test that a commit clears the merge state.
+
+hg init repo
+cd repo
+
+echo foo > file
+hg commit -Am 'add file' -d '0 0'
+
+echo bar >> file
+hg commit -Am 'append bar' -d '0 0'
+
+echo % create a second head
+hg up -C 0
+echo baz >> file
+hg commit -Am 'append baz' -d '0 0'
+
+echo % failing merge
+HGMERGE=internal:fail hg merge
+
+echo resolved > file
+hg resolve -m file
+hg commit -m 'resolved' -d '0 0'
+
+echo % resolve -l, should be empty
+hg resolve -l

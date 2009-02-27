@@ -84,3 +84,17 @@ hg --cwd b rollback
 hg --traceback --cwd b pull ../a 2>&1 | sed -e 's/\(Message-Id:\).*/\1/' \
   -e 's/changeset \([0-9a-f]*\) in .*/changeset \1/' \
   -e 's/^Date:.*/Date:/'
+
+echo % test merge
+cd a
+hg up -C 0
+echo a >> a
+hg ci -Am adda2 -d '2 0'
+hg merge
+hg ci -m merge -d '3 0'
+cd ..
+
+hg --traceback --cwd b pull ../a 2>&1 | sed -e 's/\(Message-Id:\).*/\1/' \
+  -e 's/changeset \([0-9a-f]*\) in .*/changeset \1/' \
+  -e 's/^Date:.*/Date:/'
+

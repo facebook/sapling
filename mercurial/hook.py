@@ -49,7 +49,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                              (hname, funcname))
     try:
         r = obj(ui=ui, repo=repo, hooktype=name, **args)
-    except (KeyboardInterrupt, util.SignalInterrupt):
+    except KeyboardInterrupt:
         raise
     except Exception, exc:
         if isinstance(exc, util.Abort):
@@ -70,7 +70,13 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
 
 def _exthook(ui, repo, name, cmd, args, throw):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
-    env = dict([('HG_' + k.upper(), v) for k, v in args.iteritems()])
+
+    env = {}
+    for k, v in args.iteritems():
+        if callable(v):
+            v = v()
+        env['HG_' + k.upper()] = v
+
     if repo:
         cwd = repo.root
     else:

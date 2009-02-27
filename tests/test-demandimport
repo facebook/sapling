@@ -18,13 +18,6 @@ print "os =", f(os)
 print "os.system =", f(os.system)
 print "os =", f(os)
 
-import mercurial.version
-
-print "mercurial.version =", f(mercurial.version)
-print "mercurial.version.get_version =", f(mercurial.version.get_version)
-print "mercurial.version =", f(mercurial.version)
-print "mercurial =", f(mercurial)
-
 from mercurial import util
 
 print "util =", f(util)

@@ -75,7 +75,7 @@ def loadall(ui):
             path = os.path.expanduser(path)
         try:
             load(ui, name, path)
-        except (util.SignalInterrupt, KeyboardInterrupt):
+        except KeyboardInterrupt:
             raise
         except Exception, inst:
             if path:
