@@ -11,7 +11,22 @@ import difflib
 import errno
 import optparse
 import os
-import popen2
+try:
+    import subprocess
+    subprocess.Popen  # trigger ImportError early
+    closefds = os.name == 'posix'
+    def Popen4(cmd, bufsize=-1):
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                             close_fds=closefds,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        p.fromchild = p.stdout
+        p.tochild = p.stdin
+        p.childerr = p.stderr
+        return p
+except ImportError:
+    subprocess = None
+    from popen2 import Popen4
 import shutil
 import signal
 import sys
@@ -281,7 +296,7 @@ def run(cmd):
         if ret == None:
             ret = 0
     else:
-        proc = popen2.Popen4(cmd)
+        proc = Popen4(cmd)
         try:
             output = ''
             proc.tochild.close()
