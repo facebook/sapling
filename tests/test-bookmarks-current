@@ -42,3 +42,14 @@ hg commit -m'test'
 
 echo % list bookmarks
 hg bookmark
+
+echo % delete bookmarks
+hg bookmark -d Y
+hg bookmark -d Z
+
+echo % list bookmarks
+hg bookmark
+
+echo % update to tip
+hg update tip
+

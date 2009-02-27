@@ -100,7 +100,7 @@ def setcurrent(repo, mark):
     refs = parse(repo)
 
     # do not update if we do update to a rev equal to the current bookmark
-    if (mark not in refs and
+    if (mark and mark not in refs and
         current(repo) and refs[current(repo)] == repo.changectx('.').node()):
         return
     if mark not in refs:
@@ -146,6 +146,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             raise util.Abort(_("bookmark name required"))
         if mark not in marks:
             raise util.Abort(_("a bookmark of this name does not exist"))
+        if mark == current(repo):
+            setcurrent(repo, None)
         del marks[mark]
         write(repo, marks)
         return
