@@ -134,21 +134,27 @@ HGRCPATH::
     platform default search path is used.  If empty, only the .hg/hgrc
     from the current repository is read.
 
-    For each element in path, if a directory, all entries in directory
-    ending with ".rc" are added to path.  Else, element itself is
-    added to path.
+    For each element in HGRCPATH:
+    * if it's a directory, all directories ending with .rc are added
+    * otherwise, the directory itself will be added
 
 HGUSER::
-    This is the string used as the author of a commit.
+    This is the string used as the author of a commit. If not set,
+    available values will be considered in this order:
+
+    * HGUSER (deprecated)
+    * hgrc files from the HGRCPATH
+    * EMAIL
+    * interactive prompt
+    * LOGNAME (with '@hostname' appended)
 
     (deprecated, use .hgrc)
 
 EMAIL::
-    If HGUSER is not set, this will be used as the author for a commit.
+    May be used as the author of a commit; see HGUSER.
 
 LOGNAME::
-    If neither HGUSER nor EMAIL is set, LOGNAME will be used (with
-    '@hostname' appended) as the author value of a commit.
+    May be used as the author of a commit; see HGUSER.
 
 VISUAL::
     This is the name of the editor to use when committing. See EDITOR.
