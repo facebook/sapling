@@ -41,9 +41,9 @@ helptable = (
 
     The log command also accepts date ranges:
 
-    "<{date}" - on or before a given date
-    ">{date}" - on or after a given date
-    "{date} to {date}" - a date range, inclusive
+    "<{datetime}" - at or before a given date/time
+    ">{datetime}" - on or after a given date/time
+    "{datetime} to {datetime}" - a date range, inclusive
     "-{days}" - within a given number of days of today
     ''')),
 
@@ -57,16 +57,16 @@ helptable = (
 
     Alternate pattern notations must be specified explicitly.
 
-    To use a plain path name without any pattern matching, start a
-    name with "path:".  These path names must match completely, from
-    the root of the current repository.
+    To use a plain path name without any pattern matching, start it
+    with "path:".  These path names must completely match starting at
+    the current repository root.
 
     To use an extended glob, start a name with "glob:".  Globs are
-    rooted at the current directory; a glob such as "*.c" will match
-    files ending in ".c" in the current directory only.
+    rooted at the current directory; a glob such as "*.c" will only
+    match files in the current directory ending with ".c".
 
     The supported glob syntax extensions are "**" to match any string
-    across path separators, and "{a,b}" to mean "a or b".
+    across path separators and "{a,b}" to mean "a or b".
 
     To use a Perl/Python regular expression, start a name with "re:".
     Regexp pattern matching is anchored at the root of the repository.
@@ -81,11 +81,11 @@ helptable = (
 
     glob:*.c       any name ending in ".c" in the current directory
     *.c            any name ending in ".c" in the current directory
-    **.c           any name ending in ".c" in the current directory, or
-                   any subdirectory
+    **.c           any name ending in ".c" in any subdirectory of the
+                   current directory including itself.
     foo/*.c        any name ending in ".c" in the directory foo
-    foo/**.c       any name ending in ".c" in the directory foo, or any
-                   subdirectory
+    foo/**.c       any name ending in ".c" in any subdirectory of foo
+                   including itself.
 
     Regexp examples:
 
@@ -97,11 +97,13 @@ helptable = (
      _(r'''
 HG::
     Path to the 'hg' executable, automatically passed when running hooks,
-    extensions or external tools. If unset or empty, an executable named
-    'hg' (with com/exe/bat/cmd extension on Windows) is searched.
+    extensions or external tools. If unset or empty, this is the hg
+    exutable's name if it's frozen, or an executable named 'hg'
+    (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on
+    Windows) is searched.
 
 HGEDITOR::
-    This is the name of the editor to use when committing. See EDITOR.
+    This is the name of the editor to run when committing. See EDITOR.
 
     (deprecated, use .hgrc)
 
@@ -113,8 +115,8 @@ HGENCODING::
 
 HGENCODINGMODE::
     This sets Mercurial's behavior for handling unknown characters
-    while transcoding user inputs. The default is "strict", which
-    causes Mercurial to abort if it can't translate a character. Other
+    while transcoding user input. The default is "strict", which
+    causes Mercurial to abort if it can't map a character. Other
     settings include "replace", which replaces unknown characters, and
     "ignore", which drops them. This setting can be overridden with
     the --encodingmode command-line option.
@@ -129,15 +131,15 @@ HGMERGE::
 HGRCPATH::
     A list of files or directories to search for hgrc files.  Item
     separator is ":" on Unix, ";" on Windows.  If HGRCPATH is not set,
-    platform default search path is used.  If empty, only .hg/hgrc of
-    current repository is read.
+    platform default search path is used.  If empty, only the .hg/hgrc
+    from the current repository is read.
 
     For each element in path, if a directory, all entries in directory
     ending with ".rc" are added to path.  Else, element itself is
     added to path.
 
 HGUSER::
-    This is the string used for the author of a commit.
+    This is the string used as the author of a commit.
 
     (deprecated, use .hgrc)
 
@@ -146,7 +148,7 @@ EMAIL::
 
 LOGNAME::
     If neither HGUSER nor EMAIL is set, LOGNAME will be used (with
-    '@hostname' appended) as the author value for a commit.
+    '@hostname' appended) as the author value of a commit.
 
 VISUAL::
     This is the name of the editor to use when committing. See EDITOR.
@@ -161,17 +163,19 @@ EDITOR::
 
 PYTHONPATH::
     This is used by Python to find imported modules and may need to be set
-    appropriately if Mercurial is not installed system-wide.
+    appropriately if this Mercurial is not installed system-wide.
     ''')),
 
     (['revs', 'revisions'], _('Specifying Single Revisions'),
      _(r'''
-    Mercurial accepts several notations for identifying individual
+    Mercurial supports several ways to specify individual
     revisions.
 
     A plain integer is treated as a revision number. Negative
-    integers are treated as offsets from the tip, with -1 denoting the
-    tip.
+    integers are treated as toplogical offsets from the tip, with
+    -1 denoting the tip. As such, negative numbers are only useful
+    if you've memorized your local tree numbers and want to save
+    typing a single digit. This editor suggests copy and paste.
 
     A 40-digit hexadecimal string is treated as a unique revision
     identifier.
@@ -179,7 +183,7 @@ PYTHONPATH::
     A hexadecimal string less than 40 characters long is treated as a
     unique revision identifier, and referred to as a short-form
     identifier. A short-form identifier is only valid if it is the
-    prefix of one full-length identifier.
+    prefix of exactly one full-length identifier.
 
     Any other string is treated as a tag name, which is a symbolic
     name associated with a revision identifier. Tag names may not
@@ -200,8 +204,8 @@ PYTHONPATH::
     (['mrevs', 'multirevs'], _('Specifying Multiple Revisions'),
      _(r'''
     When Mercurial accepts more than one revision, they may be
-    specified individually, or provided as a continuous range,
-    separated by the ":" character.
+    specified individually, or provided as a topologically continuous
+    range, separated by the ":" character.
 
     The syntax of range notation is [BEGIN]:[END], where BEGIN and END
     are revision identifiers. Both BEGIN and END are optional. If
@@ -213,7 +217,7 @@ PYTHONPATH::
     order.
 
     A range acts as a closed interval. This means that a range of 3:5
-    gives 3, 4 and 5. Similarly, a range of 4:2 gives 4, 3, and 2.
+    gives 3, 4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.
     ''')),
 
     (['diffs'], _('Diff Formats'),
@@ -225,14 +229,14 @@ PYTHONPATH::
     While this standard format is often enough, it does not encode the
     following information:
 
-     - executable status
+     - executable status and other permission bits
      - copy or rename information
      - changes in binary files
      - creation or deletion of empty files
 
     Mercurial also supports the extended diff format from the git VCS
     which addresses these limitations. The git diff format is not
-    produced by default because there are very few tools which
+    produced by default because a few widespread tools still do not
     understand this format.
 
     This means that when generating diffs from a Mercurial repository
@@ -255,7 +259,7 @@ PYTHONPATH::
     via the --template option, or select an existing template-style (--style).
 
     You can customize output for any "log-like" command: log, outgoing,
-    incoming, tip, parents, heads and glog are all template-enabled.
+    incoming, tip, parents, heads and glog.
 
     Three styles are packaged with Mercurial: default (the style used
     when no explicit preference is passed), compact and changelog. Usage:
@@ -290,7 +294,7 @@ PYTHONPATH::
     The "date" keyword does not produce human-readable output. If you
     want to use a date in your output, you can use a filter to process it.
     Filters are functions which return a string based on the input variable.
-    You can also use a chain of filters to get the wanted output:
+    You can also use a chain of filters to get the desired output:
 
        $ hg tip --template "{date|isodate}\n"
        2008-08-21 18:22 +0000
@@ -346,7 +350,7 @@ PYTHONPATH::
     'hg incoming --bundle').
 
     An optional identifier after # indicates a particular branch, tag,
-    or changeset to deal with in the remote repository.
+    or changeset to use from the remote repository.
 
     Some features, such as pushing to http:// and https:// URLs are
     only possible if the feature is explicitly enabled on the
@@ -377,13 +381,14 @@ PYTHONPATH::
     You can then use the alias for any command that uses a url (for example
     'hg pull alias1' would pull from the 'alias1' path).
 
-    Two path aliases are more important because they are used as defaults
+    Two path aliases are special because they are used as defaults
     when you do not provide the url to a command:
 
     default:
       When you create a repository with hg clone, the clone command saves
-      the location of the source repository as the 'default' path. This is
-      then used when you omit a path from the push and pull commands.
+      the location of the source repository as the new repository's
+      'default' path. This is then used when you omit path from push-
+      and pull-like commands (including in and out).
 
     default-push:
       The push command will look for a path named 'default-push', and
