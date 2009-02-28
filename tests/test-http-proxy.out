@@ -48,7 +48,7 @@ added 1 changesets with 1 changes to 1 files
 updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 %% bad host:port for proxy
-abort: error: Connection refused
+abort: error:
 %% do not use the proxy if it is in the no list
 requesting all changes
 adding changesets

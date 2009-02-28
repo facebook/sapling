@@ -36,7 +36,8 @@ echo %% url with user name and password
 http_proxy=http://user:passwd@localhost:$HGPORT1 hg clone --config http_proxy.always=True http://user:passwd@localhost:$HGPORT/ e
 
 echo %% bad host:port for proxy
-http_proxy=localhost:$HGPORT2 hg clone --config http_proxy.always=True http://localhost:$HGPORT/ f
+http_proxy=localhost:$HGPORT2 hg clone --config http_proxy.always=True http://localhost:$HGPORT/ f 2>&1 | \
+	sed 's/error:.*/error:/'
 
 echo %% do not use the proxy if it is in the no list
 http_proxy=localhost:$HGPORT1 hg clone --config http_proxy.no=localhost http://localhost:$HGPORT/ g
