@@ -1,6 +1,8 @@
 % no bookmarks
 no bookmarks set
 % set bookmark X
+% list bookmarks
+ * X                         -1:000000000000
 % update to bookmark X
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % list bookmarks
@@ -10,9 +12,9 @@ no bookmarks set
  * Z                         -1:000000000000
 % new bookmark Y
 % list bookmarks
-   Y                         -1:000000000000
- * Z                         -1:000000000000
+ * Y                         -1:000000000000
+   Z                         -1:000000000000
 % commit
 % list bookmarks
-   Y                         -1:000000000000
- * Z                         0:719295282060
+ * Y                         0:719295282060
+   Z                         -1:000000000000
