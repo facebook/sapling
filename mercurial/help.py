@@ -58,10 +58,10 @@ helptable = (
     Alternate pattern notations must be specified explicitly.
 
     To use a plain path name without any pattern matching, start it
-    with "path:".  These path names must completely match starting at
+    with "path:". These path names must completely match starting at
     the current repository root.
 
-    To use an extended glob, start a name with "glob:".  Globs are
+    To use an extended glob, start a name with "glob:". Globs are
     rooted at the current directory; a glob such as "*.c" will only
     match files in the current directory ending with ".c".
 
@@ -129,9 +129,9 @@ HGMERGE::
     (deprecated, use .hgrc)
 
 HGRCPATH::
-    A list of files or directories to search for hgrc files.  Item
-    separator is ":" on Unix, ";" on Windows.  If HGRCPATH is not set,
-    platform default search path is used.  If empty, only the .hg/hgrc
+    A list of files or directories to search for hgrc files. Item
+    separator is ":" on Unix, ";" on Windows. If HGRCPATH is not set,
+    platform default search path is used. If empty, only the .hg/hgrc
     from the current repository is read.
 
     For each element in HGRCPATH:
