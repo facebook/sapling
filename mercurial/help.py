@@ -309,15 +309,20 @@ PYTHONPATH::
 
     - addbreaks: Any text. Add an XHTML "<br />" tag before the end of
           every line except the last.
-    - age: Date. Returns a human-readable age for the given date.
+    - age: Date. Returns a human-readable date/time difference between
+          the given date/time and the current date/time.
     - basename: Any text. Treats the text as a path, and returns the
-          basename. For example, "foo/bar/baz" becomes "baz".
-    - date: Date. Returns a date in a Unix date command format, including
+          last component of the path after splitting by the path
+          separator (ignoring trailing seprators). For example,
+          "foo/bar/baz" becomes "baz" and "foo/bar//" becomes "bar".
+    - date: Date. Returns a date in a Unix date format, including
           the timezone: "Mon Sep 04 15:13:13 2006 0700".
     - domain: Any text. Finds the first string that looks like an email
           address, and extracts just the domain component.
+          Example: 'User <user@example.com>' becomes 'example.com'.
     - email: Any text. Extracts the first string that looks like an email
-          address.
+          address. Example: 'User <user@example.com>' becomes
+          'user@example.com'.
     - escape: Any text. Replaces the special XML/XHTML characters "&",
           "<" and ">" with XML entities.
     - fill68: Any text. Wraps the text to fit in 68 columns.
@@ -333,7 +338,7 @@ PYTHONPATH::
           in email headers.
     - short: Changeset hash. Returns the short form of a changeset hash,
           i.e. a 12-byte hexadecimal string.
-    - shortdate: Date. Returns a date like "2006-09-04".
+    - shortdate: Date. Returns a date like "2006-09-18".
     - strip: Any text. Strips all leading and trailing whitespace.
     - tabindent: Any text. Returns the text, with every line except the
           first starting with a tab character.
