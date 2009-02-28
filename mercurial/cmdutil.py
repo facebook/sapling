@@ -940,10 +940,10 @@ def finddate(ui, repo, date):
     raise util.Abort(_("revision matching date not found"))
 
 def walkchangerevs(ui, repo, pats, change, opts):
-    '''Iterate over files and the revs they changed in.
+    '''Iterate over files and the revs in which they changed.
 
     Callers most commonly need to iterate backwards over the history
-    it is interested in.  Doing so has awful (quadratic-looking)
+    in which they are interested. Doing so has awful (quadratic-looking)
     performance, so we use iterators in a "windowed" way.
 
     We walk a window of revisions in the desired order.  Within the

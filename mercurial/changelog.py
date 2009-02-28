@@ -24,7 +24,7 @@ def _string_escape(text):
     return text.replace('\0', '\\0')
 
 class appender:
-    '''the changelog index must be update last on disk, so we use this class
+    '''the changelog index must be updated last on disk, so we use this class
     to delay writes to it'''
     def __init__(self, fp, buf):
         self.data = buf

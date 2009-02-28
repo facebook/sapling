@@ -48,7 +48,7 @@ The "-m" (mbox) option is also very useful.  Instead of previewing
 each patchbomb message in a pager or sending the messages directly,
 it will create a UNIX mailbox file with the patch emails.  This
 mailbox file can be previewed with any mail user agent which supports
-UNIX mbox files, i.e. with mutt:
+UNIX mbox files, e.g. with mutt:
 
   % mutt -R -f mbox
 
@@ -444,7 +444,7 @@ def patchbomb(ui, repo, *revs, **opts):
 emailopts = [
           ('a', 'attach', None, _('send patches as attachments')),
           ('i', 'inline', None, _('send patches as inline attachments')),
-          ('', 'bcc', [], _('email addresses of blind copy recipients')),
+          ('', 'bcc', [], _('email addresses of blind carbon copy recipients')),
           ('c', 'cc', [], _('email addresses of copy recipients')),
           ('d', 'diffstat', None, _('add diffstat output to messages')),
           ('', 'date', '', _('use the given date as the sending date')),

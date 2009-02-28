@@ -169,7 +169,7 @@ add the specified files on the next commit
     The files will be added to the repository at the next commit. To
     undo an add before that, see hg revert.
 
-    If no names are given, add all files in the repository.
+    If no names are given, add all files to the repository.
 
 options:
 
@@ -188,7 +188,7 @@ add the specified files on the next commit
     The files will be added to the repository at the next commit. To
     undo an add before that, see hg revert.
 
-    If no names are given, add all files in the repository.
+    If no names are given, add all files to the repository.
 
 options:
 
@@ -220,7 +220,7 @@ diff repository (or selected files)
     probably with undesirable results.
 
     Use the --git option to generate diffs in the git extended diff
-    format. Read the diffs help topic for more information.
+    format. For more information, read hg help diffs.
 
 options:
 

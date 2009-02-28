@@ -23,7 +23,7 @@ def add(ui, repo, *pats, **opts):
     The files will be added to the repository at the next commit. To
     undo an add before that, see hg revert.
 
-    If no names are given, add all files in the repository.
+    If no names are given, add all files to the repository.
     """
 
     rejected = None
@@ -184,7 +184,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     The --merge option remembers the parent of the working directory
     before starting the backout, then merges the new head with that
     changeset afterwards. This saves you from doing the merge by
-    hand. The result of this merge is not committed, as for a normal
+    hand. The result of this merge is not committed, as with a normal
     merge.
 
     See \'hg help dates\' for a list of formats valid for -d/--date.
@@ -277,7 +277,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     If you supply a command it will be used for automatic bisection. Its exit
     status will be used as flag to mark revision as bad or good. In case exit
     status is 0 the revision is marked as good, 125 - skipped, 127 (command not
-    found) - bisection will be aborted and any other status bigger than 0 will
+    found) - bisection will be aborted; any other status bigger than 0 will
     mark revision as bad.
     """
     def print_result(nodes, good):
@@ -456,7 +456,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
 
     Generate a compressed changegroup file collecting changesets not
-    found in the other repository.
+    known to be in another repository.
 
     If no destination repository is specified the destination is
     assumed to have all the nodes specified by one or more --base
@@ -614,7 +614,7 @@ def commit(ui, repo, *pats, **opts):
     file names or -I/-X filters.
 
     If no commit message is specified, the configured editor is started to
-    enter a message.
+    prompt you for a message.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
@@ -653,13 +653,13 @@ def copy(ui, repo, *pats, **opts):
 
     Mark dest as having copies of source files. If dest is a
     directory, copies are put in that directory. If dest is a file,
-    there can only be one source.
+    the source must be a single file.
 
     By default, this command copies the contents of files as they
     stand in the working directory. If invoked with --after, the
     operation is recorded, but no copying is performed.
 
-    This command takes effect in the next commit. To undo a copy
+    This command takes effect with the next commit. To undo a copy
     before that, see hg revert.
     """
     wlock = repo.wlock(False)
@@ -1023,7 +1023,7 @@ def diff(ui, repo, *pats, **opts):
     probably with undesirable results.
 
     Use the --git option to generate diffs in the git extended diff
-    format. Read the diffs help topic for more information.
+    format. For more information, read hg help diffs.
     """
 
     revs = opts.get('rev')
@@ -1857,8 +1857,8 @@ def log(ui, repo, *pats, **opts):
     files and full commit message is shown.
 
     NOTE: log -p may generate unexpected diff output for merge
-    changesets, as it will compare the merge changeset against its
-    first parent only. Also, the files: list will only reflect files
+    changesets, as it will only compare the merge changeset against
+    its first parent. Also, the files: list will only reflect files
     that are different from BOTH parents.
 
     """
@@ -2312,10 +2312,10 @@ def rename(ui, repo, *pats, **opts):
     a file, there can only be one source.
 
     By default, this command copies the contents of files as they
-    stand in the working directory. If invoked with --after, the
+    exist in the working directory. If invoked with --after, the
     operation is recorded, but no copying is performed.
 
-    This command takes effect in the next commit. To undo a rename
+    This command takes effect at the next commit. To undo a rename
     before that, see hg revert.
     """
     wlock = repo.wlock(False)
