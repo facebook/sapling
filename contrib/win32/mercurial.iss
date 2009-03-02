@@ -42,6 +42,7 @@ Source: dist\msvcr71.dll; DestDir: {app}
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
+Source: locale\*.*; DestDir: {app}\locale; Flags: recursesubdirs createallsubdirs
 Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: COPYING; DestDir: {app}; DestName: Copying.txt
