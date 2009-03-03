@@ -35,7 +35,7 @@ class TestFetchBranches(test_util.TestBase):
                                             stupid)
         self.assertEqual(node.hex(repo['default'].node()),
                          '14d252aef315857df241dd3fa4bc7833b09bd2f5')
-        self.assertEqual(repo['tip'].parents()[0].branch(), 'dev_branch')
+        self.assertEqual(repo['default'].parents()[0].branch(), 'dev_branch')
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
 
     def test_renamed_branch_to_trunk_stupid(self):
