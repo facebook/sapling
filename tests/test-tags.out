@@ -60,21 +60,21 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     Removed tag bar
 
-tip                                5:d8bb4d1eff25
+tip                                5:e86d7ed95fd3
 bar                                0:b409d9da318e
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
-tip                                6:b5ff9d142648
+tip                                6:b744fbe1f6dd
 bar                                0:b409d9da318e
 abort: tag 'bar' already exists (use -f to force)
-tip                                6:b5ff9d142648
+tip                                6:b744fbe1f6dd
 bar                                0:b409d9da318e
 adding foo
-tip                                3:ca8479b4351c
-bar                                2:72b852876a42
+tip                                3:197c21bbbf2c
+bar                                2:6fa450212aeb
 % bar should still point to rev 2
-tip                                4:40af5d225513
-bar                                2:72b852876a42
+tip                                4:3b4b14ed0202
+bar                                2:6fa450212aeb
 adding foo
 abort: tag 'localtag' is not a global tag
 abort: tag 'globaltag' is not a local tag

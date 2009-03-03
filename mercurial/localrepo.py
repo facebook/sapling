@@ -227,6 +227,7 @@ class localrepository(repo.repository):
                 raise util.Abort(_('working copy of .hgtags is changed '
                                    '(please commit .hgtags manually)'))
 
+        self.tags() # instantiate the cache
         self._tag(names, node, message, local, user, date)
 
     def tags(self):
