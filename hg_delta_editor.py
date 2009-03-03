@@ -166,41 +166,111 @@ class HgChangeReceiver(delta.Editor):
         pickle_atomic(self.branches, self.branch_info_file, self.meta_data_dir)
         pickle_atomic(self.tags, self.tag_info_file, self.meta_data_dir)
 
-    def branches_in_paths(self, paths):
+    def branches_in_paths(self, paths, revnum, checkpath, listdir):
         '''Given a list of paths, return mapping of all branches touched
         to their branch path.
         '''
         branches = {}
+        paths_need_discovery = []
         for p in paths:
             relpath, branch, branchpath = self._split_branch_path(p)
             if relpath is not None:
                 branches[branch] = branchpath
+            elif paths[p].action == 'D' and not self._is_path_tag(p):
+                ln = self._localname(p)
+                # must check in branches_to_delete as well, because this runs after we
+                # already updated the branch map
+                if ln in self.branches or ln in self.branches_to_delete:
+                    branches[self._localname(p)] = p
+            else:
+                paths_need_discovery.append(p)
+        if paths_need_discovery:
+            paths_need_discovery = [(len(p), p) for p in paths_need_discovery]
+            paths_need_discovery.sort()
+            paths_need_discovery = [p[1] for p in paths_need_discovery]
+            actually_files = []
+            while paths_need_discovery:
+                p = paths_need_discovery.pop(0)
+                path_could_be_file = True
+                # TODO(augie) Figure out if you can use break here in a for loop, quick
+                # testing of that failed earlier.
+                ind = 0
+                while ind < len(paths_need_discovery) and not paths_need_discovery:
+                    if op.startswith(p):
+                        path_could_be_file = False
+                    ind += 1
+                if path_could_be_file:
+                    if checkpath(p, revnum) == 'f':
+                        actually_files.append(p)
+                    # if there's a copyfrom_path and there were files inside that copyfrom,
+                    # we need to detect those branches. It's a little thorny and slow, but
+                    # seems to be the best option.
+                    elif paths[p].copyfrom_path and not p.startswith('tags/'):
+                        paths_need_discovery.extend(['%s/%s' % (p,x[0])
+                                                     for x in listdir(p, revnum)
+                                                     if x[1] == 'f'])
+            if actually_files:
+                filepaths = [p.split('/') for p in actually_files]
+                filepaths = [(len(p), p) for p in filepaths]
+                filepaths.sort()
+                filepaths = [p[1] for p in filepaths]
+                while filepaths:
+                    path = filepaths.pop(0)
+                    parentdir = '/'.join(path[:-1])
+                    filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
+                    branchpath = self._normalize_path(parentdir)
+                    branchname = self._localname(branchpath)
+                    branches[branchname] = branchpath
+
         return branches
 
-    def _path_and_branch_for_path(self, path):
-        return self._split_branch_path(path)[:2]
+    def _path_and_branch_for_path(self, path, existing=True):
+        return self._split_branch_path(path, existing=existing)[:2]
 
-    def _split_branch_path(self, path):
+    def _localname(self, path):
+        """Compute the local name for a branch located at path.
+        """
+        assert not path.startswith('tags/')
+        if path == 'trunk':
+            return None
+        elif path.startswith('branches/'):
+            return path[len('branches/'):]
+        return  '../%s' % path
+
+    def _remotename(self, branch):
+        if branch == 'default' or branch is None:
+            return 'trunk'
+        elif branch.startswith('../'):
+            return branch[3:]
+        return 'branches/%s' % branch
+
+    def _split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
 
-        Raises an exception if it can't perform its job.
+        Returns a tuple of (path within branch, local branch name, server-side branch path).
+
+        If existing=True, will return None, None, None if the file isn't on some known
+        branch. If existing=False, then it will guess what the branch would be if it were
+        known.
         """
         path = self._normalize_path(path)
-        if path.startswith('trunk'):
-            p = path[len('trunk'):]
-            if p and p[0] == '/':
-                p = p[1:]
-            return p, None, 'trunk'
-        elif path.startswith('branches/'):
-            p = path[len('branches/'):]
-            br = p.split('/')[0]
-            if br:
-                p = p[len(br)+1:]
-                if p and p[0] == '/':
-                    p = p[1:]
-                return p, br, 'branches/' + br
-        return None, None, None
+        if path.startswith('tags/'):
+            return None, None, None
+        test = ''
+        path_comps = path.split('/')
+        while self._localname(test) not in self.branches and len(path_comps):
+            if not test:
+                test = path_comps.pop(0)
+            else:
+                test += '/%s' % path_comps.pop(0)
+        if self._localname(test) in self.branches:
+            return path[len(test)+1:], self._localname(test), test
+        if existing:
+            return None, None, None
+        path = test.split('/')[-1]
+        test = '/'.join(test.split('/')[:-1])
+        return path, self._localname(test), test
 
     def set_current_rev(self, rev):
         """Set the revision we're currently converting.
@@ -234,7 +304,7 @@ class HgChangeReceiver(delta.Editor):
         if path and path[0] == '/':
             path = path[1:]
         return path
-        
+
     def _is_file_included(self, subpath):
         def checkpathinmap(path, mapping):
             def rpairs(name):
@@ -243,14 +313,14 @@ class HgChangeReceiver(delta.Editor):
                 while e != -1:
                     yield name[:e], name[e+1:]
                     e = name.rfind('/', 0, e)
-            
+
             for pre, suf in rpairs(path):
                 try:
                     return mapping[pre]
                 except KeyError, err:
                     pass
             return None
-        
+
         if len(self.includepaths) and len(subpath):
             inc = checkpathinmap(subpath, self.includepaths)
         else:
@@ -268,10 +338,13 @@ class HgChangeReceiver(delta.Editor):
         if subpath is None:
             return False
         return self._is_file_included(subpath)
-        
+
 
     def _is_path_tag(self, path):
-        """If path represents the path to a tag, returns the tag name.
+        """If path could represent the path to a tag, returns the potential tag name.
+
+        Note that it's only a tag if it was copied from the path '' in a branch (or tag)
+        we have, for our purposes.
 
         Otherwise, returns False.
         """
@@ -279,7 +352,7 @@ class HgChangeReceiver(delta.Editor):
         for tags_path in self.tag_locations:
             if path and (path.startswith(tags_path) and
                          len(path) > len('%s/' % tags_path)):
-                return path[len(tags_path)+1:].split('/')[0]
+                return path[len(tags_path)+1:]
         return False
 
     def get_parent_svn_branch_and_rev(self, number, branch):
@@ -321,6 +394,28 @@ class HgChangeReceiver(delta.Editor):
             return self.revmap[r, br]
         return revlog.nullid
 
+    def _svnpath(self, branch):
+        """Return the relative path in svn of branch.
+        """
+        if branch == None or branch == 'default':
+            return 'trunk'
+        elif branch.startswith('../'):
+            return branch[3:]
+        return 'branches/%s' % branch
+
+    def __determine_parent_branch(self, p, src_path, src_rev, revnum):
+        if src_path is not None:
+            src_file, src_branch = self._path_and_branch_for_path(src_path)
+            src_tag = self._is_path_tag(src_path)
+            if src_tag != False:
+                # also case 2
+                src_branch, src_rev = self.tags[src_tag]
+                return {self._localname(p): (src_branch, src_rev, revnum )}
+            if src_file == '':
+                # case 2
+                return {self._localname(p): (src_branch, src_rev, revnum )}
+        return {}
+
     def update_branch_tag_map_for_rev(self, revision):
         paths = revision.paths
         added_branches = {}
@@ -328,37 +423,8 @@ class HgChangeReceiver(delta.Editor):
         self.branches_to_delete = set()
         tags_to_delete = set()
         for p in sorted(paths):
-            fi, br = self._path_and_branch_for_path(p)
-            if fi is not None:
-                if fi == '' and paths[p].action != 'D':
-                    src_p = paths[p].copyfrom_path
-                    src_rev = paths[p].copyfrom_rev
-                    src_tag = self._is_path_tag(src_p)
-
-                    if not ((src_p and self._is_path_valid(src_p)) or
-                            (src_tag and src_tag in self.tags)):
-                        # The branch starts here and is not a copy
-                        src_branch = None
-                        src_rev = 0
-                    elif src_tag:
-                        # this is a branch created from a tag. Note that this
-                        # really does happen (see Django)
-                        src_branch, src_rev = self.tags[src_tag]
-                    else:
-                        # Not from a tag, and from a valid repo path
-                        (src_p,
-                        src_branch) = self._path_and_branch_for_path(src_p)
-                        if src_p is None:
-                            continue
-                    if (br not in self.branches or
-                        not (src_rev == 0 and src_branch == None)):
-                        added_branches[br] = src_branch, src_rev, revision.revnum
-                elif fi == '' and br in self.branches:
-                    self.branches_to_delete.add(br)
-            else:
-                t_name = self._is_path_tag(p)
-                if t_name == False:
-                    continue
+            t_name = self._is_path_tag(p)
+            if t_name != False:
                 src_p, src_rev = paths[p].copyfrom_path, paths[p].copyfrom_rev
                 # if you commit to a tag, I'm calling you stupid and ignoring
                 # you.
@@ -378,6 +444,41 @@ class HgChangeReceiver(delta.Editor):
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
                         tags_to_delete.add(t_name)
+                continue
+            # At this point we know the path is not a tag. In that case, we only care if it
+            # is the root of a new branch (in this function). This is determined by the
+            # following checks:
+            # 1. Is the file located inside any currently known branch?
+            #     If yes, then we're done with it, this isn't interesting.
+            # 2. Does the file have copyfrom information that means it is a copy from the root
+            #    of some other branch?
+            #     If yes, then we're done: this is a new branch, and we record the copyfrom in
+            #     added_branches
+            # 3. Neither of the above. This could be a branch, but it might never work out for
+            #    us. It's only ever a branch (as far as we're concerned) if it gets committed
+            #    to, which we have to detect at file-write time anyway. So we do nothing here.
+            # 4. It's the root of an already-known branch, with an action of 'D'. We mark the
+            #    branch as deleted.
+            # 5. It's the parent directory of one or more already-known branches, so we mark them
+            #    as deleted.
+            # 6. It's a branch being replaced by another branch - the action will be 'R'.
+            fi, br = self._path_and_branch_for_path(p)
+            if fi is not None:
+                if fi == '':
+                    if paths[p].action == 'D':
+                        self.branches_to_delete.add(br) # case 4
+                    elif paths[p].action == 'R':
+                        added_branches.update(self.__determine_parent_branch(p, paths[p].copyfrom_path,
+                                                                             paths[p].copyfrom_rev,
+                                                                             revision.revnum))
+                continue # case 1
+            if paths[p].action == 'D':
+                # check for case 5
+                for known in self.branches:
+                    if self._svnpath(known).startswith(p):
+                        self.branches_to_delete.add(br) # case 5
+            added_branches.update(self.__determine_parent_branch(p, paths[p].copyfrom_path,
+                                                                 paths[p].copyfrom_rev, revision.revnum))
         for t in tags_to_delete:
             del self.tags[t]
         for br in self.branches_to_delete:
@@ -556,6 +657,7 @@ class HgChangeReceiver(delta.Editor):
             our_util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
+        self._save_metadata()
         self.clear_current_info()
 
     def authorforsvnauthor(self, author):
@@ -741,9 +843,12 @@ class HgChangeReceiver(delta.Editor):
         self.base_revision = None
         if path in self.deleted_files:
             del self.deleted_files[path]
-        fpath, branch = self._path_and_branch_for_path(path)
+        fpath, branch = self._path_and_branch_for_path(path, existing=False)
         if not fpath:
             return
+        if branch not in self.branches:
+            # we know this branch will exist now, because it has at least one file. Rock.
+            self.branches[branch] = None, 0, self.current_rev.revnum
         self.current_file = path
         self.should_edit_most_recent_plaintext = False
         if not copyfrom_path:
@@ -790,13 +895,14 @@ class HgChangeReceiver(delta.Editor):
             if not self._is_path_valid(copyfrom_path) and not tag:
                 self.missing_plaintexts.add('%s/' % path)
                 return path
-
         if tag:
             source_branch, source_rev = self.tags[tag]
             cp_f = ''
         else:
             source_rev = copyfrom_revision
             cp_f, source_branch = self._path_and_branch_for_path(copyfrom_path)
+            if cp_f == '' and br_path == '':
+                self.branches[branch] = source_branch, source_rev, self.current_rev.revnum
         new_hash = self.get_parent_revision(source_rev + 1,
                                             source_branch)
         if new_hash == node.nullid:

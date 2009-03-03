@@ -53,7 +53,7 @@ class MapTests(test_util.TestBase):
 
     def test_author_map_closing_author_stupid(self):
         self.test_author_map_closing_author(True)
-        
+
     def test_file_map(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')
         filemap = open(self.filemap, 'w')
@@ -66,10 +66,10 @@ class MapTests(test_util.TestBase):
                                       filemap=self.filemap)
         self.assertEqual(node.hex(self.repo[0].node()), '88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d')
         self.assertEqual(node.hex(self.repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
-        
+
     def test_file_map_stupid(self):
         self.test_file_map(True)
-        
+
     def test_file_map_exclude(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')
         filemap = open(self.filemap, 'w')
@@ -81,8 +81,8 @@ class MapTests(test_util.TestBase):
                                       stupid=stupid,
                                       filemap=self.filemap)
         self.assertEqual(node.hex(self.repo[0].node()), '2c48f3525926ab6c8b8424bcf5eb34b149b61841')
-        self.assertEqual(node.hex(self.repo['default'].node()), '86fc12d173716139d5bd1d36866038d355009f45')
-        
+        self.assertEqual(node.hex(self.repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
+
     def test_file_map_exclude_stupid(self):
         self.test_file_map_exclude(True)
 

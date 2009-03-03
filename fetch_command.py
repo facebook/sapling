@@ -69,7 +69,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
 
     # start converting revisions
     for r in svn.revisions(start=start):
-        valid = False
+        valid = True
         hg_editor.update_branch_tag_map_for_rev(r)
         for p in r.paths:
             if hg_editor._is_path_valid(p):
@@ -224,11 +224,12 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
     callable to retrieve individual file information. Raise BadPatchApply upon
     error.
     """
-    def make_diff_path(b):
-        if b == None:
+    def make_diff_path(branch):
+        if branch == 'trunk' or branch is None:
             return 'trunk'
-        return 'branches/' + b
-
+        elif branch.startswith('../'):
+            return branch[3:]
+        return 'branches/%s' % branch
     parent_rev, br_p = hg_editor.get_parent_svn_branch_and_rev(r.revnum, branch)
     diff_path = make_diff_path(branch)
     try:
@@ -554,8 +555,41 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
 
 def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
     # this server fails at replay
-    branches = hg_editor.branches_in_paths(r.paths)
+    branches = hg_editor.branches_in_paths(r.paths, r.revnum, svn.checkpath, svn.list_files)
     deleted_branches = {}
+    brpaths = branches.values()
+    bad_branch_paths = {}
+    for br, bp in branches.iteritems():
+        bad_branch_paths[br] = []
+
+        # This next block might be needed, but for now I'm omitting it until it can be
+        # proven necessary.
+        # for bad in brpaths:
+        #     if bad.startswith(bp) and len(bad) > len(bp):
+        #         bad_branch_paths[br].append(bad[len(bp)+1:])
+
+        # We've go a branch that contains other branches. We have to be careful to
+        # get results similar to real replay in this case.
+        for existingbr in hg_editor.branches:
+            bad = hg_editor._remotename(existingbr)
+            if bad.startswith(bp) and len(bad) > len(bp):
+                bad_branch_paths[br].append(bad[len(bp)+1:])
+    for p in r.paths:
+        if hg_editor._is_path_tag(p):
+            continue
+        branch = hg_editor._localname(p)
+        if r.paths[p].action == 'R' and branch in hg_editor.branches:
+            branchedits = sorted(filter(lambda x: x[0][1] == branch and x[0][0] < r.revnum,
+                                        hg_editor.revmap.iteritems()), reverse=True)
+            is_closed = False
+            if len(branchedits) > 0:
+                branchtip = branchedits[0][1]
+                for child in hg_editor.repo[branchtip].children():
+                    if child.branch() == 'closed-branches':
+                        is_closed = True
+                        break
+                if not is_closed:
+                    deleted_branches[branch] = branchtip
     date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
     date += ' -0000'
     check_deleted_branches = set()
@@ -589,12 +623,15 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                         raise IOError()
                     return context.memfilectx(path=path, data=externals.write(),
                                               islink=False, isexec=False, copied=None)
+                for bad in bad_branch_paths[b]:
+                    if path.startswith(bad):
+                        raise IOError()
                 return filectxfn2(repo, memctx, path)
 
         extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
         if '' in files_touched:
             files_touched.remove('')
-        excluded = [f for f in files_touched 
+        excluded = [f for f in files_touched
                     if not hg_editor._is_file_included(f)]
         for f in excluded:
             files_touched.remove(f)
@@ -612,6 +649,9 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                                          date,
                                          extra)
             ha = hg_editor.repo.commitctx(current_ctx)
+            branch = extra.get('branch', None)
+            if not branch in hg_editor.branches:
+                hg_editor.branches[branch] = None, 0, r.revnum
             hg_editor.add_to_revmap(r.revnum, b, ha)
             hg_editor._save_metadata()
             util.describe_commit(ui, ha, b)
