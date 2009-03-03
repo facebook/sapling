@@ -48,18 +48,18 @@ o  1 "2: copy e from a, change b" files: b e
 o  0 "1: add c" files: a b c
 
 % check copy preservation
-changeset:   2:cb71f8e79b45
+changeset:   2:d67b1d48a835
 user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 summary:     4: merge 2 and 3, copy d from b
 
-changeset:   1:3334790240a8
+changeset:   1:462c431cf47d
 user:        test
 date:        Thu Jan 01 00:00:02 1970 +0000
 summary:     2: copy e from a, change b
 
 % check copy removal on missing parent
-changeset:   2:cb71f8e79b45
+changeset:   2:d67b1d48a835
 user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 summary:     4: merge 2 and 3, copy d from b

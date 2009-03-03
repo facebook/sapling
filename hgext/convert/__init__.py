@@ -90,8 +90,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         ignore integrity errors when reading. Use it to fix Mercurial
         repositories with missing revlogs, by converting from and to
         Mercurial.
-    --config convert.hg.saverev=True          (boolean)
-        allow target to preserve source revision ID
+    --config convert.hg.saverev=False          (boolean)
+        store original revision ID in changeset (forces target IDs to change)
     --config convert.hg.startrev=0            (hg revision identifier)
         convert start revision and its descendants
 

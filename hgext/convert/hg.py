@@ -193,7 +193,7 @@ class mercurial_source(converter_source):
         converter_source.__init__(self, ui, path, rev)
         self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors', False)
         self.ignored = {}
-        self.saverev = ui.configbool('convert', 'hg.saverev', True)
+        self.saverev = ui.configbool('convert', 'hg.saverev', False)
         try:
             self.repo = hg.repository(self.ui, path)
             # try to provoke an exception if this isn't really a hg
