@@ -200,6 +200,22 @@ def mempatchproxy(parentctx, files):
 
     return mempatch
 
+
+def filteriterhunks(hg_editor):
+    iterhunks = patch.iterhunks
+    def filterhunks(ui, fp, sourcefile=None):
+        applycurrent = False
+        for data in iterhunks(ui, fp, sourcefile):
+            if data[0] == 'file':
+                if hg_editor._is_file_included(data[1][1]):
+                    applycurrent = True
+                else:
+                    applycurrent = False
+            assert data[0] != 'git', 'Filtering git hunks not supported.'
+            if applycurrent:
+                yield data
+    return filterhunks
+
 def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
@@ -254,7 +270,9 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
     if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
         try:
             oldpatchfile = patch.patchfile
+            olditerhunks = patch.iterhunks
             patch.patchfile = mempatchproxy(parentctx, files_data)
+            patch.iterhunks = filteriterhunks(hg_editor)
             try:
                 # We can safely ignore the changed list since we are
                 # handling non-git patches. Touched files are known
@@ -263,6 +281,7 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
                                            {}, strip=0)
             finally:
                 patch.patchfile = oldpatchfile
+                patch.iterhunks = olditerhunks
         except patch.PatchError:
             # TODO: this happens if the svn server has the wrong mime
             # type stored and doesn't know a file is binary. It would
