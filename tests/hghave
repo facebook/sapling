@@ -125,6 +125,9 @@ def has_svn_bindings():
     except ImportError:
         return False
 
+def has_p4():
+    return matchoutput('p4 -V', r'Rev\. P4/') and matchoutput('p4d -V', r'Rev\. P4D/')
+
 def has_symlink():
     return hasattr(os, "symlink")
 
@@ -173,6 +176,7 @@ checks = {
     "lsprof": (has_lsprof, "python lsprof module"),
     "mtn": (has_mtn, "monotone client (> 0.31)"),
     "outer-repo": (has_outer_repo, "outer repo"),
+    "p4": (has_p4, "Perforce server and client"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),

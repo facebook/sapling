@@ -14,6 +14,7 @@ from subversion import debugsvnlog, svn_source, svn_sink
 from monotone import monotone_source
 from gnuarch import gnuarch_source
 from bzr import bzr_source
+from p4 import p4_source
 import filemap
 
 import os, shutil
@@ -37,6 +38,7 @@ source_converters = [
     ('mtn', monotone_source),
     ('gnuarch', gnuarch_source),
     ('bzr', bzr_source),
+    ('p4', p4_source),
     ]
 
 sink_converters = [

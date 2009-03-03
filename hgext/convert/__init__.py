@@ -25,6 +25,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     - Monotone [mtn]
     - GNU Arch [gnuarch]
     - Bazaar [bzr]
+    - Perforce [p4]
 
     Accepted destination formats [identifiers]:
     - Mercurial [hg]
@@ -167,6 +168,22 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     --config convert.svn.startrev=0           (svn revision number)
         specify start Subversion revision.
+
+    Perforce Source
+    ---------------
+
+    The Perforce (P4) importer can be given a p4 depot path or a client
+    specification as source. It will convert all files in the source to
+    a flat Mercurial repository, ignoring labels, branches and integrations.
+    Note that when a depot path is given you then usually should specify a
+    target directory, because otherwise the target may be named ...-hg.
+
+    It is possible to limit the amount of source history to be converted
+    by specifying an initial Perforce revision.
+
+    --config convert.p4.startrev=0           (perforce changelist number)
+        specify initial Perforce revision.
+
 
     Mercurial Destination
     ---------------------
