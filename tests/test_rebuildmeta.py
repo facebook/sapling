@@ -9,12 +9,6 @@ import test_util
 import rebuildmeta
 import hg_delta_editor
 
-# List of expected "missing" branches - these are really files that happen
-# to be in the branches dir. This will be fixed at a later date.
-expected_branch_deltas = {'unrelatedbranch.svndump': [ ],
-                          'file_mixed_with_branches.svndump': [ ],
-                          }
-
 def _do_case(self, name, stupid):
     subdir = test_util.subdir.get(name, '')
     self._load_fixture_and_fetch(name, subdir=subdir, stupid=stupid)
@@ -39,8 +33,6 @@ def _do_case(self, name, stupid):
                                                    'tag_info'))))
     self.assertEqual(src.branchtags(), dest.branchtags())
     srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))
-    for mustpop in expected_branch_deltas.get(name, []):
-        del srcbi[mustpop]
     destbi = pickle.load(open(os.path.join(dest.path, 'svn', 'branch_info')))
     self.assertEqual(sorted(srcbi.keys()), sorted(destbi.keys()))
     for branch in destbi:
