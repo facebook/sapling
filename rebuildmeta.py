@@ -2,6 +2,7 @@ import os
 import pickle
 
 from mercurial import node
+from mercurial import util as mutil
 
 import svnwrap
 import util
@@ -9,9 +10,11 @@ import util
 def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
-    assert len(args) == 1, 'You must pass the svn URI used to create this repo.'
+    if len(args) != 1:
+        raise mutil.Abort('You must pass the svn URI used to create this repo.')
     uuid = None
-    svn = svnwrap.SubversionRepo(url=args[0])
+    url = args[0].rstrip('/')
+    svn = svnwrap.SubversionRepo(url=url)
     subdir = svn.subdir
     svnmetadir = os.path.join(repo.path, 'svn')
     if not os.path.exists(svnmetadir):
@@ -38,7 +41,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
                 uuid = convinfo[4:40]
                 assert uuid == svn.uuid, 'UUIDs did not match!'
                 urlfile = open(os.path.join(svnmetadir, 'url'), 'w')
-                urlfile.write(args[0])
+                urlfile.write(url)
                 urlfile.close()
                 uuidfile = open(os.path.join(svnmetadir, 'uuid'), 'w')
                 uuidfile.write(uuid)
