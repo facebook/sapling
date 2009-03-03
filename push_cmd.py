@@ -148,7 +148,7 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
                 changeddirs[d] = 1
     if not changeddirs:
         return added, deleted
-    olddirs = getctxdirs(parentctx, changeddirs, 
+    olddirs = getctxdirs(parentctx, changeddirs,
                          [e[0] for e in extchanges if e[1]])
     newdirs = getctxdirs(ctx, changeddirs,
                          [e[0] for e in extchanges if e[2]])
@@ -181,7 +181,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     if parent_branch and parent_branch != 'default':
         branch_path = 'branches/%s' % parent_branch
 
-    extchanges = list(svnexternals.diff(_externals(parent), 
+    extchanges = list(svnexternals.diff(_externals(parent),
                                         _externals(rev_ctx)))
     addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent, rev_ctx,
                                             rev_ctx.files(), extchanges)
@@ -273,7 +273,8 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
                    base_revision, set(addeddirs), set(deleteddirs),
                    props, newcopies)
     except core.SubversionException, e:
-        if hasattr(e, 'apr_err') and e.apr_err == 160028:
+        if hasattr(e, 'apr_err') and (e.apr_err == core.SVN_ERR_FS_TXN_OUT_OF_DATE
+                                      or e.apr_err == core.SVN_ERR_FS_CONFLICT):
             raise merc_util.Abort('Base text was out of date, maybe rebase?')
         else:
             raise
