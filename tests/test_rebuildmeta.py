@@ -11,8 +11,8 @@ import hg_delta_editor
 
 # List of expected "missing" branches - these are really files that happen
 # to be in the branches dir. This will be fixed at a later date.
-expected_branch_deltas = {'unrelatedbranch.svndump': ['c', ],
-                          'file_mixed_with_branches.svndump': ['README', ],
+expected_branch_deltas = {'unrelatedbranch.svndump': [ ],
+                          'file_mixed_with_branches.svndump': [ ],
                           }
 
 def _do_case(self, name, stupid):
