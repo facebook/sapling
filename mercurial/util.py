@@ -822,7 +822,7 @@ class path_auditor(object):
         if '.hg' in path.lower():
             lparts = [p.lower() for p in parts]
             for p in '.hg', '.hg.':
-                if p in lparts[1:-1]:
+                if p in lparts[1:]:
                     pos = lparts.index(p)
                     base = os.path.join(*parts[:pos])
                     raise Abort(_('path %r is inside repo %r') % (path, base))

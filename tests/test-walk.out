@@ -159,7 +159,7 @@ f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
 f  mammals/skunk                   skunk
 
 hg debugwalk .hg
-.hg: No such file or directory
+abort: path 'mammals/.hg' is inside repo 'mammals'
 
 hg debugwalk ../.hg
 abort: path contains illegal component: .hg
@@ -208,7 +208,7 @@ hg debugwalk beans/../.hg/data
 abort: path contains illegal component: .hg/data
 
 hg debugwalk beans/.hg
-beans/.hg: No such file or directory
+abort: path 'beans/.hg' is inside repo 'beans'
 
 hg debugwalk glob:*
 f  fennel      fennel
