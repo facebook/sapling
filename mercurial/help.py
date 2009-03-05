@@ -98,7 +98,7 @@ helptable = (
 HG::
     Path to the 'hg' executable, automatically passed when running hooks,
     extensions or external tools. If unset or empty, this is the hg
-    exutable's name if it's frozen, or an executable named 'hg'
+    executable's name if it's frozen, or an executable named 'hg'
     (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on
     Windows) is searched.
 
