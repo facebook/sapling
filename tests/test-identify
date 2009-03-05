@@ -1,5 +1,7 @@
 #!/bin/sh
 
+"$TESTDIR/hghave" no-outer-repo || exit 80
+
 echo % no repo
 hg id
 
