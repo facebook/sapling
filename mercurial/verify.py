@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import revlog, util
+import revlog, util, error
 
 def verify(repo):
     lock = repo.lock()
@@ -172,7 +172,11 @@ def _verify(repo):
 
     files = util.sort(util.unique(filenodes.keys() + filelinkrevs.keys()))
     for f in files:
-        fl = repo.file(f)
+        try:
+            fl = repo.file(f)
+        except error.RevlogError, e:
+            err(0, _("broken revlog! (%s)") % e, f)
+            continue
 
         for ff in fl.files():
             try:
