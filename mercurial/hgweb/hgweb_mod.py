@@ -284,7 +284,7 @@ class hgweb(object):
 
         allow_read = self.configlist('web', 'allow_read')
         result = (not allow_read) or (allow_read == ['*'])
-        if not result or user in allow_read:
+        if not (result or user in allow_read):
             raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
 
         if op == 'pull' and not self.allowpull:
