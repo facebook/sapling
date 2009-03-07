@@ -172,17 +172,18 @@ def _verify(repo):
 
     files = util.sort(util.unique(filenodes.keys() + filelinkrevs.keys()))
     for f in files:
+        lr = filelinkrevs[f][0]
         try:
             fl = repo.file(f)
         except error.RevlogError, e:
-            err(0, _("broken revlog! (%s)") % e, f)
+            err(lr, _("broken revlog! (%s)") % e, f)
             continue
 
         for ff in fl.files():
             try:
                 del storefiles[ff]
             except KeyError:
-                err(0, _("missing revlog!"), ff)
+                err(lr, _("missing revlog!"), ff)
 
         checklog(fl, f)
         seen = {}
