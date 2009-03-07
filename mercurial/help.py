@@ -135,8 +135,8 @@ HGRCPATH::
     from the current repository is read.
 
     For each element in HGRCPATH:
-    * if it's a directory, all directories ending with .rc are added
-    * otherwise, the directory itself will be added
+    * if it's a directory, all files ending with .rc are added
+    * otherwise, the file itself will be added
 
 HGUSER::
     This is the string used as the author of a commit. If not set,
