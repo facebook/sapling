@@ -331,7 +331,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         try:
             while changesets:
                 # update state
-                status = os.spawnl(os.P_WAIT, commandpath)
+                status = os.spawnl(os.P_WAIT, commandpath, commandpath)
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
