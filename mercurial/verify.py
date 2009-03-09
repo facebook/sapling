@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import revlog, util
+import revlog, util, error
 
 def verify(repo):
     lock = repo.lock()
@@ -172,13 +172,18 @@ def _verify(repo):
 
     files = util.sort(util.unique(filenodes.keys() + filelinkrevs.keys()))
     for f in files:
-        fl = repo.file(f)
+        lr = filelinkrevs[f][0]
+        try:
+            fl = repo.file(f)
+        except error.RevlogError, e:
+            err(lr, _("broken revlog! (%s)") % e, f)
+            continue
 
         for ff in fl.files():
             try:
                 del storefiles[ff]
             except KeyError:
-                err(0, _("missing revlog!"), ff)
+                err(lr, _("missing revlog!"), ff)
 
         checklog(fl, f)
         seen = {}
