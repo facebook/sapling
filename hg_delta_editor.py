@@ -220,6 +220,9 @@ class HgChangeReceiver(delta.Editor):
                     filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
                     branchpath = self._normalize_path(parentdir)
                     branchname = self._localname(branchpath)
+                    if branchpath.startswith('trunk/'):
+                        branches[self._localname('trunk')] = 'trunk'
+                        continue
                     branches[branchname] = branchpath
 
         return branches
@@ -268,8 +271,12 @@ class HgChangeReceiver(delta.Editor):
             return path[len(test)+1:], self._localname(test), test
         if existing:
             return None, None, None
-        path = test.split('/')[-1]
-        test = '/'.join(test.split('/')[:-1])
+        if path.startswith('trunk/'):
+            path = test.split('/')[1:]
+            test = 'trunk'
+        else:
+            path = test.split('/')[-1]
+            test = '/'.join(test.split('/')[:-1])
         return path, self._localname(test), test
 
     def set_current_rev(self, rev):

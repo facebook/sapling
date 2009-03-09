@@ -139,6 +139,15 @@ class TestBasicRepoLayout(test_util.TestBase):
     def test_entry_deletion_stupid(self):
         self.test_entry_deletion(stupid=True)
 
+    def test_fetch_when_trunk_has_no_files(self, stupid=False):
+        repo = self._load_fixture_and_fetch('file_not_in_trunk_root.svndump', stupid=stupid)
+        print repo['tip'].branch()
+        print repo['tip']
+        print repo['tip'].files()
+        self.assertEqual(repo['tip'].branch(), 'default')
+
+    def test_fetch_when_trunk_has_no_files_stupid(self):
+        self.test_fetch_when_trunk_has_no_files(stupid=True)
 
 class TestStupidPull(test_util.TestBase):
     def test_stupid(self):
