@@ -117,6 +117,7 @@ ignore = [
     '_xmlplus',
     'fcntl',
     'win32com.gen_py',
+    'pythoncom',
     # imported by tarfile, not available under Windows
     'pwd',
     'grp',
