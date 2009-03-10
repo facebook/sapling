@@ -5,6 +5,7 @@
 # Translation dictionary:
 #
 # changeset      ændring
+# commit         arkivering
 # merge          sammenføje
 # patch          rettelse
 # repo(sitory)   arkiv
@@ -16,7 +17,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2009-03-09 23:19+0100\n"
-"PO-Revision-Date: 2009-03-10 23:17+0100\n"
+"PO-Revision-Date: 2009-03-10 23:28+0100\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -4651,7 +4652,7 @@ msgstr ""
 
 #, python-format
 msgid "can't read commit message '%s': %s"
-msgstr "Kan ikke lase commit besked '%s': %s"
+msgstr "Kan ikke læse arkiveringsbesked '%s': %s"
 
 msgid "limit must be a positive integer"
 msgstr ""
@@ -4841,12 +4842,12 @@ msgid ""
 "    If no names are given, add all files to the repository.\n"
 "    "
 msgstr ""
-"tilføj de angivne filer ved næste commit\n"
+"tilføj de angivne filer ved næste arkivering\n"
 "\n"
 "    Opskriv filer til at blive versionsstyret og tilføjet til arkivet.\n"
 "\n"
-"    Filerne vil bliver tilføjet til arkivet ved næste commit. For at\n"
-"    omgøre en tilføjelse før det, se hg revert.\n"
+"    Filerne vil bliver tilføjet til arkivet ved næste arkivering. For\n"
+"    at omgøre en tilføjelse før det, se hg revert.\n"
 "\n"
 "    Hvis der ikke er angivet nogen navne tilføjes alle filer til\n"
 "    arkivet.\n"
@@ -6682,10 +6683,10 @@ msgid "exclude names matching the given patterns"
 msgstr "ekskluder navne som matcher det givne mønster"
 
 msgid "use <text> as commit message"
-msgstr "brug <tekst> som commit-besked"
+msgstr "brug <tekst> som arkiveringsbesked"
 
 msgid "read commit message from <file>"
-msgstr "læs commit-beskeden fra <fil>"
+msgstr "læs arkiveringsbeskeden fra <fil>"
 
 msgid "record datecode as commit date"
 msgstr ""
@@ -8883,7 +8884,7 @@ msgid ""
 msgstr ""
 
 msgid "enter a commit username:"
-msgstr "angiv et commit brugernavn:"
+msgstr "angiv et arkiveringsbrugernavn:"
 
 #, python-format
 msgid "No username found, using '%s' instead\n"
