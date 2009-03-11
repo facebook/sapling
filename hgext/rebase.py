@@ -26,7 +26,6 @@ def rebasemerge(repo, rev, first=False):
 
     def newancestor(a, b, pfunc):
         ancestor.ancestor = oldancestor
-        anc = ancestor.ancestor(a, b, pfunc)
         if b == rev:
             return repo[rev].parents()[0].rev()
         return ancestor.ancestor(a, b, pfunc)
