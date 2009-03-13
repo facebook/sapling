@@ -16,6 +16,9 @@ import os
 
 from mercurial import commands
 from mercurial import hg
+from mercurial import util as mutil
+
+from svn import core
 
 import svncommand
 import fetch_command
@@ -31,8 +34,14 @@ def reposetup(ui, repo):
 
 def svn(ui, repo, subcommand, *args, **opts):
     '''see detailed help for list of subcommands'''
+    try:
+        return svncommand.svncmd(ui, repo, subcommand, *args, **opts)
+    except core.SubversionException, e:
+        if e.apr_err == 230001:
+            raise mutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
+                     'Please try running svn ls on that url first.')
+        raise
 
-    return svncommand.svncmd(ui, repo, subcommand, *args, **opts)
 
 def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
     '''clone Subversion repository to a local Mercurial repository.
@@ -48,7 +57,13 @@ def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
         ui.status("Assuming destination %s\n" % hg_repo_path)
     should_update = not os.path.exists(hg_repo_path)
     svn_url = util.normalize_url(svn_url)
-    res = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path, **opts)
+    try:
+        res = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path, **opts)
+    except core.SubversionException, e:
+        if e.apr_err == 230001:
+            raise mutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
+                     'Please try running svn ls on that url first.')
+        raise
     if (res is None or res == 0) and should_update:
         repo = hg.repository(ui, hg_repo_path)
         commands.update(ui, repo, repo['tip'].node())
