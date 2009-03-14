@@ -1,0 +1,34 @@
+#!/bin/sh
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+convert=
+EOF
+
+# Prepare orig repo
+hg init orig
+cd orig
+echo foo > foo
+HGUSER='user name' hg ci -qAm 'foo' -d '0 0'
+cd ..
+
+# Explicit --authors
+cat > authormap.txt <<EOF
+user name = Long User Name
+EOF
+
+hg convert --authors authormap.txt orig new
+echo $?
+cat new/.hg/authormap
+
+hg -Rnew log
+rm -rf new
+
+# Implicit .hg/authormap
+hg init new
+mv authormap.txt new/.hg/authormap
+
+hg convert orig new
+echo $?
+
+hg -Rnew log
