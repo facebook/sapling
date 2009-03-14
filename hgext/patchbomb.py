@@ -344,8 +344,9 @@ def patchbomb(ui, repo, *revs, **opts):
             msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
         datapart = email.MIMEBase.MIMEBase('application', 'x-mercurial-bundle')
         datapart.set_payload(bundle)
+        bundlename = '%s.hg' % opts.get('bundlename', 'bundle')
         datapart.add_header('Content-Disposition', 'attachment',
-                            filename='bundle.hg')
+                            filename=bundlename)
         email.Encoders.encode_base64(datapart)
         msg.attach(datapart)
         msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
@@ -468,6 +469,8 @@ cmdtable = {
            _('send changes not found in the target repository')),
           ('b', 'bundle', None,
            _('send changes not in target as a binary bundle')),
+          ('', 'bundlename', 'bundle',
+           _('file name of the bundle attachment')),
           ('r', 'rev', [], _('a revision to send')),
           ('', 'force', None,
            _('run even when remote repository is unrelated (with -b)')),
