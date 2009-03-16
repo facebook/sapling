@@ -2363,7 +2363,16 @@ def resolve(ui, repo, *pats, **opts):
             else:
                 wctx = repo[None]
                 mctx = wctx.parents()[-1]
+
+                # backup pre-resolve (merge uses .orig for its own purposes)
+                a = repo.wjoin(f)
+                util.copyfile(a, a + ".resolve")
+
+                # resolve file
                 ms.resolve(f, wctx, mctx)
+
+                # replace filemerge's .orig file with our resolve file
+                util.rename(a + ".resolve", a + ".orig")
 
 def revert(ui, repo, *pats, **opts):
     """restore individual files or dirs to an earlier state

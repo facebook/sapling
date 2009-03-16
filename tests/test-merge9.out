@@ -23,6 +23,10 @@ R baz
 % show
 U bar
 U baz
+M bar
+M baz
+M quux2
+? bar.orig
 % re-resolve baz
 merging baz and foo to baz
 % after
