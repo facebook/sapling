@@ -19,7 +19,7 @@ summary:     test
 
  <entry>
   <title>test</title>
-  <id>http://www.selenic.com/mercurial/#changeset-4cbec7e6f8c42eb52b6b52670e1f7560ae9a101e</id>
+  <id>http://127.0.0.1/#changeset-4cbec7e6f8c42eb52b6b52670e1f7560ae9a101e</id>
   <link href="http://127.0.0.1/rev/4cbec7e6f8c42eb52b6b52670e1f7560ae9a101e"/>
   <author>
    <name>Testing</name>
