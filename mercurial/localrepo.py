@@ -824,8 +824,11 @@ class localrepository(repo.repository):
                                                     "(see hg resolve)"))
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            return self._commitctx(wctx, force, force_editor, empty_ok,
-                                   use_dirstate, update_dirstate)
+            r = self._commitctx(wctx, force, force_editor, empty_ok,
+                                use_dirstate, update_dirstate)
+            ms.reset()
+            return r
+
         finally:
             del lock, wlock
 
