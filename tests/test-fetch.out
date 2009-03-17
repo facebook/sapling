@@ -178,3 +178,15 @@ marked working directory as branch topic
 abort: working dir not at branch tip (use "hg update" to check out branch tip)
 % parent should be 0 (fetch did not update or merge anything)
 0
+% test fetch with inactive branches
+adding a
+marked working directory as branch second
+adding b
+marked working directory as branch default
+adding c
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% fetch should succeed
+pulling from ../ib1
+searching for changes
+no changes found

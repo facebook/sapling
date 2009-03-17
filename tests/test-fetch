@@ -170,6 +170,21 @@ echo '% parent should be 0 (fetch did not update or merge anything)'
 hg -R n2 parents --template '{rev}\n'
 rm -fr n1 n2
 
+echo % test fetch with inactive branches
+hg init ib1
+echo a > ib1/a
+hg --cwd ib1 ci -Am base
+hg --cwd ib1 branch second
+echo b > ib1/b
+hg --cwd ib1 ci -Am onsecond
+hg --cwd ib1 branch -f default
+echo c > ib1/c
+hg --cwd ib1 ci -Am newdefault
+hg clone ib1 ib2
+echo % fetch should succeed
+hg --cwd ib2 fetch ../ib1
+rm -fr ib1 ib2
+
 "$TESTDIR/killdaemons.py"
 
 true

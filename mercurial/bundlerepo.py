@@ -226,7 +226,7 @@ class bundlerepository(localrepo.localrepository):
             self.manifest
             return self.filestart
         else:
-            raise AttributeError(name)
+            return localrepo.localrepository.__getattr__(self, name)
 
     def url(self):
         return self._url

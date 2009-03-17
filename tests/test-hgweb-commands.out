@@ -15,7 +15,7 @@ adding foo
 
  <entry>
   <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
-  <id>http://127.0.0.1/mercurial/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
+  <id>http://127.0.0.1/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
   <link href="http://127.0.0.1/rev/a4f92ed23982be056b9852de5dfe873eaac7f0de"/>
   <author>
    <name>test</name>
@@ -31,7 +31,7 @@ adding foo
  </entry>
  <entry>
   <title>base</title>
-  <id>http://127.0.0.1/mercurial/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <id>http://127.0.0.1/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
   <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
   <author>
    <name>test</name>
@@ -60,7 +60,7 @@ adding foo
 
  <entry>
   <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
-  <id>http://127.0.0.1/mercurial/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
+  <id>http://127.0.0.1/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
   <link href="http://127.0.0.1/rev/a4f92ed23982be056b9852de5dfe873eaac7f0de"/>
   <author>
    <name>test</name>
@@ -76,7 +76,7 @@ adding foo
  </entry>
  <entry>
   <title>base</title>
-  <id>http://127.0.0.1/mercurial/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <id>http://127.0.0.1/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
   <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
   <author>
    <name>test</name>
@@ -103,7 +103,7 @@ adding foo
 
  <entry>
   <title>base</title>
-  <id>http://127.0.0.1/mercurial/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <id>http://127.0.0.1/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
   <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
   <author>
    <name>test</name>
@@ -433,7 +433,7 @@ files, or words in the commit message</div>
  <entry>
   <title>1.0</title>
   <link rel="alternate" href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
-  <id>http://127.0.0.1/mercurial/#tag-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
+  <id>http://127.0.0.1/#tag-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
   <updated>1970-01-01T00:00:00+00:00</updated>
   <published>1970-01-01T00:00:00+00:00</published>
   <content type="text">1.0</content>

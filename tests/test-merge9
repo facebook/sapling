@@ -37,6 +37,7 @@ hg resolve -u baz
 
 echo % show
 hg resolve -l
+hg st
 
 echo % re-resolve baz
 hg resolve baz

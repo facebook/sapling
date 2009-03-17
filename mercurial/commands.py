@@ -331,7 +331,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         try:
             while changesets:
                 # update state
-                status = os.spawnl(os.P_WAIT, commandpath)
+                status = os.spawnl(os.P_WAIT, commandpath, commandpath)
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
@@ -644,9 +644,6 @@ def commit(ui, repo, *pats, **opts):
         ui.write(_('committed changeset %d:%s\n') % (rev,hex(node)))
     elif ui.verbose:
         ui.write(_('committed changeset %d:%s\n') % (rev,short(node)))
-
-    ms = merge_.mergestate(repo)
-    ms.reset(node)
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
@@ -2363,7 +2360,16 @@ def resolve(ui, repo, *pats, **opts):
             else:
                 wctx = repo[None]
                 mctx = wctx.parents()[-1]
+
+                # backup pre-resolve (merge uses .orig for its own purposes)
+                a = repo.wjoin(f)
+                util.copyfile(a, a + ".resolve")
+
+                # resolve file
                 ms.resolve(f, wctx, mctx)
+
+                # replace filemerge's .orig file with our resolve file
+                util.rename(a + ".resolve", a + ".orig")
 
 def revert(ui, repo, *pats, **opts):
     """restore individual files or dirs to an earlier state
