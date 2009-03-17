@@ -292,10 +292,13 @@ class HgChangeReceiver(delta.Editor):
         self.current_files_symlink[path] = islink
         if path in self.deleted_files:
             del self.deleted_files[path]
+        if path in self.missing_plaintexts:
+            self.missing_plaintexts.remove(path)
 
     def delete_file(self, path):
         self.deleted_files[path] = True
-        self.current_files[path] = ''
+        if path in self.current_files:
+            del self.current_files[path]
         self.current_files_exec[path] = False
         self.current_files_symlink[path] = False
         self.ui.note('D %s\n' % path)
@@ -522,9 +525,7 @@ class HgChangeReceiver(delta.Editor):
         for bp, external in branches.iteritems():
             path = bp + '/.hgsvnexternals'
             if external:
-                self.current_files[path] = external.write()
-                self.current_files_symlink[path] = False
-                self.current_files_exec[path] = False
+                self.set_file(path, external.write(), False, False)
             else:
                 self.delete_file(path)
 
@@ -535,10 +536,14 @@ class HgChangeReceiver(delta.Editor):
         if self.missing_plaintexts:
             raise MissingPlainTextError()
         self._updateexternals()
-        files_to_commit = self.current_files.keys()
-        files_to_commit.extend(self.current_files_symlink.keys())
-        files_to_commit.extend(self.current_files_exec.keys())
-        files_to_commit = sorted(set(files_to_commit))
+        # paranoidly generate the list of files to commit
+        files_to_commit = set(self.current_files.keys())
+        files_to_commit.update(self.current_files_symlink.keys())
+        files_to_commit.update(self.current_files_exec.keys())
+        files_to_commit.update(self.deleted_files.keys())
+        # back to a list and sort so we get sane behavior
+        files_to_commit = list(files_to_commit)
+        files_to_commit.sort()
         branch_batches = {}
         rev = self.current_rev
         date = rev.date.replace('T', ' ').replace('Z', '').split('.')[0]
@@ -602,7 +607,8 @@ class HgChangeReceiver(delta.Editor):
             parent_ctx = self.repo.changectx(parents[0])
             if '.hgsvnexternals' not in parent_ctx and '.hgsvnexternals' in files:
                 # Do not register empty externals files
-                if not self.current_files[files['.hgsvnexternals']]:
+                if (files['.hgsvnexternals'] in self.current_files
+                    and not self.current_files[files['.hgsvnexternals']]):
                     del files['.hgsvnexternals']
 
             def filectxfn(repo, memctx, path):
@@ -633,7 +639,6 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-
             our_util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
@@ -781,6 +786,18 @@ class HgChangeReceiver(delta.Editor):
         return self.meta_file_named('authors')
     authors_file = property(authors_file)
 
+    def load_base_from_ctx(self, svnpath, path, ctx):
+        if not self._is_path_valid(svnpath):
+            return
+        if path in ctx:
+            fctx = ctx.filectx(path)
+            base = fctx.data()
+            if 'l' in fctx.flags():
+                base = 'link ' + base
+            self.set_file(svnpath, base, 'x' in fctx.flags(), 'l' in fctx.flags())
+        else:
+            self.missing_plaintexts.add(path)
+
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
         if br_path == '':
@@ -796,10 +813,8 @@ class HgChangeReceiver(delta.Editor):
                     br_path2 = br_path + '/'
                 # assuming it is a directory
                 self.externals[path] = None
-                def delete_x(x):
-                    self.deleted_files[x] = True
-                map(delete_x, [pat for pat in self.current_files.iterkeys()
-                               if pat.startswith(path)])
+                map(self.delete_file, [pat for pat in self.current_files.iterkeys()
+                                       if pat.startswith(path)])
                 for f in ctx.walk(our_util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current_files:
@@ -817,7 +832,12 @@ class HgChangeReceiver(delta.Editor):
                 self.base_revision = base_revision
             else:
                 self.base_revision = None
-            self.should_edit_most_recent_plaintext = True
+            if self.current_file not in self.current_files:
+                baserev = base_revision
+                if baserev is None or baserev == -1:
+                    baserev = self.current_rev.revnum - 1
+                parent = self.get_parent_revision(baserev + 1, branch)
+                self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
     open_file = stash_exception_on_self(open_file)
 
     def aresamefiles(self, parentctx, childctx, files):
@@ -857,9 +877,9 @@ class HgChangeReceiver(delta.Editor):
             # we know this branch will exist now, because it has at least one file. Rock.
             self.branches[branch] = None, 0, self.current_rev.revnum
         self.current_file = path
-        self.should_edit_most_recent_plaintext = False
         if not copyfrom_path:
             self.ui.note('A %s\n' % path)
+            self.set_file(path, '', False, False)
             return
         self.ui.note('A+ %s\n' % path)
         (from_file,
@@ -873,8 +893,7 @@ class HgChangeReceiver(delta.Editor):
         if from_file in ctx:
             fctx = ctx.filectx(from_file)
             flags = fctx.flags()
-            cur_file = self.current_file
-            self.set_file(cur_file, fctx.data(), 'x' in flags, 'l' in flags)
+            self.set_file(path, fctx.data(), 'x' in flags, 'l' in flags)
         if from_branch == branch:
             parentid = self.get_parent_revision(self.current_rev.revnum,
                                                 branch)
@@ -972,29 +991,20 @@ class HgChangeReceiver(delta.Editor):
     close_directory = stash_exception_on_self(close_directory)
 
     def apply_textdelta(self, file_baton, base_checksum, pool=None):
+        # We know coming in here the file must be one of the following options:
+        # 1) Deleted (invalid, fail an assertion)
+        # 2) Missing a base text (bail quick since we have to fetch a full plaintext)
+        # 3) Has a base text in self.current_files, apply deltas
         base = ''
         if not self._is_path_valid(self.current_file):
             return lambda x: None
-        if (self.current_file in self.current_files
-            and not self.should_edit_most_recent_plaintext):
-            base = self.current_files[self.current_file]
-        elif (base_checksum is not None or
-              self.should_edit_most_recent_plaintext):
-                p_, br = self._path_and_branch_for_path(self.current_file)
-                par_rev = self.current_rev.revnum
-                if self.base_revision:
-                    par_rev = self.base_revision + 1
-                ha = self.get_parent_revision(par_rev, br)
-                if ha != revlog.nullid:
-                    ctx = self.repo.changectx(ha)
-                    if not p_ in ctx:
-                        self.missing_plaintexts.add(self.current_file)
-                        # short circuit exit since we can't do anything anyway
-                        return lambda x: None
-                    fctx = ctx[p_]
-                    base = fctx.data()
-                    if 'l' in fctx.flags():
-                        base = 'link ' + base
+        assert self.current_file not in self.deleted_files, (
+            'Cannot apply_textdelta to a deleted file: %s' % self.current_file)
+        assert (self.current_file in self.current_files
+                or self.current_file in self.missing_plaintexts), '%s not found' % self.current_file
+        if self.current_file in self.missing_plaintexts:
+            return lambda x: None
+        base = self.current_files[self.current_file]
         source = cStringIO.StringIO(base)
         target = cStringIO.StringIO()
         self.stream = target
