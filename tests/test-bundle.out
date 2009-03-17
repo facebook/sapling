@@ -317,3 +317,12 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 2 files, 2 changesets, 2 total revisions
+====== diff against bundle
+diff -r 836ac62537ab anotherfile
+--- a/anotherfile	Mon Jan 12 13:46:40 1970 +0000
++++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+@@ -1,4 +0,0 @@
+-0
+-1
+-2
+-3

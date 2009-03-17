@@ -34,6 +34,7 @@ hg init empty
 
 echo "====== Bundle --all"
 hg -R test bundle --all all.hg
+
 echo "====== Bundle test to full.hg"
 hg -R test bundle full.hg empty
 echo "====== Unbundle full.hg in test"
@@ -138,5 +139,11 @@ hg -R bundle.hg verify
 hg -R all.hg verify
 # but, regular verify must continue to work
 hg -R orig verify
+
+echo "====== diff against bundle"
+hg init b
+cd b
+hg -R ../all.hg diff -r tip
+cd ..
 
 
