@@ -52,7 +52,9 @@ def fetch(ui, repo, source='default', **opts):
             raise util.Abort(_('outstanding uncommitted changes'))
         if del_:
             raise util.Abort(_('working directory is missing some files'))
-        if len(repo.branchheads(branch)) > 1:
+        bheads = repo.branchheads(branch)
+        bheads = [head for head in bheads if len(repo[head].children()) == 0]
+        if len(bheads) > 1:
             raise util.Abort(_('multiple heads in this branch '
                                '(use "hg heads ." and "hg merge" to merge)'))
 
@@ -76,6 +78,7 @@ def fetch(ui, repo, source='default', **opts):
 
         # Is this a simple fast-forward along the current branch?
         newheads = repo.branchheads(branch)
+        newheads = [head for head in newheads if len(repo[head].children()) == 0]
         newchildren = repo.changelog.nodesbetween([parent], newheads)[2]
         if len(newheads) == 1:
             if newchildren[0] != parent:
