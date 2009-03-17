@@ -73,8 +73,12 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
                                  hge.revmap.iterkeys()))
     parent = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
     r, br = svn_commit_hashes[parent.node()]
+    subdir = parent.extra()['convert_revision'][40:].split('@')[0]
     if br == None:
         branchpath = '/trunk'
+    elif br.startswith('../'):
+        branchpath = '/%s' % br[3:]
+        subdir = subdir.replace('branches/../', '')
     else:
         branchpath = '/branches/%s' % br
     url = hge.url
@@ -83,7 +87,6 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
     url = '%s%s' % (url, branchpath)
     author = '@'.join(parent.user().split('@')[:-1])
     # cleverly figure out repo root w/o actually contacting the server
-    subdir = parent.extra()['convert_revision'][40:].split('@')[0]
     reporoot = url[:len(url)-len(subdir)]
     ui.status('''URL: %(url)s
 Repository Root: %(reporoot)s
