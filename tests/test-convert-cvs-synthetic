@@ -1,0 +1,65 @@
+#!/bin/sh
+
+# This feature requires use of builtin cvsps!
+"$TESTDIR/hghave" cvs || exit 80
+
+# XXX lots of duplication with other test-convert-cvs* scripts
+
+set -e
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+echo "[convert]" >> $HGRCPATH
+echo "cvsps=builtin" >> $HGRCPATH
+
+echo % create cvs repository with one project
+mkdir cvsrepo
+cd cvsrepo
+export CVSROOT=`pwd`
+export CVS_OPTIONS=-f
+cd ..
+
+filter='sed "s:$CVSROOT:*REPO*:g"'
+cvscall()
+{
+    cvs -f "$@" | eval $filter
+}
+
+cvscall -q -d "$CVSROOT" init
+mkdir cvsrepo/proj
+
+cvscall co proj
+
+echo % create file1 on the trunk
+cd proj
+touch file1
+cvscall add file1
+cvscall ci -m"add file1 on trunk" file1
+
+echo % create two branches
+cvscall tag -b v1_0
+cvscall tag -b v1_1
+
+echo % create file2 on branch v1_0
+cvs up -rv1_0
+touch file2
+cvscall add file2
+cvscall ci -m"add file2 on branch v1_0" file2
+
+echo % create file3, file4 on branch v1_1
+cvs up -rv1_1
+touch file3
+touch file4
+cvscall add file3 file4
+cvscall ci -m"add file3, file4 on branch v1_1" file3 file4
+
+echo % merge file2 from v1_0 to v1_1
+cvscall up -jv1_0
+cvscall ci -m"merge file2 from v1_0 to v1_1"
+
+echo % convert to hg
+cd ..
+hg convert proj proj.hg | eval $filter
+
+echo % hg log output
+hg -R proj.hg log --template "{rev} {desc}\n"

@@ -33,6 +33,7 @@ class logentry(object):
         .rcs       - name of file as returned from CVS
         .revision  - revision number as tuple
         .tags      - list of tags on the file
+        .synthetic - is this a synthetic "file ... added on ..." revision?
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -106,6 +107,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     re_50 = re.compile('revision ([\\d.]+)(\s+locked by:\s+.+;)?$')
     re_60 = re.compile(r'date:\s+(.+);\s+author:\s+(.+);\s+state:\s+(.+?);(\s+lines:\s+(\+\d+)?\s+(-\d+)?;)?')
     re_70 = re.compile('branches: (.+);$')
+
+    file_added_re = re.compile(r'file [^/]+ was (initially )?added on branch')
 
     prefix = ''   # leading path to strip of what we get from CVS
 
@@ -279,7 +282,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             assert match, _('expected revision number')
             e = logentry(rcs=scache(rcs), file=scache(filename),
                     revision=tuple([int(x) for x in match.group(1).split('.')]),
-                    branches=[], parent=None)
+                    branches=[], parent=None,
+                    synthetic=False)
             state = 6
 
         elif state == 6:
@@ -337,6 +341,22 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 store = True
             else:
                 e.comment.append(line)
+
+        # When a file is added on a branch B1, CVS creates a synthetic
+        # dead trunk revision 1.1 so that the branch has a root.
+        # Likewise, if you merge such a file to a later branch B2 (one
+        # that already existed when the file was added on B1), CVS
+        # creates a synthetic dead revision 1.1.x.1 on B2.  Don't drop
+        # these revisions now, but mark them synthetic so
+        # createchangeset() can take care of them.
+        if (store and
+              e.dead and
+              e.revision[-1] == 1 and      # 1.1 or 1.1.x.1
+              len(e.comment) == 1 and
+              file_added_re.match(e.comment[0])):
+            ui.debug(_('found synthetic rev in %s: %r\n')
+                     % (e.rcs, e.comment[0]))
+            e.synthetic = True
 
         if store:
             # clean up the results and save in the log.
@@ -399,6 +419,7 @@ class changeset(object):
         .entries   - list of logentry objects in this changeset
         .parents   - list of one or two parent changesets
         .tags      - list of tags on this changeset
+        .synthetic - from synthetic revision "file ... added on branch ..."
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -437,6 +458,19 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
         c.entries.append(e)
         files[e.file] = True
         c.date = e.date       # changeset date is date of latest commit in it
+
+    # Mark synthetic changesets
+
+    for c in changesets:
+        # Synthetic revisions always get their own changeset, because
+        # the log message includes the filename.  E.g. if you add file3
+        # and file4 on a branch, you get four log entries and three
+        # changesets:
+        #   "File file3 was added on branch ..." (synthetic, 1 entry)
+        #   "File file4 was added on branch ..." (synthetic, 1 entry)
+        #   "Add file3 and file4 to fix ..."     (real, 2 entries)
+        # Hence the check for 1 entry here.
+        c.synthetic = (len(c.entries) == 1 and c.entries[0].synthetic)
 
     # Sort files in each changeset
 
@@ -546,7 +580,20 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
         c.parents = []
         if p is not None:
-            c.parents.append(changesets[p])
+            p = changesets[p]
+
+            # Ensure no changeset has a synthetic changeset as a parent.
+            while p.synthetic:
+                assert len(p.parents) <= 1, \
+                       _('synthetic changeset cannot have multiple parents')
+                if p.parents:
+                    p = p.parents[0]
+                else:
+                    p = None
+                    break
+
+            if p is not None:
+                c.parents.append(p)
 
         if mergefrom:
             m = mergefrom.search(c.comment)
@@ -581,6 +628,15 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
         branches[c.branch] = i
         i += 1
+
+    # Drop synthetic changesets (safe now that we have ensured no other
+    # changesets can have them as parents).
+    i = 0
+    while i < len(changesets):
+        if changesets[i].synthetic:
+            del changesets[i]
+        else:
+            i += 1
 
     # Number changesets
 
