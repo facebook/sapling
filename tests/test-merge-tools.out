@@ -244,7 +244,7 @@ true.executable=cat
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges
+use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to abandon
 # cat f
 revision 1
 space
@@ -260,7 +260,7 @@ true.executable=cat
 # hg update -C 1
 # hg merge -r 2 --config ui.merge=internal:fail
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges
+use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to abandon
 # cat f
 revision 1
 space
@@ -307,7 +307,7 @@ true.executable=cat
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges
+use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to abandon
 # cat f
 revision 1
 space
