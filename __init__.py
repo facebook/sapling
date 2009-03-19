@@ -37,7 +37,7 @@ def svn(ui, repo, subcommand, *args, **opts):
     try:
         return svncommand.svncmd(ui, repo, subcommand, *args, **opts)
     except core.SubversionException, e:
-        if e.apr_err == 230001:
+        if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
             raise mutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
                      'Please try running svn ls on that url first.')
         raise
@@ -60,7 +60,7 @@ def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
     try:
         res = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path, **opts)
     except core.SubversionException, e:
-        if e.apr_err == 230001:
+        if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
             raise mutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
                      'Please try running svn ls on that url first.')
         raise
