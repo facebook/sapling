@@ -189,7 +189,7 @@ class SubversionRepo(object):
         try:
             tags = self.list_dir('tags', revision=revision).keys()
         except core.SubversionException, e:
-            if e.apr_err == 160013:
+            if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
                 return {}
             raise
         tag_info = {}
@@ -386,10 +386,8 @@ class SubversionRepo(object):
                       e_baton, self.pool)
         except core.SubversionException, e: #pragma: no cover
             # can I depend on this number being constant?
-            if (e.message == "Server doesn't support the replay command"
-                or e.apr_err == 170003
-                or e.message == 'The requested report is unknown.'
-                or e.apr_err == 200007):
+            if (e.apr_err == core.SVN_ERR_RA_NOT_IMPLEMENTED or
+                e.apr_err == core.SVN_ERR_UNSUPPORTED_FEATURE):
                 raise SubversionRepoCanNotReplay, ('This Subversion server '
                    'is older than 1.4.0, and cannot satisfy replay requests.')
             else:

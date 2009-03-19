@@ -5,7 +5,6 @@ import traceback
 
 from mercurial import hg
 from mercurial import node
-from mercurial import util as merc_util
 
 import svnwrap
 import util

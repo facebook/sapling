@@ -508,6 +508,7 @@ class HgChangeReceiver(delta.Editor):
         branches = {}
         for path, entry in self.externals.iteritems():
             if not self._is_path_valid(path):
+                self.ui.warn('WARNING: Invalid path %s in externals\n' % path)
                 continue
             p, b, bp = self._split_branch_path(path)
             if bp not in branches:
@@ -838,6 +839,8 @@ class HgChangeReceiver(delta.Editor):
                     baserev = self.current_rev.revnum - 1
                 parent = self.get_parent_revision(baserev + 1, branch)
                 self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
+        else:
+            self.ui.warn('WARNING: Opening non-existant file %s\n' % path)
     open_file = stash_exception_on_self(open_file)
 
     def aresamefiles(self, parentctx, childctx, files):
@@ -1022,11 +1025,10 @@ class HgChangeReceiver(delta.Editor):
                 if not window:
                     self.current_files[self.current_file] = target.getvalue()
             except core.SubversionException, e: #pragma: no cover
-                if e.message == 'Delta source ended unexpectedly':
+                if e.apr_err == core.SVN_ERR_INCOMPLETE_DATA:
                     self.missing_plaintexts.add(self.current_file)
                 else: #pragma: no cover
-                    self._exception_info = sys.exc_info()
-                    raise
+                    raise util.Abort(*e.args)
             except: #pragma: no cover
                 print len(base), self.current_file
                 self._exception_info = sys.exc_info()
