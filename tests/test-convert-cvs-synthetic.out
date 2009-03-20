@@ -2,13 +2,9 @@
 cvs checkout: Updating proj
 % create file1 on the trunk
 cvs add: scheduling file `file1' for addition
-cvs add: use 'cvs commit' to add this file permanently
-RCS file: *REPO*/proj/file1,v
-done
-Checking in file1;
+cvs add: use `cvs commit' to add this file permanently
 *REPO*/proj/file1,v  <--  file1
 initial revision: 1.1
-done
 % create two branches
 cvs tag: Tagging .
 T file1
@@ -17,39 +13,25 @@ T file1
 % create file2 on branch v1_0
 cvs update: Updating .
 cvs add: scheduling file `file2' for addition on branch `v1_0'
-cvs add: use 'cvs commit' to add this file permanently
-RCS file: *REPO*/proj/Attic/file2,v
-done
-Checking in file2;
+cvs add: use `cvs commit' to add this file permanently
 *REPO*/proj/Attic/file2,v  <--  file2
 new revision: 1.1.2.1; previous revision: 1.1
-done
 % create file3, file4 on branch v1_1
 cvs update: Updating .
-cvs update: file2 is no longer in the repository
+cvs update: `file2' is no longer in the repository
 cvs add: scheduling file `file3' for addition on branch `v1_1'
 cvs add: scheduling file `file4' for addition on branch `v1_1'
-cvs add: use 'cvs commit' to add these files permanently
-RCS file: *REPO*/proj/Attic/file3,v
-done
-Checking in file3;
+cvs add: use `cvs commit' to add these files permanently
 *REPO*/proj/Attic/file3,v  <--  file3
 new revision: 1.1.2.1; previous revision: 1.1
-done
-RCS file: *REPO*/proj/Attic/file4,v
-done
-Checking in file4;
 *REPO*/proj/Attic/file4,v  <--  file4
 new revision: 1.1.2.1; previous revision: 1.1
-done
 % merge file2 from v1_0 to v1_1
 cvs update: Updating .
 U file2
 cvs commit: Examining .
-Checking in file2;
 *REPO*/proj/Attic/file2,v  <--  file2
 new revision: 1.1.4.2; previous revision: 1.1.4.1
-done
 % convert to hg
 initializing destination proj.hg repository
 using builtin cvsps
