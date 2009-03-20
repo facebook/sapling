@@ -9,6 +9,7 @@ import struct
 
 _b85chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
             "abcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"
+_b85chars2 = [(a + b) for a in _b85chars for b in _b85chars]
 _b85dec = {}
 
 def _mkb85dec():
@@ -22,24 +23,13 @@ def b85encode(text, pad=False):
     if r:
         text += '\0' * (4 - r)
     longs = len(text) >> 2
-    out = []
     words = struct.unpack('>%dL' % (longs), text)
-    for word in words:
-        # unrolling improved speed by 33%
-        word, r = divmod(word, 85)
-        e = _b85chars[r]
-        word, r = divmod(word, 85)
-        d = _b85chars[r]
-        word, r = divmod(word, 85)
-        c = _b85chars[r]
-        word, r = divmod(word, 85)
-        b = _b85chars[r]
-        word, r = divmod(word, 85)
-        a = _b85chars[r]
 
-        out += (a, b, c, d, e)
+    out = ''.join(_b85chars[(word / 52200625) % 85] + 
+                  _b85chars2[(word / 7225) % 7225] +
+                  _b85chars2[word % 7225]
+                  for word in words)
 
-    out = ''.join(out)
     if pad:
         return out
 

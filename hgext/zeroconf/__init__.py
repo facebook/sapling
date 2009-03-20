@@ -77,8 +77,9 @@ def publish(name, desc, path, port):
         ip = getip()
         localip = socket.inet_aton(ip)
 
-    parts = socket.gethostname().split('.')
-    host = parts[0] + ".local"
+    hostname = socket.gethostname().split('.')[0]
+    host = hostname + ".local"
+    name = "%s-%s" % (hostname, name)
 
     # advertise to browsers
     svc = Zeroconf.ServiceInfo('_http._tcp.local.',

@@ -104,6 +104,24 @@ domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable
 echo "# merge-patterns specifies executable with bogus path and gets warning:"
 domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/bin/nonexistingmergetool
 
+echo
+echo ui.merge overrules priority
+echo
+
+echo "# ui.merge specifies false:"
+domerge -r 2 --config ui.merge=false
+
+echo "# ui.merge specifies internal:fail:"
+domerge -r 2 --config ui.merge=internal:fail
+
+echo "# ui.merge specifies internal:local:"
+domerge -r 2 --config ui.merge=internal:local
+
+echo "# ui.merge specifies internal:other:"
+domerge -r 2 --config ui.merge=internal:other
+
+echo "# ui.merge specifies internal:other but is overruled by pattern for false:"
+domerge -r 2 --config ui.merge=internal:other --config merge-patterns.f=false
 
 echo
 echo Premerge
