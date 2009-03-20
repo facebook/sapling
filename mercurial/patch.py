@@ -1359,10 +1359,9 @@ def diffstatdata(lines):
     if filename:
         yield (filename, adds, removes)
 
-def diffstat(lines):
+def diffstat(lines, width=80):
     output = []
     stats = list(diffstatdata(lines))
-    width = util.termwidth() - 2
 
     maxtotal, maxname = 0, 0
     totaladds, totalremoves = 0, 0
@@ -1377,7 +1376,7 @@ def diffstat(lines):
     if graphwidth < 10:
         graphwidth = 10
 
-    factor = int(math.ceil(float(maxtotal) / graphwidth))
+    factor = max(int(math.ceil(float(maxtotal) / graphwidth)), 1)
 
     for filename, adds, removes in stats:
         # If diffstat runs out of room it doesn't print anything, which
@@ -1389,7 +1388,7 @@ def diffstat(lines):
                                                 adds+removes, pluses, minuses))
 
     if stats:
-        output.append(' %d files changed, %d insertions(+), %d deletions(-)\n' %
-                      (len(stats), totaladds, totalremoves))
+        output.append(' %d files changed, %d insertions(+), %d deletions(-)\n'
+                      % (len(stats), totaladds, totalremoves))
 
     return ''.join(output)
