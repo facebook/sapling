@@ -69,6 +69,8 @@ class HgChangeReceiver(delta.Editor):
         subdir is the subdirectory of the edits *on the svn server*.
         It is needed for stripping paths off in certain cases.
         """
+        if repo and repo.ui and not ui_:
+            ui_ = repo.ui
         if not ui_:
             ui_ = ui.ui()
         self.ui = ui_
