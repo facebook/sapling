@@ -286,6 +286,8 @@ PYTHONPATH::
           was committed. Will be empty if the branch name was default.
     - date: Date information. The date when the changeset was committed.
     - desc: String. The text of the changeset description.
+    - diffstat: String. Statistics of changes with the following format:
+          "modified files: +added/-removed lines"
     - files: List of strings. All files modified, added, or removed by
           this changeset.
     - file_adds: List of strings. Files added by this changeset.

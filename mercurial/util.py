@@ -2017,3 +2017,8 @@ def termwidth():
     except ImportError:
         pass
     return 80
+
+def iterlines(iterator):
+    for chunk in iterator:
+        for line in chunk.splitlines():
+            yield line

@@ -534,6 +534,33 @@ tags--debug:
 tags--debug: 
 tags--debug: 
 tags--debug: 
+diffstat: 1: +1/-0
+diffstat: 1: +1/-0
+diffstat: 0: +0/-0
+diffstat: 1: +1/-0
+diffstat: 0: +0/-0
+diffstat: 1: +1/-0
+diffstat: 1: +4/-0
+diffstat: 1: +2/-0
+diffstat: 1: +1/-0
+diffstat--verbose: 1: +1/-0
+diffstat--verbose: 1: +1/-0
+diffstat--verbose: 0: +0/-0
+diffstat--verbose: 1: +1/-0
+diffstat--verbose: 0: +0/-0
+diffstat--verbose: 1: +1/-0
+diffstat--verbose: 1: +4/-0
+diffstat--verbose: 1: +2/-0
+diffstat--verbose: 1: +1/-0
+diffstat--debug: 1: +1/-0
+diffstat--debug: 1: +1/-0
+diffstat--debug: 0: +0/-0
+diffstat--debug: 1: +1/-0
+diffstat--debug: 0: +0/-0
+diffstat--debug: 1: +1/-0
+diffstat--debug: 1: +4/-0
+diffstat--debug: 1: +2/-0
+diffstat--debug: 1: +1/-0
 # filters work
 
 hostname

@@ -830,6 +830,15 @@ class changeset_templater(changeset_printer):
                              node=hex(ctx.changeset()[0])))
             return self.t('manifest', **args)
 
+        def showdiffstat(**args):
+            diff = patch.diff(self.repo, ctx.parents()[0].node(), ctx.node())
+            files, adds, removes = 0, 0, 0
+            for i in patch.diffstatdata(util.iterlines(diff)):
+                files += 1
+                adds += i[1]
+                removes += i[2]
+            return '%s: +%s/-%s' % (files, adds, removes)
+
         defprops = {
             'author': ctx.user(),
             'branches': showbranches,
@@ -846,6 +855,7 @@ class changeset_templater(changeset_printer):
             'rev': ctx.rev(),
             'tags': showtags,
             'extras': showextras,
+            'diffstat': showdiffstat,
             }
         props = props.copy()
         props.update(defprops)
