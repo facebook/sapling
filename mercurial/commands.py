@@ -683,6 +683,12 @@ def debugancestor(ui, repo, *args):
     a = r.ancestor(lookup(rev1), lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
+def debugcommands(ui, cmd='', *args):
+    for cmd, vals in util.sort(table.iteritems()):
+        cmd = cmd.split('|')[0].strip('^')
+        opts = ', '.join([i[1] for i in vals[1]])
+        ui.write('%s: %s\n' % (cmd, opts))
+
 def debugcomplete(ui, cmd='', **opts):
     """returns the completion list associated with the given command"""
 
@@ -3134,6 +3140,7 @@ table = {
          _('[OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('[INDEX] REV1 REV2')),
     "debugcheckstate": (debugcheckstate, []),
+    "debugcommands": (debugcommands, [], _('[COMMAND]')),
     "debugcomplete":
         (debugcomplete,
          [('o', 'options', None, _('show the command options'))],
@@ -3416,6 +3423,6 @@ table = {
     "version": (version_, []),
 }
 
-norepo = ("clone init version help debugcomplete debugdata"
+norepo = ("clone init version help debugcommands debugcomplete debugdata"
           " debugindex debugindexdot debugdate debuginstall debugfsinfo")
 optionalrepo = ("identify paths serve showconfig debugancestor")

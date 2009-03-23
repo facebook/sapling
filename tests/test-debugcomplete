@@ -36,4 +36,8 @@ echo
 echo '% Show an error if we use --options with an ambiguous abbreviation'
 hg debugcomplete --options s
 
+echo
+echo '% Show all commands + options'
+hg debugcommands
+
 exit 0
