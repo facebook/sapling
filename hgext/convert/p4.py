@@ -66,7 +66,7 @@ class p4_source(converter_source):
         else:
             cmd = "p4 -G client -o '%s'" % path
             clientspec = marshal.load(util.popen(cmd))
-            
+
             views = {}
             for client in clientspec:
                 if client.startswith("View"):
@@ -89,8 +89,8 @@ class p4_source(converter_source):
 
         # handle revision limiting
         startrev = self.ui.config('convert', 'p4.startrev', default=0)
-        self.p4changes = [x for x in self.p4changes 
-                          if ((not startrev or int(x) >= int(startrev)) and 
+        self.p4changes = [x for x in self.p4changes
+                          if ((not startrev or int(x) >= int(startrev)) and
                               (not self.rev or int(x) <= int(self.rev)))]
 
         # now read the full changelists to get the list of file revisions
@@ -110,7 +110,7 @@ class p4_source(converter_source):
                 parents = [lastid]
             else:
                 parents = []
-            
+
             date = (int(d["time"]), 0)     # timezone not set
             c = commit(author=self.recode(d["user"]), date=util.datestr(date),
                         parents=parents, desc=desc, branch='', extra={"p4": change})
@@ -131,7 +131,7 @@ class p4_source(converter_source):
             self.changeset[change] = c
             self.files[change] = files
             lastid = change
-        
+
         if lastid:
             self.heads = [lastid]
 
