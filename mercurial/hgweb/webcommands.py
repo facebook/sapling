@@ -642,7 +642,7 @@ def graph(web, req, tmpl):
     tree = list(graphmod.graph(web.repo, rev, downrev))
     canvasheight = (len(tree) + 1) * bg_height - 27;
     data = []
-    for i, (ctx, vtx, edges) in enumerate(tree):
+    for (ctx, vtx, edges) in tree:
         node = short(ctx.node())
         age = templatefilters.age(ctx.date())
         desc = templatefilters.firstline(ctx.description())

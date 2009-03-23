@@ -68,7 +68,7 @@ def load(ui, name, path):
 
 def loadall(ui):
     result = ui.configitems("extensions")
-    for i, (name, path) in enumerate(result):
+    for (name, path) in result:
         if path:
             if path[0] == '!':
                 continue
