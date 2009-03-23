@@ -710,13 +710,20 @@ class changeset_templater(changeset_printer):
         '''set template string to use'''
         self.t.cache['changeset'] = t
 
+    def _meaningful_parentrevs(self, ctx):
+        """Return list of meaningful (or all if debug) parentrevs for rev.
+        """
+        parents = ctx.parents()
+        if len(parents) > 1:
+            return parents
+        if self.ui.debugflag:
+            return [parents[0], self.repo['null']]
+        if parents[0].rev() >= ctx.rev() - 1:
+            return []
+        return parents
+
     def _show(self, ctx, copies, props):
         '''show a single changeset or file revision'''
-        changenode = ctx.node()
-        rev = ctx.rev()
-
-        log = self.repo.changelog
-        changes = log.read(changenode)
 
         def showlist(name, values, plural=None, **args):
             '''expand set of values.
@@ -780,21 +787,21 @@ class changeset_templater(changeset_printer):
                 yield self.t(endname, **args)
 
         def showbranches(**args):
-            branch = changes[5].get("branch")
+            branch = ctx.branch()
             if branch != 'default':
                 branch = util.tolocal(branch)
                 return showlist('branch', [branch], plural='branches', **args)
 
         def showparents(**args):
-            parents = [[('rev', p), ('node', hex(log.node(p)))]
-                       for p in self._meaningful_parentrevs(log, rev)]
+            parents = [[('rev', p.rev()), ('node', p.hex())]
+                       for p in self._meaningful_parentrevs(ctx)]
             return showlist('parent', parents, **args)
 
         def showtags(**args):
-            return showlist('tag', self.repo.nodetags(changenode), **args)
+            return showlist('tag', ctx.tags(), **args)
 
         def showextras(**args):
-            for key, value in util.sort(changes[5].items()):
+            for key, value in util.sort(ctx.extra().items()):
                 args = args.copy()
                 args.update(dict(key=key, value=value))
                 yield self.t('extra', **args)
@@ -806,11 +813,11 @@ class changeset_templater(changeset_printer):
         files = []
         def getfiles():
             if not files:
-                files[:] = self.repo.status(
-                    log.parents(changenode)[0], changenode)[:3]
+                files[:] = self.repo.status(ctx.parents()[0].node(),
+                                            ctx.node())[:3]
             return files
         def showfiles(**args):
-            return showlist('file', changes[3], **args)
+            return showlist('file', ctx.files(), **args)
         def showmods(**args):
             return showlist('file_mod', getfiles()[0], **args)
         def showadds(**args):
@@ -819,24 +826,24 @@ class changeset_templater(changeset_printer):
             return showlist('file_del', getfiles()[2], **args)
         def showmanifest(**args):
             args = args.copy()
-            args.update(dict(rev=self.repo.manifest.rev(changes[0]),
-                             node=hex(changes[0])))
+            args.update(dict(rev=self.repo.manifest.rev(ctx.changeset()[0]),
+                             node=hex(ctx.changeset()[0])))
             return self.t('manifest', **args)
 
         defprops = {
-            'author': changes[1],
+            'author': ctx.user(),
             'branches': showbranches,
-            'date': changes[2],
-            'desc': changes[4].strip(),
+            'date': ctx.date(),
+            'desc': ctx.description().strip(),
             'file_adds': showadds,
             'file_dels': showdels,
             'file_mods': showmods,
             'files': showfiles,
             'file_copies': showcopies,
             'manifest': showmanifest,
-            'node': hex(changenode),
+            'node': ctx.hex(),
             'parents': showparents,
-            'rev': rev,
+            'rev': ctx.rev(),
             'tags': showtags,
             'extras': showextras,
             }
@@ -857,7 +864,7 @@ class changeset_templater(changeset_printer):
             if key:
                 h = templater.stringify(self.t(key, **props))
                 if self.buffered:
-                    self.header[rev] = h
+                    self.header[ctx.rev()] = h
                 else:
                     self.ui.write(h)
             if self.ui.debugflag and 'changeset_debug' in self.t:
@@ -869,7 +876,7 @@ class changeset_templater(changeset_printer):
             else:
                 key = 'changeset'
             self.ui.write(templater.stringify(self.t(key, **props)))
-            self.showpatch(changenode)
+            self.showpatch(ctx.node())
         except KeyError, inst:
             raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
                                                            inst.args[0]))
