@@ -42,6 +42,8 @@ def gettype(q):
 def offset_type(offset, type):
     return long(long(offset) << 16 | type)
 
+nullhash = _sha(nullid)
+
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
 
@@ -49,10 +51,17 @@ def hash(text, p1, p2):
     in a manner that makes it easy to distinguish nodes with the same
     content in the revision graph.
     """
-    l = [p1, p2]
-    l.sort()
-    s = _sha(l[0])
-    s.update(l[1])
+    # As of now, if one of the parent node is null, p2 is null
+    if p2 == nullid:
+        # deep copy of a hash is faster than creating one
+        s = nullhash.copy()
+        s.update(p1)
+    else:
+        # none of the parent nodes are nullid
+        l = [p1, p2]
+        l.sort()
+        s = _sha(l[0])
+        s.update(l[1])
     s.update(text)
     return s.digest()
 
