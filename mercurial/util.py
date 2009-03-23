@@ -1273,14 +1273,14 @@ if os.name == 'nt':
     def find_exe(command):
         '''Find executable for command searching like cmd.exe does.
         If command is a basename then PATH is searched for command.
-        PATH isn't searched if command is an absolute or relative path.  
+        PATH isn't searched if command is an absolute or relative path.
         An extension from PATHEXT is found and added if not present.
         If command isn't found None is returned.'''
         pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
         pathexts = [ext for ext in pathext.lower().split(os.pathsep)]
         if os.path.splitext(command)[1].lower() in pathexts:
             pathexts = ['']
-        
+
         def findexisting(pathcommand):
             'Will append extension (if needed) and return existing file'
             for ext in pathexts:
@@ -1291,7 +1291,7 @@ if os.name == 'nt':
 
         if os.sep in command:
             return findexisting(command)
-            
+
         for path in os.environ.get('PATH', '').split(os.pathsep):
             executable = findexisting(os.path.join(path, command))
             if executable is not None:
@@ -1465,11 +1465,11 @@ else:
     def find_exe(command):
         '''Find executable for command searching like which does.
         If command is a basename then PATH is searched for command.
-        PATH isn't searched if command is an absolute or relative path.  
+        PATH isn't searched if command is an absolute or relative path.
         If command isn't found None is returned.'''
         if sys.platform == 'OpenVMS':
             return command
-        
+
         def findexisting(executable):
             'Will return executable if existing file'
             if os.path.exists(executable):
@@ -1478,7 +1478,7 @@ else:
 
         if os.sep in command:
             return findexisting(command)
-            
+
         for path in os.environ.get('PATH', '').split(os.pathsep):
             executable = findexisting(os.path.join(path, command))
             if executable is not None:

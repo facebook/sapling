@@ -408,7 +408,7 @@ class HTTPResponse(httplib.HTTPResponse):
                     # close the connection as protocol synchronisation is
                     # probably lost
                     self.close()
-                    raise IncompleteRead(value)
+                    raise httplib.IncompleteRead(value)
                 if chunk_left == 0:
                     break
             if amt is None:
