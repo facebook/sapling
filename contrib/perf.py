@@ -1,7 +1,7 @@
 # perf.py - performance test routines
 
 from mercurial.i18n import _
-from mercurial import cmdutil, match
+from mercurial import cmdutil, match, commands
 import time, os, sys
 
 def timer(func):
@@ -101,6 +101,18 @@ def perfparents(ui, repo):
 def perflookup(ui, repo, rev):
     timer(lambda: len(repo.lookup(rev)))
 
+def perflog(ui, repo):
+    ui.pushbuffer()
+    timer(lambda: commands.log(ui, repo, rev=[], date='', user=''))
+    ui.popbuffer()
+
+def perftemplating(ui, repo):
+    ui.pushbuffer()
+    timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
+                               template='{date|shortdate} [{rev}:{node|short}]'
+                               ' {author|person}: {desc|firstline}\n'))
+    ui.popbuffer()
+
 cmdtable = {
     'perflookup': (perflookup, []),
     'perfparents': (perfparents, []),
@@ -113,5 +125,7 @@ cmdtable = {
     'perftags': (perftags, []),
     'perfdirstate': (perfdirstate, []),
     'perfdirstatedirs': (perfdirstate, []),
+    'perflog': (perflog, []),
+    'perftemplating': (perftemplating, []),
 }
 
