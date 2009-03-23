@@ -894,7 +894,7 @@ def debuginstall(ui):
     ui.status(_("Checking templates...\n"))
     try:
         import templater
-        t = templater.templater(templater.templatepath("map-cmdline.default"))
+        templater.templater(templater.templatepath("map-cmdline.default"))
     except Exception, inst:
         ui.write(" %s\n" % inst)
         ui.write(_(" (templates seem to have been installed incorrectly)\n"))
@@ -1690,8 +1690,8 @@ def import_(ui, repo, patch1, *patches, **opts):
 
                 files = {}
                 try:
-                    fuzz = patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
-                                       files=files)
+                    patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
+                                files=files)
                 finally:
                     files = patch.updatedir(ui, repo, files, similarity=sim/100.)
                 if not opts.get('no_commit'):

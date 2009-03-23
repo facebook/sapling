@@ -494,7 +494,7 @@ def error_handler(url):
         HANDLE_ERRORS = i
         try:
             fo = urllib2.urlopen(url)
-            foo = fo.read()
+            fo.read()
             fo.close()
             try: status, reason = fo.status, fo.reason
             except AttributeError: status, reason = None, None

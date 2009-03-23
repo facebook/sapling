@@ -835,7 +835,7 @@ class revlog(object):
             # odds of a binary node being all hex in ASCII are 1 in 10**25
             try:
                 node = id
-                r = self.rev(node) # quick search the index
+                self.rev(node) # quick search the index
                 return node
             except LookupError:
                 pass # may be partial hex id
@@ -855,7 +855,7 @@ class revlog(object):
             try:
                 # a full hex nodeid?
                 node = bin(id)
-                r = self.rev(node)
+                self.rev(node)
                 return node
             except (TypeError, LookupError):
                 pass

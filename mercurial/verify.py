@@ -219,7 +219,7 @@ def _verify(repo):
                         warn(_("warning: %s@%s: copy source revision is nullid %s:%s")
                             % (f, lr, rp[0], short(rp[1])))
                     else:
-                        rev = fl2.rev(rp[1])
+                        fl2.rev(rp[1])
             except Exception, inst:
                 exc(lr, _("checking rename of %s") % short(n), inst, f)
 

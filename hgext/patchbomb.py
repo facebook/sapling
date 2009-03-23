@@ -230,8 +230,8 @@ def patchbomb(ui, repo, *revs, **opts):
     def getpatches(revs):
         for r in cmdutil.revrange(repo, revs):
             output = cStringIO.StringIO()
-            p = patch.export(repo, [r], fp=output,
-                             opts=patch.diffopts(ui, opts))
+            patch.export(repo, [r], fp=output,
+                         opts=patch.diffopts(ui, opts))
             yield output.getvalue().split('\n')
 
     def getbundle(dest):

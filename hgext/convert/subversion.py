@@ -177,7 +177,7 @@ class svn_source(converter_source):
             if at >= 0:
                 latest = int(url[at+1:])
                 url = url[:at]
-        except ValueError, e:
+        except ValueError:
             pass
         self.url = geturl(url)
         self.encoding = 'UTF-8' # Subversion is always nominal UTF-8

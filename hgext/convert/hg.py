@@ -142,7 +142,7 @@ class mercurial_sink(converter_sink):
             p2 = parents.pop(0)
             ctx = context.memctx(self.repo, (p1, p2), text, files.keys(), getfilectx,
                                  commit.author, commit.date, extra)
-            a = self.repo.commitctx(ctx)
+            self.repo.commitctx(ctx)
             text = "(octopus merge fixup)\n"
             p2 = hex(self.repo.changelog.tip())
 

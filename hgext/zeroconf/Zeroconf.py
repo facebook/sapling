@@ -866,7 +866,6 @@ class Engine(threading.Thread):
 					pass
 
 	def getReaders(self):
-		result = []
 		self.condition.acquire()
 		result = self.readers.keys()
 		self.condition.release()
@@ -1486,14 +1485,14 @@ class Zeroconf(object):
 			out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, 0)
 			for question in msg.questions:
 				out.addQuestion(question)
-		
+
 		for question in msg.questions:
 			if question.type == _TYPE_PTR:
 				if question.name == "_services._dns-sd._udp.local.":
 					for stype in self.servicetypes.keys():
 						if out is None:
 							out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-						out.addAnswer(msg, DNSPointer("_services._dns-sd._udp.local.", _TYPE_PTR, _CLASS_IN, _DNS_TTL, stype))						
+						out.addAnswer(msg, DNSPointer("_services._dns-sd._udp.local.", _TYPE_PTR, _CLASS_IN, _DNS_TTL, stype))
 				for service in self.services.values():
 					if question.name == service.type:
 						if out is None:
@@ -1503,16 +1502,16 @@ class Zeroconf(object):
 				try:
 					if out is None:
 						out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-					
+
 					# Answer A record queries for any service addresses we know
 					if question.type == _TYPE_A or question.type == _TYPE_ANY:
 						for service in self.services.values():
 							if service.server == question.name.lower():
 								out.addAnswer(msg, DNSAddress(question.name, _TYPE_A, _CLASS_IN | _CLASS_UNIQUE, _DNS_TTL, service.address))
-					
+
 					service = self.services.get(question.name.lower(), None)
 					if not service: continue
-					
+
 					if question.type == _TYPE_SRV or question.type == _TYPE_ANY:
 						out.addAnswer(msg, DNSService(question.name, _TYPE_SRV, _CLASS_IN | _CLASS_UNIQUE, _DNS_TTL, service.priority, service.weight, service.port, service.server))
 					if question.type == _TYPE_TXT or question.type == _TYPE_ANY:
@@ -1521,7 +1520,7 @@ class Zeroconf(object):
 						out.addAdditionalAnswer(DNSAddress(service.server, _TYPE_A, _CLASS_IN | _CLASS_UNIQUE, _DNS_TTL, service.address))
 				except:
 					traceback.print_exc()
-				
+
 		if out is not None and out.answers:
 			out.id = msg.id
 			self.send(out, addr, port)
@@ -1531,7 +1530,7 @@ class Zeroconf(object):
 		# This is a quick test to see if we can parse the packets we generate
 		#temp = DNSIncoming(out.packet())
 		try:
-			bytes_sent = self.socket.sendto(out.packet(), 0, (addr, port))
+			self.socket.sendto(out.packet(), 0, (addr, port))
 		except:
 			# Ignore this, it may be a temporary loss of network connection
 			pass

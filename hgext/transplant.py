@@ -216,8 +216,8 @@ class transplanter:
             try:
                 files = {}
                 try:
-                    fuzz = patch.patch(patchfile, self.ui, cwd=repo.root,
-                                       files=files)
+                    patch.patch(patchfile, self.ui, cwd=repo.root,
+                                files=files)
                     if not files:
                         self.ui.warn(_('%s: empty changeset')
                                      % revlog.hex(node))

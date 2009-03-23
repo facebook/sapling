@@ -131,7 +131,7 @@ class listener(object):
 def getzcpaths():
     server = Zeroconf.Zeroconf()
     l = listener()
-    browser = Zeroconf.ServiceBrowser(server, "_hg._tcp.local.", l)
+    Zeroconf.ServiceBrowser(server, "_hg._tcp.local.", l)
     time.sleep(1)
     server.close()
     for v in l.found.values():

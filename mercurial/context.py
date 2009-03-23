@@ -233,7 +233,7 @@ class filectx(object):
 
     def __nonzero__(self):
         try:
-            n = self._filenode
+            self._filenode
             return True
         except error.LookupError:
             # file is missing

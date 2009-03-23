@@ -1742,7 +1742,7 @@ def clone(ui, source, dest=None, **opts):
     else:
         patchespath = patchdir(sr)
     try:
-        pr = hg.repository(ui, patchespath)
+        hg.repository(ui, patchespath)
     except error.RepoError:
         raise util.Abort(_('versioned patch repository not found'
                            ' (see qinit -c)'))
@@ -1768,9 +1768,9 @@ def clone(ui, source, dest=None, **opts):
                       update=False,
                       stream=opts['uncompressed'])
     ui.note(_('cloning patch repo\n'))
-    spr, dpr = hg.clone(ui, opts['patches'] or patchdir(sr), patchdir(dr),
-                        pull=opts['pull'], update=not opts['noupdate'],
-                        stream=opts['uncompressed'])
+    hg.clone(ui, opts['patches'] or patchdir(sr), patchdir(dr),
+             pull=opts['pull'], update=not opts['noupdate'],
+             stream=opts['uncompressed'])
     if dr.local():
         if qbase:
             ui.note(_('stripping applied patches from destination repo\n'))
