@@ -19,11 +19,13 @@ def ancestor(a, b, pfunc):
         return a
 
     # find depth from root of all ancestors
+    parentcache = {}
     visit = [a, b]
     depth = {}
     while visit:
         vertex = visit[-1]
         pl = pfunc(vertex)
+        parentcache[vertex] = pl
         if not pl:
             depth[vertex] = 0
             visit.pop()
@@ -46,7 +48,7 @@ def ancestor(a, b, pfunc):
             if n not in seen:
                 seen[n] = 1
                 yield (d, n)
-                for p in pfunc(n):
+                for p in parentcache[n]:
                     heapq.heappush(h, (depth[p], p))
 
     def generations(vertex):
