@@ -2435,7 +2435,6 @@ def revert(ui, repo, *pats, **opts):
     wlock = repo.wlock()
     try:
         # walk dirstate.
-        files = []
 
         m = cmdutil.match(repo, pats, opts)
         m.bad = lambda x,y: False

@@ -84,7 +84,6 @@ class convert_git(converter_source):
         message = c[end+2:]
         message = self.recode(message)
         l = c[:end].splitlines()
-        manifest = l[0].split()[1]
         parents = []
         for e in l[1:]:
             n, v = e.split(" ", 1)

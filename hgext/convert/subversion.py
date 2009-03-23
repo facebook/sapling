@@ -194,7 +194,7 @@ class svn_source(converter_source):
             self.commits = {}
             self.paths = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
-        except SubversionException, e:
+        except SubversionException:
             ui.print_exc()
             raise NoRepo("%s does not look like a Subversion repo" % self.url)
 
@@ -215,7 +215,7 @@ class svn_source(converter_source):
 
         try:
             self.get_blacklist()
-        except IOError, e:
+        except IOError:
             pass
 
         self.head = self.latest(self.module, latest)
@@ -246,7 +246,7 @@ class svn_source(converter_source):
             svn.client.ls(self.url.rstrip('/') + '/' + urllib.quote(path),
                                  optrev, False, self.ctx)
             return True
-        except SubversionException, err:
+        except SubversionException:
             return False
 
     def getheads(self):
@@ -438,7 +438,7 @@ class svn_source(converter_source):
                 pendings = remainings
                 tagspath = srctagspath
 
-        except SubversionException, (inst, num):
+        except SubversionException:
             self.ui.note(_('no tags found at revision %d\n') % start)
         return tags
 
@@ -533,7 +533,7 @@ class svn_source(converter_source):
                 try:
                     svn_rev = int(line.strip())
                     blacklist.add(svn_rev)
-                except ValueError, e:
+                except ValueError:
                     pass # not an integer or a comment
 
     def is_blacklisted(self, svn_rev):
@@ -1103,7 +1103,7 @@ class svn_sink(converter_sink, commandline):
         for f, v in files:
             try:
                 data = source.getfile(f, v)
-            except IOError, inst:
+            except IOError:
                 self.delete.append(f)
             else:
                 e = source.getmode(f, v)

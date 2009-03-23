@@ -337,7 +337,6 @@ def abort(repo, originalwd, target, state):
 
 def buildstate(repo, dest, src, base, collapse):
     'Define which revisions are going to be rebased and where'
-    state = {}
     targetancestors = util.set()
 
     if not dest:

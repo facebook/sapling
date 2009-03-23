@@ -160,7 +160,7 @@ class localrepository(repo.repository):
         if local:
             try:
                 fp = self.opener('localtags', 'r+')
-            except IOError, err:
+            except IOError:
                 fp = self.opener('localtags', 'a')
             else:
                 prevtags = fp.read()
@@ -174,7 +174,7 @@ class localrepository(repo.repository):
         if use_dirstate:
             try:
                 fp = self.wfile('.hgtags', 'rb+')
-            except IOError, err:
+            except IOError:
                 fp = self.wfile('.hgtags', 'ab')
             else:
                 prevtags = fp.read()

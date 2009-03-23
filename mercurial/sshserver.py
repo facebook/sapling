@@ -122,8 +122,6 @@ class sshserver(object):
         self.fout.flush()
 
     def do_changegroupsubset(self):
-        bases = []
-        heads = []
         argmap = dict([self.getarg(), self.getarg()])
         bases = [bin(n) for n in argmap['bases'].split(' ')]
         heads = [bin(n) for n in argmap['heads'].split(' ')]

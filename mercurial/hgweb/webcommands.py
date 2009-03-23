@@ -172,7 +172,6 @@ def changelog(web, req, tmpl, shortlog = False):
             return _search(web, tmpl, hi) # XXX redirect to 404 page?
 
     def changelist(limit=0, **map):
-        cl = web.repo.changelog
         l = [] # build a list in forward order for efficiency
         for i in xrange(start, end):
             ctx = web.repo[i]

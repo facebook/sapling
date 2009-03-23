@@ -69,7 +69,7 @@ class filemapper(object):
         for pre, suf in rpairs(name):
             try:
                 return mapping[pre], pre, suf
-            except KeyError, err:
+            except KeyError:
                 pass
         return '', name, ''
 

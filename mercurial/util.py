@@ -904,7 +904,6 @@ def _statfiles(files):
 def _statfiles_clustered(files):
     '''Stat each file in files and yield stat or None if file does not exist.
     Cluster and cache stat per directory to minimize number of OS stat calls.'''
-    lstat = os.lstat
     ncase = os.path.normcase
     sep   = os.sep
     dircache = {} # dirname -> filename -> status | None if file does not exist

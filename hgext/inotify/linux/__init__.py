@@ -27,7 +27,7 @@ def _read_procfs_value(name):
     def read_value():
         try:
             return int(open(procfs_path + '/' + name).read())
-        except OSError, err:
+        except OSError:
             return None
 
     read_value.__doc__ = '''Return the value of the %s setting from /proc.

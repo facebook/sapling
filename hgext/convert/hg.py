@@ -42,7 +42,7 @@ class mercurial_sink(converter_sink):
                 if not self.repo.local():
                     raise NoRepo(_('%s is not a local Mercurial repo') % path)
                 self.created.append(path)
-            except error.RepoError, err:
+            except error.RepoError:
                 ui.print_exc()
                 raise NoRepo("could not create hg repo %s as sink" % path)
         self.lock = None
@@ -158,7 +158,7 @@ class mercurial_sink(converter_sink):
          try:
              parentctx = self.repo[self.tagsbranch]
              tagparent = parentctx.node()
-         except error.RepoError, inst:
+         except error.RepoError:
              parentctx = None
              tagparent = nullid
 

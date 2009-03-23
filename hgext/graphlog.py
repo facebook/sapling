@@ -384,8 +384,6 @@ def gincoming(ui, repo, source="default", **opts):
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
         revdag = graphrevs(other, chlist, opts)
-        other_parents = []
-        displayer = show_changeset(ui, other, opts, buffered=True)
         graphdag = graphabledag(ui, repo, revdag, opts)
         ascii(ui, grapher(graphdag))
 
