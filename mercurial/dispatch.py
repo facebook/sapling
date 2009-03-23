@@ -7,7 +7,7 @@
 
 from i18n import _
 import os, sys, atexit, signal, pdb, socket, errno, shlex, time
-import util, commands, hg, lock, fancyopts, extensions, hook, error
+import util, commands, hg, fancyopts, extensions, hook, error
 import cmdutil
 import ui as _ui
 

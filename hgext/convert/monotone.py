@@ -1,8 +1,8 @@
 # monotone support for the convert extension
 
-import os, re, time
+import os, re
 from mercurial import util
-from common import NoRepo, MissingTool, commit, converter_source, checktool
+from common import NoRepo, commit, converter_source, checktool
 from common import commandline
 from mercurial.i18n import _
 

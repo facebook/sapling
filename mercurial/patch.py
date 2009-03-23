@@ -8,8 +8,8 @@
 
 from i18n import _
 from node import hex, nullid, short
-import base85, cmdutil, mdiff, util, revlog, diffhelpers, copies
-import cStringIO, email.Parser, os, re, errno, math
+import base85, cmdutil, mdiff, util, diffhelpers, copies
+import cStringIO, email.Parser, os, re, math
 import sys, tempfile, zlib
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')

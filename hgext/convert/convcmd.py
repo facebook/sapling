@@ -10,7 +10,7 @@ from cvs import convert_cvs
 from darcs import darcs_source
 from git import convert_git
 from hg import mercurial_source, mercurial_sink
-from subversion import debugsvnlog, svn_source, svn_sink
+from subversion import svn_source, svn_sink
 from monotone import monotone_source
 from gnuarch import gnuarch_source
 from bzr import bzr_source

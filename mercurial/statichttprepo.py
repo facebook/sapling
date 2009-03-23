@@ -9,7 +9,7 @@
 
 from i18n import _
 import changelog, byterange, url, error
-import repo, localrepo, manifest, util, store
+import localrepo, manifest, util, store
 import urllib, urllib2, errno
 
 class httprangereader(object):

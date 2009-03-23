@@ -7,6 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
+import error
 
 class repository(object):
     def capable(self, name):

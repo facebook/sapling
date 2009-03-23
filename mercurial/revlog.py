@@ -10,7 +10,8 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-from node import bin, hex, nullid, nullrev, short
+# import stuff from node for others to import from revlog
+from node import bin, hex, nullid, nullrev, short #@UnusedImport
 from i18n import _
 import changegroup, errno, ancestor, mdiff, parsers
 import struct, util, zlib, error

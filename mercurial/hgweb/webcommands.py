@@ -8,8 +8,8 @@
 import os, mimetypes, re, cgi, copy
 import webutil
 from mercurial import error, archival, templatefilters
-from mercurial.node import short, hex, nullid
-from mercurial.util import binary, datestr
+from mercurial.node import short, hex
+from mercurial.util import binary
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod, util

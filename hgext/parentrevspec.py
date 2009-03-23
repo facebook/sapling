@@ -23,7 +23,6 @@ For example, if you can refer to a revision as "foo", then:
   foo~1 = foo^1 = foo^ = first parent of foo
   foo~2 = foo^1^1 = foo^^ = first parent of first parent of foo
 '''
-import mercurial.repo
 from mercurial import error
 
 def reposetup(ui, repo):

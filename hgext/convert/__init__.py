@@ -8,6 +8,7 @@
 
 import convcmd
 import cvsps
+import subversion
 from mercurial import commands
 from mercurial.i18n import _
 
@@ -199,7 +200,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     return convcmd.convert(ui, src, dest, revmapfile, **opts)
 
 def debugsvnlog(ui, **opts):
-    return convcmd.debugsvnlog(ui, **opts)
+    return subversion.debugsvnlog(ui, **opts)
 
 def debugcvsps(ui, *args, **opts):
     '''create changeset information from CVS

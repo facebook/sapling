@@ -9,7 +9,7 @@
 
 from mercurial.i18n import _
 from mercurial import patch, cmdutil, util, templater
-import os, sys
+import sys
 import time, datetime
 
 def maketemplater(ui, repo, tmpl):

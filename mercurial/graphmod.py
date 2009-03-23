@@ -6,8 +6,7 @@
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
 
-from node import nullrev, short
-import ui, hg, util, templatefilters
+from node import nullrev
 
 def graph(repo, start_rev, stop_rev):
     """incremental revision grapher
