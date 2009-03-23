@@ -155,35 +155,33 @@ class mercurial_sink(converter_sink):
         return p2
 
     def puttags(self, tags):
-         try:
-             parentctx = self.repo[self.tagsbranch]
-             tagparent = parentctx.node()
-         except error.RepoError:
-             parentctx = None
-             tagparent = nullid
+        try:
+            parentctx = self.repo[self.tagsbranch]
+            tagparent = parentctx.node()
+        except error.RepoError:
+            parentctx = None
+            tagparent = nullid
 
-         try:
-             oldlines = util.sort(parentctx['.hgtags'].data().splitlines(1))
-         except:
-             oldlines = []
+        try:
+            oldlines = util.sort(parentctx['.hgtags'].data().splitlines(1))
+        except:
+            oldlines = []
 
-         newlines = util.sort([("%s %s\n" % (tags[tag], tag)) for tag in tags])
-
-         if newlines == oldlines:
-             return None
-         data = "".join(newlines)
-
-         def getfilectx(repo, memctx, f):
+        newlines = util.sort([("%s %s\n" % (tags[tag], tag)) for tag in tags])
+        if newlines == oldlines:
+            return None
+        data = "".join(newlines)
+        def getfilectx(repo, memctx, f):
             return context.memfilectx(f, data, False, False, None)
 
-         self.ui.status(_("updating tags\n"))
-         date = "%s 0" % int(time.mktime(time.gmtime()))
-         extra = {'branch': self.tagsbranch}
-         ctx = context.memctx(self.repo, (tagparent, None), "update tags",
-                              [".hgtags"], getfilectx, "convert-repo", date,
-                              extra)
-         self.repo.commitctx(ctx)
-         return hex(self.repo.changelog.tip())
+        self.ui.status(_("updating tags\n"))
+        date = "%s 0" % int(time.mktime(time.gmtime()))
+        extra = {'branch': self.tagsbranch}
+        ctx = context.memctx(self.repo, (tagparent, None), "update tags",
+                             [".hgtags"], getfilectx, "convert-repo", date,
+                             extra)
+        self.repo.commitctx(ctx)
+        return hex(self.repo.changelog.tip())
 
     def setfilemapmode(self, active):
         self.filemapmode = active

@@ -340,7 +340,7 @@ def buildstate(repo, dest, src, base, collapse):
     targetancestors = util.set()
 
     if not dest:
-         # Destination defaults to the latest revision in the current branch
+        # Destination defaults to the latest revision in the current branch
         branch = repo[None].branch()
         dest = repo[branch].rev()
     else:

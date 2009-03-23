@@ -46,54 +46,54 @@ from mercurial.i18n import _
 from mercurial import util
 
 def decode(arg):
-   if isinstance(arg, str):
-       uarg = arg.decode(util._encoding)
-       if arg == uarg.encode(util._encoding):
-           return uarg
-       raise UnicodeError("Not local encoding")
-   elif isinstance(arg, tuple):
-       return tuple(map(decode, arg))
-   elif isinstance(arg, list):
-       return map(decode, arg)
-   return arg
+    if isinstance(arg, str):
+        uarg = arg.decode(util._encoding)
+        if arg == uarg.encode(util._encoding):
+            return uarg
+        raise UnicodeError("Not local encoding")
+    elif isinstance(arg, tuple):
+        return tuple(map(decode, arg))
+    elif isinstance(arg, list):
+        return map(decode, arg)
+    return arg
 
 def encode(arg):
-   if isinstance(arg, unicode):
-       return arg.encode(util._encoding)
-   elif isinstance(arg, tuple):
-       return tuple(map(encode, arg))
-   elif isinstance(arg, list):
-       return map(encode, arg)
-   return arg
+    if isinstance(arg, unicode):
+        return arg.encode(util._encoding)
+    elif isinstance(arg, tuple):
+        return tuple(map(encode, arg))
+    elif isinstance(arg, list):
+        return map(encode, arg)
+    return arg
 
 def wrapper(func, args):
-   # check argument is unicode, then call original
-   for arg in args:
-       if isinstance(arg, unicode):
-           return func(*args)
+    # check argument is unicode, then call original
+    for arg in args:
+        if isinstance(arg, unicode):
+            return func(*args)
 
-   try:
-       # convert arguments to unicode, call func, then convert back
-       return encode(func(*decode(args)))
-   except UnicodeError:
-       # If not encoded with util._encoding, report it then
-       # continue with calling original function.
-      raise util.Abort(_("[win32mbcs] filename conversion fail with"
+    try:
+        # convert arguments to unicode, call func, then convert back
+        return encode(func(*decode(args)))
+    except UnicodeError:
+        # If not encoded with util._encoding, report it then
+        # continue with calling original function.
+        raise util.Abort(_("[win32mbcs] filename conversion fail with"
                          " %s encoding\n") % (util._encoding))
 
 def wrapname(name):
-   idx = name.rfind('.')
-   module = name[:idx]
-   name = name[idx+1:]
-   module = eval(module)
-   func = getattr(module, name)
-   def f(*args):
-       return wrapper(func, args)
-   try:
-      f.__name__ = func.__name__                # fail with python23
-   except Exception:
-      pass
-   setattr(module, name, f)
+    idx = name.rfind('.')
+    module = name[:idx]
+    name = name[idx+1:]
+    module = eval(module)
+    func = getattr(module, name)
+    def f(*args):
+        return wrapper(func, args)
+    try:
+        f.__name__ = func.__name__                # fail with python23
+    except Exception:
+        pass
+    setattr(module, name, f)
 
 # List of functions to be wrapped.
 # NOTE: os.path.dirname() and os.path.basename() are safe because
@@ -109,14 +109,14 @@ problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs
  shift_jisx0213 shiftjisx0213 sjisx0213 s_jisx0213'''
 
 def reposetup(ui, repo):
-   # TODO: decide use of config section for this extension
-   if not os.path.supports_unicode_filenames:
-       ui.warn(_("[win32mbcs] cannot activate on this platform.\n"))
-       return
+    # TODO: decide use of config section for this extension
+    if not os.path.supports_unicode_filenames:
+        ui.warn(_("[win32mbcs] cannot activate on this platform.\n"))
+        return
 
-   # fake is only for relevant environment.
-   if util._encoding.lower() in problematic_encodings.split():
-       for f in funcs.split():
-           wrapname(f)
-       ui.debug(_("[win32mbcs] activated with encoding: %s\n") % util._encoding)
+    # fake is only for relevant environment.
+    if util._encoding.lower() in problematic_encodings.split():
+        for f in funcs.split():
+            wrapname(f)
+        ui.debug(_("[win32mbcs] activated with encoding: %s\n") % util._encoding)
 

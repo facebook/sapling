@@ -188,11 +188,11 @@ class converter(object):
     def writeauthormap(self):
         authorfile = self.authorfile
         if authorfile:
-           self.ui.status(_('Writing author map file %s\n') % authorfile)
-           ofile = open(authorfile, 'w+')
-           for author in self.authors:
-               ofile.write("%s=%s\n" % (author, self.authors[author]))
-           ofile.close()
+            self.ui.status(_('Writing author map file %s\n') % authorfile)
+            ofile = open(authorfile, 'w+')
+            for author in self.authors:
+                ofile.write("%s=%s\n" % (author, self.authors[author]))
+            ofile.close()
 
     def readauthormap(self, authorfile):
         afile = open(authorfile, 'r')
