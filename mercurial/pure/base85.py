@@ -25,7 +25,7 @@ def b85encode(text, pad=False):
     longs = len(text) >> 2
     words = struct.unpack('>%dL' % (longs), text)
 
-    out = ''.join(_b85chars[(word / 52200625) % 85] + 
+    out = ''.join(_b85chars[(word / 52200625) % 85] +
                   _b85chars2[(word / 7225) % 7225] +
                   _b85chars2[word % 7225]
                   for word in words)
