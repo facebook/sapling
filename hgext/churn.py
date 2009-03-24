@@ -21,9 +21,10 @@ def maketemplater(ui, repo, tmpl):
     t.use_template(tmpl)
     return t
 
-def changedlines(ui, repo, ctx1, ctx2):
+def changedlines(ui, repo, ctx1, ctx2, fns):
     lines = 0
-    diff = ''.join(patch.diff(repo, ctx1.node(), ctx2.node()))
+    fmatch = cmdutil.match(repo, pats=fns)
+    diff = ''.join(patch.diff(repo, ctx1.node(), ctx2.node(), fmatch))
     for l in diff.split('\n'):
         if (l.startswith("+") and not l.startswith("+++ ") or
             l.startswith("-") and not l.startswith("--- ")):
@@ -71,7 +72,7 @@ def countrate(ui, repo, amap, *pats, **opts):
                 continue
 
             ctx1 = parents[0]
-            lines = changedlines(ui, repo, ctx1, ctx)
+            lines = changedlines(ui, repo, ctx1, ctx, fns)
             rate[key] = rate.get(key, 0) + lines
 
         if opts.get('progress'):

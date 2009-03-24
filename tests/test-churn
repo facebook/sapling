@@ -20,7 +20,15 @@ echo c > c
 hg ci -m changeca -u user3 -d 12:00 a
 hg ci -m changecb -u user3 -d 12:15 b
 hg ci -Am addc -u user3 -d 12:30
+mkdir -p d/e
+echo abc > d/e/f1.txt
+hg ci -Am "add d/e/f1.txt" -u user1 -d 12:45 d/e/f1.txt
+mkdir -p d/g
+echo def > d/g/f2.txt
+hg ci -Am "add d/g/f2.txt" -u user1 -d 13:00 d/g/f2.txt
 
+echo % churn separate directories
+hg churn d/e
 echo % churn all
 hg churn
 echo % churn up to rev 2

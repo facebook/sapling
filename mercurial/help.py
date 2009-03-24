@@ -178,7 +178,7 @@ PYTHONPATH::
     revisions.
 
     A plain integer is treated as a revision number. Negative
-    integers are treated as toplogical offsets from the tip, with
+    integers are treated as topological offsets from the tip, with
     -1 denoting the tip. As such, negative numbers are only useful
     if you've memorized your local tree numbers and want to save
     typing a single digit. This editor suggests copy and paste.
