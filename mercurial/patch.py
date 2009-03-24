@@ -910,7 +910,7 @@ def iterhunks(ui, fp, sourcefile=None):
                 # else error?
                 # copy/rename + modify should modify target, not source
                 gp = changed.get(bfile)
-                if gp and gp.op in ('COPY', 'DELETE', 'RENAME'):
+                if gp and gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD'):
                     afile = bfile
                     gitworkdone = True
             newfile = True

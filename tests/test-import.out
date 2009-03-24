@@ -293,3 +293,6 @@ removing a
 adding b
 A b
 R a
+% add empty file from the end of patch (issue 1495)
+adding a
+applying a.patch
