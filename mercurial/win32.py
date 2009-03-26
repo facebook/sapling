@@ -131,9 +131,15 @@ class WinError(Exception):
         }
 
     def __init__(self, err):
-        self.win_errno, self.win_function, self.win_strerror = err
-        if self.win_strerror.endswith('.'):
-            self.win_strerror = self.win_strerror[:-1]
+        try:
+            # unpack a pywintypes.error tuple
+            self.win_errno, self.win_function, self.win_strerror = err
+        except ValueError:
+            # get attributes from a WindowsError
+            self.win_errno = err.winerror
+            self.win_function = None
+            self.win_strerror = err.strerror
+        self.win_strerror = self.win_strerror.rstrip('.')
 
 class WinIOError(WinError, IOError):
     def __init__(self, err, filename=None):
