@@ -11,6 +11,7 @@ filterpatch()
         -e "s/^\(# Node ID\).*/\1/" \
         -e "s/^\(# Parent\).*/\1/" \
         -e "s/^\(diff -r \)\([a-f0-9]* \)\(-r \)\([a-f0-9]* \)/\1x \3y /" \
+        -e "s/^\(diff -r \)\([a-f0-9]* \)/\1x /" \
         -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/" \
         -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/"
 }
@@ -73,4 +74,39 @@ echo '% f correctly reflects the merge result'
 cat f
 echo '% And the patch is correct'
 cat .hg/patches/f2.patch | filterpatch
+
+echo
+echo '% Adding one git-style patch and one normal'
+hg qpop -a
+rm -fr .hg/patches
+hg qinit -c
+
+hg up 0
+hg qnew --git f_git.patch
+echo 'mq1' > p
+hg add p
+hg qref --git -m 'P0 (git)'
+
+hg qnew f.patch
+echo 'mq2' > p
+hg qref -m 'P1'
+
+echo '% Git patch'
+cat .hg/patches/f_git.patch  | filterpatch
+
+echo
+echo '% Normal patch'
+cat .hg/patches/f.patch | filterpatch
+
+echo
+echo '% Rebase the applied mq patches'
+hg rebase -s 2 -d 1 --quiet 2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+
+echo '% And the patches are correct'
+echo '% Git patch'
+cat .hg/patches/f_git.patch  | filterpatch
+
+echo
+echo '% Normal patch'
+cat .hg/patches/f.patch | filterpatch
 

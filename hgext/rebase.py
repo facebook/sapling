@@ -14,7 +14,7 @@ http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject
 '''
 
 from mercurial import util, repair, merge, cmdutil, commands, error
-from mercurial import extensions, ancestor, copies
+from mercurial import extensions, ancestor, copies, patch
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.i18n import _
@@ -264,6 +264,14 @@ def defineparents(repo, rev, target, state, targetancestors):
             p2 = P2n
     return p1, p2
 
+def isagitpatch(repo, patchname):
+    'Return true if the given patch is in git format'
+    mqpatch = os.path.join(repo.mq.path, patchname)
+    for line in patch.linereader(file(mqpatch, 'rb')):
+        if line.startswith('diff --git'):
+            return True
+    return False
+
 def updatemq(repo, state, skipped, **opts):
     'Update rebased mq patches - finalize and then import them'
     mqrebase = {}
@@ -271,7 +279,7 @@ def updatemq(repo, state, skipped, **opts):
         if repo[p.rev].rev() in state:
             repo.ui.debug(_('revision %d is an mq patch (%s), finalize it.\n') %
                                         (repo[p.rev].rev(), p.name))
-            mqrebase[repo[p.rev].rev()] = p.name
+            mqrebase[repo[p.rev].rev()] = (p.name, isagitpatch(repo, p.name))
 
     if mqrebase:
         repo.mq.finish(repo, mqrebase.keys())
@@ -283,9 +291,9 @@ def updatemq(repo, state, skipped, **opts):
         for rev in mq:
             if rev not in skipped:
                 repo.ui.debug(_('import mq patch %d (%s)\n')
-                              % (state[rev], mqrebase[rev]))
-                repo.mq.qimport(repo, (), patchname=mqrebase[rev],
-                            git=opts.get('git', False),rev=[str(state[rev])])
+                              % (state[rev], mqrebase[rev][0]))
+                repo.mq.qimport(repo, (), patchname=mqrebase[rev][0],
+                            git=mqrebase[rev][1],rev=[str(state[rev])])
         repo.mq.save_dirty()
 
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,

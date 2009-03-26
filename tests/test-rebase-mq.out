@@ -77,3 +77,58 @@ diff -r x -r y f
 @@ -1,1 +1,1 @@
 -mq1r1
 +mq1r1mq2
+
+% Adding one git-style patch and one normal
+patch queue now empty
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% Git patch
+P0 (git)
+
+diff --git a/p b/p
+new file mode 100644
+--- /dev/null
++++ b/p
+@@ -0,0 +1,1 @@
++mq1
+
+% Normal patch
+P1
+
+diff -r x p
+--- a/p
++++ b/p
+@@ -1,1 +1,1 @@
+-mq1
++mq2
+
+% Rebase the applied mq patches
+saving bundle to 
+% And the patches are correct
+% Git patch
+# HG changeset patch
+# User test
+# Date
+# Node ID
+# Parent
+P0 (git)
+
+diff --git a/p b/p
+new file mode 100644
+--- /dev/null
++++ b/p
+@@ -0,0 +1,1 @@
++mq1
+
+% Normal patch
+# HG changeset patch
+# User test
+# Date
+# Node ID
+# Parent
+P1
+
+--- a/p
++++ b/p
+@@ -1,1 +1,1 @@
+-mq1
++mq2
