@@ -7,6 +7,7 @@
 
 from i18n import _
 import util, os, sys
+from mercurial import extensions
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     '''call python hook. hook is callable object, looked up as
@@ -109,8 +110,13 @@ def hook(ui, repo, name, throw=False, **args):
             if callable(cmd):
                 r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
             elif cmd.startswith('python:'):
-                r = _pythonhook(ui, repo, name, hname, cmd[7:].strip(),
-                                args, throw) or r
+                if cmd.count(':') == 2:
+                    path, cmd = cmd[7:].split(':')
+                    mod = extensions.loadpath(path, 'hgkook.%s' % hname)
+                    hookfn = getattr(mod, cmd)
+                else:
+                    hookfn = cmd[7:].strip()
+                r = _pythonhook(ui, repo, name, hname, hookfn, args, throw) or r
             else:
                 r = _exthook(ui, repo, hname, cmd, args, throw) or r
     finally:

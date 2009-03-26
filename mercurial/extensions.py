@@ -28,6 +28,17 @@ def find(name):
                 return v
         raise KeyError(name)
 
+def loadpath(path, module_name):
+    module_name = module_name.replace('.', '_')
+    path = os.path.expanduser(path)
+    if os.path.isdir(path):
+        # module/__init__.py style
+        d, f = os.path.split(path)
+        fd, fpath, desc = imp.find_module(f, [d])
+        return imp.load_module(module_name, fd, fpath, desc)
+    else:
+        return imp.load_source(module_name, path)
+
 def load(ui, name, path):
     if name.startswith('hgext.') or name.startswith('hgext/'):
         shortname = name[6:]
@@ -40,14 +51,7 @@ def load(ui, name, path):
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
         # conflicts with other modules
-        module_name = "hgext_%s" % name.replace('.', '_')
-        if os.path.isdir(path):
-            # module/__init__.py style
-            d, f = os.path.split(path)
-            fd, fpath, desc = imp.find_module(f, [d])
-            mod = imp.load_module(module_name, fd, fpath, desc)
-        else:
-            mod = imp.load_source(module_name, path)
+        mod = loadpath(path, 'hgext.%s' % name)
     else:
         def importh(name):
             mod = __import__(name)
@@ -72,7 +76,6 @@ def loadall(ui):
         if path:
             if path[0] == '!':
                 continue
-            path = os.path.expanduser(path)
         try:
             load(ui, name, path)
         except KeyboardInterrupt:

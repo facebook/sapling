@@ -475,6 +475,7 @@ hooks::
   The syntax for Python hooks is as follows:
 
     hookname = python:modulename.submodule.callable
+    hookname = python:/path/to/python/module.py:callable
 
   Python hooks are run within the Mercurial process. Each hook is
   called with at least three keyword arguments: a ui object (keyword
