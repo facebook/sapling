@@ -270,8 +270,9 @@ class posixfile_nt(object):
     with win32file.FILE_SHARE_DELETE. this flag does not exist on
     windows < nt, so do not use this class there.'''
 
-    # tried to use win32file._open_osfhandle to pass fd to os.fdopen,
-    # but does not work at all. wrap win32 file api instead.
+    # ideally, we could use win32file._open_osfhandle and avoid this
+    # class entirely, but we would need the win32 _fdopen function,
+    # which is not exported by the win32file module.
 
     def __init__(self, name, mode='rb'):
         self.closed = False
