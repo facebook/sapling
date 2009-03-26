@@ -13,7 +13,7 @@ platform-specific details from the core.
 """
 
 from i18n import _
-import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback, error
+import cStringIO, errno, re, shutil, sys, tempfile, traceback, error
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
 import imp, unicodedata
 
@@ -338,22 +338,6 @@ class Abort(Exception):
 
 def always(fn): return True
 def never(fn): return False
-
-def expand_glob(pats):
-    '''On Windows, expand the implicit globs in a list of patterns'''
-    if os.name != 'nt':
-        return list(pats)
-    ret = []
-    for p in pats:
-        kind, name = patkind(p, None)
-        if kind is None:
-            globbed = glob.glob(name)
-            if globbed:
-                ret.extend(globbed)
-                continue
-            # if we couldn't expand the glob, just keep it around
-        ret.append(p)
-    return ret
 
 def patkind(name, default):
     """Split a string into an optional pattern kind prefix and the
@@ -858,12 +842,32 @@ class path_auditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
-def _makelock_file(info, pathname):
+if os.name == 'nt':
+    from windows import *
+else:
+    from posix import *
+
+def makelock(info, pathname):
+    try:
+        return os.symlink(info, pathname)
+    except OSError, why:
+        if why.errno == errno.EEXIST:
+            raise
+    except AttributeError: # no symlink in os
+        pass
+
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
     os.write(ld, info)
     os.close(ld)
 
-def _readlock_file(pathname):
+def readlock(pathname):
+    try:
+        return os.readlink(pathname)
+    except OSError, why:
+        if why.errno not in (errno.EINVAL, errno.ENOSYS):
+            raise
+    except AttributeError: # no symlink in os
+        pass
     return posixfile(pathname).read()
 
 def nlinks(pathname):
@@ -882,103 +886,6 @@ def fstat(fp):
         return os.fstat(fp.fileno())
     except AttributeError:
         return os.stat(fp.name)
-
-posixfile = file
-
-def openhardlinks():
-    '''return true if it is safe to hold open file handles to hardlinks'''
-    return True
-
-def _statfiles(files):
-    'Stat each file in files and yield stat or None if file does not exist.'
-    lstat = os.lstat
-    for nf in files:
-        try:
-            st = lstat(nf)
-        except OSError, err:
-            if err.errno not in (errno.ENOENT, errno.ENOTDIR):
-                raise
-            st = None
-        yield st
-
-def _statfiles_clustered(files):
-    '''Stat each file in files and yield stat or None if file does not exist.
-    Cluster and cache stat per directory to minimize number of OS stat calls.'''
-    ncase = os.path.normcase
-    sep   = os.sep
-    dircache = {} # dirname -> filename -> status | None if file does not exist
-    for nf in files:
-        nf  = ncase(nf)
-        pos = nf.rfind(sep)
-        if pos == -1:
-            dir, base = '.', nf
-        else:
-            dir, base = nf[:pos+1], nf[pos+1:]
-        cache = dircache.get(dir, None)
-        if cache is None:
-            try:
-                dmap = dict([(ncase(n), s)
-                    for n, k, s in osutil.listdir(dir, True)])
-            except OSError, err:
-                # handle directory not found in Python version prior to 2.5
-                # Python <= 2.4 returns native Windows code 3 in errno
-                # Python >= 2.5 returns ENOENT and adds winerror field
-                # EINVAL is raised if dir is not a directory.
-                if err.errno not in (3, errno.ENOENT, errno.EINVAL,
-                                     errno.ENOTDIR):
-                    raise
-                dmap = {}
-            cache = dircache.setdefault(dir, dmap)
-        yield cache.get(base, None)
-
-if sys.platform == 'win32':
-    statfiles = _statfiles_clustered
-else:
-    statfiles = _statfiles
-
-getuser_fallback = None
-
-def getuser():
-    '''return name of current user'''
-    try:
-        return getpass.getuser()
-    except ImportError:
-        # import of pwd will fail on windows - try fallback
-        if getuser_fallback:
-            return getuser_fallback()
-    # raised if win32api not available
-    raise Abort(_('user name not available - set USERNAME '
-                  'environment variable'))
-
-def username(uid=None):
-    """Return the name of the user with the given uid.
-
-    If uid is None, return the name of the current user."""
-    try:
-        import pwd
-        if uid is None:
-            uid = os.getuid()
-        try:
-            return pwd.getpwuid(uid)[0]
-        except KeyError:
-            return str(uid)
-    except ImportError:
-        return None
-
-def groupname(gid=None):
-    """Return the name of the group with the given gid.
-
-    If gid is None, return the name of the current group."""
-    try:
-        import grp
-        if gid is None:
-            gid = os.getgid()
-        try:
-            return grp.getgrgid(gid)[0]
-        except KeyError:
-            return str(gid)
-    except ImportError:
-        return None
 
 # File system features
 
@@ -1088,9 +995,6 @@ def checklink(path):
     except (OSError, AttributeError):
         return False
 
-_umask = os.umask(0)
-os.umask(_umask)
-
 def needbinarypatch():
     """return True if patches should be applied in binary mode by default."""
     return os.name == 'nt'
@@ -1113,379 +1017,6 @@ def gui():
 
 def lookup_reg(key, name=None, scope=None):
     return None
-
-# Platform specific variants
-if os.name == 'nt':
-    import msvcrt
-    nulldev = 'NUL:'
-
-    class winstdout:
-        '''stdout on windows misbehaves if sent through a pipe'''
-
-        def __init__(self, fp):
-            self.fp = fp
-
-        def __getattr__(self, key):
-            return getattr(self.fp, key)
-
-        def close(self):
-            try:
-                self.fp.close()
-            except: pass
-
-        def write(self, s):
-            try:
-                # This is workaround for "Not enough space" error on
-                # writing large size of data to console.
-                limit = 16000
-                l = len(s)
-                start = 0
-                while start < l:
-                    end = start + limit
-                    self.fp.write(s[start:end])
-                    start = end
-            except IOError, inst:
-                if inst.errno != 0: raise
-                self.close()
-                raise IOError(errno.EPIPE, 'Broken pipe')
-
-        def flush(self):
-            try:
-                return self.fp.flush()
-            except IOError, inst:
-                if inst.errno != errno.EINVAL: raise
-                self.close()
-                raise IOError(errno.EPIPE, 'Broken pipe')
-
-    sys.stdout = winstdout(sys.stdout)
-
-    def _is_win_9x():
-        '''return true if run on windows 95, 98 or me.'''
-        try:
-            return sys.getwindowsversion()[3] == 1
-        except AttributeError:
-            return 'command' in os.environ.get('comspec', '')
-
-    def openhardlinks():
-        return not _is_win_9x and "win32api" in locals()
-
-    def system_rcpath():
-        try:
-            return system_rcpath_win32()
-        except:
-            return [r'c:\mercurial\mercurial.ini']
-
-    def user_rcpath():
-        '''return os-specific hgrc search path to the user dir'''
-        try:
-            path = user_rcpath_win32()
-        except:
-            home = os.path.expanduser('~')
-            path = [os.path.join(home, 'mercurial.ini'),
-                    os.path.join(home, '.hgrc')]
-        userprofile = os.environ.get('USERPROFILE')
-        if userprofile:
-            path.append(os.path.join(userprofile, 'mercurial.ini'))
-            path.append(os.path.join(userprofile, '.hgrc'))
-        return path
-
-    def parse_patch_output(output_line):
-        """parses the output produced by patch and returns the file name"""
-        pf = output_line[14:]
-        if pf[0] == '`':
-            pf = pf[1:-1] # Remove the quotes
-        return pf
-
-    def sshargs(sshcmd, host, user, port):
-        '''Build argument list for ssh or Plink'''
-        pflag = 'plink' in sshcmd.lower() and '-P' or '-p'
-        args = user and ("%s@%s" % (user, host)) or host
-        return port and ("%s %s %s" % (args, pflag, port)) or args
-
-    def testpid(pid):
-        '''return False if pid dead, True if running or not known'''
-        return True
-
-    def set_flags(f, l, x):
-        pass
-
-    def set_binary(fd):
-        # When run without console, pipes may expose invalid
-        # fileno(), usually set to -1.
-        if hasattr(fd, 'fileno') and fd.fileno() >= 0:
-            msvcrt.setmode(fd.fileno(), os.O_BINARY)
-
-    def pconvert(path):
-        return '/'.join(splitpath(path))
-
-    def localpath(path):
-        return path.replace('/', '\\')
-
-    def normpath(path):
-        return pconvert(os.path.normpath(path))
-
-    makelock = _makelock_file
-    readlock = _readlock_file
-
-    def samestat(s1, s2):
-        return False
-
-    # A sequence of backslashes is special iff it precedes a double quote:
-    # - if there's an even number of backslashes, the double quote is not
-    #   quoted (i.e. it ends the quoted region)
-    # - if there's an odd number of backslashes, the double quote is quoted
-    # - in both cases, every pair of backslashes is unquoted into a single
-    #   backslash
-    # (See http://msdn2.microsoft.com/en-us/library/a1y7w461.aspx )
-    # So, to quote a string, we must surround it in double quotes, double
-    # the number of backslashes that preceed double quotes and add another
-    # backslash before every double quote (being careful with the double
-    # quote we've appended to the end)
-    _quotere = None
-    def shellquote(s):
-        global _quotere
-        if _quotere is None:
-            _quotere = re.compile(r'(\\*)("|\\$)')
-        return '"%s"' % _quotere.sub(r'\1\1\\\2', s)
-
-    def quotecommand(cmd):
-        """Build a command string suitable for os.popen* calls."""
-        # The extra quotes are needed because popen* runs the command
-        # through the current COMSPEC. cmd.exe suppress enclosing quotes.
-        return '"' + cmd + '"'
-
-    def popen(command, mode='r'):
-        # Work around "popen spawned process may not write to stdout
-        # under windows"
-        # http://bugs.python.org/issue1366
-        command += " 2> %s" % nulldev
-        return os.popen(quotecommand(command), mode)
-
-    def explain_exit(code):
-        return _("exited with status %d") % code, code
-
-    # if you change this stub into a real check, please try to implement the
-    # username and groupname functions above, too.
-    def isowner(fp, st=None):
-        return True
-
-    def find_exe(command):
-        '''Find executable for command searching like cmd.exe does.
-        If command is a basename then PATH is searched for command.
-        PATH isn't searched if command is an absolute or relative path.
-        An extension from PATHEXT is found and added if not present.
-        If command isn't found None is returned.'''
-        pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
-        pathexts = [ext for ext in pathext.lower().split(os.pathsep)]
-        if os.path.splitext(command)[1].lower() in pathexts:
-            pathexts = ['']
-
-        def findexisting(pathcommand):
-            'Will append extension (if needed) and return existing file'
-            for ext in pathexts:
-                executable = pathcommand + ext
-                if os.path.exists(executable):
-                    return executable
-            return None
-
-        if os.sep in command:
-            return findexisting(command)
-
-        for path in os.environ.get('PATH', '').split(os.pathsep):
-            executable = findexisting(os.path.join(path, command))
-            if executable is not None:
-                return executable
-        return None
-
-    def set_signal_handler():
-        try:
-            set_signal_handler_win32()
-        except NameError:
-            pass
-
-    try:
-        # override functions with win32 versions if possible
-        from util_win32 import *
-        if not _is_win_9x():
-            posixfile = posixfile_nt
-    except ImportError:
-        pass
-
-else:
-    nulldev = '/dev/null'
-
-    def rcfiles(path):
-        rcs = [os.path.join(path, 'hgrc')]
-        rcdir = os.path.join(path, 'hgrc.d')
-        try:
-            rcs.extend([os.path.join(rcdir, f)
-                        for f, kind in osutil.listdir(rcdir)
-                        if f.endswith(".rc")])
-        except OSError:
-            pass
-        return rcs
-
-    def system_rcpath():
-        path = []
-        # old mod_python does not set sys.argv
-        if len(getattr(sys, 'argv', [])) > 0:
-            path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
-                                  '/../etc/mercurial'))
-        path.extend(rcfiles('/etc/mercurial'))
-        return path
-
-    def user_rcpath():
-        return [os.path.expanduser('~/.hgrc')]
-
-    def parse_patch_output(output_line):
-        """parses the output produced by patch and returns the file name"""
-        pf = output_line[14:]
-        if os.sys.platform == 'OpenVMS':
-            if pf[0] == '`':
-                pf = pf[1:-1] # Remove the quotes
-        else:
-           if pf.startswith("'") and pf.endswith("'") and " " in pf:
-                pf = pf[1:-1] # Remove the quotes
-        return pf
-
-    def sshargs(sshcmd, host, user, port):
-        '''Build argument list for ssh'''
-        args = user and ("%s@%s" % (user, host)) or host
-        return port and ("%s -p %s" % (args, port)) or args
-
-    def is_exec(f):
-        """check whether a file is executable"""
-        return (os.lstat(f).st_mode & 0100 != 0)
-
-    def set_flags(f, l, x):
-        s = os.lstat(f).st_mode
-        if l:
-            if not stat.S_ISLNK(s):
-                # switch file to link
-                data = file(f).read()
-                os.unlink(f)
-                try:
-                    os.symlink(data, f)
-                except:
-                    # failed to make a link, rewrite file
-                    file(f, "w").write(data)
-            # no chmod needed at this point
-            return
-        if stat.S_ISLNK(s):
-            # switch link to file
-            data = os.readlink(f)
-            os.unlink(f)
-            file(f, "w").write(data)
-            s = 0666 & ~_umask # avoid restatting for chmod
-
-        sx = s & 0100
-        if x and not sx:
-            # Turn on +x for every +r bit when making a file executable
-            # and obey umask.
-            os.chmod(f, s | (s & 0444) >> 2 & ~_umask)
-        elif not x and sx:
-            # Turn off all +x bits
-            os.chmod(f, s & 0666)
-
-    def set_binary(fd):
-        pass
-
-    def pconvert(path):
-        return path
-
-    def localpath(path):
-        return path
-
-    normpath = os.path.normpath
-    samestat = os.path.samestat
-
-    def makelock(info, pathname):
-        try:
-            os.symlink(info, pathname)
-        except OSError, why:
-            if why.errno == errno.EEXIST:
-                raise
-            else:
-                _makelock_file(info, pathname)
-
-    def readlock(pathname):
-        try:
-            return os.readlink(pathname)
-        except OSError, why:
-            if why.errno in (errno.EINVAL, errno.ENOSYS):
-                return _readlock_file(pathname)
-            else:
-                raise
-
-    def shellquote(s):
-        if os.sys.platform == 'OpenVMS':
-            return '"%s"' % s
-        else:
-            return "'%s'" % s.replace("'", "'\\''")
-
-    def quotecommand(cmd):
-        return cmd
-
-    def popen(command, mode='r'):
-        return os.popen(command, mode)
-
-    def testpid(pid):
-        '''return False if pid dead, True if running or not sure'''
-        if os.sys.platform == 'OpenVMS':
-            return True
-        try:
-            os.kill(pid, 0)
-            return True
-        except OSError, inst:
-            return inst.errno != errno.ESRCH
-
-    def explain_exit(code):
-        """return a 2-tuple (desc, code) describing a process's status"""
-        if os.WIFEXITED(code):
-            val = os.WEXITSTATUS(code)
-            return _("exited with status %d") % val, val
-        elif os.WIFSIGNALED(code):
-            val = os.WTERMSIG(code)
-            return _("killed by signal %d") % val, val
-        elif os.WIFSTOPPED(code):
-            val = os.WSTOPSIG(code)
-            return _("stopped by signal %d") % val, val
-        raise ValueError(_("invalid exit code"))
-
-    def isowner(fp, st=None):
-        """Return True if the file object f belongs to the current user.
-
-        The return value of a util.fstat(f) may be passed as the st argument.
-        """
-        if st is None:
-            st = fstat(fp)
-        return st.st_uid == os.getuid()
-
-    def find_exe(command):
-        '''Find executable for command searching like which does.
-        If command is a basename then PATH is searched for command.
-        PATH isn't searched if command is an absolute or relative path.
-        If command isn't found None is returned.'''
-        if sys.platform == 'OpenVMS':
-            return command
-
-        def findexisting(executable):
-            'Will return executable if existing file'
-            if os.path.exists(executable):
-                return executable
-            return None
-
-        if os.sep in command:
-            return findexisting(command)
-
-        for path in os.environ.get('PATH', '').split(os.pathsep):
-            executable = findexisting(os.path.join(path, command))
-            if executable is not None:
-                return executable
-        return None
-
-    def set_signal_handler():
-        pass
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
@@ -1510,7 +1041,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
             raise
         st_mode = createmode
         if st_mode is None:
-            st_mode = ~_umask
+            st_mode = ~umask
         st_mode &= 0666
     os.chmod(temp, st_mode)
     if emptyok:

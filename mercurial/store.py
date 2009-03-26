@@ -136,7 +136,7 @@ def _calcmode(path):
         # files in .hg/ will be created using this mode
         mode = os.stat(path).st_mode
             # avoid some useless chmods
-        if (0777 & ~util._umask) == (0777 & mode):
+        if (0777 & ~util.umask) == (0777 & mode):
             mode = None
     except OSError:
         mode = None
