@@ -105,6 +105,9 @@ class HgChangeReceiver(delta.Editor):
             self.tag_locations = tag_locations
         pickle_atomic(self.tag_locations, self.tag_locations_file,
                       self.meta_data_dir)
+        # ensure nested paths are handled properly
+        self.tag_locations.sort()
+        self.tag_locations.reverse()
 
         self.clear_current_info()
         self.author_host = author_host
