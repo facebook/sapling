@@ -304,6 +304,11 @@ class Watcher(object):
                         dd[fn] = status
             else:
                 d.pop(fn, None)
+        elif not status:
+            # a directory is being removed, check its contents
+            for subfile, b in oldstatus.copy().iteritems():
+                self.updatestatus(wfn + '/' + subfile, None)
+
 
     def check_deleted(self, key):
         # Files that had been deleted but were present in the dirstate
@@ -473,8 +478,7 @@ class Watcher(object):
 
         if evt.mask & inotify.IN_ISDIR:
             self.scan(wpath)
-        else:
-            self.schedule_work(wpath, 'd')
+        self.schedule_work(wpath, 'd')
 
     def process_modify(self, wpath, evt):
         if self.ui.debugflag:
