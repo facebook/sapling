@@ -964,7 +964,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
         raise
     return temp
 
-class atomictempfile(posixfile):
+class atomictempfile:
     """file-like object that atomically updates a file
 
     All writes will be redirected to a temporary copy of the original
@@ -975,11 +975,14 @@ class atomictempfile(posixfile):
         self.__name = name
         self.temp = mktempcopy(name, emptyok=('w' in mode),
                                createmode=createmode)
-        posixfile.__init__(self, self.temp, mode)
+        self._fp = posixfile(self.temp, mode)
+
+    def __getattr__(self, name):
+        return getattr(self._fp, name)
 
     def rename(self):
         if not self.closed:
-            posixfile.close(self)
+            self._fp.close()
             rename(self.temp, localpath(self.__name))
 
     def __del__(self):
@@ -987,7 +990,7 @@ class atomictempfile(posixfile):
             try:
                 os.unlink(self.temp)
             except: pass
-            posixfile.close(self)
+            self._fp.close()
 
 def makedirs(name, mode=None):
     """recursive directory creation with parent mode inheritance"""
