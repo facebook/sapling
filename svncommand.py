@@ -35,7 +35,7 @@ def svncmd(ui, repo, subcommand, *args, **opts):
     path = os.path.dirname(repo.path)
     try:
         commandfunc = svn_subcommands[subcommand]
-        if commandfunc not in svn_commands_nourl:
+        if commandfunc not in svn_commands_nourl and not opts['svn_url']:
             opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
         return commandfunc(ui, args=args,
                            hg_repo_path=path,
