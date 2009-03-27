@@ -229,20 +229,6 @@ def getuser():
     raise Abort(_('user name not available - set USERNAME '
                   'environment variable'))
 
-def expand_glob(pats):
-    '''On Windows, expand the implicit globs in a list of patterns'''
-    ret = []
-    for p in pats:
-        kind, name = patkind(p, None)
-        if kind is None:
-            globbed = glob.glob(name)
-            if globbed:
-                ret.extend(globbed)
-                continue
-            # if we couldn't expand the glob, just keep it around
-        ret.append(p)
-    return ret
-
 def username(uid=None):
     """Return the name of the user with the given uid.
 

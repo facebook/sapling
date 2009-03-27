@@ -844,6 +844,19 @@ class path_auditor(object):
 
 if os.name == 'nt':
     from windows import *
+    def expand_glob(pats):
+        '''On Windows, expand the implicit globs in a list of patterns'''
+        ret = []
+        for p in pats:
+            kind, name = patkind(p, None)
+            if kind is None:
+                globbed = glob.glob(name)
+                if globbed:
+                    ret.extend(globbed)
+                    continue
+                # if we couldn't expand the glob, just keep it around
+            ret.append(p)
+        return ret
 else:
     from posix import *
 
