@@ -44,3 +44,7 @@ echo % test pre and post conversion actions
 echo 'include b' > filemap
 hg convert --debug --filemap filemap a partialb | \
     grep 'run hg'
+
+echo % converting empty dir should fail "nicely"
+mkdir emptydir
+PATH=$BINDIR hg convert emptydir 2>&1 | sed 's,file://.*/emptydir,.../emptydir,g'

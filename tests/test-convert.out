@@ -226,3 +226,16 @@ run hg source pre-conversion action
 run hg sink pre-conversion action
 run hg sink post-conversion action
 run hg source post-conversion action
+% converting empty dir should fail nicely
+assuming destination emptydir-hg
+initializing destination emptydir-hg repository
+emptydir does not look like a CVS checkout
+emptydir does not look like a Git repo
+.../emptydir does not look like a Subversion repo
+emptydir is not a local Mercurial repo
+emptydir does not look like a darcs repo
+cannot find required "mtn" tool
+emptydir does not look like a GNU Arch repo
+emptydir does not look like a Bazaar repo
+cannot find required "p4" tool
+abort: emptydir: missing or unsupported repository

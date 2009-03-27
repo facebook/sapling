@@ -28,7 +28,7 @@ class p4_source(converter_source):
     def __init__(self, ui, path, rev=None):
         super(p4_source, self).__init__(ui, path, rev=rev)
 
-        checktool('p4')
+        checktool('p4', abort=False)
 
         self.p4changes = {}
         self.heads = {}
