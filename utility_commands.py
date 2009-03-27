@@ -85,7 +85,7 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
     if url[-1] == '/':
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
-    author = '@'.join(parent.user().split('@')[:-1])
+    author = hge.svnauthorforauthor(parent.user())
     # cleverly figure out repo root w/o actually contacting the server
     reporoot = url[:len(url)-len(subdir)]
     ui.status('''URL: %(url)s
