@@ -33,12 +33,14 @@ def optrev(revnum):
 
 svn_config = core.svn_config_get_config(None)
 class RaCallbacks(ra.Callbacks):
-    def open_tmp_file(self, pool): #pragma: no cover
+    @staticmethod
+    def open_tmp_file(pool): #pragma: no cover
         (fd, fn) = tempfile.mkstemp()
         os.close(fd)
         return fn
 
-    def get_client_string(self, pool):
+    @staticmethod
+    def get_client_string(pool):
         return 'hgsubversion'
 
 
@@ -92,17 +94,38 @@ def _create_auth_baton(pool):
     return core.svn_auth_open(providers, pool)
 
 
-class Revision(object):
+class Revision(tuple):
     """Wrapper for a Subversion revision.
+
+    Derives from tuple in an attempt to minimise the memory footprint.
     """
-    def __init__(self, revnum, author, message, date, paths, strip_path=''):
-        self.revnum, self.author, self.message = revnum, author, message
-        # TODO parse this into a datetime
-        self.date = date
-        self.paths = {}
+    def __new__(self, revnum, author, message, date, paths, strip_path=''):
+        _paths = {}
         if paths:
             for p in paths:
-                self.paths[p[len(strip_path):]] = paths[p]
+                _paths[p[len(strip_path):]] = paths[p]
+        return tuple.__new__(self,
+                             (revnum, author, message, date, _paths))
+
+    def get_revnum(self):
+        return self[0]
+    revnum = property(get_revnum)
+
+    def get_author(self):
+        return self[1]
+    author = property(get_author)
+
+    def get_message(self):
+        return self[2]
+    message = property(get_message)
+
+    def get_date(self):
+        return self[3]
+    date = property(get_date)
+
+    def get_paths(self):
+        return self[4]
+    paths = property(get_paths)
 
     def __str__(self):
         return 'r%d by %s' % (self.revnum, self.author)
