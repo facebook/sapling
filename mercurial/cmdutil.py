@@ -385,8 +385,10 @@ def copy(ui, repo, pats, opts, rename=False):
                     return True # report a failure
 
         if ui.verbose or not exact:
-            action = rename and "moving" or "copying"
-            ui.status(_('%s %s to %s\n') % (action, relsrc, reltarget))
+            if rename:
+                ui.status(_('moving %s to %s\n') % (relsrc, reltarget))
+            else:
+                ui.status(_('copying %s to %s\n') % (relsrc, reltarget))
 
         targets[abstarget] = abssrc
 
