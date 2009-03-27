@@ -13,7 +13,7 @@
 # commit (v)	übertragen
 # deprecated	veraltet
 # hook		Aktion
-# merge		zusammmenführen
+# merge		zusammenführen
 # notation	Schreibweise
 # repository	Projektarchiv
 #
@@ -23,7 +23,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2009-03-24 07:33+0100\n"
-"PO-Revision-Date: 2009-03-24 07:37+0100\n"
+"PO-Revision-Date: 2009-03-27 17:46+0100\n"
 "Last-Translator: Tobias Bell <tobias.bell@gmail.com>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
 "MIME-Version: 1.0\n"
@@ -126,6 +126,7 @@ msgstr "*** [alias] %s: zirkuläre Abhängigkeit auf %s"
 msgid "*** [alias] %s: no definition\n"
 msgstr "*** [alias] %s: nicht definiert\n"
 
+# Nicht übersetzen
 msgid ""
 "mercurial bookmarks\n"
 "\n"
@@ -148,29 +149,8 @@ msgid ""
 "and\n"
 "just updates it. This is similar to git's approach of branching.\n"
 msgstr ""
-"Mercurial bookmarks\n"
-"\n"
-"Mercurial Lesezeichen sind lokale mitwandernde Verweise auf changesets. "
-"Jedes\n"
-"Lesezeichen verweist auf ein changeset identifiziert durch seinen hash. Wenn "
-"du ein changeset\n"
-"commitest, dass auf einem changeset mit Lesezeichen basiert,  wird dieses "
-"Lesezeichen\n"
-"auf das neue changeset angehoben.\n"
-"\n"
-"Die Namen von Lesezeichen können bei jedem Verweis auf Revisionen genutzt "
-"werden (z.B. hg\n"
-"merge, hg update).\n"
-"\n"
-"Die Lesezeichen Erweiterung ermöglicht eine git-ähnliche Nutzung\n"
-"durch Zufügen folgender Konfigurationseinträge in deiner .hgrc:\n"
-"\n"
-"[bookmarks]\n"
-"track.current = True\n"
-"\n"
-"Dies veranlasst bookmarks das aktuelle Lesezeichen nachzuverfolgen, und\n"
-"nur dieses zu aktualisieren. Dies ähnelt gits Umgang mit branches.\n"
 
+# Nicht übersetzen
 msgid ""
 "Parse .hg/bookmarks file and return a dictionary\n"
 "\n"
@@ -182,6 +162,7 @@ msgid ""
 "    "
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "Write bookmarks\n"
 "\n"
@@ -193,6 +174,7 @@ msgid ""
 "    "
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "Get the current bookmark\n"
 "\n"
@@ -202,6 +184,7 @@ msgid ""
 "    "
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "Set the name of the bookmark that we are currently on\n"
 "\n"
@@ -224,6 +207,19 @@ msgid ""
 "    that revision.\n"
 "    "
 msgstr ""
+"mercurial bookmarks (Lesezeichen)\n"
+"\n"
+"    Lesezeichen sind Zeiger auf bestimmte Versionen, die mitwandern,\n"
+"    wenn eine neuen Version erzeugt wird. Lesezeichen sind nur lokal.\n"
+"    Sie können umbenannt, kopiert und gelöscht werden. Es ist möglich Lesezeichen\n"
+"    bei 'hg merge' und 'hg update' zu nutzen, um auf das angegeben Lesezeichen\n"
+"    zu aktualisieren..\n"
+"\n"
+"    Du kannst 'hg bookmark NAME' aufrufen, um ein Lesezeichen mit dem\n"
+"    angegeben Namen auf der aktuellen Spitze (tip) zu setzen. Bei Angabe einer\n"
+"    Revision mit -r REV (REV kann ein vorhandenes Lesezeichen sein) wird das\n"
+"    Lesezeichen auf dieser Revision gesetzt.\n"
+"    "
 
 msgid "a bookmark of this name does not exist"
 msgstr "Es existiert kein Lesezeichen mit diesem Namen"
@@ -244,20 +240,24 @@ msgid "a bookmark cannot have the name of an existing branch"
 msgstr ""
 "Ein Lesezeichen darf nicht denselben Namen wie ein existierender Zweig haben"
 
+# Nicht übersetzen
 msgid ""
 "Strip bookmarks if revisions are stripped using\n"
 "    the mercurial.strip method. This usually happens during\n"
 "    qpush and qpop"
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "Add a revision to the repository and\n"
 "            move the bookmark"
 msgstr ""
 
+# Nicht übersetzen
 msgid "Merge bookmarks with normal tags"
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "Set the current bookmark\n"
 "\n"
