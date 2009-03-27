@@ -85,6 +85,8 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     branchinfofile = open(os.path.join(svnmetadir, 'branch_info'), 'w')
     pickle.dump(branchinfo, branchinfofile)
     branchinfofile.close()
+
+    # now handle tags
     tagsinfo = {}
     realtags = svn.tags
     tagsleft = realtags.items()
@@ -103,10 +105,11 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
                 older_tags = svn.tags_at_rev(rev)
                 newsrc, newrev = older_tags[src]
                 tagsleft.append((tag, (newsrc, newrev)))
-        if source.startswith('branches/') or source == 'trunk':
+            continue
+        else:
             source = determinebranch(source)
-            if rev <= last_rev:
-                tagsinfo[tag] = source, rev
+        if rev <= last_rev:
+            tagsinfo[tag] = source, rev
     tagsinfofile = open(os.path.join(svnmetadir, 'tag_info'), 'w')
     pickle.dump(tagsinfo, tagsinfofile)
     tagsinfofile.close()
@@ -114,10 +117,11 @@ rebuildmeta = util.register_subcommand('rebuildmeta')(rebuildmeta)
 rebuildmeta = util.command_needs_no_url(rebuildmeta)
 
 def determinebranch(branch):
-    if branch.startswith('branches'):
+    assert not branch.startswith('tags/'), "Tags can't be tags of other tags."
+    if branch.startswith('branches/'):
         branch = branch[len('branches/'):]
     elif branch == 'trunk':
         branch = None
     else:
-        assert False, 'Unhandled case while regenerating metadata.'
+        branch = '../' + branch
     return branch

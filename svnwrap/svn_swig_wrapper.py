@@ -211,6 +211,8 @@ class SubversionRepo(object):
         source = hist.paths[path].copyfrom_path
         source_rev = 0
         for p in hist.paths:
+            if not p.startswith(path):
+                continue
             if hist.paths[p].copyfrom_rev:
                 # We assume that the revision of the source tree as it was
                 # copied was actually the revision of the highest revision
@@ -247,26 +249,8 @@ class SubversionRepo(object):
         The reason this is lazy is so that you can use the same repo object
         to perform RA calls to get deltas.
         """
-        # NB: you'd think this would work, but you'd be wrong. I'm pretty
-        # convinced there must be some kind of svn bug here.
-        #return self.fetch_history_at_paths(['tags', 'trunk', 'branches'],
-        #                                   start=start)
-        # this does the same thing, but at the repo root + filtering. It's
-        # kind of tough cookies, sadly.
-        for r in self.fetch_history_at_paths([''], start=start,
-                                             chunk_size=chunk_size):
-            should_yield = False
-            i = 0
-            paths = list(r.paths.keys())
-            while i < len(paths) and not should_yield:
-                p = paths[i]
-                if (p.startswith('trunk') or p.startswith('tags')
-                    or p.startswith('branches')):
-                    should_yield = True
-                i += 1
-            if should_yield:
-                yield r
-
+        return self.fetch_history_at_paths([''], start=start,
+                                           chunk_size=chunk_size)
 
     def fetch_history_at_paths(self, paths, start=None, stop=None,
                                chunk_size=1000):
