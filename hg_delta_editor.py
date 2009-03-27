@@ -689,6 +689,14 @@ class HgChangeReceiver(delta.Editor):
             return self.authors[author]
         return '%s%s' %(author, self.author_host)
 
+    def svnauthorforauthor(self, author):
+        for svnauthor, hgauthor in self.authors.iteritems():
+            if author == hgauthor:
+                return svnauthor
+        else:
+            # return the original svn-side author
+            return author.rsplit('@', 1)[0]
+
     def readauthors(self, authorfile):
         self.ui.note(('Reading authormap from %s\n') % authorfile)
         f = open(authorfile, 'r')
