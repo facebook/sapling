@@ -84,7 +84,8 @@ cmdtable = {
          ),
     "svnclone":
         (svn_fetch,
-         [('S', 'skipto-rev', '0', 'skip commits before this revision.'),
+         [('S', 'skipto-rev', 0, 'skip commits before this revision.'),
+          ('H', 'head', 0, 'skip revisions after this one.'),
           ('', 'stupid', False, 'be stupid and use diffy replay.'),
           ('T', 'tag-locations', 'tags', 'Relative path to Subversion tags.'),
           ('A', 'authors', '', 'username mapping filename'),

@@ -29,6 +29,9 @@ class SubversionRepoCanNotDiff(Exception):
     """Exception raised when the svn API diff3() command cannot be used
     """
 
+'''Default chunk size used in fetch_history_at_paths() and revisions().'''
+_chunk_size = 1000
+
 def optrev(revnum):
     optrev = core.svn_opt_revision_t()
     optrev.kind = core.svn_opt_revision_number
@@ -145,7 +148,7 @@ class SubversionRepo(object):
     This uses the SWIG Python bindings, and will only work on svn >= 1.4.
     It takes a required param, the URL.
     """
-    def __init__(self, url='', username=''):
+    def __init__(self, url='', username='', head=None):
         self.svn_url = url
         self.uname = username
         self.auth_baton_pool = core.Pool()
@@ -206,6 +209,26 @@ class SubversionRepo(object):
     def START(self):
         return 0
     START = property(START)
+
+    def last_changed_rev(self):
+        try:
+            holder = []
+            ra.get_log(self.ra, [''],
+                       self.HEAD, 1,
+                       1, #limit of how many log messages to load
+                       True, # don't need to know changed paths
+                       True, # stop on copies
+                       lambda paths, revnum, author, date, message, pool:
+                           holder.append(revnum),
+                       self.pool)
+
+            return holder[-1]
+        except core.SubversionException, e:
+            if e.apr_err not in [core.SVN_ERR_FS_NOT_FOUND]:
+                raise
+            else:
+                return self.HEAD
+    last_changed_rev = property(last_changed_rev)
 
     def branches(self):
         """Get the branches defined in this repo assuming a standard layout.
@@ -302,7 +325,7 @@ class SubversionRepo(object):
         folders, props, junk = r
         return folders
 
-    def revisions(self, start=None, chunk_size=1000):
+    def revisions(self, start=None, stop=None, chunk_size=_chunk_size):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number

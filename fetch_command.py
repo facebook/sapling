@@ -21,7 +21,8 @@ def print_your_svn_is_old_message(ui): #pragma: no cover
               "as good a job. You should really upgrade your server.\n")
 
 
-def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
+def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, head=0,
+                    stupid=None,
                     tag_locations='tags',
                     authors=None,
                     filemap=None,
@@ -65,12 +66,23 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
         initializing_repo = True
         start = skipto_rev
 
+    if head <= 0:
+        stop = svn.last_changed_rev
+    else:
+        stop = head
+
     if initializing_repo and start > 0:
         raise merc_util.Abort('Revision skipping at repository initialization '
                               'remains unimplemented.')
 
+    if start >= stop:
+        ui.status('No new revisions beyond %d.\n' % stop)
+        return
+    else:
+        ui.status('Pulling revisions %d through %d.\n' % (start, stop))
+
     # start converting revisions
-    for r in svn.revisions(start=start):
+    for r in svn.revisions(start=start, stop=head):
         valid = True
         hg_editor.update_branch_tag_map_for_rev(r)
         for p in r.paths:
@@ -86,7 +98,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     util.describe_revision(ui, r)
                     if have_replay:
                         try:
-                            replay_convert_rev(hg_editor, svn, r)
+                            replay_convert_rev(hg_editor, svn, r, skipto_rev)
                         except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                             ui.status('%s\n' % e.message)
                             print_your_svn_is_old_message(ui)
@@ -109,9 +121,9 @@ def cleanup_file_handles(svn, count):
     if count % 50 == 0:
         svn.init_ra_and_client()
 
-def replay_convert_rev(hg_editor, svn, r):
+def replay_convert_rev(hg_editor, svn, r, skipto_rev):
     hg_editor.set_current_rev(r)
-    svn.get_replay(r.revnum, hg_editor)
+    svn.get_replay(r.revnum, hg_editor, skipto_rev)
     i = 1
     if hg_editor.missing_plaintexts:
         hg_editor.ui.debug('Fetching %s files that could not use replay.\n' %
