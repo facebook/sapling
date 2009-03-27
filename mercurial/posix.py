@@ -9,7 +9,7 @@ reference.
 """
 
 from i18n import _
-import os, sys, osutil, errno, stat, getpass
+import os, sys, osutil, errno, stat, getpass, pwd, grp
 
 posixfile = file
 nulldev = '/dev/null'
