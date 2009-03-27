@@ -45,5 +45,10 @@ def suite():
                               ])
 
 if __name__ == '__main__':
-    runner = unittest.TextTestRunner()
+    kwargs = { 'descriptions': 2 }
+    if '-v' in sys.argv:
+        kwargs['descriptions'] = 3
+        kwargs['verbosity'] = 2
+
+    runner = unittest.TextTestRunner(**kwargs)
     runner.run(suite())
