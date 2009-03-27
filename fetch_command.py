@@ -28,10 +28,12 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     **opts):
     """pull new revisions from Subversion
     """
+
     svn_url = util.normalize_url(svn_url)
     old_encoding = merc_util._encoding
     merc_util._encoding = 'UTF-8'
     skipto_rev=int(skipto_rev)
+
     have_replay = not stupid
     if have_replay and not callable(
         delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
@@ -41,7 +43,6 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                   ' contribute a patch to use the ctypes bindings instead'
                   ' of SWIG.\n')
         have_replay = False
-    initializing_repo = False
     svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
     author_host = "@%s" % svn.uuid
     tag_locations = tag_locations.split(',')
@@ -52,7 +53,9 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                                                  tag_locations=tag_locations,
                                                  authors=authors,
                                                  filemap=filemap)
+
     if os.path.exists(hg_editor.uuid_file):
+        initializing_repo = False
         uuid = open(hg_editor.uuid_file).read()
         assert uuid == svn.uuid
         start = hg_editor.last_known_revision()

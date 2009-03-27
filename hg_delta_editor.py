@@ -244,10 +244,12 @@ class HgChangeReceiver(delta.Editor):
     def _path_and_branch_for_path(self, path, existing=True):
         return self._split_branch_path(path, existing=existing)[:2]
 
+    def _branch_for_path(self, path, existing=True):
+        return self._path_and_branch_for_path(path, existing=existing)[1]
+
     def _localname(self, path):
         """Compute the local name for a branch located at path.
         """
-        assert not path.startswith('tags/')
         if path == 'trunk':
             return None
         elif path.startswith('branches/'):
@@ -272,8 +274,6 @@ class HgChangeReceiver(delta.Editor):
         known.
         """
         path = self._normalize_path(path)
-        if path.startswith('tags/'):
-            return None, None, None
         test = ''
         path_comps = path.split('/')
         while self._localname(test) not in self.branches and len(path_comps):
@@ -372,6 +372,10 @@ class HgChangeReceiver(delta.Editor):
 
         Otherwise, returns False.
         """
+        return self._split_tag_path(path)[-1] or False
+
+    def _split_tag_path(self, path):
+        r = (None, None, None)
         path = self._normalize_path(path)
         for tags_path in self.tag_locations:
             if path and (path.startswith(tags_path) and
@@ -885,8 +889,8 @@ class HgChangeReceiver(delta.Editor):
         # parentctx is not an ancestor of childctx, files are unrelated
         return False
 
-    def add_file(self, path, parent_baton, copyfrom_path,
-                 copyfrom_revision, file_pool=None):
+    def add_file(self, path, parent_baton=None, copyfrom_path=None,
+                 copyfrom_revision=None, file_pool=None):
         self.current_file = 'foobaz'
         self.base_revision = None
         if path in self.deleted_files:
