@@ -59,6 +59,18 @@ class HgChangeReceiver(delta.Editor):
         f.close()
         self.revmap[revnum, branch] = node_hash
 
+    def last_known_revision(self):
+        ''' Obtain the highest numbered -- i.e. latest -- revision known.
+
+        Currently, this function just iterates over the entire revision map
+        using the max() builtin. This may be slow for extremely large
+        repositories, but for now, it's fast enough.
+        '''
+        try:
+            return max(k[0] for k in self.revmap.iterkeys())
+        except ValueError:
+            return 0
+
     def __init__(self, path=None, repo=None, ui_=None,
                  subdir='', author_host='',
                  tag_locations=['tags'],
@@ -131,7 +143,6 @@ class HgChangeReceiver(delta.Editor):
             assert os.path.isfile(self.revmap_file)
             assert os.path.isfile(self.svn_url_file)
             assert os.path.isfile(self.uuid_file)
-            assert os.path.isfile(self.last_revision_handled_file)
         else:
             self.repo = hg.repository(self.ui, repo_path, create=True)
             os.makedirs(os.path.dirname(self.uuid_file))
@@ -762,10 +773,6 @@ class HgChangeReceiver(delta.Editor):
     def uuid_file(self):
         return self.meta_file_named('uuid')
     uuid_file = property(uuid_file)
-
-    def last_revision_handled_file(self):
-        return self.meta_file_named('last_rev')
-    last_revision_handled_file = property(last_revision_handled_file)
 
     def branch_info_file(self):
         return self.meta_file_named('branch_info')

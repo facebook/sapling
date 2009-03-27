@@ -55,11 +55,10 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     if os.path.exists(hg_editor.uuid_file):
         uuid = open(hg_editor.uuid_file).read()
         assert uuid == svn.uuid
-        start = int(open(hg_editor.last_revision_handled_file, 'r').read())
+        start = hg_editor.last_known_revision()
     else:
         open(hg_editor.uuid_file, 'w').write(svn.uuid)
         open(hg_editor.svn_url_file, 'w').write(svn_url)
-        open(hg_editor.last_revision_handled_file, 'w').write(str(0))
         initializing_repo = True
         start = skipto_rev
 
@@ -93,12 +92,6 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     else:
                         stupid_svn_server_pull_rev(ui, svn, hg_editor, r)
                     converted = True
-                    tmpfile = '%s_tmp' % hg_editor.last_revision_handled_file
-                    fp = open(tmpfile, 'w')
-                    fp.write(str(r.revnum))
-                    fp.close()
-                    merc_util.rename(tmpfile,
-                                     hg_editor.last_revision_handled_file)
                 except core.SubversionException, e: #pragma: no cover
                     if e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED:
                         tries += 1
