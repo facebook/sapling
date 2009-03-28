@@ -85,16 +85,14 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.assertEqual(node.hex(repo['default'].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         assert 'README' not in repo
-        self.assertEqual(repo['tip'].branch(),
-                         '../branches')
-
+        assert '../branches' not in repo
 
     def test_files_copied_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(
             'test_files_copied_from_outside_btt.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
                          '3c78170e30ddd35f2c32faa0d8646ab75bba4f73')
-        self.assertEqual(len(repo.changelog), 3)
+        self.assertEqual(len(repo.changelog), 2)
 
     def test_file_renamed_in_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(

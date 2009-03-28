@@ -225,6 +225,8 @@ class HgChangeReceiver(delta.Editor):
                     if branchpath.startswith('trunk/'):
                         branches[self._localname('trunk')] = 'trunk'
                         continue
+                    if branchname and branchname.startswith('../'):
+                        continue
                     branches[branchname] = branchpath
 
         return branches
@@ -276,10 +278,17 @@ class HgChangeReceiver(delta.Editor):
         if path.startswith('trunk/'):
             path = test.split('/')[1:]
             test = 'trunk'
+        elif path.startswith('branches/'):
+            elts = path.split('/')
+            test = '/'.join(elts[:2])
+            path = '/'.join(elts[2:])
         else:
             path = test.split('/')[-1]
             test = '/'.join(test.split('/')[:-1])
-        return path, self._localname(test), test
+        ln =  self._localname(test)
+        if ln and ln.startswith('../'):
+            return None, None, None
+        return path, ln, test
 
     def set_current_rev(self, rev):
         """Set the revision we're currently converting.

@@ -108,7 +108,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             continue
         else:
             source = determinebranch(source)
-        if rev <= last_rev:
+        if rev <= last_rev and (source or 'default') in repo.branchtags():
             tagsinfo[tag] = source, rev
     tagsinfofile = open(os.path.join(svnmetadir, 'tag_info'), 'w')
     pickle.dump(tagsinfo, tagsinfofile)
