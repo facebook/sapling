@@ -601,8 +601,9 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                 m = m.group(1)
                 if m == 'HEAD':
                     m = None
-                if m in branches and c.branch != m:
-                    c.parents.append(changesets[branches[m]])
+                candidate = changesets[branches[m]]
+                if m in branches and c.branch != m and not candidate.synthetic:
+                    c.parents.append(candidate)
 
         if mergeto:
             m = mergeto.search(c.comment)
