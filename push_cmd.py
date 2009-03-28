@@ -11,6 +11,15 @@ import fetch_command
 import utility_commands
 
 
+class BaseException(Exception):
+    pass
+
+
+class NoFilesException(BaseException):
+    """Exception raised when you try and commit without files.
+    """
+
+
 def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                  stupid=False, **opts):
     """push revisions starting at a specified head back to Subversion.
@@ -50,7 +59,12 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                   and c.node() in svn_commit_hashes]
         # 2. Commit oldest revision that needs to be pushed
         base_revision = svn_commit_hashes[base_n][0]
-        commit_from_rev(ui, repo, old_ctx, hge, svn_url, base_revision)
+        try:
+            commit_from_rev(ui, repo, old_ctx, hge, svn_url, base_revision)
+        except NoFilesException:
+            ui.warn("Could not push revision %s because it had no changes in svn.\n" %
+                     old_ctx)
+            return 1
         # 3. Fetch revisions from svn
         r = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path,
                                           stupid=stupid)
@@ -268,6 +282,8 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     addeddirs = [svnpath(d) for d in addeddirs]
     deleteddirs = [svnpath(d) for d in deleteddirs]
     new_target_files += addeddirs + deleteddirs + changeddirs
+    if not new_target_files:
+        raise NoFilesException()
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
                    base_revision, set(addeddirs), set(deleteddirs),

@@ -87,6 +87,32 @@ class PushTests(test_util.TestBase):
                                          self.repo_path,
                                          self.wc_path)
 
+    def test_cant_push_empty_ctx(self):
+        repo = self.repo
+        def file_callback(repo, memctx, path):
+            if path == 'adding_file':
+                return context.memfilectx(path=path,
+                                          data='foo',
+                                          islink=False,
+                                          isexec=False,
+                                          copied=False)
+            raise IOError()
+        ctx = context.memctx(repo,
+                             (repo['default'].node(), node.nullid),
+                             'automated test',
+                             [],
+                             file_callback,
+                             'an_author',
+                             '2008-10-07 20:59:48 -0500',
+                             {'branch': 'default',})
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        old_tip = repo['tip'].node()
+        self.pushrevisions()
+        tip = self.repo['tip']
+        self.assertEqual(tip.node(), old_tip)
+
+
     def test_push_to_default(self, commit=True):
         repo = self.repo
         old_tip = repo['tip'].node()
