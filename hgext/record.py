@@ -302,6 +302,7 @@ def filterpatch(ui, chunks):
             elif r == _('q'):
                 raise util.Abort(_('user quit'))
             return r
+    pos, total = 0, len(chunks) - 1
     while chunks:
         chunk = chunks.pop()
         if isinstance(chunk, header):
@@ -327,8 +328,10 @@ def filterpatch(ui, chunks):
             # new hunk
             if resp_file[0] is None and resp_all[0] is None:
                 chunk.pretty(ui)
-            r = prompt(_('record this change to %r?') %
-                       chunk.filename())
+            r = total == 1 and prompt(_('record this change to %r?') %
+                                      chunk.filename()) or \
+                prompt(_('record change %d/%d to %r?') %
+                       (pos, total, chunk.filename()))
             if r == _('y'):
                 if fixoffset:
                     chunk = copy.copy(chunk)
@@ -336,6 +339,7 @@ def filterpatch(ui, chunks):
                 applied[chunk.filename()].append(chunk)
             else:
                 fixoffset += chunk.removed - chunk.added
+        pos = pos + 1
     return reduce(operator.add, [h for h in applied.itervalues()
                                  if h[0].special() or len(h) > 1], [])
 
