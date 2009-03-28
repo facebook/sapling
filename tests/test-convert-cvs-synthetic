@@ -3,8 +3,6 @@
 # This feature requires use of builtin cvsps!
 "$TESTDIR/hghave" cvs || exit 80
 
-# XXX lots of duplication with other test-convert-cvs* scripts
-
 set -e
 
 echo "[extensions]" >> $HGRCPATH
@@ -19,47 +17,62 @@ export CVSROOT=`pwd`
 export CVS_OPTIONS=-f
 cd ..
 
-filter='sed "s:$CVSROOT:*REPO*:g"'
-cvscall()
+filterpath()
 {
-    cvs -f "$@" | eval $filter
+    eval "$@" | sed "s:$CVSROOT:*REPO*:g"
 }
 
-cvscall -q -d "$CVSROOT" init
+cvscall()
+{
+    echo cvs -f "$@"
+    cvs -f "$@" 2>&1
+}
+
+# output of 'cvs ci' varies unpredictably, so just discard it
+cvsci()
+{
+    echo cvs -f ci "$@"
+    cvs -f ci "$@" >/dev/null 2>&1
+}
+
+filterpath cvscall -d "$CVSROOT" init
 mkdir cvsrepo/proj
 
-cvscall co proj
+cvscall -q co proj
 
 echo % create file1 on the trunk
 cd proj
 touch file1
-cvscall add file1
-cvscall ci -m"add file1 on trunk" file1
+cvscall -Q add file1
+cvsci -m"add file1 on trunk" file1
 
 echo % create two branches
-cvscall tag -b v1_0
-cvscall tag -b v1_1
+cvscall -q tag -b v1_0
+cvscall -q tag -b v1_1
 
 echo % create file2 on branch v1_0
-cvs up -rv1_0
+cvscall -q up -rv1_0
 touch file2
-cvscall add file2
-cvscall ci -m"add file2 on branch v1_0" file2
+cvscall -Q add file2
+cvsci -m"add file2 on branch v1_0" file2
 
 echo % create file3, file4 on branch v1_1
-cvs up -rv1_1
+cvscall -Q up -rv1_1
 touch file3
 touch file4
-cvscall add file3 file4
-cvscall ci -m"add file3, file4 on branch v1_1" file3 file4
+cvscall -Q add file3 file4
+cvsci -m"add file3, file4 on branch v1_1" file3 file4
 
 echo % merge file2 from v1_0 to v1_1
-cvscall up -jv1_0
-cvscall ci -m"merge file2 from v1_0 to v1_1"
+cvscall -q up -jv1_0
+cvsci -m"merge file2 from v1_0 to v1_1"
+
+echo % cvs rlog output
+filterpath cvscall -q rlog proj | egrep '^(RCS file|revision)'
 
 echo % convert to hg
 cd ..
-hg convert proj proj.hg | eval $filter
+filterpath hg convert proj proj.hg
 
 echo % hg log output
 hg -R proj.hg log --template "{rev} {desc}\n"
