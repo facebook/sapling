@@ -9,7 +9,7 @@ function verify_current_revision()
         echo 'export failed!'
         return 255
     fi
-    if [[ "`hg st | wc -l`" == "0" ]] ; then
+    if [[ "`hg st | wc -l | python -c 'import sys; print sys.stdin.read().strip()'`" == "0" ]] ; then
         return 0
     else
         if [[ $1 != "keep" ]] ; then
