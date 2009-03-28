@@ -3,6 +3,7 @@ import shutil
 
 from mercurial import hg
 from mercurial import node
+from mercurial import util
 
 svn_subcommands = { }
 def register_subcommand(name):
@@ -94,7 +95,8 @@ def outgoing_revisions(ui, repo, hg_editor, reverse_map, sourcerev):
            and sourcerev.node() != node.nullid):
         outgoing_rev_hashes.append(sourcerev.node())
         sourcerev = sourcerev.parents()
-        assert len(sourcerev) == 1
+        if len(sourcerev) != 1:
+            raise util.Abort("Sorry, can't find svn parent of a merge revision.")
         sourcerev = sourcerev[0]
     if sourcerev.node() != node.nullid:
         return outgoing_rev_hashes
