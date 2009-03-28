@@ -346,6 +346,8 @@ class HgChangeReceiver(delta.Editor):
         return True
 
     def _is_path_valid(self, path):
+        if path is None:
+            return False
         subpath = self._split_branch_path(path)[0]
         if subpath is None:
             return False
@@ -825,7 +827,7 @@ class HgChangeReceiver(delta.Editor):
     delete_entry = stash_exception_on_self(delete_entry)
 
     def open_file(self, path, parent_baton, base_revision, p=None):
-        self.current_file = 'foobaz'
+        self.current_file = None
         fpath, branch = self._path_and_branch_for_path(path)
         if fpath:
             self.current_file = path
@@ -868,7 +870,7 @@ class HgChangeReceiver(delta.Editor):
 
     def add_file(self, path, parent_baton, copyfrom_path,
                  copyfrom_revision, file_pool=None):
-        self.current_file = 'foobaz'
+        self.current_file = None
         self.base_revision = None
         if path in self.deleted_files:
             del self.deleted_files[path]
@@ -930,6 +932,7 @@ class HgChangeReceiver(delta.Editor):
             source_rev = copyfrom_revision
             cp_f, source_branch = self._path_and_branch_for_path(copyfrom_path)
             if cp_f == '' and br_path == '':
+                assert br_path is not None
                 self.branches[branch] = source_branch, source_rev, self.current_rev.revnum
         new_hash = self.get_parent_revision(source_rev + 1,
                                             source_branch)
