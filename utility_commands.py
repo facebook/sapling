@@ -72,7 +72,11 @@ def run_svn_info(ui, repo, hg_repo_path, **opts):
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     parent = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
-    r, br = svn_commit_hashes[parent.node()]
+    pn = parent.node()
+    if pn not in svn_commit_hashes:
+        ui.status('Not a child of an svn revision.\n')
+        return 0
+    r, br = svn_commit_hashes[pn]
     subdir = parent.extra()['convert_revision'][40:].split('@')[0]
     if br == None:
         branchpath = '/trunk'
