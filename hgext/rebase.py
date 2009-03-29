@@ -427,15 +427,15 @@ cmdtable = {
 "rebase":
         (rebase,
         [
-        ('', 'keep', False, _('keep original revisions')),
-        ('', 'keepbranches', False, _('keep original branches')),
         ('s', 'source', '', _('rebase from a given revision')),
         ('b', 'base', '', _('rebase from the base of a given revision')),
         ('d', 'dest', '', _('rebase onto a given revision')),
         ('', 'collapse', False, _('collapse the rebased revisions')),
+        ('', 'keep', False, _('keep original revisions')),
+        ('', 'keepbranches', False, _('keep original branches')),
         ('c', 'continue', False, _('continue an interrupted rebase')),
         ('a', 'abort', False, _('abort an interrupted rebase')),] +
          templateopts,
-        _('hg rebase [-s rev | -b rev] [-d rev] [--collapse] | [-c] | [-a] | '
-                                                                '[--keep]')),
+        _('hg rebase [-s rev | -b rev] [-d rev] [--collapse] [--keep] '
+                            '[--keepbranches] | [-c] | [-a]')),
 }
