@@ -1,12 +1,10 @@
 '''
-These are examples of useful hooks in Python for Mercurial.
+Examples of useful python hooks for Mercurial.
 '''
-
 from mercurial import patch, util
 
-
 def diffstat(ui, repo, **kwargs):
-    '''Use it like:
+    '''Example usage:
 
     [hooks]
     commit.diffstat = python:/path/to/this/file.py:diffstat
