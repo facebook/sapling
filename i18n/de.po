@@ -23,7 +23,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2009-03-29 13:09+0200\n"
-"PO-Revision-Date: 2009-03-29 18:58+0200\n"
+"PO-Revision-Date: 2009-03-29 19:55+0200\n"
 "Last-Translator: Tobias Bell <tobias.bell@gmail.com>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
 "MIME-Version: 1.0\n"
@@ -9511,137 +9511,145 @@ msgstr ""
 
 #, python-format
 msgid "Not trusting file %s from untrusted user %s, group %s\n"
-msgstr ""
+msgstr "Nicht vertrauenswürdige Datei %s vom Nutzer %s, Gruppe %s\n"
 
 #, python-format
 msgid ""
 "Failed to parse %s\n"
 "%s"
 msgstr ""
+"Fehler beim Parsen von %s\n"
+"%s"
 
 #, python-format
 msgid "Ignored: %s\n"
-msgstr ""
+msgstr "Ignoriere: %s\n"
 
 #, python-format
 msgid "unable to open %s: %s"
-msgstr ""
+msgstr "Fehler beim Öffnen %s: %s"
 
 #, python-format
 msgid ""
 "failed to parse %s\n"
 "%s"
 msgstr ""
+"Fehler beim Parsen von %s\n"
+"%s"
 
 #, python-format
 msgid ""
 "Error in configuration section [%s] parameter '%s':\n"
 "%s"
 msgstr ""
+"Fehler in Konfiguration Abschnitt [%s] Eintrag '%s':\n"
+"%s"
 
 #, python-format
 msgid "Ignoring untrusted configuration option %s.%s = %s\n"
-msgstr ""
+msgstr "Ignoriere nicht vertrauenswürdigen Konfigurationseintrag %s.%s = %s\n"
 
 #, python-format
 msgid ""
 "Error in configuration section [%s]:\n"
 "%s"
 msgstr ""
+"Fehler bei Konfigurationsabschnitt [%s]:\n"
+"%s"
 
 msgid "enter a commit username:"
-msgstr ""
+msgstr "Gib einen Benutzernamen für die Version ein:"
 
 #, python-format
 msgid "No username found, using '%s' instead\n"
-msgstr ""
+msgstr "Kein Benutzername gefunden, nutze %s stattdessen\n"
 
 msgid "Please specify a username."
-msgstr ""
+msgstr "Gib einen Benutzernamen an."
 
 #, python-format
 msgid "username %s contains a newline\n"
-msgstr ""
+msgstr "Benutzername %s enthält einen Zeilenumbruch\n"
 
 msgid "unrecognized response\n"
-msgstr ""
+msgstr "Unbekannte Antwort\n"
 
 msgid "response expected"
-msgstr ""
+msgstr "Antwort erwartet"
 
 msgid "password: "
-msgstr ""
+msgstr "Passwort: "
 
 msgid "edit failed"
-msgstr ""
+msgstr "Bearbeiten fehlgeschlagen"
 
 msgid "http authorization required"
-msgstr ""
+msgstr "HTTP-Autorisation benötigt"
 
 msgid "http authorization required\n"
-msgstr ""
+msgstr "HTTP-Autorisation benötigt\n"
 
 #, python-format
 msgid "realm: %s\n"
-msgstr ""
+msgstr "Bereich: %s\n"
 
 #, python-format
 msgid "user: %s\n"
-msgstr ""
+msgstr "Benutzer: %s\n"
 
 msgid "user:"
-msgstr ""
+msgstr "Benutzer:"
 
 #, python-format
 msgid "proxying through http://%s:%s\n"
-msgstr ""
+msgstr "Verwende Proxy http://%s:%s\n"
 
 #, python-format
 msgid "http auth: user %s, password %s\n"
-msgstr ""
+msgstr "HTTP Auth: Benutzer %s, Passwort%s\n"
 
 #, python-format
 msgid "%s, please check your locale settings"
-msgstr ""
+msgstr "%s, bitte überprüfe deine locale Einstellungen"
 
 #, python-format
 msgid "command '%s' failed: %s"
-msgstr ""
+msgstr "Befehl '%s' fehlgeschlagen: %s"
 
 #, python-format
 msgid "path contains illegal component: %s"
-msgstr ""
+msgstr "Pfad enthält illegalen Teil: %s"
 
 #, python-format
 msgid "path %r is inside repo %r"
-msgstr ""
+msgstr "Pfad %r ist innerhalb des Archivs %r"
 
 #, python-format
 msgid "path %r traverses symbolic link %r"
-msgstr ""
+msgstr "Pfad %r überschreitet symbolische Verknüpfung %r"
 
 msgid "Hardlinks not supported"
-msgstr ""
+msgstr "Hardlinks nicht unterstützt"
 
 #, python-format
 msgid "could not symlink to %r: %s"
-msgstr ""
+msgstr "Konnte symbolische Verknüpfung auf %r nicht erzeugen: %s"
 
 #, python-format
 msgid "invalid date: %r "
-msgstr ""
+msgstr "Ungültiges Datum: %r "
 
 #, python-format
 msgid "date exceeds 32 bits: %d"
-msgstr ""
+msgstr "Datum überschreitet 32 Bit: %d"
 
 #, python-format
 msgid "impossible time zone offset: %d"
-msgstr ""
+msgstr "Unmögliche Zeitzonen Verschiebung: %d"
 
 #, python-format
 msgid "invalid day spec: %s"
-msgstr ""
+msgstr "Ungültige Angabe des Tages: %s"
 
 #, python-format
 msgid "%.0f GB"
@@ -9681,7 +9689,7 @@ msgstr ""
 
 #, python-format
 msgid "%.0f bytes"
-msgstr ""
+msgstr "%.0f Byte"
 
 msgid "cannot verify bundle or remote repos"
 msgstr ""
