@@ -64,12 +64,8 @@ def rebase(ui, repo, **opts):
         abortf = opts.get('abort')
         collapsef = opts.get('collapse', False)
         extrafn = opts.get('extrafn')
-        if opts.get('keepbranches', None):
-            if extrafn:
-                raise error.ParseError(
-                    'rebase', _('cannot use both keepbranches and extrafn'))
-            def extrafn(ctx, extra):
-                extra['branch'] = ctx.branch()
+        keepf = opts.get('keep', False)
+        keepbranchesf = opts.get('keepbranches', False)
 
         if contf or abortf:
             if contf and abortf:
@@ -83,7 +79,8 @@ def rebase(ui, repo, **opts):
                 raise error.ParseError('rebase',
                     _('abort and continue do not allow specifying revisions'))
 
-            originalwd, target, state, collapsef, external = restorestatus(repo)
+            (originalwd, target, state, collapsef, keepf,
+                                keepbranchesf, external) = restorestatus(repo)
             if abortf:
                 abort(repo, originalwd, target, state)
                 return
@@ -99,14 +96,21 @@ def rebase(ui, repo, **opts):
                 repo.ui.status(_('nothing to rebase\n'))
                 return
 
+        if keepbranchesf:
+            if extrafn:
+                raise error.ParseError(
+                    'rebase', _('cannot use both keepbranches and extrafn'))
+            def extrafn(ctx, extra):
+                extra['branch'] = ctx.branch()
+
         # Rebase
         targetancestors = list(repo.changelog.ancestors(target))
         targetancestors.append(target)
 
         for rev in util.sort(state):
             if state[rev] == -1:
-                storestatus(repo, originalwd, target, state, collapsef,
-                                                                external)
+                storestatus(repo, originalwd, target, state, collapsef, keepf,
+                                                    keepbranchesf, external)
                 rebasenode(repo, rev, target, state, skipped, targetancestors,
                                                        collapsef, extrafn)
         ui.note(_('rebase merging completed\n'))
@@ -120,7 +124,7 @@ def rebase(ui, repo, **opts):
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
 
-        if not opts.get('keep'):
+        if not keepf:
             # Remove no more useful revisions
             if (util.set(repo.changelog.descendants(min(state)))
                                                     - util.set(state.keys())):
@@ -273,13 +277,16 @@ def updatemq(repo, state, skipped, **opts):
                             git=opts.get('git', False),rev=[str(state[rev])])
         repo.mq.save_dirty()
 
-def storestatus(repo, originalwd, target, state, collapse, external):
+def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
+                                                                external):
     'Store the current status to allow recovery'
     f = repo.opener("rebasestate", "w")
     f.write(repo[originalwd].hex() + '\n')
     f.write(repo[target].hex() + '\n')
     f.write(repo[external].hex() + '\n')
     f.write('%d\n' % int(collapse))
+    f.write('%d\n' % int(keep))
+    f.write('%d\n' % int(keepbranches))
     for d, v in state.iteritems():
         oldrev = repo[d].hex()
         newrev = repo[v].hex()
@@ -309,11 +316,15 @@ def restorestatus(repo):
                 external = repo[l].rev()
             elif i == 3:
                 collapse = bool(int(l))
+            elif i == 4:
+                keep = bool(int(l))
+            elif i == 5:
+                keepbranches = bool(int(l))
             else:
                 oldrev, newrev = l.split(':')
                 state[repo[oldrev].rev()] = repo[newrev].rev()
         repo.ui.debug(_('rebase status resumed\n'))
-        return originalwd, target, state, collapse, external
+        return originalwd, target, state, collapse, keep, keepbranches, external
     except IOError, err:
         if err.errno != errno.ENOENT:
             raise

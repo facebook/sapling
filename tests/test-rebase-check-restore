@@ -1,0 +1,68 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "rebase=" >> $HGRCPATH
+
+BASE=`pwd`
+
+addcommit () {
+    echo $1 > $1
+    hg add $1
+    hg commit -d "${2} 0" -u test -m $1
+}
+
+commit () {
+    hg commit -d "${2} 0" -u test -m $1
+}
+
+createrepo () {
+    cd $BASE
+    rm -rf a
+    hg init a
+    cd a
+    addcommit "A" 0
+    addcommit "B" 1
+    echo "C" >> A
+    commit "C" 2
+
+    hg update -C 0
+    echo "D" >> A
+    commit "D" 3
+    addcommit "E" 4
+
+    hg update -C 0
+    hg branch 'notdefault'
+    echo "F" >> A
+    commit "F" 5
+}
+
+echo
+echo "% - Rebasing B onto E - check keep"
+createrepo > /dev/null 2>&1
+hg glog  --template '{rev}:{desc}:{branches}\n'
+hg rebase -s 1 -d 4 --keep 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+
+echo
+echo "% - Solve the conflict and go on"
+echo 'conflict solved' > A
+rm A.orig
+hg resolve -m A
+hg rebase --continue 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg glog  --template '{rev}:{desc}:{branches}\n'
+
+echo
+echo "% - Rebase F onto E - check keepbranches"
+createrepo > /dev/null 2>&1
+hg glog  --template '{rev}:{desc}:{branches}\n'
+hg rebase -s 5 -d 4 --keepbranches 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+
+echo
+echo "% - Solve the conflict and go on"
+echo 'conflict solved' > A
+rm A.orig
+hg resolve -m A
+hg rebase --continue 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg glog  --template '{rev}:{desc}:{branches}\n'
+
+exit 0

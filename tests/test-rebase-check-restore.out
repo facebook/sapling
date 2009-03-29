@@ -1,0 +1,76 @@
+
+% - Rebasing B onto E - check keep
+@  5:F:notdefault
+|
+| o  4:E:
+| |
+| o  3:D:
+|/
+| o  2:C:
+| |
+| o  1:B:
+|/
+o  0:A:
+
+merging A
+warning: conflicts during merge.
+merging A failed!
+abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+
+% - Solve the conflict and go on
+rebase completed
+@  7:C:
+|
+o  6:B:
+|
+| o  5:F:notdefault
+| |
+o |  4:E:
+| |
+o |  3:D:
+|/
+| o  2:C:
+| |
+| o  1:B:
+|/
+o  0:A:
+
+
+% - Rebase F onto E - check keepbranches
+@  5:F:notdefault
+|
+| o  4:E:
+| |
+| o  3:D:
+|/
+| o  2:C:
+| |
+| o  1:B:
+|/
+o  0:A:
+
+merging A
+warning: conflicts during merge.
+merging A failed!
+abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+
+% - Solve the conflict and go on
+saving bundle to 
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+rebase completed
+@  5:F:notdefault
+|
+o  4:E:
+|
+o  3:D:
+|
+| o  2:C:
+| |
+| o  1:B:
+|/
+o  0:A:
+
