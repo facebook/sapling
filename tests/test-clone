@@ -60,4 +60,11 @@ echo % use --pull
 hg clone --pull a g
 hg -R g verify
 
+echo
+echo % clone to '.'
+mkdir h
+cd h
+hg clone ../a .
+cd ..
+
 exit 0

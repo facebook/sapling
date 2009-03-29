@@ -4,9 +4,11 @@ abort: error: Connection refused
 255
 abort: repository a not found!
 255
-abort: destination '../a' already exists
+abort: Permission denied: ../a
 255
 abort: repository a not found!
 255
 destination directory: q
-abort: destination 'q' already exists
+abort: destination 'q' is not empty
+abort: destination 'a' is not empty
+255

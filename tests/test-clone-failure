@@ -43,4 +43,10 @@ hg init
 cd ..
 hg clone q
 
+# destination directory not empty
+mkdir a 
+echo stuff > a/a
+hg clone q a
+echo $?
+
 true

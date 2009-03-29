@@ -50,3 +50,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 2 files, 11 changesets, 11 total revisions
+
+% clone to .
+updating working directory
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
