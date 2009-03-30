@@ -14,7 +14,7 @@ http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject
 '''
 
 from mercurial import util, repair, merge, cmdutil, commands, error
-from mercurial import extensions, ancestor
+from mercurial import extensions, ancestor, copies
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.i18n import _
@@ -210,7 +210,18 @@ def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse,
     else: # we have an interrupted rebase
         repo.ui.debug(_('resuming interrupted rebase\n'))
 
-
+    # Keep track of renamed files in the revision that is going to be rebased
+    # Here we simulate the copies and renames in the source changeset
+    cop, diver = copies.copies(repo, repo[rev], repo[target], repo[p2], True)
+    m1 = repo[rev].manifest()
+    m2 = repo[target].manifest()
+    for k, v in cop.iteritems():
+        if k in m1:
+            if v in m1 or v in m2:
+                repo.dirstate.copy(v, k)
+                if v in m2 and v not in m1:
+                    repo.dirstate.remove(v)
+                
     newrev = concludenode(repo, rev, p1, p2, state, collapse,
                           extrafn=extrafn)
 
