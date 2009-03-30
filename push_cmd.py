@@ -82,7 +82,7 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                 if ctx.node() == oldest:
                     return
                 extra['branch'] = ctx.branch()
-            utility_commands.rebase_commits(ui, repo, hg_repo_path,
+            utility_commands.rebase_commits(ui, repo,
                                             extrafn=extrafn,
                                             sourcerev=needs_transplant,
                                             **opts)

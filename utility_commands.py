@@ -130,7 +130,7 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
 print_parent_revision = util.register_subcommand('parent')(print_parent_revision)
 
 
-def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts):
+def rebase_commits(ui, repo, extrafn=None, sourcerev=None, **opts):
     """rebase current unpushed revisions onto the Subversion head
 
     This moves a line of development from making its own head to the top of
@@ -146,8 +146,7 @@ def rebase_commits(ui, repo, hg_repo_path, extrafn=None, sourcerev=None, **opts)
         extrafn = extrafn2
     if sourcerev is None:
         sourcerev = repo.parents()[0].node()
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
+    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, sourcerev=sourcerev)

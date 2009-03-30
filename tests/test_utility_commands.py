@@ -136,7 +136,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         beforerebasehash = self.repo['tip'].node()
         hg.update(self.repo, 'tip')
-        utility_commands.rebase_commits(ui.ui(), self.repo, os.path.dirname(self.repo.path))
+        utility_commands.rebase_commits(ui.ui(), self.repo)
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0], self.repo[0])
         self.assertNotEqual(beforerebasehash, self.repo['tip'].node())
