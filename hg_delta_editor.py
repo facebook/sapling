@@ -60,12 +60,12 @@ class HgChangeReceiver(delta.Editor):
         self.revmap[revnum, branch] = node_hash
 
     def last_known_revision(self):
-        ''' Obtain the highest numbered -- i.e. latest -- revision known.
+        """Obtain the highest numbered -- i.e. latest -- revision known.
 
         Currently, this function just iterates over the entire revision map
         using the max() builtin. This may be slow for extremely large
         repositories, but for now, it's fast enough.
-        '''
+        """
         try:
             return max(k[0] for k in self.revmap.iterkeys())
         except ValueError:
