@@ -97,6 +97,10 @@ class TestBase(unittest.TestCase):
         self.oldwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp(
             'svnwrap_test', dir=os.environ.get('HGSUBVERSION_TEST_TEMP', None))
+        self.hgrc = os.path.join(self.tmpdir, '.hgrc')
+        os.environ['HGRCPATH'] = self.hgrc
+        rc = open(self.hgrc, 'w')
+        rc.write('[extensions]\nhgsubversion=')
 
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
