@@ -79,7 +79,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     useful if you want to e.g. give a Subversion merge two parents, or
     graft two disconnected series of history together.  Each entry
     contains a key, followed by a space, followed by one or two
-    values, separated by spaces.  The key is the revision ID in the
+    comma-separated values.  The key is the revision ID in the
     source revision control system whose parents should be modified
     (same format as a key in .hg/shamap).  The values are the revision
     IDs (in either the source or destination revision control system)
