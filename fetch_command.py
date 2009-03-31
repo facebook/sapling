@@ -77,7 +77,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
             # got a 502? Try more than once!
             tries = 0
             converted = False
-            while not converted and tries < 3:
+            while not converted:
                 try:
                     util.describe_revision(ui, r)
                     if have_replay:
@@ -92,7 +92,9 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                         stupid_svn_server_pull_rev(ui, svn, hg_editor, r)
                     converted = True
                 except core.SubversionException, e: #pragma: no cover
-                    if e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED:
+                    if (e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED
+                        and '502' in str(e)
+                        and tries < 3):
                         tries += 1
                         ui.status('Got a 502, retrying (%s)\n' % tries)
                     else:
