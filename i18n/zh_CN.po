@@ -8,20 +8,20 @@
 # $Id: zh.po 1217 2009-03-11 09:20:30Z dongsheng.song@gmail.com $
 #
 # Update with pot file:
-#    msgmerge --update zh.po hg.pot
-#    msgfmt --statistics -c zh.po
+#    msgmerge --update zh_CN.po hg.pot
+#    msgfmt --statistics -c zh_CN.po
 #
 # Please test your translation before commit:
 #    python setup.py build_py -c -d . build_ext -i build_mo
 #    LC_ALL=zh_CN.UTF-8 ./hg
 #
 # Please format your translation before commit:
-#    msgcat --width=80 --sort-by-file -o zh_new.po zh.po
-#    mv -f zh_new.po zh.po
+#    msgcat --width=80 --sort-by-file -o zh_CN_new.po zh_CN.po
+#    mv -f zh_CN_new.po zh_CN.po
 #
 # Please remove '#: filename:line' lines before submit to hg:
-#    msgcat --width=80 --no-location -o zh_new.po zh.po
-#    mv -f zh_new.po zh.po
+#    msgcat --width=80 --no-location -o zh_CN_new.po zh_CN.po
+#    mv -f zh_CN_new.po zh_CN.po
 #
 # Dictionary:
 # blame             追溯
@@ -51,7 +51,7 @@ msgstr ""
 "Project-Id-Version: Mercurial 1.2\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2009-03-20 14:26+0800\n"
-"PO-Revision-Date: 2009-02-17 23:05+0800\n"
+"PO-Revision-Date: 2009-03-31 20:38+0200\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: Chinese translation team <i18n-zh@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
