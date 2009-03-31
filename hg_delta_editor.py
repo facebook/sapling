@@ -221,6 +221,8 @@ class HgChangeReceiver(delta.Editor):
                     parentdir = '/'.join(path[:-1])
                     filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
                     branchpath = self._normalize_path(parentdir)
+                    if branchpath.startswith('tags/'):
+                        continue
                     branchname = self._localname(branchpath)
                     if branchpath.startswith('trunk/'):
                         branches[self._localname('trunk')] = 'trunk'
