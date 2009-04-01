@@ -1315,6 +1315,7 @@ def matchdate(date):
         d["d"] = "28"
         return parsedate(date, extendeddateformats, d)[0]
 
+    date = date.strip()
     if date[0] == "<":
         when = upper(date[1:])
         return lambda x: x <= when
