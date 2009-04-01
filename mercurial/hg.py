@@ -168,10 +168,14 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 copy = False
 
         if copy:
+            hgdir = os.path.realpath(os.path.join(dest, ".hg"))
             if not os.path.exists(dest):
                 os.mkdir(dest)
+            else:
+                # only clean up directories we create ourselves
+                dir_cleanup.dir_ = hgdir
             try:
-                dest_path = os.path.realpath(os.path.join(dest, ".hg"))
+                dest_path = hgdir
                 os.mkdir(dest_path)
             except OSError, inst:
                 if inst.errno == errno.EEXIST:

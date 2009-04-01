@@ -12,3 +12,7 @@ destination directory: q
 abort: destination 'q' is not empty
 abort: destination 'a' is not empty
 255
+adding c
+255
+dir is still here
+repo is gone

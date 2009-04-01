@@ -49,4 +49,17 @@ echo stuff > a/a
 hg clone q a
 echo $?
 
+# leave existing directory in place after clone failure
+hg init c
+cd c
+echo c > c
+hg commit -A -m test -d '0 0'
+chmod -rx .hg/store/data
+cd ..
+mkdir d
+hg clone c d 2> err
+echo $?
+test -d d && echo "dir is still here" || echo "dir is gone"
+test -d d/.hg && echo "repo is still here" || echo "repo is gone"
+
 true
