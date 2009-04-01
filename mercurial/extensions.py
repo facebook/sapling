@@ -33,7 +33,7 @@ def loadpath(path, module_name):
     path = os.path.expanduser(path)
     if os.path.isdir(path):
         # module/__init__.py style
-        d, f = os.path.split(path)
+        d, f = os.path.split(path.rstrip('/'))
         fd, fpath, desc = imp.find_module(f, [d])
         return imp.load_module(module_name, fd, fpath, desc)
     else:
