@@ -22,8 +22,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-03-29 13:09+0200\n"
-"PO-Revision-Date: 2009-03-29 19:55+0200\n"
+"POT-Creation-Date: 2009-04-01 21:00+0200\n"
+"PO-Revision-Date: 2009-04-01 21:03+0200\n"
 "Last-Translator: Tobias Bell <tobias.bell@gmail.com>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
 "MIME-Version: 1.0\n"
@@ -789,7 +789,7 @@ msgid ""
 "    useful if you want to e.g. give a Subversion merge two parents, or\n"
 "    graft two disconnected series of history together.  Each entry\n"
 "    contains a key, followed by a space, followed by one or two\n"
-"    values, separated by spaces.  The key is the revision ID in the\n"
+"    comma-separated values.  The key is the revision ID in the\n"
 "    source revision control system whose parents should be modified\n"
 "    (same format as a key in .hg/shamap).  The values are the revision\n"
 "    IDs (in either the source or destination revision control system)\n"
@@ -8659,6 +8659,10 @@ msgstr "Zielverzeichnis: %s\n"
 msgid "destination '%s' already exists"
 msgstr "Ziel '%s' existiert bereits"
 
+#, python-format
+msgid "destination '%s' is not empty"
+msgstr "Ziel %s ist nicht leer"
+
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
 "by revision"
@@ -8709,7 +8713,7 @@ msgstr ""
 msgid "SSL support is unavailable"
 msgstr ""
 
-msgid "IPv6 not available on this system"
+msgid "IPv6 is not available on this system"
 msgstr ""
 
 #, python-format
@@ -8805,8 +8809,8 @@ msgid "real URL is %s\n"
 msgstr ""
 
 #, python-format
-msgid "Requested URL: '%s'\n"
-msgstr ""
+msgid "requested URL: '%s'\n"
+msgstr "Angeforderte URL: '%s'\n"
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -9718,7 +9722,11 @@ msgid "warning: `%s' uses revlog format 0"
 msgstr ""
 
 #, python-format
-msgid "rev %d point to %s changeset %d"
+msgid "rev %d points to nonexistent changeset %d"
+msgstr ""
+
+#, python-format
+msgid "rev %d points to unexpected changeset %d"
 msgstr ""
 
 #, python-format
