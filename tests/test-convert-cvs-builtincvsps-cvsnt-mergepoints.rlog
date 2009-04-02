@@ -1,0 +1,42 @@
+head: 1.2
+branch:
+locks: strict
+access list:
+symbolic names:
+	MYBRANCH1_2: 1.1.2.2.0.2
+	MYBRANCH1_1: 1.1.0.4
+	MYBRANCH1: 1.1.0.2
+keyword substitution: kv
+total revisions: 8;	selected revisions: 8
+description:
+----------------------------
+revision 1.2
+date: 2009/04/02 07:00:32;  author: user;  state: Exp;  lines: +1 -1;  kopt: kv;  commitid: 14d449d462903487;  mergepoint: 1.1.2.2.2.1;  filename: foo.txt;
+merge
+----------------------------
+revision 1.1
+date: 2009/04/02 06:50:43;  author: user;  state: Exp;  kopt: kv;  commitid: 17ac49d460432d04;  filename: foo.txt;
+branches:  1.1.2;  1.1.4;
+foo.txt
+----------------------------
+revision 1.1.4.2
+date: 2009/04/02 07:02:51;  author: user;  state: Exp;  lines: +1 -0;  kopt: kv;  commitid: 170049d4631b364d;  mergepoint: 1.1.2.2;  filename: foo.txt;
+merge
+----------------------------
+revision 1.1.4.1
+date: 2009/04/02 06:53:42;  author: user;  state: Exp;  lines: +1 -1;  kopt: kv;  commitid: dc849d460f52f49;  filename: foo.txt;
+quux
+----------------------------
+revision 1.1.2.2
+date: 2009/04/02 06:53:20;  author: user;  state: Exp;  lines: +1 -1;  kopt: kv;  commitid: 8ec49d460e02f04;  filename: foo.txt;
+branches:  1.1.2.2.2;
+baz
+----------------------------
+revision 1.1.2.1
+date: 2009/04/02 06:52:38;  author: user;  state: Exp;  lines: +1 -1;  kopt: kv;  commitid: d5049d460b62e7b;  filename: foo.txt;
+bar
+----------------------------
+revision 1.1.2.2.2.1
+date: 2009/04/02 06:55:42;  author: user;  state: Exp;  lines: +1 -1;  kopt: kv;  commitid: 11c849d4616d30d1;  filename: foo.txt;
+bazzie
+=============================================================================

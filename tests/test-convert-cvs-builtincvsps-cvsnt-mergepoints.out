@@ -1,0 +1,138 @@
+% create cvs repository
+U cvsworktmp/CVSROOT/checkoutlist
+U cvsworktmp/CVSROOT/commitinfo
+U cvsworktmp/CVSROOT/config
+U cvsworktmp/CVSROOT/cvswrappers
+U cvsworktmp/CVSROOT/loginfo
+U cvsworktmp/CVSROOT/modules
+U cvsworktmp/CVSROOT/notify
+U cvsworktmp/CVSROOT/postadmin
+U cvsworktmp/CVSROOT/postproxy
+U cvsworktmp/CVSROOT/posttag
+U cvsworktmp/CVSROOT/postwatch
+U cvsworktmp/CVSROOT/preproxy
+U cvsworktmp/CVSROOT/rcsinfo
+U cvsworktmp/CVSROOT/taginfo
+U cvsworktmp/CVSROOT/verifymsg
+
+cvs add: use `cvs commit' to add this file permanently
+checking in
+initial revision: 1.1
+U cvswork/foo.txt
+checking in
+new revision: 1.1.2.1; previous revision: 1.1
+checking in
+new revision: 1.1.2.2; previous revision: 1.1.2.1
+checking in
+new revision: 1.1.2.2.2.1; previous revision: 1.1.2.2
+U foo.txt
+checking in
+new revision: 1.1.4.1; previous revision: 1.1
+rcsmerge: warning: conflicts during merge
+merging MYBRANCH1
+retrieving revision 1.1
+retrieving revision 1.1.2.2
+Merging differences between 1.1 and 1.1.2.2 into foo.txt
+checking in
+new revision: 1.1.4.2; previous revision: 1.1.4.1
+U foo.txt
+merging MYBRANCH1_2
+retrieving revision 1.1
+retrieving revision 1.1.2.2.2.1
+Merging differences between 1.1 and 1.1.2.2.2.1 into foo.txt
+checking in
+new revision: 1.2; previous revision: 1.1
+collecting CVS rlog
+7 log entries
+creating changesets
+7 changeset entries
+---------------------
+PatchSet 1 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Log:
+foo.txt
+
+Members: 
+	foo.txt:INITIAL->1.1 
+
+---------------------
+PatchSet 2 
+Date:
+Author:
+Branch: MYBRANCH1
+Tag: (none) 
+Parent: 1
+Log:
+bar
+
+Members: 
+	foo.txt:1.1->1.1.2.1 
+
+---------------------
+PatchSet 3 
+Date:
+Author:
+Branch: MYBRANCH1
+Tag: (none) 
+Parent: 2
+Log:
+baz
+
+Members: 
+	foo.txt:1.1.2.1->1.1.2.2 
+
+---------------------
+PatchSet 4 
+Date:
+Author:
+Branch: MYBRANCH1_1
+Tag: (none) 
+Parent: 1
+Log:
+quux
+
+Members: 
+	foo.txt:1.1->1.1.4.1 
+
+---------------------
+PatchSet 5 
+Date:
+Author:
+Branch: MYBRANCH1_2
+Tag: (none) 
+Parent: 3
+Log:
+bazzie
+
+Members: 
+	foo.txt:1.1.2.2->1.1.2.2.2.1 
+
+---------------------
+PatchSet 6 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Parents: 1,5
+Log:
+merge
+
+Members: 
+	foo.txt:1.1->1.2 
+
+---------------------
+PatchSet 7 
+Date:
+Author:
+Branch: MYBRANCH1_1
+Tag: (none) 
+Parents: 4,3
+Log:
+merge
+
+Members: 
+	foo.txt:1.1.4.1->1.1.4.2 
+

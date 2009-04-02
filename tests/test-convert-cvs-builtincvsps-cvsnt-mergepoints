@@ -1,0 +1,78 @@
+#!/bin/bash
+
+"$TESTDIR/hghave" cvs || exit 80
+
+cvscall()
+{
+    cvs -f "$@"
+}
+
+hgcat()
+{
+    hg --cwd src-hg cat -r tip "$1"
+}
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+echo "graphlog = " >> $HGRCPATH
+echo "[convert]" >> $HGRCPATH
+echo "cvsps=builtin" >> $HGRCPATH
+
+echo % create cvs repository
+mkdir cvsmaster
+cd cvsmaster
+export CVSROOT=`pwd`
+export CVS_OPTIONS=-f
+cd ..
+
+cvscall -q -d "$CVSROOT" init
+
+cvscall -q checkout -d cvsworktmp .
+cd cvsworktmp
+mkdir foo
+cvscall -q add foo | sed -e 's/Directory .* added to the repository//g'
+cd foo
+echo foo > foo.txt
+cvscall -q add foo.txt 
+cvscall -q ci -m "foo.txt" | sed 's/.*,v.*/checking in/g'
+ 
+cd ../..
+rm -rf cvsworktmp
+
+cvscall -q checkout -d cvswork foo
+
+cd cvswork
+
+cvscall -q rtag -b -R MYBRANCH1 foo
+cvscall -q up -P -r MYBRANCH1
+echo bar > foo.txt
+cvscall -q ci -m "bar" | sed 's/.*,v.*/checking in/g'
+echo baz > foo.txt
+cvscall -q ci -m "baz" | sed 's/.*,v.*/checking in/g'
+
+cvscall -q rtag -b -R -r MYBRANCH1 MYBRANCH1_2 foo
+cvscall -q up -P -r MYBRANCH1_2
+
+echo bazzie > foo.txt
+cvscall -q ci -m "bazzie" | sed 's/.*,v.*/checking in/g'
+
+cvscall -q rtag -b -R MYBRANCH1_1 foo
+cvscall -q up -P -r MYBRANCH1_1
+
+echo quux > foo.txt
+cvscall -q ci -m "quux" | sed 's/.*,v.*/checking in/g'
+cvscall -q up -P -jMYBRANCH1 | sed 's/RCS file: .*,v/merging MYBRANCH1/g'
+echo xyzzy > foo.txt
+cvscall -q ci -m "merge" | sed 's/.*,v.*/checking in/g'
+
+cvscall -q up -P -A
+
+cvscall -q up -P -jMYBRANCH1_2 | sed 's/RCS file: .*,v/merging MYBRANCH1_2/g'
+cvscall -q ci -m "merge" | sed 's/.*,v.*/checking in/g'
+
+REALCVS=`which cvs`
+echo "for x in \$*; do if [ \"\$x\" = \"rlog\" ]; then echo \"RCS file: $CVSROOT/foo/foo.txt,v\"; cat $TESTDIR/test-convert-cvs-builtincvsps-cvsnt-mergepoints.rlog; exit 0; fi; done; $REALCVS \$*" > cvs
+chmod +x cvs
+PATH=.:${PATH} hg debugcvsps --parents foo | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/'
+
+cd ..

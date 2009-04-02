@@ -34,6 +34,7 @@ class logentry(object):
         .revision  - revision number as tuple
         .tags      - list of tags on the file
         .synthetic - is this a synthetic "file ... added on ..." revision?
+        .mergepoint- the branch that has been merged from (if present in rlog output)
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -105,7 +106,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     re_31 = re.compile('----------------------------$')
     re_32 = re.compile('=============================================================================$')
     re_50 = re.compile('revision ([\\d.]+)(\s+locked by:\s+.+;)?$')
-    re_60 = re.compile(r'date:\s+(.+);\s+author:\s+(.+);\s+state:\s+(.+?);(\s+lines:\s+(\+\d+)?\s+(-\d+)?;)?')
+    re_60 = re.compile(r'date:\s+(.+);\s+author:\s+(.+);\s+state:\s+(.+?);(\s+lines:\s+(\+\d+)?\s+(-\d+)?;)?(.*mergepoint:\s+([^;]+);)?')
     re_70 = re.compile('branches: (.+);$')
 
     file_added_re = re.compile(r'file [^/]+ was (initially )?added on branch')
@@ -187,6 +188,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
     # state machine begins here
     tags = {}     # dictionary of revisions on current file with their tags
+    branchmap = {} # mapping between branch names and revision numbers
     state = 0
     store = False # set when a new record can be appended
 
@@ -244,6 +246,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         elif state == 2:
             # expect 'symbolic names'
             if re_20.match(line):
+                branchmap = {}
                 state = 3
 
         elif state == 3:
@@ -261,6 +264,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 if rev not in tags:
                     tags[rev] = []
                 tags[rev].append(match.group(1))
+                branchmap[match.group(1)] = match.group(2)
 
             elif re_31.match(line):
                 state = 5
@@ -311,6 +315,18 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 e.lines = (0, int(match.group(6)))
             else:
                 e.lines = None
+
+            if match.group(7): # cvsnt mergepoint
+                myrev = match.group(8).split('.')
+                if len(myrev) == 2: # head
+                    e.mergepoint = 'HEAD'
+                else:
+                    myrev = '.'.join(myrev[:-2] + ['0', myrev[-2]])
+                    branches = [b for b in branchmap if branchmap[b] == myrev]
+                    assert len(branches) == 1, 'unknown branch: %s' % e.mergepoint
+                    e.mergepoint = branches[0]
+            else:
+                e.mergepoint = None
             e.comment = []
             state = 7
 
@@ -420,6 +436,7 @@ class changeset(object):
         .parents   - list of one or two parent changesets
         .tags      - list of tags on this changeset
         .synthetic - from synthetic revision "file ... added on branch ..."
+        .mergepoint- the branch that has been merged from (if present in rlog output)
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -448,7 +465,8 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                    (c.date[0] + c.date[1]) + fuzz) and
                   e.file not in files):
             c = changeset(comment=e.comment, author=e.author,
-                          branch=e.branch, date=e.date, entries=[])
+                          branch=e.branch, date=e.date, entries=[],
+                          mergepoint=e.mergepoint)
             changesets.append(c)
             files = {}
             if len(changesets) % 100 == 0:
@@ -594,6 +612,11 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
             if p is not None:
                 c.parents.append(p)
+
+        if c.mergepoint:
+            if c.mergepoint == 'HEAD':
+                c.mergepoint = None
+            c.parents.append(changesets[branches[c.mergepoint]])
 
         if mergefrom:
             m = mergefrom.search(c.comment)
