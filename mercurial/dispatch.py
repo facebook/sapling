@@ -379,6 +379,13 @@ def _runcommand(ui, options, cmd, cmdfunc):
             raise error.ParseError(cmd, _("invalid arguments"))
 
     if options['profile']:
+        format = ui.config('profiling', 'format', default='text')
+
+        if not format in ['text']:
+            ui.warn(_("unrecognized profiling format '%s'"
+                        " - Ignored\n") % format)
+            format = 'text'
+
         output = ui.config('profiling', 'output')
 
         if output:

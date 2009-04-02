@@ -15,4 +15,7 @@ if "$TESTDIR/hghave" -q lsprof; then
         || echo --profile + output to file failed
     grep CallCount < ../out > /dev/null \
         || echo wrong --profile output when saving to a file
+
+    hg --profile --config profiling.format=text st 2>&1 \
+        | grep CallCount > /dev/null || echo --profile format=text failed
 fi

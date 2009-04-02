@@ -545,6 +545,13 @@ profiling::
   collected during profiling, while 'profiling report' stands for a
   statistical text report generated from the profiling data.
   The profiling is done using lsprof.
+  format;;
+    Profiling format.
+    Default: text.
+    text;;
+      Generate a profiling report.
+      When saving to a file, it should be noted that only the report is saved,
+      and the profiling data is not kept.
   output;;
     File path where profiling data or report should be saved.
     If the file exists, it is replaced.
