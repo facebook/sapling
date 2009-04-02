@@ -8,6 +8,7 @@ the GNU General Public License version 2, incorporated herein by
 reference.
 """
 
+from util import Abort
 from i18n import _
 import errno, msvcrt, os, osutil, re, sys
 nulldev = 'NUL:'
