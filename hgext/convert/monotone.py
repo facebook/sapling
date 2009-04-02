@@ -111,9 +111,8 @@ class monotone_source(converter_source, commandline):
     def mtnrenamefiles(self, files, fromdir, todir):
         renamed = {}
         for tofile in files:
-            suffix = tofile.lstrip(todir)
-            if todir + suffix == tofile:
-                renamed[tofile] = (fromdir + suffix).lstrip("/")
+            if tofile.startswith(todir):
+                renamed[tofile] = fromdir + tofile[len(todir):]
         return renamed
 
 
