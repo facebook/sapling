@@ -245,7 +245,7 @@ def groupname(gid=None):
 posixfile = file
 try:
     # override functions with win32 versions if possible
-    from util_win32 import *
+    from win32 import *
     if not _is_win_9x():
         posixfile = posixfile_nt
 except ImportError:
