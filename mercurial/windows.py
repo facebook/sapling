@@ -8,7 +8,7 @@ the GNU General Public License version 2, incorporated herein by
 reference.
 """
 
-from util import Abort
+import util
 from i18n import _
 import errno, msvcrt, os, osutil, re, sys
 nulldev = 'NUL:'
@@ -228,8 +228,8 @@ def statfiles(files):
 
 def getuser():
     '''return name of current user'''
-    raise Abort(_('user name not available - set USERNAME '
-                  'environment variable'))
+    raise util.Abort(_('user name not available - set USERNAME '
+                       'environment variable'))
 
 def username(uid=None):
     """Return the name of the user with the given uid.
