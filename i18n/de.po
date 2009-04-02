@@ -23,7 +23,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2009-04-01 21:00+0200\n"
-"PO-Revision-Date: 2009-04-01 21:03+0200\n"
+"PO-Revision-Date: 2009-04-02 08:11+0200\n"
 "Last-Translator: Tobias Bell <tobias.bell@gmail.com>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
 "MIME-Version: 1.0\n"
@@ -105,6 +105,7 @@ msgstr ""
 "[alias]\n"
 "mycmd = cmd --args\n"
 
+# Nicht übersetzen
 msgid ""
 "defer command lookup until needed, so that extensions loaded\n"
 "    after alias can be aliased"
@@ -7066,52 +7067,52 @@ msgid ""
 msgstr ""
 
 msgid "repository root directory or symbolic path name"
-msgstr ""
+msgstr "Wurzel des Archivs oder symbolischer Pfadname"
 
 msgid "change working directory"
-msgstr ""
+msgstr "Wechselt das Arbeitsverzeichnis"
 
 msgid "do not prompt, assume 'yes' for any required answers"
-msgstr ""
+msgstr "Keine Abfragen, nimmt 'yes' für jede Nachfrage an"
 
 msgid "suppress output"
-msgstr ""
+msgstr "Unterdrückung der Ausgabe"
 
 msgid "enable additional output"
-msgstr ""
+msgstr "Ausgabe weiterer Informationen"
 
 msgid "set/override config option"
-msgstr ""
+msgstr "Setzt/Überschreibt Konfigurationsoptionen"
 
 msgid "enable debugging output"
-msgstr ""
+msgstr "Aktiviert Debugausgaben"
 
 msgid "start debugger"
-msgstr ""
+msgstr "Startet den Debugger"
 
 msgid "set the charset encoding"
-msgstr ""
+msgstr "Setzt die Zeichenkodierung"
 
 msgid "set the charset encoding mode"
-msgstr ""
+msgstr "Setzt den Modus der Zeichenkodierung"
 
 msgid "print improved command execution profile"
-msgstr ""
+msgstr "Gibt erweitertes Ausführungsprofil der Befehle aus"
 
 msgid "print traceback on exception"
-msgstr ""
+msgstr "Gibt den Traceback einer Exception aus"
 
 msgid "time how long the command takes"
-msgstr ""
+msgstr "Ausgabe der Dauer des Befehls"
 
 msgid "print command execution profile"
-msgstr ""
+msgstr "Ausgabe des Ausführungsprofil des Befehls"
 
 msgid "output version information and exit"
-msgstr ""
+msgstr "Ausgabe der Versionsinformation und beenden"
 
 msgid "display help and exit"
-msgstr ""
+msgstr "Ausgabe der Hilfe und beenden"
 
 msgid "do not perform actions, just print output"
 msgstr "Führt die Aktionen nicht aus, sondern zeigt nur die Ausgabe"
