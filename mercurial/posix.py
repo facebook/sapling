@@ -218,5 +218,3 @@ def groupname(gid=None):
         return grp.getgrgid(gid)[0]
     except KeyError:
         return str(gid)
-
-
