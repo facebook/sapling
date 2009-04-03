@@ -220,7 +220,7 @@ diff repository (or selected files)
     probably with undesirable results.
 
     Use the --git option to generate diffs in the git extended diff
-    format. For more information, read hg help diffs.
+    format. For more information, read 'hg help diffs'.
 
 options:
 

@@ -145,7 +145,7 @@ def archive(ui, repo, dest, **opts):
     "zip": zip archive, compressed using deflate
 
     The exact name of the destination archive or directory is given
-    using a format string; see "hg help export" for details.
+    using a format string; see 'hg help export' for details.
 
     Each member added to an archive file has a directory prefix
     prepended. Use "-p" to specify a format string for the prefix.
@@ -1030,7 +1030,7 @@ def diff(ui, repo, *pats, **opts):
     probably with undesirable results.
 
     Use the --git option to generate diffs in the git extended diff
-    format. For more information, read hg help diffs.
+    format. For more information, read 'hg help diffs'.
     """
 
     revs = opts.get('rev')
