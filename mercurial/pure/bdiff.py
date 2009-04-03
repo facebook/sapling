@@ -6,7 +6,16 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import struct, difflib
-# mdiff import moved to bottom due to import cycle
+
+def splitnewlines(text):
+    '''like str.splitlines, but only split on newlines.'''
+    lines = [l + '\n' for l in text.split('\n')]
+    if lines:
+        if lines[-1] == '\n':
+            lines.pop()
+        else:
+            lines[-1] = lines[-1][:-1]
+    return lines
 
 def _normalizeblocks(a, b, blocks):
     prev = None
@@ -59,11 +68,9 @@ def bdiff(a, b):
     return "".join(bin)
 
 def blocks(a, b):
-    an = mdiff.splitnewlines(a)
-    bn = mdiff.splitnewlines(b)
+    an = splitnewlines(a)
+    bn = splitnewlines(b)
     d = difflib.SequenceMatcher(None, an, bn).get_matching_blocks()
     d = _normalizeblocks(an, bn, d)
     return [(i, i + n, j, j + n) for (i, j, n) in d]
 
-# this breaks an import cycle
-import mdiff
