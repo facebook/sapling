@@ -220,7 +220,6 @@ except ImportError:
     pass
 
 try:
-    import posix
     ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
 
     if sys.platform == 'linux2' and os.uname()[2] > '2.6':
