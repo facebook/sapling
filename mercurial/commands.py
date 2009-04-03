@@ -9,7 +9,7 @@ from node import hex, nullid, nullrev, short
 from i18n import _, gettext
 import os, re, sys
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
-import difflib, patch, time, help, mdiff, tempfile, url
+import difflib, patch, time, help, mdiff, tempfile, url, encoding
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
 import merge as merge_
 
@@ -415,10 +415,10 @@ def branch(ui, repo, label=None, **opts):
             if label not in [p.branch() for p in repo.parents()]:
                 raise util.Abort(_('a branch of the same name already exists'
                                    ' (use --force to override)'))
-        repo.dirstate.setbranch(util.fromlocal(label))
+        repo.dirstate.setbranch(encoding.fromlocal(label))
         ui.status(_('marked working directory as branch %s\n') % label)
     else:
-        ui.write("%s\n" % util.tolocal(repo.dirstate.branch()))
+        ui.write("%s\n" % encoding.tolocal(repo.dirstate.branch()))
 
 def branches(ui, repo, active=False):
     """list repository named branches
@@ -431,7 +431,7 @@ def branches(ui, repo, active=False):
     Use the command 'hg update' to switch to an existing branch.
     """
     hexfunc = ui.debugflag and hex or short
-    activebranches = [util.tolocal(repo[n].branch())
+    activebranches = [encoding.tolocal(repo[n].branch())
                             for n in repo.heads(closed=False)]
     branches = util.sort([(tag in activebranches, repo.changelog.rev(node), tag)
                           for tag, node in repo.branchtags().items()])
@@ -449,7 +449,7 @@ def branches(ui, repo, active=False):
                     notice = ' (closed)'
                 else:
                     notice = ' (inactive)'
-                rev = str(node).rjust(31 - util.colwidth(tag))
+                rev = str(node).rjust(31 - encoding.colwidth(tag))
                 data = tag, rev, hexfunc(hn), notice
                 ui.write("%s %s:%s%s\n" % data)
 
@@ -882,9 +882,9 @@ def debuginstall(ui):
     problems = 0
 
     # encoding
-    ui.status(_("Checking encoding (%s)...\n") % util._encoding)
+    ui.status(_("Checking encoding (%s)...\n") % encoding.encoding)
     try:
-        util.fromlocal("test")
+        encoding.fromlocal("test")
     except util.Abort, inst:
         ui.write(" %s\n" % inst)
         ui.write(_(" (check that your locale is properly set)\n"))
@@ -1579,7 +1579,7 @@ def identify(ui, repo, source=None,
             output.append(str(ctx.rev()))
 
     if repo.local() and default and not ui.quiet:
-        b = util.tolocal(ctx.branch())
+        b = encoding.tolocal(ctx.branch())
         if b != 'default':
             output.append("(%s)" % b)
 
@@ -1589,7 +1589,7 @@ def identify(ui, repo, source=None,
             output.append(t)
 
     if branch:
-        output.append(util.tolocal(ctx.branch()))
+        output.append(encoding.tolocal(ctx.branch()))
 
     if tags:
         output.extend(ctx.tags())
@@ -2855,7 +2855,7 @@ def tags(ui, repo):
         except error.LookupError:
             r = "    ?:%s" % hn
         else:
-            spaces = " " * (30 - util.colwidth(t))
+            spaces = " " * (30 - encoding.colwidth(t))
             if ui.verbose:
                 if repo.tagtype(t) == 'local':
                     tagtype = " local"
@@ -2976,8 +2976,9 @@ globalopts = [
     ('', 'config', [], _('set/override config option')),
     ('', 'debug', None, _('enable debugging output')),
     ('', 'debugger', None, _('start debugger')),
-    ('', 'encoding', util._encoding, _('set the charset encoding')),
-    ('', 'encodingmode', util._encodingmode, _('set the charset encoding mode')),
+    ('', 'encoding', encoding.encoding, _('set the charset encoding')),
+    ('', 'encodingmode', encoding.encodingmode,
+     _('set the charset encoding mode')),
     ('', 'lsprof', None, _('print improved command execution profile')),
     ('', 'traceback', None, _('print traceback on exception')),
     ('', 'time', None, _('time how long the command takes')),

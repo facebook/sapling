@@ -8,7 +8,7 @@
 
 import os
 from mercurial.i18n import _
-from mercurial import ui, hg, util, templater, templatefilters, error
+from mercurial import ui, hg, util, templater, templatefilters, error, encoding
 from common import ErrorResponse, get_mtime, staticfile, style_map, paritygen,\
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
@@ -119,7 +119,7 @@ class hgwebdir(object):
 
                 virtual = req.env.get("PATH_INFO", "").strip('/')
                 tmpl = self.templater(req)
-                ctype = tmpl('mimetype', encoding=util._encoding)
+                ctype = tmpl('mimetype', encoding=encoding.encoding)
                 ctype = templater.stringify(ctype)
 
                 # a static file
@@ -285,7 +285,7 @@ class hgwebdir(object):
     def templater(self, req):
 
         def header(**map):
-            yield tmpl('header', encoding=util._encoding, **map)
+            yield tmpl('header', encoding=encoding.encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)

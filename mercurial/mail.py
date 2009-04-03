@@ -8,7 +8,7 @@
 from i18n import _
 import os, smtplib, socket
 import email.Header, email.MIMEText, email.Utils
-import util
+import util, encoding
 
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''
@@ -100,8 +100,8 @@ def mimetextpatch(s, subtype='plain', display=False):
 def _charsets(ui):
     '''Obtains charsets to send mail parts not containing patches.'''
     charsets = [cs.lower() for cs in ui.configlist('email', 'charsets')]
-    fallbacks = [util._fallbackencoding.lower(),
-                 util._encoding.lower(), 'utf-8']
+    fallbacks = [encoding.fallbackencoding.lower(),
+                 encoding.encoding.lower(), 'utf-8']
     for cs in fallbacks: # util.unique does not keep order
         if cs not in charsets:
             charsets.append(cs)
@@ -110,14 +110,14 @@ def _charsets(ui):
 def _encode(ui, s, charsets):
     '''Returns (converted) string, charset tuple.
     Finds out best charset by cycling through sendcharsets in descending
-    order. Tries both _encoding and _fallbackencoding for input. Only as
+    order. Tries both encoding and fallbackencoding for input. Only as
     last resort send as is in fake ascii.
     Caveat: Do not use for mail parts containing patches!'''
     try:
         s.decode('ascii')
     except UnicodeDecodeError:
         sendcharsets = charsets or _charsets(ui)
-        for ics in (util._encoding, util._fallbackencoding):
+        for ics in (encoding.encoding, encoding.fallbackencoding):
             try:
                 u = s.decode(ics)
             except UnicodeDecodeError:

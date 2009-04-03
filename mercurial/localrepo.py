@@ -9,7 +9,7 @@ from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context, weakref
-import lock, transaction, stat, errno, ui, store
+import lock, transaction, stat, errno, ui, store, encoding
 import os, time, util, extensions, hook, inspect, error
 import match as match_
 import merge as merge_
@@ -188,7 +188,7 @@ class localrepository(repo.repository):
                 fp.write(prevtags)
 
         # committed tags are stored in UTF-8
-        writetags(fp, names, util.fromlocal, prevtags)
+        writetags(fp, names, encoding.fromlocal, prevtags)
 
         if use_dirstate and '.hgtags' not in self.dirstate:
             self.add(['.hgtags'])
@@ -254,7 +254,7 @@ class localrepository(repo.repository):
                     warn(_("cannot parse entry"))
                     continue
                 node, key = s
-                key = util.tolocal(key.strip()) # stored in UTF-8
+                key = encoding.tolocal(key.strip()) # stored in UTF-8
                 try:
                     bin_n = bin(node)
                 except TypeError:
@@ -297,7 +297,7 @@ class localrepository(repo.repository):
             readtags(f.data().splitlines(), f, "global")
 
         try:
-            data = util.fromlocal(self.opener("localtags").read())
+            data = encoding.fromlocal(self.opener("localtags").read())
             # localtags are stored in the local character set
             # while the internal tag table is stored in UTF-8
             readtags(data.splitlines(), "localtags", "local")
@@ -397,7 +397,7 @@ class localrepository(repo.repository):
         # the branch cache is stored on disk as UTF-8, but in the local
         # charset internally
         for k, v in partial.iteritems():
-            self.branchcache[util.tolocal(k)] = v
+            self.branchcache[encoding.tolocal(k)] = v
         return self.branchcache
 
 
@@ -647,7 +647,7 @@ class localrepository(repo.repository):
                 except IOError:
                     self.ui.warn(_("Named branch could not be reset, "
                                    "current branch still is: %s\n")
-                                 % util.tolocal(self.dirstate.branch()))
+                                 % encoding.tolocal(self.dirstate.branch()))
                 self.invalidate()
                 self.dirstate.invalidate()
             else:
@@ -943,7 +943,8 @@ class localrepository(repo.repository):
                 if p2 != nullid:
                     edittext.append("HG: branch merge")
                 if branchname:
-                    edittext.append("HG: branch '%s'" % util.tolocal(branchname))
+                    edittext.append("HG: branch '%s'"
+                                    % encoding.tolocal(branchname))
                 edittext.extend(["HG: added %s" % f for f in added])
                 edittext.extend(["HG: changed %s" % f for f in updated])
                 edittext.extend(["HG: removed %s" % f for f in removed])

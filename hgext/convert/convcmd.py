@@ -18,7 +18,7 @@ from p4 import p4_source
 import filemap
 
 import os, shutil
-from mercurial import hg, util
+from mercurial import hg, util, encoding
 from mercurial.i18n import _
 
 orig_encoding = 'ascii'
@@ -275,7 +275,7 @@ class converter(object):
                 if "\n" in desc:
                     desc = desc.splitlines()[0]
                 # convert log message to local encoding without using
-                # tolocal() because util._encoding conver() use it as
+                # tolocal() because encoding.encoding conver() use it as
                 # 'utf-8'
                 self.ui.status("%d %s\n" % (num, recode(desc)))
                 self.ui.note(_("source: %s\n") % recode(c))
@@ -308,8 +308,8 @@ class converter(object):
 
 def convert(ui, src, dest=None, revmapfile=None, **opts):
     global orig_encoding
-    orig_encoding = util._encoding
-    util._encoding = 'UTF-8'
+    orig_encoding = encoding.encoding
+    encoding.encoding = 'UTF-8'
 
     if not dest:
         dest = hg.defaultdest(src) + "-hg"

@@ -6,7 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import cgi, re, os, time, urllib, textwrap
-import util, templater
+import util, templater, encoding
 
 agescales = [("second", 1),
              ("minute", 60),
@@ -76,7 +76,7 @@ def nl2br(text):
     return text.replace('\n', '<br/>\n')
 
 def obfuscate(text):
-    text = unicode(text, util._encoding, 'replace')
+    text = unicode(text, encoding.encoding, 'replace')
     return ''.join(['&#%d;' % ord(c) for c in text])
 
 def domain(author):

@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _
-import os, sys, bisect, stat
+import os, sys, bisect, stat, encoding
 import mdiff, bdiff, util, templater, templatefilters, patch, errno, error
 import match as _match
 
@@ -626,7 +626,7 @@ class changeset_printer(object):
 
         # don't show the default branch name
         if branch != 'default':
-            branch = util.tolocal(branch)
+            branch = encoding.tolocal(branch)
             self.ui.write(_("branch:      %s\n") % branch)
         for tag in self.repo.nodetags(changenode):
             self.ui.write(_("tag:         %s\n") % tag)
@@ -791,7 +791,7 @@ class changeset_templater(changeset_printer):
         def showbranches(**args):
             branch = ctx.branch()
             if branch != 'default':
-                branch = util.tolocal(branch)
+                branch = encoding.tolocal(branch)
                 return showlist('branch', [branch], plural='branches', **args)
 
         def showparents(**args):

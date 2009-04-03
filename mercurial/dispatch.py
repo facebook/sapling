@@ -8,7 +8,7 @@
 from i18n import _
 import os, sys, atexit, signal, pdb, socket, errno, shlex, time
 import util, commands, hg, fancyopts, extensions, hook, error
-import cmdutil
+import cmdutil, encoding
 import ui as _ui
 
 def run():
@@ -304,7 +304,7 @@ def _dispatch(ui, args):
     # check for fallback encoding
     fallback = lui.config('ui', 'fallbackencoding')
     if fallback:
-        util._fallbackencoding = fallback
+        encoding.fallbackencoding = fallback
 
     fullargs = args
     cmd, func, args, options, cmdoptions = _parse(lui, args)
@@ -319,9 +319,9 @@ def _dispatch(ui, args):
             "and --repository may only be abbreviated as --repo!"))
 
     if options["encoding"]:
-        util._encoding = options["encoding"]
+        encoding.encoding = options["encoding"]
     if options["encodingmode"]:
-        util._encodingmode = options["encodingmode"]
+        encoding.encodingmode = options["encodingmode"]
     if options["time"]:
         def get_times():
             t = os.times()

@@ -7,7 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import os
-from mercurial import ui, hg, util, hook, error
+from mercurial import ui, hg, util, hook, error, encoding
 from mercurial import templater, templatefilters
 from common import get_mtime, style_map, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -65,7 +65,7 @@ class hgweb(object):
             self.maxshortchanges = int(self.config("web", "maxshortchanges", 60))
             self.maxfiles = int(self.config("web", "maxfiles", 10))
             self.allowpull = self.configbool("web", "allowpull", True)
-            self.encoding = self.config("web", "encoding", util._encoding)
+            self.encoding = self.config("web", "encoding", encoding.encoding)
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):

@@ -14,8 +14,8 @@ platform-specific details from the core.
 
 from i18n import _
 import cStringIO, errno, re, shutil, sys, tempfile, traceback, error
-import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import imp, unicodedata
+import os, stat, threading, time, calendar, ConfigParser, glob, osutil
+import imp
 
 # Python compatibility
 
@@ -80,71 +80,6 @@ except ImportError:
     popen2 = os.popen2
     popen3 = os.popen3
 
-
-_encodingfixup = {'646': 'ascii', 'ANSI_X3.4-1968': 'ascii'}
-
-try:
-    _encoding = os.environ.get("HGENCODING")
-    if sys.platform == 'darwin' and not _encoding:
-        # On darwin, getpreferredencoding ignores the locale environment and
-        # always returns mac-roman. We override this if the environment is
-        # not C (has been customized by the user).
-        locale.setlocale(locale.LC_CTYPE, '')
-        _encoding = locale.getlocale()[1]
-    if not _encoding:
-        _encoding = locale.getpreferredencoding() or 'ascii'
-        _encoding = _encodingfixup.get(_encoding, _encoding)
-except locale.Error:
-    _encoding = 'ascii'
-_encodingmode = os.environ.get("HGENCODINGMODE", "strict")
-_fallbackencoding = 'ISO-8859-1'
-
-def tolocal(s):
-    """
-    Convert a string from internal UTF-8 to local encoding
-
-    All internal strings should be UTF-8 but some repos before the
-    implementation of locale support may contain latin1 or possibly
-    other character sets. We attempt to decode everything strictly
-    using UTF-8, then Latin-1, and failing that, we use UTF-8 and
-    replace unknown characters.
-    """
-    for e in ('UTF-8', _fallbackencoding):
-        try:
-            u = s.decode(e) # attempt strict decoding
-            return u.encode(_encoding, "replace")
-        except LookupError, k:
-            raise Abort(_("%s, please check your locale settings") % k)
-        except UnicodeDecodeError:
-            pass
-    u = s.decode("utf-8", "replace") # last ditch
-    return u.encode(_encoding, "replace")
-
-def fromlocal(s):
-    """
-    Convert a string from the local character encoding to UTF-8
-
-    We attempt to decode strings using the encoding mode set by
-    HGENCODINGMODE, which defaults to 'strict'. In this mode, unknown
-    characters will cause an error message. Other modes include
-    'replace', which replaces unknown characters with a special
-    Unicode character, and 'ignore', which drops the character.
-    """
-    try:
-        return s.decode(_encoding, _encodingmode).encode("utf-8")
-    except UnicodeDecodeError, inst:
-        sub = s[max(0, inst.start-10):inst.start+10]
-        raise Abort("decoding near '%s': %s!" % (sub, inst))
-    except LookupError, k:
-        raise Abort(_("%s, please check your locale settings") % k)
-
-def colwidth(s):
-    "Find the column width of a UTF-8 string for display"
-    d = s.decode(_encoding, 'replace')
-    if hasattr(unicodedata, 'east_asian_width'):
-        w = unicodedata.east_asian_width
-        return sum([w(c) in 'WF' and 2 or 1 for c in d])
-    return len(d)
 
 def version():
     """Return version information if available."""

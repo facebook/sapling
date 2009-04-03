@@ -7,7 +7,7 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-import gettext, sys, os
+import gettext, sys, os, encoding
 
 # modelled after templater.templatepath:
 if hasattr(sys, 'frozen'):
@@ -37,15 +37,13 @@ def gettext(message):
     if message is None:
         return message
 
-    # We cannot just run the text through util.tolocal since that
-    # leads to infinite recursion when util._encoding is invalid.
+    # We cannot just run the text through encoding.tolocal since that
+    # leads to infinite recursion when encoding._encoding is invalid.
     try:
         u = t.ugettext(message)
-        return u.encode(util._encoding, "replace")
+        return u.encode(encoding.encoding, "replace")
     except LookupError:
         return message
 
 _ = gettext
 
-# Moved after _ because of circular import.
-import util

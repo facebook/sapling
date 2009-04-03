@@ -36,19 +36,19 @@ To use this extension, enable the extension in .hg/hgrc or ~/.hgrc:
   [extensions]
   hgext.win32mbcs =
 
-Path encoding conversion are done between unicode and util._encoding
+Path encoding conversion are done between unicode and encoding.encoding
 which is decided by mercurial from current locale setting or HGENCODING.
 
 """
 
 import os
 from mercurial.i18n import _
-from mercurial import util
+from mercurial import util, encoding
 
 def decode(arg):
     if isinstance(arg, str):
-        uarg = arg.decode(util._encoding)
-        if arg == uarg.encode(util._encoding):
+        uarg = arg.decode(encoding.encoding)
+        if arg == uarg.encode(encoding.encoding):
             return uarg
         raise UnicodeError("Not local encoding")
     elif isinstance(arg, tuple):
@@ -59,7 +59,7 @@ def decode(arg):
 
 def encode(arg):
     if isinstance(arg, unicode):
-        return arg.encode(util._encoding)
+        return arg.encode(encoding.encoding)
     elif isinstance(arg, tuple):
         return tuple(map(encode, arg))
     elif isinstance(arg, list):
@@ -76,10 +76,10 @@ def wrapper(func, args):
         # convert arguments to unicode, call func, then convert back
         return encode(func(*decode(args)))
     except UnicodeError:
-        # If not encoded with util._encoding, report it then
+        # If not encoded with encoding.encoding, report it then
         # continue with calling original function.
         raise util.Abort(_("[win32mbcs] filename conversion fail with"
-                         " %s encoding\n") % (util._encoding))
+                         " %s encoding\n") % (encoding.encoding))
 
 def wrapname(name):
     idx = name.rfind('.')
@@ -115,8 +115,9 @@ def reposetup(ui, repo):
         return
 
     # fake is only for relevant environment.
-    if util._encoding.lower() in problematic_encodings.split():
+    if encoding.encoding.lower() in problematic_encodings.split():
         for f in funcs.split():
             wrapname(f)
-        ui.debug(_("[win32mbcs] activated with encoding: %s\n") % util._encoding)
+        ui.debug(_("[win32mbcs] activated with encoding: %s\n")
+                 % encoding.encoding)
 
