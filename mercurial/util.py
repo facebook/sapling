@@ -333,8 +333,7 @@ def increasingchunks(source, min=1024, max=65536):
     if buf:
         yield ''.join(buf)
 
-class Abort(Exception):
-    """Raised if a command needs to print an error and exit."""
+Abort = error.Abort
 
 def always(fn): return True
 def never(fn): return False
