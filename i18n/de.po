@@ -22,8 +22,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-04-01 21:00+0200\n"
-"PO-Revision-Date: 2009-04-03 21:56+0200\n"
+"POT-Creation-Date: 2009-04-03 21:50+0200\n"
+"PO-Revision-Date: 2009-04-03 22:29+0200\n"
 "Last-Translator: Tobias Bell <tobias.bell@gmail.com>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
 "MIME-Version: 1.0\n"
@@ -4676,47 +4676,47 @@ msgid ""
 msgstr ""
 
 msgid "archive prefix contains illegal components"
-msgstr ""
+msgstr "Präfix des Archivs enthält nicht zulässige Komponenten"
 
 msgid "cannot give prefix when archiving to files"
-msgstr ""
+msgstr "Bei Archivierung in Dateien kann kein Präfix angegeben werden"
 
 #, python-format
 msgid "unknown archive type '%s'"
-msgstr ""
+msgstr "Unbekannter Archivtyp '%s'"
 
 msgid "invalid changegroup"
 msgstr ""
 
 msgid "unknown parent"
-msgstr ""
+msgstr "Unbekannte Vorgängerversion"
 
 #, python-format
 msgid "integrity check failed on %s:%d"
-msgstr ""
+msgstr "Integritätsprüfung fehlgeschlagen bei %s:%d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle file"
-msgstr ""
+msgstr "%s: keine Mercurial Bündeldatei"
 
 #, python-format
 msgid "%s: unknown bundle version"
-msgstr ""
+msgstr "%s: unbekannte Bündelversion"
 
 #, python-format
 msgid "%s: unknown bundle compression type"
-msgstr ""
+msgstr "%s: unbekannte Kompressionsmethode des Bündels"
 
 msgid "cannot create new bundle repository"
-msgstr ""
+msgstr "Neues Bündelarchiv kann nicht erzeugt werden"
 
 #, python-format
 msgid "premature EOF reading chunk (got %d bytes, expected %d)"
-msgstr ""
+msgstr "vorzeitiges Dateiende beim Lesen (%d Byte erhalten, %d erwartet)"
 
 #, python-format
 msgid "username %s contains a newline"
-msgstr ""
+msgstr "Benutzername %s enthält einen Zeilenumbruch"
 
 msgid "options --message and --logfile are mutually exclusive"
 msgstr "Optionen --message und --logfile schließen sich gegenseitig aus"
