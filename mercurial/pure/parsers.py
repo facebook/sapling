@@ -5,8 +5,9 @@
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
 
-from node import bin, nullid, nullrev
-import revlog, dirstate, struct, util, zlib
+from mercurial.node import bin, nullid, nullrev
+from mercurial import util
+import struct, zlib
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -24,7 +25,14 @@ def parse_manifest(mfdict, fdict, lines):
             mfdict[f] = bin(n)
 
 def parse_index(data, inline):
-    indexformatng = revlog.indexformatng
+    def gettype(q):
+        return int(q & 0xFFFF)
+
+    def offset_type(offset, type):
+        return long(long(offset) << 16 | type)
+
+    indexformatng = ">Qiiiiii20s12x"
+
     s = struct.calcsize(indexformatng)
     index = []
     cache = None
@@ -52,8 +60,8 @@ def parse_index(data, inline):
             off += s
 
     e = list(index[0])
-    type = revlog.gettype(e[0])
-    e[0] = revlog.offset_type(0, type)
+    type = gettype(e[0])
+    e[0] = offset_type(0, type)
     index[0] = tuple(e)
 
     # add the magic null revision at -1
@@ -64,7 +72,8 @@ def parse_index(data, inline):
 def parse_dirstate(dmap, copymap, st):
     parents = [st[:20], st[20: 40]]
     # deref fields so they will be local in loop
-    e_size = struct.calcsize(dirstate._format)
+    format = ">cllll"
+    e_size = struct.calcsize(format)
     pos1 = 40
     l = len(st)
 
