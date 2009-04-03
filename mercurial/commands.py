@@ -393,8 +393,9 @@ def branch(ui, repo, label=None, **opts):
     """set or show the current branch name
 
     With no argument, show the current branch name. With one argument,
-    set the working directory branch name (the branch does not exist in
-    the repository until the next commit).
+    set the working directory branch name (the branch does not exist
+    in the repository until the next commit). It is recommended to use
+    the 'default' branch as your primary development branch.
 
     Unless --force is specified, branch will not let you set a
     branch name that shadows an existing branch.
@@ -563,6 +564,21 @@ def clone(ui, source, dest=None, **opts):
     The location of the source is added to the new repository's
     .hg/hgrc file, as the default to be used for future pulls.
 
+    If you use the -r option to clone up to a specific revision, no
+    subsequent revisions (including subsequent tags) will be present
+    in the cloned repository. This option implies --pull, even on
+    local repositories.
+
+    By default, clone will check out the head of the 'default' branch.
+    If the -U option is used, the new clone will contain only a repository
+    (.hg) and no working copy (the working copy parent is the null revision).
+
+    See 'hg help urls' for valid source format details.
+
+    It is possible to specify an ssh:// URL as the destination, but no
+    .hg/hgrc and working directory will be created on the remote side.
+    Look at the help text for urls for important details about ssh:// URLs.
+
     For efficiency, hardlinks are used for cloning whenever the source
     and destination are on the same filesystem (note this applies only
     to the repository data, not to the checked out files). Some
@@ -582,18 +598,6 @@ def clone(ui, source, dest=None, **opts):
     this is not compatible with certain extensions that place their
     metadata under the .hg directory, such as mq.
 
-    If you use the -r option to clone up to a specific revision, no
-    subsequent revisions will be present in the cloned repository.
-    This option implies --pull, even on local repositories.
-
-    If the -U option is used, the new clone will contain only a repository
-    (.hg) and no working copy (the working copy parent is the null revision).
-
-    See 'hg help urls' for valid source format details.
-
-    It is possible to specify an ssh:// URL as the destination, but no
-    .hg/hgrc and working directory will be created on the remote side.
-    Look at the help text for urls for important details about ssh:// URLs.
     """
     cmdutil.setremoteconfig(ui, opts)
     hg.clone(ui, source, dest,
