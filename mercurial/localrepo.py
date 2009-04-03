@@ -1063,7 +1063,7 @@ class localrepository(repo.repository):
                             wlock = self.wlock(False)
                             for f in fixup:
                                 self.dirstate.normal(f)
-                        except lock.LockError:
+                        except error.LockError:
                             pass
                     finally:
                         del wlock
