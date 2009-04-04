@@ -2003,10 +2003,13 @@ def manifest(ui, repo, node=None, rev=None):
 def merge(ui, repo, node=None, force=None, rev=None):
     """merge working directory with another revision
 
-    Merge the contents of the current working directory and the
-    requested revision. Files that changed between either parent are
-    marked as changed for the next commit and a commit must be
-    performed before any further updates are allowed.
+    The contents of the current working directory is updated with all
+    changes made in the requested revision since the last common
+    predecessor revision.
+
+    Files that changed between either parent are marked as changed for
+    the next commit and a commit must be performed before any further
+    updates are allowed. The next commit has two parents.
 
     If no revision is specified, the working directory's parent is a
     head revision, and the current branch contains exactly one other head,
