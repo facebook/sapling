@@ -34,15 +34,15 @@ you do not need to type "hg extdiff -p kdiff3" always.
   meld =
 
   # add new command called vimdiff, runs gvimdiff with DirDiff plugin
-  #(see http://www.vim.org/scripts/script.php?script_id=102)
+  # (see http://www.vim.org/scripts/script.php?script_id=102)
   # Non english user, be sure to put "let g:DirDiffDynamicDiffText = 1" in
   # your .vimrc
   vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
 
-You can use -I/-X and list of file or directory names like normal
-"hg diff" command. The `extdiff' extension makes snapshots of only
-needed files, so running the external diff program will actually be
-pretty fast (at least faster than having to compare the entire tree).
+You can use -I/-X and list of file or directory names like normal "hg
+diff" command. The `extdiff' extension makes snapshots of only needed
+files, so running the external diff program will actually be pretty
+fast (at least faster than having to compare the entire tree).
 '''
 
 from mercurial.i18n import _
@@ -194,16 +194,16 @@ def extdiff(ui, repo, *pats, **opts):
     an external program. The default program used is diff, with
     default options "-Npru".
 
-    To select a different program, use the -p option. The program
-    will be passed the names of two directories to compare. To pass
+    To select a different program, use the -p option. The program will
+    be passed the names of two directories to compare. To pass
     additional options to the program, use the -o option. These will
     be passed before the names of the directories to compare.
 
-    When two revision arguments are given, then changes are
-    shown between those revisions. If only one revision is
-    specified then that revision is compared to the working
-    directory, and, when no revisions are specified, the
-    working directory files are compared to its parent.'''
+    When two revision arguments are given, then changes are shown
+    between those revisions. If only one revision is specified then
+    that revision is compared to the working directory, and, when no
+    revisions are specified, the working directory files are compared
+    to its parent.'''
     program = opts['program'] or 'diff'
     if opts['program']:
         option = opts['option']
