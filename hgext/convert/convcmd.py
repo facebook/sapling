@@ -198,7 +198,8 @@ class converter(object):
         afile = open(authorfile, 'r')
         for line in afile:
 
-            if line.strip() == '':
+            line = line.strip()
+            if not line or line.startswith('#'):
                 continue
 
             try:

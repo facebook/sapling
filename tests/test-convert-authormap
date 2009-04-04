@@ -16,6 +16,7 @@ cd ..
 cat > authormap.txt <<EOF
 user name = Long User Name
 
+# comment
 this line is ignored
 EOF
 
