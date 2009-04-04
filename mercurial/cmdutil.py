@@ -912,32 +912,37 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
         patch = matchfn or matchall(repo)
 
     tmpl = opts.get('template')
-    mapfile = None
+    style = None
     if tmpl:
         tmpl = templater.parsestring(tmpl, quoted=False)
     else:
-        mapfile = opts.get('style')
-        # ui settings
-        if not mapfile:
-            tmpl = ui.config('ui', 'logtemplate')
-            if tmpl:
-                tmpl = templater.parsestring(tmpl)
-            else:
-                mapfile = ui.config('ui', 'style')
+        style = opts.get('style')
 
-    if tmpl or mapfile:
-        if mapfile:
-            if not os.path.split(mapfile)[0]:
-                mapname = (templater.templatepath('map-cmdline.' + mapfile)
-                           or templater.templatepath(mapfile))
-                if mapname: mapfile = mapname
-        try:
-            t = changeset_templater(ui, repo, patch, opts, mapfile, buffered)
-        except SyntaxError, inst:
-            raise util.Abort(inst.args[0])
-        if tmpl: t.use_template(tmpl)
-        return t
-    return changeset_printer(ui, repo, patch, opts, buffered)
+    # ui settings
+    if not (tmpl or style):
+        tmpl = ui.config('ui', 'logtemplate')
+        if tmpl:
+            tmpl = templater.parsestring(tmpl)
+        else:
+            style = ui.config('ui', 'style')
+
+    if not (tmpl or style):
+        return changeset_printer(ui, repo, patch, opts, buffered)
+
+    mapfile = None
+    if style and not tmpl:
+        mapfile = style
+        if not os.path.split(mapfile)[0]:
+            mapname = (templater.templatepath('map-cmdline.' + mapfile)
+                       or templater.templatepath(mapfile))
+            if mapname: mapfile = mapname
+
+    try:
+        t = changeset_templater(ui, repo, patch, opts, mapfile, buffered)
+    except SyntaxError, inst:
+        raise util.Abort(inst.args[0])
+    if tmpl: t.use_template(tmpl)
+    return t
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
