@@ -34,13 +34,13 @@ import os
 def purge(ui, repo, *dirs, **opts):
     '''removes files not tracked by Mercurial
 
-    Delete files not known to Mercurial. This is useful to test local and
-    uncommitted changes in an otherwise-clean source tree.
+    Delete files not known to Mercurial. This is useful to test local
+    and uncommitted changes in an otherwise-clean source tree.
 
     This means that purge will delete:
      - Unknown files: files marked with "?" by "hg status"
-     - Empty directories: in fact Mercurial ignores directories unless they
-       contain files under source control managment
+     - Empty directories: in fact Mercurial ignores directories unless
+       they contain files under source control managment
     But it will leave untouched:
      - Modified and unmodified tracked files
      - Ignored files (unless --all is specified)
@@ -49,9 +49,10 @@ def purge(ui, repo, *dirs, **opts):
     If directories are given on the command line, only files in these
     directories are considered.
 
-    Be careful with purge, as you could irreversibly delete some files you
-    forgot to add to the repository. If you only want to print the list of
-    files that this program would delete, use the --print option.
+    Be careful with purge, as you could irreversibly delete some files
+    you forgot to add to the repository. If you only want to print the
+    list of files that this program would delete, use the --print
+    option.
     '''
     act = not opts['print']
     eol = '\n'
