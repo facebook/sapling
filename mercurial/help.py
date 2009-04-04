@@ -401,7 +401,7 @@ PYTHONPATH::
       When you create a repository with hg clone, the clone command saves
       the location of the source repository as the new repository's
       'default' path. This is then used when you omit path from push-
-      and pull-like commands (including in and out).
+      and pull-like commands (including incoming and outgoing).
 
     default-push:
       The push command will look for a path named 'default-push', and
