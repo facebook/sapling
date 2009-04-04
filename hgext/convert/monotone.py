@@ -14,6 +14,10 @@ class monotone_source(converter_source, commandline):
         self.ui = ui
         self.path = path
 
+        norepo = NoRepo (_("%s does not look like a monotone repo") % path)
+        if not os.path.exists(os.path.join(path, '_MTN')):
+            raise norepo
+
         # regular expressions for parsing monotone output
         space    = r'\s*'
         name     = r'\s+"((?:\\"|[^"])*)"\s*'
@@ -38,10 +42,6 @@ class monotone_source(converter_source, commandline):
         self.manifest = None
         self.files = None
         self.dirs  = None
-
-        norepo = NoRepo (_("%s does not look like a monotone repo") % path)
-        if not os.path.exists(path):
-            raise norepo
 
         checktool('mtn', abort=False)
 

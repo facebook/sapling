@@ -152,6 +152,12 @@ class svn_source(converter_source):
     def __init__(self, ui, url, rev=None):
         super(svn_source, self).__init__(ui, url, rev=rev)
 
+        if not (url.startswith('svn://') or url.startswith('svn+ssh://') or
+                (os.path.exists(url) and
+                 os.path.exists(os.path.join(url, '.svn'))) or
+                 (url.startswith('file://'))):
+            raise NoRepo("%s does not look like a Subversion repo" % url)
+
         try:
             SubversionException
         except NameError:

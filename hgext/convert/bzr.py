@@ -27,14 +27,14 @@ class bzr_source(converter_source):
     def __init__(self, ui, path, rev=None):
         super(bzr_source, self).__init__(ui, path, rev=rev)
 
+        if not os.path.exists(os.path.join(path, '.bzr')):
+            raise NoRepo('%s does not look like a Bazaar repo' % path)
+
         try:
             # access bzrlib stuff
             branch
         except NameError:
             raise NoRepo('Bazaar modules could not be loaded')
-
-        if not os.path.exists(os.path.join(path, '.bzr')):
-            raise NoRepo('%s does not look like a Bazaar repo' % path)
 
         path = os.path.abspath(path)
         self.branch = branch.Branch.open(path)
