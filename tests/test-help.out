@@ -164,7 +164,8 @@ hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
-    Schedule files to be version controlled and added to the repository.
+    Schedule files to be version controlled and added to the
+    repository.
 
     The files will be added to the repository at the next commit. To
     undo an add before that, see hg revert.
@@ -183,7 +184,8 @@ hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
-    Schedule files to be version controlled and added to the repository.
+    Schedule files to be version controlled and added to the
+    repository.
 
     The files will be added to the repository at the next commit. To
     undo an add before that, see hg revert.

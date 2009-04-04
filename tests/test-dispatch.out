@@ -5,8 +5,8 @@ hg cat [OPTION]... FILE...
 
 output the current or given revision of files
 
-    Print the specified files as they were at the given revision.
-    If no revision is given, the parent of the working directory is used,
+    Print the specified files as they were at the given revision. If
+    no revision is given, the parent of the working directory is used,
     or tip if no revision is checked out.
 
     Output may be to a file, in which case the name of the file is
