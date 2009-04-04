@@ -2194,17 +2194,17 @@ def push(ui, repo, dest=None, **opts):
 
     Push changes from the local repository to the given destination.
 
-    This is the symmetrical operation for pull. It helps to move
-    changes from the current repository to a different one. If the
-    destination is local this is identical to a pull in that directory
-    from the current one.
+    This is the symmetrical operation for pull. It moves changes from
+    the current repository to a different one. If the destination is
+    local this is identical to a pull in that directory from the
+    current one.
 
     By default, push will refuse to run if it detects the result would
     increase the number of remote heads. This generally indicates the
     the client has forgotten to pull and merge before pushing.
 
-    If -r is used, the named changeset and all its ancestors will be pushed
-    to the remote repository.
+    If -r is used, the named revision and all its ancestors will be
+    pushed to the remote repository.
 
     Look at the help text for URLs for important details about ssh:// URLs.
     If DESTINATION is omitted, a default path will be used.
