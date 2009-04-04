@@ -197,24 +197,28 @@ class converter(object):
     def readauthormap(self, authorfile):
         afile = open(authorfile, 'r')
         for line in afile:
+
             if line.strip() == '':
                 continue
+
             try:
                 srcauthor, dstauthor = line.split('=', 1)
-                srcauthor = srcauthor.strip()
-                dstauthor = dstauthor.strip()
-                if srcauthor in self.authors and dstauthor != self.authors[srcauthor]:
-                    self.ui.status(
-                        _('Overriding mapping for author %s, was %s, will be %s\n')
-                        % (srcauthor, self.authors[srcauthor], dstauthor))
-                else:
-                    self.ui.debug(_('mapping author %s to %s\n')
-                                  % (srcauthor, dstauthor))
-                    self.authors[srcauthor] = dstauthor
-            except IndexError:
-                self.ui.warn(
-                    _('Ignoring bad line in author map file %s: %s\n')
-                    % (authorfile, line.rstrip()))
+            except ValueError:
+                msg = _('Ignoring bad line in author map file %s: %s\n')
+                self.ui.warn(msg % (authorfile, line.rstrip()))
+                continue
+
+            srcauthor = srcauthor.strip()
+            dstauthor = dstauthor.strip()
+            if self.authors.get(srcauthor) in (None, dstauthor):
+                msg = _('mapping author %s to %s\n')
+                self.ui.debug(msg % (srcauthor, dstauthor))
+                self.authors[srcauthor] = dstauthor
+                continue
+
+            m = _('overriding mapping for author %s, was %s, will be %s\n')
+            self.ui.status(m % (srcauthor, self.authors[srcauthor], dstauthor))
+
         afile.close()
 
     def cachecommit(self, rev):
