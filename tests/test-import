@@ -313,3 +313,22 @@ rm b
 hg import --no-commit -v -s 100 ../rename.diff
 hg st -C
 cd ..
+
+
+echo '% add empty file from the end of patch (issue 1495)'
+hg init addemptyend
+cd addemptyend
+touch a
+hg addremove
+hg ci -m "commit"
+cat > a.patch <<EOF
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -0,0 +1,1 @@
++a
+diff --git a/b b/b
+new file mode 100644
+EOF
+hg import --no-commit a.patch
+cd ..
