@@ -15,14 +15,15 @@ bookmark is forwarded to the new changeset.
 It is possible to use bookmark names in every revision lookup (e.g. hg
 merge, hg update).
 
-The bookmark extension offers the possiblity to have a more git-like experience
-by adding the following configuration option to your .hgrc:
+The bookmark extension offers the possiblity to have a more git-like
+experience by adding the following configuration option to your .hgrc:
 
 [bookmarks]
 track.current = True
 
-This will cause bookmarks to track the bookmark that you are currently on, and
-just updates it. This is similar to git's approach of branching.
+This will cause bookmarks to track the bookmark that you are currently
+on, and just updates it. This is similar to git's approach of
+branching.
 '''
 
 from mercurial.i18n import _
@@ -115,8 +116,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
 
     Bookmarks are pointers to certain commits that move when
     commiting. Bookmarks are local. They can be renamed, copied and
-    deleted. It is possible to use bookmark names in 'hg merge' and 'hg
-    update' to update to a given bookmark.
+    deleted. It is possible to use bookmark names in 'hg merge' and
+    'hg update' to update to a given bookmark.
 
     You can use 'hg bookmark NAME' to set a bookmark on the current
     tip with the given name. If you specify a revision using -r REV
