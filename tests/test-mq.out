@@ -2,11 +2,11 @@
 mq extension - patch management and development
 
 This extension lets you work with a stack of patches in a Mercurial
-repository.  It manages two stacks of patches - all known patches, and
+repository. It manages two stacks of patches - all known patches, and
 applied patches (subset of known patches).
 
 Known patches are represented as patch files in the .hg/patches
-directory.  Applied patches are both patch files and changesets.
+directory. Applied patches are both patch files and changesets.
 
 Common tasks (use "hg help command" for more details):
 

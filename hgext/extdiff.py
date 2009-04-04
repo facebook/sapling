@@ -7,7 +7,7 @@
 
 '''
 The `extdiff' Mercurial extension allows you to use external programs
-to compare revisions, or revision with working dir.  The external diff
+to compare revisions, or revision with working dir. The external diff
 programs are called with a configurable set of options and two
 non-option arguments: paths to directories containing snapshots of
 files to compare.
@@ -40,7 +40,7 @@ you do not need to type "hg extdiff -p kdiff3" always.
   vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
 
 You can use -I/-X and list of file or directory names like normal
-"hg diff" command.  The `extdiff' extension makes snapshots of only
+"hg diff" command. The `extdiff' extension makes snapshots of only
 needed files, so running the external diff program will actually be
 pretty fast (at least faster than having to compare the entire tree).
 '''
@@ -191,12 +191,12 @@ def extdiff(ui, repo, *pats, **opts):
     '''use external program to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using
-    an external program.  The default program used is diff, with
+    an external program. The default program used is diff, with
     default options "-Npru".
 
-    To select a different program, use the -p option.  The program
-    will be passed the names of two directories to compare.  To pass
-    additional options to the program, use the -o option.  These will
+    To select a different program, use the -p option. The program
+    will be passed the names of two directories to compare. To pass
+    additional options to the program, use the -o option. These will
     be passed before the names of the directories to compare.
 
     When two revision arguments are given, then changes are

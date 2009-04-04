@@ -13,7 +13,7 @@
 Some MBCS encodings are not good for some path operations
 (i.e. splitting path, case conversion, etc.) with its encoded bytes.
 We call such a encoding (i.e. shift_jis and big5) as "problematic
-encoding".  This extension can be used to fix the issue with those
+encoding". This extension can be used to fix the issue with those
 encodings by wrapping some functions to convert to unicode string
 before path operation.
 

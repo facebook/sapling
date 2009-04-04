@@ -8,11 +8,11 @@
 '''patch management and development
 
 This extension lets you work with a stack of patches in a Mercurial
-repository.  It manages two stacks of patches - all known patches, and
+repository. It manages two stacks of patches - all known patches, and
 applied patches (subset of known patches).
 
 Known patches are represented as patch files in the .hg/patches
-directory.  Applied patches are both patch files and changesets.
+directory. Applied patches are both patch files and changesets.
 
 Common tasks (use "hg help command" for more details):
 
@@ -1716,14 +1716,14 @@ def init(ui, repo, **opts):
 def clone(ui, source, dest=None, **opts):
     '''clone main and patch repository at same time
 
-    If source is local, destination will have no patches applied.  If
+    If source is local, destination will have no patches applied. If
     source is remote, this command can not check if patches are
     applied in source, so cannot guarantee that patches are not
-    applied in destination.  If you clone remote repository, be sure
+    applied in destination. If you clone remote repository, be sure
     before that it has no patches applied.
 
     Source patch repository is looked for in <src>/.hg/patches by
-    default.  Use -p <url> to change.
+    default. Use -p <url> to change.
 
     The patch directory must be a nested mercurial repository, as
     would be created by qinit -c.

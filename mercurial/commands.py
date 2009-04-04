@@ -591,10 +591,10 @@ def clone(ui, source, dest=None, **opts):
 
       $ cp -al REPO REPOCLONE
 
-    This is the fastest way to clone, but it is not always safe.  The
+    This is the fastest way to clone, but it is not always safe. The
     operation is not atomic (making sure REPO is not modified during
     the operation is up to you) and you have to make sure your editor
-    breaks hardlinks (Emacs and most Linux Kernel tools do so).  Also,
+    breaks hardlinks (Emacs and most Linux Kernel tools do so). Also,
     this is not compatible with certain extensions that place their
     metadata under the .hg directory, such as mq.
 
@@ -609,8 +609,8 @@ def clone(ui, source, dest=None, **opts):
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
 
-    Commit changes to the given files into the repository.  Unlike a
-    centralized RCS, this operation is a local operation.  See hg push
+    Commit changes to the given files into the repository. Unlike a
+    centralized RCS, this operation is a local operation. See hg push
     for means to actively distribute your changes.
 
     If a list of files is omitted, all changes reported by "hg status"
@@ -2915,7 +2915,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     the revision to remove the working copy (like 'hg clone -U').
 
     When the working dir contains no uncommitted changes, it will be
-    replaced by the state of the requested revision from the repo.  When
+    replaced by the state of the requested revision from the repo. When
     the requested revision is on a different branch, the working dir
     will additionally be switched to that branch.
 
@@ -2927,7 +2927,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     the parent revision and requested revision are on the same branch,
     and one of them is an ancestor of the other, then the new working
     directory will contain the requested revision merged with the
-    uncommitted changes.  Otherwise, the update will fail with a
+    uncommitted changes. Otherwise, the update will fail with a
     suggestion to use 'merge' or 'update -C' instead.
 
     If you want to update just one file to an older revision, use revert.

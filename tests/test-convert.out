@@ -22,16 +22,16 @@ convert a foreign SCM repository to a Mercurial one.
     understood by the source).
 
     If no destination directory name is specified, it defaults to the
-    basename of the source with '-hg' appended.  If the destination
+    basename of the source with '-hg' appended. If the destination
     repository doesn't exist, it will be created.
 
     If <REVMAP> isn't given, it will be put in a default location
-    (<dest>/.hg/shamap by default).  The <REVMAP> is a simple text
+    (<dest>/.hg/shamap by default). The <REVMAP> is a simple text
     file that maps each source commit ID to the destination ID for
     that revision, like so:
     <source ID> <destination ID>
 
-    If the file doesn't exist, it's automatically created.  It's updated
+    If the file doesn't exist, it's automatically created. It's updated
     on each commit copied, so convert-repo can be interrupted and can
     be run repeatedly to copy new commits.
 
@@ -42,7 +42,7 @@ convert a foreign SCM repository to a Mercurial one.
     srcauthor=whatever string you want
 
     The filemap is a file that allows filtering and remapping of files
-    and directories.  Comment lines start with '#'.  Each line can
+    and directories. Comment lines start with '#'. Each line can
     contain one of the following directives:
 
       include path/to/file
@@ -55,18 +55,18 @@ convert a foreign SCM repository to a Mercurial one.
     directory, to be included in the destination repository, and the
     exclusion of all other files and dirs not explicitely included.
     The 'exclude' directive causes files or directories to be omitted.
-    The 'rename' directive renames a file or directory.  To rename from a
+    The 'rename' directive renames a file or directory. To rename from a
     subdirectory into the root of the repository, use '.' as the path to
     rename to.
 
     The splicemap is a file that allows insertion of synthetic
-    history, letting you specify the parents of a revision.  This is
+    history, letting you specify the parents of a revision. This is
     useful if you want to e.g. give a Subversion merge two parents, or
-    graft two disconnected series of history together.  Each entry
+    graft two disconnected series of history together. Each entry
     contains a key, followed by a space, followed by one or two
-    comma-separated values.  The key is the revision ID in the
+    comma-separated values. The key is the revision ID in the
     source revision control system whose parents should be modified
-    (same format as a key in .hg/shamap).  The values are the revision
+    (same format as a key in .hg/shamap). The values are the revision
     IDs (in either the source or destination revision control system)
     that should be used as the new parents for that node.
 
