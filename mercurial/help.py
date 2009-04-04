@@ -35,9 +35,9 @@ helptable = (
     "1165432709 0" (Wed Dec 6 13:18:29 2006 UTC)
 
     This is the internal representation format for dates. unixtime is
-    the number of seconds since the epoch (1970-01-01 00:00 UTC). offset
-    is the offset of the local timezone, in seconds west of UTC (negative
-    if the timezone is east of UTC).
+    the number of seconds since the epoch (1970-01-01 00:00 UTC).
+    offset is the offset of the local timezone, in seconds west of UTC
+    (negative if the timezone is east of UTC).
 
     The log command also accepts date ranges:
 
@@ -96,10 +96,10 @@ helptable = (
     (['environment', 'env'], _('Environment Variables'),
      _(r'''
 HG::
-    Path to the 'hg' executable, automatically passed when running hooks,
-    extensions or external tools. If unset or empty, this is the hg
-    executable's name if it's frozen, or an executable named 'hg'
-    (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on
+    Path to the 'hg' executable, automatically passed when running
+    hooks, extensions or external tools. If unset or empty, this is
+    the hg executable's name if it's frozen, or an executable named
+    'hg' (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on
     Windows) is searched.
 
 HGEDITOR::
@@ -160,28 +160,27 @@ VISUAL::
     This is the name of the editor to use when committing. See EDITOR.
 
 EDITOR::
-    Sometimes Mercurial needs to open a text file in an editor
-    for a user to modify, for example when writing commit messages.
-    The editor it uses is determined by looking at the environment
+    Sometimes Mercurial needs to open a text file in an editor for a
+    user to modify, for example when writing commit messages. The
+    editor it uses is determined by looking at the environment
     variables HGEDITOR, VISUAL and EDITOR, in that order. The first
     non-empty one is chosen. If all of them are empty, the editor
     defaults to 'vi'.
 
 PYTHONPATH::
-    This is used by Python to find imported modules and may need to be set
-    appropriately if this Mercurial is not installed system-wide.
+    This is used by Python to find imported modules and may need to be
+    set appropriately if this Mercurial is not installed system-wide.
     ''')),
 
     (['revs', 'revisions'], _('Specifying Single Revisions'),
      _(r'''
-    Mercurial supports several ways to specify individual
-    revisions.
+    Mercurial supports several ways to specify individual revisions.
 
-    A plain integer is treated as a revision number. Negative
-    integers are treated as topological offsets from the tip, with
-    -1 denoting the tip. As such, negative numbers are only useful
-    if you've memorized your local tree numbers and want to save
-    typing a single digit. This editor suggests copy and paste.
+    A plain integer is treated as a revision number. Negative integers
+    are treated as topological offsets from the tip, with -1 denoting
+    the tip. As such, negative numbers are only useful if you've
+    memorized your local tree numbers and want to save typing a single
+    digit. This editor suggests copy and paste.
 
     A 40-digit hexadecimal string is treated as a unique revision
     identifier.
@@ -202,9 +201,9 @@ PYTHONPATH::
     revision of an empty repository, and the parent of revision 0.
 
     The reserved name "." indicates the working directory parent. If
-    no working directory is checked out, it is equivalent to null.
-    If an uncommitted merge is in progress, "." is the revision of
-    the first parent.
+    no working directory is checked out, it is equivalent to null. If
+    an uncommitted merge is in progress, "." is the revision of the
+    first parent.
     ''')),
 
     (['mrevs', 'multirevs'], _('Specifying Multiple Revisions'),
@@ -216,8 +215,8 @@ PYTHONPATH::
     The syntax of range notation is [BEGIN]:[END], where BEGIN and END
     are revision identifiers. Both BEGIN and END are optional. If
     BEGIN is not specified, it defaults to revision number 0. If END
-    is not specified, it defaults to the tip. The range ":" thus
-    means "all revisions".
+    is not specified, it defaults to the tip. The range ":" thus means
+    "all revisions".
 
     If BEGIN is greater than END, revisions are treated in reverse
     order.
@@ -228,9 +227,10 @@ PYTHONPATH::
 
     (['diffs'], _('Diff Formats'),
      _(r'''
-    Mercurial's default format for showing changes between two versions
-    of a file is compatible with the unified format of GNU diff, which
-    can be used by GNU patch and many other standard tools.
+    Mercurial's default format for showing changes between two
+    versions of a file is compatible with the unified format of GNU
+    diff, which can be used by GNU patch and many other standard
+    tools.
 
     While this standard format is often enough, it does not encode the
     following information:
@@ -248,61 +248,66 @@ PYTHONPATH::
     This means that when generating diffs from a Mercurial repository
     (e.g. with "hg export"), you should be careful about things like
     file copies and renames or other things mentioned above, because
-    when applying a standard diff to a different repository, this extra
-    information is lost. Mercurial's internal operations (like push and
-    pull) are not affected by this, because they use an internal binary
-    format for communicating changes.
+    when applying a standard diff to a different repository, this
+    extra information is lost. Mercurial's internal operations (like
+    push and pull) are not affected by this, because they use an
+    internal binary format for communicating changes.
 
     To make Mercurial produce the git extended diff format, use the
-    --git option available for many commands, or set 'git = True' in the
-    [diff] section of your hgrc. You do not need to set this option when
-    importing diffs in this format or using them in the mq extension.
+    --git option available for many commands, or set 'git = True' in
+    the [diff] section of your hgrc. You do not need to set this
+    option when importing diffs in this format or using them in the mq
+    extension.
     ''')),
     (['templating'], _('Template Usage'),
      _(r'''
     Mercurial allows you to customize output of commands through
-    templates. You can either pass in a template from the command line,
-    via the --template option, or select an existing template-style (--style).
+    templates. You can either pass in a template from the command
+    line, via the --template option, or select an existing
+    template-style (--style).
 
-    You can customize output for any "log-like" command: log, outgoing,
-    incoming, tip, parents, heads and glog.
+    You can customize output for any "log-like" command: log,
+    outgoing, incoming, tip, parents, heads and glog.
 
     Three styles are packaged with Mercurial: default (the style used
-    when no explicit preference is passed), compact and changelog. Usage:
+    when no explicit preference is passed), compact and changelog.
+    Usage:
 
         $ hg log -r1 --style changelog
 
-    A template is a piece of text, with markup to invoke variable expansion:
+    A template is a piece of text, with markup to invoke variable
+    expansion:
 
         $ hg log -r1 --template "{node}\n"
         b56ce7b07c52de7d5fd79fb89701ea538af65746
 
     Strings in curly braces are called keywords. The availability of
-    keywords depends on the exact context of the templater. These keywords
-    are usually available for templating a log-like command:
+    keywords depends on the exact context of the templater. These
+    keywords are usually available for templating a log-like command:
 
     - author: String. The unmodified author of the changeset.
     - branches: String. The name of the branch on which the changeset
           was committed. Will be empty if the branch name was default.
     - date: Date information. The date when the changeset was committed.
     - desc: String. The text of the changeset description.
-    - diffstat: String. Statistics of changes with the following format:
-          "modified files: +added/-removed lines"
+    - diffstat: String. Statistics of changes with the following
+          format: "modified files: +added/-removed lines"
     - files: List of strings. All files modified, added, or removed by
           this changeset.
     - file_adds: List of strings. Files added by this changeset.
     - file_mods: List of strings. Files modified by this changeset.
     - file_dels: List of strings. Files removed by this changeset.
-    - node: String. The changeset identification hash, as a 40-character
-          hexadecimal string.
+    - node: String. The changeset identification hash, as a
+          40-character hexadecimal string.
     - parents: List of strings. The parents of the changeset.
     - rev: Integer. The repository-local changeset revision number.
     - tags: List of strings. Any tags associated with the changeset.
 
     The "date" keyword does not produce human-readable output. If you
-    want to use a date in your output, you can use a filter to process it.
-    Filters are functions which return a string based on the input variable.
-    You can also use a chain of filters to get the desired output:
+    want to use a date in your output, you can use a filter to process
+    it. Filters are functions which return a string based on the input
+    variable. You can also use a chain of filters to get the desired
+    output:
 
        $ hg tip --template "{date|isodate}\n"
        2008-08-21 18:22 +0000
@@ -319,11 +324,11 @@ PYTHONPATH::
           "foo/bar/baz" becomes "baz" and "foo/bar//" becomes "bar".
     - date: Date. Returns a date in a Unix date format, including
           the timezone: "Mon Sep 04 15:13:13 2006 0700".
-    - domain: Any text. Finds the first string that looks like an email
-          address, and extracts just the domain component.
+    - domain: Any text. Finds the first string that looks like an
+          email address, and extracts just the domain component.
           Example: 'User <user@example.com>' becomes 'example.com'.
-    - email: Any text. Extracts the first string that looks like an email
-          address. Example: 'User <user@example.com>' becomes
+    - email: Any text. Extracts the first string that looks like an
+          email address. Example: 'User <user@example.com>' becomes
           'user@example.com'.
     - escape: Any text. Replaces the special XML/XHTML characters "&",
           "<" and ">" with XML entities.
@@ -333,19 +338,19 @@ PYTHONPATH::
     - hgdate: Date. Returns the date as a pair of numbers:
           "1157407993 25200" (Unix timestamp, timezone offset).
     - isodate: Date. Returns the date in ISO 8601 format.
-    - obfuscate: Any text. Returns the input text rendered as a sequence
-          of XML entities.
+    - obfuscate: Any text. Returns the input text rendered as a
+          sequence of XML entities.
     - person: Any text. Returns the text before an email address.
     - rfc822date: Date. Returns a date using the same format used
           in email headers.
-    - short: Changeset hash. Returns the short form of a changeset hash,
-          i.e. a 12-byte hexadecimal string.
+    - short: Changeset hash. Returns the short form of a changeset
+          hash, i.e. a 12-byte hexadecimal string.
     - shortdate: Date. Returns a date like "2006-09-18".
     - strip: Any text. Strips all leading and trailing whitespace.
-    - tabindent: Any text. Returns the text, with every line except the
-          first starting with a tab character.
-    - urlescape: Any text. Escapes all "special" characters. For example,
-          "foo bar" becomes "foo%20bar".
+    - tabindent: Any text. Returns the text, with every line except
+          the first starting with a tab character.
+    - urlescape: Any text. Escapes all "special" characters. For
+          example, "foo bar" becomes "foo%20bar".
     - user: Any text. Returns the user portion of an email address.
     ''')),
 
@@ -366,42 +371,44 @@ PYTHONPATH::
     or changeset to use from the remote repository.
 
     Some features, such as pushing to http:// and https:// URLs are
-    only possible if the feature is explicitly enabled on the
-    remote Mercurial server.
+    only possible if the feature is explicitly enabled on the remote
+    Mercurial server.
 
     Some notes about using SSH with Mercurial:
-    - SSH requires an accessible shell account on the destination machine
-      and a copy of hg in the remote path or specified with as remotecmd.
+    - SSH requires an accessible shell account on the destination
+      machine and a copy of hg in the remote path or specified with as
+      remotecmd.
     - path is relative to the remote user's home directory by default.
       Use an extra slash at the start of a path to specify an absolute path:
         ssh://example.com//tmp/repository
-    - Mercurial doesn't use its own compression via SSH; the right thing
-      to do is to configure it in your ~/.ssh/config, e.g.:
+    - Mercurial doesn't use its own compression via SSH; the right
+      thing to do is to configure it in your ~/.ssh/config, e.g.:
         Host *.mylocalnetwork.example.com
           Compression no
         Host *
           Compression yes
-      Alternatively specify "ssh -C" as your ssh command in your hgrc or
-      with the --ssh command line option.
+      Alternatively specify "ssh -C" as your ssh command in your hgrc
+      or with the --ssh command line option.
 
-    These URLs can all be stored in your hgrc with path aliases under the
-    [paths] section like so:
+    These URLs can all be stored in your hgrc with path aliases under
+    the [paths] section like so:
     [paths]
     alias1 = URL1
     alias2 = URL2
     ...
 
-    You can then use the alias for any command that uses a URL (for example
-    'hg pull alias1' would pull from the 'alias1' path).
+    You can then use the alias for any command that uses a URL (for
+    example 'hg pull alias1' would pull from the 'alias1' path).
 
     Two path aliases are special because they are used as defaults
     when you do not provide the URL to a command:
 
     default:
-      When you create a repository with hg clone, the clone command saves
-      the location of the source repository as the new repository's
-      'default' path. This is then used when you omit path from push-
-      and pull-like commands (including incoming and outgoing).
+      When you create a repository with hg clone, the clone command
+      saves the location of the source repository as the new
+      repository's 'default' path. This is then used when you omit
+      path from push- and pull-like commands (including incoming and
+      outgoing).
 
     default-push:
       The push command will look for a path named 'default-push', and
