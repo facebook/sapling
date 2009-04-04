@@ -2343,8 +2343,13 @@ def resolve(ui, repo, *pats, **opts):
     revisions preserved from the last update or merge. To attempt to
     resolve all unresolved files, use the -a switch.
 
+    If a conflict is resolved manually, please note that the changes
+    will be overwritten if the merge is retried with resolve. The -m
+    switch should be used to mark the file as resolved.
+
     This command will also allow listing resolved files and manually
-    marking and unmarking files as resolved.
+    marking and unmarking files as resolved. All files must be marked
+    as resolved before the new commits are permitted.
 
     The codes used to show the status of files are:
     U = unresolved
