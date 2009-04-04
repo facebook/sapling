@@ -18,15 +18,16 @@
 
 '''add color output to status, qseries, and diff-related commands
 
-This extension modifies the status command to add color to its output to
-reflect file status, the qseries command to add color to reflect patch status
-(applied, unapplied, missing), and to diff-related commands to highlight
-additions, removals, diff headers, and trailing whitespace.
+This extension modifies the status command to add color to its output
+to reflect file status, the qseries command to add color to reflect
+patch status (applied, unapplied, missing), and to diff-related
+commands to highlight additions, removals, diff headers, and trailing
+whitespace.
 
-Other effects in addition to color, like bold and underlined text, are also
-available. Effects are rendered with the ECMA-48 SGR control function (aka
-ANSI escape codes). This module also provides the render_text function,
-which can be used to add effects to any text.
+Other effects in addition to color, like bold and underlined text, are
+also available. Effects are rendered with the ECMA-48 SGR control
+function (aka ANSI escape codes). This module also provides the
+render_text function, which can be used to add effects to any text.
 
 To enable this extension, add this to your .hgrc file:
 [extensions]
