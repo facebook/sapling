@@ -23,7 +23,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2009-04-03 21:50+0200\n"
-"PO-Revision-Date: 2009-04-03 22:29+0200\n"
+"PO-Revision-Date: 2009-04-04 10:49+0200\n"
 "Last-Translator: Tobias Bell <tobias.bell@gmail.com>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
 "MIME-Version: 1.0\n"
@@ -4203,9 +4203,11 @@ msgid ""
 "hg rebase [-s rev | -b rev] [-d rev] [--collapse] | [-c] | [-a] | [--keep]"
 msgstr ""
 
+# Nicht übersetzen
 msgid "interactive change selection during commit or qrefresh"
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "like patch.iterhunks, but yield different events\n"
 "\n"
@@ -4216,9 +4218,11 @@ msgid ""
 "    "
 msgstr ""
 
+# Nicht übersetzen
 msgid "scan lr while predicate holds"
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "patch header\n"
 "\n"
@@ -4227,18 +4231,20 @@ msgid ""
 msgstr ""
 
 msgid "this modifies a binary file (all or nothing)\n"
-msgstr ""
+msgstr "Dies modifiziert eine Binärdatei (alles oder nicht)\n"
 
 msgid "this is a binary file\n"
-msgstr ""
+msgstr "Dies ist eine Binärdatei\n"
 
 #, python-format
 msgid "%d hunks, %d lines changed\n"
-msgstr ""
+msgstr "%d Hunks, %d Zeilen geändert\n"
 
+# Nicht übersetzen
 msgid "hunk -> (n+,n-)"
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "patch hunk\n"
 "\n"
@@ -4246,21 +4252,26 @@ msgid ""
 "    "
 msgstr ""
 
+# Nicht übersetzen
 msgid "patch -> [] of hunks "
 msgstr ""
 
+# Nicht übersetzen
 msgid "patch parsing state machine"
 msgstr ""
 
+# Nicht übersetzen
 msgid "Interactively filter patch chunks into applied-only chunks"
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "fetch next portion from chunks until a 'header' is seen\n"
 "        NB: header == new-file mark\n"
 "        "
 msgstr ""
 
+# Nicht übersetzen
 msgid ""
 "prompt query, and process base inputs\n"
 "\n"
@@ -4283,7 +4294,7 @@ msgid "?"
 msgstr ""
 
 msgid "y - record this change"
-msgstr ""
+msgstr "y - übernimmt diese Änderung"
 
 msgid "s"
 msgstr ""
@@ -4301,22 +4312,22 @@ msgid "q"
 msgstr ""
 
 msgid "user quit"
-msgstr ""
+msgstr "Abbruch durch Benutzer"
 
 #, python-format
 msgid "examine changes to %s?"
-msgstr ""
+msgstr "Überprüfe Änderungen an %s?"
 
 msgid " and "
-msgstr ""
+msgstr " und "
 
 #, python-format
 msgid "record this change to %r?"
-msgstr ""
+msgstr "Übernehme die Änderung an %r?"
 
 #, python-format
 msgid "record change %d/%d to %r?"
-msgstr ""
+msgstr "Übernehme die Änderung %d/%d an %r?"
 
 msgid ""
 "interactively select changes to commit\n"
@@ -4343,6 +4354,28 @@ msgid ""
 "\n"
 "    ? - display help"
 msgstr ""
+"Interaktive Auswahl von Änderungen zur Übernahme ins Archiv\n"
+"\n"
+"    Falls keine Liste von Dateien übergeben wird, gelten alle von\n"
+"    \"hg status\" gemeldeten Änderungen als Kandidaten für 'record'.\n"
+"\n"
+"    Siehe 'hg help dates' für eine Liste aller gültigen Formate für -d/--\n"
+"\n"
+"    Es erfolgt eine Abfrage für jede Datei, ob Änderungen übernommen\n"
+"    werden sollen, bei Dateien mit mehreren Änderungen für jede einzelne\n"
+"    Änderung. Folgenden Antworten sind bei jeder Anfrage möglich:\n"
+"\n"
+"    y - übernimmt diese Änderung\n"
+"    n - überspringt diese Änderung\n"
+"\n"
+"    s - überspringt verbleibende Änderungen dieser Datei\n"
+"    f - übernimmt verbleibende Änderungen dieser Datei\n"
+"\n"
+"    d - fertig, überspringt verbleibende Änderungen und Dateien\n"
+"    a - übernimmt alle Änderungen aller verbleibenden Dateien\n"
+"    q - beendet ohne Änderungen zu übernehmen\n"
+"\n"
+"    ? - zeigt Hilfe an"
 
 msgid ""
 "interactively record a new patch\n"
@@ -4350,13 +4383,19 @@ msgid ""
 "    see 'hg help qnew' & 'hg help record' for more information and usage\n"
 "    "
 msgstr ""
+"Interaktive Auswahl eines neuen Patches\n"
+"\n"
+"    Siehe 'hg help qnew' & 'hg help record' für weitere Informationen und\n"
+"    die Verwendung\n"
+"    "
 
 msgid "'mq' extension not loaded"
-msgstr ""
+msgstr "'mq' Erweiterung nicht geladen"
 
 msgid "running non-interactively, use commit instead"
-msgstr ""
+msgstr "Nicht-interaktive Ausführung, nutze stattdessen 'commit'"
 
+# Nicht übersetzen
 msgid ""
 "This is generic record driver.\n"
 "\n"
@@ -4375,27 +4414,27 @@ msgid ""
 msgstr ""
 
 msgid "no changes to record\n"
-msgstr ""
+msgstr "Keine Änderungen zu übernehmen\n"
 
 #, python-format
 msgid "backup %r as %r\n"
-msgstr ""
+msgstr "Sichere %r unter %r\n"
 
 msgid "applying patch\n"
-msgstr ""
+msgstr "Wende Patch an\n"
 
 msgid "patch failed to apply"
-msgstr ""
+msgstr "Patch schlug fehl"
 
 #, python-format
 msgid "restoring %r to %r\n"
-msgstr ""
+msgstr "Wiederherstellung: %r nach %r\n"
 
 msgid "hg record [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg record [OPTION]... [DATEI]..."
 
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
-msgstr ""
+msgstr "hg qrecord [OPTION]... PATCH [DATEI]..."
 
 msgid ""
 "patch transplanting tool\n"
