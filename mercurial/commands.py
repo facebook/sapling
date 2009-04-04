@@ -1978,11 +1978,8 @@ def manifest(ui, repo, node=None, rev=None):
     """output the current or given revision of the project manifest
 
     Print a list of version controlled files for the given revision.
-    If no revision is given, the parent of the working directory is used,
-    or tip if no revision is checked out.
-
-    The manifest is the list of files being version controlled. If no revision
-    is given then the first parent of the working directory is used.
+    If no revision is given, the first parent of the working directory
+    is used, or tip if no revision is checked out.
 
     With -v flag, print file permissions, symlink and executable bits. With
     --debug flag, print file revision hashes.
