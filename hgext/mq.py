@@ -1624,14 +1624,16 @@ class queue:
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
-    The patches must not be applied, unless they are arguments to
-    the --rev parameter. At least one patch or revision is required.
+    The patches must not be applied, unless they are arguments to the
+    --rev parameter. At least one patch or revision is required.
 
     With --rev, mq will stop managing the named revisions (converting
-    them to regular mercurial changesets). The qfinish command should be
-    used as an alternative for qdel -r, as the latter option is deprecated.
+    them to regular mercurial changesets). The qfinish command should
+    be used as an alternative for qdel -r, as the latter option is
+    deprecated.
 
-    With --keep, the patch files are preserved in the patch directory."""
+    With --keep, the patch files are preserved in the patch
+    directory."""
     q = repo.mq
     q.delete(repo, patches, opts)
     q.save_dirty()
@@ -1662,23 +1664,25 @@ def unapplied(ui, repo, patch=None, **opts):
 def qimport(ui, repo, *filename, **opts):
     """import a patch
 
-    The patch is inserted into the series after the last applied patch.
-    If no patches have been applied, qimport prepends the patch
+    The patch is inserted into the series after the last applied
+    patch. If no patches have been applied, qimport prepends the patch
     to the series.
 
     The patch will have the same name as its source file unless you
     give it a new one with --name.
 
-    You can register an existing patch inside the patch directory
-    with the --existing flag.
+    You can register an existing patch inside the patch directory with
+    the --existing flag.
 
-    With --force, an existing patch of the same name will be overwritten.
+    With --force, an existing patch of the same name will be
+    overwritten.
 
     An existing changeset may be placed under mq control with --rev
     (e.g. qimport --rev tip -n patch will place tip under mq control).
     With --git, patches imported with --rev will use the git diff
     format. See the diffs help topic for information on why this is
-    important for preserving rename/copy information and permission changes.
+    important for preserving rename/copy information and permission
+    changes.
     """
     q = repo.mq
     q.qimport(repo, filename, patchname=opts['name'],
@@ -1691,10 +1695,10 @@ def init(ui, repo, **opts):
     """init a new queue repository
 
     The queue repository is unversioned by default. If -c is
-    specified, qinit will create a separate nested repository
-    for patches (qinit -c may also be run later to convert
-    an unversioned patch repository into a versioned one).
-    You can use qcommit to commit changes to this queue repository."""
+    specified, qinit will create a separate nested repository for
+    patches (qinit -c may also be run later to convert an unversioned
+    patch repository into a versioned one). You can use qcommit to
+    commit changes to this queue repository."""
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
@@ -1834,18 +1838,19 @@ def setupheaderopts(ui, opts):
 def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
-    qnew creates a new patch on top of the currently-applied patch (if any).
-    It will refuse to run if there are any outstanding changes unless -f is
-    specified, in which case the patch will be initialized with them. You
-    may also use -I, -X, and/or a list of files after the patch name to add
-    only changes to matching files to the new patch, leaving the rest as
-    uncommitted modifications.
+    qnew creates a new patch on top of the currently-applied patch (if
+    any). It will refuse to run if there are any outstanding changes
+    unless -f is specified, in which case the patch will be
+    initialized with them. You may also use -I, -X, and/or a list of
+    files after the patch name to add only changes to matching files
+    to the new patch, leaving the rest as uncommitted modifications.
 
     -u and -d can be used to set the (given) user and date, respectively.
     -U and -D set user to current user and date to current date.
 
-    -e, -m or -l set the patch header as well as the commit message. If none
-    is specified, the header is empty and the commit message is '[mq]: PATCH'.
+    -e, -m or -l set the patch header as well as the commit message.
+    If none is specified, the header is empty and the commit message
+    is '[mq]: PATCH'.
 
     Use the --git option to keep the patch in the git extended diff
     format. Read the diffs help topic for more information on why this
@@ -1868,16 +1873,17 @@ def new(ui, repo, patch, *args, **opts):
 def refresh(ui, repo, *pats, **opts):
     """update the current patch
 
-    If any file patterns are provided, the refreshed patch will contain only
-    the modifications that match those patterns; the remaining modifications
-    will remain in the working directory.
+    If any file patterns are provided, the refreshed patch will
+    contain only the modifications that match those patterns; the
+    remaining modifications will remain in the working directory.
 
-    If --short is specified, files currently included in the patch will
-    be refreshed just like matched files and remain in the patch.
+    If --short is specified, files currently included in the patch
+    will be refreshed just like matched files and remain in the patch.
 
-    hg add/remove/copy/rename work as usual, though you might want to use
-    git-style patches (--git or [diff] git=1) to track copies and renames.
-    See the diffs help topic for more information on the git diff format.
+    hg add/remove/copy/rename work as usual, though you might want to
+    use git-style patches (--git or [diff] git=1) to track copies and
+    renames. See the diffs help topic for more information on the git
+    diff format.
     """
     q = repo.mq
     message = cmdutil.logmessage(opts)
@@ -1898,13 +1904,15 @@ def refresh(ui, repo, *pats, **opts):
 def diff(ui, repo, *pats, **opts):
     """diff of the current patch and subsequent modifications
 
-    Shows a diff which includes the current patch as well as any changes which
-    have been made in the working directory since the last refresh (thus
-    showing what the current patch would become after a qrefresh).
+    Shows a diff which includes the current patch as well as any
+    changes which have been made in the working directory since the
+    last refresh (thus showing what the current patch would become
+    after a qrefresh).
 
-    Use 'hg diff' if you only want to see the changes made since the last
-    qrefresh, or 'hg export qtip' if you want to see changes made by the
-    current patch without including changes made since the qrefresh.
+    Use 'hg diff' if you only want to see the changes made since the
+    last qrefresh, or 'hg export qtip' if you want to see changes made
+    by the current patch without including changes made since the
+    qrefresh.
     """
     repo.mq.diff(repo, pats, opts)
     return 0
@@ -1915,12 +1923,12 @@ def fold(ui, repo, *files, **opts):
     Patches must not yet be applied. Each patch will be successively
     applied to the current patch in the order given. If all the
     patches apply successfully, the current patch will be refreshed
-    with the new cumulative patch, and the folded patches will
-    be deleted. With -k/--keep, the folded patch files will not
-    be removed afterwards.
+    with the new cumulative patch, and the folded patches will be
+    deleted. With -k/--keep, the folded patch files will not be
+    removed afterwards.
 
-    The header for each folded patch will be concatenated with
-    the current patch header, separated by a line of '* * *'."""
+    The header for each folded patch will be concatenated with the
+    current patch header, separated by a line of '* * *'."""
 
     q = repo.mq
 
@@ -2069,7 +2077,8 @@ def savename(path):
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
 
-    When --force is applied, all local changes in patched files will be lost.
+    When --force is applied, all local changes in patched files will
+    be lost.
     """
     q = repo.mq
     mergeq = None
@@ -2091,8 +2100,9 @@ def push(ui, repo, patch=None, **opts):
 def pop(ui, repo, patch=None, **opts):
     """pop the current patch off the stack
 
-    By default, pops off the top of the patch stack. If given a patch name,
-    keeps popping off patches until the named patch is at the top of the stack.
+    By default, pops off the top of the patch stack. If given a patch
+    name, keeps popping off patches until the named patch is at the
+    top of the stack.
     """
     localupdate = True
     if opts['name']:
@@ -2208,8 +2218,9 @@ def save(ui, repo, **opts):
 def strip(ui, repo, rev, **opts):
     """strip a revision and all its descendants from the repository
 
-    If one of the working dir's parent revisions is stripped, the working
-    directory will be updated to the parent of the stripped revision.
+    If one of the working dir's parent revisions is stripped, the
+    working directory will be updated to the parent of the stripped
+    revision.
     """
     backup = 'all'
     if opts['backup']:
@@ -2235,33 +2246,34 @@ def select(ui, repo, *args, **opts):
     '''set or print guarded patches to push
 
     Use the qguard command to set or print guards on patch, then use
-    qselect to tell mq which guards to use. A patch will be pushed if it
-    has no guards or any positive guards match the currently selected guard,
-    but will not be pushed if any negative guards match the current guard.
-    For example:
+    qselect to tell mq which guards to use. A patch will be pushed if
+    it has no guards or any positive guards match the currently
+    selected guard, but will not be pushed if any negative guards
+    match the current guard. For example:
 
         qguard foo.patch -stable    (negative guard)
         qguard bar.patch +stable    (positive guard)
         qselect stable
 
     This activates the "stable" guard. mq will skip foo.patch (because
-    it has a negative match) but push bar.patch (because it
-    has a positive match).
+    it has a negative match) but push bar.patch (because it has a
+    positive match).
 
     With no arguments, prints the currently active guards.
     With one argument, sets the active guard.
 
     Use -n/--none to deactivate guards (no other arguments needed).
-    When no guards are active, patches with positive guards are skipped
-    and patches with negative guards are pushed.
+    When no guards are active, patches with positive guards are
+    skipped and patches with negative guards are pushed.
 
     qselect can change the guards on applied patches. It does not pop
-    guarded patches by default. Use --pop to pop back to the last applied
-    patch that is not guarded. Use --reapply (which implies --pop) to push
-    back to the current patch afterwards, but skip guarded patches.
+    guarded patches by default. Use --pop to pop back to the last
+    applied patch that is not guarded. Use --reapply (which implies
+    --pop) to push back to the current patch afterwards, but skip
+    guarded patches.
 
-    Use -s/--series to print a list of all guards in the series file (no
-    other arguments needed). Use -v for more information.'''
+    Use -s/--series to print a list of all guards in the series file
+    (no other arguments needed). Use -v for more information.'''
 
     q = repo.mq
     guards = q.active()
@@ -2336,16 +2348,18 @@ def select(ui, repo, *args, **opts):
 def finish(ui, repo, *revrange, **opts):
     """move applied patches into repository history
 
-    Finishes the specified revisions (corresponding to applied patches) by
-    moving them out of mq control into regular repository history.
+    Finishes the specified revisions (corresponding to applied
+    patches) by moving them out of mq control into regular repository
+    history.
 
     Accepts a revision range or the --applied option. If --applied is
     specified, all applied mq revisions are removed from mq control.
     Otherwise, the given revisions must be at the base of the stack of
     applied patches.
 
-    This can be especially useful if your changes have been applied to an
-    upstream repository, or if you are about to push your changes to upstream.
+    This can be especially useful if your changes have been applied to
+    an upstream repository, or if you are about to push your changes
+    to upstream.
     """
     if not opts['applied'] and not revrange:
         raise util.Abort(_('no revisions specified'))
