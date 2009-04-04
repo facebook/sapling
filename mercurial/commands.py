@@ -1425,7 +1425,7 @@ def help_(ui, name=None, with_version=False):
             maxlength = 0
             exthelps = []
             for ename, ext in exts:
-                doc = (ext.__doc__ or _('(no help text available)'))
+                doc = (gettext(ext.__doc__) or _('(no help text available)'))
                 ename = ename.split('.')[-1]
                 maxlength = max(len(ename), maxlength)
                 exthelps.append((ename, doc.splitlines(0)[0].strip()))
