@@ -7,17 +7,17 @@
 '''browsing the repository in a graphical way
 
 The hgk extension allows browsing the history of a repository in a
-graphical way. It requires Tcl/Tk version 8.4 or later. (Tcl/Tk is
-not distributed with Mercurial.)
+graphical way. It requires Tcl/Tk version 8.4 or later. (Tcl/Tk is not
+distributed with Mercurial.)
 
 hgk consists of two parts: a Tcl script that does the displaying and
 querying of information, and an extension to mercurial named hgk.py,
 which provides hooks for hgk to get information. hgk can be found in
 the contrib directory, and hgk.py can be found in the hgext directory.
 
-To load the hgext.py extension, add it to your .hgrc file (you have
-to use your global $HOME/.hgrc file, not one in a repository). You
-can specify an absolute path:
+To load the hgext.py extension, add it to your .hgrc file (you have to
+use your global $HOME/.hgrc file, not one in a repository). You can
+specify an absolute path:
 
   [extensions]
   hgk=/usr/local/lib/hgk.py
@@ -29,8 +29,8 @@ named 'hgk.py' if you set hgk empty:
   hgk=
 
 The hg view command will launch the hgk Tcl script. For this command
-to work, hgk must be in your search path. Alternately, you can
-specify the path to hgk in your .hgrc file:
+to work, hgk must be in your search path. Alternately, you can specify
+the path to hgk in your .hgrc file:
 
   [hgk]
   path=/location/of/hgk
