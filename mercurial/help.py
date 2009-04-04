@@ -349,7 +349,7 @@ PYTHONPATH::
     - user: Any text. Returns the user portion of an email address.
     ''')),
 
-    (['urls'], _('Url Paths'),
+    (['urls'], _('URL Paths'),
      _(r'''
     Valid URLs are of the form:
 
@@ -384,18 +384,18 @@ PYTHONPATH::
       Alternatively specify "ssh -C" as your ssh command in your hgrc or
       with the --ssh command line option.
 
-    These urls can all be stored in your hgrc with path aliases under the
+    These URLs can all be stored in your hgrc with path aliases under the
     [paths] section like so:
     [paths]
     alias1 = URL1
     alias2 = URL2
     ...
 
-    You can then use the alias for any command that uses a url (for example
+    You can then use the alias for any command that uses a URL (for example
     'hg pull alias1' would pull from the 'alias1' path).
 
     Two path aliases are special because they are used as defaults
-    when you do not provide the url to a command:
+    when you do not provide the URL to a command:
 
     default:
       When you create a repository with hg clone, the clone command saves

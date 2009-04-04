@@ -98,7 +98,7 @@ additional help topics:
  multirevs    Specifying Multiple Revisions
  diffs        Diff Formats
  templating   Template Usage
- urls         Url Paths
+ urls         URL Paths
 
 use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
@@ -159,7 +159,7 @@ additional help topics:
  multirevs    Specifying Multiple Revisions
  diffs        Diff Formats
  templating   Template Usage
- urls         Url Paths
+ urls         URL Paths
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit

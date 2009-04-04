@@ -577,7 +577,7 @@ def clone(ui, source, dest=None, **opts):
 
     It is possible to specify an ssh:// URL as the destination, but no
     .hg/hgrc and working directory will be created on the remote side.
-    Look at the help text for urls for important details about ssh:// URLs.
+    Look at the help text for URLs for important details about ssh:// URLs.
 
     For efficiency, hardlinks are used for cloning whenever the source
     and destination are on the same filesystem (note this applies only
@@ -2203,7 +2203,7 @@ def push(ui, repo, dest=None, **opts):
     If -r is used, the named changeset and all its ancestors will be pushed
     to the remote repository.
 
-    Look at the help text for urls for important details about ssh:// URLs.
+    Look at the help text for URLs for important details about ssh:// URLs.
     If DESTINATION is omitted, a default path will be used.
     See 'hg help urls' for more information.
     """
