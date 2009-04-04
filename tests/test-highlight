@@ -14,7 +14,7 @@ cd test
 cp $TESTDIR/get-with-headers.py ./
 
 # check for UnicodeDecodeError with iso-8859-1 file contents
-python -c 'fp = open("isolatin", "w"); fp.write("h\xFCbsch\n"); fp.close();'
+python -c 'fp = open("isolatin.txt", "w"); fp.write("h\xFCbsch\n"); fp.close();'
 
 hg ci -Ama
 
@@ -27,7 +27,7 @@ echo % hgweb filerevision, html
     | sed "s/class=\"k\"/class=\"kn\"/g"
 
 echo % hgweb filerevision, html
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/isolatin') \
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/isolatin.txt') \
     | sed "s/class=\"k\"/class=\"kn\"/g"
 
 echo % hgweb fileannotate, html
