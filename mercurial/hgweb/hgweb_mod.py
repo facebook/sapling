@@ -9,7 +9,7 @@
 import os
 from mercurial import ui, hg, util, hook, error, encoding
 from mercurial import templater, templatefilters
-from common import get_mtime, style_map, ErrorResponse
+from common import get_mtime, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from common import HTTP_UNAUTHORIZED, HTTP_METHOD_NOT_ALLOWED
 from request import wsgirequest
@@ -37,9 +37,7 @@ class hgweb(object):
         self.stripecount = 1
         # a repo owner may set web.templates in .hg/hgrc to get any file
         # readable by the user running the CGI script
-        self.templatepath = self.config("web", "templates",
-                                        templater.templatepath(),
-                                        untrusted=False)
+        self.templatepath = self.config('web', 'templates')
 
     # The CGI scripts are often run by a user different from the repo owner.
     # Trust the settings from the .hg/hgrc files by default.
@@ -237,7 +235,7 @@ class hgweb(object):
 
         start = req.url[-1] == '?' and '&' or '?'
         sessionvars = webutil.sessionvars(vars, start)
-        mapfile = style_map(self.templatepath, style)
+        mapfile = templater.stylemap(style, self.templatepath)
 
         if not self.reponame:
             self.reponame = (self.config("web", "name")

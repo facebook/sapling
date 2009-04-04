@@ -78,25 +78,6 @@ def staticfile(directory, fname, req):
         else:
             raise ErrorResponse(HTTP_SERVER_ERROR, err.strerror)
 
-def style_map(templatepath, style):
-    """Return path to mapfile for a given style.
-
-    Searches mapfile in the following locations:
-    1. templatepath/style/map
-    2. templatepath/map-style
-    3. templatepath/map
-    """
-    locations = style and [os.path.join(style, "map"), "map-"+style] or []
-    locations.append("map")
-    if isinstance(templatepath, str):
-        templatepath = [templatepath]
-    for path in templatepath:
-        for location in locations:
-            mapfile = os.path.join(path, location)
-            if os.path.isfile(mapfile):
-                return mapfile
-    raise RuntimeError("No hgweb templates found in %r" % templatepath)
-
 def paritygen(stripecount, offset=0):
     """count parity of horizontal stripes for easier reading"""
     if stripecount and offset:

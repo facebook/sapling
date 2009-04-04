@@ -7,7 +7,7 @@
 
 import os, mimetypes, re, cgi, copy
 import webutil
-from mercurial import error, archival, templatefilters
+from mercurial import error, archival, templater, templatefilters
 from mercurial.node import short, hex
 from mercurial.util import binary
 from common import paritygen, staticfile, get_contact, ErrorResponse
@@ -610,7 +610,7 @@ def static(web, req, tmpl):
     # readable by the user running the CGI script
     static = web.config("web", "static", None, untrusted=False)
     if not static:
-        tp = web.templatepath
+        tp = web.templatepath or templater.templatepath()
         if isinstance(tp, str):
             tp = [tp]
         static = [os.path.join(p, 'static') for p in tp]

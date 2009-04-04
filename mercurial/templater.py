@@ -183,9 +183,32 @@ def templatepath(name=None):
 
     return normpaths
 
+def stylemap(style, paths=None):
+    """Return path to mapfile for a given style.
+
+    Searches mapfile in the following locations:
+    1. templatepath/style/map
+    2. templatepath/map-style
+    3. templatepath/map
+    """
+
+    if paths is None:
+        paths = templatepath()
+    elif isinstance(paths, str):
+        paths = [templatepath]
+
+    locations = style and [os.path.join(style, "map"), "map-" + style] or []
+    locations.append("map")
+    for path in paths:
+        for location in locations:
+            mapfile = os.path.join(path, location)
+            if os.path.isfile(mapfile):
+                return mapfile
+
+    raise RuntimeError("No hgweb templates found in %r" % paths)
+
 def stringify(thing):
     '''turn nested template iterator into string.'''
     if hasattr(thing, '__iter__'):
         return "".join([stringify(t) for t in thing if t is not None])
     return str(thing)
-
