@@ -14,14 +14,15 @@
 # ** = cleverdecode:
 # # or ** = macdecode:
 #
-# If not doing conversion, to make sure you do not commit CRLF/CR by accident:
+# If not doing conversion, to make sure you do not commit CRLF/CR by
+# accident:
 #
 # [hooks]
 # pretxncommit.crlf = python:hgext.win32text.forbidcrlf
 # # or pretxncommit.cr = python:hgext.win32text.forbidcr
 #
-# To do the same check on a server to prevent CRLF/CR from being pushed or
-# pulled:
+# To do the same check on a server to prevent CRLF/CR from being
+# pushed or pulled:
 #
 # [hooks]
 # pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
