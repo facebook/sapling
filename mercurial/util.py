@@ -776,6 +776,19 @@ class path_auditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
+def nlinks(pathname):
+    """Return number of hardlinks for the given file."""
+    return os.lstat(pathname).st_nlink
+
+if hasattr(os, 'link'):
+    os_link = os.link
+else:
+    def os_link(src, dst):
+        raise OSError(0, _("Hardlinks not supported"))
+
+def lookup_reg(key, name=None, scope=None):
+    return None
+
 if os.name == 'nt':
     from windows import *
     def expand_glob(pats):
@@ -816,16 +829,6 @@ def readlock(pathname):
     except AttributeError: # no symlink in os
         pass
     return posixfile(pathname).read()
-
-def nlinks(pathname):
-    """Return number of hardlinks for the given file."""
-    return os.lstat(pathname).st_nlink
-
-if hasattr(os, 'link'):
-    os_link = os.link
-else:
-    def os_link(src, dst):
-        raise OSError(0, _("Hardlinks not supported"))
 
 def fstat(fp):
     '''stat file object that may not have fileno method.'''
@@ -961,9 +964,6 @@ def splitpath(path):
 def gui():
     '''Are we running in a GUI?'''
     return os.name == "nt" or os.name == "mac" or os.environ.get("DISPLAY")
-
-def lookup_reg(key, name=None, scope=None):
-    return None
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
