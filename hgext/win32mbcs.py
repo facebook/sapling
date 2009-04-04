@@ -10,18 +10,18 @@
 #
 """allow to use MBCS path with problematic encoding.
 
-Some MBCS encodings are not good for some path operations
-(i.e. splitting path, case conversion, etc.) with its encoded bytes.
-We call such a encoding (i.e. shift_jis and big5) as "problematic
-encoding". This extension can be used to fix the issue with those
-encodings by wrapping some functions to convert to unicode string
-before path operation.
+Some MBCS encodings are not good for some path operations (i.e.
+splitting path, case conversion, etc.) with its encoded bytes. We call
+such a encoding (i.e. shift_jis and big5) as "problematic encoding".
+This extension can be used to fix the issue with those encodings by
+wrapping some functions to convert to unicode string before path
+operation.
 
 This extension is usefull for:
  * Japanese Windows users using shift_jis encoding.
  * Chinese Windows users using big5 encoding.
- * All users who use a repository with one of problematic encodings
-   on case-insensitive file system.
+ * All users who use a repository with one of problematic encodings on
+   case-insensitive file system.
 
 This extension is not needed for:
  * Any user who use only ascii chars in path.
@@ -29,15 +29,17 @@ This extension is not needed for:
 
 Note that there are some limitations on using this extension:
  * You should use single encoding in one repository.
- * You should set same encoding for the repository by locale or HGENCODING.
+ * You should set same encoding for the repository by locale or
+   HGENCODING.
 
 To use this extension, enable the extension in .hg/hgrc or ~/.hgrc:
 
   [extensions]
   hgext.win32mbcs =
 
-Path encoding conversion are done between unicode and encoding.encoding
-which is decided by mercurial from current locale setting or HGENCODING.
+Path encoding conversion are done between unicode and
+encoding.encoding which is decided by mercurial from current locale
+setting or HGENCODING.
 
 """
 
