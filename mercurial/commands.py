@@ -2161,11 +2161,14 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source
 
-    Pull changes from a remote repository to a local one.
+    Pull changes from a remote repository to the local one.
 
     This finds all changes from the repository at the specified path
     or URL and adds them to the local repository. By default, this
     does not update the copy of the project in the working directory.
+
+    Use hg incoming if you want to see what will be added by the next
+    pull without actually adding the changes to the repository.
 
     If SOURCE is omitted, the 'default' path will be used.
     See 'hg help urls' for more information.
