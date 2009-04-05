@@ -2829,8 +2829,10 @@ def tag(ui, repo, name1, *names, **opts):
             if not repo.tagtype(n):
                 raise util.Abort(_('tag \'%s\' does not exist') % n)
             if repo.tagtype(n) != expectedtype:
-                raise util.Abort(_('tag \'%s\' is not a %s tag') %
-                                 (n, expectedtype))
+                if expectedtype == 'global':
+                    raise util.Abort(_('tag \'%s\' is not a global tag') % n)
+                else:
+                    raise util.Abort(_('tag \'%s\' is not a local tag') % n)
         rev_ = nullid
         if not message:
             message = _('Removed tag %s') % ', '.join(names)
