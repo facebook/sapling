@@ -315,7 +315,7 @@ class svn_source(converter_source):
 
         if self.startrev and self.heads:
             if len(self.heads) > 1:
-                raise util.Abort(_('svn: start revision is not supported with '
+                raise util.Abort(_('svn: start revision is not supported '
                                    'with more than one branch'))
             revnum = self.revnum(self.heads[0])
             if revnum < self.startrev:
