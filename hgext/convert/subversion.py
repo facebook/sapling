@@ -134,6 +134,38 @@ class logstream:
             self._stdout.close()
             self._stdout = None
 
+
+# Check to see if the given path is a local Subversion repo. Verify this by
+# looking for several svn-specific files and directories in the given
+# directory.
+def filecheck(path, proto):
+    for x in ('locks', 'hooks', 'format', 'db', ):
+        if not os.path.exists(os.path.join(path, x)):
+            return False
+    return True
+
+# Check to see if a given path is the root of an svn repo over http. We verify
+# this by requesting a version-controlled URL we know can't exist and looking
+# for the svn-specific "not found" XML.
+def httpcheck(path, proto):
+   return ('<m:human-readable errcode="160013">' in
+           urllib.urlopen('%s://%s/!svn/ver/0/.svn' % (proto, path)).read())
+
+protomap = {'http': httpcheck,
+            'https': httpcheck,
+            'file': filecheck,
+            }
+def issvnurl(url):
+    if not '://' in url:
+        return False
+    proto, path = url.split('://', 1)
+    check = protomap.get(proto, lambda p, p2: False)
+    while '/' in path:
+        if check(path, proto):
+            return True
+        path = path.rsplit('/', 1)[0]
+    return False
+
 # SVN conversion code stolen from bzr-svn and tailor
 #
 # Subversion looks like a versioned filesystem, branches structures
@@ -155,7 +187,7 @@ class svn_source(converter_source):
         if not (url.startswith('svn://') or url.startswith('svn+ssh://') or
                 (os.path.exists(url) and
                  os.path.exists(os.path.join(url, '.svn'))) or
-                 (url.startswith('file://'))):
+                issvnurl(url)):
             raise NoRepo("%s does not look like a Subversion repo" % url)
 
         try:
