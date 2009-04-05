@@ -88,11 +88,11 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     Mercurial Source
     -----------------
 
-    --config convert.hg.ignoreerrors=False (boolean)
+    --config convert.hg.ignoreerrors=False    (boolean)
         ignore integrity errors when reading. Use it to fix Mercurial
         repositories with missing revlogs, by converting from and to
         Mercurial.
-    --config convert.hg.saverev=False          (boolean)
+    --config convert.hg.saverev=False         (boolean)
         store original revision ID in changeset (forces target IDs to
         change)
     --config convert.hg.startrev=0            (hg revision identifier)
@@ -123,7 +123,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     Internal cvsps is selected by setting
         --config convert.cvsps=builtin
     and has a few more configurable options:
-        --config convert.cvsps.fuzz=60   (integer)
+        --config convert.cvsps.fuzz=60        (integer)
             Specify the maximum time (in seconds) that is allowed
             between commits with identical user and log message in a
             single changeset. When very large files were checked in as
@@ -187,7 +187,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     It is possible to limit the amount of source history to be
     converted by specifying an initial Perforce revision.
 
-    --config convert.p4.startrev=0           (perforce changelist number)
+    --config convert.p4.startrev=0            (perforce changelist number)
         specify initial Perforce revision.
 
 
