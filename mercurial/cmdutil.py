@@ -862,36 +862,40 @@ class changeset_templater(changeset_printer):
         props = props.copy()
         props.update(defprops)
 
+        # find correct templates for current mode
+
+        tmplmodes = [
+            (True, None),
+            (self.ui.verbose, 'verbose'),
+            (self.ui.quiet, 'quiet'),
+            (self.ui.debugflag, 'debug'),
+        ]
+
+        types = {'header': '', 'changeset': 'changeset'}
+        for mode, postfix  in tmplmodes:
+            for type in types:
+                cur = postfix and ('%s_%s' % (type, postfix)) or type
+                if mode and cur in self.t:
+                    types[type] = cur
+
         try:
-            if self.ui.debugflag and 'header_debug' in self.t:
-                key = 'header_debug'
-            elif self.ui.quiet and 'header_quiet' in self.t:
-                key = 'header_quiet'
-            elif self.ui.verbose and 'header_verbose' in self.t:
-                key = 'header_verbose'
-            elif 'header' in self.t:
-                key = 'header'
-            else:
-                key = ''
-            if key:
-                h = templater.stringify(self.t(key, **props))
+
+            # write header
+            if types['header']:
+                h = templater.stringify(self.t(types['header'], **props))
                 if self.buffered:
                     self.header[ctx.rev()] = h
                 else:
                     self.ui.write(h)
-            if self.ui.debugflag and 'changeset_debug' in self.t:
-                key = 'changeset_debug'
-            elif self.ui.quiet and 'changeset_quiet' in self.t:
-                key = 'changeset_quiet'
-            elif self.ui.verbose and 'changeset_verbose' in self.t:
-                key = 'changeset_verbose'
-            else:
-                key = 'changeset'
+
+            # write changeset metadata, then patch if requested
+            key = types['changeset']
             self.ui.write(templater.stringify(self.t(key, **props)))
             self.showpatch(ctx.node())
+
         except KeyError, inst:
-            raise util.Abort(_("%s: no key named '%s'") % (self.t.mapfile,
-                                                           inst.args[0]))
+            msg = _("%s: no key named '%s'")
+            raise util.Abort(msg % (self.t.mapfile, inst.args[0]))
         except SyntaxError, inst:
             raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
 
