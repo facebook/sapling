@@ -450,7 +450,10 @@ class revlog(object):
         if self.version == REVLOGV0:
             self._io = revlogoldio()
         if i:
-            d = self._io.parseindex(f, self._inline)
+            try:
+                d = self._io.parseindex(f, self._inline)
+            except (ValueError, IndexError), e:
+                raise RevlogError(_("index %s is corrupted") % (self.indexfile))
             self.index, self.nodemap, self._chunkcache = d
 
         # add the magic null revision at -1 (if it hasn't been done already)

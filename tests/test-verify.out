@@ -29,3 +29,16 @@ checking files
 3 files, 1 changesets, 0 total revisions
 9 integrity errors encountered!
 (first damaged changeset appears to be 0)
+% test revlog corruption
+
+% verify
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+ a@0: broken revlog! (index data/a.i is corrupted)
+warning: orphan revlog 'data/a.i'
+1 files, 1 changesets, 0 total revisions
+1 warnings encountered!
+1 integrity errors encountered!
+(first damaged changeset appears to be 0)
