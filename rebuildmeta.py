@@ -14,7 +14,9 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
         raise mutil.Abort('You must pass the svn URI used to create this repo.')
     uuid = None
     url = args[0].rstrip('/')
-    svn = svnwrap.SubversionRepo(url=url)
+    user = opts.get('username', mutil.getuser())
+    passwd = opts.get('password', '')
+    svn = svnwrap.SubversionRepo(url, user, passwd)
     subdir = svn.subdir
     svnmetadir = os.path.join(repo.path, 'svn')
     if not os.path.exists(svnmetadir):

@@ -118,9 +118,10 @@ class SubversionRepo(object):
     This uses the SWIG Python bindings, and will only work on svn >= 1.4.
     It takes a required param, the URL.
     """
-    def __init__(self, url='', username=''):
+    def __init__(self, url='', username='', password=''):
         self.svn_url = url
         self.username = username
+        self.password = password
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool)
 
@@ -143,6 +144,10 @@ class SubversionRepo(object):
             core.svn_auth_set_parameter(self.auth_baton,
                                         core.SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                         self.username)
+        if self.password:
+            core.svn_auth_set_parameter(self.auth_baton,
+                                        core.SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                                        self.password)
         self.client_context = client.create_context()
 
         self.client_context.auth_baton = self.auth_baton

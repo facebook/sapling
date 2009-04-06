@@ -29,6 +29,8 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
+    user = opts.get('username', merc_util.getuser())
+    passwd = opts.get('password', '')
     # Strategy:
     # 1. Find all outgoing commits from this head
     if len(repo.parents()) != 1:
@@ -59,14 +61,16 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
         # 2. Commit oldest revision that needs to be pushed
         base_revision = svn_commit_hashes[base_n][0]
         try:
-            commit_from_rev(ui, repo, old_ctx, hge, svn_url, base_revision)
+            commit_from_rev(ui, repo, old_ctx, hge, svn_url, base_revision,
+                            user, passwd)
         except NoFilesException:
             ui.warn("Could not push revision %s because it had no changes in svn.\n" %
                      old_ctx)
             return 1
         # 3. Fetch revisions from svn
         r = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path,
-                                          stupid=stupid)
+                                          stupid=stupid, username=user,
+                                          password=passwd)
         assert not r or r == 0
         # 4. Find the new head of the target branch
         repo = hg.repository(ui, hge.path)
@@ -182,11 +186,12 @@ def _externals(ctx):
         ext.read(ctx['.hgsvnexternals'].data())
     return ext
 
-def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
+def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
+                    username, password):
     """Build and send a commit from Mercurial to Subversion.
     """
     file_data = {}
-    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
+    svn = svnwrap.SubversionRepo(svn_url, username, password)
     parent = rev_ctx.parents()[0]
     parent_branch = rev_ctx.parents()[0].branch()
     branch_path = 'trunk'

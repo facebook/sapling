@@ -79,6 +79,8 @@ cmdtable = {
           ('', 'filemap', '',
            'remap file to exclude paths or include only certain paths'),
           ('', 'force', False, 'force an operation to happen'),
+          ('', 'username', '', 'username for authentication'),
+          ('', 'password', '', 'password for authentication'),
           ],
          svncommand.generate_help(),
          ),
@@ -90,6 +92,8 @@ cmdtable = {
           ('A', 'authors', '', 'username mapping filename'),
           ('', 'filemap', '',
            'remap file to exclude paths or include only certain paths'),
+          ('', 'username', '', 'username for authentication'),
+          ('', 'password', '', 'password for authentication'),
          ],
          'hg svnclone source [dest]'),
 }

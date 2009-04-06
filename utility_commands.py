@@ -50,7 +50,9 @@ def generate_ignore(ui, repo, hg_repo_path, force=False, **opts):
     url = hge.url
     if url[-1] == '/':
         url = url[:-1]
-    svn = svnwrap.SubversionRepo(url)
+    user = opts.get('username', mutil.getuser())
+    passwd = opts.get('passwd', '')
+    svn = svnwrap.SubversionRepo(url, user, passwd)
     dirs = [''] + [d[0] for d in svn.list_files(branchpath, r) if d[1] == 'd']
     for dir in dirs:
         props = svn.list_props('%s/%s/' % (branchpath,dir), r)
