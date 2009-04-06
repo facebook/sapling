@@ -5,6 +5,7 @@ import shutil
 import sys
 import tempfile
 import hashlib
+import urlparse
 
 from svn import client
 from svn import core
@@ -91,6 +92,20 @@ def _create_auth_baton(pool):
 
     return core.svn_auth_open(providers, pool)
 
+def parse_url(url):
+    """Parse a URL and return a tuple (username, password, url)
+    """
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+    user, passwd = None, None
+    if '@' in netloc:
+        userpass, netloc = netloc.split('@')
+        if ':' in userpass:
+            user, passwd = userpass.split(':')
+            user, passwd = urlparse.unquote(user) or None, urlparse.unquote(passwd) or None
+        else:
+            user = urlparse.unquote(userpass) or None
+    url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
+    return (user, passwd, url)
 
 class Revision(object):
     """Wrapper for a Subversion revision.
@@ -119,9 +134,11 @@ class SubversionRepo(object):
     It takes a required param, the URL.
     """
     def __init__(self, url='', username='', password=''):
-        self.svn_url = url
-        self.username = username
-        self.password = password
+        parsed = parse_url(url)
+        # --username and --password override URL credentials
+        self.username = username or parsed[0]
+        self.password = password or parsed[1]
+        self.svn_url = parsed[2]
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool)
 

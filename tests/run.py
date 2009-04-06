@@ -22,6 +22,7 @@ import test_push_eol
 import test_rebuildmeta
 import test_tags
 import test_utility_commands
+import test_urls
 
 def suite():
     return unittest.TestSuite([test_binaryfiles.suite(),
@@ -42,6 +43,7 @@ def suite():
                                test_rebuildmeta.suite(),
                                test_tags.suite(),
                                test_utility_commands.suite(),
+                               test_urls.suite(),
                               ])
 
 if __name__ == '__main__':
