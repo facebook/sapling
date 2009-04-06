@@ -120,7 +120,7 @@ class SubversionRepo(object):
     """
     def __init__(self, url='', username=''):
         self.svn_url = url
-        self.uname = username
+        self.username = username
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool)
 
@@ -139,6 +139,10 @@ class SubversionRepo(object):
         """
         # while we're in here we'll recreate our pool
         self.pool = core.Pool()
+        if self.username:
+            core.svn_auth_set_parameter(self.auth_baton,
+                                        core.SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                                        self.username)
         self.client_context = client.create_context()
 
         self.client_context.auth_baton = self.auth_baton
