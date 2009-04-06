@@ -21,7 +21,7 @@ def parsestring(s, quoted=True):
 
     return s.decode('string_escape')
 
-class templater(object):
+class engine(object):
     '''template expansion engine.
 
     template expansion works like this. a map file contains key=value
@@ -43,6 +43,68 @@ class templater(object):
 
     template_re = re.compile(r"(?:(?:#(?=[\w\|%]+#))|(?:{(?=[\w\|%]+})))"
                              r"(\w+)(?:(?:%(\w+))|((?:\|\w+)*))[#}]")
+
+    def __init__(self, loader, filters={}, defaults={}):
+        self.loader = loader
+        self.filters = filters
+        self.defaults = defaults
+
+    def process(self, t, map):
+        '''Perform expansion. t is name of map element to expand. map contains
+        added elements for use during expansion. Is a generator.'''
+        tmpl = self.loader(t)
+        iters = [self._process(tmpl, map)]
+        while iters:
+            try:
+                item = iters[0].next()
+            except StopIteration:
+                iters.pop(0)
+                continue
+            if isinstance(item, str):
+                yield item
+            elif item is None:
+                yield ''
+            elif hasattr(item, '__iter__'):
+                iters.insert(0, iter(item))
+            else:
+                yield str(item)
+
+    def _process(self, tmpl, map):
+        '''Render a template. Returns a generator.'''
+        while tmpl:
+            m = self.template_re.search(tmpl)
+            if not m:
+                yield tmpl
+                break
+
+            start, end = m.span(0)
+            key, format, fl = m.groups()
+
+            if start:
+                yield tmpl[:start]
+            tmpl = tmpl[end:]
+
+            if key in map:
+                v = map[key]
+            else:
+                v = self.defaults.get(key, "")
+            if callable(v):
+                v = v(**map)
+            if format:
+                if not hasattr(v, '__iter__'):
+                    raise SyntaxError(_("Error expanding '%s%%%s'")
+                                      % (key, format))
+                lm = map.copy()
+                for i in v:
+                    lm.update(i)
+                    yield self.process(format, lm)
+            else:
+                if fl:
+                    for f in fl.split("|")[1:]:
+                        v = self.filters[f](v)
+                yield v
+
+class templater(object):
 
     def __init__(self, mapfile, filters={}, defaults={}, cache={},
                  minchunk=1024, maxchunk=65536):
@@ -79,7 +141,7 @@ class templater(object):
     def __contains__(self, key):
         return key in self.cache or key in self.map
 
-    def _template(self, t):
+    def load(self, t):
         '''Get the template for the given template name. Use a local cache.'''
         if not t in self.cache:
             try:
@@ -89,68 +151,13 @@ class templater(object):
                               (self.map[t], inst.args[1]))
         return self.cache[t]
 
-    def _process(self, tmpl, map):
-        '''Render a template. Returns a generator.'''
-        while tmpl:
-            m = self.template_re.search(tmpl)
-            if not m:
-                yield tmpl
-                break
-
-            start, end = m.span(0)
-            key, format, fl = m.groups()
-
-            if start:
-                yield tmpl[:start]
-            tmpl = tmpl[end:]
-
-            if key in map:
-                v = map[key]
-            else:
-                v = self.defaults.get(key, "")
-            if callable(v):
-                v = v(**map)
-            if format:
-                if not hasattr(v, '__iter__'):
-                    raise SyntaxError(_("Error expanding '%s%%%s'")
-                                      % (key, format))
-                lm = map.copy()
-                for i in v:
-                    lm.update(i)
-                    t = self._template(format)
-                    yield self._process(t, lm)
-            else:
-                if fl:
-                    for f in fl.split("|")[1:]:
-                        v = self.filters[f](v)
-                yield v
-
     def __call__(self, t, **map):
-        stream = self.expand(t, **map)
+        proc = engine(self.load, self.filters, self.defaults)
+        stream = proc.process(t, map)
         if self.minchunk:
             stream = util.increasingchunks(stream, min=self.minchunk,
                                            max=self.maxchunk)
         return stream
-
-    def expand(self, t, **map):
-        '''Perform expansion. t is name of map element to expand. map contains
-        added elements for use during expansion. Is a generator.'''
-        tmpl = self._template(t)
-        iters = [self._process(tmpl, map)]
-        while iters:
-            try:
-                item = iters[0].next()
-            except StopIteration:
-                iters.pop(0)
-                continue
-            if isinstance(item, str):
-                yield item
-            elif item is None:
-                yield ''
-            elif hasattr(item, '__iter__'):
-                iters.insert(0, iter(item))
-            else:
-                yield str(item)
 
 def templatepath(name=None):
     '''return location of template file or directory (if no name).
