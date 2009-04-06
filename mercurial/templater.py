@@ -209,6 +209,6 @@ def stylemap(style, paths=None):
 
 def stringify(thing):
     '''turn nested template iterator into string.'''
-    if hasattr(thing, '__iter__'):
+    if hasattr(thing, '__iter__') and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     return str(thing)
