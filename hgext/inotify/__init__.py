@@ -13,8 +13,9 @@
 
 from mercurial.i18n import _
 from mercurial import cmdutil, util
-import client, errno, os, server, socket
+import errno, os, server, socket
 from weakref import proxy
+from client import client
 
 def serve(ui, repo, **opts):
     '''start an inotify server for this repository'''
@@ -54,10 +55,11 @@ def reposetup(ui, repo):
             files = match.files()
             if '.' in files:
                 files = []
+            cli = client(ui, repo)
             try:
                 if not ignored and not self.inotifyserver:
-                    result = client.query(ui, repo, files, match, False,
-                                          clean, unknown)
+                    result = cli.statusquery(files, match, False,
+                                             clean, unknown)
                     if result and ui.config('inotify', 'debug'):
                         r2 = super(inotifydirstate, self).status(
                             match, False, clean, unknown)
@@ -94,8 +96,8 @@ def reposetup(ui, repo):
                     else:
                         # server is started, send query again
                         try:
-                            return client.query(ui, repo, files, match,
-                                         ignored, clean, unknown)
+                            return cli.statusquery(files, match, ignored,
+                                                   clean, unknown)
                         except socket.error, err:
                             ui.warn(_('could not talk to new inotify '
                                            'server: %s\n') % err[-1])
