@@ -36,6 +36,7 @@ import time
 # reserved exit code to skip test (used by hghave)
 SKIPPED_STATUS = 80
 SKIPPED_PREFIX = 'skipped: '
+FAILED_PREFIX  = 'hghave check failed: '
 
 required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
@@ -129,16 +130,22 @@ def splitnewlines(text):
         lines.append(text[i:n+1])
         i = n + 1
 
-def extract_missing_features(lines):
-    '''Extract missing/unknown features log lines as a list'''
+def parse_hghave_output(lines):
+    '''Parse hghave log lines.
+    Return tuple of lists (missing, failed):
+      * the missing/unknown features
+      * the features for which existence check failed'''
     missing = []
+    failed = []
     for line in lines:
-        if not line.startswith(SKIPPED_PREFIX):
-            continue
-        line = line.splitlines()[0]
-        missing.append(line[len(SKIPPED_PREFIX):])
+        if line.startswith(SKIPPED_PREFIX):
+            line = line.splitlines()[0]
+            missing.append(line[len(SKIPPED_PREFIX):])
+        elif line.startswith(FAILED_PREFIX):
+            line = line.splitlines()[0]
+            failed.append(line[len(FAILED_PREFIX):])
 
-    return missing
+    return missing, failed
 
 def show_diff(expected, output):
     for line in difflib.unified_diff(expected, output,
@@ -408,10 +415,14 @@ def run_one(test, skips, fails):
         ref_out = []
     if skipped:
         mark = 's'
-        missing = extract_missing_features(out)
+        missing, failed = parse_hghave_output(out)
         if not missing:
             missing = ['irrelevant']
-        skip(missing[-1])
+        if failed:
+            fail("hghave failed checking for %s" % failed[-1])
+            skipped = False
+        else:
+            skip(missing[-1])
     elif out != ref_out:
         mark = '!'
         if ret:

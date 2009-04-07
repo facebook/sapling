@@ -238,9 +238,15 @@ if __name__ == '__main__':
             continue
 
         check, desc = checks[feature]
-        if not negate and not check():
+        try:
+            available = check()
+        except Exception, e:
+            error('hghave check failed: ' + feature)
+            continue
+
+        if not negate and not available:
             error('skipped: missing feature: ' + desc)
-        elif negate and check():
+        elif negate and available:
             error('skipped: system supports %s' % desc)
 
     if failures != 0:
