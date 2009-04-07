@@ -29,8 +29,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     """pull new revisions from Subversion
     """
     svn_url = util.normalize_url(svn_url)
-    old_encoding = merc_util._encoding
-    merc_util._encoding = 'UTF-8'
+    old_encoding = util.swap_out_encoding()
     skipto_rev=int(skipto_rev)
     have_replay = not stupid
     if have_replay and not callable(
@@ -107,7 +106,8 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                         ui.status('Got a 502, retrying (%s)\n' % tries)
                     else:
                         raise
-    merc_util._encoding = old_encoding
+    util.swap_out_encoding(old_encoding)
+
 fetch_revisions = util.register_subcommand('pull')(fetch_revisions)
 
 

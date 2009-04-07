@@ -24,8 +24,7 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                                  stupid=False, **opts):
     """push revisions starting at a specified head back to Subversion.
     """
-    oldencoding = merc_util._encoding
-    merc_util._encoding = 'UTF-8'
+    old_encoding = util.swap_out_encoding()
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
@@ -101,7 +100,7 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                         rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
         hge = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
         svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
-    merc_util._encoding = oldencoding
+    util.swap_out_encoding(old_encoding)
     return 0
 push_revisions_to_subversion = util.register_subcommand('push')(push_revisions_to_subversion)
 # for git expats
