@@ -845,7 +845,7 @@ class HgChangeReceiver(delta.Editor):
                 # assuming it is a directory
                 self.externals[path] = None
                 map(self.delete_file, [pat for pat in self.current_files.iterkeys()
-                                       if pat.startswith(path)])
+                                       if pat.startswith(path+'/')])
                 for f in ctx.walk(our_util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current_files:

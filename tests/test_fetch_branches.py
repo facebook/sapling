@@ -53,6 +53,12 @@ class TestFetchBranches(test_util.TestBase):
     def test_replace_trunk_with_branch_stupid(self):
         self.test_replace_trunk_with_branch(stupid=True)
 
+    def test_branch_create_with_dir_delete_works(self, stupid=False):
+        repo = self._load_fixture_and_fetch('branch_create_with_dir_delete.svndump',
+                                            stupid)
+        self.assertEqual(repo['tip'].manifest().keys(),
+                         ['alpha', 'beta', 'iota', 'gamma', ])
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
           ]
