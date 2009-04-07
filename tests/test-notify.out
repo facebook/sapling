@@ -54,8 +54,8 @@ To use, configure notify extension and enable in hgrc like this:
 
  glob patterns are matched against path to repository root.
 
- if you like, you can put notify config file in repository that users can
- push changes to, they can manage their own subscriptions.
+ if you like, you can put notify config file in repository that users
+ can push changes to, they can manage their own subscriptions.
 
 no commands defined
 % commit

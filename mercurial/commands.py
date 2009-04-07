@@ -2924,14 +2924,15 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     Use null as the revision to remove the working copy (like 'hg
     clone -U').
 
-    When the working directory contains no uncommitted changes, it will be
-    replaced by the state of the requested revision from the repository.
-    When the requested revision is on a different branch, the working
-    directory will additionally be switched to that branch.
+    When the working directory contains no uncommitted changes, it
+    will be replaced by the state of the requested revision from the
+    repository. When the requested revision is on a different branch,
+    the working directory will additionally be switched to that
+    branch.
 
     When there are uncommitted changes, use option -C to discard them,
-    forcibly replacing the state of the working directory with the requested
-    revision.
+    forcibly replacing the state of the working directory with the
+    requested revision.
 
     When there are uncommitted changes and option -C is not used, and
     the parent revision and requested revision are on the same branch,
