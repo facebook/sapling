@@ -79,9 +79,6 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
                 if c.branch() == 'closed-branches':
                     if branch in branchinfo:
                         del branchinfo[branch]
-    lastrevfile = open(os.path.join(svnmetadir, 'last_rev'), 'w')
-    lastrevfile.write(str(last_rev))
-    lastrevfile.close()
     branchinfofile = open(os.path.join(svnmetadir, 'branch_info'), 'w')
     pickle.dump(branchinfo, branchinfofile)
     branchinfofile.close()

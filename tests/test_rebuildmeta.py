@@ -22,8 +22,6 @@ def _do_case(self, name, stupid):
                             args=[test_util.fileurl(self.repo_path +
                                                     subdir), ])
     dest = hg.repository(u, os.path.dirname(dest.path))
-    self.assert_(open(os.path.join(src.path, 'svn', 'last_rev')).read() >=
-                     open(os.path.join(dest.path, 'svn', 'last_rev')).read())
     for tf in ('rev_map', 'uuid', 'url'):
         self.assertEqual(open(os.path.join(src.path, 'svn', tf)).read(),
                          open(os.path.join(dest.path, 'svn', tf)).read())

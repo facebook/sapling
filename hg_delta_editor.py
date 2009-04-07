@@ -59,6 +59,18 @@ class HgChangeReceiver(delta.Editor):
         f.close()
         self.revmap[revnum, branch] = node_hash
 
+    def last_known_revision(self):
+        """Obtain the highest numbered -- i.e. latest -- revision known.
+
+        Currently, this function just iterates over the entire revision map
+        using the max() builtin. This may be slow for extremely large
+        repositories, but for now, it's fast enough.
+        """
+        try:
+            return max(k[0] for k in self.revmap.iterkeys())
+        except ValueError:
+            return 0
+
     def __init__(self, path=None, repo=None, ui_=None,
                  subdir='', author_host='',
                  tag_locations=['tags'],
@@ -133,7 +145,6 @@ class HgChangeReceiver(delta.Editor):
             assert os.path.isfile(self.revmap_file)
             assert os.path.isfile(self.svn_url_file)
             assert os.path.isfile(self.uuid_file)
-            assert os.path.isfile(self.last_revision_handled_file)
         else:
             self.repo = hg.repository(self.ui, repo_path, create=True)
             os.makedirs(os.path.dirname(self.uuid_file))
@@ -523,6 +534,7 @@ class HgChangeReceiver(delta.Editor):
         branches = {}
         for path, entry in self.externals.iteritems():
             if not self._is_path_valid(path):
+                self.ui.warn('WARNING: Invalid path %s in externals\n' % path)
                 continue
             p, b, bp = self._split_branch_path(path)
             if bp not in branches:
@@ -692,6 +704,14 @@ class HgChangeReceiver(delta.Editor):
             return self.authors[author]
         return '%s%s' %(author, self.author_host)
 
+    def svnauthorforauthor(self, author):
+        for svnauthor, hgauthor in self.authors.iteritems():
+            if author == hgauthor:
+                return svnauthor
+        else:
+            # return the original svn-side author
+            return author.rsplit('@', 1)[0]
+
     def readauthors(self, authorfile):
         self.ui.note(('Reading authormap from %s\n') % authorfile)
         f = open(authorfile, 'r')
@@ -777,10 +797,6 @@ class HgChangeReceiver(delta.Editor):
         return self.meta_file_named('uuid')
     uuid_file = property(uuid_file)
 
-    def last_revision_handled_file(self):
-        return self.meta_file_named('last_rev')
-    last_revision_handled_file = property(last_revision_handled_file)
-
     def branch_info_file(self):
         return self.meta_file_named('branch_info')
     branch_info_file = property(branch_info_file)
@@ -853,6 +869,8 @@ class HgChangeReceiver(delta.Editor):
                     baserev = self.current_rev.revnum - 1
                 parent = self.get_parent_revision(baserev + 1, branch)
                 self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
+        else:
+            self.ui.warn('WARNING: Opening non-existant file %s\n' % path)
     open_file = stash_exception_on_self(open_file)
 
     def aresamefiles(self, parentctx, childctx, files):
@@ -1038,11 +1056,10 @@ class HgChangeReceiver(delta.Editor):
                 if not window:
                     self.current_files[self.current_file] = target.getvalue()
             except core.SubversionException, e: #pragma: no cover
-                if e.message == 'Delta source ended unexpectedly':
+                if e.apr_err == core.SVN_ERR_INCOMPLETE_DATA:
                     self.missing_plaintexts.add(self.current_file)
                 else: #pragma: no cover
-                    self._exception_info = sys.exc_info()
-                    raise
+                    raise util.Abort(*e.args)
             except: #pragma: no cover
                 print len(base), self.current_file
                 self._exception_info = sys.exc_info()

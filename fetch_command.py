@@ -54,11 +54,10 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     if os.path.exists(hg_editor.uuid_file):
         uuid = open(hg_editor.uuid_file).read()
         assert uuid == svn.uuid
-        start = int(open(hg_editor.last_revision_handled_file, 'r').read())
+        start = hg_editor.last_known_revision()
     else:
         open(hg_editor.uuid_file, 'w').write(svn.uuid)
         open(hg_editor.svn_url_file, 'w').write(svn_url)
-        open(hg_editor.last_revision_handled_file, 'w').write(str(0))
         initializing_repo = True
         start = skipto_rev
 
@@ -92,20 +91,12 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     else:
                         stupid_svn_server_pull_rev(ui, svn, hg_editor, r)
                     converted = True
-                    tmpfile = '%s_tmp' % hg_editor.last_revision_handled_file
-                    fp = open(tmpfile, 'w')
-                    fp.write(str(r.revnum))
-                    fp.close()
-                    merc_util.rename(tmpfile,
-                                     hg_editor.last_revision_handled_file)
                 except core.SubversionException, e: #pragma: no cover
-                    if hasattr(e, 'message') and (
-                        'Server sent unexpected return value (502 Bad Gateway)'
-                        ' in response to PROPFIND') in e.message:
+                    if e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED:
                         tries += 1
                         ui.status('Got a 502, retrying (%s)\n' % tries)
                     else:
-                        raise
+                        raise merc_util.Abort(*e.args)
     util.swap_out_encoding(old_encoding)
 
 fetch_revisions = util.register_subcommand('pull')(fetch_revisions)
@@ -249,7 +240,7 @@ def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
     except svnwrap.SubversionRepoCanNotDiff:
         raise BadPatchApply('subversion diffing code is not supported')
     except core.SubversionException, e:
-        if (hasattr(e, 'apr_err') and e.apr_err != 160013):
+        if (hasattr(e, 'apr_err') and e.apr_err != core.SVN_ERR_FS_NOT_FOUND):
             raise
         raise BadPatchApply('previous revision does not exist')
     if '\0' in d:
@@ -610,7 +601,7 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                     ui, svn, hg_editor, b, r, parentctx)
             except BadPatchApply, e:
                 # Either this revision or the previous one does not exist.
-                ui.status("fetching entire rev: %s.\n" % e.message)
+                ui.status("Fetching entire revision: %s.\n" % e.args[0])
                 files_touched, filectxfn2 = stupid_fetch_branchrev(
                     svn, hg_editor, b, branches[b], r, parentctx)
 
