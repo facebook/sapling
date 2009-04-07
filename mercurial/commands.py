@@ -1963,12 +1963,7 @@ def log(ui, repo, *pats, **opts):
 
             if opts['user']:
                 changes = get(rev)
-                miss = 0
-                for k in opts['user']:
-                    if k != changes[1]:
-                        miss = 1
-                        break
-                if miss:
+                if not [k for k in opts['user'] if k in changes[1]]:
                     continue
 
             copies = []

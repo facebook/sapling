@@ -104,4 +104,18 @@ hg log -r ''
 echo '% log -r <some unknown node id>'
 hg log -r 1000000000000000000000000000000000000000
 
+cd ..
+
+hg init usertest
+cd usertest
+
+echo a > a
+hg ci -A -m "a" -u "User One <user1@example.org>"
+echo b > b
+hg ci -A -m "b" -u "User Two <user2@example.org>"
+
+hg log -u "User One <user1@example.org>"
+hg log -u "user1" -u "user2"
+hg log -u "user3"
+
 exit 0
