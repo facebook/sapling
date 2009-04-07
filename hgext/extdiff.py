@@ -7,7 +7,7 @@
 
 '''
 The `extdiff' Mercurial extension allows you to use external programs
-to compare revisions, or revision with working dir. The external diff
+to compare revisions, or revision with working directory. The external diff
 programs are called with a configurable set of options and two
 non-option arguments: paths to directories containing snapshots of
 files to compare.
@@ -85,7 +85,7 @@ def snapshot_wdir(ui, repo, files, tmproot):
         dirname = "root"
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
-    ui.note(_('making snapshot of %d files from working dir\n') %
+    ui.note(_('making snapshot of %d files from working directory\n') %
             (len(files)))
 
     fns_and_mtime = []

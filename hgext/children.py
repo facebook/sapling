@@ -13,7 +13,7 @@ from mercurial.i18n import _
 
 
 def children(ui, repo, file_=None, **opts):
-    """show the children of the given or working dir revision
+    """show the children of the given or working directory revision
 
     Print the children of the working directory's revisions. If a
     revision is given via --rev, the children of that revision will be

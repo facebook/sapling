@@ -154,7 +154,9 @@ class monotone_source(converter_source, commandline):
                 if self.mtnisdir(toname, rev):
                     renamed = self.mtnrenamefiles(self.files, fromname, toname)
                     for tofile, fromfile in renamed.items():
-                        self.ui.debug (_("copying file in renamed dir from '%s' to '%s'") % (fromfile, tofile), '\n')
+                        self.ui.debug (_("copying file in renamed directory "
+                                         "from '%s' to '%s'")
+                                       % (fromfile, tofile), '\n')
                         files[tofile] = rev
                     for fromfile in renamed.values():
                         files[fromfile] = rev

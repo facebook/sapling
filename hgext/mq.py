@@ -2218,7 +2218,7 @@ def save(ui, repo, **opts):
 def strip(ui, repo, rev, **opts):
     """strip a revision and all its descendants from the repository
 
-    If one of the working dir's parent revisions is stripped, the
+    If one of the working directory's parent revisions is stripped, the
     working directory will be updated to the parent of the stripped
     revision.
     """
@@ -2514,7 +2514,7 @@ cmdtable = {
     'qheader': (header, [], _('hg qheader [PATCH]')),
     "^qimport":
         (qimport,
-         [('e', 'existing', None, _('import file in patch dir')),
+         [('e', 'existing', None, _('import file in patch directory')),
           ('n', 'name', '', _('patch file name')),
           ('f', 'force', None, _('overwrite existing files')),
           ('r', 'rev', [], _('place existing revisions under mq control')),
@@ -2567,7 +2567,7 @@ cmdtable = {
     "qrestore":
         (restore,
          [('d', 'delete', None, _('delete save entry')),
-          ('u', 'update', None, _('update queue working dir'))],
+          ('u', 'update', None, _('update queue working directory'))],
          _('hg qrestore [-d] [-u] REV')),
     "qsave":
         (save,

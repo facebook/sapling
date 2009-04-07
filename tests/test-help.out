@@ -11,7 +11,7 @@ basic commands:
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working dir or revision
+ parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -29,7 +29,7 @@ use "hg help" for the full list of commands or "hg -v" for details
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working dir or revision
+ parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -67,7 +67,7 @@ list of commands:
  manifest     output the current or given revision of the project manifest
  merge        merge working directory with another revision
  outgoing     show changesets not found in destination
- parents      show the parents of the working dir or revision
+ parents      show the parents of the working directory or revision
  paths        show aliases for remote repositories
  pull         pull changes from the specified source
  push         push changes to the specified destination
@@ -75,9 +75,9 @@ list of commands:
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
  resolve      retry file merges from a merge or update
- revert       restore individual files or dirs to an earlier state
+ revert       restore individual files or directories to an earlier state
  rollback     roll back the last transaction
- root         print the root (top) of the current working dir
+ root         print the root (top) of the current working directory
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
@@ -128,7 +128,7 @@ use "hg -v help" to show aliases and global options
  manifest     output the current or given revision of the project manifest
  merge        merge working directory with another revision
  outgoing     show changesets not found in destination
- parents      show the parents of the working dir or revision
+ parents      show the parents of the working directory or revision
  paths        show aliases for remote repositories
  pull         pull changes from the specified source
  push         push changes to the specified destination
@@ -136,9 +136,9 @@ use "hg -v help" to show aliases and global options
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
  resolve      retry file merges from a merge or update
- revert       restore individual files or dirs to an earlier state
+ revert       restore individual files or directories to an earlier state
  rollback     roll back the last transaction
- root         print the root (top) of the current working dir
+ root         print the root (top) of the current working directory
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
@@ -308,7 +308,7 @@ basic commands:
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working dir or revision
+ parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -331,7 +331,7 @@ basic commands:
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working dir or revision
+ parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit

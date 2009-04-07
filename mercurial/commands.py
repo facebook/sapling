@@ -2088,7 +2088,7 @@ def outgoing(ui, repo, dest=None, **opts):
         displayer.show(repo[n])
 
 def parents(ui, repo, file_=None, **opts):
-    """show the parents of the working dir or revision
+    """show the parents of the working directory or revision
 
     Print the working directory's parent revisions. If a revision is
     given via --rev, the parent of that revision will be printed. If a
@@ -2399,10 +2399,10 @@ def resolve(ui, repo, *pats, **opts):
                 util.rename(a + ".resolve", a + ".orig")
 
 def revert(ui, repo, *pats, **opts):
-    """restore individual files or dirs to an earlier state
+    """restore individual files or directories to an earlier state
 
     (use update -r to check out earlier revisions, revert does not
-    change the working dir parents)
+    change the working directory parents)
 
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.
@@ -2644,7 +2644,7 @@ def rollback(ui, repo):
     repo.rollback()
 
 def root(ui, repo):
-    """print the root (top) of the current working dir
+    """print the root (top) of the current working directory
 
     Print the root directory of the current repository.
     """
@@ -2924,13 +2924,13 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     Use null as the revision to remove the working copy (like 'hg
     clone -U').
 
-    When the working dir contains no uncommitted changes, it will be
+    When the working directory contains no uncommitted changes, it will be
     replaced by the state of the requested revision from the repo.
     When the requested revision is on a different branch, the working
-    dir will additionally be switched to that branch.
+    directory will additionally be switched to that branch.
 
     When there are uncommitted changes, use option -C to discard them,
-    forcibly replacing the state of the working dir with the requested
+    forcibly replacing the state of the working directory with the requested
     revision.
 
     When there are uncommitted changes and option -C is not used, and
@@ -3385,7 +3385,7 @@ table = {
           ('a', 'address', '', _('address to listen on (default: all interfaces)')),
           ('', 'prefix', '', _('prefix path to serve from (default: server root)')),
           ('n', 'name', '',
-           _('name to show in web pages (default: working dir)')),
+           _('name to show in web pages (default: working directory)')),
           ('', 'webdir-conf', '', _('name of the webdir config file'
                                     ' (serve more than one repo)')),
           ('', 'pid-file', '', _('name of file to write process ID to')),
