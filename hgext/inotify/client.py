@@ -8,8 +8,58 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from mercurial.i18n import _
-import common
-import os, socket, struct
+import common, server
+import errno, os, socket, struct
+
+class QueryFailed(Exception): pass
+
+def start_server(function):
+    """
+    Decorator.
+    Tries to call function, if it fails, try to (re)start inotify server.
+    Raise QueryFailed if something went wrong
+    """
+    def decorated_function(self, *args):
+        result = None
+        try:
+            return function(self, *args)
+        except (OSError, socket.error), err:
+            autostart = self.ui.configbool('inotify', 'autostart', True)
+
+            if err[0] == errno.ECONNREFUSED:
+                self.ui.warn(_('(found dead inotify server socket; '
+                               'removing it)\n'))
+                os.unlink(self.repo.join('inotify.sock'))
+            if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
+                self.ui.debug(_('(starting inotify server)\n'))
+                try:
+                    try:
+                        server.start(self.ui, self.repo)
+                    except server.AlreadyStartedException, inst:
+                        # another process may have started its own
+                        # inotify server while this one was starting.
+                        self.ui.debug(str(inst))
+                except Exception, inst:
+                    self.ui.warn(_('could not start inotify server: '
+                                   '%s\n') % inst)
+                else:
+                    try:
+                        return function(self, *args)
+                    except socket.error, err:
+                        self.ui.warn(_('could not talk to new inotify '
+                                       'server: %s\n') % err[-1])
+            elif err[0] in (errno.ECONNREFUSED, errno.ENOENT):
+                # silently ignore normal errors if autostart is False
+                self.ui.debug(_('(inotify server not running)\n'))
+            else:
+                self.ui.warn(_('failed to contact inotify server: %s\n')
+                         % err[-1])
+
+        self.ui.traceback()
+        raise QueryFailed('inotify query failed')
+
+    return decorated_function
+
 
 class client(object):
     def __init__(self, ui, repo):
@@ -38,14 +88,14 @@ class client(object):
         """
         Read data, check version number, extract headers,
         and returns a tuple (data descriptor, header)
-        Returns (None, None) on error
+        Raises QueryFailed on error
         """
         cs = common.recvcs(self.sock)
         version = ord(cs.read(1))
         if version != common.version:
             self.ui.warn(_('(inotify: received response from incompatible '
                       'server version %d)\n') % version)
-            return None, None
+            raise QueryFailed('incompatible server version')
 
         # only one type of request is supported for now
         type = 'STAT'
@@ -54,7 +104,7 @@ class client(object):
         try:
             resphdr = struct.unpack(hdrfmt, cs.read(hdrsize))
         except struct.error:
-            return None, None
+            raise QueryFailed('unable to retrieve query response headers')
 
         return cs, resphdr
 
@@ -65,6 +115,7 @@ class client(object):
 
         return self._receive()
 
+    @start_server
     def statusquery(self, names, match, ignored, clean, unknown=True):
 
         def genquery():
@@ -80,9 +131,6 @@ class client(object):
         req = '\0'.join(genquery())
 
         cs, resphdr = self.query(req)
-
-        if not cs:
-            return None
 
         def readnames(nbytes):
             if nbytes:

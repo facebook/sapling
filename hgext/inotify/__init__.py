@@ -13,9 +13,9 @@
 
 from mercurial.i18n import _
 from mercurial import cmdutil, util
-import errno, os, server, socket
+import os, server
 from weakref import proxy
-from client import client
+from client import client, QueryFailed
 
 def serve(ui, repo, **opts):
     '''start an inotify server for this repository'''
@@ -55,12 +55,16 @@ def reposetup(ui, repo):
             files = match.files()
             if '.' in files:
                 files = []
-            cli = client(ui, repo)
-            try:
-                if not ignored and not self.inotifyserver:
+            if not ignored and not self.inotifyserver:
+                cli = client(ui, repo)
+                try:
                     result = cli.statusquery(files, match, False,
-                                             clean, unknown)
-                    if result and ui.config('inotify', 'debug'):
+                                            clean, unknown)
+                except QueryFailed, instr:
+                    ui.debug(str(instr))
+                    pass
+                else:
+                    if ui.config('inotify', 'debug'):
                         r2 = super(inotifydirstate, self).status(
                             match, False, clean, unknown)
                         for c,a,b in zip('LMARDUIC', result, r2):
@@ -71,46 +75,7 @@ def reposetup(ui, repo):
                                 if f not in a:
                                     ui.warn('*** inotify: %s -%s\n' % (c, f))
                         result = r2
-
-                    if result is not None:
-                        return result
-            except (OSError, socket.error), err:
-                autostart = ui.configbool('inotify', 'autostart', True)
-
-                if err[0] == errno.ECONNREFUSED:
-                    ui.warn(_('(found dead inotify server socket; '
-                                   'removing it)\n'))
-                    os.unlink(repo.join('inotify.sock'))
-                if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
-                    ui.debug(_('(starting inotify server)\n'))
-                    try:
-                        try:
-                            server.start(ui, repo)
-                        except server.AlreadyStartedException, inst:
-                            # another process may have started its own
-                            # inotify server while this one was starting.
-                            ui.debug(str(inst))
-                    except Exception, inst:
-                        ui.warn(_('could not start inotify server: '
-                                       '%s\n') % inst)
-                    else:
-                        # server is started, send query again
-                        try:
-                            return cli.statusquery(files, match, ignored,
-                                                   clean, unknown)
-                        except socket.error, err:
-                            ui.warn(_('could not talk to new inotify '
-                                           'server: %s\n') % err[-1])
-                elif err[0] in (errno.ECONNREFUSED, errno.ENOENT):
-                    # silently ignore normal errors if autostart is False
-                    ui.debug(_('(inotify server not running)\n'))
-                else:
-                    ui.warn(_('failed to contact inotify server: %s\n')
-                             % err[-1])
-                ui.traceback()
-                # replace by old status function
-                self.status = super(inotifydirstate, self).status
-
+                    return result
             return super(inotifydirstate, self).status(
                 match, ignored, clean, unknown)
 
