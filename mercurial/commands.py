@@ -542,7 +542,7 @@ def cat(ui, repo, file1, *pats, **opts):
     for the export command, with the following additions:
 
     %s   basename of file being printed
-    %d   dirname of file being printed, or '.' if in repo root
+    %d   dirname of file being printed, or '.' if in repository root
     %p   root-relative path name of file being printed
     """
     ctx = repo[opts.get('rev')]
@@ -1538,7 +1538,7 @@ def identify(ui, repo, source=None,
     """identify the working copy or specified revision
 
     With no revision, print a summary of the current state of the
-    repo.
+    repository.
 
     With a path, do a lookup in another repository.
 
@@ -2925,7 +2925,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     clone -U').
 
     When the working directory contains no uncommitted changes, it will be
-    replaced by the state of the requested revision from the repo.
+    replaced by the state of the requested revision from the repository.
     When the requested revision is on a different branch, the working
     directory will additionally be switched to that branch.
 
@@ -3387,7 +3387,7 @@ table = {
           ('n', 'name', '',
            _('name to show in web pages (default: working directory)')),
           ('', 'webdir-conf', '', _('name of the webdir config file'
-                                    ' (serve more than one repo)')),
+                                    ' (serve more than one repository)')),
           ('', 'pid-file', '', _('name of file to write process ID to')),
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', '', _('web templates to use')),

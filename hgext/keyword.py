@@ -52,7 +52,7 @@ Example:
     x*    = ignore
 
 Note: the more specific you are in your filename patterns
-      the less you lose speed in huge repos.
+      the less you lose speed in huge repositories.
 
 For [keywordmaps] template mapping and expansion demonstration and
 control run "hg kwdemo".
@@ -299,7 +299,7 @@ def demo(ui, repo, *args, **opts):
     fn = 'demo.txt'
     branchname = 'demobranch'
     tmpdir = tempfile.mkdtemp('', 'kwdemo.')
-    ui.note(_('creating temporary repo at %s\n') % tmpdir)
+    ui.note(_('creating temporary repository at %s\n') % tmpdir)
     repo = localrepo.localrepository(ui, tmpdir, True)
     ui.setconfig('keyword', fn, '')
     if args or opts.get('rcfile'):
@@ -353,7 +353,7 @@ def demo(ui, repo, *args, **opts):
     fmt = ui.verbose and ' in %s' % path or ''
     demostatus('%s keywords expanded%s' % (kwstatus, fmt))
     ui.write(repo.wread(fn))
-    ui.debug(_('\nremoving temporary repo %s\n') % tmpdir)
+    ui.debug(_('\nremoving temporary repository %s\n') % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 def expand(ui, repo, *pats, **opts):

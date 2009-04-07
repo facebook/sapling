@@ -1765,22 +1765,23 @@ def clone(ui, source, dest=None, **opts):
             qbase = sr.lookup('qbase')
         except error.RepoError:
             pass
-    ui.note(_('cloning main repo\n'))
+    ui.note(_('cloning main repository\n'))
     sr, dr = hg.clone(ui, sr.url(), dest,
                       pull=opts['pull'],
                       rev=destrev,
                       update=False,
                       stream=opts['uncompressed'])
-    ui.note(_('cloning patch repo\n'))
+    ui.note(_('cloning patch repository\n'))
     hg.clone(ui, opts['patches'] or patchdir(sr), patchdir(dr),
              pull=opts['pull'], update=not opts['noupdate'],
              stream=opts['uncompressed'])
     if dr.local():
         if qbase:
-            ui.note(_('stripping applied patches from destination repo\n'))
+            ui.note(_('stripping applied patches from destination '
+                      'repository\n'))
             dr.mq.strip(dr, qbase, update=False, backup=None)
         if not opts['noupdate']:
-            ui.note(_('updating destination repo\n'))
+            ui.note(_('updating destination repository\n'))
             hg.update(dr, dr.changelog.tip())
 
 def commit(ui, repo, *pats, **opts):
@@ -2480,7 +2481,7 @@ cmdtable = {
           ('U', 'noupdate', None, _('do not update the new working directories')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
-          ('p', 'patches', '', _('location of source patch repo')),
+          ('p', 'patches', '', _('location of source patch repository')),
          ] + commands.remoteopts,
          _('hg qclone [OPTION]... SOURCE [DEST]')),
     "qcommit|qci":

@@ -52,9 +52,9 @@ To use, configure notify extension and enable in hgrc like this:
    # key is glob pattern, value is ","-separated list of subscriber emails
    pattern = user@host
 
- glob patterns are matched against path to repo root.
+ glob patterns are matched against path to repository root.
 
- if you like, you can put notify config file in repo that users can
+ if you like, you can put notify config file in repository that users can
  push changes to, they can manage their own subscriptions.
 
 no commands defined
