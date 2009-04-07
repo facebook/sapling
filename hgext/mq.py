@@ -2178,7 +2178,7 @@ def rename(ui, repo, patch, name=None, **opts):
     q.save_dirty()
 
 def restore(ui, repo, rev, **opts):
-    """restore the queue state saved by a rev"""
+    """restore the queue state saved by a revision"""
     rev = repo.lookup(rev)
     q = repo.mq
     q.restore(repo, rev, delete=opts['delete'],

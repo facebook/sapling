@@ -370,7 +370,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
               e.revision[-1] == 1 and      # 1.1 or 1.1.x.1
               len(e.comment) == 1 and
               file_added_re.match(e.comment[0])):
-            ui.debug(_('found synthetic rev in %s: %r\n')
+            ui.debug(_('found synthetic revision in %s: %r\n')
                      % (e.rcs, e.comment[0]))
             e.synthetic = True
 

@@ -150,7 +150,7 @@ cmdtable = {
     "churn":
         (churn,
          [('r', 'rev', [], _('count rate for the specified revision or range')),
-          ('d', 'date', '', _('count rate for revs matching date spec')),
+          ('d', 'date', '', _('count rate for revisions matching date spec')),
           ('t', 'template', '{author|email}', _('template to group changesets')),
           ('f', 'dateformat', '',
               _('strftime-compatible format for grouping by date')),
