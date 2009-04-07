@@ -190,7 +190,20 @@ def list_features():
         desc = feature[1]
         print name + ':', desc
 
+def test_features():
+    failed = 0
+    for name, feature in checks.iteritems():
+        check, _ = feature
+        try:
+            check()
+        except Exception, e:
+            print "feature %s failed:  %s" % (name, e)
+            failed += 1
+    return failed
+
 parser = optparse.OptionParser("%prog [options] [features]")
+parser.add_option("--test-features", action="store_true",
+                  help="test available features")
 parser.add_option("--list-features", action="store_true",
                   help="list available features")
 parser.add_option("-q", "--quiet", action="store_true",
@@ -201,6 +214,9 @@ if __name__ == '__main__':
     if options.list_features:
         list_features()
         sys.exit(0)
+
+    if options.test_features:
+        sys.exit(test_features())
 
     quiet = options.quiet
 
