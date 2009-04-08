@@ -1,3 +1,5 @@
+#!/usr/bin/python
+import re
 
 from mercurial import util as hgutil
 
@@ -7,9 +9,29 @@ import svnwrap
 import svnexternals
 
 
+b_re = re.compile(r'^\+\+\+ b\/([^\n]*)', re.MULTILINE)
+a_re = re.compile(r'^--- a\/([^\n]*)', re.MULTILINE)
+devnull_re = re.compile(r'^([-+]{3}) /dev/null', re.MULTILINE)
+header_re = re.compile(r'^diff --git .* b\/(.*)', re.MULTILINE)
+newfile_devnull_re = re.compile(r'^--- /dev/null\n\+\+\+ b/([^\n]*)',
+                                re.MULTILINE)
+
+
 class NoFilesException(Exception):
     """Exception raised when you try and commit without files.
     """
+
+
+def filterdiff(diff, base_revision):
+    diff = newfile_devnull_re.sub(r'--- \1\t(revision 0)' '\n'
+                                  r'+++ \1\t(working copy)',
+                                  diff)
+    diff = a_re.sub(r'--- \1'+ ('\t(revision %d)' % base_revision), diff)
+    diff = b_re.sub(r'+++ \1' + '\t(working copy)', diff)
+    diff = devnull_re.sub(r'\1 /dev/null' '\t(working copy)', diff)
+
+    diff = header_re.sub(r'Index: \1' + '\n' + ('=' * 67), diff)
+    return diff
 
 
 def replay_convert_rev(hg_editor, svn, r):

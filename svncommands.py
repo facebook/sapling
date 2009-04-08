@@ -2,6 +2,7 @@ import os
 
 from mercurial import hg
 from mercurial import node
+from mercurial import patch
 from mercurial import util as hgutil
 
 from svn import core
@@ -185,3 +186,28 @@ def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
 push = util.register_subcommand('push')(push)
 # for git expats
 dcommit = util.register_subcommand('dcommit')(push)
+
+
+def diff(ui, repo, hg_repo_path, **opts):
+    """show a diff of the most recent revision against its parent from svn
+    """
+    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
+                                           ui_=ui)
+    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
+                                 hge.revmap.iterkeys()))
+    parent = repo.parents()[0]
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, parent.node())
+    if o_r:
+        parent = repo[o_r[-1]].parents()[0]
+    base_rev, _junk = svn_commit_hashes[parent.node()]
+    it = patch.diff(repo, parent.node(), None,
+                    opts=patch.diffopts(ui, opts={'git': True,
+                                                  'show_function': False,
+                                                  'ignore_all_space': False,
+                                                  'ignore_space_change': False,
+                                                  'ignore_blank_lines': False,
+                                                  'unified': True,
+                                                  'text': False,
+                                                  }))
+    ui.write(cmdutil.filterdiff(''.join(it), base_rev))
+diff = util.register_subcommand('diff')(diff)
