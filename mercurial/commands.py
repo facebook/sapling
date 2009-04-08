@@ -136,10 +136,9 @@ def archive(ui, repo, dest, **opts):
     '''create unversioned archive of a repository revision
 
     By default, the revision used is the parent of the working
-    directory; use "-r" to specify a different revision.
+    directory; use -r to specify a different revision.
 
-    To specify the type of archive to create, use "-t". Valid types
-    are:
+    To specify the type of archive to create, use -t. Valid types are:
 
     "files" (default): a directory full of files
     "tar": tar archive, uncompressed
@@ -152,7 +151,7 @@ def archive(ui, repo, dest, **opts):
     using a format string; see 'hg help export' for details.
 
     Each member added to an archive file has a directory prefix
-    prepended. Use "-p" to specify a format string for the prefix. The
+    prepended. Use -p to specify a format string for the prefix. The
     default is the basename of the archive, with suffixes removed.
     '''
 
@@ -1830,9 +1829,9 @@ def locate(ui, repo, *pats, **opts):
     names.
 
     If you want to feed the output of this command into the "xargs"
-    command, use the "-0" option to both this command and "xargs".
-    This will avoid the problem of "xargs" treating single filenames
-    that contain white space as multiple filenames.
+    command, use the -0 option to both this command and "xargs". This
+    will avoid the problem of "xargs" treating single filenames that
+    contain white space as multiple filenames.
     """
     end = opts.get('print0') and '\0' or '\n'
     rev = opts.get('rev') or None
@@ -2656,7 +2655,7 @@ def serve(ui, repo, **opts):
     Start a local HTTP repository browser and pull server.
 
     By default, the server logs accesses to stdout and errors to
-    stderr. Use the "-A" and "-E" options to log to files.
+    stderr. Use the -A and -E options to log to files.
     """
 
     if opts["stdio"]:
