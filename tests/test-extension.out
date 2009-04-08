@@ -48,7 +48,6 @@ global options:
     --debugger        start debugger
     --encoding        set the charset encoding (default: ascii)
     --encodingmode    set the charset encoding mode (default: strict)
-    --lsprof          print improved command execution profile
     --traceback       print traceback on exception
     --time            time how long the command takes
     --profile         print command execution profile

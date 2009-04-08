@@ -97,7 +97,6 @@ rawcommit
 --encoding
 --encodingmode
 --help
---lsprof
 --noninteractive
 --profile
 --quiet
@@ -127,7 +126,6 @@ rawcommit
 --errorlog
 --help
 --ipv6
---lsprof
 --name
 --noninteractive
 --pid-file

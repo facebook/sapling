@@ -379,25 +379,6 @@ def _runcommand(ui, options, cmd, cmdfunc):
             raise error.ParseError(cmd, _("invalid arguments"))
 
     if options['profile']:
-        import hotshot, hotshot.stats
-        prof = hotshot.Profile("hg.prof")
-        try:
-            try:
-                return prof.runcall(checkargs)
-            except:
-                try:
-                    ui.warn(_('exception raised - generating '
-                             'profile anyway\n'))
-                except:
-                    pass
-                raise
-        finally:
-            prof.close()
-            stats = hotshot.stats.load("hg.prof")
-            stats.strip_dirs()
-            stats.sort_stats('time', 'calls')
-            stats.print_stats(40)
-    elif options['lsprof']:
         try:
             from mercurial import lsprof
         except ImportError:

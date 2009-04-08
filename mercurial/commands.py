@@ -3000,7 +3000,6 @@ globalopts = [
     ('', 'encoding', encoding.encoding, _('set the charset encoding')),
     ('', 'encodingmode', encoding.encodingmode,
      _('set the charset encoding mode')),
-    ('', 'lsprof', None, _('print improved command execution profile')),
     ('', 'traceback', None, _('print traceback on exception')),
     ('', 'time', None, _('time how long the command takes')),
     ('', 'profile', None, _('print command execution profile')),
