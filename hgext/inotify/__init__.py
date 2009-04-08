@@ -96,7 +96,7 @@ def reposetup(ui, repo):
                                        '%s\n') % inst)
                     if query:
                         try:
-                            return query(ui, repo, files or [], match,
+                            return query(ui, repo, files, match,
                                          ignored, clean, unknown)
                         except socket.error, err:
                             ui.warn(_('could not talk to new inotify '

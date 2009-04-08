@@ -23,7 +23,7 @@ def query(ui, repo, names, match, ignored, clean, unknown=True):
             raise
 
     def genquery():
-        for n in names or []:
+        for n in names:
             yield n
         states = 'almrx!'
         if ignored:
