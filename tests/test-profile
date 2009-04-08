@@ -18,4 +18,15 @@ if "$TESTDIR/hghave" -q lsprof; then
 
     hg --profile --config profiling.format=text st 2>&1 \
         | grep CallCount > /dev/null || echo --profile format=text failed
+
+    echo "[profiling]" >> $HGRCPATH
+    echo "format=kcachegrind" >> $HGRCPATH
+
+    hg --profile st 2>../out || echo --profile format=kcachegrind failed
+    grep 'events: Ticks' < ../out > /dev/null || echo --profile output is wrong
+
+    hg --profile --config profiling.output=../out st 2>&1 \
+        || echo --profile format=kcachegrind + output to file failed
+    grep 'events: Ticks' < ../out > /dev/null \
+        || echo --profile output is wrong
 fi

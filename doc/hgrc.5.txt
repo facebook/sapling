@@ -552,6 +552,10 @@ profiling::
       Generate a profiling report.
       When saving to a file, it should be noted that only the report is saved,
       and the profiling data is not kept.
+    kcachegrind;;
+      Format profiling data for kcachegrind use:
+      when saving to a file, the generated file can directly be loaded
+      into kcachegrind.
   output;;
     File path where profiling data or report should be saved.
     If the file exists, it is replaced.

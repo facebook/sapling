@@ -381,7 +381,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
     if options['profile']:
         format = ui.config('profiling', 'format', default='text')
 
-        if not format in ['text']:
+        if not format in ['text', 'kcachegrind']:
             ui.warn(_("unrecognized profiling format '%s'"
                         " - Ignored\n") % format)
             format = 'text'
@@ -407,9 +407,16 @@ def _runcommand(ui, options, cmd, cmdfunc):
             return checkargs()
         finally:
             p.disable()
-            stats = lsprof.Stats(p.getstats())
-            stats.sort()
-            stats.pprint(top=10, file=ostream, climit=5)
+
+            if format == 'kcachegrind':
+                import lsprofcalltree
+                calltree = lsprofcalltree.KCacheGrind(p)
+                calltree.output(ostream)
+            else:
+                # format == 'text'
+                stats = lsprof.Stats(p.getstats())
+                stats.sort()
+                stats.pprint(top=10, file=ostream, climit=5)
 
             if output:
                 ostream.close()
