@@ -4,8 +4,8 @@ import os
 import shutil
 import sys
 import tempfile
-import hashlib
 import urlparse
+import urllib
 
 from svn import client
 from svn import core
@@ -101,9 +101,9 @@ def parse_url(url):
         userpass, netloc = netloc.split('@')
         if ':' in userpass:
             user, passwd = userpass.split(':')
-            user, passwd = urlparse.unquote(user) or None, urlparse.unquote(passwd) or None
+            user, passwd = urllib.unquote(user) or None, urllib.unquote(passwd) or None
         else:
-            user = urlparse.unquote(userpass) or None
+            user = urllib.unquote(userpass) or None
     url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
     return (user, passwd, url)
 
