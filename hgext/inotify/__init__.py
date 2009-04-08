@@ -58,7 +58,7 @@ def reposetup(ui, repo):
                 if not ignored and not self.inotifyserver:
                     result = client.query(ui, repo, files, match, False,
                                           clean, unknown)
-                    if ui.config('inotify', 'debug'):
+                    if result and ui.config('inotify', 'debug'):
                         r2 = super(inotifydirstate, self).status(
                             match, False, clean, unknown)
                         for c,a,b in zip('LMARDUIC', result, r2):
