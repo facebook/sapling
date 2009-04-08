@@ -56,11 +56,12 @@ def addremove(ui, repo, *pats, **opts):
     .hgignore. As with add, these changes take effect at the next
     commit.
 
-    Use the -s option to detect renamed files. With a parameter > 0,
-    this compares every removed file with every added file and records
-    those similar enough as renames. This option takes a percentage
-    between 0 (disabled) and 100 (files must be identical) as its
-    parameter. Detecting renamed files this way can be expensive.
+    Use the -s/--similarity option to detect renamed files. With a
+    parameter > 0, this compares every removed file with every added
+    file and records those similar enough as renames. This option
+    takes a percentage between 0 (disabled) and 100 (files must be
+    identical) as its parameter. Detecting renamed files this way can
+    be expensive.
     """
     try:
         sim = float(opts.get('similarity') or 0)
@@ -79,9 +80,9 @@ def annotate(ui, repo, *pats, **opts):
     This command is useful to discover who did a change or when a
     change took place.
 
-    Without the -a option, annotate will avoid processing files it
-    detects as binary. With -a, annotate will generate an annotation
-    anyway, probably with undesirable results.
+    Without the -a/--text option, annotate will avoid processing files
+    it detects as binary. With -a, annotate will generate an
+    annotation anyway, probably with undesirable results.
     """
     datefunc = ui.quiet and util.shortdate or util.datestr
     getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
@@ -136,9 +137,10 @@ def archive(ui, repo, dest, **opts):
     '''create unversioned archive of a repository revision
 
     By default, the revision used is the parent of the working
-    directory; use -r to specify a different revision.
+    directory; use -r/--rev to specify a different revision.
 
-    To specify the type of archive to create, use -t. Valid types are:
+    To specify the type of archive to create, use -t/--type. Valid
+    types are:
 
     "files" (default): a directory full of files
     "tar": tar archive, uncompressed
@@ -151,8 +153,9 @@ def archive(ui, repo, dest, **opts):
     using a format string; see 'hg help export' for details.
 
     Each member added to an archive file has a directory prefix
-    prepended. Use -p to specify a format string for the prefix. The
-    default is the basename of the archive, with suffixes removed.
+    prepended. Use -p/--prefix to specify a format string for the
+    prefix. The default is the basename of the archive, with suffixes
+    removed.
     '''
 
     ctx = repo[opts.get('rev')]
@@ -268,10 +271,10 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     use, mark the earliest changeset you know exhibits the problem as
     bad, then mark the latest changeset which is free from the problem
     as good. Bisect will update your working directory to a revision
-    for testing (unless the --noupdate option is specified). Once you
-    have performed tests, mark the working directory as bad or good
-    and bisect will either update to another candidate changeset or
-    announce that it has found the bad revision.
+    for testing (unless the -U/--noupdate option is specified). Once
+    you have performed tests, mark the working directory as bad or
+    good and bisect will either update to another candidate changeset
+    or announce that it has found the bad revision.
 
     As a shortcut, you can also use the revision argument to mark a
     revision as good or bad without checking it out first.
@@ -399,11 +402,11 @@ def branch(ui, repo, label=None, **opts):
     in the repository until the next commit). It is recommended to use
     the 'default' branch as your primary development branch.
 
-    Unless --force is specified, branch will not let you set a branch
-    name that shadows an existing branch.
+    Unless -f/--force is specified, branch will not let you set a
+    branch name that shadows an existing branch.
 
-    Use --clean to reset the working directory branch to that of the
-    parent of the working directory, negating a previous branch
+    Use -C/--clean to reset the working directory branch to that of
+    the parent of the working directory, negating a previous branch
     change.
 
     Use the command 'hg update' to switch to an existing branch.
@@ -465,8 +468,9 @@ def bundle(ui, repo, fname, dest=None, **opts):
     If no destination repository is specified the destination is
     assumed to have all the nodes specified by one or more --base
     parameters. To create a bundle containing all changesets, use
-    --all (or --base null). To change the compression method applied,
-    use the -t option (by default, bundles are compressed using bz2).
+    -a/--all (or --base null). To change the compression method
+    applied, use the -t/--type option (by default, bundles are
+    compressed using bz2).
 
     The bundle file can then be transferred using conventional means
     and applied to another repository with the unbundle or pull
@@ -567,15 +571,15 @@ def clone(ui, source, dest=None, **opts):
     The location of the source is added to the new repository's
     .hg/hgrc file, as the default to be used for future pulls.
 
-    If you use the -r option to clone up to a specific revision, no
-    subsequent revisions (including subsequent tags) will be present
-    in the cloned repository. This option implies --pull, even on
-    local repositories.
+    If you use the -r/--rev option to clone up to a specific revision,
+    no subsequent revisions (including subsequent tags) will be
+    present in the cloned repository. This option implies --pull, even
+    on local repositories.
 
     By default, clone will check out the head of the 'default' branch.
-    If the -U option is used, the new clone will contain only a
-    repository (.hg) and no working copy (the working copy parent is
-    the null revision).
+    If the -U/--noupdate option is used, the new clone will contain
+    only a repository (.hg) and no working copy (the working copy
+    parent is the null revision).
 
     See 'hg help urls' for valid source format details.
 
@@ -664,7 +668,7 @@ def copy(ui, repo, *pats, **opts):
     the source must be a single file.
 
     By default, this command copies the contents of files as they
-    stand in the working directory. If invoked with --after, the
+    stand in the working directory. If invoked with -A/--after, the
     operation is recorded, but no copying is performed.
 
     This command takes effect with the next commit. To undo a copy
@@ -1032,11 +1036,11 @@ def diff(ui, repo, *pats, **opts):
     revisions are specified, the working directory files are compared
     to its parent.
 
-    Without the -a option, diff will avoid generating diffs of files
-    it detects as binary. With -a, diff will generate a diff anyway,
-    probably with undesirable results.
+    Without the -a/--text option, diff will avoid generating diffs of
+    files it detects as binary. With -a, diff will generate a diff
+    anyway, probably with undesirable results.
 
-    Use the --git option to generate diffs in the git extended diff
+    Use the -g/--git option to generate diffs in the git extended diff
     format. For more information, read 'hg help diffs'.
     """
 
@@ -1081,11 +1085,11 @@ def export(ui, repo, *changesets, **opts):
     %n   zero-padded sequence number, starting at 1
     %r   zero-padded changeset revision number
 
-    Without the -a option, export will avoid generating diffs of files
-    it detects as binary. With -a, export will generate a diff anyway,
-    probably with undesirable results.
+    Without the -a/--text option, export will avoid generating diffs
+    of files it detects as binary. With -a, export will generate a
+    diff anyway, probably with undesirable results.
 
-    Use the --git option to generate diffs in the git extended diff
+    Use the -g/--git option to generate diffs in the git extended diff
     format. Read the diffs help topic for more information.
 
     With the --switch-parent option, the diff will be against the
@@ -1612,7 +1616,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     Import a list of patches and commit them individually.
 
     If there are outstanding changes in the working directory, import
-    will abort unless given the -f flag.
+    will abort unless given the -f/--force flag.
 
     You can import a patch straight from a mail message. Even patches
     as attachments work (body part must be type text/plain or
@@ -1623,7 +1627,8 @@ def import_(ui, repo, patch1, *patches, **opts):
 
     If the imported patch was generated by hg export, user and
     description from patch override values from message headers and
-    body. Values given on command line with -m and -u override these.
+    body. Values given on command line with -m/--message and -u/--user
+    override these.
 
     If --exact is specified, import will set the working directory to
     the parent of each patch before applying it, and will abort if the
@@ -1631,8 +1636,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     the patch. This may happen due to character set problems or other
     deficiencies in the text patch format.
 
-    With --similarity, hg will attempt to discover renames and copies
-    in the patch in the same way as 'addremove'.
+    With -s/--similarity, hg will attempt to discover renames and
+    copies in the patch in the same way as 'addremove'.
 
     To read a patch from standard input, use patch name "-". See 'hg
     help dates' for a list of formats valid for -d/--date.
@@ -1873,7 +1878,7 @@ def log(ui, repo, *pats, **opts):
     commit. When the -v/--verbose switch is used, the list of changed
     files and full commit message is shown.
 
-    NOTE: log -p may generate unexpected diff output for merge
+    NOTE: log -p/--patch may generate unexpected diff output for merge
     changesets, as it will only compare the merge changeset against
     its first parent. Also, the files: list will only reflect files
     that are different from BOTH parents.
@@ -2090,8 +2095,8 @@ def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision
 
     Print the working directory's parent revisions. If a revision is
-    given via --rev, the parent of that revision will be printed. If a
-    file argument is given, revision in which the file was last
+    given via -r/--rev, the parent of that revision will be printed.
+    If a file argument is given, revision in which the file was last
     changed (before the working directory revision or the argument to
     --rev if given) is printed.
     """
@@ -2206,8 +2211,8 @@ def push(ui, repo, dest=None, **opts):
     increase the number of remote heads. This generally indicates the
     the client has forgotten to pull and merge before pushing.
 
-    If -r is used, the named revision and all its ancestors will be
-    pushed to the remote repository.
+    If -r/--rev is used, the named revision and all its ancestors will
+    be pushed to the remote repository.
 
     Look at the help text for URLs for important details about ssh://
     URLs. If DESTINATION is omitted, a default path will be used.
@@ -2271,10 +2276,10 @@ def remove(ui, repo, *pats, **opts):
     Schedule the indicated files for removal from the repository.
 
     This only removes files from the current branch, not from the
-    entire project history. -A can be used to remove only files that
-    have already been deleted, -f can be used to force deletion, and
-    -Af can be used to remove files from the next revision without
-    deleting them.
+    entire project history. -A/--after can be used to remove only
+    files that have already been deleted, -f/--force can be used to
+    force deletion, and -Af can be used to remove files from the next
+    revision without deleting them.
 
     The following table details the behavior of remove for different
     file states (columns) and option combinations (rows). The file
@@ -2330,7 +2335,7 @@ def rename(ui, repo, *pats, **opts):
     file, there can only be one source.
 
     By default, this command copies the contents of files as they
-    exist in the working directory. If invoked with --after, the
+    exist in the working directory. If invoked with -A/--after, the
     operation is recorded, but no copying is performed.
 
     This command takes effect at the next commit. To undo a rename
@@ -2347,11 +2352,11 @@ def resolve(ui, repo, *pats, **opts):
 
     This command will cleanly retry unresolved file merges using file
     revisions preserved from the last update or merge. To attempt to
-    resolve all unresolved files, use the -a switch.
+    resolve all unresolved files, use the -a/--all switch.
 
     If a conflict is resolved manually, please note that the changes
-    will be overwritten if the merge is retried with resolve. The -m
-    switch should be used to mark the file as resolved.
+    will be overwritten if the merge is retried with resolve. The
+    -m/--mark switch should be used to mark the file as resolved.
 
     This command will also allow listing resolved files and manually
     marking and unmarking files as resolved. All files must be marked
@@ -2410,10 +2415,10 @@ def revert(ui, repo, *pats, **opts):
     working directory has two parents, you must explicitly specify the
     revision to revert to.
 
-    Using the -r option, revert the given files or directories to
-    their contents as of a specific revision. This can be helpful to
-    "roll back" some or all of an earlier change. See 'hg help dates'
-    for a list of formats valid for -d/--date.
+    Using the -r/--rev option, revert the given files or directories
+    to their contents as of a specific revision. This can be helpful
+    to "roll back" some or all of an earlier change. See 'hg help
+    dates' for a list of formats valid for -d/--date.
 
     Revert modifies the working directory. It does not commit any
     changes, or change the parent of the working directory. If you
@@ -2718,9 +2723,10 @@ def status(ui, repo, *pats, **opts):
 
     Show status of files in the repository. If names are given, only
     files that match are shown. Files that are clean or ignored or
-    source of a copy/move operation, are not listed unless -c (clean),
-    -i (ignored), -C (copies) or -A is given. Unless options described
-    with "show only ..." are given, the options -mardu are used.
+    source of a copy/move operation, are not listed unless -c/--clean,
+    -i/--ignored, -C/--copies or -A/--all is given. Unless options
+    described with "show only ..." are given, the options -mardu are
+    used.
 
     Option -q/--quiet hides untracked (unknown and ignored) files
     unless explicitly requested with -u/--unknown or -i/--ignored.
@@ -2943,7 +2949,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     If you want to update just one file to an older revision, use
     revert.
 
-    See 'hg help dates' for a list of formats valid for --date.
+    See 'hg help dates' for a list of formats valid for -d/--date.
     """
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
