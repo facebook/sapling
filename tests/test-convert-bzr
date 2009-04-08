@@ -8,15 +8,19 @@ cd test-createandrename
 bzr init -q source
 cd source
 echo a > a
-bzr add -q a
-bzr commit -q -m 'Initial add: a'
+echo c > c
+bzr add -q a c
+bzr commit -q -m 'Initial add: a, c'
 bzr mv a b
+bzr mv c d
 echo a2 >> a
 bzr add -q a
-bzr commit -q -m 'rename a into b, create a'
+bzr commit -q -m 'rename a into b, create a, rename c into d'
 cd ..
 hg convert source source-hg
 glog -R source-hg
+echo "% manifest"
+hg manifest -R source-hg -r tip
 echo "% test --rev option"
 hg convert -r 1 source source-1-hg
 glog -R source-1-hg

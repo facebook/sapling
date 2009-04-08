@@ -181,6 +181,7 @@ class bzr_source(converter_source):
             # renamed
             if path and path != topath:
                 renames[topath] = path
+                changes.append((path, revid))
 
             # populate the mode cache
             kind, executable = [e[1] for e in (kind, executable)]
