@@ -8,9 +8,8 @@ from mercurial import node
 import util
 from util import register_subcommand, svn_subcommands, generate_help, svn_commands_nourl
 # dirty trick to force demandimport to run my decorator anyway.
-from svncommands import pull, diff
+from svncommands import pull, diff, rebuildmeta
 from utility_commands import print_wc_url
-from rebuildmeta import rebuildmeta
 # shut up, pyflakes, we must import those
 __x = [print_wc_url, pull, diff, rebuildmeta]
 
