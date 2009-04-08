@@ -18,10 +18,6 @@ from rebuildmeta import rebuildmeta
 # shut up, pyflakes, we must import those
 __x = [print_wc_url, fetch_revisions, commit_from_rev, diff_command, rebuildmeta]
 
-mode755 = (stat.S_IXUSR | stat.S_IXGRP| stat.S_IXOTH | stat.S_IRUSR |
-           stat.S_IRGRP| stat.S_IROTH | stat.S_IWUSR)
-mode644 = (stat.S_IRUSR | stat.S_IRGRP| stat.S_IROTH | stat.S_IWUSR)
-
 
 def svncmd(ui, repo, subcommand, *args, **opts):
     if subcommand not in svn_subcommands:
