@@ -16,7 +16,7 @@ import os
 
 from mercurial import commands
 from mercurial import hg
-from mercurial import util as mutil
+from mercurial import util as hgutil
 
 from svn import core
 
@@ -24,6 +24,8 @@ import svncommand
 import svncommands
 import tag_repo
 import util
+
+from util import svn_subcommands, svn_commands_nourl
 
 def reposetup(ui, repo):
     if not util.is_svn_repo(repo):
@@ -34,13 +36,39 @@ def reposetup(ui, repo):
 
 def svn(ui, repo, subcommand, *args, **opts):
     '''see detailed help for list of subcommands'''
+
+    # guess command if prefix
+    if subcommand not in svn_subcommands:
+        candidates = []
+        for c in svn_subcommands:
+            if c.startswith(subcommand):
+                candidates.append(c)
+        if len(candidates) == 1:
+            subcommand = candidates[0]
+
+    path = os.path.dirname(repo.path)
     try:
-        return svncommand.svncmd(ui, repo, subcommand, *args, **opts)
+        commandfunc = svn_subcommands[subcommand]
+        if commandfunc not in svn_commands_nourl:
+            opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
+        return commandfunc(ui, args=args, hg_repo_path=path, repo=repo, **opts)
     except core.SubversionException, e:
         if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
-            raise mutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
+            raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
                      'Please try running svn ls on that url first.')
         raise
+    except TypeError:
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) == 1:
+            ui.status('Bad arguments for subcommand %s\n' % subcommand)
+        else:
+            raise
+    except KeyError, e:
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) == 1:
+            ui.status('Unknown subcommand %s\n' % subcommand)
+        else:
+            raise
 
 
 def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
@@ -61,7 +89,7 @@ def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
         res = svncommands.pull(ui, svn_url, hg_repo_path, **opts)
     except core.SubversionException, e:
         if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
-            raise mutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
+            raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
                      'Please try running svn ls on that url first.')
         raise
     if (res is None or res == 0) and should_update:
