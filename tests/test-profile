@@ -3,7 +3,16 @@
 echo % test --time
 hg --time help -q help 2>&1 | grep Time > /dev/null || echo --time failed
 
+hg init a
+cd a
+
 echo % test --profile
 if "$TESTDIR/hghave" -q lsprof; then
-    hg --profile help -q help 2>&1 | grep CallCount > /dev/null || echo --profile failed
+    hg --profile st 2>../out || echo --profile failed
+    grep CallCount < ../out > /dev/null || echo wrong --profile
+
+    hg --profile --config profiling.output=../out st 2>&1 \
+        || echo --profile + output to file failed
+    grep CallCount < ../out > /dev/null \
+        || echo wrong --profile output when saving to a file
 fi

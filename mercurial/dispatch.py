@@ -379,6 +379,15 @@ def _runcommand(ui, options, cmd, cmdfunc):
             raise error.ParseError(cmd, _("invalid arguments"))
 
     if options['profile']:
+        output = ui.config('profiling', 'output')
+
+        if output:
+            path = os.path.expanduser(output)
+            path = ui.expandpath(path)
+            ostream = open(path, 'wb')
+        else:
+            ostream = sys.stderr
+
         try:
             from mercurial import lsprof
         except ImportError:
@@ -393,6 +402,9 @@ def _runcommand(ui, options, cmd, cmdfunc):
             p.disable()
             stats = lsprof.Stats(p.getstats())
             stats.sort()
-            stats.pprint(top=10, file=sys.stderr, climit=5)
+            stats.pprint(top=10, file=ostream, climit=5)
+
+            if output:
+                ostream.close()
     else:
         return checkargs()

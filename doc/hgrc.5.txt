@@ -538,6 +538,18 @@ paths::
     Optional. Directory or URL to use when pushing if no destination
     is specified.
 
+[[profiling]]
+profiling::
+  Specifies profiling format and file output.
+  In this section description, 'profiling data' stands for the raw data
+  collected during profiling, while 'profiling report' stands for a
+  statistical text report generated from the profiling data.
+  The profiling is done using lsprof.
+  output;;
+    File path where profiling data or report should be saved.
+    If the file exists, it is replaced.
+    Default: None, data is printed on stderr
+
 [[server]]
 server::
   Controls generic server settings.
