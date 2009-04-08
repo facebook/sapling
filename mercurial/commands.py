@@ -3230,7 +3230,7 @@ table = {
          _('[OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
-         [('r', 'rev', '', _('show only heads which are descendants of rev')),
+         [('r', 'rev', '', _('show only heads which are descendants of REV')),
           ('a', 'active', False,
            _('show only the active heads from open branches')),
          ] + templateopts,
@@ -3276,7 +3276,7 @@ table = {
          _('[-e CMD] [--remotecmd CMD] [DEST]')),
     "locate":
         (locate,
-         [('r', 'rev', '', _('search the repository as it stood at rev')),
+         [('r', 'rev', '', _('search the repository as it stood at REV')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
           ('f', 'fullpath', None,

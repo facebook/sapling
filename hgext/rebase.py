@@ -467,6 +467,6 @@ cmdtable = {
         ('c', 'continue', False, _('continue an interrupted rebase')),
         ('a', 'abort', False, _('abort an interrupted rebase')),] +
          templateopts,
-        _('hg rebase [-s rev | -b rev] [-d rev] [--collapse] [--keep] '
+        _('hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] '
                             '[--keepbranches] | [-c] | [-a]')),
 }

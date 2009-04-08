@@ -2,7 +2,7 @@
 
 % Use continue and abort
 hg rebase: cannot use both abort and continue
-hg rebase [-s rev | -b rev] [-d rev] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
@@ -30,7 +30,7 @@ use "hg -v help rebase" to show global options
 
 % Use continue and collapse
 hg rebase: cannot use collapse with continue or abort
-hg rebase [-s rev | -b rev] [-d rev] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
@@ -58,7 +58,7 @@ use "hg -v help rebase" to show global options
 
 % Use continue/abort and dest/source
 hg rebase: abort and continue do not allow specifying revisions
-hg rebase [-s rev | -b rev] [-d rev] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
@@ -86,7 +86,7 @@ use "hg -v help rebase" to show global options
 
 % Use source and base
 hg rebase: cannot specify both a revision and a base
-hg rebase [-s rev | -b rev] [-d rev] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
