@@ -82,7 +82,7 @@ cmdtable = {
           ('', 'username', '', 'username for authentication'),
           ('', 'password', '', 'password for authentication'),
           ],
-         svncommand.generate_help(),
+         svncommands.generate_help(),
          ),
     "svnclone":
         (svn_fetch,

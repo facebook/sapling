@@ -2,11 +2,7 @@ import os
 import sys
 import traceback
 
-from mercurial import hg
-from mercurial import node
-
-import util
-from util import register_subcommand, svn_subcommands, generate_help, svn_commands_nourl
+from util import svn_subcommands, svn_commands_nourl
 # dirty trick to force demandimport to run my decorator anyway.
 from svncommands import pull, diff, rebuildmeta
 from utility_commands import print_wc_url
@@ -43,52 +39,3 @@ def svncmd(ui, repo, subcommand, *args, **opts):
             ui.status('Unknown subcommand %s\n' % subcommand)
         else:
             raise
-
-
-def help_command(ui, args=None, **opts):
-    """show help for a given subcommands or a help overview
-    """
-    if args:
-        subcommand = args[0]
-        if subcommand not in svn_subcommands:
-            candidates = []
-            for c in svn_subcommands:
-                if c.startswith(subcommand):
-                    candidates.append(c)
-            if len(candidates) == 1:
-                subcommand = candidates[0]
-            elif len(candidates) > 1:
-                ui.status('Ambiguous command. Could have been:\n%s\n' %
-                          ' '.join(candidates))
-                return
-        doc = svn_subcommands[subcommand].__doc__
-        if doc is None:
-            doc = "No documentation available for %s." % subcommand
-        ui.status(doc.strip(), '\n')
-        return
-    ui.status(generate_help())
-help_command = register_subcommand('help')(help_command)
-
-def update(ui, args, repo, clean=False, **opts):
-    """update to a specified Subversion revision number
-    """
-    assert len(args) == 1
-    rev = int(args[0])
-    path = os.path.join(repo.path, 'svn', 'rev_map')
-    answers = []
-    for k,v in util.parse_revmap(path).iteritems():
-        if k[0] == rev:
-            answers.append((v, k[1]))
-    if len(answers) == 1:
-        if clean:
-            return hg.clean(repo, answers[0][0])
-        return hg.update(repo, answers[0][0])
-    elif len(answers) == 0:
-        ui.status('Revision %s did not produce an hg revision.\n' % rev)
-        return 1
-    else:
-        ui.status('Ambiguous revision!\n')
-        ui.status('\n'.join(['%s on %s' % (node.hex(a[0]), a[1]) for a in
-                             answers]+['']))
-    return 1
-update = register_subcommand('up')(update)
