@@ -384,7 +384,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     ui.write('\n')
 
-    parent = None
+    parent = opts.get('in_reply_to') or None
 
     sender_addr = email.Utils.parseaddr(sender)[1]
     sender = mail.addressencode(ui, sender, _charsets, opts.get('test'))
@@ -458,6 +458,8 @@ emailopts = [
            _('write messages to mbox file instead of sending them')),
           ('s', 'subject', '',
            _('subject of first message (intro or single patch)')),
+          ('', 'in-reply-to', '',
+           _('"message identifier to reply to"')),
           ('t', 'to', [], _('email addresses of recipients')),
          ]
 

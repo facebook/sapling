@@ -837,3 +837,38 @@ diff -r 8580ff50825a -r 97d72e5f12c7 b
 +b
 
 --===
+% test inreplyto
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] Added tag two, two.diff for changeset ff2c9fa2018b ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH] Added tag two, two.diff for changeset ff2c9fa2018b
+X-Mercurial-Node: 2c502b2db30e1ddd5e4ecabd68d9002f6c77a5a3
+Message-Id: <2c502b2db30e1ddd5e4e.60@
+In-Reply-To: baz
+References: baz
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+# HG changeset patch
+# User test
+# Date 0 0
+# Node ID 2c502b2db30e1ddd5e4ecabd68d9002f6c77a5a3
+# Parent  91c0d1bdb4bc9cfd3b38a53a5ec53e9ae412a275
+Added tag two, two.diff for changeset ff2c9fa2018b
+
+diff -r 91c0d1bdb4bc -r 2c502b2db30e .hgtags
+--- a/.hgtags	Thu Jan 01 00:00:00 1970 +0000
++++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
+@@ -2,3 +2,5 @@
+ 8580ff50825a50c8f716709acdf8de0deddcd6ab zero.foo
+ 97d72e5f12c7e84f85064aa72e5a297142c36ed9 one
+ 97d72e5f12c7e84f85064aa72e5a297142c36ed9 one.patch
++ff2c9fa2018b15fa74b33363bda9527323e2a99f two
++ff2c9fa2018b15fa74b33363bda9527323e2a99f two.diff
+
