@@ -169,6 +169,25 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                          '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
+    def test_list_authors(self):
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'replace_trunk_with_branch.svndump')
+        u = ui.ui()
+        utility_commands.list_authors(u,
+                                      args=[test_util.fileurl(self.repo_path)],
+                                      authors=None)
+        self.assertEqual(u.stream.getvalue(), 'Augie\nevil\n')
+
+
+    def test_list_authors_map(self):
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'replace_trunk_with_branch.svndump')
+        author_path = os.path.join(self.repo_path, 'authors')
+        utility_commands.list_authors(ui.ui(),
+                                      args=[test_util.fileurl(self.repo_path)],
+                                      authors=author_path)
+        self.assertEqual(open(author_path).read(), 'Augie=\nevil=\n')
+        
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),

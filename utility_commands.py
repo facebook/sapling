@@ -198,6 +198,26 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
 show_outgoing_to_svn = util.register_subcommand('outgoing')(show_outgoing_to_svn)
 
 
+def list_authors(ui, args, authors=None, **opts):
+    """list all authors in a Subversion repository
+    """
+    if not len(args):
+        ui.status('No repository specified.\n')
+        return
+    svn = svnwrap.SubversionRepo(util.normalize_url(args[0]))
+    author_set = set()
+    for rev in svn.revisions():
+        author_set.add(str(rev.author)) # So None becomes 'None'
+    if authors:
+        authorfile = open(authors, 'w')
+        authorfile.write('%s=\n' % '=\n'.join(sorted(author_set)))
+        authorfile.close()
+    else:
+        ui.status('%s\n' % '\n'.join(sorted(author_set)))
+list_authors = util.register_subcommand('listauthors')(list_authors)
+list_authors = util.command_needs_no_url(list_authors)
+
+
 def version(ui, **opts):
     """Show current version of hg and hgsubversion.
     """
