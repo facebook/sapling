@@ -21,7 +21,7 @@ from mercurial import util as mutil
 from svn import core
 
 import svncommand
-import fetch_command
+import svncommands
 import tag_repo
 import util
 
@@ -58,7 +58,7 @@ def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
     should_update = not os.path.exists(hg_repo_path)
     svn_url = util.normalize_url(svn_url)
     try:
-        res = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path, **opts)
+        res = svncommands.pull(ui, svn_url, hg_repo_path, **opts)
     except core.SubversionException, e:
         if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
             raise mutil.Abort('It appears svn does not trust the ssl cert for this site.\n'

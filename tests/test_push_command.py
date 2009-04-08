@@ -9,7 +9,7 @@ from mercurial import node
 from mercurial import ui
 from mercurial import revlog
 
-import fetch_command
+import svncommands
 import push_cmd
 import test_util
 import time
@@ -38,9 +38,8 @@ class PushOverSvnserveTests(test_util.TestBase):
         args = ['svnserve', '-d', '--foreground', '-r', self.repo_path]
         self.svnserve_pid = subprocess.Popen(args).pid
         time.sleep(2)
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='svn://localhost/',
-                                      hg_repo_path=self.wc_path)
+        svncommands.pull(ui.ui(), svn_url='svn://localhost/',
+                         hg_repo_path=self.wc_path)
 
     def tearDown(self):
         os.system('kill -9 %d' % self.svnserve_pid)

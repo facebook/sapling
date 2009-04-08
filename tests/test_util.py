@@ -13,7 +13,7 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
-import fetch_command
+import svncommands
 import push_cmd
 
 # Fixtures that need to be pulled at a subdirectory of the repo path
@@ -49,10 +49,8 @@ def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdi
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
-    fetch_command.fetch_revisions(ui.ui(),
-                                  svn_url=fileurl(repo_path),
-                                  hg_repo_path=wc_path,
-                                  stupid=stupid)
+    svncommands.pull(ui.ui(), svn_url=fileurl(repo_path),
+                     hg_repo_path=wc_path, stupid=stupid)
     repo = hg.repository(ui.ui(), wc_path)
     return repo
 

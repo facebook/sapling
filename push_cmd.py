@@ -7,7 +7,7 @@ import util
 import hg_delta_editor
 import svnexternals
 import svnwrap
-import fetch_command
+import svncommands
 import utility_commands
 
 
@@ -68,9 +68,8 @@ def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
                      old_ctx)
             return 1
         # 3. Fetch revisions from svn
-        r = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path,
-                                          stupid=stupid, username=user,
-                                          password=passwd)
+        r = svncommands.pull(ui, svn_url, hg_repo_path, stupid=stupid,
+                             username=user, password=passwd)
         assert not r or r == 0
         # 4. Find the new head of the target branch
         repo = hg.repository(ui, hge.path)

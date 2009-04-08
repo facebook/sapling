@@ -1,20 +1,18 @@
 import os
 
-from mercurial import util as merc_util
+from mercurial import util as hgutil
 from svn import core
 from svn import delta
 
 import hg_delta_editor
 import svnwrap
 import stupid as stupidmod
+import cmdutil
 import util
 
 
-def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
-                    tag_locations='tags',
-                    authors=None,
-                    filemap=None,
-                    **opts):
+def pull(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
+         tag_locations='tags', authors=None, filemap=None, **opts):
     """pull new revisions from Subversion
     """
     svn_url = util.normalize_url(svn_url)
@@ -30,7 +28,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                   ' of SWIG.\n')
         have_replay = False
     initializing_repo = False
-    user = opts.get('username', merc_util.getuser())
+    user = opts.get('username', hgutil.getuser())
     passwd = opts.get('password', '')
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
     author_host = "@%s" % svn.uuid
@@ -53,8 +51,8 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
         start = skipto_rev
 
     if initializing_repo and start > 0:
-        raise merc_util.Abort('Revision skipping at repository initialization '
-                              'remains unimplemented.')
+        raise hgutil.Abort('Revision skipping at repository initialization '
+                           'remains unimplemented.')
 
     # start converting revisions
     for r in svn.revisions(start=start):
@@ -73,7 +71,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                     util.describe_revision(ui, r)
                     if have_replay:
                         try:
-                            replay_convert_rev(hg_editor, svn, r)
+                            cmdutil.replay_convert_rev(hg_editor, svn, r)
                         except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                             ui.status('%s\n' % e.message)
                             stupidmod.print_your_svn_is_old_message(ui)
@@ -89,44 +87,7 @@ def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                         tries += 1
                         ui.status('Got a 502, retrying (%s)\n' % tries)
                     else:
-                        raise merc_util.Abort(*e.args)
+                        raise hgutil.Abort(*e.args)
     util.swap_out_encoding(old_encoding)
 
-fetch_revisions = util.register_subcommand('pull')(fetch_revisions)
-
-
-def cleanup_file_handles(svn, count):
-    if count % 50 == 0:
-        svn.init_ra_and_client()
-
-
-def replay_convert_rev(hg_editor, svn, r):
-    hg_editor.set_current_rev(r)
-    svn.get_replay(r.revnum, hg_editor)
-    i = 1
-    if hg_editor.missing_plaintexts:
-        hg_editor.ui.debug('Fetching %s files that could not use replay.\n' %
-                           len(hg_editor.missing_plaintexts))
-        files_to_grab = set()
-        rootpath = svn.subdir and svn.subdir[1:] or ''
-        for p in hg_editor.missing_plaintexts:
-            hg_editor.ui.note('.')
-            hg_editor.ui.flush()
-            if p[-1] == '/':
-                dirpath = p[len(rootpath):]
-                files_to_grab.update([dirpath + f for f,k in
-                                      svn.list_files(dirpath, r.revnum)
-                                      if k == 'f'])
-            else:
-                files_to_grab.add(p[len(rootpath):])
-        hg_editor.ui.note('\nFetching files...\n')
-        for p in files_to_grab:
-            hg_editor.ui.note('.')
-            hg_editor.ui.flush()
-            cleanup_file_handles(svn, i)
-            i += 1
-            data, mode = svn.get_file(p, r.revnum)
-            hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
-        hg_editor.missing_plaintexts = set()
-        hg_editor.ui.note('\n')
-    hg_editor.commit_current_delta()
+pull = util.register_subcommand('pull')(pull)

@@ -8,7 +8,7 @@ from mercurial import context
 from mercurial import node
 
 import utility_commands
-import fetch_command
+import svncommands
 import test_util
 
 expected_info_output = '''URL: %(repourl)s/%(branch)s
@@ -145,10 +145,9 @@ class UtilityTests(test_util.TestBase):
         """Verify url gets normalized on initial clone.
         """
         test_util.load_svndump_fixture(self.repo_path, 'two_revs.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path)+'/',
-                                      hg_repo_path=self.wc_path,
-                                      stupid=False)
+        svncommands.pull(ui.ui(),
+                         svn_url=test_util.fileurl(self.repo_path) + '/',
+                         hg_repo_path=self.wc_path, stupid=False)
         hg.update(self.repo, 'tip')
         u = ui.ui()
         utility_commands.print_wc_url(u, self.repo, self.wc_path)
@@ -159,10 +158,9 @@ class UtilityTests(test_util.TestBase):
         """Verify url gets normalized on initial clone.
         """
         test_util.load_svndump_fixture(self.repo_path, 'ignores.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path)+'/',
-                                      hg_repo_path=self.wc_path,
-                                      stupid=False)
+        svncommands.pull(ui.ui(),
+                         svn_url=test_util.fileurl(self.repo_path) + '/',
+                         hg_repo_path=self.wc_path, stupid=False)
         hg.update(self.repo, 'tip')
         u = ui.ui()
         utility_commands.generate_ignore(u, self.repo, self.wc_path)

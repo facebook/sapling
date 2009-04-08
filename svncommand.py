@@ -10,13 +10,13 @@ import svnwrap
 import util
 from util import register_subcommand, svn_subcommands, generate_help, svn_commands_nourl
 # dirty trick to force demandimport to run my decorator anyway.
+from svncommands import pull
 from utility_commands import print_wc_url
-from fetch_command import fetch_revisions
 from push_cmd import commit_from_rev
 from diff_cmd import diff_command
 from rebuildmeta import rebuildmeta
 # shut up, pyflakes, we must import those
-__x = [print_wc_url, fetch_revisions, commit_from_rev, diff_command, rebuildmeta]
+__x = [print_wc_url, pull, commit_from_rev, diff_command, rebuildmeta]
 
 
 def svncmd(ui, repo, subcommand, *args, **opts):
