@@ -14,7 +14,6 @@ from mercurial import node
 from mercurial import ui
 
 import svncommands
-import push_cmd
 
 # Fixtures that need to be pulled at a subdirectory of the repo path
 subdir = {'truncatedhistory.svndump': '/project2',
@@ -122,9 +121,8 @@ class TestBase(unittest.TestCase):
 
     def pushrevisions(self, stupid=False):
         before = len(self.repo)
-        push_cmd.push_revisions_to_subversion(
-            ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
-            svn_url=fileurl(self.repo_path), stupid=stupid)
+        svncommands.push(ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
+                         svn_url=fileurl(self.repo_path), stupid=stupid)
         after = len(self.repo)
         self.assertEqual(0, after - before)
 

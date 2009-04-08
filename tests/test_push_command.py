@@ -10,7 +10,6 @@ from mercurial import ui
 from mercurial import revlog
 
 import svncommands
-import push_cmd
 import test_util
 import time
 
@@ -69,9 +68,8 @@ class PushOverSvnserveTests(test_util.TestBase):
         if not commit:
             return # some tests use this test as an extended setup.
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='svn://localhost/')
+        svncommands.push(ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
+                         svn_url='svn://localhost/')
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), old_tip)
         self.assertEqual(tip.parents()[0].node(), expected_parent)
@@ -172,10 +170,9 @@ class PushTests(test_util.TestBase):
         newhash = self.repo.commitctx(ctx)
         repo = self.repo
         hg.update(repo, newhash)
-        push_cmd.push_revisions_to_subversion(ui.ui(),
-                                              repo=repo,
-                                              svn_url=test_util.fileurl(self.repo_path),
-                                              hg_repo_path=self.wc_path)
+        svncommands.push(ui.ui(), repo=repo,
+                         svn_url=test_util.fileurl(self.repo_path),
+                         hg_repo_path=self.wc_path)
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0].node(), oldtiphash)
         self.assertEqual(self.repo['tip'].files(), ['delta', ])
         self.assertEqual(self.repo['tip'].manifest().keys(),
