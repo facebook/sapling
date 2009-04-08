@@ -6,12 +6,12 @@ from mercurial import ui
 
 import test_util
 
-
 class TestBasicRepoLayout(test_util.TestBase):
 
     def test_no_dates(self):
         repo = self._load_fixture_and_fetch('test_no_dates.svndump')
-        self.assertEqual(repo[0].date(), (-3600.0, -3600))
+        local_epoch = repo[0].date()
+        self.assertEqual(local_epoch[0], local_epoch[1])
         self.assertEqual(repo[1].date(), repo[2].date())
 
     def test_fresh_fetch_single_rev(self):
