@@ -3261,7 +3261,7 @@ table = {
           ('', 'exact', None,
            _('apply patch to the nodes from which it was generated')),
           ('', 'import-branch', None,
-           _('Use any branch information in patch (implied by --exact)'))] +
+           _('use any branch information in patch (implied by --exact)'))] +
          commitopts + commitopts2 + similarityopts,
          _('[OPTION]... PATCH...')),
     "incoming|in":
