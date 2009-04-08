@@ -129,10 +129,21 @@ class HgChangeReceiver(delta.Editor):
             self.readauthors(authors)
         if self.authors:
             self.writeauthors()
+
+        self.lastdate = '1970-01-01 00:00:00'
         self.includepaths = {}
         self.excludepaths = {}
         if filemap and os.path.exists(filemap):
             self.readfilemap(filemap)
+
+    def fixdate(self, date):
+        if date is not None:
+            date = date.replace('T', ' ').replace('Z', '').split('.')[0]
+            date += ' -0000'
+            self.lastdate = date
+        else:
+            date = self.lastdate
+        return date
 
     def __setup_repo(self, repo_path):
         """Verify the repo is going to work out for us.
@@ -573,8 +584,7 @@ class HgChangeReceiver(delta.Editor):
         files_to_commit.sort()
         branch_batches = {}
         rev = self.current_rev
-        date = rev.date.replace('T', ' ').replace('Z', '').split('.')[0]
-        date += ' -0000'
+        date = self.fixdate(rev.date)
 
         # build up the branches that have files on them
         for f in files_to_commit:

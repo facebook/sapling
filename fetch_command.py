@@ -586,8 +586,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                         break
                 if not is_closed:
                     deleted_branches[branch] = branchtip
-    date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
-    date += ' -0000'
+
+    date = hg_editor.fixdate(r.date)
     check_deleted_branches = set()
     for b in branches:
         parentctx = hg_editor.repo[hg_editor.get_parent_revision(r.revnum, b)]

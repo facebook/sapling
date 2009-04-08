@@ -8,6 +8,12 @@ import test_util
 
 
 class TestBasicRepoLayout(test_util.TestBase):
+
+    def test_no_dates(self):
+        repo = self._load_fixture_and_fetch('test_no_dates.svndump')
+        self.assertEqual(repo[0].date(), (-3600.0, -3600))
+        self.assertEqual(repo[1].date(), repo[2].date())
+
     def test_fresh_fetch_single_rev(self):
         repo = self._load_fixture_and_fetch('single_rev.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
