@@ -1,12 +1,10 @@
 import os
-import stat
 import sys
 import traceback
 
 from mercurial import hg
 from mercurial import node
 
-import svnwrap
 import util
 from util import register_subcommand, svn_subcommands, generate_help, svn_commands_nourl
 # dirty trick to force demandimport to run my decorator anyway.

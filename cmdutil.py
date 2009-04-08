@@ -7,11 +7,7 @@ import svnwrap
 import svnexternals
 
 
-class BaseException(Exception):
-    pass
-
-
-class NoFilesException(BaseException):
+class NoFilesException(Exception):
     """Exception raised when you try and commit without files.
     """
 
@@ -128,7 +124,7 @@ def _externals(ctx):
     return ext
 
 
-def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision
+def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
                     username, password):
     """Build and send a commit from Mercurial to Subversion.
     """
