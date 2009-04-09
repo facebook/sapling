@@ -3252,7 +3252,7 @@ table = {
     "import|patch":
         (import_,
          [('p', 'strip', 1,
-           _('directory strip option for patch. This has the same\n'
+           _('directory strip option for patch. This has the same '
              'meaning as the corresponding patch option')),
           ('b', 'base', '', _('base path')),
           ('f', 'force', None,
