@@ -2748,7 +2748,7 @@ def status(ui, repo, *pats, **opts):
     A = added
     R = removed
     C = clean
-    ! = missing, but still tracked
+    ! = missing (deleted by non-hg command, but still tracked)
     ? = not tracked
     I = ignored
       = the previous added file was copied from here
