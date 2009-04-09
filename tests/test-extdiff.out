@@ -34,3 +34,38 @@ diffing a.2a13a4d2da36/a [tmp]/test-extdiff/a/a
 diffing a.8a5febb7f867/a a.34eed99112ab/a
 diffing a.2a13a4d2da36/a a.46c0e4daeb72/a
 diff-like tools yield a non-zero exit code
+
+% test extdiff of multiple files in tmp dir:
+% diff in working directory, before
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,1 @@
+-a
++changed
+diff --git a/b b/b
+old mode 100644
+new mode 100755
+--- a/b
++++ b/b
+@@ -1,1 +1,1 @@
+-b
++changed
+% edit with extdiff -p
+% diff in working directory, after
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+-a
++changed
++edited
+diff --git a/b b/b
+old mode 100644
+new mode 100755
+--- a/b
++++ b/b
+@@ -1,1 +1,2 @@
+-b
++changed
++edited

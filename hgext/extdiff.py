@@ -67,7 +67,7 @@ def snapshot(ui, repo, files, node, tmproot):
     else:
         ui.note(_('making snapshot of %d files from working dir\n') %
             (len(files)))
-        
+    wopener = util.opener(base)
     fns_and_mtime = []
     ctx = repo[node]
     for fn in files:
@@ -77,11 +77,14 @@ def snapshot(ui, repo, files, node, tmproot):
             continue
         ui.note('  %s\n' % wfn)
         dest = os.path.join(base, wfn)
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            os.makedirs(destdir)
-        data = repo.wwritedata(wfn, ctx[wfn].data())
-        open(dest, 'wb').write(data)
+        fctx = ctx[wfn]
+        data = repo.wwritedata(wfn, fctx.data())
+        if 'l' in fctx.flags():
+            wopener.symlink(data, wfn)
+        else:
+            wopener(wfn, 'w').write(data)
+            if 'x' in fctx.flags():
+                util.set_flags(dest, False, True)
         if node is None:
             fns_and_mtime.append((dest, repo.wjoin(fn), os.path.getmtime(dest)))
     return dirname, fns_and_mtime
