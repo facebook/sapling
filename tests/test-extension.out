@@ -40,7 +40,8 @@ enabled extensions:
 global options:
  -R --repository      repository root directory or symbolic path name
     --cwd             change working directory
- -y --noninteractive  do not prompt, assume 'yes' for any required answers
+ -y --noninteractive  do not prompt, assume 'yes' for any required
+                      answers
  -q --quiet           suppress output
  -v --verbose         enable additional output
     --config          set/override config option

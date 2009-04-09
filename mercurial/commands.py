@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _, gettext
-import os, re, sys
+import os, re, sys, textwrap
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
 import difflib, patch, time, help, mdiff, tempfile, url, encoding
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
@@ -1532,7 +1532,11 @@ def help_(ui, name=None, with_version=False):
         opts_len = max([len(line[0]) for line in opt_output if line[1]] or [0])
         for first, second in opt_output:
             if second:
-                ui.write(" %-*s  %s\n" % (opts_len, first, second))
+                # wrap descriptions at 70 characters, just like the
+                # main help texts
+                second = textwrap.wrap(second, width=70 - opts_len - 3)
+                pad = '\n' + ' ' * (opts_len + 3)
+                ui.write(" %-*s  %s\n" % (opts_len, first, pad.join(second)))
             else:
                 ui.write("%s\n" % first)
 

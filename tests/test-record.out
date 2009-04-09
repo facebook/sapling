@@ -27,8 +27,10 @@ interactively select changes to commit
 
 options:
 
- -A --addremove     mark new/missing files as added/removed before committing
-    --close-branch  mark a branch as closed, hiding it from the branch list
+ -A --addremove     mark new/missing files as added/removed before
+                    committing
+    --close-branch  mark a branch as closed, hiding it from the branch
+                    list
  -I --include       include names matching the given patterns
  -X --exclude       exclude names matching the given patterns
  -m --message       use <text> as commit message
