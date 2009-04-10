@@ -4,10 +4,6 @@ import shutil
 from mercurial import hg
 from mercurial import node
 from mercurial import util
-try:
-    from mercurial import encoding
-except ImportError:
-    encoding = None
 
 svn_subcommands = { }
 def register_subcommand(name):
@@ -143,10 +139,11 @@ def describe_commit(ui, h, b):
 
 def swap_out_encoding(new_encoding="UTF-8"):
     """ Utility for mercurial incompatibility changes, can be removed after 1.3"""
-    if encoding is None:
-        old = util._encoding
-        util._encoding = new_encoding
-    else:
+    try:
+        from mercurial import encoding
         old = encoding.encoding
         encoding.encoding = new_encoding
+    except ImportError:
+        old = util._encoding
+        util._encoding = new_encoding
     return old
