@@ -1991,7 +1991,7 @@ def manifest(ui, repo, node=None, rev=None):
 
     Print a list of version controlled files for the given revision.
     If no revision is given, the first parent of the working directory
-    is used, or tip if no revision is checked out.
+    is used, or the null revision if none is checked out.
 
     With -v flag, print file permissions, symlink and executable bits.
     With --debug flag, print file revision hashes.
