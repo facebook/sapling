@@ -7,7 +7,7 @@
 
 from i18n import _
 import osutil, error
-import errno, msvcrt, os, re, sys, random
+import errno, msvcrt, os, re, sys, random, subprocess
 
 nulldev = 'NUL:'
 umask = 002
@@ -320,6 +320,37 @@ def rename(src, dst):
             # Ideally, we would notify the user here.
             pass
         os.rename(src, dst)
+
+def spawndetached(args):
+    # No standard library function really spawns a fully detached
+    # process under win32 because they allocate pipes or other objects
+    # to handle standard streams communications. Passing these objects
+    # to the child process requires handle inheritance to be enabled
+    # which makes really detached processes impossible.
+    class STARTUPINFO:
+        dwFlags = subprocess.STARTF_USESHOWWINDOW
+        hStdInput = None
+        hStdOutput = None
+        hStdError = None
+        wShowWindow = subprocess.SW_HIDE
+        
+    args = subprocess.list2cmdline(args)
+    # Not running the command in shell mode makes python26 hang when
+    # writing to hgweb output socket.
+    comspec = os.environ.get("COMSPEC", "cmd.exe")
+    args = comspec + " /c " + args
+    hp, ht, pid, tid = subprocess.CreateProcess(
+        None, args,
+        # no special security
+        None, None,
+        # Do not inherit handles
+        0,
+        # DETACHED_PROCESS
+        0x00000008,
+        os.environ,
+        os.getcwd(),
+        STARTUPINFO())
+    return pid
 
 try:
     # override functions with win32 versions if possible

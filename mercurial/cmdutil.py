@@ -580,8 +580,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
             elif runargs[i].startswith('--cwd'):
                 del runargs[i:i+2]
                 break
-        pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
-                         runargs[0], runargs)
+        pid = util.spawndetached(runargs)
         os.close(wfd)
         os.read(rfd, 1)
         if parentfn:

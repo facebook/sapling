@@ -257,3 +257,8 @@ def groupname(gid=None):
         return grp.getgrgid(gid)[0]
     except KeyError:
         return str(gid)
+
+def spawndetached(args):
+    return os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
+                      args[0], args)
+
