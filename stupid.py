@@ -1,16 +1,12 @@
 import cStringIO
 import re
-import os
 
 from mercurial import patch
 from mercurial import node
 from mercurial import context
 from mercurial import revlog
-from mercurial import util as merc_util
 from svn import core
-from svn import delta
 
-import hg_delta_editor
 import svnwrap
 import svnexternals
 import util
