@@ -1,12 +1,13 @@
 import os
 
 import mercurial
-from mercurial import cmdutil
+from mercurial import cmdutil as hgcmdutil
 from mercurial import node
 from mercurial import util as hgutil
 from hgext import rebase as hgrebase
 
 import svnwrap
+import cmdutil
 import util
 import hg_delta_editor
 
@@ -16,16 +17,6 @@ def url(ui, repo, hg_repo_path, **opts):
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     ui.status(hge.url, '\n')
-
-
-def find_wc_parent_rev(ui, repo, hge, svn_commit_hashes):
-    """Find the svn parent revision of the repo's dirstate.
-    """
-    workingctx = repo.parents()[0]
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingctx.node())
-    if o_r:
-        workingctx = repo[o_r[-1]].parents()[0]
-    return workingctx
 
 
 def genignore(ui, repo, hg_repo_path, force=False, **opts):
@@ -40,7 +31,7 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    parent = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
+    parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
     r, br = svn_commit_hashes[parent.node()]
     if br == None:
         branchpath = 'trunk'
@@ -71,7 +62,7 @@ def info(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    parent = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
+    parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
     pn = parent.node()
     if pn not in svn_commit_hashes:
         ui.status('Not a child of an svn revision.\n')
@@ -118,7 +109,7 @@ def parent(ui, repo, hg_repo_path, **opts):
                                            ui_=ui)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    ha = find_wc_parent_rev(ui, repo, hge, svn_commit_hashes)
+    ha = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
     if ha.node() != node.nullid:
         r, br = svn_commit_hashes[ha.node()]
         ui.status('Working copy parent revision is %s: r%s on %s\n' %
@@ -187,7 +178,7 @@ def outgoing(ui, repo, hg_repo_path, **opts):
     if not (o_r and len(o_r)):
         ui.status('No outgoing changes found.\n')
         return 0
-    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
+    displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
     for node in reversed(o_r):
         displayer.show(repo[node])
 

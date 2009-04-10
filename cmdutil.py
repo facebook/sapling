@@ -5,6 +5,7 @@ from mercurial import util as hgutil
 
 from svn import core
 
+import util
 import svnwrap
 import svnexternals
 
@@ -32,6 +33,17 @@ def filterdiff(diff, base_revision):
 
     diff = header_re.sub(r'Index: \1' + '\n' + ('=' * 67), diff)
     return diff
+
+
+def parentrev(ui, repo, hge, svn_commit_hashes):
+    """Find the svn parent revision of the repo's dirstate.
+    """
+    workingctx = repo.parents()[0]
+    outrev = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes,
+                                     workingctx.node())
+    if outrev:
+        workingctx = repo[outrev[-1]].parents()[0]
+    return workingctx
 
 
 def replay_convert_rev(hg_editor, svn, r):
