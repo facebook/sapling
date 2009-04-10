@@ -97,6 +97,55 @@ def pull(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     util.swap_out_encoding(old_encoding)
 
 
+def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
+             tag_locations='tags', authors=None, filemap=None, **opts):
+    """show incoming revisions from Subversion
+    """
+    svn_url = util.normalize_url(svn_url)
+
+    initializing_repo = False
+    user = opts.get('username', hgutil.getuser())
+    passwd = opts.get('password', '')
+    svn = svnwrap.SubversionRepo(svn_url, user, passwd)
+    author_host = "@%s" % svn.uuid
+    tag_locations = tag_locations.split(',')
+    hg_editor = hg_delta_editor.HgChangeReceiver(hg_repo_path,
+                                                 ui_=ui,
+                                                 subdir=svn.subdir,
+                                                 author_host=author_host,
+                                                 tag_locations=tag_locations,
+                                                 authors=authors,
+                                                 filemap=filemap)
+    if os.path.exists(hg_editor.uuid_file):
+        uuid = open(hg_editor.uuid_file).read()
+        assert uuid == svn.uuid
+        start = hg_editor.last_known_revision()
+    else:
+        open(hg_editor.uuid_file, 'w').write(svn.uuid)
+        open(hg_editor.svn_url_file, 'w').write(svn_url)
+        initializing_repo = True
+        start = skipto_rev
+
+    if initializing_repo and start > 0:
+        raise hgutil.Abort('Revision skipping at repository initialization '
+                           'remains unimplemented.')
+
+    rev_stuff = (('revision', 'revnum'),
+                 ('user', 'author'),
+                 ('date', 'date'),
+                 ('message', 'message')
+                )
+
+    ui.status('incoming changes from %s\n' % svn_url)
+
+    for r in svn.revisions(start=start):
+        ui.status('\n')
+        for label, attr in rev_stuff:
+            l1 = label+':'
+            ui.status('%s%s\n' % (l1.ljust(13),
+                                  str(r.__getattribute__(attr)).strip(), ))
+
+
 def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
     """push revisions starting at a specified head back to Subversion.
     """
@@ -378,6 +427,7 @@ table = {
     'help': help,
     'rebuildmeta': rebuildmeta,
     'diff': diff,
+    'incoming': incoming,
 }
 
 table.update(utility_commands.table)
