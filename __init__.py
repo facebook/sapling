@@ -17,6 +17,7 @@ import sys
 import traceback
 
 from mercurial import commands
+from mercurial import extensions
 from mercurial import hg
 from mercurial import util as hgutil
 
@@ -31,6 +32,45 @@ def reposetup(ui, repo):
         return
 
     repo.__class__ = tag_repo.generate_repo_class(ui, repo)
+
+def uisetup(ui):
+    """Do our UI setup.
+
+    Does the following wrappings:
+     * parent -> utility_commands.parent
+     * outgoing -> utility_commands.outgoing
+     """
+    entry = extensions.wrapcommand(commands.table, 'parents',
+                                   utility_commands.parent)
+    entry[1].append(('', 'svn', None, "show parent svn revision instead"))
+    entry = extensions.wrapcommand(commands.table, 'outgoing',
+                                   utility_commands.outgoing)
+    entry[1].append(('', 'svn', None, "show revisions outgoing to subversion"))
+    entry = extensions.wrapcommand(commands.table, 'diff',
+                                   svncommands.diff)
+    entry[1].append(('', 'svn', None,
+                     "show svn-style diffs, default against svn parent"))
+    entry = extensions.wrapcommand(commands.table, 'push',
+                                   svncommands.push)
+    entry[1].append(('', 'svn', None, "push to subversion"))
+    entry[1].append(('', 'svn-stupid', None, "use stupid replay during push to svn"))
+    entry = extensions.wrapcommand(commands.table, 'pull',
+                                   svncommands.pull)
+    entry[1].append(('', 'svn', None, "pull from subversion"))
+    entry[1].append(('', 'svn-stupid', None, "use stupid replay during pull from svn"))
+
+    entry = extensions.wrapcommand(commands.table, 'clone',
+                                   svncommands.clone)
+    entry[1].extend([#('', 'skipto-rev', '0', 'skip commits before this revision.'),
+                     ('', 'svn-stupid', False, 'be stupid and use diffy replay.'),
+                     ('', 'svn-tag-locations', 'tags', 'Relative path to Subversion tags.'),
+                     ('', 'svn-authors', '', 'username mapping filename'),
+                     ('', 'svn-filemap', '',
+                      'remap file to exclude paths or include only certain paths'),
+                     ])
+#         (svn_fetch,
+#          ,
+#          'hg svnclone source [dest]'),
 
 
 def svn(ui, repo, subcommand, *args, **opts):
@@ -70,33 +110,7 @@ def svn(ui, repo, subcommand, *args, **opts):
             raise
 
 
-def svn_fetch(ui, svn_url, hg_repo_path=None, **opts):
-    '''clone Subversion repository to a local Mercurial repository.
 
-    If no destination directory name is specified, it defaults to the
-    basename of the source plus "-hg".
-
-    You can specify multiple paths for the location of tags using comma
-    separated values.
-    '''
-    if not hg_repo_path:
-        hg_repo_path = hg.defaultdest(svn_url) + "-hg"
-        ui.status("Assuming destination %s\n" % hg_repo_path)
-    should_update = not os.path.exists(hg_repo_path)
-    svn_url = util.normalize_url(svn_url)
-    try:
-        res = svncommands.pull(ui, svn_url, hg_repo_path, **opts)
-    except core.SubversionException, e:
-        if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
-            raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
-                     'Please try running svn ls on that url first.')
-        raise
-    if (res is None or res == 0) and should_update:
-        repo = hg.repository(ui, hg_repo_path)
-        commands.update(ui, repo, repo['tip'].node())
-    return res
-
-commands.norepo += " svnclone"
 cmdtable = {
     "svn":
         (svn,
@@ -111,16 +125,4 @@ cmdtable = {
           ],
          svncommands._helpgen(),
          ),
-    "svnclone":
-        (svn_fetch,
-         [('S', 'skipto-rev', '0', 'skip commits before this revision.'),
-          ('', 'stupid', False, 'be stupid and use diffy replay.'),
-          ('T', 'tag-locations', 'tags', 'Relative path to Subversion tags.'),
-          ('A', 'authors', '', 'username mapping filename'),
-          ('', 'filemap', '',
-           'remap file to exclude paths or include only certain paths'),
-          ('', 'username', '', 'username for authentication'),
-          ('', 'password', '', 'password for authentication'),
-         ],
-         'hg svnclone source [dest]'),
 }

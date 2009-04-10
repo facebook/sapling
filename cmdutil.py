@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import re
+import os
 
 from mercurial import util as hgutil
 
@@ -22,15 +23,21 @@ class NoFilesException(Exception):
     """Exception raised when you try and commit without files.
     """
 
+def formatrev(rev):
+    if rev == -1:
+        return '\t(working copy)'
+    return '\t(revision %d)' % rev
 
-def filterdiff(diff, base_revision):
+
+def filterdiff(diff, oldrev, newrev):
     diff = newfile_devnull_re.sub(r'--- \1\t(revision 0)' '\n'
                                   r'+++ \1\t(working copy)',
                                   diff)
-    diff = a_re.sub(r'--- \1'+ ('\t(revision %d)' % base_revision), diff)
-    diff = b_re.sub(r'+++ \1' + '\t(working copy)', diff)
-    diff = devnull_re.sub(r'\1 /dev/null' '\t(working copy)', diff)
-
+    oldrev = formatrev(oldrev)
+    newrev = formatrev(newrev)
+    diff = a_re.sub(r'--- \1'+ oldrev, diff)
+    diff = b_re.sub(r'+++ \1' + newrev, diff)
+    diff = devnull_re.sub(r'\1 /dev/null\t(working copy)', diff)
     diff = header_re.sub(r'Index: \1' + '\n' + ('=' * 67), diff)
     return diff
 
@@ -270,3 +277,17 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
             raise hgutil.Abort('Base text was out of date, maybe rebase?')
         else:
             raise
+
+def filecheck(path):
+    for x in ('locks', 'hooks', 'format', 'db', ):
+        if not os.path.exists(os.path.join(path, x)):
+            return False
+    return True
+
+
+def issvnurl(url):
+    return url.startswith('svn+') or (
+        url.startswith('file://') and
+        reduce(lambda x,y: x and y,
+               map(lambda p: os.path.exists(os.path.join(url[7:], p)),
+                   ('locks', 'hooks', 'format', 'db', ))))

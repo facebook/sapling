@@ -102,20 +102,19 @@ Last Changed Date: %(date)s\n''' %
               })
 
 
-def parent(ui, repo, hg_repo_path, **opts):
+def parent(orig, ui, repo, *args, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
     """
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
+    if not opts.get('svn', False):
+        return orig(ui, repo, *args, **opts)
+    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     ha = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
-    if ha.node() != node.nullid:
-        r, br = svn_commit_hashes[ha.node()]
-        ui.status('Working copy parent revision is %s: r%s on %s\n' %
-                  (ha, r, br or 'trunk'))
-    else:
-        ui.status('Working copy seems to have no parent svn revision.\n')
+    if ha.node() == node.nullid:
+        raise mutil.Abort('No parent svn revision!')
+    displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
+    displayer.show(ha)
     return 0
 
 
@@ -167,16 +166,20 @@ def rebase(ui, repo, extrafn=None, sourcerev=None, **opts):
                          extrafn=extrafn)
 
 
-def outgoing(ui, repo, hg_repo_path, **opts):
+def outgoing(orig, ui, repo, dest=None, *args, **opts):
     """show changesets not found in the Subversion repository
     """
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
+    svnurl = ui.expandpath(dest or 'default-push', dest or 'default')
+    if not (cmdutil.issvnurl(svnurl) or opts.get('svn', False)):
+        return orig(ui, repo, dest, *args, **opts)
+
+    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, repo.parents()[0].node())
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes,
+                                  repo.parents()[0].node())
     if not (o_r and len(o_r)):
-        ui.status('No outgoing changes found.\n')
+        ui.status('no changes found\n')
         return 0
     displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
     for node in reversed(o_r):
@@ -214,8 +217,6 @@ table = {
     'url': url,
     'genignore': genignore,
     'info': info,
-    'parent': parent,
-    'outgoing': outgoing,
     'listauthors': listauthors,
     'version': version,
     'rebase': rebase,

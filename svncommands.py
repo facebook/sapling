@@ -1,6 +1,8 @@
 import os
 import cPickle as pickle
 
+from mercurial import cmdutil as hgcmdutil
+from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import patch
@@ -17,14 +19,63 @@ import util
 import utility_commands
 
 
-def pull(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
-         tag_locations='tags', authors=None, filemap=None, **opts):
+def clone(orig, ui, source, dest=None, **opts):
+    '''clone Subversion repository to a local Mercurial repository.
+
+    If no destination directory name is specified, it defaults to the
+    basename of the source plus "-hg".
+
+    You can specify multiple paths for the location of tags using comma
+    separated values.
+    '''
+    svnurl = ui.expandpath(source)
+    if not cmdutil.issvnurl(svnurl):
+        orig(ui, repo, source=source, dest=dest, *args, **opts)
+
+    if not dest:
+        dest = hg.defaultdest(source) + '-hg'
+        ui.status("Assuming destination %s\n" % dest)
+
+    if os.path.exists(dest):
+        raise hgutil.Abort("destination '%s' already exists" % dest)
+    url = util.normalize_url(svnurl)
+    res = -1
+    try:
+        try:
+            res = pull(None, ui, None, True, opts.pop('svn_stupid', False),
+                       source=url, create_new_dest=dest, **opts)
+        except core.SubversionException, e:
+            if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
+                raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
+                         'Please try running svn ls on that url first.')
+            raise
+    finally:
+        if os.path.exists(dest):
+            repo = hg.repository(ui, dest)
+            fp = repo.opener("hgrc", "w", text=True)
+            fp.write("[paths]\n")
+            # percent needs to be escaped for ConfigParser
+            fp.write("default = %(url)s\nsvn = %(url)s\n" % {'url': svnurl.replace('%', '%%')})
+            fp.close()
+            if res is None or res == 0:
+                commands.update(ui, repo, repo['tip'].node())
+
+    return res
+
+
+def pull(orig, ui, repo, svn=None, svn_stupid=False, source="default", create_new_dest=False,
+         *args, **opts):
     """pull new revisions from Subversion
     """
+    url = ui.expandpath(source)
+    if not (cmdutil.issvnurl(url) or svn or create_new_dest):
+        orig(ui, repo, source=source, *args, **opts)
+    svn_url = url
     svn_url = util.normalize_url(svn_url)
     old_encoding = util.swap_out_encoding()
-    skipto_rev=int(skipto_rev)
-    have_replay = not stupid
+    # TODO implement skipto support
+    skipto_rev = 0
+    have_replay = not svn_stupid
     if have_replay and not callable(
         delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
         ui.status('You are using old Subversion SWIG bindings. Replay will not'
@@ -38,14 +89,21 @@ def pull(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     passwd = opts.get('password', '')
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
     author_host = "@%s" % svn.uuid
-    tag_locations = tag_locations.split(',')
-    hg_editor = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                                 ui_=ui,
-                                                 subdir=svn.subdir,
-                                                 author_host=author_host,
-                                                 tag_locations=tag_locations,
-                                                 authors=authors,
-                                                 filemap=filemap)
+    # TODO these should be configurable again, but I'm torn on how.
+    # Maybe this should be configured in .hg/hgrc for each repo? Seems vaguely reasonable.
+    tag_locations = ['tags', ]
+    authors = None
+    filemap = None
+    if repo:
+        hg_editor = hg_delta_editor.HgChangeReceiver(repo=repo)
+    else:
+        hg_editor = hg_delta_editor.HgChangeReceiver(ui_=ui,
+                                                     path=create_new_dest,
+                                                     subdir=svn.subdir,
+                                                     author_host=author_host,
+                                                     tag_locations=tag_locations,
+                                                     authors=authors,
+                                                     filemap=filemap)
     if os.path.exists(hg_editor.uuid_file):
         uuid = open(hg_editor.uuid_file).read()
         assert uuid == svn.uuid
@@ -146,12 +204,15 @@ def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                                   str(r.__getattribute__(attr)).strip(), ))
 
 
-def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
+def push(orig, ui, repo, dest=None, **opts):
     """push revisions starting at a specified head back to Subversion.
     """
+    svnurl = ui.expandpath(dest or 'default-push', dest or 'default')
+    if not cmdutil.issvnurl(svnurl):
+        orig(ui, repo, dest=dest, *args, **opts)
     old_encoding = util.swap_out_encoding()
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
+    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
+    assert svnurl == hge.url
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     user = opts.get('username', hgutil.getuser())
@@ -187,14 +248,14 @@ def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
         # 2. Commit oldest revision that needs to be pushed
         base_revision = svn_commit_hashes[base_n][0]
         try:
-            cmdutil.commit_from_rev(ui, repo, old_ctx, hge, svn_url,
+            cmdutil.commit_from_rev(ui, repo, old_ctx, hge, svnurl,
                                     base_revision, user, passwd)
         except cmdutil.NoFilesException:
             ui.warn("Could not push revision %s because it had no changes in svn.\n" %
                      old_ctx)
             return 1
         # 3. Fetch revisions from svn
-        r = pull(ui, svn_url, hg_repo_path, stupid=stupid,
+        r = pull(None, ui, repo, True, stupid=opts.get('svn_stupid', False),
                  username=user, password=passwd)
         assert not r or r == 0
         # 4. Find the new head of the target branch
@@ -225,25 +286,32 @@ def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
                         if children:
                             child = children[0]
                         rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
-        hge = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
+        hge = hg_delta_editor.HgChangeReceiver(hge.path, ui_=ui)
         svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
     util.swap_out_encoding(old_encoding)
     return 0
 
 
-def diff(ui, repo, hg_repo_path, **opts):
+def diff(orig, ui, repo, *args, **opts):
     """show a diff of the most recent revision against its parent from svn
     """
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
+    if not opts.get('svn', False) or opts.get('change', None):
+        return orig(ui, repo, *args, **opts)
+    svn_commit_hashes = {}
+    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    parent = repo.parents()[0]
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, parent.node())
-    if o_r:
-        parent = repo[o_r[-1]].parents()[0]
-    base_rev, _junk = svn_commit_hashes[parent.node()]
-    it = patch.diff(repo, parent.node(), None,
+    if not opts.get('rev', None):
+        parent = repo.parents()[0]
+        o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes,
+                                      parent.node())
+        if o_r:
+            parent = repo[o_r[-1]].parents()[0]
+        opts['rev'] = ['%s:.' % node.hex(parent.node()), ]
+    node1, node2 = hgcmdutil.revpair(repo, opts['rev'])
+    baserev, _junk = svn_commit_hashes.get(node1, (-1, 'junk', ))
+    newrev, _junk = svn_commit_hashes.get(node2, (-1, 'junk', ))
+    it = patch.diff(repo, node1, node2,
                     opts=patch.diffopts(ui, opts={'git': True,
                                                   'show_function': False,
                                                   'ignore_all_space': False,
@@ -252,7 +320,7 @@ def diff(ui, repo, hg_repo_path, **opts):
                                                   'unified': True,
                                                   'text': False,
                                                   }))
-    ui.write(cmdutil.filterdiff(''.join(it), base_rev))
+    ui.write(cmdutil.filterdiff(''.join(it), baserev, newrev))
 
 
 def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
@@ -420,13 +488,9 @@ def update(ui, args, repo, clean=False, **opts):
 
 nourl = ['rebuildmeta'] + utility_commands.nourl
 table = {
-    'pull': pull,
-    'push': push,
-    'dcommit': push,
     'update': update,
     'help': help,
     'rebuildmeta': rebuildmeta,
-    'diff': diff,
     'incoming': incoming,
 }
 

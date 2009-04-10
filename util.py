@@ -15,8 +15,10 @@ def version(ui):
     return node.hex(ver)[:12]
 
 
-def normalize_url(svn_url):
-    return svn_url.rstrip('/')
+def normalize_url(svnurl):
+    if svnurl.startswith('svn+http'):
+        svnurl = svnurl[4:]
+    return svnurl.rstrip('/')
 
 
 def wipe_all_files(hg_wc_path):
