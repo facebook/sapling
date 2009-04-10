@@ -15,7 +15,9 @@ directory
 r1
 % delete an untracked file
 untracked_file
+untracked_file_readonly
 Removing file untracked_file
+Removing file untracked_file_readonly
 directory
 r1
 % delete an untracked file in a tracked directory

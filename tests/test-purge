@@ -34,6 +34,12 @@ ls
 
 echo % delete an untracked file
 touch untracked_file
+touch untracked_file_readonly
+python <<EOF
+import os, stat
+f= 'untracked_file_readonly'
+os.chmod(f, os.stat(f).st_mode & ~stat.S_IWRITE)
+EOF
 hg purge -p
 hg purge -v
 ls

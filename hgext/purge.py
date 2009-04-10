@@ -29,7 +29,7 @@
 
 from mercurial import util, commands, cmdutil
 from mercurial.i18n import _
-import os
+import os, stat
 
 def purge(ui, repo, *dirs, **opts):
     '''removes files not tracked by Mercurial
@@ -72,6 +72,13 @@ def purge(ui, repo, *dirs, **opts):
         else:
             ui.write('%s%s' % (name, eol))
 
+    def removefile(path):
+        # read-only files cannot be unlinked under Windows
+        s = os.stat(path)
+        if (s.st_dev & stat.S_IWRITE) == 0:
+            os.chmod(path, s.st_mode | stat.S_IWRITE)
+        os.remove(path)
+
     directories = []
     match = cmdutil.match(repo, dirs, opts)
     match.dir = directories.append
@@ -79,7 +86,7 @@ def purge(ui, repo, *dirs, **opts):
 
     for f in util.sort(status[4] + status[5]):
         ui.note(_('Removing file %s\n') % f)
-        remove(os.remove, f)
+        remove(removefile, f)
 
     for f in util.sort(directories)[::-1]:
         if match(f) and not os.listdir(repo.wjoin(f)):
