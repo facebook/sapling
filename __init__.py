@@ -13,6 +13,8 @@ details.
 '''
 
 import os
+import sys
+import traceback
 
 from mercurial import commands
 from mercurial import hg
@@ -20,7 +22,6 @@ from mercurial import util as hgutil
 
 from svn import core
 
-import svncommand
 import svncommands
 import tag_repo
 import util
