@@ -16,8 +16,6 @@ import cmdutil
 import util
 import utility_commands
 
-from util import generate_help, svn_subcommands, register_subcommand
-
 
 def pull(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
          tag_locations='tags', authors=None, filemap=None, **opts):
@@ -98,8 +96,6 @@ def pull(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                         raise hgutil.Abort(*e.args)
     util.swap_out_encoding(old_encoding)
 
-pull = util.register_subcommand('pull')(pull)
-
 
 def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
     """push revisions starting at a specified head back to Subversion.
@@ -166,10 +162,8 @@ def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
                 if ctx.node() == oldest:
                     return
                 extra['branch'] = ctx.branch()
-            utility_commands.rebase_commits(ui, repo,
-                                            extrafn=extrafn,
-                                            sourcerev=needs_transplant,
-                                            **opts)
+            utility_commands.rebase(ui, repo, extrafn=extrafn,
+                                    sourcerev=needs_transplant, **opts)
             repo = hg.repository(ui, hge.path)
             for child in repo[replacement.node()].children():
                 rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
@@ -186,9 +180,6 @@ def push(ui, repo, hg_repo_path, svn_url, stupid=False, **opts):
         svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
     util.swap_out_encoding(old_encoding)
     return 0
-push = util.register_subcommand('push')(push)
-# for git expats
-dcommit = util.register_subcommand('dcommit')(push)
 
 
 def diff(ui, repo, hg_repo_path, **opts):
@@ -213,7 +204,6 @@ def diff(ui, repo, hg_repo_path, **opts):
                                                   'text': False,
                                                   }))
     ui.write(cmdutil.filterdiff(''.join(it), base_rev))
-diff = util.register_subcommand('diff')(diff)
 
 
 def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
@@ -329,8 +319,6 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     tagsinfofile = open(os.path.join(svnmetadir, 'tag_info'), 'w')
     pickle.dump(tagsinfo, tagsinfofile)
     tagsinfofile.close()
-rebuildmeta = util.register_subcommand('rebuildmeta')(rebuildmeta)
-rebuildmeta = util.command_needs_no_url(rebuildmeta)
 
 
 def help(ui, args=None, **opts):
@@ -338,9 +326,9 @@ def help(ui, args=None, **opts):
     """
     if args:
         subcommand = args[0]
-        if subcommand not in svn_subcommands:
+        if subcommand not in table:
             candidates = []
-            for c in svn_subcommands:
+            for c in table:
                 if c.startswith(subcommand):
                     candidates.append(c)
             if len(candidates) == 1:
@@ -349,13 +337,12 @@ def help(ui, args=None, **opts):
                 ui.status('Ambiguous command. Could have been:\n%s\n' %
                           ' '.join(candidates))
                 return
-        doc = svn_subcommands[subcommand].__doc__
+        doc = table[subcommand].__doc__
         if doc is None:
             doc = "No documentation available for %s." % subcommand
         ui.status(doc.strip(), '\n')
         return
-    ui.status(generate_help())
-help = register_subcommand('help')(help)
+    ui.status(_helpgen())
 
 
 def update(ui, args, repo, clean=False, **opts):
@@ -380,4 +367,27 @@ def update(ui, args, repo, clean=False, **opts):
         ui.status('\n'.join(['%s on %s' % (node.hex(a[0]), a[1]) for a in
                              answers]+['']))
     return 1
-update = register_subcommand('up')(update)
+
+
+nourl = ['rebuildmeta'] + utility_commands.nourl
+table = {
+    'pull': pull,
+    'push': push,
+    'dcommit': push,
+    'update': update,
+    'help': help,
+    'rebuildmeta': rebuildmeta,
+    'diff': diff,
+}
+
+table.update(utility_commands.table)
+
+
+def _helpgen():
+    ret = ['hg svn ...', '',
+           'subcommands for Subversion integration', '',
+           'list of subcommands:', '']
+    for name, func in sorted(table.items()):
+        short_description = (func.__doc__ or '').splitlines()[0]
+        ret.append(" %-10s  %s" % (name, short_description))
+    return '\n'.join(ret) + '\n'

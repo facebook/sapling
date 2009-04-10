@@ -5,18 +5,6 @@ from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
 
-svn_subcommands = { }
-def register_subcommand(name):
-    def inner(fn):
-        svn_subcommands[name] = fn
-        return fn
-    return inner
-
-svn_commands_nourl = set()
-def command_needs_no_url(fn):
-    svn_commands_nourl.add(fn)
-    return fn
-
 
 def version(ui):
     """Guess the version of hgsubversion.
@@ -25,18 +13,6 @@ def version(ui):
     repo = hg.repository(ui, os.path.dirname(__file__))
     ver = repo.dirstate.parents()[0]
     return node.hex(ver)[:12]
-
-
-def generate_help():
-    ret = ['hg svn ...', '',
-           'subcommands for Subversion integration', '',
-           'list of subcommands:', '']
-
-    for name, func in sorted(svn_subcommands.items()):
-        short_description = (func.__doc__ or '').splitlines()[0]
-        ret.append(" %-10s  %s" % (name, short_description))
-
-    return "\n".join(ret) + '\n'
 
 
 def normalize_url(svn_url):

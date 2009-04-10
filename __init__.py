@@ -26,8 +26,6 @@ import svncommands
 import tag_repo
 import util
 
-from util import svn_subcommands, svn_commands_nourl
-
 def reposetup(ui, repo):
     if not util.is_svn_repo(repo):
         return
@@ -39,9 +37,9 @@ def svn(ui, repo, subcommand, *args, **opts):
     '''see detailed help for list of subcommands'''
 
     # guess command if prefix
-    if subcommand not in svn_subcommands:
+    if subcommand not in svncommands.table:
         candidates = []
-        for c in svn_subcommands:
+        for c in svncommands.table:
             if c.startswith(subcommand):
                 candidates.append(c)
         if len(candidates) == 1:
@@ -49,8 +47,8 @@ def svn(ui, repo, subcommand, *args, **opts):
 
     path = os.path.dirname(repo.path)
     try:
-        commandfunc = svn_subcommands[subcommand]
-        if commandfunc not in svn_commands_nourl:
+        commandfunc = svncommands.table[subcommand]
+        if commandfunc not in svncommands.nourl:
             opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
         return commandfunc(ui, args=args, hg_repo_path=path, repo=repo, **opts)
     except core.SubversionException, e:
@@ -111,7 +109,7 @@ cmdtable = {
           ('', 'username', '', 'username for authentication'),
           ('', 'password', '', 'password for authentication'),
           ],
-         svncommands.generate_help(),
+         svncommands._helpgen(),
          ),
     "svnclone":
         (svn_fetch,

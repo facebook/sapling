@@ -4,19 +4,18 @@ import mercurial
 from mercurial import cmdutil
 from mercurial import node
 from mercurial import util as hgutil
-from hgext import rebase
+from hgext import rebase as hgrebase
 
 import svnwrap
 import util
 import hg_delta_editor
 
-def print_wc_url(ui, repo, hg_repo_path, **opts):
+def url(ui, repo, hg_repo_path, **opts):
     """show the location (URL) of the Subversion repository
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                            ui_=ui)
     ui.status(hge.url, '\n')
-print_wc_url = util.register_subcommand('url')(print_wc_url)
 
 
 def find_wc_parent_rev(ui, repo, hge, svn_commit_hashes):
@@ -29,7 +28,7 @@ def find_wc_parent_rev(ui, repo, hge, svn_commit_hashes):
     return workingctx
 
 
-def generate_ignore(ui, repo, hg_repo_path, force=False, **opts):
+def genignore(ui, repo, hg_repo_path, force=False, **opts):
     """generate .hgignore from svn:ignore properties.
     """
     ignpath = os.path.join(hg_repo_path, '.hgignore')
@@ -63,10 +62,9 @@ def generate_ignore(ui, repo, hg_repo_path, force=False, **opts):
                     ignorefile.write('%s/%s\n' % (dir, prop))
                 else:
                     ignorefile.write('%s\n' % prop)
-generate_ignore = util.register_subcommand('genignore')(generate_ignore)
 
 
-def run_svn_info(ui, repo, hg_repo_path, **opts):
+def info(ui, repo, hg_repo_path, **opts):
     """show Subversion details similar to `svn info'
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
@@ -111,10 +109,9 @@ Last Changed Date: %(date)s\n''' %
                'date': hgutil.datestr(parent.date(),
                                       '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
               })
-run_svn_info = util.register_subcommand('info')(run_svn_info)
 
 
-def print_parent_revision(ui, repo, hg_repo_path, **opts):
+def parent(ui, repo, hg_repo_path, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
@@ -129,10 +126,9 @@ def print_parent_revision(ui, repo, hg_repo_path, **opts):
     else:
         ui.status('Working copy seems to have no parent svn revision.\n')
     return 0
-print_parent_revision = util.register_subcommand('parent')(print_parent_revision)
 
 
-def rebase_commits(ui, repo, extrafn=None, sourcerev=None, **opts):
+def rebase(ui, repo, extrafn=None, sourcerev=None, **opts):
     """rebase current unpushed revisions onto the Subversion head
 
     This moves a line of development from making its own head to the top of
@@ -175,13 +171,12 @@ def rebase_commits(ui, repo, extrafn=None, sourcerev=None, **opts):
         ui.status('Already up to date!\n')
         return 0
     # TODO this is really hacky, there must be a more direct way
-    return rebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
+    return hgrebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
                          base=node.hex(sourcerev),
                          extrafn=extrafn)
-rebase_commits = util.register_subcommand('rebase')(rebase_commits)
 
 
-def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
+def outgoing(ui, repo, hg_repo_path, **opts):
     """show changesets not found in the Subversion repository
     """
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
@@ -195,10 +190,9 @@ def show_outgoing_to_svn(ui, repo, hg_repo_path, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
     for node in reversed(o_r):
         displayer.show(repo[node])
-show_outgoing_to_svn = util.register_subcommand('outgoing')(show_outgoing_to_svn)
 
 
-def list_authors(ui, args, authors=None, **opts):
+def listauthors(ui, args, authors=None, **opts):
     """list all authors in a Subversion repository
     """
     if not len(args):
@@ -214,8 +208,6 @@ def list_authors(ui, args, authors=None, **opts):
         authorfile.close()
     else:
         ui.status('%s\n' % '\n'.join(sorted(author_set)))
-list_authors = util.register_subcommand('listauthors')(list_authors)
-list_authors = util.command_needs_no_url(list_authors)
 
 
 def version(ui, **opts):
@@ -224,5 +216,16 @@ def version(ui, **opts):
     ui.status('hg: %s\n' % hgutil.version())
     ui.status('svn bindings: %s\n' % svnwrap.version())
     ui.status('hgsubversion: %s\n' % util.version(ui))
-version = util.register_subcommand('version')(version)
-version = util.command_needs_no_url(version)
+
+
+nourl = ['version', 'listauthors']
+table = {
+    'url': url,
+    'genignore': genignore,
+    'info': info,
+    'parent': parent,
+    'outgoing': outgoing,
+    'listauthors': listauthors,
+    'version': version,
+    'rebase': rebase,
+}

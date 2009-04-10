@@ -26,7 +26,7 @@ class UtilityTests(test_util.TestBase):
         self._load_fixture_and_fetch('two_heads.svndump')
         hg.update(self.repo, 'the_branch')
         u = ui.ui()
-        utility_commands.run_svn_info(u, self.repo, self.wc_path)
+        utility_commands.info(u, self.repo, self.wc_path)
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
                      'repourl': test_util.fileurl(self.repo_path),
@@ -36,7 +36,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(u.stream.getvalue(), expected)
         hg.update(self.repo, 'default')
         u = ui.ui()
-        utility_commands.run_svn_info(u, self.repo, self.wc_path)
+        utility_commands.info(u, self.repo, self.wc_path)
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
                      'repourl': test_util.fileurl(self.repo_path),
@@ -65,14 +65,14 @@ class UtilityTests(test_util.TestBase):
                              {'branch': 'localbranch', })
         new = self.repo.commitctx(ctx)
         hg.update(self.repo, new)
-        utility_commands.print_parent_revision(u, self.repo, self.wc_path)
+        utility_commands.parent(u, self.repo, self.wc_path)
         self.assert_(node.hex(self.repo['the_branch'].node())[:8] in
                      u.stream.getvalue())
         self.assert_('the_branch' in u.stream.getvalue())
         self.assert_('r5' in u.stream.getvalue())
         hg.update(self.repo, 'default')
         u = ui.ui()
-        utility_commands.print_parent_revision(u, self.repo, self.wc_path)
+        utility_commands.parent(u, self.repo, self.wc_path)
         self.assert_(node.hex(self.repo['default'].node())[:8] in
                      u.stream.getvalue())
         self.assert_('trunk' in u.stream.getvalue())
@@ -98,20 +98,20 @@ class UtilityTests(test_util.TestBase):
                              {'branch': 'localbranch', })
         new = self.repo.commitctx(ctx)
         hg.update(self.repo, new)
-        utility_commands.show_outgoing_to_svn(u, self.repo, self.wc_path)
+        utility_commands.outgoing(u, self.repo, self.wc_path)
         self.assert_(node.hex(self.repo['localbranch'].node())[:8] in
                      u.stream.getvalue())
         self.assert_('testy' in u.stream.getvalue())
         hg.update(self.repo, 'default')
         u = ui.ui()
-        utility_commands.show_outgoing_to_svn(u, self.repo, self.wc_path)
+        utility_commands.outgoing(u, self.repo, self.wc_path)
         self.assertEqual(u.stream.getvalue(), 'No outgoing changes found.\n')
 
     def test_url_output(self):
         self._load_fixture_and_fetch('two_revs.svndump')
         hg.update(self.repo, 'tip')
         u = ui.ui()
-        utility_commands.print_wc_url(u, self.repo, self.wc_path)
+        utility_commands.url(u, self.repo, self.wc_path)
         expected = test_util.fileurl(self.repo_path) + '\n'
         self.assertEqual(u.stream.getvalue(), expected)
 
@@ -136,7 +136,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         beforerebasehash = self.repo['tip'].node()
         hg.update(self.repo, 'tip')
-        utility_commands.rebase_commits(ui.ui(), self.repo)
+        utility_commands.rebase(ui.ui(), self.repo)
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0], self.repo[0])
         self.assertNotEqual(beforerebasehash, self.repo['tip'].node())
@@ -150,7 +150,7 @@ class UtilityTests(test_util.TestBase):
                          hg_repo_path=self.wc_path, stupid=False)
         hg.update(self.repo, 'tip')
         u = ui.ui()
-        utility_commands.print_wc_url(u, self.repo, self.wc_path)
+        utility_commands.url(u, self.repo, self.wc_path)
         expected = test_util.fileurl(self.repo_path) + '\n'
         self.assertEqual(u.stream.getvalue(), expected)
 
@@ -163,7 +163,7 @@ class UtilityTests(test_util.TestBase):
                          hg_repo_path=self.wc_path, stupid=False)
         hg.update(self.repo, 'tip')
         u = ui.ui()
-        utility_commands.generate_ignore(u, self.repo, self.wc_path)
+        utility_commands.genignore(u, self.repo, self.wc_path)
         self.assertEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                          '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
@@ -171,9 +171,9 @@ class UtilityTests(test_util.TestBase):
         test_util.load_svndump_fixture(self.repo_path,
                                        'replace_trunk_with_branch.svndump')
         u = ui.ui()
-        utility_commands.list_authors(u,
-                                      args=[test_util.fileurl(self.repo_path)],
-                                      authors=None)
+        utility_commands.listauthors(u,
+                                     args=[test_util.fileurl(self.repo_path)],
+                                     authors=None)
         self.assertEqual(u.stream.getvalue(), 'Augie\nevil\n')
 
 
@@ -181,9 +181,9 @@ class UtilityTests(test_util.TestBase):
         test_util.load_svndump_fixture(self.repo_path,
                                        'replace_trunk_with_branch.svndump')
         author_path = os.path.join(self.repo_path, 'authors')
-        utility_commands.list_authors(ui.ui(),
-                                      args=[test_util.fileurl(self.repo_path)],
-                                      authors=author_path)
+        utility_commands.listauthors(ui.ui(),
+                                     args=[test_util.fileurl(self.repo_path)],
+                                     authors=author_path)
         self.assertEqual(open(author_path).read(), 'Augie=\nevil=\n')
         
 
