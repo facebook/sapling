@@ -3,7 +3,7 @@ import shutil
 
 from mercurial import hg
 from mercurial import node
-from mercurial import util
+from mercurial import util as hgutil
 
 svn_subcommands = { }
 def register_subcommand(name):
@@ -96,7 +96,7 @@ def outgoing_revisions(ui, repo, hg_editor, reverse_map, sourcerev):
         outgoing_rev_hashes.append(sourcerev.node())
         sourcerev = sourcerev.parents()
         if len(sourcerev) != 1:
-            raise util.Abort("Sorry, can't find svn parent of a merge revision.")
+            raise hgutil.Abort("Sorry, can't find svn parent of a merge revision.")
         sourcerev = sourcerev[0]
     if sourcerev.node() != node.nullid:
         return outgoing_rev_hashes
@@ -144,6 +144,6 @@ def swap_out_encoding(new_encoding="UTF-8"):
         old = encoding.encoding
         encoding.encoding = new_encoding
     except ImportError:
-        old = util._encoding
-        util._encoding = new_encoding
+        old = hgutil._encoding
+        hgutil._encoding = new_encoding
     return old

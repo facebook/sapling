@@ -8,14 +8,14 @@ import traceback
 from mercurial import context
 from mercurial import hg
 from mercurial import ui
-from mercurial import util
+from mercurial import util as hgutil
 from mercurial import revlog
 from mercurial import node
 from svn import delta
 from svn import core
 
 import svnexternals
-import util as our_util
+import util
 
 def pickle_atomic(data, file_path, dir=None):
     """pickle some data to a path atomically.
@@ -31,7 +31,7 @@ def pickle_atomic(data, file_path, dir=None):
     except: #pragma: no cover
         raise
     else:
-        util.rename(path, file_path)
+        hgutil.rename(path, file_path)
 
 def stash_exception_on_self(fn):
     """Stash any exception raised in the method on self.
@@ -100,7 +100,7 @@ class HgChangeReceiver(delta.Editor):
             self.subdir = self.subdir[1:]
         self.revmap = {}
         if os.path.exists(self.revmap_file):
-            self.revmap = our_util.parse_revmap(self.revmap_file)
+            self.revmap = util.parse_revmap(self.revmap_file)
         self.branches = {}
         if os.path.exists(self.branch_info_file):
             f = open(self.branch_info_file)
@@ -160,7 +160,7 @@ class HgChangeReceiver(delta.Editor):
             self.repo = hg.repository(self.ui, repo_path, create=True)
             os.makedirs(os.path.dirname(self.uuid_file))
             f = open(self.revmap_file, 'w')
-            f.write('%s\n' % our_util.REVMAP_FILE_VERSION)
+            f.write('%s\n' % util.REVMAP_FILE_VERSION)
             f.flush()
             f.close()
 
@@ -634,9 +634,9 @@ class HgChangeReceiver(delta.Editor):
             if parents[0] in closed_revs and branch in self.branches_to_delete:
                 continue
             # TODO this needs to be fixed with the new revmap
-            extra = our_util.build_extra(rev.revnum, branch,
-                                         open(self.uuid_file).read(),
-                                         self.subdir)
+            extra = util.build_extra(rev.revnum, branch,
+                                     open(self.uuid_file).read(),
+                                     self.subdir)
             if branch is not None:
                 if (branch not in self.branches
                     and branch not in self.repo.branchtags()):
@@ -676,7 +676,7 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-            our_util.describe_commit(self.ui, new_hash, branch)
+            util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         # now we handle branches that need to be committed without any files
@@ -689,9 +689,9 @@ class HgChangeReceiver(delta.Editor):
                 raise IOError
            # True here meant nuke all files, shouldn't happen with branch closing
             if self.commit_branches_empty[branch]: #pragma: no cover
-               raise util.Abort('Empty commit to an open branch attempted. '
-                                'Please report this issue.')
-            extra = our_util.build_extra(rev.revnum, branch,
+               raise hgutil.Abort('Empty commit to an open branch attempted. '
+                                  'Please report this issue.')
+            extra = util.build_extra(rev.revnum, branch,
                                      open(self.uuid_file).read(),
                                      self.subdir)
             current_ctx = context.memctx(self.repo,
@@ -703,7 +703,7 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-            our_util.describe_commit(self.ui, new_hash, branch)
+            util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         self._save_metadata()
@@ -856,7 +856,7 @@ class HgChangeReceiver(delta.Editor):
                 self.externals[path] = None
                 map(self.delete_file, [pat for pat in self.current_files.iterkeys()
                                        if pat.startswith(path+'/')])
-                for f in ctx.walk(our_util.PrefixMatch(br_path2)):
+                for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current_files:
                         self.delete_file(f_p)
@@ -1055,8 +1055,8 @@ class HgChangeReceiver(delta.Editor):
 
         handler, baton = delta.svn_txdelta_apply(source, target, None)
         if not callable(handler): #pragma: no cover
-            raise util.Abort('Error in Subversion bindings: '
-                             'cannot call handler!')
+            raise hgutil.Abort('Error in Subversion bindings: '
+                               'cannot call handler!')
         def txdelt_window(window):
             try:
                 if not self._is_path_valid(self.current_file):
@@ -1069,7 +1069,7 @@ class HgChangeReceiver(delta.Editor):
                 if e.apr_err == core.SVN_ERR_INCOMPLETE_DATA:
                     self.missing_plaintexts.add(self.current_file)
                 else: #pragma: no cover
-                    raise util.Abort(*e.args)
+                    raise hgutil.Abort(*e.args)
             except: #pragma: no cover
                 print len(base), self.current_file
                 self._exception_info = sys.exc_info()

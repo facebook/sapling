@@ -1,6 +1,6 @@
 import cStringIO
 
-from mercurial import util as merc_util
+from mercurial import util as hgutil
 
 class externalsfile(dict):
     """Map svn directories to lists of externals entries.
@@ -24,7 +24,7 @@ class externalsfile(dict):
 
     def write(self):
         fp = cStringIO.StringIO()
-        for target in merc_util.sort(self):
+        for target in hgutil.sort(self):
             lines = self[target]
             if not lines:
                 continue
@@ -47,7 +47,7 @@ class externalsfile(dict):
             if line.startswith('['):
                 line = line.strip()
                 if line[-1] != ']':
-                    raise merc_util.Abort('invalid externals section name: %s' % line)
+                    raise hgutil.Abort('invalid externals section name: %s' % line)
                 target = line[1:-1]
                 if target == '.':
                     target = ''

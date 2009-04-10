@@ -3,7 +3,7 @@ import os
 import mercurial
 from mercurial import cmdutil
 from mercurial import node
-from mercurial import util as mutil
+from mercurial import util as hgutil
 from hgext import rebase
 
 import svnwrap
@@ -34,7 +34,7 @@ def generate_ignore(ui, repo, hg_repo_path, force=False, **opts):
     """
     ignpath = os.path.join(hg_repo_path, '.hgignore')
     if not force and os.path.exists(ignpath):
-        raise mutil.Abort('not overwriting existing .hgignore, try --force?')
+        raise hgutil.Abort('not overwriting existing .hgignore, try --force?')
     ignorefile = open(ignpath, 'w')
     ignorefile.write('.hgignore\nsyntax:glob\n')
     hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
@@ -50,7 +50,7 @@ def generate_ignore(ui, repo, hg_repo_path, force=False, **opts):
     url = hge.url
     if url[-1] == '/':
         url = url[:-1]
-    user = opts.get('username', mutil.getuser())
+    user = opts.get('username', hgutil.getuser())
     passwd = opts.get('passwd', '')
     svn = svnwrap.SubversionRepo(url, user, passwd)
     dirs = [''] + [d[0] for d in svn.list_files(branchpath, r) if d[1] == 'd']
@@ -108,8 +108,8 @@ Last Changed Date: %(date)s\n''' %
                'author': author,
                'revision': r,
                # TODO I'd like to format this to the user's local TZ if possible
-               'date': mutil.datestr(parent.date(),
-                                     '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
+               'date': hgutil.datestr(parent.date(),
+                                      '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
               })
 run_svn_info = util.register_subcommand('info')(run_svn_info)
 
@@ -221,7 +221,7 @@ list_authors = util.command_needs_no_url(list_authors)
 def version(ui, **opts):
     """Show current version of hg and hgsubversion.
     """
-    ui.status('hg: %s\n' % mutil.version())
+    ui.status('hg: %s\n' % hgutil.version())
     ui.status('svn bindings: %s\n' % svnwrap.version())
     ui.status('hgsubversion: %s\n' % util.version(ui))
 version = util.register_subcommand('version')(version)
