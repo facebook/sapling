@@ -12,9 +12,12 @@ It has the following prerequisites, at least as I build it:
   Python for Windows Extensions
       http://sourceforge.net/projects/pywin32/
 
-  mfc71.dll (just download, don't install)
+  mfc71.dll (just download, don't install; not needed for Python 2.6)
       http://starship.python.net/crew/mhammond/win32/
 
+  Visual C++ 2008 redistributable package (needed for Python 2.6)
+      http://www.microsoft.com/downloads/details.aspx?familyid=9b2da534-3e03-4391-8a4d-074b9f2bc1bf&displaylang=en
+      
   The py2exe distutils extension
       http://sourceforge.net/projects/py2exe/
 
@@ -52,7 +55,25 @@ compiler=mingw32
 
 you can skip the first build step.
 
-Copy mfc71.dll and add_path.exe into the dist directory that just got created.
+Copy add_path.exe into the dist directory that just got created.
+
+If you are using Python up to version 2.5.4, copy mfc71.dll into the dist
+directory that just got created.
+
+If you are using Python 2.6 or later, after installing the Visual C++ 2008
+redistributable package copy into the dist directory that just got created the
+following files:
+  - from the directory starting with
+    Windows/WinSxS/x86_Microsoft.VC90.CRT_1fc8b3b9a1e18e3b_9.0.21022.8
+    the files named: msvcm90.dll, msvcp90.dll and msvcr90.dll
+  - from the directory starting with
+    Windows/WinSxS/x86_Microsoft.VC90.MFC_1fc8b3b9a1e18e3b_9.0.21022.8
+    the files named: mfc90.dll, mfc90u.dll, mfcm90.dll and mfcm90u.dll
+  - from the directory named Windows/WinSxS/Manifests, the manifest file
+    starting with x86_Microsoft.VC90.CRT_1fc8b3b9a1e18e3b_9.0.21022.8
+    (rename it to Microsoft.VC90.CRT.manifest) and the manifest file starting
+    with x86_Microsoft.VC90.MFC_1fc8b3b9a1e18e3b_9.0.21022.8 (rename it to
+    Microsoft.VC90.MFC.manifest)
 
 Before building the installer, you have to build Mercurial HTML documentation 
 (or fix mercurial.iss to not reference the doc directory). Assuming you have an

@@ -38,8 +38,10 @@ Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.tx
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
 Source: dist\python*.dll; Destdir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\library.zip; DestDir: {app}
-Source: dist\mfc71.dll; DestDir: {app}
-Source: dist\msvcr71.dll; DestDir: {app}
+Source: dist\mfc*.dll; DestDir: {app}
+Source: dist\msvc*.dll; DestDir: {app}
+Source: dist\Microsoft.VC*.CRT.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
+Source: dist\Microsoft.VC*.MFC.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
