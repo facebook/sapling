@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import re
 import os
+import urllib
 
 from mercurial import util as hgutil
 
@@ -278,16 +279,19 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
         else:
             raise
 
-def filecheck(path):
-    for x in ('locks', 'hooks', 'format', 'db', ):
-        if not os.path.exists(os.path.join(path, x)):
-            return False
     return True
 
+def islocalrepo(url):
+    if not url.startswith('file:///'):
+        return False
+    path = urllib.unquote(url[len('file://'):])
+    while '/' in path:
+        if reduce(lambda x,y: x and y,
+                  map(lambda p: os.path.exists(os.path.join(path, p)),
+                      ('hooks', 'format', 'db', ))):
+            return True
+        path = path.rsplit('/', 1)[0]
+    return False
 
 def issvnurl(url):
-    return url.startswith('svn+') or (
-        url.startswith('file://') and
-        reduce(lambda x,y: x and y,
-               map(lambda p: os.path.exists(os.path.join(url[7:], p)),
-                   ('locks', 'hooks', 'format', 'db', ))))
+    return url.startswith('svn') or islocalrepo(url)

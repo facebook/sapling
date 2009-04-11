@@ -1,7 +1,5 @@
 import os
 
-import mercurial
-from mercurial import cmdutil as hgcmdutil
 from mercurial import node
 from mercurial import util as hgutil
 from hgext import rebase as hgrebase
@@ -102,22 +100,6 @@ Last Changed Date: %(date)s\n''' %
               })
 
 
-def parent(orig, ui, repo, *args, **opts):
-    """show Mercurial & Subversion parents of the working dir or revision
-    """
-    if not opts.get('svn', False):
-        return orig(ui, repo, *args, **opts)
-    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    ha = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
-    if ha.node() == node.nullid:
-        raise mutil.Abort('No parent svn revision!')
-    displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
-    displayer.show(ha)
-    return 0
-
-
 def rebase(ui, repo, extrafn=None, sourcerev=None, **opts):
     """rebase current unpushed revisions onto the Subversion head
 
@@ -164,26 +146,6 @@ def rebase(ui, repo, extrafn=None, sourcerev=None, **opts):
     return hgrebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
                          base=node.hex(sourcerev),
                          extrafn=extrafn)
-
-
-def outgoing(orig, ui, repo, dest=None, *args, **opts):
-    """show changesets not found in the Subversion repository
-    """
-    svnurl = ui.expandpath(dest or 'default-push', dest or 'default')
-    if not (cmdutil.issvnurl(svnurl) or opts.get('svn', False)):
-        return orig(ui, repo, dest, *args, **opts)
-
-    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes,
-                                  repo.parents()[0].node())
-    if not (o_r and len(o_r)):
-        ui.status('no changes found\n')
-        return 0
-    displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
-    for node in reversed(o_r):
-        displayer.show(repo[node])
 
 
 def listauthors(ui, args, authors=None, **opts):

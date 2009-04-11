@@ -9,7 +9,7 @@ from mercurial import node
 from mercurial import ui
 from mercurial import revlog
 
-import svncommands
+import wrappers
 import test_util
 import time
 
@@ -37,8 +37,8 @@ class PushOverSvnserveTests(test_util.TestBase):
         args = ['svnserve', '-d', '--foreground', '-r', self.repo_path]
         self.svnserve_pid = subprocess.Popen(args).pid
         time.sleep(2)
-        svncommands.pull(ui.ui(), svn_url='svn://localhost/',
-                         hg_repo_path=self.wc_path)
+        wrappers.clone(None, ui.ui(), source='svn://localhost/',
+                       dest=self.wc_path, noupdate=True)
 
     def tearDown(self):
         os.system('kill -9 %d' % self.svnserve_pid)
@@ -68,9 +68,10 @@ class PushOverSvnserveTests(test_util.TestBase):
         if not commit:
             return # some tests use this test as an extended setup.
         hg.update(repo, repo['tip'].node())
-        svncommands.push(ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
-                         svn_url='svn://localhost/')
+        oldauthor = repo['tip'].user()
+        wrappers.push(None, ui.ui(), repo=self.repo)
         tip = self.repo['tip']
+        self.assertNotEqual(oldauthor, tip.user())
         self.assertNotEqual(tip.node(), old_tip)
         self.assertEqual(tip.parents()[0].node(), expected_parent)
         self.assertEqual(tip['adding_file'].data(), 'foo')
@@ -170,9 +171,7 @@ class PushTests(test_util.TestBase):
         newhash = self.repo.commitctx(ctx)
         repo = self.repo
         hg.update(repo, newhash)
-        svncommands.push(ui.ui(), repo=repo,
-                         svn_url=test_util.fileurl(self.repo_path),
-                         hg_repo_path=self.wc_path)
+        wrappers.push(None, ui.ui(), repo=repo)
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0].node(), oldtiphash)
         self.assertEqual(self.repo['tip'].files(), ['delta', ])
         self.assertEqual(self.repo['tip'].manifest().keys(),
@@ -285,11 +284,11 @@ class PushTests(test_util.TestBase):
                              '2008-10-29 21:26:00 -0500',
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
-        hg.update(repo, repo['tip'].node())
+        hg.clean(repo, repo['tip'].node())
         self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
-        self.assert_('@' in tip.user())
+        self.assert_('@' in self.repo['tip'].user())
         self.assertEqual(tip['gamma'].flags(), 'x')
         self.assertEqual(tip['gamma'].data(), 'foo')
         self.assertEqual([x for x in tip.manifest().keys() if 'x' not in

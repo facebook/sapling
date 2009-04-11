@@ -710,9 +710,9 @@ class HgChangeReceiver(delta.Editor):
         self.clear_current_info()
 
     def authorforsvnauthor(self, author):
-        if(author in self.authors):
+        if author in self.authors:
             return self.authors[author]
-        return '%s%s' %(author, self.author_host)
+        return '%s%s' % (author, self.author_host)
 
     def svnauthorforauthor(self, author):
         for svnauthor, hgauthor in self.authors.iteritems():

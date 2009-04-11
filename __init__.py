@@ -18,7 +18,6 @@ import traceback
 
 from mercurial import commands
 from mercurial import extensions
-from mercurial import hg
 from mercurial import util as hgutil
 
 from svn import core
@@ -26,6 +25,7 @@ from svn import core
 import svncommands
 import tag_repo
 import util
+import wrappers
 
 def reposetup(ui, repo):
     if not util.is_svn_repo(repo):
@@ -41,26 +41,26 @@ def uisetup(ui):
      * outgoing -> utility_commands.outgoing
      """
     entry = extensions.wrapcommand(commands.table, 'parents',
-                                   utility_commands.parent)
+                                   wrappers.parent)
     entry[1].append(('', 'svn', None, "show parent svn revision instead"))
     entry = extensions.wrapcommand(commands.table, 'outgoing',
-                                   utility_commands.outgoing)
+                                   wrappers.outgoing)
     entry[1].append(('', 'svn', None, "show revisions outgoing to subversion"))
     entry = extensions.wrapcommand(commands.table, 'diff',
-                                   svncommands.diff)
+                                   wrappers.diff)
     entry[1].append(('', 'svn', None,
                      "show svn-style diffs, default against svn parent"))
     entry = extensions.wrapcommand(commands.table, 'push',
-                                   svncommands.push)
+                                   wrappers.push)
     entry[1].append(('', 'svn', None, "push to subversion"))
     entry[1].append(('', 'svn-stupid', None, "use stupid replay during push to svn"))
     entry = extensions.wrapcommand(commands.table, 'pull',
-                                   svncommands.pull)
+                                   wrappers.pull)
     entry[1].append(('', 'svn', None, "pull from subversion"))
     entry[1].append(('', 'svn-stupid', None, "use stupid replay during pull from svn"))
 
     entry = extensions.wrapcommand(commands.table, 'clone',
-                                   svncommands.clone)
+                                   wrappers.clone)
     entry[1].extend([#('', 'skipto-rev', '0', 'skip commits before this revision.'),
                      ('', 'svn-stupid', False, 'be stupid and use diffy replay.'),
                      ('', 'svn-tag-locations', 'tags', 'Relative path to Subversion tags.'),
@@ -68,9 +68,6 @@ def uisetup(ui):
                      ('', 'svn-filemap', '',
                       'remap file to exclude paths or include only certain paths'),
                      ])
-#         (svn_fetch,
-#          ,
-#          'hg svnclone source [dest]'),
 
 
 def svn(ui, repo, subcommand, *args, **opts):

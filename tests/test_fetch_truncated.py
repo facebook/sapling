@@ -3,7 +3,7 @@ import unittest
 from mercurial import hg
 from mercurial import ui
 
-import svncommands
+import wrappers
 import test_util
 
 class TestFetchTruncatedHistory(test_util.TestBase):
@@ -11,8 +11,9 @@ class TestFetchTruncatedHistory(test_util.TestBase):
         # Test repository does not follow the usual layout
         test_util.load_svndump_fixture(self.repo_path, 'truncatedhistory.svndump')
         svn_url = test_util.fileurl(self.repo_path + '/project2')
-        svncommands.pull(ui.ui(), svn_url=svn_url,
-                         hg_repo_path=self.wc_path, stupid=stupid)
+        wrappers.clone(None, ui.ui(), source=svn_url,
+                       dest=self.wc_path, stupid=stupid,
+                       noupdate=True)
         repo = hg.repository(ui.ui(), self.wc_path)
 
         # We are converting /project2/trunk coming from:
