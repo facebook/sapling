@@ -16,7 +16,13 @@ class monotone_source(converter_source, commandline):
 
         norepo = NoRepo (_("%s does not look like a monotone repo") % path)
         if not os.path.exists(os.path.join(path, '_MTN')):
-            raise norepo
+            # Could be a monotone repository (SQLite db file)
+            try:
+                header = file(path, 'rb').read(16)
+            except:
+                header = ''
+            if header != 'SQLite format 3\x00':
+                raise norepo
 
         # regular expressions for parsing monotone output
         space    = r'\s*'
