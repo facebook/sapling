@@ -13,13 +13,13 @@ U src/b/c
 checking in src/b/c,v
 % convert fresh repo
 initializing destination src-hg repository
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 5 log entries
 creating changesets
 3 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 2 Initial revision
@@ -31,13 +31,13 @@ c
 c
 % convert fresh repo with --filemap
 initializing destination src-filemap repository
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 5 log entries
 creating changesets
 3 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 2 Initial revision
@@ -54,13 +54,13 @@ c
 checking in src/a,v
 checking in src/b/c,v
 % convert again
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 7 log entries
 creating changesets
 4 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 0 ci1
@@ -70,13 +70,13 @@ c
 c
 c
 % convert again with --filemap
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 7 log entries
 creating changesets
 4 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 0 ci1
@@ -93,13 +93,13 @@ T a
 T b/c
 checking in src/b/c,v
 % convert again
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 8 log entries
 creating changesets
 5 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 0 ci2
@@ -107,13 +107,13 @@ a
 c
 d
 % convert again with --filemap
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 8 log entries
 creating changesets
 5 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 0 ci2
@@ -127,13 +127,13 @@ d
 % commit a new revision with funny log message
 checking in src/a,v
 % convert again
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 9 log entries
 creating changesets
 6 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 0 funny

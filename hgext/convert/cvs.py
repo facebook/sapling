@@ -24,7 +24,7 @@ class convert_cvs(converter_source):
         if not self.builtin:
             checktool(cvspsexe)
 
-        self.changeset = {}
+        self.changeset = None
         self.files = {}
         self.tags = {}
         self.lastbranch = {}
@@ -34,12 +34,12 @@ class convert_cvs(converter_source):
         self.cvsrepo = file(os.path.join(cvs, "Repository")).read()[:-1]
         self.encoding = locale.getpreferredencoding()
 
-        self._parse(ui)
         self._connect()
 
-    def _parse(self, ui):
-        if self.changeset:
+    def _parse(self):
+        if self.changeset is not None:
             return
+        self.changeset = {}
 
         maxrev = 0
         cmd = self.cmd
@@ -65,13 +65,13 @@ class convert_cvs(converter_source):
 
             if self.builtin:
                 # builtin cvsps code
-                ui.status(_('using builtin cvsps\n'))
+                self.ui.status(_('using builtin cvsps\n'))
 
-                db = cvsps.createlog(ui, cache='update')
-                db = cvsps.createchangeset(ui, db,
-                      fuzz=int(ui.config('convert', 'cvsps.fuzz', 60)),
-                      mergeto=ui.config('convert', 'cvsps.mergeto', None),
-                      mergefrom=ui.config('convert', 'cvsps.mergefrom', None))
+                db = cvsps.createlog(self.ui, cache='update')
+                db = cvsps.createchangeset(self.ui, db,
+                      fuzz=int(self.ui.config('convert', 'cvsps.fuzz', 60)),
+                      mergeto=self.ui.config('convert', 'cvsps.mergeto', None),
+                      mergefrom=self.ui.config('convert', 'cvsps.mergefrom', None))
 
                 for cs in db:
                     if maxrev and cs.id>maxrev:
@@ -278,6 +278,7 @@ class convert_cvs(converter_source):
             r = self.readp.readline()
 
     def getheads(self):
+        self._parse()
         return self.heads
 
     def _getfile(self, name, rev):
@@ -332,6 +333,7 @@ class convert_cvs(converter_source):
                     raise util.Abort(_("unknown CVS response: %s") % line)
 
     def getfile(self, file, rev):
+        self._parse()
         data, mode = self._getfile(file, rev)
         self.modecache[(file, rev)] = mode
         return data
@@ -340,14 +342,18 @@ class convert_cvs(converter_source):
         return self.modecache[(file, rev)]
 
     def getchanges(self, rev):
+        self._parse()
         self.modecache = {}
         return util.sort(self.files[rev].items()), {}
 
     def getcommit(self, rev):
+        self._parse()
         return self.changeset[rev]
 
     def gettags(self):
+        self._parse()
         return self.tags
 
     def getchangedfiles(self, rev, i):
+        self._parse()
         return util.sort(self.files[rev].keys())

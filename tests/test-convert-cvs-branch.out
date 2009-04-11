@@ -23,13 +23,13 @@ checking in src/a,v
 % Convert
 assuming destination src-hg
 initializing destination src-hg repository
+connecting to cvsrepo
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 7 log entries
 creating changesets
 5 changeset entries
-connecting to cvsrepo
-scanning source...
 sorting...
 converting...
 4 Initial revision

@@ -34,13 +34,13 @@ cvs commit: Examining .
 new revision: 1.1.4.2; previous revision: 1.1.4.1
 % convert to hg
 initializing destination proj.hg repository
+connecting to *REPO*
+scanning source...
 using builtin cvsps
 collecting CVS rlog
 9 log entries
 creating changesets
 4 changeset entries
-connecting to *REPO*
-scanning source...
 sorting...
 converting...
 3 add file1 on trunk
