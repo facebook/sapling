@@ -42,18 +42,20 @@ Basic Use
 -----------
 Get a new clone of an svn server::
 
- $ hg svnclone <svn URI> [destination]
+ $ hg clone <svn URI> [destination]
 
 Real example::
 
- $ hg svnclone http://python-nose.googlecode.com/svn nose-hg
+ $ hg clone svn+http://python-nose.googlecode.com/svn nose-hg
 
 Note, you should pull from the root subversion directory, not specific
-folders (such as trunk).
+folders (such as trunk). Also, you only need to modify http:// urls as shown.
+This is a side effect of Mercurial and Subversion both claiming the http
+protocol, so svn+http is used to work around that.
 
 Pull new revisions into an already-converted repo::
 
- $ hg svn pull
+ $ hg pull
 
 For more information, see ``hg help svn`` while in a converted repo.
 
