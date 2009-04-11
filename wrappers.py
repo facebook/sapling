@@ -93,7 +93,7 @@ def push(orig, ui, repo, dest=None, *args, **opts):
     """
     svnurl = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     if not cmdutil.issvnurl(svnurl):
-        orig(ui, repo, dest=dest, *args, **opts)
+        return orig(ui, repo, dest=dest, *args, **opts)
     old_encoding = util.swap_out_encoding()
     hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svnurl = util.normalize_url(svnurl)
@@ -190,7 +190,7 @@ def clone(orig, ui, source, dest=None, *args, **opts):
     '''
     svnurl = ui.expandpath(source)
     if not cmdutil.issvnurl(svnurl):
-        orig(ui, source=source, dest=dest, *args, **opts)
+        return orig(ui, source=source, dest=dest, *args, **opts)
 
     if not dest:
         dest = hg.defaultdest(source) + '-hg'
@@ -229,7 +229,7 @@ def pull(orig, ui, repo, svn=None, svn_stupid=False, source="default", create_ne
     """
     url = ((repo and repo.ui) or ui).expandpath(source)
     if not (cmdutil.issvnurl(url) or svn or create_new_dest):
-        orig(ui, repo, source=source, *args, **opts)
+        return orig(ui, repo, source=source, *args, **opts)
     svn_url = url
     svn_url = util.normalize_url(svn_url)
     old_encoding = util.swap_out_encoding()
