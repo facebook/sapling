@@ -12,12 +12,12 @@ svnupanddisplay()
     (
        cd $1;
        svn up;
-       svn st -v | fixpath
+       svn st -v | fixpath | sed 's/  */ /g'
        limit=''
        if [ $2 -gt 0 ]; then
            limit="--limit=$2"
        fi
-       svn log --xml -v $limit | fixpath | sed 's,<date>.*,<date/>,'
+       svn log --xml -v $limit | fixpath | sed 's,<date>.*,<date/>,' | grep -v 'kind="'
     )
 }
 

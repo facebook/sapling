@@ -111,10 +111,9 @@ class monotone_source(converter_source, commandline):
     def mtnrenamefiles(self, files, fromdir, todir):
         renamed = {}
         for tofile in files:
-            if tofile.startswith(todir):
+            if tofile.startswith(todir + '/'):
                 renamed[tofile] = fromdir + tofile[len(todir):]
         return renamed
-
 
     # implement the converter_source interface:
 
@@ -158,6 +157,7 @@ class monotone_source(converter_source, commandline):
                                          "from '%s' to '%s'")
                                        % (fromfile, tofile), '\n')
                         files[tofile] = rev
+                        copies[tofile] = fromfile
                     for fromfile in renamed.values():
                         files[fromfile] = rev
         return (files.items(), copies)
