@@ -333,8 +333,12 @@ class mapfile(dict):
             if err.errno != errno.ENOENT:
                 raise
             return
-        for line in fp:
-            key, value = strutil.rsplit(line[:-1], ' ', 1)
+        for i, line in enumerate(fp):
+            try:
+                key, value = strutil.rsplit(line[:-1], ' ', 1)
+            except ValueError:
+                raise util.Abort(_('syntax error in %s(%d): key/value pair expected')
+                                 % (self.path, i+1))
             if key not in self:
                 self.order.append(key)
             super(mapfile, self).__setitem__(key, value)
