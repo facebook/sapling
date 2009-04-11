@@ -1,27 +1,29 @@
 % create and rename on the same file in the same step
 a => b
 c => d
+e => f
 initializing destination source-hg repository
 scanning source...
 sorting...
 converting...
-1 Initial add: a, c
+1 Initial add: a, c, e
 0 rename a into b, create a, rename c into d
-o  1 "rename a into b, create a, rename c into d" files: a b c d
+o  1 "rename a into b, create a, rename c into d" files: a b c d e f
 |
-o  0 "Initial add: a, c" files: a c
+o  0 "Initial add: a, c, e" files: a c e
 
 % manifest
 a
 b
 d
+f
 % test --rev option
 initializing destination source-1-hg repository
 scanning source...
 sorting...
 converting...
-0 Initial add: a, c
-o  0 "Initial add: a, c" files: a c
+0 Initial add: a, c, e
+o  0 "Initial add: a, c, e" files: a c e
 
 % merge
 initializing destination source-hg repository

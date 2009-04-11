@@ -21,6 +21,8 @@ try:
 except ImportError:
     pass
 
+supportedkinds = ('file', 'symlink')
+
 class bzr_source(converter_source):
     """Reads Bazaar repositories by using the Bazaar Python libraries"""
 
@@ -71,7 +73,7 @@ class bzr_source(converter_source):
     def getfile(self, name, rev):
         revtree = self.sourcerepo.revision_tree(rev)
         fileid = revtree.path2id(name)
-        if fileid is None:
+        if fileid is None or revtree.kind(fileid) not in supportedkinds:
             # the file is not available anymore - was deleted
             raise IOError(_('%s is not available in %s anymore') %
                     (name, rev))
