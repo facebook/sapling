@@ -99,13 +99,14 @@ class httprepository(repo.repository):
         except AttributeError:
             proto = resp.headers['content-type']
 
+        safeurl = url.hidepassword(self._url)
         # accept old "text/plain" and "application/hg-changegroup" for now
         if not (proto.startswith('application/mercurial-') or
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
             self.ui.debug(_("Requested URL: '%s'\n") % cu)
             raise error.RepoError(_("'%s' does not appear to be an hg repository")
-                                  % self._url)
+                                  % safeurl)
 
         if proto.startswith('application/mercurial-'):
             try:
@@ -113,10 +114,10 @@ class httprepository(repo.repository):
                 version_info = tuple([int(n) for n in version.split('.')])
             except ValueError:
                 raise error.RepoError(_("'%s' sent a broken Content-Type "
-                                        "header (%s)") % (self._url, proto))
+                                        "header (%s)") % (safeurl, proto))
             if version_info > (0, 1):
                 raise error.RepoError(_("'%s' uses newer protocol %s") %
-                                      (self._url, version))
+                                      (safeurl, version))
 
         return resp
 
