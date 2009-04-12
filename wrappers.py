@@ -141,7 +141,8 @@ def push(orig, ui, repo, dest=None, *args, **opts):
                      old_ctx)
             return 1
         # 3. Fetch revisions from svn
-        r = pull(None, ui, repo, True, stupid=opts.get('svn_stupid', False),
+        # TODO this probably should pass in the source explicitly
+        r = pull(None, ui, repo, svn=True, stupid=opts.get('svn_stupid', False),
                  username=user, password=passwd)
         assert not r or r == 0
         # 4. Find the new head of the target branch
