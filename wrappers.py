@@ -202,8 +202,9 @@ def clone(orig, ui, source, dest=None, *args, **opts):
     res = -1
     try:
         try:
-            res = pull(None, ui, None, True, opts.pop('svn_stupid', False),
-                       source=url, create_new_dest=dest, **opts)
+            res = pull(None, ui, None, source=url, svn=None,
+                       svn_stupid=opts.pop('svn_stupid', False),
+                       create_new_dest=dest, **opts)
         except core.SubversionException, e:
             if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
                 raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
@@ -223,10 +224,14 @@ def clone(orig, ui, source, dest=None, *args, **opts):
     return res
 
 
-def pull(orig, ui, repo, svn=None, svn_stupid=False, source="default", create_new_dest=False,
-         *args, **opts):
+def pull(orig, ui, repo, source="default", *args, **opts):
     """pull new revisions from Subversion
+
+    Also takes svn, svn_stupid, and create_new_dest kwargs.
     """
+    svn = opts.pop('svn', None)
+    svn_stupid = opts.pop('svn_stupid', False)
+    create_new_dest = opts.pop('create_new_dest', False)
     url = ((repo and repo.ui) or ui).expandpath(source)
     if not (cmdutil.issvnurl(url) or svn or create_new_dest):
         return orig(ui, repo, source=source, *args, **opts)
