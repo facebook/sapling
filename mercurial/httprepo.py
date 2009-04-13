@@ -104,7 +104,7 @@ class httprepository(repo.repository):
         if not (proto.startswith('application/mercurial-') or
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
-            self.ui.debug(_("Requested URL: '%s'\n") % cu)
+            self.ui.debug(_("Requested URL: '%s'\n") % url.hidepassword(cu))
             raise error.RepoError(_("'%s' does not appear to be an hg repository")
                                   % safeurl)
 
