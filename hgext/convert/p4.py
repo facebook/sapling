@@ -48,7 +48,7 @@ class p4_source(converter_source):
 
     def _parse_view(self, path):
         "Read changes affecting the path"
-        cmd = "p4 -G changes -s submitted '%s'" % path
+        cmd = 'p4 -G changes -s submitted "%s"' % path
         stdout = util.popen(cmd)
         for d in loaditer(stdout):
             c = d.get("change", None)
@@ -67,7 +67,7 @@ class p4_source(converter_source):
             else:
                 views = {"//": ""}
         else:
-            cmd = "p4 -G client -o '%s'" % path
+            cmd = 'p4 -G client -o "%s"' % path
             clientspec = marshal.load(util.popen(cmd))
 
             views = {}
@@ -142,7 +142,7 @@ class p4_source(converter_source):
         return self.heads
 
     def getfile(self, name, rev):
-        cmd = "p4 -G print '%s#%s'" % (self.depotname[name], rev)
+        cmd = 'p4 -G print "%s#%s"' % (self.depotname[name], rev)
         stdout = util.popen(cmd)
 
         mode = None

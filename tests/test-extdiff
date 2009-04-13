@@ -28,7 +28,7 @@ hg ci -d '1 0' -mtest2
 hg falabala -r 0:1
 
 # test diff during merge
-hg update 0
+hg update -C 0
 echo c >> c
 hg add c
 hg ci -m "new branch" -d '1 0'
@@ -43,3 +43,24 @@ hg falabala -c 1
 # check diff are made from the first parent
 hg falabala -c 3 || echo "diff-like tools yield a non-zero exit code"
 #hg log
+
+echo
+echo '% test extdiff of multiple files in tmp dir:'
+hg update -C 0 > /dev/null
+echo changed > a
+echo changed > b
+chmod +x b
+echo '% diff in working directory, before'
+hg diff --git
+echo '% edit with extdiff -p'
+# prepare custom diff/edit tool
+cat > differ.sh << EOT
+#!/bin/sh
+sleep 1 # avoid unchanged-timestamp problems
+echo edited >> a/a
+echo edited >> a/b
+EOT
+chmod +x differ.sh
+hg extdiff -p `pwd`/differ.sh # will change to /tmp/extdiff.TMP and populate directories a.TMP and a and start tool
+echo '% diff in working directory, after'
+hg diff --git

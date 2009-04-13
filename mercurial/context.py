@@ -513,7 +513,7 @@ class workingctx(changectx):
         return True
 
     def __contains__(self, key):
-        return self._dirstate[key] not in "?r"
+        return self._repo.dirstate[key] not in "?r"
 
     def _manifest(self):
         """generate a manifest corresponding to the working directory"""

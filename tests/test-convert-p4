@@ -63,9 +63,9 @@ hg -R dst log --template 'rev=#rev# desc="#desc#" tags="#tags#" files="#files#"\
 
 echo % interesting names
 echo dddd > "d d"
-mkdir " e "
-echo fff >" e /f "
-p4 add "d d" " e /f "
+mkdir " e"
+echo fff >" e/ f"
+p4 add "d d" " e/ f"
 p4 submit -d "add d e f"
 
 echo % convert again
