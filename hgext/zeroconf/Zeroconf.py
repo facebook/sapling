@@ -259,7 +259,7 @@ class DNSQuestion(DNSEntry):
 
 	def __init__(self, name, type, clazz):
 		if not name.endswith(".local."):
-			raise NonLocalNameException
+			raise NonLocalNameException(name)
 		DNSEntry.__init__(self, name, type, clazz)
 
 	def answeredBy(self, rec):
@@ -492,8 +492,11 @@ class DNSIncoming(object):
 			info = struct.unpack(format, self.data[self.offset:self.offset+length])
 			self.offset += length
 
-			question = DNSQuestion(name, info[0], info[1])
-			self.questions.append(question)
+			try:
+				question = DNSQuestion(name, info[0], info[1])
+				self.questions.append(question)
+			except NonLocalNameException:
+				pass
 
 	def readInt(self):
 		"""Reads an integer from the packet"""
