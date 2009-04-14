@@ -1,8 +1,6 @@
 import os
 
-from mercurial import node
 from mercurial import util as hgutil
-from hgext import rebase as hgrebase
 
 import svnwrap
 import cmdutil
@@ -100,53 +98,6 @@ Last Changed Date: %(date)s\n''' %
               })
 
 
-def rebase(ui, repo, extrafn=None, sourcerev=None, **opts):
-    """rebase current unpushed revisions onto the Subversion head
-
-    This moves a line of development from making its own head to the top of
-    Subversion development, linearizing the changes. In order to make sure you
-    rebase on top of the current top of Subversion work, you should probably run
-    'hg svn pull' before running this.
-    """
-    if extrafn is None:
-        def extrafn2(ctx, extra):
-            """defined here so we can add things easily.
-            """
-            extra['branch'] = ctx.branch()
-        extrafn = extrafn2
-    if sourcerev is None:
-        sourcerev = repo.parents()[0].node()
-    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, sourcerev=sourcerev)
-    if not o_r:
-        ui.status('Nothing to rebase!\n')
-        return 0
-    if len(repo[sourcerev].children()):
-        ui.status('Refusing to rebase non-head commit like a coward\n')
-        return 0
-    parent_rev = repo[o_r[-1]].parents()[0]
-    target_rev = parent_rev
-    p_n = parent_rev.node()
-    exhausted_choices = False
-    while target_rev.children() and not exhausted_choices:
-        for c in target_rev.children():
-            exhausted_choices = True
-            n = c.node()
-            if (n in svn_commit_hashes and
-                svn_commit_hashes[n][1] == svn_commit_hashes[p_n][1]):
-                target_rev = c
-                exhausted_choices = False
-                break
-    if parent_rev == target_rev:
-        ui.status('Already up to date!\n')
-        return 0
-    return hgrebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
-                         base=node.hex(sourcerev),
-                         extrafn=extrafn)
-
-
 def listauthors(ui, args, authors=None, **opts):
     """list all authors in a Subversion repository
     """
@@ -180,5 +131,4 @@ table = {
     'info': info,
     'listauthors': listauthors,
     'version': version,
-    'rebase': rebase,
 }

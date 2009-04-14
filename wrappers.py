@@ -1,5 +1,7 @@
 import os
 
+from hgext import rebase as hgrebase
+
 from mercurial import cmdutil as hgcmdutil
 from mercurial import commands
 from mercurial import patch
@@ -15,7 +17,6 @@ import hg_delta_editor
 import stupid as stupidmod
 import svnwrap
 import util
-import utility_commands
 
 def parent(orig, ui, repo, *args, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
@@ -53,8 +54,6 @@ def outgoing(orig, ui, repo, dest=None, *args, **opts):
         displayer.show(repo[node])
 
 
-
-
 def diff(orig, ui, repo, *args, **opts):
     """show a diff of the most recent revision against its parent from svn
     """
@@ -86,8 +85,6 @@ def diff(orig, ui, repo, *args, **opts):
     ui.write(cmdutil.filterdiff(''.join(it), baserev, newrev))
 
 
-
-
 def push(orig, ui, repo, dest=None, *args, **opts):
     """push revisions starting at a specified head back to Subversion.
     """
@@ -115,6 +112,7 @@ def push(orig, ui, repo, dest=None, *args, **opts):
         ui.status('No revisions to push.')
         return 0
     while outgoing:
+        print [node.hex(x) for x in outgoing]
         oldest = outgoing.pop(-1)
         old_ctx = repo[oldest]
         if len(old_ctx.parents()) != 1:
@@ -159,12 +157,14 @@ def push(orig, ui, repo, dest=None, *args, **opts):
                 if ctx.node() == oldest:
                     return
                 extra['branch'] = ctx.branch()
-            utility_commands.rebase(ui, repo, extrafn=extrafn,
-                                    sourcerev=needs_transplant, **opts)
+            rebase(hgrebase.rebase, ui, repo, svn=True, svnextrafn=extrafn,
+                   svnsourcerev=needs_transplant, **opts)
             repo = hg.repository(ui, hge.path)
             for child in repo[replacement.node()].children():
                 rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
+                print node.hex(rebasesrc)
                 if rebasesrc in outgoing:
+                    print 'swap outgoin'
                     while rebasesrc in outgoing:
                         rebsrcindex = outgoing.index(rebasesrc)
                         outgoing = (outgoing[0:rebsrcindex] +
@@ -177,7 +177,6 @@ def push(orig, ui, repo, dest=None, *args, **opts):
         svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
     util.swap_out_encoding(old_encoding)
     return 0
-
 
 
 def clone(orig, ui, source, dest=None, *args, **opts):
@@ -322,3 +321,52 @@ def pull(orig, ui, repo, source="default", *args, **opts):
                     else:
                         raise hgutil.Abort(*e.args)
     util.swap_out_encoding(old_encoding)
+
+
+def rebase(orig, ui, repo, **opts):
+    """rebase current unpushed revisions onto the Subversion head
+
+    This moves a line of development from making its own head to the top of
+    Subversion development, linearizing the changes. In order to make sure you
+    rebase on top of the current top of Subversion work, you should probably run
+    'hg svn pull' before running this.
+
+    Also looks for svnextrafn and svnsourcerev in **opts.
+    """
+    if not opts.get('svn', False):
+        return orig(ui, repo, **opts)
+    def extrafn2(ctx, extra):
+        """defined here so we can add things easily.
+        """
+        extra['branch'] = ctx.branch()
+    extrafn = opts.get('svnextrafn', extrafn2)
+    sourcerev = opts.get('svnsourcerev', repo.parents()[0].node())
+    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
+    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
+                                 hge.revmap.iterkeys()))
+    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, sourcerev=sourcerev)
+    if not o_r:
+        ui.status('Nothing to rebase!\n')
+        return 0
+    if len(repo[sourcerev].children()):
+        ui.status('Refusing to rebase non-head commit like a coward\n')
+        return 0
+    parent_rev = repo[o_r[-1]].parents()[0]
+    target_rev = parent_rev
+    p_n = parent_rev.node()
+    exhausted_choices = False
+    while target_rev.children() and not exhausted_choices:
+        for c in target_rev.children():
+            exhausted_choices = True
+            n = c.node()
+            if (n in svn_commit_hashes and
+                svn_commit_hashes[n][1] == svn_commit_hashes[p_n][1]):
+                target_rev = c
+                exhausted_choices = False
+                break
+    if parent_rev == target_rev:
+        ui.status('Already up to date!\n')
+        return 0
+    return orig(ui, repo, dest=node.hex(target_rev.node()),
+                base=node.hex(sourcerev),
+                extrafn=extrafn)

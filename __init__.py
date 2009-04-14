@@ -69,6 +69,14 @@ def uisetup(ui):
                       'remap file to exclude paths or include only certain paths'),
                      ])
 
+    try:
+        rebase = extensions.find('rebase')
+        if rebase:
+            entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', wrappers.rebase)
+            entry[1].append(('', 'svn', None, 'automatic svn rebase', ))
+    except:
+        pass
+
 
 def svn(ui, repo, subcommand, *args, **opts):
     '''see detailed help for list of subcommands'''
