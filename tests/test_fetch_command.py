@@ -24,7 +24,6 @@ class TestBasicRepoLayout(test_util.TestBase):
 
     def test_fresh_fetch_two_revs(self):
         repo = self._load_fixture_and_fetch('two_revs.svndump')
-        # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
@@ -33,7 +32,6 @@ class TestBasicRepoLayout(test_util.TestBase):
 
     def test_branches(self):
         repo = self._load_fixture_and_fetch('simple_branch.svndump')
-        # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
@@ -48,7 +46,6 @@ class TestBasicRepoLayout(test_util.TestBase):
 
     def test_two_branches_with_heads(self):
         repo = self._load_fixture_and_fetch('two_heads.svndump')
-        # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
@@ -63,14 +60,12 @@ class TestBasicRepoLayout(test_util.TestBase):
 
     def test_many_special_cases_replay(self):
         repo = self._load_fixture_and_fetch('many_special_cases.svndump')
-        # TODO there must be a better way than repo[0] for this check
         self._many_special_cases_checks(repo)
 
 
     def test_many_special_cases_diff(self):
         repo = self._load_fixture_and_fetch('many_special_cases.svndump',
                                             stupid=True)
-        # TODO there must be a better way than repo[0] for this check
         self._many_special_cases_checks(repo)
 
     def _many_special_cases_checks(self, repo):
@@ -156,7 +151,6 @@ class TestStupidPull(test_util.TestBase):
                                                 self.repo_path,
                                                 self.wc_path,
                                                 True)
-        # TODO there must be a better way than repo[0] for this check
         self.assertEqual(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),

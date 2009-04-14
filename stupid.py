@@ -513,9 +513,10 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
         for f in excluded:
             files_touched.remove(f)
         if parentctx.node() != node.nullid or files_touched:
-            # TODO(augie) remove this debug code? Or maybe it's sane to have it.
             for f in files_touched:
                 if f:
+                    # this is a case that really shouldn't ever happen, it means something
+                    # is very wrong
                     assert f[0] != '/'
             current_ctx = context.memctx(hg_editor.repo,
                                          [parentctx.node(), revlog.nullid],

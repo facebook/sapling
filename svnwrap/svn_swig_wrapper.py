@@ -112,7 +112,6 @@ class Revision(object):
     """
     def __init__(self, revnum, author, message, date, paths, strip_path=''):
         self.revnum, self.author, self.message = revnum, author, message
-        # TODO parse this into a datetime
         self.date = date
         self.paths = {}
         if paths:

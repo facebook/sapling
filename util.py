@@ -80,7 +80,6 @@ def outgoing_revisions(ui, repo, hg_editor, reverse_map, sourcerev):
         return outgoing_rev_hashes
 
 def build_extra(revnum, branch, uuid, subdir):
-    # TODO this needs to be fixed with the new revmap
     extra = {}
     branchpath = 'trunk'
     if branch:

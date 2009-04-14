@@ -216,8 +216,6 @@ class HgChangeReceiver(delta.Editor):
             while paths_need_discovery:
                 p = paths_need_discovery.pop(0)
                 path_could_be_file = True
-                # TODO(augie) Figure out if you can use break here in a for loop, quick
-                # testing of that failed earlier.
                 ind = 0
                 while ind < len(paths_need_discovery) and not paths_need_discovery:
                     if op.startswith(p):
@@ -633,7 +631,6 @@ class HgChangeReceiver(delta.Editor):
                        revlog.nullid)
             if parents[0] in closed_revs and branch in self.branches_to_delete:
                 continue
-            # TODO this needs to be fixed with the new revmap
             extra = util.build_extra(rev.revnum, branch,
                                      open(self.uuid_file).read(),
                                      self.subdir)

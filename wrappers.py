@@ -255,8 +255,6 @@ def pull(orig, ui, repo, source="default", *args, **opts):
     passwd = opts.get('password', '')
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
     author_host = "@%s" % svn.uuid
-    # TODO these should be configurable again, but I'm torn on how.
-    # Maybe this should be configured in .hg/hgrc for each repo? Seems vaguely reasonable.
     tag_locations = ['tags', ]
     authors = opts.pop('svn_authors', None)
     filemap = opts.pop('svn_filemap', None)

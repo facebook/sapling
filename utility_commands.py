@@ -142,7 +142,6 @@ def rebase(ui, repo, extrafn=None, sourcerev=None, **opts):
     if parent_rev == target_rev:
         ui.status('Already up to date!\n')
         return 0
-    # TODO this is really hacky, there must be a more direct way
     return hgrebase.rebase(ui, repo, dest=node.hex(target_rev.node()),
                          base=node.hex(sourcerev),
                          extrafn=extrafn)
