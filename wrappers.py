@@ -88,6 +88,7 @@ def diff(orig, ui, repo, *args, **opts):
 def push(orig, ui, repo, dest=None, *args, **opts):
     """push revisions starting at a specified head back to Subversion.
     """
+    opts.pop('svn', None) # unused in this case
     svnurl = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     if not cmdutil.issvnurl(svnurl):
         return orig(ui, repo, dest=dest, *args, **opts)
@@ -105,9 +106,10 @@ def push(orig, ui, repo, dest=None, *args, **opts):
         ui.status('Cowardly refusing to push branch merge')
         return 1
     workingrev = repo.parents()[0]
+    ui.status('searching for changes\n')
     outgoing = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingrev.node())
     if not (outgoing and len(outgoing)):
-        ui.status('No revisions to push.')
+        ui.status('no changes found\n')
         return 0
     while outgoing:
         oldest = outgoing.pop(-1)
