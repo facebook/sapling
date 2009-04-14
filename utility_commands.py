@@ -36,8 +36,7 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     url = hge.url
     if url[-1] == '/':
         url = url[:-1]
-    user = opts.get('username', hgutil.getuser())
-    passwd = opts.get('passwd', '')
+    user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     dirs = [''] + [d[0] for d in svn.list_files(branchpath, r) if d[1] == 'd']
     for dir in dirs:

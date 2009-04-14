@@ -19,8 +19,7 @@ def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     svn_url = util.normalize_url(svn_url)
 
     initializing_repo = False
-    user = opts.get('username', hgutil.getuser())
-    passwd = opts.get('password', '')
+    user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
     author_host = "@%s" % svn.uuid
     tag_locations = tag_locations.split(',')
@@ -68,8 +67,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
         raise hgutil.Abort('You must pass the svn URI used to create this repo.')
     uuid = None
     url = args[0].rstrip('/')
-    user = opts.get('username', hgutil.getuser())
-    passwd = opts.get('password', '')
+    user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     subdir = svn.subdir
     svnmetadir = os.path.join(repo.path, 'svn')

@@ -98,9 +98,7 @@ def push(orig, ui, repo, dest=None, *args, **opts):
         raise hgutil.Abort('wrong subversion url!')
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    user = opts.get('username', hgutil.getuser())
-    passwd = opts.get('password', '')
-
+    user, passwd = util.getuserpass(opts)
     # Strategy:
     # 1. Find all outgoing commits from this head
     if len(repo.parents()) != 1:
@@ -250,8 +248,7 @@ def pull(orig, ui, repo, source="default", *args, **opts):
                   ' of SWIG.\n')
         have_replay = False
     initializing_repo = False
-    user = opts.get('username', hgutil.getuser())
-    passwd = opts.get('password', '')
+    user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
     author_host = "@%s" % svn.uuid
     tag_locations = ['tags', ]

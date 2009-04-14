@@ -6,6 +6,14 @@ from mercurial import node
 from mercurial import util as hgutil
 
 
+def getuserpass(opts):
+    # DO NOT default the user to hg's getuser(). If you provide
+    # *any* default username to Subversion, it won't use any remembered
+    # username for the desired realm, breaking OS X Keychain support,
+    # GNOME keyring support, and all similar tools.
+    return opts.get('username', None), opts.get('password', '')
+
+
 def version(ui):
     """Guess the version of hgsubversion.
     """
