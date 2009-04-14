@@ -351,14 +351,10 @@ class SubversionRepo(object):
             if action == 'modify':
                 baton = editor.open_file(path, parent, base_revision, pool)
             elif action == 'add':
-                try:
-                    frompath, fromrev = copies.get(path, (None, -1))
-                    if frompath:
-                        frompath = self.svn_url + '/' + frompath
-                    baton = editor.add_file(path, parent, frompath, fromrev, pool)
-                except (core.SubversionException, TypeError), e: #pragma: no cover
-                    print e.message
-                    raise
+                frompath, fromrev = copies.get(path, (None, -1))
+                if frompath:
+                    frompath = self.svn_url + '/' + frompath
+                baton = editor.add_file(path, parent, frompath, fromrev, pool)
             elif action == 'delete':
                 baton = editor.delete_entry(path, base_revision, parent, pool)
                 compute_delta = False

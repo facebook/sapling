@@ -110,7 +110,6 @@ def push(orig, ui, repo, dest=None, *args, **opts):
         ui.status('No revisions to push.')
         return 0
     while outgoing:
-        print [node.hex(x) for x in outgoing]
         oldest = outgoing.pop(-1)
         old_ctx = repo[oldest]
         if len(old_ctx.parents()) != 1:
