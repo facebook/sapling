@@ -22,9 +22,9 @@ class TestPushDirectories(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('trunk'), 
-                          ['d1', 'd1/a', 'd2', 'd2/a', 'd2/b', 'd31', 
-                           'd31/d32', 'd31/d32/a', 'd31/d32/d33', 
+        self.assertEqual(self.svnls('trunk'),
+                          ['d1', 'd1/a', 'd2', 'd2/a', 'd2/b', 'd31',
+                           'd31/d32', 'd31/d32/a', 'd31/d32/d33',
                            'd31/d32/d33/d34', 'd31/d32/d33/d34/a'])
 
         # Add one revision with changed files only, no directory addition
@@ -46,8 +46,49 @@ class TestPushDirectories(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('trunk'), 
+        self.assertEqual(self.svnls('trunk'),
                          ['d2', 'd2/b', 'd31', 'd31/d32', 'd31/d32/a', 'd31/d32/d33'])
+
+
+class TestPushDirsNotAtRoot(test_util.TestBase):
+    def test_push_new_dir_project_root_not_repo_root(self):
+        test_util.load_fixture_and_fetch('fetch_missing_files_subdir.svndump',
+                                         self.repo_path,
+                                         self.wc_path,
+                                         subdir='foo')
+        changes = [('magic_new/a', 'magic_new/a', 'ohai', ),
+                   ]
+        self.commitchanges(changes)
+        self.pushrevisions()
+        self.assertEqual(self.svnls('foo/trunk'), ['bar',
+                                                   'bar/alpha',
+                                                   'bar/beta',
+                                                   'bar/delta',
+                                                   'bar/gamma',
+                                                   'foo',
+                                                   'magic_new',
+                                                   'magic_new/a'])
+
+    def test_push_new_file_existing_dir_root_not_repo_root(self):
+        test_util.load_fixture_and_fetch('empty_dir_in_trunk_not_repo_root.svndump',
+                                         self.repo_path,
+                                         self.wc_path,
+                                         subdir='project')
+        changes = [('narf/a', 'narf/a', 'ohai', ),
+                   ]
+        self.commitchanges(changes)
+        self.assertEqual(self.svnls('project/trunk'), ['a',
+                                                       'narf',])
+        self.pushrevisions()
+        self.assertEqual(self.svnls('project/trunk'), ['a',
+                                                       'narf',
+                                                       'narf/a'])
+        changes = [('narf/a', None, None, ),
+                   ]
+        self.commitchanges(changes)
+        self.pushrevisions()
+        self.assertEqual(self.svnls('project/trunk'), ['a' ,])
+
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestPushDirectories),
