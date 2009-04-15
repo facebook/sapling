@@ -593,8 +593,9 @@ class localrepository(repo.repository):
         return self._filter("decode", filename, data)
 
     def transaction(self):
-        if self._transref and self._transref():
-            return self._transref().nest()
+        tr = self._transref and self._transref() or None
+        if tr and tr.running():
+            return tr.nest()
 
         # abort here if the journal already exists
         if os.path.exists(self.sjoin("journal")):
