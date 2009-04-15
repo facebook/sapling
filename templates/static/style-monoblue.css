@@ -219,6 +219,9 @@ table tr.parity1 {
 table tr td {
   padding: 5px 5px;
 }
+table.annotated tr td {
+  padding: 0px 5px;
+}
 
 span.logtags span {
   padding: 2px 6px;
@@ -250,10 +253,12 @@ div.diff pre span {
   font-size: 1.2em;
   padding: 3px 0;
 }
-div.source {
+td.source {
+  white-space: pre;
+  font-family: monospace;
   margin: 10px 30px 0;
-  font-family: Tahoma, sans-serif, monospace;
-  font-size: 100%;
+  font-size: 1.2em;
+  font-family: monospace;
 }
   div.source div.parity0,
   div.source div.parity1 {
@@ -273,6 +278,12 @@ div.parity1:hover {
 .linenr {
   color: #999;
   text-align: right;
+}
+.lineno {
+  text-align: right;
+}
+.lineno a {
+  color: #999;
 }
 td.linenr {
   width: 60px;
