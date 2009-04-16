@@ -34,8 +34,6 @@ class transaction(object):
         if self.journal:
             if self.entries: self.abort()
             self.file.close()
-            try: os.unlink(self.journal)
-            except: pass
 
     def add(self, file, offset, data=None):
         if file in self.map: return
@@ -82,15 +80,23 @@ class transaction(object):
 
         self.report(_("transaction abort!\n"))
 
+        failed = False
         for f, o, ignore in self.entries:
             try:
                 self.opener(f, "a").truncate(o)
             except:
+                failed = True
                 self.report(_("failed to truncate %s\n") % f)
 
         self.entries = []
 
-        self.report(_("rollback completed\n"))
+        if not failed:
+            self.file.close()
+            os.unlink(self.journal)
+            self.journal = None
+            self.report(_("rollback completed\n"))
+        else:
+            self.report(_("rollback failed - please run hg recover\n"))
 
 def rollback(opener, file):
     files = {}
