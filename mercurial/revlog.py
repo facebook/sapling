@@ -1285,7 +1285,7 @@ class revlog(object):
 
         return node
 
-    def strip(self, minlink):
+    def strip(self, minlink, transaction):
         """truncate the revlog on the first revision with a linkrev >= minlink
 
         This function is called when we're stripping revision minlink and
@@ -1314,14 +1314,12 @@ class revlog(object):
         # first truncate the files on disk
         end = self.start(rev)
         if not self._inline:
-            df = self.opener(self.datafile, "a")
-            df.truncate(end)
+            transaction.add(self.datafile, end)
             end = rev * self._io.size
         else:
             end += rev * self._io.size
 
-        indexf = self.opener(self.indexfile, "a")
-        indexf.truncate(end)
+        transaction.add(self.indexfile, end)
 
         # then reset internal state in memory to forget those revisions
         self._cache = None

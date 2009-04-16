@@ -1,0 +1,83 @@
+% before update 0, strip 1
+changeset:   0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     a
+
+saving bundle to 
+transaction abort!
+failed to truncate data/b.i
+rollback failed - please run hg recover
+abort: Permission denied .hg/store/data/b.i
+% after update 0, strip 1
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+warning: orphan revlog 'data/b.i'
+1 files, 1 changesets, 1 total revisions
+1 warnings encountered!
+% journal contents
+00changelog.i
+00manifest.i
+data/b.i
+data/c.i
+rolling back interrupted transaction
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
+% before update 0, strip 1
+changeset:   0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     a
+
+abort: Permission denied .hg/store/data/b.i
+% after update 0, strip 1
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+3 files, 3 changesets, 3 total revisions
+% journal contents
+cat: .hg/store/journal: No such file or directory
+% before update 0, strip 1
+changeset:   0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     a
+
+saving bundle to 
+transaction abort!
+failed to truncate 00changelog.i
+rollback failed - please run hg recover
+abort: Permission denied .hg/store/00changelog.i
+% after update 0, strip 1
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+ 1: changeset refers to unknown manifest a539ce0c1a22
+ 2: changeset refers to unknown manifest e3738bf54399
+ b@1: in changeset but not in manifest
+ c@2: in changeset but not in manifest
+checking files
+ data/b.i@1: missing revlog!
+ 0: empty or missing b
+ data/c.i@2: missing revlog!
+ 0: empty or missing c
+3 files, 3 changesets, 1 total revisions
+8 integrity errors encountered!
+(first damaged changeset appears to be 0)
+% journal contents
+00changelog.i
+00manifest.i
+data/b.i
+data/c.i
+rolling back interrupted transaction
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions

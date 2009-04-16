@@ -1,0 +1,36 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=">> $HGRCPATH
+
+teststrip() {
+    hg -q up -C $1
+    echo % before update $1, strip $2
+    hg parents
+    chmod -$3 $4
+    hg strip $2 2>&1 | sed 's/\(saving bundle to \).*/\1/' | sed 's/Permission denied.*\.hg\/store\/\(.*\)/Permission denied \.hg\/store\/\1/'
+    echo % after update $1, strip $2
+    chmod +$3 $4
+    hg verify
+    echo % journal contents
+    cat .hg/store/journal | sed 's/\.i[^\n]*/\.i/'
+    ls .hg/store/journal >/dev/null 2>&1 && hg recover
+    ls .hg/strip-backup/* >/dev/null 2>&1 && hg unbundle -q .hg/strip-backup/*
+    rm -rf .hg/strip-backup
+}
+
+hg init test
+cd test
+
+echo a > a
+hg -q ci -m "a" -A
+
+echo b > b
+hg -q ci -m "b" -A
+
+echo c > c
+hg -q ci -m "c" -A
+
+teststrip 0 1 w .hg/store/data/b.i
+teststrip 0 1 r .hg/store/data/b.i
+teststrip 0 1 w .hg/store/00changelog.i
