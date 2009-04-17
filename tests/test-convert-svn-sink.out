@@ -12,11 +12,11 @@ converting...
 1 add a file
 0 modify a file
 At revision 2.
-                2        2 test         .
-                2        2 test         a
-                2        1 test         d1
-                2        1 test         d1/d2
-                2        1 test         d1/d2/b
+ 2 2 test .
+ 2 2 test a
+ 2 1 test d1
+ 2 1 test d1/d2
+ 2 1 test d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -63,11 +63,11 @@ sorting...
 converting...
 0 rename a file
 At revision 3.
-                3        3 test         .
-                3        3 test         b
-                3        1 test         d1
-                3        1 test         d1/d2
-                3        1 test         d1/d2/b
+ 3 3 test .
+ 3 3 test b
+ 3 1 test d1
+ 3 1 test d1/d2
+ 3 1 test d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -101,12 +101,12 @@ sorting...
 converting...
 0 copy a file
 At revision 4.
-                4        4 test         .
-                4        3 test         b
-                4        4 test         c
-                4        1 test         d1
-                4        1 test         d1/d2
-                4        1 test         d1/d2/b
+ 4 4 test .
+ 4 3 test b
+ 4 4 test c
+ 4 1 test d1
+ 4 1 test d1/d2
+ 4 1 test d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -140,11 +140,11 @@ sorting...
 converting...
 0 remove a file
 At revision 5.
-                5        5 test         .
-                5        4 test         c
-                5        1 test         d1
-                5        1 test         d1/d2
-                5        1 test         d1/d2/b
+ 5 5 test .
+ 5 4 test c
+ 5 1 test d1
+ 5 1 test d1/d2
+ 5 1 test d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -174,11 +174,11 @@ sorting...
 converting...
 0 make a file executable
 At revision 6.
-                6        6 test         .
-                6        6 test         c
-                6        1 test         d1
-                6        1 test         d1/d2
-                6        1 test         d1/d2/b
+ 6 6 test .
+ 6 6 test c
+ 6 1 test d1
+ 6 1 test d1/d2
+ 6 1 test d1/d2/b
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -203,9 +203,9 @@ sorting...
 converting...
 0 add executable file in new directory
 At revision 1.
-                1        1 test         .
-                1        1 test         d1
-                1        1 test         d1/a
+ 1 1 test .
+ 1 1 test d1
+ 1 1 test d1/a
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -230,11 +230,11 @@ sorting...
 converting...
 0 copy file to new directory
 At revision 2.
-                2        2 test         .
-                2        1 test         d1
-                2        1 test         d1/a
-                2        2 test         d2
-                2        2 test         d2/a
+ 2 2 test .
+ 2 1 test d1
+ 2 1 test d1/a
+ 2 2 test d2
+ 2 2 test d2/a
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -280,12 +280,12 @@ converting...
 0 merge
 % expect 4 changes
 At revision 4.
-                4        4 test         .
-                4        3 test         b
-                4        2 test         left-1
-                4        3 test         left-2
-                4        4 test         right-1
-                4        4 test         right-2
+ 4 4 test .
+ 4 3 test b
+ 4 2 test left-1
+ 4 3 test left-2
+ 4 4 test right-1
+ 4 4 test right-2
 <?xml version="1.0"?>
 <log>
 <logentry

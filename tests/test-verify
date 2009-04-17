@@ -1,7 +1,8 @@
 #!/bin/sh
 
 echo % prepare repo
-hg init
+hg init a
+cd a
 echo "some text" > FOO.txt
 echo "another text" > bar.txt
 echo "more text" > QUICK.txt
@@ -18,6 +19,24 @@ cd .hg/store/data
 mv _f_o_o.txt.i X_f_o_o.txt.i
 mv bar.txt.i xbar.txt.i
 rm _q_u_i_c_k.txt.i
+
+echo
+echo % verify
+hg verify
+
+cd ..
+
+echo % test revlog corruption
+hg init b
+cd b
+
+touch a
+hg add a
+hg ci -m a
+
+echo 'corrupted' > b
+head -c 20 .hg/store/data/a.i > start
+cat start b > .hg/store/data/a.i
 
 echo
 echo % verify

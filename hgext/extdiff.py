@@ -50,16 +50,25 @@ from mercurial.node import short
 from mercurial import cmdutil, util, commands
 import os, shlex, shutil, tempfile
 
-def snapshot_node(ui, repo, files, node, tmproot):
-    '''snapshot files as of some revision'''
+def snapshot(ui, repo, files, node, tmproot):
+    '''snapshot files as of some revision
+    if not using snapshot, -I/-X does not work and recursive diff
+    in tools like kdiff3 and meld displays too many files.'''
     dirname = os.path.basename(repo.root)
     if dirname == "":
         dirname = "root"
-    dirname = '%s.%s' % (dirname, short(node))
+    if node is not None:
+        dirname = '%s.%s' % (dirname, short(node))
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
-    ui.note(_('making snapshot of %d files from rev %s\n') %
-            (len(files), short(node)))
+    if node is not None:
+        ui.note(_('making snapshot of %d files from rev %s\n') %
+                (len(files), short(node)))
+    else:
+        ui.note(_('making snapshot of %d files from working dir\n') %
+            (len(files)))
+    wopener = util.opener(base)
+    fns_and_mtime = []
     ctx = repo[node]
     for fn in files:
         wfn = util.pconvert(fn)
@@ -68,46 +77,17 @@ def snapshot_node(ui, repo, files, node, tmproot):
             continue
         ui.note('  %s\n' % wfn)
         dest = os.path.join(base, wfn)
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            os.makedirs(destdir)
-        data = repo.wwritedata(wfn, ctx[wfn].data())
-        open(dest, 'wb').write(data)
-    return dirname
-
-
-def snapshot_wdir(ui, repo, files, tmproot):
-    '''snapshot files from working directory.
-    if not using snapshot, -I/-X does not work and recursive diff
-    in tools like kdiff3 and meld displays too many files.'''
-    dirname = os.path.basename(repo.root)
-    if dirname == "":
-        dirname = "root"
-    base = os.path.join(tmproot, dirname)
-    os.mkdir(base)
-    ui.note(_('making snapshot of %d files from working dir\n') %
-            (len(files)))
-
-    fns_and_mtime = []
-
-    for fn in files:
-        wfn = util.pconvert(fn)
-        ui.note('  %s\n' % wfn)
-        dest = os.path.join(base, wfn)
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            os.makedirs(destdir)
-
-        fp = open(dest, 'wb')
-        for chunk in util.filechunkiter(repo.wopener(wfn)):
-            fp.write(chunk)
-        fp.close()
-
-        fns_and_mtime.append((dest, repo.wjoin(fn), os.path.getmtime(dest)))
-
-
+        fctx = ctx[wfn]
+        data = repo.wwritedata(wfn, fctx.data())
+        if 'l' in fctx.flags():
+            wopener.symlink(data, wfn)
+        else:
+            wopener(wfn, 'w').write(data)
+            if 'x' in fctx.flags():
+                util.set_flags(dest, False, True)
+        if node is None:
+            fns_and_mtime.append((dest, repo.wjoin(fn), os.path.getmtime(dest)))
     return dirname, fns_and_mtime
-
 
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     '''Do the actuall diff:
@@ -139,24 +119,17 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     dir2root = ''
     try:
         # Always make a copy of node1
-        dir1 = snapshot_node(ui, repo, modified + removed, node1, tmproot)
+        dir1 = snapshot(ui, repo, modified + removed, node1, tmproot)[0]
         changes = len(modified) + len(removed) + len(added)
 
-        fns_and_mtime = []
-
         # If node2 in not the wc or there is >1 change, copy it
-        if node2:
-            dir2 = snapshot_node(ui, repo, modified + added, node2, tmproot)
-        elif changes > 1:
-            #we only actually need to get the files to copy back to the working
-            #dir in this case (because the other cases are: diffing 2 revisions
-            #or single file -- in which case the file is already directly passed
-            #to the diff tool).
-            dir2, fns_and_mtime = snapshot_wdir(ui, repo, modified + added, tmproot)
+        if node2 or changes > 1:
+            dir2, fns_and_mtime = snapshot(ui, repo, modified + added, node2, tmproot)
         else:
             # This lets the diff tool open the changed file directly
             dir2 = ''
             dir2root = repo.root
+            fns_and_mtime = []
 
         # If only one change, diff the files instead of the directories
         if changes == 1 :

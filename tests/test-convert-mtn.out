@@ -26,32 +26,51 @@ mtn: dropping dir/b from workspace manifest
 mtn: renaming bin to bin2 in workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
 mtn: committed revision 6c6977a6ef609ec80e40779f89dbd2772c96de62
+% test directory move
+mtn: adding dir1 to workspace manifest
+mtn: adding dir1/subdir1 to workspace manifest
+mtn: adding dir1/subdir1/file1 to workspace manifest
+mtn: adding dir1/subdir2_other to workspace manifest
+mtn: adding dir1/subdir2_other/file1 to workspace manifest
+mtn: beginning commit on branch 'com.selenic.test'
+mtn: committed revision e066b1feb2b7a7110450c2c18b5b4462011427d1
+mtn: skipping dir1, already accounted for in workspace
+mtn: renaming dir1/subdir1 to dir1/subdir2 in workspace manifest
+mtn: beginning commit on branch 'com.selenic.test'
+mtn: committed revision 2ad2409d25bb8d2583b57a3d4c0fa1df62aa1f79
+% test subdirectory move
 mtn: renaming dir to dir2 in workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision 5de5abe7c15eae70cf3acdda23c9c319ea50c1af
+mtn: committed revision a85290b81fc4a8fbce4dc4d956404109842b406e
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision 27a423be1e406595cc57f50f42a8790fa0a93d8e
+mtn: committed revision 7e3c8746060117104f16ff2d9212cf0f810cbff0
 mtn: dropping dir2/dir/subdir/f from workspace manifest
 mtn: dropping dir2/dir/subdir from workspace manifest
 mtn: dropping dir2/dir/emptydir from workspace manifest
 mtn: dropping dir2/dir from workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision ba57ba5ac63178529d37fa8a2a1a012fc0e42047
+mtn: committed revision a97e0433d041a6d253c5dc27e080d544e55d9c19
 % convert incrementally
 assuming destination repo.mtn-hg
 scanning source...
 sorting...
 converting...
-3 update2 "with" quotes
+5 update2 "with" quotes
+4 createdir1
+3 movedir1
 2 movedir
 1 emptydir
 0 dropdirectory
-3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  5 "dropdirectory" files: dir2/dir/subdir/f
+5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  7 "dropdirectory" files: dir2/dir/subdir/f
 |
-o  4 "emptydir" files: dir2/dir/subdir/f
+o  6 "emptydir" files: dir2/dir/subdir/f
 |
-o  3 "movedir" files: dir/a dir2/a
+o  5 "movedir" files: dir/a dir2/a
+|
+o  4 "movedir1" files: dir1/subdir1/file1 dir1/subdir2/file1
+|
+o  3 "createdir1" files: dir1/subdir1/file1 dir1/subdir2_other/file1
 |
 o  2 "update2 "with" quotes" files: bin bin2 dir/b e
 |
@@ -61,8 +80,19 @@ o  0 "initialize" files: a bin c dir/b
 
 % manifest
 bin2
+dir1/subdir2/file1
+dir1/subdir2_other/file1
 dir2/a
 e
 % contents
 a
 a
+% file move
+copies:      dir/a (a)
+% check directory move
+bin2
+dir/a
+dir1/subdir2/file1
+dir1/subdir2_other/file1
+e
+copies:      dir1/subdir2/file1 (dir1/subdir1/file1)

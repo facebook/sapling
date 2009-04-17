@@ -62,10 +62,10 @@ rev=1 desc="change a" tags="" files="a"
 rev=0 desc="initial" tags="" files="a b/c"
 % interesting names
 //depot/test-mercurial-import/d d#1 - opened for add
-//depot/test-mercurial-import/ e /f #1 - opened for add
+//depot/test-mercurial-import/ e/ f#1 - opened for add
 Submitting change 5.
 Locking 2 files ...
-add //depot/test-mercurial-import/ e /f #1
+add //depot/test-mercurial-import/ e/ f#1
 add //depot/test-mercurial-import/d d#1
 Change 5 submitted.
 % convert again
@@ -80,7 +80,7 @@ scanning source...
 sorting...
 converting...
 0 add d e f
-rev=4 desc="add d e f" tags="tip" files=" e /f  d d"
+rev=4 desc="add d e f" tags="tip" files=" e/ f d d"
 rev=3 desc="change a b/c" tags="" files="a b/c"
 rev=2 desc="change b/c" tags="" files="b/c"
 rev=1 desc="change a" tags="" files="a"
