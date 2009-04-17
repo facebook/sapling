@@ -231,6 +231,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 copy = False
 
         if copy:
+            src_repo.hook('preoutgoing', throw=True, source='clone')
             hgdir = os.path.realpath(os.path.join(dest, ".hg"))
             if not os.path.exists(dest):
                 os.mkdir(dest)
@@ -262,7 +263,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             # we need to re-init the repo after manually copying the data
             # into it
             dest_repo = repository(ui, dest)
-
+            src_repo.hook('outgoing', source='clone', node='0'*40)
         else:
             try:
                 dest_repo = repository(ui, dest, create=True)

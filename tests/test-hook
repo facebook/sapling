@@ -107,6 +107,19 @@ hg rollback
 echo 'preoutgoing.forbid = python ../printenv.py preoutgoing.forbid 1' >> ../a/.hg/hgrc
 hg pull ../a
 
+# outgoing hooks work for local clones
+cd ..
+echo '[hooks]' > a/.hg/hgrc
+echo 'preoutgoing = python ../printenv.py preoutgoing' >> a/.hg/hgrc
+echo 'outgoing = python ../printenv.py outgoing' >> a/.hg/hgrc
+hg clone a c
+rm -rf c
+
+# preoutgoing hook can prevent outgoing changes for local clones
+echo 'preoutgoing.forbid = python ../printenv.py preoutgoing.forbid 1' >> a/.hg/hgrc
+hg clone a zzz
+cd b
+
 cat > hooktests.py <<EOF
 from mercurial import util
 
