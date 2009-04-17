@@ -8,7 +8,27 @@
 
 import cStringIO, socket, struct
 
-version = 1
+"""
+  Protocol between inotify clients and server:
+
+  Client sending query:
+  1) send protocol version number
+  2) send query type (string, 4 letters long)
+  3) send query parameters:
+     - For STAT, N+1 \0-separated strings:
+        1) N different names that need checking
+        2) 1 string containing all the status types to match
+
+  Server sending query answer:
+  1) send protocol version number
+  2) send query type
+  3) send struct.pack'ed headers describing the length of the content:
+      e.g. for STAT, receive 8 integers describing the length of the
+      8 \0-separated string lists ( one list for each lmar!?ic status type )
+
+"""
+
+version = 2
 
 resphdrfmts = {
     'STAT': '>llllllll' # status requests

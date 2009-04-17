@@ -594,6 +594,8 @@ class server(object):
                            'version %d\n') % version)
             return
 
+        type = cs.read(4)
+
         names = cs.read().split('\0')
 
         states = names.pop()
@@ -638,8 +640,8 @@ class server(object):
             try:
                 v = chr(common.version)
 
-                sock.sendall(v + struct.pack(common.resphdrfmts['STAT'],
-                                         *map(len, results)))
+                sock.sendall(v + type + struct.pack(common.resphdrfmts[type],
+                                            *map(len, results)))
                 sock.sendall(''.join(results))
             finally:
                 sock.shutdown(socket.SHUT_WR)

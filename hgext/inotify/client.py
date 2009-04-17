@@ -78,13 +78,13 @@ class client(object):
             else:
                 raise
 
-    def _send(self, data):
+    def _send(self, type, data):
         """Sends protocol version number, and the data"""
-        self.sock.sendall(chr(common.version) + data)
+        self.sock.sendall(chr(common.version) + type + data)
 
         self.sock.shutdown(socket.SHUT_WR)
 
-    def _receive(self):
+    def _receive(self, type):
         """
         Read data, check version number, extract headers,
         and returns a tuple (data descriptor, header)
@@ -97,8 +97,12 @@ class client(object):
                       'server version %d)\n') % version)
             raise QueryFailed('incompatible server version')
 
-        # only one type of request is supported for now
-        type = 'STAT'
+        readtype = cs.read(4)
+        if readtype != type:
+            self.ui.warn(_('(inotify: received \'%s\' response when expecting'
+                       ' \'%s\')\n') % (readtype, type))
+            raise QueryFailed('wrong response type')
+
         hdrfmt = common.resphdrfmts[type]
         hdrsize = common.resphdrsizes[type]
         try:
@@ -108,12 +112,12 @@ class client(object):
 
         return cs, resphdr
 
-    def query(self, req):
+    def query(self, type, req):
         self._connect()
 
-        self._send(req)
+        self._send(type, req)
 
-        return self._receive()
+        return self._receive(type)
 
     @start_server
     def statusquery(self, names, match, ignored, clean, unknown=True):
@@ -130,7 +134,7 @@ class client(object):
 
         req = '\0'.join(genquery())
 
-        cs, resphdr = self.query(req)
+        cs, resphdr = self.query('STAT', req)
 
         def readnames(nbytes):
             if nbytes:
