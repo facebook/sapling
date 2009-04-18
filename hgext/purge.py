@@ -104,7 +104,7 @@ cmdtable = {
           ('',  'all', None, _('purge ignored files too')),
           ('p', 'print', None, _('print the file names instead of deleting them')),
           ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
-                                  ' (implies -p)')),
+                                  ' (implies -p/--print)')),
          ] + commands.walkopts,
          _('hg purge [OPTION]... [DIR]...'))
 }

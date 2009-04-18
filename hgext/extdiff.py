@@ -167,10 +167,10 @@ def extdiff(ui, repo, *pats, **opts):
     an external program. The default program used is diff, with
     default options "-Npru".
 
-    To select a different program, use the -p option. The program will
-    be passed the names of two directories to compare. To pass
-    additional options to the program, use the -o option. These will
-    be passed before the names of the directories to compare.
+    To select a different program, use the -p/--program option. The
+    program will be passed the names of two directories to compare. To
+    pass additional options to the program, use -o/--option. These
+    will be passed before the names of the directories to compare.
 
     When two revision arguments are given, then changes are shown
     between those revisions. If only one revision is specified then
