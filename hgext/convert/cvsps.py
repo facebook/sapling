@@ -428,6 +428,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
 class changeset(object):
     '''Class changeset has the following attributes:
+        .id        - integer identifying this changeset (list index)
         .author    - author name as CVS knows it
         .branch    - name of branch this changeset is on, or None
         .comment   - commit message
