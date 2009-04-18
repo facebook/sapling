@@ -46,7 +46,7 @@ def rebase(ui, repo, **opts):
     changes relative to a master development tree.
 
     If a rebase is interrupted to manually resolve a merge, it can be
-    continued with --continue or aborted with --abort.
+    continued with --continue/-c or aborted with --abort/-a.
     """
     originalwd = target = None
     external = nullrev
