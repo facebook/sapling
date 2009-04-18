@@ -39,6 +39,12 @@ class logentry(object):
     def __init__(self, **entries):
         self.__dict__.update(entries)
 
+    def __repr__(self):
+        return "<%s at 0x%x: %s %s>" % (self.__class__.__name__,
+                                        id(self),
+                                        self.file,
+                                        ".".join(map(str, self.revision)))
+
 class logerror(Exception):
     pass
 
@@ -441,6 +447,11 @@ class changeset(object):
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
+
+    def __repr__(self):
+        return "<%s at 0x%x: %s>" % (self.__class__.__name__,
+                                     id(self),
+                                     getattr(self, 'id', "(no id)"))
 
 def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     '''Convert log into changesets.'''
