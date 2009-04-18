@@ -1683,6 +1683,10 @@ def qimport(ui, repo, *filename, **opts):
     format. See the diffs help topic for information on why this is
     important for preserving rename/copy information and permission
     changes.
+
+    To import a patch from standard input, pass - as the patch file.
+    When importing from standard input, a patch name must be specified
+    using the --name flag.
     """
     q = repo.mq
     q.qimport(repo, filename, patchname=opts['name'],
