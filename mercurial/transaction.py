@@ -94,6 +94,9 @@ class transaction(object):
         self._abort()
 
     def _abort(self):
+        self.count = 0
+        self.file.close()
+
         if not self.entries: return
 
         self.report(_("transaction abort!\n"))
@@ -109,12 +112,13 @@ class transaction(object):
         self.entries = []
 
         if not failed:
-            self.file.close()
             os.unlink(self.journal)
-            self.journal = None
             self.report(_("rollback completed\n"))
         else:
             self.report(_("rollback failed - please run hg recover\n"))
+
+        self.journal = None
+
 
 def rollback(opener, file):
     files = {}
