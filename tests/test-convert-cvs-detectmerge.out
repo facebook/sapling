@@ -60,26 +60,43 @@ retrieving revision 1.2
 retrieving revision 1.3
 Merging differences between 1.2 and 1.3 into file1
 cvs -f ci -madd other text [MERGE from HEAD] file1
+% fix bug on v1_1, merge to trunk with error
+cvs -f -Q update -rv1_1
+cvs -f -Q tag unmerged
+cvs -f ci -mfix file1
+cvs -f -Q update -A
+cvs -f -Q update -junmerged -jv1_1
+RCS file: *REPO*/proj/file1,v
+retrieving revision 1.1.4.2
+retrieving revision 1.1.4.3
+Merging differences between 1.1.4.2 and 1.1.4.3 into file1
+cvs -f ci -mfix file1 [MERGE from v1-1]
 % convert to hg
+warning: CVS commit message references non-existent branch 'v1-1':
+fix file1 [MERGE from v1-1]
 initializing destination proj.hg repository
 connecting to *REPO*
 scanning source...
 using builtin cvsps
 collecting CVS rlog
-10 log entries
+12 log entries
 creating changesets
-8 changeset entries
+10 changeset entries
 sorting...
 converting...
-7 add file1 on trunk
-6 add text
-5 unrelated change
-4 add text [MERGE from v1_0]
-3 add text [MERGE from v1_1]
-2 add file2 on trunk
-1 add other text
-0 add other text [MERGE from HEAD]
+9 add file1 on trunk
+8 add text
+7 unrelated change
+6 add text [MERGE from v1_0]
+5 add text [MERGE from v1_1]
+4 add file2 on trunk
+3 add other text
+2 add other text [MERGE from HEAD]
+1 fix file1
+0 fix file1 [MERGE from v1-1]
 % complete log
+9: '' fix file1 [MERGE from v1-1]
+8: 'v1_1' fix file1
 7: 'v1_1' add other text [MERGE from HEAD]
 6: '' add other text
 5: '' add file2 on trunk
@@ -88,14 +105,24 @@ converting...
 2: 'v1_1' unrelated change
 1: 'v1_0' add text
 0: '' add file1 on trunk
-% parents of rev 3
-2: 'v1_1' unrelated change
-1: 'v1_0' add text
-% parents of rev 4
-0: '' add file1 on trunk
-3: 'v1_1' add text [MERGE from v1_0]
-% parents of rev 5
-4: '' add text [MERGE from v1_1]
-% parents of rev 7
-3: 'v1_1' add text [MERGE from v1_0]
-6: '' add other text
+% graphical log
+o  9: '' fix file1 [MERGE from v1-1]
+|
+| o  8: 'v1_1' fix file1
+| |
+| o  7: 'v1_1' add other text [MERGE from HEAD]
+|/|
+o |  6: '' add other text
+| |
+o |  5: '' add file2 on trunk
+| |
+o |  4: '' add text [MERGE from v1_1]
+|\|
+| o    3: 'v1_1' add text [MERGE from v1_0]
+| |\
++---o  2: 'v1_1' unrelated change
+| |
+| o  1: 'v1_0' add text
+|/
+o  0: '' add file1 on trunk
+

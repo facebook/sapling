@@ -31,8 +31,10 @@ filterpath()
 
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
+echo "graphlog = " >> $HGRCPATH
 echo "[convert]" >> $HGRCPATH
 echo "cvsps=builtin" >> $HGRCPATH
+echo "cvsps.cache=0" >> $HGRCPATH
 echo "cvsps.mergefrom=\[MERGE from (\S+)\]" >> $HGRCPATH
 
 echo % create cvs repository with one project
@@ -90,6 +92,18 @@ filterpath cvscall -Q update -j1.2 -j1.3 file1
 cvsci -m"add other text [MERGE from HEAD]" file1
 
 set -e
+echo "% fix bug on v1_1, merge to trunk with error"
+cvscall -Q update -rv1_1
+echo "merge forward" >> file1
+cvscall -Q tag unmerged
+cvsci -m"fix file1"
+cvscall -Q update -A
+filterpath cvscall -Q update -junmerged -jv1_1
+# note the typo in the commit log message
+cvsci -m"fix file1 [MERGE from v1-1]"
+cvs -Q tag -d unmerged
+
+set -e
 echo % convert to hg
 cd ..
 filterpath hg convert proj proj.hg
@@ -98,11 +112,5 @@ echo % complete log
 template="{rev}: '{branches}' {desc}\n"
 hg -R proj.hg log --template="$template"
 
-echo % parents of rev 3
-hg -R proj.hg parents --template="$template" -r3
-echo % parents of rev 4
-hg -R proj.hg parents --template="$template" -r4
-echo % parents of rev 5
-hg -R proj.hg parents --template="$template" -r5
-echo % parents of rev 7
-hg -R proj.hg parents --template="$template" -r7
+echo % graphical log
+hg -R proj.hg glog --template="$template"
