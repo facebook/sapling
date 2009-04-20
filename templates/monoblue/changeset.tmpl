@@ -34,7 +34,7 @@
 
     <h2 class="no-link no-border">changeset</h2>
 
-    <h3 class="changeset"><a href="{url}raw-rev/#node|short#">#desc|strip|escape|firstline# <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}</span></a></h3>
+    <h3 class="changeset"><a href="{url}raw-rev/#node|short#">#desc|strip|escape|firstline|nonempty# <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}</span></a></h3>
     <p class="changeset-age"><span>#date|age# ago</span></p>
 
     <dl class="overview">
@@ -49,7 +49,7 @@
         #child%changesetchild#
     </dl>
 
-    <p class="description">#desc|strip|escape|addbreaks#</p>
+    <p class="description">#desc|strip|escape|addbreaks|nonempty#</p>
 
     <table>
     #files#
