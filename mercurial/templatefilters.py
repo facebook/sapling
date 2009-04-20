@@ -165,6 +165,9 @@ def stripdir(text):
     else:
         return dir
 
+def nonempty(str):
+  return str or "(none)"
+
 filters = {
     "addbreaks": nl2br,
     "basename": os.path.basename,
@@ -183,6 +186,7 @@ filters = {
     "isodatesec": lambda x: util.datestr(x, '%Y-%m-%d %H:%M:%S %1%2'),
     "json": json,
     "jsonescape": jsonescape,
+    "nonempty": nonempty,
     "obfuscate": obfuscate,
     "permissions": permissions,
     "person": person,
