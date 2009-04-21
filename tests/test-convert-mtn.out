@@ -5,14 +5,15 @@ mtn: adding bin to workspace manifest
 mtn: adding c to workspace manifest
 mtn: adding dir to workspace manifest
 mtn: adding dir/b to workspace manifest
+mtn: adding dir/d to workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision 803ef0bf815e35b951dbd4310acd1e45e675016e
+mtn: committed revision 0f6e5e4f2e7d2a8ef312408f57618abf026afd90
 % update monotone working directory
 mtn: skipping dir, already accounted for in workspace
 mtn: renaming a to dir/a in workspace manifest
 mtn: dropping c from workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision 4daf60753d6fe21a06ce5f716303fe55fd6d3a56
+mtn: committed revision 51d0a982464573a2a2cf5ee2c9219c652aaebeff
 % convert once
 assuming destination repo.mtn-hg
 initializing destination repo.mtn-hg repository
@@ -25,7 +26,7 @@ mtn: adding e to workspace manifest
 mtn: dropping dir/b from workspace manifest
 mtn: renaming bin to bin2 in workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision 6c6977a6ef609ec80e40779f89dbd2772c96de62
+mtn: committed revision ebe58335d85d8cb176b6d0a12be04f5314b998da
 % test directory move
 mtn: adding dir1 to workspace manifest
 mtn: adding dir1/subdir1 to workspace manifest
@@ -33,23 +34,25 @@ mtn: adding dir1/subdir1/file1 to workspace manifest
 mtn: adding dir1/subdir2_other to workspace manifest
 mtn: adding dir1/subdir2_other/file1 to workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision e066b1feb2b7a7110450c2c18b5b4462011427d1
+mtn: committed revision a8d62bc04fee4d2936d28e98bbcc81686dd74306
 mtn: skipping dir1, already accounted for in workspace
 mtn: renaming dir1/subdir1 to dir1/subdir2 in workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision 2ad2409d25bb8d2583b57a3d4c0fa1df62aa1f79
+mtn: committed revision 2c3d241bbbfe538b1b51d910f5676407e3f4d3a6
 % test subdirectory move
 mtn: renaming dir to dir2 in workspace manifest
+mtn: dropping dir2/d from workspace manifest
+mtn: adding dir2/newfile to workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision a85290b81fc4a8fbce4dc4d956404109842b406e
+mtn: committed revision fdb5a02dae8bfce3a79b3393680af471016e1b4c
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision 7e3c8746060117104f16ff2d9212cf0f810cbff0
+mtn: committed revision 8bbf76d717001d24964e4604739fdcd0f539fc88
 mtn: dropping dir2/dir/subdir/f from workspace manifest
 mtn: dropping dir2/dir/subdir from workspace manifest
 mtn: dropping dir2/dir/emptydir from workspace manifest
 mtn: dropping dir2/dir from workspace manifest
 mtn: beginning commit on branch 'com.selenic.test'
-mtn: committed revision a97e0433d041a6d253c5dc27e080d544e55d9c19
+mtn: committed revision 2323d4bc324e6c82628dc04d47a9fd32ad24e322
 % convert incrementally
 assuming destination repo.mtn-hg
 scanning source...
@@ -61,12 +64,12 @@ converting...
 2 movedir
 1 emptydir
 0 dropdirectory
-5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+6 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  7 "dropdirectory" files: dir2/dir/subdir/f
 |
 o  6 "emptydir" files: dir2/dir/subdir/f
 |
-o  5 "movedir" files: dir/a dir2/a
+o  5 "movedir" files: dir/a dir/d dir2/a dir2/newfile
 |
 o  4 "movedir1" files: dir1/subdir1/file1 dir1/subdir2/file1
 |
@@ -76,13 +79,14 @@ o  2 "update2 "with" quotes" files: bin bin2 dir/b e
 |
 o  1 "update1" files: a bin c dir/a dir/b
 |
-o  0 "initialize" files: a bin c dir/b
+o  0 "initialize" files: a bin c dir/b dir/d
 
 % manifest
 bin2
 dir1/subdir2/file1
 dir1/subdir2_other/file1
 dir2/a
+dir2/newfile
 e
 % contents
 a
@@ -92,7 +96,15 @@ copies:      dir/a (a)
 % check directory move
 bin2
 dir/a
+dir/d
 dir1/subdir2/file1
 dir1/subdir2_other/file1
 e
 copies:      dir1/subdir2/file1 (dir1/subdir1/file1)
+% check file remove with directory move
+bin2
+dir1/subdir2/file1
+dir1/subdir2_other/file1
+dir2/a
+dir2/newfile
+e

@@ -33,9 +33,10 @@ cd workingdir
 echo a > a
 mkdir dir
 echo b > dir/b
+echo d > dir/d
 python -c 'file("bin", "wb").write("a\\x00b")'
 echo c > c
-mtn add a dir/b c bin
+mtn add a dir/b dir/d c bin
 mtn ci -m initialize
 echo % update monotone working directory
 mtn mv a dir/a
@@ -66,6 +67,9 @@ mtn rename dir1/subdir1 dir1/subdir2
 mtn ci -m movedir1
 echo '% test subdirectory move'
 mtn mv dir dir2
+echo newfile > dir2/newfile
+mtn drop dir2/d
+mtn add dir2/newfile
 mtn ci -m movedir
 # Test directory removal with empty directory
 mkdir dir2/dir
@@ -102,5 +106,7 @@ hg manifest -r 4
 test -d dir1/subdir2 || echo 'new dir1/subdir2 does not exist!'
 test -d dir1/subdir1 && echo 'renamed dir1/subdir1 is still there!'
 hg log -v -C -r 4 | grep copies
+echo % check file remove with directory move
+hg manifest -r 5
 exit 0
 
