@@ -80,6 +80,14 @@ mtn add --quiet -R dir2/dir
 mtn ci -m emptydir
 mtn drop -R dir2/dir
 mtn ci -m dropdirectory
+echo '% test directory and file move'
+mkdir -p dir3/d1
+echo a > dir3/a
+mtn add dir3/a dir3/d1
+mtn ci -m dirfilemove
+mtn mv dir3/a dir3/d1/a
+mtn mv dir3/d1 dir3/d2
+mtn ci -m dirfilemove2
 cd ..
 
 echo % convert incrementally
@@ -108,5 +116,7 @@ test -d dir1/subdir1 && echo 'renamed dir1/subdir1 is still there!'
 hg log -v -C -r 4 | grep copies
 echo % check file remove with directory move
 hg manifest -r 5
+echo % check file move with directory move
+hg manifest -r 9
 exit 0
 

@@ -122,14 +122,14 @@ class monotone_source(converter_source, commandline):
         #revision = self.mtncmd("get_revision %s" % rev).split("\n\n")
         revision = self.mtnrun("get_revision", rev).split("\n\n")
         files = {}
-        addedfiles = {}
+        ignoremove = {}
         renameddirs = []
         copies = {}
         for e in revision:
             m = self.add_file_re.match(e)
             if m:
                 files[m.group(1)] = rev
-                addedfiles[m.group(1)] = rev
+                ignoremove[m.group(1)] = rev
             m = self.patch_re.match(e)
             if m:
                 files[m.group(1)] = rev
@@ -144,6 +144,7 @@ class monotone_source(converter_source, commandline):
                 toname = m.group(2)
                 fromname = m.group(1)
                 if self.mtnisfile(toname, rev):
+                    ignoremove[toname] = 1
                     copies[toname] = fromname
                     files[toname] = rev
                     files[fromname] = rev
@@ -155,7 +156,7 @@ class monotone_source(converter_source, commandline):
         for fromdir, todir in renameddirs:
             renamed = {}
             for tofile in self.files:
-                if tofile in addedfiles:
+                if tofile in ignoremove:
                     continue
                 if tofile.startswith(todir + '/'):
                     renamed[tofile] = fromdir + tofile[len(todir):]
