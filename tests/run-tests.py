@@ -183,7 +183,7 @@ def check_required_tools():
         else:
             print "WARNING: Did not find prerequisite tool: "+p
 
-def cleanup_exit():
+def cleanup_exit(options):
     if not options.keep_tmpdir:
         if verbose:
             print "# Cleaning up HGTMP", HGTMP
@@ -206,7 +206,7 @@ def use_correct_python():
         shutil.copyfile(sys.executable, my_python)
         shutil.copymode(sys.executable, my_python)
 
-def install_hg():
+def install_hg(options):
     global python
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
@@ -281,7 +281,7 @@ def _hgpath():
     hgpath.close()
     return path
 
-def output_coverage():
+def output_coverage(options):
     vlog("# Producing coverage report")
     omit = [BINDIR, TESTDIR, PYTHONDIR]
     if not options.cover_stdlib:
@@ -339,7 +339,7 @@ def run(cmd):
                        % options.timeout)
     return ret, splitnewlines(output)
 
-def run_one(test, skips, fails):
+def run_one(options, test, skips, fails):
     '''tristate output:
     None -> skipped
     True -> passed
@@ -496,7 +496,7 @@ def run_one(test, skips, fails):
         return None
     return ret == 0
 
-def run_children(tests):
+def run_children(options, expecthg, tests):
     if not options.with_hg:
         install_hg()
         if hgpkg != expecthg:
@@ -561,14 +561,14 @@ def run_children(tests):
         tested, skipped, failed)
     sys.exit(failures != 0)
 
-def run_tests(tests):
+def run_tests(options, expecthg, tests):
     global DAEMON_PIDS, HGRCPATH
     DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
     HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
 
     try:
         if not options.with_hg:
-            install_hg()
+            install_hg(options)
 
             if hgpkg != expecthg:
                 print '# Testing unexpected mercurial: %s' % hgpkg
@@ -602,7 +602,7 @@ def run_tests(tests):
             if options.retest and not os.path.exists(test + ".err"):
                 skipped += 1
                 continue
-            ret = run_one(test, skips, fails)
+            ret = run_one(options, test, skips, fails)
             if ret is None:
                 skipped += 1
             elif not ret:
@@ -639,7 +639,7 @@ def run_tests(tests):
                 tested, skipped, failed)
 
         if coverage:
-            output_coverage()
+            output_coverage(options)
     except KeyboardInterrupt:
         failed = True
         print "\ninterrupted!"
@@ -647,63 +647,67 @@ def run_tests(tests):
     if failed:
         sys.exit(1)
 
-(options, args) = parse_args()
-if not options.child:
-    os.umask(022)
+def main():
+    (options, args) = parse_args()
+    if not options.child:
+        os.umask(022)
 
-    check_required_tools()
+        check_required_tools()
 
-# Reset some environment variables to well-known values so that
-# the tests produce repeatable output.
-os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
-os.environ['TZ'] = 'GMT'
-os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
-os.environ['CDPATH'] = ''
+    # Reset some environment variables to well-known values so that
+    # the tests produce repeatable output.
+    os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+    os.environ['TZ'] = 'GMT'
+    os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
+    os.environ['CDPATH'] = ''
 
-TESTDIR = os.environ["TESTDIR"] = os.getcwd()
-HGTMP = os.environ['HGTMP'] = os.path.realpath(tempfile.mkdtemp('', 'hgtests.',
-                                               options.tmpdir))
-DAEMON_PIDS = None
-HGRCPATH = None
+    global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
+    TESTDIR = os.environ["TESTDIR"] = os.getcwd()
+    HGTMP = os.environ['HGTMP'] = os.path.realpath(tempfile.mkdtemp('', 'hgtests.',
+                                                   options.tmpdir))
+    DAEMON_PIDS = None
+    HGRCPATH = None
 
-os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGMERGE"] = "internal:merge"
-os.environ["HGUSER"]   = "test"
-os.environ["HGENCODING"] = "ascii"
-os.environ["HGENCODINGMODE"] = "strict"
-os.environ["HGPORT"] = str(options.port)
-os.environ["HGPORT1"] = str(options.port + 1)
-os.environ["HGPORT2"] = str(options.port + 2)
+    os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+    os.environ["HGMERGE"] = "internal:merge"
+    os.environ["HGUSER"]   = "test"
+    os.environ["HGENCODING"] = "ascii"
+    os.environ["HGENCODINGMODE"] = "strict"
+    os.environ["HGPORT"] = str(options.port)
+    os.environ["HGPORT1"] = str(options.port + 1)
+    os.environ["HGPORT2"] = str(options.port + 2)
 
-if options.with_hg:
-    INST = options.with_hg
-else:
-    INST = os.path.join(HGTMP, "install")
-BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
-PYTHONDIR = os.path.join(INST, "lib", "python")
-COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
-
-expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
-hgpkg = None
-
-if len(args) == 0:
-    args = os.listdir(".")
-    args.sort()
-
-tests = []
-for test in args:
-    if (test.startswith("test-") and '~' not in test and
-        ('.' not in test or test.endswith('.py') or
-         test.endswith('.bat'))):
-        tests.append(test)
-
-vlog("# Using TESTDIR", TESTDIR)
-vlog("# Using HGTMP", HGTMP)
-
-try:
-    if len(tests) > 1 and options.jobs > 1:
-        run_children(tests)
+    if options.with_hg:
+        INST = options.with_hg
     else:
-        run_tests(tests)
-finally:
-    cleanup_exit()
+        INST = os.path.join(HGTMP, "install")
+    BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
+    PYTHONDIR = os.path.join(INST, "lib", "python")
+    COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
+
+    expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
+    hgpkg = None
+
+    if len(args) == 0:
+        args = os.listdir(".")
+        args.sort()
+
+    tests = []
+    for test in args:
+        if (test.startswith("test-") and '~' not in test and
+            ('.' not in test or test.endswith('.py') or
+             test.endswith('.bat'))):
+            tests.append(test)
+
+    vlog("# Using TESTDIR", TESTDIR)
+    vlog("# Using HGTMP", HGTMP)
+
+    try:
+        if len(tests) > 1 and options.jobs > 1:
+            run_children(options, expecthg, tests)
+        else:
+            run_tests(options, expecthg, tests)
+    finally:
+        cleanup_exit(options)
+
+main()
