@@ -37,6 +37,7 @@ import time
 SKIPPED_STATUS = 80
 SKIPPED_PREFIX = 'skipped: '
 FAILED_PREFIX  = 'hghave check failed: '
+PYTHON = sys.executable
 
 required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
@@ -45,8 +46,6 @@ defaults = {
     'timeout': ('HGTEST_TIMEOUT', 180),
     'port': ('HGTEST_PORT', 20059),
 }
-
-python = sys.executable
 
 def parse_args():
     parser = optparse.OptionParser("%prog [options] [tests]")
@@ -204,7 +203,7 @@ def use_correct_python():
         shutil.copymode(sys.executable, my_python)
 
 def install_hg(options):
-    global python
+    global PYTHON
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
     pure = options.pure and "--pure" or ""
@@ -268,12 +267,12 @@ def install_hg(options):
                  os.path.join(BINDIR, '_hg.py')))
         f.close()
         os.chmod(os.path.join(BINDIR, 'hg'), 0700)
-        python = '"%s" "%s" -x' % (sys.executable,
+        PYTHON = '"%s" "%s" -x' % (sys.executable,
                                    os.path.join(TESTDIR,'coverage.py'))
 
 def _hgpath():
     cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
-    hgpath = os.popen(cmd % python)
+    hgpath = os.popen(cmd % PYTHON)
     path = hgpath.read().strip()
     hgpath.close()
     return path
@@ -389,7 +388,7 @@ def run_one(options, test, skips, fails):
     lctest = test.lower()
 
     if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
-        cmd = '%s "%s"' % (python, testpath)
+        cmd = '%s "%s"' % (PYTHON, testpath)
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
         if os.name != 'nt':
@@ -523,7 +522,7 @@ def run_children(options, expecthg, tests):
             continue
         rfd, wfd = os.pipe()
         childopts = ['--child=%d' % wfd, '--port=%d' % (options.port + j * 3)]
-        cmdline = [python, sys.argv[0]] + opts + childopts + job
+        cmdline = [PYTHON, sys.argv[0]] + opts + childopts + job
         vlog(' '.join(cmdline))
         fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'r')
         os.close(wfd)
