@@ -106,6 +106,8 @@ class monotone_source(converter_source, commandline):
                 value = value.replace(r'\"', '"')
                 value = value.replace(r'\\', '\\')
                 certs[name] = value
+        # Monotone may have subsecond dates: 2005-02-05T09:39:12.364306
+        certs["date"] = certs["date"].split('.')[0]
         return certs
 
     # implement the converter_source interface:
