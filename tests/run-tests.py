@@ -46,61 +46,72 @@ defaults = {
     'port': ('HGTEST_PORT', 20059),
 }
 
-parser = optparse.OptionParser("%prog [options] [tests]")
-parser.add_option("-C", "--annotate", action="store_true",
-    help="output files annotated with coverage")
-parser.add_option("--child", type="int",
-    help="run as child process, summary to given fd")
-parser.add_option("-c", "--cover", action="store_true",
-    help="print a test coverage report")
-parser.add_option("-f", "--first", action="store_true",
-    help="exit on the first test failure")
-parser.add_option("-i", "--interactive", action="store_true",
-    help="prompt to accept changed output")
-parser.add_option("-j", "--jobs", type="int",
-    help="number of jobs to run in parallel"
-         " (default: $%s or %d)" % defaults['jobs'])
-parser.add_option("--keep-tmpdir", action="store_true",
-    help="keep temporary directory after running tests"
-         " (best used with --tmpdir)")
-parser.add_option("-R", "--restart", action="store_true",
-    help="restart at last error")
-parser.add_option("-p", "--port", type="int",
-    help="port on which servers should listen"
-         " (default: $%s or %d)" % defaults['port'])
-parser.add_option("-r", "--retest", action="store_true",
-    help="retest failed tests")
-parser.add_option("-s", "--cover_stdlib", action="store_true",
-    help="print a test coverage report inc. standard libraries")
-parser.add_option("-t", "--timeout", type="int",
-    help="kill errant tests after TIMEOUT seconds"
-         " (default: $%s or %d)" % defaults['timeout'])
-parser.add_option("--tmpdir", type="string",
-    help="run tests in the given temporary directory")
-parser.add_option("-v", "--verbose", action="store_true",
-    help="output verbose messages")
-parser.add_option("-n", "--nodiff", action="store_true",
-    help="skip showing test changes")
-parser.add_option("--with-hg", type="string",
-    help="test existing install at given location")
-parser.add_option("--pure", action="store_true",
-    help="use pure Python code instead of C extensions")
+# globals set by parse_args() (ugh)
+verbose = False
+nodiff = False
+coverage = False
+python = None
 
-for option, default in defaults.items():
-    defaults[option] = int(os.environ.get(*default))
-parser.set_defaults(**defaults)
-(options, args) = parser.parse_args()
-verbose = options.verbose
-nodiff = options.nodiff
-coverage = options.cover or options.cover_stdlib or options.annotate
-python = sys.executable
+def parse_args():
+    parser = optparse.OptionParser("%prog [options] [tests]")
+    parser.add_option("-C", "--annotate", action="store_true",
+        help="output files annotated with coverage")
+    parser.add_option("--child", type="int",
+        help="run as child process, summary to given fd")
+    parser.add_option("-c", "--cover", action="store_true",
+        help="print a test coverage report")
+    parser.add_option("-f", "--first", action="store_true",
+        help="exit on the first test failure")
+    parser.add_option("-i", "--interactive", action="store_true",
+        help="prompt to accept changed output")
+    parser.add_option("-j", "--jobs", type="int",
+        help="number of jobs to run in parallel"
+             " (default: $%s or %d)" % defaults['jobs'])
+    parser.add_option("--keep-tmpdir", action="store_true",
+        help="keep temporary directory after running tests"
+             " (best used with --tmpdir)")
+    parser.add_option("-R", "--restart", action="store_true",
+        help="restart at last error")
+    parser.add_option("-p", "--port", type="int",
+        help="port on which servers should listen"
+             " (default: $%s or %d)" % defaults['port'])
+    parser.add_option("-r", "--retest", action="store_true",
+        help="retest failed tests")
+    parser.add_option("-s", "--cover_stdlib", action="store_true",
+        help="print a test coverage report inc. standard libraries")
+    parser.add_option("-t", "--timeout", type="int",
+        help="kill errant tests after TIMEOUT seconds"
+             " (default: $%s or %d)" % defaults['timeout'])
+    parser.add_option("--tmpdir", type="string",
+        help="run tests in the given temporary directory")
+    parser.add_option("-v", "--verbose", action="store_true",
+        help="output verbose messages")
+    parser.add_option("-n", "--nodiff", action="store_true",
+        help="skip showing test changes")
+    parser.add_option("--with-hg", type="string",
+        help="test existing install at given location")
+    parser.add_option("--pure", action="store_true",
+        help="use pure Python code instead of C extensions")
 
-if options.jobs < 1:
-    print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
-    sys.exit(1)
-if options.interactive and options.jobs > 1:
-    print '(--interactive overrides --jobs)'
-    options.jobs = 1
+    for option, default in defaults.items():
+        defaults[option] = int(os.environ.get(*default))
+    parser.set_defaults(**defaults)
+    (options, args) = parser.parse_args()
+
+    global verbose, nodiff, coverage, python
+    verbose = options.verbose
+    nodiff = options.nodiff
+    coverage = options.cover or options.cover_stdlib or options.annotate
+    python = sys.executable
+
+    if options.jobs < 1:
+        print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
+        sys.exit(1)
+    if options.interactive and options.jobs > 1:
+        print '(--interactive overrides --jobs)'
+        options.jobs = 1
+
+    return (options, args)
 
 def rename(src, dst):
     """Like os.rename(), trade atomicity and opened files friendliness
@@ -478,6 +489,7 @@ def run_one(test, skips, fails):
         return None
     return ret == 0
 
+(options, args) = parse_args()
 if not options.child:
     os.umask(022)
 
