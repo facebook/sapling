@@ -39,7 +39,7 @@ SKIPPED_PREFIX = 'skipped: '
 FAILED_PREFIX  = 'hghave check failed: '
 PYTHON = sys.executable
 
-required_tools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
+requiredtools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
@@ -47,7 +47,7 @@ defaults = {
     'port': ('HGTEST_PORT', 20059),
 }
 
-def parse_args():
+def parseargs():
     parser = optparse.OptionParser("%prog [options] [tests]")
     parser.add_option("-C", "--annotate", action="store_true",
         help="output files annotated with coverage")
@@ -137,7 +137,7 @@ def splitnewlines(text):
         lines.append(text[i:n+1])
         i = n + 1
 
-def parse_hghave_output(lines):
+def parsehghaveoutput(lines):
     '''Parse hghave log lines.
     Return tuple of lists (missing, failed):
       * the missing/unknown features
@@ -154,12 +154,12 @@ def parse_hghave_output(lines):
 
     return missing, failed
 
-def show_diff(expected, output):
+def showdiff(expected, output):
     for line in difflib.unified_diff(expected, output,
             "Expected output", "Test output"):
         sys.stdout.write(line)
 
-def find_program(program):
+def findprogram(program):
     """Search PATH for a executable program"""
     for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
         name = os.path.join(p, program)
@@ -167,42 +167,42 @@ def find_program(program):
             return name
     return None
 
-def check_required_tools():
+def checktools():
     # Before we go any further, check for pre-requisite tools
     # stuff from coreutils (cat, rm, etc) are not tested
-    for p in required_tools:
+    for p in requiredtools:
         if os.name == 'nt':
             p += '.exe'
-        found = find_program(p)
+        found = findprogram(p)
         if found:
             vlog("# Found prerequisite", p, "at", found)
         else:
             print "WARNING: Did not find prerequisite tool: "+p
 
-def cleanup_exit(options):
+def cleanup(options):
     if not options.keep_tmpdir:
         if options.verbose:
             print "# Cleaning up HGTMP", HGTMP
         shutil.rmtree(HGTMP, True)
 
-def use_correct_python():
+def usecorrectpython():
     # some tests run python interpreter. they must use same
     # interpreter we use or bad things will happen.
     exedir, exename = os.path.split(sys.executable)
     if exename == 'python':
-        path = find_program('python')
+        path = findprogram('python')
         if os.path.dirname(path) == exedir:
             return
     vlog('# Making python executable in test path use correct Python')
-    my_python = os.path.join(BINDIR, 'python')
+    mypython = os.path.join(BINDIR, 'python')
     try:
-        os.symlink(sys.executable, my_python)
+        os.symlink(sys.executable, mypython)
     except AttributeError:
         # windows fallback
-        shutil.copyfile(sys.executable, my_python)
-        shutil.copymode(sys.executable, my_python)
+        shutil.copyfile(sys.executable, mypython)
+        shutil.copymode(sys.executable, mypython)
 
-def install_hg(options):
+def installhg(options):
     global PYTHON
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
@@ -236,7 +236,7 @@ def install_hg(options):
         pythonpath = pydir
     os.environ["PYTHONPATH"] = pythonpath
 
-    use_correct_python()
+    usecorrectpython()
     global hgpkg
     hgpkg = _hgpath()
 
@@ -277,7 +277,7 @@ def _hgpath():
     hgpath.close()
     return path
 
-def output_coverage(options):
+def outputcoverage(options):
     vlog("# Producing coverage report")
     omit = [BINDIR, TESTDIR, PYTHONDIR]
     if not options.cover_stdlib:
@@ -335,7 +335,7 @@ def run(cmd):
                        % options.timeout)
     return ret, splitnewlines(output)
 
-def run_one(options, test, skips, fails):
+def runone(options, test, skips, fails):
     '''tristate output:
     None -> skipped
     True -> passed
@@ -423,13 +423,13 @@ def run_one(options, test, skips, fails):
     # If reference output file exists, check test output against it
     if os.path.exists(ref):
         f = open(ref, "r")
-        ref_out = splitnewlines(f.read())
+        refout = splitnewlines(f.read())
         f.close()
     else:
-        ref_out = []
+        refout = []
     if skipped:
         mark = 's'
-        missing, failed = parse_hghave_output(out)
+        missing, failed = parsehghaveoutput(out)
         if not missing:
             missing = ['irrelevant']
         if failed:
@@ -437,14 +437,14 @@ def run_one(options, test, skips, fails):
             skipped = False
         else:
             skip(missing[-1])
-    elif out != ref_out:
+    elif out != refout:
         mark = '!'
         if ret:
             fail("output changed and returned error code %d" % ret)
         else:
             fail("output changed")
         if not options.nodiff:
-            show_diff(ref_out, out)
+            showdiff(refout, out)
         ret = 1
     elif ret:
         mark = '!'
@@ -492,9 +492,9 @@ def run_one(options, test, skips, fails):
         return None
     return ret == 0
 
-def run_children(options, expecthg, tests):
+def runchildren(options, expecthg, tests):
     if not options.with_hg:
-        install_hg()
+        installhg()
         if hgpkg != expecthg:
             print '# Testing unexpected mercurial: %s' % hgpkg
 
@@ -557,14 +557,14 @@ def run_children(options, expecthg, tests):
         tested, skipped, failed)
     sys.exit(failures != 0)
 
-def run_tests(options, expecthg, tests):
+def runtests(options, expecthg, tests):
     global DAEMON_PIDS, HGRCPATH
     DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
     HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
 
     try:
         if not options.with_hg:
-            install_hg(options)
+            installhg(options)
 
             if hgpkg != expecthg:
                 print '# Testing unexpected mercurial: %s' % hgpkg
@@ -598,7 +598,7 @@ def run_tests(options, expecthg, tests):
             if options.retest and not os.path.exists(test + ".err"):
                 skipped += 1
                 continue
-            ret = run_one(options, test, skips, fails)
+            ret = runone(options, test, skips, fails)
             if ret is None:
                 skipped += 1
             elif not ret:
@@ -635,7 +635,7 @@ def run_tests(options, expecthg, tests):
                 tested, skipped, failed)
 
         if options.anycoverage:
-            output_coverage(options)
+            outputcoverage(options)
     except KeyboardInterrupt:
         failed = True
         print "\ninterrupted!"
@@ -644,11 +644,11 @@ def run_tests(options, expecthg, tests):
         sys.exit(1)
 
 def main():
-    (options, args) = parse_args()
+    (options, args) = parseargs()
     if not options.child:
         os.umask(022)
 
-        check_required_tools()
+        checktools()
 
     # Reset some environment variables to well-known values so that
     # the tests produce repeatable output.
@@ -700,10 +700,10 @@ def main():
 
     try:
         if len(tests) > 1 and options.jobs > 1:
-            run_children(options, expecthg, tests)
+            runchildren(options, expecthg, tests)
         else:
-            run_tests(options, expecthg, tests)
+            runtests(options, expecthg, tests)
     finally:
-        cleanup_exit(options)
+        cleanup(options)
 
 main()
