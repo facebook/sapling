@@ -1335,7 +1335,7 @@ class localrepository(repo.repository):
         if not unknown:
             return base.keys(), [], []
 
-        req = dict.fromkeys(unknown)
+        req = set(unknown)
         reqcnt = 0
 
         # search through remote branches
@@ -1375,7 +1375,7 @@ class localrepository(repo.repository):
                     for p in n[2:4]:
                         if p not in req and p not in m:
                             r.append(p)
-                            req[p] = 1
+                            req.add(p)
                 seen[n[0]] = 1
 
             if r:
@@ -1447,15 +1447,15 @@ class localrepository(repo.repository):
         self.ui.debug(_("common changesets up to ")
                       + " ".join(map(short, base.keys())) + "\n")
 
-        remain = dict.fromkeys(self.changelog.nodemap)
+        remain = set(self.changelog.nodemap)
 
         # prune everything remote has from the tree
-        del remain[nullid]
+        remain.remove(nullid)
         remove = base.keys()
         while remove:
             n = remove.pop(0)
             if n in remain:
-                del remain[n]
+                remain.remove(n)
                 for p in self.changelog.parents(n):
                     remove.append(p)
 
@@ -1670,11 +1670,11 @@ class localrepository(repo.repository):
             has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
             junk = None
             # Transform the list into an ersatz set.
-            has_cl_set = dict.fromkeys(has_cl_set)
+            has_cl_set = set(has_cl_set)
         else:
             # If there were no known heads, the recipient cannot be assumed to
             # know about any changesets.
-            has_cl_set = {}
+            has_cl_set = set()
 
         # Make it easy to refer to self.manifest
         mnfst = self.manifest
@@ -1932,7 +1932,7 @@ class localrepository(repo.repository):
 
         cl = self.changelog
         nodes = cl.findmissing(common)
-        revset = dict.fromkeys([cl.rev(n) for n in nodes])
+        revset = set([cl.rev(n) for n in nodes])
         self.changegroupinfo(nodes, source)
 
         def identity(x):

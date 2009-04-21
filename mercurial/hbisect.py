@@ -24,7 +24,7 @@ def bisect(changelog, state):
     """
 
     clparents = changelog.parentrevs
-    skip = dict.fromkeys([changelog.rev(n) for n in state['skip']])
+    skip = set([changelog.rev(n) for n in state['skip']])
 
     def buildancestors(bad, good):
         # only the earliest bad revision matters
@@ -109,7 +109,7 @@ def bisect(changelog, state):
 
         for c in children.get(rev, []):
             if ancestors[c]:
-                ancestors[c] = dict.fromkeys(ancestors[c] + a).keys()
+                ancestors[c] = list(set(ancestors[c] + a))
             else:
                 ancestors[c] = a + [c]
 

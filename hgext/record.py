@@ -422,9 +422,9 @@ def dorecord(ui, repo, committer, *pats, **opts):
         chunks = filterpatch(ui, parsepatch(fp))
         del fp
 
-        contenders = {}
+        contenders = set()
         for h in chunks:
-            try: contenders.update(dict.fromkeys(h.files()))
+            try: contenders.update(set(h.files()))
             except AttributeError: pass
 
         changed = changes[0] + changes[1] + changes[2]
@@ -433,7 +433,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
             ui.status(_('no changes to record\n'))
             return 0
 
-        modified = dict.fromkeys(changes[0])
+        modified = set(changes[0])
 
         # 2. backup changed files, so we can restore them in the end
         backups = {}

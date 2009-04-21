@@ -1338,7 +1338,7 @@ class queue:
                 msg = ''
             return '%s%s' % (patchname, msg)
 
-        applied = dict.fromkeys([p.name for p in self.applied])
+        applied = set([p.name for p in self.applied])
         if length is None:
             length = len(self.series) - start
         if not missing:
@@ -1762,10 +1762,8 @@ def clone(ui, source, dest=None, **opts):
         if sr.mq.applied:
             qbase = bin(sr.mq.applied[0].rev)
             if not hg.islocal(dest):
-                heads = dict.fromkeys(sr.heads())
-                for h in sr.heads(qbase):
-                    del heads[h]
-                destrev = heads.keys()
+                heads = set(sr.heads())
+                destrev = list(heads.difference(sr.heads(qbase)))
                 destrev.append(sr.changelog.parents(qbase)[0])
     elif sr.capable('lookup'):
         try:

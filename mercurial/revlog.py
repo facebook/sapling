@@ -613,10 +613,9 @@ class revlog(object):
         heads = [self.rev(n) for n in heads]
 
         # we want the ancestors, but inclusive
-        has = dict.fromkeys(self.ancestors(*common))
-        has[nullrev] = None
-        for r in common:
-            has[r] = None
+        has = set(self.ancestors(*common))
+        has.add(nullrev)
+        has.update(common)
 
         # take all ancestors from heads that aren't in has
         missing = {}
@@ -726,9 +725,8 @@ class revlog(object):
                 # any other roots.
                 lowestrev = nullrev
                 roots = [nullid]
-        # Transform our roots list into a 'set' (i.e. a dictionary where the
-        # values don't matter.
-        descendents = dict.fromkeys(roots, 1)
+        # Transform our roots list into a set.
+        descendents = set(roots)
         # Also, keep the original roots so we can filter out roots that aren't
         # 'real' roots (i.e. are descended from other roots).
         roots = descendents.copy()
@@ -752,14 +750,14 @@ class revlog(object):
                     p = tuple(self.parents(n))
                     # If any of its parents are descendents, it's not a root.
                     if (p[0] in descendents) or (p[1] in descendents):
-                        roots.pop(n)
+                        roots.remove(n)
             else:
                 p = tuple(self.parents(n))
                 # A node is a descendent if either of its parents are
                 # descendents.  (We seeded the dependents list with the roots
                 # up there, remember?)
                 if (p[0] in descendents) or (p[1] in descendents):
-                    descendents[n] = 1
+                    descendents.add(n)
                     isdescendent = True
             if isdescendent and ((ancestors is None) or (n in ancestors)):
                 # Only include nodes that are both descendents and ancestors.
@@ -778,7 +776,7 @@ class revlog(object):
                     for p in self.parents(n):
                         heads.pop(p, None)
         heads = [n for n in heads.iterkeys() if heads[n] != 0]
-        roots = roots.keys()
+        roots = list(roots)
         assert orderedout
         assert roots
         assert heads
@@ -807,7 +805,7 @@ class revlog(object):
             start = nullid
         if stop is None:
             stop = []
-        stoprevs = dict.fromkeys([self.rev(n) for n in stop])
+        stoprevs = set([self.rev(n) for n in stop])
         startrev = self.rev(start)
         reachable = {startrev: 1}
         heads = {startrev: 1}

@@ -177,12 +177,12 @@ class bugzilla_2_16(object):
         self.run('''select bug_id from longdescs where
                     bug_id in %s and thetext like "%%%s%%"''' %
                  (buglist(ids), short(node)))
-        unknown = dict.fromkeys(ids)
+        unknown = set(ids)
         for (id,) in self.cursor.fetchall():
             self.ui.status(_('bug %d already knows about changeset %s\n') %
                            (id, short(node)))
-            unknown.pop(id, None)
-        return util.sort(unknown.keys())
+            unknown.discard(id)
+        return util.sort(unknown)
 
     def notify(self, ids, committer):
         '''tell bugzilla to send mail.'''

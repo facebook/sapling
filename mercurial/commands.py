@@ -1480,8 +1480,8 @@ def help_(ui, name=None, with_version=False):
         except AttributeError:
             ct = {}
 
-        modcmds = dict.fromkeys([c.split('|', 1)[0] for c in ct])
-        helplist(_('list of commands:\n\n'), modcmds.has_key)
+        modcmds = set([c.split('|', 1)[0] for c in ct])
+        helplist(_('list of commands:\n\n'), modcmds.__contains__)
 
     if name and name != 'shortlist':
         i = None
@@ -2503,14 +2503,14 @@ def revert(ui, repo, *pats, **opts):
 
         m = cmdutil.matchfiles(repo, names)
         changes = repo.status(match=m)[:4]
-        modified, added, removed, deleted = map(dict.fromkeys, changes)
+        modified, added, removed, deleted = map(set, changes)
 
         # if f is a rename, also revert the source
         cwd = repo.getcwd()
         for f in added:
             src = repo.dirstate.copied(f)
             if src and src not in names and repo.dirstate[src] == 'r':
-                removed[src] = None
+                removed.add(src)
                 names[src] = (repo.pathto(src, cwd), True)
 
         def removeforget(abs):
@@ -2824,7 +2824,7 @@ def tag(ui, repo, name1, *names, **opts):
 
     rev_ = "."
     names = (name1,) + names
-    if len(names) != len(dict.fromkeys(names)):
+    if len(names) != len(set(names)):
         raise util.Abort(_('tag names must be unique'))
     for n in names:
         if n in ['tip', '.', 'null']:

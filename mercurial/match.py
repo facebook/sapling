@@ -5,7 +5,7 @@ class _match(object):
         self._root = root
         self._cwd = cwd
         self._files = files
-        self._fmap = dict.fromkeys(files)
+        self._fmap = set(files)
         self.matchfn = mf
         self._anypats = ap
     def __call__(self, fn):

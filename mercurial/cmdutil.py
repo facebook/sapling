@@ -1017,13 +1017,13 @@ def walkchangerevs(ui, repo, pats, change, opts):
     else:
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
-    wanted = {}
+    wanted = set()
     slowpath = m.anypats() or (m.files() and opts.get('removed'))
     fncache = {}
 
     if not slowpath and not m.files():
         # No files, no patterns.  Display all revs.
-        wanted = dict.fromkeys(revs)
+        wanted = set(revs)
     copies = []
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
@@ -1071,7 +1071,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                         break
                     fncache.setdefault(rev, [])
                     fncache[rev].append(file_)
-                    wanted[rev] = 1
+                    wanted.add(rev)
                     if follow and copied:
                         copies.append(copied)
     if slowpath:
@@ -1089,7 +1089,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
             matches = filter(m, changefiles)
             if matches:
                 fncache[rev] = matches
-                wanted[rev] = 1
+                wanted.add(rev)
 
     class followfilter:
         def __init__(self, onlyfirst=False):
@@ -1135,8 +1135,8 @@ def walkchangerevs(ui, repo, pats, change, opts):
         ff = followfilter()
         stop = min(revs[0], revs[-1])
         for x in xrange(rev, stop-1, -1):
-            if ff.match(x) and x in wanted:
-                del wanted[x]
+            if ff.match(x):
+                wanted.discard(x)
 
     def iterate():
         if follow and not m.files():
