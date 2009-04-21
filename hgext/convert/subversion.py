@@ -754,7 +754,7 @@ class svn_source(converter_source):
                     copytopath = self.getrelpath(copytopath)
                     copies[self.recode(copytopath)] = self.recode(entry, pmodule)
 
-        return (util.unique(entries), copies)
+        return (list(set(entries)), copies)
 
     def _fetch_revisions(self, from_revnum, to_revnum):
         if from_revnum < to_revnum:

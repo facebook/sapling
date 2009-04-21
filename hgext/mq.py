@@ -204,7 +204,7 @@ class queue:
             bad = self.check_guard(guard)
             if bad:
                 raise util.Abort(bad)
-        guards = util.sort(util.unique(guards))
+        guards = util.sort(set(guards))
         self.ui.debug(_('active guards: %s\n') % ' '.join(guards))
         self.active_guards = guards
         self.guards_dirty = True
@@ -1190,11 +1190,11 @@ class queue:
                         del mm[mm.index(x)]
                     dd.append(x)
 
-                m = util.unique(mm)
-                r = util.unique(dd)
-                a = util.unique(aa)
+                m = list(set(mm))
+                r = list(set(dd))
+                a = list(set(aa))
                 c = [filter(matchfn, l) for l in (m, a, r)]
-                match = cmdutil.matchfiles(repo, util.unique(c[0] + c[1] + c[2]))
+                match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2]))
                 chunks = patch.diff(repo, patchparent, match=match,
                                     changes=c, opts=self.diffopts())
                 for chunk in chunks:

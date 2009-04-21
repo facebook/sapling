@@ -171,7 +171,7 @@ def _verify(repo):
         elif size > 0:
             storefiles[f] = True
 
-    files = util.sort(util.unique(filenodes.keys() + filelinkrevs.keys()))
+    files = util.sort(set(filenodes.keys() + filelinkrevs.keys()))
     for f in files:
         lr = filelinkrevs[f][0]
         try:

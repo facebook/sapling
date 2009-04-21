@@ -454,7 +454,7 @@ class dirstate(object):
         work = []
         wadd = work.append
 
-        files = util.unique(match.files())
+        files = set(match.files())
         if not files or '.' in files:
             files = ['']
         results = {'.hg': None}

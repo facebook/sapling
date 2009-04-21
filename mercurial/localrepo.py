@@ -791,7 +791,7 @@ class localrepository(repo.repository):
         if extra.get("close"):
             force = True
         if files:
-            files = util.unique(files)
+            files = list(set(files))
         try:
             wlock = self.wlock()
             lock = self.lock()

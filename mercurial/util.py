@@ -219,10 +219,6 @@ def binary(s):
     """return true if a string is binary data"""
     return bool(s and '\0' in s)
 
-def unique(g):
-    """return the uniq elements of iterable g"""
-    return dict.fromkeys(g).keys()
-
 def sort(l):
     if not isinstance(l, list):
         l = list(l)
