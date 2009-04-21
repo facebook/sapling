@@ -274,6 +274,13 @@ def install_hg():
         python = '"%s" "%s" -x' % (sys.executable,
                                    os.path.join(TESTDIR,'coverage.py'))
 
+def _hgpath():
+    cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
+    hgpath = os.popen(cmd % python)
+    path = hgpath.read().strip()
+    hgpath.close()
+    return path
+
 def output_coverage():
     vlog("# Producing coverage report")
     omit = [BINDIR, TESTDIR, PYTHONDIR]
@@ -524,13 +531,6 @@ else:
 BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
 PYTHONDIR = os.path.join(INST, "lib", "python")
 COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
-
-def _hgpath():
-    cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
-    hgpath = os.popen(cmd % python)
-    path = hgpath.read().strip()
-    hgpath.close()
-    return path
 
 expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
 hgpkg = None
