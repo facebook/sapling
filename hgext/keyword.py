@@ -177,7 +177,6 @@ class kwtemplater(object):
         candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True # do not expand when reading
-            action = expand and 'expanding' or 'shrinking'
             for f in candidates:
                 fp = self.repo.file(f)
                 data = fp.read(mf[f])
@@ -191,7 +190,11 @@ class kwtemplater(object):
                 else:
                     found = self.re_kw.search(data)
                 if found:
-                    notify(_('overwriting %s %s keywords\n') % (f, action))
+                    if expand:
+                        msg = _('overwriting %s expanding keywords\n')
+                    else:
+                        msg = _('overwriting %s shrinking keywords\n')
+                    notify(msg % f)
                     self.repo.wwrite(f, data, mf.flags(f))
                     self.repo.dirstate.normal(f)
             self.restrict = False
