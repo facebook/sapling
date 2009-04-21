@@ -494,7 +494,7 @@ def runone(options, test, skips, fails):
 
 def runchildren(options, expecthg, tests):
     if not options.with_hg:
-        installhg()
+        installhg(options)
         if hgpkg != expecthg:
             print '# Testing unexpected mercurial: %s' % hgpkg
 
