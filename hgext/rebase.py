@@ -77,7 +77,7 @@ def rebase(ui, repo, **opts):
                 raise error.ParseError(
                     'rebase', _('cannot use collapse with continue or abort'))
 
-            if (srcf or basef or destf):
+            if srcf or basef or destf:
                 raise error.ParseError('rebase',
                     _('abort and continue do not allow specifying revisions'))
 
