@@ -46,11 +46,7 @@ defaults = {
     'port': ('HGTEST_PORT', 20059),
 }
 
-# globals set by parse_args() (ugh)
-verbose = False
-nodiff = False
-coverage = False
-python = None
+python = sys.executable
 
 def parse_args():
     parser = optparse.OptionParser("%prog [options] [tests]")
@@ -98,11 +94,18 @@ def parse_args():
     parser.set_defaults(**defaults)
     (options, args) = parser.parse_args()
 
-    global verbose, nodiff, coverage, python
-    verbose = options.verbose
-    nodiff = options.nodiff
-    coverage = options.cover or options.cover_stdlib or options.annotate
-    python = sys.executable
+    global vlog
+    options.anycoverage = (options.cover or
+                           options.cover_stdlib or
+                           options.annotate)
+
+    if options.verbose:
+        def vlog(*msg):
+            for m in msg:
+                print m,
+            print
+    else:
+        vlog = lambda *msg: None
 
     if options.jobs < 1:
         print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
@@ -119,12 +122,6 @@ def rename(src, dst):
     """
     shutil.copy(src, dst)
     os.remove(src)
-
-def vlog(*msg):
-    if verbose:
-        for m in msg:
-            print m,
-        print
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.
@@ -185,7 +182,7 @@ def check_required_tools():
 
 def cleanup_exit(options):
     if not options.keep_tmpdir:
-        if verbose:
+        if options.verbose:
             print "# Cleaning up HGTMP", HGTMP
         shutil.rmtree(HGTMP, True)
 
@@ -220,7 +217,7 @@ def install_hg(options):
            % (sys.executable, pure, INST, PYTHONDIR, BINDIR, installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
-        if not verbose:
+        if not options.verbose:
             os.remove(installerrs)
     else:
         f = open(installerrs)
@@ -256,7 +253,7 @@ def install_hg(options):
     f.close()
     os.chmod(os.path.join(BINDIR, 'diffstat'), 0700)
 
-    if coverage:
+    if options.anycoverage:
         vlog("# Installing coverage wrapper")
         os.environ['COVERAGE_FILE'] = COVERAGE_FILE
         if os.path.exists(COVERAGE_FILE):
@@ -346,7 +343,7 @@ def run_one(options, test, skips, fails):
     False -> failed'''
 
     def skip(msg):
-        if not verbose:
+        if not options.verbose:
             skips.append((test, msg))
         else:
             print "\nSkipping %s: %s" % (test, msg)
@@ -354,7 +351,7 @@ def run_one(options, test, skips, fails):
 
     def fail(msg):
         fails.append((test, msg))
-        if not nodiff:
+        if not options.nodiff:
             print "\nERROR: %s %s" % (test, msg)
         return None
 
@@ -447,14 +444,14 @@ def run_one(options, test, skips, fails):
             fail("output changed and returned error code %d" % ret)
         else:
             fail("output changed")
-        if not nodiff:
+        if not options.nodiff:
             show_diff(ref_out, out)
         ret = 1
     elif ret:
         mark = '!'
         fail("returned error code %d" % ret)
 
-    if not verbose:
+    if not options.verbose:
         sys.stdout.write(mark)
         sys.stdout.flush()
 
@@ -638,7 +635,7 @@ def run_tests(options, expecthg, tests):
             print "# Ran %d tests, %d skipped, %d failed." % (
                 tested, skipped, failed)
 
-        if coverage:
+        if options.anycoverage:
             output_coverage(options)
     except KeyboardInterrupt:
         failed = True
