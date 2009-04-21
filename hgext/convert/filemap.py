@@ -148,7 +148,7 @@ class filemap_source(converter_source):
         # wanted by previous runs.
         self._rebuilt = not revmap
         seen = {SKIPREV: SKIPREV}
-        dummyset = util.set()
+        dummyset = set()
         converted = []
         for rev in revmap.order:
             mapped = revmap[rev]
@@ -237,7 +237,7 @@ class filemap_source(converter_source):
             # map to any revision in the restricted graph.  Put SKIPREV
             # in the set of wanted ancestors to simplify code elsewhere
             self.parentmap[rev] = SKIPREV
-            self.wantedancestors[rev] = util.set((SKIPREV,))
+            self.wantedancestors[rev] = set((SKIPREV,))
             return
 
         # Reuse the data from our parent.
@@ -254,7 +254,7 @@ class filemap_source(converter_source):
 
         # The set of wanted ancestors of rev is the union of the sets
         # of wanted ancestors of its parents. Plus rev itself.
-        wrev = util.set()
+        wrev = set()
         for p in parents:
             wrev.update(self.wantedancestors[p])
         wrev.add(rev)

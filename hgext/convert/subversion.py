@@ -564,7 +564,7 @@ class svn_source(converter_source):
         out, e.g. 'I copied trunk into a subdirectory of itself instead
         of making a branch'. The converted repository is significantly
         smaller if we ignore such revisions."""
-        self.blacklist = util.set()
+        self.blacklist = set()
         blacklist = self.blacklist
         for line in file("blacklist.txt", "r"):
             if not line.startswith("#"):
@@ -1099,7 +1099,7 @@ class svn_sink(converter_sink, commandline):
                 os.rename(tempname, wdest)
 
     def dirs_of(self, files):
-        dirs = util.set()
+        dirs = set()
         for f in files:
             if os.path.isdir(self.wjoin(f)):
                 dirs.add(f)
@@ -1155,8 +1155,8 @@ class svn_sink(converter_sink, commandline):
                 return self.revid(self.childmap[parent])
             except KeyError:
                 pass
-        entries = util.set(self.delete)
-        files = util.frozenset(files)
+        entries = set(self.delete)
+        files = frozenset(files)
         entries.update(self.add_dirs(files.difference(entries)))
         if self.copies:
             for s, d in self.copies:

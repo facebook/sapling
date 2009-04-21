@@ -1306,7 +1306,7 @@ def heads(ui, repo, *branchrevs, **opts):
         heads = repo.heads(start, closed=closed)
     else:
         heads = []
-        visitedset = util.set()
+        visitedset = set()
         for branchrev in branchrevs:
             branch = repo[branchrev].branch()
             if branch in visitedset:

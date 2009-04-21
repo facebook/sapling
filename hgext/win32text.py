@@ -99,7 +99,7 @@ _filters = {
 
 def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     halt = False
-    seen = util.set()
+    seen = set()
     # we try to walk changesets in reverse order from newest to
     # oldest, so that if we see a file multiple times, we take the
     # newest version as canonical. this prevents us from blocking a

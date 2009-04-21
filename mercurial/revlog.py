@@ -576,7 +576,7 @@ class revlog(object):
     def ancestors(self, *revs):
         'Generate the ancestors of revs using a breadth-first visit'
         visit = list(revs)
-        seen = util.set([nullrev])
+        seen = set([nullrev])
         while visit:
             for parent in self.parentrevs(visit.pop(0)):
                 if parent not in seen:
@@ -586,7 +586,7 @@ class revlog(object):
 
     def descendants(self, *revs):
         'Generate the descendants of revs in topological order'
-        seen = util.set(revs)
+        seen = set(revs)
         for i in xrange(min(revs) + 1, len(self)):
             for x in self.parentrevs(i):
                 if x != nullrev and x in seen:

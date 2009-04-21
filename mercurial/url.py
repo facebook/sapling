@@ -84,8 +84,8 @@ def quotepath(path):
     '''
     global _safeset, _hex
     if _safeset is None:
-        _safeset = util.set(_safe)
-        _hex = util.set('abcdefABCDEF0123456789')
+        _safeset = set(_safe)
+        _hex = set('abcdefABCDEF0123456789')
     l = list(path)
     for i in xrange(len(l)):
         c = l[i]

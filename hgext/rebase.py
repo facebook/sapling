@@ -128,8 +128,8 @@ def rebase(ui, repo, **opts):
 
         if not keepf:
             # Remove no more useful revisions
-            if (util.set(repo.changelog.descendants(min(state)))
-                                                    - util.set(state.keys())):
+            if (set(repo.changelog.descendants(min(state)))
+                                                    - set(state.keys())):
                 ui.warn(_("warning: new changesets detected on source branch, "
                                                         "not stripping\n"))
             else:
@@ -353,7 +353,7 @@ def restorestatus(repo):
 
 def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
-    if util.set(repo.changelog.descendants(target)) - util.set(state.values()):
+    if set(repo.changelog.descendants(target)) - set(state.values()):
         repo.ui.warn(_("warning: new changesets detected on target branch, "
                                                     "not stripping\n"))
     else:
@@ -368,7 +368,7 @@ def abort(repo, originalwd, target, state):
 
 def buildstate(repo, dest, src, base, collapse):
     'Define which revisions are going to be rebased and where'
-    targetancestors = util.set()
+    targetancestors = set()
 
     if not dest:
         # Destination defaults to the latest revision in the current branch
@@ -397,12 +397,12 @@ def buildstate(repo, dest, src, base, collapse):
             repo.ui.debug(_('already working on current\n'))
             return None
 
-        targetancestors = util.set(repo.changelog.ancestors(dest))
+        targetancestors = set(repo.changelog.ancestors(dest))
         if cwd in targetancestors:
             repo.ui.debug(_('already working on the current branch\n'))
             return None
 
-        cwdancestors = util.set(repo.changelog.ancestors(cwd))
+        cwdancestors = set(repo.changelog.ancestors(cwd))
         cwdancestors.add(cwd)
         rebasingbranch = cwdancestors - targetancestors
         source = min(rebasingbranch)
@@ -412,7 +412,7 @@ def buildstate(repo, dest, src, base, collapse):
     external = nullrev
     if collapse:
         if not targetancestors:
-            targetancestors = util.set(repo.changelog.ancestors(dest))
+            targetancestors = set(repo.changelog.ancestors(dest))
         for rev in state:
             # Check externals and fail if there are more than one
             for p in repo[rev].parents():

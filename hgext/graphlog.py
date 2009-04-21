@@ -286,7 +286,7 @@ def graphlog(ui, repo, path=None, **opts):
 
 def graphrevs(repo, nodes, opts):
     nodes.reverse()
-    include = util.set(nodes)
+    include = set(nodes)
     limit = cmdutil.loglimit(opts)
     count = 0
     for node in nodes:

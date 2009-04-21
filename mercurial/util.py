@@ -19,12 +19,6 @@ import imp
 
 # Python compatibility
 
-try:
-    set = set
-    frozenset = frozenset
-except NameError:
-    from sets import Set as set, ImmutableSet as frozenset
-
 _md5 = None
 def md5(s):
     global _md5

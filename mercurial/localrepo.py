@@ -17,7 +17,7 @@ import merge as merge_
 from lock import release
 
 class localrepository(repo.repository):
-    capabilities = util.set(('lookup', 'changegroupsubset'))
+    capabilities = set(('lookup', 'changegroupsubset'))
     supported = ('revlogv1', 'store', 'fncache')
 
     def __init__(self, parentui, path=None, create=0):

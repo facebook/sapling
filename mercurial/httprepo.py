@@ -52,9 +52,9 @@ class httprepository(repo.repository):
     def get_caps(self):
         if self.caps is None:
             try:
-                self.caps = util.set(self.do_read('capabilities').split())
+                self.caps = set(self.do_read('capabilities').split())
             except error.RepoError:
-                self.caps = util.set()
+                self.caps = set()
             self.ui.debug(_('capabilities: %s\n') %
                           (' '.join(self.caps or ['none'])))
         return self.caps

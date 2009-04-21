@@ -1,7 +1,7 @@
 import os
 import os.path
 from mercurial import hg, ui
-from mercurial.util import walkrepos, set, frozenset
+from mercurial.util import walkrepos
 from os import mkdir, chdir
 from os.path import join as pjoin
 
