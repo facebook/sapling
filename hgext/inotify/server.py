@@ -583,19 +583,7 @@ class server(object):
     def handle_timeout(self):
         pass
 
-    def handle_event(self, fd, event):
-        sock, addr = self.sock.accept()
-
-        cs = common.recvcs(sock)
-        version = ord(cs.read(1))
-
-        if version != common.version:
-            self.ui.warn(_('received query from incompatible client '
-                           'version %d\n') % version)
-            return
-
-        type = cs.read(4)
-
+    def answer_stat_query(self, cs):
         names = cs.read().split('\0')
 
         states = names.pop()
@@ -623,7 +611,7 @@ class server(object):
                         for f, s in self.repowatcher.walk(states, l, fn):
                             yield f
 
-        results = ['\0'.join(r) for r in [
+        return ['\0'.join(r) for r in [
             genresult('l', self.repowatcher.statustrees['l']),
             genresult('m', self.repowatcher.statustrees['m']),
             genresult('a', self.repowatcher.statustrees['a']),
@@ -635,6 +623,25 @@ class server(object):
             [],
             'c' in states and genresult('n', self.repowatcher.tree) or [],
             ]]
+
+    def handle_event(self, fd, event):
+        sock, addr = self.sock.accept()
+
+        cs = common.recvcs(sock)
+        version = ord(cs.read(1))
+
+        if version != common.version:
+            self.ui.warn(_('received query from incompatible client '
+                           'version %d\n') % version)
+            return
+
+        type = cs.read(4)
+
+        if type == 'STAT':
+            results = self.answer_stat_query(cs)
+        else:
+            self.ui.warn(_('unrecognized query type: %s\n') % type)
+            return
 
         try:
             try:
