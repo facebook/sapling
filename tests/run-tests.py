@@ -496,45 +496,6 @@ def run_one(test, skips, fails):
         return None
     return ret == 0
 
-(options, args) = parse_args()
-if not options.child:
-    os.umask(022)
-
-    check_required_tools()
-
-# Reset some environment variables to well-known values so that
-# the tests produce repeatable output.
-os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
-os.environ['TZ'] = 'GMT'
-os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
-os.environ['CDPATH'] = ''
-
-TESTDIR = os.environ["TESTDIR"] = os.getcwd()
-HGTMP = os.environ['HGTMP'] = os.path.realpath(tempfile.mkdtemp('', 'hgtests.',
-                                               options.tmpdir))
-DAEMON_PIDS = None
-HGRCPATH = None
-
-os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-os.environ["HGMERGE"] = "internal:merge"
-os.environ["HGUSER"]   = "test"
-os.environ["HGENCODING"] = "ascii"
-os.environ["HGENCODINGMODE"] = "strict"
-os.environ["HGPORT"] = str(options.port)
-os.environ["HGPORT1"] = str(options.port + 1)
-os.environ["HGPORT2"] = str(options.port + 2)
-
-if options.with_hg:
-    INST = options.with_hg
-else:
-    INST = os.path.join(HGTMP, "install")
-BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
-PYTHONDIR = os.path.join(INST, "lib", "python")
-COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
-
-expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
-hgpkg = None
-
 def run_children(tests):
     if not options.with_hg:
         install_hg()
@@ -685,6 +646,45 @@ def run_tests(tests):
 
     if failed:
         sys.exit(1)
+
+(options, args) = parse_args()
+if not options.child:
+    os.umask(022)
+
+    check_required_tools()
+
+# Reset some environment variables to well-known values so that
+# the tests produce repeatable output.
+os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+os.environ['TZ'] = 'GMT'
+os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
+os.environ['CDPATH'] = ''
+
+TESTDIR = os.environ["TESTDIR"] = os.getcwd()
+HGTMP = os.environ['HGTMP'] = os.path.realpath(tempfile.mkdtemp('', 'hgtests.',
+                                               options.tmpdir))
+DAEMON_PIDS = None
+HGRCPATH = None
+
+os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+os.environ["HGMERGE"] = "internal:merge"
+os.environ["HGUSER"]   = "test"
+os.environ["HGENCODING"] = "ascii"
+os.environ["HGENCODINGMODE"] = "strict"
+os.environ["HGPORT"] = str(options.port)
+os.environ["HGPORT1"] = str(options.port + 1)
+os.environ["HGPORT2"] = str(options.port + 2)
+
+if options.with_hg:
+    INST = options.with_hg
+else:
+    INST = os.path.join(HGTMP, "install")
+BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
+PYTHONDIR = os.path.join(INST, "lib", "python")
+COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
+
+expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
+hgpkg = None
 
 if len(args) == 0:
     args = os.listdir(".")
