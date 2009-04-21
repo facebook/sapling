@@ -542,6 +542,13 @@ class repowatcher(object):
     def shutdown(self):
         self.watcher.close()
 
+    def debug(self):
+        """
+        Returns a sorted list of relatives paths currently watched,
+        for debugging purposes.
+        """
+        return sorted(tuple[0][len(self.wprefix):] for tuple in self.watcher)
+
 class server(object):
     poll_events = select.POLLIN
 
@@ -624,6 +631,9 @@ class server(object):
             'c' in states and genresult('n', self.repowatcher.tree) or [],
             ]]
 
+    def answer_dbug_query(self):
+        return ['\0'.join(self.repowatcher.debug())]
+
     def handle_event(self, fd, event):
         sock, addr = self.sock.accept()
 
@@ -639,6 +649,8 @@ class server(object):
 
         if type == 'STAT':
             results = self.answer_stat_query(cs)
+        elif type == 'DBUG':
+            results = self.answer_dbug_query()
         else:
             self.ui.warn(_('unrecognized query type: %s\n') % type)
             return

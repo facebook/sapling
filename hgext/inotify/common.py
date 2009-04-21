@@ -18,6 +18,7 @@ import cStringIO, socket, struct
      - For STAT, N+1 \0-separated strings:
         1) N different names that need checking
         2) 1 string containing all the status types to match
+     - No parameter needed for DBUG
 
   Server sending query answer:
   1) send protocol version number
@@ -31,7 +32,8 @@ import cStringIO, socket, struct
 version = 2
 
 resphdrfmts = {
-    'STAT': '>llllllll' # status requests
+    'STAT': '>llllllll', # status requests
+    'DBUG': '>l'         # debugging queries
 }
 resphdrsizes = dict((k, struct.calcsize(v))
                     for k, v in resphdrfmts.iteritems())

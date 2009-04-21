@@ -142,5 +142,12 @@ class client(object):
                 if names:
                     return filter(match, names.split('\0'))
             return []
-
         return map(readnames, resphdr)
+
+    @start_server
+    def debugquery(self):
+        cs, resphdr = self.query('DBUG', '')
+
+        nbytes = resphdr[0]
+        names = cs.read(nbytes)
+        return names.split('\0')

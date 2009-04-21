@@ -39,6 +39,18 @@ def serve(ui, repo, **opts):
     service = service()
     cmdutil.service(opts, initfn=service.init, runfn=service.run)
 
+def debuginotify(ui, repo, **opts):
+    '''debugging information for inotify extension
+
+    Prints the list of directories being watched by the inotify server.
+    '''
+    cli = client(ui, repo)
+    response = cli.debugquery()
+
+    ui.write(_('directories being watched:\n'))
+    for path in response:
+        ui.write(('  %s/\n') % path)
+
 def reposetup(ui, repo):
     if not hasattr(repo, 'dirstate'):
         return
@@ -82,11 +94,13 @@ def reposetup(ui, repo):
     repo.dirstate.__class__ = inotifydirstate
 
 cmdtable = {
+    'debuginotify':
+        (debuginotify, [], ('hg debuginotify')),
     '^inserve':
-    (serve,
-     [('d', 'daemon', None, _('run server in background')),
-      ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
-      ('t', 'idle-timeout', '', _('minutes to sit idle before exiting')),
-      ('', 'pid-file', '', _('name of file to write process ID to'))],
-     _('hg inserve [OPT]...')),
+        (serve,
+         [('d', 'daemon', None, _('run server in background')),
+          ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
+          ('t', 'idle-timeout', '', _('minutes to sit idle before exiting')),
+          ('', 'pid-file', '', _('name of file to write process ID to'))],
+         _('hg inserve [OPT]...')),
     }
