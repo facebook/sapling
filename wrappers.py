@@ -103,7 +103,7 @@ def push(orig, ui, repo, dest=None, *args, **opts):
     # Strategy:
     # 1. Find all outgoing commits from this head
     if len(repo.parents()) != 1:
-        ui.status('Cowardly refusing to push branch merge')
+        ui.status('Cowardly refusing to push branch merge\n')
         return 1
     workingrev = repo.parents()[0]
     ui.status('searching for changes\n')
@@ -116,7 +116,7 @@ def push(orig, ui, repo, dest=None, *args, **opts):
         old_ctx = repo[oldest]
         if len(old_ctx.parents()) != 1:
             ui.status('Found a branch merge, this needs discussion and '
-                      'implementation.')
+                      'implementation.\n')
             return 1
         base_n = old_ctx.parents()[0].node()
         old_children = repo[base_n].children()
