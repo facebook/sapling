@@ -161,9 +161,7 @@ def push(orig, ui, repo, dest=None, *args, **opts):
             repo = hg.repository(ui, hge.path)
             for child in repo[replacement.node()].children():
                 rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
-                print node.hex(rebasesrc)
                 if rebasesrc in outgoing:
-                    print 'swap outgoin'
                     while rebasesrc in outgoing:
                         rebsrcindex = outgoing.index(rebasesrc)
                         outgoing = (outgoing[0:rebsrcindex] +
