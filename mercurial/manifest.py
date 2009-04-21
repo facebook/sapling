@@ -125,7 +125,7 @@ class manifest(revlog.revlog):
             for f in l:
                 if '\n' in f or '\r' in f:
                     raise error.RevlogError(
-                        _("'\\n' and '\\r' disallowed in filenames"))
+                        _("'\\n' and '\\r' disallowed in filenames: %r") % f)
 
         # if we're using the listcache, make sure it is valid and
         # parented by the same node we're diffing against

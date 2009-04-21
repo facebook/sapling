@@ -39,6 +39,12 @@ class logentry(object):
     def __init__(self, **entries):
         self.__dict__.update(entries)
 
+    def __repr__(self):
+        return "<%s at 0x%x: %s %s>" % (self.__class__.__name__,
+                                        id(self),
+                                        self.file,
+                                        ".".join(map(str, self.revision)))
+
 class logerror(Exception):
     pass
 
@@ -428,6 +434,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
 class changeset(object):
     '''Class changeset has the following attributes:
+        .id        - integer identifying this changeset (list index)
         .author    - author name as CVS knows it
         .branch    - name of branch this changeset is on, or None
         .comment   - commit message
@@ -440,6 +447,11 @@ class changeset(object):
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
+
+    def __repr__(self):
+        return "<%s at 0x%x: %s>" % (self.__class__.__name__,
+                                     id(self),
+                                     getattr(self, 'id', "(no id)"))
 
 def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     '''Convert log into changesets.'''

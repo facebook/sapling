@@ -93,7 +93,7 @@ def setcurrent(repo, mark):
     '''Set the name of the bookmark that we are currently on
 
     Set the name of the bookmark that we are on (hg update <bookmark>).
-    The name is recoreded in .hg/bookmarks.current
+    The name is recorded in .hg/bookmarks.current
     '''
     if current(repo) == mark:
         return

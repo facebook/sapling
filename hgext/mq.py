@@ -1625,14 +1625,14 @@ def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
     The patches must not be applied, unless they are arguments to the
-    --rev parameter. At least one patch or revision is required.
+    -r/--rev parameter. At least one patch or revision is required.
 
     With --rev, mq will stop managing the named revisions (converting
     them to regular mercurial changesets). The qfinish command should
-    be used as an alternative for qdel -r, as the latter option is
+    be used as an alternative for qdelete -r, as the latter option is
     deprecated.
 
-    With --keep, the patch files are preserved in the patch
+    With -k/--keep, the patch files are preserved in the patch
     directory."""
     q = repo.mq
     q.delete(repo, patches, opts)
@@ -1669,20 +1669,24 @@ def qimport(ui, repo, *filename, **opts):
     to the series.
 
     The patch will have the same name as its source file unless you
-    give it a new one with --name.
+    give it a new one with -n/--name.
 
     You can register an existing patch inside the patch directory with
-    the --existing flag.
+    the -e/--existing flag.
 
-    With --force, an existing patch of the same name will be
+    With -f/--force, an existing patch of the same name will be
     overwritten.
 
-    An existing changeset may be placed under mq control with --rev
+    An existing changeset may be placed under mq control with -r/--rev
     (e.g. qimport --rev tip -n patch will place tip under mq control).
-    With --git, patches imported with --rev will use the git diff
+    With -g/--git, patches imported with --rev will use the git diff
     format. See the diffs help topic for information on why this is
     important for preserving rename/copy information and permission
     changes.
+
+    To import a patch from standard input, pass - as the patch file.
+    When importing from standard input, a patch name must be specified
+    using the --name flag.
     """
     q = repo.mq
     q.qimport(repo, filename, patchname=opts['name'],
@@ -1694,11 +1698,11 @@ def qimport(ui, repo, *filename, **opts):
 def init(ui, repo, **opts):
     """init a new queue repository
 
-    The queue repository is unversioned by default. If -c is
-    specified, qinit will create a separate nested repository for
-    patches (qinit -c may also be run later to convert an unversioned
-    patch repository into a versioned one). You can use qcommit to
-    commit changes to this queue repository."""
+    The queue repository is unversioned by default. If
+    -c/--create-repo is specified, qinit will create a separate nested
+    repository for patches (qinit -c may also be run later to convert
+    an unversioned patch repository into a versioned one). You can use
+    qcommit to commit changes to this queue repository."""
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
@@ -1841,19 +1845,21 @@ def new(ui, repo, patch, *args, **opts):
 
     qnew creates a new patch on top of the currently-applied patch (if
     any). It will refuse to run if there are any outstanding changes
-    unless -f is specified, in which case the patch will be
-    initialized with them. You may also use -I, -X, and/or a list of
-    files after the patch name to add only changes to matching files
-    to the new patch, leaving the rest as uncommitted modifications.
+    unless -f/--force is specified, in which case the patch will be
+    initialized with them. You may also use -I/--include,
+    -X/--exclude, and/or a list of files after the patch name to add
+    only changes to matching files to the new patch, leaving the rest
+    as uncommitted modifications.
 
-    -u and -d can be used to set the (given) user and date, respectively.
-    -U and -D set user to current user and date to current date.
+    -u/--user and -d/--date can be used to set the (given) user and
+    date, respectively. -U/--currentuser and -D/--currentdate set user
+    to current user and date to current date.
 
-    -e, -m or -l set the patch header as well as the commit message.
-    If none is specified, the header is empty and the commit message
-    is '[mq]: PATCH'.
+    -e/--edit, -m/--message or -l/--logfile set the patch header as
+    well as the commit message. If none is specified, the header is
+    empty and the commit message is '[mq]: PATCH'.
 
-    Use the --git option to keep the patch in the git extended diff
+    Use the -g/--git option to keep the patch in the git extended diff
     format. Read the diffs help topic for more information on why this
     is important for preserving permission changes and copy/rename
     information.
@@ -1878,13 +1884,13 @@ def refresh(ui, repo, *pats, **opts):
     contain only the modifications that match those patterns; the
     remaining modifications will remain in the working directory.
 
-    If --short is specified, files currently included in the patch
+    If -s/--short is specified, files currently included in the patch
     will be refreshed just like matched files and remain in the patch.
 
     hg add/remove/copy/rename work as usual, though you might want to
-    use git-style patches (--git or [diff] git=1) to track copies and
-    renames. See the diffs help topic for more information on the git
-    diff format.
+    use git-style patches (-g/--git or [diff] git=1) to track copies
+    and renames. See the diffs help topic for more information on the
+    git diff format.
     """
     q = repo.mq
     message = cmdutil.logmessage(opts)
@@ -2078,8 +2084,8 @@ def savename(path):
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
 
-    When --force is applied, all local changes in patched files will
-    be lost.
+    When -f/--force is applied, all local changes in patched files
+    will be lost.
     """
     q = repo.mq
     mergeq = None
@@ -2353,10 +2359,10 @@ def finish(ui, repo, *revrange, **opts):
     patches) by moving them out of mq control into regular repository
     history.
 
-    Accepts a revision range or the --applied option. If --applied is
-    specified, all applied mq revisions are removed from mq control.
-    Otherwise, the given revisions must be at the base of the stack of
-    applied patches.
+    Accepts a revision range or the -a/--applied option. If --applied
+    is specified, all applied mq revisions are removed from mq
+    control. Otherwise, the given revisions must be at the base of the
+    stack of applied patches.
 
     This can be especially useful if your changes have been applied to
     an upstream repository, or if you are about to push your changes

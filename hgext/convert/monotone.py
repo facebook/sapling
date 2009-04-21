@@ -112,14 +112,9 @@ class monotone_source(converter_source, commandline):
                 value = value.replace(r'\"', '"')
                 value = value.replace(r'\\', '\\')
                 certs[name] = value
+        # Monotone may have subsecond dates: 2005-02-05T09:39:12.364306
+        certs["date"] = certs["date"].split('.')[0]
         return certs
-
-    def mtnrenamefiles(self, files, fromdir, todir):
-        renamed = {}
-        for tofile in files:
-            if tofile.startswith(todir + '/'):
-                renamed[tofile] = fromdir + tofile[len(todir):]
-        return renamed
 
     # implement the converter_source interface:
 
@@ -133,15 +128,17 @@ class monotone_source(converter_source, commandline):
         #revision = self.mtncmd("get_revision %s" % rev).split("\n\n")
         revision = self.mtnrun("get_revision", rev).split("\n\n")
         files = {}
+        addedfiles = {}
+        renameddirs = []
         copies = {}
         for e in revision:
             m = self.add_file_re.match(e)
             if m:
                 files[m.group(1)] = rev
+                addedfiles[m.group(1)] = rev
             m = self.patch_re.match(e)
             if m:
                 files[m.group(1)] = rev
-
             # Delete/rename is handled later when the convert engine
             # discovers an IOError exception from getfile,
             # but only if we add the "from" file to the list of changes.
@@ -156,16 +153,27 @@ class monotone_source(converter_source, commandline):
                     copies[toname] = fromname
                     files[toname] = rev
                     files[fromname] = rev
-                if self.mtnisdir(toname, rev):
-                    renamed = self.mtnrenamefiles(self.files, fromname, toname)
-                    for tofile, fromfile in renamed.items():
-                        self.ui.debug (_("copying file in renamed directory "
-                                         "from '%s' to '%s'")
-                                       % (fromfile, tofile), '\n')
-                        files[tofile] = rev
-                        copies[tofile] = fromfile
-                    for fromfile in renamed.values():
-                        files[fromfile] = rev
+                elif self.mtnisdir(toname, rev):
+                    renameddirs.append((fromname, toname))
+
+        # Directory renames can be handled only once we have recorded
+        # all new files
+        for fromdir, todir in renameddirs:
+            renamed = {}
+            for tofile in self.files:
+                if tofile in addedfiles:
+                    continue
+                if tofile.startswith(todir + '/'):
+                    renamed[tofile] = fromdir + tofile[len(todir):]
+            for tofile, fromfile in renamed.items():
+                self.ui.debug (_("copying file in renamed directory "
+                                 "from '%s' to '%s'")
+                               % (fromfile, tofile), '\n')
+                files[tofile] = rev
+                copies[tofile] = fromfile
+            for fromfile in renamed.values():
+                files[fromfile] = rev
+
         return (files.items(), copies)
 
     def getmode(self, name, rev):

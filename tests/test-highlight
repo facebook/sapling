@@ -24,7 +24,7 @@ cat hg.pid >> $DAEMON_PIDS
 
 echo % hgweb filerevision, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/get-with-headers.py') \
-    | sed "s/class=\"k\"/class=\"kn\"/g"
+    | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mf\"/class=\"mi\"/g"
 
 echo % hgweb filerevision, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/isolatin.txt') \
@@ -32,7 +32,7 @@ echo % hgweb filerevision, html
 
 echo % hgweb fileannotate, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py') \
-    | sed "s/class=\"k\"/class=\"kn\"/g"
+    | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mi\"/class=\"mf\"/g"
 
 echo % hgweb fileannotate, raw
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py?style=raw') \

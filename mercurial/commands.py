@@ -287,15 +287,21 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     """
     def print_result(nodes, good):
         displayer = cmdutil.show_changeset(ui, repo, {})
-        transition = (good and "good" or "bad")
         if len(nodes) == 1:
             # narrowed it down to a single revision
-            ui.write(_("The first %s revision is:\n") % transition)
+            if good:
+                ui.write(_("The first good revision is:\n"))
+            else:
+                ui.write(_("The first bad revision is:\n"))
             displayer.show(repo[nodes[0]])
         else:
             # multiple possible revisions
-            ui.write(_("Due to skipped revisions, the first "
-                       "%s revision could be any of:\n") % transition)
+            if good:
+                ui.write(_("Due to skipped revisions, the first "
+                        "good revision could be any of:\n"))
+            else:
+                ui.write(_("Due to skipped revisions, the first "
+                        "bad revision could be any of:\n"))
             for n in nodes:
                 displayer.show(repo[n])
 

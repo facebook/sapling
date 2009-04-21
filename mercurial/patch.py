@@ -421,11 +421,12 @@ class patchfile:
                             f = self.ui.note
                         offset = l - orig_start - fuzzlen
                         if offset == 1:
-                            linestr = "line"
+                            msg = _("Hunk #%d succeeded at %d %s"
+                                    "(offset %d line).\n")
                         else:
-                            linestr = "lines"
-                        f(_("Hunk #%d succeeded at %d %s(offset %d %s).\n") %
-                          (h.number, l+1, fuzzstr, offset, linestr))
+                            msg = _("Hunk #%d succeeded at %d %s"
+                                    "(offset %d lines).\n")
+                        f(msg % (h.number, l+1, fuzzstr, offset))
                         return fuzzlen
         self.printfile(True)
         self.ui.warn(_("Hunk #%d FAILED at %d\n") % (h.number, orig_start))
