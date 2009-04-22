@@ -160,6 +160,10 @@ class monotone_source(converter_source, commandline):
                     continue
                 if tofile.startswith(todir + '/'):
                     renamed[tofile] = fromdir + tofile[len(todir):]
+                    # Avoid chained moves like:
+                    # d1(/a) => d3/d1(/a)
+                    # d2 => d3
+                    ignoremove[tofile] = 1
             for tofile, fromfile in renamed.items():
                 self.ui.debug (_("copying file in renamed dir from '%s' to '%s'") 
                                % (fromfile, tofile), '\n')
