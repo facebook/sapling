@@ -1068,6 +1068,8 @@ class localrepository(repo.repository):
                     wlock = None
                     try:
                         try:
+                            # updating the dirstate is optional
+                            # so we dont wait on the lock
                             wlock = self.wlock(False)
                             for f in fixup:
                                 self.dirstate.normal(f)
