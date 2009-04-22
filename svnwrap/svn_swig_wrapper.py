@@ -62,7 +62,7 @@ def _create_auth_baton(pool):
     # Give the client context baton a suite of authentication
     # providers.h
     platform_specific = ['svn_auth_get_gnome_keyring_simple_provider',
-                       'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
+                         'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
                          'svn_auth_get_keychain_simple_provider',
                          'svn_auth_get_keychain_ssl_client_cert_pw_provider',
                          'svn_auth_get_kwallet_simple_provider',
@@ -73,13 +73,23 @@ def _create_auth_baton(pool):
                          ]
 
     providers = []
-
-    for p in platform_specific:
-        if hasattr(core, p):
-            try:
-                providers.append(getattr(core, p)())
-            except RuntimeError:
-                pass
+    # Platform-dependant authentication methods
+    getprovider = getattr(core, 'svn_auth_get_platform_specific_provider',
+                          None)
+    if getprovider:
+        # Available in svn >= 1.6
+        for name in ('gnome_keyring', 'keychain', 'kwallet', 'windows'):
+            for type in ('simple', 'ssl_client_cert_pw', 'ssl_server_trust'):
+                p = getprovider(name, type, pool)
+                if p:
+                    providers.append(p)
+    else:
+        for p in platform_specific:
+            if hasattr(core, p):
+                try:
+                    providers.append(getattr(core, p)())
+                except RuntimeError:
+                    pass
 
     providers += [
         client.get_simple_provider(),
