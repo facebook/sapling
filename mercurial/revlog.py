@@ -678,7 +678,7 @@ class revlog(object):
             # find from roots.
             heads = dict.fromkeys(heads, 0)
             # Start at the top and keep marking parents until we're done.
-            nodestotag = heads.keys()
+            nodestotag = set(heads.keys())
             # Remember where the top was so we can use it as a limit later.
             highestrev = max([self.rev(n) for n in nodestotag])
             while nodestotag:
@@ -696,7 +696,7 @@ class revlog(object):
                         # and we haven't already been marked as an ancestor
                         ancestors[n] = 1 # Mark as ancestor
                         # Add non-nullid parents to list of nodes to tag.
-                        nodestotag.extend([p for p in self.parents(n) if
+                        nodestotag.update([p for p in self.parents(n) if
                                            p != nullid])
                     elif n in heads: # We've seen it before, is it a fake head?
                         # So it is, real heads should not be the ancestors of
