@@ -83,6 +83,7 @@ like CVS' $Log$, are not supported. A keyword template map
 from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
 from mercurial import patch, localrepo, templater, templatefilters, util
 from mercurial.hgweb import webcommands
+from mercurial.lock import release
 from mercurial.node import nullid, hex
 from mercurial.i18n import _
 import re, shutil, tempfile, time
@@ -273,8 +274,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
         lock = repo.lock()
         kwt.overwrite(None, expand, status[6])
     finally:
-        del wlock, lock
-
+        release(lock, wlock)
 
 def demo(ui, repo, *args, **opts):
     '''print [keywordmaps] configuration and an expansion example
@@ -487,7 +487,7 @@ def reposetup(ui, repo):
                     repo.hook('commit', node=n, parent1=_p1, parent2=_p2)
                 return n
             finally:
-                del wlock, lock
+                release(lock, wlock)
 
     # monkeypatches
     def kwpatchfile_init(orig, self, ui, fname, opener, missing=False):

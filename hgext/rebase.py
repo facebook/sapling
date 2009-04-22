@@ -18,6 +18,7 @@ from mercurial import util, repair, merge, cmdutil, commands, error
 from mercurial import extensions, ancestor, copies, patch
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
+from mercurial.lock import release
 from mercurial.i18n import _
 import os, errno
 
@@ -141,7 +142,7 @@ def rebase(ui, repo, **opts):
         if skipped:
             ui.note(_("%d revisions have been skipped\n") % len(skipped))
     finally:
-        del lock, wlock
+        release(lock, wlock)
 
 def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={},
                  extrafn=None):
