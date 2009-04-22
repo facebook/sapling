@@ -512,12 +512,11 @@ def runchildren(options, expecthg, tests):
     tests.reverse()
     jobs = [[] for j in xrange(options.jobs)]
     while tests:
-        for j in xrange(options.jobs):
+        for job in jobs:
             if not tests: break
-            jobs[j].append(tests.pop())
+            job.append(tests.pop())
     fps = {}
-    for j in xrange(len(jobs)):
-        job = jobs[j]
+    for j, job in enumerate(jobs):
         if not job:
             continue
         rfd, wfd = os.pipe()
