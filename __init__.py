@@ -26,13 +26,14 @@ project that is in Git.  A bridger of worlds, this plugin be.
 
 # just importing every damn thing because i don't know python that well
 # and I have no idea what I actually need
-from mercurial import util, repair, merge, cmdutil, commands, error, hg, url
+from mercurial import util, repair, merge, cmdutil, commands, hg, url
 from mercurial import extensions, ancestor
 from mercurial.commands import templateopts
 from mercurial.node import nullrev, nullid, short
 from mercurial.i18n import _
-import os, errno
+import os, errno, sys
 import subprocess
+import dulwich
 
 def gclone(ui, git_url, hg_repo_path=None):
     ## TODO : add git_url as the default remote path
@@ -41,84 +42,54 @@ def gclone(ui, git_url, hg_repo_path=None):
         if hg_repo_path.endswith('.git'):
             hg_repo_path = hg_repo_path[:-4]
         hg_repo_path += '-hg'
-    subprocess.call(['hg', 'init', hg_repo_path])    
-    clone_git(git_url, hg_repo_path)
-    import_git_heads(hg_repo_path)
-    
-    # check it out
-    oldwd = os.getcwd()
-    os.chdir(hg_repo_path)
-    subprocess.call(['hg', 'checkout'])    
-    os.chdir(oldwd)
+    dest_repo = hg.repository(ui, hg_repo_path, create=True)
 
-def gpull(ui, repo, source='default', **opts):
-    """fetch from a git repo
-    """
-    lock = wlock = None
+    # make the git data directory
+    git_hg_path = os.path.join(hg_repo_path, '.hg', 'git')
+    os.mkdir(git_hg_path)
+    dulwich.repo.Repo.init_bare(git_hg_path)
+    
+    # fetch the initial git data
+    git_fetch(dest_repo, git_url)
+    
+    # checkout the tip
+    # hg.update(ui, dest_repo)
+
+def gpush(ui, repo):
+    dest_repo.ui.status(_("pushing to git url\n"))
+    
+def gpull(ui, repo):
+    dest_repo.ui.status(_("pulling from git url\n"))
+    
+
+def git_fetch(dest_repo, git_url):
+    dest_repo.ui.status(_("fetching from git url\n"))
+    git_fetch_pack(dest_repo, git_url)
+    
+def git_fetch_pack(dest_repo, git_url):
+    from dulwich.repo import Repo
+    from dulwich.client import SimpleFetchGraphWalker
+    client, path = get_transport_and_path(git_url)
+    git_dir = os.path.join(dest_repo.path, 'git')
+    r = Repo(git_dir)
+    graphwalker = SimpleFetchGraphWalker(r.heads().values(), r.get_parents)
+    f, commit = r.object_store.add_pack()
     try:
-        lock = repo.lock()
-        wlock = repo.wlock()
-        ui.write("fetching from the remote\n")
-        git_fetch(git_path())
-        import_git_heads()
-        # do the pull
-    finally:
-        del lock, wlock
+        client.fetch_pack(path, r.object_store.determine_wants_all, graphwalker, f.write, sys.stdout.write)
+        f.close()
+        commit()
+    except:
+        f.close()
+    raise
 
-def gpush(ui, repo, dest='default', **opts):
-    """push to a git repo
-    """
-    lock = wlock = None
-    try:
-        lock = repo.lock()
-        wlock = repo.wlock()
-        ui.write("pushing to the remote\n")
-        # do the push
-    finally:
-        del lock, wlock
-
-def git_path(hg_path=None):
-    if hg_path:
-      return os.path.join(hg_path, '.hg', 'git-remote')
-    else:
-      return os.path.join('.hg', 'git-remote')
-
-def clone_git(git_url, hg_path=None):
-    git_initialize(git_path(hg_path), git_url)
-    git_fetch(git_path(hg_path))
-    
-def git_initialize(git_repo_path, git_url):
-    # TODO: implement this in pure python - should be strait-forward
-    oldwd = os.getcwd()
-    os.makedirs(git_repo_path)
-    os.chdir(git_repo_path)
-    subprocess.call(['git', '--bare', 'init'])
-    subprocess.call(['git', 'remote', 'add', 'origin', git_url])
-    os.chdir(oldwd)
-    
-def git_fetch(git_repo_path, remote='origin'):
-    # TODO: implement this in pure python
-    #       - we'll have to handle ssh and git
-    oldwd = os.getcwd()
-    os.chdir(git_repo_path)
-    subprocess.call(['git', 'fetch', remote])
-    os.chdir(oldwd)
-  
-def git_push():
-    # find all the local changesets that aren't mapped
-    # create git commit object shas and map them
-    # stick those objects in a packfile and push them up (over ssh)
-    return 0
-
-def import_git_heads(hg_path=None):
-    # go through each branch
-      # add all commits we don't have locally
-      # write a SHA<->SHA mapping table
-      # update the local branches to match
-    if not hg_path:
-      hg_path = '.'
-    return subprocess.call(['hg', 'convert', git_path(hg_path), hg_path])
-  
+def get_transport_and_path(uri):
+    from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
+    for handler, transport in (("git://", TCPGitClient), ("git+ssh://", SSHGitClient)):
+        if uri.startswith(handler):
+            host, path = uri[len(handler):].split("/", 1)
+            return transport(host), "/"+path
+    # if its not git or git+ssh, try a local url..
+    return SubprocessGitClient(), uri
         
 commands.norepo += " gclone"
 cmdtable = {

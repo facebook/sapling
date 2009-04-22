@@ -1,0 +1,41 @@
+GitHug, the Hg-Git Plugin
+=========================
+
+This plugin is designed to allow you to push to a Git server over the Git 
+protocol and to pull from a Git based project.  All data is stored in Hg
+native format with a mapping table.  People collaborating in Git should not 
+even be able to tell that you're using Hg to collaborate on their project. 
+Nothing should be kept in the Git format except perhaps for caching.
+
+(Dulwich library)
+
+May need to use bookmarks extension to do everything better.
+
+* Cloning from a Git Repository *
+
+hg init, hg add remote, hg gfetch, hg checkout
+
+* Fetching from a Git Repository *
+
+hg gremote add (git-url)
+
+hg gfetch origin (like a hg pull)
+ - connects to server (upload-pack)
+ - gets a list of server shas
+ - sees what it does not have (maps all unmapped shas, checks list)
+ - requests needed shas
+ - fetches packfile
+    - explodes
+    - converts parent linages to hg changesets
+    - updates local parents
+
+* Pushing to a Git Repository *
+
+hg gpush origin
+  - maps all unmapped shas
+  - connects to server
+  - needs/haves
+  - creates packfile of git versions of everything the server needs
+  - transfers it, updates local references (bookmarks?)
+
+
