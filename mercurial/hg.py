@@ -143,7 +143,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             self.dir_ = dir_
         def close(self):
             self.dir_ = None
-        def __del__(self):
+        def cleanup(self):
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
@@ -251,7 +251,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         return src_repo, dest_repo
     finally:
         release(src_lock, dest_lock)
-        del dir_cleanup
+        if dir_cleanup is not None:
+            dir_cleanup.cleanup()
 
 def _showstats(repo, stats):
     stats = ((stats[0], _("updated")),
