@@ -1142,9 +1142,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         if follow and not m.files():
             ff = followfilter(onlyfirst=opts.get('follow_first'))
             def want(rev):
-                if ff.match(rev) and rev in wanted:
-                    return True
-                return False
+                return ff.match(rev) and rev in wanted
         else:
             def want(rev):
                 return rev in wanted
