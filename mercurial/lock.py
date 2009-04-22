@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 import errno, os, socket, time, util, error
+import warnings
 
 class lock(object):
     # lock is symlink on platforms that support it, file on others.
@@ -28,6 +29,10 @@ class lock(object):
 
     def __del__(self):
         if self.held:
+            warnings.warn("use lock.release instead of del lock",
+                    category=DeprecationWarning,
+                    stacklevel=2)
+
             # ensure the lock will be removed
             # even if recursive locking did occur
             self.held = 1
