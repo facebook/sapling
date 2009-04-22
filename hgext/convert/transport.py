@@ -44,8 +44,18 @@ def _create_auth_baton(pool):
         svn.client.get_ssl_server_trust_file_provider(pool),
         ]
     # Platform-dependant authentication methods
-    if hasattr(svn.client, 'get_windows_simple_provider'):
-        providers.append(svn.client.get_windows_simple_provider(pool))
+    getprovider = getattr(svn.core, 'svn_auth_get_platform_specific_provider',
+                          None)
+    if getprovider:
+        # Available in svn >= 1.6
+        for name in ('gnome_keyring', 'keychain', 'kwallet', 'windows'):
+            for type in ('simple', 'ssl_client_cert_pw', 'ssl_server_trust'):
+                p = getprovider(name, type, pool)
+                if p:
+                    providers.append(p)
+    else:
+        if hasattr(svn.client, 'get_windows_simple_provider'):
+            providers.append(svn.client.get_windows_simple_provider(pool))
 
     return svn.core.svn_auth_open(providers, pool)
 
