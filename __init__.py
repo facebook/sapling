@@ -26,6 +26,7 @@ import svncommands
 import tag_repo
 import util
 import wrappers
+import svnexternals
 
 def reposetup(ui, repo):
     if not util.is_svn_repo(repo):

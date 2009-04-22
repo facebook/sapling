@@ -10,6 +10,7 @@ import hg_delta_editor
 import svnwrap
 import util
 import utility_commands
+import svnexternals
 
 
 def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
@@ -228,6 +229,7 @@ table = {
     'help': help,
     'rebuildmeta': rebuildmeta,
     'incoming': incoming,
+    'updateexternals': svnexternals.updateexternals,
 }
 
 table.update(utility_commands.table)

@@ -1,8 +1,9 @@
-import unittest
+import os, unittest
+
+from mercurial import commands
 
 import svnexternals
 import test_util
-
 
 class TestFetchExternals(test_util.TestBase):
     def test_externalsfile(self):
@@ -27,6 +28,28 @@ class TestFetchExternals(test_util.TestBase):
         self.assertEqual(sorted(f), sorted(f2))
         for t in f:
             self.assertEqual(f[t], f2[t])
+
+    def test_parsedefinitions(self):
+        # Taken from svn book
+        samples = [
+            ('third-party/sounds             http://svn.example.com/repos/sounds',
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds')),
+            ('third-party/skins -r148        http://svn.example.com/skinproj',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('third-party/skins -r 148        http://svn.example.com/skinproj',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('http://svn.example.com/repos/sounds third-party/sounds',
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds')),
+            ('-r148 http://svn.example.com/skinproj third-party/skins',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('-r 148 http://svn.example.com/skinproj third-party/skins',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('http://svn.example.com/skin-maker@21 third-party/skins/toolkit',
+             ('third-party/skins/toolkit', '21', 'http://svn.example.com/skin-maker')),
+            ]
+        
+        for line, expected in samples:
+            self.assertEqual(expected, svnexternals.parsedefinition(line))
 
     def test_externals(self, stupid=False):
         repo = self._load_fixture_and_fetch('externals.svndump', stupid=stupid)
@@ -78,6 +101,29 @@ class TestFetchExternals(test_util.TestBase):
     def test_externals_stupid(self):
         self.test_externals(True)
 
+    def test_updateexternals(self):
+        def checkdeps(deps, nodeps, repo, rev=None):
+            svnexternals.updateexternals(ui, [rev], repo)
+            for d in deps:
+                p = os.path.join(repo.root, d)
+                self.assertTrue(os.path.isdir(p), 
+                                'missing: %s@%r' % (d, rev))
+            for d in nodeps:
+                p = os.path.join(repo.root, d)
+                self.assertTrue(not os.path.isdir(p),
+                                'unexpected: %s@%r' % (d, rev))
+
+        ui = test_util.ui.ui()
+        repo = self._load_fixture_and_fetch('externals.svndump', stupid=0)
+        commands.update(ui, repo)
+        checkdeps(['deps/project1'], [], repo, 0)
+        checkdeps(['deps/project1', 'deps/project2'], [], repo, 1)
+        checkdeps(['subdir/deps/project1', 'subdir2/deps/project1', 
+                   'deps/project2'], 
+                  ['deps/project1'], repo, 2)
+        checkdeps(['subdir/deps/project1', 'deps/project2'], 
+                  ['subdir2/deps/project1'], repo, 3)
+        checkdeps(['subdir/deps/project1'], ['deps/project2'], repo, 4)
 
 class TestPushExternals(test_util.TestBase):
     def setUp(self):
