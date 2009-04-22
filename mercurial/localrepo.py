@@ -14,6 +14,8 @@ import os, time, util, extensions, hook, inspect, error
 import match as match_
 import merge as merge_
 
+from lock import release
+
 class localrepository(repo.repository):
     capabilities = util.set(('lookup', 'changegroupsubset'))
     supported = ('revlogv1', 'store', 'fncache')
@@ -620,7 +622,7 @@ class localrepository(repo.repository):
         return tr
 
     def recover(self):
-        l = self.lock()
+        lock = self.lock()
         try:
             if os.path.exists(self.sjoin("journal")):
                 self.ui.status(_("rolling back interrupted transaction\n"))
@@ -631,7 +633,7 @@ class localrepository(repo.repository):
                 self.ui.warn(_("no interrupted transaction available\n"))
                 return False
         finally:
-            del l
+            lock.release()
 
     def rollback(self):
         wlock = lock = None
@@ -654,7 +656,7 @@ class localrepository(repo.repository):
             else:
                 self.ui.warn(_("no rollback information available\n"))
         finally:
-            del lock, wlock
+            release(lock, wlock)
 
     def invalidate(self):
         for a in "changelog manifest".split():
@@ -835,7 +837,7 @@ class localrepository(repo.repository):
             return r
 
         finally:
-            del lock, wlock
+            release(lock, wlock)
 
     def commitctx(self, ctx):
         """Add a new revision to current repository.
@@ -851,7 +853,7 @@ class localrepository(repo.repository):
                                    empty_ok=True, use_dirstate=False,
                                    update_dirstate=False)
         finally:
-            del lock, wlock
+            release(lock, wlock)
 
     def _commitctx(self, wctx, force=False, force_editor=False, empty_ok=False,
                   use_dirstate=True, update_dirstate=True):
@@ -1072,7 +1074,7 @@ class localrepository(repo.repository):
                         except error.LockError:
                             pass
                     finally:
-                        del wlock
+                        release(wlock)
 
         if not parentworking:
             mf1 = mfmatches(ctx1)
@@ -1138,7 +1140,7 @@ class localrepository(repo.repository):
                     self.dirstate.add(f)
             return rejected
         finally:
-            del wlock
+            wlock.release()
 
     def forget(self, list):
         wlock = self.wlock()
@@ -1149,7 +1151,7 @@ class localrepository(repo.repository):
                 else:
                     self.dirstate.forget(f)
         finally:
-            del wlock
+            wlock.release()
 
     def remove(self, list, unlink=False):
         wlock = None
@@ -1172,14 +1174,13 @@ class localrepository(repo.repository):
                 else:
                     self.dirstate.remove(f)
         finally:
-            del wlock
+            release(wlock)
 
     def undelete(self, list):
-        wlock = None
+        manifests = [self.manifest.read(self.changelog.read(p)[0])
+                     for p in self.dirstate.parents() if p != nullid]
+        wlock = self.wlock()
         try:
-            manifests = [self.manifest.read(self.changelog.read(p)[0])
-                         for p in self.dirstate.parents() if p != nullid]
-            wlock = self.wlock()
             for f in list:
                 if self.dirstate[f] != 'r':
                     self.ui.warn(_("%s not removed!\n") % f)
@@ -1189,24 +1190,23 @@ class localrepository(repo.repository):
                     self.wwrite(f, t, m.flags(f))
                     self.dirstate.normal(f)
         finally:
-            del wlock
+            wlock.release()
 
     def copy(self, source, dest):
-        wlock = None
-        try:
-            p = self.wjoin(dest)
-            if not (os.path.exists(p) or os.path.islink(p)):
-                self.ui.warn(_("%s does not exist!\n") % dest)
-            elif not (os.path.isfile(p) or os.path.islink(p)):
-                self.ui.warn(_("copy failed: %s is not a file or a "
-                               "symbolic link\n") % dest)
-            else:
-                wlock = self.wlock()
+        p = self.wjoin(dest)
+        if not (os.path.exists(p) or os.path.islink(p)):
+            self.ui.warn(_("%s does not exist!\n") % dest)
+        elif not (os.path.isfile(p) or os.path.islink(p)):
+            self.ui.warn(_("copy failed: %s is not a file or a "
+                           "symbolic link\n") % dest)
+        else:
+            wlock = self.wlock()
+            try:
                 if self.dirstate[dest] in '?r':
                     self.dirstate.add(dest)
                 self.dirstate.copy(source, dest)
-        finally:
-            del wlock
+            finally:
+                wlock.release()
 
     def heads(self, start=None, closed=True):
         heads = self.changelog.heads(start)
@@ -1500,7 +1500,7 @@ class localrepository(repo.repository):
                 cg = remote.changegroupsubset(fetch, heads, 'pull')
             return self.addchangegroup(cg, 'pull', remote.url())
         finally:
-            del lock
+            lock.release()
 
     def push(self, remote, force=False, revs=None):
         # there are two ways to push to remote repo:
@@ -1581,7 +1581,7 @@ class localrepository(repo.repository):
                 return remote.addchangegroup(cg, 'push', self.url())
             return ret[1]
         finally:
-            del lock
+            lock.release()
 
     def push_unbundle(self, remote, force, revs):
         # local repo finds heads on server, finds out what revs it

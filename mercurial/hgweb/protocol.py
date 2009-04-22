@@ -163,7 +163,7 @@ def unbundle(repo, req):
                 req.respond(HTTP_OK, HGTYPE)
                 return '%d\n%s' % (ret, val),
             finally:
-                del lock
+                lock.release()
         except ValueError, inst:
             raise ErrorResponse(HTTP_OK, inst)
         except (OSError, IOError), inst:

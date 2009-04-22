@@ -504,4 +504,4 @@ def update(repo, node, branchmerge, force, partial):
 
         return stats
     finally:
-        del wlock
+        wlock.release()

@@ -14,7 +14,7 @@ def verify(repo):
     try:
         return _verify(repo)
     finally:
-        del lock
+        lock.release()
 
 def _verify(repo):
     mflinkrevs = {}
