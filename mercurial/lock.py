@@ -27,6 +27,11 @@ class lock(object):
         self.lock()
 
     def __del__(self):
+        if self.held:
+            # ensure the lock will be removed
+            # even if recursive locking did occur
+            self.held = 1
+
         self.release()
 
     def lock(self):
@@ -45,6 +50,9 @@ class lock(object):
                                      inst.locker)
 
     def trylock(self):
+        if self.held:
+            self.held += 1
+            return
         if lock._host is None:
             lock._host = socket.gethostname()
         lockname = '%s:%s' % (lock._host, os.getpid())
@@ -97,11 +105,18 @@ class lock(object):
             return locker
 
     def release(self):
-        if self.held:
+        if self.held > 1:
+            self.held -= 1
+        elif self.held is 1:
             self.held = 0
             if self.releasefn:
                 self.releasefn()
             try:
                 os.unlink(self.f)
             except: pass
+
+def release(*locks):
+    for lock in locks:
+        if lock is not None:
+            lock.release()
 

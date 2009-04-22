@@ -683,8 +683,10 @@ class localrepository(repo.repository):
         return l
 
     def lock(self, wait=True):
-        if self._lockref and self._lockref():
-            return self._lockref()
+        l = self._lockref and self._lockref()
+        if l is not None and l.held:
+            l.lock()
+            return l
 
         l = self._lock(self.sjoin("lock"), wait, None, self.invalidate,
                        _('repository %s') % self.origroot)
@@ -692,8 +694,10 @@ class localrepository(repo.repository):
         return l
 
     def wlock(self, wait=True):
-        if self._wlockref and self._wlockref():
-            return self._wlockref()
+        l = self._wlockref and self._wlockref()
+        if l is not None and l.held:
+            l.lock()
+            return l
 
         l = self._lock(self.join("wlock"), wait, self.dirstate.write,
                        self.dirstate.invalidate, _('working directory of %s') %
