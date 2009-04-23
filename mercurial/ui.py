@@ -66,17 +66,6 @@ class ui(object):
                 ui._isatty = False
         return ui._isatty
 
-    def verbosity_constraints(self):
-        self.quiet = self.configbool('ui', 'quiet')
-        self.verbose = self.configbool('ui', 'verbose')
-        self.debugflag = self.configbool('ui', 'debug')
-
-        if self.debugflag:
-            self.verbose = True
-            self.quiet = False
-        elif self.verbose and self.quiet:
-            self.quiet = self.verbose = False
-
     def _is_trusted(self, fp, f, warn=True):
         st = util.fstat(fp)
         if util.isowner(fp, st):
@@ -183,19 +172,18 @@ class ui(object):
                         cdata.set("paths", n,
                                   os.path.normpath(os.path.join(root, path)))
 
-        # update verbosity/interactive/report_untrusted settings
+        # update ui options
         if section is None or section == 'ui':
-            if name is None or name in ('quiet', 'verbose', 'debug'):
-                self.verbosity_constraints()
-            if name is None or name == 'interactive':
-                interactive = self.configbool("ui", "interactive", None)
-                if interactive is None and self.interactive:
-                    self.interactive = self.isatty()
-                else:
-                    self.interactive = interactive
-            if name is None or name == 'report_untrusted':
-                self.report_untrusted = (
-                    self.configbool("ui", "report_untrusted", True))
+            self.debugflag = self.configbool('ui', 'debug')
+            self.verbose = self.debugflag or self.configbool('ui', 'verbose')
+            self.quiet = not self.debugflag and self.configbool('ui', 'quiet')
+            if self.verbose and self.quiet:
+                self.quiet = self.verbose = False
+
+            self.report_untrusted = self.configbool("ui", "report_untrusted",
+                                                    True)
+            self.interactive = self.configbool("ui", "interactive",
+                                               self.isatty())
             self.traceback = self.configbool('ui', 'traceback', False)
 
         # update trust information
