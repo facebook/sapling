@@ -148,6 +148,11 @@ class bzr_source(converter_source):
             # bazaar tracks directories, mercurial does not, so
             # we have to rename the directory contents
             if kind[1] == 'directory':
+                if kind[0] not in (None, 'directory'):
+                    # Replacing 'something' with a directory, record it
+                    # so it can be removed.
+                    changes.append((self.recode(paths[0]), revid))
+
                 if None not in paths and paths[0] != paths[1]:
                     # neither an add nor an delete - a move
                     # rename all directory contents manually
