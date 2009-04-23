@@ -198,19 +198,17 @@ def _parse(ui, args):
 
     return (cmd, cmd and i[0] or None, args, options, cmdoptions)
 
-def _parseconfig(config):
+def _parseconfig(ui, config):
     """parse the --config options from the command line"""
-    parsed = []
     for cfg in config:
         try:
             name, value = cfg.split('=', 1)
             section, name = name.split('.', 1)
             if not section or not name:
                 raise IndexError
-            parsed.append((section, name, value))
+            ui.setconfig(section, name, value)
         except (IndexError, ValueError):
             raise util.Abort(_('malformed --config option: %s') % cfg)
-    return parsed
 
 def _earlygetopt(aliases, args):
     """Return list of values for an option (or aliases).
@@ -256,9 +254,7 @@ _loaded = {}
 def _dispatch(ui, args):
     # read --config before doing anything else
     # (e.g. to change trust settings for reading .hg/hgrc)
-    config = _earlygetopt(['--config'], args)
-    if config:
-        ui.updateopts(_parseconfig(config))
+    _parseconfig(ui, _earlygetopt(['--config'], args))
 
     # check for cwd
     cwd = _earlygetopt(['--cwd'], args)

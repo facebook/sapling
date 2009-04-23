@@ -66,10 +66,6 @@ class ui(object):
                 ui._isatty = False
         return ui._isatty
 
-    def updateopts(self, config):
-        for section, name, value in config:
-            self.setconfig(section, name, value)
-
     def verbosity_constraints(self):
         self.quiet = self.configbool('ui', 'quiet')
         self.verbose = self.configbool('ui', 'verbose')
