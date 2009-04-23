@@ -42,15 +42,14 @@ class ui(object):
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
+            self.buffers = parentui.buffers
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
             self.cdata = dupconfig(self.parentui.cdata)
-            self.overlay = dupconfig(self.parentui.overlay)
             self.ucdata = dupconfig(self.parentui.ucdata)
-            if self.parentui is not parentui:
-                self.overlay = util.configparser()
-                updateconfig(parentui.overlay, self.overlay)
-            self.buffers = parentui.buffers
+
+            # we want the overlay from the parent, not the root
+            self.overlay = dupconfig(parentui.overlay)
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
