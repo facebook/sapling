@@ -93,7 +93,7 @@ def svn(ui, repo, subcommand, *args, **opts):
     path = os.path.dirname(repo.path)
     try:
         commandfunc = svncommands.table[subcommand]
-        if commandfunc not in svncommands.nourl:
+        if subcommand not in svncommands.nourl:
             opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
         return commandfunc(ui, args=args, hg_repo_path=path, repo=repo, **opts)
     except core.SubversionException, e:
