@@ -113,7 +113,8 @@ class monotone_source(converter_source, commandline):
                 value = value.replace(r'\\', '\\')
                 certs[name] = value
         # Monotone may have subsecond dates: 2005-02-05T09:39:12.364306
-        certs["date"] = certs["date"].split('.')[0]
+        # and all times are stored in UTC
+        certs["date"] = certs["date"].split('.')[0] + " UTC"
         return certs
 
     # implement the converter_source interface:
@@ -128,14 +129,14 @@ class monotone_source(converter_source, commandline):
         #revision = self.mtncmd("get_revision %s" % rev).split("\n\n")
         revision = self.mtnrun("get_revision", rev).split("\n\n")
         files = {}
-        addedfiles = {}
+        ignoremove = {}
         renameddirs = []
         copies = {}
         for e in revision:
             m = self.add_file_re.match(e)
             if m:
                 files[m.group(1)] = rev
-                addedfiles[m.group(1)] = rev
+                ignoremove[m.group(1)] = rev
             m = self.patch_re.match(e)
             if m:
                 files[m.group(1)] = rev
@@ -150,6 +151,7 @@ class monotone_source(converter_source, commandline):
                 toname = m.group(2)
                 fromname = m.group(1)
                 if self.mtnisfile(toname, rev):
+                    ignoremove[toname] = 1
                     copies[toname] = fromname
                     files[toname] = rev
                     files[fromname] = rev
@@ -161,10 +163,14 @@ class monotone_source(converter_source, commandline):
         for fromdir, todir in renameddirs:
             renamed = {}
             for tofile in self.files:
-                if tofile in addedfiles:
+                if tofile in ignoremove:
                     continue
                 if tofile.startswith(todir + '/'):
                     renamed[tofile] = fromdir + tofile[len(todir):]
+                    # Avoid chained moves like:
+                    # d1(/a) => d3/d1(/a)
+                    # d2 => d3
+                    ignoremove[tofile] = 1
             for tofile, fromfile in renamed.items():
                 self.ui.debug (_("copying file in renamed directory "
                                  "from '%s' to '%s'")

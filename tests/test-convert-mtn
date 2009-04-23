@@ -80,6 +80,34 @@ mtn add --quiet -R dir2/dir
 mtn ci -m emptydir
 mtn drop -R dir2/dir
 mtn ci -m dropdirectory
+echo '% test directory and file move'
+mkdir -p dir3/d1
+echo a > dir3/a
+mtn add dir3/a dir3/d1
+mtn ci -m dirfilemove
+mtn mv dir3/a dir3/d1/a
+mtn mv dir3/d1 dir3/d2
+mtn ci -m dirfilemove2
+echo '% test directory move into another directory move'
+mkdir dir4
+mkdir dir5
+echo a > dir4/a
+mtn add dir4/a dir5
+mtn ci -m dirdirmove
+mtn mv dir5 dir6
+mtn mv dir4 dir6/dir4
+mtn ci -m dirdirmove2
+echo '% test diverging directory moves'
+mkdir -p dir7/dir9/dir8
+echo a > dir7/dir9/dir8/a
+echo b > dir7/dir9/b
+echo c > dir7/c
+mtn add -R dir7
+mtn ci -m divergentdirmove
+mtn mv dir7 dir7-2
+mtn mv dir7-2/dir9 dir9-2
+mtn mv dir9-2/dir8 dir8-2
+mtn ci -m divergentdirmove2
 cd ..
 
 echo % convert incrementally
@@ -108,5 +136,11 @@ test -d dir1/subdir1 && echo 'renamed dir1/subdir1 is still there!'
 hg log -v -C -r 4 | grep copies
 echo % check file remove with directory move
 hg manifest -r 5
+echo % check file move with directory move
+hg manifest -r 9
+echo % check file directory directory move
+hg manifest -r 11
+echo % check divergent directory moves
+hg manifest -r 13
 exit 0
 
