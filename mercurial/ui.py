@@ -37,6 +37,7 @@ class ui(object):
             self.overlay = util.configparser()
             self.cdata = util.configparser()
             self.ucdata = util.configparser()
+
             # we always trust global config files
             self.readconfig(util.rcpath(), assumetrusted=True)
         else:
@@ -63,26 +64,25 @@ class ui(object):
                 ui._isatty = False
         return ui._isatty
 
-    def _is_trusted(self, fp, f, warn=True):
+    def _is_trusted(self, fp, f):
         st = util.fstat(fp)
         if util.isowner(fp, st):
             return True
+
         tusers = self.trusted_users
         tgroups = self.trusted_groups
-        if not tusers:
-            user = util.username()
-            if user is not None:
-                self.trusted_users[user] = 1
-                self.fixconfig(section='trusted')
-        if (tusers or tgroups) and '*' not in tusers and '*' not in tgroups:
-            user = util.username(st.st_uid)
-            group = util.groupname(st.st_gid)
-            if user not in tusers and group not in tgroups:
-                if warn and self.report_untrusted:
-                    self.warn(_('Not trusting file %s from untrusted '
-                                'user %s, group %s\n') % (f, user, group))
-                return False
-        return True
+        if '*' in tusers or '*' in tgroups:
+            return True
+
+        user = util.username(st.st_uid)
+        group = util.groupname(st.st_gid)
+        if user in tusers or group in tgroups or user == util.username():
+            return True
+
+        if self.report_untrusted:
+            self.warn(_('Not trusting file %s from untrusted '
+                        'user %s, group %s\n') % (f, user, group))
+        return False
 
     def readconfig(self, fn, root=None, assumetrusted=False):
         cdata = util.configparser()
@@ -175,7 +175,7 @@ class ui(object):
             self.traceback = self.configbool('ui', 'traceback', False)
 
         # update trust information
-        if (section is None or section == 'trusted') and self.trusted_users:
+        if section is None or section == 'trusted':
             for user in self.configlist('trusted', 'users'):
                 self.trusted_users[user] = 1
             for group in self.configlist('trusted', 'groups'):
