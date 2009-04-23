@@ -35,9 +35,8 @@ class ui(object):
             self.trusted_users = {}
             self.trusted_groups = {}
             self.overlay = util.configparser()
-            # if ucdata is not None, its keys must be a superset of cdata's
             self.cdata = util.configparser()
-            self.ucdata = None
+            self.ucdata = util.configparser()
             # we always trust global config files
             self.readconfig(util.rcpath(), assumetrusted=True)
         else:
@@ -47,8 +46,7 @@ class ui(object):
             self.trusted_groups = parentui.trusted_groups.copy()
             self.cdata = dupconfig(self.parentui.cdata)
             self.overlay = dupconfig(self.parentui.overlay)
-            if self.parentui.ucdata:
-                self.ucdata = dupconfig(self.parentui.ucdata)
+            self.ucdata = dupconfig(self.parentui.ucdata)
             if self.parentui is not parentui:
                 self.overlay = util.configparser()
                 updateconfig(parentui.overlay, self.overlay)
@@ -88,6 +86,8 @@ class ui(object):
         return True
 
     def readconfig(self, fn, root=None, assumetrusted=False):
+        cdata = util.configparser()
+
         if isinstance(fn, basestring):
             fn = [fn]
         for f in fn:
@@ -95,16 +95,8 @@ class ui(object):
                 fp = open(f)
             except IOError:
                 continue
-            cdata = self.cdata
+
             trusted = assumetrusted or self._is_trusted(fp, f)
-            if not trusted:
-                if self.ucdata is None:
-                    self.ucdata = dupconfig(self.cdata)
-                cdata = self.ucdata
-            elif self.ucdata is not None:
-                # use a separate configparser, so that we don't accidentally
-                # override ucdata settings later on.
-                cdata = util.configparser()
 
             try:
                 cdata.readfp(fp, f)
@@ -115,12 +107,11 @@ class ui(object):
                 self.warn(_("Ignored: %s\n") % msg)
 
             if trusted:
-                if cdata != self.cdata:
-                    updateconfig(cdata, self.cdata)
-                if self.ucdata is not None:
-                    updateconfig(cdata, self.ucdata)
-        # override data from config files with data set with ui.setconfig
-        updateconfig(self.overlay, self.cdata)
+                updateconfig(cdata, self.cdata)
+                updateconfig(self.overlay, self.cdata)
+            updateconfig(cdata, self.ucdata)
+            updateconfig(self.overlay, self.ucdata)
+
         if root is None:
             root = os.path.expanduser('~')
         self.fixconfig(root=root)
@@ -152,8 +143,7 @@ class ui(object):
                 cdata.add_section(section)
 
         updateconfig(cdata, self.cdata, sections)
-        if self.ucdata:
-            updateconfig(cdata, self.ucdata, sections)
+        updateconfig(cdata, self.ucdata, sections)
 
     def fixconfig(self, section=None, name=None, value=None, root=None):
         # translate paths relative to root (or home) into absolute paths
@@ -162,7 +152,6 @@ class ui(object):
                 root = os.getcwd()
             items = section and [(name, value)] or []
             for cdata in self.cdata, self.ucdata, self.overlay:
-                if not cdata: continue
                 if not items and cdata.has_section('paths'):
                     pathsitems = cdata.items('paths')
                 else:
@@ -195,14 +184,13 @@ class ui(object):
 
     def setconfig(self, section, name, value):
         for cdata in (self.overlay, self.cdata, self.ucdata):
-            if not cdata: continue
             if not cdata.has_section(section):
                 cdata.add_section(section)
             cdata.set(section, name, value)
         self.fixconfig(section, name, value)
 
     def _get_cdata(self, untrusted):
-        if untrusted and self.ucdata:
+        if untrusted:
             return self.ucdata
         return self.cdata
 
@@ -223,7 +211,7 @@ class ui(object):
     def _configcommon(self, section, name, default, funcname, untrusted):
         value = self._config(section, name, default, funcname,
                              untrusted, abort=True)
-        if self.debugflag and not untrusted and self.ucdata:
+        if self.debugflag and not untrusted:
             uvalue = self._config(section, name, None, funcname,
                                   untrusted=True, abort=False)
             if uvalue is not None and uvalue != value:
@@ -268,7 +256,7 @@ class ui(object):
 
     def configitems(self, section, untrusted=False):
         items = self._configitems(section, untrusted=untrusted, abort=True)
-        if self.debugflag and not untrusted and self.ucdata:
+        if self.debugflag and not untrusted:
             uitems = self._configitems(section, untrusted=True, abort=False)
             for k in util.sort(uitems):
                 if uitems[k] != items.get(k):
