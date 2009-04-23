@@ -168,7 +168,8 @@ class transplanter:
         finally:
             self.saveseries(revmap, merges)
             self.transplants.write()
-            del lock, wlock
+            lock.release()
+            wlock.release()
 
     def filter(self, filter, changelog, patchfile):
         '''arbitrarily rewrite changeset before applying it'''
@@ -293,7 +294,7 @@ class transplanter:
 
             return n, node
         finally:
-            del wlock
+            wlock.release()
 
     def readseries(self):
         nodes = []

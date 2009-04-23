@@ -102,10 +102,10 @@ def runtest() :
     py_res_2 = py_parseindex(data_non_inlined, False)
     c_res_2 = parsers.parse_index(data_non_inlined, False)
 
-    if (py_res_1 != c_res_1) :
+    if py_res_1 != c_res_1:
         print "Parse index result (with inlined data) differs!"
 
-    if (py_res_2 != c_res_2) :
+    if py_res_2 != c_res_2:
         print "Parse index result (no inlined data) differs!"
 
     print "done"

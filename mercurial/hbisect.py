@@ -140,5 +140,5 @@ def save_state(repo, state):
                 f.write("%s %s\n" % (kind, hex(node)))
         f.rename()
     finally:
-        del wlock
+        wlock.release()
 

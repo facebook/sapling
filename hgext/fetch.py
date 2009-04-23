@@ -9,6 +9,7 @@
 from mercurial.i18n import _
 from mercurial.node import nullid, short
 from mercurial import commands, cmdutil, hg, util, url
+from mercurial.lock import release
 
 def fetch(ui, repo, source='default', **opts):
     '''pull changes from a remote repository, merge new changes if needed.
@@ -132,7 +133,7 @@ def fetch(ui, repo, source='default', **opts):
                                            short(n)))
 
     finally:
-        del lock, wlock
+        release(lock, wlock)
 
 cmdtable = {
     'fetch':

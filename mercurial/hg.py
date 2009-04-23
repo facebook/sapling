@@ -7,6 +7,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from i18n import _
+from lock import release
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
 import errno, lock, os, shutil, util, extensions, error
 import merge as _merge
@@ -142,7 +143,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             self.dir_ = dir_
         def close(self):
             self.dir_ = None
-        def __del__(self):
+        def cleanup(self):
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
@@ -249,7 +250,9 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
         return src_repo, dest_repo
     finally:
-        del src_lock, dest_lock, dir_cleanup
+        release(src_lock, dest_lock)
+        if dir_cleanup is not None:
+            dir_cleanup.cleanup()
 
 def _showstats(repo, stats):
     stats = ((stats[0], _("updated")),

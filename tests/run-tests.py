@@ -305,7 +305,7 @@ class Timeout(Exception):
 def alarmed(signum, frame):
     raise Timeout
 
-def run(cmd):
+def run(cmd, options):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return the exist code, and output."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
@@ -411,7 +411,7 @@ def runone(options, test, skips, fails):
         signal.alarm(options.timeout)
 
     vlog("# Running", cmd)
-    ret, out = run(cmd)
+    ret, out = run(cmd, options)
     vlog("# Ret was:", ret)
 
     if options.timeout > 0:
@@ -494,7 +494,7 @@ def runone(options, test, skips, fails):
 
 def runchildren(options, expecthg, tests):
     if not options.with_hg:
-        installhg()
+        installhg(options)
         if hgpkg != expecthg:
             print '# Testing unexpected mercurial: %s' % hgpkg
 

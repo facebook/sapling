@@ -31,6 +31,7 @@ refresh contents of top applied patch     qrefresh
 
 from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
+from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, patch, util
 from mercurial import repair, extensions, url, error
 import os, sys, re, errno
@@ -518,7 +519,8 @@ class queue:
                     repo.dirstate.invalidate()
                 raise
         finally:
-            del tr, lock, wlock
+            del tr
+            release(lock, wlock)
             self.removeundo(repo)
 
     def _apply(self, repo, series, list=False, update_status=True,
@@ -766,6 +768,7 @@ class queue:
                         for chunk in chunks:
                             p.write(chunk)
                     p.close()
+                    wlock.release()
                     wlock = None
                     r = self.qrepo()
                     if r: r.add([patchfn])
@@ -781,7 +784,7 @@ class queue:
                 raise
             self.removeundo(repo)
         finally:
-            del wlock
+            release(wlock)
 
     def strip(self, repo, rev, update=True, backup="all", force=None):
         wlock = lock = None
@@ -801,7 +804,7 @@ class queue:
             # the actual strip
             self.removeundo(repo)
         finally:
-            del lock, wlock
+            release(lock, wlock)
 
     def isapplied(self, patch):
         """returns (index, rev, patch)"""
@@ -968,7 +971,7 @@ class queue:
                 self.ui.write(_("now at: %s\n") % top)
             return ret[0]
         finally:
-            del wlock
+            wlock.release()
 
     def pop(self, repo, patch=None, force=False, update=True, all=False):
         def getfile(f, rev, flags):
@@ -1070,7 +1073,7 @@ class queue:
             else:
                 self.ui.write(_("patch queue now empty\n"))
         finally:
-            del wlock
+            wlock.release()
 
     def diff(self, repo, pats, opts):
         top = self.check_toppatch(repo)
@@ -1295,7 +1298,7 @@ class queue:
                 self.pop(repo, force=True)
                 self.push(repo, force=True)
         finally:
-            del wlock
+            wlock.release()
             self.removeundo(repo)
 
     def init(self, repo, create=False):
@@ -2179,7 +2182,7 @@ def rename(ui, repo, patch, name=None, **opts):
                 r.copy(patch, name)
                 r.remove([patch], False)
         finally:
-            del wlock
+            wlock.release()
 
     q.save_dirty()
 

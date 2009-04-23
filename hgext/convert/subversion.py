@@ -773,7 +773,7 @@ class svn_source(converter_source):
             rev = self.revid(revnum)
             # branch log might return entries for a parent we already have
 
-            if (rev in self.commits or revnum < to_revnum):
+            if rev in self.commits or revnum < to_revnum:
                 return None, branched
 
             parents = []

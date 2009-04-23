@@ -359,7 +359,7 @@ def copy(ui, repo, pats, opts, rename=False):
 
         # check for overwrites
         exists = os.path.exists(target)
-        if (not after and exists or after and state in 'mn'):
+        if not after and exists or after and state in 'mn':
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
                         reltarget)
@@ -1142,9 +1142,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         if follow and not m.files():
             ff = followfilter(onlyfirst=opts.get('follow_first'))
             def want(rev):
-                if ff.match(rev) and rev in wanted:
-                    return True
-                return False
+                return ff.match(rev) and rev in wanted
         else:
             def want(rev):
                 return rev in wanted

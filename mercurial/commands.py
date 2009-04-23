@@ -6,6 +6,7 @@
 # of the GNU General Public License, incorporated herein by reference.
 
 from node import hex, nullid, nullrev, short
+from lock import release
 from i18n import _, gettext
 import os, re, sys, textwrap
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
@@ -684,7 +685,7 @@ def copy(ui, repo, *pats, **opts):
     try:
         return cmdutil.copy(ui, repo, pats, opts)
     finally:
-        del wlock
+        wlock.release()
 
 def debugancestor(ui, repo, *args):
     """find the ancestor revision of two revisions in a given index"""
@@ -747,7 +748,7 @@ def debugrebuildstate(ui, repo, rev="tip"):
     try:
         repo.dirstate.rebuild(ctx.node(), ctx.manifest())
     finally:
-        del wlock
+        wlock.release()
 
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
@@ -816,7 +817,7 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     try:
         repo.dirstate.setparents(repo.lookup(rev1), repo.lookup(rev2))
     finally:
-        del wlock
+        wlock.release()
 
 def debugstate(ui, repo, nodates=None):
     """show the contents of the current dirstate"""
@@ -1743,7 +1744,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             finally:
                 os.unlink(tmpname)
     finally:
-        del lock, wlock
+        release(lock, wlock)
 
 def incoming(ui, repo, source="default", **opts):
     """show new changesets found in source
@@ -2355,7 +2356,7 @@ def rename(ui, repo, *pats, **opts):
     try:
         return cmdutil.copy(ui, repo, pats, opts, rename=True)
     finally:
-        del wlock
+        wlock.release()
 
 def resolve(ui, repo, *pats, **opts):
     """retry file merges from a merge or update
@@ -2627,7 +2628,7 @@ def revert(ui, repo, *pats, **opts):
                 normal(f)
 
     finally:
-        del wlock
+        wlock.release()
 
 def rollback(ui, repo):
     """roll back the last transaction
@@ -2919,15 +2920,14 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     """
     fnames = (fname1,) + fnames
 
-    lock = None
+    lock = repo.lock()
     try:
-        lock = repo.lock()
         for fname in fnames:
             f = url.open(ui, fname)
             gen = changegroup.readbundle(f, fname)
             modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
     finally:
-        del lock
+        lock.release()
 
     return postincoming(ui, repo, modheads, opts.get('update'), None)
 

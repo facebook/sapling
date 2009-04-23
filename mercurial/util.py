@@ -223,9 +223,7 @@ def filter(s, cmd):
 
 def binary(s):
     """return true if a string is binary data"""
-    if s and '\0' in s:
-        return True
-    return False
+    return bool(s and '\0' in s)
 
 def unique(g):
     """return the uniq elements of iterable g"""
