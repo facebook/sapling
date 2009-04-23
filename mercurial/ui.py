@@ -24,8 +24,6 @@ def updateconfig(source, dest, sections=None):
             dest.set(section, name, value)
 
 class ui(object):
-    _isatty = None
-
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True, traceback=False, report_untrusted=True,
                  parentui=None):
@@ -69,6 +67,7 @@ class ui(object):
     def __getattr__(self, key):
         return getattr(self.parentui, key)
 
+    _isatty = None
     def isatty(self):
         if ui._isatty is None:
             ui._isatty = sys.stdin.isatty()
