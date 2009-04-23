@@ -222,7 +222,7 @@ def update(ui, args, repo, clean=False, **opts):
     return 1
 
 
-nourl = ['rebuildmeta'] + utility_commands.nourl
+nourl = ['rebuildmeta', 'help'] + utility_commands.nourl
 table = {
     'update': update,
     'help': help,
