@@ -30,9 +30,6 @@ class FileLike(object):
     def readline(self):
         print >> sys.__stdout__, 'READLINE'
         return self.real.readline()
-    def isatty(self):
-        print >> sys.__stdout__, 'ISATTY'
-        return False
 
 sys.stdin = FileLike(sys.stdin)
 errors = StringIO()

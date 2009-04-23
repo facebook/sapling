@@ -18,7 +18,9 @@ def run():
 def dispatch(args):
     "run the command specified in args"
     try:
-        u = _ui.ui(traceback='--traceback' in args)
+        u = _ui.ui()
+        if '--traceback' in args:
+            u.setconfig('ui', 'traceback', 'on')
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
@@ -256,7 +258,7 @@ def _dispatch(ui, args):
     # (e.g. to change trust settings for reading .hg/hgrc)
     config = _earlygetopt(['--config'], args)
     if config:
-        ui.updateopts(config=_parseconfig(config))
+        ui.updateopts(_parseconfig(config))
 
     # check for cwd
     cwd = _earlygetopt(['--cwd'], args)
@@ -335,8 +337,14 @@ def _dispatch(ui, args):
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
 
-    ui.updateopts(options["verbose"], options["debug"], options["quiet"],
-                 not options["noninteractive"], options["traceback"])
+    if options['verbose'] or options['debug'] or options['quiet']:
+        ui.setconfig('ui', 'verbose', str(bool(options['verbose'])))
+        ui.setconfig('ui', 'debug', str(bool(options['debug'])))
+        ui.setconfig('ui', 'quiet', str(bool(options['quiet'])))
+    if options['traceback']:
+        ui.setconfig('ui', 'traceback', 'on')
+    if options['noninteractive']:
+        ui.setconfig('ui', 'interactive', 'off')
 
     if options['help']:
         return commands.help_(ui, cmd, options['version'])

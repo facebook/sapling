@@ -21,8 +21,13 @@ class hgwebdir(object):
             return [(util.pconvert(name).strip('/'), path)
                     for name, path in items]
 
-        self.parentui = parentui or ui.ui(report_untrusted=False,
-                                          interactive = False)
+        if parentui:
+           self.parentui = parentui
+        else:
+            self.parentui = ui.ui()
+            self.parentui.setconfig('ui', 'report_untrusted', 'off')
+            self.parentui.setconfig('ui', 'interactive', 'off')
+
         self.motd = None
         self.style = 'paper'
         self.stripecount = None

@@ -60,7 +60,7 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
                                      trusted)
 
     parentui = ui.ui()
-    parentui.updateopts(debug=debug)
+    parentui.setconfig('ui', 'debug', str(bool(debug)))
     u = ui.ui(parentui=parentui)
     u.readconfig('.hg/hgrc')
     if silent:
@@ -145,7 +145,7 @@ print u.config('foobar', 'baz')
 print
 print "# read trusted, untrusted, new ui, trusted"
 u = ui.ui()
-u.updateopts(debug=True)
+u.setconfig('ui', 'debug', 'on')
 u.readconfig(filename)
 u2 = ui.ui(parentui=u)
 def username(uid=None):

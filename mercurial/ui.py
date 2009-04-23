@@ -24,19 +24,14 @@ def updateconfig(source, dest, sections=None):
             dest.set(section, name, value)
 
 class ui(object):
-    def __init__(self, verbose=False, debug=False, quiet=False,
-                 interactive=True, traceback=False, report_untrusted=True,
-                 parentui=None):
+    def __init__(self, parentui=None):
         self.buffers = []
+        self.quiet = self.verbose = self.debugflag = self.traceback = False
+        self.interactive = self.report_untrusted = True
+
         if parentui is None:
             # this is the parent of all ui children
             self.parentui = None
-            self.quiet = quiet
-            self.verbose = verbose
-            self.debugflag = debug
-            self.interactive = interactive
-            self.traceback = traceback
-            self.report_untrusted = report_untrusted
             self.trusted_users = {}
             self.trusted_groups = {}
             self.overlay = util.configparser()
@@ -45,7 +40,6 @@ class ui(object):
             self.ucdata = None
             # we always trust global config files
             self.readconfig(util.rcpath(), assumetrusted=True)
-            self.updateopts(verbose, debug, quiet, interactive)
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
@@ -66,24 +60,15 @@ class ui(object):
     _isatty = None
     def isatty(self):
         if ui._isatty is None:
-            ui._isatty = sys.stdin.isatty()
+            try:
+                ui._isatty = sys.stdin.isatty()
+            except AttributeError: # not a real file object
+                ui._isatty = False
         return ui._isatty
 
-    def updateopts(self, verbose=False, debug=False, quiet=False,
-                   interactive=True, traceback=False, config=[]):
+    def updateopts(self, config):
         for section, name, value in config:
             self.setconfig(section, name, value)
-
-        if quiet or verbose or debug:
-            self.setconfig('ui', 'quiet', str(bool(quiet)))
-            self.setconfig('ui', 'verbose', str(bool(verbose)))
-            self.setconfig('ui', 'debug', str(bool(debug)))
-
-        if not interactive:
-            self.setconfig('ui', 'interactive', 'False')
-            self.interactive = False
-
-        self.traceback = self.traceback or traceback
 
     def verbosity_constraints(self):
         self.quiet = self.configbool('ui', 'quiet')
@@ -215,6 +200,7 @@ class ui(object):
             if name is None or name == 'report_untrusted':
                 self.report_untrusted = (
                     self.configbool("ui", "report_untrusted", True))
+            self.traceback = self.configbool('ui', 'traceback', False)
 
         # update trust information
         if (section is None or section == 'trusted') and self.trusted_users:

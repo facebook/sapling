@@ -31,7 +31,10 @@ for i in xrange(64):
     f.close()
 
     u = ui.ui()
-    u.updateopts(quiet=cmd_quiet, verbose=cmd_verbose, debug=cmd_debug)
+    if cmd_quiet or cmd_debug or cmd_verbose:
+        u.setconfig('ui', 'quiet', str(bool(cmd_quiet)))
+        u.setconfig('ui', 'verbose', str(bool(cmd_verbose)))
+        u.setconfig('ui', 'debug', str(bool(cmd_debug)))
 
     check = ''
     if u.debugflag:
