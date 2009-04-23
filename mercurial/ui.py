@@ -9,11 +9,6 @@ from i18n import _
 import errno, getpass, os, re, socket, sys, tempfile
 import ConfigParser, traceback, util
 
-def dupconfig(orig):
-    new = util.configparser(orig.defaults())
-    updateconfig(orig, new)
-    return new
-
 def updateconfig(source, dest, sections=None):
     if not sections:
         sections = source.sections()
@@ -30,31 +25,28 @@ class ui(object):
         self.buffers = []
         self.quiet = self.verbose = self.debugflag = self.traceback = False
         self.interactive = self.report_untrusted = True
+        self.overlay = util.configparser()
+        self.cdata = util.configparser()
+        self.ucdata = util.configparser()
+        self.parentui = None
+        self.trusted_users = {}
+        self.trusted_groups = {}
 
-        if parentui is None:
-            # this is the parent of all ui children
-            self.parentui = None
-            self.trusted_users = {}
-            self.trusted_groups = {}
-            self.overlay = util.configparser()
-            self.cdata = util.configparser()
-            self.ucdata = util.configparser()
-
-            # we always trust global config files
-            for f in util.rcpath():
-                self.readconfig(f, assumetrusted=True)
-        else:
+        if parentui:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
+            updateconfig(self.parentui.cdata, self.cdata)
+            updateconfig(self.parentui.ucdata, self.ucdata)
+            # we want the overlay from the parent, not the root
+            updateconfig(parentui.overlay, self.overlay)
             self.buffers = parentui.buffers
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
-            self.cdata = dupconfig(self.parentui.cdata)
-            self.ucdata = dupconfig(self.parentui.ucdata)
-
-            # we want the overlay from the parent, not the root
-            self.overlay = dupconfig(parentui.overlay)
             self.fixconfig()
+        else:
+            # we always trust global config files
+            for f in util.rcpath():
+                self.readconfig(f, assumetrusted=True)
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
