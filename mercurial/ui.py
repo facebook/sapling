@@ -79,8 +79,6 @@ class ui(object):
             self.setconfig('ui', 'verbose', str(bool(verbose)))
             self.setconfig('ui', 'debug', str(bool(debug)))
 
-        self.verbosity_constraints()
-
         if not interactive:
             self.setconfig('ui', 'interactive', 'False')
             self.interactive = False
