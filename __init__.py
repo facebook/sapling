@@ -34,6 +34,7 @@ from mercurial.i18n import _
 import os, errno, sys
 import subprocess
 import dulwich
+from git_handler import GitHandler
 
 def gclone(ui, git_url, hg_repo_path=None):
     ## TODO : add git_url as the default remote path
@@ -50,7 +51,8 @@ def gclone(ui, git_url, hg_repo_path=None):
     dulwich.repo.Repo.init_bare(git_hg_path)
     
     # fetch the initial git data
-    git_fetch(dest_repo, git_url)
+    git = GitHandler(dest_repo, ui)
+    git.fetch(git_url)
     
     # checkout the tip
     # hg.update(ui, dest_repo)
@@ -60,34 +62,7 @@ def gpush(ui, repo):
     
 def gpull(ui, repo):
     dest_repo.ui.status(_("pulling from git url\n"))
-    
-
-def git_fetch(dest_repo, git_url):
-    dest_repo.ui.status(_("fetching from git url\n"))
-    git_fetch_pack(dest_repo, git_url)
-    
-def git_fetch_pack(dest_repo, git_url):
-    from dulwich.repo import Repo
-    from dulwich.client import SimpleFetchGraphWalker
-    client, path = get_transport_and_path(git_url)
-    git_dir = os.path.join(dest_repo.path, 'git')
-    r = Repo(git_dir)
-    graphwalker = SimpleFetchGraphWalker(r.heads().values(), r.get_parents)
-    f, commit = r.object_store.add_pack()
-    refs = client.fetch_pack(path, r.object_store.determine_wants_all, graphwalker, f.write, sys.stdout.write)
-    f.close()
-    commit()
-    r.set_refs(refs)
-
-def get_transport_and_path(uri):
-    from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
-    for handler, transport in (("git://", TCPGitClient), ("git+ssh://", SSHGitClient)):
-        if uri.startswith(handler):
-            host, path = uri[len(handler):].split("/", 1)
-            return transport(host), "/"+path
-    # if its not git or git+ssh, try a local url..
-    return SubprocessGitClient(), uri
-        
+           
 commands.norepo += " gclone"
 cmdtable = {
   "gclone":
@@ -102,4 +77,4 @@ cmdtable = {
          _('hg gpush remote')),
   "gpull":
         (gpull, [], _('hg gpull [--merge] remote')),
-}
+}    

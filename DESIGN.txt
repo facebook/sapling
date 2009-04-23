@@ -9,6 +9,14 @@ Nothing should be kept in the Git format except perhaps for caching.
 
 (Dulwich library)
 
+= Lossless Two Way = 
+We need to store data that Git records that Merc does not in a git/extra_data file.  This would be parents over two and committer information (author will be mapped to Hg committer).  This way two Hg developers can collaborate without the Git transport messing up the local commits.
+Each Git commit should be reproducable as a Merc ID and vice versa on any system.
+
+= ISSUES =
+
+* currently sorts by date, though it should be sorting topologically.  if it gets to a commit where we haven't processed it's parents, it will probably fuck up.
+
 May need to use bookmarks extension to do everything better.
 
 * Cloning from a Git Repository *
