@@ -27,7 +27,6 @@ class ui(object):
     def __init__(self, verbose=False, debug=False, quiet=False,
                  interactive=True, traceback=False, report_untrusted=True,
                  parentui=None):
-        self.overlay = None
         self.buffers = []
         if parentui is None:
             # this is the parent of all ui children
@@ -40,6 +39,7 @@ class ui(object):
             self.report_untrusted = report_untrusted
             self.trusted_users = {}
             self.trusted_groups = {}
+            self.overlay = util.configparser()
             # if ucdata is not None, its keys must be a superset of cdata's
             self.cdata = util.configparser()
             self.ucdata = None
@@ -52,13 +52,11 @@ class ui(object):
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
             self.cdata = dupconfig(self.parentui.cdata)
+            self.overlay = dupconfig(self.parentui.overlay)
             if self.parentui.ucdata:
                 self.ucdata = dupconfig(self.parentui.ucdata)
-            if self.parentui.overlay:
-                self.overlay = dupconfig(self.parentui.overlay)
-            if self.parentui is not parentui and parentui.overlay is not None:
-                if self.overlay is None:
-                    self.overlay = util.configparser()
+            if self.parentui is not parentui:
+                self.overlay = util.configparser()
                 updateconfig(parentui.overlay, self.overlay)
             self.buffers = parentui.buffers
 
@@ -154,8 +152,7 @@ class ui(object):
                 if self.ucdata is not None:
                     updateconfig(cdata, self.ucdata)
         # override data from config files with data set with ui.setconfig
-        if self.overlay:
-            updateconfig(self.overlay, self.cdata)
+        updateconfig(self.overlay, self.cdata)
         if root is None:
             root = os.path.expanduser('~')
         self.fixconfig(root=root)
@@ -229,8 +226,6 @@ class ui(object):
                 self.trusted_groups[group] = 1
 
     def setconfig(self, section, name, value):
-        if not self.overlay:
-            self.overlay = util.configparser()
         for cdata in (self.overlay, self.cdata, self.ucdata):
             if not cdata: continue
             if not cdata.has_section(section):
