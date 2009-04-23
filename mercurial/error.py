@@ -28,6 +28,9 @@ class LookupError(RevlogError, KeyError):
 class ParseError(Exception):
     """Exception raised on errors in parsing the command line."""
 
+class ConfigError(Exception):
+    'Exception raised when parsing config files'
+
 class RepoError(Exception):
     pass
 

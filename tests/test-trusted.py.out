@@ -1,21 +1,17 @@
 # same user, same group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # same user, different group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # different user, same group
@@ -24,17 +20,14 @@ trusted
     global = /some/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # different user, same group, but we trust the group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # different user, different group
@@ -43,70 +36,57 @@ trusted
     global = /some/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # different user, different group, but we trust the user
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # different user, different group, but we trust the group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # different user, different group, but we trust the user and the group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # we trust all users
 # different user, different group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # we trust all groups
 # different user, different group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # we trust all users and groups
 # different user, different group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # we don't get confused by users and groups with the same name
@@ -116,29 +96,24 @@ trusted
     global = /some/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # list of user names
 # different user, different group, but we trust the user
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # list of group names
 # different user, different group, but we trust the group
 trusted
     global = /some/path
-    interpolated = /some/path/another/path
     local = /another/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # Can't figure out the name of the user running this process
@@ -148,20 +123,16 @@ trusted
     global = /some/path
 untrusted
 . . global = /some/path
-. . interpolated = /some/path/another/path
 . . local = /another/path
 
 # prints debug warnings
 # different user, different group
 Not trusting file .hg/hgrc from untrusted user abc, group def
 trusted
-Ignoring untrusted configuration option paths.interpolated = /some/path/another/path
 Ignoring untrusted configuration option paths.local = /another/path
     global = /some/path
 untrusted
 . . global = /some/path
-.Ignoring untrusted configuration option paths.interpolated = /some/path/another/path
- . interpolated = /some/path/another/path
 .Ignoring untrusted configuration option paths.local = /another/path
  . local = /another/path
 
@@ -173,10 +144,8 @@ Not trusting file foobar from untrusted user abc, group def
 trusted:
 Ignoring untrusted configuration option foobar.baz = quux
 None
-/some/path/another/path
 untrusted:
 quux
-/some/path/another/path
 
 # error handling
 # file doesn't exist
@@ -186,26 +155,6 @@ quux
 # parse error
 # different user, different group
 Not trusting file .hg/hgrc from untrusted user abc, group def
-Ignored: Failed to parse .hg/hgrc
-File contains no section headers.
-file: .hg/hgrc, line: 1
-'foo = bar'
+Ignored: config error at .hg/hgrc:1: 'foo'
 # same user, same group
-raised Abort
-
-# interpolation error
-# same user, same group
-# regular config:
-  trusted raised Abort
-untrusted raised Abort
-# different user, different group
-Not trusting file .hg/hgrc from untrusted user abc, group def
-  trusted Ignored: Error in configuration section [foo] parameter 'bar':
-bad interpolation variable reference '%('
- None
-untrusted raised Abort
-# configitems:
-  trusted Ignored: Error in configuration section [foo]:
-bad interpolation variable reference '%('
- []
-untrusted raised Abort
+config error at .hg/hgrc:1: 'foo'

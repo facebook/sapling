@@ -1,15 +1,12 @@
-[('bool1', 'true'), ('bool2', 'false'), ('string', 'string value')]
+[('string', 'string value'), ('bool1', 'true'), ('bool2', 'false')]
 [('list1', 'foo'), ('list2', 'foo bar baz'), ('list3', 'alice, bob'), ('list4', 'foo bar baz alice, bob')]
-Error in configuration section [interpolation]:
-'%' must be followed by '%' or '(', found: '%bad2'
 ---
 'string value'
 'true'
 'false'
 None
 ---
-Error in configuration section [values] parameter 'string':
-Not a boolean: string value
+values.string not a boolean ('string value')
 True
 False
 False
@@ -29,20 +26,5 @@ True
 ['foo', 'bar']
 ['foo bar']
 ['foo', 'bar']
----
-'hallo'
-'hallo world'
-Error in configuration section [interpolation] parameter 'value3':
-Bad value substitution:
-	section: [interpolation]
-	option : value3
-	key    : novalue
-	rawval : 
-
-Error in configuration section [interpolation] parameter 'value4':
-bad interpolation variable reference '%(bad)1'
-Error in configuration section [interpolation] parameter 'value5':
-'%' must be followed by '%' or '(', found: '%bad2'
----
-No option 'Bar' in section: 'foo'
-f == function
+None
+True

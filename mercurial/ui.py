@@ -7,27 +7,19 @@
 
 from i18n import _
 import errno, getpass, os, re, socket, sys, tempfile
-import ConfigParser, traceback, util
+import config, traceback, util, error
 
-def updateconfig(source, dest, sections=None):
-    if not sections:
-        sections = source.sections()
-    for section in sections:
-        if not dest.has_section(section):
-            dest.add_section(section)
-        if not source.has_section(section):
-            continue
-        for name, value in source.items(section, raw=True):
-            dest.set(section, name, value)
+_booleans = {'1':True, 'yes':True, 'true':True, 'on':True,
+             '0':False, 'no':False, 'false':False, 'off':False}
 
 class ui(object):
     def __init__(self, parentui=None):
         self.buffers = []
         self.quiet = self.verbose = self.debugflag = self.traceback = False
         self.interactive = self.report_untrusted = True
-        self.overlay = util.configparser()
-        self.cdata = util.configparser()
-        self.ucdata = util.configparser()
+        self.overlay = config.config()
+        self.cdata = config.config()
+        self.ucdata = config.config()
         self.parentui = None
         self.trusted_users = {}
         self.trusted_groups = {}
@@ -35,10 +27,10 @@ class ui(object):
         if parentui:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
-            updateconfig(self.parentui.cdata, self.cdata)
-            updateconfig(self.parentui.ucdata, self.ucdata)
+            self.cdata.update(self.parentui.cdata)
+            self.ucdata.update(self.parentui.ucdata)
             # we want the overlay from the parent, not the root
-            updateconfig(parentui.overlay, self.overlay)
+            self.overlay.update(parentui.overlay)
             self.buffers = parentui.buffers
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
@@ -89,22 +81,21 @@ class ui(object):
                 return
             raise
 
-        cdata = util.configparser()
+        cdata = config.config()
         trusted = sections or assumetrusted or self._is_trusted(fp, filename)
 
         try:
-            cdata.readfp(fp, filename)
-        except ConfigParser.ParsingError, inst:
-            msg = _("Failed to parse %s\n%s") % (filename, inst)
+            cdata.read(filename, fp)
+        except error.ConfigError, inst:
             if trusted:
-                raise util.Abort(msg)
-            self.warn(_("Ignored: %s\n") % msg)
+                raise
+            self.warn(_("Ignored: %s\n") % str(inst))
 
         if trusted:
-            updateconfig(cdata, self.cdata, sections)
-            updateconfig(self.overlay, self.cdata, sections)
-        updateconfig(cdata, self.ucdata, sections)
-        updateconfig(self.overlay, self.ucdata, sections)
+            self.cdata.update(cdata, sections)
+            self.cdata.update(self.overlay, sections)
+        self.ucdata.update(cdata, sections)
+        self.ucdata.update(self.overlay, sections)
 
         if root is None:
             root = os.path.expanduser('~')
@@ -117,7 +108,7 @@ class ui(object):
                 root = os.getcwd()
             items = section and [(name, value)] or []
             for cdata in self.cdata, self.ucdata, self.overlay:
-                if not items and cdata.has_section('paths'):
+                if not items and 'paths' in cdata:
                     pathsitems = cdata.items('paths')
                 else:
                     pathsitems = items
@@ -149,8 +140,6 @@ class ui(object):
 
     def setconfig(self, section, name, value):
         for cdata in (self.overlay, self.cdata, self.ucdata):
-            if not cdata.has_section(section):
-                cdata.add_section(section)
             cdata.set(section, name, value)
         self.fixconfig(section, name, value)
 
@@ -159,37 +148,23 @@ class ui(object):
             return self.ucdata
         return self.cdata
 
-    def _config(self, section, name, default, funcname, untrusted, abort):
-        cdata = self._get_cdata(untrusted)
-        if cdata.has_option(section, name):
-            try:
-                func = getattr(cdata, funcname)
-                return func(section, name)
-            except (ConfigParser.InterpolationError, ValueError), inst:
-                msg = _("Error in configuration section [%s] "
-                        "parameter '%s':\n%s") % (section, name, inst)
-                if abort:
-                    raise util.Abort(msg)
-                self.warn(_("Ignored: %s\n") % msg)
-        return default
-
-    def _configcommon(self, section, name, default, funcname, untrusted):
-        value = self._config(section, name, default, funcname,
-                             untrusted, abort=True)
+    def config(self, section, name, default=None, untrusted=False):
+        value = self._get_cdata(untrusted).get(section, name, default)
         if self.debugflag and not untrusted:
-            uvalue = self._config(section, name, None, funcname,
-                                  untrusted=True, abort=False)
+            uvalue = self.ucdata.get(section, name)
             if uvalue is not None and uvalue != value:
                 self.warn(_("Ignoring untrusted configuration option "
                             "%s.%s = %s\n") % (section, name, uvalue))
         return value
 
-    def config(self, section, name, default=None, untrusted=False):
-        return self._configcommon(section, name, default, 'get', untrusted)
-
     def configbool(self, section, name, default=False, untrusted=False):
-        return self._configcommon(section, name, default, 'getboolean',
-                                  untrusted)
+        v = self.config(section, name, None, untrusted)
+        if v == None:
+            return default
+        if v.lower() not in _booleans:
+            raise error.ConfigError(_("%s.%s not a boolean ('%s')")
+                                    % (section, name, v))
+        return _booleans[v.lower()]
 
     def configlist(self, section, name, default=None, untrusted=False):
         """Return a list of comma/space separated strings"""
@@ -202,38 +177,20 @@ class ui(object):
 
     def has_section(self, section, untrusted=False):
         '''tell whether section exists in config.'''
-        cdata = self._get_cdata(untrusted)
-        return cdata.has_section(section)
-
-    def _configitems(self, section, untrusted, abort):
-        items = {}
-        cdata = self._get_cdata(untrusted)
-        if cdata.has_section(section):
-            try:
-                items.update(dict(cdata.items(section)))
-            except ConfigParser.InterpolationError, inst:
-                msg = _("Error in configuration section [%s]:\n"
-                        "%s") % (section, inst)
-                if abort:
-                    raise util.Abort(msg)
-                self.warn(_("Ignored: %s\n") % msg)
-        return items
+        return section in self._get_cdata(untrusted)
 
     def configitems(self, section, untrusted=False):
-        items = self._configitems(section, untrusted=untrusted, abort=True)
+        items = self._get_cdata(untrusted).items(section)
         if self.debugflag and not untrusted:
-            uitems = self._configitems(section, untrusted=True, abort=False)
-            for k in util.sort(uitems):
-                if uitems[k] != items.get(k):
+            for k,v in self.ucdata.items(section):
+                if self.cdata.get(section, k) != v:
                     self.warn(_("Ignoring untrusted configuration option "
-                                "%s.%s = %s\n") % (section, k, uitems[k]))
-        return util.sort(items.items())
+                                "%s.%s = %s\n") % (section, k, v))
+        return items
 
     def walkconfig(self, untrusted=False):
         cdata = self._get_cdata(untrusted)
-        sections = cdata.sections()
-        sections.sort()
-        for section in sections:
+        for section in cdata.sections():
             for name, value in self.configitems(section, untrusted):
                 yield section, name, str(value).replace('\n', '\\n')
 
