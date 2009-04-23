@@ -207,8 +207,8 @@ class ObjectStore(object):
         fd, path = tempfile.mkstemp(dir=self.pack_dir, suffix=".pack")
         f = os.fdopen(fd, 'w')
         def commit():
-            os.fsync(fd)
-            f.close()
+            #os.fsync(fd)
+            #f.close()
             if os.path.getsize(path) > 0:
                 self.move_in_pack(path)
         return f, commit

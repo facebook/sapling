@@ -80,7 +80,6 @@ def git_fetch_pack(dest_repo, git_url):
         commit()
     except:
         f.close()
-    raise
 
 def get_transport_and_path(uri):
     from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
