@@ -74,12 +74,10 @@ def git_fetch_pack(dest_repo, git_url):
     r = Repo(git_dir)
     graphwalker = SimpleFetchGraphWalker(r.heads().values(), r.get_parents)
     f, commit = r.object_store.add_pack()
-    try:
-        client.fetch_pack(path, r.object_store.determine_wants_all, graphwalker, f.write, sys.stdout.write)
-        f.close()
-        commit()
-    except:
-        f.close()
+    refs = client.fetch_pack(path, r.object_store.determine_wants_all, graphwalker, f.write, sys.stdout.write)
+    f.close()
+    commit()
+    r.set_refs(refs)
 
 def get_transport_and_path(uri):
     from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient

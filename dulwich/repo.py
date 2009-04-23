@@ -231,8 +231,17 @@ class Repo(object):
         finally:
             f.close()
 
+    def set_refs(self, refs):
+        keys = refs.keys()
+        if keys:
+            for k in keys[0:]:
+                self.set_ref(k, refs[k])
+        
     def set_ref(self, name, value):
         file = os.path.join(self.controldir(), name)
+        dirpath = os.path.dirname(file)
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
         f = open(file, 'w')
         try:
             f.write(value+"\n")

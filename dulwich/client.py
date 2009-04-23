@@ -25,6 +25,7 @@ import os
 import select
 import socket
 import subprocess
+import copy
 
 from protocol import (
     Protocol,
@@ -137,6 +138,7 @@ class GitClient(object):
         :param progress: Callback for progress reports (strings)
         """
         (refs, server_capabilities) = self.read_refs()
+        refsreturn = copy.deepcopy(refs)
         wants = determine_wants(refs)
         if not wants:
             self.proto.write_pkt_line(None)
@@ -173,6 +175,7 @@ class GitClient(object):
                 progress(pkt)
             else:
                 raise AssertionError("Invalid sideband channel %d" % channel)
+        return refsreturn
 
 
 class TCPGitClient(GitClient):
@@ -207,7 +210,7 @@ class TCPGitClient(GitClient):
         :param progress: Callback for writing progress
         """
         self.proto.send_cmd("git-upload-pack", path, "host=%s" % self.host)
-        super(TCPGitClient, self).fetch_pack(path, determine_wants, graph_walker, pack_data, progress)
+        return super(TCPGitClient, self).fetch_pack(path, determine_wants, graph_walker, pack_data, progress)
 
 
 class SubprocessGitClient(GitClient):
@@ -236,7 +239,7 @@ class SubprocessGitClient(GitClient):
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data, 
         progress):
         client = self._connect("git-upload-pack", path)
-        client.fetch_pack(path, determine_wants, graph_walker, pack_data, progress)
+        return client.fetch_pack(path, determine_wants, graph_walker, pack_data, progress)
 
 
 class SSHSubprocess(object):
@@ -292,5 +295,5 @@ class SSHGitClient(GitClient):
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data, progress):
         remote = get_ssh_vendor().connect_ssh(self.host, ["git-upload-pack %s" % path], port=self.port)
         client = GitClient(lambda: _fileno_can_read(remote.proc.stdout.fileno()), remote.recv, remote.send, *self._args, **self._kwargs)
-        client.fetch_pack(path, determine_wants, graph_walker, pack_data, progress)
+        return client.fetch_pack(path, determine_wants, graph_walker, pack_data, progress)
 
