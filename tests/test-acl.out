@@ -473,10 +473,10 @@ adding foo/file.txt revisions
 adding quux/file.py revisions
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
-error: pretxnchangegroup.acl hook failed: unable to open ../acl.config: No such file or directory
+error: pretxnchangegroup.acl hook raised an exception: [Errno 2] No such file or directory: '../acl.config'
 transaction abort!
 rollback completed
-abort: unable to open ../acl.config: No such file or directory
+abort: No such file or directory: ../acl.config
 no rollback information available
 0:6675d58eff77
 

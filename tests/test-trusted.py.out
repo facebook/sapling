@@ -165,7 +165,7 @@ untrusted
 .Ignoring untrusted configuration option paths.local = /another/path
  . local = /another/path
 
-# ui.readsections
+# ui.readconfig sections
 quux
 
 # read trusted, untrusted, new ui, trusted

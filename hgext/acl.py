@@ -74,7 +74,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     user = getpass.getuser()
     cfg = ui.config('acl', 'config')
     if cfg:
-        ui.readsections(cfg, 'acl.allow', 'acl.deny')
+        ui.readconfig(cfg, sections = ['acl.allow', 'acl.deny'])
     allow = buildmatch(ui, repo, user, 'acl.allow')
     deny = buildmatch(ui, repo, user, 'acl.deny')
 

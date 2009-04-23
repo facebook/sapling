@@ -99,7 +99,7 @@ class notifier(object):
         self.ui = ui
         cfg = self.ui.config('notify', 'config')
         if cfg:
-            self.ui.readsections(cfg, 'usersubs', 'reposubs')
+            self.ui.readconfig(cfg, sections=['usersubs', 'reposubs'])
         self.repo = repo
         self.stripcount = int(self.ui.config('notify', 'strip', 0))
         self.root = self.strip(self.repo.root)

@@ -139,7 +139,7 @@ class bugzilla_2_16(object):
         timeout = int(self.ui.config('bugzilla', 'timeout', 5))
         usermap = self.ui.config('bugzilla', 'usermap')
         if usermap:
-            self.ui.readsections(usermap, 'usermap')
+            self.ui.readconfig(usermap, 'usermap')
         self.ui.note(_('connecting to %s:%s as %s, password %s\n') %
                      (host, db, user, '*' * len(passwd)))
         self.conn = MySQLdb.connect(host=host, user=user, passwd=passwd,

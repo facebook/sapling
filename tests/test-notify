@@ -60,7 +60,7 @@ EOF
 
 echo % fail for config file is missing
 hg --cwd b rollback
-hg --cwd b pull ../a 2>&1 | grep 'unable to open.*\.notify\.conf' > /dev/null && echo pull failed
+hg --cwd b pull ../a 2>&1 | grep 'error.*\.notify\.conf' > /dev/null && echo pull failed
 
 touch "$HGTMP/.notify.conf"
 

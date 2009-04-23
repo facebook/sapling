@@ -133,13 +133,13 @@ testui(user='abc', group='def', cuser=None)
 print "# prints debug warnings"
 u = testui(user='abc', group='def', cuser='foo', debug=True)
 
-print "# ui.readsections"
+print "# ui.readconfig sections"
 filename = 'foobar'
 f = open(filename, 'w')
 f.write('[foobar]\n')
 f.write('baz = quux\n')
 f.close()
-u.readsections(filename, 'foobar')
+u.readconfig(filename, sections = ['foobar'])
 print u.config('foobar', 'baz')
 
 print

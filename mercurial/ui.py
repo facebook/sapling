@@ -20,6 +20,8 @@ def updateconfig(source, dest, sections=None):
     for section in sections:
         if not dest.has_section(section):
             dest.add_section(section)
+        if not source.has_section(section):
+            continue
         for name, value in source.items(section, raw=True):
             dest.set(section, name, value)
 
@@ -39,7 +41,8 @@ class ui(object):
             self.ucdata = util.configparser()
 
             # we always trust global config files
-            self.readconfig(util.rcpath(), assumetrusted=True)
+            for f in util.rcpath():
+                self.readconfig(f, assumetrusted=True)
         else:
             # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
@@ -51,6 +54,7 @@ class ui(object):
 
             # we want the overlay from the parent, not the root
             self.overlay = dupconfig(parentui.overlay)
+            self.fixconfig()
 
     def __getattr__(self, key):
         return getattr(self.parentui, key)
@@ -84,65 +88,35 @@ class ui(object):
                         'user %s, group %s\n') % (f, user, group))
         return False
 
-    def readconfig(self, fn, root=None, assumetrusted=False):
+    def readconfig(self, filename, root=None, assumetrusted=False,
+                   sections = None):
+        try:
+            fp = open(filename)
+        except IOError:
+            if not sections: # ignore unless we were looking for something
+                return
+            raise
+
         cdata = util.configparser()
+        trusted = sections or assumetrusted or self._is_trusted(fp, filename)
 
-        if isinstance(fn, basestring):
-            fn = [fn]
-        for f in fn:
-            try:
-                fp = open(f)
-            except IOError:
-                continue
-
-            trusted = assumetrusted or self._is_trusted(fp, f)
-
-            try:
-                cdata.readfp(fp, f)
-            except ConfigParser.ParsingError, inst:
-                msg = _("Failed to parse %s\n%s") % (f, inst)
-                if trusted:
-                    raise util.Abort(msg)
-                self.warn(_("Ignored: %s\n") % msg)
-
+        try:
+            cdata.readfp(fp, filename)
+        except ConfigParser.ParsingError, inst:
+            msg = _("Failed to parse %s\n%s") % (filename, inst)
             if trusted:
-                updateconfig(cdata, self.cdata)
-                updateconfig(self.overlay, self.cdata)
-            updateconfig(cdata, self.ucdata)
-            updateconfig(self.overlay, self.ucdata)
+                raise util.Abort(msg)
+            self.warn(_("Ignored: %s\n") % msg)
+
+        if trusted:
+            updateconfig(cdata, self.cdata, sections)
+            updateconfig(self.overlay, self.cdata, sections)
+        updateconfig(cdata, self.ucdata, sections)
+        updateconfig(self.overlay, self.ucdata, sections)
 
         if root is None:
             root = os.path.expanduser('~')
         self.fixconfig(root=root)
-
-    def readsections(self, filename, *sections):
-        """Read filename and add only the specified sections to the config data
-
-        The settings are added to the trusted config data.
-        """
-        if not sections:
-            return
-
-        cdata = util.configparser()
-        try:
-            try:
-                fp = open(filename)
-            except IOError, inst:
-                raise util.Abort(_("unable to open %s: %s") %
-                                 (filename, getattr(inst, "strerror", inst)))
-            try:
-                cdata.readfp(fp, filename)
-            finally:
-                fp.close()
-        except ConfigParser.ParsingError, inst:
-            raise util.Abort(_("failed to parse %s\n%s") % (filename, inst))
-
-        for section in sections:
-            if not cdata.has_section(section):
-                cdata.add_section(section)
-
-        updateconfig(cdata, self.cdata, sections)
-        updateconfig(cdata, self.ucdata, sections)
 
     def fixconfig(self, section=None, name=None, value=None, root=None):
         # translate paths relative to root (or home) into absolute paths
