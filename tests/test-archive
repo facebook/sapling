@@ -58,8 +58,8 @@ f = urllib2.urlopen('http://127.0.0.1:%s/?cmd=archive;node=%s;type=%s'
                     % (os.environ['HGPORT'], node, archive))
 sys.stdout.write(f.read())
 EOF
-http_proxy= python getarchive.py "$TIP" gz | gunzip | tar tf - | sed "s/$QTIP/TIP/"
-http_proxy= python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - | sed "s/$QTIP/TIP/"
+http_proxy= python getarchive.py "$TIP" gz | gunzip | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
+http_proxy= python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
 http_proxy= python getarchive.py "$TIP" zip > archive.zip
 unzip -t archive.zip | sed "s/$QTIP/TIP/"
 
@@ -69,10 +69,10 @@ hg archive -t tar test.tar
 tar tf test.tar
 
 hg archive -t tbz2 -X baz test.tar.bz2
-bunzip2 -dc test.tar.bz2 | tar tf -
+bunzip2 -dc test.tar.bz2 | tar tf - 2>/dev/null
 
 hg archive -t tgz -p %b-%h test-%h.tar.gz
-gzip -dc test-$QTIP.tar.gz | tar tf - | sed "s/$QTIP/TIP/"
+gzip -dc test-$QTIP.tar.gz | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
 
 cat > md5comp.py <<EOF
 from mercurial.util import md5
@@ -98,7 +98,7 @@ hg archive -t zip -p very/../bad test.zip
 hg archive --config ui.archivemeta=false -t zip -r 2 test.zip
 unzip -t test.zip
 
-hg archive -t tar - | tar tf - | sed "s/$QTIP/TIP/"
+hg archive -t tar - | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
 
 hg archive -r 0 -t tar rev-%r.tar
 if [ -f rev-0.tar ]; then
