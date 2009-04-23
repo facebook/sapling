@@ -399,6 +399,7 @@ def patchbomb(ui, repo, *revs, **opts):
             m['References'] = parent
         else:
             parent = m['Message-Id']
+        m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
         m['Date'] = util.datestr(start_time, "%a, %d %b %Y %H:%M:%S %1%2")
 
         start_time = (start_time[0] + 1, start_time[1])
