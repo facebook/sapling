@@ -44,9 +44,7 @@ class ui(object):
             self.cdata = util.configparser()
             self.ucdata = None
             # we always trust global config files
-            self.check_trusted = False
-            self.readconfig(util.rcpath())
-            self.check_trusted = True
+            self.readconfig(util.rcpath(), assumetrusted=True)
             self.updateopts(verbose, debug, quiet, interactive)
         else:
             # parentui may point to an ui object which is already a child
@@ -103,8 +101,6 @@ class ui(object):
             self.quiet = self.verbose = False
 
     def _is_trusted(self, fp, f, warn=True):
-        if not self.check_trusted:
-            return True
         st = util.fstat(fp)
         if util.isowner(fp, st):
             return True
@@ -125,7 +121,7 @@ class ui(object):
                 return False
         return True
 
-    def readconfig(self, fn, root=None):
+    def readconfig(self, fn, root=None, assumetrusted=False):
         if isinstance(fn, basestring):
             fn = [fn]
         for f in fn:
@@ -134,7 +130,7 @@ class ui(object):
             except IOError:
                 continue
             cdata = self.cdata
-            trusted = self._is_trusted(fp, f)
+            trusted = assumetrusted or self._is_trusted(fp, f)
             if not trusted:
                 if self.ucdata is None:
                     self.ucdata = dupconfig(self.cdata)
