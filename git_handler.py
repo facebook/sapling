@@ -1,4 +1,4 @@
-import os, errno, sys, time, datetime
+import os, errno, sys, time, datetime, pickle, copy
 import dulwich
 from dulwich.repo import Repo
 from dulwich.client import SimpleFetchGraphWalker
@@ -12,15 +12,33 @@ class GitHandler(object):
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
         self.ui = ui
+        self.load_git()
+        self.load_map()
+        
+    def load_git(self):
         git_dir = os.path.join(self.repo.path, 'git')
         self.git = Repo(git_dir)
-        
+
+    def load_map(self):
+        self._map = {}
+        if os.path.exists(self.repo.join('git-mapfile')):
+            for line in self.repo.opener('git-mapfile'):
+                gitsha, hgsha = line.strip().split(' ', 1)
+                self._map[gitsha] = hgsha
+            
+    def save_map(self):
+        file = self.repo.opener('git-mapfile', 'w+')
+        for gitsha, hgsha in self._map.iteritems():
+            file.write("%s %s\n" % (gitsha, hgsha))
+        file.close()
+
     def fetch(self, git_url):
         self.ui.status(_("fetching from git url: " + git_url + "\n"))
         self.export_git_objects()
         self.fetch_pack(git_url)
         self.import_git_objects()
-    
+        self.save_map()
+
     def fetch_pack(self, git_url):
         client, path = self.get_transport_and_path(git_url)
         graphwalker = SimpleFetchGraphWalker(self.git.heads().values(), self.git.get_parents)
@@ -70,32 +88,42 @@ class GitHandler(object):
         print bookmarks.parse(self.repo)
 
     def import_git_commit(self, commit):
-        # check that parents are all in Hg, or no parents
         print commit.parents
 
+        # TODO : have to handle merge contexts at some point (two parent files, etc)
         def getfilectx(repo, memctx, f):
             data = commit.getfile(f)
             e = commit.getmode(f)
             return context.memfilectx(f, data, 'l' in e, 'x' in e, None)
-            
+        
         p1 = "0" * 40
         p2 = "0" * 40
+        # TODO : do something if parent is not mapped yet!
+        if len(commit.parents) > 0:
+            sha = commit.parents[0]
+            p1 = self._map[sha]
+        if len(commit.parents) > 1:
+            sha = commit.parents[1]
+            p2 = self._map[sha]
+        if len(commit.parents) > 2:
+            # TODO : map extra parents to the extras file
+            pass
 
-        files = ['test']
+        files = commit.getfiles()
 
         # get a list of the changed, added, removed files
-        text = commit.message
         extra = {}
-        date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d")
-        print date
+        text = commit.message
+        date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              commit.author, date, extra)
-        print ctx
         a = self.repo.commitctx(ctx)
-        print a
-        #puts p2 = hex(self.repo.changelog.tip())
-        
-        pass
+
+        # get changeset id
+        p2 = hex(self.repo.changelog.tip())
+        # save changeset to mapping file
+        gitsha = commit.id
+        self._map[gitsha] = p2
         
     def getfilectx(self, source, repo, memctx, f):
         v = files[f]

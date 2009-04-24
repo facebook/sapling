@@ -502,11 +502,17 @@ class Commit(ShaFile):
         self._text += self._message
 
     def getfile(self, f):
-        return "file contents"
-    
+        import random
+        dt = "file contents:" + str(random.randrange(1, 100))
+        print dt
+        return dt
+        
     def getmode(self, f):
         return ""
-        
+
+    def getfiles(self):
+        return ['test']
+
     @property
     def tree(self):
         """Returns the tree that is the state of this commit"""
