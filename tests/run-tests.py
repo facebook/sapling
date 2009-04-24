@@ -38,6 +38,7 @@ SKIPPED_STATUS = 80
 SKIPPED_PREFIX = 'skipped: '
 FAILED_PREFIX  = 'hghave check failed: '
 PYTHON = sys.executable
+hgpkg = None
 
 requiredtools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
@@ -681,7 +682,6 @@ def main():
     COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
     expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
-    hgpkg = None
 
     if len(args) == 0:
         args = os.listdir(".")
