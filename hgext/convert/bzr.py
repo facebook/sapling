@@ -192,7 +192,7 @@ class bzr_source(converter_source):
 
             # populate the mode cache
             kind, executable = [e[1] for e in (kind, executable)]
-            mode = ((executable and 'x') or (kind == 'symlink' and 's')
+            mode = ((executable and 'x') or (kind == 'symlink' and 'l')
                     or '')
             self._modecache[(topath, revid)] = mode
             changes.append((topath, revid))

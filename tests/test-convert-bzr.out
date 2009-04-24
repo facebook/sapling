@@ -50,9 +50,13 @@ converting...
 1 Initial setup
 0 Symlink changed, x bits changed
 % manifest of 0
-644   altname
+644 @ altname
+644   d/a
 755 * program
+644 @ syma
 % manifest of tip
-644   altname
+644 @ altname
+644   d/a
 755 * newprog
 644   program
+644 @ syma
