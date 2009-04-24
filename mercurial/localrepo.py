@@ -1305,9 +1305,9 @@ class localrepository(repo.repository):
         """
         m = self.changelog.nodemap
         search = []
-        fetch = {}
-        seen = {}
-        seenbranch = {}
+        fetch = set()
+        seen = set()
+        seenbranch = set()
         if base == None:
             base = {}
 
@@ -1361,13 +1361,13 @@ class localrepository(repo.repository):
                     self.ui.debug(_("found incomplete branch %s:%s\n")
                                   % (short(n[0]), short(n[1])))
                     search.append(n[0:2]) # schedule branch range for scanning
-                    seenbranch[n] = 1
+                    seenbranch.add(n)
                 else:
                     if n[1] not in seen and n[1] not in fetch:
                         if n[2] in m and n[3] in m:
                             self.ui.debug(_("found new changeset %s\n") %
                                           short(n[1]))
-                            fetch[n[1]] = 1 # earliest unknown
+                            fetch.add(n[1]) # earliest unknown
                         for p in n[2:4]:
                             if p in m:
                                 base[p] = 1 # latest known
@@ -1376,7 +1376,7 @@ class localrepository(repo.repository):
                         if p not in req and p not in m:
                             r.append(p)
                             req.add(p)
-                seen[n[0]] = 1
+                seen.add(n[0])
 
             if r:
                 reqcnt += 1
@@ -1402,7 +1402,7 @@ class localrepository(repo.repository):
                         if f <= 2:
                             self.ui.debug(_("found new branch changeset %s\n") %
                                               short(p))
-                            fetch[p] = 1
+                            fetch.add(p)
                             base[i] = 1
                         else:
                             self.ui.debug(_("narrowed branch search to %s:%s\n")
@@ -1413,7 +1413,7 @@ class localrepository(repo.repository):
                 search = newsearch
 
         # sanity check our fetch list
-        for f in fetch.keys():
+        for f in fetch:
             if f in m:
                 raise error.RepoError(_("already have changeset ")
                                       + short(f[:4]))
@@ -1429,7 +1429,7 @@ class localrepository(repo.repository):
 
         self.ui.debug(_("%d total queries\n") % reqcnt)
 
-        return base.keys(), fetch.keys(), heads
+        return base.keys(), list(fetch), heads
 
     def findoutgoing(self, remote, base=None, heads=None, force=False):
         """Return list of nodes that are roots of subsets not in remote
