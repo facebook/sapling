@@ -146,18 +146,17 @@ class notifier(object):
 
     def subscribers(self):
         '''return list of email addresses of subscribers to this repo.'''
-        subs = {}
+        subs = set()
         for user, pats in self.ui.configitems('usersubs'):
             for pat in pats.split(','):
                 if fnmatch.fnmatch(self.repo.root, pat.strip()):
-                    subs[self.fixmail(user)] = 1
+                    subs.add(self.fixmail(user))
         for pat, users in self.ui.configitems('reposubs'):
             if fnmatch.fnmatch(self.repo.root, pat):
                 for user in users.split(','):
-                    subs[self.fixmail(user)] = 1
-        subs = util.sort(subs)
+                    subs.add(self.fixmail(user))
         return [mail.addressencode(self.ui, s, self.charsets, self.test)
-                for s in subs]
+                for s in sorted(subs)]
 
     def url(self, path=None):
         return self.ui.config('web', 'baseurl') + (path or self.root)
