@@ -322,6 +322,8 @@ PYTHONPATH::
           last component of the path after splitting by the path
           separator (ignoring trailing seprators). For example,
           "foo/bar/baz" becomes "baz" and "foo/bar//" becomes "bar".
+    - stripdir: Treat the text as path and strip a directory level, if
+          possible. For example, "foo" and "foo/bar" becomes "foo".
     - date: Date. Returns a date in a Unix date format, including
           the timezone: "Mon Sep 04 15:13:13 2006 0700".
     - domain: Any text. Finds the first string that looks like an
