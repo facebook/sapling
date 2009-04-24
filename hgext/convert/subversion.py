@@ -501,7 +501,7 @@ class svn_source(converter_source):
         return int(rev.split('@')[-1])
 
     def revsplit(self, rev):
-        url, revnum = strutil.rsplit(rev.encode(self.encoding), '@', 1)
+        url, revnum = rev.encode(self.encoding).rsplit('@', 1)
         revnum = int(revnum)
         parts = url.split('/', 1)
         uuid = parts.pop(0)[4:]

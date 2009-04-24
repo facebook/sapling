@@ -32,10 +32,3 @@ def rfindall(haystack, needle, start=0, end=None):
             break
         yield c
         end = c - 1
-
-def rsplit(s, sep=None, maxsplit=-1):
-    try:
-        return s.rsplit(sep, maxsplit)
-    except AttributeError:
-        return [chunk[::-1] for chunk in
-                s[::-1].split(sep, maxsplit)[::-1]]
