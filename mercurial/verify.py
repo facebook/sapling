@@ -173,7 +173,17 @@ def _verify(repo):
 
     files = sorted(set(filenodes) | set(filelinkrevs))
     for f in files:
-        lr = filelinkrevs[f][0]
+        try:
+            linkrevs = filelinkrevs[f]
+        except KeyError:
+            # in manifest but not in changelog
+            linkrevs = []
+
+        if linkrevs:
+            lr = linkrevs[0]
+        else:
+            lr = None
+
         try:
             fl = repo.file(f)
         except error.RevlogError, e:
@@ -191,7 +201,7 @@ def _verify(repo):
         for i in fl:
             revisions += 1
             n = fl.node(i)
-            lr = checkentry(fl, i, n, seen, filelinkrevs.get(f, []), f)
+            lr = checkentry(fl, i, n, seen, linkrevs, f)
             if f in filenodes:
                 if havemf and n not in filenodes[f]:
                     err(lr, _("%s not in manifests") % (short(n)), f)
