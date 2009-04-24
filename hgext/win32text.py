@@ -99,11 +99,19 @@ _filters = {
 
 def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     halt = False
-    for rev in xrange(repo[node].rev(), len(repo)):
+    seen = util.set()
+    # we try to walk changesets in reverse order from newest to
+    # oldest, so that if we see a file multiple times, we take the
+    # newest version as canonical. this prevents us from blocking a
+    # changegroup that contains an unacceptable commit followed later
+    # by a commit that fixes the problem.
+    tip = repo['tip']
+    for rev in xrange(len(repo)-1, repo[node].rev()-1, -1):
         c = repo[rev]
         for f in c.files():
-            if f not in c:
+            if f in seen or f not in tip or f not in c:
                 continue
+            seen.add(f)
             data = c[f].data()
             if not util.binary(data) and newline in data:
                 if not halt:

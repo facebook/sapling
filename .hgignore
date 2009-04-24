@@ -11,6 +11,8 @@ syntax: glob
 *.pyc
 *.swp
 *.prof
+\#*\#
+.\#*
 tests/.coverage*
 tests/annotated
 tests/*.err
