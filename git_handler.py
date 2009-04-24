@@ -1,9 +1,11 @@
-import os, errno, sys
+import os, errno, sys, time, datetime
 import dulwich
 from dulwich.repo import Repo
 from dulwich.client import SimpleFetchGraphWalker
 from hgext import bookmarks
 from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid
+from mercurial import hg, util, context, error
 
 class GitHandler(object):
     
@@ -39,8 +41,13 @@ class GitHandler(object):
         todo = []
         done = set()
         convert_list = []
+        
+        # get a list of all the head shas
         for head, sha in self.git.heads().iteritems():
             todo.append(sha)
+        
+        # traverse the heads getting a list of all the unique commits
+        # TODO : stop when we hit a SHA we've already imported
         while todo:
             sha = todo.pop()
             assert isinstance(sha, str)
@@ -51,17 +58,50 @@ class GitHandler(object):
             convert_list.append(commit)
             todo.extend([p for p in commit.parents if p not in done])
         
+        # sort the commits by commit date (TODO: change to topo sort)
         convert_list.sort(cmp=lambda x,y: x.commit_time-y.commit_time)
+        
+        # import each of the commits, oldest first
         for commit in convert_list:
             print "commit: %s" % sha
             self.import_git_commit(commit)
     
+        # TODO : update Hg bookmarks (possibly named heads?)
         print bookmarks.parse(self.repo)
 
     def import_git_commit(self, commit):
         # check that parents are all in Hg, or no parents
         print commit.parents
+
+        def getfilectx(repo, memctx, f):
+            data = commit.getfile(f)
+            e = commit.getmode(f)
+            return context.memfilectx(f, data, 'l' in e, 'x' in e, None)
+            
+        p1 = "0" * 40
+        p2 = "0" * 40
+
+        files = ['test']
+
+        # get a list of the changed, added, removed files
+        text = commit.message
+        extra = {}
+        date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d")
+        print date
+        ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
+                             commit.author, date, extra)
+        print ctx
+        a = self.repo.commitctx(ctx)
+        print a
+        #puts p2 = hex(self.repo.changelog.tip())
+        
         pass
+        
+    def getfilectx(self, source, repo, memctx, f):
+        v = files[f]
+        data = source.getfile(f, v)
+        e = source.getmode(f, v)
+        return context.memfilectx(f, data, 'l' in e, 'x' in e, copies.get(f))
 
     def export_git_objects(self):
         pass

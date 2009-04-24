@@ -501,6 +501,12 @@ class Commit(ShaFile):
         self._text += "\n" # There must be a new line after the headers
         self._text += self._message
 
+    def getfile(self, f):
+        return "file contents"
+    
+    def getmode(self, f):
+        return ""
+        
     @property
     def tree(self):
         """Returns the tree that is the state of this commit"""
