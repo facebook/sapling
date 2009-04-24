@@ -136,3 +136,26 @@ created new head
 % tranplant
 applying 42dc4432fd35
 1:42dc4432fd35 merged at a9f4acbac129
+% test transplant into empty repository
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 4 changes to 4 files
+% test filter
+filtering
+applying 17ab29e464c6
+17ab29e464c6 transplanted to e9ffc54ea104
+filtering
+applying 37a1297eb21b
+37a1297eb21b transplanted to 348b36d0b6a5
+filtering
+applying 722f4667af76
+722f4667af76 transplanted to 0aa6979afb95
+filtering
+applying a53251cdf717
+a53251cdf717 transplanted to 14f8512272b5
+3  b3
+2  b2
+1  b1
+0  r2
