@@ -157,9 +157,18 @@ def json(obj):
     else:
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
 
+def stripdir(text):
+    '''Treat the text as path and strip a directory level, if possible.'''
+    dir = os.path.dirname(text)
+    if dir == "":
+        return os.path.basename(text)
+    else:
+        return dir
+
 filters = {
     "addbreaks": nl2br,
     "basename": os.path.basename,
+    "stripdir": stripdir,
     "age": age,
     "date": lambda x: util.datestr(x),
     "domain": domain,
