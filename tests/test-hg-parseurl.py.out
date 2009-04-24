@@ -1,0 +1,5 @@
+http://example.com/no/anchor, revs: None, checkout: None
+http://example.com/an/anchor, revs: ['foo'], checkout: 'foo'
+http://example.com/no/anchor/revs, revs: ['foo'], checkout: 'foo'
+http://example.com/an/anchor/revs, revs: ['foo', 'bar'], checkout: 'foo'
+http://example.com/an/anchor/rev-None, revs: ['foo'], checkout: 'foo'

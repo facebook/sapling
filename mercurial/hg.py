@@ -25,7 +25,7 @@ def parseurl(url, revs=[]):
 
     url, branch = url.split('#', 1)
     checkout = revs and revs[-1] or branch
-    return url, revs + [branch], checkout
+    return url, (revs or []) + [branch], checkout
 
 schemes = {
     'bundle': bundlerepo,
