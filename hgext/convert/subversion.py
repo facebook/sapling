@@ -851,7 +851,7 @@ class svn_source(converter_source):
                         self.ui.note(_('skipping blacklisted revision %d\n')
                                      % revnum)
                         continue
-                    if paths is None:
+                    if not paths:
                         self.ui.debug(_('revision %d has no entries\n') % revnum)
                         continue
                     cset, lastonbranch = parselogentry(paths, revnum, author,
