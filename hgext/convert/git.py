@@ -1,4 +1,9 @@
-# git support for the convert extension
+# git.py - git support for the convert extension
+#
+#  Copyright 2005-2009 Matt Mackall <mpm@selenic.com> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 import os
 from mercurial import util

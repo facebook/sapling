@@ -1,4 +1,10 @@
-# GNU Arch support for the convert extension
+# gnuarch.py - GNU Arch support for the convert extension
+#
+#  Copyright 2008, 2009 Aleix Conchillo Flaque <aleix@member.fsf.org>
+#  and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 from common import NoRepo, commandline, commit, converter_source
 from mercurial.i18n import _

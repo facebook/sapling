@@ -1,4 +1,10 @@
-# bzr support for the convert extension
+# bzr.py - bzr support for the convert extension
+#
+#  Copyright 2008, 2009 Marek Kubica <marek@xivilization.net> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
+
 # This module is for handling 'bzr', that was formerly known as Bazaar-NG;
 # it cannot access 'bar' repositories, but they were never used very much
 

@@ -1,4 +1,10 @@
-# monotone support for the convert extension
+# monotone.py - monotone support for the convert extension
+#
+#  Copyright 2008, 2009 Mikkel Fahnoe Jorgensen <mikkel@dvide.com> and
+#  others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 import os, re
 from mercurial import util
