@@ -1,4 +1,9 @@
-# highlight extension implementation file
+# highlight.py - highlight extension implementation file
+#
+#  Copyright 2007-2009 Adam Hupp <adam@hupp.org> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 #
 # The original module was split in an interface and an implementation
 # file to defer pygments loading and speedup extension setup.
