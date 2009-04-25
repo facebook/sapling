@@ -2,6 +2,7 @@
 #
 # Copyright 2007 Matt Mackall
 # Copyright 2005, 2006 Benoit Boissinot <benoit.boissinot@ens-lyon.org>
+#
 # Inspired by git bisect, extension skeleton taken from mq.py.
 #
 # This software may be used and distributed according to the terms of the

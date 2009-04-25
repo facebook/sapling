@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
+
 '''pulling, updating and merging in one command'''
 
 from mercurial.i18n import _

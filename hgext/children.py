@@ -1,6 +1,7 @@
 # Mercurial extension to provide the 'hg children' command
 #
 # Copyright 2007 by Intevation GmbH <intevation@intevation.de>
+#
 # Author(s):
 # Thomas Arendsen Hein <thomas@intevation.de>
 #

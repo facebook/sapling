@@ -8,6 +8,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 #
+
 """allow to use MBCS path with problematic encoding.
 
 Some MBCS encodings are not good for some path operations (i.e.

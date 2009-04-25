@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
+
 '''show revision graphs in terminal windows
 
 This extension adds a --graph option to the incoming, outgoing and log

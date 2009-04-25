@@ -5,6 +5,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
+
 '''command to show certain statistics about revision history'''
 
 from mercurial.i18n import _

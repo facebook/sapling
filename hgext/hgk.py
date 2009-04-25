@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
+
 '''browsing the repository in a graphical way
 
 The hgk extension allows browsing the history of a repository in a
