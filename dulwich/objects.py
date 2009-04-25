@@ -362,6 +362,9 @@ class Tree(ShaFile):
         """Return a list of tuples describing the tree entries"""
         return [(mode, name, hexsha) for (name, (mode, hexsha)) in self._entries.iteritems()]
 
+    def entry(self, name):
+        return self._entries[name]
+        
     def iteritems(self):
         for name in sorted(self._entries.keys()):
             yield name, self_entries[name][0], self._entries[name][1]
@@ -500,18 +503,6 @@ class Commit(ShaFile):
         self._text += "%s %s %s %+05d\n" % (COMMITTER_ID, self._committer, str(self._commit_time), self._commit_timezone)
         self._text += "\n" # There must be a new line after the headers
         self._text += self._message
-
-    def getfile(self, f):
-        import random
-        dt = "file contents:" + str(random.randrange(1, 100))
-        print dt
-        return dt
-        
-    def getmode(self, f):
-        return ""
-
-    def getfiles(self):
-        return ['test']
 
     @property
     def tree(self):

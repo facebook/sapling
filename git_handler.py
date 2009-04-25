@@ -81,19 +81,18 @@ class GitHandler(object):
         
         # import each of the commits, oldest first
         for commit in convert_list:
-            print "commit: %s" % sha
             self.import_git_commit(commit)
     
         # TODO : update Hg bookmarks (possibly named heads?)
         print bookmarks.parse(self.repo)
 
     def import_git_commit(self, commit):
-        print commit.parents
-
+        print "importing: " + commit.id
+        
         # TODO : have to handle merge contexts at some point (two parent files, etc)
         def getfilectx(repo, memctx, f):
-            data = commit.getfile(f)
-            e = commit.getmode(f)
+            (e, sha, data) = self.git.get_file(commit, f)
+            e = '' # TODO : make this a real mode
             return context.memfilectx(f, data, 'l' in e, 'x' in e, None)
         
         p1 = "0" * 40
@@ -109,7 +108,9 @@ class GitHandler(object):
             # TODO : map extra parents to the extras file
             pass
 
-        files = commit.getfiles()
+        files = self.git.get_files_changed(commit)
+
+        print files
 
         # get a list of the changed, added, removed files
         extra = {}

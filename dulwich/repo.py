@@ -305,6 +305,56 @@ class Repo(object):
     def get_blob(self, sha):
         return self._get_object(sha, Blob)
 
+
+    # takes a commit object and a file path
+    # returns the contents of that file at that commit
+    # TODO : make this recursive - any file in a subdir wont be found here
+    def get_file(self, commit, f):
+        otree = self.tree(commit.tree)
+        parts = f.split('/')
+        for part in parts:
+            (mode, sha) = otree.entry(part)
+            obj = self.get_object(sha)
+            if isinstance (obj, Blob):
+                return (mode, sha, obj._text)
+            elif isinstance(obj, Tree):
+                otree = obj
+
+    # takes a commit and returns an array of the files that were changed
+    # between that commit and it's parents
+    # TODO : optimize this, it's horrible
+    # TODO : if no parents, return all files
+    def get_files_changed(self, commit):        
+        
+        def filenames(basetree, comptree, prefix):
+            changes = list()
+            csha = None
+            ctree = None
+            for (bmode, bname, bsha) in basetree.entries():
+                bobj = self.get_object(bsha)
+                if comptree:
+                    (cmode, csha) = comptree.entry(bname)
+                if csha != bsha:
+                    if isinstance (bobj, Blob):
+                        changes.append (prefix + bname)
+                    elif isinstance(bobj, Tree):
+                        if csha:
+                            ctree = self.get_object(csha)
+                        changes.extend (filenames (bobj, ctree, prefix + bname + '/'))
+            # TODO: handle removals?
+            return changes
+        
+        all_changes = list()
+        otree = self.tree(commit.tree)
+        if len(commit.parents) == 0:
+            all_changes = filenames(otree, None, '')
+        for parent in commit.parents:
+            pcommit = self.commit(parent)
+            ptree = self.tree(pcommit.tree)
+            all_changes.extend(filenames(otree, ptree, ''))
+            
+        return all_changes
+
     def revision_history(self, head):
         """Returns a list of the commits reachable from head.
 
