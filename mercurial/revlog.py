@@ -678,7 +678,7 @@ class revlog(object):
             # find from roots.
             heads = dict.fromkeys(heads, 0)
             # Start at the top and keep marking parents until we're done.
-            nodestotag = set(heads.keys())
+            nodestotag = set(heads)
             # Remember where the top was so we can use it as a limit later.
             highestrev = max([self.rev(n) for n in nodestotag])
             while nodestotag:

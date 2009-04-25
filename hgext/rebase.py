@@ -128,8 +128,7 @@ def rebase(ui, repo, **opts):
 
         if not keepf:
             # Remove no more useful revisions
-            if (set(repo.changelog.descendants(min(state)))
-                                                    - set(state.keys())):
+            if set(repo.changelog.descendants(min(state))) - set(state):
                 ui.warn(_("warning: new changesets detected on source branch, "
                                                         "not stripping\n"))
             else:
