@@ -8,6 +8,7 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 from mercurial import revlog
+from mercurial import util as hgutil
 
 import wrappers
 import test_util
@@ -403,6 +404,23 @@ class PushTests(test_util.TestBase):
         self.assertEqual(tip['alpha'].data(), 'bar')
         self.assertEqual(tip.parents()[0]['alpha'].flags(), expected_flags)
         self.assertEqual(tip['alpha'].flags(), '')
+
+    def test_push_outdated_base_text(self):
+        self.test_push_two_revs()
+        changes = [('adding_file', 'adding_file', 'different_content', ),
+                   ]
+        self.commitchanges(changes, parent='tip')
+        self.pushrevisions()
+        changes = [('adding_file', 'adding_file',
+                    'even_more different_content', ),
+                   ]
+        self.commitchanges(changes, parent=3)
+        try:
+            self.pushrevisions()
+            assert False, 'This should have aborted!'
+        except hgutil.Abort, e:
+            self.assertEqual(e.args[0],
+                             'Base text was out of date, maybe rebase?')
 
 
 def suite():

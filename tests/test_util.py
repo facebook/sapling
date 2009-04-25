@@ -140,7 +140,7 @@ class TestBase(unittest.TestCase):
         entries.sort()
         return entries
 
-    def commitchanges(self, changes):
+    def commitchanges(self, changes, parent='tip'):
         """Commit changes to mercurial directory
 
         'changes' is a sequence of tuples (source, dest, data). It can look
@@ -153,7 +153,7 @@ class TestBase(unittest.TestCase):
         - (source, None, None) to remove source.
         """
         repo = self.repo
-        parentctx = repo['tip']
+        parentctx = repo[parent]
 
         changed, removed = [], []
         for source, dest, newdata in changes:
@@ -187,7 +187,7 @@ class TestBase(unittest.TestCase):
                              '2008-10-07 20:59:48 -0500')
         nodeid = repo.commitctx(ctx)
         repo = self.repo
-        hg.update(repo, nodeid)
+        hg.clean(repo, nodeid)
         return nodeid
 
     def assertchanges(self, changes, ctx):
