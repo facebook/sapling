@@ -29,15 +29,6 @@ def normalize_url(svnurl):
     return svnurl.rstrip('/')
 
 
-def wipe_all_files(hg_wc_path):
-    files = [f for f in os.listdir(hg_wc_path) if f != '.hg']
-    for f in files:
-        f = os.path.join(hg_wc_path, f)
-        if os.path.isdir(f):
-            shutil.rmtree(f)
-        else:
-            os.remove(f)
-
 REVMAP_FILE_VERSION = 1
 def parse_revmap(revmap_filename):
     revmap = {}
