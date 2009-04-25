@@ -1,11 +1,15 @@
 # error.py - Mercurial exceptions
 #
-# This allows us to catch exceptions at higher levels without forcing imports
-#
 # Copyright 2005-2008 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
+
+"""Mercurial exceptions.
+
+This allows us to catch exceptions at higher levels without forcing
+imports.
+"""
 
 # Do not import anything here, please
 

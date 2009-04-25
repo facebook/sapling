@@ -6,9 +6,12 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
-#
-# This contains helper routines that are independent of the SCM core and hide
-# platform-specific details from the core.
+
+"""Mercurial utility functions and platform specfic implementations.
+
+This contains helper routines that are independent of the SCM core and
+hide platform-specific details from the core.
+"""
 
 from i18n import _
 import cStringIO, errno, re, shutil, sys, tempfile, traceback, error

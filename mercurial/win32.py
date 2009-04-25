@@ -4,11 +4,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
-#
-# Mark Hammond's win32all package allows better functionality on
-# Windows.  this module overrides definitions in util.py.  if not
-# available, import of this module will fail, and generic code will be
-# used.
+
+"""Utility functions that use win32 API.
+
+Mark Hammond's win32all package allows better functionality on
+Windows. This module overrides definitions in util.py. If not
+available, import of this module will fail, and generic code will be
+used.
+"""
 
 import win32api
 
