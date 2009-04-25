@@ -1,16 +1,14 @@
-'''
-win32.py - utility functions that use win32 API
-
-Copyright 2005-2009 Matt Mackall <mpm@selenic.com> and others
-
-This software may be used and distributed according to the terms of the
-GNU General Public License version 2, incorporated herein by reference.
-
-Mark Hammond's win32all package allows better functionality on
-Windows.  this module overrides definitions in util.py.  if not
-available, import of this module will fail, and generic code will be
-used.
-'''
+# win32.py - utility functions that use win32 API
+#
+# Copyright 2005-2009 Matt Mackall <mpm@selenic.com> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
+#
+# Mark Hammond's win32all package allows better functionality on
+# Windows.  this module overrides definitions in util.py.  if not
+# available, import of this module will fail, and generic code will be
+# used.
 
 import win32api
 

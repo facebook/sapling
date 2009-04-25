@@ -1,14 +1,12 @@
-"""
-revlog.py - storage back-end for mercurial
-
-This provides efficient delta storage with O(1) retrieve and append
-and O(changes) merge between branches
-
-Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
-
-This software may be used and distributed according to the terms of the
-GNU General Public License version 2, incorporated herein by reference.
-"""
+# revlog.py - storage back-end for mercurial
+#
+# This provides efficient delta storage with O(1) retrieve and append
+# and O(changes) merge between branches
+#
+# Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 # import stuff from node for others to import from revlog
 from node import bin, hex, nullid, nullrev, short #@UnusedImport
