@@ -521,7 +521,7 @@ class HgChangeReceiver(delta.Editor):
                 # check for case 5
                 for known in self.branches:
                     if self._svnpath(known).startswith(p):
-                        self.branches_to_delete.add(br) # case 5
+                        self.branches_to_delete.add(known) # case 5
             added_branches.update(self.__determine_parent_branch(p, paths[p].copyfrom_path,
                                                                  paths[p].copyfrom_rev, revision.revnum))
         for t in tags_to_delete:
