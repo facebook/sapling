@@ -1,3 +1,10 @@
+# match.py - file name matching
+#
+#  Copyright 2008, 2009 Matt Mackall <mpm@selenic.com> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
+
 import util
 
 class _match(object):
