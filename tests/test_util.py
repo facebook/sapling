@@ -45,12 +45,12 @@ def load_svndump_fixture(path, fixture_name):
     proc.stdin.flush()
     proc.communicate()
 
-def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir=''):
+def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir='', noupdate=True):
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
     wrappers.clone(None, ui.ui(), source=fileurl(repo_path),
-                     dest=wc_path, stupid=stupid, noupdate=True)
+                     dest=wc_path, stupid=stupid, noupdate=noupdate)
     repo = hg.repository(ui.ui(), wc_path)
     return repo
 

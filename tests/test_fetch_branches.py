@@ -6,9 +6,10 @@ import test_util
 
 
 class TestFetchBranches(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, stupid):
+    def _load_fixture_and_fetch(self, fixture_name, stupid, noupdate=True):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, stupid=stupid)
+                                                self.wc_path, stupid=stupid,
+                                                noupdate=noupdate)
 
     def test_unrelatedbranch(self, stupid=False):
         repo = self._load_fixture_and_fetch('unrelatedbranch.svndump', stupid)
@@ -58,6 +59,15 @@ class TestFetchBranches(test_util.TestBase):
                                             stupid)
         self.assertEqual(repo['tip'].manifest().keys(),
                          ['alpha', 'beta', 'iota', 'gamma', ])
+
+    def test_branch_tip_update_to_default(self, stupid=False):
+        repo = self._load_fixture_and_fetch('unorderedbranch.svndump',
+                                            stupid, noupdate=False)
+        self.assertEqual(repo[None].branch(), 'default')
+        self.assertTrue('tip' not in repo[None].tags())
+    
+    def test_branch_tip_update_to_default_stupid(self):
+        self.test_branch_tip_update_to_default(True)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),

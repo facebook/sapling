@@ -216,7 +216,13 @@ def clone(orig, ui, source, dest=None, *args, **opts):
             fp.write("default = %(url)s\nsvn = %(url)s\n" % {'url': svnurl})
             fp.close()
             if (res is None or res == 0) and not opts.get('noupdate', False):
-                commands.update(ui, repo, repo['tip'].node())
+                for test in ('default', 'tip'):
+                    try:
+                        uprev = repo.lookup(test)
+                        break
+                    except:
+                        continue
+                commands.update(ui, repo, uprev)
 
     return res
 
