@@ -3,8 +3,8 @@
 # Copyright 2006 Brendan Cully <brendan@kublai.com>
 # Copyright 2007 Chris Mason <chris.mason@oracle.com>
 #
-# This software may be used and distributed according to the terms
-# of the GNU General Public License, incorporated herein by reference.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
 from node import hex, nullid, short

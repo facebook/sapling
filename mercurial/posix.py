@@ -3,9 +3,8 @@ posix.py - Posix utility function implementations for Mercurial
 
  Copyright 2005-2009 Matt Mackall <mpm@selenic.com> and others
 
-This software may be used and distributed according to the terms of
-the GNU General Public License version 2, incorporated herein by
-reference.
+This software may be used and distributed according to the terms of the
+GNU General Public License version 2, incorporated herein by reference.
 """
 
 from i18n import _

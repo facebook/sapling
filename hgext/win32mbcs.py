@@ -5,8 +5,8 @@
 # Version: 0.2
 # Author:  Shun-ichi Goto <shunichi.goto@gmail.com>
 #
-# This software may be used and distributed according to the terms
-# of the GNU General Public License, incorporated herein by reference.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 #
 """allow to use MBCS path with problematic encoding.
 

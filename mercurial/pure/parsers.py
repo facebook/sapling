@@ -2,8 +2,8 @@
 #
 # Copyright 2009 Matt Mackall <mpm@selenic.com> and others
 #
-# This software may be used and distributed according to the terms
-# of the GNU General Public License, incorporated herein by reference.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 from mercurial.node import bin, nullid, nullrev
 from mercurial import util

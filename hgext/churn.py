@@ -3,8 +3,8 @@
 # Copyright 2006 Josef "Jeff" Sipek <jeffpc@josefsipek.net>
 # Copyright 2008 Alexander Solovyov <piranha@piranha.org.ua>
 #
-# This software may be used and distributed according to the terms
-# of the GNU General Public License, incorporated herein by reference.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 '''command to show certain statistics about revision history'''
 
 from mercurial.i18n import _

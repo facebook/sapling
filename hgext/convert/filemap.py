@@ -1,8 +1,8 @@
 # Copyright 2007 Bryan O'Sullivan <bos@serpentine.com>
 # Copyright 2007 Alexis S. L. Carvalho <alexis@cecm.usp.br>
 #
-# This software may be used and distributed according to the terms of
-# the GNU General Public License, incorporated herein by reference.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 import shlex
 from mercurial.i18n import _

@@ -6,8 +6,8 @@ and O(changes) merge between branches
 
 Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
 
-This software may be used and distributed according to the terms
-of the GNU General Public License, incorporated herein by reference.
+This software may be used and distributed according to the terms of the
+GNU General Public License version 2, incorporated herein by reference.
 """
 
 # import stuff from node for others to import from revlog

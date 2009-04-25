@@ -4,8 +4,8 @@
 # Copyright 2006, 2007 Alexis S. L. Carvalho <alexis@cecm.usp.br>
 # Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 #
-# This software may be used and distributed according to the terms
-# of the GNU General Public License, incorporated herein by reference.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2, incorporated herein by reference.
 
 import urllib, urllib2, urlparse, httplib, os, re
 from i18n import _

@@ -5,8 +5,8 @@ util.py - Mercurial utility functions and platform specfic implementations
  Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
  Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 
-This software may be used and distributed according to the terms
-of the GNU General Public License, incorporated herein by reference.
+This software may be used and distributed according to the terms of the
+GNU General Public License version 2, incorporated herein by reference.
 
 This contains helper routines that are independent of the SCM core and hide
 platform-specific details from the core.
