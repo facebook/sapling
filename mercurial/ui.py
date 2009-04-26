@@ -50,6 +50,9 @@ class ui(object):
                 ui._isatty = sys.stdin.isatty()
             except AttributeError: # not a real file object
                 ui._isatty = False
+            except IOError:
+                # access to stdin is unsafe in a WSGI environment
+                ui._isatty = False
         return ui._isatty
 
     def _is_trusted(self, fp, f):
