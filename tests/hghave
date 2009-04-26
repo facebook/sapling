@@ -18,7 +18,11 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     r = re.compile(regexp)
     fh = os.popen(cmd)
     s = fh.read()
-    ret = fh.close()
+    try:
+        ret = fh.close()
+    except IOError:
+        # Happen in Windows test environment
+        ret = 1
     return (ignorestatus or ret is None) and r.search(s)
 
 def has_baz():
