@@ -226,14 +226,22 @@ class ui(object):
         if not self.verbose: user = util.shortuser(user)
         return user
 
+    def _path(self, loc):
+        p = self.config('paths', loc)
+        if p and '%%' in p:
+            ui.warn('(deprecated \'\%\%\' in path %s=%s from %s)\n' %
+                    (loc, p, self.configsource('paths', loc)))
+            return p.replace('%%', '%')
+        return p
+
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
         if "://" in loc or os.path.isdir(os.path.join(loc, '.hg')):
             return loc
 
-        path = self.config("paths", loc)
+        path = self._path(loc)
         if not path and default is not None:
-            path = self.config("paths", default)
+            path = self._path(default)
         return path or loc
 
     def pushbuffer(self):
