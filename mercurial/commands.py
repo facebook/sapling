@@ -797,10 +797,16 @@ def showconfig(ui, repo, *values, **opts):
         if values:
             for v in values:
                 if v == section:
+                    ui.debug('%s: ' %
+                             ui.configsource(section, name, untrusted))
                     ui.write('%s=%s\n' % (sectname, value))
                 elif v == sectname:
+                    ui.debug('%s: ' %
+                             ui.configsource(section, name, untrusted))
                     ui.write(value, '\n')
         else:
+            ui.debug('%s: ' %
+                     ui.configsource(section, name, untrusted))
             ui.write('%s=%s\n' % (sectname, value))
 
 def debugsetparents(ui, repo, rev1, rev2=None):
