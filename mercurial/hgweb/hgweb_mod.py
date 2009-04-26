@@ -25,10 +25,10 @@ perms = {
 class hgweb(object):
     def __init__(self, repo, name=None):
         if isinstance(repo, str):
-            parentui = ui.ui()
-            parentui.setconfig('ui', 'report_untrusted', 'off')
-            parentui.setconfig('ui', 'interactive', 'off')
-            self.repo = hg.repository(parentui, repo)
+            u = ui.ui()
+            u.setconfig('ui', 'report_untrusted', 'off')
+            u.setconfig('ui', 'interactive', 'off')
+            self.repo = hg.repository(u, repo)
         else:
             self.repo = repo
 

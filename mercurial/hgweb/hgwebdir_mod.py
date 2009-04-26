@@ -17,17 +17,17 @@ from request import wsgirequest
 
 # This is a stopgap
 class hgwebdir(object):
-    def __init__(self, conf, parentui=None):
+    def __init__(self, conf, baseui=None):
         def cleannames(items):
             return [(util.pconvert(name).strip('/'), path)
                     for name, path in items]
 
-        if parentui:
-           self.parentui = parentui
+        if baseui:
+           self.ui = baseui.copy()
         else:
-            self.parentui = ui.ui()
-            self.parentui.setconfig('ui', 'report_untrusted', 'off')
-            self.parentui.setconfig('ui', 'interactive', 'off')
+            self.ui = ui.ui()
+            self.ui.setconfig('ui', 'report_untrusted', 'off')
+            self.ui.setconfig('ui', 'interactive', 'off')
 
         self.motd = None
         self.style = 'paper'
@@ -144,7 +144,7 @@ class hgwebdir(object):
                     if real:
                         req.env['REPO_NAME'] = virtual
                         try:
-                            repo = hg.repository(self.parentui, real)
+                            repo = hg.repository(self.ui, real)
                             return hgweb(repo).run_wsgi(req)
                         except IOError, inst:
                             msg = inst.strerror
@@ -203,7 +203,7 @@ class hgwebdir(object):
                     continue
                 name = name[len(subdir):]
 
-                u = self.parentui.copy()
+                u = self.ui.copy()
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except Exception, e:
@@ -297,7 +297,7 @@ class hgwebdir(object):
                 yield config('web', 'motd', '')
 
         def config(section, name, default=None, untrusted=True):
-            return self.parentui.config(section, name, default, untrusted)
+            return self.ui.config(section, name, default, untrusted)
 
         if self._baseurl is not None:
             req.env['SCRIPT_NAME'] = self._baseurl
