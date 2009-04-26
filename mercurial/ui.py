@@ -20,15 +20,15 @@ class ui(object):
         self.overlay = config.config()
         self.cdata = config.config()
         self.ucdata = config.config()
-        self.trusted_users = {}
-        self.trusted_groups = {}
+        self._trustusers = {}
+        self._trustgroups = {}
 
         if src:
             self.cdata = src.cdata.copy()
             self.ucdata = src.ucdata.copy()
             self.overlay = src.overlay.copy()
-            self.trusted_users = src.trusted_users.copy()
-            self.trusted_groups = src.trusted_groups.copy()
+            self._trustusers = src._trustusers.copy()
+            self._trustgroups = src._trustgroups.copy()
             self.fixconfig()
         else:
             # we always trust global config files
@@ -54,8 +54,7 @@ class ui(object):
         if util.isowner(fp, st):
             return True
 
-        tusers = self.trusted_users
-        tgroups = self.trusted_groups
+        tusers, tgroups = self._trustusers, self._trustgroups
         if '*' in tusers or '*' in tgroups:
             return True
 
@@ -118,9 +117,9 @@ class ui(object):
 
         # update trust information
         for user in self.configlist('trusted', 'users'):
-            self.trusted_users[user] = 1
+            self._trustusers[user] = 1
         for group in self.configlist('trusted', 'groups'):
-            self.trusted_groups[group] = 1
+            self._trustgroups[group] = 1
 
     def setconfig(self, section, name, value):
         for cdata in (self.overlay, self.cdata, self.ucdata):
