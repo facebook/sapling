@@ -7,7 +7,7 @@
 
 from i18n import _
 import re, sys, os
-from mercurial import util
+from mercurial import util, config
 
 path = ['templates', '../templates']
 
@@ -63,24 +63,18 @@ class templater(object):
         if not os.path.exists(mapfile):
             raise util.Abort(_('style not found: %s') % mapfile)
 
-        i = 0
-        for l in file(mapfile):
-            l = l.strip()
-            i += 1
-            if not l or l[0] in '#;': continue
-            m = re.match(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$', l)
-            if m:
-                key, val = m.groups()
-                if val[0] in "'\"":
-                    try:
-                        self.cache[key] = parsestring(val)
-                    except SyntaxError, inst:
-                        raise SyntaxError('%s:%s: %s' %
-                                          (mapfile, i, inst.args[0]))
-                else:
-                    self.map[key] = os.path.join(self.base, val)
+        conf = config.config()
+        conf.read(mapfile)
+
+        for key, val in conf[''].items():
+            if val[0] in "'\"":
+                try:
+                    self.cache[key] = parsestring(val)
+                except SyntaxError, inst:
+                    raise SyntaxError('%s: %s' %
+                                      (conf.getsource('', key), inst.args[0]))
             else:
-                raise SyntaxError(_("%s:%s: parse error") % (mapfile, i))
+                self.map[key] = os.path.join(self.base, val)
 
     def __contains__(self, key):
         return key in self.cache or key in self.map
