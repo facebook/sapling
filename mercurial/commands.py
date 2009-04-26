@@ -2677,13 +2677,13 @@ def serve(ui, repo, **opts):
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
-    parentui = repo and repo.baseui or ui
+    baseui = repo and repo.baseui or ui
     optlist = ("name templates style address port prefix ipv6"
                " accesslog errorlog webdir_conf certificate")
     for o in optlist.split():
         if opts[o]:
-            parentui.setconfig("web", o, str(opts[o]))
-            if (repo is not None) and (repo.ui != parentui):
+            baseui.setconfig("web", o, str(opts[o]))
+            if (repo is not None) and (repo.ui != baseui):
                 repo.ui.setconfig("web", o, str(opts[o]))
 
     if repo is None and not ui.config("web", "webdir_conf"):
@@ -2693,7 +2693,7 @@ def serve(ui, repo, **opts):
     class service:
         def init(self):
             util.set_signal_handler()
-            self.httpd = hgweb.server.create_server(parentui, repo)
+            self.httpd = hgweb.server.create_server(baseui, repo)
 
             if not ui.verbose: return
 

@@ -203,7 +203,7 @@ class hgwebdir(object):
                     continue
                 name = name[len(subdir):]
 
-                u = ui.ui(parentui=self.parentui)
+                u = self.parentui.copy()
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
                 except Exception, e:

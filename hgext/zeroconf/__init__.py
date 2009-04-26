@@ -112,7 +112,7 @@ class hgwebzc(hgweb_mod.hgweb):
 class hgwebdirzc(hgwebdir_mod.hgwebdir):
     def run(self):
         for r, p in self.repos:
-            u = ui.ui(parentui=self.parentui)
+            u = self.parentui.copy()
             u.readconfig(os.path.join(p, '.hg', 'hgrc'))
             n = os.path.basename(r)
             publish(n, "hgweb", p, int(u.config("web", "port", 8000)))

@@ -59,9 +59,8 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
     print '# %s user, %s group%s' % (kind[user == cuser], kind[group == cgroup],
                                      trusted)
 
-    parentui = ui.ui()
-    parentui.setconfig('ui', 'debug', str(bool(debug)))
-    u = ui.ui(parentui=parentui)
+    u = ui.ui()
+    u.setconfig('ui', 'debug', str(bool(debug)))
     u.readconfig('.hg/hgrc')
     if silent:
         return u
@@ -146,7 +145,7 @@ print "# read trusted, untrusted, new ui, trusted"
 u = ui.ui()
 u.setconfig('ui', 'debug', 'on')
 u.readconfig(filename)
-u2 = ui.ui(parentui=u)
+u2 = u.copy()
 def username(uid=None):
     return 'foo'
 util.username = username

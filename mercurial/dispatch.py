@@ -269,7 +269,7 @@ def _dispatch(ui, args):
         lui = ui
     if path:
         try:
-            lui = _ui.ui(parentui=ui)
+            lui = ui.copy()
             lui.readconfig(os.path.join(path, ".hg", "hgrc"))
         except IOError:
             pass
@@ -278,7 +278,7 @@ def _dispatch(ui, args):
     rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
     if rpath:
         path = lui.expandpath(rpath[-1])
-        lui = _ui.ui(parentui=ui)
+        lui = ui.copy()
         lui.readconfig(os.path.join(path, ".hg", "hgrc"))
 
     extensions.loadall(lui)

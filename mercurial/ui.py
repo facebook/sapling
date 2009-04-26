@@ -13,7 +13,7 @@ _booleans = {'1':True, 'yes':True, 'true':True, 'on':True,
              '0':False, 'no':False, 'false':False, 'off':False}
 
 class ui(object):
-    def __init__(self, parentui=None):
+    def __init__(self, src=None):
         self.buffers = []
         self.quiet = self.verbose = self.debugflag = self.traceback = False
         self.interactive = self.report_untrusted = True
@@ -23,12 +23,12 @@ class ui(object):
         self.trusted_users = {}
         self.trusted_groups = {}
 
-        if parentui:
-            self.cdata = parentui.cdata.copy()
-            self.ucdata = parentui.ucdata.copy()
-            self.overlay = parentui.overlay.copy()
-            self.trusted_users = parentui.trusted_users.copy()
-            self.trusted_groups = parentui.trusted_groups.copy()
+        if src:
+            self.cdata = src.cdata.copy()
+            self.ucdata = src.ucdata.copy()
+            self.overlay = src.overlay.copy()
+            self.trusted_users = src.trusted_users.copy()
+            self.trusted_groups = src.trusted_groups.copy()
             self.fixconfig()
         else:
             # we always trust global config files
