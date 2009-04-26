@@ -17,16 +17,16 @@ class ui(object):
         self._buffers = []
         self.quiet = self.verbose = self.debugflag = self.traceback = False
         self.interactive = self.report_untrusted = True
-        self.overlay = config.config()
-        self.cdata = config.config()
-        self.ucdata = config.config()
+        self._ocfg = config.config() # overlay
+        self._tcfg = config.config() # trusted
+        self._ucfg = config.config() # untrusted
         self._trustusers = {}
         self._trustgroups = {}
 
         if src:
-            self.cdata = src.cdata.copy()
-            self.ucdata = src.ucdata.copy()
-            self.overlay = src.overlay.copy()
+            self._tcfg = src._tcfg.copy()
+            self._ucfg = src._ucfg.copy()
+            self._ocfg = src._ocfg.copy()
             self._trustusers = src._trustusers.copy()
             self._trustgroups = src._trustgroups.copy()
             self.fixconfig()
@@ -77,21 +77,21 @@ class ui(object):
                 return
             raise
 
-        cdata = config.config()
+        cfg = config.config()
         trusted = sections or trust or self._is_trusted(fp, filename)
 
         try:
-            cdata.read(filename, fp, sections=sections)
+            cfg.read(filename, fp, sections=sections)
         except error.ConfigError, inst:
             if trusted:
                 raise
             self.warn(_("Ignored: %s\n") % str(inst))
 
         if trusted:
-            self.cdata.update(cdata)
-            self.cdata.update(self.overlay)
-        self.ucdata.update(cdata)
-        self.ucdata.update(self.overlay)
+            self._tcfg.update(cfg)
+            self._tcfg.update(self._ocfg)
+        self._ucfg.update(cfg)
+        self._ucfg.update(self._ocfg)
 
         if root is None:
             root = os.path.expanduser('~')
@@ -100,7 +100,7 @@ class ui(object):
     def fixconfig(self, root=None):
         # translate paths relative to root (or home) into absolute paths
         root = root or os.getcwd()
-        for c in self.cdata, self.ucdata, self.overlay:
+        for c in self._tcfg, self._ucfg, self._ocfg:
             for n, p in c.items('paths'):
                 if p and "://" not in p and not os.path.isabs(p):
                     c.set("paths", n, os.path.normpath(os.path.join(root, p)))
@@ -122,12 +122,12 @@ class ui(object):
             self._trustgroups[group] = 1
 
     def setconfig(self, section, name, value):
-        for cdata in (self.overlay, self.cdata, self.ucdata):
-            cdata.set(section, name, value)
+        for cfg in (self._ocfg, self._tcfg, self._ucfg):
+            cfg.set(section, name, value)
         self.fixconfig()
 
     def _data(self, untrusted):
-        return untrusted and self.ucdata or self.cdata
+        return untrusted and self._ucfg or self._tcfg
 
     def configsource(self, section, name, untrusted=False):
         return self._data(untrusted).source(section, name) or 'none'
@@ -135,7 +135,7 @@ class ui(object):
     def config(self, section, name, default=None, untrusted=False):
         value = self._data(untrusted).get(section, name, default)
         if self.debugflag and not untrusted:
-            uvalue = self.ucdata.get(section, name)
+            uvalue = self._ucfg.get(section, name)
             if uvalue is not None and uvalue != value:
                 self.warn(_("Ignoring untrusted configuration option "
                             "%s.%s = %s\n") % (section, name, uvalue))
@@ -166,15 +166,15 @@ class ui(object):
     def configitems(self, section, untrusted=False):
         items = self._data(untrusted).items(section)
         if self.debugflag and not untrusted:
-            for k,v in self.ucdata.items(section):
-                if self.cdata.get(section, k) != v:
+            for k,v in self._ucfg.items(section):
+                if self._tcfg.get(section, k) != v:
                     self.warn(_("Ignoring untrusted configuration option "
                                 "%s.%s = %s\n") % (section, k, v))
         return items
 
     def walkconfig(self, untrusted=False):
-        cdata = self._data(untrusted)
-        for section in cdata.sections():
+        cfg = self._data(untrusted)
+        for section in cfg.sections():
             for name, value in self.configitems(section, untrusted):
                 yield section, name, str(value).replace('\n', '\\n')
 
