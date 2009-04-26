@@ -183,9 +183,7 @@ class basicstore:
         for x in self.datafiles():
             yield x
         # yield manifest before changelog
-        meta = self._walk('', False)
-        meta.reverse()
-        for x in meta:
+        for x in reversed(self._walk('', False)):
             yield x
 
     def copylist(self):

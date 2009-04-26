@@ -437,9 +437,8 @@ class svn_source(converter_source):
                 origpaths, revnum, author, date, message = entry
                 copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p, e
                           in origpaths.iteritems() if e.copyfrom_path]
-                copies.sort()
                 # Apply moves/copies from more specific to general
-                copies.reverse()
+                copies.sort(reverse=True)
 
                 srctagspath = tagspath
                 if copies and copies[-1][2] == tagspath:

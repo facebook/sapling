@@ -81,8 +81,7 @@ class sshrepository(repo.repository):
             self.abort(error.RepoError(_("no suitable response from remote hg")))
 
         self.capabilities = set()
-        lines.reverse()
-        for l in lines:
+        for l in reversed(lines):
             if l.startswith("capabilities:"):
                 self.capabilities.update(l[:-1].split(":")[1].split())
                 break

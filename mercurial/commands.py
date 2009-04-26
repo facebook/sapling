@@ -447,8 +447,8 @@ def branches(ui, repo, active=False):
     activebranches = [encoding.tolocal(repo[n].branch())
                             for n in repo.heads(closed=False)]
     branches = sorted([(tag in activebranches, repo.changelog.rev(node), tag)
-                          for tag, node in repo.branchtags().items()])
-    branches.reverse()
+                          for tag, node in repo.branchtags().items()],
+                      reverse=True)
 
     for isactive, node, tag in branches:
         if (not active) or isactive:
@@ -2870,12 +2870,10 @@ def tags(ui, repo):
     switch is used, a third column "local" is printed for local tags.
     """
 
-    l = repo.tagslist()
-    l.reverse()
     hexfunc = ui.debugflag and hex or short
     tagtype = ""
 
-    for t, n in l:
+    for t, n in reversed(repo.tagslist()):
         if ui.quiet:
             ui.write("%s\n" % t)
             continue

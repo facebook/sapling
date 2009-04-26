@@ -331,11 +331,9 @@ class localrepository(repo.repository):
         return self._tagstypecache.get(tagname)
 
     def _hgtagsnodes(self):
-        heads = self.heads()
-        heads.reverse()
         last = {}
         ret = []
-        for node in heads:
+        for node in reversed(self.heads()):
             c = self[node]
             rev = c.rev()
             try:

@@ -286,10 +286,7 @@ def updatemq(repo, state, skipped, **opts):
         repo.mq.finish(repo, mqrebase.keys())
 
         # We must start import from the newest revision
-        mq = mqrebase.keys()
-        mq.sort()
-        mq.reverse()
-        for rev in mq:
+        for rev in sorted(mqrebase, reverse=True):
             if rev not in skipped:
                 repo.ui.debug(_('import mq patch %d (%s)\n')
                               % (state[rev], mqrebase[rev][0]))

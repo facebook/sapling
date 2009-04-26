@@ -285,11 +285,10 @@ def graphlog(ui, repo, path=None, **opts):
     ascii(ui, grapher(graphdag))
 
 def graphrevs(repo, nodes, opts):
-    nodes.reverse()
     include = set(nodes)
     limit = cmdutil.loglimit(opts)
     count = 0
-    for node in nodes:
+    for node in reversed(nodes):
         if count >= limit:
             break
         ctx = repo[node]

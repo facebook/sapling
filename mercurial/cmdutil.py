@@ -1052,8 +1052,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                     n = filelog.node(j)
                     revs.append((filelog.linkrev(j),
                                  follow and filelog.renamed(n)))
-                revs.reverse()
-                for rev in revs:
+                for rev in reversed(revs):
                     # only yield rev for which we have the changelog, it can
                     # happen while doing "hg log" during a pull or commit
                     if rev[0] < cl_count:
