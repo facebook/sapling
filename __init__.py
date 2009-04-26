@@ -49,7 +49,7 @@ def gclone(ui, git_url, hg_repo_path=None):
     node = git.remote_head('origin')
     hg.update(dest_repo, node)
 
-def gpush(ui, repo):
+def gpush(ui, repo, remote_name):
     dest_repo.ui.status(_("pushing to git url\n"))
     
 def gpull(ui, repo):

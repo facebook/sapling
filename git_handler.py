@@ -15,10 +15,13 @@ class GitHandler(object):
         self.ui = ui
         self.load_git()
         self.load_map()
+        self.load_config()
         
     def load_git(self):
         git_dir = os.path.join(self.repo.path, 'git')
         self.git = Repo(git_dir)
+
+    ## FILE LOAD AND SAVE METHODS
 
     def load_map(self):
         self._map = {}
@@ -26,12 +29,28 @@ class GitHandler(object):
             for line in self.repo.opener('git-mapfile'):
                 gitsha, hgsha = line.strip().split(' ', 1)
                 self._map[gitsha] = hgsha
-            
+    
     def save_map(self):
         file = self.repo.opener('git-mapfile', 'w+')
         for gitsha, hgsha in self._map.iteritems():
             file.write("%s %s\n" % (gitsha, hgsha))
         file.close()
+    
+    def load_config(self):
+        self._config = {}
+        if os.path.exists(self.repo.join('git-config')):
+            for line in self.repo.opener('git-config'):
+                key, value = line.strip().split(' ', 1)
+                self._config[key] = value
+    
+    def save_config(self):
+        file = self.repo.opener('git-config', 'w+')
+        for key, value in self._config.iteritems():
+            file.write("%s %s\n" % (key, value))
+        file.close()
+    
+
+    ## END FILE LOAD AND SAVE METHODS
 
     def fetch(self, remote_name):
         self.ui.status(_("fetching from : " + remote_name + "\n"))
@@ -42,10 +61,11 @@ class GitHandler(object):
 
     # TODO: make these actually save and recall
     def remote_add(self, remote_name, git_url):
-        self._git_url = git_url
+        self._config['remote.' + remote_name + '.url'] = git_url
+        self.save_config()
         
     def remote_name_to_url(self, remote_name):
-        return self._git_url
+        return self._config['remote.' + remote_name + '.url']
         
     def remote_head(self, remote_name):
         for head, sha in self.git.remote_refs(remote_name).iteritems():
