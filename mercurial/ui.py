@@ -25,23 +25,18 @@ class ui(object):
         self.trusted_groups = {}
 
         if parentui:
-            # parentui may point to an ui object which is already a child
             self.parentui = parentui.parentui or parentui
-            self.cdata.update(self.parentui.cdata)
-            self.ucdata.update(self.parentui.ucdata)
-            # we want the overlay from the parent, not the root
-            self.overlay.update(parentui.overlay)
-            self.buffers = parentui.buffers
+            self.cdata = self.parentui.cdata.copy()
+            self.ucdata = self.parentui.ucdata.copy()
+            self.overlay = parentui.overlay.copy()
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
+            self.buffers = parentui.buffers
             self.fixconfig()
         else:
             # we always trust global config files
             for f in util.rcpath():
                 self.readconfig(f, assumetrusted=True)
-
-    def __getattr__(self, key):
-        return getattr(self.parentui, key)
 
     _isatty = None
     def isatty(self):

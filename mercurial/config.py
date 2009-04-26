@@ -6,8 +6,6 @@ class sortdict(dict):
     def __init__(self, data=None):
         self._list = []
         if data:
-            if hasattr(data, '_list'):
-                self._list = list(data._list)
             self.update(data)
     def copy(self):
         return sortdict(self)
