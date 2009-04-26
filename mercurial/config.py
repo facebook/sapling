@@ -57,7 +57,7 @@ class config:
             self._data[section] = sortdict()
         self._data[section][item] = (value, source)
 
-    def read(self, path, fp):
+    def read(self, path, fp=None):
         sectionre = re.compile(r'\[([^\[]+)\]')
         itemre = re.compile(r'([^=\s]+)\s*=\s*(.*)')
         contre = re.compile(r'\s+(\S.*)')
@@ -66,6 +66,10 @@ class config:
         item = None
         line = 0
         cont = 0
+
+        if not fp:
+            fp = open(path)
+
         for l in fp:
             line += 1
             if cont:

@@ -8,7 +8,8 @@
 
 import os
 from mercurial.i18n import _
-from mercurial import ui, hg, util, templater, templatefilters, error, encoding
+from mercurial import ui, hg, util, templater, templatefilters
+from mercurial import config, error, encoding
 from common import ErrorResponse, get_mtime, staticfile, paritygen,\
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
@@ -16,7 +17,7 @@ from request import wsgirequest
 
 # This is a stopgap
 class hgwebdir(object):
-    def __init__(self, config, parentui=None):
+    def __init__(self, conf, parentui=None):
         def cleannames(items):
             return [(util.pconvert(name).strip('/'), path)
                     for name, path in items]
@@ -33,28 +34,23 @@ class hgwebdir(object):
         self.stripecount = None
         self.repos_sorted = ('name', False)
         self._baseurl = None
-        if isinstance(config, (list, tuple)):
-            self.repos = cleannames(config)
+        if isinstance(conf, (list, tuple)):
+            self.repos = cleannames(conf)
             self.repos_sorted = ('', False)
-        elif isinstance(config, dict):
-            self.repos = util.sort(cleannames(config.items()))
+        elif isinstance(conf, dict):
+            self.repos = util.sort(cleannames(conf.items()))
         else:
-            if isinstance(config, util.configparser):
-                cp = config
+            if isinstance(conf, config.config):
+                cp = conf
             else:
-                cp = util.configparser()
-                cp.read(config)
+                cp = config.config()
+                cp.read(conf)
             self.repos = []
-            if cp.has_section('web'):
-                if cp.has_option('web', 'motd'):
-                    self.motd = cp.get('web', 'motd')
-                if cp.has_option('web', 'style'):
-                    self.style = cp.get('web', 'style')
-                if cp.has_option('web', 'stripes'):
-                    self.stripecount = int(cp.get('web', 'stripes'))
-                if cp.has_option('web', 'baseurl'):
-                    self._baseurl = cp.get('web', 'baseurl')
-            if cp.has_section('paths'):
+            self.motd = cp.get('web', 'motd')
+            self.style = cp.get('web', 'style', 'paper')
+            self.stripecount = cp.get('web', 'stripes')
+            self._baseurl = cp.get('web', 'baseurl')
+            if 'paths' in cp:
                 paths = cleannames(cp.items('paths'))
                 for prefix, root in paths:
                     roothead, roottail = os.path.split(root)
@@ -75,14 +71,13 @@ class hgwebdir(object):
                         if prefix:
                             name = prefix + '/' + name
                         self.repos.append((name, path))
-            if cp.has_section('collections'):
-                for prefix, root in cp.items('collections'):
-                    for path in util.walkrepos(root, followsym=True):
-                        repo = os.path.normpath(path)
-                        name = repo
-                        if name.startswith(prefix):
-                            name = name[len(prefix):]
-                        self.repos.append((name.lstrip(os.sep), repo))
+            for prefix, root in cp.items('collections'):
+                for path in util.walkrepos(root, followsym=True):
+                    repo = os.path.normpath(path)
+                    name = repo
+                    if name.startswith(prefix):
+                        name = name[len(prefix):]
+                    self.repos.append((name.lstrip(os.sep), repo))
             self.repos.sort()
 
     def run(self):
@@ -320,8 +315,7 @@ class hgwebdir(object):
             style = config('web', 'style', '')
         if 'style' in req.form:
             style = req.form['style'][0]
-        if self.stripecount is None:
-            self.stripecount = int(config('web', 'stripes', 1))
+        self.stripecount = int(self.stripecount or config('web', 'stripes', 1))
         mapfile = templater.stylemap(style)
         tmpl = templater.templater(mapfile, templatefilters.filters,
                                    defaults={"header": header,
