@@ -9,8 +9,6 @@ from mercurial import commands
 
 def uisetup(ui):
     ui.write("uisetup called\\n")
-    ui.write("ui.parentui is%s None\\n" % (ui.parentui is not None
-                                           and "not" or ""))
 
 def reposetup(ui, repo):
     ui.write("reposetup called for %s\\n" % os.path.basename(repo.root))

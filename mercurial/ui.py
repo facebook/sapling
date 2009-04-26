@@ -20,23 +20,22 @@ class ui(object):
         self.overlay = config.config()
         self.cdata = config.config()
         self.ucdata = config.config()
-        self.parentui = None
         self.trusted_users = {}
         self.trusted_groups = {}
 
         if parentui:
-            self.parentui = parentui.parentui or parentui
-            self.cdata = self.parentui.cdata.copy()
-            self.ucdata = self.parentui.ucdata.copy()
+            self.cdata = parentui.cdata.copy()
+            self.ucdata = parentui.ucdata.copy()
             self.overlay = parentui.overlay.copy()
             self.trusted_users = parentui.trusted_users.copy()
             self.trusted_groups = parentui.trusted_groups.copy()
-            self.buffers = parentui.buffers
             self.fixconfig()
         else:
             # we always trust global config files
             for f in util.rcpath():
                 self.readconfig(f, assumetrusted=True)
+    def copy(self):
+        return ui(self)
 
     _isatty = None
     def isatty(self):

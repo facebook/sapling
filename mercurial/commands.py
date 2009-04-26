@@ -2677,7 +2677,7 @@ def serve(ui, repo, **opts):
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
-    parentui = ui.parentui or ui
+    parentui = repo and repo.baseui or ui
     optlist = ("name templates style address port prefix ipv6"
                " accesslog errorlog webdir_conf certificate")
     for o in optlist.split():
