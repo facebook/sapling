@@ -33,7 +33,7 @@ class ui(object):
         else:
             # we always trust global config files
             for f in util.rcpath():
-                self.readconfig(f, assumetrusted=True)
+                self.readconfig(f, trust=True)
     def copy(self):
         return ui(self)
 
@@ -69,7 +69,7 @@ class ui(object):
                         'user %s, group %s\n') % (f, user, group))
         return False
 
-    def readconfig(self, filename, root=None, assumetrusted=False,
+    def readconfig(self, filename, root=None, trust=False,
                    sections = None):
         try:
             fp = open(filename)
@@ -79,7 +79,7 @@ class ui(object):
             raise
 
         cdata = config.config()
-        trusted = sections or assumetrusted or self._is_trusted(fp, filename)
+        trusted = sections or trust or self._is_trusted(fp, filename)
 
         try:
             cdata.read(filename, fp, sections=sections)
