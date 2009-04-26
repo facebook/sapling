@@ -177,7 +177,7 @@ class dirstate(object):
         return key in self._map
 
     def __iter__(self):
-        for x in util.sort(self._map):
+        for x in sorted(self._map):
             yield x
 
     def parents(self):
@@ -460,7 +460,7 @@ class dirstate(object):
         results = {'.hg': None}
 
         # step 1: find all explicit files
-        for ff in util.sort(files):
+        for ff in sorted(files):
             nf = normalize(normpath(ff))
             if nf in results:
                 continue
@@ -526,7 +526,7 @@ class dirstate(object):
                         results[nf] = None
 
         # step 3: report unseen items in the dmap hash
-        visit = util.sort([f for f in dmap if f not in results and match(f)])
+        visit = sorted([f for f in dmap if f not in results and match(f)])
         for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
             if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
                 st = None

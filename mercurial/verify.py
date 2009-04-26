@@ -143,17 +143,17 @@ def _verify(repo):
     ui.status(_("crosschecking files in changesets and manifests\n"))
 
     if havemf:
-        for c, m in util.sort([(c, m) for m in mflinkrevs for c in mflinkrevs[m]]):
+        for c,m in sorted([(c, m) for m in mflinkrevs for c in mflinkrevs[m]]):
             err(c, _("changeset refers to unknown manifest %s") % short(m))
         del mflinkrevs
 
-        for f in util.sort(filelinkrevs):
+        for f in sorted(filelinkrevs):
             if f not in filenodes:
                 lr = filelinkrevs[f][0]
                 err(lr, _("in changeset but not in manifest"), f)
 
     if havecl:
-        for f in util.sort(filenodes):
+        for f in sorted(filenodes):
             if f not in filelinkrevs:
                 try:
                     fl = repo.file(f)
@@ -171,7 +171,7 @@ def _verify(repo):
         elif size > 0:
             storefiles[f] = True
 
-    files = util.sort(set(filenodes) | set(filelinkrevs))
+    files = sorted(set(filenodes) | set(filelinkrevs))
     for f in files:
         lr = filelinkrevs[f][0]
         try:
@@ -227,7 +227,7 @@ def _verify(repo):
         # cross-check
         if f in filenodes:
             fns = [(mf.linkrev(l), n) for n,l in filenodes[f].iteritems()]
-            for lr, node in util.sort(fns):
+            for lr, node in sorted(fns):
                 err(lr, _("%s in manifests not found") % short(node), f)
 
     for f in storefiles:

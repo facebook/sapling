@@ -79,7 +79,7 @@ class changectx(object):
         return self.filectx(key)
 
     def __iter__(self):
-        for f in util.sort(self._manifest):
+        for f in sorted(self._manifest):
             yield f
 
     def changeset(self): return self._changeset
@@ -166,7 +166,7 @@ class changectx(object):
                     break
             if match(fn):
                 yield fn
-        for fn in util.sort(fdict):
+        for fn in sorted(fdict):
             if match.bad(fn, 'No such file in rev ' + str(self)) and match(fn):
                 yield fn
 
@@ -412,7 +412,7 @@ class filectx(object):
             visit.extend(fn)
 
         hist = {}
-        for r, f in util.sort(visit):
+        for r, f in sorted(visit):
             curr = decorate(f.data(), f)
             for p in parents(f):
                 if p != nullid:
@@ -557,7 +557,7 @@ class workingctx(changectx):
     def date(self): return self._date
     def description(self): return self._text
     def files(self):
-        return util.sort(self._status[0] + self._status[1] + self._status[2])
+        return sorted(self._status[0] + self._status[1] + self._status[2])
 
     def modified(self): return self._status[0]
     def added(self): return self._status[1]
@@ -606,7 +606,7 @@ class workingctx(changectx):
         return self._parents[0].ancestor(c2) # punt on two parents for now
 
     def walk(self, match):
-        return util.sort(self._repo.dirstate.walk(match, True, False).keys())
+        return sorted(self._repo.dirstate.walk(match, True, False))
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular
@@ -727,7 +727,7 @@ class memctx(object):
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
-        files = util.sort(set(files))
+        files = sorted(set(files))
         self._status = [files, [], [], [], []]
         self._filectxfn = filectxfn
 

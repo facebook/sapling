@@ -109,7 +109,7 @@ def rebase(ui, repo, **opts):
         targetancestors = list(repo.changelog.ancestors(target))
         targetancestors.append(target)
 
-        for rev in util.sort(state):
+        for rev in sorted(state):
             if state[rev] == -1:
                 storestatus(repo, originalwd, target, state, collapsef, keepf,
                                                     keepbranchesf, external)

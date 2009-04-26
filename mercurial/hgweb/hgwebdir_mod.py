@@ -38,7 +38,7 @@ class hgwebdir(object):
             self.repos = cleannames(conf)
             self.repos_sorted = ('', False)
         elif isinstance(conf, dict):
-            self.repos = util.sort(cleannames(conf.items()))
+            self.repos = sorted(cleannames(conf.items()))
         else:
             if isinstance(conf, config.config):
                 cp = conf

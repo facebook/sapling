@@ -665,7 +665,7 @@ class changeset_printer(object):
             self.ui.write(_("copies:      %s\n") % ' '.join(copies))
 
         if extra and self.ui.debugflag:
-            for key, value in util.sort(extra.items()):
+            for key, value in sorted(extra.items()):
                 self.ui.write(_("extra:       %s=%s\n")
                               % (key, value.encode('string_escape')))
 
@@ -816,7 +816,7 @@ class changeset_templater(changeset_printer):
             return showlist('tag', ctx.tags(), **args)
 
         def showextras(**args):
-            for key, value in util.sort(ctx.extra().items()):
+            for key, value in sorted(ctx.extra().items()):
                 args = args.copy()
                 args.update(dict(key=key, value=value))
                 yield self.t('extra', **args)
@@ -1163,7 +1163,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
         for i, window in increasing_windows(0, len(revs)):
             yield 'window', revs[0] < revs[-1], revs[-1]
             nrevs = [rev for rev in revs[i:i+window] if want(rev)]
-            for rev in util.sort(list(nrevs)):
+            for rev in sorted(nrevs):
                 fns = fncache.get(rev)
                 if not fns:
                     def fns_generator():
@@ -1191,7 +1191,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     m = match(repo, pats, opts)
     if pats:
         modified, added, removed = repo.status(match=m)[:3]
-        files = util.sort(modified + added + removed)
+        files = sorted(modified + added + removed)
 
         def is_dir(f):
             name = f + '/'

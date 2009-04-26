@@ -357,7 +357,7 @@ class localrepository(repo.repository):
             except:
                 r = -2 # sort to the beginning of the list if unknown
             l.append((r, t, n))
-        return [(t, n) for r, t, n in util.sort(l)]
+        return [(t, n) for r, t, n in sorted(l)]
 
     def nodetags(self, node):
         '''return the tags associated with a node'''
@@ -861,7 +861,7 @@ class localrepository(repo.repository):
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
         try:
-            commit = util.sort(wctx.modified() + wctx.added())
+            commit = sorted(wctx.modified() + wctx.added())
             remove = wctx.removed()
             extra = wctx.extra().copy()
             branchname = extra['branch']
@@ -919,7 +919,7 @@ class localrepository(repo.repository):
                         remove.append(f)
 
             updated, added = [], []
-            for f in util.sort(changed):
+            for f in sorted(changed):
                 if f in m1 or f in m2:
                     updated.append(f)
                 else:
@@ -927,7 +927,7 @@ class localrepository(repo.repository):
 
             # update manifest
             m1.update(new)
-            removed = [f for f in util.sort(remove) if f in m1 or f in m2]
+            removed = [f for f in sorted(remove) if f in m1 or f in m2]
             removed1 = []
 
             for f in removed:
@@ -1220,7 +1220,7 @@ class localrepository(repo.repository):
             return ('close' not in extras)
         # sort the output in rev descending order
         heads = [(-self.changelog.rev(h), h) for h in heads if display(h)]
-        return [n for (r, n) in util.sort(heads)]
+        return [n for (r, n) in sorted(heads)]
 
     def branchheads(self, branch=None, start=None, closed=True):
         if branch is None:
@@ -1879,7 +1879,7 @@ class localrepository(repo.repository):
                     msng_filenode_set.setdefault(fname, {})
                     changedfiles[fname] = 1
             # Go through all our files in order sorted by name.
-            for fname in util.sort(changedfiles):
+            for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
@@ -1969,7 +1969,7 @@ class localrepository(repo.repository):
             for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
                 yield chnk
 
-            for fname in util.sort(changedfiles):
+            for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)

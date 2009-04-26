@@ -176,4 +176,4 @@ class p4_source(converter_source):
         return self.tags
 
     def getchangedfiles(self, rev, i):
-        return util.sort([x[0] for x in self.files[rev]])
+        return sorted([x[0] for x in self.files[rev]])

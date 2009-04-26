@@ -104,7 +104,7 @@ def hook(ui, repo, name, throw=False, **args):
         os.dup2(sys.__stderr__.fileno(), sys.__stdout__.fileno())
 
     try:
-        for hname, cmd in util.sort(ui.configitems('hooks')):
+        for hname, cmd in ui.configitems('hooks'):
             if hname.split('.')[0] != name or not cmd:
                 continue
             if callable(cmd):

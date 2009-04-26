@@ -60,6 +60,7 @@ abort: pretag.forbid hook exited with status 1
 precommit hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
 pretxncommit hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=true 
 5:fad284daf8c0
+5:fad284daf8c0
 pretxncommit.forbid hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=true 
 transaction abort!
 rollback completed

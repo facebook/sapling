@@ -211,12 +211,6 @@ def binary(s):
     """return true if a string is binary data"""
     return bool(s and '\0' in s)
 
-def sort(l):
-    if not isinstance(l, list):
-        l = list(l)
-    l.sort()
-    return l
-
 def increasingchunks(source, min=1024, max=65536):
     '''return no less than min bytes per chunk while data remains,
     doubling min after each chunk until it reaches max'''

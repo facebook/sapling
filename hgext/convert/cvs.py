@@ -347,7 +347,7 @@ class convert_cvs(converter_source):
     def getchanges(self, rev):
         self._parse()
         self.modecache = {}
-        return util.sort(self.files[rev].items()), {}
+        return sorted(self.files[rev].iteritems()), {}
 
     def getcommit(self, rev):
         self._parse()
@@ -359,4 +359,4 @@ class convert_cvs(converter_source):
 
     def getchangedfiles(self, rev, i):
         self._parse()
-        return util.sort(self.files[rev].keys())
+        return sorted(self.files[rev])

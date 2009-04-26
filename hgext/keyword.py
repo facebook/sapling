@@ -377,7 +377,7 @@ def files(ui, repo, *pats, **opts):
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
-    files = util.sort(modified + added + clean + unknown)
+    files = sorted(modified + added + clean + unknown)
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
     cwd = pats and repo.getcwd() or ''

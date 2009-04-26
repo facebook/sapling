@@ -169,7 +169,7 @@ class bugzilla_2_16(object):
     def filter_real_bug_ids(self, ids):
         '''filter not-existing bug ids from list.'''
         self.run('select bug_id from bugs where bug_id in %s' % buglist(ids))
-        return util.sort([c[0] for c in self.cursor.fetchall()])
+        return sorted([c[0] for c in self.cursor.fetchall()])
 
     def filter_unknown_bug_ids(self, node, ids):
         '''filter bug ids from list that already refer to this changeset.'''
@@ -182,7 +182,7 @@ class bugzilla_2_16(object):
             self.ui.status(_('bug %d already knows about changeset %s\n') %
                            (id, short(node)))
             unknown.discard(id)
-        return util.sort(unknown)
+        return sorted(unknown)
 
     def notify(self, ids, committer):
         '''tell bugzilla to send mail.'''

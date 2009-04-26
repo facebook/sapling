@@ -712,7 +712,7 @@ class svn_source(converter_source):
                 # This will fail if a directory was copied
                 # from another branch and then some of its files
                 # were deleted in the same transaction.
-                children = util.sort(self._find_children(path, revnum))
+                children = sorted(self._find_children(path, revnum))
                 for child in children:
                     # Can we move a child directory and its
                     # parent in the same commit? (probably can). Could
@@ -779,7 +779,7 @@ class svn_source(converter_source):
             parents = []
             # check whether this revision is the start of a branch or part
             # of a branch renaming
-            orig_paths = util.sort(orig_paths.items())
+            orig_paths = sorted(orig_paths.iteritems())
             root_paths = [(p,e) for p,e in orig_paths if self.module.startswith(p)]
             if root_paths:
                 path, ent = root_paths[-1]
@@ -1108,7 +1108,7 @@ class svn_sink(converter_sink, commandline):
         return dirs
 
     def add_dirs(self, files):
-        add_dirs = [d for d in util.sort(self.dirs_of(files))
+        add_dirs = [d for d in sorted(self.dirs_of(files))
                     if not os.path.exists(self.wjoin(d, '.svn', 'entries'))]
         if add_dirs:
             self.xargs(add_dirs, 'add', non_recursive=True, quiet=True)
@@ -1120,10 +1120,8 @@ class svn_sink(converter_sink, commandline):
         return files
 
     def tidy_dirs(self, names):
-        dirs = util.sort(self.dirs_of(names))
-        dirs.reverse()
         deleted = []
-        for d in dirs:
+        for d in sorted(self.dirs_of(names), reverse=True):
             wd = self.wjoin(d)
             if os.listdir(wd) == '.svn':
                 self.run0('delete', d)

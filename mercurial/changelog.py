@@ -155,7 +155,7 @@ class changelog(revlog.revlog):
 
     def encode_extra(self, d):
         # keys must be sorted to produce a deterministic changelog entry
-        items = [_string_escape('%s:%s' % (k, d[k])) for k in util.sort(d)]
+        items = [_string_escape('%s:%s' % (k, d[k])) for k in sorted(d)]
         return "\0".join(items)
 
     def read(self, node):
@@ -216,6 +216,6 @@ class changelog(revlog.revlog):
         if extra:
             extra = self.encode_extra(extra)
             parseddate = "%s %s" % (parseddate, extra)
-        l = [hex(manifest), user, parseddate] + util.sort(files) + ["", desc]
+        l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
         text = "\n".join(l)
         return self.addrevision(text, transaction, len(self), p1, p2)

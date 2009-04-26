@@ -293,7 +293,7 @@ def manifest(web, req, tmpl):
         raise ErrorResponse(HTTP_NOT_FOUND, 'path not found: ' + path)
 
     def filelist(**map):
-        for f in util.sort(files):
+        for f in sorted(files):
             full = files[f]
 
             fctx = ctx.filectx(full)
@@ -305,7 +305,7 @@ def manifest(web, req, tmpl):
                    "permissions": mf.flags(full)}
 
     def dirlist(**map):
-        for d in util.sort(dirs):
+        for d in sorted(dirs):
 
             emptydirs = []
             h = dirs[d]
@@ -384,7 +384,7 @@ def summary(web, req, tmpl):
 
         b = web.repo.branchtags()
         l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.iteritems()]
-        for r,n,t in util.sort(l):
+        for r,n,t in sorted(l):
             yield {'parity': parity.next(),
                    'branch': t,
                    'node': hex(n),

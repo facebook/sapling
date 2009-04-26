@@ -163,11 +163,11 @@ class mercurial_sink(converter_sink):
             tagparent = nullid
 
         try:
-            oldlines = util.sort(parentctx['.hgtags'].data().splitlines(1))
+            oldlines = sorted(parentctx['.hgtags'].data().splitlines(1))
         except:
             oldlines = []
 
-        newlines = util.sort([("%s %s\n" % (tags[tag], tag)) for tag in tags])
+        newlines = sorted([("%s %s\n" % (tags[tag], tag)) for tag in tags])
         if newlines == oldlines:
             return None
         data = "".join(newlines)
@@ -251,7 +251,7 @@ class mercurial_source(converter_source):
         ctx = self.changectx(rev)
         parents = self.parents(ctx)
         if not parents:
-            files = util.sort(ctx.manifest().keys())
+            files = sorted(ctx.manifest())
             if self.ignoreerrors:
                 # calling getcopies() is a simple way to detect missing
                 # revlogs and populate self.ignored
@@ -266,7 +266,7 @@ class mercurial_source(converter_source):
         copies = self.getcopies(ctx, m + a)
         changes = [(name, rev) for name in m + a + r
                    if name not in self.ignored]
-        return util.sort(changes), copies
+        return sorted(changes), copies
 
     def getcopies(self, ctx, files):
         copies = {}

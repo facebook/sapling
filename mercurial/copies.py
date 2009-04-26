@@ -10,7 +10,7 @@ import util, heapq
 
 def _nonoverlap(d1, d2, d3):
     "Return list of elements in d1 not in d2 or d3"
-    return util.sort([d for d in d1 if d not in d3 and d not in d2])
+    return sorted([d for d in d1 if d not in d3 and d not in d2])
 
 def _dirname(f):
     s = f.rfind("/")
@@ -46,7 +46,7 @@ def _findoldnames(fctx, limit):
         visit += [(p, depth - 1) for p in fc.parents()]
 
     # return old names sorted by depth
-    return [o[1] for o in util.sort(old.values())]
+    return [o[1] for o in sorted(old.values())]
 
 def _findlimit(repo, a, b):
     "find the earliest revision that's an ancestor of a or b but not both"
