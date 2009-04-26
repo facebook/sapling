@@ -42,17 +42,12 @@ class config(object):
     def __iter__(self):
         for d in self.sections():
             yield d
-    def update(self, src, sections=None):
-        if not sections:
-            sections = src.sections()
-        for s in sections:
-            if s not in src:
-                continue
+    def update(self, src):
+        for s in src:
             if s not in self:
                 self._data[s] = sortdict()
-            for k in src._data[s]:
-                self._data[s][k] = src._data[s][k]
-                self._source[(s, k)] = src._source[(s, k)]
+            self._data[s].update(src._data[s])
+        self._source.update(src._source)
     def get(self, section, item, default=None):
         return self._data.get(section, {}).get(item, default)
     def getsource(self, section, item):
@@ -67,7 +62,7 @@ class config(object):
         self._data[section][item] = value
         self._source[(section, item)] = source
 
-    def read(self, path, fp=None):
+    def read(self, path, fp=None, sections=None):
         sectionre = re.compile(r'\[([^\[]+)\]')
         itemre = re.compile(r'([^=\s]+)\s*=\s*(.*\S|)')
         contre = re.compile(r'\s+(\S.*\S)')
@@ -87,6 +82,8 @@ class config(object):
             if cont:
                 m = contre.match(l)
                 if m:
+                    if sections and section not in sections:
+                        continue
                     v = self.get(section, item) + "\n" + m.group(1)
                     self.set(section, item, v, "%s:%d" % (path, line))
                     continue
@@ -110,12 +107,16 @@ class config(object):
             m = itemre.match(l)
             if m:
                 item = m.group(1)
-                self.set(section, item, m.group(2), "%s:%d" % (path, line))
                 cont = 1
+                if sections and section not in sections:
+                    continue
+                self.set(section, item, m.group(2), "%s:%d" % (path, line))
                 continue
             m = unsetre.match(l)
             if m:
                 name = m.group(1)
+                if sections and section not in sections:
+                    continue
                 if self.get(section, name) != None:
                     del self._data[section][name]
                 continue

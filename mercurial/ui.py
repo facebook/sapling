@@ -82,17 +82,17 @@ class ui(object):
         trusted = sections or assumetrusted or self._is_trusted(fp, filename)
 
         try:
-            cdata.read(filename, fp)
+            cdata.read(filename, fp, sections=sections)
         except error.ConfigError, inst:
             if trusted:
                 raise
             self.warn(_("Ignored: %s\n") % str(inst))
 
         if trusted:
-            self.cdata.update(cdata, sections)
-            self.cdata.update(self.overlay, sections)
-        self.ucdata.update(cdata, sections)
-        self.ucdata.update(self.overlay, sections)
+            self.cdata.update(cdata)
+            self.cdata.update(self.overlay)
+        self.ucdata.update(cdata)
+        self.ucdata.update(self.overlay)
 
         if root is None:
             root = os.path.expanduser('~')
