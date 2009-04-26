@@ -2,6 +2,7 @@ import os, errno, sys, time, datetime, pickle, copy
 import dulwich
 from dulwich.repo import Repo
 from dulwich.client import SimpleFetchGraphWalker
+from dulwich.objects import hex_to_sha
 from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
@@ -32,14 +33,22 @@ class GitHandler(object):
             file.write("%s %s\n" % (gitsha, hgsha))
         file.close()
 
-    def fetch(self, git_url):
-        self.ui.status(_("fetching from git url: " + git_url + "\n"))
+    def fetch(self, remote_name):
+        self.ui.status(_("fetching from : " + remote_name + "\n"))
         self.export_git_objects()
-        self.fetch_pack(git_url)
-        self.import_git_objects()
+        self.fetch_pack(remote_name)
+        self.import_git_objects(remote_name)
         self.save_map()
 
-    def fetch_pack(self, git_url):
+    # TODO: make these actually save and recall
+    def remote_add(self, remote_name, git_url):
+        self._git_url = git_url
+        
+    def remote_name_to_url(self, remote_name):
+        return self._git_url
+        
+    def fetch_pack(self, remote_name):
+        git_url = self.remote_name_to_url(remote_name)
         client, path = self.get_transport_and_path(git_url)
         graphwalker = SimpleFetchGraphWalker(self.git.heads().values(), self.git.get_parents)
         f, commit = self.git.object_store.add_pack()
@@ -48,12 +57,12 @@ class GitHandler(object):
             refs = client.fetch_pack(path, determine_wants, graphwalker, f.write, sys.stdout.write)
             f.close()
             commit()
-            self.git.set_refs(refs)
+            self.git.set_remote_refs(refs, remote_name)
         except:
             f.close()
             raise    
 
-    def import_git_objects(self):
+    def import_git_objects(self, remote_name):
         self.ui.status(_("importing Git objects into Hg\n"))
         # import heads as remote references
         todo = []
@@ -61,7 +70,7 @@ class GitHandler(object):
         convert_list = {}
         
         # get a list of all the head shas
-        for head, sha in self.git.heads().iteritems():
+        for head, sha in self.git.remote_refs(remote_name).iteritems():
             todo.append(sha)
         
         # traverse the heads getting a list of all the unique commits
@@ -83,9 +92,15 @@ class GitHandler(object):
         for csha in commits:
             commit = convert_list[csha]
             self.import_git_commit(commit)
-    
+        
         # TODO : update Hg bookmarks
-        print bookmarks.parse(self.repo)
+        bms = {}
+        for head, sha in self.git.remote_refs(remote_name).iteritems():
+            hgsha = hex_to_sha(self._map[sha])
+            bms[head] = hgsha
+            
+        print bms    
+        bookmarks.write(self.repo, bms)
 
     def import_git_commit(self, commit):
         print "importing: " + commit.id

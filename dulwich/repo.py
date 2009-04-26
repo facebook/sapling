@@ -231,11 +231,25 @@ class Repo(object):
         finally:
             f.close()
 
+    # takes refs passed from remote and renames them
+    def set_remote_refs(self, refs, remote_name):
+        keys = refs.keys()
+        if not keys:
+            return None
+        for k in keys[0:]:
+            ref_name = k
+            parts = k.split('/')
+            if parts[0] == 'refs': # strip off 'refs/heads'
+                ref_name = "/".join([v for v in parts[2:]])
+            self.set_ref('refs/remotes/' + remote_name + '/' + ref_name, refs[k])
+        
     def set_refs(self, refs):
         keys = refs.keys()
-        if keys:
-            for k in keys[0:]:
-                self.set_ref(k, refs[k])
+        if not keys:
+            return None
+        for k in keys[0:]:
+            self.set_ref(k, refs[k])
+                    
         
     def set_ref(self, name, value):
         file = os.path.join(self.controldir(), name)
@@ -266,6 +280,13 @@ class Repo(object):
     def heads(self):
         ret = {}
         for root, dirs, files in os.walk(os.path.join(self.controldir(), 'refs', 'heads')):
+            for name in files:
+                ret[name] = self._get_ref(os.path.join(root, name))
+        return ret
+
+    def remote_refs(self, remote_name):
+        ret = {}
+        for root, dirs, files in os.walk(os.path.join(self.controldir(), 'refs', 'remotes', remote_name)):
             for name in files:
                 ret[name] = self._get_ref(os.path.join(root, name))
         return ret

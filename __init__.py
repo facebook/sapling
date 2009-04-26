@@ -42,7 +42,8 @@ def gclone(ui, git_url, hg_repo_path=None):
     
     # fetch the initial git data
     git = GitHandler(dest_repo, ui)
-    git.fetch(git_url)
+    git.remote_add('origin', git_url)
+    git.fetch('origin')
     
     # checkout the tip
     hg.update(dest_repo, None)

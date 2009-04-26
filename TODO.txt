@@ -5,7 +5,7 @@ CLONE
 * update/add bookmarks
 * checkout the tip
 * limit to HEAD branch? (gh-pages makes weird import)
-* some sort of remote management
+  - possibly also add bookmarks on the same development line
 
 * tag conversion
 
@@ -13,12 +13,14 @@ FETCH
 ===========
 
 * gfetch command
+* some sort of remote management
 
 PUSH
 ==========
 
 * get a list of all the hg changesets not yet mapped
 * create git objects from each changeset (incl trees/blobs)
+  - add metadata to commits (branch names, explicit file names)
 * update mapfile with new changeset/commit mapping
 * connect to server pushing to
   - figure out needs (use heads/bookmarks for haves)
