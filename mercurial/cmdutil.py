@@ -98,12 +98,25 @@ def loglimit(opts):
         limit = sys.maxint
     return limit
 
-def setremoteconfig(ui, opts):
-    "copy remote options to ui tree"
-    if opts.get('ssh'):
-        ui.setconfig("ui", "ssh", opts['ssh'])
-    if opts.get('remotecmd'):
-        ui.setconfig("ui", "remotecmd", opts['remotecmd'])
+def remoteui(src, opts):
+    'build a remote ui from ui or repo and opts'
+    if hasattr(src, 'ui'): # looks like a repository
+        dst = src.ui.parentui # drop repo-specific config
+        src = src.ui # copy target options from repo
+    else: # assume it's a ui object
+        dst = src # keep all global options
+
+    # copy ssh-specific options
+    for o in 'ssh', 'remotecmd':
+        v = opts.get(o) or src.config('ui', o)
+        if v:
+            dst.setconfig("ui", o, v)
+    # copy bundle-specific options
+    r = src.config('bundle', 'mainreporoot')
+    if r:
+        dst.setconfig('bundle', 'mainreporoot', r)
+
+    return dst
 
 def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can

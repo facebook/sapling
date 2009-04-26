@@ -521,10 +521,9 @@ def bundle(ui, repo, fname, dest=None, **opts):
                         seen[p] = 1
                         visit.append(p)
     else:
-        cmdutil.setremoteconfig(ui, opts)
         dest, revs, checkout = hg.parseurl(
             ui.expandpath(dest or 'default-push', dest or 'default'), revs)
-        other = hg.repository(ui, dest)
+        other = hg.repository(cmdutil.remoteui(repo, opts), dest)
         o = repo.findoutgoing(other, force=opts.get('force'))
 
     if revs:
@@ -615,8 +614,7 @@ def clone(ui, source, dest=None, **opts):
     metadata under the .hg directory, such as mq.
 
     """
-    cmdutil.setremoteconfig(ui, opts)
-    hg.clone(ui, source, dest,
+    hg.clone(cmdutil.remoteui(ui, opts), source, dest,
              pull=opts.get('pull'),
              stream=opts.get('uncompressed'),
              rev=opts.get('rev'),
@@ -1766,9 +1764,7 @@ def incoming(ui, repo, source="default", **opts):
     """
     limit = cmdutil.loglimit(opts)
     source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
-    cmdutil.setremoteconfig(ui, opts)
-
-    other = hg.repository(ui, source)
+    other = hg.repository(cmdutil.remoteui(repo, opts), source)
     ui.status(_('comparing with %s\n') % url.hidepassword(source))
     if revs:
         revs = [other.lookup(rev) for rev in revs]
@@ -1834,8 +1830,7 @@ def init(ui, dest=".", **opts):
     It is possible to specify an ssh:// URL as the destination.
     See 'hg help urls' for more information.
     """
-    cmdutil.setremoteconfig(ui, opts)
-    hg.repository(ui, dest, create=1)
+    hg.repository(cmdutil.remoteui(ui, opts), dest, create=1)
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns
@@ -2084,11 +2079,10 @@ def outgoing(ui, repo, dest=None, **opts):
     limit = cmdutil.loglimit(opts)
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
-    cmdutil.setremoteconfig(ui, opts)
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
-    other = hg.repository(ui, dest)
+    other = hg.repository(cmdutil.remoteui(repo, opts), dest)
     ui.status(_('comparing with %s\n') % url.hidepassword(dest))
     o = repo.findoutgoing(other, force=opts.get('force'))
     if not o:
@@ -2199,9 +2193,7 @@ def pull(ui, repo, source="default", **opts):
     See 'hg help urls' for more information.
     """
     source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
-    cmdutil.setremoteconfig(ui, opts)
-
-    other = hg.repository(ui, source)
+    other = hg.repository(cmdutil.remoteui(repo, opts), source)
     ui.status(_('pulling from %s\n') % url.hidepassword(source))
     if revs:
         try:
@@ -2237,9 +2229,7 @@ def push(ui, repo, dest=None, **opts):
     """
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
-    cmdutil.setremoteconfig(ui, opts)
-
-    other = hg.repository(ui, dest)
+    other = hg.repository(cmdutil.remoteui(repo, opts), dest)
     ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]

@@ -1744,10 +1744,9 @@ def clone(ui, source, dest=None, **opts):
         if url.endswith('/'):
             url = url[:-1]
         return url + '/.hg/patches'
-    cmdutil.setremoteconfig(ui, opts)
     if dest is None:
         dest = hg.defaultdest(source)
-    sr = hg.repository(ui, ui.expandpath(source))
+    sr = hg.repository(cmdutil.remoteui(ui, opts), ui.expandpath(source))
     if opts['patches']:
         patchespath = ui.expandpath(opts['patches'])
     else:

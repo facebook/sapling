@@ -220,7 +220,7 @@ def patchbomb(ui, repo, *revs, **opts):
         '''Return the revisions present locally but not in dest'''
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         revs = [repo.lookup(rev) for rev in revs]
-        other = hg.repository(ui, dest)
+        other = hg.repository(cmdutil.remoteui(repo, opts), dest)
         ui.status(_('comparing with %s\n') % dest)
         o = repo.findoutgoing(other)
         if not o:
@@ -258,7 +258,6 @@ def patchbomb(ui, repo, *revs, **opts):
             or opts.get('patches')):
         raise util.Abort(_('specify at least one changeset with -r or -o'))
 
-    cmdutil.setremoteconfig(ui, opts)
     if opts.get('outgoing') and opts.get('bundle'):
         raise util.Abort(_("--outgoing mode always on with --bundle;"
                            " do not re-specify --outgoing"))
