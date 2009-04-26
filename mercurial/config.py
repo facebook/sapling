@@ -27,7 +27,7 @@ class sortdict(dict):
         dict.__delitem__(self, key)
         self._list.remove(key)
 
-class config:
+class config(object):
     def __init__(self, data=None):
         self._data = {}
         self._source = {}
@@ -39,6 +39,11 @@ class config:
         return config(self)
     def __contains__(self, section):
         return section in self._data
+    def __getitem__(self, section):
+        return self._data.get(section, {})
+    def __iter__(self):
+        for d in self.sections():
+            yield d
     def update(self, src, sections=None):
         if not sections:
             sections = src.sections()
