@@ -6,7 +6,7 @@
 hg init a
 cd a
 echo a > a
-hg ci -Ama -d '0 0'
+hg ci -Ama
 
 echo "# missing arg"
 hg cat

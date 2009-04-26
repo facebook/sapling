@@ -26,7 +26,7 @@ echo
 echo hello > f
 hg add f
 echo commit should succeed
-hg ci -m 1 -d'0 0'
+hg ci -m 1
 echo
 
 hg clone . ../zoz
@@ -34,14 +34,14 @@ cp .hg/hgrc ../zoz/.hg
 
 python unix2dos.py f
 echo commit should fail
-hg ci -m 2.1 -d'0 0'
+hg ci -m 2.1
 echo
 
 mv .hg/hgrc .hg/hgrc.bak
 echo commits should succeed
-hg ci -m 2 -d'0 0'
+hg ci -m 2
 hg cp f g
-hg ci -m 2.2 -d'0 0'
+hg ci -m 2.2
 echo
 
 echo push should fail
@@ -52,7 +52,7 @@ mv .hg/hgrc.bak .hg/hgrc
 echo hello > f
 hg rm g
 echo commit should succeed
-hg ci -m 2.3 -d'0 0'
+hg ci -m 2.3
 echo
 
 echo push should succeed
@@ -64,18 +64,18 @@ mkdir d
 echo hello > d/f2
 python unix2dos.py d/f2
 hg add d/f2
-hg ci -m 3 -d'0 0'
+hg ci -m 3
 hg revert -a
 rm d/f2
 echo
 
 hg rem f
-hg ci -m 4 -d'0 0'
+hg ci -m 4
 echo
 
 python -c 'file("bin", "wb").write("hello\x00\x0D\x0A")'
 hg add bin
-hg ci -m 5 -d'0 0'
+hg ci -m 5
 hg log -v
 echo
 
@@ -84,9 +84,9 @@ echo
 for x in a b c d; do echo content > dupe/$x; done
 hg -R dupe add
 python unix2dos.py dupe/b dupe/c dupe/d
-hg -R dupe ci -m a -d'0 0' dupe/a
-hg -R dupe ci -m b/c -d'0 0' dupe/[bc]
-hg -R dupe ci -m d -d'0 0' dupe/d
+hg -R dupe ci -m a dupe/a
+hg -R dupe ci -m b/c dupe/[bc]
+hg -R dupe ci -m d dupe/d
 hg -R dupe log -v
 echo
 
@@ -100,7 +100,7 @@ rm .hg/hgrc
 (echo some; echo text) > f3
 python -c 'file("f4.bat", "wb").write("rem empty\x0D\x0A")'
 hg add f3 f4.bat
-hg ci -m 6 -d'0 0'
+hg ci -m 6
 
 python print.py < bin
 python print.py < f3
@@ -125,7 +125,7 @@ echo
 
 python -c 'file("f5.sh", "wb").write("# empty\x0D\x0A")'
 hg add f5.sh
-hg ci -m 7 -d'0 0'
+hg ci -m 7
 python print.py < f5.sh
 hg cat f5.sh | python print.py
 

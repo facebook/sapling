@@ -14,17 +14,17 @@ echo % initialize repository
 hg init
 
 echo 'a' > a
-hg ci -A -d '0 0' -u test -m "0"
+hg ci -A -u test -m "0"
 
 echo 'b' > b
-hg ci -A -d '0 0' -u test -m "1"
+hg ci -A -u test -m "1"
 
 hg up 0
 echo 'c' > c
-hg ci -A -d '0 0' -u test -m "2"
+hg ci -A -u test -m "2"
 
 echo 'd' > d
-hg ci -A -d '0 0' -u test -m "3"
+hg ci -A -u test -m "3"
 
 hg bookmark -r 1 one
 hg bookmark -r 3 two

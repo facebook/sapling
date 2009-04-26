@@ -3,7 +3,7 @@
 hg init
 
 echo a > a
-hg ci -d '0 0' -Ama
+hg ci -Ama
 
 hg an a
 

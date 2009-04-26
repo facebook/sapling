@@ -26,28 +26,28 @@ hg -q revert -a --no-backup
 mkdir dir
 echo boo > dir/file
 hg add
-hg -v commit -d '0 0' -m commit-9 dir
+hg -v commit -m commit-9 dir
 
 echo > dir.file
 hg add
-hg commit -d '0 0' -m commit-10 dir dir.file
+hg commit -m commit-10 dir dir.file
 
 echo >> dir/file
 mkdir bleh
 mkdir dir2
 cd bleh
-hg commit -d '0 0' -m commit-11 .
-hg commit -d '0 0' -m commit-12 ../dir ../dir2
-hg -v commit -d '0 0' -m commit-13 ../dir
+hg commit -m commit-11 .
+hg commit -m commit-12 ../dir ../dir2
+hg -v commit -m commit-13 ../dir
 cd ..
 
-hg commit -d '0 0' -m commit-14 does-not-exist
+hg commit -m commit-14 does-not-exist
 ln -s foo baz
-hg commit -d '0 0' -m commit-15 baz
+hg commit -m commit-15 baz
 touch quux
-hg commit -d '0 0' -m commit-16 quux
+hg commit -m commit-16 quux
 echo >> dir/file
-hg -v commit -d '0 0' -m commit-17 dir/file
+hg -v commit -m commit-17 dir/file
 # An empty date was interpreted as epoch origin
 echo foo >> foo
 hg commit -d '' -m commit-no-date

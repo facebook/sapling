@@ -63,7 +63,7 @@ echo % status
 hg status
 
 echo % commit
-hg --debug commit -mabsym -d '0 0' -u 'User Name <user@example.com>'
+hg --debug commit -mabsym -u 'User Name <user@example.com>'
 echo % status
 hg status
 echo % identify

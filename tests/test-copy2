@@ -17,7 +17,7 @@ hg cp bar foo
 hg rm -f bar
 rm bar
 hg st -A
-hg commit -m1 -d"0 0"
+hg commit -m1
 
 echo "# dry-run; should show that foo is clean"
 hg copy --dry-run foo bar
@@ -27,7 +27,7 @@ hg copy foo bar
 hg st -C
 
 echo "# shouldn't show copy"
-hg commit -m2 -d"0 0"
+hg commit -m2
 hg st -C
 
 echo "# should match"
@@ -36,7 +36,7 @@ hg debugrename bar
 
 echo bleah > foo
 echo quux > bar
-hg commit -m3 -d"0 0"
+hg commit -m3
 
 echo "# should not be renamed"
 hg debugrename bar
@@ -44,7 +44,7 @@ hg debugrename bar
 hg copy -f foo bar
 echo "# should show copy"
 hg st -C
-hg commit -m3 -d"0 0"
+hg commit -m3
 
 echo "# should show no parents for tip"
 hg debugindex .hg/store/data/bar.i

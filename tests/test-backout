@@ -42,16 +42,16 @@ cd ..
 hg init branch
 cd branch
 echo a > a
-hg ci -Am0 -d '0 0'
+hg ci -Am0
 echo b > b
-hg ci -Am1 -d '0 0'
+hg ci -Am1
 hg co -C 0
 # should fail
-hg backout -d '0 0' 1
+hg backout 1
 echo c > c
-hg ci -Am2 -d '0 0'
+hg ci -Am2
 # should fail
-hg backout -d '0 0' 1
+hg backout 1
 
 echo '# backout with merge'
 cd ..

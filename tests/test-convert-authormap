@@ -9,7 +9,7 @@ EOF
 hg init orig
 cd orig
 echo foo > foo
-HGUSER='user name' hg ci -qAm 'foo' -d '0 0'
+HGUSER='user name' hg ci -qAm 'foo'
 cd ..
 
 # Explicit --authors

@@ -11,16 +11,16 @@ hg init orig
 cd orig
 echo foo > foo
 echo bar > bar
-hg ci -qAm 'add foo and bar' -d '0 0'
+hg ci -qAm 'add foo and bar'
 
 hg rm foo
-hg ci -m 'remove foo' -d '0 0'
+hg ci -m 'remove foo'
 
 mkdir foo
 echo file > foo/file
-hg ci -qAm 'add foo/file' -d '0 0'
+hg ci -qAm 'add foo/file'
 
-hg tag -d '0 0' some-tag
+hg tag some-tag
 
 hg log
 cd ..

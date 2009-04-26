@@ -251,7 +251,7 @@ echo '% cd b; hg qrefresh'
 hg init refresh
 cd refresh
 echo a > a
-hg ci -Ama -d'0 0'
+hg ci -Ama
 hg qnew -mfoo foo
 echo a >> a
 hg qrefresh
@@ -410,14 +410,14 @@ hg init strip
 cd strip
 touch foo
 hg add foo
-hg ci -m 'add foo' -d '0 0'
+hg ci -m 'add foo'
 echo >> foo
-hg ci -m 'change foo 1' -d '0 0'
+hg ci -m 'change foo 1'
 hg up -C 0
 echo 1 >> foo
-hg ci -m 'change foo 2' -d '0 0'
+hg ci -m 'change foo 2'
 HGMERGE=true hg merge
-hg ci -m merge -d '0 0'
+hg ci -m merge
 hg log
 hg strip 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 checkundo strip

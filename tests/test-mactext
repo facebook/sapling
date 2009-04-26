@@ -23,10 +23,10 @@ echo
 
 echo hello > f
 hg add f
-hg ci -m 1 -d'0 0'
+hg ci -m 1
 echo
 
 python unix2mac.py f
-hg ci -m 2 -d'0 0'
+hg ci -m 2
 hg cat f | python print.py
 cat f | python print.py

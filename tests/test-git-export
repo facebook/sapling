@@ -4,24 +4,24 @@ hg init a
 cd a
 
 echo start > start
-hg ci -Amstart -d '0 0'
+hg ci -Amstart
 echo new > new
-hg ci -Amnew -d '0 0'
+hg ci -Amnew
 echo '% new file'
 hg diff --git -r 0
 
 hg cp new copy
-hg ci -mcopy -d '0 0'
+hg ci -mcopy
 echo '% copy'
 hg diff --git -r 1:tip
 
 hg mv copy rename
-hg ci -mrename -d '0 0'
+hg ci -mrename
 echo '% rename'
 hg diff --git -r 2:tip
 
 hg rm rename
-hg ci -mdelete -d '0 0'
+hg ci -mdelete
 echo '% delete'
 hg diff --git -r 3:tip
 
@@ -32,16 +32,16 @@ cat > src <<EOF
 4
 5
 EOF
-hg ci -Amsrc -d '0 0'
+hg ci -Amsrc
 chmod +x src
-hg ci -munexec -d '0 0'
+hg ci -munexec
 echo '% chmod 644'
 hg diff --git -r 5:tip
 
 hg mv src dst
 chmod -x dst
 echo a >> dst
-hg ci -mrenamemod -d '0 0'
+hg ci -mrenamemod
 echo '% rename+mod+chmod'
 hg diff --git -r 6:tip
 
@@ -68,14 +68,14 @@ hg diff --git
 echo
 echo '% diff across many revisions'
 hg mv dst dst2
-hg ci -m 'mv dst dst2' -d '0 0'
+hg ci -m 'mv dst dst2'
 
 echo >> start
-hg ci -m 'change start' -d '0 0'
+hg ci -m 'change start'
 
 hg revert -r -2 start
 hg mv dst2 dst3
-hg ci -m 'mv dst2 dst3; revert start' -d '0 0'
+hg ci -m 'mv dst2 dst3; revert start'
 
 hg diff --git -r 9:11
 echo '%  reversed'
@@ -110,7 +110,7 @@ hg diff --git -r -1:-5
 echo
 echo '% comparing with the working dir'
 echo >> start
-hg ci -m 'change start again' -d '0 0'
+hg ci -m 'change start again'
 
 echo > created
 hg add created

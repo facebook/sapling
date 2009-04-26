@@ -11,21 +11,21 @@ cd t
 
 touch 1
 touch 2
-hg commit -Am init -d "0 0"  # 0
+hg commit -Am init  # 0
 
 hg rename 1 1a
-hg commit -m rename -d "0 0" # 1
+hg commit -m rename # 1
 
 hg co -C 0
 echo unrelated >> 2
-hg ci -m unrelated1 -d "0 0"  # 2
+hg ci -m unrelated1 # 2
 
 hg merge --debug 1
-hg ci -m merge1 -d "0 0" # 3
+hg ci -m merge1 # 3
 
 hg co -C 2
 echo hello >> 1
-hg ci -m unrelated2 -d "0 0" # 4
+hg ci -m unrelated2 # 4
 
 hg co -C 3
 hg merge -y --debug 4

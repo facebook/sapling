@@ -7,22 +7,22 @@ cd a
 
 echo line1 > foo
 hg add foo
-hg ci -m '0: add foo' -d '0 0'
+hg ci -m '0: add foo'
 
 echo line2 >> foo
-hg ci -m '1: change foo' -d '0 0'
+hg ci -m '1: change foo'
 
 hg up -C 0
 hg mv foo bar
 rm bar
 echo line0 > bar
 echo line1 >> bar
-hg ci -m '2: mv foo bar; change bar' -d '0 0'
+hg ci -m '2: mv foo bar; change bar'
 
 hg merge 1
 echo '% contents of bar should be line0 line1 line2'
 cat bar
-hg ci -m '3: merge with local rename' -d '0 0'
+hg ci -m '3: merge with local rename'
 hg debugindex .hg/store/data/bar.i
 hg debugrename bar
 hg debugindex .hg/store/data/foo.i
@@ -31,14 +31,14 @@ hg debugindex .hg/store/data/foo.i
 hg up -C 2
 rm bar
 echo line1 > bar
-hg ci -m '4: revert content change from rev 2' -d '0 0'
+hg ci -m '4: revert content change from rev 2'
 
 hg log --template '#rev#:#node|short# #parents#\n'
 echo '% this should use bar@rev2 as the ancestor'
 hg --debug merge 3
 echo '% contents of bar should be line1 line2'
 cat bar
-hg ci -m '5: merge' -d '0 0'
+hg ci -m '5: merge'
 hg debugindex .hg/store/data/bar.i
 
 
@@ -53,7 +53,7 @@ hg up -C 1
 hg merge 2
 echo '% contents of bar should be line0 line1 line2'
 cat bar
-hg ci -m '3: merge with remote rename' -d '0 0'
+hg ci -m '3: merge with remote rename'
 hg debugindex .hg/store/data/bar.i
 hg debugrename bar
 hg debugindex .hg/store/data/foo.i
@@ -62,13 +62,13 @@ hg debugindex .hg/store/data/foo.i
 hg up -C 2
 rm bar
 echo line1 > bar
-hg ci -m '4: revert content change from rev 2' -d '0 0'
+hg ci -m '4: revert content change from rev 2'
 
 hg log --template '#rev#:#node|short# #parents#\n'
 echo '% this should use bar@rev2 as the ancestor'
 hg --debug merge 3
 echo '% contents of bar should be line1 line2'
 cat bar
-hg ci -m '5: merge' -d '0 0'
+hg ci -m '5: merge'
 hg debugindex .hg/store/data/bar.i
 

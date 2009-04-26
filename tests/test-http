@@ -5,7 +5,7 @@ cp "$TESTDIR"/printenv.py .
 hg init test
 cd test
 echo foo>foo
-hg commit -A -d '0 0' -m 1
+hg commit -A -m 1
 hg --config server.uncompressed=True serve -p $HGPORT -d --pid-file=../hg1.pid
 hg serve -p $HGPORT1 -d --pid-file=../hg2.pid
 # Test server address cannot be reused

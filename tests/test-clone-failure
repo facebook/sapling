@@ -53,7 +53,7 @@ echo $?
 hg init c
 cd c
 echo c > c
-hg commit -A -m test -d '0 0'
+hg commit -A -m test
 chmod -rx .hg/store/data
 cd ..
 mkdir d

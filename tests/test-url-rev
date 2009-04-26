@@ -4,10 +4,10 @@
 hg init repo
 cd repo
 echo a > a
-hg ci -qAm 'add a' -d '0 0'
+hg ci -qAm 'add a'
 hg branch foo
 echo >> a
-hg ci -m 'change a' -d '0 0'
+hg ci -m 'change a'
 cd ..
 
 echo '% clone repo#foo'
@@ -22,10 +22,10 @@ echo
 echo '% changing original repo'
 cd repo
 echo >> a
-hg ci -m 'new head of branch foo' -d '0 0'
+hg ci -m 'new head of branch foo'
 hg up -qC default
 echo bar > bar
-hg ci -qAm 'add bar' -d '0 0'
+hg ci -qAm 'add bar'
 hg log
 echo
 

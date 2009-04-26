@@ -10,21 +10,21 @@ hg init repo
 cd repo
 
 echo foo > foo
-hg ci -d '0 0' -qAm 'add foo'
+hg ci -qAm 'add foo'
 
 echo bar >> foo
-hg ci -d '0 0' -m 'change foo'
+hg ci -m 'change foo'
 
-hg backout -d '0 0' -r tip -m 'backout changed foo'
+hg backout -r tip -m 'backout changed foo'
 
 hg up -C 0
 touch bar
-hg ci -d '0 0' -qAm 'add bar'
+hg ci -qAm 'add bar'
 
 hg merge --debug
 hg debugstate | grep foo
 hg st -A foo
-hg ci -d '0 0' -m 'merge'
+hg ci -m 'merge'
 
 hg manifest --debug | grep foo
 hg debugindex .hg/store/data/foo.i

@@ -117,14 +117,14 @@ hg init orig
 cd orig
 echo foo > foo
 hg add foo
-hg ci -m 'add foo' -d '0 0'
+hg ci -m 'add foo'
 
 hg clone . ../copy
-hg tag -d '0 0' foo
+hg tag foo
 
 cd ../copy
 echo >> foo
-hg ci -m 'change foo' -d '0 0'
+hg ci -m 'change foo'
 hg bundle ../bundle.hg ../orig
 
 cd ../orig

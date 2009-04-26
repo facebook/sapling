@@ -108,7 +108,7 @@ test_whitespace_changes_and_blank_lines() {
 
 hg init
 printf 'hello world\ngoodbye world\n' >foo
-hg ci -Amfoo -ufoo -d '0 0'
+hg ci -Amfoo -ufoo
 
 test_added_blank_lines
 test_added_horizontal_space_first_on_a_line

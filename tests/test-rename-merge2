@@ -30,18 +30,18 @@ tm()
     echo base > a
     echo base > rev # used to force commits
     hg add a rev
-    hg ci -m "base" -d "0 0"
+    hg ci -m "base"
 
     # remote
     echo remote > rev
     if [ "$2" != "" ] ; then $2 ; fi
-    hg ci -m "remote" -d "0 0"
+    hg ci -m "remote"
 
     # local
     hg co -q 0
     echo local > rev
     if [ "$1" != "" ] ; then $1 ; fi
-    hg ci -m "local" -d "0 0"
+    hg ci -m "local"
 
     # working dir
     echo local > rev
@@ -56,7 +56,7 @@ tm()
     echo "--------------"
     hg status -camC -X rev
 
-    hg ci -m "merge" -d "0 0"
+    hg ci -m "merge"
 
     echo "--------------"
     echo

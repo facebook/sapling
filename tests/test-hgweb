@@ -6,7 +6,7 @@ cd test
 mkdir da
 echo foo > da/foo
 echo foo > foo
-hg ci -Ambase -d '0 0'
+hg ci -Ambase
 hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 echo % manifest

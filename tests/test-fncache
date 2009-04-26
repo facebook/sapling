@@ -8,7 +8,7 @@ echo
 echo "% add a; ci"
 echo "some text" > a
 hg add
-hg ci -d '0 0' -m first
+hg ci -m first
 
 echo
 echo "% cat .hg/store/fncache"
@@ -19,7 +19,7 @@ echo "% add a.i/b; ci"
 mkdir a.i
 echo "some other text" > a.i/b
 hg add
-hg ci -d '0 0' -m second
+hg ci -m second
 
 echo
 echo "% cat .hg/store/fncache"
@@ -30,7 +30,7 @@ echo "% add a.i.hg/c; ci"
 mkdir a.i.hg
 echo "yet another text" > a.i.hg/c
 hg add
-hg ci -d '0 0' -m third
+hg ci -m third
 
 echo
 echo "% cat .hg/store/fncache"

@@ -47,7 +47,7 @@ me
 EOF
 
 hg add 1.txt 2.txt dir/a.txt
-hg commit -d '0 0' -m 'initial checkin'
+hg commit -m 'initial checkin'
 
 echo % changing files
 

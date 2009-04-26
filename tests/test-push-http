@@ -5,13 +5,13 @@ cp "$TESTDIR"/printenv.py .
 hg init test
 cd test
 echo a > a
-hg ci -Ama -d '0 0'
+hg ci -Ama
 
 cd ..
 hg clone test test2
 cd test2
 echo a >> a
-hg ci -mb -d '0 0'
+hg ci -mb
 
 req() {
 	hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log

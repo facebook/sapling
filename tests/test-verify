@@ -7,7 +7,7 @@ echo "some text" > FOO.txt
 echo "another text" > bar.txt
 echo "more text" > QUICK.txt
 hg add
-hg ci -d '0 0' -mtest1
+hg ci -mtest1
 
 echo
 echo % verify

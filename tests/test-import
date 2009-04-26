@@ -5,7 +5,7 @@ mkdir a/d1
 mkdir a/d1/d2
 echo line 1 > a/a
 echo line 1 > a/d1/d2/a
-hg --cwd a ci -d '0 0' -Ama
+hg --cwd a ci -Ama
 
 echo line 2 >> a/a
 hg --cwd a ci -u someone -d '1 0' -m'second change'

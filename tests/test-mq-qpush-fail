@@ -9,7 +9,7 @@ hg init repo
 cd repo
 
 echo foo > foo
-hg ci -Am 'add foo' -d '0 0'
+hg ci -Am 'add foo'
 
 touch untracked-file
 echo 'syntax: glob' > .hgignore

@@ -73,7 +73,7 @@ bar
 baz
 EOF
 echo toremove > toremove
-hg ci -Amfoo -d '0 0'
+hg ci -Amfoo
 cat <<EOF > foo
 foo2
 bar2
@@ -81,14 +81,14 @@ baz2
 EOF
 rm toremove
 echo added > added
-hg ci -Amfoo2 -d '0 0'
+hg ci -Amfoo2
 echo bar > bar
-hg ci -Ambar -d '0 0'
+hg ci -Ambar
 echo bar2 >> bar
-hg ci -mbar2 -d '0 0'
+hg ci -mbar2
 hg up 0
 echo foobar > foo
-hg ci -mfoobar -d '0 0'
+hg ci -mfoobar
 hg transplant 1:3
 # transplant -c shouldn't use an old changeset
 hg up -C

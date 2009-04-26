@@ -42,14 +42,14 @@ hg grep foobar
 echo blue >> color
 echo black >> color
 hg add color
-hg ci -m 0 -d '0 0'
+hg ci -m 0
 echo orange >> color
-hg ci -m 1 -d '0 0'
+hg ci -m 1
 echo black > color
-hg ci -m 2 -d '0 0'
+hg ci -m 2
 echo orange >> color
 echo blue >> color
-hg ci -m 3 -d '0 0'
+hg ci -m 3
 hg grep orange
 hg grep --all orange
 

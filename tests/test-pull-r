@@ -3,12 +3,12 @@
 hg init repo
 cd repo
 echo foo > foo
-hg ci -qAm 'add foo' -d '0 0'
+hg ci -qAm 'add foo'
 echo >> foo
-hg ci -m 'change foo' -d '0 0'
+hg ci -m 'change foo'
 hg up -qC 0
 echo bar > bar
-hg ci -qAm 'add bar' -d '0 0'
+hg ci -qAm 'add bar'
 hg log
 cd ..
 hg init copy
