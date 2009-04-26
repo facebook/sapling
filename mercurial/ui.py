@@ -14,7 +14,7 @@ _booleans = {'1':True, 'yes':True, 'true':True, 'on':True,
 
 class ui(object):
     def __init__(self, src=None):
-        self.buffers = []
+        self._buffers = []
         self.quiet = self.verbose = self.debugflag = self.traceback = False
         self.interactive = self.report_untrusted = True
         self.overlay = config.config()
@@ -229,14 +229,14 @@ class ui(object):
         return path or loc
 
     def pushbuffer(self):
-        self.buffers.append([])
+        self._buffers.append([])
 
     def popbuffer(self):
-        return "".join(self.buffers.pop())
+        return "".join(self._buffers.pop())
 
     def write(self, *args):
-        if self.buffers:
-            self.buffers[-1].extend([str(a) for a in args])
+        if self._buffers:
+            self._buffers[-1].extend([str(a) for a in args])
         else:
             for a in args:
                 sys.stdout.write(str(a))
