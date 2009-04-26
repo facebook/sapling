@@ -76,7 +76,7 @@ class GitHandler(object):
             convert_list[sha] = commit
             todo.extend([p for p in commit.parents if p not in done])
         
-        # sort the commits by commit date (TODO: change to topo sort)
+        # sort the commits 
         commits = TopoSort(convert_list).items()
         
         # import each of the commits, oldest first
@@ -84,13 +84,13 @@ class GitHandler(object):
             commit = convert_list[csha]
             self.import_git_commit(commit)
     
-        # TODO : update Hg bookmarks (possibly named heads?)
+        # TODO : update Hg bookmarks
         print bookmarks.parse(self.repo)
 
     def import_git_commit(self, commit):
         print "importing: " + commit.id
         
-        # TODO : have to handle merge contexts at some point (two parent files, etc)
+        # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
         def getfilectx(repo, memctx, f):
             (e, sha, data) = self.git.get_file(commit, f)
             e = '' # TODO : make this a real mode
@@ -98,7 +98,6 @@ class GitHandler(object):
         
         p1 = "0" * 40
         p2 = "0" * 40
-        # TODO : do something if parent is not mapped yet!
         if len(commit.parents) > 0:
             sha = commit.parents[0]
             p1 = self._map[sha]

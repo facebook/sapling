@@ -308,7 +308,6 @@ class Repo(object):
 
     # takes a commit object and a file path
     # returns the contents of that file at that commit
-    # TODO : make this recursive - any file in a subdir wont be found here
     def get_file(self, commit, f):
         otree = self.tree(commit.tree)
         parts = f.split('/')
@@ -322,8 +321,6 @@ class Repo(object):
 
     # takes a commit and returns an array of the files that were changed
     # between that commit and it's parents
-    # TODO : optimize this, it's horrible
-    # TODO : if no parents, return all files
     def get_files_changed(self, commit):        
         
         def filenames(basetree, comptree, prefix):

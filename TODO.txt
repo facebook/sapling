@@ -1,6 +1,7 @@
 CLONE
 ===========
 
+* only try to import non-mapped commits
 * update/add bookmarks
 * checkout the tip
 * limit to HEAD branch? (gh-pages makes weird import)
