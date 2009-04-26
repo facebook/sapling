@@ -25,6 +25,16 @@ converting...
 0 Initial add: a, c, e
 o  0 "Initial add: a, c, e" files: a c e
 
+% test with filemap
+initializing destination source-filemap-hg repository
+scanning source...
+sorting...
+converting...
+1 Initial add: a, c, e
+0 rename a into b, create a, rename c into d
+b
+d
+f
 % merge
 initializing destination source-hg repository
 scanning source...

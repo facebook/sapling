@@ -123,9 +123,8 @@ class bzr_source(converter_source):
     def getchangedfiles(self, rev, i):
         self._modecache = {}
         curtree = self.sourcerepo.revision_tree(rev)
-        parentids = self._parentids.pop(rev)
         if i is not None:
-            parentid = parentids[i]
+            parentid = self._parentids[rev][i]
         else:
             # no parent id, get the empty revision
             parentid = revision.NULL_REVISION
