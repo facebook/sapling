@@ -129,12 +129,12 @@ untrusted
 # different user, different group
 Not trusting file .hg/hgrc from untrusted user abc, group def
 trusted
-Ignoring untrusted configuration option paths.local = /another/path
+ignoring untrusted configuration option paths.local = /another/path
     global = /some/path
 untrusted
 . . global = /some/path
-.Ignoring untrusted configuration option paths.local = /another/path
- . local = /another/path
+.ignoring untrusted configuration option paths.local = /another/path
+. local = /another/path
 
 # ui.readconfig sections
 quux
@@ -142,7 +142,7 @@ quux
 # read trusted, untrusted, new ui, trusted
 Not trusting file foobar from untrusted user abc, group def
 trusted:
-Ignoring untrusted configuration option foobar.baz = quux
+ignoring untrusted configuration option foobar.baz = quux
 None
 untrusted:
 quux

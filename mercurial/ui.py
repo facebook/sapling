@@ -16,7 +16,7 @@ class ui(object):
     def __init__(self, src=None):
         self._buffers = []
         self.quiet = self.verbose = self.debugflag = self.traceback = False
-        self.interactive = self.report_untrusted = True
+        self.interactive = self._reportuntrusted = True
         self._ocfg = config.config() # overlay
         self._tcfg = config.config() # trusted
         self._ucfg = config.config() # untrusted
@@ -63,7 +63,7 @@ class ui(object):
         if user in tusers or group in tgroups or user == util.username():
             return True
 
-        if self.report_untrusted:
+        if self._reportuntrusted:
             self.warn(_('Not trusting file %s from untrusted '
                         'user %s, group %s\n') % (f, user, group))
         return False
@@ -111,7 +111,7 @@ class ui(object):
         self.quiet = not self.debugflag and self.configbool('ui', 'quiet')
         if self.verbose and self.quiet:
             self.quiet = self.verbose = False
-        self.report_untrusted = self.configbool("ui", "report_untrusted", True)
+        self._reportuntrusted = self.configbool("ui", "report_untrusted", True)
         self.interactive = self.configbool("ui", "interactive", self.isatty())
         self.traceback = self.configbool('ui', 'traceback', False)
 
@@ -134,10 +134,10 @@ class ui(object):
 
     def config(self, section, name, default=None, untrusted=False):
         value = self._data(untrusted).get(section, name, default)
-        if self.debugflag and not untrusted:
+        if self.debugflag and not untrusted and self._reportuntrusted:
             uvalue = self._ucfg.get(section, name)
             if uvalue is not None and uvalue != value:
-                self.warn(_("Ignoring untrusted configuration option "
+                self.debug(_("ignoring untrusted configuration option "
                             "%s.%s = %s\n") % (section, name, uvalue))
         return value
 
@@ -165,10 +165,10 @@ class ui(object):
 
     def configitems(self, section, untrusted=False):
         items = self._data(untrusted).items(section)
-        if self.debugflag and not untrusted:
+        if self.debugflag and not untrusted and self._reportuntrusted:
             for k,v in self._ucfg.items(section):
                 if self._tcfg.get(section, k) != v:
-                    self.warn(_("Ignoring untrusted configuration option "
+                    self.debug(_("ignoring untrusted configuration option "
                                 "%s.%s = %s\n") % (section, k, v))
         return items
 
