@@ -30,9 +30,11 @@ class sortdict(dict):
 class config:
     def __init__(self, data=None):
         self._data = {}
+        self._source = {}
         if data:
             for k in data._data:
                 self._data[k] = data[k].copy()
+            self._source = data._source.copy()
     def copy(self):
         return config(self)
     def __contains__(self, section):
@@ -47,18 +49,20 @@ class config:
                 self._data[s] = sortdict()
             for k in src._data[s]:
                 self._data[s][k] = src._data[s][k]
+                self._source[(s, k)] = src._source[(s, k)]
     def get(self, section, item, default=None):
-        return self._data.get(section, {}).get(item, (default, ""))[0]
+        return self._data.get(section, {}).get(item, default)
     def getsource(self, section, item):
-        return self._data.get(section, {}).get(item, (None, ""))[1]
+        return self._source.get((section, item), "")
     def sections(self):
         return sorted(self._data.keys())
     def items(self, section):
-        return [(k, v[0]) for k,v in self._data.get(section, {}).items()]
+        return self._data.get(section, {}).items()
     def set(self, section, item, value, source=""):
         if section not in self:
             self._data[section] = sortdict()
-        self._data[section][item] = (value, source)
+        self._data[section][item] = value
+        self._source[(section, item)] = source
 
     def read(self, path, fp=None):
         sectionre = re.compile(r'\[([^\[]+)\]')
