@@ -127,16 +127,14 @@ class ui(object):
             cdata.set(section, name, value)
         self.fixconfig()
 
-    def _get_cdata(self, untrusted):
-        if untrusted:
-            return self.ucdata
-        return self.cdata
+    def _data(self, untrusted):
+        return untrusted and self.ucdata or self.cdata
 
     def configsource(self, section, name, untrusted=False):
-        return self._get_cdata(untrusted).source(section, name) or 'none'
+        return self._data(untrusted).source(section, name) or 'none'
 
     def config(self, section, name, default=None, untrusted=False):
-        value = self._get_cdata(untrusted).get(section, name, default)
+        value = self._data(untrusted).get(section, name, default)
         if self.debugflag and not untrusted:
             uvalue = self.ucdata.get(section, name)
             if uvalue is not None and uvalue != value:
@@ -164,10 +162,10 @@ class ui(object):
 
     def has_section(self, section, untrusted=False):
         '''tell whether section exists in config.'''
-        return section in self._get_cdata(untrusted)
+        return section in self._data(untrusted)
 
     def configitems(self, section, untrusted=False):
-        items = self._get_cdata(untrusted).items(section)
+        items = self._data(untrusted).items(section)
         if self.debugflag and not untrusted:
             for k,v in self.ucdata.items(section):
                 if self.cdata.get(section, k) != v:
@@ -176,7 +174,7 @@ class ui(object):
         return items
 
     def walkconfig(self, untrusted=False):
-        cdata = self._get_cdata(untrusted)
+        cdata = self._data(untrusted)
         for section in cdata.sections():
             for name, value in self.configitems(section, untrusted):
                 yield section, name, str(value).replace('\n', '\\n')
