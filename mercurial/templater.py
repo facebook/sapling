@@ -72,7 +72,7 @@ class templater(object):
                     self.cache[key] = parsestring(val)
                 except SyntaxError, inst:
                     raise SyntaxError('%s: %s' %
-                                      (conf.getsource('', key), inst.args[0]))
+                                      (conf.source('', key), inst.args[0]))
             else:
                 self.map[key] = os.path.join(self.base, val)
 

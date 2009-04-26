@@ -50,7 +50,7 @@ class config(object):
         self._source.update(src._source)
     def get(self, section, item, default=None):
         return self._data.get(section, {}).get(item, default)
-    def getsource(self, section, item):
+    def source(self, section, item):
         return self._source.get((section, item), "")
     def sections(self):
         return sorted(self._data.keys())

@@ -133,7 +133,7 @@ class ui(object):
         return self.cdata
 
     def configsource(self, section, name, untrusted=False):
-        return self._get_cdata(untrusted).getsource(section, name) or 'none'
+        return self._get_cdata(untrusted).source(section, name) or 'none'
 
     def config(self, section, name, default=None, untrusted=False):
         value = self._get_cdata(untrusted).get(section, name, default)
