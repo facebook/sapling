@@ -9,14 +9,7 @@ from node import nullid, nullrev, short, hex
 from i18n import _
 import ancestor, bdiff, error, util, os, errno
 
-class propertycache(object):
-    def __init__(self, func):
-        self.func = func
-        self.name = func.__name__
-    def __get__(self, obj, type=None):
-        result = self.func(obj)
-        setattr(obj, self.name, result)
-        return result
+propertycache = util.propertycache
 
 class changectx(object):
     """A changecontext object makes access to data related to a particular

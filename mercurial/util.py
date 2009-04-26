@@ -137,6 +137,15 @@ def cachefunc(func):
 
     return f
 
+class propertycache(object):
+    def __init__(self, func):
+        self.func = func
+        self.name = func.__name__
+    def __get__(self, obj, type=None):
+        result = self.func(obj)
+        setattr(obj, self.name, result)
+        return result
+
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
     (pin, pout) = popen2(cmd, 'b')
