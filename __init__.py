@@ -46,7 +46,8 @@ def gclone(ui, git_url, hg_repo_path=None):
     git.fetch('origin')
     
     # checkout the tip
-    hg.update(dest_repo, None)
+    node = git.remote_head('origin')
+    hg.update(dest_repo, node)
 
 def gpush(ui, repo):
     dest_repo.ui.status(_("pushing to git url\n"))

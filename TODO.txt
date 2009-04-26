@@ -2,10 +2,11 @@ CLONE
 ===========
 
 * only try to import non-mapped commits
-* update/add bookmarks
-* checkout the tip
+* checkout the HEAD 
 * limit to HEAD branch? (gh-pages makes weird import)
   - possibly also add bookmarks on the same development line
+
+* strip or close branches that have been abandoned (?)
 
 * tag conversion
 

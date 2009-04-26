@@ -47,6 +47,12 @@ class GitHandler(object):
     def remote_name_to_url(self, remote_name):
         return self._git_url
         
+    def remote_head(self, remote_name):
+        for head, sha in self.git.remote_refs(remote_name).iteritems():
+            if head == 'HEAD':
+                return self._map[sha]
+        return None
+        
     def fetch_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)
         client, path = self.get_transport_and_path(git_url)
@@ -93,13 +99,12 @@ class GitHandler(object):
             commit = convert_list[csha]
             self.import_git_commit(commit)
         
-        # TODO : update Hg bookmarks
+        # update Hg bookmarks
         bms = {}
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             hgsha = hex_to_sha(self._map[sha])
-            bms[head] = hgsha
-            
-        print bms    
+            if not head == 'HEAD':
+                bms[remote_name + '/' + head] = hgsha            
         bookmarks.write(self.repo, bms)
 
     def import_git_commit(self, commit):
