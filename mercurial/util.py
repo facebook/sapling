@@ -14,7 +14,7 @@ platform-specific details from the core.
 
 from i18n import _
 import cStringIO, errno, re, shutil, sys, tempfile, traceback, error
-import os, stat, threading, time, calendar, ConfigParser, glob, osutil
+import os, stat, threading, time, calendar, glob, osutil
 import imp
 
 # Python compatibility
@@ -117,23 +117,6 @@ extendeddateformats = defaultdateformats + (
     "%b",
     "%b %Y",
     )
-
-# differences from SafeConfigParser:
-# - case-sensitive keys
-# - allows values that are not strings (this means that you may not
-#   be able to save the configuration to a file)
-class configparser(ConfigParser.SafeConfigParser):
-    def optionxform(self, optionstr):
-        return optionstr
-
-    def set(self, section, option, value):
-        return ConfigParser.ConfigParser.set(self, section, option, value)
-
-    def _interpolate(self, section, option, rawval, vars):
-        if not isinstance(rawval, basestring):
-            return rawval
-        return ConfigParser.SafeConfigParser._interpolate(self, section,
-                                                          option, rawval, vars)
 
 def cachefunc(func):
     '''cache the result of function calls'''
