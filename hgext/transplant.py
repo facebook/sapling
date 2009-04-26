@@ -528,6 +528,8 @@ def transplant(ui, repo, *revs, **opts):
     tp = transplanter(ui, repo)
 
     p1, p2 = repo.dirstate.parents()
+    if len(repo) > 0 and p1 == revlog.nullid:
+        raise util.Abort(_('no revision checked out'))
     if not opts.get('continue'):
         if p2 != revlog.nullid:
             raise util.Abort(_('outstanding uncommitted merges'))
