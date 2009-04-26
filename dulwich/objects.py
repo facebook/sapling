@@ -363,7 +363,10 @@ class Tree(ShaFile):
         return [(mode, name, hexsha) for (name, (mode, hexsha)) in self._entries.iteritems()]
 
     def entry(self, name):
-        return self._entries[name]
+        try:
+            return self._entries[name]
+        except:
+            return (None, None)
         
     def iteritems(self):
         for name in sorted(self._entries.keys()):

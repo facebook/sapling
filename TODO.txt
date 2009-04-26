@@ -1,0 +1,27 @@
+CLONE
+===========
+
+* update/add bookmarks
+* checkout the tip
+* limit to HEAD branch? (gh-pages makes weird import)
+
+* tag conversion
+
+FETCH
+===========
+
+* gfetch command
+
+PUSH
+==========
+
+* get a list of all the hg changesets not yet mapped
+* create git objects from each changeset (incl trees/blobs)
+* update mapfile with new changeset/commit mapping
+* connect to server pushing to
+  - figure out needs (use heads/bookmarks for haves)
+* create packfile with needed objects
+  - some delta compression if possible (?)
+* upload packfile, remove temp packfile
+
+* convert tags to git
