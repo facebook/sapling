@@ -159,7 +159,8 @@ class TopoSort(object):
         self._sorted = self.robust_topological_sort(commitdict)
         self._shas = []
         for level in self._sorted:
-            self._shas.append(level[0])
+            for sha in level:
+                self._shas.append(sha)
             
     def items(self):
         self._shas.reverse()

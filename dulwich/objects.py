@@ -50,10 +50,17 @@ def _decompress(string):
     return dcomped
 
 
+# SC hacked this to keep a global dict of already hexed shas because the
+# import script calls this a bajillion times.  Will try to cache other areas
+# so this isn't called as much in the first place.
+already_hexed_shas = {}
 def sha_to_hex(sha):
     """Takes a string and returns the hex of the sha within"""
+    if sha in already_hexed_shas:
+        return already_hexed_shas[sha]
     hexsha = "".join(["%02x" % ord(c) for c in sha])
     assert len(hexsha) == 40, "Incorrect length of sha1 string: %d" % hexsha
+    already_hexed_shas[sha] = hexsha
     return hexsha
 
 

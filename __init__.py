@@ -14,16 +14,6 @@ project that is in Git.  A bridger of worlds, this plugin be.
 
 '''
 
-#
-# Stage One - use Git commands to do the import / pushes, all in one big uggo file
-#
-# Stage Two - implement the Git packfile generation and server communication
-#             in native Python, so we don't need Git locally and don't need
-#             to keep all the git repo data around.  We should just need a SHA
-#             mapping - since everything is append only in both systems it should
-#             be pretty simple to do. 
-#
-
 # just importing every damn thing because i don't know python that well
 # and I have no idea what I actually need
 from mercurial import util, repair, merge, cmdutil, commands, hg, url
@@ -55,7 +45,7 @@ def gclone(ui, git_url, hg_repo_path=None):
     git.fetch(git_url)
     
     # checkout the tip
-    # hg.update(ui, dest_repo)
+    hg.update(dest_repo, None)
 
 def gpush(ui, repo):
     dest_repo.ui.status(_("pushing to git url\n"))

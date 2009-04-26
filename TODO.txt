@@ -5,6 +5,7 @@ CLONE
 * update/add bookmarks
 * checkout the tip
 * limit to HEAD branch? (gh-pages makes weird import)
+* some sort of remote management
 
 * tag conversion
 
