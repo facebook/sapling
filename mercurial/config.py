@@ -2,7 +2,7 @@ from i18n import _
 import re, error, os
 
 class sortdict(dict):
-    'a simple append-only sorted dictionary'
+    'a simple sorted dictionary'
     def __init__(self, data=None):
         self._list = []
         if data:
@@ -23,6 +23,9 @@ class sortdict(dict):
             self[k] = src[k]
     def items(self):
         return [(k,self[k]) for k in self._list]
+    def __delitem__(self, key):
+        dict.__delitem__(self, key)
+        self._list.remove(key)
 
 class config:
     def __init__(self, data=None):
@@ -62,6 +65,7 @@ class config:
         itemre = re.compile(r'([^=\s]+)\s*=\s*(.*)')
         contre = re.compile(r'\s+(\S.*)')
         emptyre = re.compile(r'(;|#|\s*$)')
+        unsetre = re.compile(r'%unset\s+(\S.*)')
         includere = re.compile(r'%include\s+(\S.*)')
         section = ""
         item = None
@@ -102,5 +106,12 @@ class config:
                 self.set(section, item, m.group(2), "%s:%d" % (path, line))
                 cont = 1
                 continue
+            m = unsetre.match(l)
+            if m:
+                name = m.group(1)
+                if self.get(section, name) != None:
+                    del self._data[section][name]
+                continue
+
             raise error.ConfigError(_('config error at %s:%d: \'%s\'')
                                     % (path, line, l.rstrip()))
