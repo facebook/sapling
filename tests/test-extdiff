@@ -54,13 +54,14 @@ echo '% diff in working directory, before'
 hg diff --git
 echo '% edit with extdiff -p'
 # prepare custom diff/edit tool
-cat > differ.sh << EOT
-#!/bin/sh
-sleep 1 # avoid unchanged-timestamp problems
-echo edited >> a/a
-echo edited >> a/b
+cat > differ.py << EOT
+#!/usr/bin/env python
+import time
+time.sleep(1) # avoid unchanged-timestamp problems
+file('a/a', 'ab').write('edited\n')
+file('a/b', 'ab').write('edited\n')
 EOT
-chmod +x differ.sh
-hg extdiff -p `pwd`/differ.sh # will change to /tmp/extdiff.TMP and populate directories a.TMP and a and start tool
+chmod +x differ.py
+hg extdiff -p `pwd`/differ.py # will change to /tmp/extdiff.TMP and populate directories a.TMP and a and start tool
 echo '% diff in working directory, after'
 hg diff --git
