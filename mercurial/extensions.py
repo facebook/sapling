@@ -87,7 +87,7 @@ def loadall(ui):
             else:
                 ui.warn(_("*** failed to import extension %s: %s\n")
                         % (name, inst))
-            if ui.print_exc():
+            if ui.traceback():
                 return 1
 
 def wrapcommand(table, command, wrapper):

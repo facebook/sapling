@@ -233,7 +233,7 @@ class svn_source(converter_source):
             self.paths = {}
             self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
         except SubversionException:
-            ui.print_exc()
+            ui.traceback()
             raise NoRepo("%s does not look like a Subversion repo" % self.url)
 
         if rev:

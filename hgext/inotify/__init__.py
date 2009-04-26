@@ -105,7 +105,7 @@ def reposetup(ui, repo):
                 else:
                     ui.warn(_('failed to contact inotify server: %s\n')
                              % err[-1])
-                ui.print_exc()
+                ui.traceback()
                 # replace by old status function
                 self.status = super(inotifydirstate, self).status
 

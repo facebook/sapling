@@ -334,7 +334,7 @@ class ui(object):
 
         return t
 
-    def print_exc(self):
+    def traceback(self):
         '''print exception traceback if traceback printing enabled.
         only to call in exception handler. returns true if traceback
         printed.'''

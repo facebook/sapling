@@ -61,7 +61,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                            '%s\n') % (hname, exc))
         if throw:
             raise
-        ui.print_exc()
+        ui.traceback()
         return True
     if r:
         if throw:

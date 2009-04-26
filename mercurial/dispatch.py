@@ -47,7 +47,7 @@ def _runcatch(ui, args):
             # enter the debugger when we hit an exception
             if '--debugger' in args:
                 pdb.post_mortem(sys.exc_info()[2])
-            ui.print_exc()
+            ui.traceback()
             raise
 
     # Global exception handling, alphabetically

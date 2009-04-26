@@ -33,7 +33,7 @@ class mercurial_sink(converter_sink):
                 if not self.repo.local():
                     raise NoRepo(_('%s is not a local Mercurial repo') % path)
             except error.RepoError, err:
-                ui.print_exc()
+                ui.traceback()
                 raise NoRepo(err.args[0])
         else:
             try:
@@ -43,7 +43,7 @@ class mercurial_sink(converter_sink):
                     raise NoRepo(_('%s is not a local Mercurial repo') % path)
                 self.created.append(path)
             except error.RepoError:
-                ui.print_exc()
+                ui.traceback()
                 raise NoRepo("could not create hg repo %s as sink" % path)
         self.lock = None
         self.wlock = None
@@ -199,7 +199,7 @@ class mercurial_source(converter_source):
             if not self.repo.local():
                 raise error.RepoError()
         except error.RepoError:
-            ui.print_exc()
+            ui.traceback()
             raise NoRepo("%s is not a local Mercurial repo" % path)
         self.lastrev = None
         self.lastctx = None

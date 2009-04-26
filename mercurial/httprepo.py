@@ -82,7 +82,7 @@ class httprepository(repo.repository):
             raise
         except httplib.HTTPException, inst:
             self.ui.debug(_('http error while sending %s command\n') % cmd)
-            self.ui.print_exc()
+            self.ui.traceback()
             raise IOError(None, inst)
         except IndexError:
             # this only happens with Python 2.3, later versions raise URLError
