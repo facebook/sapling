@@ -67,7 +67,10 @@ class convert_cvs(converter_source):
                 # builtin cvsps code
                 self.ui.status(_('using builtin cvsps\n'))
 
-                db = cvsps.createlog(self.ui, cache='update')
+                cache = 'update'
+                if not self.ui.configbool('convert', 'cvsps.cache', True):
+                    cache = None
+                db = cvsps.createlog(self.ui, cache=cache)
                 db = cvsps.createchangeset(self.ui, db,
                       fuzz=int(self.ui.config('convert', 'cvsps.fuzz', 60)),
                       mergeto=self.ui.config('convert', 'cvsps.mergeto', None),

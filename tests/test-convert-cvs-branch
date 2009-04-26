@@ -14,6 +14,7 @@ echo "convert = " >> $HGRCPATH
 echo "graphlog = " >> $HGRCPATH
 echo "[convert]" >> $HGRCPATH
 echo "cvsps=builtin" >> $HGRCPATH
+echo "cvsps.cache=0" >> $HGRCPATH
 
 echo % create cvs repository
 mkdir cvsrepo

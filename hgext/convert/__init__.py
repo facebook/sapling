@@ -123,6 +123,9 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     Internal cvsps is selected by setting
         --config convert.cvsps=builtin
     and has a few more configurable options:
+        --config convert.cvsps.cache=True     (boolean)
+            Set to False to disable remote log caching, for testing and 
+            debugging purposes.
         --config convert.cvsps.fuzz=60        (integer)
             Specify the maximum time (in seconds) that is allowed
             between commits with identical user and log message in a
