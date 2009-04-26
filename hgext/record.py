@@ -394,7 +394,7 @@ def qrecord(ui, repo, patch, *pats, **opts):
 
 
 def dorecord(ui, repo, committer, *pats, **opts):
-    if not ui.interactive:
+    if not ui.interactive():
         raise util.Abort(_('running non-interactively, use commit instead'))
 
     def recordfunc(ui, repo, message, match, opts):

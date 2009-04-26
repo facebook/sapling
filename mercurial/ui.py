@@ -16,7 +16,7 @@ class ui(object):
     def __init__(self, src=None):
         self._buffers = []
         self.quiet = self.verbose = self.debugflag = self._traceback = False
-        self.interactive = self._reportuntrusted = True
+        self._reportuntrusted = True
         self._ocfg = config.config() # overlay
         self._tcfg = config.config() # trusted
         self._ucfg = config.config() # untrusted
@@ -36,18 +36,6 @@ class ui(object):
                 self.readconfig(f, trust=True)
     def copy(self):
         return ui(self)
-
-    _isatty = None
-    def isatty(self):
-        if ui._isatty is None:
-            try:
-                ui._isatty = sys.stdin.isatty()
-            except AttributeError: # not a real file object
-                ui._isatty = False
-            except IOError:
-                # access to stdin is unsafe in a WSGI environment
-                ui._isatty = False
-        return ui._isatty
 
     def _is_trusted(self, fp, f):
         st = util.fstat(fp)
@@ -112,7 +100,6 @@ class ui(object):
         if self.verbose and self.quiet:
             self.quiet = self.verbose = False
         self._reportuntrusted = self.configbool("ui", "report_untrusted", True)
-        self.interactive = self.configbool("ui", "interactive", self.isatty())
         self._traceback = self.configbool('ui', 'traceback', False)
 
         # update trust information
@@ -259,8 +246,11 @@ class ui(object):
         try: sys.stderr.flush()
         except: pass
 
+    def interactive(self):
+        return self.configbool("ui", "interactive") or sys.stdin.isatty()
+
     def _readline(self, prompt=''):
-        if self.isatty():
+        if sys.stdin.isatty():
             try:
                 # magically add command line editing support, where
                 # available
@@ -282,7 +272,7 @@ class ui(object):
 
         If not interactive -- the default is returned
         """
-        if not self.interactive:
+        if not self.interactive():
             self.note(msg, ' ', default, "\n")
             return default
         while True:
@@ -298,7 +288,7 @@ class ui(object):
                 raise util.Abort(_('response expected'))
 
     def getpass(self, prompt=None, default=None):
-        if not self.interactive: return default
+        if not self.interactive(): return default
         try:
             return getpass.getpass(prompt or _('password: '))
         except EOFError:

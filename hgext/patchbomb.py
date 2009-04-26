@@ -76,7 +76,7 @@ from mercurial.i18n import _
 from mercurial.node import bin
 
 def prompt(ui, prompt, default=None, rest=': ', empty_ok=False):
-    if not ui.interactive:
+    if not ui.interactive():
         return default
     if default:
         prompt += ' [%s]' % default
