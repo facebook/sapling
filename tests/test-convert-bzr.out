@@ -25,6 +25,16 @@ converting...
 0 Initial add: a, c, e
 o  0 "Initial add: a, c, e" files: a c e
 
+% test with filemap
+initializing destination source-filemap-hg repository
+scanning source...
+sorting...
+converting...
+1 Initial add: a, c, e
+0 rename a into b, create a, rename c into d
+b
+d
+f
 % merge
 initializing destination source-hg repository
 scanning source...
@@ -50,9 +60,13 @@ converting...
 1 Initial setup
 0 Symlink changed, x bits changed
 % manifest of 0
-644   altname
+644 @ altname
+644   d/a
 755 * program
+644 @ syma
 % manifest of tip
-644   altname
+644 @ altname
+644   d/a
 755 * newprog
 644   program
+644 @ syma

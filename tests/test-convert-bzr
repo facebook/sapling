@@ -27,6 +27,12 @@ hg manifest -R source-hg -r tip
 echo "% test --rev option"
 hg convert -r 1 source source-1-hg
 glog -R source-1-hg
+echo "% test with filemap"
+cat > filemap <<EOF
+exclude a
+EOF
+hg convert --filemap filemap source source-filemap-hg
+hg -R source-filemap-hg manifest -r tip
 cd ..
 
 echo % merge
@@ -72,7 +78,10 @@ cd source
 touch program
 chmod +x program
 ln -s program altname
-bzr add -q altname program
+mkdir d
+echo a > d/a
+ln -s a syma
+bzr add -q altname program syma d/a
 bzr commit -q -m 'Initial setup'
 touch newprog
 chmod +x newprog

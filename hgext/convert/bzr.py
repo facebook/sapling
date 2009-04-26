@@ -123,9 +123,8 @@ class bzr_source(converter_source):
     def getchangedfiles(self, rev, i):
         self._modecache = {}
         curtree = self.sourcerepo.revision_tree(rev)
-        parentids = self._parentids.pop(rev)
         if i is not None:
-            parentid = parentids[i]
+            parentid = self._parentids[rev][i]
         else:
             # no parent id, get the empty revision
             parentid = revision.NULL_REVISION
@@ -192,7 +191,7 @@ class bzr_source(converter_source):
 
             # populate the mode cache
             kind, executable = [e[1] for e in (kind, executable)]
-            mode = ((executable and 'x') or (kind == 'symlink' and 's')
+            mode = ((executable and 'x') or (kind == 'symlink' and 'l')
                     or '')
             self._modecache[(topath, revid)] = mode
             changes.append((topath, revid))
