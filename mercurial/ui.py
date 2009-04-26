@@ -98,47 +98,34 @@ class ui(object):
             root = os.path.expanduser('~')
         self.fixconfig(root=root)
 
-    def fixconfig(self, section=None, name=None, value=None, root=None):
+    def fixconfig(self, root=None):
         # translate paths relative to root (or home) into absolute paths
-        if section is None or section == 'paths':
-            if root is None:
-                root = os.getcwd()
-            items = section and [(name, value)] or []
-            for cdata in self.cdata, self.ucdata, self.overlay:
-                if not items and 'paths' in cdata:
-                    pathsitems = cdata.items('paths')
-                else:
-                    pathsitems = items
-                for n, path in pathsitems:
-                    if path and "://" not in path and not os.path.isabs(path):
-                        cdata.set("paths", n,
-                                  os.path.normpath(os.path.join(root, path)))
+        root = root or os.getcwd()
+        for c in self.cdata, self.ucdata, self.overlay:
+            for n, p in c.items('paths'):
+                if p and "://" not in p and not os.path.isabs(p):
+                    c.set("paths", n, os.path.normpath(os.path.join(root, p)))
 
         # update ui options
-        if section is None or section == 'ui':
-            self.debugflag = self.configbool('ui', 'debug')
-            self.verbose = self.debugflag or self.configbool('ui', 'verbose')
-            self.quiet = not self.debugflag and self.configbool('ui', 'quiet')
-            if self.verbose and self.quiet:
-                self.quiet = self.verbose = False
-
-            self.report_untrusted = self.configbool("ui", "report_untrusted",
-                                                    True)
-            self.interactive = self.configbool("ui", "interactive",
-                                               self.isatty())
-            self.traceback = self.configbool('ui', 'traceback', False)
+        self.debugflag = self.configbool('ui', 'debug')
+        self.verbose = self.debugflag or self.configbool('ui', 'verbose')
+        self.quiet = not self.debugflag and self.configbool('ui', 'quiet')
+        if self.verbose and self.quiet:
+            self.quiet = self.verbose = False
+        self.report_untrusted = self.configbool("ui", "report_untrusted", True)
+        self.interactive = self.configbool("ui", "interactive", self.isatty())
+        self.traceback = self.configbool('ui', 'traceback', False)
 
         # update trust information
-        if section is None or section == 'trusted':
-            for user in self.configlist('trusted', 'users'):
-                self.trusted_users[user] = 1
-            for group in self.configlist('trusted', 'groups'):
-                self.trusted_groups[group] = 1
+        for user in self.configlist('trusted', 'users'):
+            self.trusted_users[user] = 1
+        for group in self.configlist('trusted', 'groups'):
+            self.trusted_groups[group] = 1
 
     def setconfig(self, section, name, value):
         for cdata in (self.overlay, self.cdata, self.ucdata):
             cdata.set(section, name, value)
-        self.fixconfig(section, name, value)
+        self.fixconfig()
 
     def _get_cdata(self, untrusted):
         if untrusted:
@@ -231,7 +218,7 @@ class ui(object):
         if p and '%%' in p:
             ui.warn('(deprecated \'\%\%\' in path %s=%s from %s)\n' %
                     (loc, p, self.configsource('paths', loc)))
-            return p.replace('%%', '%')
+            p = p.replace('%%', '%')
         return p
 
     def expandpath(self, loc, default=None):
