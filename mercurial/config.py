@@ -1,5 +1,5 @@
 from i18n import _
-import re, error
+import re, error, os
 
 class sortdict(dict):
     'a simple append-only sorted dictionary'
@@ -62,6 +62,7 @@ class config:
         itemre = re.compile(r'([^=\s]+)\s*=\s*(.*)')
         contre = re.compile(r'\s+(\S.*)')
         emptyre = re.compile(r'(;|#|\s*$)')
+        includere = re.compile(r'%include\s+(\S.*)')
         section = ""
         item = None
         line = 0
@@ -79,6 +80,14 @@ class config:
                     self.set(section, item, v, "%s:%d" % (path, line))
                     continue
                 item = None
+            m = includere.match(l)
+            if m:
+                inc = m.group(1)
+                base = os.path.dirname(path)
+                inc = os.path.normpath(os.path.join(base, inc))
+                incfp = open(inc)
+                self.read(inc, incfp)
+                continue
             if emptyre.match(l):
                 continue
             m = sectionre.match(l)
