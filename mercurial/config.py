@@ -69,11 +69,11 @@ class config(object):
 
     def read(self, path, fp=None):
         sectionre = re.compile(r'\[([^\[]+)\]')
-        itemre = re.compile(r'([^=\s]+)\s*=\s*(.*)')
-        contre = re.compile(r'\s+(\S.*)')
+        itemre = re.compile(r'([^=\s]+)\s*=\s*(.*\S|)')
+        contre = re.compile(r'\s+(\S.*\S)')
         emptyre = re.compile(r'(;|#|\s*$)')
-        unsetre = re.compile(r'%unset\s+(\S.*)')
-        includere = re.compile(r'%include\s+(\S.*)')
+        unsetre = re.compile(r'%unset\s+(\S+)')
+        includere = re.compile(r'%include\s+(\S.*\S)')
         section = ""
         item = None
         line = 0
