@@ -13,11 +13,11 @@ hg qinit -c # This must work even with a managed mq queue
 
 echo 'c1' > c1
 hg add c1
-hg commit -d '0 0' -u test -m "C1"
+hg commit -d '0 0' -m "C1"
 
 echo 'r1' > r1
 hg add r1
-hg commit -d '1 0' -u test -m "R1"
+hg commit -d '1 0' -m "R1"
 
 hg up 0
 hg qnew p0.patch

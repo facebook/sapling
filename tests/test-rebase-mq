@@ -22,10 +22,10 @@ hg qinit -c # This must work even with a managed mq queue
 
 echo 'c1' > f
 hg add f
-hg commit -d '0 0' -u test -m "C1"
+hg commit -d '0 0' -m "C1"
 
 echo 'r1' > f
-hg commit -d '2 0' -u test -m "R1"
+hg commit -d '2 0' -m "R1"
 
 hg up 0
 hg qnew f.patch

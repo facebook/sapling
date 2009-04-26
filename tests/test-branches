@@ -4,42 +4,42 @@ hg init a
 cd a
 echo 'root' >root
 hg add root
-hg commit -d '0 0' -u test -m "Adding root node"
+hg commit -d '0 0' -m "Adding root node"
 
 echo 'a' >a
 hg add a
 hg branch a
-hg commit -d '1 0' -u test -m "Adding a branch"
+hg commit -d '1 0' -m "Adding a branch"
 
 hg branch q
 echo 'aa' >a
 hg branch -C
-hg commit -d '2 0' -u test -m "Adding to a branch"
+hg commit -d '2 0' -m "Adding to a branch"
 
 hg update -C 0
 echo 'b' >b
 hg add b
 hg branch b
-hg commit -d '2 0' -u test -m "Adding b branch"
+hg commit -d '2 0' -m "Adding b branch"
 
 echo 'bh1' >bh1
 hg add bh1
-hg commit -d '3 0' -u test -m "Adding b branch head 1"
+hg commit -d '3 0' -m "Adding b branch head 1"
 
 hg update -C 2
 echo 'bh2' >bh2
 hg add bh2
-hg commit -d '4 0' -u test -m "Adding b branch head 2"
+hg commit -d '4 0' -m "Adding b branch head 2"
 
 echo 'c' >c
 hg add c
 hg branch c
-hg commit -d '5 0' -u test -m "Adding c branch"
+hg commit -d '5 0' -m "Adding c branch"
 
 echo 'd' >d
 hg add d
 hg branch 'a branch name much longer than the default justification used by branches'
-hg commit -d '6 0' -u test -m "Adding d branch"
+hg commit -d '6 0' -m "Adding d branch"
 
 hg branches
 echo '-------'
@@ -55,24 +55,24 @@ echo "---- going to test branch closing"
 hg branches
 hg up -C b
 echo 'xxx1' >> b
-hg commit -d '7 0' -u test -m 'adding cset to branch b'
+hg commit -d '7 0' -m 'adding cset to branch b'
 hg up -C aee39cd168d0
 echo 'xxx2' >> b
-hg commit -d '8 0' -u test -m 'adding head to branch b'
+hg commit -d '8 0' -m 'adding head to branch b'
 echo 'xxx3' >> b
-hg commit -d '9 0' -u test -m 'adding another cset to branch b'
+hg commit -d '9 0' -m 'adding another cset to branch b'
 hg branches
 hg heads
 hg heads -a
-hg commit -d '9 0' -u test --close-branch -m 'prune bad branch'
+hg commit -d '9 0' --close-branch -m 'prune bad branch'
 hg branches -a
 hg up -C b
-hg commit -d '9 0' -u test --close-branch -m 'close this part branch too'
+hg commit -d '9 0' --close-branch -m 'close this part branch too'
 echo '--- b branch should be inactive'
 hg branches
 hg branches -a
 echo 'xxx4' >> b
-hg commit -d '9 0' -u test -m 'reopen branch with a change'
+hg commit -d '9 0' -m 'reopen branch with a change'
 echo '--- branch b is back in action'
 hg branches -a
 hg heads

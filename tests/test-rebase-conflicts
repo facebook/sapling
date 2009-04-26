@@ -14,26 +14,26 @@ hg init a
 cd a
 echo 'c1' >common
 hg add common
-hg commit -d '0 0' -u test -m "C1"
+hg commit -d '0 0' -m "C1"
 
 echo 'c2' >>common
-hg commit -d '1 0' -u test -m "C2"
+hg commit -d '1 0' -m "C2"
 
 echo 'c3' >>common
-hg commit -d '2 0' -u test -m "C3"
+hg commit -d '2 0' -m "C3"
 
 hg update -C 1
 echo 'l1' >>extra
 hg add extra
-hg commit -d '3 0' -u test -m "L1"
+hg commit -d '3 0' -m "L1"
 
 sed -e 's/c2/l2/' common > common.new
 mv common.new common
-hg commit -d '4 0' -u test -m "L2"
+hg commit -d '4 0' -m "L2"
 
 echo 'l3' >> extra2
 hg add extra2
-hg commit -d '5 0' -u test -m "L3"
+hg commit -d '5 0' -m "L3"
 
 hg glog  --template '{rev}: {desc}\n'
 

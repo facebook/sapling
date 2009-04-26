@@ -62,8 +62,8 @@ echo foo > foo/foo
 mkdir bar
 echo bar > bar/bar
 hg add
-hg ci -d '1000000 0' -u test -m commit-subdir-1 foo
-hg ci -d '1000001 0' -u test -m commit-subdir-2 bar
+hg ci -d '1000000 0' -m commit-subdir-1 foo
+hg ci -d '1000001 0' -m commit-subdir-2 bar
 echo % subdir log 1
 hg log -v foo
 echo % subdir log 2
@@ -78,9 +78,9 @@ cd test3
 mkdir foo
 echo foo content > foo/plain-file
 hg add foo/plain-file
-hg ci -d '1000000 0' -u test -m commit-foo-subdir foo
+hg ci -d '1000000 0' -m commit-foo-subdir foo
 echo modified foo content > foo/plain-file
-hg ci -d '2000000 0' -u test -m commit-foo-dot .
+hg ci -d '2000000 0' -m commit-foo-dot .
 echo % full log
 hg log -v
 echo % subdir log

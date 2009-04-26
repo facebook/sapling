@@ -9,23 +9,23 @@ cd a
 mkdir -p testdir
 echo a > testdir/a
 hg add testdir/a
-hg commit -u test -d '1000000 0' -m a
+hg commit -d '1000000 0' -m a
 cd ..
 
 hg clone a b
 cd a
 echo alpha > testdir/a
-hg commit -u test -d '1000000 0' -m remote-change
+hg commit -d '1000000 0' -m remote-change
 cd ..
 
 cd b
 mkdir testdir/subdir
 hg mv testdir/a testdir/subdir/a
-hg commit -u test -d '1000000 0' -m move
+hg commit -d '1000000 0' -m move
 mkdir newdir
 echo beta > newdir/beta
 hg add newdir/beta
-hg commit -u test -d '1000000 0' -m local-addition
+hg commit -d '1000000 0' -m local-addition
 hg pull ../a
 hg up -C 2
 hg merge
