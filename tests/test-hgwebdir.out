@@ -43,6 +43,55 @@ error: repository c not found
 
 200 Script output follows
 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+
+<title>Mercurial repositories index</title>
+</head>
+<body>
+
+<div class="container">
+<div class="menu">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
+</div>
+<div class="main">
+<h2>Mercurial Repositories</h2>
+
+<table class="bigtable">
+    <tr>
+        <th><a href="?sort=-name">Name</a></th>
+        <th><a href="?sort=description">Description</a></th>
+        <th><a href="?sort=contact">Contact</a></th>
+        <th><a href="?sort=lastchange">Last change</a></th>
+        <th>&nbsp;</th>
+    </tr>
+    <tr class="parity0"><td><a href="/b/?style=paper">b</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity1"><td><a href="/coll/a/?style=paper">coll/a</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity0"><td><a href="/coll/a/.hg/patches/?style=paper">coll/a/.hg/patches</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity1"><td><a href="/coll/b/?style=paper">coll/b</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity0"><td><a href="/coll/c/?style=paper">coll/c</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity1"><td><a href="/rcoll/a/?style=paper">rcoll/a</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity0"><td><a href="/rcoll/a/.hg/patches/?style=paper">rcoll/a/.hg/patches</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity1"><td><a href="/rcoll/b/?style=paper">rcoll/b</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity0"><td><a href="/rcoll/b/d/?style=paper">rcoll/b/d</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity1"><td><a href="/rcoll/c/?style=paper">rcoll/c</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+<tr class="parity0"><td><a href="/t/a/?style=paper">t/a</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+
+</table>
+</div>
+</div>
+
+
+</body>
+</html>
+
+200 Script output follows
+
 
 /t/a/
 
@@ -50,6 +99,45 @@ error: repository c not found
 
 
 /t/a/
+
+200 Script output follows
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+
+<title>Mercurial repositories index</title>
+</head>
+<body>
+
+<div class="container">
+<div class="menu">
+<a href="http://www.selenic.com/mercurial/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
+</div>
+<div class="main">
+<h2>Mercurial Repositories</h2>
+
+<table class="bigtable">
+    <tr>
+        <th><a href="?sort=-name">Name</a></th>
+        <th><a href="?sort=description">Description</a></th>
+        <th><a href="?sort=contact">Contact</a></th>
+        <th><a href="?sort=lastchange">Last change</a></th>
+        <th>&nbsp;</th>
+    </tr>
+    <tr class="parity0"><td><a href="/t/a/?style=paper">a</a></td><td>unknown</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td><td class="age">seconds ago</td><td class="indexlinks"></td></tr>
+
+</table>
+</div>
+</div>
+
+
+</body>
+</html>
 
 200 Script output follows
 
