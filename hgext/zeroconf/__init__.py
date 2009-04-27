@@ -51,9 +51,12 @@ def getip():
         pass
 
     # Generic method, sometimes gives useless results
-    dumbip = socket.gethostbyaddr(socket.gethostname())[2][0]
-    if not dumbip.startswith('127.') and ':' not in dumbip:
-        return dumbip
+    try:
+        dumbip = socket.gethostbyaddr(socket.gethostname())[2][0]
+        if not dumbip.startswith('127.') and ':' not in dumbip:
+            return dumbip
+    except socket.gaierror:
+        dumbip = '127.0.0.1'
 
     # works elsewhere, but actually sends a packet
     try:
@@ -69,13 +72,12 @@ def getip():
 def publish(name, desc, path, port):
     global server, localip
     if not server:
-        try:
-            server = Zeroconf.Zeroconf()
-        except socket.gaierror:
+        ip = getip()
+        if ip.startswith('127.'):
             # if we have no internet connection, this can happen.
             return
-        ip = getip()
         localip = socket.inet_aton(ip)
+        server = Zeroconf.Zeroconf(ip)
 
     hostname = socket.gethostname().split('.')[0]
     host = hostname + ".local"
@@ -129,7 +131,10 @@ class listener(object):
         self.found[repr(name)] = server.getServiceInfo(type, name)
 
 def getzcpaths():
-    server = Zeroconf.Zeroconf()
+    ip = getip()
+    if ip.startswith('127.'):
+        return
+    server = Zeroconf.Zeroconf(ip)
     l = listener()
     Zeroconf.ServiceBrowser(server, "_hg._tcp.local.", l)
     time.sleep(1)
