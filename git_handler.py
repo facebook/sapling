@@ -13,10 +13,17 @@ class GitHandler(object):
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
         self.ui = ui
+        self.init_if_missing()
         self.load_git()
         self.load_map()
         self.load_config()
         
+    def init_if_missing(self):
+        # make the git data directory
+        git_hg_path = os.path.join(self.repo.path, 'git')
+        os.mkdir(git_hg_path)
+        dulwich.repo.Repo.init_bare(git_hg_path)
+    
     def load_git(self):
         git_dir = os.path.join(self.repo.path, 'git')
         self.git = Repo(git_dir)

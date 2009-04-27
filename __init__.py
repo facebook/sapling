@@ -27,7 +27,7 @@ import dulwich
 from git_handler import GitHandler
 
 def gclone(ui, git_url, hg_repo_path=None):
-    ## TODO : add git_url as the default remote path
+    # determine new repo name
     if not hg_repo_path:
         hg_repo_path = hg.defaultdest(git_url)
         if hg_repo_path.endswith('.git'):
@@ -35,11 +35,6 @@ def gclone(ui, git_url, hg_repo_path=None):
         hg_repo_path += '-hg'
     dest_repo = hg.repository(ui, hg_repo_path, create=True)
 
-    # make the git data directory
-    git_hg_path = os.path.join(hg_repo_path, '.hg', 'git')
-    os.mkdir(git_hg_path)
-    dulwich.repo.Repo.init_bare(git_hg_path)
-    
     # fetch the initial git data
     git = GitHandler(dest_repo, ui)
     git.remote_add('origin', git_url)
@@ -50,6 +45,7 @@ def gclone(ui, git_url, hg_repo_path=None):
     hg.update(dest_repo, node)
 
 def gpush(ui, repo, remote_name):
+    # determine new repo name
     dest_repo.ui.status(_("pushing to git url\n"))
     
 def gpull(ui, repo):

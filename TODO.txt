@@ -2,6 +2,7 @@ GENERAL
 ==========
 
 * remote management
+* submodules?
 
 PUSH
 ==========
@@ -26,6 +27,6 @@ CLONE
 FETCH
 ===========
 
+* add removed files to filechanged and raise IOError
 * gfetch command
 * only try to import non-mapped commits
-* strip or close branches that have been abandoned (?)
