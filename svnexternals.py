@@ -24,7 +24,7 @@ class externalsfile(dict):
 
     def write(self):
         fp = cStringIO.StringIO()
-        for target in hgutil.sort(self):
+        for target in sorted(self):
             lines = self[target]
             if not lines:
                 continue
