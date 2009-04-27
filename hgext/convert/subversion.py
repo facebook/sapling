@@ -148,8 +148,8 @@ def filecheck(path, proto):
 # this by requesting a version-controlled URL we know can't exist and looking
 # for the svn-specific "not found" XML.
 def httpcheck(path, proto):
-   return ('<m:human-readable errcode="160013">' in
-           urllib.urlopen('%s://%s/!svn/ver/0/.svn' % (proto, path)).read())
+    return ('<m:human-readable errcode="160013">' in
+            urllib.urlopen('%s://%s/!svn/ver/0/.svn' % (proto, path)).read())
 
 protomap = {'http': httpcheck,
             'https': httpcheck,

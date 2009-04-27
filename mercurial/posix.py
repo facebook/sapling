@@ -53,7 +53,7 @@ def parse_patch_output(output_line):
         if pf[0] == '`':
             pf = pf[1:-1] # Remove the quotes
     else:
-       if pf.startswith("'") and pf.endswith("'") and " " in pf:
+        if pf.startswith("'") and pf.endswith("'") and " " in pf:
             pf = pf[1:-1] # Remove the quotes
     return pf
 
