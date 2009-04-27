@@ -283,6 +283,9 @@ def create_server(ui, repo):
     else:
         handler = _hgwebhandler
 
+    # ugly hack due to python issue5853 (for threaded use)
+    import mimetypes; mimetypes.init()
+
     try:
         if use_ipv6:
             return IPv6HTTPServer((address, port), handler)
