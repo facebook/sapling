@@ -73,9 +73,9 @@ def rmtree(path):
 class MockUI(object):
     real_ui = ui.ui
     _isatty = False
-    def __init__(self, parentui=None):
+    def __init__(self, src=None):
         self.stream = StringIO.StringIO()
-        self.inner_ui = self.real_ui(parentui=parentui)
+        self.inner_ui = self.real_ui(src)
 
     def status(self, *args):
         self.stream.write(''.join(args))
