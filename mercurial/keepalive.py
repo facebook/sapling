@@ -307,23 +307,31 @@ class KeepAliveHandler:
         return r
 
     def _start_transaction(self, h, req):
+        # What follows mostly reimplements HTTPConnection.request()
+        # except it adds self.parent.addheaders in the mix.
+        headers = req.headers.copy()
+        if sys.version_info >= (2, 4):
+            headers.update(req.unredirected_hdrs)
+        headers.update(self.parent.addheaders)
+        headers = dict((n.lower(), v) for n,v in headers.items())
+        skipheaders = {}
+        for n in ('host', 'accept-encoding'):
+            if n in headers:
+                skipheaders['skip_' + n.replace('-', '_')] = 1
         try:
             if req.has_data():
                 data = req.get_data()
-                h.putrequest('POST', req.get_selector())
-                if 'Content-type' not in req.headers:
+                h.putrequest('POST', req.get_selector(), **skipheaders)
+                if 'content-type' not in headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
-                if 'Content-length' not in req.headers:
+                if 'content-length' not in headers:
                     h.putheader('Content-length', '%d' % len(data))
             else:
-                h.putrequest('GET', req.get_selector())
+                h.putrequest('GET', req.get_selector(), **skipheaders)
         except (socket.error), err:
             raise urllib2.URLError(err)
-
-        for args in self.parent.addheaders:
-            h.putheader(*args)
-        for k, v in req.headers.items():
+        for k, v in headers.items():
             h.putheader(k, v)
         h.endheaders()
         if req.has_data():
