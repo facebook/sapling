@@ -8,6 +8,7 @@ from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
 from mercurial import node
+from mercurial import i18n
 
 from svn import core
 from svn import delta
@@ -288,6 +289,10 @@ def pull(orig, ui, repo, source="default", *args, **opts):
         raise hgutil.Abort('Revision skipping at repository initialization '
                            'remains unimplemented.')
 
+    revisions = 0
+    if not initializing_repo:
+        oldheads = len(repo.changelog.heads())
+
     # start converting revisions
     for r in svn.revisions(start=start):
         valid = True
@@ -322,7 +327,21 @@ def pull(orig, ui, repo, source="default", *args, **opts):
                         ui.status('Got a 502, retrying (%s)\n' % tries)
                     else:
                         raise hgutil.Abort(*e.args)
+            revisions += 1
     util.swap_out_encoding(old_encoding)
+
+    if revisions == 0:
+        ui.status(i18n._("no changes found\n"))
+        return
+    else:
+        ui.status("added %d svn revisions\n" % revisions)
+    if not initializing_repo:
+        newheads = len(repo.changelog.heads())
+        # postincoming needs to know if heads were added or removed
+        # calculation based on mercurial.localrepo.addchangegroup
+        # 0 means no changes, 1 no new heads, > 1 new heads, < 0 heads removed
+        modheads = newheads - oldheads + (newheads < oldheads and -1 or 1)
+        commands.postincoming(ui, repo, modheads, opts.get('update'), None)
 
 
 def rebase(orig, ui, repo, **opts):

@@ -15,6 +15,7 @@ import test_fetch_mappings
 import test_fetch_renames
 import test_fetch_symlinks
 import test_fetch_truncated
+import test_pull
 import test_push_command
 import test_push_renames
 import test_push_dirs
@@ -36,6 +37,7 @@ def suite():
                                test_fetch_renames.suite(),
                                test_fetch_symlinks.suite(),
                                test_fetch_truncated.suite(),
+                               test_pull.suite(),
                                test_push_command.suite(),
                                test_push_renames.suite(),
                                test_push_dirs.suite(),
