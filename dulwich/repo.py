@@ -20,6 +20,8 @@
 
 import os
 import stat
+import sha
+import zlib
 
 from errors import (
     MissingCommitError, 
@@ -36,6 +38,7 @@ from objects import (
     Tag,
     Tree,
     )
+from misc import make_sha
 
 OBJECTDIR = 'objects'
 SYMREF = 'ref: '
@@ -332,6 +335,22 @@ class Repo(object):
     def get_blob(self, sha):
         return self._get_object(sha, Blob)
 
+    def write_blob(self, contents):
+        sha = self.write_object('blob', contents)
+        return sha
+        
+    def write_object(self, obj_type, obj_contents):
+        raw_data = "%s %d\0%s" % (obj_type, len(obj_contents), obj_contents)
+        git_sha = make_sha(raw_data)
+        git_hex_sha = git_sha.hexdigest()
+        if not git_hex_sha in self.object_store:
+            object_dir = os.path.join(self.path, OBJECTDIR, git_hex_sha[0:2])
+            if not os.path.exists(object_dir):
+                os.mkdir(object_dir)
+            object_path = os.path.join(object_dir, git_hex_sha[2:38])            
+            data = zlib.compress(raw_data)
+            open(object_path, 'w').write(data) # write the object
+        return git_hex_sha
 
     # takes a commit object and a file path
     # returns the contents of that file at that commit

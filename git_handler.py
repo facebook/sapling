@@ -31,16 +31,34 @@ class GitHandler(object):
 
     ## FILE LOAD AND SAVE METHODS
 
+    def map_set(self, gitsha, hgsha):
+        self._map_git[gitsha] = hgsha
+        self._map_hg[hgsha] = gitsha
+
+    def map_hg_get(self, gitsha):
+        if gitsha in self._map_git:
+            return self._map_git[gitsha]
+        else:
+            return None
+
+    def map_git_get(self, hgsha):
+        if hgsha in self._map_hg:
+            return self._map_hg[hgsha]
+        else:
+            return None
+        
     def load_map(self):
-        self._map = {}
+        self._map_git = {}
+        self._map_hg = {}
         if os.path.exists(self.repo.join('git-mapfile')):
             for line in self.repo.opener('git-mapfile'):
                 gitsha, hgsha = line.strip().split(' ', 1)
-                self._map[gitsha] = hgsha
+                self._map_git[gitsha] = hgsha
+                self._map_hg[hgsha] = gitsha
 
     def save_map(self):
         file = self.repo.opener('git-mapfile', 'w+')
-        for gitsha, hgsha in self._map.iteritems():
+        for gitsha, hgsha in self._map_git.iteritems():
             file.write("%s %s\n" % (gitsha, hgsha))
         file.close()
 
@@ -81,10 +99,50 @@ class GitHandler(object):
     def remote_name_to_url(self, remote_name):
         return self._config['remote.' + remote_name + '.url']
 
+    def export_git_objects(self):
+        print "exporting git objects"
+        for rev in self.repo.changelog:
+            node = self.repo.changelog.lookup(rev)
+            hgsha = hex(node)
+            git_sha = self.map_git_get(hgsha)
+            if not git_sha:
+                self.export_hg_commit(rev)
+                
+    def export_hg_commit(self, rev):
+        # convert this commit into git objects
+        # go through the manifest, convert all blobs/trees we don't have
+        # write the commit object (with metadata info)
+        print "EXPORT"
+        node = self.repo.changelog.lookup(rev)
+        parents = self.repo.parents(rev)
+        
+        print parents # TODO: make sure parents are converted first
+        
+        ctx = self.repo.changectx(rev)
+        man = ctx.manifest()
+        for filename in man.keys():
+            print "WRITE BLOB/TREE OBJECT"
+            print filename
+            fctx = ctx.filectx(filename)
+            file_id = hex(fctx.filenode())
+            git_sha = self.map_git_get(file_id)
+            print git_sha
+            
+            print fctx.data()
+            self.git.write_blob(fctx.data())
+
+        print "WRITE COMMIT OBJECT"
+        print ctx.user()
+        print ctx.date()
+        print ctx.description()
+        print ctx.branch()
+        print ctx.tags()
+            
+            
     def remote_head(self, remote_name):
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             if head == 'HEAD':
-                return self._map[sha]
+                return self.map_hg_get(sha)
         return None
 
     def upload_pack(self, remote_name):
@@ -139,15 +197,10 @@ class GitHandler(object):
         # update Hg bookmarks
         bms = {}
         for head, sha in self.git.remote_refs(remote_name).iteritems():
-            hgsha = hex_to_sha(self._map[sha])
+            hgsha = hex_to_sha(self.map_hg_get(sha))
             if not head == 'HEAD':
                 bms[remote_name + '/' + head] = hgsha
-        if hasattr(self.repo, '_bookmarkcurrent'):
-            bookmarks.write(self.repo, bms)
-        else:
-            self.repo.ui.warn('bookmarks are not enabled, not writing'
-                              ' them out!')
-
+        bookmarks.write(self.repo, bms)
 
     def import_git_commit(self, commit):
         print "importing: " + commit.id
@@ -162,10 +215,10 @@ class GitHandler(object):
         p2 = "0" * 40
         if len(commit.parents) > 0:
             sha = commit.parents[0]
-            p1 = self._map[sha]
+            p1 = self.map_hg_get(sha)
         if len(commit.parents) > 1:
             sha = commit.parents[1]
-            p2 = self._map[sha]
+            p2 = self.map_hg_get(sha)
         if len(commit.parents) > 2:
             # TODO : map extra parents to the extras file
             pass
@@ -185,16 +238,13 @@ class GitHandler(object):
         p2 = hex(self.repo.changelog.tip())
         # save changeset to mapping file
         gitsha = commit.id
-        self._map[gitsha] = p2
+        self.map_set(gitsha, p2)
 
     def getfilectx(self, source, repo, memctx, f):
         v = files[f]
         data = source.getfile(f, v)
         e = source.getmode(f, v)
         return context.memfilectx(f, data, 'l' in e, 'x' in e, copies.get(f))
-
-    def export_git_objects(self):
-        pass
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
