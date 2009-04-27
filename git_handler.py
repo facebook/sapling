@@ -120,24 +120,29 @@ class GitHandler(object):
         
         ctx = self.repo.changectx(rev)
         man = ctx.manifest()
+        
+        trees = {}
         for filename in man.keys():
-            print "WRITE BLOB/TREE OBJECT"
-            print filename
             fctx = ctx.filectx(filename)
             file_id = hex(fctx.filenode())
             git_sha = self.map_git_get(file_id)
-            print git_sha
-            
-            print fctx.data()
-            self.git.write_blob(fctx.data())
-
+            if not git_sha:
+                sha = self.git.write_blob(fctx.data())
+                self.map_set(sha, file_id)
+                print sha
+            # TODO : check for subtrees and write them seperately
+            parts = filename.split('/')
+            if len(parts) > 1:
+                print parts
+        print trees
+        
         print "WRITE COMMIT OBJECT"
         print ctx.user()
         print ctx.date()
         print ctx.description()
         print ctx.branch()
         print ctx.tags()
-            
+        print parents
             
     def remote_head(self, remote_name):
         for head, sha in self.git.remote_refs(remote_name).iteritems():
