@@ -126,9 +126,9 @@ class GitHandler(object):
         return self._config['remote.' + remote_name + '.url']
 
     def update_references(self):
-        # if bookmarks exist, add them as git branches
-        # if non of the bookmarks are tip(), add the tip as your master branch
-        pass
+        # TODO : if bookmarks exist, add them as git branches
+        c = self.map_git_get(hex(self.repo.changelog.tip()))
+        self.git.set_ref('refs/heads/master', c)
         
     def export_git_objects(self):
         print "exporting git objects"
@@ -158,10 +158,11 @@ class GitHandler(object):
                 self.export_hg_commit(self, p_rev)
         
         ctx = self.repo.changectx(rev)
-        print ctx
         tree_sha = self.write_git_tree(ctx)
         
         # TODO : something with tags?
+        # TODO : explicit file renaming, copying?
+        
         commit = {}
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
