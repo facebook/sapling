@@ -15,15 +15,15 @@ from common import ErrorResponse, get_mtime, staticfile, paritygen,\
 from hgweb_mod import hgweb
 from request import wsgirequest
 
-# This is a stopgap
+def cleannames(items):
+    return [(util.pconvert(name).strip('/'), path) for name, path in items]
+
 class hgwebdir(object):
+
     def __init__(self, conf, baseui=None):
-        def cleannames(items):
-            return [(util.pconvert(name).strip('/'), path)
-                    for name, path in items]
 
         if baseui:
-           self.ui = baseui.copy()
+            self.ui = baseui.copy()
         else:
             self.ui = ui.ui()
             self.ui.setconfig('ui', 'report_untrusted', 'off')
@@ -31,9 +31,10 @@ class hgwebdir(object):
 
         self.motd = None
         self.style = 'paper'
-        self.stripecount = None
+        self.stripecount = 1
         self.repos_sorted = ('name', False)
         self._baseurl = None
+
         if isinstance(conf, (list, tuple)):
             self.repos = cleannames(conf)
             self.repos_sorted = ('', False)
@@ -48,7 +49,7 @@ class hgwebdir(object):
             self.repos = []
             self.motd = cp.get('web', 'motd')
             self.style = cp.get('web', 'style', 'paper')
-            self.stripecount = cp.get('web', 'stripes')
+            self.stripecount = cp.get('web', 'stripes', 1)
             self._baseurl = cp.get('web', 'baseurl')
             if 'paths' in cp:
                 paths = cleannames(cp.items('paths'))
@@ -310,12 +311,7 @@ class hgwebdir(object):
         if not staticurl.endswith('/'):
             staticurl += '/'
 
-        style = self.style
-        if style is None:
-            style = config('web', 'style', '')
-        if 'style' in req.form:
-            style = req.form['style'][0]
-        self.stripecount = int(self.stripecount or config('web', 'stripes', 1))
+        style = 'style' in req.form and req.form['style'][0] or self.style
         mapfile = templater.stylemap(style)
         tmpl = templater.templater(mapfile, templatefilters.filters,
                                    defaults={"header": header,
