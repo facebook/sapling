@@ -86,6 +86,9 @@ class MockUI(object):
     def write(self, *args):
         self.stream.write(*args)
 
+    def copy(self):
+        return self.__class__(self.inner_ui)
+
     def __getattr__(self, attr):
         return getattr(self.inner_ui, attr)
 
