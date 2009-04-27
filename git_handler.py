@@ -9,7 +9,7 @@ from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, error
 
 class GitHandler(object):
-    
+
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
         self.ui = ui
@@ -17,14 +17,14 @@ class GitHandler(object):
         self.load_git()
         self.load_map()
         self.load_config()
-        
-    # make the git data directory        
+
+    # make the git data directory
     def init_if_missing(self):
         git_hg_path = os.path.join(self.repo.path, 'git')
         if not os.path.exists(git_hg_path):
             os.mkdir(git_hg_path)
             dulwich.repo.Repo.init_bare(git_hg_path)
-    
+
     def load_git(self):
         git_dir = os.path.join(self.repo.path, 'git')
         self.git = Repo(git_dir)
@@ -37,26 +37,26 @@ class GitHandler(object):
             for line in self.repo.opener('git-mapfile'):
                 gitsha, hgsha = line.strip().split(' ', 1)
                 self._map[gitsha] = hgsha
-    
+
     def save_map(self):
         file = self.repo.opener('git-mapfile', 'w+')
         for gitsha, hgsha in self._map.iteritems():
             file.write("%s %s\n" % (gitsha, hgsha))
         file.close()
-    
+
     def load_config(self):
         self._config = {}
         if os.path.exists(self.repo.join('git-config')):
             for line in self.repo.opener('git-config'):
                 key, value = line.strip().split(' ', 1)
                 self._config[key] = value
-    
+
     def save_config(self):
         file = self.repo.opener('git-config', 'w+')
         for key, value in self._config.iteritems():
             file.write("%s %s\n" % (key, value))
         file.close()
-    
+
 
     ## END FILE LOAD AND SAVE METHODS
 
@@ -72,24 +72,24 @@ class GitHandler(object):
         self.export_git_objects()
         self.upload_pack(remote_name)
         self.save_map()
-        
+
     # TODO: make these actually save and recall
     def remote_add(self, remote_name, git_url):
         self._config['remote.' + remote_name + '.url'] = git_url
         self.save_config()
-        
+
     def remote_name_to_url(self, remote_name):
         return self._config['remote.' + remote_name + '.url']
-        
+
     def remote_head(self, remote_name):
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             if head == 'HEAD':
                 return self._map[sha]
         return None
-    
+
     def upload_pack(self, remote_name):
         self.ui.status(_("upload pack\n"))
-        
+
     def fetch_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)
         client, path = self.get_transport_and_path(git_url)
@@ -103,7 +103,7 @@ class GitHandler(object):
             self.git.set_remote_refs(refs, remote_name)
         except:
             f.close()
-            raise    
+            raise
 
     def import_git_objects(self, remote_name):
         self.ui.status(_("importing Git objects into Hg\n"))
@@ -111,11 +111,11 @@ class GitHandler(object):
         todo = []
         done = set()
         convert_list = {}
-        
+
         # get a list of all the head shas
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             todo.append(sha)
-        
+
         # traverse the heads getting a list of all the unique commits
         # TODO : stop when we hit a SHA we've already imported
         while todo:
@@ -127,32 +127,37 @@ class GitHandler(object):
             commit = self.git.commit(sha)
             convert_list[sha] = commit
             todo.extend([p for p in commit.parents if p not in done])
-        
-        # sort the commits 
+
+        # sort the commits
         commits = TopoSort(convert_list).items()
-        
+
         # import each of the commits, oldest first
         for csha in commits:
             commit = convert_list[csha]
             self.import_git_commit(commit)
-        
+
         # update Hg bookmarks
         bms = {}
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             hgsha = hex_to_sha(self._map[sha])
             if not head == 'HEAD':
-                bms[remote_name + '/' + head] = hgsha            
-        bookmarks.write(self.repo, bms)
+                bms[remote_name + '/' + head] = hgsha
+        if hasattr(self.repo, '_bookmarkcurrent'):
+            bookmarks.write(self.repo, bms)
+        else:
+            self.repo.ui.warn('bookmarks are not enabled, not writing'
+                              ' them out!')
+
 
     def import_git_commit(self, commit):
         print "importing: " + commit.id
-        
+
         # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
         def getfilectx(repo, memctx, f):
             (e, sha, data) = self.git.get_file(commit, f)
             e = '' # TODO : make this a real mode
             return context.memfilectx(f, data, 'l' in e, 'x' in e, None)
-        
+
         p1 = "0" * 40
         p2 = "0" * 40
         if len(commit.parents) > 0:
@@ -181,7 +186,7 @@ class GitHandler(object):
         # save changeset to mapping file
         gitsha = commit.id
         self._map[gitsha] = p2
-        
+
     def getfilectx(self, source, repo, memctx, f):
         v = files[f]
         data = source.getfile(f, v)
@@ -211,18 +216,18 @@ class GitHandler(object):
    Public domain, do with it as you will
 """
 class TopoSort(object):
-    
+
     def __init__(self, commitdict):
         self._sorted = self.robust_topological_sort(commitdict)
         self._shas = []
         for level in self._sorted:
             for sha in level:
                 self._shas.append(sha)
-            
+
     def items(self):
         self._shas.reverse()
         return self._shas
-        
+
     def strongly_connected_components(self, graph):
         """ Find the strongly connected components in a graph using
             Tarjan's algorithm.
@@ -303,6 +308,6 @@ class TopoSort(object):
             for successor in graph[node].parents:
                 successor_c = node_component[successor]
                 if node_c != successor_c:
-                    component_graph[node_c].append(successor_c) 
+                    component_graph[node_c].append(successor_c)
 
         return self.topological_sort(component_graph)
