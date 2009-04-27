@@ -340,6 +340,27 @@ class Repo(object):
         sha = self.write_object('blob', contents)
         return sha
 
+    # takes a hash of the commit data
+    # {'author': 'Scott Chacon <schacon@gmail.com> 1240868341 -0700'
+    #  'committer': 'Scott Chacon <schacon@gmail.com> 1240868341 -0700', 
+    #  'message': 'test commit two\n\n--HG EXTRAS--\nbranch : default\n', 
+    #  'tree': '36a63c12d097b487e4ed634c34d2f80870e64f68', 
+    #  'parents': ['ca82a6dff817ec66f44342007202690a93763949'], 
+    #  }
+    def write_commit_hash(self, commit):
+        if not 'committer' in commit:
+            commit['committer'] = commit['author']
+        commit_data = ''
+        commit_data += 'tree ' + commit['tree'] + "\n"
+        for parent in commit['parents']:
+            commit_data += 'parent ' + parent + "\n"
+        commit_data += 'author ' + commit['author'] + "\n"
+        commit_data += 'committer ' + commit['committer'] + "\n"
+        commit_data += "\n"
+        commit_data += commit['message']
+        sha = self.write_object('commit', commit_data)
+        return sha
+        
     # takes a multidim array
     # [ ['blob', 'filename', SHA, exec_flag, link_flag], 
     #   ['tree', 'dirname/', SHA]

@@ -8,6 +8,31 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, error
 
+import math
+
+def seconds_to_offset(time):
+    hours = (float(time) / 60 / 60)
+    hour_diff = math.fmod(time, 60)
+    minutes = int(hour_diff)
+    hours = int(math.floor(hours))
+    if hours > 12:
+        sign = '+'
+        hours = 12 - (hours - 12)
+    else:
+        sign = '-'
+    return sign + str(hours).rjust(2, '0') + str(minutes).rjust(2, '0')
+
+def offset_to_seconds(offset):
+    if len(offset) == 5:
+        sign = offset[0:1]
+        hours = int(offset[1:3])
+        minutes = int(offset[3:5])
+        if sign == '+':
+            hours = 12 + (12 - hours)
+        return (hours * 60 * 60) + (minutes) * 60
+    else:
+        return 0
+
 class GitHandler(object):
 
     def __init__(self, dest_repo, ui):
@@ -88,6 +113,7 @@ class GitHandler(object):
     def push(self, remote_name):
         self.ui.status(_("pushing to : " + remote_name + "\n"))
         self.export_git_objects()
+        self.update_references()
         self.upload_pack(remote_name)
         self.save_map()
 
@@ -99,39 +125,61 @@ class GitHandler(object):
     def remote_name_to_url(self, remote_name):
         return self._config['remote.' + remote_name + '.url']
 
+    def update_references(self):
+        # if bookmarks exist, add them as git branches
+        # if non of the bookmarks are tip(), add the tip as your master branch
+        pass
+        
     def export_git_objects(self):
         print "exporting git objects"
         for rev in self.repo.changelog:
-            node = self.repo.changelog.lookup(rev)
-            hgsha = hex(node)
+            self.export_hg_commit(rev)
+                
+    # convert this commit into git objects
+    # go through the manifest, convert all blobs/trees we don't have
+    # write the commit object (with metadata info)
+    def export_hg_commit(self, rev):
+        # return if we've already processed this
+        node = self.repo.changelog.lookup(rev)        
+        phgsha = hex(node)
+        pgit_sha = self.map_git_get(phgsha)
+        if pgit_sha:
+            return pgit_sha
+        
+        print "converting revision " + str(rev)
+        
+        # make sure parents are converted first
+        parents = self.repo.parents(rev)
+        for parent in parents:
+            p_rev = parent.rev()
+            hgsha = hex(parent.node())
             git_sha = self.map_git_get(hgsha)
             if not git_sha:
-                self.export_hg_commit(rev)
-                
-    def export_hg_commit(self, rev):
-        # convert this commit into git objects
-        # go through the manifest, convert all blobs/trees we don't have
-        # write the commit object (with metadata info)
-        print "EXPORT"
-        node = self.repo.changelog.lookup(rev)
-        parents = self.repo.parents(rev)
-        
-        print parents # TODO: make sure parents are converted first
+                self.export_hg_commit(self, p_rev)
         
         ctx = self.repo.changectx(rev)
-
+        print ctx
         tree_sha = self.write_git_tree(ctx)
         
-        print "WRITE COMMIT OBJECT"
-        print "Root Tree : " + tree_sha
-        print "Author : " + ctx.user()
-        print ctx.date()
-        print "DESC:"
-        print ctx.description()
-        print 'Branch : ' + ctx.branch()
-        print ctx.tags()
-        print parents
-        print ''
+        # TODO : something with tags?
+        commit = {}
+        commit['tree'] = tree_sha
+        (time, timezone) = ctx.date()
+        commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone) 
+        message = ctx.description()
+        commit['message'] = ctx.description()
+        commit['message'] += "\n\n--HG EXTRAS--\n"
+        commit['message'] += "branch : " + ctx.branch() + "\n"
+        
+        commit['parents'] = []
+        for parent in parents:
+            hgsha = hex(parent.node())
+            git_sha = self.map_git_get(hgsha)
+            commit['parents'].append(git_sha)
+            
+        commit_sha = self.git.write_commit_hash(commit) # writing new blobs to git
+        self.map_set(commit_sha, phgsha)
+        return commit_sha
         
     def write_git_tree(self, ctx):
         trees = {}
@@ -260,7 +308,8 @@ class GitHandler(object):
 
     def import_git_commit(self, commit):
         print "importing: " + commit.id
-
+        # TODO : look for HG metadata in the message and use it
+        
         # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
         def getfilectx(repo, memctx, f):
             (e, sha, data) = self.git.get_file(commit, f)
