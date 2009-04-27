@@ -43,6 +43,11 @@ try:
     import svn.ra
     import svn.delta
     import transport
+    import warnings
+    warnings.filterwarnings('ignore',
+            module='svn.core',
+            category=DeprecationWarning)
+
 except ImportError:
     pass
 
