@@ -355,6 +355,8 @@ class Repo(object):
             csha = None
             ctree = None
             for (bmode, bname, bsha) in basetree.entries():
+                if bmode == 57344: # TODO : properly handle submodules
+                    continue
                 bobj = self.get_object(bsha)
                 if comptree:
                     (cmode, csha) = comptree.entry(bname)
