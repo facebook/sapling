@@ -196,7 +196,7 @@ def stylemap(style, paths=None):
     if paths is None:
         paths = templatepath()
     elif isinstance(paths, str):
-        paths = [templatepath]
+        paths = [paths]
 
     locations = style and [os.path.join(style, "map"), "map-" + style] or []
     locations.append("map")
