@@ -37,6 +37,7 @@ from objects import (
     ShaFile,
     Tag,
     Tree,
+    hex_to_sha
     )
 from misc import make_sha
 
@@ -337,6 +338,25 @@ class Repo(object):
 
     def write_blob(self, contents):
         sha = self.write_object('blob', contents)
+        return sha
+
+    # takes a multidim array
+    # [ ['blob', 'filename', SHA, exec_flag, link_flag], 
+    #   ['tree', 'dirname/', SHA]
+    #   ...
+    # ]
+    def write_tree_array(self, tree_array):
+        tree_array.sort(key=lambda x: x[1])
+        tree_data = ''
+        for entry in tree_array:
+            rawsha = hex_to_sha(entry[2])
+            if entry[0] == 'tree':
+                tree_name = entry[1][0:-1]
+                tree_data += "%s %s\0%s" % ('040000', tree_name, rawsha)
+            if entry[0] == 'blob':
+                # TODO : respect the modes
+                tree_data += "%s %s\0%s" % ('100644', entry[1], rawsha)
+        sha = self.write_object('tree', tree_data)
         return sha
         
     def write_object(self, obj_type, obj_contents):

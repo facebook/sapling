@@ -119,31 +119,82 @@ class GitHandler(object):
         print parents # TODO: make sure parents are converted first
         
         ctx = self.repo.changectx(rev)
-        man = ctx.manifest()
-        
-        trees = {}
-        for filename in man.keys():
-            fctx = ctx.filectx(filename)
-            file_id = hex(fctx.filenode())
-            git_sha = self.map_git_get(file_id)
-            if not git_sha:
-                sha = self.git.write_blob(fctx.data())
-                self.map_set(sha, file_id)
-                print sha
-            # TODO : check for subtrees and write them seperately
-            parts = filename.split('/')
-            if len(parts) > 1:
-                print parts
-        print trees
+
+        tree_sha = self.write_git_tree(ctx)
         
         print "WRITE COMMIT OBJECT"
-        print ctx.user()
+        print "Root Tree : " + tree_sha
+        print "Author : " + ctx.user()
         print ctx.date()
+        print "DESC:"
         print ctx.description()
-        print ctx.branch()
+        print 'Branch : ' + ctx.branch()
         print ctx.tags()
         print parents
-            
+        print ''
+        
+    def write_git_tree(self, ctx):
+        trees = {}
+        man = ctx.manifest()
+        for filenm in man.keys():            
+            # write blob if not in our git database
+            fctx = ctx.filectx(filenm)
+            is_exec = 'x' in fctx.flags()
+            is_link = 'l' in fctx.flags()
+            file_id = hex(fctx.filenode())
+            blob_sha = self.map_git_get(file_id)
+            if not blob_sha:
+                blob_sha = self.git.write_blob(fctx.data()) # writing new blobs to git
+                self.map_set(blob_sha, file_id)
+
+            parts = filenm.split('/')
+            if len(parts) > 1:
+
+                # get filename and path for leading subdir
+                filepath = parts[-1:][0]
+                dirpath = "/".join([v for v in parts[0:-1]]) + '/'
+
+                # get subdir name and path for parent dir
+                parentsub = parts[-2:][0]
+                parentpath = "/".join([v for v in parts[0:-2]]) + '/'
+
+                # set file entry
+                fileentry = ['blob', filepath, blob_sha, is_exec, is_link]
+                if dirpath not in trees:
+                    trees[dirpath] = []
+                trees[dirpath].append(fileentry)
+
+                # set directory entry
+                treeentry = ['tree', parentsub + '/', dirpath]
+                if parentpath not in trees:
+                    trees[parentpath] = []
+                if treeentry not in trees[parentpath]:
+                    trees[parentpath].append( treeentry )
+            else:
+                fileentry = ['blob', parts[0], blob_sha, is_exec, is_link]                
+                if '/' not in trees:
+                    trees['/'] = []
+                trees['/'].append(fileentry)
+
+        # sort by tree depth, so we write the deepest trees first
+        dirs = trees.keys()
+        dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
+
+        # write all the trees
+        tree_sha = None
+        tree_shas = {}
+        for dirnm in dirs:
+            tree_data = []
+            for entry in trees[dirnm]:
+                # replace tree path with tree SHA
+                if entry[0] == 'tree':
+                    sha = tree_shas[entry[2]]
+                    entry[2] = sha
+                tree_data.append(entry)
+            tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
+            tree_shas[dirnm] = tree_sha
+        return tree_sha # should be the last root tree sha
+                
     def remote_head(self, remote_name):
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             if head == 'HEAD':

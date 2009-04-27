@@ -3,6 +3,9 @@ GENERAL
 
 * remote management
 * submodules?
+* switch object mapping to hg->git since the many to one is that direction
+* file modes
+* gclear - clear out all the git data
 
 PUSH
 ==========
