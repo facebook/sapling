@@ -18,11 +18,12 @@ class GitHandler(object):
         self.load_map()
         self.load_config()
         
+    # make the git data directory        
     def init_if_missing(self):
-        # make the git data directory
         git_hg_path = os.path.join(self.repo.path, 'git')
-        os.mkdir(git_hg_path)
-        dulwich.repo.Repo.init_bare(git_hg_path)
+        if not os.path.exists(git_hg_path):
+            os.mkdir(git_hg_path)
+            dulwich.repo.Repo.init_bare(git_hg_path)
     
     def load_git(self):
         git_dir = os.path.join(self.repo.path, 'git')
@@ -66,6 +67,12 @@ class GitHandler(object):
         self.import_git_objects(remote_name)
         self.save_map()
 
+    def push(self, remote_name):
+        self.ui.status(_("pushing to : " + remote_name + "\n"))
+        self.export_git_objects()
+        self.upload_pack(remote_name)
+        self.save_map()
+        
     # TODO: make these actually save and recall
     def remote_add(self, remote_name, git_url):
         self._config['remote.' + remote_name + '.url'] = git_url
@@ -79,6 +86,9 @@ class GitHandler(object):
             if head == 'HEAD':
                 return self._map[sha]
         return None
+    
+    def upload_pack(self, remote_name):
+        self.ui.status(_("upload pack\n"))
         
     def fetch_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)

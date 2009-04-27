@@ -44,9 +44,9 @@ def gclone(ui, git_url, hg_repo_path=None):
     node = git.remote_head('origin')
     hg.update(dest_repo, node)
 
-def gpush(ui, repo, remote_name):
-    # determine new repo name
-    dest_repo.ui.status(_("pushing to git url\n"))
+def gpush(ui, repo, remote_name='origin'):
+    git = GitHandler(repo, ui)
+    git.push(remote_name)
     
 def gpull(ui, repo):
     dest_repo.ui.status(_("pulling from git url\n"))
@@ -60,9 +60,9 @@ cmdtable = {
        'Clone a git repository into an hg repository.',
        ),
   "gpush":
-        (gpush,
-         [('m', 'merge', None, _('merge automatically'))],
-         _('hg gpush remote')),
+        (gpush, [], _('hg gpush remote')),
   "gpull":
-        (gpull, [], _('hg gpull [--merge] remote')),
+        (gpull, 
+        [('m', 'merge', None, _('merge automatically'))],
+        _('hg gpull [--merge] remote')),
 }    
