@@ -222,7 +222,7 @@ def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse,
                 repo.dirstate.copy(v, k)
                 if v in m2 and v not in m1:
                     repo.dirstate.remove(v)
-                
+
     newrev = concludenode(repo, rev, p1, p2, state, collapse,
                           extrafn=extrafn)
 

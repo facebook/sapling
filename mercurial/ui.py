@@ -9,8 +9,8 @@ from i18n import _
 import errno, getpass, os, re, socket, sys, tempfile
 import config, traceback, util, error
 
-_booleans = {'1':True, 'yes':True, 'true':True, 'on':True,
-             '0':False, 'no':False, 'false':False, 'off':False}
+_booleans = {'1': True, 'yes': True, 'true': True, 'on': True,
+             '0': False, 'no': False, 'false': False, 'off': False}
 
 class ui(object):
     def __init__(self, src=None):
@@ -34,6 +34,7 @@ class ui(object):
             # we always trust global config files
             for f in util.rcpath():
                 self.readconfig(f, trust=True)
+
     def copy(self):
         return self.__class__(self)
 
@@ -57,7 +58,7 @@ class ui(object):
         return False
 
     def readconfig(self, filename, root=None, trust=False,
-                   sections = None):
+                   sections=None):
         try:
             fp = open(filename)
         except IOError:
@@ -125,7 +126,7 @@ class ui(object):
             uvalue = self._ucfg.get(section, name)
             if uvalue is not None and uvalue != value:
                 self.debug(_("ignoring untrusted configuration option "
-                            "%s.%s = %s\n") % (section, name, uvalue))
+                             "%s.%s = %s\n") % (section, name, uvalue))
         return value
 
     def configbool(self, section, name, default=False, untrusted=False):
@@ -153,7 +154,7 @@ class ui(object):
     def configitems(self, section, untrusted=False):
         items = self._data(untrusted).items(section)
         if self.debugflag and not untrusted and self._reportuntrusted:
-            for k,v in self._ucfg.items(section):
+            for k, v in self._ucfg.items(section):
                 if self._tcfg.get(section, k) != v:
                     self.debug(_("ignoring untrusted configuration option "
                                 "%s.%s = %s\n") % (section, k, v))

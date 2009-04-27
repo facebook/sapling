@@ -109,7 +109,7 @@ convert a foreign SCM repository to a Mercurial one.
         --config convert.cvsps=builtin
     and has a few more configurable options:
         --config convert.cvsps.cache=True     (boolean)
-            Set to False to disable remote log caching, for testing and 
+            Set to False to disable remote log caching, for testing and
             debugging purposes.
         --config convert.cvsps.fuzz=60        (integer)
             Specify the maximum time (in seconds) that is allowed

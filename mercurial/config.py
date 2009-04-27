@@ -20,7 +20,7 @@ class sortdict(dict):
         for k in src:
             self[k] = src[k]
     def items(self):
-        return [(k,self[k]) for k in self._list]
+        return [(k, self[k]) for k in self._list]
     def __delitem__(self, key):
         dict.__delitem__(self, key)
         self._list.remove(key)
