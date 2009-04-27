@@ -42,6 +42,8 @@ def outgoing(orig, ui, repo, dest=None, *args, **opts):
     if not (cmdutil.issvnurl(svnurl) or opts.get('svn', False)):
         return orig(ui, repo, dest, *args, **opts)
 
+    # split off #rev; TODO implement --revision/#rev support
+    svnurl, revs, checkout = hg.parseurl(svnurl, opts.get('rev'))
     hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
@@ -96,6 +98,8 @@ def push(orig, ui, repo, dest=None, *args, **opts):
     old_encoding = util.swap_out_encoding()
     hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svnurl = util.normalize_url(svnurl)
+    # split of #rev; TODO: implement --rev/#rev support
+    svnurl, revs, checkout = hg.parseurl(svnurl, opts.get('rev'))
     if svnurl != hge.url:
         raise hgutil.Abort('wrong subversion url!')
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
@@ -191,7 +195,7 @@ def clone(orig, ui, source, dest=None, *args, **opts):
         return orig(ui, source=source, dest=dest, *args, **opts)
 
     if not dest:
-        dest = hg.defaultdest(source) + '-hg'
+        dest = hg.defaultdest(hg.parseurl(source)[0]) + '-hg'
         ui.status("Assuming destination %s\n" % dest)
 
     if os.path.exists(dest):
@@ -217,7 +221,9 @@ def clone(orig, ui, source, dest=None, *args, **opts):
             fp.write("default = %(url)s\nsvn = %(url)s\n" % {'url': svnurl})
             fp.close()
             if (res is None or res == 0) and not opts.get('noupdate', False):
-                for test in ('default', 'tip'):
+                # Split off #rev
+                url, revs, checkout = hg.parseurl(svnurl)
+                for test in (checkout, 'default', 'tip'):
                     try:
                         uprev = repo.lookup(test)
                         break
@@ -241,6 +247,8 @@ def pull(orig, ui, repo, source="default", *args, **opts):
         return orig(ui, repo, source=source, *args, **opts)
     svn_url = url
     svn_url = util.normalize_url(svn_url)
+    # Split off #rev; TODO: implement --rev/#rev support limiting the pulled/cloned revisions
+    svn_url, revs, checkout = hg.parseurl(svn_url, opts.get('rev'))
     old_encoding = util.swap_out_encoding()
     # TODO implement skipto support
     skipto_rev = 0
@@ -341,7 +349,7 @@ def pull(orig, ui, repo, source="default", *args, **opts):
         # calculation based on mercurial.localrepo.addchangegroup
         # 0 means no changes, 1 no new heads, > 1 new heads, < 0 heads removed
         modheads = newheads - oldheads + (newheads < oldheads and -1 or 1)
-        commands.postincoming(ui, repo, modheads, opts.get('update'), None)
+        commands.postincoming(ui, repo, modheads, opts.get('update'), checkout)
 
 
 def rebase(orig, ui, repo, **opts):

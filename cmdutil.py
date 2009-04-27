@@ -284,6 +284,8 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
 def islocalrepo(url):
     if not url.startswith('file:///'):
         return False
+    if '#' in url.split('/')[-1]: # strip off #anchor
+        url = url[:url.rfind('#')]
     path = urllib.unquote(url[len('file://'):])
     while '/' in path:
         if reduce(lambda x,y: x and y,

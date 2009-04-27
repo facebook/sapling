@@ -26,7 +26,11 @@ def version(ui):
 def normalize_url(svnurl):
     if svnurl.startswith('svn+http'):
         svnurl = svnurl[4:]
-    return svnurl.rstrip('/')
+    url, revs, checkout = hg.parseurl(svnurl)
+    url = url.rstrip('/')
+    if checkout:
+        url = '%s#%s' % (url, checkout)
+    return url
 
 
 REVMAP_FILE_VERSION = 1
