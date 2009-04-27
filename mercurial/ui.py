@@ -35,7 +35,7 @@ class ui(object):
             for f in util.rcpath():
                 self.readconfig(f, trust=True)
     def copy(self):
-        return ui(self)
+        return self.__class__(self)
 
     def _is_trusted(self, fp, f):
         st = util.fstat(fp)
