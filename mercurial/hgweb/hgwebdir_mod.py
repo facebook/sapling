@@ -14,6 +14,7 @@ from common import ErrorResponse, get_mtime, staticfile, paritygen,\
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
 from request import wsgirequest
+import webutil
 
 def cleannames(items):
     return [(util.pconvert(name).strip('/'), path) for name, path in items]
@@ -185,18 +186,6 @@ class hgwebdir(object):
                            "node": nodeid, "url": url}
 
         def entries(sortcolumn="", descending=False, subdir="", **map):
-            def sessionvars(**map):
-                fields = []
-                if 'style' in req.form:
-                    style = req.form['style'][0]
-                    if style != get('web', 'style', ''):
-                        fields.append(('style', style))
-
-                separator = url[-1] == '?' and ';' or '?'
-                for name, value in fields:
-                    yield dict(name=name, value=value, separator=separator)
-                    separator = ';'
-
             rows = []
             parity = paritygen(self.stripecount)
             for name, path in self.repos:
@@ -244,7 +233,6 @@ class hgwebdir(object):
                            description_sort=description.upper() or "unknown",
                            lastchange=d,
                            lastchange_sort=d[1]-d[0],
-                           sessionvars=sessionvars,
                            archives=archivelist(u, "tip", url))
                 if (not sortcolumn
                     or (sortcolumn, descending) == self.repos_sorted):
@@ -307,6 +295,13 @@ class hgwebdir(object):
         if not url.endswith('/'):
             url += '/'
 
+        vars = {}
+        style = self.style
+        if 'style' in req.form:
+            vars['style'] = style = req.form['style'][0]
+        start = url[-1] == '?' and '&' or '?'
+        sessionvars = webutil.sessionvars(vars, start)
+
         staticurl = config('web', 'staticurl') or url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
@@ -318,5 +313,6 @@ class hgwebdir(object):
                                              "footer": footer,
                                              "motd": motd,
                                              "url": url,
-                                             "staticurl": staticurl})
+                                             "staticurl": staticurl,
+                                             "sessionvars": sessionvars})
         return tmpl
