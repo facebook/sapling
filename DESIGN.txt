@@ -47,3 +47,19 @@ hg gpush origin
   - transfers it, updates local references (bookmarks?)
 
 
+* Tests *
+Tests are implemented in the Mercurial-standard way of small shell scripts.
+The scripts are located in the tests directory, and to run them you should
+change to that directory and then run tests/run-tests.py from the Mercurial
+sources. For example, if you have a copy of the Mercurial source code at
+/Stuff/hg-crew, you would do something like this:
+
+cd tests ; /Stuff/hg-crew/tests/run-tests.py
+
+And you should see output like this:
+.
+# Ran 1 tests, 0 skipped, 0 failed.
+
+Note that due to limitations of Dulwich at the moment, the tests need to
+start a git-daemon process. Right now, they use the default port, so will
+skip if they detect an already-running git-daemon.
