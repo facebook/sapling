@@ -130,7 +130,7 @@ class HgChangeReceiver(delta.Editor):
         if self.authors:
             self.writeauthors()
 
-        self.lastdate = '1970-01-01 00:00:00'
+        self.lastdate = '1970-01-01 00:00:00 -0000'
         self.includepaths = {}
         self.excludepaths = {}
         if filemap and os.path.exists(filemap):
