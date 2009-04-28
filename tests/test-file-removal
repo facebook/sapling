@@ -43,7 +43,7 @@ git ls-files
 
 # dulwich does not presently support local git repos, workaround
 cd ..
-git-daemon --base-path="$(pwd)"\
+git daemon --base-path="$(pwd)"\
  --listen=127.0.0.1\
  --export-all\
   --pid-file=gitdaemon.pid \
