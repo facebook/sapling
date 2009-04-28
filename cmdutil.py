@@ -286,7 +286,8 @@ def islocalrepo(url):
         return False
     if '#' in url.split('/')[-1]: # strip off #anchor
         url = url[:url.rfind('#')]
-    path = urllib.unquote(url[len('file://'):])
+    path = url[len('file://'):]
+    path = urllib.url2pathname(path).replace(os.sep, '/')
     while '/' in path:
         if reduce(lambda x,y: x and y,
                   map(lambda p: os.path.exists(os.path.join(path, p)),
