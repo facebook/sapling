@@ -196,7 +196,7 @@ class GitHandler(object):
         commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone) 
         message = ctx.description()
         commit['message'] = ctx.description()
-        commit['message'] += "\n\n--HG EXTRAS--\n"
+        commit['message'] += "\n\n--HG--\n"
         commit['message'] += "branch : " + ctx.branch() + "\n"
         
         commit['parents'] = []
@@ -471,6 +471,20 @@ class GitHandler(object):
                 return transport(host), '/' + path
         # if its not git or git+ssh, try a local url..
         return SubprocessGitClient(), uri
+
+    def clear(self):
+        git_dir = self.repo.join('git')
+        mapfile = self.repo.join('git-mapfile')
+        if os.path.exists(git_dir):        
+            for root, dirs, files in os.walk(git_dir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(git_dir)
+        if os.path.exists(mapfile):
+            os.remove(mapfile)
+        
 
 ''
 """

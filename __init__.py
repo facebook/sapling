@@ -68,6 +68,11 @@ def gremote(ui, repo, *args):
             git.remote_show(nick)
         else:
             repo.ui.warn(_("unrecognized command to gremote\n"))
+
+def gclear(ui, repo):
+    repo.ui.status(_("clearing out the git cache data\n"))
+    git = GitHandler(repo, ui)
+    git.clear()
     
 def gfetch(ui, repo):
     dest_repo.ui.status(_("pulling from git url\n"))
@@ -86,4 +91,6 @@ cmdtable = {
         _('hg gfetch remote')),
   "gremote":
       (gremote, [], _('hg gremote add remote (url)')),
+  "gclear":
+      (gclear, [], _('Clears out the Git cached data')),
 }    

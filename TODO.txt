@@ -5,13 +5,14 @@ GENERAL
 * switch object mapping to hg->git since the many to one is that direction
 * file modes
 * gclear - clear out all the git data
+* explicit file renames
 
 PUSH
 ==========
 
 * update 'remote' references after push confirmation
 * push confirmation? is there extra data after the packfile upload?
-* output something after process is complete
+* output something after process is complete (master -> master etc)
 
 * convert tags to git
 
