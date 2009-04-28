@@ -1668,7 +1668,7 @@ class localrepository(repo.repository):
             # changeset.
             has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
             junk = None
-            # Transform the list into an ersatz set.
+            # Transform the list into a set.
             has_cl_set = set(has_cl_set)
         else:
             # If there were no known heads, the recipient cannot be assumed to
