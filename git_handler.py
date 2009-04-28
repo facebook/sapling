@@ -329,8 +329,10 @@ class GitHandler(object):
     def import_git_commit(self, commit):
         print "importing: " + commit.id
         # TODO : look for HG metadata in the message and use it
+        # TODO : add extra Git data (committer info) as extras to changeset
         
         # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
+        # TODO : throw IOError for removed files
         def getfilectx(repo, memctx, f):
             (e, sha, data) = self.git.get_file(commit, f)
             e = '' # TODO : make this a real mode
@@ -377,13 +379,13 @@ class GitHandler(object):
 
     def get_transport_and_path(self, uri):
         from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
-        for handler, transport in (("git://", TCPGitClient), ("git@", SSHGitClient)):
+        for handler, transport in (("git://", TCPGitClient), ("git@", SSHGitClient), ("git+ssh://", SSHGitClient)):
             if uri.startswith(handler):
                 if handler == 'git@':
                     host, path = uri[len(handler):].split(":", 1)
                     host = 'git@' + host
                 else:
-                    host, path = uri[len(handler):].split('/', 1)
+                    host, path = uri[len(handler):].split("/", 1)
                 return transport(host), '/' + path
         # if its not git or git+ssh, try a local url..
         return SubprocessGitClient(), uri
