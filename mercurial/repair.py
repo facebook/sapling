@@ -6,9 +6,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import changegroup, os
+import changegroup
 from node import nullrev, short
 from i18n import _
+import os
 
 def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     """create a bundle with the specified revisions as a backup"""

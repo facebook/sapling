@@ -7,7 +7,8 @@
 
 from node import short
 from i18n import _
-import util, os, tempfile, simplemerge, re, filecmp
+import util, simplemerge
+import os, tempfile, re, filecmp
 
 def _toolstr(ui, tool, part, default=""):
     return ui.config("merge-tools", tool + "." + part, default)

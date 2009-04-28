@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import os, sys, osutil, errno, stat, getpass, pwd, grp
+import osutil
+import os, sys, errno, stat, getpass, pwd, grp
 
 posixfile = file
 nulldev = '/dev/null'

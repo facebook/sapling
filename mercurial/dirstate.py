@@ -7,8 +7,9 @@
 
 from node import nullid
 from i18n import _
-import struct, os, stat, util, errno, ignore
-import cStringIO, osutil, sys, parsers
+import util, ignore, osutil, parsers
+import struct, os, stat, errno
+import cStringIO, sys
 
 _unknown = ('?', 0, 0, 0)
 _format = ">cllll"

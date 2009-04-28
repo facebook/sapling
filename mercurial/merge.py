@@ -7,7 +7,8 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import errno, util, os, filemerge, copies, shutil
+import util, filemerge, copies
+import errno, os, shutil
 
 class mergestate(object):
     '''track 3-way merge state of individual files'''

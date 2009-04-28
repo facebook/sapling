@@ -6,9 +6,9 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
+import util, encoding
 import os, smtplib, socket
 import email.Header, email.MIMEText, email.Utils
-import util, encoding
 
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''

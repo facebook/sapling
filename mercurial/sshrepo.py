@@ -7,7 +7,8 @@
 
 from node import bin, hex
 from i18n import _
-import repo, re, util, error
+import repo, util, error
+import re
 
 class remotelock(object):
     def __init__(self, repo):

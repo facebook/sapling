@@ -7,7 +7,8 @@
 
 from node import nullid, nullrev, short, hex
 from i18n import _
-import ancestor, bdiff, error, util, os, errno
+import ancestor, bdiff, error, util
+import os, errno
 
 propertycache = util.propertycache
 

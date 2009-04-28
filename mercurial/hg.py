@@ -9,9 +9,10 @@
 from i18n import _
 from lock import release
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
-import errno, lock, os, shutil, util, extensions, error
+import lock, util, extensions, error
 import merge as _merge
 import verify as _verify
+import errno, os, shutil
 
 def _local(path):
     return (os.path.isfile(util.drop_scheme('file', path)) and

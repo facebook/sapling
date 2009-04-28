@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import bdiff, mpatch, re, struct, util
+import bdiff, mpatch, util
+import re, struct
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''

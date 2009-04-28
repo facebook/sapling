@@ -13,7 +13,8 @@ were part of the actual repository.
 
 from node import nullid
 from i18n import _
-import changegroup, util, os, struct, bz2, zlib, tempfile, shutil, mdiff
+import os, struct, bz2, zlib, tempfile, shutil
+import changegroup, util, mdiff
 import localrepo, changelog, manifest, filelog, revlog, error
 
 class bundlerevlog(revlog.revlog):

@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import sys, unicodedata, locale, os, error
+import error
+import sys, unicodedata, locale, os
 
 _encodingfixup = {'646': 'ascii', 'ANSI_X3.4-1968': 'ascii'}
 

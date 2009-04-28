@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import util, heapq
+import util
+import heapq
 
 def _nonoverlap(d1, d2, d3):
     "Return list of elements in d1 not in d2 or d3"

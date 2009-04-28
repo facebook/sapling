@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import errno, msvcrt, os, osutil, re, sys, error
+import osutil, error
+import errno, msvcrt, os, re, sys
 nulldev = 'NUL:'
 
 umask = 002

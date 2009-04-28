@@ -8,7 +8,8 @@
 
 from i18n import _
 from node import bin, hex
-import os, streamclone, sys, tempfile, util, hook
+import streamclone, util, hook
+import os, sys, tempfile
 
 class sshserver(object):
     def __init__(self, ui, repo):

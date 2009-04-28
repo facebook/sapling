@@ -7,7 +7,8 @@
 
 from i18n import _
 from node import hex
-import cStringIO, os, stat, tarfile, time, util, zipfile
+import util
+import cStringIO, os, stat, tarfile, time, zipfile
 import zlib, gzip
 
 def tidyprefix(dest, prefix, suffixes):

@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import util, re
+import util
+import re
 
 _commentre = None
 

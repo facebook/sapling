@@ -8,10 +8,11 @@
 from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, textwrap, subprocess
+import os, re, sys, textwrap, subprocess, difflib, time
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
-import difflib, patch, time, help, mdiff, tempfile, url, encoding
-import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
+import patch, help, mdiff, tempfile, url, encoding
+import archival, changegroup, cmdutil, sshserver, hbisect
+from hgweb import server
 import merge as merge_
 
 # Commands start here, listed alphabetically
@@ -2698,7 +2699,7 @@ def serve(ui, repo, **opts):
     class service:
         def init(self):
             util.set_signal_handler()
-            self.httpd = hgweb.server.create_server(baseui, repo)
+            self.httpd = server.create_server(baseui, repo)
 
             if not ui.verbose: return
 

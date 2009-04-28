@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import os, stat, osutil, util
+import osutil, util
+import os, stat
 
 _sha = util.sha1
 

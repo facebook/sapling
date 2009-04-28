@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import re, error, os
+import error
+import re, os
 
 class sortdict(dict):
     'a simple sorted dictionary'

@@ -14,8 +14,9 @@ hide platform-specific details from the core.
 """
 
 from i18n import _
-import cStringIO, errno, re, shutil, sys, tempfile, traceback, error
-import os, stat, threading, time, calendar, glob, osutil, random
+import error, osutil
+import cStringIO, errno, re, shutil, sys, tempfile, traceback
+import os, stat, threading, time, calendar, glob, random
 import imp
 
 # Python compatibility

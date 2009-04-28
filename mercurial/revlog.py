@@ -14,8 +14,8 @@ and O(changes) merge between branches.
 # import stuff from node for others to import from revlog
 from node import bin, hex, nullid, nullrev, short #@UnusedImport
 from i18n import _
-import changegroup, errno, ancestor, mdiff, parsers
-import struct, util, zlib, error
+import changegroup, ancestor, mdiff, parsers, error, util
+import struct, zlib, errno
 
 _pack = struct.pack
 _unpack = struct.unpack

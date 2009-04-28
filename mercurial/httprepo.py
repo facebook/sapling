@@ -8,8 +8,9 @@
 
 from node import bin, hex, nullid
 from i18n import _
-import repo, os, urllib, urllib2, urlparse, zlib, util, httplib
-import errno, socket, changegroup, statichttprepo, error, url
+import repo, changegroup, statichttprepo, error, url, util
+import os, urllib, urllib2, urlparse, zlib, httplib
+import errno, socket
 
 def zgenerator(f):
     zd = zlib.decompressobj()

@@ -6,8 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import util, os, sys
-from mercurial import extensions
+import os, sys
+import extensions, util
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     '''call python hook. hook is callable object, looked up as

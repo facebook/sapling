@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import errno, os, socket, time, util, error
+import util, error
+import errno, os, socket, time
 import warnings
 
 class lock(object):

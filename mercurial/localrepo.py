@@ -8,13 +8,13 @@
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup
-import changelog, dirstate, filelog, manifest, context, weakref
-import lock, transaction, stat, errno, ui, store, encoding
-import os, time, util, extensions, hook, inspect, error
+import changelog, dirstate, filelog, manifest, context
+import lock, transaction, ui, store, encoding
+import util, extensions, hook, error
 import match as match_
 import merge as merge_
-
 from lock import release
+import weakref, stat, errno, os, time, inspect
 propertycache = util.propertycache
 
 class localrepository(repo.repository):

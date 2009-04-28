@@ -7,7 +7,7 @@
 
 from i18n import _
 import re, sys, os
-from mercurial import util, config
+import util, config
 
 path = ['templates', '../templates']
 

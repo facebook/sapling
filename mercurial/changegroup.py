@@ -6,7 +6,8 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import struct, os, bz2, zlib, util, tempfile
+import util
+import struct, os, bz2, zlib, tempfile
 
 def getchunk(source):
     """get a chunk from a changegroup"""
