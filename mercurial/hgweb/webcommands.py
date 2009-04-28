@@ -646,7 +646,7 @@ def graph(web, req, tmpl):
         node = short(ctx.node())
         age = templatefilters.age(ctx.date())
         desc = templatefilters.firstline(ctx.description())
-        desc = cgi.escape(desc)
+        desc = cgi.escape(templatefilters.nonempty(desc))
         user = cgi.escape(templatefilters.person(ctx.user()))
         branch = ctx.branch()
         branch = branch, web.repo.branchtags().get(branch) == ctx.node()

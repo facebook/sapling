@@ -230,10 +230,7 @@ graph.vertex = function(x, y, color, parity, cur) {
 	item = item.replace(/_PARITY/, 'parity' + parity);
 	item = item.replace(/_NODEID/, cur[0]);
 	item = item.replace(/_NODEID/, cur[0]);
-	if (cur[3] != '')
-	    item = item.replace(/_DESC/, cur[3]);
-	else
-	    item = item.replace(/_DESC/, '(none)');
+	item = item.replace(/_DESC/, cur[3]);
 	item = item.replace(/_USER/, cur[4]);
 	item = item.replace(/_DATE/, cur[5]);
 
