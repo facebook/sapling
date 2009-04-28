@@ -154,8 +154,9 @@ class GitHandler(object):
             p_rev = parent.rev()
             hgsha = hex(parent.node())
             git_sha = self.map_git_get(hgsha)
-            if not git_sha:
-                self.export_hg_commit(self, p_rev)
+            if not p_rev == -1:
+                if not git_sha:
+                    self.export_hg_commit(p_rev)
         
         ctx = self.repo.changectx(rev)
         tree_sha = self.write_git_tree(ctx)
@@ -176,7 +177,8 @@ class GitHandler(object):
         for parent in parents:
             hgsha = hex(parent.node())
             git_sha = self.map_git_get(hgsha)
-            commit['parents'].append(git_sha)
+            if git_sha:
+                commit['parents'].append(git_sha)
             
         commit_sha = self.git.write_commit_hash(commit) # writing new blobs to git
         self.map_set(commit_sha, phgsha)
@@ -253,17 +255,49 @@ class GitHandler(object):
     def upload_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)
         client, path = self.get_transport_and_path(git_url)
+        changed = self.get_changed_refs
         genpack = self.generate_pack_contents
         try:
-            client.send_pack(path, genpack)
+            client.send_pack(path, changed, genpack)
             # TODO : self.git.set_remote_refs(refs, remote_name)
         except:
             raise
-            
-    def generate_pack_contents(self, want, have, none):
-        print "WANT: " + str(want)
-        print "HAVE: " + str(have)
-        print "NONE: " + str(none)
+
+    # TODO : for now, we'll just push all heads 
+    #        * we should have specified push, tracking branches and --all
+    # takes a dict of refs:shas from the server and returns what should be 
+    # pushed up
+    def get_changed_refs(self, refs):
+        keys = refs.keys()
+        if not keys:
+            return None
+        changed = []
+        for ref_name in keys:
+            parts = ref_name.split('/')
+            if parts[0] == 'refs': # strip off 'refs/heads'
+                if parts[1] == 'heads':
+                    head = "/".join([v for v in parts[2:]])
+                    print ref_name
+                    print head
+                    local_ref = self.git.ref(ref_name)
+                    if local_ref: 
+                        if not local_ref == refs[ref_name]:
+                            changed.append((refs[ref_name], local_ref, ref_name))
+        return changed
+        
+    # takes a list of shas the server wants and shas the server has
+    # and generates a list of commit shas we need to push up
+    def generate_pack_contents(self, want, have):
+        graph_walker = SimpleFetchGraphWalker(want, self.git.get_parents)
+        next = graph_walker.next()
+        shas = []
+        while next:
+            if next in have:
+                graph_walker.ack(next)
+            else:
+                shas.append(next)
+            next = graph_walker.next()
+        return shas
         
     def fetch_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)

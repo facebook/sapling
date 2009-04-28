@@ -361,6 +361,7 @@ class Repo(object):
         commit_data += 'committer ' + commit['committer'] + "\n"
         commit_data += "\n"
         commit_data += commit['message']
+        print commit_data
         sha = self.write_object('commit', commit_data)
         return sha
 
@@ -391,7 +392,7 @@ class Repo(object):
             object_dir = os.path.join(self.path, OBJECTDIR, git_hex_sha[0:2])
             if not os.path.exists(object_dir):
                 os.mkdir(object_dir)
-            object_path = os.path.join(object_dir, git_hex_sha[2:38])
+            object_path = os.path.join(object_dir, git_hex_sha[2:])
             data = zlib.compress(raw_data)
             open(object_path, 'w').write(data) # write the object
         return git_hex_sha
