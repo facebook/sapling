@@ -112,19 +112,25 @@ class GitClient(object):
         :param generate_pack_contents: Function that can return the shas of the 
             objects to upload.
         """
+        print 'SEND PACK'
         refs, server_capabilities = self.read_refs()
+        print refs
+        print server_capabilities
         changed_refs = [] # FIXME
         if not changed_refs:
+            print 'got here - nooo'
             self.proto.write_pkt_line(None)
             return
+        print 'got here - yay'
+        print changed_refs
         self.proto.write_pkt_line("%s %s %s\0%s" % (changed_refs[0][0], changed_refs[0][1], changed_refs[0][2], self.capabilities()))
         want = []
         have = []
         for changed_ref in changed_refs[:]:
-            self.proto.write_pkt_line("%s %s %s" % changed_refs)
-            want.append(changed_refs[1])
-            if changed_refs[0] != "0"*40:
-                have.append(changed_refs[0])
+            self.proto.write_pkt_line("%s %s %s" % changed_ref)
+            want.append(changed_ref[1])
+            if changed_ref[0] != "0"*40:
+                have.append(changed_ref[0])
         self.proto.write_pkt_line(None)
         shas = generate_pack_contents(want, have, None)
         write_pack_data(self.write, shas, len(shas))
