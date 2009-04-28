@@ -320,7 +320,11 @@ class GitHandler(object):
             hgsha = hex_to_sha(self.map_hg_get(sha))
             if not head == 'HEAD':
                 bms[remote_name + '/' + head] = hgsha
-        bookmarks.write(self.repo, bms)
+        try:
+            bookmarks.write(self.repo, bms)
+        except AttributeError:
+            self.repo.ui.warn('creating bookmarks failed, do you have'
+                              ' bookmarks enabled?\n')
 
     def import_git_commit(self, commit):
         print "importing: " + commit.id
