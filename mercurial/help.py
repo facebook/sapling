@@ -337,6 +337,7 @@ PYTHONPATH::
     - fill68: Any text. Wraps the text to fit in 68 columns.
     - fill76: Any text. Wraps the text to fit in 76 columns.
     - firstline: Any text. Returns the first line of text.
+    - nonempty: Any text. Returns '(none)' if the string is empty.
     - hgdate: Date. Returns the date as a pair of numbers:
           "1157407993 25200" (Unix timestamp, timezone offset).
     - isodate: Date. Returns the date in ISO 8601 format.
