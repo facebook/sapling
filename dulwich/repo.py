@@ -1,18 +1,18 @@
 # repo.py -- For dealing wih git repositories.
 # Copyright (C) 2007 James Westby <jw+debian@jameswestby.net>
 # Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; version 2
-# of the License or (at your option) any later version of 
+# of the License or (at your option) any later version of
 # the License.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -20,15 +20,14 @@
 
 import os
 import stat
-import sha
 import zlib
 
 from errors import (
-    MissingCommitError, 
-    NotBlobError, 
-    NotCommitError, 
+    MissingCommitError,
+    NotBlobError,
+    NotCommitError,
     NotGitRepository,
-    NotTreeError, 
+    NotTreeError,
     )
 from object_store import ObjectStore
 from objects import (
@@ -53,7 +52,7 @@ class Tags(object):
 
     def __getitem__(self, name):
         return self.tags[name]
-    
+
     def __setitem__(self, name, ref):
         self.tags[name] = ref
         f = open(os.path.join(self.tagdir, name), 'wb')
@@ -148,27 +147,27 @@ class Repo(object):
     def find_missing_objects(self, determine_wants, graph_walker, progress):
         """Find the missing objects required for a set of revisions.
 
-        :param determine_wants: Function that takes a dictionary with heads 
+        :param determine_wants: Function that takes a dictionary with heads
             and returns the list of heads to fetch.
-        :param graph_walker: Object that can iterate over the list of revisions 
-            to fetch and has an "ack" method that will be called to acknowledge 
+        :param graph_walker: Object that can iterate over the list of revisions
+            to fetch and has an "ack" method that will be called to acknowledge
             that a revision is present.
-        :param progress: Simple progress function that will be called with 
+        :param progress: Simple progress function that will be called with
             updated progress strings.
         """
         wants = determine_wants(self.get_refs())
-        return iter(MissingObjectFinder(self.object_store, wants, graph_walker, 
+        return iter(MissingObjectFinder(self.object_store, wants, graph_walker,
                 progress).next, None)
 
     def fetch_objects(self, determine_wants, graph_walker, progress):
         """Fetch the missing objects required for a set of revisions.
 
-        :param determine_wants: Function that takes a dictionary with heads 
+        :param determine_wants: Function that takes a dictionary with heads
             and returns the list of heads to fetch.
-        :param graph_walker: Object that can iterate over the list of revisions 
-            to fetch and has an "ack" method that will be called to acknowledge 
+        :param graph_walker: Object that can iterate over the list of revisions
+            to fetch and has an "ack" method that will be called to acknowledge
             that a revision is present.
-        :param progress: Simple progress function that will be called with 
+        :param progress: Simple progress function that will be called with
             updated progress strings.
         :return: tuple with number of objects, iterator over objects
         """
@@ -250,15 +249,15 @@ class Repo(object):
                 if parts[1] == 'tags':
                     ref_name = "/".join([v for v in parts[2:]])
                     self.set_ref('refs/tags/' + ref_name, refs[k])
-        
+
     def set_refs(self, refs):
         keys = refs.keys()
         if not keys:
             return None
         for k in keys[0:]:
             self.set_ref(k, refs[k])
-                    
-        
+
+
     def set_ref(self, name, value):
         file = os.path.join(self.controldir(), name)
         dirpath = os.path.dirname(file)
@@ -346,10 +345,10 @@ class Repo(object):
 
     # takes a hash of the commit data
     # {'author': 'Scott Chacon <schacon@gmail.com> 1240868341 -0700'
-    #  'committer': 'Scott Chacon <schacon@gmail.com> 1240868341 -0700', 
-    #  'message': 'test commit two\n\n--HG EXTRAS--\nbranch : default\n', 
-    #  'tree': '36a63c12d097b487e4ed634c34d2f80870e64f68', 
-    #  'parents': ['ca82a6dff817ec66f44342007202690a93763949'], 
+    #  'committer': 'Scott Chacon <schacon@gmail.com> 1240868341 -0700',
+    #  'message': 'test commit two\n\n--HG EXTRAS--\nbranch : default\n',
+    #  'tree': '36a63c12d097b487e4ed634c34d2f80870e64f68',
+    #  'parents': ['ca82a6dff817ec66f44342007202690a93763949'],
     #  }
     def write_commit_hash(self, commit):
         if not 'committer' in commit:
@@ -364,9 +363,9 @@ class Repo(object):
         commit_data += commit['message']
         sha = self.write_object('commit', commit_data)
         return sha
-        
+
     # takes a multidim array
-    # [ ['blob', 'filename', SHA, exec_flag, link_flag], 
+    # [ ['blob', 'filename', SHA, exec_flag, link_flag],
     #   ['tree', 'dirname/', SHA]
     #   ...
     # ]
@@ -383,7 +382,7 @@ class Repo(object):
                 tree_data += "%s %s\0%s" % ('100644', entry[1], rawsha)
         sha = self.write_object('tree', tree_data)
         return sha
-        
+
     def write_object(self, obj_type, obj_contents):
         raw_data = "%s %d\0%s" % (obj_type, len(obj_contents), obj_contents)
         git_sha = make_sha(raw_data)
@@ -392,7 +391,7 @@ class Repo(object):
             object_dir = os.path.join(self.path, OBJECTDIR, git_hex_sha[0:2])
             if not os.path.exists(object_dir):
                 os.mkdir(object_dir)
-            object_path = os.path.join(object_dir, git_hex_sha[2:38])            
+            object_path = os.path.join(object_dir, git_hex_sha[2:38])
             data = zlib.compress(raw_data)
             open(object_path, 'w').write(data) # write the object
         return git_hex_sha
@@ -412,8 +411,8 @@ class Repo(object):
 
     # takes a commit and returns an array of the files that were changed
     # between that commit and it's parents
-    def get_files_changed(self, commit):        
-        
+    def get_files_changed(self, commit):
+
         def filenames(basetree, comptree, prefix):
             changes = list()
             csha = None
@@ -433,7 +432,7 @@ class Repo(object):
                         changes.extend (filenames (bobj, ctree, prefix + bname + '/'))
             # TODO: handle removals?
             return changes
-        
+
         all_changes = list()
         otree = self.tree(commit.tree)
         if len(commit.parents) == 0:
@@ -442,7 +441,7 @@ class Repo(object):
             pcommit = self.commit(parent)
             ptree = self.tree(pcommit.tree)
             all_changes.extend(filenames(otree, ptree, ''))
-            
+
         return all_changes
 
     def revision_history(self, head):
@@ -490,8 +489,8 @@ class Repo(object):
 
     @classmethod
     def init_bare(cls, path, mkdir=True):
-        for d in [["objects"], 
-                  ["objects", "info"], 
+        for d in [["objects"],
+                  ["objects", "info"],
                   ["objects", "pack"],
                   ["branches"],
                   ["refs"],
@@ -505,4 +504,3 @@ class Repo(object):
         open(os.path.join(path, 'info', 'excludes'), 'w').write("")
 
     create = init_bare
-

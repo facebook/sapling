@@ -1,17 +1,17 @@
 # objects.py -- Access to base git objects
 # Copyright (C) 2007 James Westby <jw+debian@jameswestby.net>
 # Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; version 2
 # of the License or (at your option) a later version of the License.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -23,7 +23,6 @@
 
 import mmap
 import os
-import sha
 import zlib
 
 from errors import (
@@ -31,6 +30,7 @@ from errors import (
     NotCommitError,
     NotTreeError,
     )
+from misc import make_sha
 
 BLOB_ID = "blob"
 TAG_ID = "tag"
@@ -72,7 +72,7 @@ def hex_to_sha(hex):
 
 class ShaFile(object):
     """A git SHA file."""
-  
+
     @classmethod
     def _parse_legacy_object(cls, map):
         """Parse a legacy object, creating it and setting object._text"""
@@ -102,10 +102,10 @@ class ShaFile(object):
 
     def as_legacy_object(self):
         return zlib.compress("%s %d\0%s" % (self._type, len(self._text), self._text))
-  
+
     def as_raw_string(self):
         return self._num_type, self._text
-  
+
     @classmethod
     def _parse_object(cls, map):
         """Parse a new style object , creating it and setting object._text"""
@@ -123,7 +123,7 @@ class ShaFile(object):
         raw = map[used:]
         object._text = _decompress(raw)
         return object
-  
+
     @classmethod
     def _parse_file(cls, map):
         word = (ord(map[0]) << 8) + ord(map[1])
@@ -131,13 +131,13 @@ class ShaFile(object):
             return cls._parse_legacy_object(map)
         else:
             return cls._parse_object(map)
-  
+
     def __init__(self):
         """Don't call this directly"""
-  
+
     def _parse_text(self):
         """For subclasses to do initialisation time parsing"""
-  
+
     @classmethod
     def from_file(cls, filename):
         """Get the contents of a SHA file on disk"""
@@ -150,11 +150,11 @@ class ShaFile(object):
             return shafile
         finally:
             f.close()
-  
+
     @classmethod
     def from_raw_string(cls, type, string):
         """Creates an object of the indicated type from the raw string given.
-    
+
         Type is the numeric type of an object. String is the raw uncompressed
         contents.
         """
@@ -164,31 +164,31 @@ class ShaFile(object):
         obj._text = string
         obj._parse_text()
         return obj
-  
+
     def _header(self):
         return "%s %lu\0" % (self._type, len(self._text))
-  
+
     def sha(self):
         """The SHA1 object that is the name of this object."""
-        ressha = sha.new()
+        ressha = make_sha()
         ressha.update(self._header())
         ressha.update(self._text)
         return ressha
-  
+
     @property
     def id(self):
         return self.sha().hexdigest()
-  
+
     @property
     def type(self):
         return self._num_type
-  
+
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.id)
-  
+
     def __eq__(self, other):
         """Return true id the sha of the two objects match.
-  
+
         The __le__ etc methods aren't overriden as they make no sense,
         certainly at this level.
         """
@@ -374,7 +374,7 @@ class Tree(ShaFile):
             return self._entries[name]
         except:
             return (None, None)
-        
+
     def iteritems(self):
         for name in sorted(self._entries.keys()):
             yield name, self_entries[name][0], self._entries[name][1]
@@ -542,7 +542,7 @@ class Commit(ShaFile):
     @property
     def commit_time(self):
         """Returns the timestamp of the commit.
-        
+
         Returns it as the number of seconds since the epoch.
         """
         return self._commit_time
@@ -556,7 +556,7 @@ class Commit(ShaFile):
     @property
     def author_time(self):
         """Returns the timestamp the commit was written.
-        
+
         Returns it as the number of seconds since the epoch.
         """
         return self._author_time
@@ -589,4 +589,3 @@ try:
     from _objects import hex_to_sha, sha_to_hex
 except ImportError:
     pass
-
