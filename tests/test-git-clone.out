@@ -1,6 +1,7 @@
 Initialized empty Git repository in gitrepo/.git/
 
 fetching from : origin
+exporting git objects
 Counting objects: 6, done.
 Compressing objects:  33% (1/3)   Compressing objects:  66% (2/3)   Compressing objects: 100% (3/3)   Compressing objects: 100% (3/3), done.
 Total 6 (delta 0), reused 0 (delta 0)

@@ -1,16 +1,19 @@
 Initialized empty Git repository in gitrepo/.git/
 
 rm 'alpha'
+% final manifest in git is just beta
+beta
 fetching from : origin
+exporting git objects
 Counting objects: 8, done.
 Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
 Total 8 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 importing: 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03
 importing: 9497a4ee62e16ee641860d7677cdb2589ea15554
-importing: FIXME
+importing: 8467011f7e1308f296cd58266804be0b7df43474
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  changeset:   2:FIXME
+@  changeset:   2:74a7df57f08e
 |  tag:         origin/master
 |  tag:         tip
 |  user:        test <test@example.org>

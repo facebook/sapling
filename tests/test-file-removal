@@ -38,6 +38,8 @@ git add beta
 commit -m 'add beta'
 git rm alpha
 commit -m 'remove alpha'
+echo % final manifest in git is just beta
+git ls-files
 
 # dulwich does not presently support local git repos, workaround
 cd ..
