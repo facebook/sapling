@@ -1068,7 +1068,7 @@ class localrepository(repo.repository):
                     try:
                         try:
                             # updating the dirstate is optional
-                            # so we dont wait on the lock
+                            # so we don't wait on the lock
                             wlock = self.wlock(False)
                             for f in fixup:
                                 self.dirstate.normal(f)
@@ -1808,7 +1808,7 @@ class localrepository(repo.repository):
             return collect_msng_filenodes
 
         # We have a list of filenodes we think we need for a file, lets remove
-        # all those we now the recipient must have.
+        # all those we know the recipient must have.
         def prune_filenodes(f, filerevlog):
             msngset = msng_filenode_set[f]
             hasset = {}
