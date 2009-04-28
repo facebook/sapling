@@ -65,11 +65,11 @@ cat hg.pid >> $DAEMON_PIDS
 echo % should succeed, slashy names
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=paper' \
-	| sed -r "s/[0-9]+ seconds? ago/seconds ago/"
+	| sed "s/[0-9]\{1,\} seconds\{0,1\} ago/seconds ago/"
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/?style=paper' \
-	| sed -r "s/[0-9]+ seconds? ago/seconds ago/"
+	| sed "s/[0-9]\{1,\} seconds\{0,1\} ago/seconds ago/"
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/a?style=atom' \
 	| sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/a/?style=atom' \
