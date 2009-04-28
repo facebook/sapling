@@ -44,25 +44,46 @@ def gclone(ui, git_url, hg_repo_path=None):
     node = git.remote_head('origin')
     hg.update(dest_repo, node)
 
-def gpush(ui, repo, remote_name='origin'):
+def gpush(ui, repo, remote_name='origin', branch=None):
     git = GitHandler(repo, ui)
     git.push(remote_name)
+
+def gremote(ui, repo, *args):
+    git = GitHandler(repo, ui)
+
+    if len(args) == 0:
+        git.remote_list()
+    else:
+        verb = args[0]
+        nick = args[1]
+
+        if verb == 'add':
+            if args[2]:
+                git.remote_add(nick, args[2])
+            else:
+                repo.ui.warn(_("must supply a url to add as a remote\n"))
+        elif verb == 'rm':
+            git.remote_remove(nick)
+        elif verb == 'show':
+            git.remote_show(nick)
+        else:
+            repo.ui.warn(_("unrecognized command to gremote\n"))
     
-def gpull(ui, repo):
+def gfetch(ui, repo):
     dest_repo.ui.status(_("pulling from git url\n"))
            
 commands.norepo += " gclone"
 cmdtable = {
   "gclone":
-      (gclone,
-       [ #('A', 'authors', '', 'username mapping filename'),
-       ],
-       'Clone a git repository into an hg repository.',
+      (gclone, [],
+       _('Clone a git repository into an hg repository.'),
        ),
   "gpush":
         (gpush, [], _('hg gpush remote')),
-  "gpull":
-        (gpull, 
-        [('m', 'merge', None, _('merge automatically'))],
-        _('hg gpull [--merge] remote')),
+  "gfetch":
+        (gfetch, [],
+        #[('m', 'merge', None, _('merge automatically'))],
+        _('hg gfetch remote')),
+  "gremote":
+      (gremote, [], _('hg gremote add remote (url)')),
 }    

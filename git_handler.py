@@ -124,11 +124,30 @@ class GitHandler(object):
         self.upload_pack(remote_name)
         self.save_map()
 
-    # TODO: make these actually save and recall
     def remote_add(self, remote_name, git_url):
         self._config['remote.' + remote_name + '.url'] = git_url
         self.save_config()
 
+    def remote_remove(self, remote_name):
+        key = 'remote.' + remote_name + '.url'
+        if key in self._config:
+            del self._config[key]
+        self.save_config()
+
+    def remote_show(self, remote_name):
+        key = 'remote.' + remote_name + '.url'
+        if key in self._config:
+            name = self._config[key]
+            print "URL for " + remote_name + " : " + name
+        else:
+            print "No remote named : " + remote_name
+        return 
+
+    def remote_list(self):
+        for key, value in self._config.iteritems():
+            if key[0:6] == 'remote':
+                print key + "\t" + value
+            
     def remote_name_to_url(self, remote_name):
         return self._config['remote.' + remote_name + '.url']
 
