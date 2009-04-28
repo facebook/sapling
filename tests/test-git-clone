@@ -49,5 +49,8 @@ hg gclone git://127.0.0.1/gitrepo hgrepo
 cd hgrepo
 hg log --graph
 
+echo % we should have some bookmarks
+hg book
+
 cd ..
 kill `cat gitdaemon.pid`
