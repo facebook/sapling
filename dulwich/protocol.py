@@ -79,6 +79,13 @@ class Protocol(object):
             yield pkt
             pkt = self.read_pkt_line()
 
+    def write_file(self, f):
+        try:
+            for line in f:
+                self.write(line)
+        finally:
+            f.close()
+        
     def write_pkt_line(self, line):
         """
         Sends a 'pkt line' to the remote git process

@@ -2,12 +2,19 @@ import os, errno, sys, time, datetime, pickle, copy
 import dulwich
 from dulwich.repo import Repo
 from dulwich.client import SimpleFetchGraphWalker
-from dulwich.objects import hex_to_sha
 from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, error
-
+from dulwich.objects import (
+    Blob,
+    Commit,
+    ShaFile,
+    Tag,
+    Tree,
+    hex_to_sha
+    )
+    
 import math
 
 def seconds_to_offset(time):
@@ -277,8 +284,6 @@ class GitHandler(object):
             if parts[0] == 'refs': # strip off 'refs/heads'
                 if parts[1] == 'heads':
                     head = "/".join([v for v in parts[2:]])
-                    print ref_name
-                    print head
                     local_ref = self.git.ref(ref_name)
                     if local_ref: 
                         if not local_ref == refs[ref_name]:
@@ -297,7 +302,31 @@ class GitHandler(object):
             else:
                 shas.append(next)
             next = graph_walker.next()
-        return shas
+            
+        # so now i have the shas, need to turn them into a list of 
+        # tuples (sha, path) for ALL the objects i'm sending
+        # TODO : don't send blobs or trees they already have
+        def get_objects(tree, path):
+            changes = list()
+            changes.append((tree, path))
+            for (mode, name, sha) in tree.entries():
+                if mode == 57344: # TODO : properly handle submodules
+                    continue
+                obj = self.git.get_object(sha)
+                if isinstance (obj, Blob):
+                    changes.append((obj, path + name))
+                elif isinstance(obj, Tree):
+                    changes.extend (get_objects (obj, path + name + '/'))
+            return changes
+            
+        objects = []
+        for commit_sha in shas:
+            commit = self.git.commit(commit_sha)
+            objects.append((commit, 'commit'))
+            tree = self.git.get_object(commit.tree)
+            objects.extend( get_objects(tree, '/') )
+            
+        return objects
         
     def fetch_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)

@@ -26,6 +26,7 @@ import select
 import socket
 import subprocess
 import copy
+import tempfile
 
 from protocol import (
     Protocol,
@@ -112,15 +113,12 @@ class GitClient(object):
         :param generate_pack_contents: Function that can return the shas of the 
             objects to upload.
         """
-        print 'SEND PACK'
         refs, server_capabilities = self.read_refs()
         changed_refs = get_changed_refs(refs)
         if not changed_refs:
-            print 'got here - nooo'
+            print 'nothing changed'
             self.proto.write_pkt_line(None)
             return
-        print 'got here - yay'
-        print changed_refs
         self.proto.write_pkt_line("%s %s %s\0%s" % (changed_refs[0][0], changed_refs[0][1], changed_refs[0][2], self.capabilities()))
         want = []
         have = []
@@ -131,7 +129,15 @@ class GitClient(object):
                 have.append(changed_ref[0])
         self.proto.write_pkt_line(None)
         shas = generate_pack_contents(want, have)
-        #write_pack_data(self.write, shas, len(shas))
+            
+        (fd, tmppath) = tempfile.mkstemp(suffix=".pack")
+        f = os.fdopen(fd, 'w')        
+        (entries, sha) = write_pack_data(f, shas, len(shas))
+
+        f = open(tmppath, "r")
+        self.proto.write_file(f)
+        self.proto.write(sha)
+        f.close()
 
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data, progress):
         """Retrieve a pack from a git smart server.

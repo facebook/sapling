@@ -361,7 +361,6 @@ class Repo(object):
         commit_data += 'committer ' + commit['committer'] + "\n"
         commit_data += "\n"
         commit_data += commit['message']
-        print commit_data
         sha = self.write_object('commit', commit_data)
         return sha
 
