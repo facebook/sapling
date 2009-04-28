@@ -711,15 +711,15 @@ class localrepository(repo.repository):
         commit an individual file as part of a larger transaction
         """
 
-        fn = fctx.path()
-        t = fctx.data()
-        fl = self.file(fn)
-        fp1 = manifest1.get(fn, nullid)
-        fp2 = manifest2.get(fn, nullid)
+        fname = fctx.path()
+        text = fctx.data()
+        flog = self.file(fname)
+        fparent1 = manifest1.get(fname, nullid)
+        fparent2 = manifest2.get(fname, nullid)
 
         meta = {}
-        cp = fctx.renamed()
-        if cp and cp[0] != fn:
+        copy = fctx.renamed()
+        if copy and copy[0] != fname:
             # Mark the new revision of this file as a copy of another
             # file.  This copy data will effectively act as a parent
             # of this new revision.  If this is a merge, the first
@@ -739,43 +739,43 @@ class localrepository(repo.repository):
             #    \- 2 --- 4        as the merge base
             #
 
-            cf = cp[0]
-            cr = manifest1.get(cf)
-            nfp = fp2
+            cfname = copy[0]
+            crev = manifest1.get(cfname)
+            newfparent = fparent2
 
             if manifest2: # branch merge
-                if fp2 == nullid or cr is None: # copied on remote side
-                    if cf in manifest2:
-                        cr = manifest2[cf]
-                        nfp = fp1
+                if fparent2 == nullid or crev is None: # copied on remote side
+                    if cfname in manifest2:
+                        crev = manifest2[cfname]
+                        newfparent = fparent1
 
             # find source in nearest ancestor if we've lost track
-            if not cr:
+            if not crev:
                 self.ui.debug(_(" %s: searching for copy revision for %s\n") %
-                              (fn, cf))
-                for a in self['.'].ancestors():
-                    if cf in a:
-                        cr = a[cf].filenode()
+                              (fname, cfname))
+                for ancestor in self['.'].ancestors():
+                    if cfname in ancestor:
+                        crev = ancestor[cfname].filenode()
                         break
 
-            self.ui.debug(_(" %s: copy %s:%s\n") % (fn, cf, hex(cr)))
-            meta["copy"] = cf
-            meta["copyrev"] = hex(cr)
-            fp1, fp2 = nullid, nfp
-        elif fp2 != nullid:
+            self.ui.debug(_(" %s: copy %s:%s\n") % (fname, cfname, hex(crev)))
+            meta["copy"] = cfname
+            meta["copyrev"] = hex(crev)
+            fparent1, fparent2 = nullid, newfparent
+        elif fparent2 != nullid:
             # is one parent an ancestor of the other?
-            fpa = fl.ancestor(fp1, fp2)
-            if fpa == fp1:
-                fp1, fp2 = fp2, nullid
-            elif fpa == fp2:
-                fp2 = nullid
+            fparentancestor = flog.ancestor(fparent1, fparent2)
+            if fparentancestor == fparent1:
+                fparent1, fparent2 = fparent2, nullid
+            elif fparentancestor == fparent2:
+                fparent2 = nullid
 
         # is the file unmodified from the parent? report existing entry
-        if fp2 == nullid and not fl.cmp(fp1, t) and not meta:
-            return fp1
+        if fparent2 == nullid and not flog.cmp(fparent1, text) and not meta:
+            return fparent1
 
-        changelist.append(fn)
-        return fl.add(t, meta, tr, linkrev, fp1, fp2)
+        changelist.append(fname)
+        return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
 
     def rawcommit(self, files, text, user, date, p1=None, p2=None, extra={}):
         if p1 is None:
