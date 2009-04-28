@@ -251,8 +251,20 @@ class GitHandler(object):
         return None
 
     def upload_pack(self, remote_name):
-        self.ui.status(_("upload pack\n"))
-
+        git_url = self.remote_name_to_url(remote_name)
+        client, path = self.get_transport_and_path(git_url)
+        genpack = self.generate_pack_contents
+        try:
+            client.send_pack(path, genpack)
+            # TODO : self.git.set_remote_refs(refs, remote_name)
+        except:
+            raise
+            
+    def generate_pack_contents(self, want, have, none):
+        print "WANT: " + str(want)
+        print "HAVE: " + str(have)
+        print "NONE: " + str(none)
+        
     def fetch_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)
         client, path = self.get_transport_and_path(git_url)
@@ -287,9 +299,12 @@ class GitHandler(object):
             if sha in done:
                 continue
             done.add(sha)
-            commit = self.git.commit(sha)
-            convert_list[sha] = commit
-            todo.extend([p for p in commit.parents if p not in done])
+            try:
+                commit = self.git.commit(sha)
+                convert_list[sha] = commit
+                todo.extend([p for p in commit.parents if p not in done])
+            except:
+                print "Cannot import tags yet" # TODO
 
         # sort the commits
         commits = TopoSort(convert_list).items()
@@ -358,14 +373,16 @@ class GitHandler(object):
 
     def get_transport_and_path(self, uri):
         from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
-        for handler, transport in (("git://", TCPGitClient), ("git+ssh://", SSHGitClient)):
+        for handler, transport in (("git://", TCPGitClient), ("git@", SSHGitClient)):
             if uri.startswith(handler):
-                host, path = uri[len(handler):].split("/", 1)
-                return transport(host), "/"+path
+                host, path = uri[len(handler):].split(":", 1)
+                if handler == 'git@':
+                    host = 'git@' + host
+                return transport(host), '/' + path
         # if its not git or git+ssh, try a local url..
         return SubprocessGitClient(), uri
 
-
+''
 """
    Tarjan's algorithm and topological sorting implementation in Python
    by Paul Harrison

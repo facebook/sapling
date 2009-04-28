@@ -244,8 +244,12 @@ class Repo(object):
             ref_name = k
             parts = k.split('/')
             if parts[0] == 'refs': # strip off 'refs/heads'
-                ref_name = "/".join([v for v in parts[2:]])
-            self.set_ref('refs/remotes/' + remote_name + '/' + ref_name, refs[k])
+                if parts[1] == 'heads':
+                    ref_name = "/".join([v for v in parts[2:]])
+                    self.set_ref('refs/remotes/' + remote_name + '/' + ref_name, refs[k])
+                if parts[1] == 'tags':
+                    ref_name = "/".join([v for v in parts[2:]])
+                    self.set_ref('refs/tags/' + ref_name, refs[k])
         
     def set_refs(self, refs):
         keys = refs.keys()
