@@ -139,15 +139,15 @@ class GitHandler(object):
         key = 'remote.' + remote_name + '.url'
         if key in self._config:
             name = self._config[key]
-            print "URL for " + remote_name + " : " + name
+            self.ui.status("URL for %s : %s\n" % (remote_name, name, ))
         else:
-            print "No remote named : " + remote_name
+            self.ui.status("No remote named : %s\n" % remote_name)
         return
 
     def remote_list(self):
         for key, value in self._config.iteritems():
             if key[0:6] == 'remote':
-                print key + "\t" + value
+                self.ui.status('%s\t%s\n' % (key, value, ))
 
     def remote_name_to_url(self, remote_name):
         return self._config['remote.' + remote_name + '.url']
@@ -158,7 +158,7 @@ class GitHandler(object):
         self.git.set_ref('refs/heads/master', c)
 
     def export_git_objects(self):
-        print "exporting git objects"
+        self.ui.status("exporting git objects\n")
         for rev in self.repo.changelog:
             self.export_hg_commit(rev)
 
@@ -197,16 +197,16 @@ class GitHandler(object):
         commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
         message = ctx.description()
         commit['message'] = ctx.description()
-        
+
         # HG EXTRA INFORMATION
         add_extras = False
         if not ctx.branch() == 'default':
             add_extras = True
-            
+
         if add_extras:
             commit['message'] += "\n\n--HG--\n"
             commit['message'] += "branch : " + ctx.branch() + "\n"
-            
+
         commit['parents'] = []
         for parent in parents:
             hgsha = hex(parent.node())
@@ -246,14 +246,14 @@ class GitHandler(object):
                         nparpath = part + '/'
                     else:
                         nparpath += part + '/'
-                    
+
                     treeentry = ['tree', part + '/', nparpath]
-                    
+
                     if parpath not in trees:
                         trees[parpath] = []
                     if treeentry not in trees[parpath]:
                         trees[parpath].append( treeentry )
-                        
+
                     parpath = nparpath
 
                 # set file entry
@@ -267,7 +267,7 @@ class GitHandler(object):
                 if '/' not in trees:
                     trees['/'] = []
                 trees['/'].append(fileentry)
-        
+
         # sort by tree depth, so we write the deepest trees first
         dirs = trees.keys()
         dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
@@ -420,7 +420,7 @@ class GitHandler(object):
                 convert_list[sha] = commit
                 todo.extend([p for p in commit.parents if p not in done])
             except:
-                print "Cannot import tags yet" # TODO
+                self.ui.warn("Cannot import tags yet\n") # TODO
 
         # sort the commits
         commits = TopoSort(convert_list).items()
@@ -442,9 +442,9 @@ class GitHandler(object):
                     bms[remote_name + '/' + head] = hgsha
             bookmarks.write(self.repo, bms)
         except AttributeError:
-            self.repo.ui.warn('creating bookmarks failed, do you have'
-                              ' bookmarks enabled?\n')
-                              
+            self.ui.warn('creating bookmarks failed, do you have'
+                         ' bookmarks enabled?\n')
+
     def convert_git_int_mode(self, mode):
         convert = {
          33188: '',
@@ -453,9 +453,9 @@ class GitHandler(object):
         if mode in convert:
             return convert[mode]
         return ''
-        
+
     def import_git_commit(self, commit):
-        print "importing: " + commit.id
+        self.ui.debug("importing: %s\n" % commit.id)
         # TODO : look for HG metadata in the message and use it
         # TODO : add extra Git data (committer info) as extras to changeset
 
@@ -483,7 +483,6 @@ class GitHandler(object):
             pass
 
         files = self.git.get_files_changed(commit)
-        #print files
 
         # get a list of the changed, added, removed files
         extra = {}
@@ -501,7 +500,7 @@ class GitHandler(object):
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
-            print "YOU NEED TO SETUP BOOKMARKS"
+            self.ui.warn("YOU NEED TO SETUP BOOKMARKS\n")
 
     def get_transport_and_path(self, uri):
         from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
