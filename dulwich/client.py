@@ -65,9 +65,7 @@ class SimpleFetchGraphWalker(object):
             return ret
         return None
 
-
 CAPABILITIES = ["multi_ack", "side-band-64k", "ofs-delta"]
-
 
 class GitClient(object):
     """Git smart server client.
@@ -89,8 +87,8 @@ class GitClient(object):
         self.proto = Protocol(read, write, report_activity)
         self._can_read = can_read
         self._capabilities = list(CAPABILITIES)
-        if thin_packs:
-            self._capabilities.append("thin-pack")
+        #if thin_packs:
+        #    self._capabilities.append("thin-pack")
 
     def capabilities(self):
         return " ".join(self._capabilities)

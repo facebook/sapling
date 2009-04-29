@@ -176,7 +176,7 @@ class ObjectStore(object):
         :param path: Path to the pack file.
         """
         p = PackData(path)
-        entries = p.sorted_entries()
+        entries = p.sorted_entries(self.get_raw)
         basename = os.path.join(self.pack_dir, 
             "pack-%s" % iter_sha1(entry[0] for entry in entries))
         write_pack_index_v2(basename+".idx", entries, p.get_stored_checksum())

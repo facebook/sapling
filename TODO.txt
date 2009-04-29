@@ -14,8 +14,6 @@ PUSH
 
 FETCH
 ===========
-* gfetch command
-* only try to import non-mapped commits
 * tag conversion
 
 MAPPING ISSUES

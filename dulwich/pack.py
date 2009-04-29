@@ -508,7 +508,6 @@ class PackData(object):
         postponed = defaultdict(list)
         class Postpone(Exception):
             """Raised to postpone delta resolving."""
-          
         def get_ref_text(sha):
             assert len(sha) == 20
             if sha in found:
