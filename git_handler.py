@@ -172,7 +172,7 @@ class GitHandler(object):
         if pgit_sha:
             return pgit_sha
 
-        self.ui.status("converting revision " + str(rev))
+        self.ui.status("converting revision " + str(rev) + "\n")
 
         # make sure parents are converted first
         parents = self.repo.parents(rev)
@@ -196,9 +196,16 @@ class GitHandler(object):
         commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
         message = ctx.description()
         commit['message'] = ctx.description()
-        commit['message'] += "\n\n--HG--\n"
-        commit['message'] += "branch : " + ctx.branch() + "\n"
-
+        
+        # HG EXTRA INFORMATION
+        add_extras = False
+        if not ctx.branch() == 'default':
+            add_extras = True
+            
+        if add_extras:
+            commit['message'] += "\n\n--HG--\n"
+            commit['message'] += "branch : " + ctx.branch() + "\n"
+            
         commit['parents'] = []
         for parent in parents:
             hgsha = hex(parent.node())
@@ -226,14 +233,27 @@ class GitHandler(object):
 
             parts = filenm.split('/')
             if len(parts) > 1:
-
                 # get filename and path for leading subdir
                 filepath = parts[-1:][0]
                 dirpath = "/".join([v for v in parts[0:-1]]) + '/'
 
                 # get subdir name and path for parent dir
-                parentsub = parts[-2:][0]
-                parentpath = "/".join([v for v in parts[0:-2]]) + '/'
+                parpath = '/'
+                nparpath = '/'
+                for part in parts[0:-1]:
+                    if nparpath == '/':
+                        nparpath = part + '/'
+                    else:
+                        nparpath += part + '/'
+                    
+                    treeentry = ['tree', part + '/', nparpath]
+                    
+                    if parpath not in trees:
+                        trees[parpath] = []
+                    if treeentry not in trees[parpath]:
+                        trees[parpath].append( treeentry )
+                        
+                    parpath = nparpath
 
                 # set file entry
                 fileentry = ['blob', filepath, blob_sha, is_exec, is_link]
@@ -241,18 +261,12 @@ class GitHandler(object):
                     trees[dirpath] = []
                 trees[dirpath].append(fileentry)
 
-                # set directory entry
-                treeentry = ['tree', parentsub + '/', dirpath]
-                if parentpath not in trees:
-                    trees[parentpath] = []
-                if treeentry not in trees[parentpath]:
-                    trees[parentpath].append( treeentry )
             else:
                 fileentry = ['blob', parts[0], blob_sha, is_exec, is_link]
                 if '/' not in trees:
                     trees['/'] = []
                 trees['/'].append(fileentry)
-
+        
         # sort by tree depth, so we write the deepest trees first
         dirs = trees.keys()
         dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
