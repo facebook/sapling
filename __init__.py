@@ -26,6 +26,10 @@ import subprocess
 import dulwich
 from git_handler import GitHandler
 
+# support for `hg clone git://github.com/defunkt/facebox.git`
+import gitrepo
+hg.schemes['git'] = gitrepo
+
 def gclone(ui, git_url, hg_repo_path=None):
     # determine new repo name
     if not hg_repo_path:
