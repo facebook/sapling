@@ -172,7 +172,7 @@ class GitHandler(object):
         if pgit_sha:
             return pgit_sha
 
-        print "converting revision " + str(rev)
+        self.ui.status("converting revision " + str(rev))
 
         # make sure parents are converted first
         parents = self.repo.parents(rev)
@@ -286,13 +286,15 @@ class GitHandler(object):
         changed = self.get_changed_refs
         genpack = self.generate_pack_contents
         try:
+            self.ui.status("creating and sending data\n")
             changed_refs = client.send_pack(path, changed, genpack)
-            new_refs = {}
-            for old, new, ref in changed_refs:
-                self.ui.status("    "+ remote_name + "::" + ref + " : GIT:" + old[0:8] + " => GIT:" + new[0:8] + "\n")
-                new_refs[ref] = new
-            self.git.set_remote_refs(new_refs, remote_name)
-            self.update_hg_bookmarks(remote_name)
+            if changed_refs:
+                new_refs = {}
+                for old, new, ref in changed_refs:
+                    self.ui.status("    "+ remote_name + "::" + ref + " : GIT:" + old[0:8] + " => GIT:" + new[0:8] + "\n")
+                    new_refs[ref] = new
+                self.git.set_remote_refs(new_refs, remote_name)
+                self.update_hg_bookmarks(remote_name)
         except:
             raise
 

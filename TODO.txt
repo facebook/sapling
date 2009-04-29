@@ -2,6 +2,7 @@ GENERAL
 ==========
 * respect file modes on conversions
 * explicit file renames
+* integrate as native protocol handler (hg push git://...)
 * more tests
 * submodules?
 * .gitignore, etc - try to convert? 
@@ -9,24 +10,13 @@ GENERAL
 
 PUSH
 ==========
-
-Getting (and not sure why):
-  error: Ref refs/heads/master is at 093772e7fa2ee3c0d488bc44317cfe66d72f09ed  
-         but expected a89be0ca4c09782b6275a8e826c11a91b860a071
-  error: failed to lock refs/heads/master
-  (it works, but why is it doing this?)
-
 * push with branch names (w/ proper error messages)
-* update 'remote' references after push confirmation
-* push confirmation? is there extra data after the packfile upload?
-* output something after process is complete (master -> master etc)
-  - explain what branch mapping policy determined
+* explain what branch mapping policy determined when updating refs
 * convert tags to git
 * octopus merge explode re-implode
 
 FETCH
 ===========
-* add removed files to filechanged and raise IOError
 * gfetch command
 * only try to import non-mapped commits
 * tag conversion

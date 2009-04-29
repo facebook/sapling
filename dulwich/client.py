@@ -118,7 +118,7 @@ class GitClient(object):
         if not changed_refs:
             print 'nothing changed'
             self.proto.write_pkt_line(None)
-            return
+            return None
         return_refs = copy.copy(changed_refs)
 
         want = []
