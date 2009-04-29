@@ -230,7 +230,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
         file_data[file] = base_data, new_data, action
 
     def svnpath(p):
-        return '%s/%s' % (branch_path, p)
+        return ('%s/%s' % (branch_path, p)).rstrip('/')
 
     changeddirs = []
     for d, v1, v2 in extchanges:
