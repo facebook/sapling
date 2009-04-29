@@ -113,8 +113,9 @@ class GitHandler(object):
     def fetch(self, remote_name):
         self.ui.status(_("fetching from : " + remote_name + "\n"))
         self.export_git_objects()
-        self.fetch_pack(remote_name)
-        self.import_git_objects(remote_name)
+        refs = self.fetch_pack(remote_name)
+        if refs:
+            self.import_git_objects(remote_name)
         self.save_map()
 
     def push(self, remote_name):
@@ -386,7 +387,11 @@ class GitHandler(object):
             refs = client.fetch_pack(path, determine_wants, graphwalker, f.write, sys.stdout.write)
             f.close()
             commit()
-            self.git.set_remote_refs(refs, remote_name)
+            if refs:
+                self.git.set_remote_refs(refs, remote_name)
+            else:
+                self.ui.status(_("nothing new on the server\n"))
+            return refs
         except:
             f.close()
             raise
@@ -422,8 +427,9 @@ class GitHandler(object):
 
         # import each of the commits, oldest first
         for csha in commits:
-            commit = convert_list[csha]
-            self.import_git_commit(commit)
+            if not self.map_hg_get(csha):
+                commit = convert_list[csha]
+                self.import_git_commit(commit)
 
         self.update_hg_bookmarks(remote_name)
 
