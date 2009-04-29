@@ -1,29 +1,38 @@
 GENERAL
 ==========
-
-* submodules?
 * switch object mapping to hg->git since the many to one is that direction
-* file modes
-* gclear - clear out all the git data
+* respect file modes on conversions
 * explicit file renames
+* more tests?
+* bookmarks / tip / named branches - mapping policy to Git branches
+  - tracking branches?
+* submodules?
 
 PUSH
 ==========
-
 * update 'remote' references after push confirmation
 * push confirmation? is there extra data after the packfile upload?
 * output something after process is complete (master -> master etc)
-
+  - explain what branch mapping policy determined
 * convert tags to git
-
-CLONE
-===========
-
-* tag conversion
 
 FETCH
 ===========
-
 * add removed files to filechanged and raise IOError
 * gfetch command
 * only try to import non-mapped commits
+* tag conversion
+* save git metadata (committers, unless it's the same) as extra info
+
+SPEED/EFFICIENCY
+================
+* don't send blobs/trees already on server
+
+MILESTONES
+=============
+
+* Hg<->Git<->Hg
+  - create a repo in Hg
+  - push to a Git server
+  - clone into another Hg client
+  - verify that the node ids are identical
