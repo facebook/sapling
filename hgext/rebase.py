@@ -400,7 +400,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     if opts.get('rebase'):
         if opts.get('update'):
-            del opts.get['update']
+            del opts['update']
             ui.debug(_('--update and --rebase are not compatible, ignoring '
                                         'the update flag\n'))
 
