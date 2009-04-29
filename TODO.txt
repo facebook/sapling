@@ -1,6 +1,5 @@
 GENERAL
 ==========
-* explicit file renames
 * integrate as native protocol handler (hg push git://...)
 * more tests
 * submodules?
@@ -12,25 +11,26 @@ PUSH
 * push with branch names (w/ proper error messages)
 * explain what branch mapping policy determined when updating refs
 * convert tags to git
-* octopus merge explode re-implode
 
 FETCH
 ===========
 * gfetch command
 * only try to import non-mapped commits
 * tag conversion
-* save git metadata (committers, unless it's the same) as extra info
-* octopus merge explode
+
+MAPPING ISSUES
+==============
+Created in Hg:
+* explicit file renames
+* named branches
+
+Created in Git:
+* octopus merge explode/implode
+* different committer in Git objects
+
 
 SPEED/EFFICIENCY
 ================
 * switch object mapping to hg->git since the many to one is that direction
 * don't send blobs/trees already on server
-
-MILESTONES
-=============
-* Hg<->Git<->Hg
-  - create a repo in Hg
-  - push to a Git server
-  - clone into another Hg client
-  - verify that the node ids are identical
+* packfile creation benchmarking (seems to take a while sometimes)
