@@ -737,13 +737,28 @@ def rename(src, dst):
     try:
         os.rename(src, dst)
     except OSError, err: # FIXME: check err (EEXIST ?)
-        # on windows, rename to existing file is not allowed, so we
-        # must delete destination first. but if file is open, unlink
-        # schedules it for delete but does not delete it. rename
+
+        # On windows, rename to existing file is not allowed, so we
+        # must delete destination first. But if a file is open, unlink
+        # schedules it for delete but does not delete it. Rename
         # happens immediately even for open files, so we rename
-        # destination to a temporary name, then delete that. then
+        # destination to a temporary name, then delete that. Then
         # rename is safe to do.
-        temp = dst + "-force-rename"
+        # The temporary name is chosen at random to avoid the situation
+        # where a file is left lying around from a previous aborted run.
+        # The usual race condition this introduces can't be avoided as
+        # we need the name to rename into, and not the file itself. Due
+        # to the nature of the operation however, any races will at worst
+        # lead to the rename failing and the current operation aborting.
+
+        def tempname(prefix):
+            for tries in xrange(10):
+                temp = '%s-%08x' % (prefix, random.randint(0, 0xffffffff))
+                if not os.path.exists(temp):
+                    return temp
+            raise IOError, (errno.EEXIST, "No usable temporary filename found")
+
+        temp = tempname(dst)
         os.rename(dst, temp)
         os.unlink(temp)
         os.rename(src, dst)
