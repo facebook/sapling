@@ -2,9 +2,7 @@ from mercurial import hg, repo
 from git_handler import GitHandler
 
 class gitrepo(repo.repository):
-    capabilities = []
-
-    def __init__(self, ui, path, create=1):
+    def __init__(self, ui, path, create=True):
         dest = hg.defaultdest(path)
 
         if dest.endswith('.git'):
@@ -22,6 +20,7 @@ class gitrepo(repo.repository):
         node = git.remote_head('origin')
         hg.update(dest_repo, node)
 
+        # exit to stop normal `hg clone` flow
         raise SystemExit
 
 instance = gitrepo
