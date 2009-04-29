@@ -468,10 +468,13 @@ class svn_source(converter_source):
                     if source.startswith(srctagspath):
                         remainings.append([source, sourcerev, tagname])
                         continue
-                    # From revision may be fake, get one with changes
+                    if tagname in tags:
+                        # Keep the latest tag value
+                        continue
+                    # From revision may be fake, get one with changes                    
                     try:
                         tagid = self.latest(source, sourcerev)
-                        if tagid:
+                        if tagid and tagname not in tags:
                             tags[tagname] = tagid
                     except SvnPathNotFound:
                         # It happens when we are following directories we assumed

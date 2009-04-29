@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 65371b91-a2cf-4cb1-a047-08b28c3b4c40
+UUID: a9c3b03d-cffa-4248-8023-ecf4b2bdf5d5
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-12-06T13:50:23.869747Z
+2009-04-29T19:26:51.708679Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:23.944361Z
+2009-04-29T19:26:52.115023Z
 PROPS-END
 
 Node-path: branches
@@ -81,7 +81,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:25.174397Z
+2009-04-29T19:26:53.109819Z
 PROPS-END
 
 Node-path: trunk/a
@@ -90,6 +90,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
 Content-length: 12
 
 PROPS-END
@@ -111,7 +112,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:26.148468Z
+2009-04-29T19:26:54.073017Z
 PROPS-END
 
 Node-path: trunk/a
@@ -119,6 +120,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 4
 Text-content-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-content-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
 Content-length: 4
 
 a
@@ -140,7 +142,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:27.147988Z
+2009-04-29T19:26:55.076032Z
 PROPS-END
 
 Node-path: trunk/a
@@ -148,6 +150,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 6
 Text-content-md5: 7d4ebf8f298d22fc349a91725b00af1c
+Text-content-sha1: 92f31bc48f52339253fce6cad9f2f0c95b302f7e
 Content-length: 6
 
 a
@@ -170,7 +173,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:28.174989Z
+2009-04-29T19:26:56.095784Z
 PROPS-END
 
 Node-path: unrelated/dummy
@@ -179,6 +182,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
 Content-length: 12
 
 PROPS-END
@@ -200,7 +204,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:32.157783Z
+2009-04-29T19:27:00.074864Z
 PROPS-END
 
 Node-path: tags/trunk.badtag
@@ -208,14 +212,6 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 5
 Node-copyfrom-path: trunk
-Prop-content-length: 34
-Content-length: 34
-
-K 13
-svn:mergeinfo
-V 0
-
-PROPS-END
 
 
 Node-path: tags/trunk.v1
@@ -223,14 +219,6 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 5
 Node-copyfrom-path: trunk
-Prop-content-length: 34
-Content-length: 34
-
-K 13
-svn:mergeinfo
-V 0
-
-PROPS-END
 
 
 Revision-number: 7
@@ -248,7 +236,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:33.145803Z
+2009-04-29T19:27:01.073910Z
 PROPS-END
 
 Node-path: trunk/a
@@ -256,6 +244,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 8
 Text-content-md5: d12178e74d8774e34361e0a08d1fd2b7
+Text-content-sha1: cce0b2a263066e26610df9082b7b3c810f71262e
 Content-length: 8
 
 a
@@ -279,7 +268,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:50:36.153842Z
+2009-04-29T19:27:04.073542Z
 PROPS-END
 
 Node-path: tags/trunk.goodtag
@@ -291,5 +280,85 @@ Node-copyfrom-path: tags/trunk.badtag
 
 Node-path: tags/trunk.badtag
 Node-action: delete
+
+
+Revision-number: 9
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 7
+changea
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:05.095204Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 10
+Text-content-md5: 3f65cbdca1b64c2f8f574fccae24f3a4
+Text-content-sha1: 5c077263421de2abff9dbe867921bc6810811aa2
+Content-length: 10
+
+a
+a
+a
+a
+a
+
+
+Revision-number: 10
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 13
+removegoodtag
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:06.089193Z
+PROPS-END
+
+Node-path: tags/trunk.goodtag
+Node-action: delete
+
+
+Revision-number: 11
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 15
+recreategoodtag
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:09.070471Z
+PROPS-END
+
+Node-path: tags/trunk.goodtag
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 10
+Node-copyfrom-path: trunk
 
 
