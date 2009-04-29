@@ -256,7 +256,9 @@ class GitHandler(object):
         # sort by tree depth, so we write the deepest trees first
         dirs = trees.keys()
         dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
-
+        dirs.remove('/')
+        dirs.append('/')
+        
         # write all the trees
         tree_sha = None
         tree_shas = {}
@@ -289,15 +291,21 @@ class GitHandler(object):
         except:
             raise
 
-    # TODO : for now, we'll just push all heads 
+    # TODO : for now, we'll just push all heads that match remote heads
     #        * we should have specified push, tracking branches and --all
     # takes a dict of refs:shas from the server and returns what should be 
     # pushed up
     def get_changed_refs(self, refs):
         keys = refs.keys()
-        if not keys:
-            return None
+        
         changed = []
+        if not keys: 
+            return None
+            
+        # TODO : this is a huge hack
+        if keys[0] == 'capabilities^{}': # nothing on the server yet - first push
+            changed.append(("0"*40, self.git.ref('master'), 'refs/heads/master'))
+            
         for ref_name in keys:
             parts = ref_name.split('/')
             if parts[0] == 'refs': # strip off 'refs/heads'
