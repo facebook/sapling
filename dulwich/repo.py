@@ -417,6 +417,7 @@ class Repo(object):
             changes = list()
             csha = None
             ctree = None
+            cmode = None
             if basetree:
                 for (bmode, bname, bsha) in basetree.entries():
                     if bmode == 57344: # TODO : properly handle submodules
@@ -425,7 +426,7 @@ class Repo(object):
                     bobj = self.get_object(bsha)
                     if comptree:
                         (cmode, csha) = comptree.entry(bname)
-                    if csha != bsha:
+                    if not ((csha == bsha) and (cmode == bmode)):
                         if isinstance (bobj, Blob):
                             changes.append (prefix + bname)
                         elif isinstance(bobj, Tree):

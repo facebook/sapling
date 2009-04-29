@@ -424,6 +424,15 @@ class GitHandler(object):
         except AttributeError:
             self.repo.ui.warn('creating bookmarks failed, do you have'
                               ' bookmarks enabled?\n')
+                              
+    def convert_git_int_mode(self, mode):
+        convert = {
+         33188: '',
+         40960: 'l',
+         33261: 'e'}
+        if mode in convert:
+            return convert[mode]
+        return ''
         
     def import_git_commit(self, commit):
         print "importing: " + commit.id
@@ -435,10 +444,10 @@ class GitHandler(object):
         #        get_file call for removed files
         def getfilectx(repo, memctx, f):
             try:
-                (e, sha, data) = self.git.get_file(commit, f)
+                (mode, sha, data) = self.git.get_file(commit, f)
+                e = self.convert_git_int_mode(mode)
             except TypeError:
                 raise IOError()
-            e = '' # TODO : make this a real mode
             return context.memfilectx(f, data, 'l' in e, 'x' in e, None)
 
         p1 = "0" * 40

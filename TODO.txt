@@ -1,6 +1,5 @@
 GENERAL
 ==========
-* respect file modes on conversions
 * explicit file renames
 * integrate as native protocol handler (hg push git://...)
 * more tests
