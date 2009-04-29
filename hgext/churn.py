@@ -10,7 +10,7 @@
 
 from mercurial.i18n import _
 from mercurial import patch, cmdutil, util, templater
-import sys
+import sys, os
 import time, datetime
 
 def maketemplater(ui, repo, tmpl):
@@ -116,12 +116,18 @@ def churn(ui, repo, *pats, **opts):
 
     The map file format used to specify aliases is fairly simple:
 
-    <alias email> <actual email>'''
+    <alias email> <actual email>
+
+    By default .hgchurn in the working directory root will be used, if
+    it exists. Use the --aliases option to override this.
+    '''
     def pad(s, l):
         return (s + " " * l)[:l]
 
     amap = {}
     aliases = opts.get('aliases')
+    if not aliases and os.path.exists(repo.wjoin('.hgchurn')):
+        aliases = repo.wjoin('.hgchurn')
     if aliases:
         for l in open(aliases, "r"):
             l = l.strip()

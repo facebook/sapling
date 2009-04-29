@@ -39,6 +39,10 @@ user1 alias1
 user3 alias3
 EOF
 hg churn --aliases ../aliases
+echo % churn with .hgchurn
+mv ../aliases .hgchurn
+hg churn
+rm .hgchurn
 echo % churn with column specifier
 COLUMNS=40 hg churn
 echo % churn by hour
