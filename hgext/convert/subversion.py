@@ -460,11 +460,34 @@ class svn_source(converter_source):
                             tag[:2] = [tagpath, sourcerev]
                             break
                     else:
-                        pendings.append([source, sourcerev, dest.split('/')[-1]])
+                        pendings.append([source, sourcerev, dest])
+
+                # Filter out tags with children coming from different
+                # parts of the repository like:
+                # /tags/tag.1 (from /trunk:10)
+                # /tags/tag.1/foo (from /branches/foo:12)
+                # Here/tags/tag.1 discarded as well as its children.
+                # It happens with tools like cvs2svn. Such tags cannot
+                # be represented in mercurial.
+                addeds = dict((p, e.copyfrom_path) for p,e 
+                              in origpaths.iteritems() if e.action == 'A')
+                badroots = set()
+                for destroot in addeds:
+                    for source, sourcerev, dest in pendings:
+                        if (not dest.startswith(destroot + '/')
+                            or source.startswith(addeds[destroot] + '/')):
+                            continue
+                        badroots.add(destroot)
+                        break
+
+                for badroot in badroots:
+                    pendings = [p for p in pendings if p[2] != badroot 
+                                and not p[2].startswith(badroot + '/')]
 
                 # Tell tag renamings from tag creations
                 remainings = []
-                for source, sourcerev, tagname in pendings:
+                for source, sourcerev, dest in pendings:
+                    tagname = dest.split('/')[-1]
                     if source.startswith(srctagspath):
                         remainings.append([source, sourcerev, tagname])
                         continue
