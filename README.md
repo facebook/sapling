@@ -5,6 +5,11 @@ This is the Hg-Git plugin for Mercurial, adding the ability to push and pull to/
 
 The Hg-Git plugin can convert commits/changesets losslessly from one system to another, so you can push via an Hg repository and another Hg client can pull it and thier changeset node ids will be identical - Mercurial data does not get lost in translation (* not currently fully implemented, but it will!).  It is intended that Hg users may wish to use this to collaborate even if no Git users are involved in the project, as it may provide some advantages if you're using Bookmarks (see below).
 
+Dependencies
+============
+
+This plugin is implemented entirely in Python - there are no Git binary dependencies, you do not need to have Git installed on your system.  There are in fact no external dependencies currently other than Mercurial.  The plugin is known to work on Hg versions 1.1 and 1.2.
+
 Commands
 =========
 
@@ -49,9 +54,9 @@ Authors
 
 * Scott Chacon <schacon@gmail.com> - main development
 * Augie Fackler <durin42@gmail.com> - testing and moral support.
-* Dulwich Guys - most of the code depends on the awesome work they did.
+* Dulwich Developers - most of this code depends on the awesome work they did.
  
 Sponsorship
 ===========
 
-GitHub let me (Scott) work on this full time for several days, which is why this got done at all.  If you're looking for a free Git host to push your open source Hg projects to, do try them out (http://github.com).
+GitHub let me (Scott) work on this full time for several days, which is why this got done at all.  If you're looking for a free Git host to push your open source Hg projects to, do try us out (http://github.com).
