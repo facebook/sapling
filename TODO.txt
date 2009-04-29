@@ -1,21 +1,21 @@
 GENERAL
 ==========
-* switch object mapping to hg->git since the many to one is that direction
 * respect file modes on conversions
 * explicit file renames
-* more tests?
-* bookmarks / tip / named branches - mapping policy to Git branches
-  - tracking branches?
+* more tests
 * submodules?
-* .gitignore, etc - try to convert?
+* .gitignore, etc - try to convert? 
+  - (probably not automatically, but perhaps a generator?)
 
 PUSH
 ==========
+* push with branch names (w/ proper error messages)
 * update 'remote' references after push confirmation
 * push confirmation? is there extra data after the packfile upload?
 * output something after process is complete (master -> master etc)
   - explain what branch mapping policy determined
 * convert tags to git
+* octopus merge explode re-implode
 
 FETCH
 ===========
@@ -24,9 +24,11 @@ FETCH
 * only try to import non-mapped commits
 * tag conversion
 * save git metadata (committers, unless it's the same) as extra info
+* octopus merge explode
 
 SPEED/EFFICIENCY
 ================
+* switch object mapping to hg->git since the many to one is that direction
 * don't send blobs/trees already on server
 
 MILESTONES

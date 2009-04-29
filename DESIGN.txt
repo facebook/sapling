@@ -1,53 +1,57 @@
-GitHug, the Hg-Git Plugin
+Hg-Git Plugin Design Notes
+==========================
+
+This plugin is designed to allow you to push to a Git server over the Git protocol and to pull from a Git based project.  All data is stored in Hg native format with a mapping table.  People collaborating in Git should not  even be able to tell that you're using Hg to collaborate on their project (except for the '--HG--' section added to commit message). 
+
+Nothing should need to be kept in the Git format - you should be able to run 'hg gclear' at any time to wipe out the Git directory and everything can be rebuilt losslessly from the existing Hg data - it is a cache only.
+
+We are using the Dulwich library, which I've modified quite a bit - I'll have to get these changes back upstream at some point.
+
+I've been adding 'TODO' comments all over the place where I only partially implemented something so I could get the entire first draft of functionality completed.  The TODO areas should be mostly edge cases (executable bits, file rename info, tags, submodules, etc).
+
+Lossless Two Way
+================
+
+We need to store data that Git records that Merc does not in a git/extra_data file.  This would be parents over two and committer information (author will be mapped to Hg committer).  This way two Hg developers can collaborate without the Git transport messing up the local commits.
+
+Each Git commit should be reproducible as a Merc ID and vice versa on any system without losing data (ie changing the SHA).
+
+Branch Translation Policy
 =========================
 
-This plugin is designed to allow you to push to a Git server over the Git 
-protocol and to pull from a Git based project.  All data is stored in Hg
-native format with a mapping table.  People collaborating in Git should not 
-even be able to tell that you're using Hg to collaborate on their project. 
-Nothing should be kept in the Git format except perhaps for caching.
+Branches in Hg and Git are pretty different.  This is meant to provide a clear policy on how one is converted to the other.
 
-(Dulwich library)
+* Without Bookmarks: *
 
-= Lossless Two Way = 
-We need to store data that Git records that Merc does not in a git/extra_data file.  This would be parents over two and committer information (author will be mapped to Hg committer).  This way two Hg developers can collaborate without the Git transport messing up the local commits.
-Each Git commit should be reproducable as a Merc ID and vice versa on any system.
+If you don't have bookmarks enabled, Git simply maps your 'tip' to the 'master' branch of the repository you're pushing to, since that is the most commonly used default branch name.  Actually, pulling will map whatever the server points to as HEAD, but when pushing it will assume 'master' is your tip.
 
-= ISSUES =
+	$ hg gpush origin        # will push tip to remote 'master'
+	$ hg gpush origin master # same as above
+	$ hg gpush origin --all  # same as above
 
-* currently sorts by date, though it should be sorting topologically.  if it gets to a commit where we haven't processed it's parents, it will probably fuck up.
+If the remote server has divergent branches (branches with commits not reachable from HEAD) it will basically ignore them, not convert them into Hg changesets.  It will tell you this (and why) when fetched.
 
-May need to use bookmarks extension to do everything better.
+Conversely, on pushing, Hg named branches are ignored if they are not reachable from traversing the parents of tip. (SC: is this best?)
 
-* Cloning from a Git Repository *
+* With Bookmarks: *
 
-hg init, hg add remote, hg gfetch, hg checkout
+If you have bookmarks enabled, it will treat your bookmarks like Git branches and will only push up references if you specify them.
 
-* Fetching from a Git Repository *
+	hg gpush origin        # will error, you have to specify a branch
+	hg gpush origin master # pushes the master branch
+	hg gpush origin --all  # pushes all local branches
 
-hg gremote add (git-url)
+If a fetch gets branches, it _will_ import them and will create bookmarks that point to them, even if they have no common ancestors with the mainline (HEAD).
 
-hg gfetch origin (like a hg pull)
- - connects to server (upload-pack)
- - gets a list of server shas
- - sees what it does not have (maps all unmapped shas, checks list)
- - requests needed shas
- - fetches packfile
-    - explodes
-    - converts parent linages to hg changesets
-    - updates local parents
+* Other points *
 
-* Pushing to a Git Repository *
+If you do not specify a remote name, it will assume 'origin'.  This is helpful if you do not have bookmarks enabled as it will push tip automatically.  If you have bookmarks enabled this is not helpful because you have to specify a branch name after.
 
-hg gpush origin
-  - maps all unmapped shas
-  - connects to server
-  - needs/haves
-  - creates packfile of git versions of everything the server needs
-  - transfers it, updates local references (bookmarks?)
+Eventually, I would like to setup tracking branch refspecs much like Git - say 'this local branch pushes and pulls to/from this remote and branch', but that will be one of the last things done.
 
+Testing Hg-Git
+==============
 
-* Tests *
 Tests are implemented in the Mercurial-standard way of small shell scripts.
 The scripts are located in the tests directory, and to run them you should
 change to that directory and then run tests/run-tests.py from the Mercurial
