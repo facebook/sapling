@@ -4,7 +4,8 @@ GENERAL
 * explicit file renames
 * more tests
 * submodules?
-* .gitignore, etc - try to convert?
+* .gitignore, etc - try to convert? 
+  - (probably not automatically, but perhaps a generator?)
 
 PUSH
 ==========

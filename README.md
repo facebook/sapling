@@ -1,3 +1,5 @@
+*Warning: This plugin is not yet stabilized. Use to help me identify bugs, but it will be a few weeks before its fully stable.*
+
 Hg-Git Mercurial Plugin
 =======================
 
