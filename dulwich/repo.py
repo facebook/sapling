@@ -412,25 +412,41 @@ class Repo(object):
     # takes a commit and returns an array of the files that were changed
     # between that commit and it's parents
     def get_files_changed(self, commit):
-
         def filenames(basetree, comptree, prefix):
+            basefiles = set()
             changes = list()
             csha = None
             ctree = None
-            for (bmode, bname, bsha) in basetree.entries():
-                if bmode == 57344: # TODO : properly handle submodules
-                    continue
-                bobj = self.get_object(bsha)
-                if comptree:
-                    (cmode, csha) = comptree.entry(bname)
-                if csha != bsha:
-                    if isinstance (bobj, Blob):
-                        changes.append (prefix + bname)
-                    elif isinstance(bobj, Tree):
-                        if csha:
-                            ctree = self.get_object(csha)
-                        changes.extend (filenames (bobj, ctree, prefix + bname + '/'))
-            # TODO: handle removals?
+            if basetree:
+                for (bmode, bname, bsha) in basetree.entries():
+                    if bmode == 57344: # TODO : properly handle submodules
+                        continue
+                    basefiles.add(bname)
+                    bobj = self.get_object(bsha)
+                    if comptree:
+                        (cmode, csha) = comptree.entry(bname)
+                    if csha != bsha:
+                        if isinstance (bobj, Blob):
+                            changes.append (prefix + bname)
+                        elif isinstance(bobj, Tree):
+                            if csha:
+                                ctree = self.get_object(csha)
+                            changes.extend(filenames(bobj,
+                                                     ctree,
+                                                     prefix + bname + '/'))
+
+            # handle removals
+            if comptree:
+                for (bmode, bname, bsha, ) in comptree.entries():
+                    if bmode == 57344: # TODO: hande submodles
+                        continue
+                    if bname not in basefiles:
+                        bobj = self.get_object(bsha)
+                        if isinstance(bobj, Blob):
+                            changes.append(prefix + bname)
+                        elif isinstance(bobj, Tree):
+                            changes.extend(filenames(None, bobj,
+                                                     prefix + bname + '/'))
             return changes
 
         all_changes = list()

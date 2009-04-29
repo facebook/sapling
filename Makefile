@@ -10,7 +10,7 @@ tests:
 	cd tests && $(PYTHON) run-tests.py --with-hg=`which hg` $(TESTFLAGS)
 
 test-%:
-	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS) $@
+	cd tests && $(PYTHON) run-tests.py --with-hg=`which hg` $(TESTFLAGS) $@
 .PHONY: help all local build doc clean install install-bin install-doc \
 	install-home install-home-bin install-home-doc dist dist-notests tests \
 	update-pot

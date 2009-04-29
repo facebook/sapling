@@ -120,11 +120,16 @@ class GitClient(object):
             self.proto.write_pkt_line(None)
             return
         return_refs = copy.copy(changed_refs)
-        self.proto.write_pkt_line("%s %s %s\0%s" % (changed_refs[0][0], changed_refs[0][1], changed_refs[0][2], self.capabilities()))
+
         want = []
         have = []
-        for changed_ref in changed_refs[:]:
-            self.proto.write_pkt_line("%s %s %s" % changed_ref)
+        sent_capabilities = False
+        for changed_ref in changed_refs:
+            if sent_capabilities:
+                self.proto.write_pkt_line("%s %s %s" % changed_ref)
+            else:
+                self.proto.write_pkt_line("%s %s %s\0%s" % (changed_ref[0], changed_ref[1], changed_ref[2], self.capabilities()))
+                sent_capabilities = True
             want.append(changed_ref[1])
             if changed_ref[0] != "0"*40:
                 have.append(changed_ref[0])

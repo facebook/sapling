@@ -36,8 +36,14 @@ commit -m 'add alpha'
 echo beta > beta
 git add beta
 commit -m 'add beta'
+mkdir foo
+echo blah > foo/bar
+git add foo
+commit -m 'add foo'
 git rm alpha
 commit -m 'remove alpha'
+git rm foo/bar
+commit -m 'remove foo/bar'
 echo % final manifest in git is just beta
 git ls-files
 
@@ -53,7 +59,12 @@ hg gclone git://127.0.0.1/gitrepo hgrepo
 cd hgrepo
 hg log --graph
 
-echo % make sure that alpha is not in the manifest
+echo
+echo % make sure alpha is not in this manifest
+hg manifest -r 3
+
+echo
+echo % make sure that only beta is in the manifest
 hg manifest
 
 cd ..

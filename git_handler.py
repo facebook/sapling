@@ -14,7 +14,7 @@ from dulwich.objects import (
     Tree,
     hex_to_sha
     )
-    
+
 import math
 
 def seconds_to_offset(time):
@@ -78,7 +78,7 @@ class GitHandler(object):
             return self._map_hg[hgsha]
         else:
             return None
-        
+
     def load_map(self):
         self._map_git = {}
         self._map_hg = {}
@@ -141,13 +141,13 @@ class GitHandler(object):
             print "URL for " + remote_name + " : " + name
         else:
             print "No remote named : " + remote_name
-        return 
+        return
 
     def remote_list(self):
         for key, value in self._config.iteritems():
             if key[0:6] == 'remote':
                 print key + "\t" + value
-            
+
     def remote_name_to_url(self, remote_name):
         return self._config['remote.' + remote_name + '.url']
 
@@ -155,25 +155,25 @@ class GitHandler(object):
         # TODO : if bookmarks exist, add them as git branches
         c = self.map_git_get(hex(self.repo.changelog.tip()))
         self.git.set_ref('refs/heads/master', c)
-        
+
     def export_git_objects(self):
         print "exporting git objects"
         for rev in self.repo.changelog:
             self.export_hg_commit(rev)
-                
+
     # convert this commit into git objects
     # go through the manifest, convert all blobs/trees we don't have
     # write the commit object (with metadata info)
     def export_hg_commit(self, rev):
         # return if we've already processed this
-        node = self.repo.changelog.lookup(rev)        
+        node = self.repo.changelog.lookup(rev)
         phgsha = hex(node)
         pgit_sha = self.map_git_get(phgsha)
         if pgit_sha:
             return pgit_sha
-        
+
         print "converting revision " + str(rev)
-        
+
         # make sure parents are converted first
         parents = self.repo.parents(rev)
         for parent in parents:
@@ -183,37 +183,37 @@ class GitHandler(object):
             if not p_rev == -1:
                 if not git_sha:
                     self.export_hg_commit(p_rev)
-        
+
         ctx = self.repo.changectx(rev)
         tree_sha = self.write_git_tree(ctx)
-        
+
         # TODO : something with tags?
         # TODO : explicit file renaming, copying?
-        
+
         commit = {}
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
-        commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone) 
+        commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
         message = ctx.description()
         commit['message'] = ctx.description()
         commit['message'] += "\n\n--HG--\n"
         commit['message'] += "branch : " + ctx.branch() + "\n"
-        
+
         commit['parents'] = []
         for parent in parents:
             hgsha = hex(parent.node())
             git_sha = self.map_git_get(hgsha)
             if git_sha:
                 commit['parents'].append(git_sha)
-            
+
         commit_sha = self.git.write_commit_hash(commit) # writing new blobs to git
         self.map_set(commit_sha, phgsha)
         return commit_sha
-        
+
     def write_git_tree(self, ctx):
         trees = {}
         man = ctx.manifest()
-        for filenm in man.keys():            
+        for filenm in man.keys():
             # write blob if not in our git database
             fctx = ctx.filectx(filenm)
             is_exec = 'x' in fctx.flags()
@@ -248,7 +248,7 @@ class GitHandler(object):
                 if treeentry not in trees[parentpath]:
                     trees[parentpath].append( treeentry )
             else:
-                fileentry = ['blob', parts[0], blob_sha, is_exec, is_link]                
+                fileentry = ['blob', parts[0], blob_sha, is_exec, is_link]
                 if '/' not in trees:
                     trees['/'] = []
                 trees['/'].append(fileentry)
@@ -258,7 +258,7 @@ class GitHandler(object):
         dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
         dirs.remove('/')
         dirs.append('/')
-        
+
         # write all the trees
         tree_sha = None
         tree_shas = {}
@@ -273,7 +273,7 @@ class GitHandler(object):
             tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
             tree_shas[dirnm] = tree_sha
         return tree_sha # should be the last root tree sha
-                
+
     def remote_head(self, remote_name):
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             if head == 'HEAD':
@@ -298,30 +298,30 @@ class GitHandler(object):
 
     # TODO : for now, we'll just push all heads that match remote heads
     #        * we should have specified push, tracking branches and --all
-    # takes a dict of refs:shas from the server and returns what should be 
+    # takes a dict of refs:shas from the server and returns what should be
     # pushed up
     def get_changed_refs(self, refs):
         keys = refs.keys()
-        
+
         changed = []
-        if not keys: 
+        if not keys:
             return None
-            
+
         # TODO : this is a huge hack
         if keys[0] == 'capabilities^{}': # nothing on the server yet - first push
             changed.append(("0"*40, self.git.ref('master'), 'refs/heads/master'))
-            
+
         for ref_name in keys:
             parts = ref_name.split('/')
             if parts[0] == 'refs': # strip off 'refs/heads'
                 if parts[1] == 'heads':
                     head = "/".join([v for v in parts[2:]])
                     local_ref = self.git.ref(ref_name)
-                    if local_ref: 
+                    if local_ref:
                         if not local_ref == refs[ref_name]:
                             changed.append((refs[ref_name], local_ref, ref_name))
         return changed
-        
+
     # takes a list of shas the server wants and shas the server has
     # and generates a list of commit shas we need to push up
     def generate_pack_contents(self, want, have):
@@ -334,8 +334,8 @@ class GitHandler(object):
             else:
                 shas.append(next)
             next = graph_walker.next()
-            
-        # so now i have the shas, need to turn them into a list of 
+
+        # so now i have the shas, need to turn them into a list of
         # tuples (sha, path) for ALL the objects i'm sending
         # TODO : don't send blobs or trees they already have
         def get_objects(tree, path):
@@ -350,16 +350,16 @@ class GitHandler(object):
                 elif isinstance(obj, Tree):
                     changes.extend (get_objects (obj, path + name + '/'))
             return changes
-            
+
         objects = []
         for commit_sha in shas:
             commit = self.git.commit(commit_sha)
             objects.append((commit, 'commit'))
             tree = self.git.get_object(commit.tree)
             objects.extend( get_objects(tree, '/') )
-            
+
         return objects
-        
+
     def fetch_pack(self, remote_name):
         git_url = self.remote_name_to_url(remote_name)
         client, path = self.get_transport_and_path(git_url)
@@ -427,11 +427,15 @@ class GitHandler(object):
         print "importing: " + commit.id
         # TODO : look for HG metadata in the message and use it
         # TODO : add extra Git data (committer info) as extras to changeset
-        
+
         # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
-        # TODO : throw IOError for removed files
+        # TODO : Do something less coarse-grained than try/except on the
+        #        get_file call for removed files
         def getfilectx(repo, memctx, f):
-            (e, sha, data) = self.git.get_file(commit, f)
+            try:
+                (e, sha, data) = self.git.get_file(commit, f)
+            except TypeError:
+                raise IOError()
             e = '' # TODO : make this a real mode
             return context.memfilectx(f, data, 'l' in e, 'x' in e, None)
 
@@ -484,7 +488,7 @@ class GitHandler(object):
     def clear(self):
         git_dir = self.repo.join('git')
         mapfile = self.repo.join('git-mapfile')
-        if os.path.exists(git_dir):        
+        if os.path.exists(git_dir):
             for root, dirs, files in os.walk(git_dir, topdown=False):
                 for name in files:
                     os.remove(os.path.join(root, name))
@@ -493,7 +497,7 @@ class GitHandler(object):
             os.rmdir(git_dir)
         if os.path.exists(mapfile):
             os.remove(mapfile)
-        
+
 
 ''
 """
