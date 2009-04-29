@@ -44,6 +44,14 @@ svn ci -m changea3
 svn up
 svn mv tags/trunk.badtag tags/trunk.goodtag
 svn ci -m "fix trunk.badtag"
+echo a >> trunk/a
+svn ci -m changea
+# Delete goodtag and recreate it, to test we pick the good one
+svn rm tags/trunk.goodtag
+svn ci -m removegoodtag
+svn up
+svn copy trunk tags/trunk.goodtag
+svn ci -m recreategoodtag
 cd ..
 
 svnadmin dump svn-repo > ../tags.svndump
