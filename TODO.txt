@@ -9,6 +9,13 @@ GENERAL
 
 PUSH
 ==========
+
+Getting (and not sure why):
+  error: Ref refs/heads/master is at 093772e7fa2ee3c0d488bc44317cfe66d72f09ed  
+         but expected a89be0ca4c09782b6275a8e826c11a91b860a071
+  error: failed to lock refs/heads/master
+  (it works, but why is it doing this?)
+
 * push with branch names (w/ proper error messages)
 * update 'remote' references after push confirmation
 * push confirmation? is there extra data after the packfile upload?

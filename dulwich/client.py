@@ -36,7 +36,7 @@ from protocol import (
 from pack import (
     write_pack_data,
     )
-
+from objects import sha_to_hex
 
 def _fileno_can_read(fileno):
     return len(select.select([fileno], [], [], 0)[0]) > 0
@@ -119,6 +119,7 @@ class GitClient(object):
             print 'nothing changed'
             self.proto.write_pkt_line(None)
             return
+        return_refs = copy.copy(changed_refs)
         self.proto.write_pkt_line("%s %s %s\0%s" % (changed_refs[0][0], changed_refs[0][1], changed_refs[0][2], self.capabilities()))
         want = []
         have = []
@@ -130,14 +131,23 @@ class GitClient(object):
         self.proto.write_pkt_line(None)
         shas = generate_pack_contents(want, have)
             
+        # write packfile contents to a temp file
         (fd, tmppath) = tempfile.mkstemp(suffix=".pack")
         f = os.fdopen(fd, 'w')        
         (entries, sha) = write_pack_data(f, shas, len(shas))
 
+        # write that temp file to our filehandle
         f = open(tmppath, "r")
         self.proto.write_file(f)
         self.proto.write(sha)
         f.close()
+        
+        # read the final confirmation sha
+        sha = self.proto.read(20)
+        if sha:
+            print "CONFIRM: " + sha_to_hex(sha)
+            
+        return return_refs
 
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data, progress):
         """Retrieve a pack from a git smart server.
@@ -207,7 +217,7 @@ class TCPGitClient(GitClient):
         :param path: Path of the repository on the remote host
         """
         self.proto.send_cmd("git-receive-pack", path, "host=%s" % self.host)
-        super(TCPGitClient, self).send_pack(path, changed_refs, generate_pack_contents)
+        return super(TCPGitClient, self).send_pack(path, changed_refs, generate_pack_contents)
 
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data, progress):
         """Fetch a pack from the remote host.
@@ -244,7 +254,7 @@ class SubprocessGitClient(GitClient):
 
     def send_pack(self, path, changed_refs, generate_pack_contents):
         client = self._connect("git-receive-pack", path)
-        client.send_pack(path, changed_refs, generate_pack_contents)
+        return client.send_pack(path, changed_refs, generate_pack_contents)
 
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data, 
         progress):
@@ -300,7 +310,7 @@ class SSHGitClient(GitClient):
     def send_pack(self, path, changed_refs, generate_pack_contents):
         remote = get_ssh_vendor().connect_ssh(self.host, ["git-receive-pack '%s'" % path], port=self.port)
         client = GitClient(lambda: _fileno_can_read(remote.proc.stdout.fileno()), remote.recv, remote.send, *self._args, **self._kwargs)
-        client.send_pack(path, changed_refs, generate_pack_contents)
+        return client.send_pack(path, changed_refs, generate_pack_contents)
 
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data, progress):
         remote = get_ssh_vendor().connect_ssh(self.host, ["git-upload-pack '%s'" % path], port=self.port)

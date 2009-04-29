@@ -286,8 +286,13 @@ class GitHandler(object):
         changed = self.get_changed_refs
         genpack = self.generate_pack_contents
         try:
-            client.send_pack(path, changed, genpack)
-            # TODO : self.git.set_remote_refs(refs, remote_name)
+            changed_refs = client.send_pack(path, changed, genpack)
+            new_refs = {}
+            for old, new, ref in changed_refs:
+                self.ui.status("    "+ remote_name + "::" + ref + " : GIT:" + old[0:8] + " => GIT:" + new[0:8] + "\n")
+                new_refs[ref] = new
+            self.git.set_remote_refs(new_refs, remote_name)
+            self.update_hg_bookmarks(remote_name)
         except:
             raise
 
@@ -404,18 +409,20 @@ class GitHandler(object):
             commit = convert_list[csha]
             self.import_git_commit(commit)
 
-        # update Hg bookmarks
-        bms = {}
-        for head, sha in self.git.remote_refs(remote_name).iteritems():
-            hgsha = hex_to_sha(self.map_hg_get(sha))
-            if not head == 'HEAD':
-                bms[remote_name + '/' + head] = hgsha
+        self.update_hg_bookmarks(remote_name)
+
+    def update_hg_bookmarks(self, remote_name):
         try:
+            bms = bookmarks.parse(self.repo)
+            for head, sha in self.git.remote_refs(remote_name).iteritems():
+                hgsha = hex_to_sha(self.map_hg_get(sha))
+                if not head == 'HEAD':
+                    bms[remote_name + '/' + head] = hgsha
             bookmarks.write(self.repo, bms)
         except AttributeError:
             self.repo.ui.warn('creating bookmarks failed, do you have'
                               ' bookmarks enabled?\n')
-
+        
     def import_git_commit(self, commit):
         print "importing: " + commit.id
         # TODO : look for HG metadata in the message and use it
@@ -456,12 +463,6 @@ class GitHandler(object):
         # save changeset to mapping file
         gitsha = commit.id
         self.map_set(gitsha, p2)
-
-    def getfilectx(self, source, repo, memctx, f):
-        v = files[f]
-        data = source.getfile(f, v)
-        e = source.getmode(f, v)
-        return context.memfilectx(f, data, 'l' in e, 'x' in e, copies.get(f))
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
