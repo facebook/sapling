@@ -10,11 +10,11 @@ PUSH
 ==========
 * push with branch names (w/ proper error messages)
 * explain what branch mapping policy determined when updating refs
-* convert tags to git
+* convert tags to git (local and .hgtags entries)
 
 FETCH
 ===========
-* tag conversion
+* tag conversion (add local tags if not already in .hgtags)
 
 MAPPING ISSUES
 ==============
