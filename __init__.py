@@ -73,10 +73,10 @@ def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
     git = GitHandler(repo, ui)
     git.clear()
-    
+
 def gfetch(ui, repo):
-    dest_repo.ui.status(_("pulling from git url\n"))
-           
+    repo.ui.status(_("pulling from git url\n"))
+
 commands.norepo += " gclone"
 cmdtable = {
   "gclone":
