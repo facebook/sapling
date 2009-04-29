@@ -1,24 +1,37 @@
 Initialized empty Git repository in gitrepo/.git/
 
 rm 'alpha'
+rm 'foo/bar'
 % final manifest in git is just beta
 beta
 fetching from : origin
 exporting git objects
-Counting objects: 8, done.
-Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
-Total 8 (delta 0), reused 0 (delta 0)
+Counting objects: 14, done.
+Compressing objects:  12% (1/8)   Compressing objects:  25% (2/8)   Compressing objects:  37% (3/8)   Compressing objects:  50% (4/8)   Compressing objects:  62% (5/8)   Compressing objects:  75% (6/8)   Compressing objects:  87% (7/8)   Compressing objects: 100% (8/8)   Compressing objects: 100% (8/8), done.
+Total 14 (delta 1), reused 0 (delta 0)
 importing Git objects into Hg
 importing: 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03
 importing: 9497a4ee62e16ee641860d7677cdb2589ea15554
-importing: 8467011f7e1308f296cd58266804be0b7df43474
-2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  changeset:   2:74a7df57f08e
+importing: f2d0d5bfa905e12dee728b509b96cf265bb6ee43
+importing: b0edaf0adac19392cf2867498b983bc5192b41dd
+importing: b991de8952c482a7cd51162674ffff8474862218
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  changeset:   4:ea41a3f0ed10
 |  tag:         origin/master
 |  tag:         tip
 |  user:        test <test@example.org>
-|  date:        Mon Jan 01 00:00:12 2007 +0000
+|  date:        Mon Jan 01 00:00:14 2007 +0000
+|  summary:     remove foo/bar
+|
+o  changeset:   3:c84537f94bcc
+|  user:        test <test@example.org>
+|  date:        Mon Jan 01 00:00:13 2007 +0000
 |  summary:     remove alpha
+|
+o  changeset:   2:e25450e1354f
+|  user:        test <test@example.org>
+|  date:        Mon Jan 01 00:00:12 2007 +0000
+|  summary:     add foo
 |
 o  changeset:   1:7bcd915dc873
 |  user:        test <test@example.org>
@@ -30,5 +43,10 @@ o  changeset:   0:3442585be8a6
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
 
-% make sure that alpha is not in the manifest
+
+% make sure alpha is not in this manifest
+beta
+foo/bar
+
+% make sure that only beta is in the manifest
 beta
