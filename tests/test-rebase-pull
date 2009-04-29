@@ -53,6 +53,10 @@ hg pull --rebase 2>&1 | sed 's/\(pulling from \).*/\1/'
 hg glog --template '{rev}\n' -l 1
 
 echo
+echo "% pull --rebase --update should ignore --update"
+hg pull --rebase --update 2>&1 | sed 's/\(pulling from \).*/\1/'
+
+echo
 echo "% pull --rebase doesn't update if nothing has been pulled"
 hg up 1
 hg pull --rebase 2>&1 | sed 's/\(pulling from \).*/\1/'

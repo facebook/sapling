@@ -44,6 +44,11 @@ nothing to rebase
 @  2
 |
 
+% pull --rebase --update should ignore --update
+pulling from 
+searching for changes
+no changes found
+
 % pull --rebase doesn't update if nothing has been pulled
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 pulling from 
