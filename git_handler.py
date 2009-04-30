@@ -25,8 +25,10 @@ def seconds_to_offset(time):
     if hours > 12:
         sign = '+'
         hours = 12 - (hours - 12)
-    else:
+    elif hours > 0:
         sign = '-'
+    else:
+        sign = ''
     return sign + str(hours).rjust(2, '0') + str(minutes).rjust(2, '0')
 
 def offset_to_seconds(offset):
