@@ -194,7 +194,12 @@ class GitHandler(object):
         commit = {}
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
-        commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
+
+        # hg authors might not have emails
+        author = ctx.user()
+        if not '>' in author:
+            author = author + ' <none@none>'
+        commit['author'] = author + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
         message = ctx.description()
         commit['message'] = ctx.description()
 
