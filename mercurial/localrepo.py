@@ -19,7 +19,7 @@ propertycache = util.propertycache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset'))
-    supported = ('revlogv1', 'store', 'fncache')
+    supported = set('revlogv1 store fncache'.split())
 
     def __init__(self, baseui, path=None, create=0):
         repo.repository.__init__(self)
@@ -55,15 +55,14 @@ class localrepository(repo.repository):
             raise error.RepoError(_("repository %s already exists") % path)
         else:
             # find requirements
-            requirements = []
+            requirements = set()
             try:
-                requirements = self.opener("requires").read().splitlines()
-                for r in requirements:
-                    if r not in self.supported:
-                        raise error.RepoError(_("requirement '%s' not supported") % r)
+                requirements = set(self.opener("requires").read().splitlines())
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
+            for r in requirements - self.supported:
+                raise error.RepoError(_("requirement '%s' not supported") % r)
 
         self.store = store.store(requirements, self.path, util.opener)
         self.spath = self.store.path
