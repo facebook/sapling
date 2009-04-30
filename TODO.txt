@@ -1,6 +1,9 @@
 GENERAL
 ==========
-* integrate as native protocol handler (hg push git://...)
+* fully integrate as native protocol handler
+  - hg push git@...
+  - hg fetch [remote] (remote is url, hg alias or hg-git remote)
+  - hg clone url
 * more tests
 * submodules?
 * .gitignore, etc - try to convert? 
@@ -26,9 +29,14 @@ Created in Git:
 * octopus merge explode/implode
 * different committer in Git objects
 
+WEBSITE
+===========
+* more usage documentation
+* screencast
 
 SPEED/EFFICIENCY
 ================
 * switch object mapping to hg->git since the many to one is that direction
 * don't send blobs/trees already on server
 * packfile creation benchmarking (seems to take a while sometimes)
+  - at least provide status output

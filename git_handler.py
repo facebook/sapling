@@ -186,11 +186,8 @@ class GitHandler(object):
                     self.export_hg_commit(p_rev)
 
         ctx = self.repo.changectx(rev)
-        tree_sha = self.write_git_tree(ctx)
-
-        # TODO : something with tags?
-        # TODO : explicit file renaming, copying?
-
+        tree_sha, renames = self.write_git_tree(ctx)
+        
         commit = {}
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
@@ -200,12 +197,18 @@ class GitHandler(object):
 
         # HG EXTRA INFORMATION
         add_extras = False
+        extra_message = ''
         if not ctx.branch() == 'default':
             add_extras = True
+            extra_message += "branch : " + ctx.branch() + "\n"
 
+        if renames:
+            add_extras = True
+            for oldfile, newfile in renames:
+                extra_message += "rename : " + oldfile + " => " + newfile + "\n"
+            
         if add_extras:
-            commit['message'] += "\n\n--HG--\n"
-            commit['message'] += "branch : " + ctx.branch() + "\n"
+            commit['message'] += "\n\n--HG--\n" + extra_message
 
         commit['parents'] = []
         for parent in parents:
@@ -221,9 +224,14 @@ class GitHandler(object):
     def write_git_tree(self, ctx):
         trees = {}
         man = ctx.manifest()
+        renames = []
         for filenm in man.keys():
             # write blob if not in our git database
             fctx = ctx.filectx(filenm)
+            rename = fctx.renamed()
+            if rename:
+                filerename, sha = rename
+                renames.append((filerename, filenm))
             is_exec = 'x' in fctx.flags()
             is_link = 'l' in fctx.flags()
             file_id = hex(fctx.filenode())
@@ -287,7 +295,7 @@ class GitHandler(object):
                 tree_data.append(entry)
             tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
             tree_shas[dirnm] = tree_sha
-        return tree_sha # should be the last root tree sha
+        return (tree_sha, renames) # should be the last root tree sha
 
     def remote_head(self, remote_name):
         for head, sha in self.git.remote_refs(remote_name).iteritems():
@@ -462,13 +470,17 @@ class GitHandler(object):
         # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
+        
+        # *TODO : parse commit message to extract hg meta info
+        
         def getfilectx(repo, memctx, f):
             try:
                 (mode, sha, data) = self.git.get_file(commit, f)
                 e = self.convert_git_int_mode(mode)
             except TypeError:
                 raise IOError()
-            return context.memfilectx(f, data, 'l' in e, 'x' in e, None)
+            copied_path = None # *TODO : file rename
+            return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
         p1 = "0" * 40
         p2 = "0" * 40
@@ -486,6 +498,7 @@ class GitHandler(object):
 
         # get a list of the changed, added, removed files
         extra = {}
+        # *TODO : if committer is different than author, add it to extra
         text = commit.message
         date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
