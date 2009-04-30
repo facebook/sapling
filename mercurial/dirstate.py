@@ -12,6 +12,7 @@ import cStringIO, osutil, sys, parsers
 
 _unknown = ('?', 0, 0, 0)
 _format = ">cllll"
+propertycache = util.propertycache
 
 def _finddirs(path):
     pos = path.rfind('/')
@@ -43,70 +44,77 @@ class dirstate(object):
         self._dirtypl = False
         self._ui = ui
 
-    def __getattr__(self, name):
-        if name == '_map':
-            self._read()
-            return self._map
-        elif name == '_copymap':
-            self._read()
-            return self._copymap
-        elif name == '_foldmap':
-            _foldmap = {}
-            for name in self._map:
-                norm = os.path.normcase(name)
-                _foldmap[norm] = name
-            self._foldmap = _foldmap
-            return self._foldmap
-        elif name == '_branch':
-            try:
-                self._branch = (self._opener("branch").read().strip()
-                                or "default")
-            except IOError:
-                self._branch = "default"
-            return self._branch
-        elif name == '_pl':
-            self._pl = [nullid, nullid]
-            try:
-                st = self._opener("dirstate").read(40)
-                if len(st) == 40:
-                    self._pl = st[:20], st[20:40]
-            except IOError, err:
-                if err.errno != errno.ENOENT: raise
-            return self._pl
-        elif name == '_dirs':
-            dirs = {}
-            for f,s in self._map.iteritems():
-                if s[0] != 'r':
-                    _incdirs(dirs, f)
-            self._dirs = dirs
-            return self._dirs
-        elif name == '_ignore':
-            files = [self._join('.hgignore')]
-            for name, path in self._ui.configitems("ui"):
-                if name == 'ignore' or name.startswith('ignore.'):
-                    files.append(os.path.expanduser(path))
-            self._ignore = ignore.ignore(self._root, files, self._ui.warn)
-            return self._ignore
-        elif name == '_slash':
-            self._slash = self._ui.configbool('ui', 'slash') and os.sep != '/'
-            return self._slash
-        elif name == '_checklink':
-            self._checklink = util.checklink(self._root)
-            return self._checklink
-        elif name == '_checkexec':
-            self._checkexec = util.checkexec(self._root)
-            return self._checkexec
-        elif name == '_checkcase':
-            self._checkcase = not util.checkcase(self._join('.hg'))
-            return self._checkcase
-        elif name == 'normalize':
-            if self._checkcase:
-                self.normalize = self._normalize
-            else:
-                self.normalize = lambda x, y=False: x
-            return self.normalize
-        else:
-            raise AttributeError(name)
+    @propertycache
+    def _map(self):
+        self._read()
+        return self._map
+
+    @propertycache
+    def _copymap(self):
+        self._read()
+        return self._copymap
+
+    @propertycache
+    def _foldmap(self):
+        f = {}
+        for name in self._map:
+            f[os.path.normcase(name)] = name
+        return f
+
+    @propertycache
+    def _branch(self):
+        try:
+            return self._opener("branch").read().strip() or "default"
+        except IOError:
+            return "default"
+
+    @propertycache
+    def _pl(self):
+        try:
+            st = self._opener("dirstate").read(40)
+            if len(st) == 40:
+                return st[:20], st[20:40]
+        except IOError, err:
+            if err.errno != errno.ENOENT: raise
+        return [nullid, nullid]
+
+    @propertycache
+    def _dirs(self):
+        dirs = {}
+        for f,s in self._map.iteritems():
+            if s[0] != 'r':
+                _incdirs(dirs, f)
+        return dirs
+
+    @propertycache
+    def _ignore(self):
+        files = [self._join('.hgignore')]
+        for name, path in self._ui.configitems("ui"):
+            if name == 'ignore' or name.startswith('ignore.'):
+                files.append(os.path.expanduser(path))
+        return ignore.ignore(self._root, files, self._ui.warn)
+
+    @propertycache
+    def _slash(self):
+        return self._ui.configbool('ui', 'slash') and os.sep != '/'
+
+    @propertycache
+    def _checklink(self):
+        return util.checklink(self._root)
+
+    @propertycache
+    def _checkexec(self):
+        return util.checkexec(self._root)
+
+    @propertycache
+    def _checkcase(self):
+        return not util.checkcase(self._join('.hg'))
+
+    @propertycache
+    def normalize(self):
+        if self._checkcase:
+            return self._normalize
+        return lambda x, y=False: x
 
     def _join(self, f):
         # much faster than os.path.join()
