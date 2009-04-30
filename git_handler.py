@@ -469,6 +469,25 @@ class GitHandler(object):
             return convert[mode]
         return ''
 
+    def extract_hg_metadata(self, message):
+        split = message.split("\n\n--HG--\n", 1)
+        renames = {}
+        branches = []
+        if len(split) == 2:
+            message, meta = split
+            lines = meta.split("\n")
+            for line in lines:
+                if line == '':
+                    continue 
+                
+                command, data = line.split(" : ", 1)
+                if command == 'rename':
+                    before, after = data.split(" => ", 1)
+                    renames[after] = before
+                if command == 'branch':
+                    branches.append(data)
+        return (message, renames, branches)
+        
     def import_git_commit(self, commit):
         self.ui.debug("importing: %s\n" % commit.id)
         # TODO : look for HG metadata in the message and use it
@@ -478,7 +497,7 @@ class GitHandler(object):
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
         
-        # *TODO : parse commit message to extract hg meta info
+        (strip_message, hg_renames, hg_branches) = self.extract_hg_metadata(commit.message)
         
         def getfilectx(repo, memctx, f):
             try:
@@ -486,7 +505,10 @@ class GitHandler(object):
                 e = self.convert_git_int_mode(mode)
             except TypeError:
                 raise IOError()
-            copied_path = None # *TODO : file rename
+            if f in hg_renames:
+                copied_path = hg_renames[f]
+            else:
+                copied_path = None
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
         p1 = "0" * 40
@@ -506,7 +528,7 @@ class GitHandler(object):
         # get a list of the changed, added, removed files
         extra = {}
         # *TODO : if committer is different than author, add it to extra
-        text = commit.message
+        text = strip_message
         date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              commit.author, date, extra)
