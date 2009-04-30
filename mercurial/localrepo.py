@@ -15,6 +15,7 @@ import match as match_
 import merge as merge_
 
 from lock import release
+propertycache = util.propertycache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset'))
@@ -88,24 +89,23 @@ class localrepository(repo.repository):
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
 
-    def __getattr__(self, name):
-        if name == 'changelog':
-            self.changelog = changelog.changelog(self.sopener)
-            if 'HG_PENDING' in os.environ:
-                p = os.environ['HG_PENDING']
-                if p.startswith(self.root):
-                    self.changelog.readpending('00changelog.i.a')
-            self.sopener.defversion = self.changelog.version
-            return self.changelog
-        if name == 'manifest':
-            self.changelog
-            self.manifest = manifest.manifest(self.sopener)
-            return self.manifest
-        if name == 'dirstate':
-            self.dirstate = dirstate.dirstate(self.opener, self.ui, self.root)
-            return self.dirstate
-        else:
-            raise AttributeError(name)
+    @propertycache
+    def changelog(self):
+        c = changelog.changelog(self.sopener)
+        if 'HG_PENDING' in os.environ:
+            p = os.environ['HG_PENDING']
+            if p.startswith(self.root):
+                c.readpending('00changelog.i.a')
+        self.sopener.defversion = c.version
+        return c
+
+    @propertycache
+    def manifest(self):
+        return manifest.manifest(self.sopener)
+
+    @propertycache
+    def dirstate(self):
+        return dirstate.dirstate(self.opener, self.ui, self.root)
 
     def __getitem__(self, changeid):
         if changeid == None:

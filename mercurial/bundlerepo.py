@@ -209,25 +209,28 @@ class bundlerepository(localrepo.localrepository):
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
 
-    def __getattr__(self, name):
-        if name == 'changelog':
-            self.changelog = bundlechangelog(self.sopener, self.bundlefile)
-            self.manstart = self.bundlefile.tell()
-            return self.changelog
-        elif name == 'manifest':
-            self.bundlefile.seek(self.manstart)
-            self.manifest = bundlemanifest(self.sopener, self.bundlefile,
-                                           self.changelog.rev)
-            self.filestart = self.bundlefile.tell()
-            return self.manifest
-        elif name == 'manstart':
-            self.changelog
-            return self.manstart
-        elif name == 'filestart':
-            self.manifest
-            return self.filestart
-        else:
-            return localrepo.localrepository.__getattr__(self, name)
+    @util.propertycache
+    def changelog(self):
+        c = bundlechangelog(self.sopener, self.bundlefile)
+        self.manstart = self.bundlefile.tell()
+        return c
+
+    @util.propertycache
+    def manifest(self):
+        self.bundlefile.seek(self.manstart)
+        m = bundlemanifest(self.sopener, self.bundlefile, self.changelog.rev)
+        self.filestart = self.bundlefile.tell()
+        return m
+
+    @util.propertycache
+    def manstart(self):
+        self.changelog
+        return self.manstart
+
+    @util.propertycache
+    def filestart(self):
+        self.manifest
+        return self.filestart
 
     def url(self):
         return self._url
