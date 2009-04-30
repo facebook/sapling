@@ -25,8 +25,10 @@ def seconds_to_offset(time):
     if hours > 12:
         sign = '+'
         hours = 12 - (hours - 12)
-    else:
+    elif hours > 0:
         sign = '-'
+    else:
+        sign = ''
     return sign + str(hours).rjust(2, '0') + str(minutes).rjust(2, '0')
 
 def offset_to_seconds(offset):
@@ -191,7 +193,12 @@ class GitHandler(object):
         commit = {}
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
-        commit['author'] = ctx.user() + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
+
+        # hg authors might not have emails
+        author = ctx.user()
+        if not '>' in author:
+            author = author + ' <none@none>'
+        commit['author'] = author + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
         message = ctx.description()
         commit['message'] = ctx.description()
 
