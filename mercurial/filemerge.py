@@ -143,7 +143,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         tool = "internal:local"
         if ui.prompt(_(" no tool found to merge %s\n"
                        "keep (l)ocal or take (o)ther?") % fd,
-                     _("[lo]"), _("l")) != _("l"):
+                     (_("&Local"), _("&Other")), _("l")) != _("l"):
             tool = "internal:other"
     if tool == "internal:local":
         return 0
@@ -205,7 +205,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         if filecmp.cmp(repo.wjoin(fd), back):
             if ui.prompt(_(" output file %s appears unchanged\n"
                 "was merge successful (yn)?") % fd,
-                _("[yn]"), _("n")) != _("y"):
+                (_("&Yes"), _("&No")), _("n")) != _("y"):
                 r = 1
 
     if _toolbool(ui, tool, "fixeol"):

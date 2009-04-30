@@ -268,10 +268,12 @@ class ui(object):
             line = line[:-1]
         return line
 
-    def prompt(self, msg, pat=None, default="y"):
-        """Prompt user with msg, read response, and ensure it matches pat
-
-        If not interactive -- the default is returned
+    def prompt(self, msg, choices=None, default="y"):
+        """Prompt user with msg, read response, and ensure it matches
+        one of the provided choices. choices is a sequence of acceptable
+        responses with the format: ('&None', 'E&xec', 'Sym&link')
+        No sequence implies no response checking. Responses are case
+        insensitive. If ui is not interactive, the default is returned.
         """
         if not self.interactive():
             self.note(msg, ' ', default, "\n")
@@ -281,8 +283,11 @@ class ui(object):
                 r = self._readline(msg + ' ')
                 if not r:
                     return default
-                if not pat or re.match(pat, r):
+                if not choices:
                     return r
+                resps = [s[s.index('&')+1].lower() for s in choices]
+                if r.lower() in resps:
+                    return r.lower()
                 else:
                     self.write(_("unrecognized response\n"))
             except EOFError:

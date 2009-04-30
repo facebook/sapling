@@ -282,8 +282,16 @@ def filterpatch(ui, chunks):
         if resp_file[0] is not None:
             return resp_file[0]
         while True:
-            choices = _('[Ynsfdaq?]')
-            r = (ui.prompt("%s %s " % (query, choices), '(?i)%s?$' % choices)
+            resps = _('[Ynsfdaq?]')
+            choices = (_('&Yes, record this change'),
+                    _('&No, skip this change'),
+                    _('&Skip remaining changes to this file'),
+                    _('Record remaining changes to this &file'),
+                    _('&Done, skip remaining changes and files'),
+                    _('Record &all changes to all remaining files'),
+                    _('&Quit, recording no changes'),
+                    _('&?'))
+            r = (ui.prompt("%s %s " % (query, resps), choices)
                  or _('y')).lower()
             if r == _('?'):
                 doc = gettext(record.__doc__)

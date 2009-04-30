@@ -147,8 +147,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             if not a: # both differ from parent
                 r = repo.ui.prompt(
                     _(" conflicting flags for %s\n"
-                      "(n)one, e(x)ec or sym(l)ink?") % f, "[nxl]", "n")
-                return r != "n" and r or ''
+                      "(n)one, e(x)ec or sym(l)ink?") % f,
+                    (_("&None"), _("E&xec"), _("Sym&link")), _("n"))
+                return r != _("n") and r or ''
             if m == a:
                 return n # changed from m to n
             return m # changed from n to m
@@ -219,7 +220,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 if repo.ui.prompt(
                     _(" local changed %s which remote deleted\n"
                       "use (c)hanged version or (d)elete?") % f,
-                    _("[cd]"), _("c")) == _("d"):
+                    (_("&Changed"), _("&Delete")), _("c")) == _("d"):
                     act("prompt delete", "r", f)
                 act("prompt keep", "a", f)
             else:
@@ -254,7 +255,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 if repo.ui.prompt(
                     _("remote changed %s which local deleted\n"
                       "use (c)hanged version or leave (d)eleted?") % f,
-                    _("[cd]"), _("c")) == _("c"):
+                    (_("&Changed"), _("&Deleted")), _("c")) == _("c"):
                     act("prompt recreating", "g", f, m2.flags(f))
         else:
             act("remote created", "g", f, m2.flags(f))
