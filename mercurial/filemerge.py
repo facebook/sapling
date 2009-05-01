@@ -170,7 +170,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
 
     # do we attempt to simplemerge first?
     if _toolbool(ui, tool, "premerge", not (binary or symlink)):
-        r = simplemerge.simplemerge(a, b, c, quiet=True)
+        r = simplemerge.simplemerge(ui, a, b, c, quiet=True)
         if not r:
             ui.debug(_(" premerge successful\n"))
             os.unlink(back)
@@ -187,7 +187,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
                HG_BASE_ISLINK='l' in fca.flags())
 
     if tool == "internal:merge":
-        r = simplemerge.simplemerge(a, b, c, label=['local', 'other'])
+        r = simplemerge.simplemerge(ui, a, b, c, label=['local', 'other'])
     else:
         args = _toolstr(ui, tool, "args", '$local $base $other')
         if "$output" in args:

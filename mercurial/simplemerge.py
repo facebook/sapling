@@ -24,11 +24,6 @@ import util, mdiff, sys, os
 class CantReprocessAndShowBase(Exception):
     pass
 
-def warn(message):
-    sys.stdout.flush()
-    sys.stderr.write(message)
-    sys.stderr.flush()
-
 def intersect(ra, rb):
     """Given two ranges return the range where they intersect or None.
 
@@ -405,7 +400,7 @@ class Merge3Text(object):
 
         return unc
 
-def simplemerge(local, base, other, **opts):
+def simplemerge(ui, local, base, other, **opts):
     def readfile(filename):
         f = open(filename, "rb")
         text = f.read()
@@ -415,7 +410,7 @@ def simplemerge(local, base, other, **opts):
             if not opts.get('text'):
                 raise util.Abort(msg)
             elif not opts.get('quiet'):
-                warn(_('warning: %s\n') % msg)
+                ui.warn(_('warning: %s\n') % msg)
         return text
 
     name_a = local
@@ -451,5 +446,5 @@ def simplemerge(local, base, other, **opts):
 
     if m3.conflicts:
         if not opts.get('quiet'):
-            warn(_("warning: conflicts during merge.\n"))
+            ui.warn(_("warning: conflicts during merge.\n"))
         return 1
