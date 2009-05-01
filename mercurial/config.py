@@ -69,7 +69,7 @@ class config(object):
         self._data[section][item] = value
         self._source[(section, item)] = source
 
-    def read(self, path, fp=None, sections=None):
+    def parse(self, src, data, sections=None, remap=None, include=None):
         sectionre = re.compile(r'\[([^\[]+)\]')
         itemre = re.compile(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
         contre = re.compile(r'\s+(\S.*\S)')
@@ -81,10 +81,7 @@ class config(object):
         line = 0
         cont = 0
 
-        if not fp:
-            fp = open(path)
-
-        for l in fp:
+        for l in data.splitlines(1):
             line += 1
             if cont:
                 m = contre.match(l)
@@ -92,16 +89,16 @@ class config(object):
                     if sections and section not in sections:
                         continue
                     v = self.get(section, item) + "\n" + m.group(1)
-                    self.set(section, item, v, "%s:%d" % (path, line))
+                    self.set(section, item, v, "%s:%d" % (src, line))
                     continue
                 item = None
             m = includere.match(l)
             if m:
                 inc = m.group(1)
-                base = os.path.dirname(path)
+                base = os.path.dirname(src)
                 inc = os.path.normpath(os.path.join(base, inc))
-                incfp = open(inc)
-                self.read(inc, incfp)
+                if include:
+                    include(inc, remap=remap, sections=sections)
                 continue
             if emptyre.match(l):
                 continue
@@ -117,7 +114,7 @@ class config(object):
                 cont = 1
                 if sections and section not in sections:
                     continue
-                self.set(section, item, m.group(2), "%s:%d" % (path, line))
+                self.set(section, item, m.group(2), "%s:%d" % (src, line))
                 continue
             m = unsetre.match(l)
             if m:
@@ -129,4 +126,9 @@ class config(object):
                 continue
 
             raise error.ConfigError(_('config error at %s:%d: \'%s\'')
-                                    % (path, line, l.rstrip()))
+                                    % (src, line, l.rstrip()))
+
+    def read(self, path, fp=None, sections=None, remap=None):
+        if not fp:
+            fp = open(path)
+        self.parse(path, fp.read(), sections, remap, self.read)
