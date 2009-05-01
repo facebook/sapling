@@ -523,11 +523,24 @@ class GitHandler(object):
             # TODO : map extra parents to the extras file
             pass
 
-        files = self.git.get_files_changed(commit)
+        # if committer is different than author, add it to extra
+        extra = {}
+        if not ((commit.author == commit.committer) and (commit.author_time == commit.commit_time)):
+            cdate = datetime.datetime.fromtimestamp(commit.commit_time).strftime("%Y-%m-%d %H:%M:%S")
+            extra['committer'] = commit.committer
+            extra['commit_time'] = cdate
 
         # get a list of the changed, added, removed files
-        extra = {}
-        # *TODO : if committer is different than author, add it to extra
+        files = self.git.get_files_changed(commit)
+        
+        # if this is a merge commit, don't list renamed files
+        # i'm really confused here - this is the only way my use case will
+        # work, but it seems really hacky - do I need to just remove renames
+        # from one of the parents? AARRGH!
+        if not (p2 == "0"*40):
+            for removefile in hg_renames.values():
+                files.remove(removefile)
+        
         text = strip_message
         date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,

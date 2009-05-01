@@ -4,6 +4,7 @@ GENERAL
   - hg push git@...
   - hg fetch [remote] (remote is url, hg alias or hg-git remote)
   - hg clone url
+* fail nicely when the remote_name is not there
 * more tests
 * submodules?
 * .gitignore, etc - try to convert? 
@@ -23,12 +24,13 @@ FETCH
 MAPPING ISSUES
 ==============
 Created in Hg:
-* named branches
-* merges (dont convert back properly for some reason)
+* named branches #
+* merges with renames - dont convert back properly for some reason
 
 Created in Git:
-* octopus merge explode/implode
 * different committer in Git objects
+* encoding field
+* octopus merge explode/implode
 
 WEBSITE
 ===========
