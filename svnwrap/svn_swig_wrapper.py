@@ -395,8 +395,6 @@ class SubversionRepo(object):
 
             while len(revisions) > 1:
                 yield revisions.popleft()
-                # Now is a good time to do a quick garbage collection.
-                gc.collect(0)
 
             if len(revisions) == 0:
                 # exit the loop; there is no history for the path.
@@ -406,8 +404,6 @@ class SubversionRepo(object):
                 start = r.revnum
                 yield r
             self.init_ra_and_client()
-            # Now is a good time to do a thorough garbage colection.
-            gc.collect()
 
     def commit(self, paths, message, file_data, base_revision, addeddirs,
                deleteddirs, properties, copies):
