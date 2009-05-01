@@ -399,16 +399,22 @@ class HgChangeReceiver(delta.Editor):
 
         Otherwise, returns False.
         """
-        return self._split_tag_path(path)[-1] or False
+        return self._split_tag_path(path)[1] or False
 
     def _split_tag_path(self, path):
-        r = (None, None, None)
+        """Figure out which tag inside our repo this path represents, and
+           also figure out which path inside that tag it is.
+
+           Returns a tuple of (path within tag, tag name, server-side tag
+           path).
+        """
         path = self._normalize_path(path)
         for tags_path in self.tag_locations:
             if path and (path.startswith(tags_path) and
                          len(path) > len('%s/' % tags_path)):
-                return path[len(tags_path)+1:]
-        return False
+                tag, _, subpath = path[len(tags_path)+1:].partition('/')
+                return (subpath, tag, '%s/%s' % (tags_path, tag))
+        return (None, None, None)
 
     def get_parent_svn_branch_and_rev(self, number, branch):
         number -= 1
