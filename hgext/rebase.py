@@ -176,6 +176,7 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={},
                             user=repo[rev].user(),
                             date=repo[rev].date(),
                             extra=extra)
+        repo.dirstate.setbranch(repo[newrev].branch())
         return newrev
     except util.Abort:
         # Invalidate the previous setparents
