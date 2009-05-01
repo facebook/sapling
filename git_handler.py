@@ -568,42 +568,64 @@ class TopoSort(object):
         self._shas.reverse()
         return self._shas
 
-    def strongly_connected_components(self, graph):
-        """ Find the strongly connected components in a graph using
-            Tarjan's algorithm.
+    def strongly_connected_components(self, G):
+        """Returns a list of strongly connected components in G.
 
-            graph should be a dictionary mapping node names to
-            lists of successor nodes.
-            """
+         Uses Tarjan's algorithm with Nuutila's modifications.
+         Nonrecursive version of algorithm.
 
-        result = [ ]
-        stack = [ ]
-        low = { }
+         References:
 
-        def visit(node):
-            if node in low: return
+          R. Tarjan (1972). Depth-first search and linear graph algorithms.
+          SIAM Journal of Computing 1(2):146-160.
 
-            num = len(low)
-            low[node] = num
-            stack_pos = len(stack)
-            stack.append(node)
+          E. Nuutila and E. Soisalon-Soinen (1994).
+          On finding the strongly connected components in a directed graph.
+          Information Processing Letters 49(1): 9-14.
 
-            for successor in graph[node].parents:
-                visit(successor)
-                low[node] = min(low[node], low[successor])
-
-            if num == low[node]:
-                component = tuple(stack[stack_pos:])
-                del stack[stack_pos:]
-                result.append(component)
-                for item in component:
-                    low[item] = len(graph)
-
-        for node in graph:
-            visit(node)
-
-        return result
-
+         """
+        preorder={}
+        lowlink={}
+        scc_found={}
+        scc_queue = []
+        scc_list=[]
+        i=0     # Preorder counter
+        for source in G:
+            if source not in scc_found:
+                queue=[source]
+                while queue:
+                    v=queue[-1]
+                    if v not in preorder:
+                        i=i+1
+                        preorder[v]=i
+                    done=1
+                    v_nbrs=G[v]
+                    for w in v_nbrs:
+                        if w not in preorder:
+                            queue.append(w)
+                            done=0
+                            break
+                    if done==1:
+                        lowlink[v]=preorder[v]
+                        for w in v_nbrs:
+                            if w not in scc_found:
+                                if preorder[w]>preorder[v]:
+                                    lowlink[v]=min([lowlink[v],lowlink[w]])
+                                else:
+                                    lowlink[v]=min([lowlink[v],preorder[w]])
+                        queue.pop()
+                        if lowlink[v]==preorder[v]:
+                            scc_found[v]=True
+                            scc=[v]
+                            while scc_queue and preorder[scc_queue[-1]]>preorder[v]:
+                                k=scc_queue.pop()
+                                scc_found[k]=True
+                                scc.append(k)
+                            scc_list.append(scc)
+                        else:
+                            scc_queue.append(v)
+        scc_list.sort(lambda x, y: cmp(len(y),len(x)))
+        return scc_list
 
     def topological_sort(self, graph):
         count = { }
