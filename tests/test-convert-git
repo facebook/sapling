@@ -148,4 +148,22 @@ hg convert git-repo3 git-repo3-hg
 cd git-repo3-hg
 hg up -C
 python -c 'print len(file("b", "rb").read())'
+cd ..
 
+echo
+echo '% test author vs committer'
+mkdir git-repo4
+cd git-repo4
+git init-db >/dev/null 2>/dev/null
+echo >> foo
+git add foo
+commit -a -m addfoo
+echo >> foo
+GIT_AUTHOR_NAME="nottest"
+commit -a -m addfoo2
+cd ..
+
+echo '% convert author committer'
+hg convert git-repo4 git-repo4-hg
+cd git-repo4-hg
+hg log -v

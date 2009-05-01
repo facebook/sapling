@@ -10,17 +10,15 @@ converting...
 2 t4.1
 1 t4.2
 0 Merge branch other
-changeset:   5:4ab1af49a271
+changeset:   5:c78094926be2
 tag:         tip
-parent:      3:0222ab0998d7
-parent:      4:5333c870e3c2
+parent:      3:f5f5cb45432b
+parent:      4:4e174f80c67c
 user:        test <test@example.org>
 date:        Mon Jan 01 00:00:15 2007 +0000
 files:       a
 description:
 Merge branch other
-
-committer: test <test@example.org>
 
 
 % full conversion
@@ -98,3 +96,31 @@ converting...
 0 addbinary
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 4096
+
+% test author vs committer
+% convert author committer
+initializing destination git-repo4-hg repository
+scanning source...
+sorting...
+converting...
+1 addfoo
+0 addfoo2
+changeset:   1:d63e967f93da
+tag:         tip
+user:        nottest <test@example.org>
+date:        Mon Jan 01 00:00:21 2007 +0000
+files:       foo
+description:
+addfoo2
+
+committer: test <test@example.org>
+
+
+changeset:   0:0735477b0224
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:20 2007 +0000
+files:       foo
+description:
+addfoo
+
+

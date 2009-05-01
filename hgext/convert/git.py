@@ -90,6 +90,7 @@ class convert_git(converter_source):
         message = self.recode(message)
         l = c[:end].splitlines()
         parents = []
+        author = committer = None
         for e in l[1:]:
             n, v = e.split(" ", 1)
             if n == "author":
@@ -104,9 +105,10 @@ class convert_git(converter_source):
                 committer = " ".join(p[:-2])
                 if committer[0] == "<": committer = committer[1:-1]
                 committer = self.recode(committer)
-                message += "\ncommitter: %s\n" % committer
             if n == "parent": parents.append(v)
 
+        if committer and committer != author:
+            message += "\ncommitter: %s\n" % committer
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
