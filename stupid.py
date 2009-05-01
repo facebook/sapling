@@ -1,156 +1,15 @@
 import cStringIO
 import re
-import os
 
 from mercurial import patch
 from mercurial import node
 from mercurial import context
 from mercurial import revlog
-from mercurial import util as merc_util
 from svn import core
-from svn import delta
 
-import hg_delta_editor
 import svnwrap
 import svnexternals
 import util
-
-
-def print_your_svn_is_old_message(ui): #pragma: no cover
-    ui.status("In light of that, I'll fall back and do diffs, but it won't do "
-              "as good a job. You should really upgrade your server.\n")
-
-
-def fetch_revisions(ui, svn_url, hg_repo_path, skipto_rev=0, head=0,
-                    stupid=None,
-                    tag_locations='tags',
-                    authors=None,
-                    filemap=None,
-                    **opts):
-    """pull new revisions from Subversion
-    """
-
-    svn_url = util.normalize_url(svn_url)
-    old_encoding = merc_util._encoding
-    merc_util._encoding = 'UTF-8'
-    skipto_rev=int(skipto_rev)
-
-    have_replay = not stupid
-    if have_replay and not callable(
-        delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
-        ui.status('You are using old Subversion SWIG bindings. Replay will not'
-                  ' work until you upgrade to 1.5.0 or newer. Falling back to'
-                  ' a slower method that may be buggier. Please upgrade, or'
-                  ' contribute a patch to use the ctypes bindings instead'
-                  ' of SWIG.\n')
-        have_replay = False
-    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
-    author_host = "@%s" % svn.uuid
-    tag_locations = tag_locations.split(',')
-    hg_editor = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                                 ui_=ui,
-                                                 subdir=svn.subdir,
-                                                 author_host=author_host,
-                                                 tag_locations=tag_locations,
-                                                 authors=authors,
-                                                 filemap=filemap)
-
-    if os.path.exists(hg_editor.uuid_file):
-        initializing_repo = False
-        uuid = open(hg_editor.uuid_file).read()
-        assert uuid == svn.uuid
-        start = hg_editor.last_known_revision()
-    else:
-        open(hg_editor.uuid_file, 'w').write(svn.uuid)
-        open(hg_editor.svn_url_file, 'w').write(svn_url)
-        initializing_repo = True
-        start = skipto_rev
-
-    if head <= 0:
-        stop = svn.last_changed_rev
-    else:
-        stop = head
-
-    if initializing_repo and start > 0:
-        raise merc_util.Abort('Revision skipping at repository initialization '
-                              'remains unimplemented.')
-
-    if start >= stop:
-        ui.status('No new revisions beyond %d.\n' % stop)
-        return
-    else:
-        ui.status('Pulling revisions %d through %d.\n' % (start, stop))
-
-    # start converting revisions
-    for r in svn.revisions(start=start, stop=head):
-        valid = True
-        hg_editor.update_branch_tag_map_for_rev(r)
-        for p in r.paths:
-            if hg_editor._is_path_valid(p):
-                valid = True
-                break
-        if valid:
-            # got a 502? Try more than once!
-            tries = 0
-            converted = False
-            while not converted and tries < 3:
-                try:
-                    util.describe_revision(ui, r)
-                    if have_replay:
-                        try:
-                            replay_convert_rev(hg_editor, svn, r, skipto_rev)
-                        except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
-                            ui.status('%s\n' % e.message)
-                            print_your_svn_is_old_message(ui)
-                            have_replay = False
-                            stupid_svn_server_pull_rev(ui, svn, hg_editor, r)
-                    else:
-                        stupid_svn_server_pull_rev(ui, svn, hg_editor, r)
-                    converted = True
-                except core.SubversionException, e: #pragma: no cover
-                    if e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED:
-                        tries += 1
-                        ui.status('Got a 502, retrying (%s)\n' % tries)
-                    else:
-                        raise merc_util.Abort(*e.args)
-    merc_util._encoding = old_encoding
-fetch_revisions = util.register_subcommand('pull')(fetch_revisions)
-
-
-def cleanup_file_handles(svn, count):
-    if count % 50 == 0:
-        svn.init_ra_and_client()
-
-def replay_convert_rev(hg_editor, svn, r, skipto_rev):
-    hg_editor.set_current_rev(r)
-    svn.get_replay(r.revnum, hg_editor, skipto_rev)
-    i = 1
-    if hg_editor.missing_plaintexts:
-        hg_editor.ui.debug('Fetching %s files that could not use replay.\n' %
-                           len(hg_editor.missing_plaintexts))
-        files_to_grab = set()
-        rootpath = svn.subdir and svn.subdir[1:] or ''
-        for p in hg_editor.missing_plaintexts:
-            hg_editor.ui.note('.')
-            hg_editor.ui.flush()
-            if p[-1] == '/':
-                dirpath = p[len(rootpath):]
-                files_to_grab.update([dirpath + f for f,k in
-                                      svn.list_files(dirpath, r.revnum)
-                                      if k == 'f'])
-            else:
-                files_to_grab.add(p[len(rootpath):])
-        hg_editor.ui.note('\nFetching files...\n')
-        for p in files_to_grab:
-            hg_editor.ui.note('.')
-            hg_editor.ui.flush()
-            cleanup_file_handles(svn, i)
-            i += 1
-            data, mode = svn.get_file(p, r.revnum)
-            hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
-        hg_editor.missing_plaintexts = set()
-        hg_editor.ui.note('\n')
-    hg_editor.commit_current_delta()
 
 
 binary_file_re = re.compile(r'''Index: ([^\n]*)
@@ -180,6 +39,16 @@ property_special_removed_re = re.compile(r'''Property changes on: ([^\n]*)
 _*
 (?:Deleted|Name): svn:special
    \-''')
+
+
+class BadPatchApply(Exception):
+    pass
+
+
+def print_your_svn_is_old_message(ui): #pragma: no cover
+    ui.status("In light of that, I'll fall back and do diffs, but it won't do "
+              "as good a job. You should really upgrade your server.\n")
+
 
 def mempatchproxy(parentctx, files):
     # Avoid circular references patch.patchfile -> mempatch
@@ -222,7 +91,8 @@ def filteriterhunks(hg_editor):
                 yield data
     return filterhunks
 
-def stupid_diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
+
+def diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
@@ -456,7 +326,7 @@ def getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx):
         hgcopies.update(copies)
     return hgcopies
 
-def stupid_fetch_externals(svn, branchpath, r, parentctx):
+def fetch_externals(svn, branchpath, r, parentctx):
     """Extract svn:externals for the current revision and branch
 
     Return an externalsfile instance or None if there are no externals
@@ -507,7 +377,8 @@ def stupid_fetch_externals(svn, branchpath, r, parentctx):
         return None
     return externals
 
-def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
+
+def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
@@ -559,7 +430,7 @@ def stupid_fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
 
     return files, filectxfn
 
-def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
+def svn_server_pull_rev(ui, svn, hg_editor, r):
     # this server fails at replay
     branches = hg_editor.branches_in_paths(r.paths, r.revnum, svn.checkpath, svn.list_files)
     deleted_branches = {}
@@ -596,8 +467,8 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
                         break
                 if not is_closed:
                     deleted_branches[branch] = branchtip
-    date = r.date.replace('T', ' ').replace('Z', '').split('.')[0]
-    date += ' -0000'
+
+    date = hg_editor.fixdate(r.date)
     check_deleted_branches = set()
     for b in branches:
         parentctx = hg_editor.repo[hg_editor.get_parent_revision(r.revnum, b)]
@@ -611,15 +482,15 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
             continue
         else:
             try:
-                files_touched, filectxfn2 = stupid_diff_branchrev(
+                files_touched, filectxfn2 = diff_branchrev(
                     ui, svn, hg_editor, b, r, parentctx)
             except BadPatchApply, e:
                 # Either this revision or the previous one does not exist.
                 ui.status("Fetching entire revision: %s.\n" % e.args[0])
-                files_touched, filectxfn2 = stupid_fetch_branchrev(
+                files_touched, filectxfn2 = fetch_branchrev(
                     svn, hg_editor, b, branches[b], r, parentctx)
 
-            externals = stupid_fetch_externals(svn, branches[b], r, parentctx)
+            externals = fetch_externals(svn, branches[b], r, parentctx)
             if externals is not None:
                 files_touched.append('.hgsvnexternals')
 
@@ -642,9 +513,10 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         for f in excluded:
             files_touched.remove(f)
         if parentctx.node() != node.nullid or files_touched:
-            # TODO(augie) remove this debug code? Or maybe it's sane to have it.
             for f in files_touched:
                 if f:
+                    # this is a case that really shouldn't ever happen, it means something
+                    # is very wrong
                     assert f[0] != '/'
             current_ctx = context.memctx(hg_editor.repo,
                                          [parentctx.node(), revlog.nullid],
@@ -697,6 +569,3 @@ def stupid_svn_server_pull_rev(ui, svn, hg_editor, r):
         ha = hg_editor.repo.commitctx(current_ctx)
         ui.status('Marked branch %s as closed.\n' % (b or 'default'))
         hg_editor._save_metadata()
-
-class BadPatchApply(Exception):
-    pass

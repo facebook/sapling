@@ -3,18 +3,15 @@ import shutil
 
 from mercurial import hg
 from mercurial import node
+from mercurial import util as hgutil
 
-svn_subcommands = { }
-def register_subcommand(name):
-    def inner(fn):
-        svn_subcommands[name] = fn
-        return fn
-    return inner
 
-svn_commands_nourl = set()
-def command_needs_no_url(fn):
-    svn_commands_nourl.add(fn)
-    return fn
+def getuserpass(opts):
+    # DO NOT default the user to hg's getuser(). If you provide
+    # *any* default username to Subversion, it won't use any remembered
+    # username for the desired realm, breaking OS X Keychain support,
+    # GNOME keyring support, and all similar tools.
+    return opts.get('username', None), opts.get('password', '')
 
 
 def version(ui):
@@ -26,30 +23,15 @@ def version(ui):
     return node.hex(ver)[:12]
 
 
-def generate_help():
-    ret = ['hg svn ...', '',
-           'subcommands for Subversion integration', '',
-           'list of subcommands:', '']
+def normalize_url(svnurl):
+    if svnurl.startswith('svn+http'):
+        svnurl = svnurl[4:]
+    url, revs, checkout = hg.parseurl(svnurl)
+    url = url.rstrip('/')
+    if checkout:
+        url = '%s#%s' % (url, checkout)
+    return url
 
-    for name, func in sorted(svn_subcommands.items()):
-        short_description = (func.__doc__ or '').splitlines()[0]
-        ret.append(" %-10s  %s" % (name, short_description))
-
-    return "\n".join(ret) + '\n'
-
-
-def normalize_url(svn_url):
-    return svn_url.rstrip('/')
-
-
-def wipe_all_files(hg_wc_path):
-    files = [f for f in os.listdir(hg_wc_path) if f != '.hg']
-    for f in files:
-        f = os.path.join(hg_wc_path, f)
-        if os.path.isdir(f):
-            shutil.rmtree(f)
-        else:
-            os.remove(f)
 
 REVMAP_FILE_VERSION = 1
 def parse_revmap(revmap_filename):
@@ -94,13 +76,13 @@ def outgoing_revisions(ui, repo, hg_editor, reverse_map, sourcerev):
            and sourcerev.node() != node.nullid):
         outgoing_rev_hashes.append(sourcerev.node())
         sourcerev = sourcerev.parents()
-        assert len(sourcerev) == 1
+        if len(sourcerev) != 1:
+            raise hgutil.Abort("Sorry, can't find svn parent of a merge revision.")
         sourcerev = sourcerev[0]
     if sourcerev.node() != node.nullid:
         return outgoing_rev_hashes
 
 def build_extra(revnum, branch, uuid, subdir):
-    # TODO this needs to be fixed with the new revmap
     extra = {}
     branchpath = 'trunk'
     if branch:
@@ -133,3 +115,12 @@ def describe_revision(ui, r):
 
 def describe_commit(ui, h, b):
     ui.note(' committed to "%s" as %s\n' % ((b or 'default'), node.short(h)))
+
+
+def swap_out_encoding(new_encoding="UTF-8"):
+    """ Utility for mercurial incompatibility changes, can be removed after 1.3
+    """
+    from mercurial import encoding
+    old = encoding.encoding
+    encoding.encoding = new_encoding
+    return old

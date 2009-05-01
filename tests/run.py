@@ -15,6 +15,7 @@ import test_fetch_mappings
 import test_fetch_renames
 import test_fetch_symlinks
 import test_fetch_truncated
+import test_pull
 import test_push_command
 import test_push_renames
 import test_push_dirs
@@ -22,6 +23,7 @@ import test_push_eol
 import test_rebuildmeta
 import test_tags
 import test_utility_commands
+import test_urls
 
 def suite():
     return unittest.TestSuite([test_binaryfiles.suite(),
@@ -35,6 +37,7 @@ def suite():
                                test_fetch_renames.suite(),
                                test_fetch_symlinks.suite(),
                                test_fetch_truncated.suite(),
+                               test_pull.suite(),
                                test_push_command.suite(),
                                test_push_renames.suite(),
                                test_push_dirs.suite(),
@@ -42,6 +45,7 @@ def suite():
                                test_rebuildmeta.suite(),
                                test_tags.suite(),
                                test_utility_commands.suite(),
+                               test_urls.suite(),
                               ])
 
 if __name__ == '__main__':

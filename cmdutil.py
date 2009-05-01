@@ -1,97 +1,91 @@
-from mercurial import util as merc_util
-from mercurial import hg
-from mercurial import node
+#!/usr/bin/python
+import re
+import os
+import urllib
+
+from mercurial import util as hgutil
+
 from svn import core
 
 import util
-import hg_delta_editor
-import svnexternals
 import svnwrap
-import fetch_command
-import utility_commands
+import svnexternals
 
 
-def push_revisions_to_subversion(ui, repo, hg_repo_path, svn_url,
-                                 stupid=False, **opts):
-    """push revisions starting at a specified head back to Subversion.
+b_re = re.compile(r'^\+\+\+ b\/([^\n]*)', re.MULTILINE)
+a_re = re.compile(r'^--- a\/([^\n]*)', re.MULTILINE)
+devnull_re = re.compile(r'^([-+]{3}) /dev/null', re.MULTILINE)
+header_re = re.compile(r'^diff --git .* b\/(.*)', re.MULTILINE)
+newfile_devnull_re = re.compile(r'^--- /dev/null\n\+\+\+ b/([^\n]*)',
+                                re.MULTILINE)
+
+
+class NoFilesException(Exception):
+    """Exception raised when you try and commit without files.
     """
-    oldencoding = merc_util._encoding
-    merc_util._encoding = 'UTF-8'
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    # Strategy:
-    # 1. Find all outgoing commits from this head
-    if len(repo.parents()) != 1:
-        ui.status('Cowardly refusing to push branch merge')
-        return 1
-    workingrev = repo.parents()[0]
-    outgoing = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingrev.node())
-    if not (outgoing and len(outgoing)):
-        ui.status('No revisions to push.')
-        return 0
-    while outgoing:
-        oldest = outgoing.pop(-1)
-        old_ctx = repo[oldest]
-        if len(old_ctx.parents()) != 1:
-            ui.status('Found a branch merge, this needs discussion and '
-                      'implementation.')
-            return 1
-        base_n = old_ctx.parents()[0].node()
-        old_children = repo[base_n].children()
-        svnbranch = repo[base_n].branch()
-        oldtip = base_n
-        samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
-                              and c.node() in svn_commit_hashes]
-        while samebranchchildren:
-            oldtip = samebranchchildren[0].node()
-            samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
-                                  and c.node() in svn_commit_hashes]
-        # 2. Commit oldest revision that needs to be pushed
-        base_revision = svn_commit_hashes[base_n][0]
-        commit_from_rev(ui, repo, old_ctx, hge, svn_url, base_revision)
-        # 3. Fetch revisions from svn
-        r = fetch_command.fetch_revisions(ui, svn_url, hg_repo_path,
-                                          stupid=stupid)
-        assert not r or r == 0
-        # 4. Find the new head of the target branch
-        repo = hg.repository(ui, hge.path)
-        oldtipctx = repo[oldtip]
-        replacement = [c for c in oldtipctx.children() if c not in old_children
-                       and c.branch() == oldtipctx.branch()]
-        assert len(replacement) == 1, 'Replacement node came back as: %r' % replacement
-        replacement = replacement[0]
-        # 5. Rebase all children of the currently-pushing rev to the new branch
-        heads = repo.heads(old_ctx.node())
-        for needs_transplant in heads:
-            def extrafn(ctx, extra):
-                if ctx.node() == oldest:
-                    return
-                extra['branch'] = ctx.branch()
-            utility_commands.rebase_commits(ui, repo, hg_repo_path,
-                                            extrafn=extrafn,
-                                            sourcerev=needs_transplant,
-                                            **opts)
-            repo = hg.repository(ui, hge.path)
-            for child in repo[replacement.node()].children():
-                rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
-                if rebasesrc in outgoing:
-                    while rebasesrc in outgoing:
-                        rebsrcindex = outgoing.index(rebasesrc)
-                        outgoing = (outgoing[0:rebsrcindex] +
-                                    [child.node(), ] + outgoing[rebsrcindex+1:])
-                        children = [c for c in child.children() if c.branch() == child.branch()]
-                        if children:
-                            child = children[0]
-                        rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
-        hge = hg_delta_editor.HgChangeReceiver(hg_repo_path, ui_=ui)
-        svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
-    merc_util._encoding = oldencoding
-    return 0
-push_revisions_to_subversion = util.register_subcommand('push')(push_revisions_to_subversion)
-# for git expats
-push_revisions_to_subversion = util.register_subcommand('dcommit')(push_revisions_to_subversion)
+
+def formatrev(rev):
+    if rev == -1:
+        return '\t(working copy)'
+    return '\t(revision %d)' % rev
+
+
+def filterdiff(diff, oldrev, newrev):
+    diff = newfile_devnull_re.sub(r'--- \1\t(revision 0)' '\n'
+                                  r'+++ \1\t(working copy)',
+                                  diff)
+    oldrev = formatrev(oldrev)
+    newrev = formatrev(newrev)
+    diff = a_re.sub(r'--- \1'+ oldrev, diff)
+    diff = b_re.sub(r'+++ \1' + newrev, diff)
+    diff = devnull_re.sub(r'\1 /dev/null\t(working copy)', diff)
+    diff = header_re.sub(r'Index: \1' + '\n' + ('=' * 67), diff)
+    return diff
+
+
+def parentrev(ui, repo, hge, svn_commit_hashes):
+    """Find the svn parent revision of the repo's dirstate.
+    """
+    workingctx = repo.parents()[0]
+    outrev = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes,
+                                     workingctx.node())
+    if outrev:
+        workingctx = repo[outrev[-1]].parents()[0]
+    return workingctx
+
+
+def replay_convert_rev(hg_editor, svn, r):
+    hg_editor.set_current_rev(r)
+    svn.get_replay(r.revnum, hg_editor)
+    i = 1
+    if hg_editor.missing_plaintexts:
+        hg_editor.ui.debug('Fetching %s files that could not use replay.\n' %
+                           len(hg_editor.missing_plaintexts))
+        files_to_grab = set()
+        rootpath = svn.subdir and svn.subdir[1:] or ''
+        for p in hg_editor.missing_plaintexts:
+            hg_editor.ui.note('.')
+            hg_editor.ui.flush()
+            if p[-1] == '/':
+                dirpath = p[len(rootpath):]
+                files_to_grab.update([dirpath + f for f,k in
+                                      svn.list_files(dirpath, r.revnum)
+                                      if k == 'f'])
+            else:
+                files_to_grab.add(p[len(rootpath):])
+        hg_editor.ui.note('\nFetching files...\n')
+        for p in files_to_grab:
+            hg_editor.ui.note('.')
+            hg_editor.ui.flush()
+            if i % 50 == 0:
+                svn.init_ra_and_client()
+            i += 1
+            data, mode = svn.get_file(p, r.revnum)
+            hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
+        hg_editor.missing_plaintexts = set()
+        hg_editor.ui.note('\n')
+    hg_editor.commit_current_delta()
+
 
 def _isdir(svn, branchpath, svndir):
     try:
@@ -99,6 +93,7 @@ def _isdir(svn, branchpath, svndir):
         return True
     except core.SubversionException:
         return False
+
 
 def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     """Compute directories to add or delete when moving from parentctx
@@ -163,17 +158,20 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
 
     return added, deleted
 
+
 def _externals(ctx):
     ext = svnexternals.externalsfile()
     if '.hgsvnexternals' in ctx:
         ext.read(ctx['.hgsvnexternals'].data())
     return ext
 
-def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
+
+def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
+                    username, password):
     """Build and send a commit from Mercurial to Subversion.
     """
     file_data = {}
-    svn = svnwrap.SubversionRepo(svn_url, username=merc_util.getuser())
+    svn = svnwrap.SubversionRepo(svn_url, username, password)
     parent = rev_ctx.parents()[0]
     parent_branch = rev_ctx.parents()[0].branch()
     branch_path = 'trunk'
@@ -260,7 +258,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
             if tf in props:
                 props[ntf] = props[tf]
                 del props[tf]
-            if merc_util.binary(file_data[ntf][1]):
+            if hgutil.binary(file_data[ntf][1]):
                 props.setdefault(ntf, {}).update(props.get(ntf, {}))
                 props.setdefault(ntf, {})['svn:mime-type'] = 'application/octet-stream'
             del file_data[tf]
@@ -268,6 +266,8 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     addeddirs = [svnpath(d) for d in addeddirs]
     deleteddirs = [svnpath(d) for d in deleteddirs]
     new_target_files += addeddirs + deleteddirs + changeddirs
+    if not new_target_files:
+        raise NoFilesException()
     try:
         svn.commit(new_target_files, rev_ctx.description(), file_data,
                    base_revision, set(addeddirs), set(deleteddirs),
@@ -275,6 +275,26 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision):
     except core.SubversionException, e:
         if hasattr(e, 'apr_err') and (e.apr_err == core.SVN_ERR_FS_TXN_OUT_OF_DATE
                                       or e.apr_err == core.SVN_ERR_FS_CONFLICT):
-            raise merc_util.Abort('Base text was out of date, maybe rebase?')
+            raise hgutil.Abort('Base text was out of date, maybe rebase?')
         else:
             raise
+
+    return True
+
+def islocalrepo(url):
+    if not url.startswith('file:///'):
+        return False
+    if '#' in url.split('/')[-1]: # strip off #anchor
+        url = url[:url.rfind('#')]
+    path = url[len('file://'):]
+    path = urllib.url2pathname(path).replace(os.sep, '/')
+    while '/' in path:
+        if reduce(lambda x,y: x and y,
+                  map(lambda p: os.path.exists(os.path.join(path, p)),
+                      ('hooks', 'format', 'db', ))):
+            return True
+        path = path.rsplit('/', 1)[0]
+    return False
+
+def issvnurl(url):
+    return url.startswith('svn') or islocalrepo(url)

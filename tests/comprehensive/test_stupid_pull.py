@@ -6,7 +6,7 @@ from mercurial import hg
 from mercurial import ui
 
 from tests import test_util
-import fetch_command
+import wrappers
 
 
 def _do_case(self, name):
@@ -18,10 +18,8 @@ def _do_case(self, name):
     checkout_path = self.repo_path
     if subdir:
         checkout_path += '/' + subdir
-    fetch_command.fetch_revisions(ui.ui(),
-                                  svn_url=test_util.fileurl(checkout_path),
-                                  hg_repo_path=wc2_path,
-                                  stupid=True)
+    wrappers.clone(None, ui.ui(), source=test_util.fileurl(checkout_path),
+                     dest=wc2_path, stupid=True, noupdate=True)
     self.repo2 = hg.repository(ui.ui(), wc2_path)
     self.assertEqual(self.repo.branchtags(), self.repo2.branchtags())
     self.assertEqual(pickle.load(open(os.path.join(self.wc_path, '.hg', 'svn', 'tag_info'))),

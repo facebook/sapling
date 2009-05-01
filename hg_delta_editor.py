@@ -8,14 +8,14 @@ import traceback
 from mercurial import context
 from mercurial import hg
 from mercurial import ui
-from mercurial import util
+from mercurial import util as hgutil
 from mercurial import revlog
 from mercurial import node
 from svn import delta
 from svn import core
 
 import svnexternals
-import util as our_util
+import util
 
 def pickle_atomic(data, file_path, dir=None):
     """pickle some data to a path atomically.
@@ -31,7 +31,7 @@ def pickle_atomic(data, file_path, dir=None):
     except: #pragma: no cover
         raise
     else:
-        util.rename(path, file_path)
+        hgutil.rename(path, file_path)
 
 def stash_exception_on_self(fn):
     """Stash any exception raised in the method on self.
@@ -60,12 +60,12 @@ class HgChangeReceiver(delta.Editor):
         self.revmap[revnum, branch] = node_hash
 
     def last_known_revision(self):
-        ''' Obtain the highest numbered -- i.e. latest -- revision known.
+        """Obtain the highest numbered -- i.e. latest -- revision known.
 
         Currently, this function just iterates over the entire revision map
         using the max() builtin. This may be slow for extremely large
         repositories, but for now, it's fast enough.
-        '''
+        """
         try:
             return max(k[0] for k in self.revmap.iterkeys())
         except ValueError:
@@ -81,6 +81,8 @@ class HgChangeReceiver(delta.Editor):
         subdir is the subdirectory of the edits *on the svn server*.
         It is needed for stripping paths off in certain cases.
         """
+        if repo and repo.ui and not ui_:
+            ui_ = repo.ui
         if not ui_:
             ui_ = ui.ui()
         self.ui = ui_
@@ -98,7 +100,7 @@ class HgChangeReceiver(delta.Editor):
             self.subdir = self.subdir[1:]
         self.revmap = {}
         if os.path.exists(self.revmap_file):
-            self.revmap = our_util.parse_revmap(self.revmap_file)
+            self.revmap = util.parse_revmap(self.revmap_file)
         self.branches = {}
         if os.path.exists(self.branch_info_file):
             f = open(self.branch_info_file)
@@ -130,10 +132,21 @@ class HgChangeReceiver(delta.Editor):
             self.readauthors(authors)
         if self.authors:
             self.writeauthors()
+
+        self.lastdate = '1970-01-01 00:00:00 -0000'
         self.includepaths = {}
         self.excludepaths = {}
         if filemap and os.path.exists(filemap):
             self.readfilemap(filemap)
+
+    def fixdate(self, date):
+        if date is not None:
+            date = date.replace('T', ' ').replace('Z', '').split('.')[0]
+            date += ' -0000'
+            self.lastdate = date
+        else:
+            date = self.lastdate
+        return date
 
     def __setup_repo(self, repo_path):
         """Verify the repo is going to work out for us.
@@ -150,7 +163,7 @@ class HgChangeReceiver(delta.Editor):
             self.repo = hg.repository(self.ui, repo_path, create=True)
             os.makedirs(os.path.dirname(self.uuid_file))
             f = open(self.revmap_file, 'w')
-            f.write('%s\n' % our_util.REVMAP_FILE_VERSION)
+            f.write('%s\n' % util.REVMAP_FILE_VERSION)
             f.flush()
             f.close()
 
@@ -206,8 +219,6 @@ class HgChangeReceiver(delta.Editor):
             while paths_need_discovery:
                 p = paths_need_discovery.pop(0)
                 path_could_be_file = True
-                # TODO(augie) Figure out if you can use break here in a for loop, quick
-                # testing of that failed earlier.
                 ind = 0
                 while ind < len(paths_need_discovery) and not paths_need_discovery:
                     if op.startswith(p):
@@ -233,9 +244,13 @@ class HgChangeReceiver(delta.Editor):
                     parentdir = '/'.join(path[:-1])
                     filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
                     branchpath = self._normalize_path(parentdir)
+                    if branchpath.startswith('tags/'):
+                        continue
                     branchname = self._localname(branchpath)
                     if branchpath.startswith('trunk/'):
                         branches[self._localname('trunk')] = 'trunk'
+                        continue
+                    if branchname and branchname.startswith('../'):
                         continue
                     branches[branchname] = branchpath
 
@@ -250,6 +265,7 @@ class HgChangeReceiver(delta.Editor):
     def _localname(self, path):
         """Compute the local name for a branch located at path.
         """
+        assert not path.startswith('tags/')
         if path == 'trunk':
             return None
         elif path.startswith('branches/'):
@@ -274,6 +290,8 @@ class HgChangeReceiver(delta.Editor):
         known.
         """
         path = self._normalize_path(path)
+        if path.startswith('tags/'):
+            return None, None, None
         test = ''
         path_comps = path.split('/')
         while self._localname(test) not in self.branches and len(path_comps):
@@ -288,10 +306,17 @@ class HgChangeReceiver(delta.Editor):
         if path.startswith('trunk/'):
             path = test.split('/')[1:]
             test = 'trunk'
+        elif path.startswith('branches/'):
+            elts = path.split('/')
+            test = '/'.join(elts[:2])
+            path = '/'.join(elts[2:])
         else:
             path = test.split('/')[-1]
             test = '/'.join(test.split('/')[:-1])
-        return path, self._localname(test), test
+        ln =  self._localname(test)
+        if ln and ln.startswith('../'):
+            return None, None, None
+        return path, ln, test
 
     def set_current_rev(self, rev):
         """Set the revision we're currently converting.
@@ -358,6 +383,8 @@ class HgChangeReceiver(delta.Editor):
         return True
 
     def _is_path_valid(self, path):
+        if path is None:
+            return False
         subpath = self._split_branch_path(path)[0]
         if subpath is None:
             return False
@@ -504,7 +531,7 @@ class HgChangeReceiver(delta.Editor):
                 # check for case 5
                 for known in self.branches:
                     if self._svnpath(known).startswith(p):
-                        self.branches_to_delete.add(br) # case 5
+                        self.branches_to_delete.add(known) # case 5
             added_branches.update(self.__determine_parent_branch(p, paths[p].copyfrom_path,
                                                                  paths[p].copyfrom_rev, revision.revnum))
         for t in tags_to_delete:
@@ -565,8 +592,7 @@ class HgChangeReceiver(delta.Editor):
         files_to_commit.sort()
         branch_batches = {}
         rev = self.current_rev
-        date = rev.date.replace('T', ' ').replace('Z', '').split('.')[0]
-        date += ' -0000'
+        date = self.fixdate(rev.date)
 
         # build up the branches that have files on them
         for f in files_to_commit:
@@ -615,10 +641,9 @@ class HgChangeReceiver(delta.Editor):
                        revlog.nullid)
             if parents[0] in closed_revs and branch in self.branches_to_delete:
                 continue
-            # TODO this needs to be fixed with the new revmap
-            extra = our_util.build_extra(rev.revnum, branch,
-                                         open(self.uuid_file).read(),
-                                         self.subdir)
+            extra = util.build_extra(rev.revnum, branch,
+                                     open(self.uuid_file).read(),
+                                     self.subdir)
             if branch is not None:
                 if (branch not in self.branches
                     and branch not in self.repo.branchtags()):
@@ -658,7 +683,7 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-            our_util.describe_commit(self.ui, new_hash, branch)
+            util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         # now we handle branches that need to be committed without any files
@@ -671,9 +696,9 @@ class HgChangeReceiver(delta.Editor):
                 raise IOError
            # True here meant nuke all files, shouldn't happen with branch closing
             if self.commit_branches_empty[branch]: #pragma: no cover
-               raise util.Abort('Empty commit to an open branch attempted. '
-                                'Please report this issue.')
-            extra = our_util.build_extra(rev.revnum, branch,
+               raise hgutil.Abort('Empty commit to an open branch attempted. '
+                                  'Please report this issue.')
+            extra = util.build_extra(rev.revnum, branch,
                                      open(self.uuid_file).read(),
                                      self.subdir)
             current_ctx = context.memctx(self.repo,
@@ -685,23 +710,23 @@ class HgChangeReceiver(delta.Editor):
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
-            our_util.describe_commit(self.ui, new_hash, branch)
+            util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         self._save_metadata()
         self.clear_current_info()
 
     def authorforsvnauthor(self, author):
-        if(author in self.authors):
+        if author in self.authors:
             return self.authors[author]
-        return '%s%s' %(author, self.author_host)
+        return '%s%s' % (author, self.author_host)
 
     def svnauthorforauthor(self, author):
         for svnauthor, hgauthor in self.authors.iteritems():
             if author == hgauthor:
                 return svnauthor
         else:
-            # Mercurial incorrectly splits at e.g. '.', so we roll our own.
+            # return the original svn-side author
             return author.rsplit('@', 1)[0]
 
     def readauthors(self, authorfile):
@@ -837,8 +862,8 @@ class HgChangeReceiver(delta.Editor):
                 # assuming it is a directory
                 self.externals[path] = None
                 map(self.delete_file, [pat for pat in self.current_files.iterkeys()
-                                       if pat.startswith(path)])
-                for f in ctx.walk(our_util.PrefixMatch(br_path2)):
+                                       if pat.startswith(path+'/')])
+                for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current_files:
                         self.delete_file(f_p)
@@ -846,7 +871,7 @@ class HgChangeReceiver(delta.Editor):
     delete_entry = stash_exception_on_self(delete_entry)
 
     def open_file(self, path, parent_baton, base_revision, p=None):
-        self.current_file = 'foobaz'
+        self.current_file = None
         fpath, branch = self._path_and_branch_for_path(path)
         if fpath:
             self.current_file = path
@@ -891,7 +916,7 @@ class HgChangeReceiver(delta.Editor):
 
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
                  copyfrom_revision=None, file_pool=None):
-        self.current_file = 'foobaz'
+        self.current_file = None
         self.base_revision = None
         if path in self.deleted_files:
             del self.deleted_files[path]
@@ -953,6 +978,7 @@ class HgChangeReceiver(delta.Editor):
             source_rev = copyfrom_revision
             cp_f, source_branch = self._path_and_branch_for_path(copyfrom_path)
             if cp_f == '' and br_path == '':
+                assert br_path is not None
                 self.branches[branch] = source_branch, source_rev, self.current_rev.revnum
         new_hash = self.get_parent_revision(source_rev + 1,
                                             source_branch)
@@ -1036,8 +1062,8 @@ class HgChangeReceiver(delta.Editor):
 
         handler, baton = delta.svn_txdelta_apply(source, target, None)
         if not callable(handler): #pragma: no cover
-            raise util.Abort('Error in Subversion bindings: '
-                             'cannot call handler!')
+            raise hgutil.Abort('Error in Subversion bindings: '
+                               'cannot call handler!')
         def txdelt_window(window):
             try:
                 if not self._is_path_valid(self.current_file):
@@ -1050,7 +1076,7 @@ class HgChangeReceiver(delta.Editor):
                 if e.apr_err == core.SVN_ERR_INCOMPLETE_DATA:
                     self.missing_plaintexts.add(self.current_file)
                 else: #pragma: no cover
-                    raise util.Abort(*e.args)
+                    raise hgutil.Abort(*e.args)
             except: #pragma: no cover
                 print len(base), self.current_file
                 self._exception_info = sys.exc_info()

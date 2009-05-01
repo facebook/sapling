@@ -2,7 +2,7 @@ import unittest
 
 from mercurial import ui
 
-import diff_cmd
+import wrappers
 
 import test_util
 
@@ -32,7 +32,8 @@ class DiffTests(test_util.TestBase):
                             ('alpha', 'alpha', 'alpha\n\nadded line\n'),
                             ])
         u = ui.ui()
-        diff_cmd.diff_command(u, self.repo, self.wc_path)
+        wrappers.diff(lambda x,y,z: None,
+                         u, self.repo, svn=True)
         self.assertEqual(u.stream.getvalue(), expected_diff_output)
 
 

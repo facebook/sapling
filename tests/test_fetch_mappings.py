@@ -7,7 +7,7 @@ from mercurial import ui
 from mercurial import node
 
 import test_util
-import fetch_command
+import wrappers
 
 class MapTests(test_util.TestBase):
     @property
@@ -23,11 +23,8 @@ class MapTests(test_util.TestBase):
         authormap = open(self.authors, 'w')
         authormap.write("Augie=Augie Fackler <durin42@gmail.com>\n")
         authormap.close()
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path),
-                                      hg_repo_path=self.wc_path,
-                                      stupid=stupid,
-                                      authors=self.authors)
+        wrappers.clone(None, ui.ui(), source=test_util.fileurl(self.repo_path),
+                         dest=self.wc_path, stupid=stupid, svn_authors=self.authors)
         self.assertEqual(self.repo[0].user(),
                          'Augie Fackler <durin42@gmail.com>')
         self.assertEqual(self.repo['tip'].user(),
@@ -41,11 +38,9 @@ class MapTests(test_util.TestBase):
         authormap = open(self.authors, 'w')
         authormap.write("evil=Testy <test@test>")
         authormap.close()
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path),
-                                      hg_repo_path=self.wc_path,
-                                      stupid=stupid,
-                                      authors=self.authors)
+        wrappers.clone(None, ui.ui(), source=test_util.fileurl(self.repo_path),
+                         dest=self.wc_path, stupid=stupid,
+                         svn_authors=self.authors)
         self.assertEqual(self.repo[0].user(),
                          'Augie@5b65bade-98f3-4993-a01f-b7a6710da339')
         self.assertEqual(self.repo['tip'].user(),
@@ -59,11 +54,9 @@ class MapTests(test_util.TestBase):
         filemap = open(self.filemap, 'w')
         filemap.write("include alpha\n")
         filemap.close()
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path),
-                                      hg_repo_path=self.wc_path,
-                                      stupid=stupid,
-                                      filemap=self.filemap)
+        wrappers.clone(None, ui.ui(), source=test_util.fileurl(self.repo_path),
+                         dest=self.wc_path, stupid=stupid,
+                         svn_filemap=self.filemap)
         self.assertEqual(node.hex(self.repo[0].node()), '88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d')
         self.assertEqual(node.hex(self.repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
 
@@ -75,11 +68,9 @@ class MapTests(test_util.TestBase):
         filemap = open(self.filemap, 'w')
         filemap.write("exclude alpha\n")
         filemap.close()
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path),
-                                      hg_repo_path=self.wc_path,
-                                      stupid=stupid,
-                                      filemap=self.filemap)
+        wrappers.clone(None, ui.ui(), source=test_util.fileurl(self.repo_path),
+                         dest=self.wc_path, stupid=stupid,
+                         svn_filemap=self.filemap)
         self.assertEqual(node.hex(self.repo[0].node()), '2c48f3525926ab6c8b8424bcf5eb34b149b61841')
         self.assertEqual(node.hex(self.repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
 

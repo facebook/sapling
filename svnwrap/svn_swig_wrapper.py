@@ -4,9 +4,10 @@ import os
 import shutil
 import sys
 import tempfile
+import urlparse
+import urllib
 import hashlib
 import collections
-import gc
 
 from svn import client
 from svn import core
@@ -70,7 +71,7 @@ def _create_auth_baton(pool):
     # Give the client context baton a suite of authentication
     # providers.h
     platform_specific = ['svn_auth_get_gnome_keyring_simple_provider',
-                       'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
+                         'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
                          'svn_auth_get_keychain_simple_provider',
                          'svn_auth_get_keychain_ssl_client_cert_pw_provider',
                          'svn_auth_get_kwallet_simple_provider',
@@ -81,13 +82,23 @@ def _create_auth_baton(pool):
                          ]
 
     providers = []
-
-    for p in platform_specific:
-        if hasattr(core, p):
-            try:
-                providers.append(getattr(core, p)())
-            except RuntimeError:
-                pass
+    # Platform-dependant authentication methods
+    getprovider = getattr(core, 'svn_auth_get_platform_specific_provider',
+                          None)
+    if getprovider:
+        # Available in svn >= 1.6
+        for name in ('gnome_keyring', 'keychain', 'kwallet', 'windows'):
+            for type in ('simple', 'ssl_client_cert_pw', 'ssl_server_trust'):
+                p = getprovider(name, type, pool)
+                if p:
+                    providers.append(p)
+    else:
+        for p in platform_specific:
+            if hasattr(core, p):
+                try:
+                    providers.append(getattr(core, p)())
+                except RuntimeError:
+                    pass
 
     providers += [
         client.get_simple_provider(),
@@ -100,6 +111,20 @@ def _create_auth_baton(pool):
 
     return core.svn_auth_open(providers, pool)
 
+def parse_url(url):
+    """Parse a URL and return a tuple (username, password, url)
+    """
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+    user, passwd = None, None
+    if '@' in netloc:
+        userpass, netloc = netloc.split('@')
+        if ':' in userpass:
+            user, passwd = userpass.split(':')
+            user, passwd = urllib.unquote(user) or None, urllib.unquote(passwd) or None
+        else:
+            user = urllib.unquote(userpass) or None
+    url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
+    return (user, passwd, url)
 
 class Revision(tuple):
     """Wrapper for a Subversion revision.
@@ -148,9 +173,12 @@ class SubversionRepo(object):
     This uses the SWIG Python bindings, and will only work on svn >= 1.4.
     It takes a required param, the URL.
     """
-    def __init__(self, url='', username='', head=None):
-        self.svn_url = url
-        self.uname = username
+    def __init__(self, url='', username='', password='', head=None):
+        parsed = parse_url(url)
+        # --username and --password override URL credentials
+        self.username = username or parsed[0]
+        self.password = password or parsed[1]
+        self.svn_url = parsed[2]
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool)
         # self.init_ra_and_client() assumes that a pool already exists
@@ -169,26 +197,16 @@ class SubversionRepo(object):
         """Initializes the RA and client layers, because sometimes getting
         unified diffs runs the remote server out of open files.
         """
-        # Debugging code; retained for possible later use.
-        if False:
-            gc.collect()
-            import pympler.muppy.tracker
-            try:
-                self.memory_tracker
-                try:
-                    self.memory_tracker.print_diff(self.memory_base)
-                except:
-                    print 'HOP'
-                    self.memory_base = self.memory_tracker.create_summary()
-            except:
-                print 'HEP'
-                self.memory_tracker = pympler.muppy.tracker.SummaryTracker()
-
-        # while we're in here we'll recreate our pool, but first, we clear it
-        # and destroy it to make possible leaks cause fatal errors.
-        self.pool.clear()
-        self.pool.destroy()
+        # while we're in here we'll recreate our pool
         self.pool = core.Pool()
+        if self.username:
+            core.svn_auth_set_parameter(self.auth_baton,
+                                        core.SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                                        self.username)
+        if self.password:
+            core.svn_auth_set_parameter(self.auth_baton,
+                                        core.SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                                        self.password)
         self.client_context = client.create_context()
 
         self.client_context.auth_baton = self.auth_baton
@@ -298,6 +316,8 @@ class SubversionRepo(object):
         source = hist.paths[path].copyfrom_path
         source_rev = 0
         for p in hist.paths:
+            if not p.startswith(path):
+                continue
             if hist.paths[p].copyfrom_rev:
                 # We assume that the revision of the source tree as it was
                 # copied was actually the revision of the highest revision
@@ -334,13 +354,7 @@ class SubversionRepo(object):
         The reason this is lazy is so that you can use the same repo object
         to perform RA calls to get deltas.
         """
-        # NB: you'd think this would work, but you'd be wrong. I'm pretty
-        # convinced there must be some kind of svn bug here.
-        #return self.fetch_history_at_paths(['tags', 'trunk', 'branches'],
-        #                                   start=start)
-        # However, we no longer need such filtering, as we gracefully handle
-        # branches located at arbitrary locations.
-        return self.fetch_history_at_paths([''], start=start, stop=stop,
+        return self.fetch_history_at_paths([''], start=start,
                                            chunk_size=chunk_size)
 
     def fetch_history_at_paths(self, paths, start=None, stop=None,
@@ -412,7 +426,6 @@ class SubversionRepo(object):
         checksum = []
         # internal dir batons can fall out of scope and get GCed before svn is
         # done with them. This prevents that (credit to gvn for the idea).
-        # TODO: verify that these are not the cause of our leaks
         batons = [edit_baton, ]
         def driver_cb(parent, path, pool):
             if not parent:
@@ -439,14 +452,10 @@ class SubversionRepo(object):
             if action == 'modify':
                 baton = editor.open_file(path, parent, base_revision, pool)
             elif action == 'add':
-                try:
-                    frompath, fromrev = copies.get(path, (None, -1))
-                    if frompath:
-                        frompath = self.svn_url + '/' + frompath
-                    baton = editor.add_file(path, parent, frompath, fromrev, pool)
-                except (core.SubversionException, TypeError), e: #pragma: no cover
-                    print e
-                    raise
+                frompath, fromrev = copies.get(path, (None, -1))
+                if frompath:
+                    frompath = self.svn_url + '/' + frompath
+                baton = editor.add_file(path, parent, frompath, fromrev, pool)
             elif action == 'delete':
                 baton = editor.delete_entry(path, base_revision, parent, pool)
                 compute_delta = False
@@ -475,11 +484,14 @@ class SubversionRepo(object):
         editor.close_edit(edit_baton, self.pool)
 
     def get_replay(self, revision, editor, oldest_rev_i_have=0):
+        # this method has a tendency to chew through RAM if you don't re-init
+        self.init_ra_and_client()
         e_ptr, e_baton = delta.make_editor(editor)
         try:
             ra.replay(self.ra, revision, oldest_rev_i_have, True, e_ptr,
                       e_baton, self.pool)
         except core.SubversionException, e: #pragma: no cover
+            # can I depend on this number being constant?
             if (e.apr_err == core.SVN_ERR_RA_NOT_IMPLEMENTED or
                 e.apr_err == core.SVN_ERR_UNSUPPORTED_FEATURE):
                 raise SubversionRepoCanNotReplay, ('This Subversion server '
@@ -493,6 +505,9 @@ class SubversionRepo(object):
         """
         if not self.hasdiff3:
             raise SubversionRepoCanNotDiff()
+        # works around an svn server keeping too many open files (observed
+        # in an svnserve from the 1.2 era)
+        self.init_ra_and_client()
 
         assert path[0] != '/'
         url = self.svn_url + '/' + path
@@ -556,7 +571,7 @@ class SubversionRepo(object):
             notfound = (core.SVN_ERR_FS_NOT_FOUND,
                         core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
             if e.apr_err in notfound: # File not found
-                raise IOError, e.args[0]
+                raise IOError()
             raise
         if mode  == 'l':
             linkprefix = "link "
@@ -598,11 +613,11 @@ class SubversionRepo(object):
         revision.
         """
         dirpath = dirpath.strip('/')
+        pool = core.Pool()
         rpath = '/'.join([self.svn_url, dirpath]).strip('/')
         rev = optrev(revision)
         try:
-            entries = client.ls(rpath, rev, True, self.client_context,
-                                self.pool)
+            entries = client.ls(rpath, rev, True, self.client_context, pool)
         except core.SubversionException, e:
             if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
                 raise IOError('%s cannot be found at r%d' % (dirpath, revision))

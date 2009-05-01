@@ -13,12 +13,12 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
-import fetch_command
-import push_cmd
+import wrappers
 
 # Fixtures that need to be pulled at a subdirectory of the repo path
 subdir = {'truncatedhistory.svndump': '/project2',
           'fetch_missing_files_subdir.svndump': '/foo',
+          'empty_dir_in_trunk_not_repo_root.svndump': '/project',
           }
 
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
@@ -45,14 +45,12 @@ def load_svndump_fixture(path, fixture_name):
     proc.stdin.flush()
     proc.communicate()
 
-def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir=''):
+def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir='', noupdate=True):
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
-    fetch_command.fetch_revisions(ui.ui(),
-                                  svn_url=fileurl(repo_path),
-                                  hg_repo_path=wc_path,
-                                  stupid=stupid)
+    wrappers.clone(None, ui.ui(), source=fileurl(repo_path),
+                     dest=wc_path, stupid=stupid, noupdate=noupdate)
     repo = hg.repository(ui.ui(), wc_path)
     return repo
 
@@ -75,9 +73,9 @@ def rmtree(path):
 class MockUI(object):
     real_ui = ui.ui
     _isatty = False
-    def __init__(self, parentui=None):
+    def __init__(self, src=None):
         self.stream = StringIO.StringIO()
-        self.inner_ui = self.real_ui(parentui=parentui)
+        self.inner_ui = self.real_ui(src)
 
     def status(self, *args):
         self.stream.write(''.join(args))
@@ -88,6 +86,9 @@ class MockUI(object):
     def write(self, *args):
         self.stream.write(*args)
 
+    def copy(self):
+        return self.__class__(self.inner_ui)
+
     def __getattr__(self, attr):
         return getattr(self.inner_ui, attr)
 
@@ -97,6 +98,10 @@ class TestBase(unittest.TestCase):
         self.oldwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp(
             'svnwrap_test', dir=os.environ.get('HGSUBVERSION_TEST_TEMP', None))
+        self.hgrc = os.path.join(self.tmpdir, '.hgrc')
+        os.environ['HGRCPATH'] = self.hgrc
+        rc = open(self.hgrc, 'w')
+        rc.write('[extensions]\nhgsubversion=')
 
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
@@ -120,9 +125,7 @@ class TestBase(unittest.TestCase):
 
     def pushrevisions(self, stupid=False):
         before = len(self.repo)
-        push_cmd.push_revisions_to_subversion(
-            ui.ui(), repo=self.repo, hg_repo_path=self.wc_path,
-            svn_url=fileurl(self.repo_path), stupid=stupid)
+        wrappers.push(None, ui.ui(), repo=self.repo, stupid=stupid)
         after = len(self.repo)
         self.assertEqual(0, after - before)
 
@@ -140,7 +143,7 @@ class TestBase(unittest.TestCase):
         entries.sort()
         return entries
 
-    def commitchanges(self, changes):
+    def commitchanges(self, changes, parent='tip'):
         """Commit changes to mercurial directory
 
         'changes' is a sequence of tuples (source, dest, data). It can look
@@ -153,7 +156,7 @@ class TestBase(unittest.TestCase):
         - (source, None, None) to remove source.
         """
         repo = self.repo
-        parentctx = repo['tip']
+        parentctx = repo[parent]
 
         changed, removed = [], []
         for source, dest, newdata in changes:
@@ -187,7 +190,7 @@ class TestBase(unittest.TestCase):
                              '2008-10-07 20:59:48 -0500')
         nodeid = repo.commitctx(ctx)
         repo = self.repo
-        hg.update(repo, nodeid)
+        hg.clean(repo, nodeid)
         return nodeid
 
     def assertchanges(self, changes, ctx):

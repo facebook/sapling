@@ -1,6 +1,7 @@
 import os
 import unittest
 
+from hgext import rebase
 from mercurial import ui
 from mercurial import hg
 from mercurial import revlog
@@ -8,8 +9,8 @@ from mercurial import context
 from mercurial import node
 
 import utility_commands
-import fetch_command
 import test_util
+import wrappers
 
 expected_info_output = '''URL: %(repourl)s/%(branch)s
 Repository Root: %(repourl)s
@@ -26,7 +27,7 @@ class UtilityTests(test_util.TestBase):
         self._load_fixture_and_fetch('two_heads.svndump')
         hg.update(self.repo, 'the_branch')
         u = ui.ui()
-        utility_commands.run_svn_info(u, self.repo, self.wc_path)
+        utility_commands.info(u, self.repo, self.wc_path)
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
                      'repourl': test_util.fileurl(self.repo_path),
@@ -36,7 +37,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(u.stream.getvalue(), expected)
         hg.update(self.repo, 'default')
         u = ui.ui()
-        utility_commands.run_svn_info(u, self.repo, self.wc_path)
+        utility_commands.info(u, self.repo, self.wc_path)
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
                      'repourl': test_util.fileurl(self.repo_path),
@@ -65,18 +66,34 @@ class UtilityTests(test_util.TestBase):
                              {'branch': 'localbranch', })
         new = self.repo.commitctx(ctx)
         hg.update(self.repo, new)
-        utility_commands.print_parent_revision(u, self.repo, self.wc_path)
-        self.assert_(node.hex(self.repo['the_branch'].node())[:8] in
-                     u.stream.getvalue())
-        self.assert_('the_branch' in u.stream.getvalue())
-        self.assert_('r5' in u.stream.getvalue())
+        wrappers.parent(lambda x, y: None, u, self.repo, svn=True)
+        self.assertEqual(u.stream.getvalue(),
+                         'changeset:   3:4e256962fc5d\n'
+                         'branch:      the_branch\n'
+                         'user:        durin@df2126f7-00ab-4d49-b42c-7e981dde0bcf\n'
+                         'date:        Wed Oct 08 01:39:05 2008 +0000\n'
+                         'summary:     add delta on the branch\n\n')
+
         hg.update(self.repo, 'default')
+        # Make sure styles work
         u = ui.ui()
-        utility_commands.print_parent_revision(u, self.repo, self.wc_path)
-        self.assert_(node.hex(self.repo['default'].node())[:8] in
-                     u.stream.getvalue())
-        self.assert_('trunk' in u.stream.getvalue())
-        self.assert_('r6' in u.stream.getvalue())
+        wrappers.parent(lambda x, y: None, u, self.repo, svn=True, style='compact')
+        self.assertEqual(u.stream.getvalue(),
+                         '4:1   1083037b18d8   2008-10-08 01:39 +0000   durin\n'
+                         '  Add gamma on trunk.\n\n')
+        # custom templates too
+        u = ui.ui()
+        wrappers.parent(lambda x, y: None, u, self.repo, svn=True, template='{node}\n')
+        self.assertEqual(u.stream.getvalue(), '1083037b18d85cd84fa211c5adbaeff0fea2cd9f\n')
+
+        u = ui.ui()
+        wrappers.parent(lambda x, y: None, u, self.repo, svn=True)
+        self.assertEqual(u.stream.getvalue(),
+                         'changeset:   4:1083037b18d8\n'
+                         'parent:      1:c95251e0dd04\n'
+                         'user:        durin@df2126f7-00ab-4d49-b42c-7e981dde0bcf\n'
+                         'date:        Wed Oct 08 01:39:29 2008 +0000\n'
+                         'summary:     Add gamma on trunk.\n\n')
 
     def test_outgoing_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
@@ -98,20 +115,27 @@ class UtilityTests(test_util.TestBase):
                              {'branch': 'localbranch', })
         new = self.repo.commitctx(ctx)
         hg.update(self.repo, new)
-        utility_commands.show_outgoing_to_svn(u, self.repo, self.wc_path)
+        wrappers.outgoing(lambda x,y,z: None, u, self.repo, svn=True)
         self.assert_(node.hex(self.repo['localbranch'].node())[:8] in
                      u.stream.getvalue())
-        self.assert_('testy' in u.stream.getvalue())
+        self.assertEqual(u.stream.getvalue(), ('changeset:   5:6de15430fa20\n'
+                                               'branch:      localbranch\n'
+                                               'tag:         tip\n'
+                                               'parent:      3:4e256962fc5d\n'
+                                               'user:        testy\n'
+                                               'date:        Sun Dec 21 16:32:00 2008 -0500\n'
+                                               'summary:     automated test\n'
+                                               '\n'))
         hg.update(self.repo, 'default')
         u = ui.ui()
-        utility_commands.show_outgoing_to_svn(u, self.repo, self.wc_path)
-        self.assertEqual(u.stream.getvalue(), 'No outgoing changes found.\n')
+        wrappers.outgoing(lambda x,y,z: None, u, self.repo, svn=True)
+        self.assertEqual(u.stream.getvalue(), 'no changes found\n')
 
     def test_url_output(self):
         self._load_fixture_and_fetch('two_revs.svndump')
         hg.update(self.repo, 'tip')
         u = ui.ui()
-        utility_commands.print_wc_url(u, self.repo, self.wc_path)
+        utility_commands.url(u, self.repo, self.wc_path)
         expected = test_util.fileurl(self.repo_path) + '\n'
         self.assertEqual(u.stream.getvalue(), expected)
 
@@ -136,7 +160,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         beforerebasehash = self.repo['tip'].node()
         hg.update(self.repo, 'tip')
-        utility_commands.rebase_commits(ui.ui(), self.repo, os.path.dirname(self.repo.path))
+        wrappers.rebase(rebase.rebase, ui.ui(), self.repo, svn=True)
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0], self.repo[0])
         self.assertNotEqual(beforerebasehash, self.repo['tip'].node())
@@ -145,13 +169,12 @@ class UtilityTests(test_util.TestBase):
         """Verify url gets normalized on initial clone.
         """
         test_util.load_svndump_fixture(self.repo_path, 'two_revs.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path)+'/',
-                                      hg_repo_path=self.wc_path,
-                                      stupid=False)
+        wrappers.clone(None, ui.ui(),
+                       source=test_util.fileurl(self.repo_path) + '/',
+                       dest=self.wc_path, stupid=False)
         hg.update(self.repo, 'tip')
         u = ui.ui()
-        utility_commands.print_wc_url(u, self.repo, self.wc_path)
+        utility_commands.url(u, self.repo, self.wc_path)
         expected = test_util.fileurl(self.repo_path) + '\n'
         self.assertEqual(u.stream.getvalue(), expected)
 
@@ -159,15 +182,33 @@ class UtilityTests(test_util.TestBase):
         """Verify url gets normalized on initial clone.
         """
         test_util.load_svndump_fixture(self.repo_path, 'ignores.svndump')
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url=test_util.fileurl(self.repo_path)+'/',
-                                      hg_repo_path=self.wc_path,
-                                      stupid=False)
+        wrappers.clone(None, ui.ui(),
+                       source=test_util.fileurl(self.repo_path) + '/',
+                       dest=self.wc_path, stupid=False)
         hg.update(self.repo, 'tip')
         u = ui.ui()
-        utility_commands.generate_ignore(u, self.repo, self.wc_path)
+        utility_commands.genignore(u, self.repo, self.wc_path)
         self.assertEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                          '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
+
+    def test_list_authors(self):
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'replace_trunk_with_branch.svndump')
+        u = ui.ui()
+        utility_commands.listauthors(u,
+                                     args=[test_util.fileurl(self.repo_path)],
+                                     authors=None)
+        self.assertEqual(u.stream.getvalue(), 'Augie\nevil\n')
+
+
+    def test_list_authors_map(self):
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'replace_trunk_with_branch.svndump')
+        author_path = os.path.join(self.repo_path, 'authors')
+        utility_commands.listauthors(ui.ui(),
+                                     args=[test_util.fileurl(self.repo_path)],
+                                     authors=author_path)
+        self.assertEqual(open(author_path).read(), 'Augie=\nevil=\n')
 
 
 def suite():

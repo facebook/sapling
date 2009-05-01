@@ -5,9 +5,10 @@ import unittest
 from mercurial import hg
 from mercurial import ui
 
-import test_util
-import rebuildmeta
+import svncommands
 import hg_delta_editor
+
+import test_util
 
 def _do_case(self, name, stupid):
     subdir = test_util.subdir.get(name, '')
@@ -16,7 +17,7 @@ def _do_case(self, name, stupid):
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
     src, dest = hg.clone(u, self.wc_path, wc2_path, update=False)
-    rebuildmeta.rebuildmeta(u,
+    svncommands.rebuildmeta(u,
                             dest,
                             os.path.dirname(dest.path),
                             args=[test_util.fileurl(self.repo_path +

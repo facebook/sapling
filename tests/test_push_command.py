@@ -8,9 +8,9 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 from mercurial import revlog
+from mercurial import util as hgutil
 
-import fetch_command
-import push_cmd
+import wrappers
 import test_util
 import time
 
@@ -38,9 +38,8 @@ class PushOverSvnserveTests(test_util.TestBase):
         args = ['svnserve', '-d', '--foreground', '-r', self.repo_path]
         self.svnserve_pid = subprocess.Popen(args).pid
         time.sleep(2)
-        fetch_command.fetch_revisions(ui.ui(),
-                                      svn_url='svn://localhost/',
-                                      hg_repo_path=self.wc_path)
+        wrappers.clone(None, ui.ui(), source='svn://localhost/',
+                       dest=self.wc_path, noupdate=True)
 
     def tearDown(self):
         os.system('kill -9 %d' % self.svnserve_pid)
@@ -70,10 +69,10 @@ class PushOverSvnserveTests(test_util.TestBase):
         if not commit:
             return # some tests use this test as an extended setup.
         hg.update(repo, repo['tip'].node())
-        push_cmd.push_revisions_to_subversion(ui.ui(), repo=self.repo,
-                                              hg_repo_path=self.wc_path,
-                                              svn_url='svn://localhost/')
+        oldauthor = repo['tip'].user()
+        wrappers.push(None, ui.ui(), repo=self.repo)
         tip = self.repo['tip']
+        self.assertNotEqual(oldauthor, tip.user())
         self.assertNotEqual(tip.node(), old_tip)
         self.assertEqual(tip.parents()[0].node(), expected_parent)
         self.assertEqual(tip['adding_file'].data(), 'foo')
@@ -86,6 +85,32 @@ class PushTests(test_util.TestBase):
         test_util.load_fixture_and_fetch('simple_branch.svndump',
                                          self.repo_path,
                                          self.wc_path)
+
+    def test_cant_push_empty_ctx(self):
+        repo = self.repo
+        def file_callback(repo, memctx, path):
+            if path == 'adding_file':
+                return context.memfilectx(path=path,
+                                          data='foo',
+                                          islink=False,
+                                          isexec=False,
+                                          copied=False)
+            raise IOError()
+        ctx = context.memctx(repo,
+                             (repo['default'].node(), node.nullid),
+                             'automated test',
+                             [],
+                             file_callback,
+                             'an_author',
+                             '2008-10-07 20:59:48 -0500',
+                             {'branch': 'default',})
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        old_tip = repo['tip'].node()
+        self.pushrevisions()
+        tip = self.repo['tip']
+        self.assertEqual(tip.node(), old_tip)
+
 
     def test_push_to_default(self, commit=True):
         repo = self.repo
@@ -147,10 +172,7 @@ class PushTests(test_util.TestBase):
         newhash = self.repo.commitctx(ctx)
         repo = self.repo
         hg.update(repo, newhash)
-        push_cmd.push_revisions_to_subversion(ui.ui(),
-                                              repo=repo,
-                                              svn_url=test_util.fileurl(self.repo_path),
-                                              hg_repo_path=self.wc_path)
+        wrappers.push(None, ui.ui(), repo=repo)
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0].node(), oldtiphash)
         self.assertEqual(self.repo['tip'].files(), ['delta', ])
         self.assertEqual(self.repo['tip'].manifest().keys(),
@@ -263,11 +285,11 @@ class PushTests(test_util.TestBase):
                              '2008-10-29 21:26:00 -0500',
                              {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
-        hg.update(repo, repo['tip'].node())
+        hg.clean(repo, repo['tip'].node())
         self.pushrevisions()
         tip = self.repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
-        self.assert_('@' in tip.user())
+        self.assert_('@' in self.repo['tip'].user())
         self.assertEqual(tip['gamma'].flags(), 'x')
         self.assertEqual(tip['gamma'].data(), 'foo')
         self.assertEqual([x for x in tip.manifest().keys() if 'x' not in
@@ -382,6 +404,23 @@ class PushTests(test_util.TestBase):
         self.assertEqual(tip['alpha'].data(), 'bar')
         self.assertEqual(tip.parents()[0]['alpha'].flags(), expected_flags)
         self.assertEqual(tip['alpha'].flags(), '')
+
+    def test_push_outdated_base_text(self):
+        self.test_push_two_revs()
+        changes = [('adding_file', 'adding_file', 'different_content', ),
+                   ]
+        self.commitchanges(changes, parent='tip')
+        self.pushrevisions()
+        changes = [('adding_file', 'adding_file',
+                    'even_more different_content', ),
+                   ]
+        self.commitchanges(changes, parent=3)
+        try:
+            self.pushrevisions()
+            assert False, 'This should have aborted!'
+        except hgutil.Abort, e:
+            self.assertEqual(e.args[0],
+                             'Base text was out of date, maybe rebase?')
 
 
 def suite():

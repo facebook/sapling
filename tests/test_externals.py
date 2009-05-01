@@ -1,8 +1,9 @@
-import unittest
+import os, unittest
+
+from mercurial import commands
 
 import svnexternals
 import test_util
-
 
 class TestFetchExternals(test_util.TestBase):
     def test_externalsfile(self):
@@ -10,9 +11,8 @@ class TestFetchExternals(test_util.TestBase):
         f['t1'] = 'dir1 -r10 svn://foobar'
         f['t 2'] = 'dir2 -r10 svn://foobar'
         f['t3'] = ['dir31 -r10 svn://foobar', 'dir32 -r10 svn://foobar']
-        
-        refext = """\
-[t 2]
+
+        refext = """[t 2]
  dir2 -r10 svn://foobar
 [t1]
  dir1 -r10 svn://foobar
@@ -29,55 +29,71 @@ class TestFetchExternals(test_util.TestBase):
         for t in f:
             self.assertEqual(f[t], f2[t])
 
+    def test_parsedefinitions(self):
+        # Taken from svn book
+        samples = [
+            ('third-party/sounds             http://svn.example.com/repos/sounds',
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds')),
+            ('third-party/skins -r148        http://svn.example.com/skinproj',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('third-party/skins -r 148        http://svn.example.com/skinproj',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('http://svn.example.com/repos/sounds third-party/sounds',
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds')),
+            ('-r148 http://svn.example.com/skinproj third-party/skins',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('-r 148 http://svn.example.com/skinproj third-party/skins',
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+            ('http://svn.example.com/skin-maker@21 third-party/skins/toolkit',
+             ('third-party/skins/toolkit', '21', 'http://svn.example.com/skin-maker')),
+            ]
+        
+        for line, expected in samples:
+            self.assertEqual(expected, svnexternals.parsedefinition(line))
+
     def test_externals(self, stupid=False):
         repo = self._load_fixture_and_fetch('externals.svndump', stupid=stupid)
 
-        ref0 = """\
-[.]
+        ref0 = """[.]
  ^/externals/project1 deps/project1
 """
         self.assertEqual(ref0, repo[0]['.hgsvnexternals'].data())
-        ref1 = """\
-[.]
+        ref1 = """[.]
  ^/externals/project1 deps/project1
  ^/externals/project2 deps/project2
 """
         self.assertEqual(ref1, repo[1]['.hgsvnexternals'].data())
 
-        ref2 = """\
-[.]
+        ref2 = """[.]
  ^/externals/project2 deps/project2
 [subdir]
  ^/externals/project1 deps/project1
 [subdir2]
  ^/externals/project1 deps/project1
 """
-        self.assertEqual(ref2, repo[2]['.hgsvnexternals'].data())
+        actual = repo[2]['.hgsvnexternals'].data()
+        self.assertEqual(ref2, actual)
 
-        ref3 = """\
-[.]
+        ref3 = """[.]
  ^/externals/project2 deps/project2
 [subdir]
  ^/externals/project1 deps/project1
 """
         self.assertEqual(ref3, repo[3]['.hgsvnexternals'].data())
 
-        ref4 = """\
-[subdir]
+        ref4 = """[subdir]
  ^/externals/project1 deps/project1
 """
         self.assertEqual(ref4, repo[4]['.hgsvnexternals'].data())
 
-        ref5 = """\
-[.]
+        ref5 = """[.]
  ^/externals/project2 deps/project2
 [subdir2]
  ^/externals/project1 deps/project1
 """
         self.assertEqual(ref5, repo[5]['.hgsvnexternals'].data())
 
-        ref6 = """\
-[.]
+        ref6 = """[.]
  ^/externals/project2 deps/project2
 """
         self.assertEqual(ref6, repo[6]['.hgsvnexternals'].data())
@@ -85,6 +101,29 @@ class TestFetchExternals(test_util.TestBase):
     def test_externals_stupid(self):
         self.test_externals(True)
 
+    def test_updateexternals(self):
+        def checkdeps(deps, nodeps, repo, rev=None):
+            svnexternals.updateexternals(ui, [rev], repo)
+            for d in deps:
+                p = os.path.join(repo.root, d)
+                self.assertTrue(os.path.isdir(p), 
+                                'missing: %s@%r' % (d, rev))
+            for d in nodeps:
+                p = os.path.join(repo.root, d)
+                self.assertTrue(not os.path.isdir(p),
+                                'unexpected: %s@%r' % (d, rev))
+
+        ui = test_util.ui.ui()
+        repo = self._load_fixture_and_fetch('externals.svndump', stupid=0)
+        commands.update(ui, repo)
+        checkdeps(['deps/project1'], [], repo, 0)
+        checkdeps(['deps/project1', 'deps/project2'], [], repo, 1)
+        checkdeps(['subdir/deps/project1', 'subdir2/deps/project1', 
+                   'deps/project2'], 
+                  ['deps/project1'], repo, 2)
+        checkdeps(['subdir/deps/project1', 'deps/project2'], 
+                  ['subdir2/deps/project1'], repo, 3)
+        checkdeps(['subdir/deps/project1'], ['deps/project2'], repo, 4)
 
 class TestPushExternals(test_util.TestBase):
     def setUp(self):
@@ -96,9 +135,8 @@ class TestPushExternals(test_util.TestBase):
     def test_push_externals(self, stupid=False):
         # Add a new reference on an existing and non-existing directory
         changes = [
-            ('.hgsvnexternals', '.hgsvnexternals', 
-             """\
-[dir]
+            ('.hgsvnexternals', '.hgsvnexternals',
+             """[dir]
  ../externals/project2 deps/project2
 [subdir1]
  ../externals/project1 deps/project1
@@ -115,9 +153,8 @@ class TestPushExternals(test_util.TestBase):
         # Remove all references from one directory, add a new one
         # to the other (test multiline entries)
         changes = [
-            ('.hgsvnexternals', '.hgsvnexternals', 
-             """\
-[subdir1]
+            ('.hgsvnexternals', '.hgsvnexternals',
+             """[subdir1]
  ../externals/project1 deps/project1
  ../externals/project2 deps/project2
 """),
