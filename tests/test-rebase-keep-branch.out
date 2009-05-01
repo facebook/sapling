@@ -31,3 +31,5 @@ o  1:c2:
 |
 o  0:c1:
 
+% dirstate branch should be "notdefault"
+notdefault
