@@ -359,13 +359,15 @@ class GitHandler(object):
     def generate_pack_contents(self, want, have):
         graph_walker = SimpleFetchGraphWalker(want, self.git.get_parents)
         next = graph_walker.next()
-        shas = []
+        shas = set()
         while next:
             if next in have:
                 graph_walker.ack(next)
             else:
-                shas.append(next)
+                shas.add(next)
             next = graph_walker.next()
+
+        seen = []
 
         # so now i have the shas, need to turn them into a list of
         # tuples (sha, path) for ALL the objects i'm sending
@@ -376,11 +378,15 @@ class GitHandler(object):
             for (mode, name, sha) in tree.entries():
                 if mode == 57344: # TODO : properly handle submodules
                     continue
+                if sha in seen:
+                    continue
+
                 obj = self.git.get_object(sha)
-                if isinstance (obj, Blob):
+                seen.append(sha)
+                if isinstance(obj, Blob):
                     changes.append((obj, path + name))
                 elif isinstance(obj, Tree):
-                    changes.extend (get_objects (obj, path + name + '/'))
+                    changes.extend(get_objects (obj, path + name + '/'))
             return changes
 
         objects = []
