@@ -208,30 +208,20 @@ ext_modules=[
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c']),
     Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
     Extension('mercurial.parsers', ['mercurial/parsers.c']),
+    Extension('mercurial.osutil', ['mercurial/osutil.c']),
     ]
 
 packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
             'hgext.highlight', 'hgext.zeroconf', ]
 
-try:
-    import msvcrt
-    ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
-except ImportError:
-    pass
-
-try:
-    ext_modules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
-
-    if sys.platform == 'linux2' and os.uname()[2] > '2.6':
-        # The inotify extension is only usable with Linux 2.6 kernels.
-        # You also need a reasonably recent C library.
-        cc = new_compiler()
-        if has_function(cc, 'inotify_add_watch'):
-            ext_modules.append(Extension('hgext.inotify.linux._inotify',
-                                         ['hgext/inotify/linux/_inotify.c']))
-            packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
-except ImportError:
-    pass
+if sys.platform == 'linux2' and os.uname()[2] > '2.6':
+    # The inotify extension is only usable with Linux 2.6 kernels.
+    # You also need a reasonably recent C library.
+    cc = new_compiler()
+    if has_function(cc, 'inotify_add_watch'):
+        ext_modules.append(Extension('hgext.inotify.linux._inotify',
+                                     ['hgext/inotify/linux/_inotify.c']))
+        packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
 
 datafiles = []
 for root in ('templates', 'i18n'):
