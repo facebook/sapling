@@ -86,9 +86,9 @@ i18n/hg.pot: $(PYTHON_FILES)
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string
         # literals like this '\037\213'. xgettext thinks it has to
-        # parse these them even though they are not marked for
-        # translation. Extracting with an explicit encoding of
-        # ISO-8859-1 will make xgettext "parse" and ignore them.
+        # parse them even though they are not marked for translation.
+        # Extracting with an explicit encoding of ISO-8859-1 will make
+        # xgettext "parse" and ignore them.
 	echo $^ | xargs \
 	  xgettext --package-name "Mercurial" \
 	  --msgid-bugs-address "<mercurial-devel@selenic.com>" \
