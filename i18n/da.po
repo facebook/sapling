@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-05-02 17:00+0200\n"
-"PO-Revision-Date: 2009-05-02 17:21+0200\n"
+"PO-Revision-Date: 2009-05-02 17:47+0200\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -7386,7 +7386,7 @@ msgid "config error at %s:%d: '%s'"
 msgstr "konfigurationsfejl på %s:%d: '%s'"
 
 msgid "not found in manifest"
-msgstr ""
+msgstr "blev ikke fundet i manifest"
 
 msgid "branch name not in UTF-8!"
 msgstr ""
@@ -7608,7 +7608,7 @@ msgstr ""
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
-msgstr ""
+msgstr "kunne ikke finder sammenføjningsværktøj %s\n"
 
 #, python-format
 msgid "tool %s can't handle symlinks\n"
@@ -7624,7 +7624,7 @@ msgstr ""
 
 #, python-format
 msgid "picked tool '%s' for %s (binary %s symlink %s)\n"
-msgstr ""
+msgstr "valgte værktøj '%s' til %s (binær %s symbolsk link %s)\n"
 
 #, python-format
 msgid ""
@@ -7643,18 +7643,18 @@ msgstr ""
 
 #, python-format
 msgid "merging %s and %s to %s\n"
-msgstr ""
+msgstr "føjer %s og %s sammen til %s\n"
 
 #, python-format
 msgid "merging %s\n"
-msgstr ""
+msgstr "sammenføjer %s\n"
 
 #, python-format
 msgid "my %s other %s ancestor %s\n"
 msgstr ""
 
 msgid " premerge successful\n"
-msgstr ""
+msgstr "præ-sammenføjning succesfuld\n"
 
 #, python-format
 msgid ""
@@ -8373,11 +8373,11 @@ msgstr "arkivet %s eksisterer allerede"
 
 #, python-format
 msgid "requirement '%s' not supported"
-msgstr ""
+msgstr "betingelse '%s' er ikke understøttet"
 
 #, python-format
 msgid "%r cannot be used in a tag name"
-msgstr ""
+msgstr "%r kan ikke bruges i et mærkatnavnet"
 
 msgid "working copy of .hgtags is changed (please commit .hgtags manually)"
 msgstr ""
@@ -8395,7 +8395,7 @@ msgstr ""
 
 #, python-format
 msgid "tag '%s' refers to unknown node"
-msgstr ""
+msgstr "mærkaten '%s' henviser til en ukendt knude"
 
 #, python-format
 msgid "unknown revision '%s'"
@@ -8415,7 +8415,7 @@ msgid "no interrupted transaction available\n"
 msgstr ""
 
 msgid "rolling back last transaction\n"
-msgstr ""
+msgstr "ruller sidst transaktion tilbage\n"
 
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
@@ -8449,27 +8449,27 @@ msgstr ""
 
 #, python-format
 msgid "%s not tracked!\n"
-msgstr ""
+msgstr "%s følges ikke\n"
 
 msgid "unresolved merge conflicts (see hg resolve)"
 msgstr ""
 
 msgid "nothing changed\n"
-msgstr ""
+msgstr "ingen ændringer\n"
 
 #, python-format
 msgid "trouble committing %s!\n"
-msgstr ""
+msgstr "problem ved arkivering %s!\n"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
-msgstr ""
+msgstr "HG: Skriv arkiveringsbesked. Linier som starter med 'HG:' bliver fjernet."
 
 msgid "empty commit message"
-msgstr ""
+msgstr "tom arkiveringsbesked"
 
 #, python-format
 msgid "%s does not exist!\n"
-msgstr ""
+msgstr "%s eksisterer ikke!\n"
 
 #, python-format
 msgid ""
@@ -8483,23 +8483,23 @@ msgstr ""
 
 #, python-format
 msgid "%s already tracked!\n"
-msgstr ""
+msgstr "%s følges allerede!\n"
 
 #, python-format
 msgid "%s not added!\n"
-msgstr ""
+msgstr "%s ikke tilføjet!\n"
 
 #, python-format
 msgid "%s still exists!\n"
-msgstr ""
+msgstr "%s eksisterer stadig!\n"
 
 #, python-format
 msgid "%s not removed!\n"
-msgstr ""
+msgstr "%s ikke fjernet!\n"
 
 #, python-format
 msgid "copy failed: %s is not a file or a symbolic link\n"
-msgstr ""
+msgstr "kopiering fejlede: %s er ikke en fil eller en symbolsk længe\n"
 
 msgid "searching for changes\n"
 msgstr "leder efter ændringer\n"
@@ -8757,7 +8757,7 @@ msgstr ""
 
 #, python-format
 msgid "preserving %s for resolve of %s\n"
-msgstr ""
+msgstr "bevarer %s til løsning af %s\n"
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
@@ -9015,21 +9015,21 @@ msgid "template file %s: %s"
 msgstr ""
 
 msgid "transaction abort!\n"
-msgstr ""
+msgstr "transaktionen er afbrudt!\n"
 
 #, python-format
 msgid "failed to truncate %s\n"
-msgstr ""
+msgstr "kunne ikke trunkere %s\n"
 
 msgid "rollback completed\n"
-msgstr ""
+msgstr "tilbagerulning gennemført\n"
 
 msgid "rollback failed - please run hg recover\n"
-msgstr ""
+msgstr "tilbagerulning fejlede - kør venligst hg recover\n"
 
 #, python-format
 msgid "Not trusting file %s from untrusted user %s, group %s\n"
-msgstr ""
+msgstr "Stoler ikke på filen %s fra ubetroet bruger %s, gruppe %s\n"
 
 #, python-format
 msgid "Ignored: %s\n"
