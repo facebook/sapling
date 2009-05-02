@@ -784,7 +784,11 @@ def showconfig(ui, repo, *values, **opts):
     that config item.
 
     With multiple args, print names and values of all config items
-    with matching section names."""
+    with matching section names.
+
+    With the --debug flag, the source (filename and line number) is
+    printed for each config item.
+    """
 
     untrusted = bool(opts.get('untrusted'))
     if values:
