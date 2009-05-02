@@ -1,4 +1,5 @@
 import os, errno, sys, time, datetime, pickle, copy
+import toposort
 import dulwich
 from dulwich.repo import Repo
 from dulwich.client import SimpleFetchGraphWalker
@@ -359,15 +360,13 @@ class GitHandler(object):
     def generate_pack_contents(self, want, have):
         graph_walker = SimpleFetchGraphWalker(want, self.git.get_parents)
         next = graph_walker.next()
-        shas = set()
+        shas = []
         while next:
             if next in have:
                 graph_walker.ack(next)
             else:
-                shas.add(next)
+                shas.append(next)
             next = graph_walker.next()
-
-        seen = []
 
         # so now i have the shas, need to turn them into a list of
         # tuples (sha, path) for ALL the objects i'm sending
@@ -378,15 +377,11 @@ class GitHandler(object):
             for (mode, name, sha) in tree.entries():
                 if mode == 57344: # TODO : properly handle submodules
                     continue
-                if sha in seen:
-                    continue
-
                 obj = self.git.get_object(sha)
-                seen.append(sha)
-                if isinstance(obj, Blob):
+                if isinstance (obj, Blob):
                     changes.append((obj, path + name))
                 elif isinstance(obj, Tree):
-                    changes.extend(get_objects (obj, path + name + '/'))
+                    changes.extend (get_objects (obj, path + name + '/'))
             return changes
 
         objects = []
@@ -529,24 +524,11 @@ class GitHandler(object):
             # TODO : map extra parents to the extras file
             pass
 
-        # if committer is different than author, add it to extra
-        extra = {}
-        if not ((commit.author == commit.committer) and (commit.author_time == commit.commit_time)):
-            cdate = datetime.datetime.fromtimestamp(commit.commit_time).strftime("%Y-%m-%d %H:%M:%S")
-            extra['committer'] = commit.committer
-            extra['commit_time'] = cdate
+        files = self.git.get_files_changed(commit)
 
         # get a list of the changed, added, removed files
-        files = self.git.get_files_changed(commit)
-        
-        # if this is a merge commit, don't list renamed files
-        # i'm really confused here - this is the only way my use case will
-        # work, but it seems really hacky - do I need to just remove renames
-        # from one of the parents? AARRGH!
-        if not (p2 == "0"*40):
-            for removefile in hg_renames.values():
-                files.remove(removefile)
-        
+        extra = {}
+        # *TODO : if committer is different than author, add it to extra
         text = strip_message
         date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
@@ -588,129 +570,3 @@ class GitHandler(object):
             os.rmdir(git_dir)
         if os.path.exists(mapfile):
             os.remove(mapfile)
-
-
-''
-"""
-   Tarjan's algorithm and topological sorting implementation in Python
-   by Paul Harrison
-   Public domain, do with it as you will
-"""
-class TopoSort(object):
-
-    def __init__(self, commitdict):
-        self._sorted = self.robust_topological_sort(commitdict)
-        self._shas = []
-        for level in self._sorted:
-            for sha in level:
-                self._shas.append(sha)
-
-    def items(self):
-        self._shas.reverse()
-        return self._shas
-
-    def strongly_connected_components(self, G):
-        """Returns a list of strongly connected components in G.
-
-         Uses Tarjan's algorithm with Nuutila's modifications.
-         Nonrecursive version of algorithm.
-
-         References:
-
-          R. Tarjan (1972). Depth-first search and linear graph algorithms.
-          SIAM Journal of Computing 1(2):146-160.
-
-          E. Nuutila and E. Soisalon-Soinen (1994).
-          On finding the strongly connected components in a directed graph.
-          Information Processing Letters 49(1): 9-14.
-
-         """
-        preorder={}
-        lowlink={}
-        scc_found={}
-        scc_queue = []
-        scc_list=[]
-        i=0     # Preorder counter
-        for source in G:
-            if source not in scc_found:
-                queue=[source]
-                while queue:
-                    v=queue[-1]
-                    if v not in preorder:
-                        i=i+1
-                        preorder[v]=i
-                    done=1
-                    v_nbrs=G[v]
-                    for w in v_nbrs:
-                        if w not in preorder:
-                            queue.append(w)
-                            done=0
-                            break
-                    if done==1:
-                        lowlink[v]=preorder[v]
-                        for w in v_nbrs:
-                            if w not in scc_found:
-                                if preorder[w]>preorder[v]:
-                                    lowlink[v]=min([lowlink[v],lowlink[w]])
-                                else:
-                                    lowlink[v]=min([lowlink[v],preorder[w]])
-                        queue.pop()
-                        if lowlink[v]==preorder[v]:
-                            scc_found[v]=True
-                            scc=[v]
-                            while scc_queue and preorder[scc_queue[-1]]>preorder[v]:
-                                k=scc_queue.pop()
-                                scc_found[k]=True
-                                scc.append(k)
-                            scc_list.append(scc)
-                        else:
-                            scc_queue.append(v)
-        scc_list.sort(lambda x, y: cmp(len(y),len(x)))
-        return scc_list
-
-    def topological_sort(self, graph):
-        count = { }
-        for node in graph:
-            count[node] = 0
-        for node in graph:
-            for successor in graph[node]:
-                count[successor] += 1
-
-        ready = [ node for node in graph if count[node] == 0 ]
-
-        result = [ ]
-        while ready:
-            node = ready.pop(-1)
-            result.append(node)
-
-            for successor in graph[node]:
-                count[successor] -= 1
-                if count[successor] == 0:
-                    ready.append(successor)
-
-        return result
-
-
-    def robust_topological_sort(self, graph):
-        """ First identify strongly connected components,
-            then perform a topological sort on these components. """
-
-        components = self.strongly_connected_components(graph)
-
-        node_component = { }
-        for component in components:
-            for node in component:
-                node_component[node] = component
-
-        component_graph = { }
-        for component in components:
-            component_graph[component] = [ ]
-
-        for node in graph:
-            node_c = node_component[node]
-            for successor in graph[node].parents:
-                successor_c = node_component[successor]
-                if node_c != successor_c:
-                    component_graph[node_c].append(successor_c)
-
-        return self.topological_sort(component_graph)
