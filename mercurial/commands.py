@@ -2667,7 +2667,8 @@ def serve(ui, repo, **opts):
     Start a local HTTP repository browser and pull server.
 
     By default, the server logs accesses to stdout and errors to
-    stderr. Use the -A and -E options to log to files.
+    stderr. Use the -A/--accesslog and -E/--errorlog options to log to
+    files.
     """
 
     if opts["stdio"]:
@@ -2939,16 +2940,16 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
     the working directory will additionally be switched to that
     branch.
 
-    When there are uncommitted changes, use option -C to discard them,
-    forcibly replacing the state of the working directory with the
-    requested revision.
+    When there are uncommitted changes, use option -C/--clean to
+    discard them, forcibly replacing the state of the working
+    directory with the requested revision.
 
-    When there are uncommitted changes and option -C is not used, and
-    the parent revision and requested revision are on the same branch,
-    and one of them is an ancestor of the other, then the new working
-    directory will contain the requested revision merged with the
-    uncommitted changes. Otherwise, the update will fail with a
-    suggestion to use 'merge' or 'update -C' instead.
+    When there are uncommitted changes and option -C/--clean is not
+    used, and the parent revision and requested revision are on the
+    same branch, and one of them is an ancestor of the other, then the
+    new working directory will contain the requested revision merged
+    with the uncommitted changes. Otherwise, the update will fail with
+    a suggestion to use 'merge' or 'update -C' instead.
 
     If you want to update just one file to an older revision, use
     revert.

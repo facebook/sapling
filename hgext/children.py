@@ -17,7 +17,7 @@ def children(ui, repo, file_=None, **opts):
     """show the children of the given or working directory revision
 
     Print the children of the working directory's revisions. If a
-    revision is given via --rev/-r, the children of that revision will
+    revision is given via -r/--rev, the children of that revision will
     be printed. If a file argument is given, revision in which the
     file was last changed (after the working directory revision or the
     argument to --rev if given) is printed.
