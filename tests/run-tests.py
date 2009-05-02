@@ -11,27 +11,23 @@ import difflib
 import errno
 import optparse
 import os
-try:
-    import subprocess
-    subprocess.Popen  # trigger ImportError early
-    closefds = os.name == 'posix'
-    def Popen4(cmd, bufsize=-1):
-        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                             close_fds=closefds,
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-        p.fromchild = p.stdout
-        p.tochild = p.stdin
-        p.childerr = p.stderr
-        return p
-except ImportError:
-    subprocess = None
-    from popen2 import Popen4
+import subprocess
 import shutil
 import signal
 import sys
 import tempfile
 import time
+
+closefds = os.name == 'posix'
+def Popen4(cmd, bufsize=-1):
+    p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                         close_fds=closefds,
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
+    p.fromchild = p.stdout
+    p.tochild = p.stdin
+    p.childerr = p.stderr
+    return p
 
 # reserved exit code to skip test (used by hghave)
 SKIPPED_STATUS = 80

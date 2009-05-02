@@ -44,37 +44,29 @@ def sha1(s):
             _sha1 = sha.sha
     return _sha1(s)
 
-try:
-    import subprocess
-    subprocess.Popen  # trigger ImportError early
-    closefds = os.name == 'posix'
-    def popen2(cmd, mode='t', bufsize=-1):
-        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                             close_fds=closefds,
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        return p.stdin, p.stdout
-    def popen3(cmd, mode='t', bufsize=-1):
-        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                             close_fds=closefds,
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        return p.stdin, p.stdout, p.stderr
-    def Popen3(cmd, capturestderr=False, bufsize=-1):
-        stderr = capturestderr and subprocess.PIPE or None
-        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                             close_fds=closefds,
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             stderr=stderr)
-        p.fromchild = p.stdout
-        p.tochild = p.stdin
-        p.childerr = p.stderr
-        return p
-except ImportError:
-    subprocess = None
-    from popen2 import Popen3
-    popen2 = os.popen2
-    popen3 = os.popen3
-
+import subprocess
+closefds = os.name == 'posix'
+def popen2(cmd, mode='t', bufsize=-1):
+    p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                         close_fds=closefds,
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    return p.stdin, p.stdout
+def popen3(cmd, mode='t', bufsize=-1):
+    p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                         close_fds=closefds,
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    return p.stdin, p.stdout, p.stderr
+def Popen3(cmd, capturestderr=False, bufsize=-1):
+    stderr = capturestderr and subprocess.PIPE or None
+    p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                         close_fds=closefds,
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=stderr)
+    p.fromchild = p.stdout
+    p.tochild = p.stdin
+    p.childerr = p.stderr
+    return p
 
 def version():
     """Return version information if available."""
