@@ -944,17 +944,17 @@ class localrepository(repo.repository):
                 edittext.append(_("HG: Enter commit message."
                                   "  Lines beginning with 'HG:' are removed."))
                 edittext.append("HG: --")
-                edittext.append("HG: user: %s" % user)
+                edittext.append(_("HG: user: %s") % user)
                 if p2 != nullid:
-                    edittext.append("HG: branch merge")
+                    edittext.append(_("HG: branch merge"))
                 if branchname:
-                    edittext.append("HG: branch '%s'"
+                    edittext.append(_("HG: branch '%s'")
                                     % encoding.tolocal(branchname))
-                edittext.extend(["HG: added %s" % f for f in added])
-                edittext.extend(["HG: changed %s" % f for f in updated])
-                edittext.extend(["HG: removed %s" % f for f in removed])
+                edittext.extend([_("HG: added %s") % f for f in added])
+                edittext.extend([_("HG: changed %s") % f for f in updated])
+                edittext.extend([_("HG: removed %s") % f for f in removed])
                 if not added and not updated and not removed:
-                    edittext.append("HG: no files changed")
+                    edittext.append(_("HG: no files changed"))
                 edittext.append("")
                 # run editor in the repository root
                 olddir = os.getcwd()
