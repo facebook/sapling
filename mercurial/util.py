@@ -20,28 +20,26 @@ import imp
 
 # Python compatibility
 
-_md5 = None
 def md5(s):
-    global _md5
-    if _md5 is None:
-        try:
-            import hashlib
-            _md5 = hashlib.md5
-        except ImportError:
-            import md5
-            _md5 = md5.md5
+    try:
+        import hashlib
+        _md5 = hashlib.md5
+    except ImportError:
+        import md5
+        _md5 = md5.md5
+    global md5
+    md5 = _md5
     return _md5(s)
 
-_sha1 = None
 def sha1(s):
-    global _sha1
-    if _sha1 is None:
-        try:
-            import hashlib
-            _sha1 = hashlib.sha1
-        except ImportError:
-            import sha
-            _sha1 = sha.sha
+    try:
+        import hashlib
+        _sha1 = hashlib.sha1
+    except ImportError:
+        import sha
+        _sha1 = sha.sha
+    global sha1
+    sha1 = _sha1
     return _sha1(s)
 
 import subprocess
