@@ -70,8 +70,8 @@ class AuthorMap(dict):
         if author in self:
             result = self.super.__getitem__(author)
         elif self.ui.configbool('hgsubversion', 'defaultauthors', True):
-            self[author] = result = \
-                '%s <%s%s>' % (author, author, self.defaulthost)
+            # TODO: should we treat missing authors specially?
+            self[author] = result = '%s%s' % (author, self.defaulthost)
             self.ui.warn('Substituting author "%s" for default "%s"\n'
                          % (author, result))
         else:
