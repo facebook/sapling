@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, textwrap
+import os, re, sys, textwrap, subprocess
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
 import difflib, patch, time, help, mdiff, tempfile, url, encoding
 import archival, changegroup, cmdutil, hgweb.server, sshserver, hbisect
@@ -343,7 +343,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         try:
             while changesets:
                 # update state
-                status = os.spawnl(os.P_WAIT, commandpath, commandpath)
+                status = subprocess.call([commandpath])
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
