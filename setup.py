@@ -6,8 +6,8 @@
 # 'python setup.py --help' for more options
 
 import sys
-if not hasattr(sys, 'version_info') or sys.version_info < (2, 3, 0, 'final'):
-    raise SystemExit("Mercurial requires python 2.3 or later.")
+if not hasattr(sys, 'version_info') or sys.version_info < (2, 4, 0, 'final'):
+    raise SystemExit("Mercurial requires Python 2.4 or later.")
 
 # Solaris Python packaging brain damage
 try:
