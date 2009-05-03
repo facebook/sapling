@@ -2416,8 +2416,8 @@ def resolve(ui, repo, *pats, **opts):
 def revert(ui, repo, *pats, **opts):
     """restore individual files or directories to an earlier state
 
-    (use update -r to check out earlier revisions, revert does not
-    change the working directory parents)
+    (Use update -r to check out earlier revisions, revert does not
+    change the working directory parents.)
 
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.
