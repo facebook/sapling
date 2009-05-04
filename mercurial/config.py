@@ -105,6 +105,8 @@ class config(object):
             m = sectionre.match(l)
             if m:
                 section = m.group(1)
+                if remap:
+                    section = remap.get(section, section)
                 if section not in self:
                     self._data[section] = sortdict()
                 continue
