@@ -32,6 +32,7 @@ def walkrepodirs(repo):
     '''Iterate over all subdirectories of this repo.
     Exclude the .hg directory, any nested repos, and ignored dirs.'''
     rootslash = repo.root + os.sep
+
     def walkit(dirname, top):
         fullpath = rootslash + dirname
         hginside = False
@@ -45,15 +46,15 @@ def walkrepodirs(repo):
                         d = join(dirname, name)
                         if repo.dirstate._ignore(d):
                             continue
-                        for subdir, hginsub in walkit(d, False):
-                            if not hginsub:
-                                yield subdir, False
+                        for subdir in walkit(d, False):
+                            yield subdir
         except OSError, err:
             if err.errno not in walk_ignored_errors:
                 raise
-        yield fullpath, hginside
-    for dirname, hginside in walkit('', True):
-        yield dirname
+        if top or not hginside:
+            yield fullpath
+
+    return walkit('', True)
 
 def walk(repo, root):
     '''Like os.walk, but only yields regular files.'''
