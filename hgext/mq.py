@@ -191,10 +191,9 @@ class queue:
             return _('guard cannot be an empty string')
         bad_chars = '# \t\r\n\f'
         first = guard[0]
-        for c in '-+':
-            if first == c:
-                return (_('guard %r starts with invalid character: %r') %
-                        (guard, c))
+        if first in '-+':
+            return (_('guard %r starts with invalid character: %r') %
+                      (guard, first))
         for c in bad_chars:
             if c in guard:
                 return _('invalid character in guard %r: %r') % (guard, c)
