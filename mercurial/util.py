@@ -21,13 +21,18 @@ import imp
 # Python compatibility
 
 def sha1(s):
+    return _fastsha1(s)
+
+def _fastsha1(s):
+    # This function will import sha1 from hashlib or sha (whichever is
+    # available) and overwrite itself with it on the first call.
+    # Subsequent calls will go directly to the imported function.
     try:
-        import hashlib
-        _sha1 = hashlib.sha1
+        from hashlib import sha1 as _sha1
     except ImportError:
         from sha import sha as _sha1
-    global sha1
-    sha1 = _sha1
+    global _fastsha1
+    _fastsha1 = _sha1
     return _sha1(s)
 
 import subprocess
