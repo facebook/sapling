@@ -16,6 +16,7 @@ from svn import core
 
 import svnexternals
 import util
+from maps import *
 
 def pickle_atomic(data, file_path, dir=None):
     """pickle some data to a path atomically.
@@ -119,16 +120,14 @@ class HgChangeReceiver(delta.Editor):
             self.tag_locations = tag_locations
         pickle_atomic(self.tag_locations, self.tag_locations_file,
                       self.meta_data_dir)
+        # ensure nested paths are handled properly
+        self.tag_locations.sort()
+        self.tag_locations.reverse()
 
         self.clear_current_info()
-        self.author_host = author_host
-        self.authors = {}
-        if os.path.exists(self.authors_file):
-            self.readauthors(self.authors_file)
-        if authors and os.path.exists(authors):
-            self.readauthors(authors)
-        if self.authors:
-            self.writeauthors()
+        self.authors = AuthorMap(self.ui, self.authors_file,
+                                 defaulthost=author_host)
+        if authors: self.authors.load(authors)
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.includepaths = {}
@@ -255,6 +254,9 @@ class HgChangeReceiver(delta.Editor):
 
     def _path_and_branch_for_path(self, path, existing=True):
         return self._split_branch_path(path, existing=existing)[:2]
+
+    def _branch_for_path(self, path, existing=True):
+        return self._path_and_branch_for_path(path, existing=existing)[1]
 
     def _localname(self, path):
         """Compute the local name for a branch located at path.
@@ -393,12 +395,22 @@ class HgChangeReceiver(delta.Editor):
 
         Otherwise, returns False.
         """
+        return self._split_tag_path(path)[1] or False
+
+    def _split_tag_path(self, path):
+        """Figure out which tag inside our repo this path represents, and
+           also figure out which path inside that tag it is.
+
+           Returns a tuple of (path within tag, tag name, server-side tag
+           path).
+        """
         path = self._normalize_path(path)
         for tags_path in self.tag_locations:
             if path and (path.startswith(tags_path) and
                          len(path) > len('%s/' % tags_path)):
-                return path[len(tags_path)+1:]
-        return False
+                tag, _, subpath = path[len(tags_path)+1:].partition('/')
+                return (subpath, tag, '%s/%s' % (tags_path, tag))
+        return (None, None, None)
 
     def get_parent_svn_branch_and_rev(self, number, branch):
         number -= 1
@@ -626,7 +638,7 @@ class HgChangeReceiver(delta.Editor):
                                          rev.message or ' ',
                                          files,
                                          del_all_files,
-                                         self.authorforsvnauthor(rev.author),
+                                         self.authors[rev.author],
                                          date,
                                          {'branch': 'closed-branches'})
             new_hash = self.repo.commitctx(current_ctx)
@@ -679,7 +691,7 @@ class HgChangeReceiver(delta.Editor):
                                          rev.message or '...',
                                          files.keys(),
                                          filectxfn,
-                                         self.authorforsvnauthor(rev.author),
+                                         self.authors[rev.author],
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
@@ -706,7 +718,7 @@ class HgChangeReceiver(delta.Editor):
                                          rev.message or ' ',
                                          [],
                                          del_all_files,
-                                         self.authorforsvnauthor(rev.author),
+                                         self.authors[rev.author],
                                          date,
                                          extra)
             new_hash = self.repo.commitctx(current_ctx)
@@ -715,50 +727,6 @@ class HgChangeReceiver(delta.Editor):
                 self.add_to_revmap(rev.revnum, branch, new_hash)
         self._save_metadata()
         self.clear_current_info()
-
-    def authorforsvnauthor(self, author):
-        if author in self.authors:
-            return self.authors[author]
-        return '%s%s' % (author, self.author_host)
-
-    def svnauthorforauthor(self, author):
-        for svnauthor, hgauthor in self.authors.iteritems():
-            if author == hgauthor:
-                return svnauthor
-        else:
-            # return the original svn-side author
-            return author.rsplit('@', 1)[0]
-
-    def readauthors(self, authorfile):
-        self.ui.note(('Reading authormap from %s\n') % authorfile)
-        f = open(authorfile, 'r')
-        for line in f:
-            if not line.strip():
-                continue
-            try:
-                srcauth, dstauth = line.split('=', 1)
-                srcauth = srcauth.strip()
-                dstauth = dstauth.strip()
-                if srcauth in self.authors and dstauth != self.authors[srcauth]:
-                    self.ui.status(('Overriding author mapping for "%s" ' +
-                                    'from "%s" to "%s"\n')
-                                   % (srcauth, self.authors[srcauth], dstauth))
-                else:
-                    self.ui.debug(('Mapping author "%s" to "%s"\n')
-                                  % (srcauth, dstauth))
-                    self.authors[srcauth] = dstauth
-            except IndexError:
-                self.ui.warn(
-                    ('Ignoring bad line in author map file %s: %s\n')
-                    % (authorfile, line.rstrip()))
-        f.close()
-
-    def writeauthors(self):
-        self.ui.debug(('Writing author map to %s\n') % self.authors_file)
-        f = open(self.authors_file, 'w+')
-        for author in self.authors:
-            f.write("%s=%s\n" % (author, self.authors[author]))
-        f.close()
 
     def readfilemap(self, filemapfile):
         self.ui.note(
@@ -914,8 +882,8 @@ class HgChangeReceiver(delta.Editor):
         # parentctx is not an ancestor of childctx, files are unrelated
         return False
 
-    def add_file(self, path, parent_baton, copyfrom_path,
-                 copyfrom_revision, file_pool=None):
+    def add_file(self, path, parent_baton=None, copyfrom_path=None,
+                 copyfrom_revision=None, file_pool=None):
         self.current_file = None
         self.base_revision = None
         if path in self.deleted_files:

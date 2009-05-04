@@ -6,11 +6,15 @@ import sys
 import tempfile
 import urlparse
 import urllib
+import hashlib
+import collections
 
 from svn import client
 from svn import core
 from svn import delta
 from svn import ra
+
+from mercurial import util as hgutil
 
 def version():
     return '%d.%d.%d' % (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO)
@@ -26,6 +30,9 @@ class SubversionRepoCanNotDiff(Exception):
     """Exception raised when the svn API diff3() command cannot be used
     """
 
+'''Default chunk size used in fetch_history_at_paths() and revisions().'''
+_chunk_size = 1000
+
 def optrev(revnum):
     optrev = core.svn_opt_revision_t()
     optrev.kind = core.svn_opt_revision_number
@@ -34,16 +41,18 @@ def optrev(revnum):
 
 svn_config = core.svn_config_get_config(None)
 class RaCallbacks(ra.Callbacks):
-    def open_tmp_file(self, pool): #pragma: no cover
+    @staticmethod
+    def open_tmp_file(pool): #pragma: no cover
         (fd, fn) = tempfile.mkstemp()
         os.close(fd)
         return fn
 
-    def get_client_string(self, pool):
+    @staticmethod
+    def get_client_string(pool):
         return 'hgsubversion'
 
-
 def user_pass_prompt(realm, default_username, ms, pool): #pragma: no cover
+    # FIXME: should use getpass() and username() from mercurial.ui
     creds = core.svn_auth_cred_simple_t()
     creds.may_save = ms
     if default_username:
@@ -117,16 +126,38 @@ def parse_url(url):
     url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
     return (user, passwd, url)
 
-class Revision(object):
+class Revision(tuple):
     """Wrapper for a Subversion revision.
+
+    Derives from tuple in an attempt to minimise the memory footprint.
     """
-    def __init__(self, revnum, author, message, date, paths, strip_path=''):
-        self.revnum, self.author, self.message = revnum, author, message
-        self.date = date
-        self.paths = {}
+    def __new__(self, revnum, author, message, date, paths, strip_path=''):
+        _paths = {}
         if paths:
             for p in paths:
-                self.paths[p[len(strip_path):]] = paths[p]
+                _paths[p[len(strip_path):]] = paths[p]
+        return tuple.__new__(self,
+                             (revnum, author, message, date, _paths))
+
+    def get_revnum(self):
+        return self[0]
+    revnum = property(get_revnum)
+
+    def get_author(self):
+        return self[1]
+    author = property(get_author)
+
+    def get_message(self):
+        return self[2]
+    message = property(get_message)
+
+    def get_date(self):
+        return self[3]
+    date = property(get_date)
+
+    def get_paths(self):
+        return self[4]
+    paths = property(get_paths)
 
     def __str__(self):
         return 'r%d by %s' % (self.revnum, self.author)
@@ -142,7 +173,7 @@ class SubversionRepo(object):
     This uses the SWIG Python bindings, and will only work on svn >= 1.4.
     It takes a required param, the URL.
     """
-    def __init__(self, url='', username='', password=''):
+    def __init__(self, url='', username='', password='', head=None):
         parsed = parse_url(url)
         # --username and --password override URL credentials
         self.username = username or parsed[0]
@@ -150,6 +181,8 @@ class SubversionRepo(object):
         self.svn_url = parsed[2]
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool)
+        # self.init_ra_and_client() assumes that a pool already exists
+        self.pool = core.Pool()
 
         self.init_ra_and_client()
         self.uuid = ra.get_uuid(self.ra, self.pool)
@@ -181,8 +214,11 @@ class SubversionRepo(object):
         callbacks = RaCallbacks()
         callbacks.auth_baton = self.auth_baton
         self.callbacks = callbacks
-        self.ra = ra.open2(self.svn_url.encode('utf-8'), callbacks,
-                           svn_config, self.pool)
+        try:
+            self.ra = ra.open2(self.svn_url.encode('utf-8'), callbacks,
+                               svn_config, self.pool)
+        except core.SubversionException, e:
+            raise hgutil.Abort(e.args[0])
 
     def HEAD(self):
         return ra.get_latest_revnum(self.ra, self.pool)
@@ -192,8 +228,31 @@ class SubversionRepo(object):
         return 0
     START = property(START)
 
+    def last_changed_rev(self):
+        try:
+            holder = []
+            ra.get_log(self.ra, [''],
+                       self.HEAD, 1,
+                       1, #limit of how many log messages to load
+                       True, # don't need to know changed paths
+                       True, # stop on copies
+                       lambda paths, revnum, author, date, message, pool:
+                           holder.append(revnum),
+                       self.pool)
+
+            return holder[-1]
+        except core.SubversionException, e:
+            if e.apr_err not in [core.SVN_ERR_FS_NOT_FOUND]:
+                raise
+            else:
+                return self.HEAD
+    last_changed_rev = property(last_changed_rev)
+
     def branches(self):
         """Get the branches defined in this repo assuming a standard layout.
+
+        This method should be eliminated; this class does not have
+        sufficient knowledge to yield all known tags.
         """
         branches = self.list_dir('branches').keys()
         branch_info = {}
@@ -216,11 +275,22 @@ class SubversionRepo(object):
         """Get the current tags in this repo assuming a standard layout.
 
         This returns a dictionary of tag: (source path, source rev)
+
+        This method should be eliminated; this class does not have
+        sufficient knowledge to yield all known tags.
         """
         return self.tags_at_rev(self.HEAD)
     tags = property(tags)
 
     def tags_at_rev(self, revision):
+        """Get the tags in this repo at the given revision, assuming a
+        standard layout.
+
+        This returns a dictionary of tag: (source path, source rev)
+
+        This method should be eliminated; this class does not have
+        sufficient knowledge to yield all known tags.
+        """
         try:
             tags = self.list_dir('tags', revision=revision).keys()
         except core.SubversionException, e:
@@ -275,7 +345,7 @@ class SubversionRepo(object):
         folders, props, junk = r
         return folders
 
-    def revisions(self, start=None, chunk_size=1000):
+    def revisions(self, start=None, stop=None, chunk_size=_chunk_size):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number
@@ -288,35 +358,52 @@ class SubversionRepo(object):
                                            chunk_size=chunk_size)
 
     def fetch_history_at_paths(self, paths, start=None, stop=None,
-                               chunk_size=1000):
-        revisions = []
-        def callback(paths, revnum, author, date, message, pool):
-            r = Revision(revnum, author, message, date, paths,
-                         strip_path=self.subdir)
-            revisions.append(r)
+                               chunk_size=_chunk_size):
+        '''TODO: This method should be merged with self.revisions() as
+        they are now functionally equivalent.'''
         if not start:
             start = self.START
         if not stop:
             stop = self.HEAD
         while stop > start:
-            ra.get_log(self.ra,
-                       paths,
-                       start+1,
-                       stop,
-                       chunk_size, #limit of how many log messages to load
-                       True, # don't need to know changed paths
-                       True, # stop on copies
-                       callback,
-                       self.pool)
-            if len(revisions) < chunk_size:
-                # this means there was no history for the path, so force the
-                # loop to exit
-                start = stop
+            def callback(paths, revnum, author, date, message, pool):
+                r = Revision(revnum, author, message, date, paths,
+                             strip_path=self.subdir)
+                revisions.append(r)
+            # use a queue; we only access revisions in a FIFO manner
+            revisions = collections.deque()
+
+            try:
+                # TODO: using min(start + chunk_size, stop) may be preferable;
+                #       ra.get_log(), even with chunk_size set, takes a while
+                #       when converting the 65k+ rev. in LLVM.
+                ra.get_log(self.ra,
+                           paths,
+                           start+1,
+                           stop,
+                           chunk_size, #limit of how many log messages to load
+                           True, # don't need to know changed paths
+                           True, # stop on copies
+                           callback,
+                           self.pool)
+            except core.SubversionException, e:
+                if e.apr_err not in [core.SVN_ERR_FS_NOT_FOUND]:
+                    raise
+                else:
+                    raise hgutil.Abort('%s not found at revision %d!'
+                                       % (self.subdir.rstrip('/'), stop))
+
+            while len(revisions) > 1:
+                yield revisions.popleft()
+
+            if len(revisions) == 0:
+                # exit the loop; there is no history for the path.
+                break
             else:
-                start = revisions[-1].revnum
-            while len(revisions) > 0:
-                yield revisions[0]
-                revisions.pop(0)
+                r = revisions.popleft()
+                start = r.revnum
+                yield r
+            self.init_ra_and_client()
 
     def commit(self, paths, message, file_data, base_revision, addeddirs,
                deleteddirs, properties, copies):

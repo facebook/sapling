@@ -75,7 +75,7 @@ def info(ui, repo, hg_repo_path, **opts):
     if url[-1] == '/':
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
-    author = hge.svnauthorforauthor(parent.user())
+    author = hge.authors.reverselookup(parent.user())
     # cleverly figure out repo root w/o actually contacting the server
     reporoot = url[:len(url)-len(subdir)]
     ui.status('''URL: %(url)s

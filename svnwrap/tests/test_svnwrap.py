@@ -1,5 +1,5 @@
 import os
-import popen2
+import subprocess
 import shutil
 import tempfile
 import unittest
@@ -14,12 +14,12 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.repo_path = '%s/testrepo' % self.tmpdir
         os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create', 
                                            self.repo_path,])
-        proc = popen2.Popen4(['svnadmin', 'load', self.repo_path,])
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures', 
                                 'project_root_at_repo_root.svndump'))
-        proc.tochild.write(inp.read())
-        proc.tochild.close()
-        proc.wait()
+        proc = subprocess.check_call(['svnadmin', 'load', self.repo_path,],
+                                stdin=inp, close_fds=True,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
         self.repo = svnwrap.SubversionRepo('file://%s' % self.repo_path)
 
     def tearDown(self):
@@ -59,11 +59,11 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
         self.repo_path = '%s/testrepo' % self.tmpdir
         os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create', 
                                            self.repo_path,])
-        proc = popen2.Popen4(['svnadmin', 'load', self.repo_path,])
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures', 
                                 'project_root_not_repo_root.svndump'))
-        proc.tochild.write(inp.read())
-        proc.tochild.close()
-        proc.wait()
+        subprocess.check_call(['svnadmin', 'load', self.repo_path,],
+                              stdin=inp, close_fds=True,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT)
         self.repo = svnwrap.SubversionRepo('file://%s/dummyproj' % 
                                            self.repo_path)

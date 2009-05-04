@@ -523,7 +523,7 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
                                          r.message or util.default_commit_msg,
                                          files_touched,
                                          filectxfn,
-                                         hg_editor.authorforsvnauthor(r.author),
+                                         hg_editor.authors[r.author],
                                          date,
                                          extra)
             ha = hg_editor.repo.commitctx(current_ctx)
@@ -563,7 +563,7 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
                                      r.message or util.default_commit_msg,
                                      files_touched,
                                      filectxfn,
-                                     hg_editor.authorforsvnauthor(r.author),
+                                     hg_editor.authors[r.author],
                                      date,
                                      {'branch': 'closed-branches'})
         ha = hg_editor.repo.commitctx(current_ctx)

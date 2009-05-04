@@ -22,7 +22,7 @@ def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
     initializing_repo = False
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
-    author_host = "@%s" % svn.uuid
+    author_host = ui.config('hgsubversion', 'defaulthost', svn.uuid)
     tag_locations = tag_locations.split(',')
     hg_editor = hg_delta_editor.HgChangeReceiver(hg_repo_path,
                                                  ui_=ui,
