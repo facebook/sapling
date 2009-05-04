@@ -33,9 +33,10 @@ def walkrepodirs(repo):
     Exclude the .hg directory, any nested repos, and ignored dirs.'''
     rootslash = repo.root + os.sep
     def walkit(dirname, top):
+        fullpath = rootslash + dirname
         hginside = False
         try:
-            for name, kind in osutil.listdir(rootslash + dirname):
+            for name, kind in osutil.listdir(fullpath):
                 if kind == stat.S_IFDIR:
                     if name == '.hg':
                         hginside = True
@@ -50,7 +51,7 @@ def walkrepodirs(repo):
         except OSError, err:
             if err.errno not in walk_ignored_errors:
                 raise
-        yield rootslash + dirname, hginside
+        yield fullpath, hginside
     for dirname, hginside in walkit('', True):
         yield dirname
 
