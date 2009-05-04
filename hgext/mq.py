@@ -123,8 +123,6 @@ class queue:
         self.path = patchdir or os.path.join(path, "patches")
         self.opener = util.opener(self.path)
         self.ui = ui
-        self.applied = []
-        self.full_series = []
         self.applied_dirty = 0
         self.series_dirty = 0
         self.series_path = "series"
@@ -134,13 +132,28 @@ class queue:
         self.guards_dirty = False
         self._diffopts = None
 
-        if os.path.exists(self.join(self.series_path)):
-            self.full_series = self.opener(self.series_path).read().splitlines()
-        self.parse_series()
-
+    @util.propertycache
+    def applied(self):
         if os.path.exists(self.join(self.status_path)):
             lines = self.opener(self.status_path).read().splitlines()
-            self.applied = [statusentry(l) for l in lines]
+            return [statusentry(l) for l in lines]
+        return []
+
+    @util.propertycache
+    def full_series(self):
+        if os.path.exists(self.join(self.series_path)):
+            return self.opener(self.series_path).read().splitlines()
+        return []
+
+    @util.propertycache
+    def series(self):
+        self.parse_series()
+        return self.series
+
+    @util.propertycache
+    def series_guards(self):
+        self.parse_series()
+        return self.series_guards
 
     def diffopts(self):
         if self._diffopts is None:
@@ -2386,6 +2399,10 @@ def finish(ui, repo, *revrange, **opts):
 
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
+        @util.propertycache
+        def mq(self):
+            return queue(self.ui, self.join(""))
+
         def abort_if_wdir_patched(self, errmsg, force=False):
             if self.mq.applied and not force:
                 parent = hex(self.dirstate.parents()[0])
@@ -2467,7 +2484,6 @@ def reposetup(ui, repo):
 
     if repo.local():
         repo.__class__ = mqrepo
-        repo.mq = queue(ui, repo.join(""))
 
 def mqimport(orig, ui, repo, *args, **kwargs):
     if hasattr(repo, 'abort_if_wdir_patched'):
