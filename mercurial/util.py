@@ -25,8 +25,7 @@ def md5(s):
         import hashlib
         _md5 = hashlib.md5
     except ImportError:
-        import md5
-        _md5 = md5.md5
+        from md5 import md5 as _md5
     global md5
     md5 = _md5
     return _md5(s)
@@ -36,8 +35,7 @@ def sha1(s):
         import hashlib
         _sha1 = hashlib.sha1
     except ImportError:
-        import sha
-        _sha1 = sha.sha
+        from sha import sha as _sha1
     global sha1
     sha1 = _sha1
     return _sha1(s)
