@@ -105,23 +105,57 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             self, realm, authuri)
         user, passwd = authinfo
         if user and passwd:
+            self._writedebug(user, passwd)
             return (user, passwd)
 
-        if not self.ui.interactive():
-            raise util.Abort(_('http authorization required'))
+        user, passwd = self._readauthtoken(authuri)
+        if not user or not passwd:
+            if not self.ui.interactive():
+                raise util.Abort(_('http authorization required'))
 
-        self.ui.write(_("http authorization required\n"))
-        self.ui.status(_("realm: %s\n") % realm)
-        if user:
-            self.ui.status(_("user: %s\n") % user)
-        else:
-            user = self.ui.prompt(_("user:"), default=None)
+            self.ui.write(_("http authorization required\n"))
+            self.ui.status(_("realm: %s\n") % realm)
+            if user:
+                self.ui.status(_("user: %s\n") % user)
+            else:
+                user = self.ui.prompt(_("user:"), default=None)
 
-        if not passwd:
-            passwd = self.ui.getpass()
+            if not passwd:
+                passwd = self.ui.getpass()
 
         self.add_password(realm, authuri, user, passwd)
+        self._writedebug(user, passwd)
         return (user, passwd)
+
+    def _writedebug(self, user, passwd):
+        msg = _('http auth: user %s, password %s\n')
+        self.ui.debug(msg % (user, passwd and '*' * len(passwd) or 'not set'))
+
+    def _readauthtoken(self, uri):
+        # Read configuration
+        config = dict()
+        for key, val in self.ui.configitems('auth'):
+            group, setting = key.split('.', 1)
+            gdict = config.setdefault(group, dict())
+            gdict[setting] = val
+
+        # Find the best match
+        scheme, hostpath = uri.split('://', 1)
+        bestlen = 0
+        bestauth = None, None
+        for auth in config.itervalues():
+            prefix = auth.get('prefix')
+            if not prefix: continue
+            p = prefix.split('://', 1)
+            if len(p) > 1:
+                schemes, prefix = [p[0]], p[1]
+            else:
+                schemes = (auth.get('schemes') or 'https').split()
+            if (prefix == '*' or hostpath.startswith(prefix)) and \
+                len(prefix) > bestlen and scheme in schemes:
+                bestlen = len(prefix)
+                bestauth = auth.get('username'), auth.get('password')
+        return bestauth
 
 class proxyhandler(urllib2.ProxyHandler):
     def __init__(self, ui):

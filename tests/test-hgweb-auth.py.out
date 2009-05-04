@@ -1,0 +1,139 @@
+
+*** Test in-uri schemes
+
+CFG: {x.prefix: http://example.org}
+URI: http://example.org/foo
+     ('x', 'x')
+URI: http://example.org/foo/bar
+     ('x', 'x')
+URI: http://example.org/bar
+     ('x', 'x')
+URI: https://example.org/foo
+     abort
+URI: https://example.org/foo/bar
+     abort
+URI: https://example.org/bar
+     abort
+CFG: {x.prefix: https://example.org}
+URI: http://example.org/foo
+     abort
+URI: http://example.org/foo/bar
+     abort
+URI: http://example.org/bar
+     abort
+URI: https://example.org/foo
+     ('x', 'x')
+URI: https://example.org/foo/bar
+     ('x', 'x')
+URI: https://example.org/bar
+     ('x', 'x')
+CFG: {x.prefix: http://example.org, x.schemes: https}
+URI: http://example.org/foo
+     ('x', 'x')
+URI: http://example.org/foo/bar
+     ('x', 'x')
+URI: http://example.org/bar
+     ('x', 'x')
+URI: https://example.org/foo
+     abort
+URI: https://example.org/foo/bar
+     abort
+URI: https://example.org/bar
+     abort
+CFG: {x.prefix: https://example.org, x.schemes: http}
+URI: http://example.org/foo
+     abort
+URI: http://example.org/foo/bar
+     abort
+URI: http://example.org/bar
+     abort
+URI: https://example.org/foo
+     ('x', 'x')
+URI: https://example.org/foo/bar
+     ('x', 'x')
+URI: https://example.org/bar
+     ('x', 'x')
+
+*** Test separately configured schemes
+
+CFG: {x.prefix: example.org, x.schemes: http}
+URI: http://example.org/foo
+     ('x', 'x')
+URI: http://example.org/foo/bar
+     ('x', 'x')
+URI: http://example.org/bar
+     ('x', 'x')
+URI: https://example.org/foo
+     abort
+URI: https://example.org/foo/bar
+     abort
+URI: https://example.org/bar
+     abort
+CFG: {x.prefix: example.org, x.schemes: https}
+URI: http://example.org/foo
+     abort
+URI: http://example.org/foo/bar
+     abort
+URI: http://example.org/bar
+     abort
+URI: https://example.org/foo
+     ('x', 'x')
+URI: https://example.org/foo/bar
+     ('x', 'x')
+URI: https://example.org/bar
+     ('x', 'x')
+CFG: {x.prefix: example.org, x.schemes: http https}
+URI: http://example.org/foo
+     ('x', 'x')
+URI: http://example.org/foo/bar
+     ('x', 'x')
+URI: http://example.org/bar
+     ('x', 'x')
+URI: https://example.org/foo
+     ('x', 'x')
+URI: https://example.org/foo/bar
+     ('x', 'x')
+URI: https://example.org/bar
+     ('x', 'x')
+
+*** Test prefix matching
+
+CFG: {x.prefix: http://example.org/foo, y.prefix: http://example.org/bar}
+URI: http://example.org/foo
+     ('x', 'x')
+URI: http://example.org/foo/bar
+     ('x', 'x')
+URI: http://example.org/bar
+     ('y', 'y')
+URI: https://example.org/foo
+     abort
+URI: https://example.org/foo/bar
+     abort
+URI: https://example.org/bar
+     abort
+CFG: {x.prefix: http://example.org/foo, y.prefix: http://example.org/foo/bar}
+URI: http://example.org/foo
+     ('x', 'x')
+URI: http://example.org/foo/bar
+     ('y', 'y')
+URI: http://example.org/bar
+     abort
+URI: https://example.org/foo
+     abort
+URI: https://example.org/foo/bar
+     abort
+URI: https://example.org/bar
+     abort
+CFG: {x.prefix: *, y.prefix: https://example.org/bar}
+URI: http://example.org/foo
+     abort
+URI: http://example.org/foo/bar
+     abort
+URI: http://example.org/bar
+     abort
+URI: https://example.org/foo
+     ('x', 'x')
+URI: https://example.org/foo/bar
+     ('x', 'x')
+URI: https://example.org/bar
+     ('y', 'y')
