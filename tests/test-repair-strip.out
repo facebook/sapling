@@ -17,8 +17,9 @@ checking files
  b@?: rev 1 points to nonexistent changeset 2
  (expected 1)
  b@?: 736c29771fba not in manifests
+warning: orphan revlog 'data/c.i'
 2 files, 2 changesets, 3 total revisions
-1 warnings encountered!
+2 warnings encountered!
 2 integrity errors encountered!
 % journal contents
 00changelog.i
@@ -63,15 +64,15 @@ checking manifests
  manifest@?: rev 2 points to nonexistent changeset 2
  manifest@?: rev 3 points to nonexistent changeset 3
 crosschecking files in changesets and manifests
- c@?: in manifest but not in changeset
+ c@3: in manifest but not in changeset
 checking files
- b@2: 736c29771fba in manifests not found
- data/c.i@?: missing revlog!
- ?: empty or missing c
- c@3: 149da44f2a4e in manifests not found
-3 files, 2 changesets, 2 total revisions
-7 integrity errors encountered!
-(first damaged changeset appears to be 2)
+ b@?: rev 1 points to nonexistent changeset 2
+ (expected 1)
+ c@?: rev 0 points to nonexistent changeset 3
+3 files, 2 changesets, 4 total revisions
+1 warnings encountered!
+5 integrity errors encountered!
+(first damaged changeset appears to be 3)
 % journal contents
 00changelog.i
 00manifest.i

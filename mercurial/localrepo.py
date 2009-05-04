@@ -624,7 +624,7 @@ class localrepository(repo.repository):
         try:
             if os.path.exists(self.sjoin("journal")):
                 self.ui.status(_("rolling back interrupted transaction\n"))
-                transaction.rollback(self.sopener, self.sjoin("journal"))
+                transaction.rollback(self.sopener, self.sjoin("journal"), self.ui.warn)
                 self.invalidate()
                 return True
             else:
@@ -640,7 +640,7 @@ class localrepository(repo.repository):
             lock = self.lock()
             if os.path.exists(self.sjoin("undo")):
                 self.ui.status(_("rolling back last transaction\n"))
-                transaction.rollback(self.sopener, self.sjoin("undo"))
+                transaction.rollback(self.sopener, self.sjoin("undo"), self.ui.warn)
                 util.rename(self.join("undo.dirstate"), self.join("dirstate"))
                 try:
                     branch = self.opener("undo.branch").read()

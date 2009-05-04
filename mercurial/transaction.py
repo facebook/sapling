@@ -23,6 +23,23 @@ def active(func):
         return func(self, *args, **kwds)
     return _active
 
+def _playback(journal, report, opener, entries, unlink=True):
+    for f, o, ignore in entries:
+        if o or not unlink:
+            try:
+                opener(f, 'a').truncate(o)
+            except:
+                report(_("failed to truncate %s\n") % f)
+                raise
+        else:
+            try:
+                fn = opener(f).name
+                os.unlink(fn)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+    os.unlink(journal)
+
 class transaction(object):
     def __init__(self, report, opener, journal, after=None, createmode=None):
         self.journal = None
@@ -101,40 +118,21 @@ class transaction(object):
 
         self.report(_("transaction abort!\n"))
 
-        failed = False
-        for f, o, ignore in self.entries:
+        try:
             try:
-                self.opener(f, "a").truncate(o)
+                _playback(self.journal, self.report, self.opener, self.entries, False)
+                self.report(_("rollback completed\n"))
             except:
-                failed = True
-                self.report(_("failed to truncate %s\n") % f)
-
-        self.entries = []
-
-        if not failed:
-            os.unlink(self.journal)
-            self.report(_("rollback completed\n"))
-        else:
-            self.report(_("rollback failed - please run hg recover\n"))
-
-        self.journal = None
+                self.report(_("rollback failed - please run hg recover\n"))
+        finally:
+            self.journal = None
 
 
-def rollback(opener, file):
-    files = {}
+def rollback(opener, file, report):
+    entries = []
+
     for l in open(file).readlines():
         f, o = l.split('\0')
-        files[f] = int(o)
-    for f in files:
-        o = files[f]
-        if o:
-            opener(f, "a").truncate(int(o))
-        else:
-            try:
-                fn = opener(f).name
-                os.unlink(fn)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-    os.unlink(file)
+        entries.append((f, int(o), None))
 
+    _playback(file, report, opener, entries)
