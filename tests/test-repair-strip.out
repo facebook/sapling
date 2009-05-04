@@ -64,12 +64,12 @@ crosschecking files in changesets and manifests
  c@2: in changeset but not in manifest
 checking files
  data/b.i@1: missing revlog!
- 0: empty or missing b
+ 1: empty or missing b
  data/c.i@2: missing revlog!
- 0: empty or missing c
+ 2: empty or missing c
 3 files, 3 changesets, 1 total revisions
 8 integrity errors encountered!
-(first damaged changeset appears to be 0)
+(first damaged changeset appears to be 1)
 % journal contents
 00changelog.i
 00manifest.i

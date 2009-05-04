@@ -52,9 +52,9 @@ def _verify(repo):
         ui.warn(msg + "\n")
         warnings[0] += 1
 
-    def checklog(obj, name):
+    def checklog(obj, name, linkrev):
         if not len(obj) and (havecl or havemf):
-            err(0, _("empty or missing %s") % name)
+            err(linkrev, _("empty or missing %s") % name)
             return
 
         d = obj.checksize()
@@ -107,7 +107,7 @@ def _verify(repo):
 
     ui.status(_("checking changesets\n"))
     seen = {}
-    checklog(cl, "changelog")
+    checklog(cl, "changelog", 0)
     for i in repo:
         n = cl.node(i)
         checkentry(cl, i, n, seen, [i], "changelog")
@@ -122,7 +122,7 @@ def _verify(repo):
 
     ui.status(_("checking manifests\n"))
     seen = {}
-    checklog(mf, "manifest")
+    checklog(mf, "manifest", 0)
     for i in mf:
         n = mf.node(i)
         lr = checkentry(mf, i, n, seen, mflinkrevs.get(n, []), "manifest")
@@ -196,7 +196,7 @@ def _verify(repo):
             except KeyError:
                 err(lr, _("missing revlog!"), ff)
 
-        checklog(fl, f)
+        checklog(fl, f, lr)
         seen = {}
         for i in fl:
             revisions += 1
