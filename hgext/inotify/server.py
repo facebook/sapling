@@ -74,7 +74,7 @@ def walk(repo, root):
                     else:
                         dirs.append(name)
                 elif kind in (stat.S_IFREG, stat.S_IFLNK):
-                    files.append((name, kind))
+                    files.append(name)
             yield fullpath, dirs, files
 
             for subdir in dirs:
@@ -319,12 +319,12 @@ class Watcher(object):
         self.handle_timeout()
         ds = self.repo.dirstate._map.copy()
         self.add_watch(join(self.repo.root, topdir), self.mask)
-        for root, dirs, entries in walk(self.repo, topdir):
+        for root, dirs, files in walk(self.repo, topdir):
             for d in dirs:
                 self.add_watch(join(root, d), self.mask)
             wroot = root[len(self.wprefix):]
             d = self.dir(self.tree, wroot)
-            for fn, kind in entries:
+            for fn in files:
                 wfn = join(wroot, fn)
                 self.updatestatus(wfn, self.getstat(wfn))
                 ds.pop(wfn, None)
