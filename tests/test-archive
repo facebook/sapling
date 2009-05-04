@@ -75,7 +75,10 @@ hg archive -t tgz -p %b-%h test-%h.tar.gz
 gzip -dc test-$QTIP.tar.gz | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
 
 cat > md5comp.py <<EOF
-from mercurial.util import md5
+try:
+    from hashlib import md5
+except ImportError:
+    from md5 import md5
 import sys
 f1, f2 = sys.argv[1:3]
 h1 = md5(file(f1, 'rb').read()).hexdigest()

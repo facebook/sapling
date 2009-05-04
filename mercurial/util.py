@@ -20,16 +20,6 @@ import imp
 
 # Python compatibility
 
-def md5(s):
-    try:
-        import hashlib
-        _md5 = hashlib.md5
-    except ImportError:
-        from md5 import md5 as _md5
-    global md5
-    md5 = _md5
-    return _md5(s)
-
 def sha1(s):
     try:
         import hashlib
