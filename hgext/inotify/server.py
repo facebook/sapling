@@ -114,7 +114,7 @@ def _explain_watch_limit(ui, repo, count):
     raise util.Abort(_('cannot watch %s until inotify watch limit is raised')
                      % repo.root)
 
-class Watcher(object):
+class RepoWatcher(object):
     poll_events = select.POLLIN
     statuskeys = 'almr!?'
 
@@ -545,10 +545,10 @@ class Watcher(object):
 class Server(object):
     poll_events = select.POLLIN
 
-    def __init__(self, ui, repo, watcher, timeout):
+    def __init__(self, ui, repo, repowatcher, timeout):
         self.ui = ui
         self.repo = repo
-        self.watcher = watcher
+        self.repowatcher = repowatcher
         self.timeout = timeout
         self.sock = socket.socket(socket.AF_UNIX)
         self.sockpath = self.repo.join('inotify.sock')
@@ -602,36 +602,38 @@ class Server(object):
 
         self.ui.note(_('answering query for %r\n') % states)
 
-        if self.watcher.timeout:
+        if self.repowatcher.timeout:
             # We got a query while a rescan is pending.  Make sure we
             # rescan before responding, or we could give back a wrong
             # answer.
-            self.watcher.handle_timeout()
+            self.repowatcher.handle_timeout()
 
         if not names:
             def genresult(states, tree):
-                for fn, state in self.watcher.walk(states, tree):
+                for fn, state in self.repowatcher.walk(states, tree):
                     yield fn
         else:
             def genresult(states, tree):
                 for fn in names:
-                    l = self.watcher.lookup(fn, tree)
+                    l = self.repowatcher.lookup(fn, tree)
                     try:
                         if l in states:
                             yield fn
                     except TypeError:
-                        for f, s in self.watcher.walk(states, l, fn):
+                        for f, s in self.repowatcher.walk(states, l, fn):
                             yield f
 
         results = ['\0'.join(r) for r in [
-            genresult('l', self.watcher.statustrees['l']),
-            genresult('m', self.watcher.statustrees['m']),
-            genresult('a', self.watcher.statustrees['a']),
-            genresult('r', self.watcher.statustrees['r']),
-            genresult('!', self.watcher.statustrees['!']),
-            '?' in states and genresult('?', self.watcher.statustrees['?']) or [],
+            genresult('l', self.repowatcher.statustrees['l']),
+            genresult('m', self.repowatcher.statustrees['m']),
+            genresult('a', self.repowatcher.statustrees['a']),
+            genresult('r', self.repowatcher.statustrees['r']),
+            genresult('!', self.repowatcher.statustrees['!']),
+            '?' in states
+                and genresult('?', self.repowatcher.statustrees['?'])
+                or [],
             [],
-            'c' in states and genresult('n', self.watcher.tree) or [],
+            'c' in states and genresult('n', self.repowatcher.tree) or [],
             ]]
 
         try:
@@ -661,10 +663,10 @@ class Master(object):
         self.ui = ui
         self.repo = repo
         self.poll = select.poll()
-        self.watcher = Watcher(ui, repo, self)
-        self.server = Server(ui, repo, self.watcher, timeout)
+        self.repowatcher = RepoWatcher(ui, repo, self)
+        self.server = Server(ui, repo, self.repowatcher, timeout)
         self.table = {}
-        for obj in (self.watcher, self.server):
+        for obj in (self.repowatcher, self.server):
             fd = obj.fileno()
             self.table[fd] = obj
             self.poll.register(fd, obj.poll_events)
@@ -677,7 +679,7 @@ class Master(object):
             obj.shutdown()
 
     def run(self):
-        self.watcher.setup()
+        self.repowatcher.setup()
         self.ui.note(_('finished setup\n'))
         if os.getenv('TIME_STARTUP'):
             sys.exit(0)
@@ -733,7 +735,7 @@ def start(ui, repo):
     if pid:
         return pid
 
-    closefds([m.server.fileno(), m.watcher.fileno()])
+    closefds([m.server.fileno(), m.repowatcher.fileno()])
     os.setsid()
 
     fd = os.open('/dev/null', os.O_RDONLY)
