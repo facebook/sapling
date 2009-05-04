@@ -1,4 +1,4 @@
-% before update 0, strip 1
+% before update 0, strip 2
 changeset:   0:cb9a9f314b8b
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -9,14 +9,17 @@ transaction abort!
 failed to truncate data/b.i
 rollback failed - please run hg recover
 abort: Permission denied .hg/store/data/b.i
-% after update 0, strip 1
+% after update 0, strip 2
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-warning: orphan revlog 'data/b.i'
-1 files, 1 changesets, 1 total revisions
+ b@?: rev 1 points to nonexistent changeset 2
+ (expected 1)
+ b@?: 736c29771fba not in manifests
+2 files, 2 changesets, 3 total revisions
 1 warnings encountered!
+2 integrity errors encountered!
 % journal contents
 00changelog.i
 00manifest.i
@@ -27,23 +30,23 @@ checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-1 files, 1 changesets, 1 total revisions
-% before update 0, strip 1
+2 files, 2 changesets, 2 total revisions
+% before update 0, strip 2
 changeset:   0:cb9a9f314b8b
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     a
 
 abort: Permission denied .hg/store/data/b.i
-% after update 0, strip 1
+% after update 0, strip 2
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-3 files, 3 changesets, 3 total revisions
+3 files, 4 changesets, 4 total revisions
 % journal contents
 cat: .hg/store/journal: No such file or directory
-% before update 0, strip 1
+% before update 0, strip 2
 changeset:   0:cb9a9f314b8b
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -51,25 +54,24 @@ summary:     a
 
 saving bundle to 
 transaction abort!
-failed to truncate 00changelog.i
+failed to truncate 00manifest.i
 rollback failed - please run hg recover
-abort: Permission denied .hg/store/00changelog.i
-% after update 0, strip 1
+abort: Permission denied .hg/store/00manifest.i
+% after update 0, strip 2
 checking changesets
 checking manifests
+ manifest@?: rev 2 points to nonexistent changeset 2
+ manifest@?: rev 3 points to nonexistent changeset 3
 crosschecking files in changesets and manifests
- 1: changeset refers to unknown manifest a539ce0c1a22
- 2: changeset refers to unknown manifest e3738bf54399
- b@1: in changeset but not in manifest
- c@2: in changeset but not in manifest
+ c@?: in manifest but not in changeset
 checking files
- data/b.i@1: missing revlog!
- 1: empty or missing b
- data/c.i@2: missing revlog!
- 2: empty or missing c
-3 files, 3 changesets, 1 total revisions
-8 integrity errors encountered!
-(first damaged changeset appears to be 1)
+ b@2: 736c29771fba in manifests not found
+ data/c.i@?: missing revlog!
+ ?: empty or missing c
+ c@3: 149da44f2a4e in manifests not found
+3 files, 2 changesets, 2 total revisions
+7 integrity errors encountered!
+(first damaged changeset appears to be 2)
 % journal contents
 00changelog.i
 00manifest.i
@@ -80,4 +82,4 @@ checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
-1 files, 1 changesets, 1 total revisions
+2 files, 2 changesets, 2 total revisions

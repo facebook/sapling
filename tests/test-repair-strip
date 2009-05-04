@@ -28,9 +28,13 @@ hg -q ci -m "a" -A
 echo b > b
 hg -q ci -m "b" -A
 
+echo b2 >> b
+hg -q ci -m "b2" -A
+
 echo c > c
 hg -q ci -m "c" -A
+ 
+teststrip 0 2 w .hg/store/data/b.i
+teststrip 0 2 r .hg/store/data/b.i
+teststrip 0 2 w .hg/store/00manifest.i
 
-teststrip 0 1 w .hg/store/data/b.i
-teststrip 0 1 r .hg/store/data/b.i
-teststrip 0 1 w .hg/store/00changelog.i
