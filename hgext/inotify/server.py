@@ -78,21 +78,20 @@ def walk(repo, root):
                     dirs.append(name)
                 elif kind in (stat.S_IFREG, stat.S_IFLNK):
                     files.append((name, kind))
-
-            yield hginside, fullpath, dirs, files
+            if reporoot or not hginside:
+                yield fullpath, dirs, files
 
             for subdir in dirs:
                 path = join(root, subdir)
                 if repo.dirstate._ignore(path):
                     continue
                 for result in walkit(path, False):
-                    if not result[0]:
-                        yield result
+                    yield result
         except OSError, err:
             if err.errno not in walk_ignored_errors:
                 raise
-    for result in walkit(root, root == ''):
-        yield result[1:]
+
+    return walkit(root, root == '')
 
 def _explain_watch_limit(ui, repo, count):
     path = '/proc/sys/fs/inotify/max_user_watches'
