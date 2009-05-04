@@ -59,7 +59,6 @@ def walk(repo, root):
 
     # This function is critical to performance during startup.
 
-    reporoot = root == ''
     rootslash = repo.root + os.sep
 
     def walkit(root, reporoot):
@@ -78,7 +77,6 @@ def walk(repo, root):
                             break
                     dirs.append(name)
                 elif kind in (stat.S_IFREG, stat.S_IFLNK):
-                    path = join(root, name)
                     files.append((name, kind))
 
             yield hginside, fullpath, dirs, files
@@ -93,7 +91,7 @@ def walk(repo, root):
         except OSError, err:
             if err.errno not in walk_ignored_errors:
                 raise
-    for result in walkit(root, reporoot):
+    for result in walkit(root, root == ''):
         yield result[1:]
 
 def _explain_watch_limit(ui, repo, count):
