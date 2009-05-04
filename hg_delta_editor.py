@@ -448,7 +448,7 @@ class HgChangeReceiver(delta.Editor):
             return branch[3:]
         return 'branches/%s' % branch
 
-    def __determine_parent_branch(self, p, src_path, src_rev, revnum):
+    def _determine_parent_branch(self, p, src_path, src_rev, revnum):
         if src_path is not None:
             src_file, src_branch = self._path_and_branch_for_path(src_path)
             src_tag = self._is_path_tag(src_path)
@@ -490,40 +490,46 @@ class HgChangeReceiver(delta.Editor):
                       and t_name in self.tags):
                         tags_to_delete.add(t_name)
                 continue
-            # At this point we know the path is not a tag. In that case, we only care if it
-            # is the root of a new branch (in this function). This is determined by the
-            # following checks:
-            # 1. Is the file located inside any currently known branch?
-            #     If yes, then we're done with it, this isn't interesting.
-            # 2. Does the file have copyfrom information that means it is a copy from the root
-            #    of some other branch?
-            #     If yes, then we're done: this is a new branch, and we record the copyfrom in
-            #     added_branches
-            # 3. Neither of the above. This could be a branch, but it might never work out for
-            #    us. It's only ever a branch (as far as we're concerned) if it gets committed
-            #    to, which we have to detect at file-write time anyway. So we do nothing here.
-            # 4. It's the root of an already-known branch, with an action of 'D'. We mark the
-            #    branch as deleted.
-            # 5. It's the parent directory of one or more already-known branches, so we mark them
-            #    as deleted.
-            # 6. It's a branch being replaced by another branch - the action will be 'R'.
+            # At this point we know the path is not a tag. In that
+            # case, we only care if it is the root of a new branch (in
+            # this function). This is determined by the following
+            # checks:
+            # 1. Is the file located inside any currently known
+            #    branch?  If yes, then we're done with it, this isn't
+            #    interesting.
+            # 2. Does the file have copyfrom information that means it
+            #    is a copy from the root of some other branch?  If
+            #    yes, then we're done: this is a new branch, and we
+            #    record the copyfrom in added_branches
+            # 3. Neither of the above. This could be a branch, but it
+            #    might never work out for us. It's only ever a branch
+            #    (as far as we're concerned) if it gets committed to,
+            #    which we have to detect at file-write time anyway. So
+            #    we do nothing here.
+            # 4. It's the root of an already-known branch, with an
+            #    action of 'D'. We mark the branch as deleted.
+            # 5. It's the parent directory of one or more
+            #    already-known branches, so we mark them as deleted.
+            # 6. It's a branch being replaced by another branch - the
+            #    action will be 'R'.
             fi, br = self._path_and_branch_for_path(p)
             if fi is not None:
                 if fi == '':
                     if paths[p].action == 'D':
                         self.branches_to_delete.add(br) # case 4
                     elif paths[p].action == 'R':
-                        added_branches.update(self.__determine_parent_branch(p, paths[p].copyfrom_path,
-                                                                             paths[p].copyfrom_rev,
-                                                                             revision.revnum))
+                        parent = self._determine_parent_branch(
+                            p, paths[p].copyfrom_path, paths[p].copyfrom_rev,
+                            revision.revnum)
+                        added_branches.update(parent)
                 continue # case 1
             if paths[p].action == 'D':
-                # check for case 5
                 for known in self.branches:
                     if self._svnpath(known).startswith(p):
                         self.branches_to_delete.add(known) # case 5
-            added_branches.update(self.__determine_parent_branch(p, paths[p].copyfrom_path,
-                                                                 paths[p].copyfrom_rev, revision.revnum))
+            parent = self._determine_parent_branch(
+                p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
+            added_branches.update(parent)
         for t in tags_to_delete:
             del self.tags[t]
         for br in self.branches_to_delete:
