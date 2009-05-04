@@ -20,8 +20,8 @@ setup(
     license = 'GNU GPL',
     author = 'Augie Fackler, others',
     author_email = 'hgsubversion@googlegroups.com',
-    description = 'HgSubversion is a Mercurial extension for working with '
-    'Subversion repositories.',
+    description = ('hgsubversion is a Mercurial extension for working with '
+                   'Subversion repositories.'),
     long_description = __doc__,
     keywords = 'mercurial',
     packages = ['hgext.hgsubversion', 'hgext.hgsubversion.svnwrap'],
