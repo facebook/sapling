@@ -41,7 +41,8 @@ def walkrepodirs(repo):
                 if kind == stat.S_IFDIR:
                     if name == '.hg':
                         hginside = True
-                        if not top: break
+                        if not top:
+                            return
                     else:
                         d = join(dirname, name)
                         if repo.dirstate._ignore(d):
@@ -76,7 +77,7 @@ def walk(repo, root):
                         if reporoot:
                             continue
                         else:
-                            break
+                            return
                     dirs.append(name)
                 elif kind in (stat.S_IFREG, stat.S_IFLNK):
                     files.append((name, kind))
