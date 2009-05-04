@@ -33,19 +33,19 @@ class TestFetchExternals(test_util.TestBase):
         # Taken from svn book
         samples = [
             ('third-party/sounds             http://svn.example.com/repos/sounds',
-             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds')),
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds', None)),
             ('third-party/skins -r148        http://svn.example.com/skinproj',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
             ('third-party/skins -r 148        http://svn.example.com/skinproj',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
             ('http://svn.example.com/repos/sounds third-party/sounds',
-             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds')),
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds', None)),
             ('-r148 http://svn.example.com/skinproj third-party/skins',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
             ('-r 148 http://svn.example.com/skinproj third-party/skins',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj')),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
             ('http://svn.example.com/skin-maker@21 third-party/skins/toolkit',
-             ('third-party/skins/toolkit', '21', 'http://svn.example.com/skin-maker')),
+             ('third-party/skins/toolkit', None, 'http://svn.example.com/skin-maker', '21')),
             ]
         
         for line, expected in samples:
@@ -60,12 +60,12 @@ class TestFetchExternals(test_util.TestBase):
         self.assertEqual(ref0, repo[0]['.hgsvnexternals'].data())
         ref1 = """[.]
  ^/externals/project1 deps/project1
- ^/externals/project2 deps/project2
+ -r2 ^/externals/project2@2 deps/project2
 """
         self.assertEqual(ref1, repo[1]['.hgsvnexternals'].data())
 
         ref2 = """[.]
- ^/externals/project2 deps/project2
+ -r2 ^/externals/project2@2 deps/project2
 [subdir]
  ^/externals/project1 deps/project1
 [subdir2]
@@ -75,7 +75,7 @@ class TestFetchExternals(test_util.TestBase):
         self.assertEqual(ref2, actual)
 
         ref3 = """[.]
- ^/externals/project2 deps/project2
+ -r2 ^/externals/project2@2 deps/project2
 [subdir]
  ^/externals/project1 deps/project1
 """
@@ -87,14 +87,14 @@ class TestFetchExternals(test_util.TestBase):
         self.assertEqual(ref4, repo[4]['.hgsvnexternals'].data())
 
         ref5 = """[.]
- ^/externals/project2 deps/project2
+ -r2 ^/externals/project2@2 deps/project2
 [subdir2]
  ^/externals/project1 deps/project1
 """
         self.assertEqual(ref5, repo[5]['.hgsvnexternals'].data())
 
         ref6 = """[.]
- ^/externals/project2 deps/project2
+ -r2 ^/externals/project2@2 deps/project2
 """
         self.assertEqual(ref6, repo[6]['.hgsvnexternals'].data())
 

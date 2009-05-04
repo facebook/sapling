@@ -38,13 +38,13 @@ svn ci -m "set externals on ."
 # Add another one
 cat > externals <<EOF
 ^/externals/project1 deps/project1
-^/externals/project2 deps/project2
+-r2 ^/externals/project2@2 deps/project2
 EOF
 svn propset -F externals svn:externals .
 svn ci -m "update externals on ."
 # Suppress an external and add one on a subdir
 cat > externals <<EOF
-^/externals/project2 deps/project2
+-r2 ^/externals/project2@2 deps/project2
 EOF
 svn propset -F externals svn:externals .
 mkdir subdir
@@ -72,6 +72,14 @@ svn ci -m 'remove externals subdir'
 # Remove the property on subdir2
 svn propdel svn:externals subdir2
 svn ci -m 'remove externals subdir2'
+# Kill project2 externals, peg revision should preserve it
+cd ..
+svn up
+svn rm externals/project2
+svn ci -m 'remove externals project2'
+cd trunk
+echo a >> a
+svn ci -m 'change a'
 cd ../..
 
 svnadmin dump testrepo > ../externals.svndump

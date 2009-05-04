@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: ab7049d2-24fc-4035-b126-5f7012d66a0d
+UUID: ac40e40a-7fbf-47e1-90a7-c1de12a5b013
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2009-01-12T23:19:30.150669Z
+2009-05-03T14:07:14.149596Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:30.267365Z
+2009-05-03T14:07:14.234026Z
 PROPS-END
 
 Node-path: branches
@@ -72,7 +72,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:31.232927Z
+2009-05-03T14:07:15.135488Z
 PROPS-END
 
 Node-path: externals/project1
@@ -90,6 +90,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
 Content-length: 12
 
 PROPS-END
@@ -111,6 +112,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
 Content-length: 12
 
 PROPS-END
@@ -132,7 +134,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:32.212750Z
+2009-05-03T14:07:16.180110Z
 PROPS-END
 
 Node-path: trunk
@@ -155,6 +157,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
 Content-length: 12
 
 PROPS-END
@@ -176,20 +179,20 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:33.180250Z
+2009-05-03T14:07:17.092210Z
 PROPS-END
 
 Node-path: trunk
 Node-kind: dir
 Node-action: change
-Prop-content-length: 105
-Content-length: 105
+Prop-content-length: 111
+Content-length: 111
 
 K 13
 svn:externals
-V 70
+V 76
 ^/externals/project1 deps/project1
-^/externals/project2 deps/project2
+-r2 ^/externals/project2@2 deps/project2
 
 PROPS-END
 
@@ -209,19 +212,19 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:34.270854Z
+2009-05-03T14:07:18.165337Z
 PROPS-END
 
 Node-path: trunk
 Node-kind: dir
 Node-action: change
-Prop-content-length: 70
-Content-length: 70
+Prop-content-length: 76
+Content-length: 76
 
 K 13
 svn:externals
-V 35
-^/externals/project2 deps/project2
+V 41
+-r2 ^/externals/project2@2 deps/project2
 
 PROPS-END
 
@@ -269,7 +272,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:37.185743Z
+2009-05-03T14:07:21.092911Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -277,19 +280,6 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 5
 Node-copyfrom-path: trunk
-Prop-content-length: 94
-Content-length: 94
-
-K 13
-svn:externals
-V 35
-^/externals/project2 deps/project2
-
-K 13
-svn:mergeinfo
-V 0
-
-PROPS-END
 
 
 Node-path: branches/branch1/subdir2
@@ -316,7 +306,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:39.198328Z
+2009-05-03T14:07:23.097507Z
 PROPS-END
 
 Node-path: branches/branch2
@@ -324,12 +314,8 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 5
 Node-copyfrom-path: trunk
-Prop-content-length: 34
-Content-length: 34
-
-K 13
-svn:mergeinfo
-V 0
+Prop-content-length: 10
+Content-length: 10
 
 PROPS-END
 
@@ -358,7 +344,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:40.183807Z
+2009-05-03T14:07:24.086967Z
 PROPS-END
 
 Node-path: trunk/subdir
@@ -380,7 +366,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-01-12T23:19:41.180477Z
+2009-05-03T14:07:25.093557Z
 PROPS-END
 
 Node-path: trunk/subdir2
@@ -390,5 +376,57 @@ Prop-content-length: 10
 Content-length: 10
 
 PROPS-END
+
+
+Revision-number: 10
+Prop-content-length: 127
+Content-length: 127
+
+K 7
+svn:log
+V 25
+remove externals project2
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-05-03T14:07:27.088306Z
+PROPS-END
+
+Node-path: externals/project2
+Node-action: delete
+
+
+Revision-number: 11
+Prop-content-length: 109
+Content-length: 109
+
+K 7
+svn:log
+V 8
+change a
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-05-03T14:07:28.065953Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-content-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
+Content-length: 4
+
+a
+a
 
 

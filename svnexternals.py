@@ -78,7 +78,6 @@ class BadDefinition(Exception):
 
 re_defold = re.compile(r'^(.*?)\s+(?:-r\s*(\d+)\s+)?([a-zA-Z]+://.*)$')
 re_defnew = re.compile(r'^(?:-r\s*(\d+)\s+)?((?:[a-zA-Z]+://|\^/).*)\s+(.*)$')
-re_pegrev = re.compile(r'^(.*)@(\d+)$')
 re_scheme = re.compile(r'^[a-zA-Z]+://')
 
 def parsedefinition(line):
@@ -89,19 +88,18 @@ def parsedefinition(line):
     # potential quotes. svn documentation is not really talkative about
     # these either.
     line = line.strip()
+    pegrev = None
     m = re_defnew.search(line)
     if m:
         rev, source, path = m.group(1, 2, 3)
+        if '@' in source:
+            source, pegrev = source.rsplit('@', 1)
     else:
         m = re_defold.search(line)
         if not m:
             raise BadDefinition()
         path, rev, source = m.group(1, 2, 3)
-    # Look for peg revisions
-    m = re_pegrev.search(source)
-    if m:
-        source, rev = m.group(1, 2)
-    return (path, rev, source)
+    return (path, rev, source, pegrev)
 
 def parsedefinitions(ui, repo, svnroot, exts):
     """Return (targetdir, revision, source) tuples. Fail if nested
@@ -111,7 +109,7 @@ def parsedefinitions(ui, repo, svnroot, exts):
     for base in sorted(exts):
         for line in exts[base]:
             try:
-                path, rev, source = parsedefinition(line)
+                path, rev, source, pegrev = parsedefinition(line)
             except BadDefinition:
                 ui.warn(_('ignoring invalid external definition: %r' % line))
                 continue
@@ -124,7 +122,7 @@ def parsedefinitions(ui, repo, svnroot, exts):
                 continue
             wpath = hgutil.pconvert(os.path.join(base, path))
             wpath = hgutil.canonpath(repo.root, '', wpath)
-            defs.append((wpath, rev, source))
+            defs.append((wpath, rev, source, pegrev))
     # Check target dirs are not nested
     defs.sort()
     for i, d in enumerate(defs):
@@ -189,13 +187,18 @@ class externalsupdater:
         self.repo = repo
         self.ui = ui
 
-    def update(self, wpath, rev, source):
+    def update(self, wpath, rev, source, pegrev):
         path = self.repo.wjoin(wpath)
         revspec = []
         if rev:
             revspec = ['-r', rev]
         if os.path.isdir(path):
             exturl, extroot, extrev = getsvninfo(path)
+            # Comparing the source paths is not enough, but I don't
+            # know how to compare path+pegrev. The following update
+            # might fail if the path was replaced by another unrelated
+            # one. It can be fixed manually by deleting the externals
+            # and updating again.
             if source == exturl:
                 if extrev != rev:
                     self.ui.status(_('updating external on %s@%s\n') %
@@ -208,6 +211,10 @@ class externalsupdater:
         cwd = os.path.join(self.repo.root, cwd)
         if not os.path.isdir(cwd):
             os.makedirs(cwd)
+        if not pegrev and rev:
+            pegrev = rev
+        if pegrev:
+            source = '%s@%s' % (source, pegrev)
         self.ui.status(_('fetching external %s@%s\n') % (wpath, rev or 'HEAD'))
         self.svn(['co'] + revspec + [source, dest], cwd)
 
@@ -264,7 +271,7 @@ def updateexternals(ui, args, repo, **opts):
     actions = computeactions(ui, repo, svnroot, oldext, newext)
     for action, ext in actions:
         if action == 'u':
-            updater.update(ext[0], ext[1], ext[2])
+            updater.update(ext[0], ext[1], ext[2], ext[3])
         elif action == 'd':
             updater.delete(ext[0])
         else:
