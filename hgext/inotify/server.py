@@ -73,16 +73,15 @@ def walk(repo, root):
                             return
                     else:
                         dirs.append(name)
+                        path = join(root, name)
+                        if repo.dirstate._ignore(path):
+                            continue
+                        for result in walkit(path, False):
+                            yield result
                 elif kind in (stat.S_IFREG, stat.S_IFLNK):
                     files.append(name)
             yield fullpath, dirs, files
 
-            for subdir in dirs:
-                path = join(root, subdir)
-                if repo.dirstate._ignore(path):
-                    continue
-                for result in walkit(path, False):
-                    yield result
         except OSError, err:
             if err.errno not in walk_ignored_errors:
                 raise
