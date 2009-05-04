@@ -35,12 +35,10 @@ def walkrepodirs(repo):
 
     def walkit(dirname, top):
         fullpath = rootslash + dirname
-        hginside = False
         try:
             for name, kind in osutil.listdir(fullpath):
                 if kind == stat.S_IFDIR:
                     if name == '.hg':
-                        hginside = True
                         if not top:
                             return
                     else:
@@ -52,8 +50,7 @@ def walkrepodirs(repo):
         except OSError, err:
             if err.errno not in walk_ignored_errors:
                 raise
-        if top or not hginside:
-            yield fullpath
+        yield fullpath
 
     return walkit('', True)
 
@@ -66,14 +63,12 @@ def walk(repo, root):
 
     def walkit(root, reporoot):
         files, dirs = [], []
-        hginside = False
 
         try:
             fullpath = rootslash + root
             for name, kind in osutil.listdir(fullpath):
                 if kind == stat.S_IFDIR:
                     if name == '.hg':
-                        hginside = True
                         if reporoot:
                             continue
                         else:
@@ -81,8 +76,7 @@ def walk(repo, root):
                     dirs.append(name)
                 elif kind in (stat.S_IFREG, stat.S_IFLNK):
                     files.append((name, kind))
-            if reporoot or not hginside:
-                yield fullpath, dirs, files
+            yield fullpath, dirs, files
 
             for subdir in dirs:
                 path = join(root, subdir)
