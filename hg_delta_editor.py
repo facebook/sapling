@@ -16,7 +16,7 @@ from svn import core
 
 import svnexternals
 import util
-from maps import *
+import maps
 
 def pickle_atomic(data, file_path, dir=None):
     """pickle some data to a path atomically.
@@ -125,7 +125,7 @@ class HgChangeReceiver(delta.Editor):
         self.tag_locations.reverse()
 
         self.clear_current_info()
-        self.authors = AuthorMap(self.ui, self.authors_file,
+        self.authors = maps.AuthorMap(self.ui, self.authors_file,
                                  defaulthost=author_host)
         if authors: self.authors.load(authors)
 
