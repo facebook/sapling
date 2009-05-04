@@ -48,16 +48,6 @@ def popen3(cmd, mode='t', bufsize=-1):
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     return p.stdin, p.stdout, p.stderr
-def Popen3(cmd, capturestderr=False, bufsize=-1):
-    stderr = capturestderr and subprocess.PIPE or None
-    p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                         close_fds=closefds,
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=stderr)
-    p.fromchild = p.stdout
-    p.tochild = p.stdin
-    p.childerr = p.stderr
-    return p
 
 def version():
     """Return version information if available."""
