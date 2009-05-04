@@ -297,8 +297,8 @@ class HgChangeReceiver(delta.Editor):
             return path[len(test)+1:], self._localname(test), test
         if existing:
             return None, None, None
-        if path.startswith('trunk/'):
-            path = test.split('/')[1:]
+        if path == 'trunk' or path.startswith('trunk/'):
+            path = path.split('/')[1:]
             test = 'trunk'
         elif path.startswith('branches/'):
             elts = path.split('/')
@@ -497,10 +497,10 @@ class HgChangeReceiver(delta.Editor):
             # 1. Is the file located inside any currently known
             #    branch?  If yes, then we're done with it, this isn't
             #    interesting.
-            # 2. Does the file have copyfrom information that means it
-            #    is a copy from the root of some other branch?  If
-            #    yes, then we're done: this is a new branch, and we
-            #    record the copyfrom in added_branches
+            # 2. Does the file have copyfrom information? If yes, then
+            #    we're done: this is a new branch, and we record the
+            #    copyfrom in added_branches if it comes from the root
+            #    of another branch, or create it from scratch.
             # 3. Neither of the above. This could be a branch, but it
             #    might never work out for us. It's only ever a branch
             #    (as far as we're concerned) if it gets committed to,
@@ -529,6 +529,10 @@ class HgChangeReceiver(delta.Editor):
                         self.branches_to_delete.add(known) # case 5
             parent = self._determine_parent_branch(
                 p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
+            if not parent and paths[p].copyfrom_path:
+                bpath, branch = self._path_and_branch_for_path(p, False)
+                if bpath is not None and branch not in self.branches:
+                    parent = {branch: (None, 0, revision.revnum)}
             added_branches.update(parent)
         for t in tags_to_delete:
             del self.tags[t]

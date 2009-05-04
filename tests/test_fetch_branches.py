@@ -9,10 +9,11 @@ import wrappers
 
 
 class TestFetchBranches(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, stupid, noupdate=True):
+    def _load_fixture_and_fetch(self, fixture_name, stupid, noupdate=True,
+                                subdir=''):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
                                                 self.wc_path, stupid=stupid,
-                                                noupdate=noupdate)
+                                                noupdate=noupdate, subdir=subdir)
 
     def _load_fixture_and_fetch_with_anchor(self, fixture_name, anchor):
         test_util.load_svndump_fixture(self.repo_path, fixture_name)
@@ -83,6 +84,19 @@ class TestFetchBranches(test_util.TestBase):
             'unorderedbranch.svndump', 'branch')
         self.assertEqual(repo[None].branch(), 'branch')
         self.assertEqual(repo[None].parents()[0], repo[repo.branchheads()[0]])
+
+    def test_branches_weird_moves(self, stupid=False):
+        repo = self._load_fixture_and_fetch('renamedproject.svndump', stupid,
+                                            subdir='project')
+        heads = [repo[n] for n in repo.heads()]
+        heads = dict((ctx.branch(), ctx) for ctx in heads)
+        mdefault = sorted(heads['default'].manifest().keys())
+        mbranch = sorted(heads['branch'].manifest().keys())
+        self.assertEqual(mdefault, ['a', 'b', 'd/a'])
+        self.assertEqual(mbranch, ['a'])
+
+    def test_branches_weird_moves_stupid(self):
+        self.test_branches_weird_moves(True)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
