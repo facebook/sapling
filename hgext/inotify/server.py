@@ -69,11 +69,10 @@ def walk(repo, root):
             for name, kind in osutil.listdir(fullpath):
                 if kind == stat.S_IFDIR:
                     if name == '.hg':
-                        if reporoot:
-                            continue
-                        else:
+                        if not reporoot:
                             return
-                    dirs.append(name)
+                    else:
+                        dirs.append(name)
                 elif kind in (stat.S_IFREG, stat.S_IFLNK):
                     files.append((name, kind))
             yield fullpath, dirs, files
