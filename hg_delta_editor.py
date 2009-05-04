@@ -844,7 +844,7 @@ class HgChangeReceiver(delta.Editor):
                 base = 'link ' + base
             self.set_file(svnpath, base, 'x' in fctx.flags(), 'l' in fctx.flags())
         else:
-            self.missing_plaintexts.add(path)
+            self.missing_plaintexts.add(svnpath)
 
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
