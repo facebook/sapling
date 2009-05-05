@@ -155,6 +155,15 @@ class queue:
         self.parse_series()
         return self.series_guards
 
+    def invalidate(self):
+        for a in 'applied full_series series series_guards'.split():
+            if a in self.__dict__:
+                delattr(self, a)
+        self.applied_dirty = 0
+        self.series_dirty = 0
+        self.guards_dirty = False
+        self.active_guards = None
+
     def diffopts(self):
         if self._diffopts is None:
             self._diffopts = patch.diffopts(self.ui)
