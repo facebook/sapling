@@ -445,7 +445,7 @@ class GitHandler(object):
                 self.ui.warn("Cannot import tags yet\n") # TODO
 
         # sort the commits
-        commits = TopoSort(convert_list).items()
+        commits = toposort.TopoSort(convert_list).items()
 
         # import each of the commits, oldest first
         for csha in commits:

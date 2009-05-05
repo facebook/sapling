@@ -8,13 +8,10 @@ import toposort
 class Ob:
     def __init__(self, eyedee, parents):
         self._id = eyedee
-        self._parents = parents
+        self.parents = parents
         
     def id(self):
         return self._id
-
-    def parents(self):
-        return self._parents
 
 
 class TestTopoSorting(unittest.TestCase):

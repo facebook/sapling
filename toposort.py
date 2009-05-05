@@ -37,7 +37,7 @@ class TopoSort(object):
             stack_pos = len(stack)
             stack.append(node)
 
-            for successor in graph[node].parents():
+            for successor in graph[node].parents:
                 visit(successor)
                 low[node] = min(low[node], low[successor])
 
@@ -94,7 +94,7 @@ class TopoSort(object):
 
         for node in graph:
             node_c = node_component[node]
-            for successor in graph[node].parents():
+            for successor in graph[node].parents:
                 successor_c = node_component[successor]
                 if node_c != successor_c:
                     component_graph[node_c].append(successor_c)
