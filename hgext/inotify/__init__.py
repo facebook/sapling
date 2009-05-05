@@ -63,17 +63,24 @@ def reposetup(ui, repo):
         # to recurse.
         inotifyserver = False
 
+        # We'll set this to false after an unsuccessful attempt so that
+        # next calls of status() within the same instance don't try again
+        # to start an inotify server if it won't start.
+        _inotifyon = True
+
         def status(self, match, ignored, clean, unknown=True):
             files = match.files()
             if '.' in files:
                 files = []
-            if not ignored and not self.inotifyserver:
+            if self._inotifyon and not ignored and not self.inotifyserver:
                 cli = client(ui, repo)
                 try:
                     result = cli.statusquery(files, match, False,
                                             clean, unknown)
                 except QueryFailed, instr:
                     ui.debug(str(instr))
+                    # don't retry within the same hg instance
+                    inotifydirstate._inotifyon = False
                     pass
                 else:
                     if ui.config('inotify', 'debug'):
