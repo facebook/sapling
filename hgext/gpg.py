@@ -152,7 +152,7 @@ def sigs(ui, repo):
             continue
         revs.setdefault(r, [])
         revs[r].extend(keys)
-    for rev in reversed(sorted(revs)):
+    for rev in sorted(revs, reverse=True):
         for k in revs[rev]:
             r = "%5d:%s" % (rev, hgnode.hex(repo.changelog.node(rev)))
             ui.write("%-30s %s\n" % (keystr(ui, k), r))
