@@ -33,6 +33,26 @@ exclude a
 EOF
 hg convert --filemap filemap source source-filemap-hg
 hg -R source-filemap-hg manifest -r tip
+
+# extract timestamps that look just like hg's {date|isodate}:
+# yyyy-mm-dd HH:MM zzzz (no seconds!)
+echo "% compare timestamps"
+cd source
+bzr log | \
+  awk -F'[ :]' '$1 == "timestamp" { printf "%s %s:%s %s\n", $4, $5, $6, $8 }' \
+  > ../bzr-timestamps
+cd ..
+
+hg -R source-hg log --template "{date|isodate}\n" > hg-timestamps
+if diff -q bzr-timestamps hg-timestamps ; then
+  echo "good: hg timestamps match bzr timestamps"
+else
+  echo "fail: bzr timestamps are:"
+  cat bzr-timestamps
+  echo "but hg timestamps are:"
+  cat hg-timestamps
+fi
+
 cd ..
 
 echo % merge

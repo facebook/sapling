@@ -110,8 +110,7 @@ class bzr_source(converter_source):
             self._parentids[version] = parents
 
         return commit(parents=parents,
-                # bzr uses 1 second timezone precision
-                date='%d %d' % (rev.timestamp, rev.timezone / 3600),
+                date='%d %d' % (rev.timestamp, -rev.timezone),
                 author=self.recode(rev.committer),
                 # bzr returns bytestrings or unicode, depending on the content
                 desc=self.recode(rev.message),

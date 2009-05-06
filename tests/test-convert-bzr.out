@@ -35,6 +35,8 @@ converting...
 b
 d
 f
+% compare timestamps
+good: hg timestamps match bzr timestamps
 % merge
 initializing destination source-hg repository
 scanning source...
