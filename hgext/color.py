@@ -60,7 +60,7 @@ diff.trailingwhitespace = bold red_background
 
 import os, sys
 
-from mercurial import cmdutil, commands, extensions
+from mercurial import cmdutil, commands, extensions, error
 from mercurial.i18n import _
 
 # start and stop parameters for effects
@@ -220,18 +220,30 @@ _diff_effects = {'diffline': ['bold'],
                  'changed': ['white'],
                  'trailingwhitespace': ['bold', 'red_background']}
 
+_ui = None
+
 def uisetup(ui):
     '''Initialize the extension.'''
+    global _ui
+    _ui = ui
     _setupcmd(ui, 'diff', commands.table, colordiff, _diff_effects)
     _setupcmd(ui, 'incoming', commands.table, None, _diff_effects)
     _setupcmd(ui, 'log', commands.table, None, _diff_effects)
     _setupcmd(ui, 'outgoing', commands.table, None, _diff_effects)
     _setupcmd(ui, 'tip', commands.table, None, _diff_effects)
     _setupcmd(ui, 'status', commands.table, colorstatus, _status_effects)
+
+def extsetup():
     try:
         mq = extensions.find('mq')
-        _setupcmd(ui, 'qdiff', mq.cmdtable, colordiff, _diff_effects)
-        _setupcmd(ui, 'qseries', mq.cmdtable, colorqseries, _patch_effects)
+        try:
+            # If we are loaded after mq, we must wrap commands.table
+            _setupcmd(_ui, 'qdiff', commands.table, colordiff, _diff_effects)
+            _setupcmd(_ui, 'qseries', commands.table, colorqseries, _patch_effects)
+        except error.UnknownCommand:
+            # Otherwise we wrap mq.cmdtable
+            _setupcmd(_ui, 'qdiff', mq.cmdtable, colordiff, _diff_effects)
+            _setupcmd(_ui, 'qseries', mq.cmdtable, colorqseries, _patch_effects)
     except KeyError:
         # The mq extension is not enabled
         pass
