@@ -122,23 +122,10 @@ class propertycache(object):
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
-    (pin, pout) = popen2(cmd, 'b')
-    def writer():
-        try:
-            pin.write(s)
-            pin.close()
-        except IOError, inst:
-            if inst.errno != errno.EPIPE:
-                raise
-
-    # we should use select instead on UNIX, but this will work on most
-    # systems, including Windows
-    w = threading.Thread(target=writer)
-    w.start()
-    f = pout.read()
-    pout.close()
-    w.join()
-    return f
+    p = subprocess.Popen(cmd, shell=True, close_fds=closefds,
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    pout, perr = p.communicate(s)
+    return pout
 
 def tempfilter(s, cmd):
     '''filter string S through a pair of temporary files with CMD.
