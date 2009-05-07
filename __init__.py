@@ -18,6 +18,7 @@ import traceback
 
 from mercurial import commands
 from mercurial import extensions
+from mercurial import hg
 from mercurial import util as hgutil
 
 from svn import core
@@ -27,12 +28,6 @@ import tag_repo
 import util
 import wrappers
 import svnexternals
-
-def reposetup(ui, repo):
-    if not util.is_svn_repo(repo):
-        return
-
-    repo.__class__ = tag_repo.generate_repo_class(ui, repo)
 
 def uisetup(ui):
     """Do our UI setup.
@@ -55,20 +50,6 @@ def uisetup(ui):
                                    wrappers.push)
     entry[1].append(('', 'svn', None, "push to subversion"))
     entry[1].append(('', 'svn-stupid', None, "use stupid replay during push to svn"))
-    entry = extensions.wrapcommand(commands.table, 'pull',
-                                   wrappers.pull)
-    entry[1].append(('', 'svn', None, "pull from subversion"))
-    entry[1].append(('', 'svn-stupid', None, "use stupid replay during pull from svn"))
-
-    entry = extensions.wrapcommand(commands.table, 'clone',
-                                   wrappers.clone)
-    entry[1].extend([#('', 'skipto-rev', '0', 'skip commits before this revision.'),
-                     ('', 'svn-stupid', False, 'be stupid and use diffy replay.'),
-                     ('', 'svn-tag-locations', 'tags', 'Relative path to Subversion tags.'),
-                     ('', 'svn-authors', '', 'username mapping filename'),
-                     ('', 'svn-filemap', '',
-                      'remap file to exclude paths or include only certain paths'),
-                     ])
 
     try:
         rebase = extensions.find('rebase')
@@ -115,7 +96,12 @@ def svn(ui, repo, subcommand, *args, **opts):
         else:
             raise
 
+def reposetup(ui, repo):
+    if repo.local():
+       tag_repo.generate_repo_class(ui, repo)
 
+for scheme in ('svn', 'svn+ssh', 'svn+http', 'svn+file'):
+    hg.schemes[scheme] = tag_repo
 
 cmdtable = {
     "svn":

@@ -24,7 +24,7 @@ def version(ui):
 
 
 def normalize_url(svnurl):
-    if svnurl.startswith('svn+http'):
+    if svnurl.startswith('svn+') and not svnurl.startswith('svn+ssh'):
         svnurl = svnurl[4:]
     url, revs, checkout = hg.parseurl(svnurl)
     url = url.rstrip('/')

@@ -243,7 +243,7 @@ def pull(orig, ui, repo, source="default", *args, **opts):
     svn_stupid = opts.pop('svn_stupid', False)
     create_new_dest = opts.pop('create_new_dest', False)
     url = ((repo and repo.ui) or ui).expandpath(source)
-    if not (cmdutil.issvnurl(url) or svn or create_new_dest):
+    if orig and not (cmdutil.issvnurl(url) or svn or create_new_dest):
         return orig(ui, repo, source=source, *args, **opts)
     svn_url = url
     svn_url = util.normalize_url(svn_url)

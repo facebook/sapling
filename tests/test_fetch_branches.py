@@ -5,7 +5,6 @@ from mercurial import node
 from mercurial import ui
 
 import test_util
-import wrappers
 
 
 class TestFetchBranches(test_util.TestBase):
@@ -18,7 +17,7 @@ class TestFetchBranches(test_util.TestBase):
     def _load_fixture_and_fetch_with_anchor(self, fixture_name, anchor):
         test_util.load_svndump_fixture(self.repo_path, fixture_name)
         source = '%s#%s' % (test_util.fileurl(self.repo_path), anchor)
-        wrappers.clone(None, ui.ui(), source=source, dest=self.wc_path)
+        repo = hg.clone(ui.ui(), source=source, dest=self.wc_path)
         return hg.repository(ui.ui(), self.wc_path)
 
     def test_unrelatedbranch(self, stupid=False):

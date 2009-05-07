@@ -89,12 +89,11 @@ class HgChangeReceiver(delta.Editor):
         self.ui = ui_
         if repo:
             self.repo = repo
+            self.__setup_repo(repo)
             self.path = os.path.normpath(os.path.join(self.repo.path, '..'))
         elif path:
             self.path = path
             self.__setup_repo(path)
-        else: #pragma: no cover
-            raise TypeError("Expected either path or repo argument")
 
         self.subdir = subdir
         if self.subdir and self.subdir[0] == '/':
@@ -144,19 +143,27 @@ class HgChangeReceiver(delta.Editor):
             date = self.lastdate
         return date
 
-    def __setup_repo(self, repo_path):
+    def __setup_repo(self, arg):
         """Verify the repo is going to work out for us.
 
         This method will fail an assertion if the repo exists but doesn't have
         the Subversion metadata.
         """
-        if os.path.isdir(repo_path) and len(os.listdir(repo_path)):
-            self.repo = hg.repository(self.ui, repo_path)
+        if isinstance(arg, basestring):
+            self.path = arg
+            self.repo = hg.repository(self.ui, self.path, create=True)
+        elif arg:
+            self.repo = arg
+            self.path = os.path.normpath(os.path.join(self.repo.path, '..'))
+        else: #pragma: no cover
+            raise TypeError("editor requires either a path or a repository "
+                            "specified")
+
+        if os.path.isdir(self.meta_data_dir) and os.listdir(self.meta_data_dir):
             assert os.path.isfile(self.revmap_file)
             assert os.path.isfile(self.svn_url_file)
             assert os.path.isfile(self.uuid_file)
         else:
-            self.repo = hg.repository(self.ui, repo_path, create=True)
             os.makedirs(os.path.dirname(self.uuid_file))
             f = open(self.revmap_file, 'w')
             f.write('%s\n' % util.REVMAP_FILE_VERSION)
