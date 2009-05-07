@@ -39,7 +39,7 @@ hg -R source-filemap-hg manifest -r tip
 echo "% compare timestamps"
 cd source
 bzr log | \
-  awk -F'[ :]' '$1 == "timestamp" { printf "%s %s:%s %s\n", $4, $5, $6, $8 }' \
+  sed '/timestamp/!d;s/.\{15\}\([0-9: -]\{16\}\).\{9\}/\1 +0000/' \
   > ../bzr-timestamps
 cd ..
 
