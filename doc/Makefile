@@ -20,8 +20,8 @@ hg.1.gendoc.txt: ../mercurial/commands.py ../mercurial/help.py
 	${PYTHON} gendoc.py > $@
 
 %: %.xml
-	xmlto man $*.xml ; \
-	sed -e 's/^\.hg/\\\&.hg/' $* > $*~ ; \
+	xmlto man $*.xml && \
+	sed -e 's/^\.hg/\\\&.hg/' $* > $*~ && \
 	mv $*~ $*
 
 %.xml: %.txt
