@@ -430,7 +430,6 @@ class GitHandler(object):
             todo.append(sha)
 
         # traverse the heads getting a list of all the unique commits
-        # TODO : stop when we hit a SHA we've already imported
         while todo:
             sha = todo.pop()
             assert isinstance(sha, str)
@@ -449,7 +448,7 @@ class GitHandler(object):
 
         # import each of the commits, oldest first
         for csha in commits:
-            if not self.map_hg_get(csha):
+            if not self.map_hg_get(csha): # it's already here
                 commit = convert_list[csha]
                 self.import_git_commit(commit)
 
@@ -479,7 +478,7 @@ class GitHandler(object):
     def extract_hg_metadata(self, message):
         split = message.split("\n\n--HG--\n", 1)
         renames = {}
-        branches = []
+        branch = False
         if len(split) == 2:
             message, meta = split
             lines = meta.split("\n")
@@ -492,19 +491,19 @@ class GitHandler(object):
                     before, after = data.split(" => ", 1)
                     renames[after] = before
                 if command == 'branch':
-                    branches.append(data)
-        return (message, renames, branches)
+                    branch = data
+        return (message, renames, branch)
         
     def import_git_commit(self, commit):
         self.ui.debug("importing: %s\n" % commit.id)
-        # TODO : look for HG metadata in the message and use it
+        # TODO : find and use hg named branches
         # TODO : add extra Git data (committer info) as extras to changeset
 
         # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
         
-        (strip_message, hg_renames, hg_branches) = self.extract_hg_metadata(commit.message)
+        (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
         
         def getfilectx(repo, memctx, f):
             try:
@@ -530,11 +529,25 @@ class GitHandler(object):
             # TODO : map extra parents to the extras file
             pass
 
+        # get a list of the changed, added, removed files
         files = self.git.get_files_changed(commit)
 
-        # get a list of the changed, added, removed files
+        # if this is a merge commit, don't list renamed files
+        # i'm really confused here - this is the only way my use case will
+        # work, but it seems really hacky - do I need to just remove renames
+        # from one of the parents? AARRGH!
+        if not (p2 == "0"*40):
+            for removefile in hg_renames.values():
+                files.remove(removefile)
+
         extra = {}
+        
         # *TODO : if committer is different than author, add it to extra
+        
+        # if named branch, add to extra
+        if hg_branch:
+            extra['branch'] = hg_branch
+        
         text = strip_message
         date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
