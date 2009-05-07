@@ -252,7 +252,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d):
               result = ret)
     return ret
 
-_loaded = {}
+_loaded = set()
 def _dispatch(ui, args):
     # read --config before doing anything else
     # (e.g. to change trust settings for reading .hg/hgrc)
@@ -300,7 +300,7 @@ def _dispatch(ui, args):
             ui.warn(_("extension '%s' overrides commands: %s\n")
                     % (name, " ".join(overrides)))
         commands.table.update(cmdtable)
-        _loaded[name] = 1
+        _loaded.add(name)
     # check for fallback encoding
     fallback = lui.config('ui', 'fallbackencoding')
     if fallback:
