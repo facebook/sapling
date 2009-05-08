@@ -240,12 +240,23 @@ def groupname(gid=None):
     If gid is None, return the name of the current group."""
     return None
 
-posixfile = file
 try:
     # override functions with win32 versions if possible
     from win32 import *
     if not _is_win_9x():
         posixfile = posixfile_nt
+        try:
+            # fast, buffered POSIX-like file support
+            from osutil import posixfile as _posixfile
+            def posixfile(name, mode='r', buffering=-1):
+                # wrap osutil.posixfile to provide friendlier exceptions
+                try:
+                    return _posixfile(name, mode, buffering)
+                except WindowsError, err:
+                    raise WinIOError(err)
+            posixfile.__doc__ = _posixfile.__doc__
+        except ImportError:
+            # slow, unbuffered POSIX-like file support
+            posixfile = posixfile_nt
 except ImportError:
-    pass
-
+    posixfile = file

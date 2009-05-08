@@ -9,15 +9,18 @@
 
 #define _ATFILE_SOURCE
 #include <Python.h>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <dirent.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+# include <windows.h>
+# include <io.h>
+#else
+# include <dirent.h>
+# include <sys/stat.h>
+# include <sys/types.h>
+# include <unistd.h>
 #endif
 
 #ifdef _WIN32
@@ -392,11 +395,128 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	return _listdir(path, plen, wantstat, skip);
 }
 
+#ifdef _WIN32
+static PyObject *posixfile(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	static char *kwlist[] = {"name", "mode", "buffering", NULL};
+	PyObject *file_obj = NULL;
+	char *name = NULL;
+	char *mode = "rb";
+	DWORD access;
+	DWORD creation;
+	HANDLE handle;
+	int fd, flags = 0;
+	int bufsize = -1;
+	char m0, m1, m2;
+	char fpmode[4];
+	int fppos = 0;
+	int plus;
+	FILE *fp;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "et|si:posixfile", kwlist,
+					 Py_FileSystemDefaultEncoding,
+					 &name, &mode, &bufsize))
+		return NULL;
+
+	m0 = mode[0];
+	m1 = m0 ? mode[1] : '\0';
+	m2 = m1 ? mode[2] : '\0';
+	plus = m1 == '+' || m2 == '+';
+
+	fpmode[fppos++] = m0;
+	if (m1 == 'b' || m2 == 'b') {
+		flags = _O_BINARY;
+		fpmode[fppos++] = 'b';
+	}
+	else
+		flags = _O_TEXT;
+	if (plus) {
+		flags |= _O_RDWR;
+		access = GENERIC_READ | GENERIC_WRITE;
+		fpmode[fppos++] = '+';
+	}
+	fpmode[fppos++] = '\0';
+
+	switch (m0) {
+	case 'r':
+		creation = OPEN_EXISTING;
+		if (!plus) {
+			flags |= _O_RDONLY;
+			access = GENERIC_READ;
+		}
+		break;
+	case 'w':
+		creation = CREATE_ALWAYS;
+		if (!plus) {
+			access = GENERIC_WRITE;
+			flags |= _O_WRONLY;
+		}
+		break;
+	case 'a':
+		creation = OPEN_ALWAYS;
+		flags |= _O_APPEND;
+		if (!plus) {
+			flags |= _O_WRONLY;
+			access = GENERIC_WRITE;
+		}
+		break;
+	default:
+		PyErr_Format(PyExc_ValueError,
+			     "mode string must begin with one of 'r', 'w', "
+			     "or 'a', not '%c'", m0);
+		goto bail;
+	}
+
+	handle = CreateFile(name, access,
+			    FILE_SHARE_READ | FILE_SHARE_WRITE |
+			    FILE_SHARE_DELETE,
+			    NULL,
+			    creation,
+			    FILE_ATTRIBUTE_NORMAL,
+			    0);
+
+	if (handle == INVALID_HANDLE_VALUE) {
+		PyErr_SetFromWindowsErrWithFilename(GetLastError(), name);
+		goto bail;
+	}
+
+	fd = _open_osfhandle((intptr_t) handle, flags);
+	if (fd == -1) {
+		CloseHandle(handle);
+		PyErr_SetFromErrnoWithFilename(PyExc_IOError, name);
+		goto bail;
+	}
+
+	fp = _fdopen(fd, fpmode);
+	if (fp == NULL) {
+		_close(fd);
+		PyErr_SetFromErrnoWithFilename(PyExc_IOError, name);
+		goto bail;
+	}
+
+	file_obj = PyFile_FromFile(fp, name, mode, fclose);
+	if (file_obj == NULL) {
+		fclose(fp);
+		goto bail;
+	}
+
+	PyFile_SetBufSize(file_obj, bufsize);
+bail:
+	PyMem_Free(name);
+	return file_obj;
+}
+#endif
+
 static char osutil_doc[] = "Native operating system services.";
 
 static PyMethodDef methods[] = {
 	{"listdir", (PyCFunction)listdir, METH_VARARGS | METH_KEYWORDS,
 	 "list a directory\n"},
+#ifdef _WIN32
+	{"posixfile", (PyCFunction)posixfile, METH_VARARGS | METH_KEYWORDS,
+	 "Open a file with POSIX-like semantics.\n"
+"On error, this function may raise either a WindowsError or an IOError."},
+#endif
 	{NULL, NULL}
 };
 
