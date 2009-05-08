@@ -31,8 +31,8 @@ def _fastsha1(s):
         from hashlib import sha1 as _sha1
     except ImportError:
         from sha import sha as _sha1
-    global _fastsha1
-    _fastsha1 = _sha1
+    global _fastsha1, sha1
+    _fastsha1 = sha1 = _sha1
     return _sha1(s)
 
 import subprocess
