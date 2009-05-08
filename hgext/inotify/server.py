@@ -116,6 +116,18 @@ def _explain_watch_limit(ui, repo, count):
 class RepoWatcher(object):
     poll_events = select.POLLIN
     statuskeys = 'almr!?'
+    mask = (
+        inotify.IN_ATTRIB |
+        inotify.IN_CREATE |
+        inotify.IN_DELETE |
+        inotify.IN_DELETE_SELF |
+        inotify.IN_MODIFY |
+        inotify.IN_MOVED_FROM |
+        inotify.IN_MOVED_TO |
+        inotify.IN_MOVE_SELF |
+        inotify.IN_ONLYDIR |
+        inotify.IN_UNMOUNT |
+        0)
 
     def __init__(self, ui, repo, master):
         self.ui = ui
@@ -123,18 +135,6 @@ class RepoWatcher(object):
         self.wprefix = self.repo.wjoin('')
         self.timeout = None
         self.master = master
-        self.mask = (
-            inotify.IN_ATTRIB |
-            inotify.IN_CREATE |
-            inotify.IN_DELETE |
-            inotify.IN_DELETE_SELF |
-            inotify.IN_MODIFY |
-            inotify.IN_MOVED_FROM |
-            inotify.IN_MOVED_TO |
-            inotify.IN_MOVE_SELF |
-            inotify.IN_ONLYDIR |
-            inotify.IN_UNMOUNT |
-            0)
         try:
             self.watcher = watcher.Watcher()
         except OSError, err:
