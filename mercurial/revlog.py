@@ -949,6 +949,14 @@ class revlog(object):
 
         return self._loadchunk(offset, length, df)
 
+    def _prime(self, startrev, endrev, df):
+        start = self.start(startrev)
+        end = self.end(endrev)
+        if self._inline:
+            start += (startrev + 1) * self._io.size
+            end += (startrev + 1) * self._io.size
+        self._loadchunk(start, end - start, df)
+
     def chunk(self, rev, df=None):
         start, length = self.start(rev), self.length(rev)
         if self._inline:
@@ -989,10 +997,12 @@ class revlog(object):
             self._loadindex(base, rev + 1)
             if not self._inline and rev > base + 1:
                 df = self.opener(self.datafile)
+                self._prime(base, rev, df)
         else:
             self._loadindex(base, rev + 1)
             if not self._inline and rev > base:
                 df = self.opener(self.datafile)
+                self._prime(base, rev, df)
             text = self.chunk(base, df=df)
 
         bins = [self.chunk(r, df) for r in xrange(base + 1, rev + 1)]
