@@ -242,8 +242,6 @@ class RepoWatcher(object):
         except KeyError:
             type_ = '?'
         if type_ == 'n':
-            if not st:
-                return '!'
             st_mode, st_size, st_mtime = st
             if size == -1:
                 return 'l'
@@ -252,8 +250,6 @@ class RepoWatcher(object):
             if time != int(st_mtime):
                 return 'l'
             return 'n'
-        if type_ in 'ma' and not st:
-            return '!'
         if type_ == '?' and self.repo.dirstate._ignore(fn):
             return 'i'
         return type_
