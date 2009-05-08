@@ -451,9 +451,12 @@ class PackData(object):
         """Calculate the checksum for this pack."""
         map, map_offset = simple_mmap(self._file, 0, self._size - 20)
         try:
-            return make_sha(map[map_offset:self._size-20]).digest()
-        finally:
+            r = make_sha(map[map_offset:self._size-20]).digest()
             map.close()
+            return r
+        except:
+            map.close()
+            raise
 
     def resolve_object(self, offset, type, obj, get_ref, get_offset=None):
         """Resolve an object, possibly resolving deltas when necessary.
@@ -500,8 +503,10 @@ class PackData(object):
                 offset += total_size
                 if progress:
                     progress(i, num)
-        finally:
             map.close()
+        except:
+            map.close()
+            raise
   
     def iterentries(self, ext_resolve_ref=None, progress=None):
         found = {}
