@@ -426,7 +426,7 @@ class revlog(object):
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
         self._cache = None
-        self._chunkcache = None
+        self._chunkcache = (0, '')
         self.nodemap = {nullid: nullrev}
         self.index = []
 
@@ -469,6 +469,8 @@ class revlog(object):
             except (ValueError, IndexError), e:
                 raise RevlogError(_("index %s is corrupted") % (self.indexfile))
             self.index, self.nodemap, self._chunkcache = d
+            if not self._chunkcache:
+                self._chunkcache = (0, '')
 
         # add the magic null revision at -1 (if it hasn't been done already)
         if (self.index == [] or isinstance(self.index, lazyindex) or
@@ -910,42 +912,48 @@ class revlog(object):
         p1, p2 = self.parents(node)
         return hash(text, p1, p2) != node
 
-    def chunk(self, rev, df=None):
-        def loadcache(df):
-            if not df:
-                if self._inline:
-                    df = self.opener(self.indexfile)
-                else:
-                    df = self.opener(self.datafile)
-            df.seek(start)
-            self._chunkcache = (start, df.read(cache_length))
+    def _addchunk(self, offset, data):
+        o, d = self._chunkcache
+        # try to add to existing cache
+        if o + len(d) == offset and len(d) + len(data) < _prereadsize:
+            self._chunkcache = o, d + data
+        else:
+            self._chunkcache = offset, data
 
+    def _loadchunk(self, offset, length, df=None):
+        if not df:
+            if self._inline:
+                df = self.opener(self.indexfile)
+            else:
+                df = self.opener(self.datafile)
+
+        readahead = max(65536, length)
+        df.seek(offset)
+        d = df.read(readahead)
+        self._addchunk(offset, d)
+        if readahead > length:
+            return d[:length]
+        return d
+
+    def _getchunk(self, offset, length, df=None):
+        o, d = self._chunkcache
+        l = len(d)
+
+        # is it in the cache?
+        cachestart = offset - o
+        cacheend = cachestart + length
+        if cachestart >= 0 and cacheend <= l:
+            if cachestart == 0 and cacheend == l:
+                return d # avoid a copy
+            return d[cachestart:cacheend]
+
+        return self._loadchunk(offset, length, df)
+
+    def chunk(self, rev, df=None):
         start, length = self.start(rev), self.length(rev)
         if self._inline:
             start += (rev + 1) * self._io.size
-        end = start + length
-
-        offset = 0
-        if not self._chunkcache:
-            cache_length = max(65536, length)
-            loadcache(df)
-        else:
-            cache_start = self._chunkcache[0]
-            cache_length = len(self._chunkcache[1])
-            cache_end = cache_start + cache_length
-            if start >= cache_start and end <= cache_end:
-                # it is cached
-                offset = start - cache_start
-            else:
-                cache_length = max(65536, length)
-                loadcache(df)
-
-        # avoid copying large chunks
-        c = self._chunkcache[1]
-        if cache_length != length:
-            c = c[offset:offset + length]
-
-        return decompress(c)
+        return decompress(self._getchunk(start, length, df))
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
@@ -1039,7 +1047,7 @@ class revlog(object):
         fp.rename()
 
         tr.replace(self.indexfile, trindex * calc)
-        self._chunkcache = None
+        self._chunkcache = (0, '')
 
     def addrevision(self, text, transaction, link, p1, p2, d=None):
         """add a revision to the log
@@ -1324,7 +1332,7 @@ class revlog(object):
 
         # then reset internal state in memory to forget those revisions
         self._cache = None
-        self._chunkcache = None
+        self._chunkcache = (0, '')
         for x in xrange(rev, len(self)):
             del self.nodemap[self.node(x)]
 
