@@ -467,7 +467,7 @@ class Commit(ShaFile):
             assert text[count] == ' ', "Invalid commit object, " \
                  "author information must be followed by space not %s" % text[count]
             count += 1
-            self._author_time = int(text[count:count+10])
+            self._author_time = int(text[count:].split(" ", 1)[0])
             while text[count] != ' ':
                 count += 1
             self._author_timezone = int(text[count:count+6])
