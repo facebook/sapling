@@ -3043,7 +3043,7 @@ commitopts = [
 
 commitopts2 = [
     ('d', 'date', '', _('record datecode as commit date')),
-    ('u', 'user', '', _('record user as committer')),
+    ('u', 'user', '', _('record the specified user as committer')),
 ]
 
 templateopts = [
