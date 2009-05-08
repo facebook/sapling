@@ -214,8 +214,7 @@ class RepoWatcher(object):
     def dir(self, tree, path):
         if path:
             for name in path.split('/'):
-                tree.setdefault(name, {})
-                tree = tree[name]
+                tree = tree.setdefault(name, {})
         return tree
 
     def lookup(self, path, tree):
@@ -438,8 +437,7 @@ class RepoWatcher(object):
         self.updatestatus(wpath, None)
 
     def schedule_work(self, wpath, evt):
-        self.eventq.setdefault(wpath, [])
-        prev = self.eventq[wpath]
+        prev = self.eventq.setdefault(wpath, [])
         try:
             if prev and evt == 'm' and prev[-1] in 'cm':
                 return
