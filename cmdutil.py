@@ -245,7 +245,7 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
     for d in deleteddirs2:
         pos = d.rfind('/')
         if pos >= 0 and d[:pos] in deleteddirs:
-            deleteddirs.remove(d[:pos])
+            deleteddirs.remove(d)
 
     newcopies = {}
     for source, dest in copies.iteritems():
