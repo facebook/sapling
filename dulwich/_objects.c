@@ -47,12 +47,20 @@ static PyObject *py_hex_to_sha(PyObject *self, PyObject *py_hexsha)
 	return PyString_FromStringAndSize(sha, 20);
 }
 
-static PyObject *py_sha_to_hex(PyObject *self, PyObject *py_sha)
+static PyObject *sha_to_pyhex(const unsigned char *sha)
 {
 	char hexsha[41];
-	unsigned char *sha;
 	int i;
+	for (i = 0; i < 20; i++) {
+		hexsha[i*2] = bytehex((sha[i] & 0xF0) >> 4);
+		hexsha[i*2+1] = bytehex(sha[i] & 0x0F);
+	}
+	
+	return PyString_FromStringAndSize(hexsha, 40);
+}
 
+static PyObject *py_sha_to_hex(PyObject *self, PyObject *py_sha)
+{
 	if (!PyString_Check(py_sha)) {
 		PyErr_SetString(PyExc_TypeError, "sha is not a string");
 		return NULL;
@@ -63,18 +71,65 @@ static PyObject *py_sha_to_hex(PyObject *self, PyObject *py_sha)
 		return NULL;
 	}
 
-	sha = (unsigned char *)PyString_AsString(py_sha);
-	for (i = 0; i < 20; i++) {
-		hexsha[i*2] = bytehex((sha[i] & 0xF0) >> 4);
-		hexsha[i*2+1] = bytehex(sha[i] & 0x0F);
+	return sha_to_pyhex((unsigned char *)PyString_AsString(py_sha));
+}
+
+static PyObject *py_parse_tree(PyObject *self, PyObject *args)
+{
+	char *text, *end;
+	int len, namelen;
+	PyObject *ret, *item, *name;
+
+	if (!PyArg_ParseTuple(args, "s#", &text, &len))
+		return NULL;
+
+	ret = PyDict_New();
+	if (ret == NULL) {
+		return NULL;
 	}
-	
-	return PyString_FromStringAndSize(hexsha, 40);
+
+	end = text + len;
+
+    while (text < end) {
+        long mode;
+		mode = strtol(text, &text, 8);
+
+		if (*text != ' ') {
+			PyErr_SetString(PyExc_RuntimeError, "Expected space");
+			Py_DECREF(ret);
+			return NULL;
+		}
+
+		text++;
+
+        namelen = strlen(text);
+
+		name = PyString_FromStringAndSize(text, namelen);
+		if (name == NULL) {
+			Py_DECREF(ret);
+			return NULL;
+		}
+
+        item = Py_BuildValue("(lN)", mode, sha_to_pyhex((unsigned char *)text+namelen+1));
+        if (item == NULL) {
+            Py_DECREF(ret);
+			Py_DECREF(name);
+            return NULL;
+        }
+		PyDict_SetItem(ret, name, item);
+		Py_DECREF(name);
+		Py_DECREF(item);
+
+		text += namelen+21;
+    }
+
+    return ret;
 }
 
 static PyMethodDef py_objects_methods[] = {
 	{ "hex_to_sha", (PyCFunction)py_hex_to_sha, METH_O, NULL },
 	{ "sha_to_hex", (PyCFunction)py_sha_to_hex, METH_O, NULL },
+	{ "parse_tree", (PyCFunction)py_parse_tree, METH_VARARGS, NULL, },
 };
 
 void init_objects(void)

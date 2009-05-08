@@ -79,13 +79,6 @@ class Protocol(object):
             yield pkt
             pkt = self.read_pkt_line()
 
-    def write_file(self, f):
-        try:
-            for line in f:
-                self.write(line)
-        finally:
-            f.close()
-        
     def write_pkt_line(self, line):
         """
         Sends a 'pkt line' to the remote git process
@@ -103,6 +96,25 @@ class Protocol(object):
                     self.report_activity(4+len(line), 'write')
         except socket.error, e:
             raise GitProtocolError(e)
+
+    def write_file(self):
+        class ProtocolFile(object):
+
+            def __init__(self, proto):
+                self._proto = proto
+                self._offset = 0
+
+            def write(self, data):
+                self._proto.write(data)
+                self._offset += len(data)
+
+            def tell(self):
+                return self._offset
+
+            def close(self):
+                pass
+
+        return ProtocolFile(self)
 
     def write_sideband(self, channel, blob):
         """

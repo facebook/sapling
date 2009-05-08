@@ -1,6 +1,6 @@
 # __init__.py -- The git module of dulwich
 # Copyright (C) 2007 James Westby <jw+debian@jameswestby.net>
-# Copyright (C) 2008 Jelmer Vernooji <jelmer@samba.org>
+# Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
 # 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -18,9 +18,13 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA  02110-1301, USA.
 
+
+"""Python implementation of the Git file formats and protocols."""
+
+
 import client
 import protocol
 import repo
 import server
 
-__version__ = (0, 1, 1)
+__version__ = (0, 2, 2)

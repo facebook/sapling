@@ -1,17 +1,17 @@
 # objects.py -- Access to base git objects
 # Copyright (C) 2007 James Westby <jw+debian@jameswestby.net>
-# Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
-#
+# Copyright (C) 2008-2009 Jelmer Vernooij <jelmer@samba.org>
+# 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; version 2
 # of the License or (at your option) a later version of the License.
-#
+# 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#
+# 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -23,6 +23,8 @@
 
 import mmap
 import os
+import sha
+import stat
 import zlib
 
 from errors import (
@@ -70,9 +72,20 @@ def hex_to_sha(hex):
     return ''.join([chr(int(hex[i:i+2], 16)) for i in xrange(0, len(hex), 2)])
 
 
+def serializable_property(name, docstring=None):
+    def set(obj, value):
+        obj._ensure_parsed()
+        setattr(obj, "_"+name, value)
+        obj._needs_serialization = True
+    def get(obj):
+        obj._ensure_parsed()
+        return getattr(obj, "_"+name)
+    return property(get, set, doc=docstring)
+
+
 class ShaFile(object):
     """A git SHA file."""
-
+  
     @classmethod
     def _parse_legacy_object(cls, map):
         """Parse a legacy object, creating it and setting object._text"""
@@ -97,15 +110,31 @@ class ShaFile(object):
         object._size = size
         assert text[0] == "\0", "Size not followed by null"
         text = text[1:]
-        object._text = text
+        object.set_raw_string(text)
         return object
 
     def as_legacy_object(self):
-        return zlib.compress("%s %d\0%s" % (self._type, len(self._text), self._text))
-
+        text = self.as_raw_string()
+        return zlib.compress("%s %d\0%s" % (self._type, len(text), text))
+  
     def as_raw_string(self):
-        return self._num_type, self._text
+        if self._needs_serialization:
+            self.serialize()
+        return self._text
 
+    def as_pretty_string(self):
+        return self.as_raw_string()
+
+    def _ensure_parsed(self):
+        if self._needs_parsing:
+            self._parse_text()
+
+    def set_raw_string(self, text):
+        self._text = text
+        self._sha = None
+        self._needs_parsing = True
+        self._needs_serialization = False
+  
     @classmethod
     def _parse_object(cls, map):
         """Parse a new style object , creating it and setting object._text"""
@@ -121,9 +150,9 @@ class ShaFile(object):
             byte = ord(map[used])
             used += 1
         raw = map[used:]
-        object._text = _decompress(raw)
+        object.set_raw_string(_decompress(raw))
         return object
-
+  
     @classmethod
     def _parse_file(cls, map):
         word = (ord(map[0]) << 8) + ord(map[1])
@@ -131,13 +160,14 @@ class ShaFile(object):
             return cls._parse_legacy_object(map)
         else:
             return cls._parse_object(map)
-
+  
     def __init__(self):
         """Don't call this directly"""
-
+        self._sha = None
+  
     def _parse_text(self):
         """For subclasses to do initialisation time parsing"""
-
+  
     @classmethod
     def from_file(cls, filename):
         """Get the contents of a SHA file on disk"""
@@ -146,49 +176,52 @@ class ShaFile(object):
         try:
             map = mmap.mmap(f.fileno(), size, access=mmap.ACCESS_READ)
             shafile = cls._parse_file(map)
-            shafile._parse_text()
             return shafile
         finally:
             f.close()
-
+  
     @classmethod
     def from_raw_string(cls, type, string):
         """Creates an object of the indicated type from the raw string given.
-
+    
         Type is the numeric type of an object. String is the raw uncompressed
         contents.
         """
         real_class = num_type_map[type]
         obj = real_class()
-        obj._num_type = type
-        obj._text = string
-        obj._parse_text()
+        obj.type = type
+        obj.set_raw_string(string)
         return obj
-
+  
     def _header(self):
-        return "%s %lu\0" % (self._type, len(self._text))
-
+        return "%s %lu\0" % (self._type, len(self.as_raw_string()))
+  
     def sha(self):
         """The SHA1 object that is the name of this object."""
-        ressha = make_sha()
-        ressha.update(self._header())
-        ressha.update(self._text)
-        return ressha
-
+        if self._needs_serialization or self._sha is None:
+            self._sha = make_sha()
+            self._sha.update(self._header())
+            self._sha.update(self.as_raw_string())
+        return self._sha
+  
     @property
     def id(self):
         return self.sha().hexdigest()
-
-    @property
-    def type(self):
+  
+    def get_type(self):
         return self._num_type
 
+    def set_type(self, type):
+        self._num_type = type
+
+    type = property(get_type, set_type)
+  
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.id)
-
+  
     def __eq__(self, other):
         """Return true id the sha of the two objects match.
-
+  
         The __le__ etc methods aren't overriden as they make no sense,
         certainly at this level.
         """
@@ -200,11 +233,17 @@ class Blob(ShaFile):
 
     _type = BLOB_ID
     _num_type = 3
+    _needs_serialization = False
+    _needs_parsing = False
 
-    @property
-    def data(self):
-        """The text contained within the blob object."""
+    def get_data(self):
         return self._text
+
+    def set_data(self, data):
+        self._text = data
+
+    data = property(get_data, set_data, 
+            "The text contained within the blob object.")
 
     @classmethod
     def from_file(cls, filename):
@@ -217,7 +256,7 @@ class Blob(ShaFile):
     def from_string(cls, string):
         """Create a blob from a string."""
         shafile = cls()
-        shafile._text = string
+        shafile.set_raw_string(string)
         return shafile
 
 
@@ -238,7 +277,7 @@ class Tag(ShaFile):
     def from_string(cls, string):
         """Create a blob from a string."""
         shafile = cls()
-        shafile._text = string
+        shafile.set_raw_string(string)
         return shafile
 
     def _parse_text(self):
@@ -306,33 +345,48 @@ class Tag(ShaFile):
         assert text[count] == '\n', "There must be a new line after the headers"
         count += 1
         self._message = text[count:]
+        self._needs_parsing = False
 
-    @property
-    def object(self):
+    def get_object(self):
         """Returns the object pointed by this tag, represented as a tuple(type, sha)"""
+        self._ensure_parsed()
         return (self._object_type, self._object_sha)
 
-    @property
-    def name(self):
-        """Returns the name of this tag"""
-        return self._name
+    object = property(get_object)
 
-    @property
-    def tagger(self):
-        """Returns the name of the person who created this tag"""
-        return self._tagger
+    name = serializable_property("name", "The name of this tag")
+    tagger = serializable_property("tagger", 
+        "Returns the name of the person who created this tag")
+    tag_time = serializable_property("tag_time", 
+        "The creation timestamp of the tag.  As the number of seconds since the epoch")
+    message = serializable_property("message", "The message attached to this tag")
 
-    @property
-    def tag_time(self):
-        """Returns the creation timestamp of the tag.
 
-        Returns it as the number of seconds since the epoch"""
-        return self._tag_time
-
-    @property
-    def message(self):
-        """Returns the message attached to this tag"""
-        return self._message
+def parse_tree(text):
+    ret = {}
+    count = 0
+    while count < len(text):
+        mode = 0
+        chr = text[count]
+        while chr != ' ':
+            assert chr >= '0' and chr <= '7', "%s is not a valid mode char" % chr
+            mode = (mode << 3) + (ord(chr) - ord('0'))
+            count += 1
+            chr = text[count]
+        count += 1
+        chr = text[count]
+        name = ''
+        while chr != '\0':
+            name += chr
+            count += 1
+            chr = text[count]
+        count += 1
+        chr = text[count]
+        sha = text[count:count+20]
+        hexsha = sha_to_hex(sha)
+        ret[name] = (mode, hexsha)
+        count = count + 20
+    return ret
 
 
 class Tree(ShaFile):
@@ -342,7 +396,10 @@ class Tree(ShaFile):
     _num_type = 2
 
     def __init__(self):
+        super(Tree, self).__init__()
         self._entries = {}
+        self._needs_parsing = False
+        self._needs_serialization = True
 
     @classmethod
     def from_file(cls, filename):
@@ -351,63 +408,78 @@ class Tree(ShaFile):
             raise NotTreeError(filename)
         return tree
 
+    def __contains__(self, name):
+        self._ensure_parsed()
+        return name in self._entries
+
     def __getitem__(self, name):
+        self._ensure_parsed()
         return self._entries[name]
 
     def __setitem__(self, name, value):
         assert isinstance(value, tuple)
         assert len(value) == 2
+        self._ensure_parsed()
         self._entries[name] = value
+        self._needs_serialization = True
 
     def __delitem__(self, name):
+        self._ensure_parsed()
         del self._entries[name]
+        self._needs_serialization = True
 
     def add(self, mode, name, hexsha):
+        assert type(mode) == int
+        assert type(name) == str
+        assert type(hexsha) == str
+        self._ensure_parsed()
         self._entries[name] = mode, hexsha
+        self._needs_serialization = True
 
     def entries(self):
         """Return a list of tuples describing the tree entries"""
-        return [(mode, name, hexsha) for (name, (mode, hexsha)) in self._entries.iteritems()]
-
-    def entry(self, name):
-        try:
-            return self._entries[name]
-        except:
-            return (None, None)
+        self._ensure_parsed()
+        # The order of this is different from iteritems() for historical reasons
+        return [(mode, name, hexsha) for (name, mode, hexsha) in self.iteritems()]
 
     def iteritems(self):
+        self._ensure_parsed()
         for name in sorted(self._entries.keys()):
-            yield name, self_entries[name][0], self._entries[name][1]
+            yield name, self._entries[name][0], self._entries[name][1]
 
     def _parse_text(self):
         """Grab the entries in the tree"""
-        count = 0
-        while count < len(self._text):
-            mode = 0
-            chr = self._text[count]
-            while chr != ' ':
-                assert chr >= '0' and chr <= '7', "%s is not a valid mode char" % chr
-                mode = (mode << 3) + (ord(chr) - ord('0'))
-                count += 1
-                chr = self._text[count]
-            count += 1
-            chr = self._text[count]
-            name = ''
-            while chr != '\0':
-                name += chr
-                count += 1
-                chr = self._text[count]
-            count += 1
-            chr = self._text[count]
-            sha = self._text[count:count+20]
-            hexsha = sha_to_hex(sha)
-            self.add(mode, name, hexsha)
-            count = count + 20
+        self._entries = parse_tree(self._text)
+        self._needs_parsing = False
 
     def serialize(self):
         self._text = ""
         for name, mode, hexsha in self.iteritems():
             self._text += "%04o %s\0%s" % (mode, name, hex_to_sha(hexsha))
+        self._needs_serialization = False
+
+    def as_pretty_string(self):
+        text = ""
+        for name, mode, hexsha in self.iteritems():
+            if mode & stat.S_IFDIR:
+                kind = "tree"
+            else:
+                kind = "blob"
+            text += "%04o %s %s\t%s\n" % (mode, kind, hexsha, name)
+        return text
+
+
+def parse_timezone(text):
+    offset = int(text)
+    hours = int(offset / 100)
+    minutes = (offset % 100)
+    return (hours * 3600) + (minutes * 60)
+
+
+def format_timezone(offset):
+    if offset % 60 != 0:
+        raise ValueError("Unable to handle non-minute offset.")
+    return '%+03d%02d' % (offset / 3600, (offset / 60) % 60)
 
 
 class Commit(ShaFile):
@@ -417,7 +489,10 @@ class Commit(ShaFile):
     _num_type = 1
 
     def __init__(self):
+        super(Commit, self).__init__()
         self._parents = []
+        self._needs_parsing = False
+        self._needs_serialization = True
 
     @classmethod
     def from_file(cls, filename):
@@ -469,8 +544,9 @@ class Commit(ShaFile):
             count += 1
             self._author_time = int(text[count:].split(" ", 1)[0])
             while text[count] != ' ':
+                assert text[count] != '\n', "Malformed author information"
                 count += 1
-            self._author_timezone = int(text[count:count+6])
+            self._author_timezone = parse_timezone(text[count:count+6])
             count += 1
             while text[count] != '\n':
                 count += 1
@@ -493,8 +569,9 @@ class Commit(ShaFile):
             count += 1
             self._commit_time = int(text[count:count+10])
             while text[count] != ' ':
+                assert text[count] != '\n', "Malformed committer information"
                 count += 1
-            self._commit_timezone = int(text[count:count+6])
+            self._commit_timezone = parse_timezone(text[count:count+6])
             count += 1
             while text[count] != '\n':
                 count += 1
@@ -503,69 +580,54 @@ class Commit(ShaFile):
         count += 1
         # XXX: There can be an encoding field.
         self._message = text[count:]
+        self._needs_parsing = False
 
     def serialize(self):
         self._text = ""
         self._text += "%s %s\n" % (TREE_ID, self._tree)
         for p in self._parents:
             self._text += "%s %s\n" % (PARENT_ID, p)
-        self._text += "%s %s %s %+05d\n" % (AUTHOR_ID, self._author, str(self._author_time), self._author_timezone)
-        self._text += "%s %s %s %+05d\n" % (COMMITTER_ID, self._committer, str(self._commit_time), self._commit_timezone)
+        self._text += "%s %s %s %s\n" % (AUTHOR_ID, self._author, str(self._author_time), format_timezone(self._author_timezone))
+        self._text += "%s %s %s %s\n" % (COMMITTER_ID, self._committer, str(self._commit_time), format_timezone(self._commit_timezone))
         self._text += "\n" # There must be a new line after the headers
         self._text += self._message
+        self._needs_serialization = False
 
-    @property
-    def tree(self):
-        """Returns the tree that is the state of this commit"""
-        return self._tree
+    tree = serializable_property("tree", "Tree that is the state of this commit")
 
-    @property
-    def parents(self):
+    def get_parents(self):
         """Return a list of parents of this commit."""
+        self._ensure_parsed()
         return self._parents
 
-    @property
-    def author(self):
-        """Returns the name of the author of the commit"""
-        return self._author
+    def set_parents(self, value):
+        """Return a list of parents of this commit."""
+        self._ensure_parsed()
+        self._needs_serialization = True
+        self._parents = value
 
-    @property
-    def committer(self):
-        """Returns the name of the committer of the commit"""
-        return self._committer
+    parents = property(get_parents, set_parents)
 
-    @property
-    def message(self):
-        """Returns the commit message"""
-        return self._message
+    author = serializable_property("author", 
+        "The name of the author of the commit")
 
-    @property
-    def commit_time(self):
-        """Returns the timestamp of the commit.
+    committer = serializable_property("committer", 
+        "The name of the committer of the commit")
 
-        Returns it as the number of seconds since the epoch.
-        """
-        return self._commit_time
+    message = serializable_property("message",
+        "The commit message")
 
-    @property
-    def commit_timezone(self):
-        """Returns the zone the commit time is in
-        """
-        return self._commit_timezone
+    commit_time = serializable_property("commit_time",
+        "The timestamp of the commit. As the number of seconds since the epoch.")
 
-    @property
-    def author_time(self):
-        """Returns the timestamp the commit was written.
+    commit_timezone = serializable_property("commit_timezone",
+        "The zone the commit time is in")
 
-        Returns it as the number of seconds since the epoch.
-        """
-        return self._author_time
+    author_time = serializable_property("author_time", 
+        "The timestamp the commit was written. as the number of seconds since the epoch.")
 
-    @property
-    def author_timezone(self):
-        """Returns the zone the author time is in
-        """
-        return self._author_timezone
+    author_timezone = serializable_property("author_timezone", 
+        "Returns the zone the author time is in.")
 
 
 type_map = {
@@ -586,6 +648,7 @@ num_type_map = {
 
 try:
     # Try to import C versions
-    from _objects import hex_to_sha, sha_to_hex
+    from dulwich._objects import hex_to_sha, sha_to_hex, parse_tree
 except ImportError:
     pass
+

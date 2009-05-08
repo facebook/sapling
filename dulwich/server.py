@@ -16,6 +16,10 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA  02110-1301, USA.
 
+
+"""Git smart network protocol server implementation."""
+
+
 import SocketServer
 import tempfile
 
@@ -88,6 +92,7 @@ class GitBackend(Backend):
 
 
 class Handler(object):
+    """Smart protocol command handler base class."""
 
     def __init__(self, backend, read, write):
         self.backend = backend
@@ -98,6 +103,7 @@ class Handler(object):
 
 
 class UploadPackHandler(Handler):
+    """Protocol handler for uploading a pack to the server."""
 
     def default_capabilities(self):
         return ("multi_ack", "side-band-64k", "thin-pack", "ofs-delta")
@@ -170,6 +176,7 @@ class UploadPackHandler(Handler):
 
 
 class ReceivePackHandler(Handler):
+    """Protocol handler for downloading a pack to the client."""
 
     def default_capabilities(self):
         return ("report-status", "delete-refs")
@@ -204,7 +211,8 @@ class ReceivePackHandler(Handler):
         # backend can now deal with this refs and read a pack using self.read
         self.backend.apply_pack(client_refs, self.proto.read)
 
-        # when we have read all the pack from the client, it assumes everything worked OK
+        # when we have read all the pack from the client, it assumes 
+        # everything worked OK.
         # there is NO ack from the server before it reports victory.
 
 

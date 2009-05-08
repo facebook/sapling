@@ -1,5 +1,5 @@
 # object_store.py -- Object store for git objects 
-# Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2008-2009 Jelmer Vernooij <jelmer@samba.org>
 # 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -16,7 +16,13 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA  02110-1301, USA.
 
+
+"""Git object store interfaces and implementation."""
+
+
+import itertools
 import os
+import stat
 import tempfile
 import urllib2
 
@@ -25,6 +31,7 @@ from errors import (
     )
 from objects import (
     ShaFile,
+    Tag,
     Tree,
     hex_to_sha,
     sha_to_hex,
@@ -42,17 +49,9 @@ from pack import (
 
 PACKDIR = 'pack'
 
-class ObjectStore(object):
-    """Object store."""
 
-    def __init__(self, path):
-        """Open an object store.
-
-        :param path: Path of the object store.
-        """
-        self.path = path
-        self._pack_cache = None
-        self.pack_dir = os.path.join(self.path, PACKDIR)
+class BaseObjectStore(object):
+    """Object store interface."""
 
     def determine_wants_all(self, refs):
 	    return [sha for (ref, sha) in refs.iteritems() if not sha in self and not ref.endswith("^{}")]
@@ -65,6 +64,67 @@ class ObjectStore(object):
         return ObjectStoreIterator(self, shas)
 
     def __contains__(self, sha):
+        """Check if a particular object is present by SHA1."""
+        raise NotImplementedError(self.__contains__)
+
+    def get_raw(self, name):
+        """Obtain the raw text for an object.
+        
+        :param name: sha for the object.
+        :return: tuple with object type and object contents.
+        """
+        raise NotImplementedError(self.get_raw)
+
+    def __getitem__(self, sha):
+        """Obtain an object by SHA1."""
+        type, uncomp = self.get_raw(sha)
+        return ShaFile.from_raw_string(type, uncomp)
+
+    def __iter__(self):
+        """Iterate over the SHAs that are present in this store."""
+        raise NotImplementedError(self.__iter__)
+
+    def add_object(self, obj):
+        """Add a single object to this object store.
+
+        """
+        raise NotImplementedError(self.add_object)
+
+    def add_objects(self, objects):
+        """Add a set of objects to this object store.
+
+        :param objects: Iterable over a list of objects.
+        """
+        raise NotImplementedError(self.add_objects)
+
+    def find_missing_objects(self, wants, graph_walker, progress=None):
+        """Find the missing objects required for a set of revisions.
+
+        :param wants: Iterable over SHAs of objects to fetch.
+        :param graph_walker: Object that can iterate over the list of revisions 
+            to fetch and has an "ack" method that will be called to acknowledge 
+            that a revision is present.
+        :param progress: Simple progress function that will be called with 
+            updated progress strings.
+        :return: Iterator over (sha, path) pairs.
+        """
+        return iter(MissingObjectFinder(self, wants, graph_walker, progress).next, None)
+
+
+class DiskObjectStore(BaseObjectStore):
+    """Git-style object store that exists on disk."""
+
+    def __init__(self, path):
+        """Open an object store.
+
+        :param path: Path of the object store.
+        """
+        self.path = path
+        self._pack_cache = None
+        self.pack_dir = os.path.join(self.path, PACKDIR)
+
+    def __contains__(self, sha):
+        """Check if a particular object is present by SHA1."""
         for pack in self.packs:
             if sha in pack:
                 return True
@@ -72,6 +132,11 @@ class ObjectStore(object):
         if ret is not None:
             return True
         return False
+
+    def __iter__(self):
+        """Iterate over the SHAs that are present in this store."""
+        iterables = self.packs + [self._iter_shafile_shas()]
+        return itertools.chain(*iterables)
 
     @property
     def packs(self):
@@ -92,6 +157,13 @@ class ObjectStore(object):
         file = sha[2:]
         # Check from object dir
         return os.path.join(self.path, dir, file)
+
+    def _iter_shafile_shas(self):
+        for base in os.listdir(self.path):
+            if len(base) != 2:
+                continue
+            for rest in os.listdir(os.path.join(self.path, base)):
+                yield base+rest
 
     def _get_shafile(self, sha):
         path = self._get_shafile_path(sha)
@@ -133,12 +205,8 @@ class ObjectStore(object):
             hexsha = sha_to_hex(name)
         ret = self._get_shafile(hexsha)
         if ret is not None:
-            return ret.as_raw_string()
+            return ret.type, ret.as_raw_string()
         raise KeyError(hexsha)
-
-    def __getitem__(self, sha):
-        type, uncomp = self.get_raw(sha)
-        return ShaFile.from_raw_string(type, uncomp)
 
     def move_in_thin_pack(self, path):
         """Move a specific file containing a pack into the pack directory.
@@ -176,7 +244,7 @@ class ObjectStore(object):
         :param path: Path to the pack file.
         """
         p = PackData(path)
-        entries = p.sorted_entries(self.get_raw)
+        entries = p.sorted_entries()
         basename = os.path.join(self.pack_dir, 
             "pack-%s" % iter_sha1(entry[0] for entry in entries))
         write_pack_index_v2(basename+".idx", entries, p.get_stored_checksum())
@@ -207,13 +275,16 @@ class ObjectStore(object):
         fd, path = tempfile.mkstemp(dir=self.pack_dir, suffix=".pack")
         f = os.fdopen(fd, 'w')
         def commit():
-            #os.fsync(fd)
-            #f.close()
+            os.fsync(fd)
+            f.close()
             if os.path.getsize(path) > 0:
                 self.move_in_pack(path)
         return f, commit
 
     def add_object(self, obj):
+        """Add a single object to this object store.
+
+        """
         self._add_shafile(obj.id, obj)
 
     def add_objects(self, objects):
@@ -226,6 +297,45 @@ class ObjectStore(object):
         f, commit = self.add_pack()
         write_pack_data(f, objects, len(objects))
         commit()
+
+
+class MemoryObjectStore(BaseObjectStore):
+
+    def __init__(self):
+        super(MemoryObjectStore, self).__init__()
+        self._data = {}
+
+    def __contains__(self, sha):
+        return sha in self._data
+
+    def __iter__(self):
+        """Iterate over the SHAs that are present in this store."""
+        return self._data.iterkeys()
+
+    def get_raw(self, name):
+        """Obtain the raw text for an object.
+        
+        :param name: sha for the object.
+        :return: tuple with object type and object contents.
+        """
+        return self[name].as_raw_string()
+
+    def __getitem__(self, name):
+        return self._data[name]
+
+    def add_object(self, obj):
+        """Add a single object to this object store.
+
+        """
+        self._data[obj.id] = obj
+
+    def add_objects(self, objects):
+        """Add a set of objects to this object store.
+
+        :param objects: Iterable over a list of objects.
+        """
+        for obj in objects:
+            self._data[obj.id] = obj
 
 
 class ObjectImporter(object):
@@ -294,6 +404,12 @@ class ObjectStoreIterator(ObjectIterator):
 
 
 def tree_lookup_path(lookup_obj, root_sha, path):
+    """Lookup an object in a Git tree.
+
+    :param lookup_obj: Callback for retrieving object by SHA1
+    :param root_sha: SHA1 of the root tree
+    :param path: Path to lookup
+    """
     parts = path.split("/")
     sha = root_sha
     for p in parts:
@@ -304,3 +420,58 @@ def tree_lookup_path(lookup_obj, root_sha, path):
             continue
         mode, sha = obj[p]
     return lookup_obj(sha)
+
+
+class MissingObjectFinder(object):
+    """Find the objects missing from another object store.
+
+    :param object_store: Object store containing at least all objects to be 
+        sent
+    :param wants: SHA1s of commits to send
+    :param graph_walker: graph walker object used to see what the remote 
+        repo has and misses
+    :param progress: Optional function to report progress to.
+    """
+
+    def __init__(self, object_store, wants, graph_walker, progress=None):
+        self.sha_done = set()
+        self.objects_to_send = set([(w, None, False) for w in wants])
+        self.object_store = object_store
+        if progress is None:
+            self.progress = lambda x: None
+        else:
+            self.progress = progress
+        ref = graph_walker.next()
+        while ref:
+            if ref in self.object_store:
+                graph_walker.ack(ref)
+            ref = graph_walker.next()
+
+    def add_todo(self, entries):
+        self.objects_to_send.update([e for e in entries if not e[0] in self.sha_done])
+
+    def parse_tree(self, tree):
+        self.add_todo([(sha, name, not stat.S_ISDIR(mode)) for (mode, name, sha) in tree.entries()])
+
+    def parse_commit(self, commit):
+        self.add_todo([(commit.tree, "", False)])
+        self.add_todo([(p, None, False) for p in commit.parents])
+
+    def parse_tag(self, tag):
+        self.add_todo([(tag.object[1], None, False)])
+
+    def next(self):
+        if not self.objects_to_send:
+            return None
+        (sha, name, leaf) = self.objects_to_send.pop()
+        if not leaf:
+            o = self.object_store[sha]
+            if isinstance(o, Commit):
+                self.parse_commit(o)
+            elif isinstance(o, Tree):
+                self.parse_tree(o)
+            elif isinstance(o, Tag):
+                self.parse_tag(o)
+        self.sha_done.add(sha)
+        self.progress("counting objects: %d\r" % len(self.sha_done))
+        return (sha, name)

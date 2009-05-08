@@ -1,22 +1,24 @@
 # repo.py -- For dealing wih git repositories.
 # Copyright (C) 2007 James Westby <jw+debian@jameswestby.net>
-# Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
-#
+# Copyright (C) 2008-2009 Jelmer Vernooij <jelmer@samba.org>
+# 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; version 2
-# of the License or (at your option) any later version of
+# of the License or (at your option) any later version of 
 # the License.
-#
+# 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#
+# 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA  02110-1301, USA.
+
+"""Repository access."""
 
 import os
 import stat
@@ -42,9 +44,11 @@ from misc import make_sha
 
 OBJECTDIR = 'objects'
 SYMREF = 'ref: '
-
+REFSDIR = 'refs'
+INDEX_FILENAME = "index"
 
 class Tags(object):
+    """Tags container."""
 
     def __init__(self, tagdir, tags):
         self.tagdir = tagdir
@@ -52,7 +56,7 @@ class Tags(object):
 
     def __getitem__(self, name):
         return self.tags[name]
-
+    
     def __setitem__(self, name, ref):
         self.tags[name] = ref
         f = open(os.path.join(self.tagdir, name), 'wb')
@@ -70,69 +74,33 @@ class Tags(object):
 
 
 def read_packed_refs(f):
+    """Read a packed refs file.
+
+    Yields tuples with ref names and SHA1s.
+
+    :param f: file-like object to read from
+    """
     l = f.readline()
-    assert l == "# pack-refs with: peeled \n"
     for l in f.readlines():
+        if l[0] == "#":
+            # Comment
+            continue
         if l[0] == "^":
             # FIXME: Return somehow
             continue
         yield tuple(l.rstrip("\n").split(" ", 2))
 
 
-class MissingObjectFinder(object):
-
-    def __init__(self, object_store, wants, graph_walker, progress=None):
-        self.sha_done = set()
-        self.objects_to_send = set([(w, None) for w in wants])
-        self.object_store = object_store
-        if progress is None:
-            self.progress = lambda x: None
-        else:
-            self.progress = progress
-        ref = graph_walker.next()
-        while ref:
-            if ref in self.object_store:
-                graph_walker.ack(ref)
-            ref = graph_walker.next()
-
-    def add_todo(self, entries):
-        self.objects_to_send.update([e for e in entries if not e in self.sha_done])
-
-    def parse_tree(self, tree):
-        self.add_todo([(sha, name) for (mode, name, sha) in tree.entries()])
-
-    def parse_commit(self, commit):
-        self.add_todo([(commit.tree, "")])
-        self.add_todo([(p, None) for p in commit.parents])
-
-    def parse_tag(self, tag):
-        self.add_todo([(tag.object[1], None)])
-
-    def next(self):
-        if not self.objects_to_send:
-            return None
-        (sha, name) = self.objects_to_send.pop()
-        o = self.object_store[sha]
-        if isinstance(o, Commit):
-            self.parse_commit(o)
-        elif isinstance(o, Tree):
-            self.parse_tree(o)
-        elif isinstance(o, Tag):
-            self.parse_tag(o)
-        self.sha_done.add((sha, name))
-        self.progress("counting objects: %d\r" % len(self.sha_done))
-        return (sha, name)
-
-
 class Repo(object):
+    """A local git repository."""
 
-    ref_locs = ['', 'refs', 'refs/tags', 'refs/heads', 'refs/remotes']
+    ref_locs = ['', REFSDIR, 'refs/tags', 'refs/heads', 'refs/remotes']
 
     def __init__(self, root):
-        if os.path.isdir(os.path.join(root, ".git", "objects")):
+        if os.path.isdir(os.path.join(root, ".git", OBJECTDIR)):
             self.bare = False
             self._controldir = os.path.join(root, ".git")
-        elif os.path.isdir(os.path.join(root, "objects")):
+        elif os.path.isdir(os.path.join(root, OBJECTDIR)):
             self.bare = True
             self._controldir = root
         else:
@@ -142,32 +110,47 @@ class Repo(object):
         self._object_store = None
 
     def controldir(self):
+        """Return the path of the control directory."""
         return self._controldir
+
+    def index_path(self):
+        """Return path to the index file."""
+        return os.path.join(self.controldir(), INDEX_FILENAME)
+
+    def open_index(self):
+        """Open the index for this repository."""
+        from dulwich.index import Index
+        return Index(self.index_path())
+
+    def has_index(self):
+        """Check if an index is present."""
+        return os.path.exists(self.index_path())
 
     def find_missing_objects(self, determine_wants, graph_walker, progress):
         """Find the missing objects required for a set of revisions.
 
-        :param determine_wants: Function that takes a dictionary with heads
+        :param determine_wants: Function that takes a dictionary with heads 
             and returns the list of heads to fetch.
-        :param graph_walker: Object that can iterate over the list of revisions
-            to fetch and has an "ack" method that will be called to acknowledge
+        :param graph_walker: Object that can iterate over the list of revisions 
+            to fetch and has an "ack" method that will be called to acknowledge 
             that a revision is present.
-        :param progress: Simple progress function that will be called with
+        :param progress: Simple progress function that will be called with 
             updated progress strings.
+        :return: Iterator over (sha, path) pairs.
         """
         wants = determine_wants(self.get_refs())
-        return iter(MissingObjectFinder(self.object_store, wants, graph_walker,
-                progress).next, None)
+        return self.object_store.find_missing_objects(wants, 
+                graph_walker, progress)
 
     def fetch_objects(self, determine_wants, graph_walker, progress):
         """Fetch the missing objects required for a set of revisions.
 
-        :param determine_wants: Function that takes a dictionary with heads
+        :param determine_wants: Function that takes a dictionary with heads 
             and returns the list of heads to fetch.
-        :param graph_walker: Object that can iterate over the list of revisions
-            to fetch and has an "ack" method that will be called to acknowledge
+        :param graph_walker: Object that can iterate over the list of revisions 
+            to fetch and has an "ack" method that will be called to acknowledge 
             that a revision is present.
-        :param progress: Simple progress function that will be called with
+        :param progress: Simple progress function that will be called with 
             updated progress strings.
         :return: tuple with number of objects, iterator over objects
         """
@@ -175,12 +158,13 @@ class Repo(object):
             self.find_missing_objects(determine_wants, graph_walker, progress))
 
     def object_dir(self):
+        """Return path of the object directory."""
         return os.path.join(self.controldir(), OBJECTDIR)
 
     @property
     def object_store(self):
         if self._object_store is None:
-            self._object_store = ObjectStore(self.object_dir())
+            self._object_store = DiskObjectStore(self.object_dir())
         return self._object_store
 
     def pack_dir(self):
@@ -201,6 +185,7 @@ class Repo(object):
             f.close()
 
     def ref(self, name):
+        """Return the SHA1 a ref is pointing to."""
         for dir in self.ref_locs:
             file = os.path.join(self.controldir(), dir, name)
             if os.path.exists(file):
@@ -210,6 +195,7 @@ class Repo(object):
             return packed_refs[name]
 
     def get_refs(self):
+        """Get dictionary with all refs."""
         ret = {}
         if self.head():
             ret['HEAD'] = self.head()
@@ -222,6 +208,13 @@ class Repo(object):
         return ret
 
     def get_packed_refs(self):
+        """Get contents of the packed-refs file.
+
+        :return: Dictionary mapping ref names to SHA1s
+
+        :note: Will return an empty dictionary when no packed-refs file is 
+            present.
+        """
         path = os.path.join(self.controldir(), 'packed-refs')
         if not os.path.exists(path):
             return {}
@@ -270,12 +263,17 @@ class Repo(object):
             f.close()
 
     def remove_ref(self, name):
+        """Remove a ref.
+
+        :param name: Name of the ref
+        """
         file = os.path.join(self.controldir(), name)
         if os.path.exists(file):
             os.remove(file)
 
     def tagdir(self):
-        return os.path.join(self.controldir(), 'refs', 'tags')
+        """Tag directory."""
+        return os.path.join(self.controldir(), REFSDIR, 'tags')
 
     def get_tags(self):
         ret = {}
@@ -506,11 +504,11 @@ class Repo(object):
 
     @classmethod
     def init_bare(cls, path, mkdir=True):
-        for d in [["objects"],
-                  ["objects", "info"],
-                  ["objects", "pack"],
+        for d in [[OBJECTDIR], 
+                  [OBJECTDIR, "info"], 
+                  [OBJECTDIR, "pack"],
                   ["branches"],
-                  ["refs"],
+                  [REFSDIR],
                   ["refs", "tags"],
                   ["refs", "heads"],
                   ["hooks"],
@@ -521,3 +519,4 @@ class Repo(object):
         open(os.path.join(path, 'info', 'excludes'), 'w').write("")
 
     create = init_bare
+
