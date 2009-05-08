@@ -30,6 +30,11 @@ match for the object name. You then use the pointer got from this as
 a pointer in to the corresponding packfile.
 """
 
+from mercurial import demandimport
+import __builtin__
+orig_import = __builtin__.__import__
+demandimport.disable()
+
 try:
     from collections import defaultdict
 except ImportError:
@@ -60,6 +65,8 @@ from objects import (
     sha_to_hex,
     )
 from misc import make_sha
+
+__builtin__.__import__ = orig_import
 
 supports_mmap_offset = (sys.version_info[0] >= 3 or
         (sys.version_info[0] == 2 and sys.version_info[1] >= 6))
