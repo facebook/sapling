@@ -998,14 +998,9 @@ class revlog(object):
         return text
 
     def checkinlinesize(self, tr, fp=None):
-        if not self._inline:
+        if not self._inline or (self.start(-2) + self.length(-2)) < 131072:
             return
-        if not fp:
-            fp = self.opener(self.indexfile, 'r')
-            fp.seek(0, 2)
-        size = fp.tell()
-        if size < 131072:
-            return
+
         trinfo = tr.find(self.indexfile)
         if trinfo == None:
             raise RevlogError(_("%s not found in the transaction")
@@ -1015,6 +1010,10 @@ class revlog(object):
         dataoff = self.start(trindex)
 
         tr.add(self.datafile, dataoff)
+
+        if not fp:
+            fp = self.opener(self.indexfile, 'r')
+
         df = self.opener(self.datafile, 'w')
         try:
             calc = self._io.size
