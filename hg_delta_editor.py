@@ -862,7 +862,7 @@ class HgChangeReceiver(delta.Editor):
                 parent = self.get_parent_revision(baserev + 1, branch)
                 self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
         else:
-            self.ui.warn('WARNING: Opening non-existant file %s\n' % path)
+            self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
     open_file = stash_exception_on_self(open_file)
 
     def aresamefiles(self, parentctx, childctx, files):
