@@ -114,7 +114,7 @@ def simple_mmap(f, offset, size, access=mmap.ACCESS_READ):
     :param access: Access mechanism.
     :return: MMAP'd area.
     """
-    print f, offset, size
+    #print f, offset, size
     if supports_mmap_offset:
         mem = mmap.mmap(f.fileno(), size + offset % mmap.PAGESIZE, access=access,
                 offset=offset / mmap.PAGESIZE * mmap.PAGESIZE)
