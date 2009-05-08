@@ -59,9 +59,6 @@ def reposetup(ui, repo):
     repo = proxy(repo)
 
     class inotifydirstate(repo.dirstate.__class__):
-        # Set to True if we're the inotify server, so we don't attempt
-        # to recurse.
-        inotifyserver = False
 
         # We'll set this to false after an unsuccessful attempt so that
         # next calls of status() within the same instance don't try again
@@ -72,7 +69,7 @@ def reposetup(ui, repo):
             files = match.files()
             if '.' in files:
                 files = []
-            if self._inotifyon and not ignored and not self.inotifyserver:
+            if self._inotifyon and not ignored:
                 cli = client(ui, repo)
                 try:
                     result = cli.statusquery(files, match, False,

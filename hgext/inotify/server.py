@@ -144,8 +144,6 @@ class repowatcher(object):
         self.registered = True
         self.fileno = self.watcher.fileno
 
-        self.repo.dirstate.__class__.inotifyserver = True
-
         self.tree = {}
         self.statcache = {}
         self.statustrees = dict([(s, {}) for s in self.statuskeys])
