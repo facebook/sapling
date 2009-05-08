@@ -31,6 +31,8 @@ REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 
+_prereadsize = 1048576
+
 RevlogError = error.RevlogError
 LookupError = error.LookupError
 
@@ -315,12 +317,13 @@ class revlogoldio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatv0)
 
-    def parseindex(self, fp, inline):
+    def parseindex(self, fp, data, inline):
         s = self.size
         index = []
         nodemap =  {nullid: nullrev}
         n = off = 0
-        data = fp.read()
+        if len(data) < _prereadsize:
+            data += fp.read() # read the rest
         l = len(data)
         while off + s <= l:
             cur = data[off:off + s]
@@ -358,13 +361,15 @@ class revlogio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatng)
 
-    def parseindex(self, fp, inline):
+    def parseindex(self, fp, data, inline):
         try:
-            size = util.fstat(fp).st_size
+            size = len(data)
+            if size == _prereadsize:
+                size = util.fstat(fp).st_size
         except AttributeError:
             size = 0
 
-        if util.openhardlinks() and not inline and size > 1000000:
+        if util.openhardlinks() and not inline and size > _prereadsize:
             # big index, let's parse it on demand
             parser = lazyparser(fp, size)
             index = lazyindex(parser)
@@ -375,7 +380,6 @@ class revlogio(object):
             index[0] = e
             return index, nodemap, None
 
-        data = fp.read()
         # call the C implementation to parse the index data
         index, nodemap, cache = parsers.parse_index(data, inline)
         return index, nodemap, cache
@@ -422,7 +426,7 @@ class revlog(object):
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
         self._cache = None
-        self._chunkcache = None
+        self._chunkcache = (0, '')
         self.nodemap = {nullid: nullrev}
         self.index = []
 
@@ -432,13 +436,12 @@ class revlog(object):
             if v & REVLOGNG:
                 v |= REVLOGNGINLINEDATA
 
-        i = ""
+        i = ''
         try:
             f = self.opener(self.indexfile)
-            i = f.read(4)
-            f.seek(0)
+            i = f.read(_prereadsize)
             if len(i) > 0:
-                v = struct.unpack(versionformat, i)[0]
+                v = struct.unpack(versionformat, i[:4])[0]
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -462,10 +465,12 @@ class revlog(object):
             self._io = revlogoldio()
         if i:
             try:
-                d = self._io.parseindex(f, self._inline)
+                d = self._io.parseindex(f, i, self._inline)
             except (ValueError, IndexError), e:
                 raise RevlogError(_("index %s is corrupted") % (self.indexfile))
             self.index, self.nodemap, self._chunkcache = d
+            if not self._chunkcache:
+                self._chunkcache = (0, '')
 
         # add the magic null revision at -1 (if it hasn't been done already)
         if (self.index == [] or isinstance(self.index, lazyindex) or
@@ -907,42 +912,56 @@ class revlog(object):
         p1, p2 = self.parents(node)
         return hash(text, p1, p2) != node
 
-    def chunk(self, rev, df=None):
-        def loadcache(df):
-            if not df:
-                if self._inline:
-                    df = self.opener(self.indexfile)
-                else:
-                    df = self.opener(self.datafile)
-            df.seek(start)
-            self._chunkcache = (start, df.read(cache_length))
+    def _addchunk(self, offset, data):
+        o, d = self._chunkcache
+        # try to add to existing cache
+        if o + len(d) == offset and len(d) + len(data) < _prereadsize:
+            self._chunkcache = o, d + data
+        else:
+            self._chunkcache = offset, data
 
+    def _loadchunk(self, offset, length, df=None):
+        if not df:
+            if self._inline:
+                df = self.opener(self.indexfile)
+            else:
+                df = self.opener(self.datafile)
+
+        readahead = max(65536, length)
+        df.seek(offset)
+        d = df.read(readahead)
+        self._addchunk(offset, d)
+        if readahead > length:
+            return d[:length]
+        return d
+
+    def _getchunk(self, offset, length, df=None):
+        o, d = self._chunkcache
+        l = len(d)
+
+        # is it in the cache?
+        cachestart = offset - o
+        cacheend = cachestart + length
+        if cachestart >= 0 and cacheend <= l:
+            if cachestart == 0 and cacheend == l:
+                return d # avoid a copy
+            return d[cachestart:cacheend]
+
+        return self._loadchunk(offset, length, df)
+
+    def _prime(self, startrev, endrev, df):
+        start = self.start(startrev)
+        end = self.end(endrev)
+        if self._inline:
+            start += (startrev + 1) * self._io.size
+            end += (startrev + 1) * self._io.size
+        self._loadchunk(start, end - start, df)
+
+    def chunk(self, rev, df=None):
         start, length = self.start(rev), self.length(rev)
         if self._inline:
             start += (rev + 1) * self._io.size
-        end = start + length
-
-        offset = 0
-        if not self._chunkcache:
-            cache_length = max(65536, length)
-            loadcache(df)
-        else:
-            cache_start = self._chunkcache[0]
-            cache_length = len(self._chunkcache[1])
-            cache_end = cache_start + cache_length
-            if start >= cache_start and end <= cache_end:
-                # it is cached
-                offset = start - cache_start
-            else:
-                cache_length = max(65536, length)
-                loadcache(df)
-
-        # avoid copying large chunks
-        c = self._chunkcache[1]
-        if cache_length != length:
-            c = c[offset:offset + length]
-
-        return decompress(c)
+        return decompress(self._getchunk(start, length, df))
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
@@ -978,10 +997,12 @@ class revlog(object):
             self._loadindex(base, rev + 1)
             if not self._inline and rev > base + 1:
                 df = self.opener(self.datafile)
+                self._prime(base, rev, df)
         else:
             self._loadindex(base, rev + 1)
             if not self._inline and rev > base:
                 df = self.opener(self.datafile)
+                self._prime(base, rev, df)
             text = self.chunk(base, df=df)
 
         bins = [self.chunk(r, df) for r in xrange(base + 1, rev + 1)]
@@ -995,14 +1016,9 @@ class revlog(object):
         return text
 
     def checkinlinesize(self, tr, fp=None):
-        if not self._inline:
+        if not self._inline or (self.start(-2) + self.length(-2)) < 131072:
             return
-        if not fp:
-            fp = self.opener(self.indexfile, 'r')
-            fp.seek(0, 2)
-        size = fp.tell()
-        if size < 131072:
-            return
+
         trinfo = tr.find(self.indexfile)
         if trinfo == None:
             raise RevlogError(_("%s not found in the transaction")
@@ -1012,19 +1028,22 @@ class revlog(object):
         dataoff = self.start(trindex)
 
         tr.add(self.datafile, dataoff)
+
+        if fp:
+            fp.flush()
+            fp.close()
+
         df = self.opener(self.datafile, 'w')
         try:
             calc = self._io.size
             for r in self:
                 start = self.start(r) + (r + 1) * calc
                 length = self.length(r)
-                fp.seek(start)
-                d = fp.read(length)
+                d = self._getchunk(start, length)
                 df.write(d)
         finally:
             df.close()
 
-        fp.close()
         fp = self.opener(self.indexfile, 'w', atomictemp=True)
         self.version &= ~(REVLOGNGINLINEDATA)
         self._inline = False
@@ -1037,7 +1056,7 @@ class revlog(object):
         fp.rename()
 
         tr.replace(self.indexfile, trindex * calc)
-        self._chunkcache = None
+        self._chunkcache = (0, '')
 
     def addrevision(self, text, transaction, link, p1, p2, d=None):
         """add a revision to the log
@@ -1322,7 +1341,7 @@ class revlog(object):
 
         # then reset internal state in memory to forget those revisions
         self._cache = None
-        self._chunkcache = None
+        self._chunkcache = (0, '')
         for x in xrange(rev, len(self)):
             del self.nodemap[self.node(x)]
 
