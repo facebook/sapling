@@ -158,7 +158,7 @@ adding utf
 % no mime encoding for email --test
 % md5sum of 8-bit output
 e726c29b3008e77994c7572563e57c34  mailtest
-% mime encoded mbox
+% mime encoded mbox (base64)
 This patch series consists of 1 patches.
 
 
@@ -188,6 +188,59 @@ MCAxOTcwICswMDAwCisrKyBiL3V0ZglUaHUgSmFuIDAxIDAwOjAwOjA0IDE5NzAgKzAwMDAKQEAg
 LTAsMCArMSwxIEBACitow7ZtbWEhCg==
 
 
+% mime encoded mbox (quoted-printable)
+adding qp
+% no mime encoding for email --test
+% md5sum of qp output
+0402c7d033e04044e423bb04816f9dae  mailtest
+% mime encoded mbox (quoted-printable)
+This patch series consists of 1 patches.
+
+
+Writing [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable ...
+From quux Thu Jan 01 00:04:01 1970
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+Subject: [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable
+X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
+Message-Id: <c655633f8c87700bb38c.240@
+User-Agent: Mercurial-patchbomb
+Date: Thu, 01 Jan 1970 00:04:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+# HG changeset patch
+# User test
+# Date 4 0
+# Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
+# Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+charset=3Dutf-8; content-transfer-encoding: quoted-printable
+
+diff -r c3c9e37db9f4 -r c655633f8c87 qp
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+@@ -0,0 +1,4 @@
++xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
++foo
++
++bar
+
+
 % iso-8859-1 patch
 adding isolatin
 % fake ascii mbox
@@ -196,7 +249,7 @@ This patch series consists of 1 patches.
 
 Writing [PATCH] charset=us-ascii; content-transfer-encoding: 8bit ...
 % md5sum of 8-bit output
-40190791e367a851e42f0887b2d9439e  mboxfix
+9ea043d8fc43a71045114508baed144b  mboxfix
 % test diffstat for single patch
 This patch series consists of 1 patches.
 
@@ -376,18 +429,70 @@ diff -r 97d72e5f12c7 -r ff2c9fa2018b c
 +c
 
 --===
+% test inline for single patch (quoted-printable)
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] test ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH] test
+X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
+Message-Id: <c655633f8c87700bb38c.60@
+User-Agent: Mercurial-patchbomb
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: inline; filename=t2.patch
+
+# HG changeset patch
+# User test
+# Date 4 0
+# Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
+# Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+charset=3Dutf-8; content-transfer-encoding: quoted-printable
+
+diff -r c3c9e37db9f4 -r c655633f8c87 qp
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+@@ -0,0 +1,4 @@
++xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
++foo
++
++bar
+
+--===
 % test inline for multiple patches
-This patch series consists of 2 patches.
+This patch series consists of 3 patches.
 
 
 Write the introductory message for the patch series.
 
 
-Displaying [PATCH 0 of 2] test ...
+Displaying [PATCH 0 of 3] test ...
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Subject: [PATCH 0 of 2] test
+Subject: [PATCH 0 of 3] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
 Date: Thu, 01 Jan 1970 00:01:00 +0000
@@ -396,10 +501,10 @@ To: foo
 Cc: bar
 
 
-Displaying [PATCH 1 of 2] a ...
+Displaying [PATCH 1 of 3] a ...
 Content-Type: multipart/mixed; boundary="===
 MIME-Version: 1.0
-Subject: [PATCH 1 of 2] a
+Subject: [PATCH 1 of 3] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
@@ -430,10 +535,10 @@ diff -r 000000000000 -r 8580ff50825a a
 +a
 
 --===
-Displaying [PATCH 2 of 2] b ...
+Displaying [PATCH 2 of 3] b ...
 Content-Type: multipart/mixed; boundary="===
 MIME-Version: 1.0
-Subject: [PATCH 2 of 2] b
+Subject: [PATCH 2 of 3] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
@@ -462,6 +567,57 @@ diff -r 8580ff50825a -r 97d72e5f12c7 b
 +++ b/b	Thu Jan 01 00:00:02 1970 +0000
 @@ -0,0 +1,1 @@
 +b
+
+--===
+Displaying [PATCH 3 of 3] charset=utf-8; content-transfer-encoding: quoted-printable ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 3 of 3] charset=utf-8;
+	content-transfer-encoding: quoted-printable
+X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
+Message-Id: <c655633f8c87700bb38c.63@
+In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
+User-Agent: Mercurial-patchbomb
+Date: Thu, 01 Jan 1970 00:01:03 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: inline; filename=t2-3.patch
+
+# HG changeset patch
+# User test
+# Date 4 0
+# Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
+# Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+charset=3Dutf-8; content-transfer-encoding: quoted-printable
+
+diff -r c3c9e37db9f4 -r c655633f8c87 qp
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+@@ -0,0 +1,4 @@
++xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
++foo
++
++bar
 
 --===
 % test attach for single patch
@@ -509,18 +665,79 @@ diff -r 97d72e5f12c7 -r ff2c9fa2018b c
 +c
 
 --===
+% test attach for single patch (quoted-printable)
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] test ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH] test
+X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
+Message-Id: <c655633f8c87700bb38c.60@
+User-Agent: Mercurial-patchbomb
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+Patch subject is complete summary.
+
+
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: attachment; filename=t2.patch
+
+# HG changeset patch
+# User test
+# Date 4 0
+# Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
+# Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+charset=3Dutf-8; content-transfer-encoding: quoted-printable
+
+diff -r c3c9e37db9f4 -r c655633f8c87 qp
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+@@ -0,0 +1,4 @@
++xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
++foo
++
++bar
+
+--===
 % test attach for multiple patches
-This patch series consists of 2 patches.
+This patch series consists of 3 patches.
 
 
 Write the introductory message for the patch series.
 
 
-Displaying [PATCH 0 of 2] test ...
+Displaying [PATCH 0 of 3] test ...
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Subject: [PATCH 0 of 2] test
+Subject: [PATCH 0 of 3] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
 Date: Thu, 01 Jan 1970 00:01:00 +0000
@@ -529,10 +746,10 @@ To: foo
 Cc: bar
 
 
-Displaying [PATCH 1 of 2] a ...
+Displaying [PATCH 1 of 3] a ...
 Content-Type: multipart/mixed; boundary="===
 MIME-Version: 1.0
-Subject: [PATCH 1 of 2] a
+Subject: [PATCH 1 of 3] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
@@ -572,10 +789,10 @@ diff -r 000000000000 -r 8580ff50825a a
 +a
 
 --===
-Displaying [PATCH 2 of 2] b ...
+Displaying [PATCH 2 of 3] b ...
 Content-Type: multipart/mixed; boundary="===
 MIME-Version: 1.0
-Subject: [PATCH 2 of 2] b
+Subject: [PATCH 2 of 3] b
 X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
 Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
@@ -613,6 +830,66 @@ diff -r 8580ff50825a -r 97d72e5f12c7 b
 +++ b/b	Thu Jan 01 00:00:02 1970 +0000
 @@ -0,0 +1,1 @@
 +b
+
+--===
+Displaying [PATCH 3 of 3] charset=utf-8; content-transfer-encoding: quoted-printable ...
+Content-Type: multipart/mixed; boundary="===
+MIME-Version: 1.0
+Subject: [PATCH 3 of 3] charset=utf-8;
+	content-transfer-encoding: quoted-printable
+X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
+Message-Id: <c655633f8c87700bb38c.63@
+In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
+User-Agent: Mercurial-patchbomb
+Date: Thu, 01 Jan 1970 00:01:03 +0000
+From: quux
+To: foo
+Cc: bar
+
+--===
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+Patch subject is complete summary.
+
+
+
+--===
+Content-Type: text/x-patch; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: attachment; filename=t2-3.patch
+
+# HG changeset patch
+# User test
+# Date 4 0
+# Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
+# Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+charset=3Dutf-8; content-transfer-encoding: quoted-printable
+
+diff -r c3c9e37db9f4 -r c655633f8c87 qp
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+@@ -0,0 +1,4 @@
++xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
++foo
++
++bar
 
 --===
 % test intro for single patch
@@ -873,8 +1150,8 @@ Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Subject: [PATCH] Added tag two, two.diff for changeset ff2c9fa2018b
-X-Mercurial-Node: 2c502b2db30e1ddd5e4ecabd68d9002f6c77a5a3
-Message-Id: <2c502b2db30e1ddd5e4e.60@
+X-Mercurial-Node: e317db6a6f288748d1f6cb064f3810fcba66b1b6
+Message-Id: <e317db6a6f288748d1f6.60@
 In-Reply-To: baz
 References: baz
 User-Agent: Mercurial-patchbomb
@@ -886,11 +1163,11 @@ Cc: bar
 # HG changeset patch
 # User test
 # Date 0 0
-# Node ID 2c502b2db30e1ddd5e4ecabd68d9002f6c77a5a3
-# Parent  91c0d1bdb4bc9cfd3b38a53a5ec53e9ae412a275
+# Node ID e317db6a6f288748d1f6cb064f3810fcba66b1b6
+# Parent  eae5fcf795eee29d0e45ffc9f519a91cd79fc9ff
 Added tag two, two.diff for changeset ff2c9fa2018b
 
-diff -r 91c0d1bdb4bc -r 2c502b2db30e .hgtags
+diff -r eae5fcf795ee -r e317db6a6f28 .hgtags
 --- a/.hgtags	Thu Jan 01 00:00:00 1970 +0000
 +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
 @@ -2,3 +2,5 @@

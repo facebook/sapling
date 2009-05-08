@@ -58,7 +58,23 @@ echo "% md5sum of 8-bit output"
 $TESTDIR/md5sum.py mailtest
 rm mailtest
 
-echo "% mime encoded mbox"
+echo "% mime encoded mbox (base64)"
+hg email --date '1970-1-1 0:4' -f quux -t foo -c bar -r tip -m mbox
+cat mbox | fixheaders
+rm mbox
+
+echo "% mime encoded mbox (quoted-printable)"
+python -c 'fp = open("qp", "wb"); fp.write("%s\nfoo\n\nbar\n" % \
+  ("x" * 1024)); fp.close();'
+hg commit -A -d '4 0' -m 'charset=utf-8; content-transfer-encoding: quoted-printable'
+
+echo "% no mime encoding for email --test"
+hg email --date '1970-1-1 0:4' -f quux -t foo -c bar -r tip -n | fixheaders > mailtest
+echo "% md5sum of qp output"
+$TESTDIR/md5sum.py mailtest
+rm mailtest
+
+echo "% mime encoded mbox (quoted-printable)"
 hg email --date '1970-1-1 0:4' -f quux -t foo -c bar -r tip -m mbox
 cat mbox | fixheaders
 rm mbox
@@ -85,17 +101,25 @@ echo "% test inline for single patch"
 hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i 2 | \
   fixheaders
 
-echo "% test inline for multiple patches"
-hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i 0:1 | \
+echo "% test inline for single patch (quoted-printable)"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i 4 | \
   fixheaders
+
+echo "% test inline for multiple patches"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i \
+  -r 0:1 -r 4 | fixheaders
 
 echo "% test attach for single patch"
 hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a 2 | \
   fixheaders
 
-echo "% test attach for multiple patches"
-hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a 0:1 | \
+echo "% test attach for single patch (quoted-printable)"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a 4 | \
   fixheaders
+
+echo "% test attach for multiple patches"
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a \
+  -r 0:1 -r 4 | fixheaders
 
 echo "% test intro for single patch"
 hg email --date '1970-1-1 0:1' -n --intro -f quux -t foo -c bar -s test 2 | \

@@ -7,7 +7,7 @@
 
 from i18n import _
 import util, encoding
-import os, smtplib, socket
+import os, smtplib, socket, quopri
 import email.Header, email.MIMEText, email.Utils
 
 def _smtp(ui):
@@ -88,14 +88,31 @@ def validateconfig(ui):
 
 def mimetextpatch(s, subtype='plain', display=False):
     '''If patch in utf-8 transfer-encode it.'''
+
+    enc = None
+    for line in s.splitlines():
+        if len(line) > 950:
+            s = quopri.encodestring(s)
+            enc = "quoted-printable"
+            break
+
+    cs = 'us-ascii'
     if not display:
-        for cs in ('us-ascii', 'utf-8'):
+        try:
+            s.decode('us-ascii')
+        except UnicodeDecodeError:
             try:
-                s.decode(cs)
-                return email.MIMEText.MIMEText(s, subtype, cs)
+                s.decode('utf-8')
+                cs = 'utf-8'
             except UnicodeDecodeError:
+                # We'll go with us-ascii as a fallback.
                 pass
-    return email.MIMEText.MIMEText(s, subtype)
+
+    msg = email.MIMEText.MIMEText(s, subtype, cs)
+    if enc:
+        del msg['Content-Transfer-Encoding']
+        msg['Content-Transfer-Encoding'] = enc
+    return msg
 
 def _charsets(ui):
     '''Obtains charsets to send mail parts not containing patches.'''
