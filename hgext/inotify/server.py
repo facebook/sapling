@@ -253,9 +253,16 @@ class RepoWatcher(object):
             return 'i'
         return type_
 
-    def updatestatus(self, wfn, st=None, status=None):
-        if st:
-            status = self.filestatus(wfn, st)
+    def updatestatus(self, wfn, osstat=None, newstatus=None):
+        '''
+        Update the stored status of a file or directory.
+
+        osstat: (mode, size, time) tuple, as returned by os.lstat(wfn)
+
+        newstatus: char in statuskeys, new status to apply.
+        '''
+        if osstat:
+            newstatus = self.filestatus(wfn, osstat)
         else:
             self.statcache.pop(wfn, None)
         root, fn = self.split(wfn)
@@ -264,35 +271,35 @@ class RepoWatcher(object):
         isdir = False
         if oldstatus:
             try:
-                if not status:
+                if not newstatus:
                     if oldstatus in 'almn':
-                        status = '!'
+                        newstatus = '!'
                     elif oldstatus == 'r':
-                        status = 'r'
+                        newstatus = 'r'
             except TypeError:
                 # oldstatus may be a dict left behind by a deleted
                 # directory
                 isdir = True
             else:
-                if oldstatus in self.statuskeys and oldstatus != status:
+                if oldstatus in self.statuskeys and oldstatus != newstatus:
                     del self.dir(self.statustrees[oldstatus], root)[fn]
-        if self.ui.debugflag and oldstatus != status:
+        if self.ui.debugflag and oldstatus != newstatus:
             if isdir:
                 self.ui.note(_('status: %r dir(%d) -> %s\n') %
-                             (wfn, len(oldstatus), status))
+                             (wfn, len(oldstatus), newstatus))
             else:
                 self.ui.note(_('status: %r %s -> %s\n') %
-                             (wfn, oldstatus, status))
+                             (wfn, oldstatus, newstatus))
         if not isdir:
-            if status and status != 'i':
-                d[fn] = status
-                if status in self.statuskeys:
-                    dd = self.dir(self.statustrees[status], root)
-                    if oldstatus != status or fn not in dd:
-                        dd[fn] = status
+            if newstatus and newstatus != 'i':
+                d[fn] = newstatus
+                if newstatus in self.statuskeys:
+                    dd = self.dir(self.statustrees[newstatus], root)
+                    if oldstatus != newstatus or fn not in dd:
+                        dd[fn] = newstatus
             else:
                 d.pop(fn, None)
-        elif not status:
+        elif not newstatus:
             # a directory is being removed, check its contents
             for subfile, b in oldstatus.copy().iteritems():
                 self.updatestatus(wfn + '/' + subfile, None)
@@ -333,7 +340,7 @@ class RepoWatcher(object):
                 st = self.stat(wfn)
             except OSError:
                 status = state[0]
-                self.updatestatus(wfn, None, status=status)
+                self.updatestatus(wfn, None, newstatus=status)
             else:
                 self.updatestatus(wfn, st)
         self.check_deleted('!')
