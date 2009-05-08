@@ -119,7 +119,7 @@ def _charsets(ui):
     charsets = [cs.lower() for cs in ui.configlist('email', 'charsets')]
     fallbacks = [encoding.fallbackencoding.lower(),
                  encoding.encoding.lower(), 'utf-8']
-    for cs in fallbacks: # util.unique does not keep order
+    for cs in fallbacks: # find unique charsets while keeping order
         if cs not in charsets:
             charsets.append(cs)
     return [cs for cs in charsets if not cs.endswith('ascii')]
