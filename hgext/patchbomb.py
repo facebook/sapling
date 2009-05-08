@@ -466,7 +466,7 @@ emailopts = [
           ('s', 'subject', '',
            _('subject of first message (intro or single patch)')),
           ('', 'in-reply-to', '',
-           _('"message identifier to reply to"')),
+           _('message identifier to reply to')),
           ('t', 'to', [], _('email addresses of recipients')),
          ]
 
