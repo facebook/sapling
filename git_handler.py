@@ -201,7 +201,7 @@ class GitHandler(object):
             author = author + ' <none@none>'
         commit['author'] = author + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
         message = ctx.description()
-        commit['message'] = ctx.description()
+        commit['message'] = ctx.description() + "\n"
 
         # HG EXTRA INFORMATION
         add_extras = False
@@ -216,7 +216,7 @@ class GitHandler(object):
                 extra_message += "rename : " + oldfile + " => " + newfile + "\n"
             
         if add_extras:
-            commit['message'] += "\n\n--HG--\n" + extra_message
+            commit['message'] += "\n--HG--\n" + extra_message
 
         commit['parents'] = []
         for parent in parents:

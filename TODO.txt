@@ -5,7 +5,6 @@ GENERAL
   - hg fetch [remote] (remote is url, hg alias or hg-git remote)
   - hg clone url
 * fail nicely when the remote_name is not there
-* more tests
 * submodules?
 * .gitignore, etc - try to convert? 
   - (probably not automatically, but perhaps a generator?)
@@ -24,8 +23,8 @@ FETCH
 MAPPING ISSUES
 ==============
 Created in Hg:
-* named branches #
-* merges with renames - dont convert back properly for some reason
+* merges with renames in 2nd branch
+  - dont convert back properly for some reason
 
 Created in Git:
 * different committer in Git objects
