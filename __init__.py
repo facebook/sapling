@@ -68,6 +68,7 @@ def uisetup(ui):
                      ('', 'svn-authors', '', 'username mapping filename'),
                      ('', 'svn-filemap', '',
                       'remap file to exclude paths or include only certain paths'),
+                     ('', 'svn-no-branchnames', False, "don't record branch names in hg"),
                      ])
 
     try:
