@@ -427,7 +427,7 @@ class dirstate(object):
             badfn = match.bad
 
         def badtype(f, mode):
-            kind = 'unknown'
+            kind = _('unknown')
             if stat.S_ISCHR(mode): kind = _('character device')
             elif stat.S_ISBLK(mode): kind = _('block device')
             elif stat.S_ISFIFO(mode): kind = _('fifo')
