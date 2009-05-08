@@ -1019,8 +1019,9 @@ class revlog(object):
 
         tr.add(self.datafile, dataoff)
 
-        if not fp:
-            fp = self.opener(self.indexfile, 'r')
+        if fp:
+            fp.flush()
+            fp.close()
 
         df = self.opener(self.datafile, 'w')
         try:
@@ -1028,13 +1029,11 @@ class revlog(object):
             for r in self:
                 start = self.start(r) + (r + 1) * calc
                 length = self.length(r)
-                fp.seek(start)
-                d = fp.read(length)
+                d = self._getchunk(start, length)
                 df.write(d)
         finally:
             df.close()
 
-        fp.close()
         fp = self.opener(self.indexfile, 'w', atomictemp=True)
         self.version &= ~(REVLOGNGINLINEDATA)
         self._inline = False
