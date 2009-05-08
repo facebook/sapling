@@ -31,6 +31,8 @@ REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 
+_prereadsize = 1048576
+
 RevlogError = error.RevlogError
 LookupError = error.LookupError
 
@@ -315,12 +317,13 @@ class revlogoldio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatv0)
 
-    def parseindex(self, fp, inline):
+    def parseindex(self, fp, data, inline):
         s = self.size
         index = []
         nodemap =  {nullid: nullrev}
         n = off = 0
-        data = fp.read()
+        if len(data) < _prereadsize:
+            data += fp.read() # read the rest
         l = len(data)
         while off + s <= l:
             cur = data[off:off + s]
@@ -358,13 +361,15 @@ class revlogio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatng)
 
-    def parseindex(self, fp, inline):
+    def parseindex(self, fp, data, inline):
         try:
-            size = util.fstat(fp).st_size
+            size = len(data)
+            if size == _prereadsize:
+                size = util.fstat(fp).st_size
         except AttributeError:
             size = 0
 
-        if util.openhardlinks() and not inline and size > 1000000:
+        if util.openhardlinks() and not inline and size > _prereadsize:
             # big index, let's parse it on demand
             parser = lazyparser(fp, size)
             index = lazyindex(parser)
@@ -375,7 +380,6 @@ class revlogio(object):
             index[0] = e
             return index, nodemap, None
 
-        data = fp.read()
         # call the C implementation to parse the index data
         index, nodemap, cache = parsers.parse_index(data, inline)
         return index, nodemap, cache
@@ -432,13 +436,12 @@ class revlog(object):
             if v & REVLOGNG:
                 v |= REVLOGNGINLINEDATA
 
-        i = ""
+        i = ''
         try:
             f = self.opener(self.indexfile)
-            i = f.read(4)
-            f.seek(0)
+            i = f.read(_prereadsize)
             if len(i) > 0:
-                v = struct.unpack(versionformat, i)[0]
+                v = struct.unpack(versionformat, i[:4])[0]
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -462,7 +465,7 @@ class revlog(object):
             self._io = revlogoldio()
         if i:
             try:
-                d = self._io.parseindex(f, self._inline)
+                d = self._io.parseindex(f, i, self._inline)
             except (ValueError, IndexError), e:
                 raise RevlogError(_("index %s is corrupted") % (self.indexfile))
             self.index, self.nodemap, self._chunkcache = d
