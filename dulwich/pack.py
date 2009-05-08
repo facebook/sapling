@@ -30,6 +30,11 @@ match for the object name. You then use the pointer got from this as
 a pointer in to the corresponding packfile.
 """
 
+from mercurial import demandimport
+import __builtin__
+orig_import = __builtin__.__import__
+demandimport.disable()
+
 try:
     from collections import defaultdict
 except ImportError:
@@ -60,6 +65,8 @@ from objects import (
     sha_to_hex,
     )
 from misc import make_sha
+
+__builtin__.__import__ = orig_import
 
 supports_mmap_offset = (sys.version_info[0] >= 3 or
         (sys.version_info[0] == 2 and sys.version_info[1] >= 6))
@@ -107,9 +114,14 @@ def simple_mmap(f, offset, size, access=mmap.ACCESS_READ):
     :param access: Access mechanism.
     :return: MMAP'd area.
     """
-    mem = mmap.mmap(f.fileno(), size+offset, access=access)
-    return mem, offset
-
+    print f, offset, size
+    if supports_mmap_offset:
+        mem = mmap.mmap(f.fileno(), size + offset % mmap.PAGESIZE, access=access,
+                offset=offset / mmap.PAGESIZE * mmap.PAGESIZE)
+        return mem, offset % mmap.PAGESIZE
+    else:
+        mem = mmap.mmap(f.fileno(), size+offset, access=access)
+        return mem, offset
 
 def load_pack_index(filename):
     f = open(filename, 'r')
@@ -451,9 +463,12 @@ class PackData(object):
         """Calculate the checksum for this pack."""
         map, map_offset = simple_mmap(self._file, 0, self._size - 20)
         try:
-            return make_sha(map[map_offset:self._size-20]).digest()
-        finally:
+            r = make_sha(map[map_offset:self._size-20]).digest()
             map.close()
+            return r
+        except:
+            map.close()
+            raise
 
     def resolve_object(self, offset, type, obj, get_ref, get_offset=None):
         """Resolve an object, possibly resolving deltas when necessary.
@@ -500,8 +515,10 @@ class PackData(object):
                 offset += total_size
                 if progress:
                     progress(i, num)
-        finally:
             map.close()
+        except:
+            map.close()
+            raise
   
     def iterentries(self, ext_resolve_ref=None, progress=None):
         found = {}

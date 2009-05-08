@@ -20,12 +20,19 @@
 These utilities can all be deleted when dulwich decides it wants to stop
 support for python 2.4.
 """
+
+from mercurial import demandimport
+import __builtin__
+orig_import = __builtin__.__import__
+demandimport.disable()
+
 try:
     import hashlib
 except ImportError:
     import sha
 import struct
 
+__builtin__.__import__ = orig_import
 
 class defaultdict(dict):
     """A python 2.4 equivalent of collections.defaultdict."""
