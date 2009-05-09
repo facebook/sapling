@@ -52,19 +52,7 @@ def generate_repo_class(ui, repo):
             for tag, source in hg_editor.tags.iteritems():
                 target = hg_editor.get_parent_revision(source[1]+1, source[0])
                 tags['tag/%s' % tag] = node.hex(target)
-            # TODO: should we even generate these tags?
-            if not hasattr(self, '_nofaketags'):
-                for (revnum, branch), node_hash in hg_editor.revmap.iteritems():
-                    tags['%s@r%d' % (branch or 'trunk', revnum)] = node_hash
             return tags
-
-        @localsvn
-        def tagslist(self):
-            try:
-                self._nofaketags = True
-                return super(svnlocalrepo, self).tagslist()
-            finally:
-                del self._nofaketags
 
     repo.__class__ = svnlocalrepo
 

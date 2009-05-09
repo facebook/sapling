@@ -24,7 +24,7 @@ from mercurial import util as hgutil
 from svn import core
 
 import svncommands
-import tag_repo
+import svnrepo
 import util
 import wrappers
 import svnexternals
@@ -98,10 +98,10 @@ def svn(ui, repo, subcommand, *args, **opts):
 
 def reposetup(ui, repo):
     if repo.local():
-       tag_repo.generate_repo_class(ui, repo)
+       svnrepo.generate_repo_class(ui, repo)
 
 for scheme in ('svn', 'svn+ssh', 'svn+http', 'svn+file'):
-    hg.schemes[scheme] = tag_repo
+    hg.schemes[scheme] = svnrepo
 
 cmdtable = {
     "svn":
