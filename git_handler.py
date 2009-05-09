@@ -321,9 +321,9 @@ class GitHandler(object):
             changed_refs = client.send_pack(path, changed, genpack)
             if changed_refs:
                 new_refs = {}
-                for old, new, ref in changed_refs:
-                    self.ui.status("    "+ remote_name + "::" + ref + " : GIT:" + old[0:8] + " => GIT:" + new[0:8] + "\n")
-                    new_refs[ref] = new
+                for ref, sha in changed_refs.iteritems():
+                    self.ui.status("    "+ remote_name + "::" + ref + " => GIT:" + sha[0:8] + "\n")
+                    new_refs[ref] = sha
                 self.git.set_remote_refs(new_refs, remote_name)
                 self.update_hg_bookmarks(remote_name)
         except:
@@ -336,13 +336,13 @@ class GitHandler(object):
     def get_changed_refs(self, refs):
         keys = refs.keys()
 
-        changed = []
+        changed = {}
         if not keys:
             return None
 
         # TODO : this is a huge hack
         if keys[0] == 'capabilities^{}': # nothing on the server yet - first push
-            changed.append(("0"*40, self.git.ref('master'), 'refs/heads/master'))
+            changed['refs/heads/master'] = self.git.ref('master')
 
         for ref_name in keys:
             parts = ref_name.split('/')
@@ -352,7 +352,7 @@ class GitHandler(object):
                     local_ref = self.git.ref(ref_name)
                     if local_ref:
                         if not local_ref == refs[ref_name]:
-                            changed.append((refs[ref_name], local_ref, ref_name))
+                            changed[ref_name] = local_ref
         return changed
 
     # takes a list of shas the server wants and shas the server has
@@ -509,7 +509,7 @@ class GitHandler(object):
             try:
                 (mode, sha, data) = self.git.get_file(commit, f)
                 e = self.convert_git_int_mode(mode)
-            except TypeError:
+            except TypeError, KeyError:
                 raise IOError()
             if f in hg_renames:
                 copied_path = hg_renames[f]

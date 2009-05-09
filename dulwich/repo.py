@@ -31,7 +31,7 @@ from errors import (
     NotGitRepository,
     NotTreeError,
     )
-from object_store import ObjectStore
+from object_store import DiskObjectStore
 from objects import (
     Blob,
     Commit,
@@ -119,7 +119,7 @@ class Repo(object):
 
     def open_index(self):
         """Open the index for this repository."""
-        from dulwich.index import Index
+        from index import Index
         return Index(self.index_path())
 
     def has_index(self):

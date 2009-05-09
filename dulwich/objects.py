@@ -428,6 +428,12 @@ class Tree(ShaFile):
         del self._entries[name]
         self._needs_serialization = True
 
+    def entry(self, name):
+        try:
+            return self._entries[name]
+        except:
+            return (None, None)
+        
     def add(self, mode, name, hexsha):
         assert type(mode) == int
         assert type(name) == str
@@ -648,7 +654,7 @@ num_type_map = {
 
 try:
     # Try to import C versions
-    from dulwich._objects import hex_to_sha, sha_to_hex, parse_tree
+    from _objects import hex_to_sha, sha_to_hex
 except ImportError:
     pass
 

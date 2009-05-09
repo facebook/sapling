@@ -26,15 +26,15 @@ import select
 import socket
 import subprocess
 
-from dulwich.errors import (
+from errors import (
     ChecksumMismatch,
     )
-from dulwich.protocol import (
+from protocol import (
     Protocol,
     TCP_GIT_PORT,
     extract_capabilities,
     )
-from dulwich.pack import (
+from pack import (
     write_pack_data,
     )
 

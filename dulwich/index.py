@@ -22,7 +22,7 @@ import os
 import stat
 import struct
 
-from dulwich.objects import (
+from objects import (
     Tree,
     hex_to_sha,
     sha_to_hex,
