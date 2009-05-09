@@ -34,6 +34,7 @@ WEBSITE
 ===========
 * more usage documentation
 * screencast
+* git+ssh, git@ descriptions, better error detection for that
 
 SPEED/EFFICIENCY
 ================

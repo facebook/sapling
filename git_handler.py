@@ -164,6 +164,7 @@ class GitHandler(object):
         self.ui.status("exporting git objects\n")
         for rev in self.repo.changelog:
             self.export_hg_commit(rev)
+            self.save_map()
 
     # convert this commit into git objects
     # go through the manifest, convert all blobs/trees we don't have
