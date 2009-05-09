@@ -174,7 +174,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
             note = ""
             if f in copy: note += "*"
             if f in diverge2: note += "!"
-            repo.ui.debug(_("   %s -> %s %s\n") % (f, fullcopy[f], note))
+            repo.ui.debug("   %s -> %s %s\n" % (f, fullcopy[f], note))
     del diverge2
 
     if not fullcopy or not checkdirs:
