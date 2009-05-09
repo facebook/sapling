@@ -331,13 +331,13 @@ class SSHGitClient(GitClient):
         self._kwargs = kwargs
 
     def send_pack(self, path, determine_wants, generate_pack_contents):
-        remote = get_ssh_vendor().connect_ssh(self.host, ["git-receive-pack %s" % path], port=self.port)
+        remote = get_ssh_vendor().connect_ssh(self.host, ["git-receive-pack '%s'" % path], port=self.port)
         client = GitClient(lambda: _fileno_can_read(remote.proc.stdout.fileno()), remote.recv, remote.send, *self._args, **self._kwargs)
         return client.send_pack(path, determine_wants, generate_pack_contents)
 
     def fetch_pack(self, path, determine_wants, graph_walker, pack_data,
         progress):
-        remote = get_ssh_vendor().connect_ssh(self.host, ["git-upload-pack %s" % path], port=self.port)
+        remote = get_ssh_vendor().connect_ssh(self.host, ["git-upload-pack '%s'" % path], port=self.port)
         client = GitClient(lambda: _fileno_can_read(remote.proc.stdout.fileno()), remote.recv, remote.send, *self._args, **self._kwargs)
         return client.fetch_pack(path, determine_wants, graph_walker, pack_data,
                                  progress)
