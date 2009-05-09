@@ -526,8 +526,10 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
                                          hg_editor.authors[r.author],
                                          date,
                                          extra)
-            ha = hg_editor.repo.commitctx(current_ctx)
             branch = extra.get('branch', None)
+            if hg_editor.opts.get('svn_no_branchnames', False):
+                extra.pop('branch', None)
+            ha = hg_editor.repo.commitctx(current_ctx)
             if not branch in hg_editor.branches:
                 hg_editor.branches[branch] = None, 0, r.revnum
             hg_editor.add_to_revmap(r.revnum, b, ha)
@@ -558,6 +560,9 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
         if 'closed-branches' in hg_editor.repo.branchtags():
             closed = hg_editor.repo['closed-branches'].node()
         parents = (parent, closed)
+        extra = {}
+        if not hg_editor.opts.get('svn_no_branchnames', False):
+                extra['branch'] = 'closed-branches'
         current_ctx = context.memctx(hg_editor.repo,
                                      parents,
                                      r.message or util.default_commit_msg,
@@ -565,7 +570,7 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
                                      filectxfn,
                                      hg_editor.authors[r.author],
                                      date,
-                                     {'branch': 'closed-branches'})
+                                     extra)
         ha = hg_editor.repo.commitctx(current_ctx)
         ui.status('Marked branch %s as closed.\n' % (b or 'default'))
         hg_editor._save_metadata()

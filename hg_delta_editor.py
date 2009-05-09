@@ -640,6 +640,9 @@ class HgChangeReceiver(delta.Editor):
             def del_all_files(*args):
                 raise IOError
             files = parentctx.manifest().keys()
+            extra = {}
+            if not self.opts.get('svn_no_branchnames', False):
+                extra['branch'] = 'closed-branches'
             current_ctx = context.memctx(self.repo,
                                          parents,
                                          rev.message or ' ',
@@ -647,7 +650,7 @@ class HgChangeReceiver(delta.Editor):
                                          del_all_files,
                                          self.authors[rev.author],
                                          date,
-                                         {'branch': 'closed-branches'})
+                                         extra)
             new_hash = self.repo.commitctx(current_ctx)
             self.ui.status('Marked branch %s as closed.\n' % (branch or
                                                               'default'))
@@ -693,6 +696,8 @@ class HgChangeReceiver(delta.Editor):
                                           data=data,
                                           islink=is_link, isexec=is_exec,
                                           copied=copied)
+            if self.opts.get('svn_no_branchnames', False):
+                extra.pop('branch', None)
             current_ctx = context.memctx(self.repo,
                                          parents,
                                          rev.message or '...',
@@ -720,6 +725,8 @@ class HgChangeReceiver(delta.Editor):
             extra = util.build_extra(rev.revnum, branch,
                                      open(self.uuid_file).read(),
                                      self.subdir)
+            if self.opts.get('svn_no_branchnames', False):
+                extra.pop('branch', None)
             current_ctx = context.memctx(self.repo,
                                          (ha, node.nullid),
                                          rev.message or ' ',
@@ -862,7 +869,7 @@ class HgChangeReceiver(delta.Editor):
                 parent = self.get_parent_revision(baserev + 1, branch)
                 self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
         else:
-            self.ui.warn('WARNING: Opening non-existant file %s\n' % path)
+            self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
     open_file = stash_exception_on_self(open_file)
 
     def aresamefiles(self, parentctx, childctx, files):

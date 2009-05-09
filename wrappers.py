@@ -283,6 +283,7 @@ def pull(orig, ui, repo, source="default", *args, **opts):
                                                      tag_locations=tag_locations,
                                                      authors=authors,
                                                      filemap=filemap)
+    hg_editor.opts = opts
     if os.path.exists(hg_editor.uuid_file):
         uuid = open(hg_editor.uuid_file).read()
         assert uuid == svn.uuid

@@ -6,16 +6,16 @@ from mercurial import util as hgutil
 class AuthorMap(dict):
     '''A mapping from Subversion-style authors to Mercurial-style
     authors, and back. The data is stored persistently on disk.
-    
+
     If the 'hgsubversion.defaultauthors' configuration option is set to false,
     attempting to obtain an unknown author will fail with an Abort.
     '''
 
     def __init__(self, ui, path, defaulthost=None):
         '''Initialise a new AuthorMap.
-        
+
         The ui argument is used to print diagnostic messages.
-        
+
         The path argument is the location of the backing store,
         typically .hg/authormap.
         '''
@@ -70,9 +70,8 @@ class AuthorMap(dict):
         if author in self:
             result = self.super.__getitem__(author)
         elif self.ui.configbool('hgsubversion', 'defaultauthors', True):
-            # TODO: should we treat missing authors specially?
             self[author] = result = '%s%s' % (author, self.defaulthost)
-            self.ui.warn('Substituting author "%s" for default "%s"\n'
+            self.ui.note('Substituting author "%s" for default "%s"\n'
                          % (author, result))
         else:
             raise hgutil.Abort('Author %s has no entry in the author map!'

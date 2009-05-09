@@ -47,7 +47,7 @@ class TestPushDirectories(test_util.TestBase):
         self.commitchanges(changes)
         self.pushrevisions()
         self.assertEqual(self.svnls('trunk'),
-                         ['d2', 'd2/b', 'd31', 'd31/d32', 'd31/d32/a', 'd31/d32/d33'])
+                         ['d2', 'd2/b', 'd31', 'd31/d32', 'd31/d32/a', ])
 
 
 class TestPushDirsNotAtRoot(test_util.TestBase):
