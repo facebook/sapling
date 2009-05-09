@@ -101,7 +101,7 @@ Mercurial "hgrc" file, the purpose of each section, its possible
 keys, and their possible values.
 
 [[auth]]
-auth:
+auth::
   Authentication credentials for HTTP authentication.
   Each line has the following format:
 
