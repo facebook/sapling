@@ -544,14 +544,17 @@ class Commit(ShaFile):
                 self._author += text[count]
                 count += 1
             self._author += text[count]
+            self._author_raw = self._author
             count += 1
             assert text[count] == ' ', "Invalid commit object, " \
                  "author information must be followed by space not %s" % text[count]
             count += 1
+            self._author_raw += ' ' + text[count:].split(" ", 1)[0]
             self._author_time = int(text[count:].split(" ", 1)[0])
             while text[count] != ' ':
                 assert text[count] != '\n', "Malformed author information"
                 count += 1
+            self._author_raw += text[count:count+6]
             self._author_timezone = parse_timezone(text[count:count+6])
             count += 1
             while text[count] != '\n':
@@ -569,14 +572,17 @@ class Commit(ShaFile):
                 self._committer += text[count]
                 count += 1
             self._committer += text[count]
+            self._committer_raw = self._committer
             count += 1
             assert text[count] == ' ', "Invalid commit object, " \
                  "commiter information must be followed by space not %s" % text[count]
             count += 1
-            self._commit_time = int(text[count:count+10])
+            self._committer_raw += ' ' + text[count:].split(" ", 1)[0]
+            self._commit_time = int(text[count:].split(" ", 1)[0])
             while text[count] != ' ':
                 assert text[count] != '\n', "Malformed committer information"
                 count += 1
+            self._committer_raw += text[count:count+6]
             self._commit_timezone = parse_timezone(text[count:count+6])
             count += 1
             while text[count] != '\n':

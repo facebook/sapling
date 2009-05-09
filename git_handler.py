@@ -197,11 +197,15 @@ class GitHandler(object):
 
         # hg authors might not have emails
         author = ctx.user()
-        if not '>' in author:
+        if not '>' in author: # TODO : this kills losslessness - die (submodules)?
             author = author + ' <none@none>'
         commit['author'] = author + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
         message = ctx.description()
         commit['message'] = ctx.description() + "\n"
+
+        extra = ctx.extra()
+        if 'committer' in extra:
+            commit['committer'] = extra['committer']
 
         # HG EXTRA INFORMATION
         add_extras = False
@@ -541,10 +545,15 @@ class GitHandler(object):
                 files.remove(removefile)
 
         extra = {}
-        
-        # *TODO : if committer is different than author, add it to extra
-        
+
         # if named branch, add to extra
+        if hg_branch:
+            extra['branch'] = hg_branch
+
+        # if committer is different than author, add it to extra
+        if not commit._author_raw == commit._committer_raw:
+            extra['committer'] = commit._committer_raw
+
         if hg_branch:
             extra['branch'] = hg_branch
         

@@ -27,8 +27,7 @@ Created in Hg:
   - dont convert back properly for some reason
 
 Created in Git:
-* different committer in Git objects
-* encoding field
+* encoding field / utf-8
 * octopus merge explode/implode
 
 WEBSITE
