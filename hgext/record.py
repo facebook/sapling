@@ -385,7 +385,8 @@ def record(ui, repo, *pats, **opts):
 def qrecord(ui, repo, patch, *pats, **opts):
     '''interactively record a new patch
 
-    see 'hg help qnew' & 'hg help record' for more information and usage
+    See 'hg help qnew' & 'hg help record' for more information and
+    usage.
     '''
 
     try:
