@@ -87,13 +87,7 @@ class HgChangeReceiver(delta.Editor):
         if not ui_:
             ui_ = ui.ui()
         self.ui = ui_
-        if repo:
-            self.repo = repo
-            self.__setup_repo(repo)
-            self.path = os.path.normpath(os.path.join(self.repo.path, '..'))
-        elif path:
-            self.path = path
-            self.__setup_repo(path)
+        self.__setup_repo(repo or path)
 
         self.subdir = subdir
         if self.subdir and self.subdir[0] == '/':
@@ -150,8 +144,9 @@ class HgChangeReceiver(delta.Editor):
         the Subversion metadata.
         """
         if isinstance(arg, basestring):
-            self.path = arg
-            self.repo = hg.repository(self.ui, self.path, create=True)
+            self.repo = hg.repository(self.ui, arg,
+                                      create=(not os.path.exists(arg)))
+            self.path = os.path.normpath(os.path.join(arg, '..'))
         elif arg:
             self.repo = arg
             self.path = os.path.normpath(os.path.join(self.repo.path, '..'))
