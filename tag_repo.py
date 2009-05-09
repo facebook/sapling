@@ -25,7 +25,6 @@ def generate_repo_class(ui, repo):
         '''
         original = repo.__getattribute__(fn.__name__)
         def wrapper(self, *args, **opts):
-            print args
             if not isinstance(args[0], svnremoterepo):
                 return original(*args, **opts)
             else:
