@@ -500,7 +500,7 @@ msgid ""
 "show the children of the given or working directory revision\n"
 "\n"
 "    Print the children of the working directory's revisions. If a\n"
-"    revision is given via --rev/-r, the children of that revision will\n"
+"    revision is given via -r/--rev, the children of that revision will\n"
 "    be printed. If a file argument is given, revision in which the\n"
 "    file was last changed (after the working directory revision or the\n"
 "    argument to --rev if given) is printed.\n"
@@ -509,7 +509,7 @@ msgstr ""
 "vis børnene til arbejdskatalogets eller en given revision\n"
 "\n"
 "    Udskriv arbejdskatalogets børnerevisioner. Hvis en revision\n"
-"    angivet med --rev/-r, så udskrives børnene til denne revision.\n"
+"    angivet med -r/--rev, så udskrives børnene til denne revision.\n"
 "    Hvis en fil er angivet, udskrives revisionen i hvilken filen sidst\n"
 "    blev ændret (efter arbejdskatalogets revision eller argumentet til\n"
 "    --rev, hvis givet).\n"
@@ -3879,7 +3879,7 @@ msgstr ""
 msgid "subject of first message (intro or single patch)"
 msgstr ""
 
-msgid "\"message identifier to reply to\""
+msgid "message identifier to reply to"
 msgstr ""
 
 msgid "email addresses of recipients"
@@ -5468,7 +5468,11 @@ msgid ""
 "    that config item.\n"
 "\n"
 "    With multiple args, print names and values of all config items\n"
-"    with matching section names."
+"    with matching section names.\n"
+"\n"
+"    With the --debug flag, the source (filename and line number) is\n"
+"    printed for each config item.\n"
+"    "
 msgstr ""
 
 msgid "only one config item permitted"
@@ -6387,8 +6391,8 @@ msgstr ""
 msgid ""
 "restore individual files or directories to an earlier state\n"
 "\n"
-"    (use update -r to check out earlier revisions, revert does not\n"
-"    change the working directory parents)\n"
+"    (Use update -r to check out earlier revisions, revert does not\n"
+"    change the working directory parents.)\n"
 "\n"
 "    With no revision specified, revert the named files or directories\n"
 "    to the contents they had in the parent of the working directory.\n"
@@ -6492,7 +6496,8 @@ msgid ""
 "    Start a local HTTP repository browser and pull server.\n"
 "\n"
 "    By default, the server logs accesses to stdout and errors to\n"
-"    stderr. Use the -A and -E options to log to files.\n"
+"    stderr. Use the -A/--accesslog and -E/--errorlog options to log to\n"
+"    files.\n"
 "    "
 msgstr ""
 "eksporter arkivet via HTTP\n"
@@ -6500,7 +6505,8 @@ msgstr ""
 "    Start en lokal HTTP arkivbrowser og pull-server.\n"
 "\n"
 "    Som standard logger serveren forespørgsler til stdout og fejl til\n"
-"    stderr. Brug -A og -E tilvalgene for at logge til filer.\n"
+"    stderr. Brug -A/--accesslog og -E/--errorlog tilvalgene for at\n"
+"    logge til filer.\n"
 "    "
 
 #, python-format
@@ -6677,16 +6683,16 @@ msgid ""
 "    the working directory will additionally be switched to that\n"
 "    branch.\n"
 "\n"
-"    When there are uncommitted changes, use option -C to discard them,\n"
-"    forcibly replacing the state of the working directory with the\n"
-"    requested revision.\n"
+"    When there are uncommitted changes, use option -C/--clean to\n"
+"    discard them, forcibly replacing the state of the working\n"
+"    directory with the requested revision.\n"
 "\n"
-"    When there are uncommitted changes and option -C is not used, and\n"
-"    the parent revision and requested revision are on the same branch,\n"
-"    and one of them is an ancestor of the other, then the new working\n"
-"    directory will contain the requested revision merged with the\n"
-"    uncommitted changes. Otherwise, the update will fail with a\n"
-"    suggestion to use 'merge' or 'update -C' instead.\n"
+"    When there are uncommitted changes and option -C/--clean is not\n"
+"    used, and the parent revision and requested revision are on the\n"
+"    same branch, and one of them is an ancestor of the other, then the\n"
+"    new working directory will contain the requested revision merged\n"
+"    with the uncommitted changes. Otherwise, the update will fail with\n"
+"    a suggestion to use 'merge' or 'update -C' instead.\n"
 "\n"
 "    If you want to update just one file to an older revision, use\n"
 "    revert.\n"
@@ -6706,15 +6712,15 @@ msgstr ""
 "    Hvis den ønskede revision er på en anden gren, så vil\n"
 "    arbejdskataloget yderligere blive skiftet til denne gren.\n"
 "\n"
-"    Hvis der er uarkiverede ændringer kan -C tilvalget bruges for at\n"
-"    kassere dem og sætte tilstanden af arbejdskataloget lig tilstanden\n"
-"    i den ønskede revision.\n"
+"    Hvis der er uarkiverede ændringer kan -C/--clean tilvalget bruges\n"
+"    for at kassere dem og sætte tilstanden af arbejdskataloget lig\n"
+"    tilstanden i den ønskede revision.\n"
 "\n"
-"    Hvis der er uarkiverede ændringer, og -C tilvalget ikke bruges, og\n"
-"    forældrerevisionen og den ønskede revision begge er på samme gren,\n"
-"    og en af dem er en forfar til den anden, så vil det nye\n"
-"    arbejdskatalog indeholde den ønskede revision sammenføjet med de\n"
-"    uarkiverede ændringer. Ellers vil opdateringen fejle med et\n"
+"    Hvis der er uarkiverede ændringer, og -C/--clean tilvalget ikke\n"
+"    bruges, og forældrerevisionen og den ønskede revision begge er på\n"
+"    samme gren, og en af dem er en forfar til den anden, så vil det\n"
+"    nye arbejdskatalog indeholde den ønskede revision sammenføjet med\n"
+"    de uarkiverede ændringer. Ellers vil opdateringen fejle med et\n"
 "    forslag til at bruge 'merge' eller 'update -C' i stedet.\n"
 "\n"
 "    Hvis du vil opdatere blot en enkelt fil til en ældre revision,\n"
@@ -6818,7 +6824,7 @@ msgstr "læs arkiveringsbeskeden fra <fil>"
 msgid "record datecode as commit date"
 msgstr ""
 
-msgid "record user as committer"
+msgid "record the specified user as committer"
 msgstr ""
 
 msgid "display using template map file"
@@ -7410,10 +7416,6 @@ msgstr ""
 msgid "  all copies found (* = to merge, ! = divergent):\n"
 msgstr ""
 
-#, python-format
-msgid "   %s -> %s %s\n"
-msgstr ""
-
 msgid "  checking for directory renames\n"
 msgstr ""
 
@@ -7440,6 +7442,9 @@ msgstr ""
 #, python-format
 msgid "not in dirstate: %s\n"
 msgstr ""
+
+msgid "unknown"
+msgstr "ukendt"
 
 msgid "character device"
 msgstr ""
@@ -7568,15 +7573,17 @@ msgid "extension '%s' overrides commands: %s\n"
 msgstr ""
 
 msgid "Option --config may not be abbreviated!"
-msgstr ""
+msgstr "tilvalget --config må ikke forkortes!"
 
 msgid "Option --cwd may not be abbreviated!"
-msgstr ""
+msgstr "tilvalget --cwd må ikke forkortes!"
 
 msgid ""
 "Option -R has to be separated from other options (i.e. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
+"tilvalget -R skal adskilles fra andre tilvalg (i.e. ikke -qR) og --"
+"repository må kun forkortes som --repo!"
 
 #, python-format
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
@@ -7584,10 +7591,10 @@ msgstr ""
 
 #, python-format
 msgid "repository '%s' is not local"
-msgstr ""
+msgstr "arkiv '%s' er ikke lokalt"
 
 msgid "invalid arguments"
-msgstr ""
+msgstr "ugyldige argumenter"
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
@@ -7597,30 +7604,32 @@ msgid ""
 "lsprof not available - install from http://codespeak.net/svn/user/arigo/hack/"
 "misc/lsprof/"
 msgstr ""
+"lsprof er ikke tilgængelig - installer fra http://codespeak.net/svn/user/"
+"arigo/hack/misc/lsprof/"
 
 #, python-format
 msgid "*** failed to import extension %s from %s: %s\n"
-msgstr ""
+msgstr "*** import af udvidelse %s fra %s fejlede: %s\n"
 
 #, python-format
 msgid "*** failed to import extension %s: %s\n"
-msgstr ""
+msgstr "*** import af udvidelse %s fejlede: %s\n"
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
-msgstr "kunne ikke finder sammenføjningsværktøj %s\n"
+msgstr "kunne ikke finde sammenføjningsværktøj %s\n"
 
 #, python-format
 msgid "tool %s can't handle symlinks\n"
-msgstr ""
+msgstr "værktøj %s kan ikke håndtere symbolske lænker\n"
 
 #, python-format
 msgid "tool %s can't handle binary\n"
-msgstr ""
+msgstr "værktøj %s kan ikke håndtere binære filer\n"
 
 #, python-format
 msgid "tool %s requires a GUI\n"
-msgstr ""
+msgstr "værktøj %s kræver et GUI\n"
 
 #, python-format
 msgid "picked tool '%s' for %s (binary %s symlink %s)\n"
@@ -8462,7 +8471,34 @@ msgid "trouble committing %s!\n"
 msgstr "problem ved arkivering %s!\n"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
-msgstr "HG: Skriv arkiveringsbesked. Linier som starter med 'HG:' bliver fjernet."
+msgstr ""
+"HG: Skriv arkiveringsbesked. Linier som starter med 'HG:' bliver fjernet."
+
+#, python-format
+msgid "HG: user: %s"
+msgstr "HG: bruger: %s"
+
+msgid "HG: branch merge"
+msgstr ""
+
+#, python-format
+msgid "HG: branch '%s'"
+msgstr "HG: gren '%s'"
+
+#, python-format
+msgid "HG: added %s"
+msgstr "HG: tilføjet %s"
+
+#, python-format
+msgid "HG: changed %s"
+msgstr "HG: ændret %s"
+
+#, python-format
+msgid "HG: removed %s"
+msgstr "HG: fjernet %s"
+
+msgid "HG: no files changed"
+msgstr "HG: ingen filændringer"
 
 msgid "empty commit message"
 msgstr "tom arkiveringsbesked"
@@ -9014,12 +9050,15 @@ msgstr ""
 msgid "template file %s: %s"
 msgstr ""
 
-msgid "transaction abort!\n"
-msgstr "transaktionen er afbrudt!\n"
+msgid "cannot use transaction when it is already committed/aborted"
+msgstr ""
 
 #, python-format
 msgid "failed to truncate %s\n"
 msgstr "kunne ikke trunkere %s\n"
+
+msgid "transaction abort!\n"
+msgstr "transaktionen er afbrudt!\n"
 
 msgid "rollback completed\n"
 msgstr "tilbagerulning gennemført\n"
@@ -9087,12 +9126,12 @@ msgid "user:"
 msgstr "bruger:"
 
 #, python-format
-msgid "proxying through http://%s:%s\n"
-msgstr ""
-
-#, python-format
 msgid "http auth: user %s, password %s\n"
 msgstr "http godkendelse: bruger %s, kodeord %s\n"
+
+#, python-format
+msgid "proxying through http://%s:%s\n"
+msgstr ""
 
 #, python-format
 msgid "command '%s' failed: %s"
@@ -9325,6 +9364,3 @@ msgstr "(første beskadigede ændring er tilsyneladende %d)\n"
 
 msgid "user name not available - set USERNAME environment variable"
 msgstr "der er ikke noget brugernavn - sæt USERNAME miljøvariabel"
-
-#~ msgid "unable to open %s: %s"
-#~ msgstr "kunne ikke åbne %s: %s"
