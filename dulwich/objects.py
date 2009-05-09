@@ -429,6 +429,7 @@ class Tree(ShaFile):
         self._needs_serialization = True
 
     def entry(self, name):
+        self._ensure_parsed()
         try:
             return self._entries[name]
         except:

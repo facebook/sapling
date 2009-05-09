@@ -28,6 +28,7 @@ Created in Hg:
 
 Created in Git:
 * encoding field / utf-8
+* respect modes on tree write
 * octopus merge explode/implode
 
 WEBSITE

@@ -374,7 +374,7 @@ class Repo(object):
             rawsha = hex_to_sha(entry[2])
             if entry[0] == 'tree':
                 tree_name = entry[1][0:-1]
-                tree_data += "%s %s\0%s" % ('040000', tree_name, rawsha)
+                tree_data += "%s %s\0%s" % ('40000', tree_name, rawsha)
             if entry[0] == 'blob':
                 # TODO : respect the modes
                 tree_data += "%s %s\0%s" % ('100644', entry[1], rawsha)

@@ -294,7 +294,7 @@ class GitHandler(object):
         dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
         dirs.remove('/')
         dirs.append('/')
-
+        
         # write all the trees
         tree_sha = None
         tree_shas = {}
@@ -308,6 +308,7 @@ class GitHandler(object):
                 tree_data.append(entry)
             tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
             tree_shas[dirnm] = tree_sha
+        
         return (tree_sha, renames) # should be the last root tree sha
 
     def remote_head(self, remote_name):
@@ -514,7 +515,7 @@ class GitHandler(object):
             try:
                 (mode, sha, data) = self.git.get_file(commit, f)
                 e = self.convert_git_int_mode(mode)
-            except TypeError, KeyError:
+            except TypeError:
                 raise IOError()
             if f in hg_renames:
                 copied_path = hg_renames[f]
@@ -557,7 +558,7 @@ class GitHandler(object):
 
         if hg_branch:
             extra['branch'] = hg_branch
-        
+                
         text = strip_message
         date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
