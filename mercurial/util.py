@@ -38,12 +38,12 @@ def _fastsha1(s):
 
 import subprocess
 closefds = os.name == 'posix'
-def popen2(cmd, mode='t', bufsize=-1):
+def popen2(cmd, bufsize=-1):
     p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     return p.stdin, p.stdout
-def popen3(cmd, mode='t', bufsize=-1):
+def popen3(cmd, bufsize=-1):
     p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
