@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-05-02 17:00+0200\n"
-"PO-Revision-Date: 2009-05-02 17:47+0200\n"
+"PO-Revision-Date: 2009-05-10 14:29+0200\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -8415,23 +8415,23 @@ msgid "filtering %s through %s\n"
 msgstr "filtrerer %s gennem %s\n"
 
 msgid "journal already exists - run hg recover"
-msgstr ""
+msgstr "journalen eksisterer allerede -- kør hg recover"
 
 msgid "rolling back interrupted transaction\n"
-msgstr ""
+msgstr "ruller afbrudt transaktion tilbage\n"
 
 msgid "no interrupted transaction available\n"
-msgstr ""
+msgstr "ingen afbrudt transaktion tilgængelig\n"
 
 msgid "rolling back last transaction\n"
-msgstr "ruller sidst transaktion tilbage\n"
+msgstr "ruller sidste transaktion tilbage\n"
 
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
 
 msgid "no rollback information available\n"
-msgstr ""
+msgstr "ingen tilbagerulningsinformation til stede\n"
 
 #, python-format
 msgid "waiting for lock on %s held by %r\n"
