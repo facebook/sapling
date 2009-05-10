@@ -376,8 +376,16 @@ class Repo(object):
                 tree_name = entry[1][0:-1]
                 tree_data += "%s %s\0%s" % ('40000', tree_name, rawsha)
             if entry[0] == 'blob':
-                # TODO : respect the modes
-                tree_data += "%s %s\0%s" % ('100644', entry[1], rawsha)
+                # TODO : support symlinks
+                exec_flag = entry[3]
+                link_flag = entry[4]
+                if link_flag:
+                  mode = '120000'
+                elif exec_flag:
+                  mode = '100755'
+                else:
+                  mode = '100644'
+                tree_data += "%s %s\0%s" % (mode, entry[1], rawsha)
         sha = self.write_object('tree', tree_data)
         return sha
 
