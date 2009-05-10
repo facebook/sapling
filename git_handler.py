@@ -99,10 +99,10 @@ class GitHandler(object):
                 self._config[key] = value
 
     def save_config(self):
-        file = self.repo.opener('git-config', 'w+')
+        file = self.repo.opener('git-config', 'w+', atomictemp=True)
         for key, value in self._config.iteritems():
             file.write("%s %s\n" % (key, value))
-        file.close()
+        file.rename()
 
 
     ## END FILE LOAD AND SAVE METHODS
