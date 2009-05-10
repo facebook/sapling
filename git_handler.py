@@ -1,4 +1,4 @@
-import os, errno, sys, time, datetime, pickle, copy
+import os, errno, sys, time, datetime, pickle, copy, math
 import toposort
 import dulwich
 from dulwich.repo import Repo
@@ -159,7 +159,11 @@ class GitHandler(object):
 
     def export_git_objects(self):
         self.ui.status(_("exporting git objects\n"))
-        for rev in self.repo.changelog:
+        total = len(self.repo.changelog)
+        magnitude = int(math.log(total, 10)) + 1
+        for i, rev in enumerate(self.repo.changelog):
+            if i%100 == 0:
+                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
             self.export_hg_commit(rev)
             self.save_map()
 
