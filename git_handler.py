@@ -50,6 +50,7 @@ class GitHandler(object):
         self.ui = ui
         self.mapfile = 'git-mapfile'
         self.configfile = 'git-config'
+        self.gitdir = self.repo.join('git')
         self.init_if_missing()
         self.load_git()
         self.load_map()
@@ -57,14 +58,12 @@ class GitHandler(object):
 
     # make the git data directory
     def init_if_missing(self):
-        git_hg_path = os.path.join(self.repo.path, 'git')
-        if not os.path.exists(git_hg_path):
-            os.mkdir(git_hg_path)
-            Repo.init_bare(git_hg_path)
+        if not os.path.exists(self.gitdir):
+            os.mkdir(self.gitdir)
+            Repo.init_bare(self.gitdir)
 
     def load_git(self):
-        git_dir = os.path.join(self.repo.path, 'git')
-        self.git = Repo(git_dir)
+        self.git = Repo(self.gitdir)
 
     ## FILE LOAD AND SAVE METHODS
 
@@ -597,14 +596,13 @@ class GitHandler(object):
         return SubprocessGitClient(), uri
 
     def clear(self):
-        git_dir = self.repo.join('git')
         mapfile = self.repo.join(self.mapfile)
-        if os.path.exists(git_dir):
-            for root, dirs, files in os.walk(git_dir, topdown=False):
+        if os.path.exists(self.gitdir):
+            for root, dirs, files in os.walk(self.gitdir, topdown=False):
                 for name in files:
                     os.remove(os.path.join(root, name))
                 for name in dirs:
                     os.rmdir(os.path.join(root, name))
-            os.rmdir(git_dir)
+            os.rmdir(self.gitdir)
         if os.path.exists(mapfile):
             os.remove(mapfile)
