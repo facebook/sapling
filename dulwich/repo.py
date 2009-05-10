@@ -376,7 +376,7 @@ class Repo(object):
                 tree_name = entry[1][0:-1]
                 tree_data += "%s %s\0%s" % ('40000', tree_name, rawsha)
             if entry[0] == 'blob':
-                # TODO : support symlinks
+                # TODO : support submodules
                 exec_flag = entry[3]
                 link_flag = entry[4]
                 if link_flag:
