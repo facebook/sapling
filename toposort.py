@@ -53,6 +53,64 @@ class TopoSort(object):
 
         return result
 
+    def strongly_connected_components_non(self, G):
+        """Returns a list of strongly connected components in G.
+
+         Uses Tarjan's algorithm with Nuutila's modifications.
+         Nonrecursive version of algorithm.
+
+         References:
+
+          R. Tarjan (1972). Depth-first search and linear graph algorithms.
+          SIAM Journal of Computing 1(2):146-160.
+
+          E. Nuutila and E. Soisalon-Soinen (1994).
+          On finding the strongly connected components in a directed graph.
+          Information Processing Letters 49(1): 9-14.
+
+         """
+        preorder={}
+        lowlink={}
+        scc_found={}
+        scc_queue = []
+        scc_list=[]
+        i=0     # Preorder counter
+        for source in G:
+            if source not in scc_found:
+                queue=[source]
+                while queue:
+                    v=queue[-1]
+                    if v not in preorder:
+                        i=i+1
+                        preorder[v]=i
+                    done=1
+                    v_nbrs=G[v]
+                    for w in v_nbrs.parents:
+                        if w not in preorder:
+                            queue.append(w)
+                            done=0
+                            break
+                    if done==1:
+                        lowlink[v]=preorder[v]
+                        for w in v_nbrs.parents:
+                            if w not in scc_found:
+                                if preorder[w]>preorder[v]:
+                                    lowlink[v]=min([lowlink[v],lowlink[w]])
+                                else:
+                                    lowlink[v]=min([lowlink[v],preorder[w]])
+                        queue.pop()
+                        if lowlink[v]==preorder[v]:
+                            scc_found[v]=True
+                            scc=(v,)
+                            while scc_queue and preorder[scc_queue[-1]]>preorder[v]:
+                                k=scc_queue.pop()
+                                scc_found[k]=True
+                                scc.append(k)
+                            scc_list.append(scc)
+                        else:
+                            scc_queue.append(v)
+        scc_list.sort(lambda x, y: cmp(len(y),len(x)))
+        return scc_list
 
     def topological_sort(self, graph):
         count = { }
@@ -76,13 +134,12 @@ class TopoSort(object):
 
         return result
 
-
     def robust_topological_sort(self, graph):
         """ First identify strongly connected components,
             then perform a topological sort on these components. """
 
-        components = self.strongly_connected_components(graph)
-
+        components = self.strongly_connected_components_non(graph)
+        
         node_component = { }
         for component in components:
             for node in component:
