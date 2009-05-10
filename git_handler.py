@@ -86,10 +86,10 @@ class GitHandler(object):
                 self._map_hg[hgsha] = gitsha
 
     def save_map(self):
-        file = self.repo.opener('git-mapfile', 'w+')
+        file = self.repo.opener('git-mapfile', 'w+', atomictemp=True)
         for gitsha, hgsha in sorted(self._map_git.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
-        file.close()
+        file.rename()
 
     def load_config(self):
         self._config = {}
