@@ -327,6 +327,7 @@ class GitHandler(object):
                 self.git.set_remote_refs(new_refs, remote_name)
                 self.update_hg_bookmarks(remote_name)
         except:
+            # TODO : remove try/except or do something useful here
             raise
 
     # TODO : for now, we'll just push all heads that match remote heads
@@ -377,7 +378,7 @@ class GitHandler(object):
             changes = list()
             changes.append((tree, path))
             for (mode, name, sha) in tree.entries():
-                if mode == 57344: # TODO : properly handle submodules
+                if mode == 57344: # TODO : properly handle submodules and document what 57344 means
                     continue
                 if sha in seen:
                     continue
@@ -467,6 +468,7 @@ class GitHandler(object):
                          ' bookmarks enabled?\n'))
 
     def convert_git_int_mode(self, mode):
+	# TODO : make these into constants
         convert = {
          33188: '',
          40960: 'l',
