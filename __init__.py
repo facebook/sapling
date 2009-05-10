@@ -14,16 +14,9 @@ project that is in Git.  A bridger of worlds, this plugin be.
 
 '''
 
-# just importing every damn thing because i don't know python that well
-# and I have no idea what I actually need
-from mercurial import util, repair, merge, cmdutil, commands, hg, url
-from mercurial import extensions, ancestor
-from mercurial.commands import templateopts
-from mercurial.node import nullrev, nullid, short
+from mercurial import commands
+from mercurial import hg
 from mercurial.i18n import _
-import os, errno, sys
-import subprocess
-import dulwich
 from git_handler import GitHandler
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
