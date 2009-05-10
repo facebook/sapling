@@ -58,7 +58,7 @@ class GitHandler(object):
         git_hg_path = os.path.join(self.repo.path, 'git')
         if not os.path.exists(git_hg_path):
             os.mkdir(git_hg_path)
-            dulwich.repo.Repo.init_bare(git_hg_path)
+            Repo.init_bare(git_hg_path)
 
     def load_git(self):
         git_dir = os.path.join(self.repo.path, 'git')
@@ -71,16 +71,10 @@ class GitHandler(object):
         self._map_hg[hgsha] = gitsha
 
     def map_hg_get(self, gitsha):
-        if gitsha in self._map_git:
-            return self._map_git[gitsha]
-        else:
-            return None
+	return self._map_git.get(gitsha)
 
     def map_git_get(self, hgsha):
-        if hgsha in self._map_hg:
-            return self._map_hg[hgsha]
-        else:
-            return None
+	return self._map_hg.get(hgsha)
 
     def load_map(self):
         self._map_git = {}
