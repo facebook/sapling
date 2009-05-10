@@ -164,8 +164,9 @@ class GitHandler(object):
         for i, rev in enumerate(self.repo.changelog):
             if i%100 == 0:
                 self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
-            self.export_hg_commit(rev)
-            self.save_map()
+            pgit_sha, already_written = self.export_hg_commit(rev)
+            if not already_written:
+                self.save_map()
 
     # convert this commit into git objects
     # go through the manifest, convert all blobs/trees we don't have
@@ -176,7 +177,7 @@ class GitHandler(object):
         phgsha = hex(node)
         pgit_sha = self.map_git_get(phgsha)
         if pgit_sha:
-            return pgit_sha
+            return pgit_sha, True
 
         self.ui.status(_("converting revision %s\n") % str(rev))
 
@@ -233,7 +234,7 @@ class GitHandler(object):
 
         commit_sha = self.git.write_commit_hash(commit) # writing new blobs to git
         self.map_set(commit_sha, phgsha)
-        return commit_sha
+        return commit_sha, False
 
     def write_git_tree(self, ctx):
         trees = {}
