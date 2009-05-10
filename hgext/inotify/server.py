@@ -113,7 +113,7 @@ def _explain_watch_limit(ui, repo, count):
     raise util.Abort(_('cannot watch %s until inotify watch limit is raised')
                      % repo.root)
 
-class RepoWatcher(object):
+class repowatcher(object):
     poll_events = select.POLLIN
     statuskeys = 'almr!?'
     mask = (
@@ -136,11 +136,11 @@ class RepoWatcher(object):
         self.timeout = None
         self.master = master
         try:
-            self.watcher = watcher.Watcher()
+            self.watcher = watcher.watcher()
         except OSError, err:
             raise util.Abort(_('inotify service not available: %s') %
                              err.strerror)
-        self.threshold = watcher.Threshold(self.watcher)
+        self.threshold = watcher.threshold(self.watcher)
         self.registered = True
         self.fileno = self.watcher.fileno
 
@@ -542,7 +542,7 @@ class RepoWatcher(object):
     def shutdown(self):
         self.watcher.close()
 
-class Server(object):
+class server(object):
     poll_events = select.POLLIN
 
     def __init__(self, ui, repo, repowatcher, timeout):
@@ -658,13 +658,13 @@ class Server(object):
             if err.errno != errno.ENOENT:
                 raise
 
-class Master(object):
+class master(object):
     def __init__(self, ui, repo, timeout=None):
         self.ui = ui
         self.repo = repo
         self.poll = select.poll()
-        self.repowatcher = RepoWatcher(ui, repo, self)
-        self.server = Server(ui, repo, self.repowatcher, timeout)
+        self.repowatcher = repowatcher(ui, repo, self)
+        self.server = server(ui, repo, self.repowatcher, timeout)
         self.table = {}
         for obj in (self.repowatcher, self.server):
             fd = obj.fileno()
@@ -727,7 +727,7 @@ def start(ui, repo):
             except OSError:
                 pass
 
-    m = Master(ui, repo)
+    m = master(ui, repo)
     sys.stdout.flush()
     sys.stderr.flush()
 

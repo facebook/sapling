@@ -25,7 +25,7 @@ def serve(ui, repo, **opts):
     class service:
         def init(self):
             try:
-                self.master = server.Master(ui, repo, timeout)
+                self.master = server.master(ui, repo, timeout)
             except server.AlreadyStartedException, inst:
                 raise util.Abort(str(inst))
 

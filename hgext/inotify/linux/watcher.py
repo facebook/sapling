@@ -11,12 +11,12 @@
 The inotify subsystem provides an efficient mechanism for file status
 monitoring and change notification.
 
-The Watcher class hides the low-level details of the inotify
+The watcher class hides the low-level details of the inotify
 interface, and provides a Pythonic wrapper around it.  It generates
 events that provide somewhat more information than raw inotify makes
 available.
 
-The AutoWatcher class is more useful, as it automatically watches
+The autowatcher class is more useful, as it automatically watches
 newly-created directories on your behalf.'''
 
 __author__ = "Bryan O'Sullivan <bos@serpentine.com>"
@@ -29,7 +29,7 @@ import os
 import termios
 
 
-class Event(object):
+class event(object):
     '''Derived inotify event class.
 
     The following fields are available:
@@ -72,7 +72,7 @@ class Event(object):
 
     def __repr__(self):
         r = repr(self.raw)
-        return 'Event(path=' + repr(self.path) + ', ' + r[r.find('(')+1:]
+        return 'event(path=' + repr(self.path) + ', ' + r[r.find('(')+1:]
 
 
 _event_props = {
@@ -100,12 +100,12 @@ for k, v in _event_props.iteritems():
         return self.mask & mask
     getter.__name__ = k
     getter.__doc__ = v
-    setattr(Event, k, property(getter, doc=v))
+    setattr(event, k, property(getter, doc=v))
 
 del _event_props
 
 
-class Watcher(object):
+class watcher(object):
     '''Provide a Pythonic interface to the low-level inotify API.
 
     Also adds derived information to each event that is not available
@@ -177,7 +177,7 @@ class Watcher(object):
 
         events = []
         for evt in inotify.read(self.fd, bufsize):
-            events.append(Event(evt, self._wds[evt.wd][0]))
+            events.append(event(evt, self._wds[evt.wd][0]))
             if evt.mask & inotify.IN_IGNORED:
                 self._remove(evt.wd)
             elif evt.mask & inotify.IN_UNMOUNT:
@@ -265,8 +265,8 @@ class Watcher(object):
         return [w for w in self.add_iter(path, mask, onerror)]
 
 
-class AutoWatcher(Watcher):
-    '''Watcher class that automatically watches newly created directories.'''
+class autowatcher(watcher):
+    '''watcher class that automatically watches newly created directories.'''
 
     __slots__ = (
         'addfilter',
@@ -284,13 +284,13 @@ class AutoWatcher(Watcher):
         True, the directory will be watched if it still exists,
         otherwise, it will beb skipped.'''
 
-        super(AutoWatcher, self).__init__()
+        super(autowatcher, self).__init__()
         self.addfilter = addfilter
 
     _dir_create_mask = inotify.IN_ISDIR | inotify.IN_CREATE
 
     def read(self, bufsize=None):
-        events = super(AutoWatcher, self).read(bufsize)
+        events = super(autowatcher, self).read(bufsize)
         for evt in events:
             if evt.mask & self._dir_create_mask == self._dir_create_mask:
                 if self.addfilter is None or self.addfilter(evt):
@@ -305,7 +305,7 @@ class AutoWatcher(Watcher):
         return events
 
 
-class Threshold(object):
+class threshold(object):
     '''Class that indicates whether a file descriptor has reached a
     threshold of readable bytes available.
 
