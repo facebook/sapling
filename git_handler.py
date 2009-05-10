@@ -108,7 +108,7 @@ class GitHandler(object):
     ## END FILE LOAD AND SAVE METHODS
 
     def fetch(self, remote_name):
-        self.ui.status(_("fetching from : " + remote_name + "\n"))
+        self.ui.status(_("fetching from : %s\n") % remote_name)
         self.export_git_objects()
         refs = self.fetch_pack(remote_name)
         if refs:
@@ -116,7 +116,7 @@ class GitHandler(object):
         self.save_map()
 
     def push(self, remote_name):
-        self.ui.status(_("pushing to : " + remote_name + "\n"))
+        self.ui.status(_("pushing to : %s\n") % remote_name)
         self.export_git_objects()
         self.update_references()
         self.upload_pack(remote_name)
@@ -136,9 +136,9 @@ class GitHandler(object):
         key = 'remote.' + remote_name + '.url'
         if key in self._config:
             name = self._config[key]
-            self.ui.status("URL for %s : %s\n" % (remote_name, name, ))
+            self.ui.status(_("URL for %s : %s\n") % (remote_name, name, ))
         else:
-            self.ui.status("No remote named : %s\n" % remote_name)
+            self.ui.status(_("No remote named : %s\n") % remote_name)
         return
 
     def remote_list(self):
@@ -155,7 +155,7 @@ class GitHandler(object):
         self.git.set_ref('refs/heads/master', c)
 
     def export_git_objects(self):
-        self.ui.status("exporting git objects\n")
+        self.ui.status(_("exporting git objects\n"))
         for rev in self.repo.changelog:
             self.export_hg_commit(rev)
             self.save_map()
@@ -171,7 +171,7 @@ class GitHandler(object):
         if pgit_sha:
             return pgit_sha
 
-        self.ui.status("converting revision " + str(rev) + "\n")
+        self.ui.status(_("converting revision %s\n") % str(rev))
 
         # make sure parents are converted first
         parents = self.repo.parents(rev)
@@ -317,7 +317,7 @@ class GitHandler(object):
         changed = self.get_changed_refs
         genpack = self.generate_pack_contents
         try:
-            self.ui.status("creating and sending data\n")
+            self.ui.status(_("creating and sending data\n"))
             changed_refs = client.send_pack(path, changed, genpack)
             if changed_refs:
                 new_refs = {}
@@ -441,7 +441,7 @@ class GitHandler(object):
                 convert_list[sha] = commit
                 todo.extend([p for p in commit.parents if p not in done])
             except:
-                self.ui.warn("Cannot import tags yet\n") # TODO
+                self.ui.warn(_("Cannot import tags yet\n")) # TODO
 
         # sort the commits
         commits = toposort.TopoSort(convert_list).items()
@@ -463,8 +463,8 @@ class GitHandler(object):
                     bms[remote_name + '/' + head] = hgsha
             bookmarks.write(self.repo, bms)
         except AttributeError:
-            self.ui.warn('creating bookmarks failed, do you have'
-                         ' bookmarks enabled?\n')
+            self.ui.warn(_('creating bookmarks failed, do you have'
+                         ' bookmarks enabled?\n'))
 
     def convert_git_int_mode(self, mode):
         convert = {
@@ -495,7 +495,7 @@ class GitHandler(object):
         return (message, renames, branch)
         
     def import_git_commit(self, commit):
-        self.ui.debug("importing: %s\n" % commit.id)
+        self.ui.debug(_("importing: %s\n") % commit.id)
         # TODO : find and use hg named branches
         # TODO : add extra Git data (committer info) as extras to changeset
 
