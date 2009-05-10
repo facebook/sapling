@@ -52,6 +52,10 @@ def gpush(ui, repo, remote_name='origin', branch=None):
     git = GitHandler(repo, ui)
     git.push(remote_name)
 
+def gexport(ui, repo):
+    git = GitHandler(repo, ui)
+    git.export()
+
 def gremote(ui, repo, *args):
     git = GitHandler(repo, ui)
 
@@ -91,6 +95,8 @@ cmdtable = {
        ),
   "gpush":
         (gpush, [], _('hg gpush remote')),
+  "gexport":
+        (gexport, [], _('hg gexport')),
   "gfetch":
         (gfetch, [],
         #[('m', 'merge', None, _('merge automatically'))],

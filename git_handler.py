@@ -115,12 +115,15 @@ class GitHandler(object):
             self.import_git_objects(remote_name)
         self.save_map()
 
-    def push(self, remote_name):
-        self.ui.status(_("pushing to : %s\n") % remote_name)
+    def export(self):
         self.export_git_objects()
         self.update_references()
-        self.upload_pack(remote_name)
         self.save_map()
+
+    def push(self, remote_name):
+        self.ui.status(_("pushing to : %s\n") % remote_name)
+        self.export()
+        self.upload_pack(remote_name)
 
     def remote_add(self, remote_name, git_url):
         self._config['remote.' + remote_name + '.url'] = git_url
