@@ -48,6 +48,8 @@ class GitHandler(object):
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
         self.ui = ui
+        self.mapfile = 'git-mapfile'
+        self.configfile = 'git-config'
         self.init_if_missing()
         self.load_git()
         self.load_map()
@@ -79,27 +81,27 @@ class GitHandler(object):
     def load_map(self):
         self._map_git = {}
         self._map_hg = {}
-        if os.path.exists(self.repo.join('git-mapfile')):
-            for line in self.repo.opener('git-mapfile'):
+        if os.path.exists(self.repo.join(self.mapfile)):
+            for line in self.repo.opener(self.mapfile):
                 gitsha, hgsha = line.strip().split(' ', 1)
                 self._map_git[gitsha] = hgsha
                 self._map_hg[hgsha] = gitsha
 
     def save_map(self):
-        file = self.repo.opener('git-mapfile', 'w+', atomictemp=True)
+        file = self.repo.opener(self.mapfile, 'w+', atomictemp=True)
         for gitsha, hgsha in sorted(self._map_git.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
         file.rename()
 
     def load_config(self):
         self._config = {}
-        if os.path.exists(self.repo.join('git-config')):
-            for line in self.repo.opener('git-config'):
+        if os.path.exists(self.repo.join(self.configfile)):
+            for line in self.repo.opener(self.configfile):
                 key, value = line.strip().split(' ', 1)
                 self._config[key] = value
 
     def save_config(self):
-        file = self.repo.opener('git-config', 'w+', atomictemp=True)
+        file = self.repo.opener(self.configfile, 'w+', atomictemp=True)
         for key, value in self._config.iteritems():
             file.write("%s %s\n" % (key, value))
         file.rename()
@@ -596,7 +598,7 @@ class GitHandler(object):
 
     def clear(self):
         git_dir = self.repo.join('git')
-        mapfile = self.repo.join('git-mapfile')
+        mapfile = self.repo.join(self.mapfile)
         if os.path.exists(git_dir):
             for root, dirs, files in os.walk(git_dir, topdown=False):
                 for name in files:
