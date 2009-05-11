@@ -22,10 +22,6 @@ FETCH
 
 MAPPING ISSUES
 ==============
-Created in Hg:
-* merges with renames in 2nd branch
-  - dont convert back properly for some reason
-
 Created in Git:
 * encoding field / utf-8
 * octopus merge explode/implode

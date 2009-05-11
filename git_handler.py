@@ -434,7 +434,8 @@ class GitHandler(object):
         todo = []
         done = set()
         convert_list = {}
-
+        self.renames = {}
+        
         # get a list of all the head shas
         for head, sha in self.git.remote_refs(remote_name).iteritems():
             todo.append(sha)
@@ -543,14 +544,12 @@ class GitHandler(object):
         # get a list of the changed, added, removed files
         files = self.git.get_files_changed(commit)
 
-        # if this is a merge commit, don't list renamed files
-        # i'm really confused here - this is the only way my use case will
-        # work, but it seems really hacky - do I need to just remove renames
-        # from one of the parents? AARRGH!
+        # wierd hack for explicit file renames in first but not second branch
         if not (p2 == "0"*40):
-            for removefile in hg_renames.values():
+            vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
+            for removefile in vals:
                 files.remove(removefile)
-
+            
         extra = {}
 
         # if named branch, add to extra
@@ -571,10 +570,19 @@ class GitHandler(object):
         a = self.repo.commitctx(ctx)
 
         # get changeset id
-        p2 = hex(self.repo.changelog.tip())
+        cs = hex(self.repo.changelog.tip())
         # save changeset to mapping file
         gitsha = commit.id
-        self.map_set(gitsha, p2)
+        
+        # saving rename info
+        if (not (p2 == "0"*40) or (p1 == "0"*40)):
+            self.renames[cs] = {}
+        else:
+            self.renames[cs] = self.renames[p1].copy()
+            
+        self.renames[cs].update(hg_renames)
+        
+        self.map_set(gitsha, cs)
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
