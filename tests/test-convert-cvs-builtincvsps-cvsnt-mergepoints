@@ -21,8 +21,10 @@ echo "cvsps=builtin" >> $HGRCPATH
 echo % create cvs repository
 mkdir cvsmaster
 cd cvsmaster
-export CVSROOT=`pwd`
-export CVS_OPTIONS=-f
+CVSROOT=`pwd`
+export CVSROOT
+CVS_OPTIONS=-f
+export CVS_OPTIONS
 cd ..
 
 cvscall -q -d "$CVSROOT" init

@@ -19,8 +19,10 @@ echo "cvsps.cache=0" >> $HGRCPATH
 echo % create cvs repository
 mkdir cvsrepo
 cd cvsrepo
-export CVSROOT=`pwd`
-export CVS_OPTIONS=-f
+CVSROOT=`pwd`
+export CVSROOT
+CVS_OPTIONS=-f
+export CVS_OPTIONS
 cd ..
 
 cvscall -q -d "$CVSROOT" init
