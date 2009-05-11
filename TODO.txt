@@ -23,7 +23,6 @@ FETCH
 MAPPING ISSUES
 ==============
 Created in Git:
-* encoding field / utf-8
 * octopus merge explode/implode
 
 WEBSITE
@@ -35,6 +34,6 @@ WEBSITE
 SPEED/EFFICIENCY
 ================
 * switch object mapping to hg->git since the many to one is that direction
-* don't send blobs/trees already on server
+* don't send blobs/trees already on server (thin pack)
 * packfile creation benchmarking (seems to take a while sometimes)
   - at least provide status output

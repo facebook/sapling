@@ -210,6 +210,8 @@ class GitHandler(object):
         extra = ctx.extra()
         if 'committer' in extra:
             commit['committer'] = extra['committer']
+        if 'encoding' in extra:
+            commit['encoding'] = extra['encoding']
 
         # HG EXTRA INFORMATION
         add_extras = False
@@ -584,9 +586,12 @@ class GitHandler(object):
         if not commit._author_raw == commit._committer_raw:
             extra['committer'] = commit._committer_raw
 
+        if commit._encoding:
+            extra['encoding'] = commit._encoding
+
         if hg_branch:
             extra['branch'] = hg_branch
-                
+
         text = strip_message
         date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,

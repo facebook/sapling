@@ -41,6 +41,7 @@ COMMIT_ID = "commit"
 PARENT_ID = "parent"
 AUTHOR_ID = "author"
 COMMITTER_ID = "committer"
+ENCODING_ID = "encoding"
 OBJECT_ID = "object"
 TYPE_ID = "type"
 TAGGER_ID = "tagger"
@@ -589,9 +590,18 @@ class Commit(ShaFile):
             while text[count] != '\n':
                 count += 1
             count += 1
-        assert text[count] == '\n', "There must be a new line after the headers"
+        self._encoding = None
+        if not text[count] == '\n':
+            # There can be an encoding field.
+            if text[count:].startswith(ENCODING_ID):
+                count += len(ENCODING_ID)
+                assert text[count] == ' ', "Invalid encoding, " \
+                     "%s must be followed by space not %s" % (ENCODING_ID, text[count])
+                count += 1
+                self._encoding = text[count:].split("\n", 1)[0]
+                while text[count] != "\n":
+                    count += 1
         count += 1
-        # XXX: There can be an encoding field.
         self._message = text[count:]
         self._needs_parsing = False
 
