@@ -1438,7 +1438,10 @@ def termwidth():
         import termios, array, fcntl
         for dev in (sys.stdout, sys.stdin):
             try:
-                fd = dev.fileno()
+                try:
+                    fd = dev.fileno()
+                except AttributeError:
+                    continue
                 if not os.isatty(fd):
                     continue
                 arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
