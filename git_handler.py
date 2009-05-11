@@ -456,13 +456,15 @@ class GitHandler(object):
 
         # sort the commits
         commits = toposort.TopoSort(convert_list).items()
-
+        
         # import each of the commits, oldest first
         for csha in commits:
+            commit = convert_list[csha]
             if not self.map_hg_get(csha): # it's already here
-                commit = convert_list[csha]
                 self.import_git_commit(commit)
-
+            else:
+                self.pseudo_import_git_commit(commit)
+                
         self.update_hg_bookmarks(remote_name)
 
     def update_hg_bookmarks(self, remote_name):
@@ -505,7 +507,29 @@ class GitHandler(object):
                 if command == 'branch':
                     branch = data
         return (message, renames, branch)
-        
+
+    def pseudo_import_git_commit(self, commit):
+        (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
+        cs = self.map_hg_get(commit.id)
+        p1 = "0" * 40
+        p2 = "0" * 40
+        if len(commit.parents) > 0:
+            sha = commit.parents[0]
+            p1 = self.map_hg_get(sha)
+        if len(commit.parents) > 1:
+            sha = commit.parents[1]
+            p2 = self.map_hg_get(sha)
+        if len(commit.parents) > 2:
+            # TODO : map extra parents to the extras file
+            pass
+        # saving rename info
+        if (not (p2 == "0"*40) or (p1 == "0"*40)):
+            self.renames[cs] = {}
+        else:
+            self.renames[cs] = self.renames[p1].copy()
+
+        self.renames[cs].update(hg_renames)
+    
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
         # TODO : find and use hg named branches
