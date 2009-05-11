@@ -58,7 +58,7 @@ class ui(object):
         return False
 
     def readconfig(self, filename, root=None, trust=False,
-                   sections=None):
+                   sections=None, remap=None):
         try:
             fp = open(filename)
         except IOError:
@@ -70,7 +70,7 @@ class ui(object):
         trusted = sections or trust or self._is_trusted(fp, filename)
 
         try:
-            cfg.read(filename, fp, sections=sections)
+            cfg.read(filename, fp, sections=sections, remap=remap)
         except error.ConfigError, inst:
             if trusted:
                 raise

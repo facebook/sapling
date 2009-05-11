@@ -9,7 +9,7 @@
 import os
 from mercurial.i18n import _
 from mercurial import ui, hg, util, templater, templatefilters
-from mercurial import config, error, encoding
+from mercurial import error, encoding
 from common import ErrorResponse, get_mtime, staticfile, paritygen,\
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
@@ -30,11 +30,7 @@ class hgwebdir(object):
             self.ui.setconfig('ui', 'report_untrusted', 'off')
             self.ui.setconfig('ui', 'interactive', 'off')
 
-        self.motd = None
-        self.style = 'paper'
-        self.stripecount = 1
         self.repos_sorted = ('name', False)
-        self._baseurl = None
 
         if isinstance(conf, (list, tuple)):
             self.repos = cleannames(conf)
@@ -42,45 +38,48 @@ class hgwebdir(object):
         elif isinstance(conf, dict):
             self.repos = sorted(cleannames(conf.items()))
         else:
-            if isinstance(conf, config.config):
-                cp = conf
-            else:
-                cp = config.config()
-                cp.read(conf)
+            self.ui.readconfig(conf, remap={'paths': 'hgweb-paths'})
             self.repos = []
-            self.motd = cp.get('web', 'motd')
-            self.style = cp.get('web', 'style', 'paper')
-            self.stripecount = cp.get('web', 'stripes', 1)
-            self._baseurl = cp.get('web', 'baseurl')
-            if 'paths' in cp:
-                paths = cleannames(cp.items('paths'))
-                for prefix, root in paths:
-                    roothead, roottail = os.path.split(root)
-                    # "foo = /bar/*" makes every subrepo of /bar/ to be
-                    # mounted as foo/subrepo
-                    # and "foo = /bar/**" does even recurse inside the
-                    # subdirectories, remember to use it without working dir.
-                    try:
-                        recurse = {'*': False, '**': True}[roottail]
-                    except KeyError:
-                        self.repos.append((prefix, root))
-                        continue
-                    roothead = os.path.normpath(roothead)
-                    for path in util.walkrepos(roothead, followsym=True,
-                                               recurse=recurse):
-                        path = os.path.normpath(path)
-                        name = util.pconvert(path[len(roothead):]).strip('/')
-                        if prefix:
-                            name = prefix + '/' + name
-                        self.repos.append((name, path))
-            for prefix, root in cp.items('collections'):
-                for path in util.walkrepos(root, followsym=True):
-                    repo = os.path.normpath(path)
-                    name = repo
-                    if name.startswith(prefix):
-                        name = name[len(prefix):]
-                    self.repos.append((name.lstrip(os.sep), repo))
-            self.repos.sort()
+
+        self.motd = self.ui.config('web', 'motd')
+        self.style = self.ui.config('web', 'style', 'paper')
+        self.stripecount = self.ui.config('web', 'stripes', 1)
+        if self.stripecount:
+            self.stripecount = int(self.stripecount)
+        self._baseurl = self.ui.config('web', 'baseurl')
+
+        if self.repos:
+            return
+
+        for prefix, root in cleannames(self.ui.configitems('hgweb-paths')):
+            roothead, roottail = os.path.split(root)
+            # "foo = /bar/*" makes every subrepo of /bar/ to be
+            # mounted as foo/subrepo
+            # and "foo = /bar/**" also recurses into the subdirectories,
+            # remember to use it without working dir.
+            try:
+                recurse = {'*': False, '**': True}[roottail]
+            except KeyError:
+                self.repos.append((prefix, root))
+                continue
+            roothead = os.path.normpath(roothead)
+            for path in util.walkrepos(roothead, followsym=True,
+                                       recurse=recurse):
+                path = os.path.normpath(path)
+                name = util.pconvert(path[len(roothead):]).strip('/')
+                if prefix:
+                    name = prefix + '/' + name
+                self.repos.append((name, path))
+
+        for prefix, root in self.ui.configitems('collections'):
+             for path in util.walkrepos(root, followsym=True):
+                 repo = os.path.normpath(path)
+                 name = repo
+                 if name.startswith(prefix):
+                     name = name[len(prefix):]
+                 self.repos.append((name.lstrip(os.sep), repo))
+
+        self.repos.sort()
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
