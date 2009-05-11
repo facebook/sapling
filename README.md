@@ -1,6 +1,6 @@
 *Warning: This plugin is not yet stabilized. Use to help me identify bugs, but it will be a few weeks before its fully stable.*
 
-*Project status as of 5/11:*  Pretty solid, but a bit slow - can losslessly convert most major scenarios and can handle projects up to several thousand commits. Encodings, submodules and octopus merges in Git are not handled well, nor are tags in either system, though that's not strictly neccesary. See TODO.txt for full list of things I'm working on.
+*Project status as of 5/11:*  Pretty solid, but a bit slow - can losslessly convert most major scenarios and can handle projects up to several thousand commits. Encodings, submodules and octopus merges in Git are not handled well, nor are tags in either system. See TODO.txt for full list of things I'm working on.
 
 
 Hg-Git Mercurial Plugin
@@ -8,7 +8,7 @@ Hg-Git Mercurial Plugin
 
 This is the Hg-Git plugin for Mercurial, adding the ability to push and pull to/from a Git server repository from Hg.  This means you can collaborate on Git based projects from Hg, or use a Git server as a collaboration point for a team with developers using both Git and Hg.
 
-The Hg-Git plugin can convert commits/changesets losslessly from one system to another, so you can push via an Hg repository and another Hg client can pull it and thier changeset node ids will be identical - Mercurial data does not get lost in translation (* not currently fully implemented, but it will!).  It is intended that Hg users may wish to use this to collaborate even if no Git users are involved in the project, as it may provide some advantages if you're using Bookmarks (see below).
+The Hg-Git plugin can convert commits/changesets losslessly from one system to another, so you can push via an Hg repository and another Hg client can pull it and their changeset node ids will be identical - Mercurial data does not get lost in translation.  It is intended that Hg users may wish to use this to collaborate even if no Git users are involved in the project, and it may even provide some advantages if you're using Bookmarks (see below).
 
 Dependencies
 ============
@@ -58,7 +58,8 @@ Authors
 ========
 
 * Scott Chacon <schacon@gmail.com> - main development
-* Augie Fackler <durin42@gmail.com> - testing and moral support.
+* Augie Fackler <durin42@gmail.com> - testing and moral support
+* Sverre Rabbelier <sverre@rabbelier.nl> - gexport, mode and i18n stuff and misc fixes
 * Dulwich Developers - most of this code depends on the awesome work they did.
  
 Sponsorship
