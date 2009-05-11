@@ -38,7 +38,7 @@ created new head
 8[tip]   946e2bd9c565   2020-01-01 10:01 +0000   test
   third
 
-7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
+7:-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
   second
 
 6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
@@ -53,19 +53,23 @@ created new head
 3   10e46f2dcbf4   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2   97054abb4ab8   1970-01-14 21:20 +0000   other
+2   97054abb4ab8   1970-01-14 21:20 +0000   other@place
   no person
 
-1   b608e9d1a3f0   1970-01-13 17:33 +0000   other
+1   b608e9d1a3f0   1970-01-13 17:33 +0000   A. N. Other <other@place>
   other 1
+other 2
 
-0   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
+other 3
+
+0   1e4e1b8f71e0   1970-01-12 13:46 +0000   User Name <user@hostname>
   line 1
+line 2
 
 8[tip]:7,-1   946e2bd9c565   2020-01-01 10:01 +0000   test
   third
 
-7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   user
+7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
   second
 
 6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
@@ -80,14 +84,18 @@ created new head
 3:2,-1   10e46f2dcbf4   1970-01-16 01:06 +0000   person
   no user, no domain
 
-2:1,-1   97054abb4ab8   1970-01-14 21:20 +0000   other
+2:1,-1   97054abb4ab8   1970-01-14 21:20 +0000   other@place
   no person
 
-1:0,-1   b608e9d1a3f0   1970-01-13 17:33 +0000   other
+1:0,-1   b608e9d1a3f0   1970-01-13 17:33 +0000   A. N. Other <other@place>
   other 1
+other 2
 
-0:-1,-1   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
+other 3
+
+0:-1,-1   1e4e1b8f71e0   1970-01-12 13:46 +0000   User Name <user@hostname>
   line 1
+line 2
 
 # error if style not readable
 abort: Permission denied: ./q

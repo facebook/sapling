@@ -1,5 +1,6 @@
 changeset = '{rev}{tags}{parents}   {node|short}   {date|isodate}   {author|user}\n  {desc|firstline|strip}\n\n'
 changeset_quiet = '{rev}:{node|short}\n'
+changeset_verbose = '{rev}{tags}{parents}   {node|short}   {date|isodate}   {author}\n  {desc|strip}\n\n'
 start_tags = '['
 tag = '{tag},'
 last_tag = '{tag}]'
