@@ -125,10 +125,12 @@ def strip(ui, repo, node, backup="all"):
     tr = repo.transaction()
     offset = len(tr.entries)
 
+    tr.startgroup()
     cl.strip(striprev, tr)
     mfst.strip(striprev, tr)
     for f in fs:
         f.strip(striprev, tr)
+    tr.endgroup()
 
     try:
         for i in xrange(offset, len(tr.entries)):

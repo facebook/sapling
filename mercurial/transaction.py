@@ -51,6 +51,7 @@ class transaction(object):
         self.entries = []
         self.map = {}
         self.journal = journal
+        self._queue = []
 
         self.file = open(self.journal, "w")
         if createmode is not None:
@@ -62,8 +63,25 @@ class transaction(object):
             self.file.close()
 
     @active
+    def startgroup(self):
+        self._queue.append([])
+
+    @active
+    def endgroup(self):
+        q = self._queue.pop()
+        d = ''.join(['%s\0%d\n' % (x[0], x[1]) for x in q])
+        self.entries.extend(q)
+        self.file.write(d)
+        self.file.flush()
+
+    @active
     def add(self, file, offset, data=None):
         if file in self.map: return
+
+        if self._queue:
+            self._queue[-1].append((file, offset, data))
+            return
+
         self.entries.append((file, offset, data))
         self.map[file] = len(self.entries) - 1
         # add enough data to the journal to do the truncate
@@ -78,6 +96,11 @@ class transaction(object):
 
     @active
     def replace(self, file, offset, data=None):
+        '''
+        replace can only replace already committed entries
+        that are not pending in the queue
+        '''
+
         if file not in self.map:
             raise KeyError(file)
         index = self.map[file]
