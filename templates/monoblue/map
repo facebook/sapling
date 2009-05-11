@@ -45,7 +45,8 @@ filerevchild = '<dt>child {rev}</dt><dd><a href="{url}file/{node|short}/{file|ur
 fileannotatechild = '<dt>child {rev}</dt><dd><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
 tags = tags.tmpl
 tagentry = '<tr class="parity#parity#"><td class="nowrap">#date|age# ago</td><td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">#tag|escape#</a></td><td class="nowrap"><a href="{url}rev/#node|short#{sessionvars%urlparameter}">changeset</a> | <a href="{url}log/#node|short#{sessionvars%urlparameter}">changelog</a> | <a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a></td></tr>'
-branchentry = '<tr class="parity{parity}"><td class="nowrap">{date|age} ago</td><td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td><td>{branch|escape}</td><td class="nowrap"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> | <a href="{url}log/{node|short}{sessionvars%urlparameter}">changelog</a> | <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a></td></tr>'
+branches = branches.tmpl
+branchentry = '<tr class="parity{parity}"><td class="nowrap">{date|age} ago</td><td><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{node|short}</a></td><td>{branch|escape}</td><td class="nowrap"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> | <a href="{url}log/{node|short}{sessionvars%urlparameter}">changelog</a> | <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a></td></tr>'
 diffblock = '<pre>#lines#</pre>'
 filediffparent = '<dt>parent {rev}</dt><dd><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
 filelogparent = '<tr><td align="right">parent #rev#:&nbsp;</td><td><a href="{url}file/{node|short}/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td></tr>'

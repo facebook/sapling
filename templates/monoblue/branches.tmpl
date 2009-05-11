@@ -1,5 +1,5 @@
 #header#
-    <title>#repo|escape#: Tags</title>
+    <title>#repo|escape#: Branches</title>
     <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for #repo|escape#"/>
     <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for #repo|escape#"/>
 </head>
@@ -7,7 +7,7 @@
 <body>
 <div id="container">
     <div class="page-header">
-        <h1><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / Tags</h1>
+        <h1><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / Branches</h1>
 
         <form action="{url}log">
             {sessionvars%hiddenformentry}
@@ -22,15 +22,15 @@
             <li><a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a></li>
             <li><a href="{url}changelog{sessionvars%urlparameter}">changelog</a></li>
             <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
-            <li class="current">tags</li>
-            <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
+            <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+            <li class="current">branches</li>
             <li><a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a></li>
         </ul>
     </div>
 
     <h2 class="no-link no-border">tags</h2>
     <table cellspacing="0">
-#entries%tagentry#
+#entries%branchentry#
     </table>
 
 #footer#
