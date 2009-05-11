@@ -108,7 +108,8 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             self._writedebug(user, passwd)
             return (user, passwd)
 
-        user, passwd = self._readauthtoken(authuri)
+        if not user:
+            user, passwd = self._readauthtoken(authuri)
         if not user or not passwd:
             if not self.ui.interactive():
                 raise util.Abort(_('http authorization required'))
