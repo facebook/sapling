@@ -1,5 +1,5 @@
 #header#
-<title>#repo|escape#: Tags</title>
+<title>#repo|escape#: Branches</title>
 <link rel="alternate" type="application/atom+xml"
    href="{url}atom-tags" title="Atom feed for #repo|escape#"/>
 <link rel="alternate" type="application/rss+xml"
@@ -8,7 +8,7 @@
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / tags
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / branches
 </div>
 
 <div class="page_nav">
@@ -16,15 +16,15 @@
 <a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
 <a href="{url}log{sessionvars%urlparameter}">changelog</a> |
 <a href="{url}graph{sessionvars%urlparameter}">graph</a> |
-tags |
-<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
+<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
+branches |
 <a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a>
 <br/>
 </div>
 
 <div class="title">&nbsp;</div>
 <table cellspacing="0">
-#entries%tagentry#
+#entries%branchentry#
 </table>
 
 #footer#
