@@ -154,7 +154,7 @@ def revrange(repo, revs):
             return defval
         return repo.changelog.rev(repo.lookup(val))
 
-    seen, l = {}, []
+    seen, l = set(), []
     for spec in revs:
         if revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
@@ -164,13 +164,13 @@ def revrange(repo, revs):
             for rev in xrange(start, end+step, step):
                 if rev in seen:
                     continue
-                seen[rev] = 1
+                seen.add(rev)
                 l.append(rev)
         else:
             rev = revfix(repo, spec, None)
             if rev in seen:
                 continue
-            seen[rev] = 1
+            seen.add(rev)
             l.append(rev)
 
     return l
