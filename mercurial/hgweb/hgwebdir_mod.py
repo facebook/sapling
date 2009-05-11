@@ -30,11 +30,8 @@ class hgwebdir(object):
             self.ui.setconfig('ui', 'report_untrusted', 'off')
             self.ui.setconfig('ui', 'interactive', 'off')
 
-        self.repos_sorted = ('name', False)
-
         if isinstance(conf, (list, tuple)):
             self.repos = cleannames(conf)
-            self.repos_sorted = ('', False)
         elif isinstance(conf, dict):
             self.repos = sorted(cleannames(conf.items()))
         else:
@@ -184,6 +181,7 @@ class hgwebdir(object):
                     yield {"type" : i[0], "extension": i[1],
                            "node": nodeid, "url": url}
 
+        sortdefault = 'name', False
         def entries(sortcolumn="", descending=False, subdir="", **map):
             rows = []
             parity = paritygen(self.stripecount)
@@ -233,8 +231,7 @@ class hgwebdir(object):
                            lastchange=d,
                            lastchange_sort=d[1]-d[0],
                            archives=archivelist(u, "tip", url))
-                if (not sortcolumn
-                    or (sortcolumn, descending) == self.repos_sorted):
+                if (not sortcolumn or (sortcolumn, descending) == sortdefault):
                     # fast path for unsorted output
                     row['parity'] = parity.next()
                     yield row
@@ -249,7 +246,7 @@ class hgwebdir(object):
                     yield row
 
         sortable = ["name", "description", "contact", "lastchange"]
-        sortcolumn, descending = self.repos_sorted
+        sortcolumn, descending = sortdefault
         if 'sort' in req.form:
             sortcolumn = req.form['sort'][0]
             descending = sortcolumn.startswith('-')
