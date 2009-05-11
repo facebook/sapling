@@ -481,7 +481,7 @@ class GitHandler(object):
         convert = {
          33188: '',
          40960: 'l',
-         33261: 'e'}
+         33261: 'x'}
         if mode in convert:
             return convert[mode]
         return ''
