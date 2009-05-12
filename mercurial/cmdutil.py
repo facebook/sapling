@@ -712,10 +712,8 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, patch, diffopts, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, patch, diffopts, buffered)
-        filters = templatefilters.filters.copy()
-        filters['formatnode'] = (ui.debugflag and (lambda x: x)
-                                 or (lambda x: x[:12]))
-        self.t = templater.templater(mapfile, filters,
+        formatnode = ui.debugflag and (lambda x: x) or (lambda x: x[:12])
+        self.t = templater.templater(mapfile, {'formatnode': formatnode},
                                      cache={
                                          'parent': '{rev}:{node|formatnode} ',
                                          'manifest': '{rev}:{node|formatnode}',

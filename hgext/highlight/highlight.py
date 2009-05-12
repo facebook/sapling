@@ -10,9 +10,7 @@
 
 from mercurial import demandimport
 demandimport.ignore.extend(['pkgutil', 'pkg_resources', '__main__',])
-
 from mercurial import util, encoding
-from mercurial.templatefilters import filters
 
 from pygments import highlight
 from pygments.util import ClassNotFound
@@ -55,7 +53,7 @@ def pygmentize(field, fctx, style, tmpl):
     colorized = colorized[colorized.find('<pre>')+5:]
     coloriter = iter(colorized.splitlines())
 
-    filters['colorize'] = lambda x: coloriter.next()
+    tmpl.filters['colorize'] = lambda x: coloriter.next()
 
     oldl = tmpl.cache[field]
     newl = oldl.replace('line|escape', 'line|colorize')

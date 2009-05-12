@@ -7,9 +7,10 @@
 
 from i18n import _
 import re, sys, os
-import util, config
+import util, config, templatefilters
 
 path = ['templates', '../templates']
+stringify = templatefilters.stringify
 
 def parsestring(s, quoted=True):
     '''parse a string using simple c-like syntax.
@@ -116,7 +117,8 @@ class templater(object):
         self.cache = cache.copy()
         self.map = {}
         self.base = (mapfile and os.path.dirname(mapfile)) or ''
-        self.filters = filters
+        self.filters = templatefilters.filters.copy()
+        self.filters.update(filters)
         self.defaults = defaults
         self.minchunk, self.maxchunk = minchunk, maxchunk
 
@@ -207,9 +209,3 @@ def stylemap(style, paths=None):
                 return mapfile
 
     raise RuntimeError("No hgweb templates found in %r" % paths)
-
-def stringify(thing):
-    '''turn nested template iterator into string.'''
-    if hasattr(thing, '__iter__') and not isinstance(thing, str):
-        return "".join([stringify(t) for t in thing if t is not None])
-    return str(thing)

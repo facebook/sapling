@@ -7,8 +7,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 import os
-from mercurial import ui, hg, util, hook, error, encoding
-from mercurial import templater, templatefilters
+from mercurial import ui, hg, util, hook, error, encoding, templater
 from common import get_mtime, ErrorResponse
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from common import HTTP_UNAUTHORIZED, HTTP_METHOD_NOT_ALLOWED
@@ -246,7 +245,7 @@ class hgweb(object):
 
         # create the templater
 
-        tmpl = templater.templater(mapfile, templatefilters.filters,
+        tmpl = templater.templater(mapfile,
                                    defaults={"url": req.url,
                                              "staticurl": staticurl,
                                              "urlbase": urlbase,

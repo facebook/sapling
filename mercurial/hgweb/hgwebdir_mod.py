@@ -8,7 +8,7 @@
 
 import os
 from mercurial.i18n import _
-from mercurial import ui, hg, util, templater, templatefilters
+from mercurial import ui, hg, util, templater
 from mercurial import error, encoding
 from common import ErrorResponse, get_mtime, staticfile, paritygen,\
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -304,7 +304,7 @@ class hgwebdir(object):
 
         style = 'style' in req.form and req.form['style'][0] or self.style
         mapfile = templater.stylemap(style)
-        tmpl = templater.templater(mapfile, templatefilters.filters,
+        tmpl = templater.templater(mapfile,
                                    defaults={"header": header,
                                              "footer": footer,
                                              "motd": motd,
