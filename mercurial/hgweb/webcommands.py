@@ -360,19 +360,19 @@ def tags(web, req, tmpl):
 
 def branches(web, req, tmpl):
     b = web.repo.branchtags()
-    l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.iteritems()]
+    tips = (web.repo[n] for t, n in web.repo.branchtags().iteritems())
     parity = paritygen(web.stripecount)
 
     def entries(limit, **map):
         count = 0
-        for r, n, t in sorted(l):
+        for ctx in sorted(tips, key=lambda x: x.rev(), reverse=True):
             if limit > 0 and count >= limit:
                 return
             count += 1
             yield {'parity': parity.next(),
-                   'branch': t,
-                   'node': hex(n),
-                   'date': web.repo[n].date()}
+                   'branch': ctx.branch(),
+                   'node': ctx.hex(),
+                   'date': ctx.date()}
 
     return tmpl('branches', node=hex(web.repo.changelog.tip()),
                 entries=lambda **x: entries(0, **x),
