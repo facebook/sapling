@@ -35,7 +35,7 @@ class hgwebdir(object):
         elif isinstance(conf, dict):
             self.repos = sorted(cleannames(conf.items()))
         else:
-            self.ui.readconfig(conf, remap={'paths': 'hgweb-paths'})
+            self.ui.readconfig(conf, remap={'paths': 'hgweb-paths'}, trust=True)
             self.repos = []
 
         self.motd = self.ui.config('web', 'motd')
