@@ -1,6 +1,7 @@
 % Set up the repo
 adding da/foo
 adding foo
+marked working directory as branch stable
 % Logs and changes
 200 Script output follows
 
@@ -13,6 +14,22 @@ adding foo
  <title>test Changelog</title>
  <updated>1970-01-01T00:00:00+00:00</updated>
 
+ <entry>
+  <title>branch</title>
+  <id>http://127.0.0.1/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id>
+  <link href="http://127.0.0.1/rev/1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">branch</pre>
+   </div>
+  </content>
+ </entry>
  <entry>
   <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
   <id>http://127.0.0.1/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
@@ -58,6 +75,22 @@ adding foo
  <title>test Changelog</title>
  <updated>1970-01-01T00:00:00+00:00</updated>
 
+ <entry>
+  <title>branch</title>
+  <id>http://127.0.0.1/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id>
+  <link href="http://127.0.0.1/rev/1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe"/>
+  <author>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
+  </author>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <published>1970-01-01T00:00:00+00:00</published>
+  <content type="xhtml">
+   <div xmlns="http://127.0.0.1/1999/xhtml">
+    <pre xml:space="preserve">branch</pre>
+   </div>
+  </content>
+ </entry>
  <entry>
   <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
   <id>http://127.0.0.1/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
@@ -144,12 +177,13 @@ adding foo
 </div>
 <ul>
 <li class="active">log</li>
-<li><a href="/graph/a4f92ed23982">graph</a></li>
+<li><a href="/graph/1d22e65f027e">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
-<li><a href="/rev/a4f92ed23982">changeset</a></li>
-<li><a href="/file/a4f92ed23982">browse</a></li>
+<li><a href="/rev/1d22e65f027e">changeset</a></li>
+<li><a href="/file/1d22e65f027e">browse</a></li>
 </ul>
 <ul>
 
@@ -167,7 +201,7 @@ adding foo
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate">rev 1: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </div>
 
 <table class="bigtable">
  <tr>
@@ -178,9 +212,14 @@ files, or words in the commit message</div>
  <tr class="parity0">
   <td class="age">many years</td>
   <td class="author">test</td>
-  <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> <span class="tag">tip</span> </td>
+  <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> <span class="tag">tip</span> </td>
  </tr>
  <tr class="parity1">
+  <td class="age">many years</td>
+  <td class="author">test</td>
+  <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> </td>
+ </tr>
+ <tr class="parity0">
   <td class="age">many years</td>
   <td class="author">test</td>
   <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> </td>
@@ -188,7 +227,7 @@ files, or words in the commit message</div>
 
 </table>
 
-<div class="navigate">rev 1: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </div>
 </div>
 </div>
 
@@ -219,6 +258,7 @@ files, or words in the commit message</div>
  <li><a href="/shortlog/2ef0ac749a14">log</a></li>
  <li><a href="/graph/2ef0ac749a14">graph</a></li>
  <li><a href="/tags">tags</a></li>
+ <li><a href="/branches">branches</a></li>
 </ul>
 <ul>
  <li class="active">changeset</li>
@@ -345,6 +385,7 @@ drwxr-xr-x da
 <li><a href="/shortlog/a4f92ed23982">log</a></li>
 <li><a href="/graph/a4f92ed23982">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/a4f92ed23982">changeset</a></li>
@@ -387,7 +428,7 @@ files, or words in the commit message</div>
 </tr>
 <tr>
  <th class="author">children</th>
- <td class="author"></td>
+ <td class="author"><a href="/file/1d22e65f027e/foo">1d22e65f027e</a> </td>
 </tr>
 
 </table>
@@ -443,6 +484,57 @@ files, or words in the commit message</div>
 200 Script output follows
 
 <?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://127.0.0.1/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://127.0.0.1/1999/xhtml" xml:lang="en-US" lang="en-US">
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow"/>
+<link rel="stylesheet" href="/static/style-gitweb.css" type="text/css" />
+
+
+<title>test: Branches</title>
+<link rel="alternate" type="application/atom+xml"
+   href="/atom-tags" title="Atom feed for test"/>
+<link rel="alternate" type="application/rss+xml"
+   href="/rss-tags" title="RSS feed for test"/>
+</head>
+<body>
+
+<div class="page_header">
+<a href="http://127.0.0.1/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / branches
+</div>
+
+<div class="page_nav">
+<a href="/summary?style=gitweb">summary</a> |
+<a href="/shortlog?style=gitweb">shortlog</a> |
+<a href="/log?style=gitweb">changelog</a> |
+<a href="/graph?style=gitweb">graph</a> |
+<a href="/tags?style=gitweb">tags</a> |
+branches |
+<a href="/file/1d22e65f027e?style=gitweb">files</a>
+<br/>
+</div>
+
+<div class="title">&nbsp;</div>
+<table cellspacing="0">
+<tr class="parity0"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td><td>stable</td><td class="link"><a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> | <a href="/log/1d22e65f027e?style=gitweb">changelog</a> | <a href="/file/1d22e65f027e?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr>
+</table>
+
+<div class="page_footer">
+<div class="page_footer_text">test</div>
+<div class="rss_logo">
+<a href="/rss-log">RSS</a>
+<a href="/atom-log">Atom</a>
+</div>
+<br />
+
+</div>
+</body>
+</html>
+
+200 Script output follows
+
+<?xml version="1.0" encoding="ascii"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
 <head>
@@ -476,7 +568,8 @@ summary |
 <a href="/log?style=gitweb">changelog</a> |
 <a href="/graph?style=gitweb">graph</a> |
 <a href="/tags?style=gitweb">tags</a> |
-<a href="/file/a4f92ed23982?style=gitweb">files</a>
+<a href="/branches?style=gitweb">branches</a> |
+<a href="/file/1d22e65f027e?style=gitweb">files</a>
 <br/>
 </div>
 
@@ -489,7 +582,7 @@ summary |
 
 <div><a  class="title" href="/shortlog?style=gitweb">changes</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b> <span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a></td><td class="link" nowrap><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>base</b> <span class="logtags"><span class="tagtag" title="1.0">1.0</span> </span></a></td><td class="link" nowrap><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/file/2ef0ac749a14?style=gitweb">files</a></td></tr>
+<tr class="parity0"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>branch</b> <span class="logtags"><span class="branchtag" title="stable">stable</span> <span class="tagtag" title="tip">tip</span> </span></a></td><td class="link" nowrap><a href="/rev/1d22e65f027e?style=gitweb">changeset</a> | <a href="/file/1d22e65f027e?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b> <span class="logtags"><span class="branchtag" title="default">default</span> </span></a></td><td class="link" nowrap><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr><tr class="parity0"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>base</b> <span class="logtags"><span class="tagtag" title="1.0">1.0</span> </span></a></td><td class="link" nowrap><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/file/2ef0ac749a14?style=gitweb">files</a></td></tr>
 <tr class="light"><td colspan="4"><a class="list" href="/shortlog?style=gitweb">...</a></td></tr>
 </table>
 
@@ -501,7 +594,7 @@ summary |
 
 <div><a class="title" href="#">branches</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>many years ago</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr>
+<tr class="parity0"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td><td>stable</td><td class="link"><a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> | <a href="/log/1d22e65f027e?style=gitweb">changelog</a> | <a href="/file/1d22e65f027e?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr>
 <tr class="light">
   <td colspan="4"><a class="list"  href="#">...</a></td>
 </tr>
@@ -551,14 +644,15 @@ summary |
 <div class="page_nav">
 <a href="/summary?style=gitweb">summary</a> |
 <a href="/shortlog?style=gitweb">shortlog</a> |
-<a href="/log/1?style=gitweb">changelog</a> |
+<a href="/log/2?style=gitweb">changelog</a> |
 graph |
 <a href="/tags?style=gitweb">tags</a> |
-<a href="/file/a4f92ed23982?style=gitweb">files</a>
+<a href="/branches?style=gitweb">branches</a> |
+<a href="/file/1d22e65f027e?style=gitweb">files</a>
 <br/>
-<a href="/graph/1?style=gitweb&revcount=12">less</a>
-<a href="/graph/1?style=gitweb&revcount=50">more</a>
-| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-1</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+<a href="/graph/2?style=gitweb&revcount=12">less</a>
+<a href="/graph/2?style=gitweb&revcount=50">more</a>
+| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-2</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
 </div>
 
 <div class="title">&nbsp;</div>
@@ -567,7 +661,7 @@ graph |
 
 <div id="wrapper">
 <ul id="nodebgs"></ul>
-<canvas id="graph" width="224" height="90"></canvas>
+<canvas id="graph" width="224" height="129"></canvas>
 <ul id="graphnodes"></ul>
 </div>
 
@@ -575,7 +669,7 @@ graph |
 <script>
 <!-- hide script content
 
-var data = [["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "many years", ["default", true], ["tip"]], ["2ef0ac749a14", [0, 1], [], "base", "test", "many years", ["default", false], ["1.0"]]];
+var data = [["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "many years", ["stable", true], ["tip"]], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "many years", ["default", true], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "many years", ["default", false], ["1.0"]]];
 var graph = new Graph();
 graph.scale(39);
 
@@ -642,9 +736,9 @@ graph.render(data);
 </script>
 
 <div class="page_nav">
-<a href="/graph/1?style=gitweb&revcount=12">less</a>
-<a href="/graph/1?style=gitweb&revcount=50">more</a>
-| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-1</a> <a href="/graph/tip?style=gitweb">tip</a> 
+<a href="/graph/2?style=gitweb&revcount=12">less</a>
+<a href="/graph/2?style=gitweb&revcount=50">more</a>
+| <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-2</a> <a href="/graph/tip?style=gitweb">tip</a> 
 </div>
 
 <div class="page_footer">
@@ -665,7 +759,7 @@ graph.render(data);
 lookup changegroupsubset unbundle=HG10GZ,HG10BZ,HG10UN% heads
 200 Script output follows
 
-a4f92ed23982be056b9852de5dfe873eaac7f0de
+1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
 % lookup
 200 Script output follows
 
@@ -673,16 +767,14 @@ a4f92ed23982be056b9852de5dfe873eaac7f0de
 % branches
 200 Script output follows
 
-a4f92ed23982be056b9852de5dfe873eaac7f0de 2ef0ac749a14e4f57a5a822464a0902c6f7f448f 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000
+1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe 2ef0ac749a14e4f57a5a822464a0902c6f7f448f 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000
 % changegroup
 200 Script output follows
 
-xœ½S=hA^üáÉ¥-®ˆÅ<g÷öö4Ä(Ú…;!Âìß|à»B…`¢ &Vj¥F,ÄÊÎBÁJ1Z˜*MÒøŠ‡	bñÄ;¼€Eğ |0ÌÎ·óÍÌ.!äQ}ãYvoûÛÕs³ıîÁÂ‘æµS·IEëÁñ*h.|à’š@SĞšŠ`¦‰fA'
-dÊ¬
-I”ùVA‘Ã£¡ÙŒ
-D[>¿åããn}EÏ¾Ú=uw|}âÇÍ¡§o6Ö«ªŞ[* H`Š{¥ĞZæ„±Îs
-¨•.Pék1Ê“Yã9öÔ'6ZEl¨h3ÇÀ	ç¼‹ópLë‡æ¥ØNâÅ†où,f> ZÉ5R^ÙéşrfÿæØ½}ßçÎŞéªÚøÛ¯ÿhì¿†H˜wM‚a<<ñèóV=7LjK•Ñà\ôWÉyÅOj;®wæŞN}hÏÌ˜Şœ>ö®jCØHa´.ÁÄ¦|"î9Bk8¤Àh§X
-‰H£’Ø·E$äÖÒòÀ§ËÃ£#a~yø<y±zpç‡U‡ÛCßàïËô<¤STŒqÁ40+‚œ«P¼ƒ-må³Î=W_YZ<Ü×?ŸüÜm?¿òz~a­ª´{ßUüšÒ¯ıßrä'% stream_out
+xœ½TMHUA¾¨ùìÚ&*¸ˆ™¾fæÎ½wÆòaE[%˜Ì¯Œ÷À÷‚
+4KP2m•­*«EAPĞÂ2Zù¹j£›$¤MJ´Àš›O0ß¢†9gæ|çœïŒeY÷¢KOÒ·K~\né­w†«“Wß°r\Yî6(¢)ö•Æäz€RèkN˜çR¤©K@à!A´k§U*mØ’ÒÉ¤Âæ,¥Ì+ï¯Dgiï«·šç[WûcŞ-ÍçÊz³»Ó>c> "XÂ„@ÒçB*L PRÃ@ºB0Û8#ƒ:ƒ¢h¼=ÍÚSáY,LÓ ò¨”J:æØQàèd§#â,Ñ®R*í ¥¦bã;¾¯üK[^wKáN¯»kèBÑôÁ³«[ıkmvwcB¦¤ÔGÄDÂ1­‘ JË}î	î+WºŠ€|Ô Ö ÔTŞá,!âµ©4ãçÕŸËaaP¸fÍ_\9ñíäå¦ÑÒŸ§o®HóûïÿH3­k
+°’ˆ¹"8Â@ »Š)Ó'…9
+¨€„S ¥½-g`äÜÃH^ßâÀTMÇôBOÏŞ®å®#rM(K—`FsGD¹Á +Œ|ŸpÁ1ğ œJ‚<àŸÁĞõÈ>PrªêWõÄ®ÑüÏ'u±ÍHnCÌ`È &¬ñ|Œ$ÄŒ¢p`Ü €Ä×Rr-”2íi;ófñz†ÛØdåç‹õzp²ş¬õòÓşükwsít–bÕl…µ0„°  	_c¢Ã‰Zç–ù ÌNFgÇFªŠ+šœc_]z38<—+µ,",ÈÈ?\‘ÿ.~U–—õ%ŞN<õ—%ç^ÏLí~Ú–kÜ->†ƒ"–H¦ãªs=-ë7åÚ¼% stream_out
 200 Script output follows
 
 1

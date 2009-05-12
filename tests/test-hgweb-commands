@@ -13,6 +13,9 @@ echo foo > da/foo
 echo foo > foo
 hg ci -Ambase
 hg tag 1.0
+echo another > foo
+hg branch stable
+hg ci -Ambranch
 hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
@@ -33,6 +36,7 @@ echo % File-related
 
 echo % Overviews
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/tags/?style=atom' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/branches/?style=gitweb' | sed "s/http:\/\/[^/]*\//http:\/\/127.0.0.1\//"
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/summary/?style=gitweb'
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/?style=gitweb'
 
