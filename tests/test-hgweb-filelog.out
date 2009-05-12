@@ -486,6 +486,7 @@ a@6563da9dcf87: not found in manifest
 <a href="/shortlog?style=spartan">shortlog</a>
 <a href="/graph?style=spartan">graph</a>
 <a href="/tags?style=spartan">tags</a>
+<a href="/branches?style=spartan">branches</a>
 <a href="/file/38d962e6234d/c?style=spartan">file</a>
 <a href="/annotate/38d962e6234d/c?style=spartan">annotate</a>
 <a type="application/rss+xml" href="/rss-log/tip/c">rss</a>

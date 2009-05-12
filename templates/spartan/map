@@ -44,6 +44,8 @@ filerevchild = '<tr><td class="metatag">child:</td><td><a href="#url#file/#node|
 fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td></tr>'
 tags = tags.tmpl
 tagentry = '<li class="tagEntry parity#parity#"><tt class="node">#node#</tt> <a href="#url#rev/#node|short#{sessionvars%urlparameter}">#tag|escape#</a></li>'
+branches = branches.tmpl
+branchentry = '<li class="tagEntry parity#parity#"><tt class="node">#node#</tt> <a href="#url#shortlog/#node|short#{sessionvars%urlparameter}">#branch|escape#</a></li>'
 diffblock = '<pre class="parity#parity#">#lines#</pre>'
 changelogtag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
 changesettag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
