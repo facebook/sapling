@@ -105,6 +105,8 @@ class engine(object):
                         v = self.filters[f](v)
                 yield v
 
+engines = {'default': engine}
+
 class templater(object):
 
     def __init__(self, mapfile, filters={}, defaults={}, cache={},
@@ -121,6 +123,7 @@ class templater(object):
         self.filters.update(filters)
         self.defaults = defaults
         self.minchunk, self.maxchunk = minchunk, maxchunk
+        self.engines = {}
 
         if not mapfile:
             return
@@ -138,7 +141,10 @@ class templater(object):
                     raise SyntaxError('%s: %s' %
                                       (conf.source('', key), inst.args[0]))
             else:
-                self.map[key] = os.path.join(self.base, val)
+                val = 'default', val
+                if ':' in val[1]:
+                    val = val[1].split(':', 1)
+                self.map[key] = val[0], os.path.join(self.base, val[1])
 
     def __contains__(self, key):
         return key in self.cache or key in self.map
@@ -147,14 +153,19 @@ class templater(object):
         '''Get the template for the given template name. Use a local cache.'''
         if not t in self.cache:
             try:
-                self.cache[t] = file(self.map[t]).read()
+                self.cache[t] = open(self.map[t][1]).read()
             except IOError, inst:
                 raise IOError(inst.args[0], _('template file %s: %s') %
-                              (self.map[t], inst.args[1]))
+                              (self.map[t][1], inst.args[1]))
         return self.cache[t]
 
     def __call__(self, t, **map):
-        proc = engine(self.load, self.filters, self.defaults)
+        ttype = t in self.map and self.map[t][0] or 'default'
+        proc = self.engines.get(ttype)
+        if proc is None:
+            proc = engines[ttype](self.load, self.filters, self.defaults)
+            self.engines[ttype] = proc
+
         stream = proc.process(t, map)
         if self.minchunk:
             stream = util.increasingchunks(stream, min=self.minchunk,
