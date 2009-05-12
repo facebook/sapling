@@ -14,6 +14,8 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
+import util
+
 # Fixtures that need to be pulled at a subdirectory of the repo path
 subdir = {'truncatedhistory.svndump': '/project2',
           'fetch_missing_files_subdir.svndump': '/foo',
@@ -116,7 +118,7 @@ class TestBase(unittest.TestCase):
 
     def svnls(self, path, rev='HEAD'):
         path = self.repo_path + '/' + path
-        path = fileurl(path)
+        path = util.normalize_url(fileurl(path))
         args = ['svn', 'ls', '-r', rev, '-R', path]
         p = subprocess.Popen(args,
                              stdout=subprocess.PIPE,
