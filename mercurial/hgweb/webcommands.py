@@ -19,8 +19,8 @@ from mercurial import graphmod, util
 
 __all__ = [
    'log', 'rawfile', 'file', 'changelog', 'shortlog', 'changeset', 'rev',
-   'manifest', 'tags', 'summary', 'filediff', 'diff', 'annotate', 'filelog',
-   'archive', 'static', 'graph',
+   'manifest', 'tags', 'branches', 'summary', 'filediff', 'diff', 'annotate',
+   'filelog', 'archive', 'static', 'graph',
 ]
 
 def log(web, req, tmpl):
@@ -357,6 +357,26 @@ def tags(web, req, tmpl):
                 entries=lambda **x: entries(False,0, **x),
                 entriesnotip=lambda **x: entries(True,0, **x),
                 latestentry=lambda **x: entries(True,1, **x))
+
+def branches(web, req, tmpl):
+    b = web.repo.branchtags()
+    l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.iteritems()]
+    parity = paritygen(web.stripecount)
+
+    def entries(limit, **map):
+        count = 0
+        for r, n, t in sorted(l):
+            if limit > 0 and count >= limit:
+                return
+            count += 1
+            yield {'parity': parity.next(),
+                   'branch': t,
+                   'node': hex(n),
+                   'date': web.repo[n].date()}
+
+    return tmpl('branches', node=hex(web.repo.changelog.tip()),
+                entries=lambda **x: entries(0, **x),
+                latestentry=lambda **x: entries(1, **x))
 
 def summary(web, req, tmpl):
     i = web.repo.tagslist()
