@@ -240,6 +240,33 @@ def groupname(gid=None):
     If gid is None, return the name of the current group."""
     return None
 
+def _removedirs(name):
+    """special version of os.removedirs that does not remove symlinked
+    directories or junction points if they actually contain files"""
+    if osutil.listdir(name):
+        return
+    os.rmdir(name)
+    head, tail = os.path.split(name)
+    if not tail:
+        head, tail = os.path.split(head)
+    while head and tail:
+        try:
+            if osutil.listdir(name):
+                return
+            os.rmdir(head)
+        except:
+            break
+        head, tail = os.path.split(head)
+
+def unlink(f):
+    """unlink and remove the directory if it is empty"""
+    os.unlink(f)
+    # try removing directories that might now be empty
+    try:
+        _removedirs(os.path.dirname(f))
+    except OSError:
+        pass
+
 try:
     # override functions with win32 versions if possible
     from win32 import *
