@@ -22,3 +22,8 @@ adding b
 adding b.diff to series file
 applying b.diff
 now at: b.diff
+% try to import --push
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding another.diff to series file
+applying another.diff
+now at: another.diff

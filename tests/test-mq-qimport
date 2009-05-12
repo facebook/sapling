@@ -69,4 +69,10 @@ echo % qimport CRLF diff
 hg qimport b.diff
 hg qpush
 
-
+echo % try to import --push
+echo another >> b
+hg diff > another.diff
+hg up -C
+hg qimport --push another.diff
+hg qfin -a
+hg qimport -rtip -P

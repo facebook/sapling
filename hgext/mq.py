@@ -1693,6 +1693,9 @@ def qimport(ui, repo, *filename, **opts):
               existing=opts['existing'], force=opts['force'], rev=opts['rev'],
               git=opts['git'])
     q.save_dirty()
+
+    if opts.get('push') and not opts.get('rev'):
+        return q.push(repo, None)
     return 0
 
 def init(ui, repo, **opts):
@@ -2522,8 +2525,9 @@ cmdtable = {
           ('n', 'name', '', _('patch file name')),
           ('f', 'force', None, _('overwrite existing files')),
           ('r', 'rev', [], _('place existing revisions under mq control')),
-          ('g', 'git', None, _('use git extended diff format'))],
-         _('hg qimport [-e] [-n NAME] [-f] [-g] [-r REV]... FILE...')),
+          ('g', 'git', None, _('use git extended diff format')),
+          ('P', 'push', None, _('qpush after importing'))],
+         _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE...')),
     "^qinit":
         (init,
          [('c', 'create-repo', None, _('create queue repository'))],
