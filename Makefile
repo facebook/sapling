@@ -36,7 +36,7 @@ doc:
 	$(MAKE) -C doc
 
 clean:
-	-$(PYTHON) setup.py clean --all # ignore errors of this command
+	-$(PYTHON) setup.py clean --all # ignore errors from this command
 	find . -name '*.py[cdo]' -exec rm -f '{}' ';'
 	rm -f MANIFEST mercurial/__version__.py mercurial/*.so tests/*.err
 	rm -rf locale
