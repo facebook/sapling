@@ -42,6 +42,7 @@ foo
 <li><a href="/shortlog">log</a></li>
 <li><a href="/graph">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 </div>
 
@@ -111,6 +112,7 @@ error: bork@2ef0ac749a14: not found in manifest
 <li><a href="/shortlog">log</a></li>
 <li><a href="/graph">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 </div>
 

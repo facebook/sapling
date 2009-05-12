@@ -26,6 +26,7 @@ adding b
  <li><a href="/shortlog/0cd96de13884">log</a></li>
  <li><a href="/graph/0cd96de13884">graph</a></li>
  <li><a href="/tags">tags</a></li>
+ <li><a href="/branches">branches</a></li>
 </ul>
 <ul>
  <li class="active">changeset</li>
@@ -118,6 +119,7 @@ files, or words in the commit message</div>
 <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
 <li><a href="/graph/78e4ebad7cdf">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/78e4ebad7cdf">changeset</a></li>
@@ -206,6 +208,7 @@ files, or words in the commit message</div>
  <li><a href="/shortlog/0cd96de13884">log</a></li>
  <li><a href="/graph/0cd96de13884">graph</a></li>
  <li><a href="/tags">tags</a></li>
+ <li><a href="/branches">branches</a></li>
 </ul>
 <ul>
  <li class="active">changeset</li>
@@ -300,6 +303,7 @@ files, or words in the commit message</div>
 <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
 <li><a href="/graph/78e4ebad7cdf">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/78e4ebad7cdf">changeset</a></li>

@@ -24,6 +24,7 @@ adding a
  <li><a href="/shortlog/c78f6c5cbea9">log</a></li>
  <li><a href="/graph/c78f6c5cbea9">graph</a></li>
  <li><a href="/tags">tags</a></li>
+ <li><a href="/branches">branches</a></li>
 </ul>
 <ul>
  <li class="active">changeset</li>
@@ -112,6 +113,7 @@ files, or words in the commit message</div>
 <li><a href="/shortlog/c78f6c5cbea9">log</a></li>
 <li><a href="/graph/c78f6c5cbea9">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/c78f6c5cbea9">changeset</a></li>

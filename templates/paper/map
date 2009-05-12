@@ -56,6 +56,8 @@ changelogchild = '<tr><th class="child">child</th><td class="child"><a href="{ur
 fileannotatechild = '<tr><td class="metatag">child:</td><td><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td></tr>'
 tags = tags.tmpl
 tagentry = '<tr class="tagEntry parity{parity}"><td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{tag|escape}</a></td><td class="node">{node|short}</td></tr>'
+branches = branches.tmpl
+branchentry = '<tr class="tagEntry parity{parity}"><td><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{branch|escape}</a></td><td class="node">{node|short}</td></tr>'
 changelogtag = '<span class="tag">{name|escape}</span> '
 changesettag = '<span class="tag">{tag|escape}</span> '
 changelogbranchhead = '<span class="branchhead">{name|escape}</span> '

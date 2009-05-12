@@ -1,9 +1,9 @@
 {header}
-<title>{repo|escape}: tags</title>
+<title>{repo|escape}: branches</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-tags" title="Atom feed for {repo|escape}: tags" />
+   href="{url}atom-tags" title="Atom feed for {repo|escape}: branches" />
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-tags" title="RSS feed for {repo|escape}: tags" />
+   href="{url}rss-tags" title="RSS feed for {repo|escape}: branches" />
 </head>
 <body>
 
@@ -16,14 +16,14 @@
 <ul>
 <li><a href="{url}shortlog{sessionvars%urlparameter}">log</a></li>
 <li><a href="{url}graph{sessionvars%urlparameter}">graph</a></li>
-<li class="active">tags</li>
-<li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
+<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+<li class="active">branches</li>
 </ul>
 </div>
 
 <div class="main">
 <h2><a href="{url}{sessionvars%urlparameter}">{repo|escape}</a></h2>
-<h3>tags</h3>
+<h3>branches</h3>
 
 <form class="search" action="{url}log">
 {sessionvars%hiddenformentry}
@@ -34,10 +34,10 @@ files, or words in the commit message</div>
 
 <table class="bigtable">
 <tr>
- <th>tag</th>
+ <th>branch</th>
  <th>node</th>
 </tr>
-{entries%tagentry}
+{entries%branchentry}
 </table>
 </div>
 </div>

@@ -113,6 +113,7 @@ diff -r 000000000000 -r 6563da9dcf87 b
 <li><a href="/shortlog/01de2d66a28d">log</a></li>
 <li><a href="/graph/01de2d66a28d">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/01de2d66a28d">changeset</a></li>
@@ -195,6 +196,7 @@ files, or words in the commit message</div>
 <li><a href="/shortlog/01de2d66a28d">log</a></li>
 <li><a href="/graph/01de2d66a28d">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/01de2d66a28d">changeset</a></li>
@@ -277,6 +279,7 @@ files, or words in the commit message</div>
 <li><a href="/shortlog/5ed941583260">log</a></li>
 <li><a href="/graph/5ed941583260">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/5ed941583260">changeset</a></li>
@@ -354,6 +357,7 @@ files, or words in the commit message</div>
 <li><a href="/shortlog/5ed941583260">log</a></li>
 <li><a href="/graph/5ed941583260">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/5ed941583260">changeset</a></li>
@@ -427,6 +431,7 @@ files, or words in the commit message</div>
 <li><a href="/shortlog">log</a></li>
 <li><a href="/graph">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 </div>
 

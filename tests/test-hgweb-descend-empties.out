@@ -28,6 +28,7 @@ adding d1/d2/foo
 <li><a href="/shortlog/9087c84a0f5d">log</a></li>
 <li><a href="/graph/9087c84a0f5d">graph</a></li>
 <li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
 </ul>
 <ul>
 <li><a href="/rev/9087c84a0f5d">changeset</a></li>
