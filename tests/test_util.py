@@ -81,7 +81,8 @@ class TestBase(unittest.TestCase):
         self.hgrc = os.path.join(self.tmpdir, '.hgrc')
         os.environ['HGRCPATH'] = self.hgrc
         rc = open(self.hgrc, 'w')
-        rc.write('[extensions]\nhgsubversion=')
+        for l in '[extensions]', 'hgsubversion=':
+            print >> rc, l
 
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
@@ -91,13 +92,13 @@ class TestBase(unittest.TestCase):
         # instead. Using the regular UI class, with all stderr redirected to
         # stdout ensures that the test setup is much more similar to usage
         # setups.
-        self._ui_write_err = ui.ui.write_err
-        ui.ui.write_err = ui.ui.write
+        self.patch = (ui.ui.write_err, ui.ui.write)
+        setattr(ui.ui, self.patch[0].func_name, self.patch[1])
 
     def tearDown(self):
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
-        ui.ui.write_err = self._ui_write_err
+        setattr(ui.ui, self.patch[0].func_name, self.patch[0])
 
     def _load_fixture_and_fetch(self, fixture_name, subdir='', stupid=False):
         return load_fixture_and_fetch(fixture_name, self.repo_path,
