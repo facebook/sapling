@@ -165,7 +165,10 @@ class GitHandler(object):
     def export_git_objects(self):
         self.ui.status(_("exporting git objects\n"))
         total = len(self.repo.changelog)
-        magnitude = int(math.log(total, 10)) + 1 if total else 1
+        if total:
+          magnitude = int(math.log(total, 10)) + 1
+        else:
+          magnitude = 1
         for i, rev in enumerate(self.repo.changelog):
             if i%100 == 0:
                 self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
