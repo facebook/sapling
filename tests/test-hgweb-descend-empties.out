@@ -61,7 +61,43 @@ files, or words in the commit message</div>
   <td class="size"></td>
   <td class="permissions">drwxr-xr-x</td>
 </tr>
-<tr class="fileline parity1"><td class="name"><a href="/file/9087c84a0f5d/a1"><img src="/static/coal-folder.png" alt="dir."/> a1/</a> <a href="/file/9087c84a0f5d/a1/a2/a3/a4">a2/a3/a4</a></td><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr><tr class="fileline parity0"><td class="name"><a href="/file/9087c84a0f5d/b1"><img src="/static/coal-folder.png" alt="dir."/> b1/</a> <a href="/file/9087c84a0f5d/b1/b2">b2</a></td><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr><tr class="fileline parity1"><td class="name"><a href="/file/9087c84a0f5d/d1"><img src="/static/coal-folder.png" alt="dir."/> d1/</a> <a href="/file/9087c84a0f5d/d1/d2">d2</a></td><td class="size"></td><td class="permissions">drwxr-xr-x</td></tr>
+
+<tr class="fileline parity1">
+<td class="name">
+<a href="/file/9087c84a0f5d/a1">
+<img src="/static/coal-folder.png" alt="dir."/> a1/
+</a>
+<a href="/file/9087c84a0f5d/a1/a2/a3/a4">
+a2/a3/a4
+</a>
+</td>
+<td class="size"></td>
+<td class="permissions">drwxr-xr-x</td>
+</tr>
+<tr class="fileline parity0">
+<td class="name">
+<a href="/file/9087c84a0f5d/b1">
+<img src="/static/coal-folder.png" alt="dir."/> b1/
+</a>
+<a href="/file/9087c84a0f5d/b1/b2">
+b2
+</a>
+</td>
+<td class="size"></td>
+<td class="permissions">drwxr-xr-x</td>
+</tr>
+<tr class="fileline parity1">
+<td class="name">
+<a href="/file/9087c84a0f5d/d1">
+<img src="/static/coal-folder.png" alt="dir."/> d1/
+</a>
+<a href="/file/9087c84a0f5d/d1/d2">
+d2
+</a>
+</td>
+<td class="size"></td>
+<td class="permissions">drwxr-xr-x</td>
+</tr>
 
 </table>
 </div>
