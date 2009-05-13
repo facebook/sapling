@@ -118,6 +118,7 @@ class GitHandler(object):
 
     def export(self):
         self.export_git_objects()
+        self.export_hg_tags()
         self.update_references()
         self.save_map()
 
@@ -158,6 +159,9 @@ class GitHandler(object):
         c = self.map_git_get(hex(self.repo.changelog.tip()))
         self.git.set_ref('refs/heads/master', c)
 
+    def export_hg_tags(self):
+        pass
+        
     def export_git_objects(self):
         self.ui.status(_("exporting git objects\n"))
         total = len(self.repo.changelog)
@@ -465,6 +469,7 @@ class GitHandler(object):
             if not self.map_hg_get(csha): # it's already here
                 self.import_git_commit(commit)
             else:
+                # we need to get rename info for further upstream
                 self.pseudo_import_git_commit(commit)
                 
         self.update_hg_bookmarks(remote_name)
@@ -534,10 +539,6 @@ class GitHandler(object):
     
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
-        # TODO : find and use hg named branches
-        # TODO : add extra Git data (committer info) as extras to changeset
-
-        # TODO : (?) have to handle merge contexts at some point (two parent files, etc)
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
         
