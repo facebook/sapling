@@ -70,6 +70,17 @@ convert a foreign SCM repository to a Mercurial one.
     (in either the source or destination revision control system) that
     should be used as the new parents for that node.
 
+    The branchmap is a file that allows you to rename a branch when it is
+    being brought in from whatever external repository. When used in
+    conjunction with a splicemap, it allows for a powerful combination
+    to help fix even the most badly mismanaged repositories and turn them
+    into nicely structured Mercurial repositories. The branchmap contains
+    lines of the form "original_branch_name new_branch_name".
+    "original_branch_name" is the name of the branch in the source
+    repository, and "new_branch_name" is the name of the branch is the
+    destination repository. This can be used to (for instance) move code
+    in one repository from "default" to a named branch.
+
     Mercurial Source
     -----------------
 
@@ -197,6 +208,7 @@ options:
  -r --rev          import up to target revision REV
  -s --source-type  source repository type
     --splicemap    splice synthesized history into place
+    --branchmap    change branch names while converting
     --datesort     try to sort changesets by date
 
 use "hg -v help convert" to show global options

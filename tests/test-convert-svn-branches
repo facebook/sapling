@@ -24,10 +24,13 @@ fi
 svnurl=file://$svnpath/svn-repo
 
 echo % convert trunk and branches
-hg convert --datesort -r 10 $svnurl A-hg
+cat >branchmap <<EOF
+old3 newbranch
+EOF
+hg convert --branchmap=branchmap --datesort -r 10 $svnurl A-hg
 
 echo % convert again
-hg convert --datesort $svnurl A-hg
+hg convert --branchmap=branchmap --datesort $svnurl A-hg
 
 cd A-hg
 hg glog --template 'branch=#branches# #rev# #desc|firstline# files: #files#\n'

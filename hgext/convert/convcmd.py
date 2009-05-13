@@ -91,6 +91,7 @@ class converter(object):
             self.authorfile = self.dest.authorfile()
 
         self.splicemap = mapfile(ui, opts.get('splicemap'))
+        self.branchmap = mapfile(ui, opts.get('branchmap'))
 
     def walktree(self, heads):
         '''Return a mapping that identifies the uncommitted parents of every
@@ -225,6 +226,7 @@ class converter(object):
     def cachecommit(self, rev):
         commit = self.source.getcommit(rev)
         commit.author = self.authors.get(commit.author, commit.author)
+        commit.branch = self.branchmap.get(commit.branch, commit.branch)
         self.commitcache[rev] = commit
         return commit
 

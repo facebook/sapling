@@ -86,6 +86,17 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     (in either the source or destination revision control system) that
     should be used as the new parents for that node.
 
+    The branchmap is a file that allows you to rename a branch when it is
+    being brought in from whatever external repository. When used in
+    conjunction with a splicemap, it allows for a powerful combination
+    to help fix even the most badly mismanaged repositories and turn them
+    into nicely structured Mercurial repositories. The branchmap contains
+    lines of the form "original_branch_name new_branch_name".
+    "original_branch_name" is the name of the branch in the source
+    repository, and "new_branch_name" is the name of the branch is the
+    destination repository. This can be used to (for instance) move code
+    in one repository from "default" to a named branch.
+
     Mercurial Source
     -----------------
 
@@ -235,6 +246,7 @@ cmdtable = {
           ('r', 'rev', '', _('import up to target revision REV')),
           ('s', 'source-type', '', _('source repository type')),
           ('', 'splicemap', '', _('splice synthesized history into place')),
+          ('', 'branchmap', '', _('change branch names while converting')),
           ('', 'datesort', None, _('try to sort changesets by date'))],
          _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]')),
     "debugsvnlog":
