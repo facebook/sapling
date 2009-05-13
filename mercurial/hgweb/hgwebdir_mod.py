@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import os
+import os, time
 from mercurial.i18n import _
 from mercurial import ui, hg, util, templater
 from mercurial import error, encoding
@@ -20,22 +20,31 @@ def cleannames(items):
     return [(util.pconvert(name).strip('/'), path) for name, path in items]
 
 class hgwebdir(object):
+    refreshinterval = 20
 
     def __init__(self, conf, baseui=None):
+        self.conf = conf
+        self.baseui = baseui
+        self.lastrefresh = 0
+        self.refresh()
 
-        if baseui:
-            self.ui = baseui.copy()
+    def refresh(self):
+        if self.lastrefresh + self.refreshinterval > time.time():
+            return
+
+        if self.baseui:
+            self.ui = self.baseui.copy()
         else:
             self.ui = ui.ui()
             self.ui.setconfig('ui', 'report_untrusted', 'off')
             self.ui.setconfig('ui', 'interactive', 'off')
 
-        if isinstance(conf, (list, tuple)):
+        if isinstance(self.conf, (list, tuple)):
             self.repos = cleannames(conf)
-        elif isinstance(conf, dict):
-            self.repos = sorted(cleannames(conf.items()))
+        elif isinstance(self.conf, dict):
+            self.repos = sorted(cleannames(self.conf.items()))
         else:
-            self.ui.readconfig(conf, remap={'paths': 'hgweb-paths'}, trust=True)
+            self.ui.readconfig(self.conf, remap={'paths': 'hgweb-paths'}, trust=True)
             self.repos = []
 
         self.motd = self.ui.config('web', 'motd')
@@ -77,6 +86,7 @@ class hgwebdir(object):
                  self.repos.append((name.lstrip(os.sep), repo))
 
         self.repos.sort()
+        self.lastrefresh = time.time()
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
@@ -111,9 +121,9 @@ class hgwebdir(object):
         return False
 
     def run_wsgi(self, req):
-
         try:
             try:
+                self.refresh()
 
                 virtual = req.env.get("PATH_INFO", "").strip('/')
                 tmpl = self.templater(req)
@@ -245,6 +255,7 @@ class hgwebdir(object):
                     row['parity'] = parity.next()
                     yield row
 
+        self.refresh()
         sortable = ["name", "description", "contact", "lastchange"]
         sortcolumn, descending = sortdefault
         if 'sort' in req.form:
@@ -260,6 +271,7 @@ class hgwebdir(object):
                             and "-" or "", column))
                 for column in sortable]
 
+        self.refresh()
         if self._baseurl is not None:
             req.env['SCRIPT_NAME'] = self._baseurl
 
