@@ -690,9 +690,11 @@ class HgChangeReceiver(delta.Editor):
                 is_link = self.current_files_symlink.get(current_file, 'l' in flags)
                 if current_file in self.current_files:
                     data = self.current_files[current_file]
-                    if is_link:
-                        assert data.startswith('link ')
+                    if is_link and data.startswith('link '):
                         data = data[len('link '):]
+                    elif is_link:
+                        raise ValueError('file erronously marked as a link: '
+                                         '%s (%r)' % (current_file, flags))
                 else:
                     data = parent_ctx.filectx(path).data()
                 return context.memfilectx(path=path,
