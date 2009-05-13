@@ -35,7 +35,7 @@ filelogentry = filelogentry.tmpl
 
 annotateline = '<tr class="parity{parity}"><td class="annotate"><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}" title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a></td><td class="source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</td></tr>'
 
-diffblock = '<div class="source bottomline parity{parity}">{lines}</div>'
+diffblock = '<div class="source bottomline parity{parity}"><pre>{lines}</pre></div>'
 difflineplus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="plusline">{line|escape}</span>'
 difflineminus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="minusline">{line|escape}</span>'
 difflineat = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="atline">{line|escape}</span>'
