@@ -517,7 +517,27 @@ branches |
 
 <div class="title">&nbsp;</div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td><td>stable</td><td class="link"><a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> | <a href="/log/1d22e65f027e?style=gitweb">changelog</a> | <a href="/file/1d22e65f027e?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr>
+
+<tr class="parity0">
+<td class="age"><i>many years ago</i></td>
+<td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
+<td>stable</td>
+<td class="link">
+<a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> |
+<a href="/log/1d22e65f027e?style=gitweb">changelog</a> |
+<a href="/file/1d22e65f027e?style=gitweb">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i>many years ago</i></td>
+<td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
+<td>default</td>
+<td class="link">
+<a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> |
+<a href="/log/a4f92ed23982?style=gitweb">changelog</a> |
+<a href="/file/a4f92ed23982?style=gitweb">files</a>
+</td>
+</tr>
 </table>
 
 <div class="page_footer">
@@ -582,19 +602,90 @@ summary |
 
 <div><a  class="title" href="/shortlog?style=gitweb">changes</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>branch</b> <span class="logtags"><span class="branchtag" title="stable">stable</span> <span class="tagtag" title="tip">tip</span> </span></a></td><td class="link" nowrap><a href="/rev/1d22e65f027e?style=gitweb">changeset</a> | <a href="/file/1d22e65f027e?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b> <span class="logtags"><span class="branchtag" title="default">default</span> </span></a></td><td class="link" nowrap><a href="/rev/a4f92ed23982?style=gitweb">changeset</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr><tr class="parity0"><td class="age"><i>many years ago</i></td><td><i>test</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>base</b> <span class="logtags"><span class="tagtag" title="1.0">1.0</span> </span></a></td><td class="link" nowrap><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/file/2ef0ac749a14?style=gitweb">files</a></td></tr>
+
+<tr class="parity0">
+<td class="age"><i>many years ago</i></td>
+<td><i>test</i></td>
+<td>
+<a class="list" href="/rev/1d22e65f027e?style=gitweb">
+<b>branch</b>
+<span class="logtags"><span class="branchtag" title="stable">stable</span> <span class="tagtag" title="tip">tip</span> </span>
+</a>
+</td>
+<td class="link" nowrap>
+<a href="/rev/1d22e65f027e?style=gitweb">changeset</a> |
+<a href="/file/1d22e65f027e?style=gitweb">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i>many years ago</i></td>
+<td><i>test</i></td>
+<td>
+<a class="list" href="/rev/a4f92ed23982?style=gitweb">
+<b>Added tag 1.0 for changeset 2ef0ac749a14</b>
+<span class="logtags"><span class="branchtag" title="default">default</span> </span>
+</a>
+</td>
+<td class="link" nowrap>
+<a href="/rev/a4f92ed23982?style=gitweb">changeset</a> |
+<a href="/file/a4f92ed23982?style=gitweb">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i>many years ago</i></td>
+<td><i>test</i></td>
+<td>
+<a class="list" href="/rev/2ef0ac749a14?style=gitweb">
+<b>base</b>
+<span class="logtags"><span class="tagtag" title="1.0">1.0</span> </span>
+</a>
+</td>
+<td class="link" nowrap>
+<a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
+<a href="/file/2ef0ac749a14?style=gitweb">files</a>
+</td>
+</tr>
 <tr class="light"><td colspan="4"><a class="list" href="/shortlog?style=gitweb">...</a></td></tr>
 </table>
 
 <div><a class="title" href="/tags?style=gitweb">tags</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>many years ago</i></td><td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td><td class="link"><a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> | <a href="/log/2ef0ac749a14?style=gitweb">changelog</a> | <a href="/file/2ef0ac749a14?style=gitweb">files</a></td></tr>
+
+<tr class="parity0">
+<td class="age"><i>many years ago</i></td>
+<td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td>
+<td class="link">
+<a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
+<a href="/log/2ef0ac749a14?style=gitweb">changelog</a> |
+<a href="/file/2ef0ac749a14?style=gitweb">files</a>
+</td>
+</tr>
 <tr class="light"><td colspan="3"><a class="list" href="/tags?style=gitweb">...</a></td></tr>
 </table>
 
 <div><a class="title" href="#">branches</a></div>
 <table cellspacing="0">
-<tr class="parity0"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td><td>stable</td><td class="link"><a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> | <a href="/log/1d22e65f027e?style=gitweb">changelog</a> | <a href="/file/1d22e65f027e?style=gitweb">files</a></td></tr><tr class="parity1"><td class="age"><i>many years ago</i></td><td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td><td>default</td><td class="link"><a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> | <a href="/log/a4f92ed23982?style=gitweb">changelog</a> | <a href="/file/a4f92ed23982?style=gitweb">files</a></td></tr>
+
+<tr class="parity0">
+<td class="age"><i>many years ago</i></td>
+<td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
+<td>stable</td>
+<td class="link">
+<a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> |
+<a href="/log/1d22e65f027e?style=gitweb">changelog</a> |
+<a href="/file/1d22e65f027e?style=gitweb">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i>many years ago</i></td>
+<td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
+<td>default</td>
+<td class="link">
+<a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> |
+<a href="/log/a4f92ed23982?style=gitweb">changelog</a> |
+<a href="/file/a4f92ed23982?style=gitweb">files</a>
+</td>
+</tr>
 <tr class="light">
   <td colspan="4"><a class="list"  href="#">...</a></td>
 </tr>
