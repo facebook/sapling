@@ -9002,7 +9002,7 @@ msgid "could not create remote repo"
 msgstr ""
 
 msgid "remote: "
-msgstr "fjern: "
+msgstr "fjernsystem: "
 
 msgid "no suitable response from remote hg"
 msgstr ""
