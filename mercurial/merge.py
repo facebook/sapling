@@ -263,16 +263,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     return action
 
-def actioncmp(a1, a2):
-    m1 = a1[1]
-    m2 = a2[1]
-    if m1 == m2:
-        return cmp(a1, a2)
-    if m1 == 'r':
-        return -1
-    if m2 == 'r':
-        return 1
-    return cmp(a1, a2)
+def actionkey(a):
+    return a[1] == 'r' and -1 or 0, a
 
 def applyupdates(repo, action, wctx, mctx):
     "apply the merge action list to the working directory"
@@ -281,7 +273,7 @@ def applyupdates(repo, action, wctx, mctx):
     ms = mergestate(repo)
     ms.reset(wctx.parents()[0].node())
     moves = []
-    action.sort(actioncmp)
+    action.sort(key=actionkey)
 
     # prescan for merges
     for a in action:

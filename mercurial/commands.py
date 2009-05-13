@@ -1464,7 +1464,7 @@ def help_(ui, name=None, with_version=False):
         # description
         if not doc:
             doc = _("(no help text available)")
-        if callable(doc):
+        if hasattr(doc, '__call__'):
             doc = doc()
 
         ui.write("%s\n" % header)

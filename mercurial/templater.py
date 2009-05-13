@@ -89,7 +89,7 @@ class engine(object):
                 v = map[key]
             else:
                 v = self.defaults.get(key, "")
-            if callable(v):
+            if hasattr(v, '__call__'):
                 v = v(**map)
             if format:
                 if not hasattr(v, '__iter__'):

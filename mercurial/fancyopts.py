@@ -70,7 +70,7 @@ def fancyopts(args, options, state, gnu=False):
         # copy defaults to state
         if isinstance(default, list):
             state[name] = default[:]
-        elif callable(default):
+        elif hasattr(default, '__call__'):
             state[name] = None
         else:
             state[name] = default
