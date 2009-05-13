@@ -8,9 +8,17 @@
 from i18n import _
 import osutil, error
 import errno, msvcrt, os, re, sys
-nulldev = 'NUL:'
 
+nulldev = 'NUL:'
 umask = 002
+
+# wrap osutil.posixfile to provide friendlier exceptions
+def posixfile(name, mode='r', buffering=-1):
+    try:
+        return osutil.posixfile(name, mode, buffering)
+    except WindowsError, err:
+        raise WinIOError(err)
+posixfile.__doc__ = osutil.posixfile.__doc__
 
 class winstdout:
     '''stdout on windows misbehaves if sent through a pipe'''
@@ -270,20 +278,5 @@ def unlink(f):
 try:
     # override functions with win32 versions if possible
     from win32 import *
-    if not _is_win_9x():
-        posixfile = posixfile_nt
-        try:
-            # fast, buffered POSIX-like file support
-            from osutil import posixfile as _posixfile
-            def posixfile(name, mode='r', buffering=-1):
-                # wrap osutil.posixfile to provide friendlier exceptions
-                try:
-                    return _posixfile(name, mode, buffering)
-                except WindowsError, err:
-                    raise WinIOError(err)
-            posixfile.__doc__ = _posixfile.__doc__
-        except ImportError:
-            # slow, unbuffered POSIX-like file support
-            posixfile = posixfile_nt
 except ImportError:
-    posixfile = file
+    pass
