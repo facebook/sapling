@@ -17,63 +17,6 @@ import test_util
 import time
 
 
-class PushOverSvnserveTests(test_util.TestBase):
-    def setUp(self):
-        test_util.TestBase.setUp(self)
-        test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
-        open(os.path.join(self.repo_path, 'conf', 'svnserve.conf'),
-             'w').write('[general]\nanon-access=write\n[sasl]\n')
-        self.port = random.randint(socket.IPPORT_USERRESERVED, 65535)
-        self.host = 'localhost'
-        args = ['svnserve', '--daemon', '--foreground',
-                '--listen-port=%d' % self.port,
-                '--listen-host=%s' % self.host,
-                '--root=%s' % self.repo_path]
-        svnserve = subprocess.Popen(args, stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
-        self.svnserve_pid = svnserve.pid
-        time.sleep(2)
-        commands.clone(ui.ui(), 'svn://%s:%d/' % (self.host, self.port),
-                       self.wc_path, noupdate=True)
-
-    def tearDown(self):
-        os.kill(self.svnserve_pid, 9)
-        test_util.TestBase.tearDown(self)
-
-    def test_push_to_default(self, commit=True):
-        repo = self.repo
-        old_tip = repo['tip'].node()
-        expected_parent = repo['default'].node()
-        def file_callback(repo, memctx, path):
-            if path == 'adding_file':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
-            raise IOError()
-        ctx = context.memctx(repo,
-                             (repo['default'].node(), node.nullid),
-                             'automated test',
-                             ['adding_file'],
-                             file_callback,
-                             'an_author',
-                             '2008-10-07 20:59:48 -0500',
-                             {'branch': 'default',})
-        new_hash = repo.commitctx(ctx)
-        if not commit:
-            return # some tests use this test as an extended setup.
-        hg.update(repo, repo['tip'].node())
-        oldauthor = repo['tip'].user()
-        commands.push(repo.ui, repo)
-        tip = self.repo['tip']
-        self.assertNotEqual(oldauthor, tip.user())
-        self.assertNotEqual(tip.node(), old_tip)
-        self.assertEqual(tip.parents()[0].node(), expected_parent)
-        self.assertEqual(tip['adding_file'].data(), 'foo')
-        self.assertEqual(tip.branch(), 'default')
-
-
 class PushTests(test_util.TestBase):
     def setUp(self):
         test_util.TestBase.setUp(self)
@@ -106,6 +49,56 @@ class PushTests(test_util.TestBase):
         tip = self.repo['tip']
         self.assertEqual(tip.node(), old_tip)
 
+    def test_push_over_svnserve(self, commit=True):
+        test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
+        open(os.path.join(self.repo_path, 'conf', 'svnserve.conf'),
+             'w').write('[general]\nanon-access=write\n[sasl]\n')
+        self.port = random.randint(socket.IPPORT_USERRESERVED, 65535)
+        self.host = 'localhost'
+        args = ['svnserve', '--daemon', '--foreground',
+                '--listen-port=%d' % self.port,
+                '--listen-host=%s' % self.host,
+                '--root=%s' % self.repo_path]
+
+        self.svnserve_pid = subprocess.Popen(args).pid
+        try:
+            time.sleep(2)
+            commands.clone(ui.ui(), 'svn://%s:%d/' % (self.host, self.port),
+                           self.wc_path, noupdate=True)
+
+            repo = self.repo
+            old_tip = repo['tip'].node()
+            expected_parent = repo['default'].node()
+            def file_callback(repo, memctx, path):
+                if path == 'adding_file':
+                    return context.memfilectx(path=path,
+                                              data='foo',
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
+                raise IOError()
+            ctx = context.memctx(repo,
+                                 (repo['default'].node(), node.nullid),
+                                 'automated test',
+                                 ['adding_file'],
+                                 file_callback,
+                                 'an_author',
+                                 '2008-10-07 20:59:48 -0500',
+                                 {'branch': 'default',})
+            new_hash = repo.commitctx(ctx)
+            if not commit:
+                return # some tests use this test as an extended setup.
+            hg.update(repo, repo['tip'].node())
+            oldauthor = repo['tip'].user()
+            commands.push(repo.ui, repo)
+            tip = self.repo['tip']
+            self.assertNotEqual(oldauthor, tip.user())
+            self.assertNotEqual(tip.node(), old_tip)
+            self.assertEqual(tip.parents()[0].node(), expected_parent)
+            self.assertEqual(tip['adding_file'].data(), 'foo')
+            self.assertEqual(tip.branch(), 'default')
+        finally:
+            os.kill(self.svnserve_pid, 9)
 
     def test_push_to_default(self, commit=True):
         repo = self.repo
@@ -419,7 +412,7 @@ class PushTests(test_util.TestBase):
 
 
 def suite():
-    test_classes = [PushTests, PushOverSvnserveTests]
+    test_classes = [PushTests, ]
     tests = []
     # This is the quickest hack I could come up with to load all the tests from
     # both classes. Would love a patch that simplifies this without adding
