@@ -837,11 +837,12 @@ With a prefix argument, prompt for the path to add."
   (interactive "d")
   (save-excursion
     (goto-char pos)
-    (let ((face (get-text-property pos 'face))
+    (let (face
 	  (inhibit-read-only t)
 	  bol)
       (beginning-of-line)
       (setq bol (+ (point) 4))
+      (setq face (get-text-property bol 'face))
       (end-of-line)
       (if (eq face 'bold)
 	  (progn
