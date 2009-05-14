@@ -155,19 +155,19 @@ class changectx(object):
         return changectx(self._repo, n)
 
     def walk(self, match):
-        fdict = dict.fromkeys(match.files())
+        fset = set(match.files())
         # for dirstate.walk, files=['.'] means "walk the whole tree".
         # follow that here, too
-        fdict.pop('.', None)
+        fset.discard('.')
         for fn in self:
-            for ffn in fdict:
+            for ffn in fset:
                 # match if the file is the exact name or a directory
                 if ffn == fn or fn.startswith("%s/" % ffn):
-                    del fdict[ffn]
+                    fset.remove(ffn)
                     break
             if match(fn):
                 yield fn
-        for fn in sorted(fdict):
+        for fn in sorted(fset):
             if match.bad(fn, 'No such file in rev ' + str(self)) and match(fn):
                 yield fn
 
