@@ -62,7 +62,9 @@ abort: Permission denied .hg/store/00manifest.i
 checking changesets
 checking manifests
  manifest@?: rev 2 points to nonexistent changeset 2
+ manifest@?: 3362547cdf64 not in changesets
  manifest@?: rev 3 points to nonexistent changeset 3
+ manifest@?: 265a85892ecb not in changesets
 crosschecking files in changesets and manifests
  c@3: in manifest but not in changeset
 checking files
@@ -71,7 +73,7 @@ checking files
  c@?: rev 0 points to nonexistent changeset 3
 3 files, 2 changesets, 4 total revisions
 1 warnings encountered!
-5 integrity errors encountered!
+7 integrity errors encountered!
 (first damaged changeset appears to be 3)
 % journal contents
 00changelog.i

@@ -128,6 +128,8 @@ def _verify(repo):
         lr = checkentry(mf, i, n, seen, mflinkrevs.get(n, []), "manifest")
         if n in mflinkrevs:
             del mflinkrevs[n]
+        else:
+            err(lr, _("%s not in changesets") % short(n), "manifest")
 
         try:
             for f, fn in mf.readdelta(n).iteritems():
