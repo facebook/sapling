@@ -1051,7 +1051,7 @@ class localrepository(repo.repository):
             if parentworking and cmp:
                 fixup = []
                 # do a full compare of any files that might have changed
-                for f in cmp:
+                for f in sorted(cmp):
                     if (f not in ctx1 or ctx2.flags(f) != ctx1.flags(f)
                         or ctx1[f].cmp(ctx2[f].data())):
                         modified.append(f)
