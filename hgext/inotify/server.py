@@ -589,8 +589,6 @@ class server(object):
         cs = common.recvcs(sock)
         version = ord(cs.read(1))
 
-        sock.sendall(chr(common.version))
-
         if version != common.version:
             self.ui.warn(_('received query from incompatible client '
                            'version %d\n') % version)
@@ -638,7 +636,9 @@ class server(object):
 
         try:
             try:
-                sock.sendall(struct.pack(common.resphdrfmt,
+                v = chr(common.version)
+
+                sock.sendall(v + struct.pack(common.resphdrfmts['STAT'],
                                          *map(len, results)))
                 sock.sendall(''.join(results))
             finally:

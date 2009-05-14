@@ -10,8 +10,11 @@ import cStringIO, socket, struct
 
 version = 1
 
-resphdrfmt = '>llllllll'
-resphdrsize = struct.calcsize(resphdrfmt)
+resphdrfmts = {
+    'STAT': '>llllllll' # status requests
+}
+resphdrsizes = dict((k, struct.calcsize(v))
+                    for k, v in resphdrfmts.iteritems())
 
 def recvcs(sock):
     cs = cStringIO.StringIO()

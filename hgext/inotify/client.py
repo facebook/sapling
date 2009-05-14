@@ -46,8 +46,12 @@ def query(ui, repo, names, match, ignored, clean, unknown=True):
                   'version %d)\n') % version)
         return None
 
+    # only one type of request is supported for now
+    type = 'STAT'
+    hdrfmt = common.resphdrfmts[type]
+    hdrsize = common.resphdrsizes[type]
     try:
-        resphdr = struct.unpack(common.resphdrfmt, cs.read(common.resphdrsize))
+        resphdr = struct.unpack(hdrfmt, cs.read(hdrsize))
     except struct.error:
         return None
 
