@@ -476,6 +476,9 @@ class dirstate(object):
                 st = lstat(join(nf))
                 kind = getkind(st.st_mode)
                 if kind == dirkind:
+                    if nf in dmap:
+                        #file deleted on disc but still in dirstate
+                        results[nf] = None
                     if not dirignore(nf):
                         wadd(nf)
                 elif kind == regkind or kind == lnkkind:
@@ -488,14 +491,19 @@ class dirstate(object):
                 keep = False
                 prefix = nf + "/"
                 for fn in dmap:
-                    if nf == fn or fn.startswith(prefix):
+                    if nf == fn:
+                        if matchfn(nf):
+                            results[nf] = None
+                        keep = True
+                        break
+                    elif fn.startswith(prefix):
                         keep = True
                         break
                 if not keep:
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
                     elif badfn(ff, inst.strerror):
-                        if (nf in dmap or not ignore(nf)) and matchfn(nf):
+                        if nf not in results and not ignore(nf) and matchfn(nf):
                             results[nf] = None
 
         # step 2: visit subdirectories
