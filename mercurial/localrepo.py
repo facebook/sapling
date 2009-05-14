@@ -826,29 +826,29 @@ class localrepository(repo.repository):
         If working is set, the working directory is affected.
         """
 
-        lock = self.lock()
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
+        lock = None
+        commit = sorted(ctx.modified() + ctx.added())
+        remove = ctx.removed()
+        extra = ctx.extra().copy()
+        branchname = extra['branch']
+        user = ctx.user()
+        text = ctx.description()
+
+        p1, p2 = [p.node() for p in ctx.parents()]
+        c1 = self.changelog.read(p1)
+        c2 = self.changelog.read(p2)
+        m1 = self.manifest.read(c1[0]).copy()
+        m2 = self.manifest.read(c2[0])
+
+        xp1 = hex(p1)
+        if p2 == nullid: xp2 = ''
+        else: xp2 = hex(p2)
+        self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
+
+        lock = self.lock()
         try:
-            commit = sorted(ctx.modified() + ctx.added())
-            remove = ctx.removed()
-            extra = ctx.extra().copy()
-            branchname = extra['branch']
-            user = ctx.user()
-            text = ctx.description()
-
-            p1, p2 = [p.node() for p in ctx.parents()]
-            c1 = self.changelog.read(p1)
-            c2 = self.changelog.read(p2)
-            m1 = self.manifest.read(c1[0]).copy()
-            m2 = self.manifest.read(c2[0])
-
-            xp1 = hex(p1)
-            if p2 == nullid: xp2 = ''
-            else: xp2 = hex(p2)
-
-            self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
-
             tr = self.transaction()
             trp = weakref.proxy(tr)
 
