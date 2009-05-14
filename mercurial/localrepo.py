@@ -829,17 +829,12 @@ class localrepository(repo.repository):
         tr = lock = None
         valid = 0 # don't save the dirstate if this isn't set
         remove = ctx.removed()
-
-        p1, p2 = [p.node() for p in ctx.parents()]
-        c1 = self.changelog.read(p1)
-        c2 = self.changelog.read(p2)
-        m1 = self.manifest.read(c1[0]).copy()
-        m2 = self.manifest.read(c2[0])
+        p1, p2 = ctx.p1(), ctx.p2()
+        m1 = p1.manifest().copy()
+        m2 = p2.manifest()
         user = ctx.user()
 
-        xp1, xp2 = hex(p1), hex(p2)
-        if p2 == nullid:
-            xp2 = ''
+        xp1, xp2 = p1.hex(), p2 and p2.hex() or ''
         self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
 
         lock = self.lock()
@@ -884,8 +879,8 @@ class localrepository(repo.repository):
                 if f in m1:
                     del m1[f]
                     removed1.append(f)
-            mn = self.manifest.add(m1, trp, linkrev, c1[0], c2[0],
-                                   (new, removed1))
+            mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
+                                   p2.manifestnode(), (new, removed1))
 
             text = ctx.description()
             if editor:
@@ -897,7 +892,8 @@ class localrepository(repo.repository):
             text = '\n'.join(lines)
 
             self.changelog.delayupdate()
-            n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
+            n = self.changelog.add(mn, changed + removed, text, trp,
+                                   p1.node(), p2.node(),
                                    user, ctx.date(), ctx.extra().copy())
             p = lambda: self.changelog.writepending() and self.root or ""
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
