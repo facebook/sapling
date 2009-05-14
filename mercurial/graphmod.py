@@ -16,13 +16,10 @@ def graph(repo, start_rev, stop_rev):
     or equal to start_rev) and for each revision emits tuples with the
     following elements:
 
-      - Current node
-      - Column and color for the current node
+      - Context of the current node
+      - Tuple (col, color) with column and color index for the current node
       - Edges; a list of (col, next_col, color) indicating the edges between
         the current node and its parents.
-      - First line of the changeset description
-      - The changeset author
-      - The changeset date/time
     """
 
     if start_rev == nullrev and not stop_rev:
