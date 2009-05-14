@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _
-import os, sys, bisect, stat, errno
+import os, sys, bisect, stat, errno, re
 import mdiff, bdiff, util, templater, patch, error, encoding
 import match as _match
 
@@ -1252,6 +1252,7 @@ def commitforceeditor(repo, ctx, added, updated, removed):
     olddir = os.getcwd()
     os.chdir(repo.root)
     text = repo.ui.edit("\n".join(edittext), ctx.user())
+    text = re.sub("(?m)^HG:.*\n", "", text)
     os.chdir(olddir)
 
     if not text.strip():

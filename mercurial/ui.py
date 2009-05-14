@@ -324,7 +324,6 @@ class ui(object):
             f = open(name)
             t = f.read()
             f.close()
-            t = re.sub("(?m)^HG:.*\n", "", t)
         finally:
             os.unlink(name)
 
