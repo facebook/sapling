@@ -774,10 +774,9 @@ class localrepository(repo.repository):
             force = True
         if files:
             files = list(set(files))
-        try:
-            wlock = self.wlock()
-            lock = self.lock()
 
+        wlock = self.wlock()
+        try:
             p1, p2 = self.dirstate.parents()
 
             if (not force and p2 != nullid and
@@ -817,7 +816,7 @@ class localrepository(repo.repository):
             return r
 
         finally:
-            release(lock, wlock)
+            wlock.release()
 
     def commitctx(self, ctx):
         """Add a new revision to current repository.
@@ -825,15 +824,12 @@ class localrepository(repo.repository):
         Revision information is passed in the context.memctx argument.
         commitctx() does not touch the working directory.
         """
-        lock = self.lock()
-        try:
-            return self._commitctx(ctx, force=True, force_editor=False,
-                                   empty_ok=True, working=False)
-        finally:
-            lock.release()
+        return self._commitctx(ctx, force=True, force_editor=False,
+                               empty_ok=True, working=False)
 
     def _commitctx(self, ctx, force=False, force_editor=False, empty_ok=False,
                    working=True):
+        lock = self.lock()
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
         try:
@@ -958,6 +954,7 @@ class localrepository(repo.repository):
             if not valid: # don't save our updated dirstate
                 self.dirstate.invalidate()
             del tr
+            lock.release()
 
     def walk(self, match, node=None):
         '''
