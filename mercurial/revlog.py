@@ -1149,16 +1149,17 @@ class revlog(object):
         have this parent as it has all history before these
         changesets. parent is parent[0]
         """
-        revs = [self.rev(n) for n in nodelist]
 
         # if we don't have any revisions touched by these changesets, bail
-        if not revs:
+        if not nodelist:
             yield changegroup.closechunk()
             return
 
+        revs = [self.rev(n) for n in nodelist]
+
         # add the parent of the first rev
-        p = self.parents(self.node(revs[0]))[0]
-        revs.insert(0, self.rev(p))
+        p = self.parentrevs(revs[0])[0]
+        revs.insert(0, p)
 
         # build deltas
         for d in xrange(0, len(revs) - 1):
