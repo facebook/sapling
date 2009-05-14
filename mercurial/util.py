@@ -15,7 +15,7 @@ platform-specific details from the core.
 from i18n import _
 import cStringIO, errno, getpass, re, shutil, sys, tempfile, traceback, error
 import os, stat, threading, time, calendar, ConfigParser, locale, glob, osutil
-import imp, unicodedata
+import imp, unicodedata, random
 
 # Python compatibility
 
