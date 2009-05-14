@@ -113,13 +113,16 @@ class GitHandler(object):
 
     ## END FILE LOAD AND SAVE METHODS
 
+    def import_commits(self, remote_name):
+        self.import_git_objects(remote_name)
+        self.save_map()
+
     def fetch(self, remote_name):
         self.ui.status(_("fetching from : %s\n") % remote_name)
         self.export_git_objects()
         refs = self.fetch_pack(remote_name)
         if refs:
-            self.import_git_objects(remote_name)
-        self.save_map()
+            self.import_commits(remote_name)
 
     def export_commits(self):
         self.export_git_objects()
@@ -435,17 +438,18 @@ class GitHandler(object):
             f.close()
             raise
 
-    def import_git_objects(self, remote_name):
+    def import_git_objects(self, remote_name=None):
         self.ui.status(_("importing Git objects into Hg\n"))
         # import heads as remote references
         todo = []
         done = set()
         convert_list = {}
         self.renames = {}
-        
-        # get a list of all the head shas
-        for head, sha in self.git.remote_refs(remote_name).iteritems():
-            todo.append(sha)
+
+        if remote_name:
+            todo = self.git.remote_refs(remote_name).values()[:]
+        else:
+            todo = self.git.heads().values()[:]
 
         # traverse the heads getting a list of all the unique commits
         while todo:
