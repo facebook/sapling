@@ -172,7 +172,7 @@ def stripdir(text):
         return dir
 
 def nonempty(str):
-  return str or "(none)"
+    return str or "(none)"
 
 filters = {
     "addbreaks": nl2br,
