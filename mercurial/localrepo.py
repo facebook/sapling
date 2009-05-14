@@ -830,15 +830,13 @@ class localrepository(repo.repository):
         Revision information is passed in the context.memctx argument.
         commitctx() does not touch the working directory.
         """
-        wlock = lock = None
+        lock = self.lock()
         try:
-            wlock = self.wlock()
-            lock = self.lock()
             return self._commitctx(ctx, force=True, force_editor=False,
                                    empty_ok=True, use_dirstate=False,
                                    update_dirstate=False)
         finally:
-            release(lock, wlock)
+            lock.release()
 
     def _commitctx(self, wctx, force=False, force_editor=False, empty_ok=False,
                   use_dirstate=True, update_dirstate=True):
