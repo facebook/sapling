@@ -2025,7 +2025,7 @@ def manifest(ui, repo, node=None, rev=None):
             ui.write(decor[ctx.flags(f)])
         ui.write("%s\n" % f)
 
-def merge(ui, repo, node=None, force=None, rev=None):
+def merge(ui, repo, node=None, **opts):
     """merge working directory with another revision
 
     The contents of the current working directory is updated with all
@@ -2042,10 +2042,10 @@ def merge(ui, repo, node=None, force=None, rev=None):
     explicit revision to merge with must be provided.
     """
 
-    if rev and node:
+    if opts.get('rev') and node:
         raise util.Abort(_("please specify just one revision"))
     if not node:
-        node = rev
+        node = opts.get('rev')
 
     if not node:
         branch = repo.changectx(None).branch()
@@ -2070,7 +2070,18 @@ def merge(ui, repo, node=None, force=None, rev=None):
             raise util.Abort(_('working dir not at a head rev - '
                                'use "hg update" or merge with an explicit rev'))
         node = parent == bheads[0] and bheads[-1] or bheads[0]
-    return hg.merge(repo, node, force=force)
+
+    if opts.get('show'):
+        p1 = repo['.']
+        p2 = repo[node]
+        common = p1.ancestor(p2)
+        roots, heads = [common.node()], [p2.node()]
+        displayer = cmdutil.show_changeset(ui, repo, opts)
+        for node in repo.changelog.nodesbetween(roots=roots, heads=heads)[0]:
+        	displayer.show(repo[node])
+        return 0
+
+    return hg.merge(repo, node, force=opts.get('force'))
 
 def outgoing(ui, repo, dest=None, **opts):
     """show changesets not found in destination
@@ -3324,7 +3335,8 @@ table = {
         (merge,
          [('f', 'force', None, _('force a merge with outstanding changes')),
           ('r', 'rev', '', _('revision to merge')),
-             ],
+          ('S', 'show', None,
+           _('review revisions to merge (no merge is performed)'))],
          _('[-f] [[-r] REV]')),
     "outgoing|out":
         (outgoing,

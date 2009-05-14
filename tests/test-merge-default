@@ -31,6 +31,7 @@ hg merge 2
 hg commit -mm1
 
 echo % should succeed - 2 heads
+hg merge -S
 hg merge
 hg commit -mm2
 

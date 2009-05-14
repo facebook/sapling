@@ -1,6 +1,16 @@
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 created new head
 %% no merges expected
+changeset:   0:98e00378acd0
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     commit #0
+
+changeset:   1:4ee19afe4659
+user:        test
+date:        Mon Jan 12 13:46:40 1970 +0000
+summary:     commit #1
+
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 diff -r d9e5953b9dec b

@@ -20,6 +20,7 @@ hg cat foo >> foo
 hg ci -m 'change foo' -d "1000000 0"
 
 # we get conflicts that shouldn't be there
+hg merge -S
 hg merge --debug
 
 echo "-- foo --"
