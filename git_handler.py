@@ -50,7 +50,12 @@ class GitHandler(object):
         self.ui = ui
         self.mapfile = 'git-mapfile'
         self.configfile = 'git-config'
-        self.gitdir = self.repo.join('git')
+
+        if ui.config('git', 'intree'):
+            self.gitdir = self.repo.wjoin('.git')
+        else:
+            self.gitdir = self.repo.join('git')
+
         self.init_if_missing()
         self.load_git()
         self.load_map()
