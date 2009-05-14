@@ -747,6 +747,9 @@ class memctx(object):
     def __nonzero__(self):
         return True
 
+    def __getitem__(self, key):
+        return self.filectx(key)
+
     def user(self): return self._user or self._repo.ui.username()
     def date(self): return self._date
     def description(self): return self._text

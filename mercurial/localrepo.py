@@ -705,7 +705,7 @@ class localrepository(repo.repository):
         self._wlockref = weakref.ref(l)
         return l
 
-    def filecommit(self, fctx, manifest1, manifest2, linkrev, tr, changelist):
+    def _filecommit(self, fctx, manifest1, manifest2, linkrev, tr, changelist):
         """
         commit an individual file as part of a larger transaction
         """
@@ -714,7 +714,7 @@ class localrepository(repo.repository):
         text = fctx.data()
         flog = self.file(fname)
         fparent1 = manifest1.get(fname, nullid)
-        fparent2 = manifest2.get(fname, nullid)
+        fparent2 = fparent2o = manifest2.get(fname, nullid)
 
         meta = {}
         copy = fctx.renamed()
@@ -769,12 +769,16 @@ class localrepository(repo.repository):
             elif fparentancestor == fparent2:
                 fparent2 = nullid
 
-        # is the file unmodified from the parent? report existing entry
-        if fparent2 == nullid and not flog.cmp(fparent1, text) and not meta:
-            return fparent1
+        # is the file changed?
+        if fparent2 != nullid or flog.cmp(fparent1, text) or meta:
+            changelist.append(fname)
+            return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
 
-        changelist.append(fname)
-        return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
+        # are just the flags changed during merge?
+        if fparent1 !=  fparent2o and manifest1.flags(fname) != fctx.flags():
+            changelist.append(fname)
+
+        return fparent1
 
     def commit(self, files=None, text="", user=None, date=None,
                match=None, force=False, force_editor=False,
@@ -877,17 +881,10 @@ class localrepository(repo.repository):
             for f in commit:
                 self.ui.note(f + "\n")
                 try:
-                    fctx = ctx.filectx(f)
-                    newflags = fctx.flags()
-                    new[f] = self.filecommit(fctx, m1, m2, linkrev, trp, changed)
-                    if ((not changed or changed[-1] != f) and
-                        m2.get(f) != new[f]):
-                        # mention the file in the changelog if some
-                        # flag changed, even if there was no content
-                        # change.
-                        if m1.flags(f) != newflags:
-                            changed.append(f)
-                    m1.set(f, newflags)
+                    fctx = ctx[f]
+                    new[f] = self._filecommit(fctx, m1, m2, linkrev, trp,
+                                              changed)
+                    m1.set(f, fctx.flags())
                     if working:
                         self.dirstate.normal(f)
 
