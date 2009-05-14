@@ -101,6 +101,14 @@ class changectx(object):
         """return contexts for each parent changeset"""
         return self._parents
 
+    def p1(self):
+        return self._parents[0]
+
+    def p2(self):
+        if len(self._parents) == 2:
+            return self._parents[1]
+        return changectx(self._repo, -1)
+
     def children(self):
         """return contexts for each child changeset"""
         c = self._repo.changelog.children(self._node)
@@ -750,6 +758,9 @@ class memctx(object):
     def __getitem__(self, key):
         return self.filectx(key)
 
+    def p1(self): return self._parents[0]
+    def p2(self): return self._parents[1]
+
     def user(self): return self._user or self._repo.ui.username()
     def date(self): return self._date
     def description(self): return self._text
@@ -800,4 +811,3 @@ class memfilectx(object):
     def isexec(self): return 'x' in self._flags
     def islink(self): return 'l' in self._flags
     def renamed(self): return self._copied
-
