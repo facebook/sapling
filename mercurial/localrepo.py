@@ -814,6 +814,14 @@ class localrepository(repo.repository):
                                       extra, changes)
             ret = self.commitctx(wctx, editor, True)
             ms.reset()
+
+            # update dirstate
+            for f in changes[0] + changes[1]:
+                self.dirstate.normal(f)
+            for f in changes[2]:
+                self.dirstate.forget(f)
+            self.dirstate.setparents(ret)
+
             return ret
 
         finally:
@@ -821,7 +829,7 @@ class localrepository(repo.repository):
                 self.dirstate.invalidate() # didn't successfully commit
             wlock.release()
 
-    def commitctx(self, ctx, editor=None, working=False):
+    def commitctx(self, ctx, editor=None, error=False):
         """Add a new revision to current repository.
 
         Revision information is passed via the context argument.
@@ -855,11 +863,8 @@ class localrepository(repo.repository):
                     new[f] = self._filecommit(fctx, m1, m2, linkrev, trp,
                                               changed)
                     m1.set(f, fctx.flags())
-                    if working:
-                        self.dirstate.normal(f)
-
                 except (OSError, IOError):
-                    if working:
+                    if error:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
                     else:
@@ -905,11 +910,6 @@ class localrepository(repo.repository):
 
             if self.branchcache:
                 self.branchtags()
-
-            if working:
-                self.dirstate.setparents(n)
-                for f in removed:
-                    self.dirstate.forget(f)
 
             self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
             return n
