@@ -219,7 +219,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                                        "lookup and so doesn't support clone by "
                                        "revision"))
                 revs = [src_repo.lookup(r) for r in rev]
-
+                checkout = revs[0]
             if dest_repo.local():
                 dest_repo.clone(src_repo, heads=revs, stream=stream)
             elif src_repo.local():

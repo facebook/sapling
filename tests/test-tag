@@ -1,6 +1,8 @@
 #!/bin/sh
 
-hg init
+hg init test
+cd test
+
 echo a > a
 hg add a
 hg commit -m "test" -d "1000000 0"
@@ -38,6 +40,17 @@ hg tag -l 'xx
 newline'
 hg tag -l 'xx:xx'
 
+echo % cloning local tags
+cd ..
+hg -R test log -r0:5
+hg clone -q -rbleah1 test test1
+hg -R test1 parents --style=compact
+hg clone -q -r5 test#bleah1 test2
+hg -R test2 parents --style=compact
+hg clone -q -U test#bleah1 test3
+hg -R test3 parents --style=compact
+
+cd test
 echo % issue 601
 python << EOF
 f = file('.hg/localtags'); last = f.readlines()[-1][:-1]; f.close()
