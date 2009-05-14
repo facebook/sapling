@@ -2020,12 +2020,12 @@ class localrepository(repo.repository):
             trp = weakref.proxy(tr)
             # pull off the changeset group
             self.ui.status(_("adding changesets\n"))
-            cor = len(cl) - 1
+            clstart = len(cl)
             chunkiter = changegroup.chunkiter(source)
             if cl.addgroup(chunkiter, csmap, trp) is None and not emptyok:
                 raise util.Abort(_("received changelog group is empty"))
-            cnr = len(cl) - 1
-            changesets = cnr - cor
+            clend = len(cl)
+            changesets = clend - clstart
 
             # pull off the manifest group
             self.ui.status(_("adding manifests\n"))
@@ -2063,7 +2063,7 @@ class localrepository(repo.repository):
             if changesets > 0:
                 p = lambda: cl.writepending() and self.root or ""
                 self.hook('pretxnchangegroup', throw=True,
-                          node=hex(cl.node(cor+1)), source=srctype,
+                          node=hex(cl.node(clstart)), source=srctype,
                           url=url, pending=p)
 
             # make changelog see real files again
@@ -2077,10 +2077,10 @@ class localrepository(repo.repository):
             # forcefully update the on-disk branch cache
             self.ui.debug(_("updating the branch cache\n"))
             self.branchtags()
-            self.hook("changegroup", node=hex(cl.node(cor+1)),
+            self.hook("changegroup", node=hex(cl.node(clstart)),
                       source=srctype, url=url)
 
-            for i in xrange(cor + 1, cnr + 1):
+            for i in xrange(clstart, clend):
                 self.hook("incoming", node=hex(cl.node(i)),
                           source=srctype, url=url)
 
