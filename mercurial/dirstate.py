@@ -533,7 +533,7 @@ class dirstate(object):
                         results[nf] = None
 
         # step 3: report unseen items in the dmap hash
-        visit = sorted([f for f in dmap if f not in results and match(f)])
+        visit = sorted([f for f in dmap if f not in results and matchfn(f)])
         for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
             if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
                 st = None
