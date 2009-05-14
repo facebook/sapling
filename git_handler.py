@@ -465,7 +465,11 @@ class GitHandler(object):
         commits = toposort.TopoSort(convert_list).items()
         
         # import each of the commits, oldest first
-        for csha in commits:
+        total = len(commits)
+        magnitude = int(math.log(total, 10)) + 1 if total else 1
+        for i, csha in enumerate(commits):
+            if i%100 == 0:
+                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
             commit = convert_list[csha]
             if not self.map_hg_get(csha): # it's already here
                 self.import_git_commit(commit)
