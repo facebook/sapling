@@ -811,22 +811,21 @@ class localrepository(repo.repository):
                                                     "(see hg resolve)"))
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            r = self._commitctx(wctx, force, editor, True)
+            r = self.commitctx(wctx, editor, True)
             ms.reset()
             return r
 
         finally:
             wlock.release()
 
-    def commitctx(self, ctx):
+    def commitctx(self, ctx, editor=None, working=False):
         """Add a new revision to current repository.
 
-        Revision information is passed in the context.memctx argument.
-        commitctx() does not touch the working directory.
+        Revision information is passed via the context argument.
+        If editor is supplied, it is called to get a commit message.
+        If working is set, the working directory is affected.
         """
-        return self._commitctx(ctx, force=True, editor=None, working=False)
 
-    def _commitctx(self, ctx, force=False, editor=None, working=True):
         lock = self.lock()
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
