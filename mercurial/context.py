@@ -85,6 +85,7 @@ class changectx(object):
 
     def changeset(self): return self._changeset
     def manifest(self): return self._manifest
+    def manifestnode(self): return self._changeset[0]
 
     def rev(self): return self._rev
     def node(self): return self._node
