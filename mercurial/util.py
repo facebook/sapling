@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil
 import cStringIO, errno, re, shutil, sys, tempfile, traceback
-import os, stat, threading, time, calendar, glob, random
+import os, stat, time, calendar, glob, random
 import imp
 
 # Python compatibility

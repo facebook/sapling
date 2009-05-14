@@ -12,7 +12,7 @@ from mercurial.node import short, hex
 from mercurial.util import binary
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
-from mercurial import graphmod, util
+from mercurial import graphmod
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.

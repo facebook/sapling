@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, bisect, stat, errno
-import mdiff, bdiff, util, templater, templatefilters, patch, error, encoding
+import mdiff, bdiff, util, templater, patch, error, encoding
 import match as _match
 
 revrangesep = ':'

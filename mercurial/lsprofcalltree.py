@@ -10,10 +10,6 @@ This software may be used and distributed according to the terms
 of the GNU General Public License, incorporated herein by reference.
 """
 
-import optparse
-import os
-import sys
-
 def label(code):
     if isinstance(code, str):
         return '~' + code    # built-in functions ('~' sorts at the end)

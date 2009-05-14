@@ -6,7 +6,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import mdiff, parsers, util, error, revlog
+import mdiff, parsers, error, revlog
 import array, struct
 
 class manifestdict(dict):

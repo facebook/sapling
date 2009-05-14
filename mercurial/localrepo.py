@@ -9,7 +9,7 @@ from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup
 import changelog, dirstate, filelog, manifest, context
-import lock, transaction, ui, store, encoding
+import lock, transaction, store, encoding
 import util, extensions, hook, error
 import match as match_
 import merge as merge_

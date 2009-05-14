@@ -6,7 +6,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 import cgi, re, os, time, urllib, textwrap
-import util, templater, encoding
+import util, encoding
 
 def stringify(thing):
     '''turn nested template iterator into string.'''
