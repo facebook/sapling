@@ -23,8 +23,7 @@ setup(
     long_description = open(os.path.join(os.path.dirname(__file__),
                                          'README')).read(),
     keywords = 'mercurial',
-    packages = ['hgext.hgsubversion', 'hgext.hgsubversion.svnwrap'],
-    package_dir = {'hgext.hgsubversion': ''},
+    packages = ['hgsubversion', 'hgsubversion.svnwrap'],
     platforms = 'any',
     classifiers = [
         'License :: OSI Approved :: GNU General Public License (GPL)',

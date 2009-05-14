@@ -14,7 +14,7 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
-import util
+from hgsubversion import util
 
 # Fixtures that need to be pulled at a subdirectory of the repo path
 subdir = {'truncatedhistory.svndump': '/project2',
@@ -50,7 +50,7 @@ def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdi
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
-    
+
     _ui = ui.ui()
     _ui.setconfig('hgsubversion', 'stupid', str(stupid))
     commands.clone(_ui, fileurl(repo_path), wc_path, noupdate=noupdate)

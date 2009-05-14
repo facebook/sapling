@@ -2,7 +2,7 @@ import unittest
 
 from mercurial import ui
 
-import wrappers
+from hgsubversion import wrappers
 
 import test_util
 

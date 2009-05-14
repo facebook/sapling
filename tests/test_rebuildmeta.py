@@ -5,8 +5,8 @@ import unittest
 from mercurial import hg
 from mercurial import ui
 
-import svncommands
-import hg_delta_editor
+from hgsubversion import svncommands
+from hgsubversion import hg_delta_editor
 
 import test_util
 

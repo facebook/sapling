@@ -74,10 +74,10 @@ class TestFetchBranches(test_util.TestBase):
                                             stupid, noupdate=False)
         self.assertEqual(repo[None].branch(), 'default')
         self.assertTrue('tip' not in repo[None].tags())
-    
+
     def test_branch_tip_update_to_default_stupid(self):
         self.test_branch_tip_update_to_default(True)
-    
+
     def test_branch_tip_update_to_branch_anchor(self):
         repo = self._load_fixture_and_fetch_with_anchor(
             'unorderedbranch.svndump', 'branch')

@@ -6,7 +6,7 @@ from mercurial import ui
 
 import test_util
 
-import svnrepo
+from hgsubversion import svnrepo
 
 class TestTags(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name, stupid=False):

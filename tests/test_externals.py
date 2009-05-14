@@ -2,7 +2,7 @@ import os, unittest
 
 from mercurial import commands
 
-import svnexternals
+from hgsubversion import svnexternals
 import test_util
 
 class TestFetchExternals(test_util.TestBase):
@@ -47,7 +47,7 @@ class TestFetchExternals(test_util.TestBase):
             ('http://svn.example.com/skin-maker@21 third-party/skins/toolkit',
              ('third-party/skins/toolkit', None, 'http://svn.example.com/skin-maker', '21')),
             ]
-        
+
         for line, expected in samples:
             self.assertEqual(expected, svnexternals.parsedefinition(line))
 
@@ -106,7 +106,7 @@ class TestFetchExternals(test_util.TestBase):
             svnexternals.updateexternals(ui, [rev], repo)
             for d in deps:
                 p = os.path.join(repo.root, d)
-                self.assertTrue(os.path.isdir(p), 
+                self.assertTrue(os.path.isdir(p),
                                 'missing: %s@%r' % (d, rev))
             for d in nodeps:
                 p = os.path.join(repo.root, d)
@@ -118,10 +118,10 @@ class TestFetchExternals(test_util.TestBase):
         commands.update(ui, repo)
         checkdeps(['deps/project1'], [], repo, 0)
         checkdeps(['deps/project1', 'deps/project2'], [], repo, 1)
-        checkdeps(['subdir/deps/project1', 'subdir2/deps/project1', 
-                   'deps/project2'], 
+        checkdeps(['subdir/deps/project1', 'subdir2/deps/project1',
+                   'deps/project2'],
                   ['deps/project1'], repo, 2)
-        checkdeps(['subdir/deps/project1', 'deps/project2'], 
+        checkdeps(['subdir/deps/project1', 'deps/project2'],
                   ['subdir2/deps/project1'], repo, 3)
         checkdeps(['subdir/deps/project1'], ['deps/project2'], repo, 4)
 

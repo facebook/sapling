@@ -63,6 +63,8 @@ class PushTests(test_util.TestBase):
         self.svnserve_pid = subprocess.Popen(args).pid
         try:
             time.sleep(2)
+            import shutil
+            shutil.rmtree(self.wc_path)
             commands.clone(ui.ui(), 'svn://%s:%d/' % (self.host, self.port),
                            self.wc_path, noupdate=True)
 

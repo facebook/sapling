@@ -87,14 +87,14 @@ def uisetup(ui):
                  'name mapping used for sources)'),
                 ('T', 'tagpaths', ['tags'], 'list of paths to search for tags '
                  'in Subversion repositories.'))
-    extname = __package__.split('_')[-1]
+    extname = 'hgsubversion'
 
     for command in ['clone']:
         doc = wrapper.__doc__.strip() % { 'extension': extname }
         getattr(commands, command).__doc__ += doc
         entry = extensions.wrapcommand(commands.table, command, wrapper)
         entry[1].extend(newflags)
-        
+
     try:
         rebase = extensions.find('rebase')
         if rebase:

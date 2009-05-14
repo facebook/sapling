@@ -8,10 +8,10 @@ from mercurial import revlog
 from mercurial import context
 from mercurial import node
 
-import util
-import utility_commands
+from hgsubversion import util
+from hgsubversion import utility_commands
 import test_util
-import wrappers
+from hgsubversion import wrappers
 
 expected_info_output = '''URL: %(repourl)s/%(branch)s
 Repository Root: %(repourl)s
@@ -174,7 +174,7 @@ class UtilityTests(test_util.TestBase):
 
     def test_genignore(self):
         """ Test generation of .hgignore file. """
-        test_util.load_fixture_and_fetch('ignores.svndump', self.repo_path, 
+        test_util.load_fixture_and_fetch('ignores.svndump', self.repo_path,
                                          self.wc_path, noupdate=False)
         u = ui.ui()
         u.pushbuffer()
