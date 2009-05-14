@@ -461,6 +461,23 @@ class dirstate(object):
         work = []
         wadd = work.append
 
+        if match.anypats():
+            #match.match with patterns
+            dostep3 = True
+            nomatches = False
+        elif not match.files():
+            #match.always or match.never
+            dostep3 = matchfn('')
+            nomatches = not dostep3
+        else:
+            #match.exact or match.match without pattern
+            dostep3 = False
+            nomatches = matchfn == match.exact
+
+        if nomatches:
+            #skip step 2
+            dirignore = util.always
+
         files = set(match.files())
         if not files or '.' in files:
             files = ['']
@@ -476,6 +493,7 @@ class dirstate(object):
                 st = lstat(join(nf))
                 kind = getkind(st.st_mode)
                 if kind == dirkind:
+                    dostep3 = True
                     if nf in dmap:
                         #file deleted on disc but still in dirstate
                         results[nf] = None
@@ -497,6 +515,7 @@ class dirstate(object):
                         keep = True
                         break
                     elif fn.startswith(prefix):
+                        dostep3 = True
                         keep = True
                         break
                 if not keep:
@@ -541,11 +560,12 @@ class dirstate(object):
                         results[nf] = None
 
         # step 3: report unseen items in the dmap hash
-        visit = sorted([f for f in dmap if f not in results and matchfn(f)])
-        for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
-            if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
-                st = None
-            results[nf] = st
+        if dostep3 and not nomatches:
+            visit = sorted([f for f in dmap if f not in results and matchfn(f)])
+            for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
+                if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
+                    st = None
+                results[nf] = st
 
         del results['.hg']
         return results
