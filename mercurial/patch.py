@@ -1236,6 +1236,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
 
     if opts.git:
         copy, diverge = copies.copies(repo, ctx1, ctx2, repo[nullid])
+        copy = copy.copy()
         for k, v in copy.items():
             copy[v] = k
 
