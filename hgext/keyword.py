@@ -451,7 +451,7 @@ def reposetup(ui, repo):
 
         def commit(self, files=None, text='', user=None, date=None,
                    match=None, force=False, force_editor=False,
-                   p1=None, p2=None, extra={}, empty_ok=False):
+                   extra={}, empty_ok=False):
             wlock = lock = None
             _p1 = _p2 = None
             try:
@@ -465,10 +465,7 @@ def reposetup(ui, repo):
                         ui.setconfig('hooks', name, None)
                 if commithooks:
                     # store parents for commit hook environment
-                    if p1 is None:
-                        _p1, _p2 = repo.dirstate.parents()
-                    else:
-                        _p1, _p2 = p1, p2 or nullid
+                    _p1, _p2 = repo.dirstate.parents()
                     _p1 = hex(_p1)
                     if _p2 == nullid:
                         _p2 = ''
@@ -476,7 +473,7 @@ def reposetup(ui, repo):
                         _p2 = hex(_p2)
 
                 n = super(kwrepo, self).commit(files, text, user, date, match,
-                                               force, force_editor, p1, p2,
+                                               force, force_editor,
                                                extra, empty_ok)
 
                 # restore commit hooks

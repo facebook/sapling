@@ -767,9 +767,8 @@ class localrepository(repo.repository):
 
         return fparent1
 
-    def commit(self, files=None, text="", user=None, date=None,
-               match=None, force=False, force_editor=False,
-               p1=None, p2=None, extra={}, empty_ok=False):
+    def commit(self, files=None, text="", user=None, date=None, match=None,
+               force=False, force_editor=False, extra={}, empty_ok=False):
         wlock = lock = None
         if extra.get("close"):
             force = True
