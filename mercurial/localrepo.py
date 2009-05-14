@@ -768,7 +768,7 @@ class localrepository(repo.repository):
         return fparent1
 
     def commit(self, files=None, text="", user=None, date=None, match=None,
-               force=False, force_editor=False, extra={}, empty_ok=False):
+               force=False, editor=False, extra={}):
         wlock = lock = None
         if extra.get("close"):
             force = True
@@ -811,7 +811,7 @@ class localrepository(repo.repository):
                                                     "(see hg resolve)"))
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            r = self._commitctx(wctx, force, force_editor, empty_ok, True)
+            r = self._commitctx(wctx, force, editor, True)
             ms.reset()
             return r
 
@@ -824,11 +824,9 @@ class localrepository(repo.repository):
         Revision information is passed in the context.memctx argument.
         commitctx() does not touch the working directory.
         """
-        return self._commitctx(ctx, force=True, force_editor=False,
-                               empty_ok=True, working=False)
+        return self._commitctx(ctx, force=True, editor=None, working=False)
 
-    def _commitctx(self, ctx, force=False, force_editor=False, empty_ok=False,
-                   working=True):
+    def _commitctx(self, ctx, force=False, editor=None, working=True):
         lock = self.lock()
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
@@ -895,39 +893,12 @@ class localrepository(repo.repository):
             mn = self.manifest.add(m1, trp, linkrev, c1[0], c2[0],
                                    (new, removed1))
 
-            # add changeset
-            if (not empty_ok and not text) or force_editor:
-                edittext = []
-                if text:
-                    edittext.append(text)
-                edittext.append("")
-                edittext.append("") # Empty line between message and comments.
-                edittext.append(_("HG: Enter commit message."
-                                  "  Lines beginning with 'HG:' are removed."))
-                edittext.append("HG: --")
-                edittext.append(_("HG: user: %s") % user)
-                if p2 != nullid:
-                    edittext.append(_("HG: branch merge"))
-                if branchname:
-                    edittext.append(_("HG: branch '%s'")
-                                    % encoding.tolocal(branchname))
-                edittext.extend([_("HG: added %s") % f for f in added])
-                edittext.extend([_("HG: changed %s") % f for f in updated])
-                edittext.extend([_("HG: removed %s") % f for f in removed])
-                if not added and not updated and not removed:
-                    edittext.append(_("HG: no files changed"))
-                edittext.append("")
-                # run editor in the repository root
-                olddir = os.getcwd()
-                os.chdir(self.root)
-                text = self.ui.edit("\n".join(edittext), user)
-                os.chdir(olddir)
+            if editor:
+                text = editor(self, ctx, added, updated, removed)
 
             lines = [line.rstrip() for line in text.rstrip().splitlines()]
             while lines and not lines[0]:
                 del lines[0]
-            if not lines and working:
-                raise util.Abort(_("empty commit message"))
             text = '\n'.join(lines)
 
             self.changelog.delayupdate()

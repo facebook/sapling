@@ -642,10 +642,13 @@ def commit(ui, repo, *pats, **opts):
     extra = {}
     if opts.get('close_branch'):
         extra['close'] = 1
+    e = cmdutil.commiteditor
+    if opts.get('force_editor'):
+        e = cmdutil.commitforceeditor
+
     def commitfunc(ui, repo, message, match, opts):
         return repo.commit(match.files(), message, opts.get('user'),
-            opts.get('date'), match, force_editor=opts.get('force_editor'),
-            extra=extra)
+            opts.get('date'), match, editor=e, extra=extra)
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
@@ -1741,7 +1744,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                     files = patch.updatedir(ui, repo, files, similarity=sim/100.)
                 if not opts.get('no_commit'):
                     n = repo.commit(files, message, opts.get('user') or user,
-                                    opts.get('date') or date)
+                                    opts.get('date') or date,
+                                    editor=cmdutil.commiteditor)
                     if opts.get('exact'):
                         if hex(n) != nodeid:
                             repo.rollback()

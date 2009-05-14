@@ -1221,3 +1221,40 @@ def commit(ui, repo, commitfunc, pats, opts):
         return commitfunc(ui, repo, message, m, opts)
     except ValueError, inst:
         raise util.Abort(str(inst))
+
+def commiteditor(repo, ctx, added, updated, removed):
+    if ctx.description():
+        return ctx.description()
+    return commitforceeditor(repo, ctx, added, updated, removed)
+
+def commitforceeditor(repo, ctx, added, updated, removed):
+    edittext = []
+    if ctx.description():
+        edittext.append(ctx.description())
+    edittext.append("")
+    edittext.append("") # Empty line between message and comments.
+    edittext.append(_("HG: Enter commit message."
+                      "  Lines beginning with 'HG:' are removed."))
+    edittext.append("HG: --")
+    edittext.append(_("HG: user: %s") % ctx.user())
+    if ctx.p2():
+        edittext.append(_("HG: branch merge"))
+    if ctx.branch():
+        edittext.append(_("HG: branch '%s'")
+                        % encoding.tolocal(ctx.branch()))
+    edittext.extend([_("HG: added %s") % f for f in added])
+    edittext.extend([_("HG: changed %s") % f for f in updated])
+    edittext.extend([_("HG: removed %s") % f for f in removed])
+    if not added and not updated and not removed:
+        edittext.append(_("HG: no files changed"))
+    edittext.append("")
+    # run editor in the repository root
+    olddir = os.getcwd()
+    os.chdir(repo.root)
+    text = repo.ui.edit("\n".join(edittext), ctx.user())
+    os.chdir(olddir)
+
+    if not text.strip():
+        raise util.Abort(_("empty commit message"))
+
+    return text
