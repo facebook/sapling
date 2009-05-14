@@ -816,8 +816,7 @@ class localrepository(repo.repository):
                                                     "(see hg resolve)"))
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            r = self._commitctx(wctx, force, force_editor, empty_ok,
-                                True, True)
+            r = self._commitctx(wctx, force, force_editor, empty_ok, True)
             ms.reset()
             return r
 
@@ -833,13 +832,12 @@ class localrepository(repo.repository):
         lock = self.lock()
         try:
             return self._commitctx(ctx, force=True, force_editor=False,
-                                   empty_ok=True, use_dirstate=False,
-                                   update_dirstate=False)
+                                   empty_ok=True, working=False)
         finally:
             lock.release()
 
     def _commitctx(self, wctx, force=False, force_editor=False, empty_ok=False,
-                  use_dirstate=True, update_dirstate=True):
+                   working=True):
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
         try:
@@ -856,7 +854,7 @@ class localrepository(repo.repository):
             m1 = self.manifest.read(c1[0]).copy()
             m2 = self.manifest.read(c2[0])
 
-            if use_dirstate:
+            if working:
                 oldname = c1[5].get("branch") # stored in UTF-8
                 if (not commit and not remove and not force and p2 == nullid
                     and branchname == oldname):
@@ -890,11 +888,11 @@ class localrepository(repo.repository):
                         if m1.flags(f) != newflags:
                             changed.append(f)
                     m1.set(f, newflags)
-                    if use_dirstate:
+                    if working:
                         self.dirstate.normal(f)
 
                 except (OSError, IOError):
-                    if use_dirstate:
+                    if working:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
                     else:
@@ -950,7 +948,7 @@ class localrepository(repo.repository):
             lines = [line.rstrip() for line in text.rstrip().splitlines()]
             while lines and not lines[0]:
                 del lines[0]
-            if not lines and use_dirstate:
+            if not lines and working:
                 raise util.Abort(_("empty commit message"))
             text = '\n'.join(lines)
 
@@ -966,11 +964,10 @@ class localrepository(repo.repository):
             if self.branchcache:
                 self.branchtags()
 
-            if use_dirstate or update_dirstate:
+            if working:
                 self.dirstate.setparents(n)
-                if use_dirstate:
-                    for f in removed:
-                        self.dirstate.forget(f)
+                for f in removed:
+                    self.dirstate.forget(f)
             valid = 1 # our dirstate updates are complete
 
             self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
