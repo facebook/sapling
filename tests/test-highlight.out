@@ -255,7 +255,217 @@ files, or words in the commit message</div>
  <th class="annotate">rev</th>
  <th class="line">&nbsp;&nbsp;line source</th>
 </tr>
-<tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#1" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l1" id="l1">     1</a> <span class="c">#!/usr/bin/env python</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#2" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l2" id="l2">     2</a> </td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#3" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l3" id="l3">     3</a> <span class="n">__doc__</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;This does HTTP get requests given a host:port and path and returns</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#4" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l4" id="l4">     4</a> <span class="s">a subset of the headers plus the body of the result.&quot;&quot;&quot;</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#5" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l5" id="l5">     5</a> </td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#6" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l6" id="l6">     6</a> <span class="kn">import</span> <span class="nn">httplib</span><span class="o">,</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">re</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#7" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l7" id="l7">     7</a> </td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#8" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l8" id="l8">     8</a> <span class="kn">try</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#9" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l9" id="l9">     9</a>     <span class="kn">import</span> <span class="nn">msvcrt</span><span class="o">,</span> <span class="nn">os</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#10" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l10" id="l10">    10</a>     <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#11" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l11" id="l11">    11</a>     <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#12" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l12" id="l12">    12</a> <span class="kn">except</span> <span class="ne">ImportError</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#13" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l13" id="l13">    13</a>     <span class="kn">pass</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#14" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l14" id="l14">    14</a> </td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#15" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l15" id="l15">    15</a> <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">3</span><span class="p">:]]</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#16" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l16" id="l16">    16</a> <span class="n">conn</span> <span class="o">=</span> <span class="n">httplib</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#17" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l17" id="l17">    17</a> <span class="n">conn</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">2</span><span class="p">])</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#18" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l18" id="l18">    18</a> <span class="n">response</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">getresponse</span><span class="p">()</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#19" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l19" id="l19">    19</a> <span class="kn">print</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#20" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l20" id="l20">    20</a> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#21" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l21" id="l21">    21</a>     <span class="kn">if</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#22" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l22" id="l22">    22</a>         <span class="kn">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">))</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#23" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l23" id="l23">    23</a> <span class="kn">print</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#24" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l24" id="l24">    24</a> <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#25" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l25" id="l25">    25</a> <span class="n">data</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;\d+ years&#39;</span><span class="p">,</span> <span class="s">&#39;many years&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#26" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l26" id="l26">    26</a> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#27" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l27" id="l27">    27</a> </td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#28" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l28" id="l28">    28</a> <span class="kn">if</span> <span class="mf">200</span> <span class="o">&lt;=</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="mf">299</span><span class="p">:</span></td></tr><tr class="parity0"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#29" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l29" id="l29">    29</a>     <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">0</span><span class="p">)</span></td></tr><tr class="parity1"><td class="annotate"><a href="/annotate/7c3facd7c58a/get-with-headers.py#30" title="7c3facd7c58a: a">test@0</a></td><td class="source"><a href="#l30" id="l30">    30</a> <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span></td></tr>
+
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#1"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l1" id="l1">     1</a> <span class="c">#!/usr/bin/env python</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#2"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l2" id="l2">     2</a> </td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#3"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l3" id="l3">     3</a> <span class="n">__doc__</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;This does HTTP get requests given a host:port and path and returns</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#4"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l4" id="l4">     4</a> <span class="s">a subset of the headers plus the body of the result.&quot;&quot;&quot;</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#5"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l5" id="l5">     5</a> </td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#6"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l6" id="l6">     6</a> <span class="kn">import</span> <span class="nn">httplib</span><span class="o">,</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">re</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#7"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l7" id="l7">     7</a> </td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#8"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l8" id="l8">     8</a> <span class="kn">try</span><span class="p">:</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#9"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l9" id="l9">     9</a>     <span class="kn">import</span> <span class="nn">msvcrt</span><span class="o">,</span> <span class="nn">os</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#10"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l10" id="l10">    10</a>     <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#11"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l11" id="l11">    11</a>     <span class="n">msvcrt</span><span class="o">.</span><span class="n">setmode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">O_BINARY</span><span class="p">)</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#12"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l12" id="l12">    12</a> <span class="kn">except</span> <span class="ne">ImportError</span><span class="p">:</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#13"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l13" id="l13">    13</a>     <span class="kn">pass</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#14"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l14" id="l14">    14</a> </td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#15"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l15" id="l15">    15</a> <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">3</span><span class="p">:]]</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#16"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l16" id="l16">    16</a> <span class="n">conn</span> <span class="o">=</span> <span class="n">httplib</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#17"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l17" id="l17">    17</a> <span class="n">conn</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">2</span><span class="p">])</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#18"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l18" id="l18">    18</a> <span class="n">response</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">getresponse</span><span class="p">()</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#19"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l19" id="l19">    19</a> <span class="kn">print</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#20"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l20" id="l20">    20</a> <span class="kn">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">:</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#21"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l21" id="l21">    21</a>     <span class="kn">if</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#22"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l22" id="l22">    22</a>         <span class="kn">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="n">h</span><span class="p">))</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#23"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l23" id="l23">    23</a> <span class="kn">print</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#24"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l24" id="l24">    24</a> <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#25"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l25" id="l25">    25</a> <span class="n">data</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;\d+ years&#39;</span><span class="p">,</span> <span class="s">&#39;many years&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#26"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l26" id="l26">    26</a> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#27"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l27" id="l27">    27</a> </td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#28"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l28" id="l28">    28</a> <span class="kn">if</span> <span class="mf">200</span> <span class="o">&lt;=</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="mf">299</span><span class="p">:</span></td>
+</tr>
+<tr class="parity0">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#29"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l29" id="l29">    29</a>     <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">0</span><span class="p">)</span></td>
+</tr>
+<tr class="parity1">
+<td class="annotate">
+<a href="/annotate/7c3facd7c58a/get-with-headers.py#30"
+title="7c3facd7c58a: a">test@0</a>
+</td>
+<td class="source"><a href="#l30" id="l30">    30</a> <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span></td>
+</tr>
 </table>
 </div>
 </div>
