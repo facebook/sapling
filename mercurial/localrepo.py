@@ -836,19 +836,19 @@ class localrepository(repo.repository):
         finally:
             lock.release()
 
-    def _commitctx(self, wctx, force=False, force_editor=False, empty_ok=False,
+    def _commitctx(self, ctx, force=False, force_editor=False, empty_ok=False,
                    working=True):
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
         try:
-            commit = sorted(wctx.modified() + wctx.added())
-            remove = wctx.removed()
-            extra = wctx.extra().copy()
+            commit = sorted(ctx.modified() + ctx.added())
+            remove = ctx.removed()
+            extra = ctx.extra().copy()
             branchname = extra['branch']
-            user = wctx.user()
-            text = wctx.description()
+            user = ctx.user()
+            text = ctx.description()
 
-            p1, p2 = [p.node() for p in wctx.parents()]
+            p1, p2 = [p.node() for p in ctx.parents()]
             c1 = self.changelog.read(p1)
             c2 = self.changelog.read(p2)
             m1 = self.manifest.read(c1[0]).copy()
@@ -877,7 +877,7 @@ class localrepository(repo.repository):
             for f in commit:
                 self.ui.note(f + "\n")
                 try:
-                    fctx = wctx.filectx(f)
+                    fctx = ctx.filectx(f)
                     newflags = fctx.flags()
                     new[f] = self.filecommit(fctx, m1, m2, linkrev, trp, changed)
                     if ((not changed or changed[-1] != f) and
@@ -954,7 +954,7 @@ class localrepository(repo.repository):
 
             self.changelog.delayupdate()
             n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
-                                   user, wctx.date(), extra)
+                                   user, ctx.date(), extra)
             p = lambda: self.changelog.writepending() and self.root or ""
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2, pending=p)
