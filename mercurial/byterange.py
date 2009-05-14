@@ -23,7 +23,7 @@ import os
 import stat
 import urllib
 import urllib2
-import email.utils
+import email.Utils
 
 try:
     from cStringIO import StringIO
@@ -214,7 +214,7 @@ class FileRangeHandler(urllib2.FileHandler):
         localfile = urllib.url2pathname(file)
         stats = os.stat(localfile)
         size = stats[stat.ST_SIZE]
-        modified = email.utils.formatdate(stats[stat.ST_MTIME])
+        modified = email.Utils.formatdate(stats[stat.ST_MTIME])
         mtype = mimetypes.guess_type(file)[0]
         if host:
             host, port = urllib.splitport(host)
