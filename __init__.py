@@ -54,12 +54,14 @@ def gremote(ui, repo, *args):
 
     if len(args) == 0:
         git.remote_list()
+    elif len(args) < 2:
+        repo.ui.warn(_("must supply an action and a remote\n"))
     else:
         verb = args[0]
         nick = args[1]
 
         if verb == 'add':
-            if args[2]:
+            if len(args) == 3:
                 git.remote_add(nick, args[2])
             else:
                 repo.ui.warn(_("must supply a url to add as a remote\n"))
