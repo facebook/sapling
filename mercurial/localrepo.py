@@ -2051,7 +2051,7 @@ class localrepository(repo.repository):
                 revisions += len(fl) - o
                 files += 1
 
-            newheads = len(self.changelog.heads())
+            newheads = len(cl.heads())
             heads = ""
             if oldheads and newheads != oldheads:
                 heads = _(" (%+d heads)") % (newheads - oldheads)
@@ -2061,9 +2061,9 @@ class localrepository(repo.repository):
                              % (changesets, revisions, files, heads))
 
             if changesets > 0:
-                p = lambda: self.changelog.writepending() and self.root or ""
+                p = lambda: cl.writepending() and self.root or ""
                 self.hook('pretxnchangegroup', throw=True,
-                          node=hex(self.changelog.node(cor+1)), source=srctype,
+                          node=hex(cl.node(cor+1)), source=srctype,
                           url=url, pending=p)
 
             # make changelog see real files again
@@ -2077,11 +2077,11 @@ class localrepository(repo.repository):
             # forcefully update the on-disk branch cache
             self.ui.debug(_("updating the branch cache\n"))
             self.branchtags()
-            self.hook("changegroup", node=hex(self.changelog.node(cor+1)),
+            self.hook("changegroup", node=hex(cl.node(cor+1)),
                       source=srctype, url=url)
 
             for i in xrange(cor + 1, cnr + 1):
-                self.hook("incoming", node=hex(self.changelog.node(i)),
+                self.hook("incoming", node=hex(cl.node(i)),
                           source=srctype, url=url)
 
         # never return 0 here:
