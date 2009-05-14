@@ -129,10 +129,7 @@ class localrepository(repo.repository):
 
     tag_disallowed = ':\r\n'
 
-    def _tag(self, names, node, message, local, user, date, parent=None,
-             extra={}):
-        use_dirstate = parent is None
-
+    def _tag(self, names, node, message, local, user, date, extra={}):
         if isinstance(names, str):
             allchars = names
             names = (names,)
@@ -173,30 +170,20 @@ class localrepository(repo.repository):
                 self.hook('tag', node=hex(node), tag=name, local=local)
             return
 
-        if use_dirstate:
-            try:
-                fp = self.wfile('.hgtags', 'rb+')
-            except IOError:
-                fp = self.wfile('.hgtags', 'ab')
-            else:
-                prevtags = fp.read()
+        try:
+            fp = self.wfile('.hgtags', 'rb+')
+        except IOError:
+            fp = self.wfile('.hgtags', 'ab')
         else:
-            try:
-                prevtags = self.filectx('.hgtags', parent).data()
-            except error.LookupError:
-                pass
-            fp = self.wfile('.hgtags', 'wb')
-            if prevtags:
-                fp.write(prevtags)
+            prevtags = fp.read()
 
         # committed tags are stored in UTF-8
         writetags(fp, names, encoding.fromlocal, prevtags)
 
-        if use_dirstate and '.hgtags' not in self.dirstate:
+        if '.hgtags' not in self.dirstate:
             self.add(['.hgtags'])
 
-        tagnode = self.commit(['.hgtags'], message, user, date, p1=parent,
-                              extra=extra)
+        tagnode = self.commit(['.hgtags'], message, user, date, extra=extra)
 
         for name in names:
             self.hook('tag', node=hex(node), tag=name, local=local)
