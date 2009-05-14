@@ -971,6 +971,7 @@ class atomictempfile:
     """
     def __init__(self, name, mode, createmode):
         self.__name = name
+        self._fp = None
         self.temp = mktempcopy(name, emptyok=('w' in mode),
                                createmode=createmode)
         self._fp = posixfile(self.temp, mode)
@@ -988,7 +989,8 @@ class atomictempfile:
             try:
                 os.unlink(self.temp)
             except: pass
-            self._fp.close()
+            if self._fp:
+                self._fp.close()
 
 def makedirs(name, mode=None):
     """recursive directory creation with parent mode inheritance"""
