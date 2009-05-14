@@ -198,9 +198,8 @@ class changelog(revlog.revlog):
         files = l[3:]
         return (manifest, user, (time, timezone), files, desc, extra)
 
-    def add(self, manifest, files, desc, transaction, p1=None, p2=None,
-                  user=None, date=None, extra={}):
-
+    def add(self, manifest, files, desc, transaction, p1, p2,
+                  user, date=None, extra={}):
         user = user.strip()
         if "\n" in user:
             raise error.RevlogError(_("username %s contains a newline")
