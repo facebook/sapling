@@ -7,7 +7,6 @@ default = .../foo%bar
 bundle.mainreporoot=.../foobar
 defaults.backout=-d "0 0"
 defaults.commit=-d "0 0"
-defaults.debugrawcommit=-d "0 0"
 defaults.tag=-d "0 0"
 paths.default=.../foo%bar
 ui.slash=True

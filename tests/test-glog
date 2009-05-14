@@ -82,9 +82,8 @@ commit()
     if [ "$#" -gt 0 ]; then
         hg debugsetparents "$@"
     fi
-    echo $rev > $rev
-    hg add $rev
-    hg rawcommit -q -d "$rev 0" -m "($rev) $msg" $rev
+    echo $rev > a
+    hg commit -Aqd "$rev 0" -m "($rev) $msg"
 }
 
 echo "[extensions]" >> $HGRCPATH
@@ -142,7 +141,7 @@ echo % glog
 hg glog
 
 echo % file glog
-hg glog 5
+hg glog a
 
 echo % unused arguments
 hg glog -q foo bar || echo failed
@@ -150,7 +149,7 @@ hg glog -q foo bar || echo failed
 echo % from outer space
 cd ..
 hg glog -l1 repo
-hg glog -l1 repo/0
+hg glog -l1 repo/a
 hg glog -l1 repo/missing
 
 echo % file log with revs != cset revs

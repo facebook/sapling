@@ -360,7 +360,6 @@ def runone(options, test, skips, fails):
     hgrc.write('[defaults]\n')
     hgrc.write('backout = -d "0 0"\n')
     hgrc.write('commit = -d "0 0"\n')
-    hgrc.write('debugrawcommit = -d "0 0"\n')
     hgrc.write('tag = -d "0 0"\n')
     hgrc.close()
 

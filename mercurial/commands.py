@@ -2252,34 +2252,6 @@ def push(ui, repo, dest=None, **opts):
     r = repo.push(other, opts.get('force'), revs=revs)
     return r == 0
 
-def rawcommit(ui, repo, *pats, **opts):
-    """raw commit interface (DEPRECATED)
-
-    (DEPRECATED)
-    Lowlevel commit, for use in helper scripts.
-
-    This command is not intended to be used by normal users, as it is
-    primarily useful for importing from other SCMs.
-
-    This command is now deprecated and will be removed in a future
-    release, please use debugsetparents and commit instead.
-    """
-
-    ui.warn(_("(the rawcommit command is deprecated)\n"))
-
-    message = cmdutil.logmessage(opts)
-
-    files = cmdutil.match(repo, pats, opts).files()
-    if opts.get('files'):
-        files += open(opts['files']).read().splitlines()
-
-    parents = [repo.lookup(p) for p in opts['parent']]
-
-    try:
-        repo.rawcommit(files, message, opts['user'], opts['date'], *parents)
-    except ValueError, inst:
-        raise util.Abort(str(inst))
-
 def recover(ui, repo):
     """roll back an interrupted transaction
 
@@ -3206,12 +3178,6 @@ table = {
     "debugindex": (debugindex, [], _('FILE')),
     "debugindexdot": (debugindexdot, [], _('FILE')),
     "debuginstall": (debuginstall, []),
-    "debugrawcommit|rawcommit":
-        (rawcommit,
-         [('p', 'parent', [], _('parent')),
-          ('F', 'files', '', _('file list'))
-          ] + commitopts + commitopts2,
-         _('[OPTION]... [FILE]...')),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '', _('revision to rebuild to'))],

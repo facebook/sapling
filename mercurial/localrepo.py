@@ -776,12 +776,6 @@ class localrepository(repo.repository):
         changelist.append(fname)
         return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
 
-    def rawcommit(self, files, text, user, date, p1=None, p2=None, extra={}):
-        if p1 is None:
-            p1, p2 = self.dirstate.parents()
-        return self.commit(files=files, text=text, user=user, date=date,
-                           p1=p1, p2=p2, extra=extra, empty_ok=True)
-
     def commit(self, files=None, text="", user=None, date=None,
                match=None, force=False, force_editor=False,
                p1=None, p2=None, extra={}, empty_ok=False):
@@ -793,34 +787,27 @@ class localrepository(repo.repository):
         try:
             wlock = self.wlock()
             lock = self.lock()
-            use_dirstate = (p1 is None) # not rawcommit
 
-            if use_dirstate:
-                p1, p2 = self.dirstate.parents()
-                update_dirstate = True
+            p1, p2 = self.dirstate.parents()
 
-                if (not force and p2 != nullid and
-                    (match and (match.files() or match.anypats()))):
-                    raise util.Abort(_('cannot partially commit a merge '
-                                       '(do not specify files or patterns)'))
+            if (not force and p2 != nullid and
+                (match and (match.files() or match.anypats()))):
+                raise util.Abort(_('cannot partially commit a merge '
+                                   '(do not specify files or patterns)'))
 
-                if files:
-                    modified, removed = [], []
-                    for f in files:
-                        s = self.dirstate[f]
-                        if s in 'nma':
-                            modified.append(f)
-                        elif s == 'r':
-                            removed.append(f)
-                        else:
-                            self.ui.warn(_("%s not tracked!\n") % f)
-                    changes = [modified, [], removed, [], []]
-                else:
-                    changes = self.status(match=match)
+            if files:
+                modified, removed = [], []
+                for f in files:
+                    s = self.dirstate[f]
+                    if s in 'nma':
+                        modified.append(f)
+                    elif s == 'r':
+                        removed.append(f)
+                    else:
+                        self.ui.warn(_("%s not tracked!\n") % f)
+                changes = [modified, [], removed, [], []]
             else:
-                p1, p2 = p1, p2 or nullid
-                update_dirstate = (self.dirstate.parents()[0] == p1)
-                changes = [files, [], [], [], []]
+                changes = self.status(match=match)
 
             ms = merge_.mergestate(self)
             for f in changes[0]:
@@ -830,7 +817,7 @@ class localrepository(repo.repository):
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
             r = self._commitctx(wctx, force, force_editor, empty_ok,
-                                use_dirstate, update_dirstate)
+                                True, True)
             ms.reset()
             return r
 

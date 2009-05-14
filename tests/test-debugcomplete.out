@@ -69,7 +69,6 @@ debugfsinfo
 debugindex
 debugindexdot
 debuginstall
-debugrawcommit
 debugrebuildstate
 debugrename
 debugsetparents
@@ -87,7 +86,7 @@ rollback
 root
 
 % Show the alias of a debug command if there are no other candidates
-rawcommit
+
 
 % Show the global options
 --config
@@ -196,7 +195,6 @@ debugfsinfo:
 debugindex: 
 debugindexdot: 
 debuginstall: 
-debugrawcommit: parent, files, message, logfile, date, user
 debugrebuildstate: rev
 debugrename: rev
 debugsetparents: 
