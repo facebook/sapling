@@ -121,14 +121,14 @@ class GitHandler(object):
             self.import_git_objects(remote_name)
         self.save_map()
 
-    def export(self):
+    def export_commits(self):
         self.export_git_objects()
         self.update_references()
         self.save_map()
 
     def push(self, remote_name):
         self.ui.status(_("pushing to : %s\n") % remote_name)
-        self.export()
+        self.export_commits()
         self.upload_pack(remote_name)
 
     def remote_add(self, remote_name, git_url):

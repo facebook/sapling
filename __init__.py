@@ -47,7 +47,7 @@ def gpush(ui, repo, remote_name='origin', branch=None):
 
 def gexport(ui, repo):
     git = GitHandler(repo, ui)
-    git.export()
+    git.export_commits()
 
 def gremote(ui, repo, *args):
     git = GitHandler(repo, ui)
