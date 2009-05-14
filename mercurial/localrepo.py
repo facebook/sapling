@@ -799,6 +799,12 @@ class localrepository(repo.repository):
             else:
                 changes = self.status(match=match)
 
+            if (not (changes[0] or changes[1] or changes[2])
+                and not force and p2 == nullid and
+                self[None].branch() == self['.'].branch()):
+                self.ui.status(_("nothing changed\n"))
+                return None
+
             ms = merge_.mergestate(self)
             for f in changes[0]:
                 if f in ms and ms[f] == 'u':
@@ -843,13 +849,6 @@ class localrepository(repo.repository):
             c2 = self.changelog.read(p2)
             m1 = self.manifest.read(c1[0]).copy()
             m2 = self.manifest.read(c2[0])
-
-            if working:
-                oldname = c1[5].get("branch") # stored in UTF-8
-                if (not commit and not remove and not force and p2 == nullid
-                    and branchname == oldname):
-                    self.ui.status(_("nothing changed\n"))
-                    return None
 
             xp1 = hex(p1)
             if p2 == nullid: xp2 = ''
