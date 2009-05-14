@@ -775,6 +775,7 @@ class localrepository(repo.repository):
         if files:
             files = list(set(files))
 
+        ret = None
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
@@ -811,11 +812,13 @@ class localrepository(repo.repository):
                                                     "(see hg resolve)"))
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            r = self.commitctx(wctx, editor, True)
+            ret = self.commitctx(wctx, editor, True)
             ms.reset()
-            return r
+            return ret
 
         finally:
+            if ret == None:
+                self.dirstate.invalidate() # didn't successfully commit
             wlock.release()
 
     def commitctx(self, ctx, editor=None, working=False):
@@ -827,7 +830,6 @@ class localrepository(repo.repository):
         """
 
         tr = lock = None
-        valid = 0 # don't save the dirstate if this isn't set
         remove = ctx.removed()
         p1, p2 = ctx.p1(), ctx.p2()
         m1 = p1.manifest().copy()
@@ -908,13 +910,10 @@ class localrepository(repo.repository):
                 self.dirstate.setparents(n)
                 for f in removed:
                     self.dirstate.forget(f)
-            valid = 1 # our dirstate updates are complete
 
             self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
             return n
         finally:
-            if not valid: # don't save our updated dirstate
-                self.dirstate.invalidate()
             del tr
             lock.release()
 
