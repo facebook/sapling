@@ -1,16 +1,18 @@
+import atexit
 import os
+import random
 import socket
 import subprocess
 import unittest
 
 from mercurial import context
+from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
 from mercurial import revlog
 from mercurial import util as hgutil
 
-import wrappers
 import test_util
 import time
 
@@ -21,28 +23,21 @@ class PushOverSvnserveTests(test_util.TestBase):
         test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
         open(os.path.join(self.repo_path, 'conf', 'svnserve.conf'),
              'w').write('[general]\nanon-access=write\n[sasl]\n')
-        # Paranoia: we try and connect to localhost on 3689 before we start
-        # svnserve. If it is running, we force the test to fail early.
-        user_has_own_svnserve = False
-        try:
-            s = socket.socket()
-            s.settimeout(0.3)
-            s.connect(('localhost', 3690))
-            s.close()
-            user_has_own_svnserve = True
-        except:
-            pass
-        if user_has_own_svnserve:
-            assert False, ('You appear to be running your own svnserve!'
-                           ' You can probably ignore this test failure.')
-        args = ['svnserve', '-d', '--foreground', '-r', self.repo_path]
-        self.svnserve_pid = subprocess.Popen(args).pid
+        self.port = random.randint(socket.IPPORT_USERRESERVED, 65535)
+        self.host = 'localhost'
+        args = ['svnserve', '--daemon', '--foreground',
+                '--listen-port=%d' % self.port,
+                '--listen-host=%s' % self.host,
+                '--root=%s' % self.repo_path]
+        svnserve = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+        self.svnserve_pid = svnserve.pid
         time.sleep(2)
-        wrappers.clone(None, ui.ui(), source='svn://localhost/',
-                       dest=self.wc_path, noupdate=True)
+        commands.clone(ui.ui(), 'svn://%s:%d/' % (self.host, self.port),
+                       self.wc_path, noupdate=True)
 
     def tearDown(self):
-        os.system('kill -9 %d' % self.svnserve_pid)
+        os.kill(self.svnserve_pid, 9)
         test_util.TestBase.tearDown(self)
 
     def test_push_to_default(self, commit=True):
@@ -70,7 +65,7 @@ class PushOverSvnserveTests(test_util.TestBase):
             return # some tests use this test as an extended setup.
         hg.update(repo, repo['tip'].node())
         oldauthor = repo['tip'].user()
-        wrappers.push(None, ui.ui(), repo=self.repo)
+        commands.push(repo.ui, repo)
         tip = self.repo['tip']
         self.assertNotEqual(oldauthor, tip.user())
         self.assertNotEqual(tip.node(), old_tip)
@@ -172,7 +167,7 @@ class PushTests(test_util.TestBase):
         newhash = self.repo.commitctx(ctx)
         repo = self.repo
         hg.update(repo, newhash)
-        wrappers.push(None, ui.ui(), repo=repo)
+        commands.push(repo.ui, repo)
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0].node(), oldtiphash)
         self.assertEqual(self.repo['tip'].files(), ['delta', ])
         self.assertEqual(self.repo['tip'].manifest().keys(),

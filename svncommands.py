@@ -30,16 +30,10 @@ def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                                                  author_host=author_host,
                                                  tag_locations=tag_locations,
                                                  authors=authors,
-                                                 filemap=filemap)
-    if os.path.exists(hg_editor.uuid_file):
-        uuid = open(hg_editor.uuid_file).read()
-        assert uuid == svn.uuid
-        start = hg_editor.last_known_revision()
-    else:
-        open(hg_editor.uuid_file, 'w').write(svn.uuid)
-        open(hg_editor.svn_url_file, 'w').write(svn_url)
-        initializing_repo = True
-        start = skipto_rev
+                                                 filemap=filemap,
+                                                 uuid=svn.uuid)
+    start = max(hg_editor.last_known_revision(), skipto_rev)
+    initializing_repo = (hg_editor.last_known_revision() <= 0)
 
     if initializing_repo and start > 0:
         raise hgutil.Abort('Revision skipping at repository initialization '
@@ -65,9 +59,13 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
     if len(args) != 1:
-        raise hgutil.Abort('You must pass the svn URI used to create this repo.')
+        url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
+    else:
+        url = args[0]
+    if not (url.startswith('svn+') or url.startswith('svn:')):
+        raise hgutil.Abort('No valid Subversion URI found; please specify one.')
     uuid = None
-    url = args[0].rstrip('/')
+    url = util.normalize_url(url.rstrip('/'))
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     subdir = svn.subdir
@@ -95,9 +93,6 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             if uuid is None:
                 uuid = convinfo[4:40]
                 assert uuid == svn.uuid, 'UUIDs did not match!'
-                urlfile = open(os.path.join(svnmetadir, 'url'), 'w')
-                urlfile.write(url)
-                urlfile.close()
                 uuidfile = open(os.path.join(svnmetadir, 'uuid'), 'w')
                 uuidfile.write(uuid)
                 uuidfile.close()

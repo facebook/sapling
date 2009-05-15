@@ -9,11 +9,10 @@ import unittest
 import urllib
 
 from mercurial import context
+from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
-
-import wrappers
 
 # Fixtures that need to be pulled at a subdirectory of the repo path
 subdir = {'truncatedhistory.svndump': '/project2',
@@ -37,22 +36,25 @@ def load_svndump_fixture(path, fixture_name):
     '''Loads an svnadmin dump into a fresh repo at path, which should not
     already exist.
     '''
-    subprocess.call(['svnadmin', 'create', path,])
-    proc = subprocess.Popen(['svnadmin', 'load', path,], stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if os.path.exists(path): rmtree(path)
+    subprocess.call(['svnadmin', 'create', path,],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     inp = open(os.path.join(FIXTURES, fixture_name))
-    proc.stdin.write(inp.read())
-    proc.stdin.flush()
+    proc = subprocess.Popen(['svnadmin', 'load', path,], stdin=inp,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     proc.communicate()
 
 def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir='', noupdate=True):
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
-    wrappers.clone(None, ui.ui(), source=fileurl(repo_path),
-                     dest=wc_path, stupid=stupid, noupdate=noupdate)
-    repo = hg.repository(ui.ui(), wc_path)
-    return repo
+    
+    _ui = ui.ui()
+    _ui.setconfig('hgsubversion', 'stupid', str(stupid))
+    commands.clone(_ui, fileurl(repo_path), wc_path, noupdate=noupdate)
+    _ui = ui.ui()
+    _ui.setconfig('hgsubversion', 'stupid', str(stupid))
+    return hg.repository(_ui, wc_path)
 
 def rmtree(path):
     # Read-only files cannot be removed under Windows
@@ -69,30 +71,6 @@ def rmtree(path):
                 os.chmod(f, s.st_mode | stat.S_IWRITE)
     shutil.rmtree(path)
 
-
-class MockUI(object):
-    real_ui = ui.ui
-    _isatty = False
-    def __init__(self, src=None):
-        self.stream = StringIO.StringIO()
-        self.inner_ui = self.real_ui(src)
-
-    def status(self, *args):
-        self.stream.write(''.join(args))
-
-    def warn(self, *args):
-        self.stream.write(*args)
-
-    def write(self, *args):
-        self.stream.write(*args)
-
-    def copy(self):
-        return self.__class__(self.inner_ui)
-
-    def __getattr__(self, attr):
-        return getattr(self.inner_ui, attr)
-
-
 class TestBase(unittest.TestCase):
     def setUp(self):
         self.oldwd = os.getcwd()
@@ -105,13 +83,19 @@ class TestBase(unittest.TestCase):
 
         self.repo_path = '%s/testrepo' % self.tmpdir
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
-        self._real_ui = ui.ui
-        ui.ui = MockUI
+
+        # Previously, we had a MockUI class that wrapped ui, and giving access
+        # to the stream. The ui.pushbuffer() and ui.popbuffer() can be used
+        # instead. Using the regular UI class, with all stderr redirected to
+        # stdout ensures that the test setup is much more similar to usage
+        # setups.
+        self._ui_write_err = ui.ui.write_err
+        ui.ui.write_err = ui.ui.write
 
     def tearDown(self):
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
-        ui.ui = self._real_ui
+        ui.ui.write_err = self._ui_write_err
 
     def _load_fixture_and_fetch(self, fixture_name, subdir='', stupid=False):
         return load_fixture_and_fetch(fixture_name, self.repo_path,
@@ -125,7 +109,8 @@ class TestBase(unittest.TestCase):
 
     def pushrevisions(self, stupid=False):
         before = len(self.repo)
-        wrappers.push(None, ui.ui(), repo=self.repo, stupid=stupid)
+        self.repo.ui.setconfig('hgsubversion', 'stupid', str(stupid))
+        commands.push(self.repo.ui, self.repo)
         after = len(self.repo)
         self.assertEqual(0, after - before)
 
@@ -135,7 +120,7 @@ class TestBase(unittest.TestCase):
         args = ['svn', 'ls', '-r', rev, '-R', path]
         p = subprocess.Popen(args,
                              stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.STDOUT)
         stdout, stderr = p.communicate()
         if p.returncode:
             raise Exception('svn ls failed on %s: %r' % (path, stderr))

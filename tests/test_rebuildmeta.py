@@ -22,10 +22,18 @@ def _do_case(self, name, stupid):
                             os.path.dirname(dest.path),
                             args=[test_util.fileurl(self.repo_path +
                                                     subdir), ])
+    self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
+                    'no .hg/svn directory in the source!')
+    self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
+                    'no .hg/svn directory in the destination!')
     dest = hg.repository(u, os.path.dirname(dest.path))
-    for tf in ('rev_map', 'uuid', 'url'):
-        self.assertEqual(open(os.path.join(src.path, 'svn', tf)).read(),
-                         open(os.path.join(dest.path, 'svn', tf)).read())
+    for tf in ('rev_map', 'uuid'):
+        stf = os.path.join(src.path, 'svn', tf)
+        self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
+        dtf = os.path.join(dest.path, 'svn', tf)
+        self.assertTrue(os.path.isfile(dtf), '%r is missing!' % tf)
+        self.assertEqual(open(stf).read(),
+                         open(dtf).read())
     self.assertEqual(pickle.load(open(os.path.join(src.path, 'svn',
                                                    'tag_info'))),
                      pickle.load(open(os.path.join(dest.path, 'svn',

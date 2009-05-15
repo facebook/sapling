@@ -3,6 +3,7 @@ import cStringIO
 import os, re, shutil, stat, subprocess
 from mercurial import util as hgutil
 from mercurial.i18n import _
+from hgsubversion import util
 
 class externalsfile(dict):
     """Map svn directories to lists of externals entries.
@@ -160,7 +161,8 @@ def getsvninfo(svnurl):
     # Yes, this is ugly, but good enough for now
     args = ['svn', 'info', '--xml', svnurl]
     shell = os.name == 'nt'
-    p = subprocess.Popen(args, stdout=subprocess.PIPE, shell=shell)
+    p = subprocess.Popen(args, shell=shell,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout = p.communicate()[0]
     if p.returncode:
         raise hgutil.Abort(_('cannot get information about %s')
@@ -240,21 +242,23 @@ class externalsupdater:
         args = ['svn'] + args
         self.ui.debug(_('updating externals: %r, cwd=%s\n') % (args, cwd))
         shell = os.name == 'nt'
-        subprocess.check_call(args, cwd=cwd, shell=shell)
+        subprocess.check_call(args, cwd=cwd, shell=shell,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 def updateexternals(ui, args, repo, **opts):
     """update repository externals
     """
-    if len(args) > 1:
+    if len(args) > 2:
         raise hgutil.Abort(_('updateexternals expects at most one changeset'))
     node = None
+    if len(args) == 2:
+        svnurl = util.normalize_url(repo.ui.expandpath(args[0]))
+        args = args[1:]
+    else:
+        svnurl = util.normalize_url(repo.ui.expandpath('default'))
     if args:
         node = args[0]
 
-    try:
-        svnurl = file(repo.join('svn/url'), 'rb').read()
-    except:
-        raise hgutil.Abort(_('failed to retrieve original svn URL'))
     svnroot = getsvninfo(svnurl)[1]
 
     # Retrieve current externals status

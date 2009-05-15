@@ -11,6 +11,8 @@ Before using hgsubversion, it is *strongly* encouraged to run the
 automated tests. See `README' in the hgsubversion directory for
 details.
 '''
+# TODO: The docstring should be slightly more helpful, and at least mention all
+#       configuration settings we support
 
 import os
 import sys
@@ -29,6 +31,32 @@ import util
 import wrappers
 import svnexternals
 
+schemes = ('svn', 'svn+ssh', 'svn+http', 'svn+file')
+
+optionmap = {
+    'tagpaths': ('hgsubversion', 'tagpaths'),
+    'authors': ('hgsubversion', 'authormap'),
+    'filemap': ('hgsubversion', 'filemap'),
+    'stupid': ('hgsubversion', 'stupid'),
+    'defaulthost': ('hgsubversion', 'defaulthost'),
+    'defaultauthors': ('hgsubversion', 'defaultauthors'),
+    'usebranchnames': ('hgsubversion', 'usebranchnames'),
+}
+
+def wrapper(orig, ui, repo, *args, **opts):
+    """
+    Subversion repositories are also supported for this command. See
+    `hg help %(extension)s` for details.
+    """
+    for opt, (section, name) in optionmap.iteritems():
+        if opt in opts:
+            if isinstance(repo, str):
+                ui.setconfig(section, name, opts.pop(opt))
+            else:
+                repo.ui.setconfig(section, name, opts.pop(opt))
+
+    return orig(ui, repo, *args, **opts)
+
 def uisetup(ui):
     """Do our UI setup.
 
@@ -46,11 +74,21 @@ def uisetup(ui):
                                    wrappers.diff)
     entry[1].append(('', 'svn', None,
                      "show svn-style diffs, default against svn parent"))
-    entry = extensions.wrapcommand(commands.table, 'push',
-                                   wrappers.push)
-    entry[1].append(('', 'svn', None, "push to subversion"))
-    entry[1].append(('', 'svn-stupid', None, "use stupid replay during push to svn"))
 
+    newflags = (('A', 'authors', '', 'path to file containing username '
+                 'mappings for Subversion sources'),
+                ('', 'filemap', '', 'path to file containing rules for file '
+                 'name mapping used for sources)'),
+                ('T', 'tagpaths', ['tags'], 'list of paths to search for tags '
+                 'in Subversion repositories.'))
+    extname = __package__.split('_')[-1]
+
+    for command in ['clone']:
+        doc = wrapper.__doc__.strip() % { 'extension': extname }
+        getattr(commands, command).__doc__ += doc
+        entry = extensions.wrapcommand(commands.table, command, wrapper)
+        entry[1].extend(newflags)
+        
     try:
         rebase = extensions.find('rebase')
         if rebase:
@@ -100,7 +138,7 @@ def reposetup(ui, repo):
     if repo.local():
        svnrepo.generate_repo_class(ui, repo)
 
-for scheme in ('svn', 'svn+ssh', 'svn+http', 'svn+file'):
+for scheme in schemes:
     hg.schemes[scheme] = svnrepo
 
 cmdtable = {

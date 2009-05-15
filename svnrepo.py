@@ -1,3 +1,19 @@
+"""
+repository class-based interface for hgsubversion
+
+  Copyright (C) 2009, Dan Villiom Podlaski Christiansen <danchr@gmail.com>
+  See parent package for licensing.
+
+Internally, Mercurial assumes that every single repository is a localrepository
+subclass: pull() is called on the instance pull *to*, but not the one pulled
+*from*. To work around this, we create two classes:
+
+- svnremoterepo for Subversion repositories, but it doesn't really do anything.
+- svnlocalrepo for local repositories which handles both operations on itself --
+  the local, hgsubversion-enabled clone -- and the remote repository. Decorators
+  are used to distinguish and filter these operations from others.
+"""
+
 from mercurial import node
 from mercurial import util as hgutil
 import mercurial.repo
@@ -7,39 +23,44 @@ import util
 import wrappers
 
 def generate_repo_class(ui, repo):
+    """ This function generates the local repository wrapper. """
+
     def localsvn(fn):
-        '''
+        """
         Filter for instance methods which only apply to local Subversion
         repositories.
-        '''
+        """
         if util.is_svn_repo(repo):
             return fn
         else:
-            original = repo.__getattribute__(fn.__name__)
-            return original
+            return getattr(repo, fn.__name__)
 
     def remotesvn(fn):
-        '''
+        """
         Filter for instance methods which require the first argument
         to be a remote Subversion repository instance.
-        '''
-        original = repo.__getattribute__(fn.__name__)
+        """
+        original = getattr(repo.__class__, fn.__name__)
         def wrapper(self, *args, **opts):
-            if not isinstance(args[0], svnremoterepo):
-                return original(*args, **opts)
-            else:
+            if 'subversion' in getattr(args[0], 'capabilities', []):
                 return fn(self, *args, **opts)
+            else:
+                return original(self, *args, **opts)
         wrapper.__name__ = fn.__name__ + '_wrapper'
         wrapper.__doc__ = fn.__doc__
         return wrapper
 
     class svnlocalrepo(repo.__class__):
         @remotesvn
+        def push(self, remote, force=False, revs=None):
+            # TODO: pass on revs
+            wrappers.push(self, dest=remote.svnurl, force=force, revs=None)
+
+        @remotesvn
         def pull(self, remote, heads=None, force=False):
             try:
                 lock = self.wlock()
-                wrappers.pull(None, self.ui, self, source=remote.path,
-                              svn=True, rev=heads, force=force)
+                wrappers.pull(self, source=remote.svnurl, rev=heads, force=force)
             except KeyboardInterrupt:
                 pass
             finally:
@@ -51,16 +72,22 @@ def generate_repo_class(ui, repo):
             hg_editor = hg_delta_editor.HgChangeReceiver(repo=self)
             for tag, source in hg_editor.tags.iteritems():
                 target = hg_editor.get_parent_revision(source[1]+1, source[0])
-                tags['tag/%s' % tag] = node.hex(target)
+                tags['tag/%s' % tag] = target
             return tags
 
     repo.__class__ = svnlocalrepo
 
 class svnremoterepo(mercurial.repo.repository):
+    """ the dumb wrapper for actual Subversion repositories """
+
     def __init__(self, ui, path):
         self.ui = ui
         self.path = path
-        self.capabilities = set(['lookup'])
+        self.capabilities = set(['lookup', 'subversion'])
+
+    @property
+    def svnurl(self):
+        return util.normalize_url(self.path)
 
     def url(self):
         return self.path
@@ -82,6 +109,4 @@ def instance(ui, url, create):
     if create:
         raise hgutil.Abort('cannot create new remote Subversion repository')
 
-    if url.startswith('svn+') and not url.startswith('svn+ssh:'):
-        url = url[4:]
-    return svnremoterepo(ui, util.normalize_url(url))
+    return svnremoterepo(ui, url)

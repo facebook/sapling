@@ -32,9 +32,9 @@ class DiffTests(test_util.TestBase):
                             ('alpha', 'alpha', 'alpha\n\nadded line\n'),
                             ])
         u = ui.ui()
-        wrappers.diff(lambda x,y,z: None,
-                         u, self.repo, svn=True)
-        self.assertEqual(u.stream.getvalue(), expected_diff_output)
+        u.pushbuffer()
+        wrappers.diff(lambda x,y,z: None, u, self.repo, svn=True)
+        self.assertEqual(u.popbuffer(), expected_diff_output)
 
 
 def suite():

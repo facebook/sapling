@@ -6,20 +6,15 @@ from mercurial import ui
 
 import test_util
 
-import tag_repo
+import svnrepo
 
 class TestTags(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name, stupid=False):
         return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
                                                 self.wc_path, stupid=stupid)
 
-    def getrepo(self):
-        ui_ = ui.ui()
-        repo = hg.repository(ui_, self.wc_path)
-        repo.__class__ = tag_repo.generate_repo_class(ui_, repo)
-        return repo
-
     def _test_tag_revision_info(self, repo):
+        print repo.tags()
         self.assertEqual(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
@@ -30,7 +25,7 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('basic_tag_tests.svndump',
                                             stupid=stupid)
         self._test_tag_revision_info(repo)
-        repo = self.getrepo()
+        repo = self.repo
         self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
         self.assertEqual(repo['tip'].node(), repo['tag/copied_tag'].node())
 
@@ -41,7 +36,7 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('remove_tag_test.svndump',
                                             stupid=stupid)
         self._test_tag_revision_info(repo)
-        repo = self.getrepo()
+        repo = self.repo
         self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
         self.assert_('tag/copied_tag' not in repo.tags())
 
@@ -52,7 +47,7 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('rename_tag_test.svndump',
                                             stupid=stupid)
         self._test_tag_revision_info(repo)
-        repo = self.getrepo()
+        repo = self.repo
         self.assertEqual(repo['tip'].node(), repo['tag/tag_r3'].node())
         self.assertEqual(repo['tip'].node(), repo['tag/other_tag_r3'].node())
         self.assert_('tag/copied_tag' not in repo.tags())
@@ -63,7 +58,7 @@ class TestTags(test_util.TestBase):
     def test_branch_from_tag(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
                                             stupid=stupid)
-        repo = self.getrepo()
+        repo = self.repo
         self.assertEqual(repo['tip'].node(), repo['branch_from_tag'].node())
         self.assertEqual(repo[1].node(), repo['tag/tag_r3'].node())
         self.assertEqual(repo['branch_from_tag'].parents()[0].node(),
@@ -75,7 +70,7 @@ class TestTags(test_util.TestBase):
     def test_tag_by_renaming_branch(self, stupid=False):
         repo = self._load_fixture_and_fetch('tag_by_rename_branch.svndump',
                                             stupid=stupid)
-        repo = self.getrepo()
+        repo = self.repo
         self.assertEqual(repo['tip'], repo['closed-branches'])
         self.assertEqual(node.hex(repo['tip'].node()),
                          '2f0a3abe2004c0fa01f5f6074a8b5441e9c80c2a')

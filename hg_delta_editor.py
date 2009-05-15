@@ -11,6 +11,7 @@ from mercurial import ui
 from mercurial import util as hgutil
 from mercurial import revlog
 from mercurial import node
+from mercurial import error
 from svn import delta
 from svn import core
 
@@ -74,9 +75,8 @@ class HgChangeReceiver(delta.Editor):
 
     def __init__(self, path=None, repo=None, ui_=None,
                  subdir='', author_host='',
-                 tag_locations=['tags'],
-                 authors=None,
-                 filemap=None):
+                 tag_locations=[],
+                 authors=None, filemap=None, uuid=None):
         """path is the path to the target hg repo.
 
         subdir is the subdirectory of the edits *on the svn server*.
@@ -87,14 +87,22 @@ class HgChangeReceiver(delta.Editor):
         if not ui_:
             ui_ = ui.ui()
         self.ui = ui_
-        self.__setup_repo(repo or path)
+        self.__setup_repo(repo or path, uuid)
+
+        if not author_host:
+            author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
+        if not authors:
+            authors = self.ui.config('hgsubversion', 'authormap')
+        if not filemap:
+            filemap = self.ui.config('hgsubversion', 'filemap')
+        if not tag_locations:
+            tag_locations = self.ui.config('hgsubversion', 'tagpaths', ['tags'])
+        self.usebranchnames = self.ui.configbool('hgsubversion',
+                                                  'usebranchnames', True)
 
         self.subdir = subdir
         if self.subdir and self.subdir[0] == '/':
             self.subdir = self.subdir[1:]
-        self.revmap = {}
-        if os.path.exists(self.revmap_file):
-            self.revmap = util.parse_revmap(self.revmap_file)
         self.branches = {}
         if os.path.exists(self.branch_info_file):
             f = open(self.branch_info_file)
@@ -137,7 +145,7 @@ class HgChangeReceiver(delta.Editor):
             date = self.lastdate
         return date
 
-    def __setup_repo(self, arg):
+    def __setup_repo(self, arg, uuid):
         """Verify the repo is going to work out for us.
 
         This method will fail an assertion if the repo exists but doesn't have
@@ -154,12 +162,14 @@ class HgChangeReceiver(delta.Editor):
             raise TypeError("editor requires either a path or a repository "
                             "specified")
 
-        if os.path.isdir(self.meta_data_dir) and os.listdir(self.meta_data_dir):
-            assert os.path.isfile(self.revmap_file)
-            assert os.path.isfile(self.svn_url_file)
-            assert os.path.isfile(self.uuid_file)
+        if not os.path.isdir(self.meta_data_dir):
+            os.makedirs(self.meta_data_dir)
+        self._set_uuid(uuid)
+
+        if os.path.isfile(self.revmap_file):
+            self.revmap = util.parse_revmap(self.revmap_file)
         else:
-            os.makedirs(os.path.dirname(self.uuid_file))
+            self.revmap = {}
             f = open(self.revmap_file, 'w')
             f.write('%s\n' % util.REVMAP_FILE_VERSION)
             f.flush()
@@ -636,7 +646,7 @@ class HgChangeReceiver(delta.Editor):
                 raise IOError
             files = parentctx.manifest().keys()
             extra = {}
-            if not self.opts.get('svn_no_branchnames', False):
+            if self.usebranchnames:
                 extra['branch'] = 'closed-branches'
             current_ctx = context.memctx(self.repo,
                                          parents,
@@ -658,9 +668,7 @@ class HgChangeReceiver(delta.Editor):
                        revlog.nullid)
             if parents[0] in closed_revs and branch in self.branches_to_delete:
                 continue
-            extra = util.build_extra(rev.revnum, branch,
-                                     open(self.uuid_file).read(),
-                                     self.subdir)
+            extra = util.build_extra(rev.revnum, branch, self.uuid, self.subdir)
             if branch is not None:
                 if (branch not in self.branches
                     and branch not in self.repo.branchtags()):
@@ -691,7 +699,7 @@ class HgChangeReceiver(delta.Editor):
                                           data=data,
                                           islink=is_link, isexec=is_exec,
                                           copied=copied)
-            if self.opts.get('svn_no_branchnames', False):
+            if not self.usebranchnames:
                 extra.pop('branch', None)
             current_ctx = context.memctx(self.repo,
                                          parents,
@@ -717,10 +725,8 @@ class HgChangeReceiver(delta.Editor):
             if self.commit_branches_empty[branch]: #pragma: no cover
                raise hgutil.Abort('Empty commit to an open branch attempted. '
                                   'Please report this issue.')
-            extra = util.build_extra(rev.revnum, branch,
-                                     open(self.uuid_file).read(),
-                                     self.subdir)
-            if self.opts.get('svn_no_branchnames', False):
+            extra = util.build_extra(rev.revnum, branch, self.uuid, self.subdir)
+            if not self.usebranchnames:
                 extra.pop('branch', None)
             current_ctx = context.memctx(self.repo,
                                          (ha, node.nullid),
@@ -783,13 +789,31 @@ class HgChangeReceiver(delta.Editor):
         return self.meta_file_named('rev_map')
     revmap_file = property(revmap_file)
 
-    def svn_url_file(self):
-        return self.meta_file_named('url')
-    svn_url_file = property(svn_url_file)
+    def _get_uuid(self):
+        return open(self.meta_file_named('uuid')).read()
 
-    def uuid_file(self):
-        return self.meta_file_named('uuid')
-    uuid_file = property(uuid_file)
+    def _set_uuid(self, uuid):
+        if not uuid:
+            return self._get_uuid()
+        elif os.path.isfile(self.meta_file_named('uuid')):
+            stored_uuid = self._get_uuid()
+            assert stored_uuid
+            if uuid != stored_uuid:
+                raise hgutil.Abort('unable to operate on unrelated repository')
+            else:
+                return stored_uuid
+        else:
+            if uuid:
+                f = open(self.meta_file_named('uuid'), 'w')
+                f.write(uuid)
+                f.flush()
+                f.close()
+                return self._get_uuid()
+            else:
+                raise hgutil.Abort('unable to operate on unrelated repository')
+
+    uuid = property(_get_uuid, _set_uuid, None,
+                    'Error-checked UUID of source Subversion repository.')
 
     def branch_info_file(self):
         return self.meta_file_named('branch_info')
@@ -802,10 +826,6 @@ class HgChangeReceiver(delta.Editor):
     def tag_locations_file(self):
         return self.meta_file_named('tag_locations')
     tag_locations_file = property(tag_locations_file)
-
-    def url(self):
-        return open(self.svn_url_file).read()
-    url = property(url)
 
     def authors_file(self):
         return self.meta_file_named('authors')

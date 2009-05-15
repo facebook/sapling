@@ -527,7 +527,7 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
                                          date,
                                          extra)
             branch = extra.get('branch', None)
-            if hg_editor.opts.get('svn_no_branchnames', False):
+            if not hg_editor.usebranchnames:
                 extra.pop('branch', None)
             ha = hg_editor.repo.commitctx(current_ctx)
             if not branch in hg_editor.branches:
@@ -561,7 +561,7 @@ def svn_server_pull_rev(ui, svn, hg_editor, r):
             closed = hg_editor.repo['closed-branches'].node()
         parents = (parent, closed)
         extra = {}
-        if not hg_editor.opts.get('svn_no_branchnames', False):
+        if hg_editor.usebranchnames:
                 extra['branch'] = 'closed-branches'
         current_ctx = context.memctx(hg_editor.repo,
                                      parents,

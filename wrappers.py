@@ -87,24 +87,36 @@ def diff(orig, ui, repo, *args, **opts):
                                                   }))
     ui.write(cmdutil.filterdiff(''.join(it), baserev, newrev))
 
-
-def push(orig, ui, repo, dest=None, *args, **opts):
+def push(repo, dest="default", force=False, revs=None):
     """push revisions starting at a specified head back to Subversion.
     """
-    opts.pop('svn', None) # unused in this case
-    svnurl = repo.ui.expandpath(dest or 'default-push', dest or 'default')
-    if not cmdutil.issvnurl(svnurl):
-        return orig(ui, repo, dest=dest, *args, **opts)
+    assert not revs, 'designated revisions for push remains unimplemented.'
+    print dest
+    ui = repo.ui
+    svnurl = util.normalize_url(repo.ui.expandpath(dest))
     old_encoding = util.swap_out_encoding()
-    hge = hg_delta_editor.HgChangeReceiver(repo=repo)
-    svnurl = util.normalize_url(svnurl)
     # split of #rev; TODO: implement --rev/#rev support
-    svnurl, revs, checkout = hg.parseurl(svnurl, opts.get('rev'))
-    if svnurl != hge.url:
-        raise hgutil.Abort('wrong subversion url!')
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    user, passwd = util.getuserpass(opts)
+    svnurl, revs, checkout = hg.parseurl(svnurl, revs)
+    # TODO: do credentials specified in the URL still work?
+    user = repo.ui.config('hgsubversion', 'username')
+    passwd = repo.ui.config('hgsubversion', 'password')
+    svn = svnwrap.SubversionRepo(svnurl, user, passwd)
+    hge = hg_delta_editor.HgChangeReceiver(repo=repo, uuid=svn.uuid)
+
+    # Check if we are up-to-date with the Subversion repository.
+    if hge.last_known_revision() != svn.last_changed_rev:
+        # Based on localrepository.push() in localrepo.py:1559. 
+        # TODO: Ideally, we would behave exactly like other repositories:
+        #  - push everything by default
+        #  - handle additional heads in the same way
+        #  - allow pushing single revisions, branches, tags or heads using
+        #    the -r/--rev flag.
+        if force:
+            ui.warn("note: unsynced remote changes!\n")
+        else:
+            ui.warn("abort: unsynced remote changes!\n")
+            return None, 0
+
     # Strategy:
     # 1. Find all outgoing commits from this head
     if len(repo.parents()) != 1:
@@ -112,6 +124,8 @@ def push(orig, ui, repo, dest=None, *args, **opts):
         return 1
     workingrev = repo.parents()[0]
     ui.status('searching for changes\n')
+    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
+                                 hge.revmap.iterkeys()))
     outgoing = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingrev.node())
     if not (outgoing and len(outgoing)):
         ui.status('no changes found\n')
@@ -143,12 +157,10 @@ def push(orig, ui, repo, dest=None, *args, **opts):
                      old_ctx)
             return 1
         # 3. Fetch revisions from svn
-        # TODO this probably should pass in the source explicitly
-        r = pull(None, ui, repo, svn=True, stupid=opts.get('svn_stupid', False),
-                 username=user, password=passwd)
+        # TODO: this probably should pass in the source explicitly - rev too?
+        r = pull(repo, source=dest, force=force)
         assert not r or r == 0
         # 4. Find the new head of the target branch
-        repo = hg.repository(ui, hge.path)
         oldtipctx = repo[oldtip]
         replacement = [c for c in oldtipctx.children() if c not in old_children
                        and c.branch() == oldtipctx.branch()]
@@ -161,8 +173,9 @@ def push(orig, ui, repo, dest=None, *args, **opts):
                 if ctx.node() == oldest:
                     return
                 extra['branch'] = ctx.branch()
+            # TODO: can we avoid calling our own rebase wrapper here?
             rebase(hgrebase.rebase, ui, repo, svn=True, svnextrafn=extrafn,
-                   svnsourcerev=needs_transplant, **opts)
+                   svnsourcerev=needs_transplant)
             repo = hg.repository(ui, hge.path)
             for child in repo[replacement.node()].children():
                 rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
@@ -175,7 +188,8 @@ def push(orig, ui, repo, dest=None, *args, **opts):
                         if children:
                             child = children[0]
                         rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
-        hge = hg_delta_editor.HgChangeReceiver(hge.path, ui_=ui)
+        # TODO: stop constantly creating the HgChangeReceiver instances.
+        hge = hg_delta_editor.HgChangeReceiver(hge.repo, ui_=ui, uuid=svn.uuid)
         svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
     util.swap_out_encoding(old_encoding)
     return 0
@@ -234,25 +248,20 @@ def clone(orig, ui, source, dest=None, *args, **opts):
     return res
 
 
-def pull(orig, ui, repo, source="default", *args, **opts):
+def pull(repo, source="default", rev=None, force=False):
     """pull new revisions from Subversion
 
     Also takes svn, svn_stupid, and create_new_dest kwargs.
     """
-    svn = opts.pop('svn', None)
-    svn_stupid = opts.pop('svn_stupid', False)
-    create_new_dest = opts.pop('create_new_dest', False)
-    url = ((repo and repo.ui) or ui).expandpath(source)
-    if orig and not (cmdutil.issvnurl(url) or svn or create_new_dest):
-        return orig(ui, repo, source=source, *args, **opts)
-    svn_url = url
-    svn_url = util.normalize_url(svn_url)
+    url = repo.ui.expandpath(source)
+    svn_url = util.normalize_url(url)
+
     # Split off #rev; TODO: implement --rev/#rev support limiting the pulled/cloned revisions
-    svn_url, revs, checkout = hg.parseurl(svn_url, opts.get('rev'))
+    svn_url, revs, checkout = hg.parseurl(svn_url, rev)
     old_encoding = util.swap_out_encoding()
     # TODO implement skipto support
     skipto_rev = 0
-    have_replay = not svn_stupid
+    have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
     if have_replay and not callable(
         delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
         ui.status('You are using old Subversion SWIG bindings. Replay will not'
@@ -261,46 +270,23 @@ def pull(orig, ui, repo, source="default", *args, **opts):
                   ' contribute a patch to use the ctypes bindings instead'
                   ' of SWIG.\n')
         have_replay = False
-    initializing_repo = False
-    user, passwd = util.getuserpass(opts)
+
+    # FIXME: enable this
+    user = repo.ui.config('hgsubversion', 'username')
+    passwd = repo.ui.config('hgsubversion', 'password')
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
-    author_host = ui.config('hgsubversion', 'defaulthost', svn.uuid)
-    tag_locations = ['tags', ]
-    authors = opts.pop('svn_authors', None)
-    filemap = opts.pop('svn_filemap', None)
-    if repo:
-        hg_editor = hg_delta_editor.HgChangeReceiver(repo=repo,
-                                                     subdir=svn.subdir,
-                                                     author_host=author_host,
-                                                     tag_locations=tag_locations,
-                                                     authors=authors,
-                                                     filemap=filemap)
-    else:
-        hg_editor = hg_delta_editor.HgChangeReceiver(ui_=ui,
-                                                     path=create_new_dest,
-                                                     subdir=svn.subdir,
-                                                     author_host=author_host,
-                                                     tag_locations=tag_locations,
-                                                     authors=authors,
-                                                     filemap=filemap)
-    hg_editor.opts = opts
-    if os.path.exists(hg_editor.uuid_file):
-        uuid = open(hg_editor.uuid_file).read()
-        assert uuid == svn.uuid
-        start = hg_editor.last_known_revision()
-    else:
-        open(hg_editor.uuid_file, 'w').write(svn.uuid)
-        open(hg_editor.svn_url_file, 'w').write(svn_url)
-        initializing_repo = True
-        start = skipto_rev
+    hg_editor = hg_delta_editor.HgChangeReceiver(repo=repo, subdir=svn.subdir,
+                                                 uuid=svn.uuid)
+
+    start = max(hg_editor.last_known_revision(), skipto_rev)
+    initializing_repo = (hg_editor.last_known_revision() <= 0)
+    ui = repo.ui
 
     if initializing_repo and start > 0:
         raise hgutil.Abort('Revision skipping at repository initialization '
                            'remains unimplemented.')
 
     revisions = 0
-    if not initializing_repo:
-        oldheads = len(repo.changelog.heads())
 
     # start converting revisions
     for r in svn.revisions(start=start):
@@ -344,14 +330,6 @@ def pull(orig, ui, repo, source="default", *args, **opts):
         return
     else:
         ui.status("added %d svn revisions\n" % revisions)
-    if not initializing_repo:
-        newheads = len(repo.changelog.heads())
-        # postincoming needs to know if heads were added or removed
-        # calculation based on mercurial.localrepo.addchangegroup
-        # 0 means no changes, 1 no new heads, > 1 new heads, < 0 heads removed
-        modheads = newheads - oldheads + (newheads < oldheads and -1 or 1)
-        commands.postincoming(ui, repo, modheads, opts.get('update'), checkout)
-
 
 def rebase(orig, ui, repo, **opts):
     """rebase current unpushed revisions onto the Subversion head

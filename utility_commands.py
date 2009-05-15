@@ -7,14 +7,6 @@ import cmdutil
 import util
 import hg_delta_editor
 
-def url(ui, repo, hg_repo_path, **opts):
-    """show the location (URL) of the Subversion repository
-    """
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
-    ui.status(hge.url, '\n')
-
-
 def genignore(ui, repo, hg_repo_path, force=False, **opts):
     """generate .hgignore from svn:ignore properties.
     """
@@ -23,8 +15,11 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
         raise hgutil.Abort('not overwriting existing .hgignore, try --force?')
     ignorefile = open(ignpath, 'w')
     ignorefile.write('.hgignore\nsyntax:glob\n')
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
+    url = util.normalize_url(repo.ui.config('paths', 'default'))
+    user, passwd = util.getuserpass(opts)
+    svn = svnwrap.SubversionRepo(url, user, passwd)
+    hge = hg_delta_editor.HgChangeReceiver(path=hg_repo_path, repo=repo,
+                                           ui_=ui, uuid=svn.uuid)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
@@ -33,11 +28,8 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
         branchpath = 'trunk'
     else:
         branchpath = 'branches/%s' % br
-    url = hge.url
     if url[-1] == '/':
         url = url[:-1]
-    user, passwd = util.getuserpass(opts)
-    svn = svnwrap.SubversionRepo(url, user, passwd)
     dirs = [''] + [d[0] for d in svn.list_files(branchpath, r) if d[1] == 'd']
     for dir in dirs:
         props = svn.list_props('%s/%s/' % (branchpath,dir), r)
@@ -53,8 +45,11 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
 def info(ui, repo, hg_repo_path, **opts):
     """show Subversion details similar to `svn info'
     """
-    hge = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                           ui_=ui)
+    url = util.normalize_url(repo.ui.config('paths', 'default'))
+    user, passwd = util.getuserpass(opts)
+    svn = svnwrap.SubversionRepo(url, user, passwd)
+    hge = hg_delta_editor.HgChangeReceiver(path=hg_repo_path, repo=repo,
+                                           ui_=ui, uuid=svn.uuid)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
@@ -71,7 +66,7 @@ def info(ui, repo, hg_repo_path, **opts):
         subdir = subdir.replace('branches/../', '')
     else:
         branchpath = '/branches/%s' % br
-    url = hge.url
+    url = util.normalize_url(repo.ui.config('paths', 'default'))
     if url[-1] == '/':
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
@@ -87,7 +82,7 @@ Last Changed Author: %(author)s
 Last Changed Rev: %(revision)s
 Last Changed Date: %(date)s\n''' %
               {'reporoot': reporoot,
-               'uuid': open(hge.uuid_file).read(),
+               'uuid': hge.uuid,
                'url': url,
                'author': author,
                'revision': r,
@@ -125,7 +120,6 @@ def version(ui, **opts):
 
 nourl = ['version', 'listauthors']
 table = {
-    'url': url,
     'genignore': genignore,
     'info': info,
     'listauthors': listauthors,
