@@ -54,5 +54,8 @@ if __name__ == '__main__':
         kwargs['descriptions'] = 3
         kwargs['verbosity'] = 2
 
+    # silence output when running outside nose
+    sys.stdout = os.tmpfile()
+
     runner = unittest.TextTestRunner(**kwargs)
     runner.run(suite())
