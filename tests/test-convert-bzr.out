@@ -70,3 +70,6 @@ converting...
 755 * newprog
 644   program
 644 @ syma
+% test the symlinks can be recreated
+5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+a

@@ -73,12 +73,22 @@ class bzr_source(converter_source):
     def getfile(self, name, rev):
         revtree = self.sourcerepo.revision_tree(rev)
         fileid = revtree.path2id(name)
-        if fileid is None or revtree.kind(fileid) not in supportedkinds:
+        kind = None
+        if fileid is not None:
+            kind = revtree.kind(fileid)
+        if kind not in supportedkinds:
             # the file is not available anymore - was deleted
             raise IOError(_('%s is not available in %s anymore') %
                     (name, rev))
-        sio = revtree.get_file(fileid)
-        return sio.read()
+        if kind == 'symlink':
+            target = revtree.get_symlink_target(fileid)
+            if target is None:
+                raise util.Abort(_('%s.%s symlink has no target')
+                                 % (name, rev))
+            return target
+        else:
+            sio = revtree.get_file(fileid)
+            return sio.read()
 
     def getmode(self, name, rev):
         return self._modecache[(name, rev)]
