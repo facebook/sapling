@@ -885,8 +885,8 @@ class queue:
     def push(self, repo, patch=None, force=False, list=False,
              mergeq=None, all=False):
         wlock = repo.wlock()
-        if repo.dirstate.parents()[0] != repo.changelog.tip():
-            self.ui.status(_("(working directory not at tip)\n"))
+        if repo.dirstate.parents()[0] not in repo.heads():
+            self.ui.status(_("(working directory not at a head)\n"))
 
         if not self.series:
             self.ui.warn(_('no patches in series\n'))

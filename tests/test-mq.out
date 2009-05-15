@@ -326,7 +326,7 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 patch queue now empty
-(working directory not at tip)
+(working directory not at a head)
 applying bar
 now at: bar
 diff --git a/bar b/bar
@@ -360,7 +360,7 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 patch queue now empty
-(working directory not at tip)
+(working directory not at a head)
 applying bar
 now at: bar
 diff --git a/foo b/bleh
