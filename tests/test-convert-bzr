@@ -114,4 +114,8 @@ cd ..
 hg convert source source-hg
 manifest source-hg 0
 manifest source-hg tip
-cd ..
+cd source-hg
+echo % test the symlinks can be recreated
+hg up
+hg cat syma
+cd ../..
