@@ -13,7 +13,8 @@ from dulwich.objects import (
     ShaFile,
     Tag,
     Tree,
-    hex_to_sha
+    hex_to_sha,
+    format_timezone,
     )
 
 import math
@@ -203,7 +204,7 @@ class GitHandler(object):
         author = ctx.user()
         if not '>' in author: # TODO : this kills losslessness - die (submodules)?
             author = author + ' <none@none>'
-        commit['author'] = author + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
+        commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
         message = ctx.description()
         commit['message'] = ctx.description() + "\n"
 
@@ -593,7 +594,7 @@ class GitHandler(object):
             extra['branch'] = hg_branch
 
         text = strip_message
-        date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
+        date = (commit.author_time, -commit.author_timezone)
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              commit.author, date, extra)
         a = self.repo.commitctx(ctx)
