@@ -1,8 +1,8 @@
-#header#
+{header}
  <id>{urlbase}{url}atom-log/tip/{file|escape}</id>
  <link rel="self" href="{urlbase}{url}atom-log/tip/{file|escape}"/>
- <title>#repo|escape#: #file|escape# history</title>
- #latestentry%feedupdated#
+ <title>{repo|escape}: {file|escape} history</title>
+ {latestentry%feedupdated}
 
-#entries%changelogentry#
+{entries%changelogentry}
 </feed>
