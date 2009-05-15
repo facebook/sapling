@@ -1,13 +1,13 @@
-#header#
+{header}
 <title>{repo|escape}: {file|escape}@{node|short} (annotated)</title>
-    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for #repo|escape#"/>
-    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for {repo|escape}"/>
+    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 
 <body>
 <div id="container">
     <div class="page-header">
-        <h1><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / annotate</h1>
+        <h1><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / annotate</h1>
 
         <form action="{url}log">
             {sessionvars%hiddenformentry}
@@ -24,34 +24,34 @@
             <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
             <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
             <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
-            <li><a href="{url}file/#node|short##path|urlescape#{sessionvars%urlparameter}">files</a></li>
+            <li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a></li>
         </ul>
     </div>
 
     <ul class="submenu">
-        <li><a href="{url}file/{node|short}/#file|urlescape#{sessionvars%urlparameter}">file</a></li>
-        <li><a href="{url}log/{node|short}/#file|urlescape#{sessionvars%urlparameter}">revisions</a></li>
+        <li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
+        <li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a></li>
         <li class="current">annotate</li>
         <li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
-        <li><a href="{url}raw-annotate/{node|short}/#file|urlescape#">raw</a></li>
+        <li><a href="{url}raw-annotate/{node|short}/{file|urlescape}">raw</a></li>
     </ul>
 
     <h2 class="no-link no-border">{file|escape}@{node|short} (annotated)</h2>
-    <h3 class="changeset">#file|escape#</h3>
-    <p class="changeset-age"><span>#date|age# ago</span></p>
+    <h3 class="changeset">{file|escape}</h3>
+    <p class="changeset-age"><span>{date|age} ago</span></p>
 
     <dl class="overview">
         <dt>author</dt>
-        <dd>#author|obfuscate#</dd>
+        <dd>{author|obfuscate}</dd>
         <dt>date</dt>
-        <dd>#date|date#</dd>
-        #branch%filerevbranch#
+        <dd>{date|date}</dd>
+        {branch%filerevbranch}
         <dt>changeset {rev}</dt>
-        <dd><a href="{url}rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></dd>
-        #parent%fileannotateparent#
-        #child%fileannotatechild#
+        <dd><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></dd>
+        {parent%fileannotateparent}
+        {child%fileannotatechild}
         <dt>permissions</dt>
-        <dd>#permissions|permissions#</dd>
+        <dd>{permissions|permissions}</dd>
     </dl>
 
     <p class="description">{desc|strip|escape|addbreaks|nonempty}</p>
@@ -60,4 +60,4 @@
     {annotate%annotateline}
     </table>
 
-#footer#
+{footer}

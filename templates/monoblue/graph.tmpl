@@ -1,14 +1,14 @@
-#header#
-    <title>#repo|escape#: graph</title>
-    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for #repo|escape#"/>
-    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for #repo|escape#"/>
-    <!--[if IE]><script type="text/javascript" src="#staticurl#excanvas.js"></script><![endif]-->
+{header}
+    <title>{repo|escape}: graph</title>
+    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for {repo|escape}"/>
+    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for {repo|escape}"/>
+    <!--[if IE]><script type="text/javascript" src="{staticurl}excanvas.js"></script><![endif]-->
 </head>
 
 <body>
 <div id="container">
     <div class="page-header">
-        <h1><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / graph</h1>
+        <h1><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / graph</h1>
 
         <form action="{url}log">
             {sessionvars%hiddenformentry}
@@ -25,7 +25,7 @@
             <li class="current">graph</li>
             <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
             <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
-            <li><a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a></li>
+            <li><a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a></li>
         </ul>
     </div>
 
@@ -34,11 +34,11 @@
     <div id="noscript">The revision graph only works with JavaScript-enabled browsers.</div>
     <div id="wrapper">
         <ul id="nodebgs"></ul>
-        <canvas id="graph" width="224" height="#canvasheight#"></canvas>
+        <canvas id="graph" width="224" height="{canvasheight}"></canvas>
         <ul id="graphnodes"></ul>
     </div>
 
-    <script type="text/javascript" src="#staticurl#graph.js"></script>
+    <script type="text/javascript" src="{staticurl}graph.js"></script>
     <script>
     <!-- hide script content
 
@@ -115,4 +115,4 @@
         | {changenav%navgraphentry}
     </div>
 
-#footer#
+{footer}
