@@ -1,18 +1,18 @@
-#header#
-<title>#repo|escape#: Error</title>
+{header}
+<title>{repo|escape}: Error</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for #repo|escape#"/>
+   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / error
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / error
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{sessionvars%urlparameter}">summary</a> | <a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> | <a href="{url}log{sessionvars%urlparameter}">changelog</a> | <a href="{url}tags{sessionvars%urlparameter}">tags</a> | <a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a><br/>
+<a href="{url}summary{sessionvars%urlparameter}">summary</a> | <a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> | <a href="{url}log{sessionvars%urlparameter}">changelog</a> | <a href="{url}tags{sessionvars%urlparameter}">tags</a> | <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a><br/>
 </div>
 
 <div class="page_body">
@@ -22,4 +22,4 @@
 {error|escape}
 </div>
 
-#footer#
+{footer}

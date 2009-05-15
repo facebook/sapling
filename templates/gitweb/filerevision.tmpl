@@ -1,14 +1,14 @@
-#header#
+{header}
 <title>{repo|escape}: {file|escape}@{node|short}</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for #repo|escape#"/>
+   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / file revision
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / file revision
 </div>
 
 <div class="page_nav">
@@ -18,34 +18,34 @@
 <a href="{url}graph{sessionvars%urlparameter}">graph</a> |
 <a href="{url}tags{sessionvars%urlparameter}">tags</a> |
 <a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/#node|short##path|urlescape#{sessionvars%urlparameter}">files</a> |
-<a href="{url}rev/#node|short#{sessionvars%urlparameter}">changeset</a> |
+<a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a> |
+<a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
 file |
-<a href="{url}log/{node|short}/#file|urlescape#{sessionvars%urlparameter}">revisions</a> |
-<a href="{url}annotate/{node|short}/#file|urlescape#{sessionvars%urlparameter}">annotate</a> |
+<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
+<a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a> |
 <a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
-<a href="{url}raw-file/{node|short}/#file|urlescape#">raw</a><br/>
+<a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a><br/>
 </div>
 
-<div class="title">#file|escape#</div>
+<div class="title">{file|escape}</div>
 
 <div class="title_text">
 <table cellspacing="0">
 <tr>
  <td>author</td>
- <td>#author|obfuscate#</td></tr>
+ <td>{author|obfuscate}</td></tr>
 <tr>
  <td></td>
- <td>#date|date# (#date|age# ago)</td></tr>
-#branch%filerevbranch#
+ <td>{date|date} ({date|age} ago)</td></tr>
+{branch%filerevbranch}
 <tr>
  <td>changeset {rev}</td>
- <td style="font-family:monospace"><a class="list" href="{url}rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td></tr>
-#parent%filerevparent#
-#child%filerevchild#
+ <td style="font-family:monospace"><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
+{parent%filerevparent}
+{child%filerevchild}
 <tr>
  <td>permissions</td>
- <td style="font-family:monospace">#permissions|permissions#</td></tr>
+ <td style="font-family:monospace">{permissions|permissions}</td></tr>
 </table>
 </div>
 
@@ -54,7 +54,7 @@ file |
 </div>
 
 <div class="page_body">
-#text%fileline#
+{text%fileline}
 </div>
 
-#footer#
+{footer}

@@ -1,19 +1,19 @@
-#header#
-<title>#repo|escape#: Search</title>
+{header}
+<title>{repo|escape}: Search</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for #repo|escape#"/>
+   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / search
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / search
 
 <form action="{url}log">
 {sessionvars%hiddenformentry}
 <div class="search">
-<input type="text" name="rev" value="#query|escape#" />
+<input type="text" name="rev" value="{query|escape}" />
 </div>
 </form>
 </div>
@@ -25,12 +25,12 @@
 <a href="{url}graph{sessionvars%urlparameter}">graph</a> |
 <a href="{url}tags{sessionvars%urlparameter}">tags</a> |
 <a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a>#archives%archiveentry#
+<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>{archives%archiveentry}
 <br/>
 </div>
 
-<div class="title">searching for #query|escape#</div>
+<div class="title">searching for {query|escape}</div>
 
-#entries#
+{entries}
 
-#footer#
+{footer}

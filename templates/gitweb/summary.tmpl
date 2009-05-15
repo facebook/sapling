@@ -1,14 +1,14 @@
-#header#
-<title>#repo|escape#: Summary</title>
+{header}
+<title>{repo|escape}: Summary</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for #repo|escape#"/>
+   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for #repo|escape#"/>
+   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">#repo|escape#</a> / summary
+<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / summary
 
 <form action="{url}log">
 {sessionvars%hiddenformentry}
@@ -25,26 +25,26 @@ summary |
 <a href="{url}graph{sessionvars%urlparameter}">graph</a> |
 <a href="{url}tags{sessionvars%urlparameter}">tags</a> |
 <a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/#node|short#{sessionvars%urlparameter}">files</a>#archives%archiveentry#
+<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>{archives%archiveentry}
 <br/>
 </div>
 
 <div class="title">&nbsp;</div>
 <table cellspacing="0">
-<tr><td>description</td><td>#desc#</td></tr>
-<tr><td>owner</td><td>#owner|obfuscate#</td></tr>
-<tr><td>last change</td><td>#lastchange|rfc822date#</td></tr>
+<tr><td>description</td><td>{desc}</td></tr>
+<tr><td>owner</td><td>{owner|obfuscate}</td></tr>
+<tr><td>last change</td><td>{lastchange|rfc822date}</td></tr>
 </table>
 
 <div><a  class="title" href="{url}shortlog{sessionvars%urlparameter}">changes</a></div>
 <table cellspacing="0">
-#shortlog#
+{shortlog}
 <tr class="light"><td colspan="4"><a class="list" href="{url}shortlog{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
 <div><a class="title" href="{url}tags{sessionvars%urlparameter}">tags</a></div>
 <table cellspacing="0">
-#tags#
+{tags}
 <tr class="light"><td colspan="3"><a class="list" href="{url}tags{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
@@ -55,4 +55,4 @@ summary |
   <td colspan="4"><a class="list"  href="#">...</a></td>
 </tr>
 </table>
-#footer#
+{footer}

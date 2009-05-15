@@ -1,4 +1,4 @@
-#header#
+{header}
 <title>Mercurial repositories index</title>
 </head>
 <body>
@@ -10,17 +10,17 @@
 
 <table cellspacing="0">
     <tr>
-        <td><a href="?sort=#sort_name#">Name</a></td>
-        <td><a href="?sort=#sort_description#">Description</a></td>
-        <td><a href="?sort=#sort_contact#">Contact</a></td>
-        <td><a href="?sort=#sort_lastchange#">Last change</a></td>
+        <td><a href="?sort={sort_name}">Name</a></td>
+        <td><a href="?sort={sort_description}">Description</a></td>
+        <td><a href="?sort={sort_contact}">Contact</a></td>
+        <td><a href="?sort={sort_lastchange}">Last change</a></td>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
     </tr>
-    #entries%indexentry#
+    {entries%indexentry}
 </table>
 <div class="page_footer">
-#motd#
+{motd}
 </div>
 </body>
 </html>
