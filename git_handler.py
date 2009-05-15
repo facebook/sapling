@@ -210,7 +210,10 @@ class GitHandler(object):
 
         extra = ctx.extra()
         if 'committer' in extra:
-            commit['committer'] = extra['committer']
+            # fixup timezone
+            (name_timestamp, timezone) = extra['committer'].rsplit(' ', 1)
+            timezone = format_timezone(-int(timezone))
+            commit['committer'] = '%s %s' % (name_timestamp, timezone)
         if 'encoding' in extra:
             commit['encoding'] = extra['encoding']
 
@@ -585,7 +588,7 @@ class GitHandler(object):
 
         # if committer is different than author, add it to extra
         if not commit._author_raw == commit._committer_raw:
-            extra['committer'] = commit._committer_raw
+            extra['committer'] = "%s %d %d" % (commit.committer, commit.commit_time, -commit.commit_timezone)
 
         if commit._encoding:
             extra['encoding'] = commit._encoding
