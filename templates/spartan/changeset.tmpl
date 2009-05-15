@@ -1,51 +1,51 @@
-#header#
-<title>#repo|escape#: changeset #node|short#</title>
+{header}
+<title>{repo|escape}: changeset {node|short}</title>
 </head>
 <body>
 
 <div class="buttons">
-<a href="#url#log/#rev#{sessionvars%urlparameter}">changelog</a>
-<a href="#url#shortlog/#rev#{sessionvars%urlparameter}">shortlog</a>
-<a href="#url#graph{sessionvars%urlparameter}">graph</a>
-<a href="#url#tags{sessionvars%urlparameter}">tags</a>
-<a href="#url#branches{sessionvars%urlparameter}">branches</a>
-<a href="#url#file/#node|short#{sessionvars%urlparameter}">files</a>
-<a href="#url#raw-rev/#node|short#">raw</a>
-#archives%archiveentry#
+<a href="{url}log/{rev}{sessionvars%urlparameter}">changelog</a>
+<a href="{url}shortlog/{rev}{sessionvars%urlparameter}">shortlog</a>
+<a href="{url}graph{sessionvars%urlparameter}">graph</a>
+<a href="{url}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url}branches{sessionvars%urlparameter}">branches</a>
+<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
+<a href="{url}raw-rev/{node|short}">raw</a>
+{archives%archiveentry}
 </div>
 
-<h2>changeset: #desc|strip|escape|firstline|nonempty#</h2>
+<h2>changeset: {desc|strip|escape|firstline|nonempty}</h2>
 
 <table id="changesetEntry">
 <tr>
- <th class="changeset">changeset #rev#:</th>
- <td class="changeset"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td>
+ <th class="changeset">changeset {rev}:</th>
+ <td class="changeset"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
 </tr>
-#parent%changesetparent#
-#child%changesetchild#
-#changesettag#
+{parent%changesetparent}
+{child%changesetchild}
+{changesettag}
 <tr>
  <th class="author">author:</th>
- <td class="author">#author|obfuscate#</td>
+ <td class="author">{author|obfuscate}</td>
 </tr>
 <tr>
  <th class="date">date:</th>
- <td class="date">#date|date# (#date|age# ago)</td>
+ <td class="date">{date|date} ({date|age} ago)</td>
 </tr>
 <tr>
  <th class="files">files:</th>
- <td class="files">#files#</td>
+ <td class="files">{files}</td>
 </tr>
 <tr>
  <th class="description">description:</th>
- <td class="description">#desc|strip|escape|addbreaks|nonempty#</td>
+ <td class="description">{desc|strip|escape|addbreaks|nonempty}</td>
 </tr>
 </table>
 
 <div id="changesetDiff">
-#diff#
+{diff}
 </div>
 
-#footer#
+{footer}
 
 

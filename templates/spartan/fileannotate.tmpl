@@ -1,39 +1,39 @@
-#header#
-<title>#repo|escape#: #file|escape# annotate</title>
+{header}
+<title>{repo|escape}: {file|escape} annotate</title>
 </head>
 <body>
 
 <div class="buttons">
-<a href="#url#log/#rev#{sessionvars%urlparameter}">changelog</a>
-<a href="#url#shortlog/#rev#{sessionvars%urlparameter}">shortlog</a>
-<a href="#url#graph{sessionvars%urlparameter}">graph</a>
-<a href="#url#tags{sessionvars%urlparameter}">tags</a>
-<a href="#url#branches{sessionvars%urlparameter}">branches</a>
-<a href="#url#rev/#node|short#{sessionvars%urlparameter}">changeset</a>
-<a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">files</a>
-<a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">file</a>
-<a href="#url#log/#node|short#/#file|urlescape#{sessionvars%urlparameter}">revisions</a>
-<a href="#url#raw-annotate/#node|short#/#file|urlescape#">raw</a>
+<a href="{url}log/{rev}{sessionvars%urlparameter}">changelog</a>
+<a href="{url}shortlog/{rev}{sessionvars%urlparameter}">shortlog</a>
+<a href="{url}graph{sessionvars%urlparameter}">graph</a>
+<a href="{url}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url}branches{sessionvars%urlparameter}">branches</a>
+<a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a>
+<a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a>
+<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a>
+<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a>
+<a href="{url}raw-annotate/{node|short}/{file|urlescape}">raw</a>
 </div>
 
-<h2>Annotate #file|escape#</h2>
+<h2>Annotate {file|escape}</h2>
 
 <table>
 <tr>
- <td class="metatag">changeset #rev#:</td>
- <td><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td></tr>
-#parent%fileannotateparent#
-#child%fileannotatechild#
+ <td class="metatag">changeset {rev}:</td>
+ <td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
+{parent%fileannotateparent}
+{child%fileannotatechild}
 <tr>
  <td class="metatag">author:</td>
- <td>#author|obfuscate#</td></tr>
+ <td>{author|obfuscate}</td></tr>
 <tr>
  <td class="metatag">date:</td>
- <td>#date|date# (#date|age# ago)</td>
+ <td>{date|date} ({date|age} ago)</td>
 </tr>
 <tr>
  <td class="metatag">permissions:</td>
- <td>#permissions|permissions#</td>
+ <td>{permissions|permissions}</td>
 </tr>
 <tr>
   <td class="metatag">description:</td>
@@ -44,7 +44,7 @@
 <br/>
 
 <table cellspacing="0" cellpadding="0">
-#annotate%annotateline#
+{annotate%annotateline}
 </table>
 
-#footer#
+{footer}

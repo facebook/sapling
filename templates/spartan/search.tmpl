@@ -1,36 +1,36 @@
-#header#
-<title>#repo|escape#: searching for #query|escape#</title>
+{header}
+<title>{repo|escape}: searching for {query|escape}</title>
 </head>
 <body>
 
 <div class="buttons">
-<a href="#url#log{sessionvars%urlparameter}">changelog</a>
-<a href="#url#shortlog{sessionvars%urlparameter}">shortlog</a>
-<a href="#url#graph{sessionvars%urlparameter}">graph</a>
-<a href="#url#tags{sessionvars%urlparameter}">tags</a>
-<a href="#url#branches{sessionvars%urlparameter}">branches</a>
-<a href="#url#file/#node|short#{sessionvars%urlparameter}">files</a>
-#archives%archiveentry#
+<a href="{url}log{sessionvars%urlparameter}">changelog</a>
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a>
+<a href="{url}graph{sessionvars%urlparameter}">graph</a>
+<a href="{url}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url}branches{sessionvars%urlparameter}">branches</a>
+<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
+{archives%archiveentry}
 </div>
 
-<h2>searching for #query|escape#</h2>
+<h2>searching for {query|escape}</h2>
 
 <form>
 {sessionvars%hiddenformentry}
 <p>
 search:
-<input name="rev" type="text" width="30" value="#query|escape#">
+<input name="rev" type="text" width="30" value="{query|escape}">
 </p>
 </form>
 
-#entries#
+{entries}
 
 <form>
 {sessionvars%hiddenformentry}
 <p>
 search:
-<input name="rev" type="text" width="30" value="#query|escape#">
+<input name="rev" type="text" width="30" value="{query|escape}">
 </p>
 </form>
 
-#footer#
+{footer}

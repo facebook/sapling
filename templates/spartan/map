@@ -11,8 +11,8 @@ naventry = '<a href="{url}log/{node|short}{sessionvars%urlparameter}">{label|esc
 navshortentry = '<a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navgraphentry = '<a href="{url}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 filenaventry = '<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{label|escape}</a> '
-filedifflink = '<a href="#url#diff/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#file|escape#</a> '
-filenodelink = '<a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#file|escape#</a> '
+filedifflink = '<a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
+filenodelink = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
 filenolink = '{file|escape} '
 fileellipses = '...'
 changelogentry = changelogentry.tmpl
@@ -21,55 +21,55 @@ changeset = changeset.tmpl
 manifest = manifest.tmpl
 
 direntry = '
-  <tr class="parity#parity#">
+  <tr class="parity{parity}">
     <td><tt>drwxr-xr-x</tt>&nbsp;
     <td>&nbsp;
     <td>&nbsp;
     <td>
-      <a href="#url#file/#node|short##path|urlescape#{sessionvars%urlparameter}">#basename|escape#/</a>
-      <a href="#url#file/#node|short##path|urlescape#/#emptydirs|urlescape#{sessionvars%urlparameter}">
-        #emptydirs|urlescape#
+      <a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}/</a>
+      <a href="{url}file/{node|short}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">
+        {emptydirs|urlescape}
       </a>'
 
 fileentry = '
-  <tr class="parity#parity#">
-    <td><tt>#permissions|permissions#</tt>&nbsp;
-    <td align=right><tt class="date">#date|isodate#</tt>&nbsp;
-    <td align=right><tt>#size#</tt>&nbsp;
-    <td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#basename|escape#</a>'
+  <tr class="parity{parity}">
+    <td><tt>{permissions|permissions}</tt>&nbsp;
+    <td align=right><tt class="date">{date|isodate}</tt>&nbsp;
+    <td align=right><tt>{size}</tt>&nbsp;
+    <td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>'
 
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = '<div class="parity#parity#"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</div>'
+fileline = '<div class="parity{parity}"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</div>'
 filelogentry = filelogentry.tmpl
 annotateline = '
-  <tr class="parity#parity#">
+  <tr class="parity{parity}">
     <td class="annotate">
-      <a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}#l{targetline}"
-         title="{node|short}: {desc|escape|firstline}">#author|user#@#rev#</a>
+      <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
+         title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
     </td>
     <td>
-      <a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>
+      <a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>
     </td>
-    <td><pre>#line|escape#</pre></td>
+    <td><pre>{line|escape}</pre></td>
   </tr>'
-difflineplus = '<span class="plusline"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</span>'
-difflineminus = '<span class="minusline"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</span>'
-difflineat = '<span class="atline"><a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#</span>'
-diffline = '<a class="lineno" href="##lineid#" id="#lineid#">#linenumber#</a>#line|escape#'
+difflineplus = '<span class="plusline"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</span>'
+difflineminus = '<span class="minusline"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</span>'
+difflineat = '<span class="atline"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</span>'
+diffline = '<a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}'
 changelogparent = '
   <tr>
-    <th class="parent">parent #rev#:</th>
+    <th class="parent">parent {rev}:</th>
     <td class="parent">
-      <a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a>
+      <a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
     </td>
   </tr>'
 changesetparent = '
   <tr>
-    <th class="parent">parent #rev#:</th>
-    <td class="parent"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td>
+    <th class="parent">parent {rev}:</th>
+    <td class="parent"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 filerevparent = '
   <tr>
@@ -85,8 +85,8 @@ filelogrename = '
   <tr>
     <th>base:</th>
     <td>
-      <a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">
-        #file|escape#@#node|short#
+      <a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
+        {file|escape}@{node|short}
       </a>
     </td>
   </tr>'
@@ -101,74 +101,74 @@ fileannotateparent = '
   </tr>'
 changesetchild = '
   <tr>
-    <th class="child">child #rev#:</th>
-    <td class="child"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td>
+    <th class="child">child {rev}:</th>
+    <td class="child"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 changelogchild = '
   <tr>
-    <th class="child">child #rev#:</th>
-    <td class="child"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td>
+    <th class="child">child {rev}:</th>
+    <td class="child"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 filerevchild = '
   <tr>
     <td class="metatag">child:</td>
-    <td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td>
+    <td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 fileannotatechild = '
   <tr>
     <td class="metatag">child:</td>
-    <td><a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td>
+    <td><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 tags = tags.tmpl
 tagentry = '
-  <li class="tagEntry parity#parity#">
-    <tt class="node">#node#</tt>
-    <a href="#url#rev/#node|short#{sessionvars%urlparameter}">#tag|escape#</a>
+  <li class="tagEntry parity{parity}">
+    <tt class="node">{node}</tt>
+    <a href="{url}rev/{node|short}{sessionvars%urlparameter}">{tag|escape}</a>
   </li>'
 branches = branches.tmpl
 branchentry = '
-  <li class="tagEntry parity#parity#">
-    <tt class="node">#node#</tt>
-    <a href="#url#shortlog/#node|short#{sessionvars%urlparameter}">#branch|escape#</a>
+  <li class="tagEntry parity{parity}">
+    <tt class="node">{node}</tt>
+    <a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{branch|escape}</a>
   </li>'
-diffblock = '<pre class="parity#parity#">#lines#</pre>'
-changelogtag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
-changesettag = '<tr><th class="tag">tag:</th><td class="tag">#tag|escape#</td></tr>'
+diffblock = '<pre class="parity{parity}">{lines}</pre>'
+changelogtag = '<tr><th class="tag">tag:</th><td class="tag">{tag|escape}</td></tr>'
+changesettag = '<tr><th class="tag">tag:</th><td class="tag">{tag|escape}</td></tr>'
 filediffparent = '
   <tr>
-    <th class="parent">parent #rev#:</th>
-    <td class="parent"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td>
+    <th class="parent">parent {rev}:</th>
+    <td class="parent"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 filelogparent = '
   <tr>
-    <th>parent #rev#:</th>
-    <td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td>
+    <th>parent {rev}:</th>
+    <td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 filediffchild = '
   <tr>
-    <th class="child">child #rev#:</th>
-    <td class="child"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td>
+    <th class="child">child {rev}:</th>
+    <td class="child"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 filelogchild = '
   <tr>
-    <th>child #rev#:</th>
-    <td><a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a></td>
+    <th>child {rev}:</th>
+    <td><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 indexentry = '
-  <tr class="parity#parity#">
-    <td><a href="#url#{sessionvars%urlparameter}">#name|escape#</a></td>
-    <td>#description#</td>
-    <td>#contact|obfuscate#</td>
-    <td class="age">#lastchange|age# ago</td>
+  <tr class="parity{parity}">
+    <td><a href="{url}{sessionvars%urlparameter}">{name|escape}</a></td>
+    <td>{description}</td>
+    <td>{contact|obfuscate}</td>
+    <td class="age">{lastchange|age} ago</td>
     <td class="indexlinks">
-      <a href="#url#rss-log">RSS</a>
-      <a href="#url#atom-log">Atom</a>
-      #archives%archiveentry#
+      <a href="{url}rss-log">RSS</a>
+      <a href="{url}atom-log">Atom</a>
+      {archives%archiveentry}
     </td>
   </tr>'
 index = index.tmpl
-archiveentry = '<a href="#url#archive/#node|short##extension|urlescape#">#type|escape#</a> '
+archiveentry = '<a href="{url}archive/{node|short}{extension|urlescape}">{type|escape}</a> '
 notfound = notfound.tmpl
 error = error.tmpl
-urlparameter = '#separator##name#=#value|urlescape#'
-hiddenformentry = '<input type="hidden" name="#name#" value="#value|escape#" />'
+urlparameter = '{separator}{name}={value|urlescape}'
+hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'

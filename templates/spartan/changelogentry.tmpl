@@ -1,25 +1,25 @@
-<table class="logEntry parity#parity#">
+<table class="logEntry parity{parity}">
  <tr>
-  <th class="age">#date|age# ago:</th>
-  <th class="firstline">#desc|strip|firstline|escape|nonempty#</th>
+  <th class="age">{date|age} ago:</th>
+  <th class="firstline">{desc|strip|firstline|escape|nonempty}</th>
  </tr>
  <tr>
-  <th class="revision">changeset #rev#:</th>
-  <td class="node"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#node|short#</a></td>
+  <th class="revision">changeset {rev}:</th>
+  <td class="node"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
  </tr>
- #parent%changelogparent#
- #child%changelogchild#
- #changelogtag#
+ {parent%changelogparent}
+ {child%changelogchild}
+ {changelogtag}
  <tr>
   <th class="author">author:</th>
-  <td class="author">#author|obfuscate#</td>
+  <td class="author">{author|obfuscate}</td>
  </tr>
  <tr>
   <th class="date">date:</th>
-  <td class="date">#date|date#</td>
+  <td class="date">{date|date}</td>
  </tr>
  <tr>
-  <th class="files"><a href="#url#file/#node|short#{sessionvars%urlparameter}">files</a>:</th>
-  <td class="files">#files#</td>
+  <th class="files"><a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>:</th>
+  <td class="files">{files}</td>
  </tr>
 </table>

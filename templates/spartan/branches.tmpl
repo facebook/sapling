@@ -1,26 +1,26 @@
-#header#
-<title>#repo|escape#: branches</title>
+{header}
+<title>{repo|escape}: branches</title>
 <link rel="alternate" type="application/atom+xml"
-   href="#url#atom-branches" title="Atom feed for #repo|escape#: branches">
+   href="{url}atom-branches" title="Atom feed for {repo|escape}: branches">
 <link rel="alternate" type="application/rss+xml"
-   href="#url#rss-branches" title="RSS feed for #repo|escape#: branches">
+   href="{url}rss-branches" title="RSS feed for {repo|escape}: branches">
 </head>
 <body>
 
 <div class="buttons">
-<a href="#url#log{sessionvars%urlparameter}">changelog</a>
-<a href="#url#shortlog{sessionvars%urlparameter}">shortlog</a>
-<a href="#url#graph{sessionvars%urlparameter}">graph</a>
-<a href="#url#tags{sessionvars%urlparameter}">tags</a>
-<a href="#url#file/#node|short#/{sessionvars%urlparameter}">files</a>
-<a type="application/rss+xml" href="#url#rss-branches">rss</a>
-<a type="application/atom+xml" href="#url#atom-branches">atom</a>
+<a href="{url}log{sessionvars%urlparameter}">changelog</a>
+<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a>
+<a href="{url}graph{sessionvars%urlparameter}">graph</a>
+<a href="{url}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url}file/{node|short}/{sessionvars%urlparameter}">files</a>
+<a type="application/rss+xml" href="{url}rss-branches">rss</a>
+<a type="application/atom+xml" href="{url}atom-branches">atom</a>
 </div>
 
 <h2>branches:</h2>
 
 <ul id="tagEntries">
-#entries%branchentry#
+{entries%branchentry}
 </ul>
 
-#footer#
+{footer}

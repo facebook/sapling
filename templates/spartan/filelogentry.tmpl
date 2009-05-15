@@ -1,24 +1,24 @@
-<table class="logEntry parity#parity#">
+<table class="logEntry parity{parity}">
  <tr>
-  <th class="age">#date|age# ago:</th>
-  <th class="firstline"><a href="#url#rev/#node|short#{sessionvars%urlparameter}">#desc|strip|firstline|escape|nonempty#</a></th>
+  <th class="age">{date|age} ago:</th>
+  <th class="firstline"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}</a></th>
  </tr>
  <tr>
-  <th class="revision">revision #filerev#:</td>
+  <th class="revision">revision {filerev}:</td>
   <td class="node">
-   <a href="#url#file/#node|short#/#file|urlescape#{sessionvars%urlparameter}">#node|short#</a>
-   <a href="#url#diff/#node|short#/#file|urlescape#{sessionvars%urlparameter}">(diff)</a>
-   <a href="#url#annotate/#node|short#/#file|urlescape#{sessionvars%urlparameter}">(annotate)</a>
+   <a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a>
+   <a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">(diff)</a>
+   <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">(annotate)</a>
   </td>
  </tr>
- #rename%filelogrename#
+ {rename%filelogrename}
  <tr>
   <th class="author">author:</th>
-  <td class="author">#author|obfuscate#</td>
+  <td class="author">{author|obfuscate}</td>
  </tr>
  <tr>
   <th class="date">date:</th>
-  <td class="date">#date|date#</td>
+  <td class="date">{date|date}</td>
  </tr>
 </table>
 
