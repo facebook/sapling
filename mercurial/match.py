@@ -45,7 +45,7 @@ class never(_match):
 
 class exact(_match):
     def __init__(self, root, cwd, files):
-        _match.__init__(self, root, cwd, files, lambda f: f in files, False)
+        _match.__init__(self, root, cwd, files, self.exact, False)
 
 class match(_match):
     def __init__(self, root, cwd, patterns, include, exclude, default):
