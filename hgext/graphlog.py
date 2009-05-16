@@ -30,8 +30,8 @@ def asciiformat(ui, repo, revdag, opts):
         char = ctx.node() in showparents and '@' or 'o'
         yield (ctx.rev(), parents, char, lines)
 
-def grapher(nodes):
-    """grapher for asciigraph on a list of nodes and their parents
+def asciiedges(nodes):
+    """adds edge info to ascii formatted changelog DAG walk suitable for ascii()
 
     nodes must generate tuples (node, parents, char, lines) where
      - parents must generate the parents of node, in sorted order,
@@ -118,10 +118,10 @@ def get_padding_line(ni, n_columns, edges):
     line.extend(["|", " "] * (n_columns - ni - 1))
     return line
 
-def ascii(ui, grapher):
-    """prints an ASCII graph of the DAG returned by the grapher
+def ascii(ui, dag):
+    """prints an ASCII graph of the DAG
 
-    grapher is a generator that emits tuples with the following elements:
+    dag is a generator that emits tuples with the following elements:
 
       - Character to use as node's symbol.
       - List of lines to display as the node's text.
@@ -136,7 +136,7 @@ def ascii(ui, grapher):
     """
     prev_n_columns_diff = 0
     prev_node_index = 0
-    for (node_ch, node_lines, node_index, edges, n_columns, n_columns_diff) in grapher:
+    for (node_ch, node_lines, node_index, edges, n_columns, n_columns_diff) in dag:
 
         assert -2 < n_columns_diff < 2
         if n_columns_diff == -1:
@@ -258,8 +258,8 @@ def graphlog(ui, repo, path=None, **opts):
     else:
         revdag = graphmod.revisions(repo, start, stop)
 
-    graphdag = asciiformat(ui, repo, revdag, opts)
-    ascii(ui, grapher(graphdag))
+    fmtdag = asciiformat(ui, repo, revdag, opts)
+    ascii(ui, asciiedges(fmtdag))
 
 def graphrevs(repo, nodes, opts):
     limit = cmdutil.loglimit(opts)
@@ -293,8 +293,8 @@ def goutgoing(ui, repo, dest=None, **opts):
 
     o = repo.changelog.nodesbetween(o, revs)[0]
     revdag = graphrevs(repo, o, opts)
-    graphdag = asciiformat(ui, repo, revdag, opts)
-    ascii(ui, grapher(graphdag))
+    fmtdag = asciiformat(ui, repo, revdag, opts)
+    ascii(ui, asciiedges(fmtdag))
 
 def gincoming(ui, repo, source="default", **opts):
     """show the incoming changesets alongside an ASCII revision graph
@@ -342,8 +342,8 @@ def gincoming(ui, repo, source="default", **opts):
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
         revdag = graphrevs(other, chlist, opts)
-        graphdag = asciiformat(ui, repo, revdag, opts)
-        ascii(ui, grapher(graphdag))
+        fmtdag = asciiformat(ui, repo, revdag, opts)
+        ascii(ui, asciiedges(fmtdag))
 
     finally:
         if hasattr(other, 'close'):
