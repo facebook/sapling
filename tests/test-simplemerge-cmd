@@ -47,7 +47,7 @@ cat orig >> binary-local
 python simplemerge -p binary-local base other
 
 echo '% binary file --text'
-python simplemerge -a -p binary-local base other
+python simplemerge -a -p binary-local base other 2>&1 | $TESTDIR/repr.py
 
 echo '% help'
 python simplemerge --help
