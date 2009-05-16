@@ -79,6 +79,9 @@ class converter(object):
         self.authors = {}
         self.authorfile = None
 
+        # Record converted revisions persistently: maps source revision
+        # ID to target revision ID (both strings).  (This is how 
+        # incremental conversions work.)
         self.map = mapfile(ui, revmapfile)
 
         # Read first the dst author map if any

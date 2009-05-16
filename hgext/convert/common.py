@@ -75,7 +75,8 @@ class converter_source(object):
 
     def getfile(self, name, rev):
         """Return file contents as a string. rev is the identifier returned
-        by a previous call to getchanges().
+        by a previous call to getchanges(). Raise IOError to indicate that
+        name was deleted in rev.
         """
         raise NotImplementedError()
 
@@ -89,7 +90,7 @@ class converter_source(object):
         """Returns a tuple of (files, copies).
 
         files is a sorted list of (filename, id) tuples for all files
-        changed between version and it's first parent returned by
+        changed between version and its first parent returned by
         getcommit(). id is the source revision id of the file.
 
         copies is a dictionary of dest: source
