@@ -29,3 +29,8 @@ echo "username = " >> .hg/hgrc
 hg commit -d '1000000 0' -m commit-1
 rm .hg/hgrc
 hg commit -d '1000000 0' -m commit-1 2>&1 | sed -e "s/'[^']*'/user@host/"
+
+echo space > asdf
+hg commit -d '1000000 0' -u ' ' -m commit-1
+
+true
