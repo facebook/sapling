@@ -24,3 +24,6 @@ summary:     commit-1
 
 abort: Please specify a username.
 No username found, using user@host instead
+transaction abort!
+rollback completed
+abort: empty username!
