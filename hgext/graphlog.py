@@ -20,6 +20,16 @@ from mercurial.node import nullrev
 from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
 from mercurial import hg, url, util, graphmod
 
+def asciiformat(ui, repo, revdag, opts):
+    """formats a changelog DAG walk for ASCII output"""
+    showparents = [ctx.node() for ctx in repo[None].parents()]
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    for (ctx, parents) in revdag:
+        displayer.show(ctx)
+        lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
+        char = ctx.node() in showparents and '@' or 'o'
+        yield (ctx.rev(), parents, char, lines)
+
 def grapher(nodes):
     """grapher for asciigraph on a list of nodes and their parents
 
@@ -248,7 +258,7 @@ def graphlog(ui, repo, path=None, **opts):
     else:
         revdag = graphmod.revisions(repo, start, stop)
 
-    graphdag = graphabledag(ui, repo, revdag, opts)
+    graphdag = asciiformat(ui, repo, revdag, opts)
     ascii(ui, grapher(graphdag))
 
 def graphrevs(repo, nodes, opts):
@@ -257,15 +267,6 @@ def graphrevs(repo, nodes, opts):
     if limit < sys.maxint:
         nodes = nodes[:limit]
     return graphmod.nodes(repo, nodes)
-
-def graphabledag(ui, repo, revdag, opts):
-    showparents = [ctx.node() for ctx in repo[None].parents()]
-    displayer = show_changeset(ui, repo, opts, buffered=True)
-    for (ctx, parents) in revdag:
-        displayer.show(ctx)
-        lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
-        char = ctx.node() in showparents and '@' or 'o'
-        yield (ctx.rev(), parents, char, lines)
 
 def goutgoing(ui, repo, dest=None, **opts):
     """show the outgoing changesets alongside an ASCII revision graph
@@ -292,7 +293,7 @@ def goutgoing(ui, repo, dest=None, **opts):
 
     o = repo.changelog.nodesbetween(o, revs)[0]
     revdag = graphrevs(repo, o, opts)
-    graphdag = graphabledag(ui, repo, revdag, opts)
+    graphdag = asciiformat(ui, repo, revdag, opts)
     ascii(ui, grapher(graphdag))
 
 def gincoming(ui, repo, source="default", **opts):
@@ -341,7 +342,7 @@ def gincoming(ui, repo, source="default", **opts):
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
         revdag = graphrevs(other, chlist, opts)
-        graphdag = graphabledag(ui, repo, revdag, opts)
+        graphdag = asciiformat(ui, repo, revdag, opts)
         ascii(ui, grapher(graphdag))
 
     finally:
