@@ -18,94 +18,130 @@
 
     <p>Welcome to Mercurial for Windows!</p>
 
-    <p>Mercurial is a command-line application.  You must run it from
+    <p>
+      Mercurial is a command-line application. You must run it from
       the Windows command prompt (or if you're hard core, a <a
-      href="http://www.mingw.org/">MinGW</a> shell).</p>
+      href="http://www.mingw.org/">MinGW</a> shell).
+    </p>
 
-    <p class="indented"><i>Note: the standard <a
-      href="http://www.mingw.org/">MinGW</a> msys startup script uses
-      rxvt which has problems setting up standard input and output.
-      Running bash directly works correctly.</i></p>
+    <p class="indented">
+      <i>Note: the standard <a href="http://www.mingw.org/">MinGW</a>
+      msys startup script uses rxvt which has problems setting up
+      standard input and output. Running bash directly works
+      correctly.</i>
+    </p>
 
-    <p>For documentation, please visit the <a
+    <p>
+      For documentation, please visit the <a
       href="http://www.selenic.com/mercurial">Mercurial web site</a>.
       You can also download a free book, <a
       href="http://hgbook.red-bean.com/">Distributed revision control
-      with Mercurial</a>.</p>
+      with Mercurial</a>.
+    </p>
 
-    <p>By default, Mercurial installs to <tt>C:\Program Files\Mercurial</tt>.  The
-      Mercurial command is called <tt>hg.exe</tt>.</p>
+    <p>
+      By default, Mercurial installs to <tt>C:\Program
+      Files\Mercurial</tt>. The Mercurial command is called
+      <tt>hg.exe</tt>.
+    </p>
 
     <h1>Testing Mercurial after you've installed it</h1>
 
-    <p>The easiest way to check that Mercurial is installed properly is to
-      just type the following at the command prompt:</p>
+    <p>
+      The easiest way to check that Mercurial is installed properly is
+      to just type the following at the command prompt:
+    </p>
 
     <pre>
 hg
 </pre>
 
-    <p>This command should print a useful help message.  If it does,
-      other Mercurial commands should work fine for you.</p>
+    <p>
+      This command should print a useful help message. If it does,
+      other Mercurial commands should work fine for you.
+    </p>
 
     <h1>Configuration notes</h1>
-	<h4>Default editor</h4>
-       <p>The default editor for commit messages is 'notepad'. You can set the EDITOR
-    (or HGEDITOR) environment variable to specify your preference or set it in
-    mercurial.ini:</p>
+    <h4>Default editor</h4>
+    <p>
+      The default editor for commit messages is 'notepad'. You can set
+      the EDITOR (or HGEDITOR) environment variable to specify your
+      preference or set it in mercurial.ini:
+    </p>
     <pre>
 [ui]
 editor = whatever
 </pre>
 
-	<h4>Configuring a Merge program</h4>
-        <p>It should be emphasized that Mercurial by itself doesn't attempt to do a
-	Merge at the file level, neither does it make any attempt to Resolve the conflicts.</p>
+    <h4>Configuring a Merge program</h4>
+    <p>
+      It should be emphasized that Mercurial by itself doesn't attempt
+      to do a Merge at the file level, neither does it make any
+      attempt to Resolve the conflicts.
+    </p>
 
-    <p>By default, Mercurial will use the merge program defined by the HGMERGE environment
-    variable, or uses the one defined in the mercurial.ini file. (see <a href="http://www.selenic.com/mercurial/wiki/index.cgi/MergeProgram">MergeProgram</a> on the Mercurial Wiki for more information)</p>
+    <p>
+      By default, Mercurial will use the merge program defined by the
+      HGMERGE environment variable, or uses the one defined in the
+      mercurial.ini file. (see <a
+      href="http://www.selenic.com/mercurial/wiki/index.cgi/MergeProgram">MergeProgram</a>
+      on the Mercurial Wiki for more information)
+    </p>
 
     <h1>Reporting problems</h1>
 
-    <p>Before you report any problems, please consult the <a
-	href="http://www.selenic.com/mercurial">Mercurial web site</a> and
-      see if your question is already in our list of <a
-	href="http://www.selenic.com/mercurial/wiki/index.cgi/FAQ">Frequently
-	Answered Questions</a> (the "FAQ").</p>
+    <p>
+      Before you report any problems, please consult the <a
+      href="http://www.selenic.com/mercurial">Mercurial web site</a>
+      and see if your question is already in our list of <a
+      href="http://www.selenic.com/mercurial/wiki/index.cgi/FAQ">Frequently
+      Answered Questions</a> (the "FAQ").
+    </p>
 
-    <p>If you cannot find an answer to your question, please feel
-      free to send mail to the Mercurial mailing list, at <a
-	href="mailto:mercurial@selenic.com">mercurial@selenic.com</a>.
+    <p>
+      If you cannot find an answer to your question, please feel free
+      to send mail to the Mercurial mailing list, at <a
+      href="mailto:mercurial@selenic.com">mercurial@selenic.com</a>.
       <b>Remember</b>, the more useful information you include in your
-      report, the easier it will be for us to help you!</p>
+      report, the easier it will be for us to help you!
+    </p>
 
-    <p>If you are IRC-savvy, that's usually the fastest way to get
-      help.  Go to <tt>#mercurial</tt> on
-      <tt>irc.freenode.net</tt>.</p>
+    <p>
+      If you are IRC-savvy, that's usually the fastest way to get
+      help. Go to <tt>#mercurial</tt> on <tt>irc.freenode.net</tt>.
+    </p>
 
     <h1>Author and copyright information</h1>
 
-    <p>Mercurial was written by <a href="http://www.selenic.com">Matt
-	Mackall</a>, and is maintained by Matt and a team of
-	volunteers.</p>
+    <p>
+      Mercurial was written by <a href="http://www.selenic.com">Matt
+      Mackall</a>, and is maintained by Matt and a team of volunteers.
+    </p>
 
-    <p>The Windows installer was written by <a
-	href="http://www.serpentine.com/blog">Bryan
-	O'Sullivan</a>.</p>
+    <p>
+      The Windows installer was written by <a
+      href="http://www.serpentine.com/blog">Bryan O'Sullivan</a>.
+    </p>
 
-    <p>Mercurial is Copyright 2005-2009 Matt Mackall and others.
-	See the <tt>Contributors.txt</tt> file for a list of contributors.</p>
+    <p>
+      Mercurial is Copyright 2005-2009 Matt Mackall and others. See
+      the <tt>Contributors.txt</tt> file for a list of contributors.
+    </p>
 
-    <p>Mercurial is free software; you can redistribute it and/or
+    <p>
+      Mercurial is free software; you can redistribute it and/or
       modify it under the terms of the <a
-       href="http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt">GNU
+      href="http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt">GNU
       General Public License version 2</a> as published by the Free
-      Software Foundation.</p>
+      Software Foundation.
+    </p>
 
-    <p>Mercurial is distributed in the hope that it will be useful,
-      but <b>without any warranty</b>; without even the implied
-      warranty of <b>merchantability</b> or <b>fitness for a
-      particular purpose</b>.  See the GNU General Public License for
-      more details.</p>
+    <p>
+      Mercurial is distributed in the hope that it will be useful, but
+      <b>without any warranty</b>; without even the implied warranty
+      of <b>merchantability</b> or <b>fitness for a particular
+      purpose</b>. See the GNU General Public License for more
+      details.
+    </p>
   </body>
 </html>
