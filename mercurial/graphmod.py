@@ -87,46 +87,46 @@ def graph(repo, start_rev, stop_rev):
 
     assert start_rev >= stop_rev
     assert stop_rev >= 0
-    curr_rev = start_rev
-    revs = []
+    cur = start_rev
+    seen = []
     cl = repo.changelog
     colors = {}
-    new_color = 1
+    newcolor = 1
 
-    while curr_rev >= stop_rev:
-        # Compute revs and next_revs
-        if curr_rev not in revs:
-            revs.append(curr_rev) # new head
-            colors[curr_rev] = new_color
-            new_color += 1
+    while cur >= stop_rev:
+        # Compute seen and next
+        if cur not in seen:
+            seen.append(cur) # new head
+            colors[cur] = newcolor
+            newcolor += 1
 
-        idx = revs.index(curr_rev)
-        color = colors.pop(curr_rev)
-        next = revs[:]
+        col = seen.index(cur)
+        color = colors.pop(cur)
+        next = seen[:]
 
         # Add parents to next_revs
-        parents = [x for x in cl.parentrevs(curr_rev) if x != nullrev]
+        parents = [x for x in cl.parentrevs(cur) if x != nullrev]
         addparents = [p for p in parents if p not in next]
-        next[idx:idx + 1] = addparents
+        next[col:col + 1] = addparents
 
         # Set colors for the parents
         for i, p in enumerate(addparents):
             if not i:
                 colors[p] = color
             else:
-                colors[p] = new_color
-                new_color += 1
+                colors[p] = newcolor
+                newcolor += 1
 
         # Add edges to the graph
         edges = []
-        for col, r in enumerate(revs):
-            if r in next:
-                edges.append((col, next.index(r), colors[r]))
-            elif r == curr_rev:
+        for ecol, eid in enumerate(seen):
+            if eid in next:
+                edges.append((ecol, next.index(eid), colors[eid]))
+            elif eid == id:
                 for p in parents:
-                    edges.append((col, next.index(p), colors[p]))
+                    edges.append((ecol, next.index(p), colors[p]))
 
         # Yield and move on
-        yield (repo[curr_rev], (idx, color), edges)
-        revs = next
-        curr_rev -= 1
+        yield (repo[cur], (col, color), edges)
+        seen = next
+        cur -= 1
