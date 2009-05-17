@@ -1,3 +1,5 @@
+#!/bin/sh
+
 hg init test
 cd test
 

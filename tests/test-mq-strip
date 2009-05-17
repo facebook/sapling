@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
