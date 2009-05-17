@@ -93,19 +93,11 @@ class monotone_source(converter_source, commandline):
     def mtnisfile(self, name, rev):
         # a non-file could be a directory or a deleted or renamed file
         self.mtnloadmanifest(rev)
-        try:
-            self.files[name]
-            return True
-        except KeyError:
-            return False
+        return name in self.files
 
     def mtnisdir(self, name, rev):
         self.mtnloadmanifest(rev)
-        try:
-            self.dirs[name]
-            return True
-        except KeyError:
-            return False
+        return name in self.dirs
 
     def mtngetcerts(self, rev):
         certs = {"author":"<missing>", "date":"<missing>",
@@ -190,11 +182,8 @@ class monotone_source(converter_source, commandline):
 
     def getmode(self, name, rev):
         self.mtnloadmanifest(rev)
-        try:
-            node, attr = self.files[name]
-            return attr
-        except KeyError:
-            return ""
+        node, attr = self.files.get(name, (None, ""))
+        return attr
 
     def getfile(self, name, rev):
         if not self.mtnisfile(name, rev):
