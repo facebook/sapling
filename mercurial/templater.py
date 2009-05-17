@@ -83,14 +83,17 @@ class engine(object):
     def _filter(self, expr, get, map):
         if expr not in self.cache:
             parts = expr.split('|')
-            filters = parts[1:]
-            for f in filters:
-            	if f not in self.filters:
-                    raise SyntaxError(_("unknown filter '%s'") % expr)
-            calls = '('.join(i for i in reversed(filters))
-            end = ')' * len(filters)
-            code = "lambda _get: %s(_get('%s')%s" % (calls, parts[0], end)
-            self.cache[expr] = eval(code, self.filters)
+            val = parts[0]
+            try:
+                filters = [self.filters[f] for f in parts[1:]]
+            except KeyError, i:
+                raise SyntaxError(_("unknown filter '%s'") % i[0])
+            def apply(get):
+                    x = get(val)
+                    for f in filters:
+                        x = f(x)
+                    return x
+            self.cache[expr] = apply
         return self.cache[expr](get)
 
     def _process(self, tmpl, map):
