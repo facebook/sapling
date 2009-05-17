@@ -1033,7 +1033,7 @@ def updatedir(ui, repo, patches, similarity=0):
     if not patches:
         return
     copies = []
-    removes = {}
+    removes = set()
     cfiles = patches.keys()
     cwd = repo.getcwd()
     if cwd:
@@ -1044,14 +1044,13 @@ def updatedir(ui, repo, patches, similarity=0):
             continue
         if gp.op == 'RENAME':
             copies.append((gp.oldpath, gp.path))
-            removes[gp.oldpath] = 1
+            removes.add(gp.oldpath)
         elif gp.op == 'COPY':
             copies.append((gp.oldpath, gp.path))
         elif gp.op == 'DELETE':
-            removes[gp.path] = 1
+            removes.add(gp.path)
     for src, dst in copies:
         repo.copy(src, dst)
-    removes = removes.keys()
     if (not similarity) and removes:
         repo.remove(sorted(removes), True)
     for f in patches:
@@ -1240,7 +1239,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
         for k, v in copy.items():
             copy[v] = k
 
-    gone = {}
+    gone = set()
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
 
     for f in sorted(modified + added + removed):
@@ -1262,7 +1261,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
                     _addmodehdr(header, omode, mode)
                     if a in removed and a not in gone:
                         op = 'rename'
-                        gone[a] = 1
+                        gone.add(a)
                     else:
                         op = 'copy'
                     header.append('%s from %s\n' % (op, a))
