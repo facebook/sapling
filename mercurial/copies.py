@@ -20,18 +20,18 @@ def _dirname(f):
     return f[:s]
 
 def _dirs(files):
-    d = {}
+    d = set()
     for f in files:
         f = _dirname(f)
         while f not in d:
-            d[f] = True
+            d.add(f)
             f = _dirname(f)
     return d
 
 def _findoldnames(fctx, limit):
     "find files that path was copied from, back to linkrev limit"
     old = {}
-    seen = {}
+    seen = set()
     orig = fctx.path()
     visit = [(fctx, 0)]
     while visit:
@@ -39,7 +39,7 @@ def _findoldnames(fctx, limit):
         s = str(fc)
         if s in seen:
             continue
-        seen[s] = 1
+        seen.add(s)
         if fc.path() != orig and fc.path() not in old:
             old[fc.path()] = (depth, fc.path()) # remember depth
         if fc.rev() < limit and fc.rev() is not None:
@@ -184,7 +184,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
 
     # generate a directory move map
     d1, d2 = _dirs(m1), _dirs(m2)
-    invalid = {}
+    invalid = set()
     dirmove = {}
 
     # examine each file copy for a potential directory move, which is
@@ -196,13 +196,13 @@ def copies(repo, c1, c2, ca, checkdirs=False):
             continue
         elif dsrc in d1 and ddst in d1:
             # directory wasn't entirely moved locally
-            invalid[dsrc] = True
+            invalid.add(dsrc)
         elif dsrc in d2 and ddst in d2:
             # directory wasn't entirely moved remotely
-            invalid[dsrc] = True
+            invalid.add(dsrc)
         elif dsrc in dirmove and dirmove[dsrc] != ddst:
             # files from the same directory moved to two different places
-            invalid[dsrc] = True
+            invalid.add(dsrc)
         else:
             # looks good so far
             dirmove[dsrc + "/"] = ddst + "/"
