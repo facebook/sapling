@@ -1578,9 +1578,8 @@ class localrepository(repo.repository):
         knownheads = set()
         # We assume that all parents of bases are known heads.
         for n in bases:
-            for p in cl.parents(n):
-                if p != nullid:
-                    knownheads.add(p)
+            knownheads.update(cl.parents(n))
+        knownheads.discard(nullid)
         knownheads = list(knownheads)
         if knownheads:
             # Now that we know what heads are known, we can compute which
@@ -1866,8 +1865,7 @@ class localrepository(repo.repository):
         def changed_file_collector(changedfileset):
             def collect_changed_files(clnode):
                 c = cl.read(clnode)
-                for fname in c[3]:
-                    changedfileset.add(fname)
+                changedfileset.update(c[3])
             return collect_changed_files
 
         def lookuprevlink_func(revlog):
