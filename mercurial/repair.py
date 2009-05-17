@@ -23,17 +23,15 @@ def _bundle(repo, bases, heads, node, suffix, extranodes=None):
 
 def _collectfiles(repo, striprev):
     """find out the filelogs affected by the strip"""
-    files = {}
+    files = set()
 
     for x in xrange(striprev, len(repo)):
         for name in repo[x].files():
             if name in files:
                 continue
-            files[name] = 1
+            files.add(name)
 
-    files = files.keys()
-    files.sort()
-    return files
+    return sorted(files)
 
 def _collectextranodes(repo, files, link):
     """return the nodes that have to be saved before the strip"""
@@ -82,20 +80,20 @@ def strip(ui, repo, node, backup="all"):
     # the list of heads and bases of the set of interesting revisions.
     # (head = revision in the set that has no descendant in the set;
     #  base = revision in the set that has no ancestor in the set)
-    tostrip = {striprev: 1}
-    saveheads = {}
+    tostrip = set((striprev,))
+    saveheads = set()
     savebases = []
     for r in xrange(striprev + 1, len(cl)):
         parents = cl.parentrevs(r)
         if parents[0] in tostrip or parents[1] in tostrip:
             # r is a descendant of striprev
-            tostrip[r] = 1
+            tostrip.add(r)
             # if this is a merge and one of the parents does not descend
             # from striprev, mark that parent as a savehead.
             if parents[1] != nullrev:
                 for p in parents:
                     if p not in tostrip and p > striprev:
-                        saveheads[p] = 1
+                        saveheads.add(p)
         else:
             # if no parents of this revision will be stripped, mark it as
             # a savebase
@@ -103,9 +101,8 @@ def strip(ui, repo, node, backup="all"):
                 savebases.append(cl.node(r))
 
             for p in parents:
-                if p in saveheads:
-                    del saveheads[p]
-            saveheads[r] = 1
+                saveheads.discard(p)
+            saveheads.add(r)
 
     saveheads = [cl.node(r) for r in saveheads]
     files = _collectfiles(repo, striprev)
