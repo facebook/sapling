@@ -87,8 +87,8 @@ def bisect(changelog, state):
     poison = set()
     for rev in candidates:
         if rev in poison:
-            for c in children.get(rev, []):
-                poison.add(c) # poison children
+            # poison children
+            poison.update(children.get(rev, []))
             continue
 
         a = ancestors[rev] or [rev]
@@ -104,8 +104,8 @@ def bisect(changelog, state):
                 break
 
         if y < perfect and rev not in skip: # all downhill from here?
-            for c in children.get(rev, []):
-                poison.add(c) # poison children
+            # poison children
+            poison.update(children.get(rev, []))
             continue
 
         for c in children.get(rev, []):
