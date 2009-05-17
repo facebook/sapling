@@ -42,8 +42,7 @@ class engine(object):
     filter uses function to transform value. syntax is
     {key|filter1|filter2|...}.'''
 
-    template_re = re.compile(r"(?:(?:#(?=[\w\|%]+#))|(?:{(?=[\w\|%]+})))"
-                             r"(\w+)(?:(?:%(\w+))|((?:\|\w+)*))[#}]")
+    template_re = re.compile(r'{([\w\|%]+)}|#([\w\|%]+)#')
 
     def __init__(self, loader, filters={}, defaults={}):
         self.loader = loader
@@ -70,7 +69,8 @@ class engine(object):
             else:
                 yield str(item)
 
-    def _format(self, key, format, get, map):
+    def _format(self, expr, get, map):
+        key, format = expr.split('%')
         v = get(key)
         if not hasattr(v, '__iter__'):
             raise SyntaxError(_("Error expanding '%s%%%s'") % (key, format))
@@ -79,9 +79,10 @@ class engine(object):
             lm.update(i)
             yield self.process(format, lm)
 
-    def _filter(self, key, filters, get, map):
-        v = get(key)
-        for f in filters.split('|')[1:]:
+    def _filter(self, expr, get, map):
+        parts = expr.split('|')
+        v = get(parts[0])
+        for f in parts[1:]:
             v = self.filters[f](v)
         return v
 
@@ -103,18 +104,19 @@ class engine(object):
                 break
 
             start, end = m.span(0)
-            key, fmt, fl = m.groups()
+            variants = m.groups()
+            expr = variants[0] or variants[1]
 
             if start:
                 yield tmpl[:start]
             tmpl = tmpl[end:]
 
-            if fmt:
-                yield self._format(key, fmt, get, map)
-            elif fl:
-                yield self._filter(key, fl, get, map)
+            if '%' in expr:
+                yield self._format(expr, get, map)
+            elif '|' in expr:
+                yield self._filter(expr, get, map)
             else:
-                yield get(key)
+                yield get(expr)
 
 engines = {'default': engine}
 
