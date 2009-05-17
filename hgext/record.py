@@ -251,7 +251,7 @@ def filterpatch(ui, chunks):
     """Interactively filter patch chunks into applied-only chunks"""
     chunks = list(chunks)
     chunks.reverse()
-    seen = {}
+    seen = set()
     def consumefile():
         """fetch next portion from chunks until a 'header' is seen
         NB: header == new-file mark
@@ -321,7 +321,7 @@ def filterpatch(ui, chunks):
             if hdr in seen:
                 consumefile()
                 continue
-            seen[hdr] = True
+            seen.add(hdr)
             if resp_all[0] is None:
                 chunk.pretty(ui)
             r = prompt(_('examine changes to %s?') %
