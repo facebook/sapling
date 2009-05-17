@@ -48,6 +48,7 @@ class engine(object):
         self.loader = loader
         self.filters = filters
         self.defaults = defaults
+        self.cache = {}
 
     def process(self, t, map):
         '''Perform expansion. t is name of map element to expand. map contains
@@ -80,11 +81,17 @@ class engine(object):
             yield self.process(format, lm)
 
     def _filter(self, expr, get, map):
-        parts = expr.split('|')
-        v = get(parts[0])
-        for f in parts[1:]:
-            v = self.filters[f](v)
-        return v
+        if expr not in self.cache:
+            parts = expr.split('|')
+            filters = parts[1:]
+            for f in filters:
+            	if f not in self.filters:
+                    raise SyntaxError(_("unknown filter '%s'") % expr)
+            calls = '('.join(i for i in reversed(filters))
+            end = ')' * len(filters)
+            code = "lambda _get: %s(_get('%s')%s" % (calls, parts[0], end)
+            self.cache[expr] = eval(code, self.filters)
+        return self.cache[expr](get)
 
     def _process(self, tmpl, map):
         '''Render a template. Returns a generator.'''
