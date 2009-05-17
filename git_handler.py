@@ -175,12 +175,15 @@ class GitHandler(object):
         c = self.map_git_get(hex(self.repo.changelog.tip()))
         self.git.set_ref('refs/heads/master', c)
 
+    # Make sure there's a refs/remotes/remote_name/name
+    #           for every refs/heads/name
     def update_remote_references(self, remote_name):
+        self.git.set_remote_refs(self.local_heads(), remote_name)
+
+    def local_heads(self):
         def is_local_head(item): return item[0].startswith('refs/heads')
         refs = self.git.get_refs()
-        heads = dict(filter(is_local_head, refs.items()))
-
-        self.git.set_remote_refs(heads, remote_name)
+        return dict(filter(is_local_head, refs.items()))
 
     def export_git_objects(self):
         self.ui.status(_("exporting git objects\n"))
@@ -389,6 +392,13 @@ class GitHandler(object):
                     if local_ref:
                         if not local_ref == refs[ref_name]:
                             changed[ref_name] = local_ref
+        
+        # Also push any local branches not on the server yet
+        for head in self.local_heads():
+            if not head in refs:
+                ref = self.git.ref(head)
+                changed[head] = ref
+
         return changed
 
     # takes a list of shas the server wants and shas the server has
