@@ -70,8 +70,32 @@ class engine(object):
             else:
                 yield str(item)
 
+    def _format(self, key, format, get, map):
+        v = get(key)
+        if not hasattr(v, '__iter__'):
+            raise SyntaxError(_("Error expanding '%s%%%s'") % (key, format))
+        lm = map.copy()
+        for i in v:
+            lm.update(i)
+            yield self.process(format, lm)
+
+    def _filter(self, key, filters, get, map):
+        v = get(key)
+        for f in filters.split('|')[1:]:
+            v = self.filters[f](v)
+        return v
+
     def _process(self, tmpl, map):
         '''Render a template. Returns a generator.'''
+
+        def get(key):
+            v = map.get(key)
+            if v is None:
+                v = self.defaults.get(key, '')
+            if hasattr(v, '__call__'):
+                v = v(**map)
+            return v
+
         while tmpl:
             m = self.template_re.search(tmpl)
             if not m:
@@ -79,31 +103,18 @@ class engine(object):
                 break
 
             start, end = m.span(0)
-            key, format, fl = m.groups()
+            key, fmt, fl = m.groups()
 
             if start:
                 yield tmpl[:start]
             tmpl = tmpl[end:]
 
-            if key in map:
-                v = map[key]
+            if fmt:
+                yield self._format(key, fmt, get, map)
+            elif fl:
+                yield self._filter(key, fl, get, map)
             else:
-                v = self.defaults.get(key, "")
-            if hasattr(v, '__call__'):
-                v = v(**map)
-            if format:
-                if not hasattr(v, '__iter__'):
-                    raise SyntaxError(_("Error expanding '%s%%%s'")
-                                      % (key, format))
-                lm = map.copy()
-                for i in v:
-                    lm.update(i)
-                    yield self.process(format, lm)
-            else:
-                if fl:
-                    for f in fl.split("|")[1:]:
-                        v = self.filters[f](v)
-                yield v
+                yield get(key)
 
 engines = {'default': engine}
 
