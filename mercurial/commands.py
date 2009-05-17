@@ -503,7 +503,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         # create the right base
         # XXX: nodesbetween / changegroup* should be "fixed" instead
         o = []
-        has = {nullid: None}
+        has = set((nullid,))
         for n in base:
             has.update(repo.changelog.reachable(n))
         if revs:

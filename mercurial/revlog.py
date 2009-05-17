@@ -556,11 +556,10 @@ class revlog(object):
         """
 
     def reachable(self, node, stop=None):
-        """return a hash of all nodes ancestral to a given node, including
+        """return the set of all nodes ancestral to a given node, including
          the node itself, stopping when stop is matched"""
-        reachable = {}
+        reachable = set((node,))
         visit = [node]
-        reachable[node] = 1
         if stop:
             stopn = self.rev(stop)
         else:
@@ -575,7 +574,7 @@ class revlog(object):
                 if self.rev(p) < stopn:
                     continue
                 if p not in reachable:
-                    reachable[p] = 1
+                    reachable.add(p)
                     visit.append(p)
         return reachable
 
@@ -678,7 +677,7 @@ class revlog(object):
             heads = list(heads)
             if not heads:
                 return nonodes
-            ancestors = {}
+            ancestors = set()
             # Turn heads into a dictionary so we can remove 'fake' heads.
             # Also, later we will be using it to filter out the heads we can't
             # find from roots.
@@ -700,7 +699,7 @@ class revlog(object):
                     if n not in ancestors:
                         # If we are possibly a descendent of one of the roots
                         # and we haven't already been marked as an ancestor
-                        ancestors[n] = 1 # Mark as ancestor
+                        ancestors.add(n) # Mark as ancestor
                         # Add non-nullid parents to list of nodes to tag.
                         nodestotag.update([p for p in self.parents(n) if
                                            p != nullid])
@@ -813,18 +812,18 @@ class revlog(object):
             stop = []
         stoprevs = set([self.rev(n) for n in stop])
         startrev = self.rev(start)
-        reachable = {startrev: 1}
-        heads = {startrev: 1}
+        reachable = set((startrev,))
+        heads = set((startrev,))
 
         parentrevs = self.parentrevs
         for r in xrange(startrev + 1, len(self)):
             for p in parentrevs(r):
                 if p in reachable:
                     if r not in stoprevs:
-                        reachable[r] = 1
-                    heads[r] = 1
+                        reachable.add(r)
+                    heads.add(r)
                 if p in heads and p not in stoprevs:
-                    del heads[p]
+                    heads.remove(p)
 
         return [self.node(r) for r in heads]
 
