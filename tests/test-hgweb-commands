@@ -50,7 +50,7 @@ echo % branches
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=branches'
 echo % changegroup
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=changegroup' \
-    | $TESTDIR/repr.py
+    | $TESTDIR/printrepr.py
 echo % stream_out
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=stream_out'
 echo % failing unbundle, requires POST request
