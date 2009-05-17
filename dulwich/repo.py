@@ -173,14 +173,12 @@ class Repo(object):
     def _get_ref(self, file):
         f = open(file, 'rb')
         try:
-            contents = f.read()
+            contents = f.read().strip()
             if contents.startswith(SYMREF):
                 ref = contents[len(SYMREF):]
-                if ref[-1] == '\n':
-                    ref = ref[:-1]
                 return self.ref(ref)
-            assert len(contents) == 41, 'Invalid ref in %s' % file
-            return contents[:-1]
+            assert len(contents) == 40, 'Invalid ref in %s' % file
+            return contents
         finally:
             f.close()
 
