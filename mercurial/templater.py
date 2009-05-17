@@ -74,7 +74,7 @@ class engine(object):
         key, format = expr.split('%')
         v = get(key)
         if not hasattr(v, '__iter__'):
-            raise SyntaxError(_("Error expanding '%s%%%s'") % (key, format))
+            raise SyntaxError(_("error expanding '%s%%%s'") % (key, format))
         lm = map.copy()
         for i in v:
             lm.update(i)
