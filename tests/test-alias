@@ -10,6 +10,13 @@ cleanstatus = status -c
 unknown = bargle
 ambiguous = s
 recursive = recursive
+mylog = log
+lognull = log -r null
+
+[defaults]
+mylog = -q
+lognull = -q
+log = -v
 EOF
 
 echo '% basic'
@@ -30,3 +37,7 @@ hg ci -Amfoo
 
 echo '% with opts'
 hg cleanst
+
+echo '% interaction with defaults'
+hg mylog
+hg lognull

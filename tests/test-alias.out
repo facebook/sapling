@@ -8,3 +8,6 @@
 adding foo
 % with opts
 C foo
+% interaction with defaults
+0:e63c23eaa88a
+-1:000000000000
