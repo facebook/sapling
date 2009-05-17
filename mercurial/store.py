@@ -234,9 +234,9 @@ class fncacheopener(object):
         self.entries = None
 
     def loadfncache(self):
-        self.entries = {}
+        self.entries = set()
         for f in fncache(self.opener):
-            self.entries[f] = True
+            self.entries.add(f)
 
     def __call__(self, path, mode='r', *args, **kw):
         if mode not in ('r', 'rb') and path.startswith('data/'):
@@ -245,7 +245,7 @@ class fncacheopener(object):
             if path not in self.entries:
                 self.opener('fncache', 'ab').write(path + '\n')
                 # fncache may contain non-existent files after rollback / strip
-                self.entries[path] = True
+                self.entries.add(path)
         return self.opener(hybridencode(path), mode, *args, **kw)
 
 class fncachestore(basicstore):
