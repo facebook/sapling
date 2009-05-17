@@ -26,10 +26,7 @@ def _collectfiles(repo, striprev):
     files = set()
 
     for x in xrange(striprev, len(repo)):
-        for name in repo[x].files():
-            if name in files:
-                continue
-            files.add(name)
+        files.update(repo[x].files())
 
     return sorted(files)
 
@@ -100,8 +97,7 @@ def strip(ui, repo, node, backup="all"):
             if parents[0] < striprev and parents[1] < striprev:
                 savebases.append(cl.node(r))
 
-            for p in parents:
-                saveheads.discard(p)
+            saveheads.difference_update(parents)
             saveheads.add(r)
 
     saveheads = [cl.node(r) for r in saveheads]
