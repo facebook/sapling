@@ -88,7 +88,7 @@ def wrapname(name):
     idx = name.rfind('.')
     module = name[:idx]
     name = name[idx+1:]
-    module = eval(module)
+    module = globals()[module]
     func = getattr(module, name)
     def f(*args):
         return wrapper(func, args)
