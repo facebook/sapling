@@ -51,7 +51,8 @@ def rebase(ui, repo, **opts):
     """
     originalwd = target = None
     external = nullrev
-    state = skipped = {}
+    state = {}
+    skipped = set()
 
     lock = wlock = None
     try:
@@ -143,7 +144,7 @@ def rebase(ui, repo, **opts):
     finally:
         release(lock, wlock)
 
-def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={},
+def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped=None,
                  extrafn=None):
     """Skip commit if collapsing has been required and rev is not the last
     revision, commit otherwise
@@ -154,6 +155,9 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped={},
         return None
 
     repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
+
+    if skipped is None:
+        skipped = set()
 
     # Commit, record the old nodeid
     m, a, r = repo.status()[:3]
@@ -234,7 +238,7 @@ def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse,
         if not collapse:
             repo.ui.note(_('no changes, revision %d skipped\n') % rev)
             repo.ui.debug(_('next revision set to %s\n') % p1)
-            skipped[rev] = True
+            skipped.add(rev)
         state[rev] = p1
 
 def defineparents(repo, rev, target, state, targetancestors):
