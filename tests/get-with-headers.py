@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__doc__ = """This does HTTP get requests given a host:port and path and returns
+"""This does HTTP GET requests given a host:port and path and returns
 a subset of the headers plus the body of the result."""
 
 import httplib, sys, re
