@@ -252,10 +252,9 @@ def matchall(repo):
 def matchfiles(repo, files):
     return _match.exact(repo.root, repo.getcwd(), files)
 
-def findrenames(repo, added=None, removed=None, threshold=0.5):
+def findrenames(repo, match=None, threshold=0.5):
     '''find renamed files -- yields (before, after, score) tuples'''
-    if added is None or removed is None:
-        added, removed = repo.status()[1:3]
+    added, removed = repo.status(match=match)[1:3]
     ctx = repo['.']
     for a in added:
         aa = repo.wread(a)
@@ -310,7 +309,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         repo.remove(remove)
         repo.add(add)
     if similarity > 0:
-        for old, new, score in findrenames(repo, add, remove, similarity):
+        for old, new, score in findrenames(repo, m, similarity):
             oldexact, newexact = m.exact(old), m.exact(new)
             if repo.ui.verbose or not oldexact or not newexact:
                 oldrel, newrel = m.rel(old), m.rel(new)

@@ -18,3 +18,15 @@ recording removal of tiny-file as rename to small-file (82% similar)
 abort: similarity must be a number
 abort: similarity must be between 0 and 100
 abort: similarity must be between 0 and 100
+% issue 1527
+removing d/a
+adding d/b
+recording removal of d/a as rename to d/b (100% similar)
+r   0          0 1970-01-01 00:00:00 d/a
+a   0         -1 unset               d/b
+copy: d/a -> d/b
+% no copies found here (since the target isn't in d
+removing d/b
+% copies here
+adding c
+recording removal of d/a as rename to c (100% similar)

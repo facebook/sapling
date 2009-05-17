@@ -46,4 +46,22 @@ hg addremove -s foo
 hg addremove -s -1
 hg addremove -s 1e6
 
+cd ..
+
+echo '% issue 1527'
+hg init rep3; cd rep3
+mkdir d
+echo a > d/a
+hg add d/a
+hg commit -m 1
+
+mv d/a d/b
+hg addremove -s80
+hg debugstate
+mv d/b c
+echo "% no copies found here (since the target isn't in d"
+hg addremove -s80 d
+echo "% copies here"
+hg addremove -s80
+
 true
