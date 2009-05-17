@@ -84,11 +84,11 @@ def bisect(changelog, state):
     # find the best node to test
     best_rev = None
     best_len = -1
-    poison = {}
+    poison = set()
     for rev in candidates:
         if rev in poison:
             for c in children.get(rev, []):
-                poison[c] = True # poison children
+                poison.add(c) # poison children
             continue
 
         a = ancestors[rev] or [rev]
@@ -105,7 +105,7 @@ def bisect(changelog, state):
 
         if y < perfect and rev not in skip: # all downhill from here?
             for c in children.get(rev, []):
-                poison[c] = True # poison children
+                poison.add(c) # poison children
             continue
 
         for c in children.get(rev, []):
