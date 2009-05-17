@@ -52,7 +52,8 @@ filerevision = ../paper/filerevision.tmpl
 fileannotate = ../paper/fileannotate.tmpl
 filediff = ../paper/filediff.tmpl
 filelog = ../paper/filelog.tmpl
-fileline = '<div class="parity{parity} source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</div>'
+fileline = '
+  <div class="parity{parity} source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</div>'
 filelogentry = ../paper/filelogentry.tmpl
 
 annotateline = '
