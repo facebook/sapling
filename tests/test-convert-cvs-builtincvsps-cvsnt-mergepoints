@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 "$TESTDIR/hghave" cvs || exit 80
 
