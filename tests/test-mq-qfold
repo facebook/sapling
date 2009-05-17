@@ -1,0 +1,36 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+filterdiff()
+{
+    grep -v diff | \
+	sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
+	-e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
+}
+
+echo '% init'
+hg init repo
+cd repo
+echo a > a
+hg ci -Am adda
+echo a >> a
+hg qnew -f p1
+echo b >> a
+hg qnew -f p2
+echo c >> a
+hg qnew -f p3
+echo '% fold in the middle of the queue'
+hg qpop p1
+hg qdiff | filterdiff
+hg qfold p2
+hg qser
+hg qdiff | filterdiff
+echo '% fold with local changes'
+echo d >> a
+hg qfold p3
+hg diff -c . | filterdiff
+cd ..
+
+

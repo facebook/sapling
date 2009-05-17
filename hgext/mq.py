@@ -1943,6 +1943,7 @@ def fold(ui, repo, *files, **opts):
         raise util.Abort(_('qfold requires at least one patch name'))
     if not q.check_toppatch(repo):
         raise util.Abort(_('No patches applied'))
+    q.check_localchanges(repo)
 
     message = cmdutil.logmessage(opts)
     if opts['edit']:

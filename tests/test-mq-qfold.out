@@ -1,0 +1,25 @@
+% init
+adding a
+% fold in the middle of the queue
+now at: p1
+--- a/a
++++ b/a
+@@ -1,1 +1,2 @@
+ a
++a
+p1
+p3
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++a
++b
+% fold with local changes
+abort: local changes found, refresh first
+--- a/a
++++ b/a
+@@ -1,1 +1,3 @@
+ a
++a
++b
