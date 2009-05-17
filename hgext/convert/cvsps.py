@@ -572,8 +572,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     for c in changesets:
         tags = set()
         for e in c.entries:
-            for tag in e.tags:
-                tags.add(tag)
+            tags.update(e.tags)
         # remember tags only if this is the latest changeset to have it
         c.tags = sorted(tag for tag in tags if globaltags[tag] is c)
 
