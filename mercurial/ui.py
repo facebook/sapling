@@ -20,8 +20,8 @@ class ui(object):
         self._ocfg = config.config() # overlay
         self._tcfg = config.config() # trusted
         self._ucfg = config.config() # untrusted
-        self._trustusers = {}
-        self._trustgroups = {}
+        self._trustusers = set()
+        self._trustgroups = set()
 
         if src:
             self._tcfg = src._tcfg.copy()
@@ -104,10 +104,8 @@ class ui(object):
         self._traceback = self.configbool('ui', 'traceback', False)
 
         # update trust information
-        for user in self.configlist('trusted', 'users'):
-            self._trustusers[user] = 1
-        for group in self.configlist('trusted', 'groups'):
-            self._trustgroups[group] = 1
+        self._trustusers.update(self.configlist('trusted', 'users'))
+        self._trustgroups.update(self.configlist('trusted', 'groups'))
 
     def setconfig(self, section, name, value):
         for cfg in (self._ocfg, self._tcfg, self._ucfg):
