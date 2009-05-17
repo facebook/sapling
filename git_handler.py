@@ -124,6 +124,7 @@ class GitHandler(object):
     def push(self, remote_name):
         self.ui.status(_("pushing to : %s\n") % remote_name)
         self.export()
+        self.update_remote_references(remote_name)
         self.upload_pack(remote_name)
 
     def remote_add(self, remote_name, git_url):
@@ -173,6 +174,13 @@ class GitHandler(object):
 
         c = self.map_git_get(hex(self.repo.changelog.tip()))
         self.git.set_ref('refs/heads/master', c)
+
+    def update_remote_references(self, remote_name):
+        def is_local_head(item): return item[0].startswith('refs/heads')
+        refs = self.git.get_refs()
+        heads = dict(filter(is_local_head, refs.items()))
+
+        self.git.set_remote_refs(heads, remote_name)
 
     def export_git_objects(self):
         self.ui.status(_("exporting git objects\n"))
