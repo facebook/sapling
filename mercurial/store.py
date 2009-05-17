@@ -234,9 +234,7 @@ class fncacheopener(object):
         self.entries = None
 
     def loadfncache(self):
-        self.entries = set()
-        for f in fncache(self.opener):
-            self.entries.add(f)
+        self.entries = set(fncache(self.opener))
 
     def __call__(self, path, mode='r', *args, **kw):
         if mode not in ('r', 'rb') and path.startswith('data/'):
