@@ -231,17 +231,17 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
 
     # calculate the graph for the supplied commits
     for i in xrange(len(want_sha1)):
-        reachable.append({});
+        reachable.append(set());
         n = want_sha1[i];
         visit = [n];
-        reachable[i][n] = 1
+        reachable[i].add(n)
         while visit:
             n = visit.pop(0)
             if n in stop_sha1:
                 continue
             for p in repo.changelog.parents(n):
                 if p not in reachable[i]:
-                    reachable[i][p] = 1
+                    reachable[i].add(p)
                     visit.append(p)
                 if p in stop_sha1:
                     continue
