@@ -624,18 +624,18 @@ class revlog(object):
         has.update(common)
 
         # take all ancestors from heads that aren't in has
-        missing = {}
+        missing = set()
         visit = [r for r in heads if r not in has]
         while visit:
             r = visit.pop(0)
             if r in missing:
                 continue
             else:
-                missing[r] = None
+                missing.add(r)
                 for p in self.parentrevs(r):
                     if p not in has:
                         visit.append(p)
-        missing = missing.keys()
+        missing = list(missing)
         missing.sort()
         return [self.node(r) for r in missing]
 
