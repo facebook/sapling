@@ -11,7 +11,41 @@ EOF
 
 hg init test
 cd test
-cp $TESTDIR/get-with-headers.py ./
+# create random Python file to exercise Pygments
+cat <<EOF > primes.py
+#!/usr/bin/env python
+
+"""Fun with generators. Corresponding Haskell implementation:
+
+primes = 2 : sieve [3, 5..]
+    where sieve (p:ns) = p : sieve [n | n <- ns, mod n p /= 0]
+"""
+
+from itertools import dropwhile, ifilter, islice, count, chain
+
+def primes():
+    """Generate all primes."""
+    def sieve(ns):
+        p = ns.next()
+        # It is important to yield *here* in order to stop the
+        # infinite recursion.
+        yield p
+        ns = ifilter(lambda n: n % p != 0, ns)
+        for n in sieve(ns):
+            yield n
+
+    odds = ifilter(lambda i: i % 2 == 1, count())
+    return chain([2], sieve(dropwhile(lambda n: n < 3, odds)))
+
+if __name__ == "__main__":
+    import sys
+    try:
+        n = int(sys.argv[1])
+    except (ValueError, IndexError):
+        n = 10
+    p = primes()
+    print "The first %d primes: %s" % (n, list(islice(p, n)))
+EOF
 
 # check for UnicodeDecodeError with iso-8859-1 file contents
 python -c 'fp = open("isolatin.txt", "w"); fp.write("h\xFCbsch\n"); fp.close();'
@@ -23,7 +57,7 @@ hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
 echo % hgweb filerevision, html
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/get-with-headers.py') \
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/primes.py') \
     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mf\"/class=\"mi\"/g"
 
 echo % hgweb filerevision, html
@@ -31,17 +65,17 @@ echo % hgweb filerevision, html
     | sed "s/class=\"k\"/class=\"kn\"/g"
 
 echo % hgweb fileannotate, html
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py') \
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/primes.py') \
     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mi\"/class=\"mf\"/g"
 
 echo % hgweb fileannotate, raw
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/get-with-headers.py?style=raw') \
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/primes.py?style=raw') \
     | sed "s/test@//" > a
 
 echo "200 Script output follows" > b
 echo "" >> b
 echo "" >> b
-hg annotate "get-with-headers.py" >> b
+hg annotate "primes.py" >> b
 echo "" >> b
 echo "" >> b
 echo "" >> b
@@ -51,12 +85,12 @@ diff -u b a
 
 echo
 echo % hgweb filerevision, raw
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/get-with-headers.py?style=raw') \
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/primes.py?style=raw') \
     > a
 
 echo "200 Script output follows" > b
 echo "" >> b
-hg cat get-with-headers.py >> b
+hg cat primes.py >> b
 
 diff -u b a
 

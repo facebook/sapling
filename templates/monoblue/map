@@ -61,7 +61,12 @@ filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = '<div style="font-family:monospace" class="parity{parity}"><pre><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</pre></div>'
+fileline = '
+  <div style="font-family:monospace" class="parity{parity}">
+    <pre>
+      <a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}
+    </pre>
+  </div>'
 annotateline = '
   <tr class="parity{parity}">
     <td class="linenr">
