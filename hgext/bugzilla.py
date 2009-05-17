@@ -339,7 +339,7 @@ class bugzilla(object):
                 re.IGNORECASE)
             bugzilla._split_re = re.compile(r'\D+')
         start = 0
-        ids = {}
+        ids = set()
         while True:
             m = bugzilla._bug_re.search(ctx.description(), start)
             if not m:
@@ -347,8 +347,7 @@ class bugzilla(object):
             start = m.end()
             for id in bugzilla._split_re.split(m.group(1)):
                 if not id: continue
-                ids[int(id)] = 1
-        ids = ids.keys()
+                ids.add(int(id))
         if ids:
             ids = self.filter_real_bug_ids(ids)
         if ids:
