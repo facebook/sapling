@@ -34,6 +34,12 @@ EOF
 hg convert --filemap filemap source source-filemap-hg
 hg -R source-filemap-hg manifest -r tip
 
+echo '% convert from lightweight checkout'
+bzr checkout --lightweight source source-light
+hg convert source-light source-light-hg
+echo "% lightweight manifest"
+hg manifest -R source-light-hg -r tip
+
 # extract timestamps that look just like hg's {date|isodate}:
 # yyyy-mm-dd HH:MM zzzz (no seconds!)
 echo "% compare timestamps"

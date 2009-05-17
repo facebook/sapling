@@ -45,9 +45,30 @@ class bzr_source(converter_source):
             raise NoRepo('Bazaar modules could not be loaded')
 
         path = os.path.abspath(path)
+        self._checkrepotype(path)
         self.branch = branch.Branch.open(path)
         self.sourcerepo = self.branch.repository
         self._parentids = {}
+
+    def _checkrepotype(self, path):
+        # Lightweight checkouts detection is informational but probably
+        # fragile at API level. It should not terminate the conversion.
+        try:
+            from bzrlib import bzrdir
+            dir = bzrdir.BzrDir.open_containing(path)[0]
+            try:
+                tree = dir.open_workingtree(recommend_upgrade=False)
+                branch = tree.branch
+            except (errors.NoWorkingTree, errors.NotLocalUrl), e:
+                tree = None
+                branch = dir.open_branch()
+            if (tree is not None and tree.bzrdir.root_transport.base !=
+                branch.bzrdir.root_transport.base):
+                self.ui.warn(_('warning: lightweight checkouts may cause '
+                               'conversion failures, try with a regular '
+                               'branch instead.\n'))
+        except:
+            self.ui.note(_('bzr source type could not be determined\n'))
 
     def before(self):
         """Before the conversion begins, acquire a read lock
