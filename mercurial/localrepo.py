@@ -1382,20 +1382,20 @@ class localrepository(repo.repository):
         # find every node whose parents have been pruned
         subset = []
         # find every remote head that will get new children
-        updated_heads = {}
+        updated_heads = set()
         for n in remain:
             p1, p2 = self.changelog.parents(n)
             if p1 not in remain and p2 not in remain:
                 subset.append(n)
             if heads:
                 if p1 in heads:
-                    updated_heads[p1] = True
+                    updated_heads.add(p1)
                 if p2 in heads:
-                    updated_heads[p2] = True
+                    updated_heads.add(p2)
 
         # this is the set of all roots we have to push
         if heads:
-            return subset, updated_heads.keys()
+            return subset, list(updated_heads)
         else:
             return subset
 
@@ -1575,13 +1575,13 @@ class localrepository(repo.repository):
 
         # Known heads are the list of heads that it is assumed the recipient
         # of this changegroup will know about.
-        knownheads = {}
+        knownheads = set()
         # We assume that all parents of bases are known heads.
         for n in bases:
             for p in cl.parents(n):
                 if p != nullid:
-                    knownheads[p] = 1
-        knownheads = knownheads.keys()
+                    knownheads.add(p)
+        knownheads = list(knownheads)
         if knownheads:
             # Now that we know what heads are known, we can compute which
             # changesets are known.  The recipient must know about all
@@ -1627,14 +1627,14 @@ class localrepository(repo.repository):
         # also assume the recipient will have all the parents.  This function
         # prunes them from the set of missing nodes.
         def prune_parents(revlog, hasset, msngset):
-            haslst = hasset.keys()
+            haslst = list(hasset)
             haslst.sort(cmp_by_rev_func(revlog))
             for node in haslst:
                 parentlst = [p for p in revlog.parents(node) if p != nullid]
                 while parentlst:
                     n = parentlst.pop()
                     if n not in hasset:
-                        hasset[n] = 1
+                        hasset.add(n)
                         p = [p for p in revlog.parents(n) if p != nullid]
                         parentlst.extend(p)
             for n in hasset:
@@ -1666,14 +1666,14 @@ class localrepository(repo.repository):
         # of the changegroup) the recipient must know about and remove them
         # from the changegroup.
         def prune_manifests():
-            has_mnfst_set = {}
+            has_mnfst_set = set()
             for n in msng_mnfst_set:
                 # If a 'missing' manifest thinks it belongs to a changenode
                 # the recipient is assumed to have, obviously the recipient
                 # must have that manifest.
                 linknode = cl.node(mnfst.linkrev(mnfst.rev(n)))
                 if linknode in has_cl_set:
-                    has_mnfst_set[n] = 1
+                    has_mnfst_set.add(n)
             prune_parents(mnfst, has_mnfst_set, msng_mnfst_set)
 
         # Use the information collected in collect_manifests_and_files to say
@@ -1732,14 +1732,14 @@ class localrepository(repo.repository):
         # all those we know the recipient must have.
         def prune_filenodes(f, filerevlog):
             msngset = msng_filenode_set[f]
-            hasset = {}
+            hasset = set()
             # If a 'missing' filenode thinks it belongs to a changenode we
             # assume the recipient must have, then the recipient must have
             # that filenode.
             for n in msngset:
                 clnode = cl.node(filerevlog.linkrev(filerevlog.rev(n)))
                 if clnode in has_cl_set:
-                    hasset[n] = 1
+                    hasset.add(n)
             prune_parents(filerevlog, hasset, msngset)
 
         # A function generator function that sets up the a context for the
@@ -1867,7 +1867,7 @@ class localrepository(repo.repository):
             def collect_changed_files(clnode):
                 c = cl.read(clnode)
                 for fname in c[3]:
-                    changedfileset[fname] = 1
+                    changedfileset.add(fname)
             return collect_changed_files
 
         def lookuprevlink_func(revlog):
@@ -1877,7 +1877,7 @@ class localrepository(repo.repository):
 
         def gengroup():
             # construct a list of all changed files
-            changedfiles = {}
+            changedfiles = set()
 
             for chnk in cl.group(nodes, identity,
                                  changed_file_collector(changedfiles)):
