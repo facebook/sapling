@@ -154,7 +154,23 @@ class GitHandler(object):
         return self._config['remote.' + remote_name + '.url']
 
     def update_references(self):
-        # TODO : if bookmarks exist, add them as git branches
+        try:
+            # We only care about bookmarks of the form 'name',
+            # not 'remote/name'.
+            def is_local_ref(item): return item[0].count('/') == 0
+            bms = bookmarks.parse(self.repo)
+            bms = dict(filter(is_local_ref, bms.items()))
+
+            # Create a local Git branch name for each
+            # Mercurial bookmark.
+            for key in bms:
+                hg_sha  = hex(bms[key])
+                git_sha = self.map_git_get(hg_sha)
+                self.git.set_ref('refs/heads/' + key, git_sha)
+        except AttributeError:
+            # No bookmarks extension
+            pass
+
         c = self.map_git_get(hex(self.repo.changelog.tip()))
         self.git.set_ref('refs/heads/master', c)
 
