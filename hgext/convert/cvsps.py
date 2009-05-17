@@ -463,7 +463,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     listsort(log, key=lambda x:(x.comment, x.author, x.branch, x.date))
 
     changesets = []
-    files = {}
+    files = set()
     c = None
     for i, e in enumerate(log):
 
@@ -480,13 +480,13 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                           branch=e.branch, date=e.date, entries=[],
                           mergepoint=getattr(e, 'mergepoint', None))
             changesets.append(c)
-            files = {}
+            files = set()
             if len(changesets) % 100 == 0:
                 t = '%d %s' % (len(changesets), repr(e.comment)[1:-1])
                 ui.status(util.ellipsis(t, 80) + '\n')
 
         c.entries.append(e)
-        files[e.file] = True
+        files.add(e.file)
         c.date = e.date       # changeset date is date of latest commit in it
 
     # Mark synthetic changesets
@@ -564,19 +564,18 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
     globaltags = {}
     for c in changesets:
-        tags = {}
         for e in c.entries:
             for tag in e.tags:
                 # remember which is the latest changeset to have this tag
                 globaltags[tag] = c
 
     for c in changesets:
-        tags = {}
+        tags = set()
         for e in c.entries:
             for tag in e.tags:
-                tags[tag] = True
+                tags.add(tag)
         # remember tags only if this is the latest changeset to have it
-        c.tags = sorted([tag for tag in tags if globaltags[tag] is c])
+        c.tags = sorted(tag for tag in tags if globaltags[tag] is c)
 
     # Find parent changesets, handle {{mergetobranch BRANCHNAME}}
     # by inserting dummy changesets with two parents, and handle

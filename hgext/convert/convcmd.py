@@ -100,12 +100,12 @@ class converter(object):
         '''Return a mapping that identifies the uncommitted parents of every
         uncommitted changeset.'''
         visit = heads
-        known = {}
+        known = set()
         parents = {}
         while visit:
             n = visit.pop(0)
             if n in known or n in self.map: continue
-            known[n] = 1
+            known.add(n)
             commit = self.cachecommit(n)
             parents[n] = []
             for p in commit.parents:
@@ -118,14 +118,14 @@ class converter(object):
         '''Return an ordering such that every uncommitted changeset is
         preceeded by all its uncommitted ancestors.'''
         visit = parents.keys()
-        seen = {}
+        seen = set()
         children = {}
         actives = []
 
         while visit:
             n = visit.pop(0)
             if n in seen: continue
-            seen[n] = 1
+            seen.add(n)
             # Ensure that nodes without parents are present in the 'children'
             # mapping.
             children.setdefault(n, [])

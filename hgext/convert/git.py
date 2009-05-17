@@ -63,7 +63,7 @@ class convert_git(converter_source):
         self.modecache = {}
         fh = self.gitcmd("git diff-tree -z --root -m -r %s" % version)
         changes = []
-        seen = {}
+        seen = set()
         entry = None
         for l in fh.read().split('\x00'):
             if not entry:
@@ -73,7 +73,7 @@ class convert_git(converter_source):
                 continue
             f = l
             if f not in seen:
-                seen[f] = 1
+                seen.add(f)
                 entry = entry.split()
                 h = entry[3]
                 p = (entry[1] == "100755")

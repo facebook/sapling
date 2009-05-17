@@ -195,7 +195,7 @@ class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):
         converter_source.__init__(self, ui, path, rev)
         self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors', False)
-        self.ignored = {}
+        self.ignored = set()
         self.saverev = ui.configbool('convert', 'hg.saverev', False)
         try:
             self.repo = hg.repository(self.ui, path)
@@ -288,7 +288,7 @@ class mercurial_source(converter_source):
             except error.LookupError, e:
                 if not self.ignoreerrors:
                     raise
-                self.ignored[name] = 1
+                self.ignored.add(name)
                 self.ui.warn(_('ignoring: %s\n') % e)
         return copies
 
