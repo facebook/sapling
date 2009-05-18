@@ -42,8 +42,12 @@ filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
 filelog = filelog.tmpl
-fileline = '<div class="parity{parity}"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</div>'
+fileline = '<div class="parity{parity}"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>&nbsp;{line|escape}</div>'
 filelogentry = filelogentry.tmpl
+
+# The &nbsp; ensures that all table cells have content (even if there
+# is an empty line in the annotated file), which in turn ensures that
+# all table rows have equal height.
 annotateline = '
   <tr class="parity{parity}">
     <td class="annotate">
@@ -53,7 +57,7 @@ annotateline = '
     <td>
       <a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>
     </td>
-    <td><pre>{line|escape}</pre></td>
+    <td><pre>&nbsp;{line|escape}</pre></td>
   </tr>'
 difflineplus = '<span class="plusline"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</span>'
 difflineminus = '<span class="minusline"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</span>'

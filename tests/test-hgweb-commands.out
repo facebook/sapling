@@ -887,7 +887,7 @@ a { text-decoration:none; }
 .parity0 { background-color: #ddd; }
 .parity1 { background-color: #eee; }
 .lineno { width: 60px; color: #aaa; font-size: smaller;
-          text-align: right; padding-right:1em; }
+          text-align: right; }
 .plusline { color: green; }
 .minusline { color: red; }
 .atline { color: purple; }
