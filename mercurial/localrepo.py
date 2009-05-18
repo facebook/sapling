@@ -809,16 +809,15 @@ class localrepository(repo.repository):
             if editor:
                 wctx._text = editor(self, wctx,
                                     changes[1], changes[0], changes[2])
-
             ret = self.commitctx(wctx, True)
-            ms.reset()
 
-            # update dirstate
+            # update dirstate and mergestate
             for f in changes[0] + changes[1]:
                 self.dirstate.normal(f)
             for f in changes[2]:
                 self.dirstate.forget(f)
             self.dirstate.setparents(ret)
+            ms.reset()
 
             return ret
 
