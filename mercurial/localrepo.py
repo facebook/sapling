@@ -884,15 +884,10 @@ class localrepository(repo.repository):
             mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
                                    p2.manifestnode(), (new, drop))
 
-            text = ctx.description()
-            lines = [line.rstrip() for line in text.rstrip().splitlines()]
-            while lines and not lines[0]:
-                del lines[0]
-            text = '\n'.join(lines)
-
+            # update changelog
             self.changelog.delayupdate()
-            n = self.changelog.add(mn, changed + removed, text, trp,
-                                   p1.node(), p2.node(),
+            n = self.changelog.add(mn, changed + removed, ctx.description(),
+                                   trp, p1.node(), p2.node(),
                                    user, ctx.date(), ctx.extra().copy())
             p = lambda: self.changelog.writepending() and self.root or ""
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,

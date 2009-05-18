@@ -209,6 +209,10 @@ class changelog(revlog.revlog):
         if "\n" in user:
             raise error.RevlogError(_("username %s contains a newline")
                                     % repr(user))
+
+        # strip trailing whitespace and leading and trailing empty lines
+        desc = '\n'.join([l.rstrip() for l in desc.splitlines()]).strip('\n')
+
         user, desc = encoding.fromlocal(user), encoding.fromlocal(desc)
 
         if date:
