@@ -1231,6 +1231,7 @@ def commitforceeditor(repo, ctx, added, updated, removed):
     edittext.append("") # Empty line between message and comments.
     edittext.append(_("HG: Enter commit message."
                       "  Lines beginning with 'HG:' are removed."))
+    edittext.append("HG: Leave message empty to abort commit.")
     edittext.append("HG: --")
     edittext.append(_("HG: user: %s") % ctx.user())
     if ctx.p2():

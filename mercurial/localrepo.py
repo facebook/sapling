@@ -769,25 +769,18 @@ class localrepository(repo.repository):
 
     def commit(self, files=None, text="", user=None, date=None, match=None,
                force=False, editor=False, extra={}):
-        wlock = lock = None
-        if extra.get("close"):
-            force = True
-        if files:
-            files = list(set(files))
-
-        ret = None
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
 
-            if (not force and p2 != nullid and
-                (match and (match.files() or match.anypats()))):
+            if (not force and p2 != nullid and match and
+                (match.files() or match.anypats())):
                 raise util.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
 
             if files:
                 modified, removed = [], []
-                for f in files:
+                for f in sorted(set(files)):
                     s = self.dirstate[f]
                     if s in 'nma':
                         modified.append(f)
@@ -799,9 +792,9 @@ class localrepository(repo.repository):
             else:
                 changes = self.status(match=match)
 
-            if (not (changes[0] or changes[1] or changes[2])
-                and not force and p2 == nullid and
-                self[None].branch() == self['.'].branch()):
+            if (not force and not extra.get("close") and p2 == nullid
+                and not (changes[0] or changes[1] or changes[2])
+                and self[None].branch() == self['.'].branch()):
                 self.ui.status(_("nothing changed\n"))
                 return None
 
@@ -810,26 +803,28 @@ class localrepository(repo.repository):
                 if f in ms and ms[f] == 'u':
                     raise util.Abort(_("unresolved merge conflicts "
                                                     "(see hg resolve)"))
+
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            ret = self.commitctx(wctx, editor, True)
-            ms.reset()
+            if editor:
+                wctx._text = editor(self, wctx,
+                                    changes[1], changes[0], changes[2])
+            ret = self.commitctx(wctx, True)
 
-            # update dirstate
+            # update dirstate and mergestate
             for f in changes[0] + changes[1]:
                 self.dirstate.normal(f)
             for f in changes[2]:
                 self.dirstate.forget(f)
             self.dirstate.setparents(ret)
+            ms.reset()
 
             return ret
 
         finally:
-            if ret == None:
-                self.dirstate.invalidate() # didn't successfully commit
             wlock.release()
 
-    def commitctx(self, ctx, editor=None, error=False):
+    def commitctx(self, ctx, error=False):
         """Add a new revision to current repository.
 
         Revision information is passed via the context argument.
@@ -838,7 +833,7 @@ class localrepository(repo.repository):
         """
 
         tr = lock = None
-        remove = ctx.removed()
+        removed = ctx.removed()
         p1, p2 = ctx.p1(), ctx.p2()
         m1 = p1.manifest().copy()
         m2 = p2.manifest()
@@ -868,39 +863,21 @@ class localrepository(repo.repository):
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
                     else:
-                        remove.append(f)
-
-            updated, added = [], []
-            for f in sorted(changed):
-                if f in m1 or f in m2:
-                    updated.append(f)
-                else:
-                    added.append(f)
+                        removed.append(f)
 
             # update manifest
             m1.update(new)
-            removed = [f for f in sorted(remove) if f in m1 or f in m2]
-            removed1 = []
-
-            for f in removed:
-                if f in m1:
-                    del m1[f]
-                    removed1.append(f)
+            removed = [f for f in sorted(removed) if f in m1 or f in m2]
+            drop = [f for f in removed if f in m1]
+            for f in drop:
+                del m1[f]
             mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
-                                   p2.manifestnode(), (new, removed1))
+                                   p2.manifestnode(), (new, drop))
 
-            text = ctx.description()
-            if editor:
-                text = editor(self, ctx, added, updated, removed)
-
-            lines = [line.rstrip() for line in text.rstrip().splitlines()]
-            while lines and not lines[0]:
-                del lines[0]
-            text = '\n'.join(lines)
-
+            # update changelog
             self.changelog.delayupdate()
-            n = self.changelog.add(mn, changed + removed, text, trp,
-                                   p1.node(), p2.node(),
+            n = self.changelog.add(mn, changed + removed, ctx.description(),
+                                   trp, p1.node(), p2.node(),
                                    user, ctx.date(), ctx.extra().copy())
             p = lambda: self.changelog.writepending() and self.root or ""
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,

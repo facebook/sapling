@@ -32,8 +32,6 @@ added 1 changesets with 2 changes to 2 files
 updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying ../tip.patch
-transaction abort!
-rollback completed
 abort: empty commit message
 % import of plain diff should be ok with message
 requesting all changes
@@ -150,8 +148,6 @@ added 1 changesets with 2 changes to 2 files
 updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying patch from stdin
-transaction abort!
-rollback completed
 abort: empty commit message
 % hg export in email, should use patch header
 requesting all changes

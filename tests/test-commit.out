@@ -1,6 +1,4 @@
 % commit date test
-transaction abort!
-rollback completed
 abort: empty commit message
 abort: impossible time zone offset: 4444444
 abort: invalid date: '1\t15.1' 
@@ -110,12 +108,11 @@ abort: cannot partially commit a merge (do not specify files or patterns)
 
 
 HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+HG: Leave message empty to abort commit.
 HG: --
 HG: user: test
 HG: branch 'default'
 HG: added added
 HG: changed changed
 HG: removed removed
-transaction abort!
-rollback completed
 abort: empty commit message
