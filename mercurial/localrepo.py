@@ -769,7 +769,6 @@ class localrepository(repo.repository):
 
     def commit(self, files=None, text="", user=None, date=None, match=None,
                force=False, editor=False, extra={}):
-        ret = None
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
@@ -824,8 +823,6 @@ class localrepository(repo.repository):
             return ret
 
         finally:
-            if ret == None:
-                self.dirstate.invalidate() # didn't successfully commit
             wlock.release()
 
     def commitctx(self, ctx, error=False):
