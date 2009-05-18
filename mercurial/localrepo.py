@@ -843,7 +843,7 @@ class localrepository(repo.repository):
         """
 
         tr = lock = None
-        remove = ctx.removed()
+        removed = ctx.removed()
         p1, p2 = ctx.p1(), ctx.p2()
         m1 = p1.manifest().copy()
         m2 = p2.manifest()
@@ -873,19 +873,16 @@ class localrepository(repo.repository):
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
                     else:
-                        remove.append(f)
+                        removed.append(f)
 
             # update manifest
             m1.update(new)
-            removed = [f for f in sorted(remove) if f in m1 or f in m2]
-            removed1 = []
-
-            for f in removed:
-                if f in m1:
-                    del m1[f]
-                    removed1.append(f)
+            removed = [f for f in sorted(removed) if f in m1 or f in m2]
+            drop = [f for f in removed if f in m1]
+            for f in drop:
+                del m1[f]
             mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
-                                   p2.manifestnode(), (new, removed1))
+                                   p2.manifestnode(), (new, drop))
 
             text = ctx.description()
             lines = [line.rstrip() for line in text.rstrip().splitlines()]
