@@ -47,11 +47,11 @@ as a patchbomb.
 
 To avoid sending patches prematurely, it is a good idea to first run
 the "email" command with the "-n" option (test only). You will be
-prompted for an email recipient address, a subject an an introductory
+prompted for an email recipient address, a subject and an introductory
 message describing the patches of your patchbomb. Then when all is
-done, patchbomb messages are displayed. If PAGER environment variable
-is set, your pager will be fired up once for each patchbomb message,
-so you can verify everything is alright.
+done, patchbomb messages are displayed. If the PAGER environment
+variable is set, your pager will be fired up once for each patchbomb
+message, so you can verify everything is alright.
 
 The -m/--mbox option is also very useful. Instead of previewing each
 patchbomb message in a pager or sending the messages directly, it will
@@ -70,7 +70,7 @@ package), to send each message out:
 That should be all. Now your patchbomb is on its way out.
 
 You can also either configure the method option in the email section
-to be a sendmail compatable mailer or fill out the [smtp] section so
+to be a sendmail compatible mailer or fill out the [smtp] section so
 that the patchbomb extension can automatically send patchbombs
 directly from the commandline. See the [email] and [smtp] sections in
 hgrc(5) for details.'''
