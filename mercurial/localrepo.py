@@ -810,9 +810,14 @@ class localrepository(repo.repository):
                 if f in ms and ms[f] == 'u':
                     raise util.Abort(_("unresolved merge conflicts "
                                                     "(see hg resolve)"))
+
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
-            ret = self.commitctx(wctx, editor, True)
+            if editor:
+                wctx._text = editor(self, wctx,
+                                    changes[1], changes[0], changes[2])
+
+            ret = self.commitctx(wctx, True)
             ms.reset()
 
             # update dirstate
@@ -829,7 +834,7 @@ class localrepository(repo.repository):
                 self.dirstate.invalidate() # didn't successfully commit
             wlock.release()
 
-    def commitctx(self, ctx, editor=None, error=False):
+    def commitctx(self, ctx, error=False):
         """Add a new revision to current repository.
 
         Revision information is passed via the context argument.
@@ -870,13 +875,6 @@ class localrepository(repo.repository):
                     else:
                         remove.append(f)
 
-            updated, added = [], []
-            for f in sorted(changed):
-                if f in m1 or f in m2:
-                    updated.append(f)
-                else:
-                    added.append(f)
-
             # update manifest
             m1.update(new)
             removed = [f for f in sorted(remove) if f in m1 or f in m2]
@@ -890,9 +888,6 @@ class localrepository(repo.repository):
                                    p2.manifestnode(), (new, removed1))
 
             text = ctx.description()
-            if editor:
-                text = editor(self, ctx, added, updated, removed)
-
             lines = [line.rstrip() for line in text.rstrip().splitlines()]
             while lines and not lines[0]:
                 del lines[0]

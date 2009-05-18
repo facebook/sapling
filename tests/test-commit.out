@@ -1,6 +1,4 @@
 % commit date test
-transaction abort!
-rollback completed
 abort: empty commit message
 abort: impossible time zone offset: 4444444
 abort: invalid date: '1\t15.1' 
@@ -116,6 +114,4 @@ HG: branch 'default'
 HG: added added
 HG: changed changed
 HG: removed removed
-transaction abort!
-rollback completed
 abort: empty commit message

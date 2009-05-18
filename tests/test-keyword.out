@@ -112,10 +112,6 @@ A a
 A b
 % default keyword expansion including commit hook
 % interrupted commit should not change state or run commit hook
-a
-b
-transaction abort!
-rollback completed
 abort: empty commit message
 % status
 A a
@@ -281,8 +277,6 @@ xxx $
 ignore $Id$
 a
 % interrupted commit should not change state
-transaction abort!
-rollback completed
 abort: empty commit message
 % status
 M a

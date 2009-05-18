@@ -53,9 +53,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 % select files but no hunks
 diff --git a/empty-rw b/empty-rw
 new file mode 100644
-examine changes to 'empty-rw'? [Ynsfdaq?]  transaction abort!
-rollback completed
-abort: empty commit message
+examine changes to 'empty-rw'? [Ynsfdaq?]  abort: empty commit message
 
 changeset:   -1:000000000000
 tag:         tip
