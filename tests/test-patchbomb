@@ -148,3 +148,6 @@ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i -r 0:1 | \
 echo "% test inreplyto"
 hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar --in-reply-to baz \
   -r tip | fixheaders
+
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar --in-reply-to baz \
+  -r 0:1 | fixheaders

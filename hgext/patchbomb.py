@@ -397,6 +397,7 @@ def patchbomb(ui, repo, *revs, **opts):
     ui.write('\n')
 
     parent = opts.get('in_reply_to') or None
+    first = True
 
     sender_addr = email.Utils.parseaddr(sender)[1]
     sender = mail.addressencode(ui, sender, _charsets, opts.get('test'))
@@ -409,8 +410,10 @@ def patchbomb(ui, repo, *revs, **opts):
         if parent:
             m['In-Reply-To'] = parent
             m['References'] = parent
-        else:
+        if first:
             parent = m['Message-Id']
+            first = False
+
         m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
         m['Date'] = util.datestr(start_time, "%a, %d %b %Y %H:%M:%S %1%2")
 
