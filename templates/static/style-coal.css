@@ -162,14 +162,12 @@ h3 {
 }
 
 .bigtable td {
-  padding: 1px 4px;
   vertical-align: top;
 }
 
 .bigtable th {
   padding: 1px 4px;
   border-bottom: 1px solid #999;
-  font-size: smaller;
 }
 .bigtable tr { border: none; }
 .bigtable .age { width: 6em; }
@@ -187,9 +185,10 @@ h3 {
 .source, .sourcefirst, .sourcelast {
   font-family: monospace;
   white-space: pre;
+  padding: 1px 4px;
   font-size: 90%;
 }
-.sourcefirst { border-bottom: 1px solid #999; font-weight: bold; font-size: smaller; }
+.sourcefirst { border-bottom: 1px solid #999; font-weight: bold }
 .sourcelast { border-top: 1px solid #999; }
 .source a { color: #999; font-size: smaller; font-family: monospace;}
 .bottomline { border-bottom: 1px solid #999; }
