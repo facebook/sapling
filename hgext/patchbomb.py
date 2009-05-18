@@ -24,9 +24,9 @@ Each message refers to the first in the series using the In-Reply-To
 and References headers, so they will show up as a sequence in threaded
 mail and news readers, and in mail archives.
 
-For each changeset, you will be prompted with a diffstat summary and
-the changeset summary, so you can be sure you are sending the right
-changes.
+With the -d/--diffstat option, you will be prompted for each changeset
+with a diffstat summary and the changeset summary, so you can be sure
+you are sending the right changes.
 
 To enable this extension:
 
