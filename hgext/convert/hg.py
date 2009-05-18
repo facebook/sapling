@@ -131,8 +131,8 @@ class mercurial_sink(converter_sink):
             m1node = self.repo.changelog.read(bin(parents[0]))[0]
             parent = parents[0]
 
-        if len(parents) < 2: parents.append("0" * 40)
-        if len(parents) < 2: parents.append("0" * 40)
+        if len(parents) < 2: parents.append(nullid)
+        if len(parents) < 2: parents.append(nullid)
         p2 = parents.pop(0)
 
         text = commit.desc
