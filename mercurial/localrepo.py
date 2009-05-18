@@ -769,25 +769,19 @@ class localrepository(repo.repository):
 
     def commit(self, files=None, text="", user=None, date=None, match=None,
                force=False, editor=False, extra={}):
-        wlock = None
-        if extra.get("close"):
-            force = True
-        if files:
-            files = list(set(files))
-
         ret = None
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
 
-            if (not force and p2 != nullid and
-                (match and (match.files() or match.anypats()))):
+            if (not force and p2 != nullid and match and
+                (match.files() or match.anypats())):
                 raise util.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
 
             if files:
                 modified, removed = [], []
-                for f in files:
+                for f in sorted(set(files)):
                     s = self.dirstate[f]
                     if s in 'nma':
                         modified.append(f)
@@ -799,9 +793,9 @@ class localrepository(repo.repository):
             else:
                 changes = self.status(match=match)
 
-            if (not (changes[0] or changes[1] or changes[2])
-                and not force and p2 == nullid and
-                self[None].branch() == self['.'].branch()):
+            if (not force and not extra.get("close") and p2 == nullid
+                and not (changes[0] or changes[1] or changes[2])
+                and self[None].branch() == self['.'].branch()):
                 self.ui.status(_("nothing changed\n"))
                 return None
 
