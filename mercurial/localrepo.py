@@ -769,7 +769,7 @@ class localrepository(repo.repository):
 
     def commit(self, files=None, text="", user=None, date=None, match=None,
                force=False, editor=False, extra={}):
-        wlock = lock = None
+        wlock = None
         if extra.get("close"):
             force = True
         if files:
