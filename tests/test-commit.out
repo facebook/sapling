@@ -108,6 +108,7 @@ abort: cannot partially commit a merge (do not specify files or patterns)
 
 
 HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+HG: Leave message empty to abort commit.
 HG: --
 HG: user: test
 HG: branch 'default'
