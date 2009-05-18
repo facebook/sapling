@@ -18,7 +18,7 @@ body {
 }
 
 #.main {
-  width:98%;
+  width: 98%;
 }
 
 .overflow {
@@ -188,7 +188,7 @@ h3 {
   padding: 1px 4px;
   font-size: 90%;
 }
-.sourcefirst { border-bottom: 1px solid #999; font-weight: bold }
+.sourcefirst { border-bottom: 1px solid #999; font-weight: bold; }
 .sourcelast { border-top: 1px solid #999; }
 .source a { color: #999; font-size: smaller; font-family: monospace;}
 .bottomline { border-bottom: 1px solid #999; }
@@ -220,6 +220,7 @@ div.description {
   padding: .3em;
 }
 
+/* Graph */
 div#wrapper {
 	position: relative;
 	border-top: 1px solid black;

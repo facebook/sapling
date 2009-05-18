@@ -54,7 +54,7 @@ body {
   font-weight: bold;
 }
 
-.menu img { 
+.menu img {
   width: 75px;
   height: 90px;
   border: 0;
@@ -225,6 +225,14 @@ canvas {
 	margin: 0;
 }
 
+ul#graphnodes {
+	position: absolute;
+	z-index: 10;
+	top: -1.0em;
+	list-style: none inside none;
+	padding: 0;
+}
+
 ul#nodebgs {
 	list-style: none inside none;
 	padding: 0;
@@ -234,14 +242,6 @@ ul#nodebgs {
 
 ul#graphnodes li, ul#nodebgs li {
 	height: 39px;
-}
-
-ul#graphnodes {
-	position: absolute;
-	z-index: 10;
-	top: -1.0em;
-	list-style: none inside none;
-	padding: 0;
 }
 
 ul#graphnodes li .info {
