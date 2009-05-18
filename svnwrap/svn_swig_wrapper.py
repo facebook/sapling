@@ -6,7 +6,6 @@ import sys
 import tempfile
 import urlparse
 import urllib
-import hashlib
 import collections
 
 import warnings
