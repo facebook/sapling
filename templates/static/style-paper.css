@@ -97,7 +97,7 @@ a { text-decoration:none; }
 .navigate {
   text-align: right;
   font-size: 60%;
-  margin: 1em 0 1em 0;
+  margin: 1em 0;
 }
 
 .tag {
@@ -153,12 +153,12 @@ h3 {
 }
 
 .bigtable td {
-  padding: 1px 4px 1px 4px;
+  padding: 1px 4px;
   vertical-align: top;
 }
 
 .bigtable th {
-  padding: 1px 4px 1px 4px;
+  padding: 1px 4px;
   border-bottom: 1px solid #999;
   font-size: smaller;
 }
@@ -195,7 +195,7 @@ h3 {
 }
 
 #changesetEntry th {
-  padding: 1px 4px 1px 4px;
+  padding: 1px 4px;
   width: 4em;
   text-align: right;
   font-weight: normal;
