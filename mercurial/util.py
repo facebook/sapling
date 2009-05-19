@@ -266,7 +266,7 @@ def globre(pat, head='^', tail='$'):
             res += re.escape(c)
     return head + res + tail
 
-_globchars = {'[': 1, '{': 1, '*': 1, '?': 1}
+_globchars = set('[{*?')
 
 def pathto(root, n1, n2):
     '''return the relative path from one place to another.
