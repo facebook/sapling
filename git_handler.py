@@ -13,7 +13,8 @@ from dulwich.objects import (
     ShaFile,
     Tag,
     Tree,
-    hex_to_sha
+    hex_to_sha,
+    format_timezone,
     )
 
 import math
@@ -230,13 +231,16 @@ class GitHandler(object):
         author = ctx.user()
         if not '>' in author: # TODO : this kills losslessness - die (submodules)?
             author = author + ' <none@none>'
-        commit['author'] = author + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
+        commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
         message = ctx.description()
         commit['message'] = ctx.description() + "\n"
 
         extra = ctx.extra()
         if 'committer' in extra:
-            commit['committer'] = extra['committer']
+            # fixup timezone
+            (name_timestamp, timezone) = extra['committer'].rsplit(' ', 1)
+            timezone = format_timezone(-int(timezone))
+            commit['committer'] = '%s %s' % (name_timestamp, timezone)
         if 'encoding' in extra:
             commit['encoding'] = extra['encoding']
 
@@ -623,7 +627,7 @@ class GitHandler(object):
 
         # if committer is different than author, add it to extra
         if not commit._author_raw == commit._committer_raw:
-            extra['committer'] = commit._committer_raw
+            extra['committer'] = "%s %d %d" % (commit.committer, commit.commit_time, -commit.commit_timezone)
 
         if commit._encoding:
             extra['encoding'] = commit._encoding
@@ -632,7 +636,7 @@ class GitHandler(object):
             extra['branch'] = hg_branch
 
         text = strip_message
-        date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
+        date = (commit.author_time, -commit.author_timezone)
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              commit.author, date, extra)
         a = self.repo.commitctx(ctx)

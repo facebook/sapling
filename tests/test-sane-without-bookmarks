@@ -4,7 +4,7 @@
 # "$TESTDIR/hghave" git || exit 80
 
 # bail early if the user is already running git-daemon
-echo hi | nc localhost 9418 && exit 80
+echo hi | nc localhost 9418 2>/dev/null && exit 80
 
 echo "[extensions]" >> $HGRCPATH
 echo "hggit=$(echo $(dirname $(dirname $0)))" >> $HGRCPATH
