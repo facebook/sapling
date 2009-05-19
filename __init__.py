@@ -1,15 +1,21 @@
 '''integration with Subversion repositories
 
-This extension allows Mercurial to act as a Subversion client, for
-fast incremental, bidirectional updates.
+hgsubversion is an extension for Mercurial that allows it to act as a Subversion
+client, offering fast, incremental and bidirectional synchronisation.
 
-It is *not* ready yet for production use. You should only be using
-this if you're ready to hack on it, and go diving into the internals
-of Mercurial and/or Subversion.
+Please note that hgsubversion should not be considered stable software. It is
+not feature complete, and neither guarantees of functionality nor future
+compatability can be offered. It is, however, quite useful for the cases where
+it works, and a good platform for further improvements.
 
-Before using hgsubversion, it is *strongly* encouraged to run the
+Before using hgsubversion, we *strongly* encourage running the
 automated tests. See `README' in the hgsubversion directory for
 details.
+
+The operation of hgsubversion can be customised with the following variables:
+
+<list not written yet>
+
 '''
 # TODO: The docstring should be slightly more helpful, and at least mention all
 #       configuration settings we support
