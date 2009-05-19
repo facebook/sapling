@@ -513,8 +513,8 @@ class GitHandler(object):
     def pseudo_import_git_commit(self, commit):
         (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
         cs = self.map_hg_get(commit.id)
-        p1 = "0" * 40
-        p2 = "0" * 40
+        p1 = nullid
+        p2 = nullid
         if len(commit.parents) > 0:
             sha = commit.parents[0]
             p1 = self.map_hg_get(sha)
@@ -525,7 +525,7 @@ class GitHandler(object):
             # TODO : map extra parents to the extras file
             pass
         # saving rename info
-        if (not (p2 == "0"*40) or (p1 == "0"*40)):
+        if (not (p2 == nullid) or (p1 == nullid)):
             self.renames[cs] = {}
         else:
             self.renames[cs] = self.renames[p1].copy()
@@ -555,8 +555,8 @@ class GitHandler(object):
                 copied_path = None
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
-        p1 = "0" * 40
-        p2 = "0" * 40
+        p1 = nullid
+        p2 = nullid
         if len(commit.parents) > 0:
             sha = commit.parents[0]
             p1 = self.map_hg_get(sha)
@@ -571,7 +571,7 @@ class GitHandler(object):
         files = self.git.get_files_changed(commit)
 
         # wierd hack for explicit file renames in first but not second branch
-        if not (p2 == "0"*40):
+        if not (p2 == nullid):
             vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
             for removefile in vals:
                 files.remove(removefile)
@@ -604,7 +604,7 @@ class GitHandler(object):
         gitsha = commit.id
         
         # saving rename info
-        if (not (p2 == "0"*40) or (p1 == "0"*40)):
+        if (not (p2 == nullid) or (p1 == nullid)):
             self.renames[cs] = {}
         else:
             self.renames[cs] = self.renames[p1].copy()
