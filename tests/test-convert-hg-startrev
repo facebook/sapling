@@ -6,7 +6,7 @@ echo 'hgext.convert =' >> $HGRCPATH
 
 glog()
 {
-    hg -R "$1" glog --template '#rev# "#desc#" files: #files#\n'
+    hg -R "$1" glog --template '{rev} "{desc}" files: {files}\n'
 }
 
 hg init source

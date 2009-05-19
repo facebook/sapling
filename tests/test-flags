@@ -20,7 +20,7 @@ hg co
 chmod +x a
 hg ci -m "chmod +x a" -d "1000000 0"
 echo % the changelog should mention file a:
-hg tip --template '#files#\n'
+hg tip --template '{files}\n'
 
 cd ../test1
 echo 123 >>a

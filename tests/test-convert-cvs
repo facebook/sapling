@@ -63,7 +63,7 @@ echo % convert fresh repo with --filemap
 echo include b/c > filemap
 hg convert --filemap filemap src src-filemap | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
 hgcat b/c
-hg -R src-filemap log --template '#rev# #desc# files: #files#\n'
+hg -R src-filemap log --template '{rev} {desc} files: {files}\n'
 
 echo % commit new file revisions
 cd src
@@ -81,7 +81,7 @@ hgcat b/c
 echo % convert again with --filemap
 hg convert --filemap filemap src src-filemap | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
 hgcat b/c
-hg -R src-filemap log --template '#rev# #desc# files: #files#\n'
+hg -R src-filemap log --template '{rev} {desc} files: {files}\n'
 
 echo % commit branch
 cd src
@@ -101,5 +101,5 @@ hgcat b/c
 echo % convert again with --filemap
 hg convert --filemap filemap src src-filemap | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
 hgcat b/c
-hg -R src-filemap log --template '#rev# #desc# files: #files#\n'
-hg -R src-hg glog --template '#rev# (#branches#) #desc# files: #files#\n'
+hg -R src-filemap log --template '{rev} {desc} files: {files}\n'
+hg -R src-hg glog --template '{rev} ({branches}) {desc} files: {files}\n'

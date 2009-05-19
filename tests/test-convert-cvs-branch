@@ -61,4 +61,4 @@ hg convert src | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
 
 echo % Check the result
 
-hg -R src-hg glog --template '#rev# (#branches#) #desc# files: #files#\n'
+hg -R src-hg glog --template '{rev} ({branches}) {desc} files: {files}\n'

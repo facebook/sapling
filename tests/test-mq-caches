@@ -8,7 +8,7 @@ show_branch_cache()
 {
     # force cache (re)generation
     hg log -r does-not-exist 2> /dev/null
-    hg log -r tip --template 'tip: #rev#\n'
+    hg log -r tip --template 'tip: {rev}\n'
     if [ -f $branches ]; then
 	sort $branches
     else
@@ -16,7 +16,7 @@ show_branch_cache()
     fi
     if [ "$1" = 1 ]; then
 	for b in foo bar; do
-	    hg log -r $b --template "branch $b: "'#rev#\n'
+	    hg log -r $b --template "branch $b: "'{rev}\n'
 	done
     fi
 }
@@ -68,7 +68,7 @@ echo
 echo '# importing rev 1 (the cache now ends in one of the patches)'
 hg qimport -r 1 -n p0
 show_branch_cache 1
-hg log -r qbase --template 'qbase: #rev#\n'
+hg log -r qbase --template 'qbase: {rev}\n'
 
 echo
 echo '# detect an invalid cache'

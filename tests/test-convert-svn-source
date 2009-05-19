@@ -72,14 +72,14 @@ echo % test incremental conversion
 hg convert $svnurl B-hg
 
 cd B-hg
-hg glog --template '#rev# #desc|firstline# files: #files#\n'
+hg glog --template '{rev} {desc|firstline} files: {files}\n'
 hg tags -q
 cd ..
 
 echo % test filemap
 echo 'include letter2.txt' > filemap
 hg convert --filemap filemap $svnurl/trunk fmap
-hg glog -R fmap --template '#rev# #desc|firstline# files: #files#\n'
+hg glog -R fmap --template '{rev} {desc|firstline} files: {files}\n'
 
 echo % test stop revision
 hg convert --rev 1 $svnurl/trunk stoprev

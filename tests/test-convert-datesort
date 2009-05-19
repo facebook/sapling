@@ -36,5 +36,5 @@ cd ..
 echo % convert with datesort
 hg convert --datesort t t2
 echo % graph converted repo
-hg -R t2 glog --template '#rev# "#desc#"\n'
+hg -R t2 glog --template '{rev} "{desc}"\n'
 

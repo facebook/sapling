@@ -53,7 +53,7 @@ cd ..
 
 glog()
 {
-    hg glog --template '#rev# "#desc|firstline#" files: #files#\n' "$@"
+    hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
 }
 
 hg convert darcs-repo darcs-repo-hg 2>&1 | grep -v hGetLine | grep -v '^$'

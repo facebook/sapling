@@ -33,7 +33,7 @@ echo % convert again
 hg convert --branchmap=branchmap --datesort $svnurl A-hg
 
 cd A-hg
-hg glog --template 'branch=#branches# #rev# #desc|firstline# files: #files#\n'
+hg glog --template 'branch={branches} {rev} {desc|firstline} files: {files}\n'
 hg branches | sed 's/:.*/:/'
 hg tags -q
 cd ..

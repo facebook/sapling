@@ -27,6 +27,6 @@ echo % convert trunk and branches
 hg convert --datesort $svnurl/subproject A-hg
 
 cd A-hg
-hg glog --template '#rev# #desc|firstline# files: #files#\n'
+hg glog --template '{rev} {desc|firstline} files: {files}\n'
 hg branches | sed 's/:.*/:/'
 cd ..

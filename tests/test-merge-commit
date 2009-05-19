@@ -33,7 +33,7 @@ rm bar
 echo line1 > bar
 hg ci -m '4: revert content change from rev 2'
 
-hg log --template '#rev#:#node|short# #parents#\n'
+hg log --template '{rev}:{node|short} {parents}\n'
 echo '% this should use bar@rev2 as the ancestor'
 hg --debug merge 3
 echo '% contents of bar should be line1 line2'
@@ -64,7 +64,7 @@ rm bar
 echo line1 > bar
 hg ci -m '4: revert content change from rev 2'
 
-hg log --template '#rev#:#node|short# #parents#\n'
+hg log --template '{rev}:{node|short} {parents}\n'
 echo '% this should use bar@rev2 as the ancestor'
 hg --debug merge 3
 echo '% contents of bar should be line1 line2'

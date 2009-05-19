@@ -33,7 +33,7 @@ commit '4: change foo 2b' 1
 commit '5: merge' 3 4
 commit '6: change foo again'
 
-hg log --template '#rev#:#node|short# #parents#\n'
+hg log --template '{rev}:{node|short} {parents}\n'
 echo
 
 lookup()

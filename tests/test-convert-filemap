@@ -8,7 +8,7 @@ echo 'hgext.convert =' >> $HGRCPATH
 
 glog()
 {
-    hg glog --template '#rev# "#desc#" files: #files#\n' "$@"
+    hg glog --template '{rev} "{desc}" files: {files}\n' "$@"
 }
 
 hg init source

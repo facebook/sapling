@@ -27,7 +27,7 @@ echo % convert
 hg convert --datesort $svnurl A-hg
 
 cd A-hg
-hg glog --template '#rev# #desc|firstline# tags: #tags#\n'
+hg glog --template '{rev} {desc|firstline} tags: {tags}\n'
 hg tags | sed 's/:.*/:/'
 cd ..
 

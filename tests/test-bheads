@@ -2,7 +2,7 @@
 
 heads()
 {
-    hg heads --template '#rev#: #desc|firstline|strip#\n' "$@"
+    hg heads --template '{rev}: {desc|firstline|strip}\n' "$@"
 }
 
 hg init a

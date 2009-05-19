@@ -49,7 +49,7 @@ p4 submit -d "change b/c"
 
 echo % convert
 hg convert -s p4 $DEPOTPATH dst
-hg -R dst log --template 'rev=#rev# desc="#desc#" tags="#tags#" files="#files#"\n'
+hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
 
 echo % change some files
 p4 edit a b/c
@@ -59,7 +59,7 @@ p4 submit -d "change a b/c"
 
 echo % convert again
 hg convert -s p4 $DEPOTPATH dst
-hg -R dst log --template 'rev=#rev# desc="#desc#" tags="#tags#" files="#files#"\n'
+hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
 
 echo % interesting names
 echo dddd > "d d"
@@ -70,6 +70,6 @@ p4 submit -d "add d e f"
 
 echo % convert again
 hg convert -s p4 $DEPOTPATH dst
-hg -R dst log --template 'rev=#rev# desc="#desc#" tags="#tags#" files="#files#"\n'
+hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
 
 

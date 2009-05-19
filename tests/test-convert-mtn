@@ -115,7 +115,7 @@ hg convert -s mtn repo.mtn
 
 glog()
 {
-    hg glog --template '#rev# "#desc|firstline#" files: #files#\n' "$@"
+    hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
 }
 
 cd repo.mtn-hg

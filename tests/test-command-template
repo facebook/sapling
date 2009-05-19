@@ -115,13 +115,13 @@ hg log --template '<changeset author="{author|xmlescape}"/>\n'
 
 echo '# formatnode filter works'
 echo '#  quiet'
-hg -q log -r 0 --template '#node|formatnode#\n'
+hg -q log -r 0 --template '{node|formatnode}\n'
 echo '#  normal'
-hg log -r 0 --template '#node|formatnode#\n'
+hg log -r 0 --template '{node|formatnode}\n'
 echo '#  verbose'
-hg -v log -r 0 --template '#node|formatnode#\n'
+hg -v log -r 0 --template '{node|formatnode}\n'
 echo '#  debug'
-hg --debug log -r 0 --template '#node|formatnode#\n'
+hg --debug log -r 0 --template '{node|formatnode}\n'
 
 echo '# error on syntax'
 echo 'x = "f' >> t

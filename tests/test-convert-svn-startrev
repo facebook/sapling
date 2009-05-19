@@ -32,7 +32,7 @@ convert()
         --config convert.svn.branches="  " \
         --config convert.svn.tags= \
         --datesort $svnurl $repopath
-    hg -R $repopath glog --template '#rev# #desc|firstline# files: #files#\n'
+    hg -R $repopath glog --template '{rev} {desc|firstline} files: {files}\n'
     echo
 }
 
