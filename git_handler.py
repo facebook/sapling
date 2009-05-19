@@ -294,12 +294,17 @@ class GitHandler(object):
                     trees['/'] = []
                 trees['/'].append(fileentry)
 
-        # sort by tree depth, so we write the deepest trees first
         dirs = trees.keys()
-        dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
-        dirs.remove('/')
-        dirs.append('/')
-        
+        if dirs:
+            # sort by tree depth, so we write the deepest trees first
+            dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
+            dirs.remove('/')
+            dirs.append('/')
+        else:
+            # manifest is empty => make empty root tree
+            trees['/'] = []
+            dirs = ['/']
+
         # write all the trees
         tree_sha = None
         tree_shas = {}
