@@ -769,6 +769,12 @@ class localrepository(repo.repository):
 
     def commit(self, files=None, text="", user=None, date=None, match=None,
                force=False, editor=False, extra={}):
+        """Add a new revision to current repository.
+
+        Revision information is gathered from the working directory, files and
+        match can be used to filter the committed files.
+        If editor is supplied, it is called to get a commit message.
+        """
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
@@ -828,8 +834,6 @@ class localrepository(repo.repository):
         """Add a new revision to current repository.
 
         Revision information is passed via the context argument.
-        If editor is supplied, it is called to get a commit message.
-        If working is set, the working directory is affected.
         """
 
         tr = lock = None
