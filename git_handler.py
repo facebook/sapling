@@ -51,7 +51,12 @@ class GitHandler(object):
         self.ui = ui
         self.mapfile = 'git-mapfile'
         self.configfile = 'git-config'
-        self.gitdir = self.repo.join('git')
+
+        if ui.config('git', 'intree'):
+            self.gitdir = self.repo.wjoin('.git')
+        else:
+            self.gitdir = self.repo.join('git')
+
         self.init_if_missing()
         self.load_git()
         self.load_map()
@@ -109,22 +114,25 @@ class GitHandler(object):
 
     ## END FILE LOAD AND SAVE METHODS
 
+    def import_commits(self, remote_name):
+        self.import_git_objects(remote_name)
+        self.save_map()
+
     def fetch(self, remote_name):
         self.ui.status(_("fetching from : %s\n") % remote_name)
         self.export_git_objects()
         refs = self.fetch_pack(remote_name)
         if refs:
-            self.import_git_objects(remote_name)
-        self.save_map()
+            self.import_commits(remote_name)
 
-    def export(self):
+    def export_commits(self):
         self.export_git_objects()
         self.update_references()
         self.save_map()
 
     def push(self, remote_name):
         self.ui.status(_("pushing to : %s\n") % remote_name)
-        self.export()
+        self.export_commits()
         self.update_remote_references(remote_name)
         self.upload_pack(remote_name)
 
@@ -473,17 +481,18 @@ class GitHandler(object):
             f.close()
             raise
 
-    def import_git_objects(self, remote_name):
+    def import_git_objects(self, remote_name=None):
         self.ui.status(_("importing Git objects into Hg\n"))
         # import heads as remote references
         todo = []
         done = set()
         convert_list = {}
         self.renames = {}
-        
-        # get a list of all the head shas
-        for head, sha in self.git.remote_refs(remote_name).iteritems():
-            todo.append(sha)
+
+        if remote_name:
+            todo = self.git.remote_refs(remote_name).values()[:]
+        else:
+            todo = self.git.heads().values()[:]
 
         # traverse the heads getting a list of all the unique commits
         while todo:
@@ -503,7 +512,11 @@ class GitHandler(object):
         commits = toposort.TopoSort(convert_list).items()
         
         # import each of the commits, oldest first
-        for csha in commits:
+        total = len(commits)
+        magnitude = int(math.log(total, 10)) + 1 if total else 1
+        for i, csha in enumerate(commits):
+            if i%100 == 0:
+                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
             commit = convert_list[csha]
             if not self.map_hg_get(csha): # it's already here
                 self.import_git_commit(commit)

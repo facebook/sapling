@@ -45,21 +45,27 @@ def gpush(ui, repo, remote_name='origin', branch=None):
     git = GitHandler(repo, ui)
     git.push(remote_name)
 
+def gimport(ui, repo, remote_name=None):
+    git = GitHandler(repo, ui)
+    git.import_commits(remote_name)
+
 def gexport(ui, repo):
     git = GitHandler(repo, ui)
-    git.export()
+    git.export_commits()
 
 def gremote(ui, repo, *args):
     git = GitHandler(repo, ui)
 
     if len(args) == 0:
         git.remote_list()
+    elif len(args) < 2:
+        repo.ui.warn(_("must supply an action and a remote\n"))
     else:
         verb = args[0]
         nick = args[1]
 
         if verb == 'add':
-            if args[2]:
+            if len(args) == 3:
                 git.remote_add(nick, args[2])
             else:
                 repo.ui.warn(_("must supply a url to add as a remote\n"))
@@ -88,6 +94,8 @@ cmdtable = {
        ),
   "gpush":
         (gpush, [], _('hg gpush remote')),
+  "gimport":
+        (gimport, [], _('hg gimport')),
   "gexport":
         (gexport, [], _('hg gexport')),
   "gfetch":
