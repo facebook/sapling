@@ -415,7 +415,7 @@ def patchbomb(ui, repo, *revs, **opts):
             first = False
 
         m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
-        m['Date'] = util.datestr(start_time, "%a, %d %b %Y %H:%M:%S %1%2")
+        m['Date'] = email.Utils.formatdate(start_time[0])
 
         start_time = (start_time[0] + 1, start_time[1])
         m['From'] = sender
