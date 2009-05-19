@@ -1,3 +1,5 @@
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** rename in working dir **
 ** add a a1 / add a a2 / hg mv a b
@@ -118,6 +120,8 @@ new file mode 100644
 +y1
 
 
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** copy in working dir **
 ** add a a1 / add a a2 / hg cp a b
@@ -255,6 +259,8 @@ new file mode 100644
 +y1
 
 
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** single rename **
 ** hg mv a b / add b b1 / add b w
@@ -390,6 +396,8 @@ new file mode 100644
 +y1
 
 
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** single copy **
 ** hg cp a b / add b b1 / add a w
@@ -560,6 +568,8 @@ new file mode 100644
 +y1
 
 
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** rename chain **
 ** hg mv a b / hg mv b c / hg mv c d
@@ -684,6 +694,8 @@ new file mode 100644
 +y1
 
 
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** copy chain **
 ** hg cp a b / hg cp b c / hg cp c d
@@ -925,6 +937,8 @@ new file mode 100644
 +y1
 
 
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** circular rename **
 ** add a a1 / hg mv a b / hg mv b a
@@ -1047,6 +1061,8 @@ new file mode 100644
 +y1
 
 
+updating working directory
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 moving x/x to y/x
 ** directory move **

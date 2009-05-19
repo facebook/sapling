@@ -92,6 +92,7 @@ hg ci -mfoobar
 hg transplant 1:3
 # transplant -c shouldn't use an old changeset
 hg up -C
+rm added
 hg transplant 1
 hg transplant --continue
 hg transplant 1:3

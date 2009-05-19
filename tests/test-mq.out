@@ -242,7 +242,7 @@ added 1 changesets with 1 changes to 1 files
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 abort: local changes found
 % --force strip with local changes
-0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 saving bundle to 
 % cd b; hg qrefresh
 adding a

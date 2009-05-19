@@ -23,6 +23,7 @@ add a m2
 add x/y y1
 hg add x/y
 hg ci -m2
+cd ..
 
 show()
 {
@@ -41,6 +42,7 @@ count=0
 # $4 - test description
 tb()
 {
+    hg clone t t2 ; cd t2
     hg co -q -C 0
 
     add a $count
@@ -62,6 +64,8 @@ tb()
     show "--rev 2 --rev ." "branch to parent"
     show "--rev . --rev 2" "parent to branch"
     echo
+    cd ..
+    rm -rf t2
 }
 
 

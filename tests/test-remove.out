@@ -7,17 +7,23 @@ not removing bar: file has been marked for add (use -f to force removal)
 A bar
 ./bar
 ./foo
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 01 state clean, options none
 R foo
+? bar
+./bar
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 02 state modified, options none
 not removing foo: file is modified (use -f to force removal)
 M foo
+? bar
+./bar
 ./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 03 state missing, options none
 R foo
+? bar
+./bar
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 10 state added, options -f
 ? bar
@@ -38,18 +44,24 @@ not removing bar: file still exists (use -f to force removal)
 A bar
 ./bar
 ./foo
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 21 state clean, options -A
 not removing foo: file still exists (use -f to force removal)
+? bar
+./bar
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 22 state modified, options -A
 not removing foo: file still exists (use -f to force removal)
 M foo
+? bar
+./bar
 ./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 23 state missing, options -A
 R foo
+? bar
+./bar
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 30 state added, options -Af
 ? bar

@@ -253,7 +253,7 @@ rolling back last transaction
 % status
 A c
 % update -C
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % custom keyword expansion
 % try with kwdemo
 [extensions]
@@ -280,12 +280,14 @@ a
 abort: empty commit message
 % status
 M a
+? c
 ? log
 % commit
 a
 overwriting a expanding keywords
 committed changeset 2:bb948857c743469b22bbf51f7ec8112279ca5d83
 % status
+? c
 % verify
 checking changesets
 checking manifests
@@ -313,10 +315,12 @@ a
 % remove
 committed changeset 3:d14c712653769de926994cf7fbb06c8fbd68f012
 % status
+? c
 % rollback
 rolling back last transaction
 % status
 R a
+? c
 % revert a
 % cat a
 expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
