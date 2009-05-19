@@ -107,7 +107,7 @@ class localrepository(repo.repository):
         return dirstate.dirstate(self.opener, self.ui, self.root)
 
     def __getitem__(self, changeid):
-        if changeid == None:
+        if changeid is None:
             return context.workingctx(self)
         return context.changectx(self, changeid)
 
@@ -1209,7 +1209,7 @@ class localrepository(repo.repository):
         fetch = set()
         seen = set()
         seenbranch = set()
-        if base == None:
+        if base is None:
             base = {}
 
         if not heads:
@@ -1341,7 +1341,7 @@ class localrepository(repo.repository):
         or ancestors of these heads, and return a second element which
         contains all remote heads which get new children.
         """
-        if base == None:
+        if base is None:
             base = {}
             self.findincoming(remote, base, heads, force=force)
 

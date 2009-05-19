@@ -44,7 +44,7 @@ class tarit:
             timestamp = None
             if 'timestamp' in kw:
                 timestamp = kw.pop('timestamp')
-            if timestamp == None:
+            if timestamp is None:
                 self.timestamp = time.time()
             else:
                 self.timestamp = timestamp

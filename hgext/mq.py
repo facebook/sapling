@@ -430,7 +430,7 @@ class queue:
         if ret:
             raise util.Abort(_("update returned %d") % ret)
         n = repo.commit(None, ctx.description(), ctx.user(), force=1)
-        if n == None:
+        if n is None:
             raise util.Abort(_("repo commit failed"))
         try:
             ph = mergeq.readheaders(patch)
@@ -603,7 +603,7 @@ class queue:
             n = repo.commit(files, message, ph.user, ph.date, match=match,
                             force=True)
 
-            if n == None:
+            if n is None:
                 raise util.Abort(_("repo commit failed"))
 
             if update_status:
@@ -767,7 +767,7 @@ class queue:
                     msg = msg()
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
                 n = repo.commit(commitfiles, commitmsg, user, date, match=match, force=True)
-                if n == None:
+                if n is None:
                     raise util.Abort(_("repo commit failed"))
                 try:
                     self.full_series[insert:insert] = [patchfn]
@@ -860,7 +860,7 @@ class queue:
                     return self.series[0]
             return None
 
-        if patch == None:
+        if patch is None:
             return None
         if patch in self.series:
             return patch
@@ -1422,7 +1422,7 @@ class queue:
                     applied.append(se)
                 else:
                     series.append(file_)
-        if datastart == None:
+        if datastart is None:
             self.ui.warn(_("No saved patch data found\n"))
             return 1
         self.ui.warn(_("restoring status: %s\n") % lines[0])
@@ -1486,7 +1486,7 @@ class queue:
         if len(self.applied) > 0:
             p = self.applied[-1].name
             end = self.find_series(p)
-            if end == None:
+            if end is None:
                 return len(self.full_series)
             return end + 1
         return 0
@@ -2090,7 +2090,7 @@ def lastsavename(path):
         m = namere.match(f)
         if m:
             index = int(m.group(1))
-            if maxindex == None or index > maxindex:
+            if maxindex is None or index > maxindex:
                 maxindex = index
                 maxname = f
     if maxname:

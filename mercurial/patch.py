@@ -452,11 +452,11 @@ class hunk:
         if not m:
             raise PatchError(_("bad hunk #%d") % self.number)
         self.starta, foo, self.lena, self.startb, foo2, self.lenb = m.groups()
-        if self.lena == None:
+        if self.lena is None:
             self.lena = 1
         else:
             self.lena = int(self.lena)
-        if self.lenb == None:
+        if self.lenb is None:
             self.lenb = 1
         else:
             self.lenb = int(self.lenb)
@@ -479,7 +479,7 @@ class hunk:
             raise PatchError(_("bad hunk #%d") % self.number)
         foo, self.starta, foo2, aend, foo3 = m.groups()
         self.starta = int(self.starta)
-        if aend == None:
+        if aend is None:
             aend = self.starta
         self.lena = int(aend) - self.starta
         if self.starta:
@@ -511,7 +511,7 @@ class hunk:
             raise PatchError(_("bad hunk #%d") % self.number)
         foo, self.startb, foo2, bend, foo3 = m.groups()
         self.startb = int(self.startb)
-        if bend == None:
+        if bend is None:
             bend = self.startb
         self.lenb = int(bend) - self.startb
         if self.startb:
@@ -872,7 +872,7 @@ def iterhunks(ui, fp, sourcefile=None):
         if ((sourcefile or state == BFILE) and ((not context and x[0] == '@') or
             ((context is not False) and x.startswith('***************')))):
             try:
-                if context == None and x.startswith('***************'):
+                if context is None and x.startswith('***************'):
                     context = True
                 gpatch = changed.get(bfile)
                 create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'

@@ -37,13 +37,13 @@ def buildlist(names, top):
                 names[os.path.join(l, x)] = (st.st_dev, st.st_ino)
 
 def diff_files(file1, file2):
-    if file1 == None:
+    if file1 is None:
         b = file(file2).read().splitlines(1)
         l1 = "--- %s\n" % (file2)
         l2 = "+++ %s\n" % (file2)
         l3 = "@@ -0,0 +1,%d @@\n" % len(b)
         l = [l1, l2, l3] + ["+" + e for e in b]
-    elif file2 == None:
+    elif file2 is None:
         a = file(file1).read().splitlines(1)
         l1 = "--- %s\n" % (file1)
         l2 = "+++ %s\n" % (file1)

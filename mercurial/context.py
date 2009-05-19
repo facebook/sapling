@@ -444,7 +444,7 @@ class filectx(object):
 
         # prime the ancestor cache for the working directory
         for c in (self, fc2):
-            if c._filerev == None:
+            if c._filerev is None:
                 pl = [(n.path(), n.filenode()) for n in c.parents()]
                 acache[(c._path, None)] = pl
 

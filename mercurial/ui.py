@@ -129,7 +129,7 @@ class ui(object):
 
     def configbool(self, section, name, default=False, untrusted=False):
         v = self.config(section, name, None, untrusted)
-        if v == None:
+        if v is None:
             return default
         if v.lower() not in _booleans:
             raise error.ConfigError(_("%s.%s not a boolean ('%s')")

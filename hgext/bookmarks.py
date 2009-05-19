@@ -143,7 +143,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         return
 
     if delete:
-        if mark == None:
+        if mark is None:
             raise util.Abort(_("bookmark name required"))
         if mark not in marks:
             raise util.Abort(_("a bookmark of this name does not exist"))
@@ -171,7 +171,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         write(repo, marks)
         return
 
-    if mark == None:
+    if mark is None:
         if rev:
             raise util.Abort(_("bookmark name required"))
         if len(marks) == 0:
@@ -243,7 +243,7 @@ def reposetup(ui, repo):
             """Add a revision to the repository and
             move the bookmark"""
             node  = super(bookmark_repo, self).commit(*k, **kw)
-            if node == None:
+            if node is None:
                 return None
             parents = repo.changelog.parents(node)
             if parents[1] == nullid:

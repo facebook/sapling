@@ -175,7 +175,7 @@ class lazyparser(object):
         if lend > len(self.index) - i:
             lend = len(self.index) - i
         for x in xrange(lend):
-            if self.index[i + x] == None:
+            if self.index[i + x] is None:
                 b = data[off : off + self.s]
                 self.index[i + x] = b
                 n = b[ngshaoffset:ngshaoffset + 20]
@@ -231,7 +231,7 @@ class lazyparser(object):
         if self.all:
             return
         all = False
-        if i == None:
+        if i is None:
             blockstart = 0
             blocksize = (65536 / self.s) * self.s
             end = self.datasize
@@ -279,7 +279,7 @@ class lazymap(object):
         self.p = parser
     def load(self, key):
         n = self.p.findnode(key)
-        if n == None:
+        if n is None:
             raise KeyError(key)
     def __contains__(self, key):
         if key in self.p.map:
@@ -1019,7 +1019,7 @@ class revlog(object):
             return
 
         trinfo = tr.find(self.indexfile)
-        if trinfo == None:
+        if trinfo is None:
             raise RevlogError(_("%s not found in the transaction")
                               % self.indexfile)
 
