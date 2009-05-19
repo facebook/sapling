@@ -427,7 +427,7 @@ class Repo(object):
             cmode = None
             if basetree:
                 for (bmode, bname, bsha) in basetree.entries():
-                    if bmode == 57344: # TODO : properly handle submodules
+                    if bmode == 0160000: # TODO : properly handle submodules
                         continue
                     basefiles.add(bname)
                     bobj = self.get_object(bsha)
@@ -447,7 +447,7 @@ class Repo(object):
             # handle removals
             if comptree:
                 for (bmode, bname, bsha, ) in comptree.entries():
-                    if bmode == 57344: # TODO: hande submodles
+                    if bmode == 0160000: # TODO: hande submodles
                         continue
                     if bname not in basefiles:
                         bobj = self.get_object(bsha)

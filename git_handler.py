@@ -389,7 +389,7 @@ class GitHandler(object):
             changes = list()
             changes.append((tree, path))
             for (mode, name, sha) in tree.entries():
-                if mode == 57344: # TODO : properly handle submodules and document what 57344 means
+                if mode == 0160000: # TODO : properly handle submodules and document what 57344 means
                     continue
                 if sha in seen:
                     continue
@@ -484,9 +484,9 @@ class GitHandler(object):
     def convert_git_int_mode(self, mode):
 	# TODO : make these into constants
         convert = {
-         33188: '',
-         40960: 'l',
-         33261: 'x'}
+         0100644: '',
+         0100755: 'x',
+         0120000: 'l'}
         if mode in convert:
             return convert[mode]
         return ''
