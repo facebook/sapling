@@ -11,7 +11,6 @@ mycmd = cmd --args
 
 from mercurial.i18n import _
 from mercurial import commands, cmdutil, error
-import shlex
 
 cmdtable = {}
 
@@ -70,11 +69,12 @@ def uisetup(ui):
         if not target:
             ui.warn(_('*** [alias] %s: no definition\n') % cmd)
             continue
-        args = shlex.split(target)
+        args = target.split(' ', 1)
         tcmd = args.pop(0)
         if args:
+            args = args[0]
             defaults = ui.config('defaults', cmd)
             if defaults:
-                args = shlex.split(defaults) + args
-            ui.setconfig('defaults', cmd, ' '.join(args))
+                args = ' '.join((args, defaults))
+            ui.setconfig('defaults', cmd, args)
         cmdtable[cmd] = lazycommand(ui, cmd, tcmd)
