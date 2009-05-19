@@ -128,7 +128,7 @@ def simple_mmap(f, offset, size, access=mmap.ACCESS_READ):
 
 
 def load_pack_index(filename):
-    f = open(filename, 'r')
+    f = open(filename, 'rb')
     if f.read(4) == '\377tOc':
         version = struct.unpack(">L", f.read(4))[0]
         if version == 2:
@@ -181,7 +181,7 @@ class PackIndex(object):
         # ensure that it hasn't changed.
         self._size = os.path.getsize(filename)
         if file is None:
-            self._file = open(filename, 'r')
+            self._file = open(filename, 'rb')
         else:
             self._file = file
         self._contents, map_offset = simple_mmap(self._file, 0, self._size)
@@ -733,7 +733,7 @@ def write_pack(filename, objects, num_objects):
     :param objects: Iterable over (object, path) tuples to write
     :param num_objects: Number of objects to write
     """
-    f = open(filename + ".pack", 'w')
+    f = open(filename + ".pack", 'wb')
     try:
         entries, data_sum = write_pack_data(f, objects, num_objects)
     finally:
@@ -797,7 +797,7 @@ def write_pack_index_v1(filename, entries, pack_checksum):
             crc32_checksum.
     :param pack_checksum: Checksum of the pack file.
     """
-    f = open(filename, 'w')
+    f = open(filename, 'wb')
     f = SHA1Writer(f)
     fan_out_table = defaultdict(lambda: 0)
     for (name, offset, entry_checksum) in entries:
@@ -945,7 +945,7 @@ def write_pack_index_v2(filename, entries, pack_checksum):
             crc32_checksum.
     :param pack_checksum: Checksum of the pack file.
     """
-    f = open(filename, 'w')
+    f = open(filename, 'wb')
     f = SHA1Writer(f)
     f.write('\377tOc') # Magic!
     f.write(struct.pack(">L", 2))
