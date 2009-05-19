@@ -1230,16 +1230,14 @@ def grep(ui, repo, pattern, *pats, **opts):
                 for i in xrange(blo, bhi):
                     yield ('+', b[i])
 
-    prev = {}
-    def display(fn, rev, states, prevstates):
+    def display(fn, r, pstates, states):
         datefunc = ui.quiet and util.shortdate or util.datestr
         found = False
         filerevmatches = {}
-        r = prev.get(fn, -1)
         if opts.get('all'):
-            iter = difflinestates(states, prevstates)
+            iter = difflinestates(pstates, states)
         else:
-            iter = [('', l) for l in prevstates]
+            iter = [('', l) for l in states]
         for change, l in iter:
             cols = [fn, str(r)]
             if opts.get('line_number'):
@@ -1261,8 +1259,8 @@ def grep(ui, repo, pattern, *pats, **opts):
             found = True
         return found
 
-    fstate = {}
     skip = {}
+    revfiles = {}
     get = util.cachefunc(lambda r: repo[r].changeset())
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
     found = False
@@ -1270,46 +1268,58 @@ def grep(ui, repo, pattern, *pats, **opts):
     for st, rev, fns in changeiter:
         if st == 'window':
             matches.clear()
+            revfiles.clear()
         elif st == 'add':
             ctx = repo[rev]
-            matches[rev] = {}
+            pctx = ctx.parents()[0]
+            parent = pctx.rev()
+            matches.setdefault(rev, {})
+            matches.setdefault(parent, {})
+            files = revfiles.setdefault(rev, [])
             for fn in fns:
-                if fn in skip:
-                    continue
+                flog = getfile(fn)
                 try:
-                    grepbody(fn, rev, getfile(fn).read(ctx.filenode(fn)))
-                    fstate.setdefault(fn, [])
-                    if follow:
-                        copied = getfile(fn).renamed(ctx.filenode(fn))
-                        if copied:
-                            copies.setdefault(rev, {})[fn] = copied[0]
+                    fnode = ctx.filenode(fn)
                 except error.LookupError:
-                    pass
+                    continue
+
+                copied = flog.renamed(fnode)
+                copy = follow and copied and copied[0]
+                if copy:
+                    copies.setdefault(rev, {})[fn] = copy
+                if fn in skip:
+                    if copy:
+                        skip[copy] = True
+                    continue
+                files.append(fn)
+
+                if not matches[rev].has_key(fn):
+                    grepbody(fn, rev, flog.read(fnode))
+
+                pfn = copy or fn
+                if not matches[parent].has_key(pfn):
+                    try:
+                        fnode = pctx.filenode(pfn)
+                        grepbody(pfn, parent, flog.read(fnode))
+                    except error.LookupError:
+                        pass
         elif st == 'iter':
-            for fn, m in sorted(matches[rev].items()):
+            parent = repo[rev].parents()[0].rev()
+            for fn in sorted(revfiles.get(rev, [])):
+                states = matches[rev][fn]
                 copy = copies.get(rev, {}).get(fn)
                 if fn in skip:
                     if copy:
                         skip[copy] = True
                     continue
-                if fn in prev or fstate[fn]:
-                    r = display(fn, rev, m, fstate[fn])
+                pstates = matches.get(parent, {}).get(copy or fn, [])
+                if pstates or states:
+                    r = display(fn, rev, pstates, states)
                     found = found or r
                     if r and not opts.get('all'):
                         skip[fn] = True
                         if copy:
                             skip[copy] = True
-                fstate[fn] = m
-                if copy:
-                    fstate[copy] = m
-                prev[fn] = rev
-
-    for fn, state in sorted(fstate.items()):
-        if fn in skip:
-            continue
-        if fn not in copies.get(prev[fn], {}):
-            found = display(fn, rev, {}, state) or found
-    return (not found and 1) or 0
 
 def heads(ui, repo, *branchrevs, **opts):
     """show current repository heads or show branch heads
