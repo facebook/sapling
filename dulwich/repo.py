@@ -424,7 +424,6 @@ class Repo(object):
             basefiles = set()
             changes = list()
             csha = None
-            ctree = None
             cmode = None
             if basetree:
                 for (bmode, bname, bsha) in basetree.entries():
@@ -438,6 +437,7 @@ class Repo(object):
                         if isinstance (bobj, Blob):
                             changes.append (prefix + bname)
                         elif isinstance(bobj, Tree):
+                            ctree = None
                             if csha:
                                 ctree = self.get_object(csha)
                             changes.extend(filenames(bobj,
