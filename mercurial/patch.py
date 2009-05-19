@@ -870,7 +870,7 @@ def iterhunks(ui, fp, sourcefile=None):
             current_hunk = None
             gitworkdone = False
         if ((sourcefile or state == BFILE) and ((not context and x[0] == '@') or
-            ((context or context == None) and x.startswith('***************')))):
+            ((context is not False) and x.startswith('***************')))):
             try:
                 if context == None and x.startswith('***************'):
                     context = True
