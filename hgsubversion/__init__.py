@@ -51,8 +51,9 @@ optionmap = {
 
 def wrapper(orig, ui, repo, *args, **opts):
     """
-    Subversion repositories are also supported for this command. See
-    `hg help %(extension)s` for details.
+    Some of the options listed below only apply to Subversion 
+    %(action)s. See 'hg help %(extension)s' for more information on 
+    them as well as other ways of customising the conversion process.
     """
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts:
@@ -81,17 +82,19 @@ def uisetup(ui):
     entry[1].append(('', 'svn', None,
                      "show svn-style diffs, default against svn parent"))
 
-    newflags = (('A', 'authors', '', 'path to file containing username '
-                 'mappings for Subversion sources'),
-                ('', 'filemap', '', 'path to file containing rules for file '
-                 'name mapping used for sources)'),
+    newflags = (('A', 'authors', '', 'path to file mapping Subversion '
+                 'usernames to Mercurial authors.'),
+                ('', 'filemap', '', 'path to file containing rules for '
+                 'mapping Subversion repository paths.'),
                 ('T', 'tagpaths', ['tags'], 'list of paths to search for tags '
                  'in Subversion repositories.'))
-    extname = 'hgsubversion'
 
-    for command in ['clone']:
-        doc = wrapper.__doc__.strip() % { 'extension': extname }
-        getattr(commands, command).__doc__ += doc
+    for command, action in [('clone', 'sources'), ('pull', 'sources'),
+                            ('push', 'destinations')]:
+        doc = wrapper.__doc__.strip() % { 'extension': 'hgsubversion',
+                                          'action': action }
+        fn = getattr(commands, command)
+        fn.__doc__ = fn.__doc__.rstrip() + '\n\n    ' + doc
         entry = extensions.wrapcommand(commands.table, command, wrapper)
         entry[1].extend(newflags)
 

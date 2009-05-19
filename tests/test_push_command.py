@@ -60,7 +60,9 @@ class PushTests(test_util.TestBase):
                 '--listen-host=%s' % self.host,
                 '--root=%s' % self.repo_path]
 
-        self.svnserve_pid = subprocess.Popen(args).pid
+        svnserve = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+        self.svnserve_pid = svnserve.pid
         try:
             time.sleep(2)
             import shutil

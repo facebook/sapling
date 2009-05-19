@@ -1,4 +1,5 @@
 syntax:glob
+build
 *.pyc
 *.pyo
 .DS_Store
