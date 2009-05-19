@@ -688,6 +688,9 @@ def main():
             ('.' not in test or test.endswith('.py') or
              test.endswith('.bat'))):
             tests.append(test)
+    if not tests:
+        print "# Ran 0 tests, 0 skipped, 0 failed."
+        return
 
     vlog("# Using TESTDIR", TESTDIR)
     vlog("# Using HGTMP", HGTMP)
