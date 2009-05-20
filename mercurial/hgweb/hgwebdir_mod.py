@@ -19,6 +19,28 @@ import webutil
 def cleannames(items):
     return [(util.pconvert(name).strip('/'), path) for name, path in items]
 
+def findrepos(paths):
+    repos = {}
+    for prefix, root in cleannames(paths):
+        roothead, roottail = os.path.split(root)
+        # "foo = /bar/*" makes every subrepo of /bar/ to be
+        # mounted as foo/subrepo
+        # and "foo = /bar/**" also recurses into the subdirectories,
+        # remember to use it without working dir.
+        try:
+            recurse = {'*': False, '**': True}[roottail]
+        except KeyError:
+            repos[prefix] = root
+            continue
+        roothead = os.path.normpath(roothead)
+        for path in util.walkrepos(roothead, followsym=True, recurse=recurse):
+            path = os.path.normpath(path)
+            name = util.pconvert(path[len(roothead):]).strip('/')
+            if prefix:
+                name = prefix + '/' + name
+            repos[name] = path
+    return repos.items()
+
 class hgwebdir(object):
     refreshinterval = 20
 
@@ -39,14 +61,6 @@ class hgwebdir(object):
             self.ui.setconfig('ui', 'report_untrusted', 'off')
             self.ui.setconfig('ui', 'interactive', 'off')
 
-        if isinstance(self.conf, (list, tuple)):
-            self.repos = cleannames(conf)
-        elif isinstance(self.conf, dict):
-            self.repos = sorted(cleannames(self.conf.items()))
-        else:
-            self.ui.readconfig(self.conf, remap={'paths': 'hgweb-paths'}, trust=True)
-            self.repos = []
-
         self.motd = self.ui.config('web', 'motd')
         self.style = self.ui.config('web', 'style', 'paper')
         self.stripecount = self.ui.config('web', 'stripes', 1)
@@ -54,29 +68,16 @@ class hgwebdir(object):
             self.stripecount = int(self.stripecount)
         self._baseurl = self.ui.config('web', 'baseurl')
 
-        if self.repos:
-            return
+        if not isinstance(self.conf, (dict, list, tuple)):
+            map = {'paths': 'hgweb-paths'}
+            self.ui.readconfig(self.conf, remap=map, trust=True)
+            paths = self.ui.configitems('hgweb-paths')
+        elif isinstance(self.conf, (list, tuple)):
+            paths = self.conf
+        elif isinstance(self.conf, dict):
+            paths = self.conf.items()
 
-        for prefix, root in cleannames(self.ui.configitems('hgweb-paths')):
-            roothead, roottail = os.path.split(root)
-            # "foo = /bar/*" makes every subrepo of /bar/ to be
-            # mounted as foo/subrepo
-            # and "foo = /bar/**" also recurses into the subdirectories,
-            # remember to use it without working dir.
-            try:
-                recurse = {'*': False, '**': True}[roottail]
-            except KeyError:
-                self.repos.append((prefix, root))
-                continue
-            roothead = os.path.normpath(roothead)
-            for path in util.walkrepos(roothead, followsym=True,
-                                       recurse=recurse):
-                path = os.path.normpath(path)
-                name = util.pconvert(path[len(roothead):]).strip('/')
-                if prefix:
-                    name = prefix + '/' + name
-                self.repos.append((name, path))
-
+        self.repos = findrepos(paths)
         for prefix, root in self.ui.configitems('collections'):
             for path in util.walkrepos(root, followsym=True):
                 repo = os.path.normpath(path)
