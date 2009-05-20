@@ -48,18 +48,17 @@ optionmap = {
     'defaultauthors': ('hgsubversion', 'defaultauthors'),
     'usebranchnames': ('hgsubversion', 'usebranchnames'),
 }
+dontretain = { 'hgsubversion': set(['authormap', 'filemap']) }
 
-svnopts = (('', 'stupid', '', 'use slower, but more compatible, protocol for '
+svnopts = (('', 'stupid', None, 'use slower, but more compatible, protocol for '
             'Subversion'),)
 
-svncloneopts = (('T', 'tagpaths', [], 'list of path s to search for tags '
+svncloneopts = (('T', 'tagpaths', '', 'list of path s to search for tags '
                  'in Subversion repositories'),
                 ('A', 'authors', '', 'path to file mapping Subversion '
                  'usernames to Mercurial authors'),
                 ('', 'filemap', '', 'path to file containing rules for '
                  'remapping Subversion repository paths'),)
-
-
 
 def wrapper(orig, ui, repo, *args, **opts):
     """
@@ -84,7 +83,7 @@ def clonewrapper(orig, ui, source, dest=None, **opts):
 
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:
-            ui.setconfig(section, name, opts.pop(opt))
+            ui.setconfig(section, name, str(opts.pop(opt)))
 
     # this must be kept in sync with mercurial/commands.py
     srcrepo, dstrepo = hg.clone(hgcmdutil.remoteui(ui, opts), source, dest,
@@ -96,13 +95,13 @@ def clonewrapper(orig, ui, source, dest=None, **opts):
     if dstrepo.local() and srcrepo.capable('subversion'):
         fd = dstrepo.opener("hgrc", "a", text=True)
         for section in set(s for s, v in optionmap.itervalues()):
-            if ui.has_section(section):
-                fd.write('\n[%s]\n' % section)
+            config = dict(ui.configitems(section))
+            for name in dontretain[section]:
+                config.pop(name, None)
 
-            for key, value in ui.configitems(section):
-                if not isinstance(value, str):
-                    value = ', '.join(value)
-                fd.write('%s = %s\n' % (key, value))
+            if config:
+                fd.write('\n[%s]\n' % section)
+                map(fd.write, ('%s = %s\n' % p for p in config.iteritems()))
 
 def uisetup(ui):
     """Do our UI setup.
