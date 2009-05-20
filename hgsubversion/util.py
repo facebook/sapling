@@ -99,7 +99,7 @@ def build_extra(revnum, branch, uuid, subdir):
 
 
 def is_svn_repo(repo):
-    return os.path.exists(os.path.join(repo.path, 'svn'))
+    return os.path.exists(os.path.join(repo.path, 'svn', 'uuid'))
 
 default_commit_msg = '*** empty log message ***'
 

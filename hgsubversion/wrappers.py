@@ -39,7 +39,7 @@ def outgoing(orig, ui, repo, dest=None, *args, **opts):
     """show changesets not found in the Subversion repository
     """
     svnurl = repo.ui.expandpath(dest or 'default-push', dest or 'default')
-    if not (cmdutil.issvnurl(svnurl) or opts.get('svn', False)):
+    if not hg.repository(ui, svnurl).capable('subversion'):
         return orig(ui, repo, dest, *args, **opts)
 
     # split off #rev; TODO implement --revision/#rev support
