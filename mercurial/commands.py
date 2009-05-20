@@ -2311,6 +2311,10 @@ def remove(ui, repo, *pats, **opts):
     s = repo.status(match=m, clean=True)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
+    for f in m.files():
+        if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
+            ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
+
     def warn(files, reason):
         for f in files:
             ui.warn(_('not removing %s: file %s (use -f to force removal)\n')

@@ -1,4 +1,5 @@
 % file not managed
+not removing foo: file is untracked
 ? foo
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
