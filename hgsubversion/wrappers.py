@@ -194,7 +194,7 @@ def push(repo, dest="default", force=False, revs=None):
     return 0
 
 
-def pull(repo, source="default", rev=None, force=False):
+def pull(repo, source="default", heads=None, force=False):
     """pull new revisions from Subversion
 
     Also takes svn, svn_stupid, and create_new_dest kwargs.
@@ -203,7 +203,7 @@ def pull(repo, source="default", rev=None, force=False):
     svn_url = util.normalize_url(url)
 
     # Split off #rev
-    svn_url, revs, checkout = hg.parseurl(svn_url, rev)
+    svn_url, heads, checkout = hg.parseurl(svn_url, heads)
     old_encoding = util.swap_out_encoding()
 
     # TODO implement skipto support
@@ -211,8 +211,8 @@ def pull(repo, source="default", rev=None, force=False):
     try:
         stopat_rev = int(checkout or 0)
     except ValueError:
-        raise hgutil.Abort('unrecognised Subversion revision; '
-                           'only numbers work.')
+        raise hgutil.Abort('unrecognised Subversion revision %s: '
+                           'only numbers work.' % checkout)
 
     have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
     if have_replay and not callable(

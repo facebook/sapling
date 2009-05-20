@@ -3,6 +3,7 @@ import unittest
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
+from mercurial import util as hgutil
 
 import test_util
 
@@ -78,11 +79,13 @@ class TestFetchBranches(test_util.TestBase):
     def test_branch_tip_update_to_default_stupid(self):
         self.test_branch_tip_update_to_default(True)
 
-    def test_branch_tip_update_to_branch_anchor(self):
+    def test_branch_pull_anchor(self):
+        self.assertRaises(hgutil.Abort,
+                          self._load_fixture_and_fetch_with_anchor,
+                          'unorderedbranch.svndump', 'NaN')
         repo = self._load_fixture_and_fetch_with_anchor(
-            'unorderedbranch.svndump', 'branch')
-        self.assertEqual(repo[None].branch(), 'branch')
-        self.assertEqual(repo[None].parents()[0], repo[repo.branchheads()[0]])
+            'unorderedbranch.svndump', '4')
+        self.assertTrue('c' not in repo.branchtags())
 
     def test_branches_weird_moves(self, stupid=False):
         repo = self._load_fixture_and_fetch('renamedproject.svndump', stupid,

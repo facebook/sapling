@@ -63,7 +63,7 @@ def generate_repo_class(ui, repo):
             lock = self.wlock()
             try:
                 wrappers.pull(self, source=remote.svnurl,
-                              rev=heads, force=force)
+                              heads=heads, force=force)
             finally:
                 lock.release()
 
