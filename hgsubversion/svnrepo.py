@@ -91,7 +91,7 @@ class svnremoterepo(mercurial.repo.repository):
         return util.normalize_url(self.path)
 
     def url(self):
-        return self.path.rstrip('/')
+        return self.path
 
     def lookup(self, key):
         return key
