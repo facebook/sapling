@@ -522,9 +522,9 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     exception.'''
     def py2shell(val):
         'convert python object into string that is useful to shell'
-        if val in (None, False):
+        if val is None or val is False:
             return '0'
-        if val == True:
+        if val is True:
             return '1'
         return str(val)
     oldenv = {}
