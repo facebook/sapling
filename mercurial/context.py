@@ -638,49 +638,36 @@ class workingfilectx(filectx):
     def _changectx(self):
         return workingctx(self._repo)
 
-    @propertycache
-    def _repopath(self):
-        return self._repo.dirstate.copied(self._path) or self._path
-
-    @propertycache
-    def _filelog(self):
-        return self._repo.file(self._repopath)
-
     def __nonzero__(self):
         return True
 
     def __str__(self):
         return "%s@%s" % (self.path(), self._changectx)
 
-    def filectx(self, fileid):
-        '''opens an arbitrary revision of the file without
-        opening a new filelog'''
-        return filectx(self._repo, self._repopath, fileid=fileid,
-                       filelog=self._filelog)
-
-    def rev(self):
-        if '_changectx' in self.__dict__:
-            return self._changectx.rev()
-        return self._filelog.linkrev(self._filerev)
-
     def data(self): return self._repo.wread(self._path)
     def renamed(self):
-        rp = self._repopath
-        if rp == self._path:
+        rp = self._repo.dirstate.copied(self._path)
+        if not rp:
             return None
         return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
 
     def parents(self):
         '''return parent filectxs, following copies if necessary'''
-        p = self._path
-        rp = self._repopath
-        pcl = self._changectx._parents
+        def filenode(ctx, path):
+            return ctx._manifest.get(path, nullid)
+
+        path = self._path
         fl = self._filelog
-        pl = [(rp, pcl[0]._manifest.get(rp, nullid), fl)]
-        if len(pcl) > 1:
-            if rp != p:
-                fl = None
-            pl.append((p, pcl[1]._manifest.get(p, nullid), fl))
+        pcl = self._changectx._parents
+        renamed = self.renamed()
+
+        if renamed:
+            pl = [renamed + (None,)]
+        else:
+            pl = [(path, filenode(pcl[0], path), fl)]
+
+        for pc in pcl[1:]:
+            pl.append((path, filenode(pc, path), fl))
 
         return [filectx(self._repo, p, fileid=n, filelog=l)
                 for p,n,l in pl if n != nullid]
