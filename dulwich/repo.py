@@ -289,9 +289,12 @@ class Repo(object):
 
     def remote_refs(self, remote_name):
         ret = {}
-        for root, dirs, files in os.walk(os.path.join(self.controldir(), 'refs', 'remotes', remote_name)):
+        r = os.path.join(self.controldir(), 'refs', 'remotes', remote_name)
+        for root, dirs, files in os.walk(r):
             for name in files:
-                ret[name] = self._get_ref(os.path.join(root, name))
+                if root != r:
+                    name = root[len(r) + 1:] + "/" + name
+                ret[name] = self._get_ref(os.path.join(r, name))
         return ret
 
     def head(self):
