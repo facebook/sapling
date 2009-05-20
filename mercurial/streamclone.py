@@ -8,6 +8,8 @@
 import util, error
 from i18n import _
 
+from mercurial import store
+
 class StreamException(Exception):
     def __init__(self, code):
         Exception.__init__(self)
@@ -46,7 +48,8 @@ def stream_out(repo, untrusted=False):
         try:
             repo.ui.debug(_('scanning\n'))
             for name, ename, size in repo.store.walk():
-                entries.append((name, size))
+                # for backwards compat, name was partially encoded
+                entries.append((store.encodedir(name), size))
                 total_bytes += size
         finally:
             lock.release()

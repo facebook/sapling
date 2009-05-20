@@ -11,6 +11,24 @@ import os, stat
 
 _sha = util.sha1
 
+# This avoids a collision between a file named foo and a dir named
+# foo.i or foo.d
+def encodedir(path):
+    if not path.startswith('data/'):
+        return path
+    return (path
+            .replace(".hg/", ".hg.hg/")
+            .replace(".i/", ".i.hg/")
+            .replace(".d/", ".d.hg/"))
+
+def decodedir(path):
+    if not path.startswith('data/'):
+        return path
+    return (path
+            .replace(".d.hg/", ".d/")
+            .replace(".i.hg/", ".i/")
+            .replace(".hg.hg/", ".hg/"))
+
 def _buildencodefun():
     e = '_'
     win_reserved = [ord(x) for x in '\\:*?"<>|']
@@ -34,8 +52,8 @@ def _buildencodefun():
                     pass
             else:
                 raise KeyError
-    return (lambda s: "".join([cmap[c] for c in s]),
-            lambda s: "".join(list(decode(s))))
+    return (lambda s: "".join([cmap[c] for c in encodedir(s)]),
+            lambda s: decodedir("".join(list(decode(s)))))
 
 encodefilename, decodefilename = _buildencodefun()
 
@@ -104,6 +122,8 @@ def hybridencode(path):
     '''
     if not path.startswith('data/'):
         return path
+    # escape directories ending with .i and .d
+    path = encodedir(path)
     ndpath = path[len('data/'):]
     res = 'data/' + auxencode(encodefilename(ndpath))
     if len(res) > MAX_PATH_LEN_IN_HGSTORE:
@@ -155,7 +175,7 @@ class basicstore:
         self.opener.createmode = self.createmode
 
     def join(self, f):
-        return self.pathjoiner(self.path, f)
+        return self.pathjoiner(self.path, encodedir(f))
 
     def _walk(self, relpath, recurse):
         '''yields (unencoded, encoded, size)'''
@@ -170,7 +190,7 @@ class basicstore:
                     fp = self.pathjoiner(p, f)
                     if kind == stat.S_IFREG and f[-2:] in ('.d', '.i'):
                         n = util.pconvert(fp[striplen:])
-                        l.append((n, n, st.st_size))
+                        l.append((decodedir(n), n, st.st_size))
                     elif kind == stat.S_IFDIR and recurse:
                         visit.append(fp)
         return sorted(l)
@@ -215,6 +235,8 @@ class encodedstore(basicstore):
                 [self.pathjoiner('store', f) for f in _data.split()])
 
 class fncache(object):
+    # the filename used to be partially encoded
+    # hence the encodedir/decodedir dance
     def __init__(self, opener):
         self.opener = opener
         self.entries = None
@@ -231,20 +253,20 @@ class fncache(object):
             if (len(line) < 2) or (line[-1] != '\n'):
                 t = _('invalid entry in fncache, line %s') % (n + 1)
                 raise util.Abort(t)
-            self.entries.add(line[:-1])
+            self.entries.add(decodedir(line[:-1]))
         fp.close()
 
     def rewrite(self, files):
         fp = self.opener('fncache', mode='wb')
         for p in files:
-            fp.write(p + '\n')
+            fp.write(encodedir(p) + '\n')
         fp.close()
         self.entries = set(files)
 
     def add(self, fn):
         if self.entries is None:
             self._load()
-        self.opener('fncache', 'ab').write(fn + '\n')
+        self.opener('fncache', 'ab').write(encodedir(fn) + '\n')
 
     def __contains__(self, fn):
         if self.entries is None:
