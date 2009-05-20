@@ -96,7 +96,7 @@ class HgChangeReceiver(delta.Editor):
         if not filemap:
             filemap = self.ui.config('hgsubversion', 'filemap')
         if not tag_locations:
-            tag_locations = self.ui.config('hgsubversion', 'tagpaths', ['tags'])
+            tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                   'usebranchnames', True)
 

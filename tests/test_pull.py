@@ -21,7 +21,7 @@ class TestPull(test_util.TestBase):
         if self.svn_wc is None:
             self.svn_wc = os.path.join(self.tmpdir, 'testsvn_wc')
             subprocess.call([
-                'svn', 'co', '-q', test_util.fileurl(self.repo_path)[4:], 
+                'svn', 'co', '-q', test_util.fileurl(self.repo_path), 
                 self.svn_wc
             ],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

@@ -358,7 +358,7 @@ class SubversionRepo(object):
         The reason this is lazy is so that you can use the same repo object
         to perform RA calls to get deltas.
         """
-        return self.fetch_history_at_paths([''], start=start,
+        return self.fetch_history_at_paths([''], start=start, stop=stop,
                                            chunk_size=chunk_size)
 
     def fetch_history_at_paths(self, paths, start=None, stop=None,

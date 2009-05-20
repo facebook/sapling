@@ -62,8 +62,6 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
         url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     else:
         url = args[0]
-    if not (url.startswith('svn+') or url.startswith('svn:')):
-        raise hgutil.Abort('No valid Subversion URI found; please specify one.')
     uuid = None
     url = util.normalize_url(url.rstrip('/'))
     user, passwd = util.getuserpass(opts)

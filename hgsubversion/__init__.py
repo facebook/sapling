@@ -28,16 +28,16 @@ from mercurial import commands
 from mercurial import extensions
 from mercurial import hg
 from mercurial import util as hgutil
+from mercurial import cmdutil as hgcmdutil
 
 from svn import core
 
 import svncommands
+import cmdutil
 import svnrepo
 import util
 import wrappers
 import svnexternals
-
-schemes = ('svn', 'svn+ssh', 'svn+http', 'svn+file')
 
 optionmap = {
     'tagpaths': ('hgsubversion', 'tagpaths'),
@@ -49,20 +49,60 @@ optionmap = {
     'usebranchnames': ('hgsubversion', 'usebranchnames'),
 }
 
+svnopts = (('', 'stupid', '', 'use slower, but more compatible, protocol for '
+            'Subversion'),)
+
+svncloneopts = (('T', 'tagpaths', [], 'list of path s to search for tags '
+                 'in Subversion repositories'),
+                ('A', 'authors', '', 'path to file mapping Subversion '
+                 'usernames to Mercurial authors'),
+                ('', 'filemap', '', 'path to file containing rules for '
+                 'remapping Subversion repository paths'),)
+
+
+
 def wrapper(orig, ui, repo, *args, **opts):
     """
-    Some of the options listed below only apply to Subversion 
-    %(action)s. See 'hg help %(extension)s' for more information on 
-    them as well as other ways of customising the conversion process.
+    Subversion %(target)s can be used for %(command)s. See 'hg help
+    %(extension)s' for more on the conversion process.
     """
     for opt, (section, name) in optionmap.iteritems():
-        if opt in opts:
+        if opt in opts and opts[opt]:
             if isinstance(repo, str):
                 ui.setconfig(section, name, opts.pop(opt))
             else:
                 repo.ui.setconfig(section, name, opts.pop(opt))
 
     return orig(ui, repo, *args, **opts)
+
+def clonewrapper(orig, ui, source, dest=None, **opts):
+    """
+    Some of the options listed below only apply to Subversion
+    %(target)s. See 'hg help %(extension)s' for more information on
+    them as well as other ways of customising the conversion process.
+    """
+
+    for opt, (section, name) in optionmap.iteritems():
+        if opt in opts and opts[opt]:
+            ui.setconfig(section, name, opts.pop(opt))
+
+    # this must be kept in sync with mercurial/commands.py
+    srcrepo, dstrepo = hg.clone(hgcmdutil.remoteui(ui, opts), source, dest,
+                                pull=opts.get('pull'),
+                                stream=opts.get('uncompressed'),
+                                rev=opts.get('rev'),
+                                update=not opts.get('noupdate'))
+
+    if dstrepo.local() and srcrepo.capable('subversion'):
+        fd = dstrepo.opener("hgrc", "a", text=True)
+        for section in set(s for s, v in optionmap.itervalues()):
+            if ui.has_section(section):
+                fd.write('\n[%s]\n' % section)
+
+            for key, value in ui.configitems(section):
+                if not isinstance(value, str):
+                    value = ', '.join(value)
+                fd.write('%s = %s\n' % (key, value))
 
 def uisetup(ui):
     """Do our UI setup.
@@ -82,21 +122,19 @@ def uisetup(ui):
     entry[1].append(('', 'svn', None,
                      "show svn-style diffs, default against svn parent"))
 
-    newflags = (('A', 'authors', '', 'path to file mapping Subversion '
-                 'usernames to Mercurial authors.'),
-                ('', 'filemap', '', 'path to file containing rules for '
-                 'mapping Subversion repository paths.'),
-                ('T', 'tagpaths', ['tags'], 'list of paths to search for tags '
-                 'in Subversion repositories.'))
-
-    for command, action in [('clone', 'sources'), ('pull', 'sources'),
-                            ('push', 'destinations')]:
-        doc = wrapper.__doc__.strip() % { 'extension': 'hgsubversion',
-                                          'action': action }
+    for command, target, isclone in [('clone', 'sources', True),
+                                     ('pull', 'sources', False),
+                                     ('push', 'destinations', False)]:
+        doc = wrapper.__doc__.strip() % { 'command': command,
+                                          'Command': command.capitalize(),
+                                          'extension': 'hgsubversion',
+                                          'target': target }
         fn = getattr(commands, command)
         fn.__doc__ = fn.__doc__.rstrip() + '\n\n    ' + doc
-        entry = extensions.wrapcommand(commands.table, command, wrapper)
-        entry[1].extend(newflags)
+        entry = extensions.wrapcommand(commands.table, command,
+                                       (wrapper, clonewrapper)[isclone])
+        entry[1].extend(svnopts)
+        if isclone: entry[1].extend(svncloneopts)
 
     try:
         rebase = extensions.find('rebase')
@@ -147,8 +185,16 @@ def reposetup(ui, repo):
     if repo.local():
        svnrepo.generate_repo_class(ui, repo)
 
-for scheme in schemes:
-    hg.schemes[scheme] = svnrepo
+_origschemes = hg.schemes.copy()
+def _lookup(url):
+    if cmdutil.islocalrepo(url):
+        return svnrepo
+    else:
+        return _origschemes['file'](url)
+
+# install scheme handlers
+hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,
+                    'svn': svnrepo, 'svn+ssh': svnrepo })
 
 cmdtable = {
     "svn":
@@ -165,3 +211,6 @@ cmdtable = {
          svncommands._helpgen(),
          ),
 }
+
+# only these methods are public
+__all__ = ('cmdtable', 'reposetup', 'uisetup')

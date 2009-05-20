@@ -31,7 +31,7 @@ def fileurl(path):
     path = urllib.pathname2url(path)
     if drive:
         drive = '/' + drive
-    url = 'svn+file://%s%s' % (drive, path)
+    url = 'file://%s%s' % (drive, path)
     return url
 
 def load_svndump_fixture(path, fixture_name):

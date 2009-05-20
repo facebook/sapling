@@ -202,12 +202,18 @@ def pull(repo, source="default", rev=None, force=False):
     url = repo.ui.expandpath(source)
     svn_url = util.normalize_url(url)
 
-    # Split off #rev; TODO: implement --rev/#rev support limiting the pulled/cloned revisions
+    # Split off #rev
     svn_url, revs, checkout = hg.parseurl(svn_url, rev)
     old_encoding = util.swap_out_encoding()
 
     # TODO implement skipto support
     skipto_rev = 0
+    try:
+        stopat_rev = int(checkout or 0)
+    except ValueError:
+        raise hgutil.Abort('unrecognised Subversion revision; '
+                           'only numbers work.')
+
     have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
     if have_replay and not callable(
         delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
@@ -235,8 +241,9 @@ def pull(repo, source="default", rev=None, force=False):
 
     revisions = 0
 
-    # start converting revisions
-    for r in svn.revisions(start=start):
+    try:
+      # start converting revisions
+      for r in svn.revisions(start=start, stop=stopat_rev):
         valid = True
         hg_editor.update_branch_tag_map_for_rev(r)
         for p in r.paths:
@@ -270,6 +277,9 @@ def pull(repo, source="default", rev=None, force=False):
                     else:
                         raise hgutil.Abort(*e.args)
             revisions += 1
+    except KeyboardInterrupt:
+        pass
+
     util.swap_out_encoding(old_encoding)
 
     if revisions == 0:

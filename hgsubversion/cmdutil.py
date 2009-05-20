@@ -297,4 +297,7 @@ def islocalrepo(url):
     return False
 
 def issvnurl(url):
-    return url.startswith('svn') or islocalrepo(url)
+    for scheme in ('svn', 'http', 'https', 'svn+ssh'):
+        if url.startswith(scheme + '://'):
+            return True
+    return islocalrepo(url)

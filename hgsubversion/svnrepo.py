@@ -14,8 +14,10 @@ subclass: pull() is called on the instance pull *to*, but not the one pulled
   are used to distinguish and filter these operations from others.
 """
 
+from mercurial import error
 from mercurial import node
 from mercurial import util as hgutil
+from mercurial import httprepo
 import mercurial.repo
 
 import hg_delta_editor
@@ -42,7 +44,8 @@ def generate_repo_class(ui, repo):
         """
         original = getattr(repo.__class__, fn.__name__)
         def wrapper(self, *args, **opts):
-            if 'subversion' in getattr(args[0], 'capabilities', []):
+            capable = getattr(args[0], 'capable', lambda x: False)
+            if capable('subversion'):
                 return fn(self, *args, **opts)
             else:
                 return original(self, *args, **opts)
@@ -53,16 +56,14 @@ def generate_repo_class(ui, repo):
     class svnlocalrepo(repo.__class__):
         @remotesvn
         def push(self, remote, force=False, revs=None):
-            # TODO: pass on revs
             wrappers.push(self, dest=remote.svnurl, force=force, revs=None)
 
         @remotesvn
         def pull(self, remote, heads=None, force=False):
+            lock = self.wlock()
             try:
-                lock = self.wlock()
-                wrappers.pull(self, source=remote.svnurl, rev=heads, force=force)
-            except KeyboardInterrupt:
-                pass
+                wrappers.pull(self, source=remote.svnurl,
+                              rev=heads, force=force)
             finally:
                 lock.release()
 
@@ -90,7 +91,7 @@ class svnremoterepo(mercurial.repo.repository):
         return util.normalize_url(self.path)
 
     def url(self):
-        return self.path
+        return self.path.rstrip('/')
 
     def lookup(self, key):
         return key
@@ -106,6 +107,13 @@ class svnremoterepo(mercurial.repo.repository):
         raise hgutil.Abort('command unavailable for Subversion repositories')
 
 def instance(ui, url, create):
+    if url.startswith('http://') or url.startswith('https://'):
+        try:
+            # may yield a bogus 'real URL...' message
+            return httprepo.instance(ui, url, create)
+        except error.RepoError:
+            pass
+
     if create:
         raise hgutil.Abort('cannot create new remote Subversion repository')
 
