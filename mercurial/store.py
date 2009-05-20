@@ -214,37 +214,47 @@ class encodedstore(basicstore):
         return (['requires', '00changelog.i'] +
                 [self.pathjoiner('store', f) for f in _data.split()])
 
-def fncache(opener):
-    '''yields the entries in the fncache file'''
-    try:
-        fp = opener('fncache', mode='rb')
-    except IOError:
-        # skip nonexistent file
-        return
-    for n, line in enumerate(fp):
-        if (len(line) < 2) or (line[-1] != '\n'):
-            t = _('invalid entry in fncache, line %s') % (n + 1)
-            raise util.Abort(t)
-        yield line[:-1]
-    fp.close()
-
-class fncacheopener(object):
+class fncache(object):
     def __init__(self, opener):
         self.opener = opener
         self.entries = None
 
-    def loadfncache(self):
-        self.entries = set(fncache(self.opener))
+    def _load(self):
+        '''fill the entries from the fncache file'''
+        self.entries = set()
+        try:
+            fp = self.opener('fncache', mode='rb')
+        except IOError:
+            # skip nonexistent file
+            return
+        for n, line in enumerate(fp):
+            if (len(line) < 2) or (line[-1] != '\n'):
+                t = _('invalid entry in fncache, line %s') % (n + 1)
+                raise util.Abort(t)
+            self.entries.add(line[:-1])
+        fp.close()
 
-    def __call__(self, path, mode='r', *args, **kw):
-        if mode not in ('r', 'rb') and path.startswith('data/'):
-            if self.entries is None:
-                self.loadfncache()
-            if path not in self.entries:
-                self.opener('fncache', 'ab').write(path + '\n')
-                # fncache may contain non-existent files after rollback / strip
-                self.entries.add(path)
-        return self.opener(hybridencode(path), mode, *args, **kw)
+    def rewrite(self, files):
+        fp = self.opener('fncache', mode='wb')
+        for p in files:
+            fp.write(p + '\n')
+        fp.close()
+        self.entries = set(files)
+
+    def add(self, fn):
+        if self.entries is None:
+            self._load()
+        self.opener('fncache', 'ab').write(fn + '\n')
+
+    def __contains__(self, fn):
+        if self.entries is None:
+            self._load()
+        return fn in self.entries
+
+    def __iter__(self):
+        if self.entries is None:
+            self._load()
+        return iter(self.entries)
 
 class fncachestore(basicstore):
     def __init__(self, path, opener, pathjoiner):
@@ -253,7 +263,15 @@ class fncachestore(basicstore):
         self.createmode = _calcmode(self.path)
         self._op = opener(self.path)
         self._op.createmode = self.createmode
-        self.opener = fncacheopener(self._op)
+        self.fncache = fncache(self._op)
+
+        def fncacheopener(path, mode='r', *args, **kw):
+            if (mode not in ('r', 'rb')
+                and path.startswith('data/')
+                and path not in self.fncache):
+                    self.fncache.add(path)
+            return self._op(hybridencode(path), mode, *args, **kw)
+        self.opener = fncacheopener
 
     def join(self, f):
         return self.pathjoiner(self.path, hybridencode(f))
@@ -263,7 +281,7 @@ class fncachestore(basicstore):
         existing = []
         pjoin = self.pathjoiner
         spath = self.path
-        for f in fncache(self._op):
+        for f in self.fncache:
             ef = hybridencode(f)
             try:
                 st = os.stat(pjoin(spath, ef))
@@ -275,10 +293,7 @@ class fncachestore(basicstore):
         if rewrite:
             # rewrite fncache to remove nonexistent entries
             # (may be caused by rollback / strip)
-            fp = self._op('fncache', mode='wb')
-            for p in existing:
-                fp.write(p + '\n')
-            fp.close()
+            self.fncache.rewrite(existing)
 
     def copylist(self):
         d = _data + ' dh fncache'
