@@ -91,7 +91,6 @@ def push(repo, dest="default", force=False, revs=None):
     """push revisions starting at a specified head back to Subversion.
     """
     assert not revs, 'designated revisions for push remains unimplemented.'
-    print dest
     ui = repo.ui
     svnurl = util.normalize_url(repo.ui.expandpath(dest))
     old_encoding = util.swap_out_encoding()
@@ -105,7 +104,7 @@ def push(repo, dest="default", force=False, revs=None):
 
     # Check if we are up-to-date with the Subversion repository.
     if hge.last_known_revision() != svn.last_changed_rev:
-        # Based on localrepository.push() in localrepo.py:1559. 
+        # Messages are based on localrepository.push() in localrepo.py:1559. 
         # TODO: Ideally, we would behave exactly like other repositories:
         #  - push everything by default
         #  - handle additional heads in the same way
@@ -195,59 +194,6 @@ def push(repo, dest="default", force=False, revs=None):
     return 0
 
 
-def clone(orig, ui, source, dest=None, *args, **opts):
-    '''clone Subversion repository to a local Mercurial repository.
-
-    If no destination directory name is specified, it defaults to the
-    basename of the source plus "-hg".
-
-    You can specify multiple paths for the location of tags using comma
-    separated values.
-    '''
-    svnurl = ui.expandpath(source)
-    if not cmdutil.issvnurl(svnurl):
-        return orig(ui, source=source, dest=dest, *args, **opts)
-
-    if not dest:
-        dest = hg.defaultdest(hg.parseurl(source)[0]) + '-hg'
-        ui.status("Assuming destination %s\n" % dest)
-
-    if os.path.exists(dest):
-        raise hgutil.Abort("destination '%s' already exists" % dest)
-    url = util.normalize_url(svnurl)
-    res = -1
-    try:
-        try:
-            res = pull(None, ui, None, source=url, svn=None,
-                       svn_stupid=opts.pop('svn_stupid', False),
-                       create_new_dest=dest, **opts)
-        except core.SubversionException, e:
-            if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
-                raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
-                         'Please try running svn ls on that url first.')
-            raise
-    finally:
-        if os.path.exists(dest):
-            repo = hg.repository(ui, dest)
-            fp = repo.opener("hgrc", "w", text=True)
-            fp.write("[paths]\n")
-            # percent needs to be escaped for ConfigParser
-            fp.write("default = %(url)s\nsvn = %(url)s\n" % {'url': svnurl})
-            fp.close()
-            if (res is None or res == 0) and not opts.get('noupdate', False):
-                # Split off #rev
-                url, revs, checkout = hg.parseurl(svnurl)
-                for test in (checkout, 'default', 'tip'):
-                    try:
-                        uprev = repo.lookup(test)
-                        break
-                    except:
-                        continue
-                commands.update(ui, repo, uprev)
-
-    return res
-
-
 def pull(repo, source="default", rev=None, force=False):
     """pull new revisions from Subversion
 
@@ -259,6 +205,7 @@ def pull(repo, source="default", rev=None, force=False):
     # Split off #rev; TODO: implement --rev/#rev support limiting the pulled/cloned revisions
     svn_url, revs, checkout = hg.parseurl(svn_url, rev)
     old_encoding = util.swap_out_encoding()
+
     # TODO implement skipto support
     skipto_rev = 0
     have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
@@ -271,7 +218,7 @@ def pull(repo, source="default", rev=None, force=False):
                   ' of SWIG.\n')
         have_replay = False
 
-    # FIXME: enable this
+    # TODO: do credentials specified in the URL still work?
     user = repo.ui.config('hgsubversion', 'username')
     passwd = repo.ui.config('hgsubversion', 'password')
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
@@ -329,7 +276,7 @@ def pull(repo, source="default", rev=None, force=False):
         ui.status(i18n._("no changes found\n"))
         return
     else:
-        ui.status("added %d svn revisions\n" % revisions)
+        ui.status("pulled %d revisions\n" % revisions)
 
 def rebase(orig, ui, repo, **opts):
     """rebase current unpushed revisions onto the Subversion head
