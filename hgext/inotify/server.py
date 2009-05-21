@@ -155,6 +155,7 @@ class repowatcher(object):
         self.deferred = 0
 
         self.ds_info = self.dirstate_info()
+        self.handle_timeout()
         self.scan()
 
     def event_time(self):
@@ -326,7 +327,6 @@ class repowatcher(object):
             del self.dir(self.tree, root)[fn]
 
     def scan(self, topdir=''):
-        self.handle_timeout()
         ds = self.repo.dirstate._map.copy()
         self.add_watch(join(self.repo.root, topdir), self.mask)
         for root, dirs, files in walk(self.repo, topdir):
@@ -363,6 +363,7 @@ class repowatcher(object):
             self.last_event = None
         self.ui.note(_('%s dirstate reload\n') % self.event_time())
         self.repo.dirstate.invalidate()
+        self.handle_timeout()
         self.scan()
         self.ui.note(_('%s end dirstate reload\n') % self.event_time())
 
@@ -392,6 +393,7 @@ class repowatcher(object):
         if '_ignore' in self.repo.dirstate.__dict__:
             delattr(self.repo.dirstate, '_ignore')
             self.ui.note(_('rescanning due to .hgignore change\n'))
+            self.handle_timeout()
             self.scan()
 
     def getstat(self, wpath):
