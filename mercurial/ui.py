@@ -246,7 +246,10 @@ class ui(object):
         except: pass
 
     def interactive(self):
-        return self.configbool("ui", "interactive") or sys.stdin.isatty()
+        i = self.configbool("ui", "interactive", None)
+        if i is None:
+            return sys.stdin.isatty()
+        return i
 
     def _readline(self, prompt=''):
         if sys.stdin.isatty():
