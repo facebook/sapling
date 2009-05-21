@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-05-02 17:00+0200\n"
-"PO-Revision-Date: 2009-05-10 14:29+0200\n"
+"POT-Creation-Date: 2009-05-21 23:44+0200\n"
+"PO-Revision-Date: 2009-05-21 23:52+0200\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -47,9 +47,6 @@ msgid ""
 msgstr ""
 "    aliaser %s:\n"
 "\n"
-
-msgid "return tuple of (match function, list enabled)."
-msgstr ""
 
 #, python-format
 msgid "acl: %s not enabled\n"
@@ -93,11 +90,6 @@ msgid ""
 "mycmd = cmd --args\n"
 msgstr ""
 
-msgid ""
-"defer command lookup until needed, so that extensions loaded\n"
-"    after alias can be aliased"
-msgstr ""
-
 #, python-format
 msgid "*** [alias] %s: command %s is unknown"
 msgstr ""
@@ -137,45 +129,6 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Parse .hg/bookmarks file and return a dictionary\n"
-"\n"
-"    Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values\n"
-"    in the .hg/bookmarks file. They are read by the parse() method and\n"
-"    returned as a dictionary with name => hash values.\n"
-"\n"
-"    The parsed dictionary is cached until a write() operation is done.\n"
-"    "
-msgstr ""
-
-msgid ""
-"Write bookmarks\n"
-"\n"
-"    Write the given bookmark => hash dictionary to the .hg/bookmarks file\n"
-"    in a format equal to those of localtags.\n"
-"\n"
-"    We also store a backup of the previous state in undo.bookmarks that\n"
-"    can be copied back on rollback.\n"
-"    "
-msgstr ""
-
-msgid ""
-"Get the current bookmark\n"
-"\n"
-"    If we use gittishsh branches we have a current bookmark that\n"
-"    we are on. This function returns the name of the bookmark. It\n"
-"    is stored in .hg/bookmarks.current\n"
-"    "
-msgstr ""
-
-msgid ""
-"Set the name of the bookmark that we are currently on\n"
-"\n"
-"    Set the name of the bookmark that we are on (hg update <bookmark>).\n"
-"    The name is recorded in .hg/bookmarks.current\n"
-"    "
-msgstr ""
-
-msgid ""
 "mercurial bookmarks\n"
 "\n"
 "    Bookmarks are pointers to certain commits that move when\n"
@@ -206,28 +159,6 @@ msgid "bookmark name cannot contain newlines"
 msgstr "bogmærkenavn kan ikke indeholde linieskift"
 
 msgid "a bookmark cannot have the name of an existing branch"
-msgstr ""
-
-msgid ""
-"Strip bookmarks if revisions are stripped using\n"
-"    the mercurial.strip method. This usually happens during\n"
-"    qpush and qpop"
-msgstr ""
-
-msgid ""
-"Add a revision to the repository and\n"
-"            move the bookmark"
-msgstr ""
-
-msgid "Merge bookmarks with normal tags"
-msgstr ""
-
-msgid ""
-"Set the current bookmark\n"
-"\n"
-"    If the user updates to a bookmark we update the .hg/bookmarks.current\n"
-"    file.\n"
-"    "
 msgstr ""
 
 msgid "force"
@@ -359,15 +290,9 @@ msgid ""
 "    Changeset commit comment. Bug 1234.\n"
 msgstr ""
 
-msgid "support for bugzilla version 2.16."
-msgstr ""
-
 #, python-format
 msgid "connecting to %s:%s as %s, password %s\n"
 msgstr "forbinder til %s:%s som %s, kodeord %s\n"
-
-msgid "run a query."
-msgstr ""
 
 #, python-format
 msgid "query: %s %s\n"
@@ -377,24 +302,12 @@ msgstr "forespørgsel: %s %s\n"
 msgid "failed query: %s %s\n"
 msgstr "fejlet forespørgsel: %s %s\n"
 
-msgid "get identity of longdesc field"
-msgstr ""
-
 msgid "unknown database schema"
 msgstr "ukendt databaseskema"
-
-msgid "filter not-existing bug ids from list."
-msgstr ""
-
-msgid "filter bug ids from list that already refer to this changeset."
-msgstr ""
 
 #, python-format
 msgid "bug %d already knows about changeset %s\n"
 msgstr "fejl %d kender allerede til ændring %s\n"
-
-msgid "tell bugzilla to send mail."
-msgstr ""
 
 msgid "telling bugzilla to send mail:\n"
 msgstr "beder bugzilla om at sende mail:\n"
@@ -414,21 +327,9 @@ msgstr ""
 msgid "done\n"
 msgstr "færdig\n"
 
-msgid "look up numeric bugzilla user id."
-msgstr ""
-
 #, python-format
 msgid "looking up user %s\n"
 msgstr "slår bruger %s op\n"
-
-msgid "map name of committer to bugzilla user name."
-msgstr ""
-
-msgid ""
-"see if committer is a registered bugzilla user. Return\n"
-"        bugzilla username and userid if so. If not, return default\n"
-"        bugzilla username and userid."
-msgstr ""
 
 #, python-format
 msgid "cannot find bugzilla user id for %s"
@@ -438,50 +339,14 @@ msgstr ""
 msgid "cannot find bugzilla user id for %s or %s"
 msgstr ""
 
-msgid ""
-"add comment to bug. try adding comment as committer of\n"
-"        changeset, otherwise as default bugzilla user."
-msgstr ""
-
-msgid "support for bugzilla 2.18 series."
-msgstr ""
-
-msgid "support for bugzilla 3.0 series."
-msgstr ""
-
-msgid ""
-"return object that knows how to talk to bugzilla version in\n"
-"        use."
-msgstr ""
-
 #, python-format
 msgid "bugzilla version %s not supported"
-msgstr ""
-
-msgid ""
-"find valid bug ids that are referred to in changeset\n"
-"        comments and that do not already have references to this\n"
-"        changeset."
-msgstr ""
-
-msgid "update bugzilla bug with reference to changeset."
-msgstr ""
-
-msgid ""
-"strip leading prefix of repo root and turn into\n"
-"            url-safe path."
 msgstr ""
 
 msgid ""
 "changeset {node|short} in repo {root} refers to bug {bug}.\n"
 "details:\n"
 "\t{desc|tabindent}"
-msgstr ""
-
-msgid ""
-"add comment to bugzilla for each changeset that refers to a\n"
-"    bugzilla bug id. only add a comment once per bug, so same change\n"
-"    seen multiple times does not fill bug with duplicate data."
 msgstr ""
 
 #, python-format
@@ -522,9 +387,6 @@ msgid "hg children [-r REV] [FILE]"
 msgstr ""
 
 msgid "command to show certain statistics about revision history"
-msgstr ""
-
-msgid "Calculate stats"
 msgstr ""
 
 #, python-format
@@ -675,30 +537,6 @@ msgid ""
 "diff.trailingwhitespace = bold red_background\n"
 msgstr ""
 
-msgid "Wrap text in commands to turn on each effect."
-msgstr ""
-
-msgid "run the status command with colored output"
-msgstr ""
-
-msgid "run the qseries command with colored output"
-msgstr ""
-
-msgid "wrap ui.write for colored diff output"
-msgstr ""
-
-msgid "wrap cmdutil.changeset_printer.showpatch with colored output"
-msgstr ""
-
-msgid "run the diff command with colored output"
-msgstr ""
-
-msgid "Initialize the extension."
-msgstr ""
-
-msgid "patch in command to command table and load effect map"
-msgstr ""
-
 msgid "when to colorize (always, auto, or never)"
 msgstr ""
 
@@ -778,6 +616,17 @@ msgid ""
 "    format as a key in .hg/shamap). The values are the revision IDs\n"
 "    (in either the source or destination revision control system) that\n"
 "    should be used as the new parents for that node.\n"
+"\n"
+"    The branchmap is a file that allows you to rename a branch when it is\n"
+"    being brought in from whatever external repository. When used in\n"
+"    conjunction with a splicemap, it allows for a powerful combination\n"
+"    to help fix even the most badly mismanaged repositories and turn them\n"
+"    into nicely structured Mercurial repositories. The branchmap contains\n"
+"    lines of the form \"original_branch_name new_branch_name\".\n"
+"    \"original_branch_name\" is the name of the branch in the source\n"
+"    repository, and \"new_branch_name\" is the name of the branch is the\n"
+"    destination repository. This can be used to (for instance) move code\n"
+"    in one repository from \"default\" to a named branch.\n"
 "\n"
 "    Mercurial Source\n"
 "    -----------------\n"
@@ -932,6 +781,9 @@ msgstr ""
 msgid "splice synthesized history into place"
 msgstr ""
 
+msgid "change branch names while converting"
+msgstr ""
+
 msgid "try to sort changesets by date"
 msgstr ""
 
@@ -971,12 +823,24 @@ msgstr ""
 msgid "hg debugcvsps [OPTION]... [PATH]..."
 msgstr ""
 
+msgid ""
+"warning: lightweight checkouts may cause conversion failures, try with a "
+"regular branch instead.\n"
+msgstr ""
+
+msgid "bzr source type could not be determined\n"
+msgstr ""
+
 #, python-format
 msgid "%s is not a valid revision in current branch"
 msgstr ""
 
 #, python-format
 msgid "%s is not available in %s anymore"
+msgstr ""
+
+#, python-format
+msgid "%s.%s symlink has no target"
 msgstr ""
 
 #, python-format
@@ -1446,28 +1310,12 @@ msgid ""
 "fast (at least faster than having to compare the entire tree).\n"
 msgstr ""
 
-msgid ""
-"snapshot files as of some revision\n"
-"    if not using snapshot, -I/-X does not work and recursive diff\n"
-"    in tools like kdiff3 and meld displays too many files."
-msgstr ""
-
 #, python-format
 msgid "making snapshot of %d files from rev %s\n"
 msgstr ""
 
 #, python-format
 msgid "making snapshot of %d files from working directory\n"
-msgstr ""
-
-msgid ""
-"Do the actuall diff:\n"
-"\n"
-"    - copy to a temp structure if diffing 2 internal revisions\n"
-"    - copy to a temp structure if diffing working revision with\n"
-"      another one and more than 1 file is changed\n"
-"    - just invoke the diff for a single file in the working dir\n"
-"    "
 msgstr ""
 
 msgid "cannot specify --rev and --change at the same time"
@@ -1513,9 +1361,6 @@ msgid "change made by revision"
 msgstr ""
 
 msgid "hg extdiff [OPT]... [FILE]..."
-msgstr ""
-
-msgid "use closure to save diff command to use"
 msgstr ""
 
 #, python-format
@@ -1566,8 +1411,10 @@ msgstr ""
 msgid "pulling from %s\n"
 msgstr "hiver fra %s\n"
 
-msgid "fetch -r doesn't work for remote repositories yet"
-msgstr "fetch -r virker endnu ikke for fjernarkiver"
+msgid ""
+"Other repository doesn't support revision lookup, so a rev cannot be "
+"specified."
+msgstr ""
 
 #, python-format
 msgid ""
@@ -1606,23 +1453,7 @@ msgstr ""
 msgid "hg fetch [SOURCE]"
 msgstr ""
 
-msgid " returns of the good and bad signatures"
-msgstr ""
-
 msgid "error while verifying signature"
-msgstr ""
-
-msgid "create a new gpg instance"
-msgstr ""
-
-msgid ""
-"\n"
-"    walk over every sigs, yields a couple\n"
-"    ((node, version, sig), (filename, linenumber))\n"
-"    "
-msgstr ""
-
-msgid "get the keys who signed a data"
 msgstr ""
 
 #, python-format
@@ -1651,9 +1482,6 @@ msgstr "verificer alle underskrifter der måtte være for en given revision"
 msgid "No valid signature for %s\n"
 msgstr "Ingen gyldig signatur for %s\n"
 
-msgid "associate a string to a key (username, comment)"
-msgstr ""
-
 msgid ""
 "add a signature for the current or given revision\n"
 "\n"
@@ -1677,9 +1505,6 @@ msgstr ""
 
 #, python-format
 msgid "Added signature for changeset %s"
-msgstr ""
-
-msgid "map a manifest into some text"
 msgstr ""
 
 msgid "unknown signature version"
@@ -1717,53 +1542,6 @@ msgid ""
 "revision graph is also shown.\n"
 msgstr ""
 
-msgid ""
-"cset DAG generator yielding (rev, node, [parents]) tuples\n"
-"\n"
-"    This generator function walks through the revision history from "
-"revision\n"
-"    start to revision stop (which must be less than or equal to start).\n"
-"    "
-msgstr ""
-
-msgid ""
-"file cset DAG generator yielding (rev, node, [parents]) tuples\n"
-"\n"
-"    This generator function walks through the revision history of a single\n"
-"    file from revision start to revision stop (which must be less than or\n"
-"    equal to start).\n"
-"    "
-msgstr ""
-
-msgid ""
-"grapher for asciigraph on a list of nodes and their parents\n"
-"\n"
-"    nodes must generate tuples (node, parents, char, lines) where\n"
-"     - parents must generate the parents of node, in sorted order,\n"
-"       and max length 2,\n"
-"     - char is the char to print as the node symbol, and\n"
-"     - lines are the lines to display next to the node.\n"
-"    "
-msgstr ""
-
-msgid ""
-"prints an ASCII graph of the DAG returned by the grapher\n"
-"\n"
-"    grapher is a generator that emits tuples with the following elements:\n"
-"\n"
-"      - Character to use as node's symbol.\n"
-"      - List of lines to display as the node's text.\n"
-"      - Column of the current node in the set of ongoing edges.\n"
-"      - Edges; a list of (col, next_col) indicating the edges between\n"
-"        the current node and its parents.\n"
-"      - Number of columns (ongoing edges) in the current revision.\n"
-"      - The difference between the number of columns (ongoing edges)\n"
-"        in the next revision and the number of columns (ongoing edges)\n"
-"        in the current revision. That is: -1 means one column removed;\n"
-"        0 means no columns added or removed; 1 means one column added.\n"
-"    "
-msgstr ""
-
 #, python-format
 msgid "--graph option is incompatible with --%s"
 msgstr ""
@@ -1779,37 +1557,12 @@ msgid ""
 "    "
 msgstr ""
 
-msgid ""
-"show the outgoing changesets alongside an ASCII revision graph\n"
-"\n"
-"    Print the outgoing changesets alongside a revision graph drawn with\n"
-"    ASCII characters.\n"
-"\n"
-"    Nodes printed as an @ character are parents of the working\n"
-"    directory.\n"
-"    "
-msgstr ""
-
 #, python-format
 msgid "comparing with %s\n"
 msgstr "sammenligner med %s\n"
 
 msgid "no changes found\n"
 msgstr "fandt ingen ændringer\n"
-
-msgid ""
-"show the incoming changesets alongside an ASCII revision graph\n"
-"\n"
-"    Print the incoming changesets alongside a revision graph drawn with\n"
-"    ASCII characters.\n"
-"\n"
-"    Nodes printed as an @ character are parents of the working\n"
-"    directory.\n"
-"    "
-msgstr ""
-
-msgid "wrap the command"
-msgstr ""
 
 msgid "show the revision DAG"
 msgstr ""
@@ -1842,8 +1595,7 @@ msgid ""
 "# Append a diffstat to the log message (optional)\n"
 "#diffstat = False\n"
 "# Template to use for log messages (optional)\n"
-"#template = {desc}\n"
-"{baseurl}/rev/{node}-- {diffstat}\n"
+"#template = {desc}\\n{baseurl}/rev/{node}-- {diffstat}\n"
 "# Style to use (optional)\n"
 "#style = foo\n"
 "# The URL of the CIA notification service (optional)\n"
@@ -1864,17 +1616,8 @@ msgid ""
 "baseurl = http://server/path/to/repo\n"
 msgstr ""
 
-msgid " A CIA message "
-msgstr ""
-
-msgid " CIA notification class "
-msgstr ""
-
 #, python-format
 msgid "hgcia: sending update to %s\n"
-msgstr ""
-
-msgid " send CIA notification "
 msgstr ""
 
 msgid "email.from must be defined when sending by email"
@@ -2251,31 +1994,6 @@ msgid ""
 "\"Log = {desc}\" expands to the first line of the changeset description.\n"
 msgstr ""
 
-msgid "Returns hgdate in cvs-like UTC format."
-msgstr ""
-
-msgid ""
-"\n"
-"    Sets up keyword templates, corresponding keyword regex, and\n"
-"    provides keyword substitution functions.\n"
-"    "
-msgstr ""
-
-msgid "Replaces keywords in data with expanded template."
-msgstr ""
-
-msgid "Returns data with keywords expanded."
-msgstr ""
-
-msgid ""
-"Returns true if path matches [keyword] pattern\n"
-"        and is not a symbolic link.\n"
-"        Caveat: localrepository._link fails on Windows."
-msgstr ""
-
-msgid "Overwrites selected files expanding/shrinking keywords."
-msgstr ""
-
 #, python-format
 msgid "overwriting %s expanding keywords\n"
 msgstr ""
@@ -2284,48 +2002,10 @@ msgstr ""
 msgid "overwriting %s shrinking keywords\n"
 msgstr ""
 
-msgid "Unconditionally removes all keyword substitutions from text."
-msgstr ""
-
-msgid "Returns text with all keyword substitutions removed."
-msgstr ""
-
-msgid "Returns lines with keyword substitutions removed."
-msgstr ""
-
-msgid ""
-"If in restricted mode returns data read from wdir with\n"
-"        keyword substitutions removed."
-msgstr ""
-
-msgid ""
-"\n"
-"    Subclass of filelog to hook into its read, add, cmp methods.\n"
-"    Keywords are \"stored\" unexpanded, and processed on reading.\n"
-"    "
-msgstr ""
-
-msgid "Expands keywords when reading filelog."
-msgstr ""
-
-msgid "Removes keyword substitutions when adding to filelog."
-msgstr ""
-
-msgid "Removes keyword substitutions for comparison."
-msgstr ""
-
-msgid ""
-"Bails out if [keyword] configuration is not active.\n"
-"    Returns status of working directory."
-msgstr ""
-
 msgid "[keyword] patterns cannot match"
 msgstr ""
 
 msgid "no [keyword] patterns configured"
-msgstr ""
-
-msgid "Selects files and passes them to kwtemplater.overwrite."
 msgstr ""
 
 msgid ""
@@ -2392,36 +2072,6 @@ msgid ""
 "\n"
 "    kwshrink refuses to run if given files contain local changes.\n"
 "    "
-msgstr ""
-
-msgid ""
-"Collects [keyword] config in kwtools.\n"
-"    Monkeypatches dispatch._parse if needed."
-msgstr ""
-
-msgid "Monkeypatch dispatch._parse to obtain running hg command."
-msgstr ""
-
-msgid ""
-"Sets up repo as kwrepo for keyword substitution.\n"
-"    Overrides file method to return kwfilelog instead of filelog\n"
-"    if file matches user configuration.\n"
-"    Wraps commit to overwrite configured files with updated\n"
-"    keyword substitutions.\n"
-"    Monkeypatches patch and webcommands."
-msgstr ""
-
-msgid ""
-"Monkeypatch/wrap patch.patchfile.__init__ to avoid\n"
-"        rejects or conflicts due to expanded keywords in working dir."
-msgstr ""
-
-msgid ""
-"Monkeypatch patch.diff to avoid expansion except when\n"
-"        comparing against working dir."
-msgstr ""
-
-msgid "Wraps webcommands.x turning off keyword expansion."
 msgstr ""
 
 msgid "show default keyword template maps"
@@ -2498,17 +2148,6 @@ msgstr ""
 "anvend og put patch på stakken                   qpush\n"
 "fjern patch fra stakken                          qpop\n"
 "genopfrisk indholdet af den øverste patch        qrefresh\n"
-
-msgid ""
-"Update all references to a field in the patch header.\n"
-"        If none found, add it email style."
-msgstr ""
-
-msgid ""
-"Remove existing message, keeping the rest of the comments fields.\n"
-"        If comments contains 'subject: ', message will prepend\n"
-"        the field and a blank line."
-msgstr ""
 
 #, python-format
 msgid "%s appears more than once in %s"
@@ -2588,11 +2227,6 @@ msgstr "rettelsen %s findes ikke\n"
 msgid "patch %s is not applied\n"
 msgstr "rettelsen %s er ikke anvendt\n"
 
-msgid ""
-"Apply patchfile  to the working directory.\n"
-"        patchfile: file name of patch"
-msgstr ""
-
 msgid "patch failed, unable to continue (try -v)\n"
 msgstr ""
 
@@ -2661,12 +2295,6 @@ msgstr "lokale ændringer fundet"
 msgid "\"%s\" cannot be used as the name of a patch"
 msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
 
-msgid ""
-"options:\n"
-"           msg: a string or a no-argument function returning a string\n"
-"        "
-msgstr ""
-
 #, python-format
 msgid "patch \"%s\" already exists"
 msgstr "rettelsen \"%s\" findes allerede"
@@ -2674,9 +2302,6 @@ msgstr "rettelsen \"%s\" findes allerede"
 #, python-format
 msgid "error unlinking %s\n"
 msgstr "fejl ved sletning af %s\n"
-
-msgid "returns (index, rev, patch)"
-msgstr ""
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
@@ -2686,8 +2311,8 @@ msgstr "rettelsen \"%s\" er tvetydigt:\n"
 msgid "patch %s not in series"
 msgstr ""
 
-msgid "(working directory not at tip)\n"
-msgstr ""
+msgid "(working directory not at a head)\n"
+msgstr "(arbejdskatalog er ikke ved et hoved)\n"
 
 msgid "no patches in series\n"
 msgstr "ingen patches i serien\n"
@@ -2804,14 +2429,6 @@ msgid "hg patches saved state"
 msgstr ""
 
 msgid "repo commit failed\n"
-msgstr ""
-
-msgid ""
-"If all_patches is False, return the index of the next pushable patch\n"
-"        in the series, or the series length. If all_patches is True, return "
-"the\n"
-"        index of the first patch past the last applied one.\n"
-"        "
 msgstr ""
 
 #, python-format
@@ -3351,7 +2968,10 @@ msgstr ""
 msgid "use git extended diff format"
 msgstr ""
 
-msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-r REV]... FILE..."
+msgid "qpush after importing"
+msgstr ""
+
+msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
 msgstr ""
 
 msgid "create queue repository"
@@ -3568,27 +3188,6 @@ msgid ""
 " can push changes to, they can manage their own subscriptions."
 msgstr ""
 
-msgid "email notification class."
-msgstr ""
-
-msgid "strip leading slashes from local path, turn into web-safe path."
-msgstr ""
-
-msgid "try to clean up email addresses."
-msgstr ""
-
-msgid "return list of email addresses of subscribers to this repo."
-msgstr ""
-
-msgid "format one changeset."
-msgstr ""
-
-msgid "true if incoming changes from this source should be skipped."
-msgstr ""
-
-msgid "send message."
-msgstr ""
-
 #, python-format
 msgid "%s: %d new changesets"
 msgstr "%s: %d nye ændringer"
@@ -3609,13 +3208,6 @@ msgid ""
 "\n"
 "diffs (%d lines):\n"
 "\n"
-msgstr ""
-
-msgid ""
-"send email notifications to interested subscribers.\n"
-"\n"
-"    if used as changegroup hook, send one email for all changesets in\n"
-"    changegroup. else send one email per changeset."
 msgstr ""
 
 #, python-format
@@ -3691,19 +3283,19 @@ msgid ""
 "first line of the changeset description as the subject text. The\n"
 "message contains two or three body parts:\n"
 "\n"
-"  The remainder of the changeset description.\n"
+"  The changeset description.\n"
 "\n"
 "  [Optional] The result of running diffstat on the patch.\n"
 "\n"
 "  The patch itself, as generated by \"hg export\".\n"
 "\n"
-"Each message refers to all of its predecessors using the In-Reply-To\n"
+"Each message refers to the first in the series using the In-Reply-To\n"
 "and References headers, so they will show up as a sequence in threaded\n"
 "mail and news readers, and in mail archives.\n"
 "\n"
-"For each changeset, you will be prompted with a diffstat summary and\n"
-"the changeset summary, so you can be sure you are sending the right\n"
-"changes.\n"
+"With the -d/--diffstat option, you will be prompted for each changeset\n"
+"with a diffstat summary and the changeset summary, so you can be sure\n"
+"you are sending the right changes.\n"
 "\n"
 "To enable this extension:\n"
 "\n"
@@ -3724,11 +3316,11 @@ msgid ""
 "\n"
 "To avoid sending patches prematurely, it is a good idea to first run\n"
 "the \"email\" command with the \"-n\" option (test only). You will be\n"
-"prompted for an email recipient address, a subject an an introductory\n"
+"prompted for an email recipient address, a subject and an introductory\n"
 "message describing the patches of your patchbomb. Then when all is\n"
-"done, patchbomb messages are displayed. If PAGER environment variable\n"
-"is set, your pager will be fired up once for each patchbomb message,\n"
-"so you can verify everything is alright.\n"
+"done, patchbomb messages are displayed. If the PAGER environment\n"
+"variable is set, your pager will be fired up once for each patchbomb\n"
+"message, so you can verify everything is alright.\n"
 "\n"
 "The -m/--mbox option is also very useful. Instead of previewing each\n"
 "patchbomb message in a pager or sending the messages directly, it will\n"
@@ -3747,7 +3339,7 @@ msgid ""
 "That should be all. Now your patchbomb is on its way out.\n"
 "\n"
 "You can also either configure the method option in the email section\n"
-"to be a sendmail compatable mailer or fill out the [smtp] section so\n"
+"to be a sendmail compatible mailer or fill out the [smtp] section so\n"
 "that the patchbomb extension can automatically send patchbombs\n"
 "directly from the commandline. See the [email] and [smtp] sections in\n"
 "hgrc(5) for details."
@@ -3771,10 +3363,16 @@ msgid ""
 "\n"
 "    Each patch email has a Subject line of \"[PATCH M of N] ...\", using\n"
 "    the first line of the changeset description as the subject text.\n"
-"    The message contains two or three body parts. First, the rest of\n"
-"    the changeset description. Next, (optionally) if the diffstat\n"
-"    program is installed, the result of running diffstat on the patch.\n"
-"    Finally, the patch itself, as generated by \"hg export\".\n"
+"    The message contains two or three parts. First, the changeset\n"
+"    description. Next, (optionally) if the diffstat program is\n"
+"    installed and -d/--diffstat is used, the result of running\n"
+"    diffstat on the patch. Finally, the patch itself, as generated by\n"
+"    \"hg export\".\n"
+"\n"
+"    By default the patch is included as text in the email body for\n"
+"    easy reviewing. Using the -a/--attach option will instead create\n"
+"    an attachment for the patch. With -i/--inline an inline attachment\n"
+"    will be created.\n"
 "\n"
 "    With -o/--outgoing, emails will be generated for patches not found\n"
 "    in the destination repository (or only those which are ancestors\n"
@@ -3805,9 +3403,6 @@ msgid ""
 "    Before using this command, you will need to enable email in your\n"
 "    hgrc. See the [email] section in hgrc(5) for details.\n"
 "    "
-msgstr ""
-
-msgid "Return the revisions present locally but not in dest"
 msgstr ""
 
 msgid "specify at least one changeset with -r or -o"
@@ -3978,9 +3573,6 @@ msgid ""
 "http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject\n"
 msgstr ""
 
-msgid "return the correct ancestor"
-msgstr ""
-
 msgid "first revision, do not change ancestor\n"
 msgstr ""
 
@@ -4027,16 +3619,7 @@ msgstr ""
 msgid "%d revisions have been skipped\n"
 msgstr ""
 
-msgid ""
-"Skip commit if collapsing has been required and rev is not the last\n"
-"    revision, commit otherwise\n"
-"    "
-msgstr ""
-
 msgid " set parents\n"
-msgstr ""
-
-msgid "Rebase a single revision"
 msgstr ""
 
 #, python-format
@@ -4072,17 +3655,8 @@ msgstr ""
 msgid "next revision set to %s\n"
 msgstr ""
 
-msgid "Return the new parent relationship of the revision that will be rebased"
-msgstr ""
-
 #, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
-msgstr ""
-
-msgid "Return true if the given patch is in git format"
-msgstr ""
-
-msgid "Update rebased mq patches - finalize and then import them"
 msgstr ""
 
 #, python-format
@@ -4093,16 +3667,7 @@ msgstr ""
 msgid "import mq patch %d (%s)\n"
 msgstr ""
 
-msgid "Store the current status to allow recovery"
-msgstr ""
-
 msgid "rebase status stored\n"
-msgstr ""
-
-msgid "Remove the status files"
-msgstr ""
-
-msgid "Restore a previously stored status"
 msgstr ""
 
 msgid "rebase status resumed\n"
@@ -4111,16 +3676,10 @@ msgstr ""
 msgid "no rebase in progress"
 msgstr ""
 
-msgid "Restore the repository to its original state"
-msgstr ""
-
 msgid "warning: new changesets detected on target branch, not stripping\n"
 msgstr ""
 
 msgid "rebase aborted\n"
-msgstr ""
-
-msgid "Define which revisions are going to be rebased and where"
 msgstr ""
 
 msgid "cannot rebase onto an applied mq patch"
@@ -4145,13 +3704,7 @@ msgstr ""
 msgid "unable to collapse, there is more than one external parent"
 msgstr ""
 
-msgid "Call rebase after pull if the latter has been invoked with --rebase"
-msgstr ""
-
 msgid "--update and --rebase are not compatible, ignoring the update flag\n"
-msgstr ""
-
-msgid "Replace pull with a decorator to provide --rebase option"
 msgstr ""
 
 msgid "rebase working directory to branch head"
@@ -4189,26 +3742,6 @@ msgstr ""
 msgid "interactive change selection during commit or qrefresh"
 msgstr ""
 
-msgid ""
-"like patch.iterhunks, but yield different events\n"
-"\n"
-"    - ('file',    [header_lines + fromfile + tofile])\n"
-"    - ('context', [context_lines])\n"
-"    - ('hunk',    [hunk_lines])\n"
-"    - ('range',   (-start,len, +start,len, diffp))\n"
-"    "
-msgstr ""
-
-msgid "scan lr while predicate holds"
-msgstr ""
-
-msgid ""
-"patch header\n"
-"\n"
-"    XXX shoudn't we move this to mercurial/patch.py ?\n"
-"    "
-msgstr ""
-
 msgid "this modifies a binary file (all or nothing)\n"
 msgstr ""
 
@@ -4217,43 +3750,6 @@ msgstr ""
 
 #, python-format
 msgid "%d hunks, %d lines changed\n"
-msgstr ""
-
-msgid "hunk -> (n+,n-)"
-msgstr ""
-
-msgid ""
-"patch hunk\n"
-"\n"
-"    XXX shouldn't we merge this with patch.hunk ?\n"
-"    "
-msgstr ""
-
-msgid "patch -> [] of hunks "
-msgstr ""
-
-msgid "patch parsing state machine"
-msgstr ""
-
-msgid "Interactively filter patch chunks into applied-only chunks"
-msgstr ""
-
-msgid ""
-"fetch next portion from chunks until a 'header' is seen\n"
-"        NB: header == new-file mark\n"
-"        "
-msgstr ""
-
-msgid ""
-"prompt query, and process base inputs\n"
-"\n"
-"        - y/n for the rest of file\n"
-"        - y/n for the rest\n"
-"        - ? (help)\n"
-"        - q (quit)\n"
-"\n"
-"        else, input is returned to the caller.\n"
-"        "
 msgstr ""
 
 msgid "[Ynsfdaq?]"
@@ -4351,34 +3847,10 @@ msgid ""
 "    ? - display help"
 msgstr ""
 
-msgid ""
-"interactively record a new patch\n"
-"\n"
-"    see 'hg help qnew' & 'hg help record' for more information and usage\n"
-"    "
-msgstr ""
-
 msgid "'mq' extension not loaded"
 msgstr ""
 
 msgid "running non-interactively, use commit instead"
-msgstr ""
-
-msgid ""
-"This is generic record driver.\n"
-"\n"
-"        It's job is to interactively filter local changes, and accordingly\n"
-"        prepare working dir into a state, where the job can be delegated to\n"
-"        non-interactive commit command such as 'commit' or 'qrefresh'.\n"
-"\n"
-"        After the actual job is done by non-interactive command, working "
-"dir\n"
-"        state is restored to original.\n"
-"\n"
-"        In the end we'll record intresting changes, and everything else will "
-"be\n"
-"        left in place, so the user can continue his work.\n"
-"        "
 msgstr ""
 
 msgid "no changes to record\n"
@@ -4413,14 +3885,6 @@ msgid ""
 "map from a changeset hash to its hash in the source repository.\n"
 msgstr ""
 
-msgid ""
-"returns True if a node is already an ancestor of parent\n"
-"        or has already been transplanted"
-msgstr ""
-
-msgid "apply the revisions in revmap one by one in revision order"
-msgstr ""
-
 #, python-format
 msgid "skipping already applied revision %s\n"
 msgstr ""
@@ -4437,17 +3901,11 @@ msgstr ""
 msgid "%s transplanted to %s\n"
 msgstr ""
 
-msgid "arbitrarily rewrite changeset before applying it"
-msgstr ""
-
 #, python-format
 msgid "filtering %s\n"
 msgstr ""
 
 msgid "filter failed"
-msgstr ""
-
-msgid "apply the patch in patchfile to the repository as a transplant"
 msgstr ""
 
 msgid "can only omit patchfile if merging"
@@ -4460,14 +3918,8 @@ msgstr "%s: tom ændring"
 msgid "Fix up the merge and run hg transplant --continue"
 msgstr ""
 
-msgid "recover last transaction and apply remaining changesets"
-msgstr ""
-
 #, python-format
 msgid "%s transplanted as %s\n"
-msgstr ""
-
-msgid "commit working directory using journal metadata"
 msgstr ""
 
 msgid "transplant log file is corrupt"
@@ -4479,15 +3931,6 @@ msgstr ""
 
 msgid "commit failed"
 msgstr ""
-
-msgid "journal changelog metadata for later recover"
-msgstr ""
-
-msgid "remove changelog journal"
-msgstr ""
-
-msgid "interactively transplant changesets"
-msgstr "transplanter ændringer interaktivt"
 
 msgid "apply changeset? [ynmpcq?]:"
 msgstr ""
@@ -4725,6 +4168,9 @@ msgstr ""
 msgid "premature EOF reading chunk (got %d bytes, expected %d)"
 msgstr "for tidlig EOF ved læsning af chunk (fik %d bytes, forventede %d)"
 
+msgid "empty username"
+msgstr "tomt brugernavn"
+
 #, python-format
 msgid "username %s contains a newline"
 msgstr "brugernavn %s indeholder et linieskift"
@@ -4916,6 +4362,42 @@ msgstr ""
 #, python-format
 msgid "file %s not tracked!"
 msgstr ""
+
+msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
+msgstr ""
+"HG: Skriv arkiveringsbesked. Linier som starter med 'HG:' bliver fjernet."
+
+msgid "HG: Leave message empty to abort commit."
+msgstr ""
+
+#, python-format
+msgid "HG: user: %s"
+msgstr "HG: bruger: %s"
+
+msgid "HG: branch merge"
+msgstr ""
+
+#, python-format
+msgid "HG: branch '%s'"
+msgstr "HG: gren '%s'"
+
+#, python-format
+msgid "HG: added %s"
+msgstr "HG: tilføjet %s"
+
+#, python-format
+msgid "HG: changed %s"
+msgstr "HG: ændret %s"
+
+#, python-format
+msgid "HG: removed %s"
+msgstr "HG: fjernet %s"
+
+msgid "HG: no files changed"
+msgstr "HG: ingen filændringer"
+
+msgid "empty commit message"
+msgstr "tom arkiveringsbesked"
 
 msgid ""
 "add the specified files on the next commit\n"
@@ -6024,13 +5506,6 @@ msgid ""
 msgstr ""
 
 msgid ""
-"looks up all renames for a file (up to endrev) the first\n"
-"        time the file is given. It indexes on the changerev and only\n"
-"        parses the manifest if linkrev != changerev.\n"
-"        Returns rename info for fn at changerev rev."
-msgstr ""
-
-msgid ""
 "output the current or given revision of the project manifest\n"
 "\n"
 "    Print a list of version controlled files for the given revision.\n"
@@ -6191,11 +5666,6 @@ msgstr ""
 "    "
 
 msgid ""
-"Other repository doesn't support revision lookup, so a rev cannot be "
-"specified."
-msgstr ""
-
-msgid ""
 "push changes to the specified destination\n"
 "\n"
 "    Push changes from the local repository to the given destination.\n"
@@ -6242,23 +5712,6 @@ msgstr ""
 #, python-format
 msgid "pushing to %s\n"
 msgstr "skubber til %s\n"
-
-msgid ""
-"raw commit interface (DEPRECATED)\n"
-"\n"
-"    (DEPRECATED)\n"
-"    Lowlevel commit, for use in helper scripts.\n"
-"\n"
-"    This command is not intended to be used by normal users, as it is\n"
-"    primarily useful for importing from other SCMs.\n"
-"\n"
-"    This command is now deprecated and will be removed in a future\n"
-"    release, please use debugsetparents and commit instead.\n"
-"    "
-msgstr ""
-
-msgid "(the rawcommit command is deprecated)\n"
-msgstr ""
 
 msgid ""
 "roll back an interrupted transaction\n"
@@ -6326,6 +5779,10 @@ msgstr ""
 
 msgid "no files specified"
 msgstr ""
+
+#, python-format
+msgid "not removing %s: file is untracked\n"
+msgstr "fjerner ikke %s: filen følges ikke\n"
 
 #, python-format
 msgid "not removing %s: file %s (use -f to force removal)\n"
@@ -7031,12 +6488,6 @@ msgstr ""
 msgid "FILE"
 msgstr ""
 
-msgid "parent"
-msgstr ""
-
-msgid "file list"
-msgstr ""
-
 msgid "revision to rebuild to"
 msgstr ""
 
@@ -7211,6 +6662,9 @@ msgid "force a merge with outstanding changes"
 msgstr ""
 
 msgid "revision to merge"
+msgstr ""
+
+msgid "review revisions to merge (no merge is performed)"
 msgstr ""
 
 msgid "[-f] [[-r] REV]"
@@ -8460,48 +7914,15 @@ msgstr ""
 msgid "%s not tracked!\n"
 msgstr "%s følges ikke\n"
 
-msgid "unresolved merge conflicts (see hg resolve)"
-msgstr ""
-
 msgid "nothing changed\n"
 msgstr "ingen ændringer\n"
+
+msgid "unresolved merge conflicts (see hg resolve)"
+msgstr ""
 
 #, python-format
 msgid "trouble committing %s!\n"
 msgstr "problem ved arkivering %s!\n"
-
-msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
-msgstr ""
-"HG: Skriv arkiveringsbesked. Linier som starter med 'HG:' bliver fjernet."
-
-#, python-format
-msgid "HG: user: %s"
-msgstr "HG: bruger: %s"
-
-msgid "HG: branch merge"
-msgstr ""
-
-#, python-format
-msgid "HG: branch '%s'"
-msgstr "HG: gren '%s'"
-
-#, python-format
-msgid "HG: added %s"
-msgstr "HG: tilføjet %s"
-
-#, python-format
-msgid "HG: changed %s"
-msgstr "HG: ændret %s"
-
-#, python-format
-msgid "HG: removed %s"
-msgstr "HG: fjernet %s"
-
-msgid "HG: no files changed"
-msgstr "HG: ingen filændringer"
-
-msgid "empty commit message"
-msgstr "tom arkiveringsbesked"
 
 #, python-format
 msgid "%s does not exist!\n"
@@ -9039,8 +8460,12 @@ msgid "unmatched quotes"
 msgstr ""
 
 #, python-format
-msgid "Error expanding '%s%%%s'"
-msgstr ""
+msgid "error expanding '%s%%%s'"
+msgstr "fejl ved ekspansion af '%s%%%s'"
+
+#, python-format
+msgid "unknown filter '%s'"
+msgstr "ukendt filter '%s'"
 
 #, python-format
 msgid "style not found: %s"
@@ -9279,6 +8704,10 @@ msgstr "udpakker ændring %s"
 
 msgid "checking manifests\n"
 msgstr ""
+
+#, python-format
+msgid "%s not in changesets"
+msgstr "%s ikke i ændringer"
 
 msgid "file without name in manifest"
 msgstr ""
