@@ -130,6 +130,9 @@ class pollable(object):
         * If no, call handle_timeout
     """
     poll_events = select.POLLIN
+    instances = {}
+    poll = select.poll()
+
     def fileno(self):
         raise NotImplementedError
 
@@ -141,6 +144,19 @@ class pollable(object):
 
     def shutdown(self):
         raise NotImplementedError
+
+    def register(self, timeout):
+        fd = self.fileno()
+
+        pollable.poll.register(fd, pollable.poll_events)
+        pollable.instances[fd] = self
+
+        self.registered = True
+        self.timeout = timeout
+
+    def unregister(self):
+        pollable.poll.unregister(self)
+        self.registered = False
 
 def eventaction(code):
     """
@@ -178,19 +194,16 @@ class repowatcher(pollable):
         inotify.IN_UNMOUNT |
         0)
 
-    def __init__(self, ui, repo, master):
+    def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
         self.wprefix = self.repo.wjoin('')
-        self.timeout = None
-        self.master = master
         try:
             self.watcher = watcher.watcher()
         except OSError, err:
             raise util.Abort(_('inotify service not available: %s') %
                              err.strerror)
         self.threshold = watcher.threshold(self.watcher)
-        self.registered = True
         self.fileno = self.watcher.fileno
 
         self.tree = {}
@@ -201,6 +214,8 @@ class repowatcher(pollable):
         self.last_event = None
 
         self.lastevent = {}
+
+        self.register(timeout=None)
 
         self.ds_info = self.dirstate_info()
         self.handle_timeout()
@@ -536,8 +551,7 @@ class repowatcher(pollable):
                 if self.ui.debugflag:
                     self.ui.note(_('%s below threshold - unhooking\n') %
                                  (self.event_time()))
-                self.master.poll.unregister(self.fileno())
-                self.registered = False
+                self.unregister()
                 self.timeout = 250
         else:
             self.read_events()
@@ -567,8 +581,7 @@ class repowatcher(pollable):
                 self.ui.note(_('%s hooking back up with %d bytes readable\n') %
                              (self.event_time(), self.threshold.readable()))
             self.read_events(0)
-            self.master.poll.register(self, self.poll_events)
-            self.registered = True
+            self.register(timeout=None)
 
         self.timeout = None
 
@@ -590,7 +603,6 @@ class server(pollable):
         self.ui = ui
         self.repo = repo
         self.repowatcher = repowatcher
-        self.timeout = timeout
         self.sock = socket.socket(socket.AF_UNIX)
         self.sockpath = self.repo.join('inotify.sock')
         self.realsockpath = None
@@ -620,6 +632,7 @@ class server(pollable):
                 raise
         self.sock.listen(5)
         self.fileno = self.sock.fileno
+        self.register(timeout=timeout)
 
     def handle_timeout(self):
         pass
@@ -721,20 +734,11 @@ class master(object):
     def __init__(self, ui, repo, timeout=None):
         self.ui = ui
         self.repo = repo
-        self.poll = select.poll()
-        self.repowatcher = repowatcher(ui, repo, self)
+        self.repowatcher = repowatcher(ui, repo)
         self.server = server(ui, repo, self.repowatcher, timeout)
-        self.table = {}
-        for obj in (self.repowatcher, self.server):
-            fd = obj.fileno()
-            self.table[fd] = obj
-            self.poll.register(fd, obj.poll_events)
-
-    def register(self, fd, mask):
-        self.poll.register(fd, mask)
 
     def shutdown(self):
-        for obj in self.table.itervalues():
+        for obj in pollable.instances.itervalues():
             obj.shutdown()
 
     def run(self):
@@ -745,7 +749,7 @@ class master(object):
         while True:
             timeout = None
             timeobj = None
-            for obj in self.table.itervalues():
+            for obj in pollable.instances.itervalues():
                 if obj.timeout is not None and (timeout is None or obj.timeout < timeout):
                     timeout, timeobj = obj.timeout, obj
             try:
@@ -754,7 +758,7 @@ class master(object):
                         self.ui.note(_('polling: no timeout\n'))
                     else:
                         self.ui.note(_('polling: %sms timeout\n') % timeout)
-                events = self.poll.poll(timeout)
+                events = pollable.poll.poll(timeout)
             except select.error, err:
                 if err[0] == errno.EINTR:
                     continue
@@ -765,7 +769,7 @@ class master(object):
                     by_fd.setdefault(fd, []).append(event)
 
                 for fd, events in by_fd.iteritems():
-                    self.table[fd].handle_pollevents(events)
+                    pollable.instances[fd].handle_pollevents(events)
 
             elif timeobj:
                 timeobj.handle_timeout()
@@ -799,7 +803,7 @@ def start(ui, repo):
     if pid:
         return pid
 
-    closefds([m.server.fileno(), m.repowatcher.fileno()])
+    closefds(pollable.instances.keys())
     os.setsid()
 
     fd = os.open('/dev/null', os.O_RDONLY)
