@@ -113,8 +113,33 @@ def _explain_watch_limit(ui, repo, count):
     raise util.Abort(_('cannot watch %s until inotify watch limit is raised')
                      % repo.root)
 
-class repowatcher(object):
+class pollable(object):
+    """
+    Interface to support polling.
+    The file descriptor returned by fileno() is registered to a polling
+    object.
+    Usage:
+        Every tick, check if an event has happened since the last tick:
+        * If yes, call handle_events
+        * If no, call handle_timeout
+    """
     poll_events = select.POLLIN
+    def fileno(self):
+        raise NotImplementedError
+
+    def handle_events(self, events):
+        raise NotImplementedError
+
+    def handle_timeout(self):
+        raise NotImplementedError
+
+    def shutdown(self):
+        raise NotImplementedError
+
+class repowatcher(pollable):
+    """
+    Watches inotify events
+    """
     statuskeys = 'almr!?'
     mask = (
         inotify.IN_ATTRIB |
@@ -540,7 +565,7 @@ class repowatcher(object):
                 self.ui.note(_('%s hooking back up with %d bytes readable\n') %
                              (self.event_time(), self.threshold.readable()))
             self.read_events(0)
-            self.master.poll.register(self, select.POLLIN)
+            self.master.poll.register(self, self.poll_events)
             self.registered = True
 
         self.timeout = None
@@ -555,9 +580,10 @@ class repowatcher(object):
         """
         return sorted(tuple[0][len(self.wprefix):] for tuple in self.watcher)
 
-class server(object):
-    poll_events = select.POLLIN
-
+class server(pollable):
+    """
+    Listens for client queries on unix socket inotify.sock
+    """
     def __init__(self, ui, repo, repowatcher, timeout):
         self.ui = ui
         self.repo = repo
