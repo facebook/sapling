@@ -158,6 +158,31 @@ class pollable(object):
         pollable.poll.unregister(self)
         self.registered = False
 
+    @classmethod
+    def run(cls):
+        while True:
+            timeout = None
+            timeobj = None
+            for obj in cls.instances.itervalues():
+                if obj.timeout is not None and (timeout is None or obj.timeout < timeout):
+                    timeout, timeobj = obj.timeout, obj
+            try:
+                events = cls.poll.poll(timeout)
+            except select.error, err:
+                if err[0] == errno.EINTR:
+                    continue
+                raise
+            if events:
+                by_fd = {}
+                for fd, event in events:
+                    by_fd.setdefault(fd, []).append(event)
+
+                for fd, events in by_fd.iteritems():
+                    cls.instances[fd].handle_pollevents(events)
+
+            elif timeobj:
+                timeobj.handle_timeout()
+
 def eventaction(code):
     """
     Decorator to help handle events in repowatcher
@@ -746,33 +771,7 @@ class master(object):
         self.ui.note(_('finished setup\n'))
         if os.getenv('TIME_STARTUP'):
             sys.exit(0)
-        while True:
-            timeout = None
-            timeobj = None
-            for obj in pollable.instances.itervalues():
-                if obj.timeout is not None and (timeout is None or obj.timeout < timeout):
-                    timeout, timeobj = obj.timeout, obj
-            try:
-                if self.ui.debugflag:
-                    if timeout is None:
-                        self.ui.note(_('polling: no timeout\n'))
-                    else:
-                        self.ui.note(_('polling: %sms timeout\n') % timeout)
-                events = pollable.poll.poll(timeout)
-            except select.error, err:
-                if err[0] == errno.EINTR:
-                    continue
-                raise
-            if events:
-                by_fd = {}
-                for fd, event in events:
-                    by_fd.setdefault(fd, []).append(event)
-
-                for fd, events in by_fd.iteritems():
-                    pollable.instances[fd].handle_pollevents(events)
-
-            elif timeobj:
-                timeobj.handle_timeout()
+        pollable.run()
 
 def start(ui, repo):
     def closefds(ignore):
