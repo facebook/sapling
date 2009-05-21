@@ -500,7 +500,7 @@ class repowatcher(object):
                      evt.fullpath)
         sys.exit(0)
 
-    def handle_pollevent(self):
+    def handle_pollevents(self, events):
         if self.ui.debugflag:
             self.ui.note(_('%s readable: %d bytes\n') %
                          (self.event_time(), self.threshold.readable()))
@@ -640,6 +640,10 @@ class server(object):
     def answer_dbug_query(self):
         return ['\0'.join(self.repowatcher.debug())]
 
+    def handle_pollevents(self, events):
+        for e in events:
+            self.handle_pollevent()
+
     def handle_pollevent(self):
         sock, addr = self.sock.accept()
 
@@ -728,8 +732,13 @@ class master(object):
                     continue
                 raise
             if events:
+                by_fd = {}
                 for fd, event in events:
-                    self.table[fd].handle_pollevent()
+                    by_fd.setdefault(fd, []).append(event)
+
+                for fd, events in by_fd.iteritems():
+                    self.table[fd].handle_pollevents(events)
+
             elif timeobj:
                 timeobj.handle_timeout()
 
