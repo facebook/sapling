@@ -500,7 +500,7 @@ class repowatcher(object):
                      evt.fullpath)
         sys.exit(0)
 
-    def handle_event(self, fd, event):
+    def handle_event(self):
         if self.ui.debugflag:
             self.ui.note(_('%s readable: %d bytes\n') %
                          (self.event_time(), self.threshold.readable()))
@@ -509,7 +509,7 @@ class repowatcher(object):
                 if self.ui.debugflag:
                     self.ui.note(_('%s below threshold - unhooking\n') %
                                  (self.event_time()))
-                self.master.poll.unregister(fd)
+                self.master.poll.unregister(self.fileno())
                 self.registered = False
                 self.timeout = 250
         else:
@@ -640,7 +640,7 @@ class server(object):
     def answer_dbug_query(self):
         return ['\0'.join(self.repowatcher.debug())]
 
-    def handle_event(self, fd, event):
+    def handle_event(self):
         sock, addr = self.sock.accept()
 
         cs = common.recvcs(sock)
@@ -729,7 +729,7 @@ class master(object):
                 raise
             if events:
                 for fd, event in events:
-                    self.table[fd].handle_event(fd, event)
+                    self.table[fd].handle_event()
             elif timeobj:
                 timeobj.handle_timeout()
 
