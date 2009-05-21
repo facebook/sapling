@@ -194,7 +194,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     changeset afterwards. This saves you from doing the merge by hand.
     The result of this merge is not committed, as with a normal merge.
 
-    See \'hg help dates\' for a list of formats valid for -d/--date.
+    See 'hg help dates' for a list of formats valid for -d/--date.
     '''
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
