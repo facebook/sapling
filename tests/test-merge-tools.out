@@ -156,7 +156,7 @@ false.whatever=
 true.priority=1
 true.executable=cat
 # hg update -C 1
-# hg merge -r 2 --config merge-tools.true.executable=/bin/cat
+# hg merge -r 2 --config merge-tools.true.executable=cat
 revision 1
 space
 revision 0
@@ -459,7 +459,7 @@ false.whatever=
 true.priority=1
 true.executable=cat
 # hg update -C 1
-# hg merge -r 2 --config merge-tools.true.checkchanged=1
+# hg merge -y -r 2 --config merge-tools.true.checkchanged=1
 revision 1
 space
 revision 0
