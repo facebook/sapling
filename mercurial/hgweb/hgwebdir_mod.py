@@ -79,12 +79,13 @@ class hgwebdir(object):
 
         self.repos = findrepos(paths)
         for prefix, root in self.ui.configitems('collections'):
+            prefix = util.pconvert(prefix)
             for path in util.walkrepos(root, followsym=True):
                 repo = os.path.normpath(path)
-                name = repo
+                name = util.pconvert(repo)
                 if name.startswith(prefix):
                     name = name[len(prefix):]
-                self.repos.append((name.lstrip(os.sep), repo))
+                self.repos.append((name.lstrip('/'), repo))
 
         self.repos.sort()
         self.lastrefresh = time.time()
