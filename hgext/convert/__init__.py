@@ -144,13 +144,13 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
             single changeset. When very large files were checked in as
             part of a changeset then the default may not be long
             enough.
-        --config convert.cvsps.mergeto='{{mergetobranch ([-\w]+)}}'
+        --config convert.cvsps.mergeto='{{mergetobranch ([-\\w]+)}}'
             Specify a regular expression to which commit log messages
             are matched. If a match occurs, then the conversion
             process will insert a dummy revision merging the branch on
             which this log message occurs to the branch indicated in
             the regex.
-        --config convert.cvsps.mergefrom='{{mergefrombranch ([-\w]+)}}'
+        --config convert.cvsps.mergefrom='{{mergefrombranch ([-\\w]+)}}'
             Specify a regular expression to which commit log messages
             are matched. If a match occurs, then the conversion
             process will add the most recent revision on the branch

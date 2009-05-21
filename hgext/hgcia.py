@@ -16,7 +16,7 @@ project = foo
 # Append a diffstat to the log message (optional)
 #diffstat = False
 # Template to use for log messages (optional)
-#template = {desc}\n{baseurl}/rev/{node}-- {diffstat}
+#template = {desc}\\n{baseurl}/rev/{node}-- {diffstat}
 # Style to use (optional)
 #style = foo
 # The URL of the CIA notification service (optional)
