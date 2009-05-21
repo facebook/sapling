@@ -81,8 +81,8 @@ update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYTHON_FILES)
 	mkdir -p i18n
-	pygettext -d hg -p i18n --docstrings \
-	  mercurial/commands.py hgext/*.py hgext/*/__init__.py
+	$(PYTHON) i18n/hggettext mercurial/commands.py \
+	  hgext/*.py hgext/*/__init__.py > i18n/hg.pot
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string
         # literals like this '\037\213'. xgettext thinks it has to
