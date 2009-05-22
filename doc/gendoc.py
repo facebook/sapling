@@ -44,7 +44,7 @@ def get_cmd(cmd):
     s = 'hg ' + cmds[0]
     if len(attr) > 2:
         if not attr[2].startswith('hg'):
-            s += attr[2]
+            s += ' ' + attr[2]
         else:
             s = attr[2]
     d['synopsis'] = s
