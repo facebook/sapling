@@ -3332,7 +3332,7 @@ table = {
         (parents,
          [('r', 'rev', '', _('show parents from the specified revision')),
          ] + templateopts,
-         _('hg parents [-r REV] [FILE]')),
+         _('[-r REV] [FILE]')),
     "paths": (paths, [], _('[NAME]')),
     "^pull":
         (pull,
