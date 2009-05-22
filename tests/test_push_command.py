@@ -101,6 +101,9 @@ class PushTests(test_util.TestBase):
             self.assertEqual(tip.parents()[0].node(), expected_parent)
             self.assertEqual(tip['adding_file'].data(), 'foo')
             self.assertEqual(tip.branch(), 'default')
+            # unintended behaviour:
+            self.assertNotEqual('an_author', tip.user())
+            self.assertEqual('None', tip.user().rsplit('@', 1)[0])
         finally:
             os.kill(self.svnserve_pid, 9)
 
