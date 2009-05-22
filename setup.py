@@ -26,7 +26,7 @@ except:
     raise SystemExit(
         "Couldn't import standard zlib (incomplete Python install).")
 
-import os, time
+import os, subprocess, time
 import shutil
 import tempfile
 from distutils.core import setup, Extension
@@ -97,29 +97,31 @@ try:
 except ImportError:
     pass
 
-if os.path.exists('.hg'):
+if os.path.isdir('.hg'):
     # execute hg out of this directory with a custom environment which
     # includes the pure Python modules in mercurial/pure
     pypath = os.environ.get('PYTHONPATH', '')
     purepath = os.path.join('mercurial', 'pure')
     os.environ['PYTHONPATH'] = os.pathsep.join(['mercurial', purepath, pypath])
     os.environ['HGRCPATH'] = '' # do not read any config file
-    cmd = '%s hg id -it' % sys.executable
+    cmd = [sys.executable, 'hg', 'id', '-i', '-t']
     version = None
 
-    try:
-        l = os.popen(cmd).read().split()
-    except OSError, e:
-        print "warning: could not establish Mercurial version: %s" % e
-
+    l, e = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE).communicate()
     os.environ['PYTHONPATH'] = pypath
 
-    while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
-        l.pop()
-    if l:
-        version = l[-1] # latest tag or revision number
-        if version.endswith('+'):
-            version += time.strftime('%Y%m%d')
+    if e:
+        sys.stderr.write('warning: could not establish Mercurial version: %s'
+                         % e)
+    else:
+        l = l.split()
+        while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
+            l.pop()
+        if l:
+            version = l[-1] # latest tag or revision number
+            if version.endswith('+'):
+                version += time.strftime('%Y%m%d')
 
     if version:
         f = file("mercurial/__version__.py", "w")
