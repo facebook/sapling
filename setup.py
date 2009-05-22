@@ -113,8 +113,8 @@ if os.path.isdir('.hg'):
     os.environ['PYTHONPATH'] = pypath
 
     if e:
-        sys.stderr.write('warning: could not establish Mercurial version: %s'
-                         % e)
+        sys.stderr.write('warning: could not establish Mercurial '
+                         'version: %s\n' % e)
     else:
         l = l.split()
         while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
