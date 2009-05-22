@@ -415,6 +415,22 @@ class repowatcher(object):
             self.statcache.pop(wpath, None)
             raise
 
+    def eventaction(code):
+        def decorator(f):
+            def wrapper(self, wpath):
+                if code == 'm' and wpath in self.lastevent and \
+                    self.lastevent[wpath] in 'cm':
+                    return
+                self.lastevent[wpath] = code
+                self.timeout = 250
+
+                f(self, wpath)
+
+            wrapper.func_name = f.func_name
+            return wrapper
+        return decorator
+
+    @eventaction('c')
     def created(self, wpath):
         if wpath == '.hgignore':
             self.update_hgignore()
@@ -425,6 +441,7 @@ class repowatcher(object):
         except OSError:
             pass
 
+    @eventaction('m')
     def modified(self, wpath):
         if wpath == '.hgignore':
             self.update_hgignore()
@@ -436,6 +453,7 @@ class repowatcher(object):
         except OSError:
             pass
 
+    @eventaction('d')
     def deleted(self, wpath):
         if wpath == '.hgignore':
             self.update_hgignore()
@@ -446,21 +464,6 @@ class repowatcher(object):
 
         self.deletefile(wpath, self.repo.dirstate[wpath])
 
-    def work(self, wpath, evt):
-        try:
-            if evt == 'c':
-                self.created(wpath)
-            elif evt == 'm':
-                if wpath in self.lastevent and self.lastevent[wpath] in 'cm':
-                    return
-                self.modified(wpath)
-            elif evt == 'd':
-                self.deleted(wpath)
-
-            self.lastevent[wpath] = evt
-        finally:
-            self.timeout = 250
-
     def process_create(self, wpath, evt):
         if self.ui.debugflag:
             self.ui.note(_('%s event: created %s\n') %
@@ -469,7 +472,7 @@ class repowatcher(object):
         if evt.mask & inotify.IN_ISDIR:
             self.scan(wpath)
         else:
-            self.work(wpath, 'c')
+            self.created(wpath)
 
     def process_delete(self, wpath, evt):
         if self.ui.debugflag:
@@ -482,7 +485,7 @@ class repowatcher(object):
                 self.deletefile(join(wpath, wfn), '?')
             self.scan(wpath)
         else:
-            self.work(wpath, 'd')
+            self.deleted(wpath)
 
     def process_modify(self, wpath, evt):
         if self.ui.debugflag:
@@ -490,7 +493,7 @@ class repowatcher(object):
                          (self.event_time(), wpath))
 
         if not (evt.mask & inotify.IN_ISDIR):
-            self.work(wpath, 'm')
+            self.modified(wpath)
 
     def process_unmount(self, evt):
         self.ui.warn(_('filesystem containing %s was unmounted\n') %
