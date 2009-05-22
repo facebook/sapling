@@ -151,8 +151,7 @@ class repowatcher(object):
         self.watches = 0
         self.last_event = None
 
-        self.eventq = {}
-        self.deferred = 0
+        self.lastevent = {}
 
         self.ds_info = self.dirstate_info()
         self.handle_timeout()
@@ -447,23 +446,20 @@ class repowatcher(object):
 
         self.deletefile(wpath, self.repo.dirstate[wpath])
 
-    def schedule_work(self, wpath, evt):
-        prev = self.eventq.setdefault(wpath, [])
+    def work(self, wpath, evt):
         try:
-            if prev and evt == 'm' and prev[-1] in 'cm':
-                return
-            self.eventq[wpath].append(evt)
-        finally:
-            self.deferred += 1
-            self.timeout = 250
+            if evt == 'c':
+                self.created(wpath)
+            elif evt == 'm':
+                if wpath in self.lastevent and self.lastevent[wpath] in 'cm':
+                    return
+                self.modified(wpath)
+            elif evt == 'd':
+                self.deleted(wpath)
 
-    def deferred_event(self, wpath, evt):
-        if evt == 'c':
-            self.created(wpath)
-        elif evt == 'm':
-            self.modified(wpath)
-        elif evt == 'd':
-            self.deleted(wpath)
+            self.lastevent[wpath] = evt
+        finally:
+            self.timeout = 250
 
     def process_create(self, wpath, evt):
         if self.ui.debugflag:
@@ -473,7 +469,7 @@ class repowatcher(object):
         if evt.mask & inotify.IN_ISDIR:
             self.scan(wpath)
         else:
-            self.schedule_work(wpath, 'c')
+            self.work(wpath, 'c')
 
     def process_delete(self, wpath, evt):
         if self.ui.debugflag:
@@ -486,7 +482,7 @@ class repowatcher(object):
                 self.deletefile(join(wpath, wfn), '?')
             self.scan(wpath)
         else:
-            self.schedule_work(wpath, 'd')
+            self.work(wpath, 'd')
 
     def process_modify(self, wpath, evt):
         if self.ui.debugflag:
@@ -494,7 +490,7 @@ class repowatcher(object):
                          (self.event_time(), wpath))
 
         if not (evt.mask & inotify.IN_ISDIR):
-            self.schedule_work(wpath, 'm')
+            self.work(wpath, 'm')
 
     def process_unmount(self, evt):
         self.ui.warn(_('filesystem containing %s was unmounted\n') %
@@ -533,6 +529,8 @@ class repowatcher(object):
             elif evt.mask & (inotify.IN_CREATE | inotify.IN_MOVED_TO):
                 self.process_create(wpath, evt)
 
+        self.lastevent.clear()
+
     def handle_timeout(self):
         if not self.registered:
             if self.ui.debugflag:
@@ -542,16 +540,6 @@ class repowatcher(object):
             self.master.poll.register(self, select.POLLIN)
             self.registered = True
 
-        if self.eventq:
-            if self.ui.debugflag:
-                self.ui.note(_('%s processing %d deferred events as %d\n') %
-                             (self.event_time(), self.deferred,
-                              len(self.eventq)))
-            for wpath, evts in sorted(self.eventq.iteritems()):
-                for evt in evts:
-                    self.deferred_event(wpath, evt)
-            self.eventq.clear()
-            self.deferred = 0
         self.timeout = None
 
     def shutdown(self):
