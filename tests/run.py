@@ -2,8 +2,7 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+import test_util
 import test_binaryfiles
 import test_diff
 import test_externals
@@ -21,6 +20,7 @@ import test_push_renames
 import test_push_dirs
 import test_push_eol
 import test_rebuildmeta
+import test_svnwrap
 import test_tags
 import test_utility_commands
 import test_urls
@@ -43,6 +43,7 @@ def suite():
                                test_push_dirs.suite(),
                                test_push_eol.suite(),
                                test_rebuildmeta.suite(),
+                               test_svnwrap.suite(),
                                test_tags.suite(),
                                test_utility_commands.suite(),
                                test_urls.suite(),

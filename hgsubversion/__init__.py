@@ -113,9 +113,6 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'parents',
                                    wrappers.parent)
     entry[1].append(('', 'svn', None, "show parent svn revision instead"))
-    entry = extensions.wrapcommand(commands.table, 'outgoing',
-                                   wrappers.outgoing)
-    entry[1].append(('', 'svn', None, "show revisions outgoing to subversion"))
     entry = extensions.wrapcommand(commands.table, 'diff',
                                    wrappers.diff)
     entry[1].append(('', 'svn', None,
@@ -184,12 +181,12 @@ def reposetup(ui, repo):
     if repo.local():
        svnrepo.generate_repo_class(ui, repo)
 
-_origschemes = hg.schemes.copy()
+
 def _lookup(url):
     if cmdutil.islocalrepo(url):
         return svnrepo
     else:
-        return _origschemes['file'](url)
+        return hg._local(url)
 
 # install scheme handlers
 hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,

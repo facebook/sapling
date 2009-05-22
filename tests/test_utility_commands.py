@@ -7,6 +7,7 @@ from mercurial import hg
 from mercurial import revlog
 from mercurial import context
 from mercurial import node
+from mercurial import commands
 
 from hgsubversion import util
 from hgsubversion import utility_commands
@@ -111,7 +112,6 @@ class UtilityTests(test_util.TestBase):
     def test_outgoing_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
         u = ui.ui()
-        u.pushbuffer()
         parents = (self.repo['the_branch'].node(), revlog.nullid, )
         def filectxfn(repo, memctx, path):
             return context.memfilectx(path=path,
@@ -129,22 +129,26 @@ class UtilityTests(test_util.TestBase):
                              {'branch': 'localbranch', })
         new = self.repo.commitctx(ctx)
         hg.update(self.repo, new)
-        wrappers.outgoing(lambda x,y,z: None, u, self.repo, svn=True)
+        u.pushbuffer()
+        commands.outgoing(u, self.repo, self.repourl)
         actual = u.popbuffer()
-        self.assert_(node.hex(self.repo['localbranch'].node())[:8] in actual)
-        self.assertEqual(actual, ('changeset:   5:6de15430fa20\n'
-                                               'branch:      localbranch\n'
-                                               'tag:         tip\n'
-                                               'parent:      3:4e256962fc5d\n'
-                                               'user:        testy\n'
-                                               'date:        Sun Dec 21 16:32:00 2008 -0500\n'
-                                               'summary:     automated test\n'
-                                               '\n'))
+        u.write(actual)
+        self.assertTrue(node.hex(self.repo['localbranch'].node())[:8] in actual)
+        actual = actual.splitlines()
+        self.assertEqual(actual[0], 'comparing with ' + self.repourl)
+        self.assertEqual(actual[1], 'changeset:   5:6de15430fa20')
+        self.assertEqual(actual[2], 'branch:      localbranch')
+        self.assertEqual(actual[3], 'tag:         tip')
+        self.assertEqual(actual[4], 'parent:      3:4e256962fc5d')
+        self.assertEqual(actual[5], 'user:        testy')
+        self.assertEqual(actual[6], 'date:        Sun Dec 21 16:32:00 2008 -0500')
+        self.assertEqual(actual[7], 'summary:     automated test')
         hg.update(self.repo, 'default')
         u.pushbuffer()
-        wrappers.outgoing(lambda x,y,z: None, u, self.repo, svn=True)
+        commands.outgoing(u, self.repo, self.repourl)
         actual = u.popbuffer()
-        self.assertEqual(actual, 'no changes found\n')
+        u.write(actual)
+        self.assertEqual(actual.splitlines()[1], 'no changes found')
 
     def test_rebase(self):
         self._load_fixture_and_fetch('two_revs.svndump')

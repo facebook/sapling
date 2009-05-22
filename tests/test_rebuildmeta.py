@@ -2,13 +2,13 @@ import os
 import pickle
 import unittest
 
+import test_util
+
 from mercurial import hg
 from mercurial import ui
 
 from hgsubversion import svncommands
 from hgsubversion import hg_delta_editor
-
-import test_util
 
 def _do_case(self, name, stupid):
     subdir = test_util.subdir.get(name, '')
@@ -69,6 +69,9 @@ def buildmethod(case, name, stupid):
 attrs = {'_do_case': _do_case,
          }
 for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
+    # this fixture results in an empty repository, don't use it
+    if case == 'project_root_not_repo_root.svndump':
+        continue
     name = 'test_' + case[:-len('.svndump')]
     attrs[name] = buildmethod(case, name, False)
     name += '_stupid'

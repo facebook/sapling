@@ -35,26 +35,18 @@ def parent(orig, ui, repo, *args, **opts):
     return 0
 
 
-def outgoing(orig, ui, repo, dest=None, *args, **opts):
+def outgoing(repo, dest=None, heads=None, force=False):
     """show changesets not found in the Subversion repository
     """
-    svnurl = repo.ui.expandpath(dest or 'default-push', dest or 'default')
-    if not hg.repository(ui, svnurl).capable('subversion'):
-        return orig(ui, repo, dest, *args, **opts)
+    assert dest.capable('subversion')
 
     # split off #rev; TODO implement --revision/#rev support
-    svnurl, revs, checkout = hg.parseurl(svnurl, opts.get('rev'))
+    svnurl, revs, checkout = hg.parseurl(dest.svnurl, heads)
     hge = hg_delta_editor.HgChangeReceiver(repo=repo)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes,
-                                  repo.parents()[0].node())
-    if not (o_r and len(o_r)):
-        ui.status('no changes found\n')
-        return 0
-    displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
-    for node in reversed(o_r):
-        displayer.show(repo[node])
+    return util.outgoing_revisions(repo.ui, repo, hge, svn_commit_hashes,
+                                   repo.parents()[0].node())
 
 
 def diff(orig, ui, repo, *args, **opts):
@@ -87,12 +79,12 @@ def diff(orig, ui, repo, *args, **opts):
                                                   }))
     ui.write(cmdutil.filterdiff(''.join(it), baserev, newrev))
 
-def push(repo, dest="default", force=False, revs=None):
+def push(repo, dest, force, revs):
     """push revisions starting at a specified head back to Subversion.
     """
     assert not revs, 'designated revisions for push remains unimplemented.'
     ui = repo.ui
-    svnurl = util.normalize_url(repo.ui.expandpath(dest))
+    svnurl = util.normalize_url(repo.ui.expandpath(dest.svnurl))
     old_encoding = util.swap_out_encoding()
     # split of #rev; TODO: implement --rev/#rev support
     svnurl, revs, checkout = hg.parseurl(svnurl, revs)
@@ -157,7 +149,7 @@ def push(repo, dest="default", force=False, revs=None):
             return 1
         # 3. Fetch revisions from svn
         # TODO: this probably should pass in the source explicitly - rev too?
-        r = pull(repo, source=dest, force=force)
+        r = repo.pull(dest, force=force)
         assert not r or r == 0
         # 4. Find the new head of the target branch
         oldtipctx = repo[oldtip]
@@ -194,13 +186,10 @@ def push(repo, dest="default", force=False, revs=None):
     return 0
 
 
-def pull(repo, source="default", heads=None, force=False):
-    """pull new revisions from Subversion
-
-    Also takes svn, svn_stupid, and create_new_dest kwargs.
-    """
-    url = repo.ui.expandpath(source)
-    svn_url = util.normalize_url(url)
+def pull(repo, source, heads=[], force=False):
+    """pull new revisions from Subversion"""
+    assert source.capable('subversion')
+    svn_url = source.svnurl
 
     # Split off #rev
     svn_url, heads, checkout = hg.parseurl(svn_url, heads)
@@ -217,12 +206,14 @@ def pull(repo, source="default", heads=None, force=False):
     have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
     if have_replay and not callable(
         delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
-        ui.status('You are using old Subversion SWIG bindings. Replay will not'
-                  ' work until you upgrade to 1.5.0 or newer. Falling back to'
-                  ' a slower method that may be buggier. Please upgrade, or'
-                  ' contribute a patch to use the ctypes bindings instead'
-                  ' of SWIG.\n')
+        repo.ui.status('You are using old Subversion SWIG bindings. Replay '
+                       'will not work until you upgrade to 1.5.0 or newer. '
+                       'Falling back to a slower method that may be buggier. '
+                       'Please upgrade, or contribute a patch to use the '
+                       'ctypes bindings instead of SWIG.\n')
         have_replay = False
+    elif not have_replay:
+        repo.ui.note('fetching stupidly...\n')
 
     # TODO: do credentials specified in the URL still work?
     user = repo.ui.config('hgsubversion', 'username')
@@ -242,15 +233,12 @@ def pull(repo, source="default", heads=None, force=False):
     revisions = 0
 
     try:
-      # start converting revisions
-      for r in svn.revisions(start=start, stop=stopat_rev):
-        valid = True
-        hg_editor.update_branch_tag_map_for_rev(r)
-        for p in r.paths:
-            if hg_editor._is_path_valid(p):
-                valid = True
-                break
-        if valid:
+        # start converting revisions
+        for r in svn.revisions(start=start, stop=stopat_rev):
+            if (r.author is None and 
+                r.message == 'This is an empty revision for padding.'):
+                continue
+            hg_editor.update_branch_tag_map_for_rev(r)
             # got a 502? Try more than once!
             tries = 0
             converted = False
@@ -279,12 +267,12 @@ def pull(repo, source="default", heads=None, force=False):
             revisions += 1
     except KeyboardInterrupt:
         pass
-
-    util.swap_out_encoding(old_encoding)
+    finally:
+        util.swap_out_encoding(old_encoding)
 
     if revisions == 0:
         ui.status(i18n._("no changes found\n"))
-        return
+        return 0
     else:
         ui.status("pulled %d revisions\n" % revisions)
 

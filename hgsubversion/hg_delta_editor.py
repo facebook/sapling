@@ -73,7 +73,7 @@ class HgChangeReceiver(delta.Editor):
         except ValueError:
             return 0
 
-    def __init__(self, path=None, repo=None, ui_=None,
+    def __init__(self, repo=None, path=None, ui_=None,
                  subdir='', author_host='',
                  tag_locations=[],
                  authors=None, filemap=None, uuid=None):
@@ -87,7 +87,7 @@ class HgChangeReceiver(delta.Editor):
         if not ui_:
             ui_ = ui.ui()
         self.ui = ui_
-        self.__setup_repo(repo or path, uuid)
+        self.__setup_repo(uuid, repo, path, subdir)
 
         if not author_host:
             author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
@@ -100,6 +100,7 @@ class HgChangeReceiver(delta.Editor):
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                   'usebranchnames', True)
 
+        # FIXME: test that this hasn't changed! defer & compare?
         self.subdir = subdir
         if self.subdir and self.subdir[0] == '/':
             self.subdir = self.subdir[1:]
@@ -145,19 +146,19 @@ class HgChangeReceiver(delta.Editor):
             date = self.lastdate
         return date
 
-    def __setup_repo(self, arg, uuid):
+    def __setup_repo(self, uuid, repo, path, subdir):
         """Verify the repo is going to work out for us.
 
         This method will fail an assertion if the repo exists but doesn't have
         the Subversion metadata.
         """
-        if isinstance(arg, basestring):
-            self.repo = hg.repository(self.ui, arg,
-                                      create=(not os.path.exists(arg)))
-            self.path = os.path.normpath(os.path.join(arg, '..'))
-        elif arg:
-            self.repo = arg
-            self.path = os.path.normpath(os.path.join(self.repo.path, '..'))
+        if repo:
+            self.repo = repo
+            self.path = os.path.normpath(self.repo.join('..'))
+        elif path:
+            self.repo = hg.repository(self.ui, path,
+                                      create=(not os.path.exists(path)))
+            self.path = os.path.normpath(os.path.join(path, '..'))
         else: #pragma: no cover
             raise TypeError("editor requires either a path or a repository "
                             "specified")
@@ -165,6 +166,7 @@ class HgChangeReceiver(delta.Editor):
         if not os.path.isdir(self.meta_data_dir):
             os.makedirs(self.meta_data_dir)
         self._set_uuid(uuid)
+        # TODO: validate subdir too
 
         if os.path.isfile(self.revmap_file):
             self.revmap = util.parse_revmap(self.revmap_file)

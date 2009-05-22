@@ -1,12 +1,13 @@
+import imp
 import os
 import subprocess
 import shutil
 import tempfile
 import unittest
 
-from nose import tools
+import test_util
 
-import svnwrap
+from hgsubversion import svnwrap
 
 class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
@@ -29,10 +30,10 @@ class TestBasicRepoLayout(unittest.TestCase):
 
     def test_num_revs(self):
         revs = list(self.repo.revisions())
-        tools.eq_(len(revs), 7)
+        self.assertEqual(len(revs), 7)
         r = revs[1]
-        tools.eq_(r.revnum, 2)
-        tools.eq_(sorted(r.paths.keys()),
+        self.assertEqual(r.revnum, 2)
+        self.assertEqual(sorted(r.paths.keys()),
                   ['trunk/alpha', 'trunk/beta', 'trunk/delta'])
         for r in revs:
             for p in r.paths:
@@ -40,19 +41,19 @@ class TestBasicRepoLayout(unittest.TestCase):
                 if p:
                     assert p[0] != '/'
         revs = list(self.repo.revisions(start=3))
-        tools.eq_(len(revs), 4)
+        self.assertEqual(len(revs), 4)
 
 
     def test_branches(self):
-        tools.eq_(self.repo.branches.keys(), ['crazy', 'more_crazy'])
-        tools.eq_(self.repo.branches['crazy'], ('trunk', 2, 4))
-        tools.eq_(self.repo.branches['more_crazy'], ('trunk', 5, 7))
+        self.assertEqual(self.repo.branches.keys(), ['crazy', 'more_crazy'])
+        self.assertEqual(self.repo.branches['crazy'], ('trunk', 2, 4))
+        self.assertEqual(self.repo.branches['more_crazy'], ('trunk', 5, 7))
 
 
     def test_tags(self):
         tags = self.repo.tags
-        tools.eq_(tags.keys(), ['rev1'])
-        tools.eq_(tags['rev1'], ('trunk', 2))
+        self.assertEqual(tags.keys(), ['rev1'])
+        self.assertEqual(tags['rev1'], ('trunk', 2))
 
 class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
     def setUp(self):
@@ -69,3 +70,7 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
         assert ret == 0
         self.repo = svnwrap.SubversionRepo('file://%s/dummyproj' %
                                            self.repo_path)
+def suite():
+    all = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
+           unittest.TestLoader().loadTestsFromTestCase(TestRootAsSubdirOfRepo)]
+    return unittest.TestSuite(all)

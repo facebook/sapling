@@ -1,4 +1,5 @@
 import errno
+import imp
 import os
 import subprocess
 import shutil
@@ -7,6 +8,8 @@ import stat
 import tempfile
 import unittest
 import urllib
+
+import __init__
 
 from mercurial import context
 from mercurial import commands

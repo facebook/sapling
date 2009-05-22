@@ -27,6 +27,8 @@ import wrappers
 def generate_repo_class(ui, repo):
     """ This function generates the local repository wrapper. """
 
+    superclass = repo.__class__
+
     def localsvn(fn):
         """
         Filter for instance methods which only apply to local Subversion
@@ -42,34 +44,39 @@ def generate_repo_class(ui, repo):
         Filter for instance methods which require the first argument
         to be a remote Subversion repository instance.
         """
-        original = getattr(repo.__class__, fn.__name__)
+        original = getattr(repo, fn.__name__)
         def wrapper(self, *args, **opts):
             capable = getattr(args[0], 'capable', lambda x: False)
             if capable('subversion'):
                 return fn(self, *args, **opts)
             else:
-                return original(self, *args, **opts)
+                return original(*args, **opts)
         wrapper.__name__ = fn.__name__ + '_wrapper'
         wrapper.__doc__ = fn.__doc__
         return wrapper
 
-    class svnlocalrepo(repo.__class__):
+    class svnlocalrepo(superclass):
         @remotesvn
         def push(self, remote, force=False, revs=None):
-            wrappers.push(self, dest=remote.svnurl, force=force, revs=None)
+            return wrappers.push(self, remote, force, revs)
 
         @remotesvn
-        def pull(self, remote, heads=None, force=False):
-            lock = self.wlock()
-            try:
-                wrappers.pull(self, source=remote.svnurl,
-                              heads=heads, force=force)
-            finally:
-                lock.release()
+        def pull(self, remote, heads=[], force=False):
+            return wrappers.pull(self, remote, heads, force)
+
+        @remotesvn
+        def findoutgoing(self, remote, base=None, heads=None, force=False):
+            return wrappers.outgoing(repo, remote, heads, force)
+
+        @remotesvn
+        def findcommonincoming(self, remote, base=None, heads=None,
+                               force=False):
+            raise hgutil.Abort('cannot display incoming changes from '
+                               'Subversion repositories, yet')
 
         @localsvn
         def tags(self):
-            tags = super(svnlocalrepo, self).tags()
+            tags = superclass.tags(self)
             hg_editor = hg_delta_editor.HgChangeReceiver(repo=self)
             for tag, source in hg_editor.tags.iteritems():
                 target = hg_editor.get_parent_revision(source[1]+1, source[0])
