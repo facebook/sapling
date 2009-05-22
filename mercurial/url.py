@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import urllib, urllib2, urlparse, httplib, os, re
+import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO
 from i18n import _
 import keepalive, util
 
@@ -245,18 +245,165 @@ def _gen_sendfile(connection):
             connection.send(self, data)
     return _sendfile
 
+has_https = hasattr(urllib2, 'HTTPSHandler')
+if has_https:
+    try:
+        # avoid using deprecated/broken FakeSocket in python 2.6
+        import ssl
+        _ssl_wrap_socket = ssl.wrap_socket
+    except ImportError:
+        def _ssl_wrap_socket(sock, key_file, cert_file):
+            ssl = socket.ssl(sock, key_file, cert_file)
+            return httplib.FakeSocket(sock, ssl)
+
 class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
     send = _gen_sendfile(keepalive.HTTPConnection)
+
+    def _proxytunnel(self):
+        proxyheaders = dict(
+                [(x, self.headers[x]) for x in self.headers
+                 if x.lower().startswith('proxy-')])
+        self._set_hostport(self.host, self.port)
+        self.send('CONNECT %s:%d HTTP/1.0\r\n' % (self.realhost, self.realport))
+        for header in proxyheaders.iteritems():
+            self.send('%s: %s\r\n' % header)
+        self.send('\r\n')
+
+        # majority of the following code is duplicated from
+        # httplib.HTTPConnection as there are no adequate places to
+        # override functions to provide the needed functionality
+        res = self.response_class(self.sock,
+                                  strict=self.strict,
+                                  method=self._method)
+
+        while True:
+            version, status, reason = res._read_status()
+            if status != httplib.CONTINUE:
+                break
+            while True:
+                skip = res.fp.readline().strip()
+                if not skip:
+                    break
+        res.status = status
+        res.reason = reason.strip()
+
+        if res.status == 200:
+            while True:
+                line = res.fp.readline()
+                if line == '\r\n':
+                    break
+            return True
+
+        if version == 'HTTP/1.0':
+            res.version = 10
+        elif version.startswith('HTTP/1.'):
+            res.version = 11
+        elif version == 'HTTP/0.9':
+            res.version = 9
+        else:
+            raise httplib.UnknownProtocol(version)
+
+        if res.version == 9:
+            res.length = None
+            res.chunked = 0
+            res.will_close = 1
+            res.msg = httplib.HTTPMessage(cStringIO.StringIO())
+            return False
+
+        res.msg = httplib.HTTPMessage(res.fp)
+        res.msg.fp = None
+
+        # are we using the chunked-style of transfer encoding?
+        trenc = res.msg.getheader('transfer-encoding')
+        if trenc and trenc.lower() == "chunked":
+            res.chunked = 1
+            res.chunk_left = None
+        else:
+            res.chunked = 0
+
+        # will the connection close at the end of the response?
+        res.will_close = res._check_close()
+
+        # do we have a Content-Length?
+        # NOTE: RFC 2616, S4.4, #3 says we ignore this if tr_enc is "chunked"
+        length = res.msg.getheader('content-length')
+        if length and not res.chunked:
+            try:
+                res.length = int(length)
+            except ValueError:
+                res.length = None
+            else:
+                if res.length < 0:  # ignore nonsensical negative lengths
+                    res.length = None
+        else:
+            res.length = None
+
+        # does the body have a fixed length? (of zero)
+        if (status == httplib.NO_CONTENT or status == httplib.NOT_MODIFIED or
+            100 <= status < 200 or # 1xx codes
+            res._method == 'HEAD'):
+            res.length = 0
+
+        # if the connection remains open, and we aren't using chunked, and
+        # a content-length was not provided, then assume that the connection
+        # WILL close.
+        if (not res.will_close and
+           not res.chunked and
+           res.length is None):
+            res.will_close = 1
+
+        self.proxyres = res
+
+        return False
+
+    def connect(self):
+        if has_https and self.realhost: # use CONNECT proxy
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((self.host, self.port))
+            if self._proxytunnel():
+                # we do not support client x509 certificates
+                self.sock = _ssl_wrap_socket(self.sock, None, None)
+        else:
+            keepalive.HTTPConnection.connect(self)
+
+    def getresponse(self):
+        proxyres = getattr(self, 'proxyres', None)
+        if proxyres:
+            if proxyres.will_close:
+                self.close()
+            self.proxyres = None
+            return proxyres
+        return keepalive.HTTPConnection.getresponse(self)
 
 class httphandler(keepalive.HTTPHandler):
     def http_open(self, req):
         return self.do_open(httpconnection, req)
 
+    def _start_transaction(self, h, req):
+        if req.get_selector() == req.get_full_url(): # has proxy
+            urlparts = urlparse.urlparse(req.get_selector())
+            if urlparts[0] == 'https': # only use CONNECT for HTTPS
+                if ':' in urlparts[1]:
+                    realhost, realport = urlparts[1].split(':')
+                else:
+                    realhost = urlparts[1]
+                    realport = 443
+
+                h.realhost = realhost
+                h.realport = realport
+                h.headers = req.headers.copy()
+                h.headers.update(self.parent.addheaders)
+                return keepalive.HTTPHandler._start_transaction(self, h, req)
+
+        h.realhost = None
+        h.realport = None
+        h.headers = None
+        return keepalive.HTTPHandler._start_transaction(self, h, req)
+
     def __del__(self):
         self.close_all()
 
-has_https = hasattr(urllib2, 'HTTPSHandler')
 if has_https:
     class httpsconnection(httplib.HTTPSConnection):
         response_class = keepalive.HTTPResponse
