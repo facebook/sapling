@@ -82,13 +82,13 @@ class PushTests(test_util.TestBase):
                                               copied=False)
                 raise IOError()
             ctx = context.memctx(repo,
-                                 (repo['default'].node(), node.nullid),
-                                 'automated test',
-                                 ['adding_file'],
-                                 file_callback,
-                                 'an_author',
-                                 '2008-10-07 20:59:48 -0500',
-                                 {'branch': 'default',})
+                                 parents=(repo['default'].node(), node.nullid),
+                                 text='automated test',
+                                 files=['adding_file'],
+                                 filectxfn=file_callback,
+                                 user='an_author',
+                                 date='2008-10-07 20:59:48 -0500',
+                                 extra={'branch': 'default',})
             new_hash = repo.commitctx(ctx)
             if not commit:
                 return # some tests use this test as an extended setup.
