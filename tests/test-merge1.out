@@ -40,7 +40,7 @@ created new head
 Contents of b should be "this is file b1"
 This is file b1
 %% merge fails
-abort: outstanding uncommitted changes
+abort: outstanding uncommitted changes (use 'hg status' to list changes)
 %% merge expected!
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -54,7 +54,7 @@ M b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 %% merge of b should fail
-abort: outstanding uncommitted changes
+abort: outstanding uncommitted changes (use 'hg status' to list changes)
 %% merge of b expected
 merging for b
 merging b

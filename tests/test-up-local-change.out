@@ -107,7 +107,7 @@ summary:     2
 
 abort: crosses branches (use 'hg merge' or 'hg update -C' to discard changes)
 failed
-abort: outstanding uncommitted changes
+abort: outstanding uncommitted changes (use 'hg status' to list changes)
 failed
 resolving manifests
  overwrite False partial False
