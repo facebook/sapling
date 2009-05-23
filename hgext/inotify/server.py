@@ -311,10 +311,6 @@ class repowatcher(object):
                         dd[fn] = newstatus
             else:
                 d.pop(fn, None)
-        elif not newstatus:
-            # a directory is being removed, check its contents
-            for subfile, b in oldstatus.copy().iteritems():
-                self._updatestatus(wfn + '/' + subfile, None)
 
 
     def check_deleted(self, key):
@@ -483,8 +479,12 @@ class repowatcher(object):
                          (self.event_time(), wpath))
 
         if evt.mask & inotify.IN_ISDIR:
+            tree = self.dir(self.tree, wpath).copy()
+            for wfn, ignore in self.walk('?', tree):
+                self.deletefile(join(wpath, wfn), '?')
             self.scan(wpath)
-        self.schedule_work(wpath, 'd')
+        else:
+            self.schedule_work(wpath, 'd')
 
     def process_modify(self, wpath, evt):
         if self.ui.debugflag:
