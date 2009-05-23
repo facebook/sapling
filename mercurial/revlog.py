@@ -322,7 +322,7 @@ class revlogoldio(object):
         index = []
         nodemap =  {nullid: nullrev}
         n = off = 0
-        if len(data) < _prereadsize:
+        if len(data) == _prereadsize:
             data += fp.read() # read the rest
         l = len(data)
         while off + s <= l:
@@ -362,23 +362,19 @@ class revlogio(object):
         self.size = struct.calcsize(indexformatng)
 
     def parseindex(self, fp, data, inline):
-        try:
-            size = len(data)
-            if size == _prereadsize:
-                size = util.fstat(fp).st_size
-        except AttributeError:
-            size = 0
-
-        if util.openhardlinks() and not inline and size > _prereadsize:
-            # big index, let's parse it on demand
-            parser = lazyparser(fp, size)
-            index = lazyindex(parser)
-            nodemap = lazymap(parser)
-            e = list(index[0])
-            type = gettype(e[0])
-            e[0] = offset_type(0, type)
-            index[0] = e
-            return index, nodemap, None
+        if len(data) == _prereadsize:
+            if util.openhardlinks() and not inline:
+                # big index, let's parse it on demand
+                parser = lazyparser(fp, size)
+                index = lazyindex(parser)
+                nodemap = lazymap(parser)
+                e = list(index[0])
+                type = gettype(e[0])
+                e[0] = offset_type(0, type)
+                index[0] = e
+                return index, nodemap, None
+            else:
+                data += fp.read()
 
         # call the C implementation to parse the index data
         index, nodemap, cache = parsers.parse_index(data, inline)
