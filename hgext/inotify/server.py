@@ -235,7 +235,6 @@ class repowatcher(pollable):
         self.statcache = {}
         self.statustrees = dict([(s, {}) for s in self.statuskeys])
 
-        self.watches = 0
         self.last_event = None
 
         self.lastevent = {}
@@ -277,7 +276,6 @@ class repowatcher(pollable):
                 self.ui.note(_('watching %r\n') % path[len(self.wprefix):])
             try:
                 self.watcher.add(path, mask)
-                self.watches += 1
             except OSError, err:
                 if err.errno in (errno.ENOENT, errno.ENOTDIR):
                     return
