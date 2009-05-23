@@ -23,6 +23,7 @@ from hgsubversion import util
 subdir = {'truncatedhistory.svndump': '/project2',
           'fetch_missing_files_subdir.svndump': '/foo',
           'empty_dir_in_trunk_not_repo_root.svndump': '/project',
+          'project_root_not_repo_root.svndump': '/dummyproj',
           }
 
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
