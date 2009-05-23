@@ -561,7 +561,9 @@ class HgChangeReceiver(delta.Editor):
                 p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
             if not parent and paths[p].copyfrom_path:
                 bpath, branch = self._path_and_branch_for_path(p, False)
-                if bpath is not None and branch not in self.branches:
+                if (bpath is not None
+                    and branch not in self.branches
+                    and branch not in added_branches):
                     parent = {branch: (None, 0, revision.revnum)}
             added_branches.update(parent)
         for t in tags_to_delete:
