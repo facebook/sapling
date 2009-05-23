@@ -68,7 +68,7 @@ def _is_win_9x():
         return 'command' in os.environ.get('comspec', '')
 
 def openhardlinks():
-    return not _is_win_9x and "win32api" in locals()
+    return not _is_win_9x() and "win32api" in globals()
 
 def system_rcpath():
     try:
