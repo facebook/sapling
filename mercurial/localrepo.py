@@ -18,7 +18,7 @@ import weakref, stat, errno, os, time, inspect
 propertycache = util.propertycache
 
 class localrepository(repo.repository):
-    capabilities = set(('lookup', 'changegroupsubset'))
+    capabilities = set(('lookup', 'changegroupsubset', 'branchmap'))
     supported = set('revlogv1 store fncache'.split())
 
     def __init__(self, baseui, path=None, create=0):
@@ -360,7 +360,7 @@ class localrepository(repo.repository):
 
         return partial
 
-    def _branchheads(self):
+    def branchmap(self):
         tip = self.changelog.tip()
         if self.branchcache is not None and self._branchcachetip == tip:
             return self.branchcache
@@ -392,7 +392,7 @@ class localrepository(repo.repository):
         '''return a dict where branch names map to the tipmost head of
         the branch, open heads come before closed'''
         bt = {}
-        for bn, heads in self._branchheads().iteritems():
+        for bn, heads in self.branchmap().iteritems():
             head = None
             for i in range(len(heads)-1, -1, -1):
                 h = heads[i]
@@ -1125,7 +1125,7 @@ class localrepository(repo.repository):
     def branchheads(self, branch=None, start=None, closed=True):
         if branch is None:
             branch = self[None].branch()
-        branches = self._branchheads()
+        branches = self.branchmap()
         if branch not in branches:
             return []
         bheads = branches[branch]

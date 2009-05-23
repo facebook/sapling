@@ -9,7 +9,7 @@
 from i18n import _
 from node import bin, hex
 import streamclone, util, hook
-import os, sys, tempfile
+import os, sys, tempfile, urllib
 
 class sshserver(object):
     def __init__(self, ui, repo):
@@ -64,6 +64,15 @@ class sshserver(object):
             success = 0
         self.respond("%s %s\n" % (success, r))
 
+    def do_branchmap(self):
+        branchmap = self.repo.branchmap()
+        heads = []
+        for branch, nodes in branchmap.iteritems():
+            branchname = urllib.quote(branch)
+            branchnodes = [hex(node) for node in nodes]
+            heads.append('%s %s' % (branchname, ' '.join(branchnodes)))
+        self.respond('\n'.join(heads))
+
     def do_heads(self):
         h = self.repo.heads()
         self.respond(" ".join(map(hex, h)) + "\n")
@@ -77,7 +86,7 @@ class sshserver(object):
         capabilities: space separated list of tokens
         '''
 
-        caps = ['unbundle', 'lookup', 'changegroupsubset']
+        caps = ['unbundle', 'lookup', 'changegroupsubset', 'branchmap']
         if self.ui.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.changelog.version)
         self.respond("capabilities: %s\n" % (' '.join(caps),))
