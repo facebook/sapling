@@ -80,3 +80,47 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 0
+% issue 736
+% push on existing branch and new branch
+pushing to ../f
+searching for changes
+abort: push creates new remote branch 'c'!
+(did you forget to merge? use push -f to force)
+1
+% fail on multiple head push
+pushing to ../f
+searching for changes
+abort: push creates new remote heads!
+(did you forget to merge? use push -f to force)
+1
+% push replacement head on existing branches
+pushing to ../f
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 2 changes to 1 files
+0
+% merge of branch a to other branch b followed by unrelated push on branch a
+pushing to ../f
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (-1 heads)
+0
+pushing to ../f
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+0
+% cheating the counting algorithm
+pushing to ../f
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 2 changes to 1 files
+0

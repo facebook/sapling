@@ -59,4 +59,68 @@ hg init ../e
 hg push -r 0 ../e ; echo $?
 hg push -r 1 ../e ; echo $?
 
+cd ..
+
+# issue 736
+echo % issue 736
+hg init f
+cd f
+hg -q branch a
+echo 0 > foo
+hg -q ci -d "1000000 0" -Am 0
+echo 1 > foo
+hg -q ci -d "1000000 0" -m 1
+hg -q up 0
+echo 2 > foo
+hg -q ci -d "1000000 0" -m 2
+hg -q up 0
+hg -q branch b
+echo 3 > foo
+hg -q ci -d "1000000 0" -m 3
+cd ..
+
+hg -q clone f g
+cd g
+
+echo % push on existing branch and new branch
+hg -q up 1
+echo 4 > foo
+hg -q ci -d "1000000 0" -m 4
+hg -q up 0
+echo 5 > foo
+hg -q branch c
+hg -q ci -d "1000000 0" -m 5
+hg push -r 4 -r 5 ../f; echo $?
+
+echo % fail on multiple head push
+hg -q up 1
+echo 6 > foo
+hg -q ci -d "1000000 0" -m 6
+hg push -r 4 -r 6 ../f; echo $?
+
+echo % push replacement head on existing branches
+hg -q up 3
+echo 7 > foo
+hg -q ci -d "1000000 0" -m 7
+hg push -r 6 -r 7 ../f; echo $?
+
+echo % merge of branch a to other branch b followed by unrelated push on branch a
+hg -q up 6
+HGMERGE=true hg -q merge 7
+hg -q ci -d "1000000 0" -m 8
+hg -q up 7
+echo 9 > foo
+hg -q ci -d "1000000 0" -m 9
+hg push -r 8 ../f; echo $?
+hg push -r 9 ../f; echo $?
+
+echo % cheating the counting algorithm
+hg -q up 8
+HGMERGE=true hg -q merge 2
+hg -q ci -d "1000000 0" -m 10
+hg -q up 1
+echo 11 > foo
+hg -q ci -d "1000000 0" -m 11
+hg push -r 10 -r 11 ../f; echo $?
+
 exit 0
