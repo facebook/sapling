@@ -8,7 +8,7 @@
 from node import bin, hex
 from i18n import _
 import repo, util, error
-import re
+import re, urllib
 
 class remotelock(object):
     def __init__(self, repo):
@@ -165,6 +165,19 @@ class sshrepository(repo.repository):
             return map(bin, d[:-1].split(" "))
         except:
             self.abort(error.ResponseError(_("unexpected response:"), d))
+
+    def branchmap(self):
+        d = self.call("branchmap")
+        try:
+            branchmap = {}
+            for branchpart in d.splitlines():
+                branchheads = branchpart.split(' ')
+                branchname = urllib.unquote(branchheads[0])
+                branchheads = [bin(x) for x in branchheads[1:]]
+                branchmap[branchname] = branchheads
+            return branchmap
+        except:
+            raise error.ResponseError(_("unexpected response:"), d)
 
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))

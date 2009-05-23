@@ -145,6 +145,19 @@ class httprepository(repo.repository):
         except:
             raise error.ResponseError(_("unexpected response:"), d)
 
+    def branchmap(self):
+        d = self.do_read("branchmap")
+        try:
+            branchmap = {}
+            for branchpart in d.splitlines():
+                branchheads = branchpart.split(' ')
+                branchname = urllib.unquote(branchheads[0])
+                branchheads = [bin(x) for x in branchheads[1:]]
+                branchmap[branchname] = branchheads
+            return branchmap
+        except:
+            raise error.ResponseError(_("unexpected response:"), d)
+
     def branches(self, nodes):
         n = " ".join(map(hex, nodes))
         d = self.do_read("branches", nodes=n)
