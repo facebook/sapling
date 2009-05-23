@@ -1429,42 +1429,97 @@ class localrepository(repo.repository):
         else:
             bases, heads = update, self.changelog.heads()
 
-        if not bases:
-            self.ui.status(_("no changes found\n"))
-            return None, 1
-        elif not force:
-            # check if we're creating new remote heads
-            # to be a remote head after push, node must be either
-            # - unknown locally
-            # - a local outgoing head descended from update
-            # - a remote head that's known locally and not
-            #   ancestral to an outgoing head
+        def checkbranch(lheads, rheads, updatelh):
+            '''
+            check whether there are more local heads than remote heads on
+            a specific branch.
+
+            lheads: local branch heads
+            rheads: remote branch heads
+            updatelh: outgoing local branch heads
+            '''
 
             warn = 0
 
-            if remote_heads == [nullid]:
-                warn = 0
-            elif not revs and len(heads) > len(remote_heads):
+            if not revs and len(lheads) > len(rheads):
                 warn = 1
             else:
-                newheads = list(heads)
-                for r in remote_heads:
+                updatelheads = [self.changelog.heads(x, lheads)
+                                for x in updatelh]
+                newheads = set(sum(updatelheads, [])) & set(lheads)
+
+                if not newheads:
+                    return True
+
+                for r in rheads:
                     if r in self.changelog.nodemap:
                         desc = self.changelog.heads(r, heads)
                         l = [h for h in heads if h in desc]
                         if not l:
-                            newheads.append(r)
+                            newheads.add(r)
                     else:
-                        newheads.append(r)
-                if len(newheads) > len(remote_heads):
+                        newheads.add(r)
+                if len(newheads) > len(rheads):
                     warn = 1
 
             if warn:
-                self.ui.warn(_("abort: push creates new remote heads!\n"))
+                if not rheads: # new branch requires --force
+                    self.ui.warn(_("abort: push creates new"
+                                   " remote branch '%s'!\n" %
+                                   self[updatelh[0]].branch()))
+                else:
+                    self.ui.warn(_("abort: push creates new remote heads!\n"))
+
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
-                return None, 0
-            elif inc:
+                return False
+            return True
+
+        if not bases:
+            self.ui.status(_("no changes found\n"))
+            return None, 1
+        elif not force:
+            # Check for each named branch if we're creating new remote heads.
+            # To be a remote head after push, node must be either:
+            # - unknown locally
+            # - a local outgoing head descended from update
+            # - a remote head that's known locally and not
+            #   ancestral to an outgoing head
+            #
+            # New named branches cannot be created without --force.
+
+            if remote_heads != [nullid]:
+                if remote.capable('branchmap'):
+                    localhds = {}
+                    if not revs:
+                        localhds = self.branchmap()
+                    else:
+                        for n in heads:
+                            branch = self[n].branch()
+                            if branch in localhds:
+                                localhds[branch].append(n)
+                            else:
+                                localhds[branch] = [n]
+
+                    remotehds = remote.branchmap()
+
+                    for lh in localhds:
+                        if lh in remotehds:
+                            rheads = remotehds[lh]
+                        else:
+                            rheads = []
+                        lheads = localhds[lh]
+                        updatelh = [upd for upd in update
+                                    if self[upd].branch() == lh]
+                        if not updatelh:
+                            continue
+                        if not checkbranch(lheads, rheads, updatelh):
+                            return None, 0
+                else:
+                    if not checkbranch(heads, remote_heads, update):
+                        return None, 0
+
+            if inc:
                 self.ui.warn(_("note: unsynced remote changes!\n"))
 
 
