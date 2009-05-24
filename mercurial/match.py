@@ -63,8 +63,6 @@ def _patsplit(pat, default):
         if pat.startswith(prefix + ':'): return pat.split(':', 1)
     return default, pat
 
-_globchars = set('[{*?')
-
 def _globre(pat, head, tail):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
@@ -159,16 +157,12 @@ def _matchfn(pats, tail):
                 raise util.Abort("invalid pattern (%s): %s" % (k, p))
         raise util.Abort("invalid pattern")
 
-def _containsglob(name):
-    for c in name:
-        if c in _globchars: return True
-    return False
-
 def _globprefix(pat):
     '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
     root = []
     for p in pat.split('/'):
-        if _containsglob(p): break
+        if '[' in p or '{' in p or '*' in p or '?' in p:
+            break
         root.append(p)
     return '/'.join(root) or '.'
 
