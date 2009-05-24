@@ -4,6 +4,15 @@
 # it into your zsh function path (/usr/share/zsh/site-functions for
 # instance)
 #
+# If you do not want to install it globally, you can copy it somewhere
+# else and add that directory to $fpath. This must be done before
+# compinit is called. If the file is copied to ~/.zsh.d, your ~/.zshrc
+# file could look like this:
+#
+# fpath=("$HOME/.zsh.d" $fpath)
+# autoload -U compinit
+# compinit
+#
 # Copyright (C) 2005-6 Steve Borho
 # Copyright (C) 2006-8 Brendan Cully <brendan@kublai.com>
 #
