@@ -148,7 +148,7 @@ def _matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
 
     # a common case: no patterns at all
     if not names and not inc and not exc:
-        return [], util.always, False
+        return [], lambda f: True, False
 
     def contains_glob(name):
         for c in name:
@@ -233,20 +233,35 @@ def _matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
 
     roots, pats, anypats = normalizepats(names, dflt_pat)
 
-    patmatch = matchfn(pats, '$') or util.always
-    incmatch = util.always
+    patmatch = matchfn(pats, '$')
     if inc:
         dummy, inckinds, dummy = normalizepats(inc, 'glob')
         incmatch = matchfn(inckinds, '(?:/|$)')
-    excmatch = util.never
     if exc:
         dummy, exckinds, dummy = normalizepats(exc, 'glob')
         excmatch = matchfn(exckinds, '(?:/|$)')
 
-    if not names and inc and not exc:
-        # common case: hgignore patterns
-        matcher = incmatch
+    if names:
+        if inc:
+            if exc:
+                m = lambda f: incmatch(f) and not excmatch(f) and patmatch(f)
+            else:
+                m = lambda f: incmatch(f) and patmatch(f)
+        else:
+            if exc:
+                m = lambda f: not excmatch(f) and patmatch(f)
+            else:
+                m = patmatch
     else:
-        matcher = lambda fn: incmatch(fn) and not excmatch(fn) and patmatch(fn)
+        if inc:
+            if exc:
+                m = lambda f: incmatch(f) and not excmatch(f)
+            else:
+                m = incmatch
+        else:
+            if exc:
+                m = lambda f: not excmatch(f)
+            else:
+                m = lambda f: True
 
-    return (roots, matcher, (inc or exc or anypats) and True)
+    return (roots, m, (inc or exc or anypats) and True)
