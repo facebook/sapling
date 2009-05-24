@@ -214,7 +214,7 @@ def _patsplit(pat, default):
         if pat.startswith(prefix + ':'): return pat.split(':', 1)
     return default, pat
 
-def globre(pat, head='^', tail='$'):
+def _globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
     res = ''
@@ -389,14 +389,14 @@ def matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
         elif kind == 'path':
             return '^' + re.escape(name) + '(?:/|$)'
         elif kind == 'relglob':
-            return globre(name, '(?:|.*/)', tail)
+            return _globre(name, '(?:|.*/)', tail)
         elif kind == 'relpath':
             return re.escape(name) + '(?:/|$)'
         elif kind == 'relre':
             if name.startswith('^'):
                 return name
             return '.*' + name
-        return globre(name, '', tail)
+        return _globre(name, '', tail)
 
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
