@@ -96,7 +96,7 @@ def rebase(ui, repo, **opts):
             if result:
                 originalwd, target, state, external = result
             else: # Empty state built, nothing to rebase
-                repo.ui.status(_('nothing to rebase\n'))
+                ui.status(_('nothing to rebase\n'))
                 return
 
         if keepbranchesf:
@@ -133,7 +133,7 @@ def rebase(ui, repo, **opts):
                 ui.warn(_("warning: new changesets detected on source branch, "
                                                         "not stripping\n"))
             else:
-                repair.strip(repo.ui, repo, repo[min(state)].node(), "strip")
+                repair.strip(ui, repo, repo[min(state)].node(), "strip")
 
         clearstatus(repo)
         ui.status(_("rebase completed\n"))

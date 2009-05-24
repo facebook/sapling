@@ -96,7 +96,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
             chunks = patch.diff(repo, node1, node2, match=m,
                                 opts=patch.diffopts(ui, {'git': True}))
             for chunk in chunks:
-                repo.ui.write(chunk)
+                ui.write(chunk)
         else:
             __difftree(repo, node1, node2, files=files)
         if not opts['stdin']:

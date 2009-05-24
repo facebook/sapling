@@ -413,7 +413,7 @@ def browserevs(ui, repo, nodes, opts):
             elif action == 'p':
                 parent = repo.changelog.parents(node)[0]
                 for chunk in patch.diff(repo, parent, node):
-                    repo.ui.write(chunk)
+                    ui.write(chunk)
                 action = None
             elif action not in ('y', 'n', 'm', 'c', 'q'):
                 ui.write('no such option\n')

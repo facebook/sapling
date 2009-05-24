@@ -163,11 +163,11 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     util.copyfile(a, back)
 
     if orig != fco.path():
-        repo.ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
+        ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
     else:
-        repo.ui.status(_("merging %s\n") % fd)
+        ui.status(_("merging %s\n") % fd)
 
-    repo.ui.debug(_("my %s other %s ancestor %s\n") % (fcd, fco, fca))
+    ui.debug(_("my %s other %s ancestor %s\n") % (fcd, fco, fca))
 
     # do we attempt to simplemerge first?
     if _toolbool(ui, tool, "premerge", not (binary or symlink)):
@@ -213,7 +213,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         _matcheol(repo.wjoin(fd), back)
 
     if r:
-        repo.ui.warn(_("merging %s failed!\n") % fd)
+        ui.warn(_("merging %s failed!\n") % fd)
     else:
         os.unlink(back)
 

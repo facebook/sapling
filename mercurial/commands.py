@@ -1078,7 +1078,7 @@ def diff(ui, repo, *pats, **opts):
     m = cmdutil.match(repo, pats, opts)
     it = patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
     for chunk in it:
-        repo.ui.write(chunk)
+        ui.write(chunk)
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
@@ -2491,7 +2491,7 @@ def revert(ui, repo, *pats, **opts):
             for f in names:
                 if f.startswith(path_):
                     return False
-            repo.ui.warn("%s: %s\n" % (m.rel(path), msg))
+            ui.warn("%s: %s\n" % (m.rel(path), msg))
             return False
 
         m = cmdutil.match(repo, pats, opts)
