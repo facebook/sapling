@@ -40,7 +40,7 @@ def purge(ui, repo, *dirs, **opts):
     This means that purge will delete:
      - Unknown files: files marked with "?" by "hg status"
      - Empty directories: in fact Mercurial ignores directories unless
-       they contain files under source control managment
+       they contain files under source control management
     But it will leave untouched:
      - Modified and unmodified tracked files
      - Ignored files (unless --all is specified)
