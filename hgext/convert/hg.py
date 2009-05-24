@@ -12,10 +12,10 @@
 #   those older versions, then converted, may thus have different
 #   hashes for changesets that are otherwise identical.
 #
-# * By default, the source revision is stored in the converted
-#   revision.  This will cause the converted revision to have a
-#   different identity than the source.  To avoid this, use the
-#   following option: "--config convert.hg.saverev=false"
+# * Using "--config convert.hg.saverev=true" will make the source
+#   identifier to be stored in the converted revision. This will cause
+#   the converted revision to have a different identity than the
+#   source.
 
 
 import os, time
