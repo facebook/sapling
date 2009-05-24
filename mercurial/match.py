@@ -175,8 +175,6 @@ def _matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
 
     def matchfn(pats, tail):
         """build a matching function from a set of patterns"""
-        if not pats:
-            return
         try:
             pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
             if len(pat) > 20000:
@@ -233,7 +231,8 @@ def _matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
 
     roots, pats, anypats = normalizepats(names, dflt_pat)
 
-    patmatch = matchfn(pats, '$')
+    if names:
+        patmatch = matchfn(pats, '$')
     if inc:
         dummy, inckinds, dummy = normalizepats(inc, 'glob')
         incmatch = matchfn(inckinds, '(?:/|$)')
