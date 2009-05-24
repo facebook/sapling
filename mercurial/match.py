@@ -65,7 +65,7 @@ def _patsplit(pat, default):
 
 _globchars = set('[{*?')
 
-def _globre(pat, head='^', tail='$'):
+def _globre(pat, head, tail):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
     res = ''
