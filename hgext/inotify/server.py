@@ -250,36 +250,48 @@ class repowatcher(object):
             return 'i'
         return type_
 
-    def updatestatus(self, wfn, osstat=None, newstatus=None):
+    def updatefile(self, wfn, osstat):
+        '''
+        update the file entry of an existing file.
+
+        osstat: (mode, size, time) tuple, as returned by os.lstat(wfn)
+        '''
+
+        self._updatestatus(wfn, self.filestatus(wfn, osstat))
+
+    def deletefile(self, wfn, oldstatus):
+        '''
+        update the entry of a file which has been deleted.
+
+        oldstatus: char in statuskeys, status of the file before deletion
+        '''
+        if oldstatus == 'r':
+            newstatus = 'r'
+        elif oldstatus in 'almn':
+            newstatus = '!'
+        else:
+            newstatus = None
+
+        self.statcache.pop(wfn, None)
+        self._updatestatus(wfn, newstatus)
+
+    def _updatestatus(self, wfn, newstatus):
         '''
         Update the stored status of a file or directory.
 
-        osstat: (mode, size, time) tuple, as returned by os.lstat(wfn)
-
-        newstatus: char in statuskeys, new status to apply.
+        newstatus: - char in (statuskeys + 'ni'), new status to apply.
+                   - or None, to stop tracking wfn
         '''
-        if osstat:
-            newstatus = self.filestatus(wfn, osstat)
-        else:
-            self.statcache.pop(wfn, None)
         root, fn = self.split(wfn)
         d = self.dir(self.tree, root)
+
         oldstatus = d.get(fn)
-        isdir = False
-        if oldstatus:
-            try:
-                if not newstatus:
-                    if oldstatus in 'almn':
-                        newstatus = '!'
-                    elif oldstatus == 'r':
-                        newstatus = 'r'
-            except TypeError:
-                # oldstatus may be a dict left behind by a deleted
-                # directory
-                isdir = True
-            else:
-                if oldstatus in self.statuskeys and oldstatus != newstatus:
-                    del self.dir(self.statustrees[oldstatus], root)[fn]
+        # oldstatus can be either:
+        # - None : fn is new
+        # - a char in statuskeys: fn is a (tracked) file
+        # - a dict: fn is a directory
+        isdir = isinstance(oldstatus, dict)
+
         if self.ui.debugflag and oldstatus != newstatus:
             if isdir:
                 self.ui.note(_('status: %r dir(%d) -> %s\n') %
@@ -288,6 +300,9 @@ class repowatcher(object):
                 self.ui.note(_('status: %r %s -> %s\n') %
                              (wfn, oldstatus, newstatus))
         if not isdir:
+            if oldstatus and oldstatus in self.statuskeys \
+                and oldstatus != newstatus:
+                del self.dir(self.statustrees[oldstatus], root)[fn]
             if newstatus and newstatus != 'i':
                 d[fn] = newstatus
                 if newstatus in self.statuskeys:
@@ -299,7 +314,7 @@ class repowatcher(object):
         elif not newstatus:
             # a directory is being removed, check its contents
             for subfile, b in oldstatus.copy().iteritems():
-                self.updatestatus(wfn + '/' + subfile, None)
+                self._updatestatus(wfn + '/' + subfile, None)
 
 
     def check_deleted(self, key):
@@ -325,7 +340,7 @@ class repowatcher(object):
             d = self.dir(self.tree, wroot)
             for fn in files:
                 wfn = join(wroot, fn)
-                self.updatestatus(wfn, self.getstat(wfn))
+                self.updatefile(wfn, self.getstat(wfn))
                 ds.pop(wfn, None)
         wtopdir = topdir
         if wtopdir and wtopdir[-1] != '/':
@@ -337,9 +352,9 @@ class repowatcher(object):
                 st = self.stat(wfn)
             except OSError:
                 status = state[0]
-                self.updatestatus(wfn, None, newstatus=status)
+                self.deletefile(wfn, status)
             else:
-                self.updatestatus(wfn, st)
+                self.updatefile(wfn, st)
         self.check_deleted('!')
         self.check_deleted('r')
 
@@ -409,7 +424,7 @@ class repowatcher(object):
         try:
             st = self.stat(wpath)
             if stat.S_ISREG(st[0]):
-                self.updatestatus(wpath, st)
+                self.updatefile(wpath, st)
         except OSError:
             pass
 
@@ -420,7 +435,7 @@ class repowatcher(object):
             st = self.stat(wpath)
             if stat.S_ISREG(st[0]):
                 if self.repo.dirstate[wpath] in 'lmn':
-                    self.updatestatus(wpath, st)
+                    self.updatefile(wpath, st)
         except OSError:
             pass
 
@@ -432,7 +447,7 @@ class repowatcher(object):
                 self.check_dirstate()
             return
 
-        self.updatestatus(wpath, None)
+        self.deletefile(wpath, self.repo.dirstate[wpath])
 
     def schedule_work(self, wpath, evt):
         prev = self.eventq.setdefault(wpath, [])
