@@ -135,7 +135,7 @@ def _regex(kind, name, tail):
         return '.*' + name
     return _globre(name, '', tail)
 
-def _matchfn(pats, tail):
+def _buildmatch(pats, tail):
     """build a matching function from a set of patterns"""
     try:
         pat = '(?:%s)' % '|'.join([_regex(k, p, tail) for (k, p) in pats])
@@ -149,7 +149,7 @@ def _matchfn(pats, tail):
         l = len(pats)
         if l < 2:
             raise
-        a, b = _matchfn(pats[:l//2], tail), matchfn(pats[l//2:], tail)
+        a, b = _buildmatch(pats[:l//2], tail), _buildmatch(pats[l//2:], tail)
         return lambda s: a(s) or b(s)
     except re.error:
         for k, p in pats:
@@ -231,11 +231,11 @@ def _matcher(root, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
         pats = _normalize(names, dflt_pat, root, cwd)
         roots = _roots(pats)
         anypats = anypats or _anypats(pats)
-        patmatch = _matchfn(pats, '$')
+        patmatch = _buildmatch(pats, '$')
     if inc:
-        incmatch = _matchfn(_normalize(inc, 'glob', root, cwd), '(?:/|$)')
+        incmatch = _buildmatch(_normalize(inc, 'glob', root, cwd), '(?:/|$)')
     if exc:
-        excmatch = _matchfn(_normalize(exc, 'glob', root, cwd), '(?:/|$)')
+        excmatch = _buildmatch(_normalize(exc, 'glob', root, cwd), '(?:/|$)')
 
     if names:
         if inc:
