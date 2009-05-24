@@ -125,11 +125,14 @@ def _globre(pat):
     i, n = 0, len(pat)
     res = ''
     group = 0
+    escape = re.escape
     def peek(): return i < n and pat[i]
     while i < n:
         c = pat[i]
         i = i+1
-        if c == '*':
+        if c not in '*?[{},\\':
+            res += escape(c)
+        elif c == '*':
             if peek() == '*':
                 i += 1
                 res += '.*'
@@ -165,11 +168,11 @@ def _globre(pat):
             p = peek()
             if p:
                 i += 1
-                res += re.escape(p)
+                res += escape(p)
             else:
-                res += re.escape(c)
+                res += escape(c)
         else:
-            res += re.escape(c)
+            res += escape(c)
     return res
 
 def _regex(kind, name, tail):
