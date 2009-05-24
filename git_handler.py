@@ -247,8 +247,11 @@ class GitHandler(object):
         if 'committer' in extra:
             # fixup timezone
             (name_timestamp, timezone) = extra['committer'].rsplit(' ', 1)
-            timezone = format_timezone(-int(timezone))
-            commit['committer'] = '%s %s' % (name_timestamp, timezone)
+            try:
+                timezone = format_timezone(-int(timezone))
+                commit['committer'] = '%s %s' % (name_timestamp, timezone)
+            except ValueError:
+                self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%s: '%s'.\n") % (rev, timezone))
         if 'encoding' in extra:
             commit['encoding'] = extra['encoding']
 
