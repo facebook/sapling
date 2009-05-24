@@ -7,35 +7,7 @@
 
 import util, re
 
-class _match(object):
-    def __init__(self, root, cwd, files, mf, ap):
-        self._root = root
-        self._cwd = cwd
-        self._files = files
-        self._fmap = set(files)
-        self.matchfn = mf
-        self._anypats = ap
-    def __call__(self, fn):
-        return self.matchfn(fn)
-    def __iter__(self):
-        for f in self._files:
-            yield f
-    def bad(self, f, msg):
-        return True
-    def dir(self, f):
-        pass
-    def missing(self, f):
-        pass
-    def exact(self, f):
-        return f in self._fmap
-    def rel(self, f):
-        return util.pathto(self._root, self._cwd, f)
-    def files(self):
-        return self._files
-    def anypats(self):
-        return self._anypats
-
-class match(_match):
+class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
                  default='glob', exact=False):
         """build an object to match a set of file patterns
@@ -55,24 +27,26 @@ class match(_match):
         'path:<path>' - a path relative to canonroot
         'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
         'relpath:<path>' - a path relative to cwd
-        'relre:<regexp>' - a regexp that doesn't have to match the start of a name
-        '<something>' - one of the cases above, selected by the dflt_pat argument
+        'relre:<regexp>' - a regexp that needn't match the start of a name
+        '<something>' - a pattern of the specified default type
         """
 
-        roots = []
-        anypats = bool(include or exclude)
+        self._root = root
+        self._cwd = cwd
+        self._files = []
+        self._anypats = bool(include or exclude)
 
         if include:
             im = _buildmatch(_normalize(include, 'glob', root, cwd), '(?:/|$)')
         if exclude:
             em = _buildmatch(_normalize(exclude, 'glob', root, cwd), '(?:/|$)')
         if exact:
-            roots = patterns
+            self._files = patterns
             pm = self.exact
         elif patterns:
             pats = _normalize(patterns, default, root, cwd)
-            roots = _roots(pats)
-            anypats = anypats or _anypats(pats)
+            self._files = _roots(pats)
+            self._anypats = self._anypats or _anypats(pats)
             pm = _buildmatch(pats, '$')
 
         if patterns or exact:
@@ -98,7 +72,28 @@ class match(_match):
                 else:
                     m = lambda f: True
 
-        _match.__init__(self, root, cwd, roots, m, anypats)
+        self.matchfn = m
+        self._fmap = set(self._files)
+
+    def __call__(self, fn):
+        return self.matchfn(fn)
+    def __iter__(self):
+        for f in self._files:
+            yield f
+    def bad(self, f, msg):
+        return True
+    def dir(self, f):
+        pass
+    def missing(self, f):
+        pass
+    def exact(self, f):
+        return f in self._fmap
+    def rel(self, f):
+        return util.pathto(self._root, self._cwd, f)
+    def files(self):
+        return self._files
+    def anypats(self):
+        return self._anypats
 
 class exact(match):
     def __init__(self, root, cwd, files):
