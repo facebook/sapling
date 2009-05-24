@@ -59,8 +59,10 @@ def patkind(pat):
 def _patsplit(pat, default):
     """Split a string into an optional pattern kind prefix and the
     actual pattern."""
-    for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
-        if pat.startswith(prefix + ':'): return pat.split(':', 1)
+    if ':' in pat:
+        pat, val = pat.split(':', 1)
+        if pat in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre'):
+            return pat, val
     return default, pat
 
 def _globre(pat, head, tail):
