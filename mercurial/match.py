@@ -120,7 +120,7 @@ def _patsplit(pat, default):
             return pat, val
     return default, pat
 
-def _globre(pat, head, tail):
+def _globre(pat):
     "convert a glob pattern into a regexp"
     i, n = 0, len(pat)
     res = ''
@@ -170,7 +170,7 @@ def _globre(pat, head, tail):
                 res += re.escape(c)
         else:
             res += re.escape(c)
-    return head + res + tail
+    return res
 
 def _regex(kind, name, tail):
     '''convert a pattern into a regular expression'''
@@ -181,14 +181,14 @@ def _regex(kind, name, tail):
     elif kind == 'path':
         return '^' + re.escape(name) + '(?:/|$)'
     elif kind == 'relglob':
-        return _globre(name, '(?:|.*/)', tail)
+        return '(?:|.*/)' + _globre(name) + tail
     elif kind == 'relpath':
         return re.escape(name) + '(?:/|$)'
     elif kind == 'relre':
         if name.startswith('^'):
             return name
         return '.*' + name
-    return _globre(name, '', tail)
+    return _globre(name) + tail
 
 def _buildmatch(pats, tail):
     """build a matching function from a set of patterns"""
