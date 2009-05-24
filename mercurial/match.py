@@ -222,22 +222,18 @@ def _matcher(root, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
     - a bool indicating if any patterns were passed in
     """
 
-    # a common case: no patterns at all
-    if not names and not inc and not exc:
-        return [], lambda f: True, False
-
-    pats = _normalizepats(names, dflt_pat, root, cwd)
-    roots = _roots(pats)
-    anypats = _anypats(pats)
+    roots = []
+    anypats = bool(inc or exc)
 
     if names:
+        pats = _normalizepats(names, dflt_pat, root, cwd)
+        roots = _roots(pats)
+        anypats = anypats or _anypats(pats)
         patmatch = _matchfn(pats, '$')
     if inc:
-        inckinds = _normalizepats(inc, 'glob', root, cwd)
-        incmatch = _matchfn(inckinds, '(?:/|$)')
+        incmatch = _matchfn(_normalizepats(inc, 'glob', root, cwd), '(?:/|$)')
     if exc:
-        exckinds = _normalizepats(exc, 'glob', root, cwd)
-        excmatch = _matchfn(exckinds, '(?:/|$)')
+        excmatch = _matchfn(_normalizepats(exc, 'glob', root, cwd), '(?:/|$)')
 
     if names:
         if inc:
@@ -262,4 +258,4 @@ def _matcher(root, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
             else:
                 m = lambda f: True
 
-    return (roots, m, (inc or exc or anypats) and True)
+    return (roots, m, anypats)
