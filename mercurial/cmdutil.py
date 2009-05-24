@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _
-import os, sys, bisect, stat, errno, re
+import os, sys, bisect, stat, errno, re, glob
 import mdiff, bdiff, util, templater, patch, error, encoding
 import match as _match
 
@@ -235,9 +235,23 @@ def make_file(repo, pat, node=None,
                               pathname),
                 mode)
 
+def expandpats(pats):
+    if not util.expandglobs:
+        return list(pats)
+    ret = []
+    for p in pats:
+        kind, name = _match._patsplit(p, None)
+        if kind is None:
+            globbed = glob.glob(name)
+            if globbed:
+                ret.extend(globbed)
+                continue
+        ret.append(p)
+    return ret
+
 def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
     if not globbed and default == 'relpath':
-        pats = util.expand_glob(pats or [])
+        pats = expandpats(pats or [])
     m = _match.match(repo.root, repo.getcwd(), pats,
                     opts.get('include'), opts.get('exclude'), default)
     def badfn(f, msg):
@@ -487,7 +501,7 @@ def copy(ui, repo, pats, opts, rename=False):
         return res
 
 
-    pats = util.expand_glob(pats)
+    pats = expandpats(pats)
     if not pats:
         raise util.Abort(_('no source or destination specified'))
     if len(pats) == 1:

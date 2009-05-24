@@ -13,6 +13,7 @@ posixfile = file
 nulldev = '/dev/null'
 normpath = os.path.normpath
 samestat = os.path.samestat
+expandglobs = False
 
 umask = os.umask(0)
 os.umask(umask)

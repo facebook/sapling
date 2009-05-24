@@ -280,3 +280,5 @@ try:
     from win32 import *
 except ImportError:
     pass
+
+expandglobs = True

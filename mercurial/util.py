@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil
 import cStringIO, errno, re, shutil, sys, tempfile, traceback
-import os, stat, time, calendar, glob, random
+import os, stat, time, calendar, random
 import imp
 
 # Python compatibility
@@ -540,19 +540,6 @@ def lookup_reg(key, name=None, scope=None):
 
 if os.name == 'nt':
     from windows import *
-    def expand_glob(pats):
-        '''On Windows, expand the implicit globs in a list of patterns'''
-        ret = []
-        for p in pats:
-            kind, name = _patsplit(p, None)
-            if kind is None:
-                globbed = glob.glob(name)
-                if globbed:
-                    ret.extend(globbed)
-                    continue
-                # if we couldn't expand the glob, just keep it around
-            ret.append(p)
-        return ret
 else:
     from posix import *
 
