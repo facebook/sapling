@@ -117,11 +117,90 @@ def _globre(pat, head, tail):
             res += re.escape(c)
     return head + res + tail
 
-def _matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
+def _regex(kind, name, tail):
+    '''convert a pattern into a regular expression'''
+    if not name:
+        return ''
+    if kind == 're':
+        return name
+    elif kind == 'path':
+        return '^' + re.escape(name) + '(?:/|$)'
+    elif kind == 'relglob':
+        return _globre(name, '(?:|.*/)', tail)
+    elif kind == 'relpath':
+        return re.escape(name) + '(?:/|$)'
+    elif kind == 'relre':
+        if name.startswith('^'):
+            return name
+        return '.*' + name
+    return _globre(name, '', tail)
+
+def _matchfn(pats, tail):
+    """build a matching function from a set of patterns"""
+    try:
+        pat = '(?:%s)' % '|'.join([_regex(k, p, tail) for (k, p) in pats])
+        if len(pat) > 20000:
+            raise OverflowError()
+        return re.compile(pat).match
+    except OverflowError:
+        # We're using a Python with a tiny regex engine and we
+        # made it explode, so we'll divide the pattern list in two
+        # until it works
+        l = len(pats)
+        if l < 2:
+            raise
+        a, b = _matchfn(pats[:l//2], tail), matchfn(pats[l//2:], tail)
+        return lambda s: a(s) or b(s)
+    except re.error:
+        for k, p in pats:
+            try:
+                re.compile('(?:%s)' % _regex(k, p, tail))
+            except re.error:
+                raise util.Abort("invalid pattern (%s): %s" % (k, p))
+        raise util.Abort("invalid pattern")
+
+def _containsglob(name):
+    for c in name:
+        if c in _globchars: return True
+    return False
+
+def _globprefix(pat):
+    '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
+    root = []
+    for p in pat.split('/'):
+        if _containsglob(p): break
+        root.append(p)
+    return '/'.join(root) or '.'
+
+def _normalizepats(names, default, canonroot, cwd):
+    pats = []
+    roots = []
+    anypats = False
+    for kind, name in [_patsplit(p, default) for p in names]:
+        if kind in ('glob', 'relpath'):
+            name = util.canonpath(canonroot, cwd, name)
+        elif kind in ('relglob', 'path'):
+            name = util.normpath(name)
+
+        pats.append((kind, name))
+
+        if kind in ('glob', 're', 'relglob', 'relre'):
+            anypats = True
+
+        if kind == 'glob':
+            root = _globprefix(name)
+            roots.append(root)
+        elif kind in ('relpath', 'path'):
+            roots.append(name or '.')
+        elif kind == 'relglob':
+            roots.append('.')
+    return roots, pats, anypats
+
+def _matcher(root, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
     """build a function to match a set of file patterns
 
     arguments:
-    canonroot - the canonical root of the tree you're matching against
+    root - the canonical root of the tree you're matching against
     cwd - the current working directory, if relevant
     names - patterns to find
     inc - patterns to include
@@ -150,95 +229,16 @@ def _matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
     if not names and not inc and not exc:
         return [], lambda f: True, False
 
-    def contains_glob(name):
-        for c in name:
-            if c in _globchars: return True
-        return False
-
-    def regex(kind, name, tail):
-        '''convert a pattern into a regular expression'''
-        if not name:
-            return ''
-        if kind == 're':
-            return name
-        elif kind == 'path':
-            return '^' + re.escape(name) + '(?:/|$)'
-        elif kind == 'relglob':
-            return _globre(name, '(?:|.*/)', tail)
-        elif kind == 'relpath':
-            return re.escape(name) + '(?:/|$)'
-        elif kind == 'relre':
-            if name.startswith('^'):
-                return name
-            return '.*' + name
-        return _globre(name, '', tail)
-
-    def matchfn(pats, tail):
-        """build a matching function from a set of patterns"""
-        try:
-            pat = '(?:%s)' % '|'.join([regex(k, p, tail) for (k, p) in pats])
-            if len(pat) > 20000:
-                raise OverflowError()
-            return re.compile(pat).match
-        except OverflowError:
-            # We're using a Python with a tiny regex engine and we
-            # made it explode, so we'll divide the pattern list in two
-            # until it works
-            l = len(pats)
-            if l < 2:
-                raise
-            a, b = matchfn(pats[:l//2], tail), matchfn(pats[l//2:], tail)
-            return lambda s: a(s) or b(s)
-        except re.error:
-            for k, p in pats:
-                try:
-                    re.compile('(?:%s)' % regex(k, p, tail))
-                except re.error:
-                    raise util.Abort("invalid pattern (%s): %s" % (k, p))
-            raise util.Abort("invalid pattern")
-
-    def globprefix(pat):
-        '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
-        root = []
-        for p in pat.split('/'):
-            if contains_glob(p): break
-            root.append(p)
-        return '/'.join(root) or '.'
-
-    def normalizepats(names, default):
-        pats = []
-        roots = []
-        anypats = False
-        for kind, name in [_patsplit(p, default) for p in names]:
-            if kind in ('glob', 'relpath'):
-                name = util.canonpath(canonroot, cwd, name)
-            elif kind in ('relglob', 'path'):
-                name = util.normpath(name)
-
-            pats.append((kind, name))
-
-            if kind in ('glob', 're', 'relglob', 'relre'):
-                anypats = True
-
-            if kind == 'glob':
-                root = globprefix(name)
-                roots.append(root)
-            elif kind in ('relpath', 'path'):
-                roots.append(name or '.')
-            elif kind == 'relglob':
-                roots.append('.')
-        return roots, pats, anypats
-
-    roots, pats, anypats = normalizepats(names, dflt_pat)
+    roots, pats, anypats = _normalizepats(names, dflt_pat, root, cwd)
 
     if names:
-        patmatch = matchfn(pats, '$')
+        patmatch = _matchfn(pats, '$')
     if inc:
-        dummy, inckinds, dummy = normalizepats(inc, 'glob')
-        incmatch = matchfn(inckinds, '(?:/|$)')
+        dummy, inckinds, dummy = _normalizepats(inc, 'glob', root, cwd)
+        incmatch = _matchfn(inckinds, '(?:/|$)')
     if exc:
-        dummy, exckinds, dummy = normalizepats(exc, 'glob')
-        excmatch = matchfn(exckinds, '(?:/|$)')
+        dummy, exckinds, dummy = _normalizepats(exc, 'glob', root, cwd)
+        excmatch = _matchfn(exckinds, '(?:/|$)')
 
     if names:
         if inc:
