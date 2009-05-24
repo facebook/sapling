@@ -53,3 +53,7 @@ class match(_match):
         f, mf, ap = util.matcher(root, cwd, patterns, include, exclude,
                                  default)
         _match.__init__(self, root, cwd, f, mf, ap)
+
+def patkind(pat):
+    return util._patsplit(pat, None)[0]
+

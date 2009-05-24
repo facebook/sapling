@@ -207,12 +207,12 @@ Abort = error.Abort
 def always(fn): return True
 def never(fn): return False
 
-def patkind(name, default):
+def _patsplit(pat, default):
     """Split a string into an optional pattern kind prefix and the
     actual pattern."""
     for prefix in 're', 'glob', 'path', 'relglob', 'relpath', 'relre':
-        if name.startswith(prefix + ':'): return name.split(':', 1)
-    return default, name
+        if pat.startswith(prefix + ':'): return pat.split(':', 1)
+    return default, pat
 
 def globre(pat, head='^', tail='$'):
     "convert a glob pattern into a regexp"
@@ -436,7 +436,7 @@ def matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
         pats = []
         roots = []
         anypats = False
-        for kind, name in [patkind(p, default) for p in names]:
+        for kind, name in [_patsplit(p, default) for p in names]:
             if kind in ('glob', 'relpath'):
                 name = canonpath(canonroot, cwd, name)
             elif kind in ('relglob', 'path'):
@@ -739,7 +739,7 @@ if os.name == 'nt':
         '''On Windows, expand the implicit globs in a list of patterns'''
         ret = []
         for p in pats:
-            kind, name = patkind(p, None)
+            kind, name = _patsplit(p, None)
             if kind is None:
                 globbed = glob.glob(name)
                 if globbed:
