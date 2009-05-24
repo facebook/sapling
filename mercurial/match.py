@@ -35,18 +35,6 @@ class _match(object):
     def anypats(self):
         return self._anypats
 
-class always(_match):
-    def __init__(self, root, cwd):
-        _match.__init__(self, root, cwd, [], lambda f: True, False)
-
-class never(_match):
-    def __init__(self, root, cwd):
-        _match.__init__(self, root, cwd, [], lambda f: False, False)
-
-class exact(_match):
-    def __init__(self, root, cwd, files):
-        _match.__init__(self, root, cwd, files, self.exact, False)
-
 class match(_match):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
                  default='glob'):
@@ -107,6 +95,18 @@ class match(_match):
                     m = lambda f: True
 
         _match.__init__(self, root, cwd, roots, m, anypats)
+
+class exact(_match):
+    def __init__(self, root, cwd, files):
+        _match.__init__(self, root, cwd, files, self.exact, False)
+
+class always(match):
+    def __init__(self, root, cwd):
+        match.__init__(self, root, cwd, [])
+
+class never(exact):
+    def __init__(self, root, cwd):
+        exact.__init__(self, root, cwd, [])
 
 def patkind(pat):
     return _patsplit(pat, None)[0]
