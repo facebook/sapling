@@ -15,7 +15,7 @@ echo '% [defaults]'
 hg cat a
 cat >> $HGRCPATH <<EOF
 [defaults]
-cat = -v
+cat = -r null
 EOF
 hg cat a
 
