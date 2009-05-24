@@ -217,15 +217,6 @@ def _buildmatch(pats, tail):
                 raise util.Abort("invalid pattern (%s): %s" % (k, p))
         raise util.Abort("invalid pattern")
 
-def _globprefix(pat):
-    '''return the non-glob prefix of a path, e.g. foo/* -> foo'''
-    root = []
-    for p in pat.split('/'):
-        if '[' in p or '{' in p or '*' in p or '?' in p:
-            break
-        root.append(p)
-    return '/'.join(root) or '.'
-
 def _normalize(names, default, root, cwd):
     pats = []
     for kind, name in [_patsplit(p, default) for p in names]:
@@ -240,8 +231,13 @@ def _normalize(names, default, root, cwd):
 def _roots(patterns):
     r = []
     for kind, name in patterns:
-        if kind == 'glob':
-            r.append(_globprefix(name))
+        if kind == 'glob': # find the non-glob prefix
+            root = []
+            for p in name.split('/'):
+                if '[' in p or '{' in p or '*' in p or '?' in p:
+                    break
+                root.append(p)
+            r.append('/'.join(root) or '.')
         elif kind in ('relpath', 'path'):
             r.append(name or '.')
         elif kind == 'relglob':
