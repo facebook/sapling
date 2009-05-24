@@ -13,7 +13,7 @@ ancestors of a specific revision.
 
 For example, if you can refer to a revision as "foo", then:
 
-- foo^N = Nth parent of foo:
+- foo^N = Nth parent of foo
   foo^0 = foo
   foo^1 = first parent of foo
   foo^2 = second parent of foo
