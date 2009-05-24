@@ -192,6 +192,7 @@ filters = {
     "isodatesec": lambda x: util.datestr(x, '%Y-%m-%d %H:%M:%S %1%2'),
     "json": json,
     "jsonescape": jsonescape,
+    "localdate": lambda x: (x[0], util.makedate()[1]),
     "nonempty": nonempty,
     "obfuscate": obfuscate,
     "permissions": permissions,

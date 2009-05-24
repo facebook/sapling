@@ -341,6 +341,7 @@ PYTHONPATH::
     - hgdate: Date. Returns the date as a pair of numbers:
           "1157407993 25200" (Unix timestamp, timezone offset).
     - isodate: Date. Returns the date in ISO 8601 format.
+    - localdate: Date. Converts a date to local date.
     - obfuscate: Any text. Returns the input text rendered as a
           sequence of XML entities.
     - person: Any text. Returns the text before an email address.
