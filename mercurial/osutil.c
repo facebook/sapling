@@ -402,7 +402,7 @@ static PyObject *posixfile(PyObject *self, PyObject *args, PyObject *kwds)
 	PyObject *file_obj = NULL;
 	char *name = NULL;
 	char *mode = "rb";
-	DWORD access;
+	DWORD access = 0;
 	DWORD creation;
 	HANDLE handle;
 	int fd, flags = 0;
