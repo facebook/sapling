@@ -80,12 +80,12 @@ def ignore(root, files, warn):
         return util.never
 
     try:
-        ignorefunc = match.match(root, '', [], allpats, [], 'glob')
+        ignorefunc = match.match(root, '', [], allpats)
     except util.Abort:
         # Re-raise an exception where the src is the right file
         for f, patlist in pats.iteritems():
             try:
-                match.match(root, '', [], patlist, [], 'glob')
+                match.match(root, '', [], patlist)
             except util.Abort, inst:
                 raise util.Abort('%s: %s' % (f, inst[0]))
 

@@ -126,7 +126,7 @@ class kwtemplater(object):
         self.ui = ui
         self.repo = repo
         self.matcher = match.match(repo.root, '', [],
-                                   kwtools['inc'], kwtools['exc'], 'glob')
+                                   kwtools['inc'], kwtools['exc'])
         self.restrict = kwtools['hgcmd'] in restricted.split()
 
         kwmaps = self.ui.configitems('keywordmaps')

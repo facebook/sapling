@@ -48,7 +48,8 @@ class exact(_match):
         _match.__init__(self, root, cwd, files, self.exact, False)
 
 class match(_match):
-    def __init__(self, root, cwd, patterns, include, exclude, default):
+    def __init__(self, root, cwd, patterns, include=[], exclude=[],
+                 default='glob'):
         f, mf, ap = util.matcher(root, cwd, patterns, include, exclude,
                                  default)
         _match.__init__(self, root, cwd, f, mf, ap)

@@ -60,7 +60,7 @@ def buildmatch(ui, repo, user, key):
     ui.debug(_('acl: %s enabled, %d entries for user %s\n') %
              (key, len(pats), user))
     if pats:
-        return match.match(repo.root, '', pats, [], [], 'glob')
+        return match.match(repo.root, '', pats)
     return match.never(repo.root, '')
 
 
