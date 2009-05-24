@@ -37,7 +37,7 @@ class _match(object):
 
 class match(_match):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
-                 default='glob'):
+                 default='glob', exact=False):
         """build an object to match a set of file patterns
 
         arguments:
@@ -47,6 +47,7 @@ class match(_match):
         include - patterns to include
         exclude - patterns to exclude
         default - if a pattern in names has no explicit type, assume this one
+        exact - patterns are actually literals
 
         a pattern is one of:
         'glob:<glob>' - a glob relative to cwd
@@ -61,17 +62,20 @@ class match(_match):
         roots = []
         anypats = bool(include or exclude)
 
-        if patterns:
-            pats = _normalize(patterns, default, root, cwd)
-            roots = _roots(pats)
-            anypats = anypats or _anypats(pats)
-            pm = _buildmatch(pats, '$')
         if include:
             im = _buildmatch(_normalize(include, 'glob', root, cwd), '(?:/|$)')
         if exclude:
             em = _buildmatch(_normalize(exclude, 'glob', root, cwd), '(?:/|$)')
+        if exact:
+            roots = patterns
+            pm = self.exact
+        elif patterns:
+            pats = _normalize(patterns, default, root, cwd)
+            roots = _roots(pats)
+            anypats = anypats or _anypats(pats)
+            pm = _buildmatch(pats, '$')
 
-        if patterns:
+        if patterns or exact:
             if include:
                 if exclude:
                     m = lambda f: im(f) and not em(f) and pm(f)
@@ -96,17 +100,17 @@ class match(_match):
 
         _match.__init__(self, root, cwd, roots, m, anypats)
 
-class exact(_match):
+class exact(match):
     def __init__(self, root, cwd, files):
-        _match.__init__(self, root, cwd, files, self.exact, False)
+        match.__init__(self, root, cwd, files, exact = True)
 
 class always(match):
     def __init__(self, root, cwd):
         match.__init__(self, root, cwd, [])
 
-class never(exact):
+class never(match):
     def __init__(self, root, cwd):
-        exact.__init__(self, root, cwd, [])
+        match.__init__(self, root, cwd, [], exact = True)
 
 def patkind(pat):
     return _patsplit(pat, None)[0]
