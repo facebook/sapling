@@ -25,6 +25,9 @@ class convert_cvs(converter_source):
         self.cmd = ui.config('convert', 'cvsps', 'builtin')
         cvspsexe = self.cmd.split(None, 1)[0]
         self.builtin = cvspsexe == 'builtin'
+        if not self.builtin:
+            ui.warn(_('warning: support for external cvsps is deprecated and '
+                      'will be removed in Mercurial 1.4\n'))
 
         if not self.builtin:
             checktool(cvspsexe)
