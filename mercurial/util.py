@@ -342,7 +342,7 @@ def canonpath(root, cwd, myname):
 
         raise Abort('%s not under root' % myname)
 
-def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None, dflt_pat='glob'):
+def matcher(canonroot, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
     """build a function to match a set of file patterns
 
     arguments:
@@ -352,7 +352,6 @@ def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None, dflt_pat='glo
     inc - patterns to include
     exc - patterns to exclude
     dflt_pat - if a pattern in names has no explicit type, assume this one
-    src - where these patterns came from (e.g. .hgignore)
 
     a pattern is one of:
     'glob:<glob>' - a glob relative to cwd
@@ -422,11 +421,7 @@ def matcher(canonroot, cwd='', names=[], inc=[], exc=[], src=None, dflt_pat='glo
                 try:
                     re.compile('(?:%s)' % regex(k, p, tail))
                 except re.error:
-                    if src:
-                        raise Abort("%s: invalid pattern (%s): %s" %
-                                    (src, k, p))
-                    else:
-                        raise Abort("invalid pattern (%s): %s" % (k, p))
+                    raise Abort("invalid pattern (%s): %s" % (k, p))
             raise Abort("invalid pattern")
 
     def globprefix(pat):

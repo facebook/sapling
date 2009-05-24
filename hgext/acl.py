@@ -46,7 +46,7 @@
 #   ** = user6
 
 from mercurial.i18n import _
-from mercurial import util
+from mercurial import util, match
 import getpass
 
 def buildmatch(ui, repo, user, key):
@@ -60,8 +60,9 @@ def buildmatch(ui, repo, user, key):
     ui.debug(_('acl: %s enabled, %d entries for user %s\n') %
              (key, len(pats), user))
     if pats:
-        return util.matcher(repo.root, names=pats)[1]
-    return util.never
+        return match.match(repo.root, '', pats, [], [], 'glob')
+    return match.never(repo.root, '')
+
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if hooktype != 'pretxnchangegroup':

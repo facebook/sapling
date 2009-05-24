@@ -50,5 +50,5 @@ class exact(_match):
 class match(_match):
     def __init__(self, root, cwd, patterns, include, exclude, default):
         f, mf, ap = util.matcher(root, cwd, patterns, include, exclude,
-                                 None, default)
+                                 default)
         _match.__init__(self, root, cwd, f, mf, ap)

@@ -7,7 +7,7 @@
 
 from node import short
 from i18n import _
-import util, simplemerge
+import util, simplemerge, match
 import os, tempfile, re, filecmp
 
 def _toolstr(ui, tool, part, default=""):
@@ -55,7 +55,7 @@ def _picktool(repo, ui, path, binary, symlink):
 
     # then patterns
     for pat, tool in ui.configitems("merge-patterns"):
-        mf = util.matcher(repo.root, "", [pat], [], [])[1]
+        mf = match.match(repo.root, '', [pat], [], [], 'glob')
         if mf(path) and check(tool, pat, symlink, False):
                 toolpath = _findtool(ui, tool)
                 return (tool, '"' + toolpath + '"')

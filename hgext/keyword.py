@@ -81,7 +81,7 @@ like CVS' $Log$, are not supported. A keyword template map
 '''
 
 from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
-from mercurial import patch, localrepo, templater, templatefilters, util
+from mercurial import patch, localrepo, templater, templatefilters, util, match
 from mercurial.hgweb import webcommands
 from mercurial.lock import release
 from mercurial.node import nullid, hex
@@ -125,8 +125,8 @@ class kwtemplater(object):
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
-        self.matcher = util.matcher(repo.root,
-                                    inc=kwtools['inc'], exc=kwtools['exc'])[1]
+        self.matcher = match.match(repo.root, '', [],
+                                   kwtools['inc'], kwtools['exc'], 'glob')
         self.restrict = kwtools['hgcmd'] in restricted.split()
 
         kwmaps = self.ui.configitems('keywordmaps')

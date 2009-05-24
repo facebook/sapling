@@ -6,7 +6,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import util
+import util, match
 import re
 
 _commentre = None
@@ -80,12 +80,13 @@ def ignore(root, files, warn):
         return util.never
 
     try:
-        files, ignorefunc, anypats = (
-            util.matcher(root, inc=allpats, src='.hgignore'))
+        ignorefunc = match.match(root, '', [], allpats, [], 'glob')
     except util.Abort:
         # Re-raise an exception where the src is the right file
         for f, patlist in pats.iteritems():
-            files, ignorefunc, anypats = (
-                util.matcher(root, inc=patlist, src=f))
+            try:
+                match.match(root, '', [], patlist, [], 'glob')
+            except util.Abort, inst:
+                raise util.Abort('%s: %s' % (f, inst[0]))
 
     return ignorefunc
