@@ -155,6 +155,7 @@ class mercurial_sink(converter_sink):
             man = self.repo.manifest
             mnode = self.repo.changelog.read(bin(p2))[0]
             if not man.cmp(m1node, man.revision(mnode)):
+                self.ui.status(_("filtering out empty revision\n"))
                 self.repo.rollback()
                 return parent
         return p2

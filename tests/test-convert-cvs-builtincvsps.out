@@ -42,6 +42,7 @@ sorting...
 converting...
 2 Initial revision
 1 import
+filtering out empty revision
 rolling back last transaction
 0 ci0
 updating tags
