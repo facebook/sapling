@@ -168,8 +168,6 @@ def _globprefix(pat):
 
 def _normalizepats(names, default, canonroot, cwd):
     pats = []
-    roots = []
-    anypats = False
     for kind, name in [_patsplit(p, default) for p in names]:
         if kind in ('glob', 'relpath'):
             name = util.canonpath(canonroot, cwd, name)
@@ -177,18 +175,23 @@ def _normalizepats(names, default, canonroot, cwd):
             name = util.normpath(name)
 
         pats.append((kind, name))
+    return pats
 
-        if kind in ('glob', 're', 'relglob', 'relre'):
-            anypats = True
-
+def _roots(patterns):
+    r = []
+    for kind, name in patterns:
         if kind == 'glob':
-            root = _globprefix(name)
-            roots.append(root)
+            r.append(_globprefix(name))
         elif kind in ('relpath', 'path'):
-            roots.append(name or '.')
+            r.append(name or '.')
         elif kind == 'relglob':
-            roots.append('.')
-    return roots, pats, anypats
+            r.append('.')
+    return r
+
+def _anypats(patterns):
+    for kind, name in patterns:
+        if kind in ('glob', 're', 'relglob', 'relre'):
+            return True
 
 def _matcher(root, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
     """build a function to match a set of file patterns
@@ -223,15 +226,17 @@ def _matcher(root, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
     if not names and not inc and not exc:
         return [], lambda f: True, False
 
-    roots, pats, anypats = _normalizepats(names, dflt_pat, root, cwd)
+    pats = _normalizepats(names, dflt_pat, root, cwd)
+    roots = _roots(pats)
+    anypats = _anypats(pats)
 
     if names:
         patmatch = _matchfn(pats, '$')
     if inc:
-        dummy, inckinds, dummy = _normalizepats(inc, 'glob', root, cwd)
+        inckinds = _normalizepats(inc, 'glob', root, cwd)
         incmatch = _matchfn(inckinds, '(?:/|$)')
     if exc:
-        dummy, exckinds, dummy = _normalizepats(exc, 'glob', root, cwd)
+        exckinds = _normalizepats(exc, 'glob', root, cwd)
         excmatch = _matchfn(exckinds, '(?:/|$)')
 
     if names:
