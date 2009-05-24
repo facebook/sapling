@@ -166,11 +166,11 @@ def _globprefix(pat):
         root.append(p)
     return '/'.join(root) or '.'
 
-def _normalizepats(names, default, canonroot, cwd):
+def _normalize(names, default, root, cwd):
     pats = []
     for kind, name in [_patsplit(p, default) for p in names]:
         if kind in ('glob', 'relpath'):
-            name = util.canonpath(canonroot, cwd, name)
+            name = util.canonpath(root, cwd, name)
         elif kind in ('relglob', 'path'):
             name = util.normpath(name)
 
@@ -226,14 +226,14 @@ def _matcher(root, cwd='', names=[], inc=[], exc=[], dflt_pat='glob'):
     anypats = bool(inc or exc)
 
     if names:
-        pats = _normalizepats(names, dflt_pat, root, cwd)
+        pats = _normalize(names, dflt_pat, root, cwd)
         roots = _roots(pats)
         anypats = anypats or _anypats(pats)
         patmatch = _matchfn(pats, '$')
     if inc:
-        incmatch = _matchfn(_normalizepats(inc, 'glob', root, cwd), '(?:/|$)')
+        incmatch = _matchfn(_normalize(inc, 'glob', root, cwd), '(?:/|$)')
     if exc:
-        excmatch = _matchfn(_normalizepats(exc, 'glob', root, cwd), '(?:/|$)')
+        excmatch = _matchfn(_normalize(exc, 'glob', root, cwd), '(?:/|$)')
 
     if names:
         if inc:
