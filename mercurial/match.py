@@ -114,9 +114,9 @@ def _patsplit(pat, default):
     """Split a string into an optional pattern kind prefix and the
     actual pattern."""
     if ':' in pat:
-        pat, val = pat.split(':', 1)
-        if pat in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre'):
-            return pat, val
+        kind, val = pat.split(':', 1)
+        if kind in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre'):
+            return kind, val
     return default, pat
 
 def _globre(pat):
