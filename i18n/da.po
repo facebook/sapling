@@ -6384,7 +6384,7 @@ msgid "skip testing changeset"
 msgstr ""
 
 msgid "use command to check changeset state"
-msgstr "brug kommando for at tjekke tilstanden af ændringen"
+msgstr "brug kommando for at kontrollere tilstanden af ændringen"
 
 msgid "do not update to target"
 msgstr "undlad at opdatere til målet"
@@ -8685,7 +8685,7 @@ msgstr "ukendt forælder 2 %s til %s"
 
 #, python-format
 msgid "checking parents of %s"
-msgstr "tjekkre forældrene til %s"
+msgstr "kontrollerer forældre til %s"
 
 #, python-format
 msgid "duplicate revision %d (%d)"
@@ -8696,7 +8696,7 @@ msgid "repository uses revlog format %d\n"
 msgstr "arkivet bruger revlog format %d\n"
 
 msgid "checking changesets\n"
-msgstr "tjekker ændringer\n"
+msgstr "kontrollerer ændringer\n"
 
 #, python-format
 msgid "unpacking changeset %s"
@@ -8730,7 +8730,7 @@ msgid "in manifest but not in changeset"
 msgstr ""
 
 msgid "checking files\n"
-msgstr "tjekker filer\n"
+msgstr "kontrollerer filer\n"
 
 #, python-format
 msgid "cannot decode filename '%s'"
@@ -8765,7 +8765,7 @@ msgstr ""
 
 #, python-format
 msgid "checking rename of %s"
-msgstr "tjekker omdøbning af %s"
+msgstr "kontrollerer omdøbning af %s"
 
 #, python-format
 msgid "%s in manifests not found"
