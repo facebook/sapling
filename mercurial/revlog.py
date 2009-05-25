@@ -1162,7 +1162,7 @@ class revlog(object):
         revs.insert(0, p)
 
         # build deltas
-        for d in xrange(0, len(revs) - 1):
+        for d in xrange(len(revs) - 1):
             a, b = revs[d], revs[d + 1]
             nb = self.node(b)
 

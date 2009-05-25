@@ -1407,7 +1407,7 @@ class queue:
         series = []
         applied = []
         qpp = None
-        for i in xrange(0, len(lines)):
+        for i in xrange(len(lines)):
             if lines[i] == 'Patch Data:':
                 datastart = i + 1
             elif lines[i].startswith('Dirstate:'):

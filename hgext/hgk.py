@@ -188,7 +188,7 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
             else:
                 i -= chunk
 
-            for x in xrange(0, chunk):
+            for x in xrange(chunk):
                 if i + x >= count:
                     l[chunk - x:] = [0] * (chunk - x)
                     break

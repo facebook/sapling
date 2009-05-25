@@ -116,7 +116,7 @@ def colorstatus(orig, ui, repo, *pats, **opts):
         lines = lines_with_status
 
     # apply color to output and display it
-    for i in xrange(0, len(lines)):
+    for i in xrange(len(lines)):
         status = _status_abbreviations[lines_with_status[i][0]]
         effects = _status_effects[status]
         if effects:

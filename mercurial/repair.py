@@ -36,7 +36,7 @@ def _collectextranodes(repo, files, link):
         extra = []
         startrev = count = len(revlog)
         # find the truncation point of the revlog
-        for i in xrange(0, count):
+        for i in xrange(count):
             lrev = revlog.linkrev(i)
             if lrev >= link:
                 startrev = i + 1
