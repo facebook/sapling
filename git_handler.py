@@ -530,8 +530,9 @@ class GitHandler(object):
                 self.import_git_commit(commit)
             else:
                 self.pseudo_import_git_commit(commit)
-                
-        self.update_hg_bookmarks(remote_name)
+
+        if remote_name:
+            self.update_hg_bookmarks(remote_name)
 
     def update_hg_bookmarks(self, remote_name):
         try:
