@@ -197,7 +197,7 @@ class GitHandler(object):
         return dict(filter(is_local_head, refs.items()))
 
     def export_git_objects(self):
-        self.ui.status(_("exporting git objects\n"))
+        self.ui.status(_("importing Hg objects into Git\n"))
         total = len(self.repo.changelog)
         magnitude = int(math.log(total, 10)) + 1 if total else 1
         for i, rev in enumerate(self.repo.changelog):
