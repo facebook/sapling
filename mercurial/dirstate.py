@@ -75,6 +75,8 @@ class dirstate(object):
             st = self._opener("dirstate").read(40)
             if len(st) == 40:
                 return st[:20], st[20:40]
+            if len(st) < 40:
+                raise util.Abort(_('working directory state appears damaged!'))
         except IOError, err:
             if err.errno != errno.ENOENT: raise
         return [nullid, nullid]
