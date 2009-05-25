@@ -474,6 +474,11 @@ class localrepository(repo.repository):
         n = self.changelog._partialmatch(key)
         if n:
             return n
+
+        # can't find key, check if it might have come from damaged dirstate
+        if key in self.dirstate.parents():
+            raise error.Abort(_("working directory has unknown parent '%s'!")
+                              % short(key))
         try:
             if len(key) == 20:
                 key = hex(key)
