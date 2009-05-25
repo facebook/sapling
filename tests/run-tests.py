@@ -259,13 +259,13 @@ def installhg(options):
         f = open(os.path.join(BINDIR, 'hg'), 'w')
         f.write('#!' + sys.executable + '\n')
         f.write('import sys, os; os.execv(sys.executable, [sys.executable, '
-                '"%s", "-x", "%s"] + sys.argv[1:])\n' %
+                '"%s", "-x", "-p", "%s"] + sys.argv[1:])\n' %
                 (os.path.join(TESTDIR, 'coverage.py'),
                  os.path.join(BINDIR, '_hg.py')))
         f.close()
         os.chmod(os.path.join(BINDIR, 'hg'), 0700)
-        PYTHON = '"%s" "%s" -x' % (sys.executable,
-                                   os.path.join(TESTDIR,'coverage.py'))
+        PYTHON = '"%s" "%s" -x -p' % (sys.executable,
+                                      os.path.join(TESTDIR, 'coverage.py'))
 
 def _hgpath():
     cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
@@ -275,26 +275,29 @@ def _hgpath():
     return path
 
 def outputcoverage(options):
-    vlog("# Producing coverage report")
+
+    vlog('# Producing coverage report')
+    os.chdir(PYTHONDIR)
+
+    def covrun(*args):
+        start = sys.executable, os.path.join(TESTDIR, 'coverage.py')
+        cmd = '"%s" "%s" %s' % (start[0], start[1], ' '.join(args))
+        vlog('# Running: %s' % cmd)
+        os.system(cmd)
+
     omit = [BINDIR, TESTDIR, PYTHONDIR]
     if not options.cover_stdlib:
         # Exclude as system paths (ignoring empty strings seen on win)
         omit += [x for x in sys.path if x != '']
     omit = ','.join(omit)
-    os.chdir(PYTHONDIR)
-    cmd = '"%s" "%s" -i -r "--omit=%s"' % (
-        sys.executable, os.path.join(TESTDIR, 'coverage.py'), omit)
-    vlog("# Running: "+cmd)
-    os.system(cmd)
+
+    covrun('-c') # combine from parallel processes
+    covrun('-i', '-r', '"--omit=%s"' % omit) # report
     if options.annotate:
         adir = os.path.join(TESTDIR, 'annotated')
         if not os.path.isdir(adir):
             os.mkdir(adir)
-        cmd = '"%s" "%s" -i -a "--directory=%s" "--omit=%s"' % (
-            sys.executable, os.path.join(TESTDIR, 'coverage.py'),
-            adir, omit)
-        vlog("# Running: "+cmd)
-        os.system(cmd)
+        covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
 class Timeout(Exception):
     pass
