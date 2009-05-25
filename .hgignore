@@ -10,3 +10,4 @@ cover
 *.py,cover
 MANIFEST
 dist
+*.egg-info
