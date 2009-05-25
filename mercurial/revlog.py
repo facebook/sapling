@@ -362,8 +362,13 @@ class revlogio(object):
         self.size = struct.calcsize(indexformatng)
 
     def parseindex(self, fp, data, inline):
-        if len(data) == _prereadsize:
+        size = len(data)
+        if size == _prereadsize:
             if util.openhardlinks() and not inline:
+                try:
+                    size = util.fstat(fp).st_size
+                except AttributeError:
+                    size = 0
                 # big index, let's parse it on demand
                 parser = lazyparser(fp, size)
                 index = lazyindex(parser)
