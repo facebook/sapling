@@ -537,7 +537,7 @@ def copy(ui, repo, pats, opts, rename=False):
 
     return errors
 
-def service(opts, parentfn=None, initfn=None, runfn=None):
+def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None):
     '''Run a command as a service.'''
 
     if opts['daemon'] and not opts['daemon_pipefds']:
@@ -581,11 +581,18 @@ def service(opts, parentfn=None, initfn=None, runfn=None):
         os.close(wfd)
         sys.stdout.flush()
         sys.stderr.flush()
-        fd = os.open(util.nulldev, os.O_RDWR)
-        if fd != 0: os.dup2(fd, 0)
-        if fd != 1: os.dup2(fd, 1)
-        if fd != 2: os.dup2(fd, 2)
-        if fd not in (0, 1, 2): os.close(fd)
+
+        nullfd = os.open(util.nulldev, os.O_RDWR)
+        logfilefd = nullfd
+        if logfile:
+            logfilefd = os.open(logfile, os.O_RDWR | os.O_CREAT | os.O_APPEND)
+        os.dup2(nullfd, 0)
+        os.dup2(logfilefd, 1)
+        os.dup2(logfilefd, 2)
+        if nullfd not in (0, 1, 2):
+            os.close(nullfd)
+        if logfile and logfilefd not in (0, 1, 2):
+            os.close(logfilefd)
 
     if runfn:
         return runfn()
