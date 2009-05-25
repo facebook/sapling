@@ -90,9 +90,9 @@ _effect_params = {'none': 0,
                   'cyan_background': 46,
                   'white_background': 47}
 
-def render_effects(text, *effects):
+def render_effects(text, effects):
     'Wrap text in commands to turn on each effect.'
-    start = [str(_effect_params[e]) for e in ('none',) + effects]
+    start = [str(_effect_params[e]) for e in ['none'] + effects]
     start = '\033[' + ';'.join(start) + 'm'
     stop = '\033[' + str(_effect_params['none']) + 'm'
     return ''.join([start, text, stop])
@@ -120,7 +120,7 @@ def colorstatus(orig, ui, repo, *pats, **opts):
         status = _status_abbreviations[lines_with_status[i][0]]
         effects = _status_effects[status]
         if effects:
-            lines[i] = render_effects(lines[i], *effects)
+            lines[i] = render_effects(lines[i], effects)
         ui.write(lines[i] + delimiter)
     return retval
 
@@ -133,14 +133,14 @@ _status_abbreviations = { 'M': 'modified',
                           'C': 'clean',
                           ' ': 'copied', }
 
-_status_effects = { 'modified': ('blue', 'bold'),
-                    'added': ('green', 'bold'),
-                    'removed': ('red', 'bold'),
-                    'deleted': ('cyan', 'bold', 'underline'),
-                    'unknown': ('magenta', 'bold', 'underline'),
-                    'ignored': ('black', 'bold'),
-                    'clean': ('none', ),
-                    'copied': ('none', ), }
+_status_effects = { 'modified': ['blue', 'bold'],
+                    'added': ['green', 'bold'],
+                    'removed': ['red', 'bold'],
+                    'deleted': ['cyan', 'bold', 'underline'],
+                    'unknown': ['magenta', 'bold', 'underline'],
+                    'ignored': ['black', 'bold'],
+                    'clean': ['none'],
+                    'copied': ['none'], }
 
 def colorqseries(orig, ui, repo, *dummy, **opts):
     '''run the qseries command with colored output'''
@@ -162,12 +162,12 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
             effects = _patch_effects['applied']
         else:
             effects = _patch_effects['unapplied']
-        ui.write(render_effects(patch, *effects) + '\n')
+        ui.write(render_effects(patch, effects) + '\n')
     return retval
 
-_patch_effects = { 'applied': ('blue', 'bold', 'underline'),
-                   'missing': ('red', 'bold'),
-                   'unapplied': ('black', 'bold'), }
+_patch_effects = { 'applied': ['blue', 'bold', 'underline'],
+                   'missing': ['red', 'bold'],
+                   'unapplied': ['black', 'bold'], }
 
 def colorwrap(orig, s):
     '''wrap ui.write for colored diff output'''
@@ -179,11 +179,11 @@ def colorwrap(orig, s):
             stripline = line.rstrip()
         for prefix, style in _diff_prefixes:
             if stripline.startswith(prefix):
-                lines[i] = render_effects(stripline, *_diff_effects[style])
+                lines[i] = render_effects(stripline, _diff_effects[style])
                 break
         if line != stripline:
             lines[i] += render_effects(
-                line[len(stripline):], *_diff_effects['trailingwhitespace'])
+                line[len(stripline):], _diff_effects['trailingwhitespace'])
     orig('\n'.join(lines))
 
 def colorshowpatch(orig, self, node):
@@ -214,15 +214,15 @@ _diff_prefixes = [('diff', 'diffline'),
                   ('-', 'deleted'),
                   ('+', 'inserted')]
 
-_diff_effects = {'diffline': ('bold',),
-                 'extended': ('cyan', 'bold'),
-                 'file_a': ('red', 'bold'),
-                 'file_b': ('green', 'bold'),
-                 'hunk': ('magenta',),
-                 'deleted': ('red',),
-                 'inserted': ('green',),
-                 'changed': ('white',),
-                 'trailingwhitespace': ('bold', 'red_background'),}
+_diff_effects = {'diffline': ['bold',],
+                 'extended': ['cyan', 'bold'],
+                 'file_a': ['red', 'bold'],
+                 'file_b': ['green', 'bold'],
+                 'hunk': ['magenta',],
+                 'deleted': ['red',],
+                 'inserted': ['green',],
+                 'changed': ['white',],
+                 'trailingwhitespace': ['bold', 'red_background'],}
 
 def uisetup(ui):
     '''Initialize the extension.'''
