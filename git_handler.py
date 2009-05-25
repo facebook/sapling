@@ -57,6 +57,8 @@ class GitHandler(object):
         else:
             self.gitdir = self.repo.join('git')
 
+        self.importbranch = ui.config('git', 'importbranch')
+
         self.init_if_missing()
         self.load_git()
         self.load_map()
@@ -494,6 +496,9 @@ class GitHandler(object):
 
         if remote_name:
             todo = self.git.remote_refs(remote_name).values()[:]
+        elif self.importbranch:
+            branches = self.importbranch.split(',')
+            todo = [self.git.ref(i.strip()) for i in branches]
         else:
             todo = self.git.heads().values()[:]
 
