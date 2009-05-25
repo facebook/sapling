@@ -62,7 +62,7 @@ diff.changed = white
 diff.trailingwhitespace = bold red_background
 '''
 
-import os, re, sys
+import os, sys
 
 from mercurial import cmdutil, commands, extensions
 from mercurial.i18n import _
@@ -265,6 +265,6 @@ def _setupcmd(ui, cmd, table, func, effectsmap):
     ])
 
     for status in effectsmap:
-        effects = ui.config('color', cmd + '.' + status)
+        effects = ui.configlist('color', cmd + '.' + status)
         if effects:
-            effectsmap[status] = re.split('\W+', effects)
+            effectsmap[status] = effects
