@@ -13,8 +13,8 @@ _b85chars2 = [(a + b) for a in _b85chars for b in _b85chars]
 _b85dec = {}
 
 def _mkb85dec():
-    for i in range(len(_b85chars)):
-        _b85dec[_b85chars[i]] = i
+    for i, c in enumerate(_b85chars):
+        _b85dec[c] = i
 
 def b85encode(text, pad=False):
     """encode text in base85 format"""
@@ -50,9 +50,9 @@ def b85decode(text):
     for i in range(0, len(text), 5):
         chunk = text[i:i+5]
         acc = 0
-        for j in range(len(chunk)):
+        for j, c in enumerate(chunk):
             try:
-                acc = acc * 85 + _b85dec[chunk[j]]
+                acc = acc * 85 + _b85dec[c]
             except KeyError:
                 raise TypeError('Bad base85 character at byte %d' % (i + j))
         if acc > 4294967295:

@@ -307,8 +307,7 @@ class patchfile:
 
     def hashlines(self):
         self.hash = {}
-        for x in xrange(len(self.lines)):
-            s = self.lines[x]
+        for x, s in enumerate(self.lines):
             self.hash.setdefault(s, []).append(x)
 
     def write_rej(self):

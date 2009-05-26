@@ -112,8 +112,8 @@ class patchheader(object):
                     self.message = self.message[2:]
                     break
         ci = 0
-        for mi in xrange(len(self.message)):
-            while self.message[mi] != self.comments[ci]:
+        for mi in self.message:
+            while mi != self.comments[ci]:
                 ci += 1
             del self.comments[ci]
 
@@ -827,8 +827,7 @@ class queue:
 
     def isapplied(self, patch):
         """returns (index, rev, patch)"""
-        for i in xrange(len(self.applied)):
-            a = self.applied[i]
+        for i, a in enumerate(self.applied):
             if a.name == patch:
                 return (i, a.rev, a.name)
         return None
@@ -1407,15 +1406,15 @@ class queue:
         series = []
         applied = []
         qpp = None
-        for i in xrange(len(lines)):
-            if lines[i] == 'Patch Data:':
+        for i, line in enumerate(lines):
+            if line == 'Patch Data:':
                 datastart = i + 1
-            elif lines[i].startswith('Dirstate:'):
-                l = lines[i].rstrip()
+            elif line.startswith('Dirstate:'):
+                l = line.rstrip()
                 l = l[10:].split(' ')
                 qpp = [ bin(x) for x in l ]
             elif datastart != None:
-                l = lines[i].rstrip()
+                l = line.rstrip()
                 se = statusentry(l)
                 file_ = se.name
                 if se.rev:
