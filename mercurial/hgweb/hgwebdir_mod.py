@@ -61,13 +61,6 @@ class hgwebdir(object):
             self.ui.setconfig('ui', 'report_untrusted', 'off')
             self.ui.setconfig('ui', 'interactive', 'off')
 
-        self.motd = self.ui.config('web', 'motd')
-        self.style = self.ui.config('web', 'style', 'paper')
-        self.stripecount = self.ui.config('web', 'stripes', 1)
-        if self.stripecount:
-            self.stripecount = int(self.stripecount)
-        self._baseurl = self.ui.config('web', 'baseurl')
-
         if not isinstance(self.conf, (dict, list, tuple)):
             map = {'paths': 'hgweb-paths'}
             self.ui.readconfig(self.conf, remap=map, trust=True)
@@ -76,6 +69,13 @@ class hgwebdir(object):
             paths = self.conf
         elif isinstance(self.conf, dict):
             paths = self.conf.items()
+
+        self.motd = self.ui.config('web', 'motd')
+        self.style = self.ui.config('web', 'style', 'paper')
+        self.stripecount = self.ui.config('web', 'stripes', 1)
+        if self.stripecount:
+            self.stripecount = int(self.stripecount)
+        self._baseurl = self.ui.config('web', 'baseurl')
 
         self.repos = findrepos(paths)
         for prefix, root in self.ui.configitems('collections'):
