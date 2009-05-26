@@ -125,8 +125,8 @@ class kwtemplater(object):
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
-        self.matcher = match.match(repo.root, '', [],
-                                   kwtools['inc'], kwtools['exc'])
+        self.match = match.match(repo.root, '', [],
+                                 kwtools['inc'], kwtools['exc'])
         self.restrict = kwtools['hgcmd'] in restricted.split()
 
         kwmaps = self.ui.configitems('keywordmaps')
@@ -155,7 +155,7 @@ class kwtemplater(object):
 
     def expand(self, path, node, data):
         '''Returns data with keywords expanded.'''
-        if not self.restrict and self.matcher(path) and not util.binary(data):
+        if not self.restrict and self.match(path) and not util.binary(data):
             ctx = self.repo.filectx(path, fileid=node).changectx()
             return self.substitute(data, path, ctx, self.re_kw.sub)
         return data
@@ -164,7 +164,7 @@ class kwtemplater(object):
         '''Returns true if path matches [keyword] pattern
         and is not a symbolic link.
         Caveat: localrepository._link fails on Windows.'''
-        return self.matcher(path) and not 'l' in flagfunc(path)
+        return self.match(path) and not 'l' in flagfunc(path)
 
     def overwrite(self, node, expand, files):
         '''Overwrites selected files expanding/shrinking keywords.'''
@@ -204,13 +204,13 @@ class kwtemplater(object):
 
     def shrink(self, fname, text):
         '''Returns text with all keyword substitutions removed.'''
-        if self.matcher(fname) and not util.binary(text):
+        if self.match(fname) and not util.binary(text):
             return self.shrinktext(text)
         return text
 
     def shrinklines(self, fname, lines):
         '''Returns lines with keyword substitutions removed.'''
-        if self.matcher(fname):
+        if self.match(fname):
             text = ''.join(lines)
             if not util.binary(text):
                 return self.shrinktext(text).splitlines(True)
@@ -253,8 +253,8 @@ def _status(ui, repo, kwt, unknown, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
-        matcher = cmdutil.match(repo, pats, opts)
-        return repo.status(match=matcher, unknown=unknown, clean=True)
+        match = cmdutil.match(repo, pats, opts)
+        return repo.status(match=match, unknown=unknown, clean=True)
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
@@ -497,14 +497,14 @@ def reposetup(ui, repo):
         '''Monkeypatch patch.diff to avoid expansion except when
         comparing against working dir.'''
         if node2 is not None:
-            kwt.matcher = util.never
+            kwt.match = util.never
         elif node1 is not None and node1 != repo['.'].node():
             kwt.restrict = True
         return orig(repo, node1, node2, match, changes, opts)
 
     def kwweb_skip(orig, web, req, tmpl):
         '''Wraps webcommands.x turning off keyword expansion.'''
-        kwt.matcher = util.never
+        kwt.match = util.never
         return orig(web, req, tmpl)
 
     repo.__class__ = kwrepo
