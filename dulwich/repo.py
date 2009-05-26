@@ -293,7 +293,7 @@ class Repo(object):
         for root, dirs, files in os.walk(r):
             for name in files:
                 if root != r:
-                    name = root[len(r) + 1:] + "/" + name
+                    name = os.path.join(root[len(r) + 1:], name)
                 ret[name] = self._get_ref(os.path.join(r, name))
         return ret
 
