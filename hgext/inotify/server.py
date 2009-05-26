@@ -26,6 +26,12 @@ def join(a, b):
         return a + '/' + b
     return b
 
+def split(path):
+    c = path.rfind('/')
+    if c == -1:
+        return '', path
+    return path[:c], path[c+1:]
+
 walk_ignored_errors = (errno.ENOENT, errno.ENAMETOOLONG)
 
 def walkrepodirs(repo):
@@ -251,12 +257,6 @@ class repowatcher(pollable):
                 return 'd'
         return tree
 
-    def split(self, path):
-        c = path.rfind('/')
-        if c == -1:
-            return '', path
-        return path[:c], path[c+1:]
-
     def filestatus(self, fn, st):
         try:
             type_, mode, size, time = self.repo.dirstate._map[fn][:4]
@@ -307,7 +307,7 @@ class repowatcher(pollable):
         newstatus: - char in (statuskeys + 'ni'), new status to apply.
                    - or None, to stop tracking wfn
         '''
-        root, fn = self.split(wfn)
+        root, fn = split(wfn)
         d = self.dir(self.tree, root)
 
         oldstatus = d.get(fn)
@@ -346,7 +346,7 @@ class repowatcher(pollable):
             if wfn not in self.repo.dirstate:
                 nuke.append(wfn)
         for wfn in nuke:
-            root, fn = self.split(wfn)
+            root, fn = split(wfn)
             del self.dir(self.statustrees[key], root)[fn]
             del self.dir(self.tree, root)[fn]
 
