@@ -214,15 +214,15 @@ _diff_prefixes = [('diff', 'diffline'),
                   ('-', 'deleted'),
                   ('+', 'inserted')]
 
-_diff_effects = {'diffline': ['bold',],
+_diff_effects = {'diffline': ['bold'],
                  'extended': ['cyan', 'bold'],
                  'file_a': ['red', 'bold'],
                  'file_b': ['green', 'bold'],
-                 'hunk': ['magenta',],
-                 'deleted': ['red',],
-                 'inserted': ['green',],
-                 'changed': ['white',],
-                 'trailingwhitespace': ['bold', 'red_background'],}
+                 'hunk': ['magenta'],
+                 'deleted': ['red'],
+                 'inserted': ['green'],
+                 'changed': ['white'],
+                 'trailingwhitespace': ['bold', 'red_background']}
 
 def uisetup(ui):
     '''Initialize the extension.'''
