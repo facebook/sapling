@@ -20,8 +20,7 @@ Use xgettext like normal to extract strings marked as translatable and
 join the message cataloges to get the final catalog.
 """
 
-from mercurial import demandimport; demandimport.enable()
-import sys, inspect
+import os, sys, inspect
 
 
 def escape(s):
@@ -114,5 +113,11 @@ def docstrings(path):
 
 
 if __name__ == "__main__":
+    # It is very important that we import the Mercurial modules from
+    # the source tree where hggettext is executed. Otherwise we might
+    # accidentally import and extract strings from a Mercurial
+    # installation mentioned in PYTHONPATH.
+    sys.path.insert(0, os.getcwd())
+    from mercurial import demandimport; demandimport.enable()
     for path in sys.argv[1:]:
         docstrings(path)
