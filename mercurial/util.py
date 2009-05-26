@@ -512,7 +512,7 @@ class path_auditor(object):
                                 (path, prefix))
         parts.pop()
         prefixes = []
-        for n in range(len(parts)):
+        while parts:
             prefix = os.sep.join(parts)
             if prefix in self.auditeddir:
                 break
