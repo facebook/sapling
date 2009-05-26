@@ -201,6 +201,92 @@ def eventaction(code):
         return wrapper
     return decorator
 
+class directory(object):
+    """
+    Representing a directory
+
+    * path is the relative path from repo root to this directory
+    * files is a dict listing the files in this directory
+        - keys are file names
+        - values are file status
+    * dirs is a dict listing the subdirectories
+        - key are subdirectories names
+        - values are directory objects
+    """
+    def __init__(self, relpath=''):
+        self.path = relpath
+        self.files = {}
+        self.dirs = {}
+
+    def dir(self, relpath):
+        """
+        Returns the directory contained at the relative path relpath.
+        Creates the intermediate directories if necessary.
+        """
+        if not relpath:
+            return self
+        l = relpath.split('/')
+        ret = self
+        while l:
+            next = l.pop(0)
+            try:
+                ret = ret.dirs[next]
+            except KeyError:
+                d = directory(join(ret.path, next))
+                ret.dirs[next] = d
+                ret = d
+        return ret
+
+    def walk(self, states):
+        """
+        yield (filename, status) pairs for items in the trees
+        that have status in states.
+        filenames are relative to the repo root
+        """
+        for file, st in self.files.iteritems():
+            if st in states:
+                yield join(self.path, file), st
+        for dir in self.dirs.itervalues():
+            for e in dir.walk(states):
+                yield e
+
+    def lookup(self, states, path):
+        """
+        yield root-relative filenames that match path, and whose
+        status are in states:
+        * if path is a file, yield path
+        * if path is a directory, yield directory files
+        * if path is not tracked, yield nothing
+        """
+        if path[-1] == '/':
+            path = path[:-1]
+
+        paths = path.split('/')
+
+        # we need to check separately for last node
+        last = paths.pop()
+
+        tree = self
+        try:
+            for dir in paths:
+                tree = tree.dirs[dir]
+        except KeyError:
+            # path is not tracked
+            return
+
+        try:
+            # if path is a directory, walk it
+            for file, st in tree.dirs[last].walk(states):
+                yield file
+        except KeyError:
+            try:
+                if tree.files[last] in states:
+                    # path is a file
+                    yield path
+            except KeyError:
+                # path is not tracked
+                pass
+
 class repowatcher(pollable):
     """
     Watches inotify events
@@ -231,9 +317,9 @@ class repowatcher(pollable):
         self.threshold = watcher.threshold(self.watcher)
         self.fileno = self.watcher.fileno
 
-        self.tree = {}
+        self.tree = directory()
         self.statcache = {}
-        self.statustrees = dict([(s, {}) for s in self.statuskeys])
+        self.statustrees = dict([(s, directory()) for s in self.statuskeys])
 
         self.last_event = None
 
@@ -288,23 +374,6 @@ class repowatcher(pollable):
         self.add_watch(self.repo.path, inotify.IN_DELETE)
         self.check_dirstate()
 
-    def dir(self, tree, path):
-        if path:
-            for name in path.split('/'):
-                tree = tree.setdefault(name, {})
-        return tree
-
-    def lookup(self, path, tree):
-        if path:
-            try:
-                for name in path.split('/'):
-                    tree = tree[name]
-            except KeyError:
-                return 'x'
-            except TypeError:
-                return 'd'
-        return tree
-
     def filestatus(self, fn, st):
         try:
             type_, mode, size, time = self.repo.dirstate._map[fn][:4]
@@ -350,53 +419,47 @@ class repowatcher(pollable):
 
     def _updatestatus(self, wfn, newstatus):
         '''
-        Update the stored status of a file or directory.
+        Update the stored status of a file.
 
         newstatus: - char in (statuskeys + 'ni'), new status to apply.
                    - or None, to stop tracking wfn
         '''
         root, fn = split(wfn)
-        d = self.dir(self.tree, root)
+        d = self.tree.dir(root)
 
-        oldstatus = d.get(fn)
+        oldstatus = d.files.get(fn)
         # oldstatus can be either:
         # - None : fn is new
         # - a char in statuskeys: fn is a (tracked) file
-        # - a dict: fn is a directory
-        isdir = isinstance(oldstatus, dict)
 
         if self.ui.debugflag and oldstatus != newstatus:
-            if isdir:
-                self.ui.note(_('status: %r dir(%d) -> %s\n') %
-                             (wfn, len(oldstatus), newstatus))
-            else:
-                self.ui.note(_('status: %r %s -> %s\n') %
+            self.ui.note(_('status: %r %s -> %s\n') %
                              (wfn, oldstatus, newstatus))
-        if not isdir:
-            if oldstatus and oldstatus in self.statuskeys \
-                and oldstatus != newstatus:
-                del self.dir(self.statustrees[oldstatus], root)[fn]
-            if newstatus and newstatus != 'i':
-                d[fn] = newstatus
-                if newstatus in self.statuskeys:
-                    dd = self.dir(self.statustrees[newstatus], root)
-                    if oldstatus != newstatus or fn not in dd:
-                        dd[fn] = newstatus
-            else:
-                d.pop(fn, None)
+
+        if oldstatus and oldstatus in self.statuskeys \
+            and oldstatus != newstatus:
+            del self.statustrees[oldstatus].dir(root).files[fn]
+        if newstatus and newstatus != 'i':
+            d.files[fn] = newstatus
+            if newstatus in self.statuskeys:
+                dd = self.statustrees[newstatus].dir(root)
+                if oldstatus != newstatus or fn not in dd.files:
+                    dd.files[fn] = newstatus
+        else:
+            d.files.pop(fn, None)
 
 
     def check_deleted(self, key):
         # Files that had been deleted but were present in the dirstate
         # may have vanished from the dirstate; we must clean them up.
         nuke = []
-        for wfn, ignore in self.walk(key, self.statustrees[key]):
+        for wfn, ignore in self.statustrees[key].walk(key):
             if wfn not in self.repo.dirstate:
                 nuke.append(wfn)
         for wfn in nuke:
             root, fn = split(wfn)
-            del self.dir(self.statustrees[key], root)[fn]
-            del self.dir(self.tree, root)[fn]
+            del self.statustrees[key].dir(root).files[fn]
+            del self.tree.dir(root).files[fn]
 
     def scan(self, topdir=''):
         ds = self.repo.dirstate._map.copy()
@@ -437,18 +500,6 @@ class repowatcher(pollable):
         self.handle_timeout()
         self.scan()
         self.ui.note(_('%s end dirstate reload\n') % self.event_time())
-
-    def walk(self, states, tree, prefix=''):
-        # This is the "inner loop" when talking to the client.
-
-        for name, val in tree.iteritems():
-            path = join(prefix, name)
-            try:
-                if val in states:
-                    yield path, val
-            except TypeError:
-                for p in self.walk(states, val, path):
-                    yield p
 
     def update_hgignore(self):
         # An update of the ignore file can potentially change the
@@ -537,9 +588,10 @@ class repowatcher(pollable):
                          (self.event_time(), wpath))
 
         if evt.mask & inotify.IN_ISDIR:
-            tree = self.dir(self.tree, wpath).copy()
-            for wfn, ignore in self.walk('?', tree):
-                self.deletefile(join(wpath, wfn), '?')
+            tree = self.tree.dir(wpath)
+            todelete = [wfn for wfn, ignore in tree.walk('?')]
+            for fn in todelete:
+                self.deletefile(fn, '?')
             self.scan(wpath)
         else:
             self.deleted(wpath)
@@ -669,18 +721,13 @@ class server(pollable):
 
         if not names:
             def genresult(states, tree):
-                for fn, state in self.repowatcher.walk(states, tree):
+                for fn, state in tree.walk(states):
                     yield fn
         else:
             def genresult(states, tree):
                 for fn in names:
-                    l = self.repowatcher.lookup(fn, tree)
-                    try:
-                        if l in states:
-                            yield fn
-                    except TypeError:
-                        for f, s in self.repowatcher.walk(states, l, fn):
-                            yield f
+                    for f in tree.lookup(states, fn):
+                        yield f
 
         return ['\0'.join(r) for r in [
             genresult('l', self.repowatcher.statustrees['l']),
