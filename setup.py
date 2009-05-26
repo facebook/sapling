@@ -100,17 +100,18 @@ except ImportError:
 version = None
 
 if os.path.isdir('.hg'):
-    # execute hg out of this directory with a custom environment which
-    # includes the pure Python modules in mercurial/pure
-    pypath = os.environ.get('PYTHONPATH', '')
-    purepath = os.path.join('mercurial', 'pure')
-    os.environ['PYTHONPATH'] = os.pathsep.join(['mercurial', purepath, pypath])
-    os.environ['HGRCPATH'] = '' # do not read any config file
+    # Execute hg out of this directory with a custom environment which
+    # includes the pure Python modules in mercurial/pure. We also take
+    # care to not use any hgrc files and do no localization.
+    pypath = ['mercurial', os.path.join('mercurial', 'pure')]
+    env = {'PYTHONPATH': os.pathsep.join(pypath),
+           'HGRCPATH': '',
+           'LANGUAGE': 'C'}
     cmd = [sys.executable, 'hg', 'id', '-i', '-t']
 
-    out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE).communicate()
-    os.environ['PYTHONPATH'] = pypath
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, env=env)
+    out, err = p.communicate()
 
     # If root is executing setup.py, but the repository is owned by
     # another user (as in "sudo python setup.py install") we will get
