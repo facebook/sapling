@@ -57,6 +57,8 @@ class GitHandler(object):
         else:
             self.gitdir = self.repo.join('git')
 
+        self.importbranch = ui.config('git', 'importbranch')
+
         self.init_if_missing()
         self.load_git()
         self.load_map()
@@ -195,7 +197,7 @@ class GitHandler(object):
         return dict(filter(is_local_head, refs.items()))
 
     def export_git_objects(self):
-        self.ui.status(_("exporting git objects\n"))
+        self.ui.status(_("importing Hg objects into Git\n"))
         total = len(self.repo.changelog)
         magnitude = int(math.log(total, 10)) + 1 if total else 1
         for i, rev in enumerate(self.repo.changelog):
@@ -247,8 +249,11 @@ class GitHandler(object):
         if 'committer' in extra:
             # fixup timezone
             (name_timestamp, timezone) = extra['committer'].rsplit(' ', 1)
-            timezone = format_timezone(-int(timezone))
-            commit['committer'] = '%s %s' % (name_timestamp, timezone)
+            try:
+                timezone = format_timezone(-int(timezone))
+                commit['committer'] = '%s %s' % (name_timestamp, timezone)
+            except ValueError:
+                self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%s: '%s'.\n") % (rev, timezone))
         if 'encoding' in extra:
             commit['encoding'] = extra['encoding']
 
@@ -491,6 +496,9 @@ class GitHandler(object):
 
         if remote_name:
             todo = self.git.remote_refs(remote_name).values()[:]
+        elif self.importbranch:
+            branches = self.importbranch.split(',')
+            todo = [self.git.ref(i.strip()) for i in branches]
         else:
             todo = self.git.heads().values()[:]
 
@@ -522,8 +530,9 @@ class GitHandler(object):
                 self.import_git_commit(commit)
             else:
                 self.pseudo_import_git_commit(commit)
-                
-        self.update_hg_bookmarks(remote_name)
+
+        if remote_name:
+            self.update_hg_bookmarks(remote_name)
 
     def update_hg_bookmarks(self, remote_name):
         try:
