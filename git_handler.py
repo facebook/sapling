@@ -58,6 +58,7 @@ class GitHandler(object):
             self.gitdir = self.repo.join('git')
 
         self.importbranch = ui.config('git', 'importbranch')
+        self.exportbranch = ui.config('git', 'exportbranch', 'refs/heads/master')
 
         self.init_if_missing()
         self.load_git()
@@ -184,7 +185,7 @@ class GitHandler(object):
             pass
 
         c = self.map_git_get(hex(self.repo.changelog.tip()))
-        self.git.set_ref('refs/heads/master', c)
+        self.git.set_ref(self.exportbranch, c)
 
     # Make sure there's a refs/remotes/remote_name/name
     #           for every refs/heads/name
