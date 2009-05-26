@@ -108,15 +108,15 @@ if os.path.isdir('.hg'):
     os.environ['HGRCPATH'] = '' # do not read any config file
     cmd = [sys.executable, 'hg', 'id', '-i', '-t']
 
-    l, e = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE).communicate()
+    out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE).communicate()
     os.environ['PYTHONPATH'] = pypath
 
-    if e:
+    if err:
         sys.stderr.write('warning: could not establish Mercurial '
-                         'version:\n%s\n' % e)
+                         'version:\n%s\n' % err)
     else:
-        l = l.split()
+        l = out.split()
         while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
             l.pop()
         if l:
