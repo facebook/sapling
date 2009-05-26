@@ -80,7 +80,6 @@ test-%:
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYTHON_FILES)
-	mkdir -p i18n
 	$(PYTHON) i18n/hggettext mercurial/commands.py \
 	  hgext/*.py hgext/*/__init__.py > i18n/hg.pot
         # All strings marked for translation in Mercurial contain
