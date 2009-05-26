@@ -171,8 +171,9 @@ class basicstore:
         self.pathjoiner = pathjoiner
         self.path = path
         self.createmode = _calcmode(path)
-        self.opener = opener(self.path)
-        self.opener.createmode = self.createmode
+        op = opener(self.path)
+        op.createmode = self.createmode
+        self.opener = lambda f, *args, **kw: op(encodedir(f), *args, **kw)
 
     def join(self, f):
         return self.pathjoiner(self.path, encodedir(f))

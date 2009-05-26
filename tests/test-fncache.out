@@ -41,3 +41,41 @@ checking files
 3 files, 3 changesets, 3 total revisions
 3 integrity errors encountered!
 (first damaged changeset appears to be 0)
+% non store repo
+adding tst.d/foo
+.hg:
+00changelog.i
+00manifest.i
+data
+dirstate
+requires
+undo
+undo.branch
+undo.dirstate
+
+.hg/data:
+tst.d.hg
+
+.hg/data/tst.d.hg:
+foo.i
+% non fncache repo
+adding tst.d/Foo
+.hg:
+00changelog.i
+dirstate
+requires
+store
+undo.branch
+undo.dirstate
+
+.hg/store:
+00changelog.i
+00manifest.i
+data
+undo
+
+.hg/store/data:
+tst.d.hg
+
+.hg/store/data/tst.d.hg:
+_foo.i

@@ -48,4 +48,23 @@ echo
 echo "% hg verify"
 hg verify
 
+# try non store repo encoding
+cd ..
+echo % non store repo
+hg --config format.usestore=False init foo
+cd foo
+mkdir tst.d
+echo foo > tst.d/foo
+hg ci -Amfoo
+ls -R .hg
+
+cd ..
+echo % non fncache repo
+hg --config format.usefncache=False init bar
+cd bar
+mkdir tst.d
+echo foo > tst.d/Foo
+hg ci -Amfoo
+ls -R .hg
+
 exit 0
