@@ -112,9 +112,15 @@ if os.path.isdir('.hg'):
                                 stderr=subprocess.PIPE).communicate()
     os.environ['PYTHONPATH'] = pypath
 
+    # If root is executing setup.py, but the repository is owned by
+    # another user (as in "sudo python setup.py install") we will get
+    # trust warnings since the .hg/hgrc file is untrusted. That is
+    # fine, we don't want to load it anyway.
+    err = [e for e in err.splitlines()
+           if not e.startswith('Not trusting file')]
     if err:
         sys.stderr.write('warning: could not establish Mercurial '
-                         'version:\n%s\n' % err)
+                         'version:\n%s\n' % '\n'.join(err))
     else:
         l = out.split()
         while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
