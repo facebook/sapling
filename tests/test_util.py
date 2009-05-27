@@ -114,12 +114,12 @@ class TestBase(unittest.TestCase):
     def repo(self):
         return hg.repository(ui.ui(), self.wc_path)
 
-    def pushrevisions(self, stupid=False):
+    def pushrevisions(self, stupid=False, expected_extra_back=0):
         before = len(self.repo)
         self.repo.ui.setconfig('hgsubversion', 'stupid', str(stupid))
         commands.push(self.repo.ui, self.repo)
         after = len(self.repo)
-        self.assertEqual(0, after - before)
+        self.assertEqual(expected_extra_back, after - before)
 
     def svnls(self, path, rev='HEAD'):
         path = self.repo_path + '/' + path
@@ -135,7 +135,7 @@ class TestBase(unittest.TestCase):
         entries.sort()
         return entries
 
-    def commitchanges(self, changes, parent='tip'):
+    def commitchanges(self, changes, parent='tip', message='automated test'):
         """Commit changes to mercurial directory
 
         'changes' is a sequence of tuples (source, dest, data). It can look
@@ -175,7 +175,7 @@ class TestBase(unittest.TestCase):
 
         ctx = context.memctx(repo,
                              (parentctx.node(), node.nullid),
-                             'automated test',
+                             message,
                              changed + removed,
                              filectxfn,
                              'an_author',
