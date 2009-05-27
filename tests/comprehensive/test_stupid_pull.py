@@ -6,7 +6,7 @@ from mercurial import hg
 from mercurial import ui
 
 from tests import test_util
-import wrappers
+from hgsubversion import wrappers
 
 
 def _do_case(self, name):
