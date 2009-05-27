@@ -11,7 +11,6 @@ GENERAL
 
 MAPPING ISSUES
 ==============
-Created in Git:
 * octopus merge explode/implode
 
 * work in Git on a named branch created in Hg is forward-ported to be named branch commits in Hg and stripped back out if re-exported
@@ -23,6 +22,7 @@ PUSH
 * push with branch names (w/ proper error messages)
 * explain what branch mapping policy determined when updating refs
 * add a warning for a non-fast forward push
+* error nicer if pushing to remote without push access (over git://)
 
 WEBSITE
 ===========
