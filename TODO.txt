@@ -9,17 +9,6 @@ GENERAL
 * .gitignore, etc - try to convert? 
   - (probably not automatically, but perhaps a generator?)
 
-PUSH
-==========
-* push with branch names (w/ proper error messages)
-* explain what branch mapping policy determined when updating refs
-* convert tags to git (local and .hgtags entries)
-* add a warning for a non-fast forward push
-
-FETCH
-===========
-* tag conversion (add local tags if not already in .hgtags)
-
 MAPPING ISSUES
 ==============
 Created in Git:
@@ -28,6 +17,12 @@ Created in Git:
 * work in Git on a named branch created in Hg is forward-ported to be named branch commits in Hg and stripped back out if re-exported
 
 * timezone issues (?)
+
+PUSH
+==========
+* push with branch names (w/ proper error messages)
+* explain what branch mapping policy determined when updating refs
+* add a warning for a non-fast forward push
 
 WEBSITE
 ===========
