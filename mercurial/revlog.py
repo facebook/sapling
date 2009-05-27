@@ -119,7 +119,11 @@ class lazyparser(object):
     # available. it keeps file handle open, which make it not possible
     # to break hardlinks on local cloned repos.
 
-    def __init__(self, dataf, size):
+    def __init__(self, dataf):
+        try:
+            size = util.fstat(dataf).st_size
+        except AttributeError:
+            size = 0
         self.dataf = dataf
         self.s = struct.calcsize(indexformatng)
         self.datasize = size
@@ -362,15 +366,10 @@ class revlogio(object):
         self.size = struct.calcsize(indexformatng)
 
     def parseindex(self, fp, data, inline):
-        size = len(data)
-        if size == _prereadsize:
+        if len(data) == _prereadsize:
             if util.openhardlinks() and not inline:
-                try:
-                    size = util.fstat(fp).st_size
-                except AttributeError:
-                    size = 0
                 # big index, let's parse it on demand
-                parser = lazyparser(fp, size)
+                parser = lazyparser(fp)
                 index = lazyindex(parser)
                 nodemap = lazymap(parser)
                 e = list(index[0])
