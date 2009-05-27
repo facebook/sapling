@@ -13,7 +13,8 @@ from dulwich.objects import (
     ShaFile,
     Tag,
     Tree,
-    hex_to_sha
+    hex_to_sha,
+    sha_to_hex
     )
 
 import math
@@ -113,7 +114,8 @@ class GitHandler(object):
         self.export_git_objects()
         refs = self.fetch_pack(remote_name)
         if refs:
-            self.import_git_objects(remote_name)
+            self.import_git_objects(remote_name, refs)
+            self.import_local_tags(refs)
         self.save_map()
 
     def export(self):
@@ -160,8 +162,11 @@ class GitHandler(object):
         self.git.set_ref('refs/heads/master', c)
 
     def export_hg_tags(self):
-        pass
-        
+        for tag, sha in self.repo.tags().iteritems():
+            if tag == 'tip':
+                continue 
+            self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
+
     def export_git_objects(self):
         self.ui.status(_("exporting git objects\n"))
         total = len(self.repo.changelog)
@@ -353,6 +358,7 @@ class GitHandler(object):
     # takes a dict of refs:shas from the server and returns what should be
     # pushed up
     def get_changed_refs(self, refs):
+        print refs
         keys = refs.keys()
 
         changed = {}
@@ -362,6 +368,10 @@ class GitHandler(object):
         # TODO : this is a huge hack
         if keys[0] == 'capabilities^{}': # nothing on the server yet - first push
             changed['refs/heads/master'] = self.git.ref('master')
+
+        tags = self.git.get_tags()
+        for tag, sha in tags.iteritems():
+            changed['refs/tags/' + tag] = sha
 
         for ref_name in keys:
             parts = ref_name.split('/')
@@ -437,16 +447,42 @@ class GitHandler(object):
             f.close()
             raise
 
-    def import_git_objects(self, remote_name):
+    # take refs just fetched, add local tags for all tags not in .hgtags
+    def import_local_tags(self, refs):
+        keys = refs.keys()
+        if not keys:
+            return None
+        for k in keys[0:]:
+            ref_name = k
+            parts = k.split('/')
+            if (parts[0] == 'refs' and parts[1] == 'tags'):
+                ref_name = "/".join([v for v in parts[2:]])
+                if ref_name[-3:] == '^{}':
+                    ref_name = ref_name[:-3]
+                if not ref_name in self.repo.tags():
+                    obj = self.git.get_object(refs[k])
+                    sha = None
+                    if isinstance (obj, Commit): # lightweight
+                        sha = self.map_hg_get(refs[k])
+                    if isinstance (obj, Tag): # annotated
+                        (obj_type, obj_sha) = obj.get_object()
+                        obj = self.git.get_object(obj_sha)
+                        if isinstance (obj, Commit):                
+                            sha = self.map_hg_get(obj_sha)
+                    if sha:
+                        self.repo.tag(ref_name, hex_to_sha(sha), '', True, None, None)
+                    
+        
+    def import_git_objects(self, remote_name, refs):
         self.ui.status(_("importing Git objects into Hg\n"))
-        # import heads as remote references
+        # import heads and fetched tags as remote references
         todo = []
         done = set()
         convert_list = {}
         self.renames = {}
         
         # get a list of all the head shas
-        for head, sha in self.git.remote_refs(remote_name).iteritems():
+        for head, sha in refs.iteritems():
             todo.append(sha)
 
         # traverse the heads getting a list of all the unique commits
@@ -456,12 +492,16 @@ class GitHandler(object):
             if sha in done:
                 continue
             done.add(sha)
-            try:
-                commit = self.git.commit(sha)
-                convert_list[sha] = commit
-                todo.extend([p for p in commit.parents if p not in done])
-            except:
-                self.ui.warn(_("Cannot import tags yet\n")) # TODO
+            obj = self.git.get_object(sha)
+            if isinstance (obj, Commit):                
+                convert_list[sha] = obj
+                todo.extend([p for p in obj.parents if p not in done])
+            if isinstance(obj, Tag):
+                (obj_type, obj_sha) = obj.get_object()
+                obj = self.git.get_object(obj_sha)
+                if isinstance (obj, Commit):                
+                    convert_list[sha] = obj
+                    todo.extend([p for p in obj.parents if p not in done])
 
         # sort the commits
         commits = toposort.TopoSort(convert_list).items()

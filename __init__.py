@@ -79,9 +79,6 @@ def gfetch(ui, repo, remote_name='origin'):
     repo.ui.status(_("pulling from git url\n"))
     git = GitHandler(repo, ui)
     git.fetch(remote_name)
-
-def gtest(ui, repo):
-    print repo.tags()
     
 commands.norepo += " gclone"
 cmdtable = {
@@ -89,8 +86,8 @@ cmdtable = {
       (gclone, [],
        _('Clone a git repository into an hg repository.'),
        ),
-  "gtest":
-        (gtest, [], _('testing')),
+  "gpush":
+        (gpush, [], _('hg gpush')),
   "gexport":
         (gexport, [], _('hg gexport')),
   "gfetch":
