@@ -199,7 +199,7 @@ class ui(object):
     def _path(self, loc):
         p = self.config('paths', loc)
         if p and '%%' in p:
-            ui.warn('(deprecated \'\%\%\' in path %s=%s from %s)\n' %
+            self.warn('(deprecated \'%%\' in path %s=%s from %s)\n' %
                     (loc, p, self.configsource('paths', loc)))
             p = p.replace('%%', '%')
         return p
