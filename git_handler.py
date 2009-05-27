@@ -192,6 +192,8 @@ class GitHandler(object):
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
+            if tag[-3:] == '^{}':
+                continue
             if tag == 'tip':
                 continue 
             self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
@@ -408,7 +410,6 @@ class GitHandler(object):
     # takes a dict of refs:shas from the server and returns what should be
     # pushed up
     def get_changed_refs(self, refs):
-        print refs
         keys = refs.keys()
 
         changed = {}
@@ -421,7 +422,9 @@ class GitHandler(object):
 
         tags = self.git.get_tags()
         for tag, sha in tags.iteritems():
-            changed['refs/tags/' + tag] = sha
+            tag_name = 'refs/tags/' + tag
+            if tag_name not in refs:
+                changed[tag_name] = sha
 
         for ref_name in keys:
             parts = ref_name.split('/')
