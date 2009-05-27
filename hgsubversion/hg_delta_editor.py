@@ -420,7 +420,11 @@ class HgChangeReceiver(delta.Editor):
         for tags_path in self.tag_locations:
             if path and (path.startswith(tags_path) and
                          len(path) > len('%s/' % tags_path)):
-                tag, _, subpath = path[len(tags_path)+1:].partition('/')
+                tag = path[len(tags_path)+1:]
+                if '/' in tag:
+                    tag, subpath = tag.split('/', 1)
+                else:
+                    subpath = ''
                 return (subpath, tag, '%s/%s' % (tags_path, tag))
         return (None, None, None)
 

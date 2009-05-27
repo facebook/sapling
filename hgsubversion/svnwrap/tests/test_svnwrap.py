@@ -12,14 +12,15 @@ class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
-        os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create', 
+        os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create',
                                            self.repo_path,])
-        inp = open(os.path.join(os.path.dirname(__file__), 'fixtures', 
+        inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_at_repo_root.svndump'))
-        proc = subprocess.check_call(['svnadmin', 'load', self.repo_path,],
+        proc = subprocess.call(['svnadmin', 'load', self.repo_path,],
                                 stdin=inp, close_fds=True,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
+        assert proc == 0
         self.repo = svnwrap.SubversionRepo('file://%s' % self.repo_path)
 
     def tearDown(self):
@@ -57,13 +58,14 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
-        os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create', 
+        os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create',
                                            self.repo_path,])
-        inp = open(os.path.join(os.path.dirname(__file__), 'fixtures', 
+        inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_not_repo_root.svndump'))
-        subprocess.check_call(['svnadmin', 'load', self.repo_path,],
+        ret = subprocess.call(['svnadmin', 'load', self.repo_path,],
                               stdin=inp, close_fds=True,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
-        self.repo = svnwrap.SubversionRepo('file://%s/dummyproj' % 
+        assert ret == 0
+        self.repo = svnwrap.SubversionRepo('file://%s/dummyproj' %
                                            self.repo_path)

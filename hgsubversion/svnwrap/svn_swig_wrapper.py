@@ -6,8 +6,12 @@ import sys
 import tempfile
 import urlparse
 import urllib
-import hashlib
 import collections
+
+import warnings
+warnings.filterwarnings('ignore',
+                        module='svn.core',
+                        category=DeprecationWarning)
 
 from svn import client
 from svn import core
