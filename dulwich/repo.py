@@ -173,14 +173,12 @@ class Repo(object):
     def _get_ref(self, file):
         f = open(file, 'rb')
         try:
-            contents = f.read()
+            contents = f.read().strip()
             if contents.startswith(SYMREF):
                 ref = contents[len(SYMREF):]
-                if ref[-1] == '\n':
-                    ref = ref[:-1]
                 return self.ref(ref)
-            assert len(contents) == 41, 'Invalid ref in %s' % file
-            return contents[:-1]
+            assert len(contents) == 40, 'Invalid ref in %s' % file
+            return contents
         finally:
             f.close()
 
@@ -291,9 +289,12 @@ class Repo(object):
 
     def remote_refs(self, remote_name):
         ret = {}
-        for root, dirs, files in os.walk(os.path.join(self.controldir(), 'refs', 'remotes', remote_name)):
+        r = os.path.join(self.controldir(), 'refs', 'remotes', remote_name)
+        for root, dirs, files in os.walk(r):
             for name in files:
-                ret[name] = self._get_ref(os.path.join(root, name))
+                if root != r:
+                    name = os.path.join(root[len(r) + 1:], name)
+                ret[name] = self._get_ref(os.path.join(r, name))
         return ret
 
     def head(self):
@@ -424,11 +425,10 @@ class Repo(object):
             basefiles = set()
             changes = list()
             csha = None
-            ctree = None
             cmode = None
             if basetree:
                 for (bmode, bname, bsha) in basetree.entries():
-                    if bmode == 57344: # TODO : properly handle submodules
+                    if bmode == 0160000: # TODO : properly handle submodules
                         continue
                     basefiles.add(bname)
                     bobj = self.get_object(bsha)
@@ -438,6 +438,7 @@ class Repo(object):
                         if isinstance (bobj, Blob):
                             changes.append (prefix + bname)
                         elif isinstance(bobj, Tree):
+                            ctree = None
                             if csha:
                                 ctree = self.get_object(csha)
                             changes.extend(filenames(bobj,
@@ -447,7 +448,7 @@ class Repo(object):
             # handle removals
             if comptree:
                 for (bmode, bname, bsha, ) in comptree.entries():
-                    if bmode == 57344: # TODO: hande submodles
+                    if bmode == 0160000: # TODO: hande submodles
                         continue
                     if bname not in basefiles:
                         bobj = self.get_object(bsha)

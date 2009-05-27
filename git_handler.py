@@ -14,7 +14,8 @@ from dulwich.objects import (
     Tag,
     Tree,
     hex_to_sha,
-    sha_to_hex
+    sha_to_hex,
+    format_timezone,
     )
 
 import math
@@ -51,7 +52,14 @@ class GitHandler(object):
         self.ui = ui
         self.mapfile = 'git-mapfile'
         self.configfile = 'git-config'
-        self.gitdir = self.repo.join('git')
+
+        if ui.config('git', 'intree'):
+            self.gitdir = self.repo.wjoin('.git')
+        else:
+            self.gitdir = self.repo.join('git')
+
+        self.importbranch = ui.config('git', 'importbranch')
+
         self.init_if_missing()
         self.load_git()
         self.load_map()
@@ -109,6 +117,10 @@ class GitHandler(object):
 
     ## END FILE LOAD AND SAVE METHODS
 
+    def import_commits(self, remote_name):
+        self.import_git_objects(remote_name)
+        self.save_map()
+
     def fetch(self, remote_name):
         self.ui.status(_("fetching from : %s\n") % remote_name)
         self.export_git_objects()
@@ -118,7 +130,7 @@ class GitHandler(object):
             self.import_local_tags(refs)
         self.save_map()
 
-    def export(self):
+    def export_commits(self):
         self.export_git_objects()
         self.export_hg_tags()
         self.update_references()
@@ -126,7 +138,8 @@ class GitHandler(object):
 
     def push(self, remote_name):
         self.ui.status(_("pushing to : %s\n") % remote_name)
-        self.export()
+        self.export_commits()
+        self.update_remote_references(remote_name)
         self.upload_pack(remote_name)
 
     def remote_add(self, remote_name, git_url):
@@ -157,7 +170,23 @@ class GitHandler(object):
         return self._config['remote.' + remote_name + '.url']
 
     def update_references(self):
-        # TODO : if bookmarks exist, add them as git branches
+        try:
+            # We only care about bookmarks of the form 'name',
+            # not 'remote/name'.
+            def is_local_ref(item): return item[0].count('/') == 0
+            bms = bookmarks.parse(self.repo)
+            bms = dict(filter(is_local_ref, bms.items()))
+
+            # Create a local Git branch name for each
+            # Mercurial bookmark.
+            for key in bms:
+                hg_sha  = hex(bms[key])
+                git_sha = self.map_git_get(hg_sha)
+                self.git.set_ref('refs/heads/' + key, git_sha)
+        except AttributeError:
+            # No bookmarks extension
+            pass
+
         c = self.map_git_get(hex(self.repo.changelog.tip()))
         self.git.set_ref('refs/heads/master', c)
 
@@ -167,8 +196,18 @@ class GitHandler(object):
                 continue 
             self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
 
+    # Make sure there's a refs/remotes/remote_name/name
+    #           for every refs/heads/name
+    def update_remote_references(self, remote_name):
+        self.git.set_remote_refs(self.local_heads(), remote_name)
+
+    def local_heads(self):
+        def is_local_head(item): return item[0].startswith('refs/heads')
+        refs = self.git.get_refs()
+        return dict(filter(is_local_head, refs.items()))
+
     def export_git_objects(self):
-        self.ui.status(_("exporting git objects\n"))
+        self.ui.status(_("importing Hg objects into Git\n"))
         total = len(self.repo.changelog)
         if total:
           magnitude = int(math.log(total, 10)) + 1
@@ -215,13 +254,19 @@ class GitHandler(object):
         author = ctx.user()
         if not '>' in author: # TODO : this kills losslessness - die (submodules)?
             author = author + ' <none@none>'
-        commit['author'] = author + ' ' + str(int(time)) + ' ' + seconds_to_offset(timezone)
+        commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
         message = ctx.description()
         commit['message'] = ctx.description() + "\n"
 
         extra = ctx.extra()
         if 'committer' in extra:
-            commit['committer'] = extra['committer']
+            # fixup timezone
+            (name_timestamp, timezone) = extra['committer'].rsplit(' ', 1)
+            try:
+                timezone = format_timezone(-int(timezone))
+                commit['committer'] = '%s %s' % (name_timestamp, timezone)
+            except ValueError:
+                self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%s: '%s'.\n") % (rev, timezone))
         if 'encoding' in extra:
             commit['encoding'] = extra['encoding']
 
@@ -306,12 +351,17 @@ class GitHandler(object):
                     trees['/'] = []
                 trees['/'].append(fileentry)
 
-        # sort by tree depth, so we write the deepest trees first
         dirs = trees.keys()
-        dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
-        dirs.remove('/')
-        dirs.append('/')
-        
+        if dirs:
+            # sort by tree depth, so we write the deepest trees first
+            dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
+            dirs.remove('/')
+            dirs.append('/')
+        else:
+            # manifest is empty => make empty root tree
+            trees['/'] = []
+            dirs = ['/']
+
         # write all the trees
         tree_sha = None
         tree_shas = {}
@@ -382,6 +432,13 @@ class GitHandler(object):
                     if local_ref:
                         if not local_ref == refs[ref_name]:
                             changed[ref_name] = local_ref
+        
+        # Also push any local branches not on the server yet
+        for head in self.local_heads():
+            if not head in refs:
+                ref = self.git.ref(head)
+                changed[head] = ref
+
         return changed
 
     # takes a list of shas the server wants and shas the server has
@@ -406,7 +463,7 @@ class GitHandler(object):
             changes = list()
             changes.append((tree, path))
             for (mode, name, sha) in tree.entries():
-                if mode == 57344: # TODO : properly handle submodules and document what 57344 means
+                if mode == 0160000: # TODO : properly handle submodules and document what 57344 means
                     continue
                 if sha in seen:
                     continue
@@ -473,17 +530,26 @@ class GitHandler(object):
                         self.repo.tag(ref_name, hex_to_sha(sha), '', True, None, None)
                     
         
-    def import_git_objects(self, remote_name, refs):
+    def import_git_objects(self, remote_name=None, refs=None):
         self.ui.status(_("importing Git objects into Hg\n"))
         # import heads and fetched tags as remote references
         todo = []
         done = set()
         convert_list = {}
         self.renames = {}
-        
+
         # get a list of all the head shas
-        for head, sha in refs.iteritems():
+        if refs: 
+          for head, sha in refs.iteritems():
             todo.append(sha)
+        else:
+          if remote_name:
+              todo = self.git.remote_refs(remote_name).values()[:]
+          elif self.importbranch:
+              branches = self.importbranch.split(',')
+              todo = [self.git.ref(i.strip()) for i in branches]
+          else:
+              todo = self.git.heads().values()[:]
 
         # traverse the heads getting a list of all the unique commits
         while todo:
@@ -507,15 +573,20 @@ class GitHandler(object):
         commits = toposort.TopoSort(convert_list).items()
         
         # import each of the commits, oldest first
-        for csha in commits:
+        total = len(commits)
+        magnitude = int(math.log(total, 10)) + 1 if total else 1
+        for i, csha in enumerate(commits):
+            if i%100 == 0:
+                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
             commit = convert_list[csha]
             if not self.map_hg_get(csha): # it's already here
                 self.import_git_commit(commit)
             else:
                 # we need to get rename info for further upstream
                 self.pseudo_import_git_commit(commit)
-                
-        self.update_hg_bookmarks(remote_name)
+
+        if remote_name:
+            self.update_hg_bookmarks(remote_name)
 
     def update_hg_bookmarks(self, remote_name):
         try:
@@ -532,9 +603,9 @@ class GitHandler(object):
     def convert_git_int_mode(self, mode):
 	# TODO : make these into constants
         convert = {
-         33188: '',
-         40960: 'l',
-         33261: 'x'}
+         0100644: '',
+         0100755: 'x',
+         0120000: 'l'}
         if mode in convert:
             return convert[mode]
         return ''
@@ -561,8 +632,8 @@ class GitHandler(object):
     def pseudo_import_git_commit(self, commit):
         (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
         cs = self.map_hg_get(commit.id)
-        p1 = "0" * 40
-        p2 = "0" * 40
+        p1 = nullid
+        p2 = nullid
         if len(commit.parents) > 0:
             sha = commit.parents[0]
             p1 = self.map_hg_get(sha)
@@ -573,7 +644,7 @@ class GitHandler(object):
             # TODO : map extra parents to the extras file
             pass
         # saving rename info
-        if (not (p2 == "0"*40) or (p1 == "0"*40)):
+        if (not (p2 == nullid) or (p1 == nullid)):
             self.renames[cs] = {}
         else:
             self.renames[cs] = self.renames[p1].copy()
@@ -599,8 +670,8 @@ class GitHandler(object):
                 copied_path = None
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
-        p1 = "0" * 40
-        p2 = "0" * 40
+        p1 = nullid
+        p2 = nullid
         if len(commit.parents) > 0:
             sha = commit.parents[0]
             p1 = self.map_hg_get(sha)
@@ -615,7 +686,7 @@ class GitHandler(object):
         files = self.git.get_files_changed(commit)
 
         # wierd hack for explicit file renames in first but not second branch
-        if not (p2 == "0"*40):
+        if not (p2 == nullid):
             vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
             for removefile in vals:
                 files.remove(removefile)
@@ -628,7 +699,7 @@ class GitHandler(object):
 
         # if committer is different than author, add it to extra
         if not commit._author_raw == commit._committer_raw:
-            extra['committer'] = commit._committer_raw
+            extra['committer'] = "%s %d %d" % (commit.committer, commit.commit_time, -commit.commit_timezone)
 
         if commit._encoding:
             extra['encoding'] = commit._encoding
@@ -637,7 +708,7 @@ class GitHandler(object):
             extra['branch'] = hg_branch
 
         text = strip_message
-        date = datetime.datetime.fromtimestamp(commit.author_time).strftime("%Y-%m-%d %H:%M:%S")
+        date = (commit.author_time, -commit.author_timezone)
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              commit.author, date, extra)
         a = self.repo.commitctx(ctx)
@@ -648,7 +719,7 @@ class GitHandler(object):
         gitsha = commit.id
         
         # saving rename info
-        if (not (p2 == "0"*40) or (p1 == "0"*40)):
+        if (not (p2 == nullid) or (p1 == nullid)):
             self.renames[cs] = {}
         else:
             self.renames[cs] = self.renames[p1].copy()

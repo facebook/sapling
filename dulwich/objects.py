@@ -479,15 +479,19 @@ class Tree(ShaFile):
 
 def parse_timezone(text):
     offset = int(text)
+    signum = (offset < 0) and -1 or 1
+    offset = abs(offset)
     hours = int(offset / 100)
     minutes = (offset % 100)
-    return (hours * 3600) + (minutes * 60)
+    return signum * (hours * 3600 + minutes * 60)
 
 
 def format_timezone(offset):
     if offset % 60 != 0:
         raise ValueError("Unable to handle non-minute offset.")
-    return '%+03d%02d' % (offset / 3600, (offset / 60) % 60)
+    sign = (offset < 0) and '-' or '+'
+    offset = abs(offset)
+    return '%c%02d%02d' % (sign, offset / 3600, (offset / 60) % 60)
 
 
 class Commit(ShaFile):

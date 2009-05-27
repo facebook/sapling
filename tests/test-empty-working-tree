@@ -4,11 +4,10 @@
 # "$TESTDIR/hghave" git || exit 80
 
 # bail early if the user is already running git-daemon
-echo hi | nc localhost 9418 2>/dev/null && exit 80
+echo hi | nc localhost 9418 && exit 80
 
 echo "[extensions]" >> $HGRCPATH
 echo "hggit=$(echo $(dirname $(dirname $0)))" >> $HGRCPATH
-echo 'hgext.graphlog =' >> $HGRCPATH
 echo 'hgext.bookmarks =' >> $HGRCPATH
 
 GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
@@ -18,24 +17,11 @@ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
 GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
 GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
 
-count=10
-commit()
-{
-    GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
-    GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-    git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
-    count=`expr $count + 1`
-}
-
 mkdir gitrepo
 cd gitrepo
 git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-echo alpha > alpha
-git add alpha
-commit -m 'add alpha'
-echo beta > beta
-git add beta
-commit -m 'add beta'
+
+git commit --allow-empty -m empty
 
 # dulwich does not presently support local git repos, workaround
 cd ..
@@ -47,10 +33,10 @@ git daemon --base-path="$(pwd)"\
 
 hg gclone git://localhost/gitrepo hgrepo
 cd hgrepo
-hg log --graph
+hg log -r tip --template 'files: {files}\n'
 
-echo % we should have some bookmarks
-hg book
+hg gclear
+hg gexport
 
 cd ..
 kill `cat gitdaemon.pid`

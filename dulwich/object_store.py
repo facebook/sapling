@@ -22,6 +22,7 @@
 
 import itertools
 import os
+import shutil
 import stat
 import tempfile
 import urllib2
@@ -248,7 +249,12 @@ class DiskObjectStore(BaseObjectStore):
         basename = os.path.join(self.pack_dir, 
             "pack-%s" % iter_sha1(entry[0] for entry in entries))
         write_pack_index_v2(basename+".idx", entries, p.get_stored_checksum())
-        os.rename(path, basename + ".pack")
+        try:
+            os.rename(path, basename + ".pack")
+        except OSError:
+            # Hack for Windows access denied error.
+            # TODO: mark the original for deletion later.
+            shutil.copyfile(path, basename + ".pack")
         self._add_known_pack(basename)
 
     def add_thin_pack(self):
