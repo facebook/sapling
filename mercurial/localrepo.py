@@ -971,18 +971,17 @@ class localrepository(repo.repository):
 
                 # update dirstate for files that are actually clean
                 if fixup:
-                    wlock = None
                     try:
+                        wlock = self.wlock(False)
                         try:
                             # updating the dirstate is optional
                             # so we don't wait on the lock
-                            wlock = self.wlock(False)
                             for f in fixup:
                                 self.dirstate.normal(f)
-                        except error.LockError:
-                            pass
-                    finally:
-                        release(wlock)
+                        finally:
+                            wlock.release()
+                    except error.LockError:
+                        pass
 
         if not parentworking:
             mf1 = mfmatches(ctx1)
@@ -1062,16 +1061,15 @@ class localrepository(repo.repository):
             wlock.release()
 
     def remove(self, list, unlink=False):
-        wlock = None
+        if unlink:
+            for f in list:
+                try:
+                    util.unlink(self.wjoin(f))
+                except OSError, inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
+        wlock = self.wlock()
         try:
-            if unlink:
-                for f in list:
-                    try:
-                        util.unlink(self.wjoin(f))
-                    except OSError, inst:
-                        if inst.errno != errno.ENOENT:
-                            raise
-            wlock = self.wlock()
             for f in list:
                 if unlink and os.path.exists(self.wjoin(f)):
                     self.ui.warn(_("%s still exists!\n") % f)
@@ -1082,7 +1080,7 @@ class localrepository(repo.repository):
                 else:
                     self.dirstate.remove(f)
         finally:
-            release(wlock)
+            wlock.release()
 
     def undelete(self, list):
         manifests = [self.manifest.read(self.changelog.read(p)[0])
