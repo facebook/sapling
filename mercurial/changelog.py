@@ -89,19 +89,20 @@ class appender:
 
 class changelog(revlog.revlog):
     def __init__(self, opener):
-        revlog.revlog.__init__(self, opener, "00changelog.i")
+        self._realopener = opener
+        self._delayed = False
+        revlog.revlog.__init__(self, self._delayopener, "00changelog.i")
 
     def delayupdate(self):
         "delay visibility of index updates to other readers"
-        self._realopener = self.opener
-        self.opener = self._delayopener
+        self._delayed = True
         self._delaycount = len(self)
         self._delaybuf = []
         self._delayname = None
 
     def finalize(self, tr):
         "finalize index updates"
-        self.opener = self._realopener
+        self._delayed = False
         # move redirected index data back into place
         if self._delayname:
             util.rename(self._delayname + ".a", self._delayname)
@@ -116,7 +117,7 @@ class changelog(revlog.revlog):
     def _delayopener(self, name, mode='r'):
         fp = self._realopener(name, mode)
         # only divert the index
-        if not name == self.indexfile:
+        if not self._delayed or not name == self.indexfile:
             return fp
         # if we're doing an initial clone, divert to another file
         if self._delaycount == 0:
