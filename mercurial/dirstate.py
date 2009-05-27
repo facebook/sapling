@@ -497,7 +497,7 @@ class dirstate(object):
                 if kind == dirkind:
                     dostep3 = True
                     if nf in dmap:
-                        #file deleted on disc but still in dirstate
+                        #file deleted on disk but still in dirstate
                         results[nf] = None
                     if not dirignore(nf):
                         wadd(nf)
