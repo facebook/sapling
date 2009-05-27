@@ -1150,12 +1150,12 @@ class revlog(object):
         changesets. parent is parent[0]
         """
 
+        revs = [self.rev(n) for n in nodelist]
+
         # if we don't have any revisions touched by these changesets, bail
-        if not nodelist:
+        if not revs:
             yield changegroup.closechunk()
             return
-
-        revs = [self.rev(n) for n in nodelist]
 
         # add the parent of the first rev
         p = self.parentrevs(revs[0])[0]
