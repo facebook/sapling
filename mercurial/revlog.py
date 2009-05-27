@@ -1009,7 +1009,7 @@ class revlog(object):
         p1, p2 = self.parents(node)
         if node != hash(text, p1, p2):
             raise RevlogError(_("integrity check failed on %s:%d")
-                              % (self.datafile, rev))
+                              % (self.indexfile, rev))
 
         self._cache = (node, rev, text)
         return text
