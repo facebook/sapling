@@ -59,6 +59,8 @@ class GitHandler(object):
             self.gitdir = self.repo.join('git')
 
         self.importbranch = ui.config('git', 'importbranch')
+        self.exportbranch = ui.config('git', 'exportbranch', 'refs/heads/master')
+        self.bookbranch = ui.config('git', 'bookbranch', '')
 
         self.init_if_missing()
         self.load_git()
@@ -188,7 +190,7 @@ class GitHandler(object):
             pass
 
         c = self.map_git_get(hex(self.repo.changelog.tip()))
-        self.git.set_ref('refs/heads/master', c)
+        self.git.set_ref(self.exportbranch, c)
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
@@ -588,17 +590,28 @@ class GitHandler(object):
                 # we need to get rename info for further upstream
                 self.pseudo_import_git_commit(commit)
 
-        if remote_name:
-            self.update_hg_bookmarks(remote_name)
+        self.update_hg_bookmarks(remote_name)
 
     def update_hg_bookmarks(self, remote_name):
         try:
             bms = bookmarks.parse(self.repo)
-            for head, sha in self.git.remote_refs(remote_name).iteritems():
+            if remote_name:
+                heads = self.git.remote_refs(remote_name)
+            else:
+                branches = self.bookbranch.split(',')
+                heads = dict((i, self.git.ref(i.strip())) for i in branches)
+
+            base_name = (remote_name + '/') if remote_name else '' 
+
+            for head, sha in heads.iteritems():
+                if not sha:
+                    self.ui.warn(_("Could not resolve head %s.\n") % head)
+                    continue
                 hgsha = hex_to_sha(self.map_hg_get(sha))
                 if not head == 'HEAD':
-                    bms[remote_name + '/' + head] = hgsha
-            bookmarks.write(self.repo, bms)
+                    bms[base_name + head] = hgsha
+            if heads:
+                bookmarks.write(self.repo, bms)
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
                          ' bookmarks enabled?\n'))
