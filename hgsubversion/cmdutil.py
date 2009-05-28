@@ -54,7 +54,8 @@ def parentrev(ui, repo, hge, svn_commit_hashes):
     return workingctx
 
 
-def replay_convert_rev(hg_editor, svn, r):
+def replay_convert_rev(ui, hg_editor, svn, r):
+    # ui is only passed in for similarity with stupid.convert_rev()
     hg_editor.set_current_rev(r)
     svn.get_replay(r.revnum, hg_editor)
     i = 1

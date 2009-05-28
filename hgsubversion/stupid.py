@@ -430,7 +430,7 @@ def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
 
     return files, filectxfn
 
-def svn_server_pull_rev(ui, svn, hg_editor, r):
+def convert_rev(ui, hg_editor, svn, r):
     # this server fails at replay
     branches = hg_editor.branches_in_paths(r.paths, r.revnum, svn.checkpath, svn.list_files)
     deleted_branches = {}

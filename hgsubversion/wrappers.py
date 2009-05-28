@@ -19,6 +19,11 @@ import stupid as stupidmod
 import svnwrap
 import util
 
+pullfuns = {
+    True: cmdutil.replay_convert_rev,
+    False: stupidmod.convert_rev,
+}
+
 def parent(orig, ui, repo, *args, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
     """
@@ -217,7 +222,6 @@ def pull(repo, source, heads=[], force=False):
                            'remains unimplemented.')
 
     revisions = 0
-
     try:
         # start converting revisions
         for r in svn.revisions(start=start, stop=stopat_rev):
@@ -231,17 +235,12 @@ def pull(repo, source, heads=[], force=False):
             while not converted:
                 try:
                     util.describe_revision(ui, r)
-                    if have_replay:
-                        try:
-                            cmdutil.replay_convert_rev(hg_editor, svn, r)
-                        except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
-                            ui.status('%s\n' % e.message)
-                            stupidmod.print_your_svn_is_old_message(ui)
-                            have_replay = False
-                            stupidmod.svn_server_pull_rev(ui, svn, hg_editor, r)
-                    else:
-                        stupidmod.svn_server_pull_rev(ui, svn, hg_editor, r)
+                    pullfuns[have_replay](ui, hg_editor, svn, r)
                     converted = True
+                except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
+                    ui.status('%s\n' % e.message)
+                    stupidmod.print_your_svn_is_old_message(ui)
+                    have_replay = False
                 except core.SubversionException, e: #pragma: no cover
                     if (e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED
                         and '502' in str(e)
