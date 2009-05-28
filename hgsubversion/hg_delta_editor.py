@@ -35,8 +35,10 @@ def pickle_atomic(data, file_path, dir=None):
     else:
         hgutil.rename(path, file_path)
 
-def stash_exception_on_self(fn):
-    """Stash any exception raised in the method on self.
+def ieditor(fn):
+    """Helps identify methods used by the SVN editor interface.
+
+    Stash any exception raised in the method on self.
 
     This is required because the SWIG bindings just mutate any exception into
     a generic Subversion exception with no way of telling what the original was.
@@ -853,6 +855,7 @@ class HgChangeReceiver(delta.Editor):
         else:
             self.missing_plaintexts.add(svnpath)
 
+    @ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
         if br_path == '':
@@ -875,8 +878,8 @@ class HgChangeReceiver(delta.Editor):
                     if f_p not in self.current_files:
                         self.delete_file(f_p)
             self.delete_file(path)
-    delete_entry = stash_exception_on_self(delete_entry)
 
+    @ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
         self.current_file = None
         fpath, branch = self._path_and_branch_for_path(path)
@@ -895,7 +898,6 @@ class HgChangeReceiver(delta.Editor):
                 self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
         else:
             self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
-    open_file = stash_exception_on_self(open_file)
 
     def aresamefiles(self, parentctx, childctx, files):
         """Assuming all files exist in childctx and parentctx, return True
@@ -921,6 +923,7 @@ class HgChangeReceiver(delta.Editor):
         # parentctx is not an ancestor of childctx, files are unrelated
         return False
 
+    @ieditor
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
                  copyfrom_revision=None, file_pool=None):
         self.current_file = None
@@ -958,8 +961,8 @@ class HgChangeReceiver(delta.Editor):
                 parentctx = self.repo.changectx(parentid)
                 if self.aresamefiles(parentctx, ctx, [from_file]):
                     self.copies[path] = from_file
-    add_file = stash_exception_on_self(add_file)
 
+    @ieditor
     def add_directory(self, path, parent_baton, copyfrom_path,
                       copyfrom_revision, dir_pool=None):
         self.dir_batons[path] = path
@@ -1018,36 +1021,36 @@ class HgChangeReceiver(delta.Editor):
                 if self.aresamefiles(parentctx, cp_f_ctx, copies.values()):
                     self.copies.update(copies)
         return path
-    add_directory = stash_exception_on_self(add_directory)
 
+    @ieditor
     def change_file_prop(self, file_baton, name, value, pool=None):
         if name == 'svn:executable':
             self.current_files_exec[self.current_file] = bool(value is not None)
         elif name == 'svn:special':
             self.current_files_symlink[self.current_file] = bool(value is not None)
-    change_file_prop = stash_exception_on_self(change_file_prop)
 
+    @ieditor
     def change_dir_prop(self, dir_baton, name, value, pool=None):
         if dir_baton is None:
             return
         path = self.dir_batons[dir_baton]
         if name == 'svn:externals':
             self.externals[path] = value
-    change_dir_prop = stash_exception_on_self(change_dir_prop)
 
+    @ieditor
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
         self.dir_batons[path] = path
         p_, branch = self._path_and_branch_for_path(path)
         if p_ == '':
             self.commit_branches_empty[branch] = False
         return path
-    open_directory = stash_exception_on_self(open_directory)
 
+    @ieditor
     def close_directory(self, dir_baton, dir_pool=None):
         if dir_baton is not None:
             del self.dir_batons[dir_baton]
-    close_directory = stash_exception_on_self(close_directory)
 
+    @ieditor
     def apply_textdelta(self, file_baton, base_checksum, pool=None):
         # We know coming in here the file must be one of the following options:
         # 1) Deleted (invalid, fail an assertion)
@@ -1089,7 +1092,6 @@ class HgChangeReceiver(delta.Editor):
                 self._exception_info = sys.exc_info()
                 raise
         return txdelt_window
-    apply_textdelta = stash_exception_on_self(apply_textdelta)
 
 class MissingPlainTextError(Exception):
     """Exception raised when the repo lacks a source file required for replaying
