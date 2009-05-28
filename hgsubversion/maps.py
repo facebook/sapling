@@ -37,6 +37,7 @@ class AuthorMap(dict):
         f = open(path, 'r')
         for number, line in enumerate(f):
 
+            line = line.split('#')[0]
             if not line.strip():
                 continue
 

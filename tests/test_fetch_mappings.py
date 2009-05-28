@@ -21,7 +21,7 @@ class MapTests(test_util.TestBase):
     def test_author_map(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')
         authormap = open(self.authors, 'w')
-        authormap.write("Augie=Augie Fackler <durin42@gmail.com>\n")
+        authormap.write('Augie=Augie Fackler <durin42@gmail.com> # stuffy\n')
         authormap.write("Augie Fackler <durin42@gmail.com>\n")
         authormap.close()
         _ui = ui.ui()
