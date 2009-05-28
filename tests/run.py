@@ -25,32 +25,9 @@ import test_tags
 import test_utility_commands
 import test_urls
 
-def suite():
-    return unittest.TestSuite([test_binaryfiles.suite(),
-                               test_diff.suite(),
-                               test_externals.suite(),
-                               test_fetch_branches.suite(),
-                               test_fetch_command.suite(),
-                               test_fetch_command_regexes.suite(),
-                               test_fetch_exec.suite(),
-                               test_fetch_mappings.suite(),
-                               test_fetch_renames.suite(),
-                               test_fetch_symlinks.suite(),
-                               test_fetch_truncated.suite(),
-                               test_pull.suite(),
-                               test_push_command.suite(),
-                               test_push_renames.suite(),
-                               test_push_dirs.suite(),
-                               test_push_eol.suite(),
-                               test_rebuildmeta.suite(),
-                               test_svnwrap.suite(),
-                               test_tags.suite(),
-                               test_utility_commands.suite(),
-                               test_urls.suite(),
-                              ])
-
 if __name__ == '__main__':
-    kwargs = { 'descriptions': 2 }
+
+    kwargs = {'descriptions': 2}
     if '-v' in sys.argv:
         kwargs['descriptions'] = 3
         kwargs['verbosity'] = 2
@@ -58,5 +35,22 @@ if __name__ == '__main__':
     # silence output when running outside nose
     sys.stdout = os.tmpfile()
 
+    all = globals()
+    all = dict((k, v) for (k, v) in all.iteritems() if k.startswith('test_'))
+    del all['test_util']
+
+    args = [i for i in sys.argv[1:] if i.startswith('test')]
+    args = [i.split('.py')[0].replace('-', '_') for i in args]
+
+    if not args:
+        suite = [i[1].suite() for i in sorted(all.iteritems())]
+    else:
+        suite = []
+        for arg in args:
+            if arg not in all:
+                print 'test module %s not available' % arg
+            else:
+                suite.append(all[arg].suite())
+
     runner = unittest.TextTestRunner(**kwargs)
-    runner.run(suite())
+    runner.run(unittest.TestSuite(suite))
