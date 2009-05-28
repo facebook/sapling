@@ -865,6 +865,32 @@ class HgChangeReceiver(delta.Editor):
         else:
             self.missing_plaintexts.add(svnpath)
 
+    def aresamefiles(self, parentctx, childctx, files):
+        """Assuming all files exist in childctx and parentctx, return True
+        if none of them was changed in-between.
+        """
+        if parentctx == childctx:
+            return True
+        if parentctx.rev() > childctx.rev():
+            parentctx, childctx = childctx, parentctx
+
+        def selfandancestors(selfctx):
+            yield selfctx
+            for ctx in selfctx.ancestors():
+                yield ctx
+
+        files = dict.fromkeys(files)
+        for pctx in selfandancestors(childctx):
+            if pctx.rev() <= parentctx.rev():
+                return True
+            for f in pctx.files():
+                if f in files:
+                    return False
+        # parentctx is not an ancestor of childctx, files are unrelated
+        return False
+
+    # Here come all the actual editor methods
+
     @ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self._path_and_branch_for_path(path)
@@ -908,30 +934,6 @@ class HgChangeReceiver(delta.Editor):
                 self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
         else:
             self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
-
-    def aresamefiles(self, parentctx, childctx, files):
-        """Assuming all files exist in childctx and parentctx, return True
-        if none of them was changed in-between.
-        """
-        if parentctx == childctx:
-            return True
-        if parentctx.rev() > childctx.rev():
-            parentctx, childctx = childctx, parentctx
-
-        def selfandancestors(selfctx):
-            yield selfctx
-            for ctx in selfctx.ancestors():
-                yield ctx
-
-        files = dict.fromkeys(files)
-        for pctx in selfandancestors(childctx):
-            if pctx.rev() <= parentctx.rev():
-                return True
-            for f in pctx.files():
-                if f in files:
-                    return False
-        # parentctx is not an ancestor of childctx, files are unrelated
-        return False
 
     @ieditor
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
