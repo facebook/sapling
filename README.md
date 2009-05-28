@@ -1,6 +1,6 @@
 *Warning: This plugin is not yet stabilized. Use to help me identify bugs, but it will be a few weeks before its fully stable.*
 
-*Project status as of 5/27:*  Pretty solid, but a bit slow - can losslessly convert most major scenarios and can handle projects up to several thousand commits. Submodules and octopus merges in Git are not handled. See TODO.txt for full list of things I'm working on.
+*Project status as of 5/27:*  Pretty solid, but a bit slow - can losslessly convert most major scenarios and can handle projects up to several thousand commits. Submodules in Git are not handled. See TODO.txt for full list of things I'm working on.
 
 
 Hg-Git Mercurial Plugin
