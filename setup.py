@@ -107,6 +107,11 @@ if os.path.isdir('.hg'):
     env = {'PYTHONPATH': os.pathsep.join(pypath),
            'HGRCPATH': '',
            'LANGUAGE': 'C'}
+    if 'SystemRoot' in os.environ:
+        # Copy SystemRoot into the custom environment for Python 2.6
+        # under Windows. Otherwise, the subprocess will fail with
+        # error 0xc0150004. See: http://bugs.python.org/issue3440
+        env['SystemRoot'] = os.environ['SystemRoot']
     cmd = [sys.executable, 'hg', 'id', '-i', '-t']
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
