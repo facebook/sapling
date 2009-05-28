@@ -19,6 +19,16 @@ import svnexternals
 import util
 import maps
 
+class MissingPlainTextError(Exception):
+    """Exception raised when the repo lacks a source file required for replaying
+    a txdelta.
+    """
+
+class ReplayException(Exception):
+    """Exception raised when you try and commit but the replay encountered an
+    exception.
+    """
+
 def pickle_atomic(data, file_path, dir=None):
     """pickle some data to a path atomically.
 
@@ -1092,13 +1102,3 @@ class HgChangeReceiver(delta.Editor):
                 self._exception_info = sys.exc_info()
                 raise
         return txdelt_window
-
-class MissingPlainTextError(Exception):
-    """Exception raised when the repo lacks a source file required for replaying
-    a txdelta.
-    """
-
-class ReplayException(Exception):
-    """Exception raised when you try and commit but the replay encountered an
-    exception.
-    """
