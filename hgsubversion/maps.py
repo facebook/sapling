@@ -31,33 +31,37 @@ class AuthorMap(dict):
 
     def load(self, path):
         ''' Load mappings from a file at the specified path. '''
-        if os.path.exists(path):
-            self.ui.note('Reading authormap from %s\n' % path)
-            f = open(path, 'r')
-            for number, line in enumerate(f):
-                if not line.strip():
-                    continue
-                try:
-                    srcauth, dstauth = line.split('=', 1)
-                    srcauth = srcauth.strip()
-                    dstauth = dstauth.strip()
-                    if srcauth in self and dstauth != self[srcauth]:
-                        self.ui.warn(('Overriding author mapping for "%s" from '
-                                      + '"%s" to "%s"\n')
-                                     % (srcauth, self[srcauth], dstauth))
-                    else:
-                        self[srcauth] = dstauth
-                except (IndexError, ValueError):
-                    self.ui.warn('Ignoring line %i in author map %s: %s\n'
-                                 % (number, path, line.rstrip()))
-            f.close()
+        if not os.path.exists(path):
+            return
+        self.ui.note('reading authormap from %s\n' % path)
+        f = open(path, 'r')
+        for number, line in enumerate(f):
+
+            if not line.strip():
+                continue
+
+            try:
+                src, dst = line.split('=', 1)
+            except (IndexError, ValueError):
+                msg = 'ignoring line %i in author map %s: %s\n'
+                self.ui.warn(msg % (number, path, line.rstrip()))
+                continue
+
+            src = src.strip()
+            dst = dst.strip()
+            if src in self and dst != self[src]:
+                msg = 'overriding author: "%s" to "%s" (%s)\n'
+                self.ui.warn(msg % (self[src], dst, src))
+            else:
+                self[src] = dst
+
+        f.close()
 
     def __setitem__(self, key, value):
         ''' Similar to dict.__setitem__, but also updates the new mapping in the
         backing store. '''
         self.super.__setitem__(key, value)
-
-        self.ui.debug(('Writing author map to %s\n') % self.path)
+        self.ui.debug('adding author %s to author map\n' % self.path)
         f = open(self.path, 'w+')
         for k, v in self.iteritems():
             f.write("%s=%s\n" % (k, v))
@@ -71,12 +75,12 @@ class AuthorMap(dict):
             result = self.super.__getitem__(author)
         elif self.ui.configbool('hgsubversion', 'defaultauthors', True):
             self[author] = result = '%s%s' % (author, self.defaulthost)
-            self.ui.note('Substituting author "%s" for default "%s"\n'
-                         % (author, result))
+            msg = 'substituting author "%s" for default "%s"\n'
+            self.ui.note(msg % (author, result))
         else:
-            raise hgutil.Abort('Author %s has no entry in the author map!'
-                               % author)
-        self.ui.debug('Mapping author "%s" to "%s"\n' % (author, result))
+            msg = 'author %s has no entry in the author map!'
+            raise hgutil.Abort(msg % author)
+        self.ui.debug('mapping author "%s" to "%s"\n' % (author, result))
         return result
 
     def reverselookup(self, author):
