@@ -1,6 +1,7 @@
 import atexit
 import os
 import random
+import shutil
 import socket
 import subprocess
 import unittest
@@ -212,7 +213,7 @@ class PushTests(test_util.TestBase):
             pass
         self.assertEqual(tip.branch(), 'default')
 
-    def test_push_to_branch(self):
+    def test_push_to_branch(self, push=True):
         repo = self.repo
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
@@ -231,13 +232,45 @@ class PushTests(test_util.TestBase):
                              '2008-10-07 20:59:48 -0500',
                              {'branch': 'the_branch',})
         new_hash = repo.commitctx(ctx)
-        #commands.update(ui.ui(), self.repo, node='tip')
         hg.update(repo, repo['tip'].node())
+        if push:
+            self.pushrevisions()
+            tip = self.repo['tip']
+            self.assertNotEqual(tip.node(), new_hash)
+            self.assertEqual(tip['adding_file'].data(), 'foo')
+            self.assertEqual(tip.branch(), 'the_branch')
+
+    def push_to_non_tip(self):
+        self.test_push_to_branch(push=False)
+        wc2path = self.wc_path + '_clone'
+        u = self.repo.ui
+        hg.clone(self.repo.ui, self.wc_path, wc2path, update=False)
         self.pushrevisions()
-        tip = self.repo['tip']
-        self.assertNotEqual(tip.node(), new_hash)
-        self.assertEqual(tip['adding_file'].data(), 'foo')
-        self.assertEqual(tip.branch(), 'the_branch')
+        oldf = open(os.path.join(self.wc_path, '.hg', 'hgrc'))
+        hgrc = oldf.read()
+        oldf.close()
+        shutil.rmtree(self.wc_path)
+        hg.clone(u, wc2path, self.wc_path, update=False)
+        oldf = open(os.path.join(self.wc_path, '.hg', 'hgrc'), 'w')
+        oldf.write(hgrc)
+        oldf.close()
+
+        # do a commit here
+        self.commitchanges([('foobaz', 'foobaz', 'This file is added on default.', ),
+                            ],
+                           parent='default',
+                           message='commit to default')
+        from hgsubversion import svncommands
+        svncommands.rebuildmeta(u,
+                                self.repo,
+                                os.path.dirname(self.repo.path),
+                                args=[test_util.fileurl(self.repo_path)])
+
+
+        hg.update(self.repo, self.repo['tip'].node())
+        oldnode = self.repo['tip'].hex()
+        self.pushrevisions(expected_extra_back=1)
+        self.assertNotEqual(oldnode, self.repo['tip'].hex(), 'Revision was not pushed.')
 
     def test_delete_file(self):
         repo = self.repo

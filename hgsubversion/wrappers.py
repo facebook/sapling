@@ -94,20 +94,6 @@ def push(repo, dest, force, revs):
     svn = svnwrap.SubversionRepo(svnurl, user, passwd)
     hge = hg_delta_editor.HgChangeReceiver(repo=repo, uuid=svn.uuid)
 
-    # Check if we are up-to-date with the Subversion repository.
-    if hge.last_known_revision() != svn.last_changed_rev:
-        # Messages are based on localrepository.push() in localrepo.py:1559. 
-        # TODO: Ideally, we would behave exactly like other repositories:
-        #  - push everything by default
-        #  - handle additional heads in the same way
-        #  - allow pushing single revisions, branches, tags or heads using
-        #    the -r/--rev flag.
-        if force:
-            ui.warn("note: unsynced remote changes!\n")
-        else:
-            ui.warn("abort: unsynced remote changes!\n")
-            return None, 0
-
     # Strategy:
     # 1. Find all outgoing commits from this head
     if len(repo.parents()) != 1:
@@ -235,7 +221,7 @@ def pull(repo, source, heads=[], force=False):
     try:
         # start converting revisions
         for r in svn.revisions(start=start, stop=stopat_rev):
-            if (r.author is None and 
+            if (r.author is None and
                 r.message == 'This is an empty revision for padding.'):
                 continue
             hg_editor.update_branch_tag_map_for_rev(r)
