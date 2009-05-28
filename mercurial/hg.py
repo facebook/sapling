@@ -165,7 +165,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 # can end up with extra data in the cloned revlogs that's
                 # not pointed to by changesets, thus causing verify to
                 # fail
-                src_lock = src_repo.lock()
+                src_lock = src_repo.lock(wait=False)
             except error.LockError:
                 copy = False
 
