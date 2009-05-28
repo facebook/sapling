@@ -412,35 +412,23 @@ class HgChangeReceiver(delta.Editor):
             return False
         return self._is_file_included(subpath)
 
-
     def _is_path_tag(self, path):
-        """If path could represent the path to a tag, returns the potential tag name.
+        """If path could represent the path to a tag, returns the potential tag
+        name. Otherwise, returns False.
 
-        Note that it's only a tag if it was copied from the path '' in a branch (or tag)
-        we have, for our purposes.
-
-        Otherwise, returns False.
-        """
-        return self._split_tag_path(path)[1] or False
-
-    def _split_tag_path(self, path):
-        """Figure out which tag inside our repo this path represents, and
-           also figure out which path inside that tag it is.
-
-           Returns a tuple of (path within tag, tag name, server-side tag
-           path).
+        Note that it's only a tag if it was copied from the path '' in a branch
+        (or tag) we have, for our purposes.
         """
         path = self._normalize_path(path)
-        for tags_path in self.tag_locations:
-            if path and (path.startswith(tags_path) and
-                         len(path) > len('%s/' % tags_path)):
-                tag = path[len(tags_path)+1:]
+        for tagspath in self.tag_locations:
+            onpath = path.startswith(tagspath)
+            longer = len(path) > len('%s/' % tagspath)
+            if path and onpath and longer:
+                tag, subpath = path[len(tagspath) + 1:], ''
                 if '/' in tag:
                     tag, subpath = tag.split('/', 1)
-                else:
-                    subpath = ''
-                return (subpath, tag, '%s/%s' % (tags_path, tag))
-        return (None, None, None)
+                return tag
+        return False
 
     def get_parent_svn_branch_and_rev(self, number, branch):
         number -= 1
