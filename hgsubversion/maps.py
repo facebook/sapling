@@ -47,7 +47,7 @@ class AuthorMap(dict):
                                      % (srcauth, self[srcauth], dstauth))
                     else:
                         self[srcauth] = dstauth
-                except IndexError:
+                except (IndexError, ValueError):
                     self.ui.warn('Ignoring line %i in author map %s: %s\n'
                                  % (number, path, line.rstrip()))
             f.close()
