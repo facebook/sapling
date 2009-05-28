@@ -711,11 +711,12 @@ class GitHandler(object):
             if gparents:
                 p1 = gparents.pop()
 
-            # wierd hack for explicit file renames in first but not second branch
-            if not (p2 == nullid):
-                vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
-                for removefile in vals:
-                    files.remove(removefile)
+        # wierd hack for explicit file renames in first but not second branch
+        if not (p2 == nullid):
+            vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
+            for removefile in vals:
+                files.remove(removefile)
+
         extra = {}
 
         # if named branch, add to extra
