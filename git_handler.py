@@ -20,31 +20,6 @@ from dulwich.objects import (
 
 import math
 
-def seconds_to_offset(time):
-    hours = (float(time) / 60 / 60)
-    hour_diff = math.fmod(time, 60)
-    minutes = int(hour_diff)
-    hours = int(math.floor(hours))
-    if hours > 12:
-        sign = '+'
-        hours = 12 - (hours - 12)
-    elif hours > 0:
-        sign = '-'
-    else:
-        sign = ''
-    return sign + str(hours).rjust(2, '0') + str(minutes).rjust(2, '0')
-
-def offset_to_seconds(offset):
-    if len(offset) == 5:
-        sign = offset[0:1]
-        hours = int(offset[1:3])
-        minutes = int(offset[3:5])
-        if sign == '+':
-            hours = 12 + (12 - hours)
-        return (hours * 60 * 60) + (minutes) * 60
-    else:
-        return 0
-
 class GitHandler(object):
 
     def __init__(self, dest_repo, ui):
@@ -220,6 +195,12 @@ class GitHandler(object):
         for i, rev in enumerate(self.repo.changelog):
             if i%100 == 0:
                 self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
+            
+            ctx = self.repo.changectx(rev)
+            state = ctx.extra().get('hg-git', None)
+            if state == 'octopus':
+                self.ui.debug("revision %d is a part of octopus explosion\n" % rev)
+                continue
             pgit_sha, already_written = self.export_hg_commit(rev)
             if not already_written:
                 self.save_map()
@@ -228,6 +209,9 @@ class GitHandler(object):
     # go through the manifest, convert all blobs/trees we don't have
     # write the commit object (with metadata info)
     def export_hg_commit(self, rev):
+        def is_octopus_part(ctx):
+            return ctx.extra().get('hg-git', None) in set(['octopus', 'octopus-done'])
+
         # return if we've already processed this
         node = self.repo.changelog.lookup(rev)
         phgsha = hex(node)
@@ -238,7 +222,22 @@ class GitHandler(object):
         self.ui.status(_("converting revision %s\n") % str(rev))
 
         # make sure parents are converted first
-        parents = self.repo.parents(rev)
+        ctx = self.repo.changectx(rev)
+        extra = ctx.extra()
+
+        parents = []
+        if extra.get('hg-git', None) == 'octopus-done':
+            # implode octopus parents
+            part = ctx
+            while is_octopus_part(part):
+                (p1, p2) = part.parents()
+                assert not is_octopus_part(p1)
+                parents.append(p1)
+                part = p2
+            parents.append(p2)
+        else:
+            parents = ctx.parents()
+
         for parent in parents:
             p_rev = parent.rev()
             hgsha = hex(parent.node())
@@ -247,7 +246,6 @@ class GitHandler(object):
                 if not git_sha:
                     self.export_hg_commit(p_rev)
 
-        ctx = self.repo.changectx(rev)
         tree_sha, renames = self.write_git_tree(ctx)
         
         commit = {}
@@ -262,7 +260,6 @@ class GitHandler(object):
         message = ctx.description()
         commit['message'] = ctx.description() + "\n"
 
-        extra = ctx.extra()
         if 'committer' in extra:
             # fixup timezone
             (name_timestamp, timezone) = extra['committer'].rsplit(' ', 1)
@@ -612,6 +609,7 @@ class GitHandler(object):
                     bms[base_name + head] = hgsha
             if heads:
                 bookmarks.write(self.repo, bms)
+
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
                          ' bookmarks enabled?\n'))
@@ -674,6 +672,12 @@ class GitHandler(object):
         
         (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
         
+        # get a list of the changed, added, removed files
+        files = self.git.get_files_changed(commit)
+
+        date = (commit.author_time, -commit.author_timezone)
+        text = strip_message
+
         def getfilectx(repo, memctx, f):
             try:
                 (mode, sha, data) = self.git.get_file(commit, f)
@@ -686,27 +690,32 @@ class GitHandler(object):
                 copied_path = None
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
-        p1 = nullid
-        p2 = nullid
-        if len(commit.parents) > 0:
-            sha = commit.parents[0]
-            p1 = self.map_hg_get(sha)
-        if len(commit.parents) > 1:
-            sha = commit.parents[1]
-            p2 = self.map_hg_get(sha)
-        if len(commit.parents) > 2:
-            # TODO : map extra parents to the extras file
-            pass
+        gparents = map(self.map_hg_get, commit.parents)
+        p1, p2 = (nullid, nullid)
+        octopus = False
 
-        # get a list of the changed, added, removed files
-        files = self.git.get_files_changed(commit)
+        if len(gparents) > 1:
+            # merge, possibly octopus
+            def commit_octopus(p1, p2):
+                ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
+                                     commit.author, date, {'hg-git': 'octopus'})
+                return hex(self.repo.commitctx(ctx))
 
-        # wierd hack for explicit file renames in first but not second branch
-        if not (p2 == nullid):
-            vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
-            for removefile in vals:
-                files.remove(removefile)
-            
+            octopus = len(gparents) > 2
+            p2 = gparents.pop()
+            p1 = gparents.pop()
+            while len(gparents) > 0:
+                p2 = commit_octopus(p1, p2)
+                p1 = gparents.pop()
+        else:
+            if gparents:
+                p1 = gparents.pop()
+
+            # wierd hack for explicit file renames in first but not second branch
+            if not (p2 == nullid):
+                vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
+                for removefile in vals:
+                    files.remove(removefile)
         extra = {}
 
         # if named branch, add to extra
@@ -723,16 +732,16 @@ class GitHandler(object):
         if hg_branch:
             extra['branch'] = hg_branch
 
-        text = strip_message
-        date = (commit.author_time, -commit.author_timezone)
+        if octopus:
+            extra['hg-git'] ='octopus-done'
+
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              commit.author, date, extra)
-        a = self.repo.commitctx(ctx)
+        node = self.repo.commitctx(ctx)
 
-        # get changeset id
-        cs = hex(self.repo.changelog.tip())
         # save changeset to mapping file
-        gitsha = commit.id
+        cs = hex(node)
+        self.map_set(commit.id, cs)
         
         # saving rename info
         if (not (p2 == nullid) or (p1 == nullid)):
@@ -742,7 +751,6 @@ class GitHandler(object):
             
         self.renames[cs].update(hg_renames)
         
-        self.map_set(gitsha, cs)
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
