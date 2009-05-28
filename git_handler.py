@@ -19,31 +19,6 @@ from dulwich.objects import (
 
 import math
 
-def seconds_to_offset(time):
-    hours = (float(time) / 60 / 60)
-    hour_diff = math.fmod(time, 60)
-    minutes = int(hour_diff)
-    hours = int(math.floor(hours))
-    if hours > 12:
-        sign = '+'
-        hours = 12 - (hours - 12)
-    elif hours > 0:
-        sign = '-'
-    else:
-        sign = ''
-    return sign + str(hours).rjust(2, '0') + str(minutes).rjust(2, '0')
-
-def offset_to_seconds(offset):
-    if len(offset) == 5:
-        sign = offset[0:1]
-        hours = int(offset[1:3])
-        minutes = int(offset[3:5])
-        if sign == '+':
-            hours = 12 + (12 - hours)
-        return (hours * 60 * 60) + (minutes) * 60
-    else:
-        return 0
-
 class GitHandler(object):
 
     def __init__(self, dest_repo, ui):
