@@ -972,10 +972,10 @@ class localrepository(repo.repository):
                 # update dirstate for files that are actually clean
                 if fixup:
                     try:
+                        # updating the dirstate is optional
+                        # so we don't wait on the lock
                         wlock = self.wlock(False)
                         try:
-                            # updating the dirstate is optional
-                            # so we don't wait on the lock
                             for f in fixup:
                                 self.dirstate.normal(f)
                         finally:
