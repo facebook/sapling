@@ -4,25 +4,24 @@ GENERAL
   - hg push git@...
   - hg fetch [remote] (remote is url, hg alias or hg-git remote)
   - hg clone url
-* fail nicely when the remote_name is not there
-* submodules?
-* .gitignore, etc - try to convert? 
-  - (probably not automatically, but perhaps a generator?)
+
 
 MAPPING ISSUES
 ==============
 * octopus merge explode/implode
-
 * work in Git on a named branch created in Hg is forward-ported to be named branch commits in Hg and stripped back out if re-exported
-
 * timezone issues (?)
 
-PUSH
-==========
+
+REMOTE/BRANCH STUFF
+=====================
 * push with branch names (w/ proper error messages)
 * explain what branch mapping policy determined when updating refs
+
 * add a warning for a non-fast forward push
 * error nicer if pushing to remote without push access (over git://)
+* fail nicely when the remote_name is not there
+
 
 WEBSITE
 ===========
@@ -30,9 +29,17 @@ WEBSITE
 * screencast
 * git+ssh, git@ descriptions, better error detection for that
 
+
 SPEED/EFFICIENCY
 ================
 * switch object mapping to hg->git since the many to one is that direction
 * don't send blobs/trees already on server (thin pack)
 * packfile creation benchmarking (seems to take a while sometimes)
   - at least provide status output
+
+
+MAYBE
+==========
+* submodules?
+* .gitignore, etc - try to convert? 
+  - (probably not automatically, but perhaps a generator?)
