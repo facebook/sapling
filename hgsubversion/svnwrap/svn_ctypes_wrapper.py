@@ -78,7 +78,7 @@ class SubversionRepo(object):
         """
         raise NotImplementedError
 
-    def revisions(self, start=None, chunk_size=1000):
+    def revisions(self, paths=None, start=None, stop=None, chunk_size=1000):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number
@@ -93,11 +93,6 @@ class SubversionRepo(object):
         #                                   start=start)
         # this does the same thing, but at the repo root + filtering. It's
         # kind of tough cookies, sadly.
-        raise NotImplementedError
-
-
-    def fetch_history_at_paths(self, paths, start=None, stop=None,
-                               chunk_size=1000):
         raise NotImplementedError
 
     def get_replay(self, revision, editor, oldest_rev_i_have=0):

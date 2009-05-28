@@ -263,7 +263,7 @@ class SubversionRepo(object):
         head=self.HEAD
         for b in branches:
             b_path = 'branches/%s' %b
-            hist_gen = self.fetch_history_at_paths([b_path], stop=head)
+            hist_gen = self.revisions([b_path], stop=head)
             hist = hist_gen.next()
             source, source_rev = self._get_copy_source(b_path, cached_head=head)
             # This if statement guards against projects that have non-ancestral
@@ -313,7 +313,7 @@ class SubversionRepo(object):
         """
         if not cached_head:
             cached_head = self.HEAD
-        hist_gen = self.fetch_history_at_paths([path], stop=cached_head)
+        hist_gen = self.revisions([path], stop=cached_head)
         hist = hist_gen.next()
         if hist.paths[path].copyfrom_path is None:
             return None, None
@@ -349,7 +349,8 @@ class SubversionRepo(object):
         folders, props, junk = r
         return folders
 
-    def revisions(self, start=None, stop=None, chunk_size=_chunk_size):
+    def revisions(self, paths=None, start=None, stop=None,
+                  chunk_size=_chunk_size):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number
@@ -358,13 +359,8 @@ class SubversionRepo(object):
         The reason this is lazy is so that you can use the same repo object
         to perform RA calls to get deltas.
         """
-        return self.fetch_history_at_paths([''], start=start, stop=stop,
-                                           chunk_size=chunk_size)
-
-    def fetch_history_at_paths(self, paths, start=None, stop=None,
-                               chunk_size=_chunk_size):
-        '''TODO: This method should be merged with self.revisions() as
-        they are now functionally equivalent.'''
+        if paths is None:
+            paths = ['']
         if not start:
             start = self.START
         if not stop:
