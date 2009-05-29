@@ -570,7 +570,7 @@ def runtests(options, expecthg, tests):
         if options.timeout > 0:
             try:
                 signal.signal(signal.SIGALRM, alarmed)
-                vlog('# Running tests with %d-second timeout' %
+                vlog('# Running each test with %d second timeout' %
                      options.timeout)
             except AttributeError:
                 print 'WARNING: cannot run tests with timeouts'
