@@ -1,4 +1,4 @@
-import os, errno, sys, time, datetime, pickle, copy, math
+import os, errno, sys, time, datetime, pickle, copy, math, urllib
 import toposort
 import dulwich
 from dulwich.repo import Repo
@@ -254,7 +254,7 @@ class GitHandler(object):
 
         # hg authors might not have emails
         author = ctx.user()
-        if not '>' in author: # TODO : this kills losslessness - die (submodules)?
+        if not '>' in author: 
             author = author + ' <none@none>'
         commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
         message = ctx.description()
@@ -282,7 +282,14 @@ class GitHandler(object):
             add_extras = True
             for oldfile, newfile in renames:
                 extra_message += "rename : " + oldfile + " => " + newfile + "\n"
-            
+
+        for key, value in extra.iteritems():
+            if key in ['committer', 'encoding', 'branch', 'hg-git', 'git']:
+                continue
+            else:
+                add_extras = True        
+                extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
+
         if add_extras:
             commit['message'] += "\n--HG--\n" + extra_message
 
@@ -627,6 +634,8 @@ class GitHandler(object):
     def extract_hg_metadata(self, message):
         split = message.split("\n\n--HG--\n", 1)
         renames = {}
+        extra = {}
+        files = []
         branch = False
         if len(split) == 2:
             message, meta = split
@@ -636,12 +645,18 @@ class GitHandler(object):
                     continue 
                 
                 command, data = line.split(" : ", 1)
+                
                 if command == 'rename':
                     before, after = data.split(" => ", 1)
                     renames[after] = before
                 if command == 'branch':
                     branch = data
-        return (message, renames, branch)
+                if command == 'files':
+                    files.append(data)
+                if command == 'extra':
+                    before, after = data.split(" : ", 1)
+                    extra[before] = urllib.unquote(after)
+        return (message, renames, branch, files, extra)
 
     def pseudo_import_git_commit(self, commit):
         (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
@@ -669,8 +684,8 @@ class GitHandler(object):
         self.ui.debug(_("importing: %s\n") % commit.id)
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
-        
-        (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
+
+        (strip_message, hg_renames, hg_branch, files, extra) = self.extract_hg_metadata(commit.message)
         
         # get a list of the changed, added, removed files
         files = self.git.get_files_changed(commit)
@@ -716,8 +731,11 @@ class GitHandler(object):
             vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
             for removefile in vals:
                 files.remove(removefile)
+        author = commit.author
 
         extra = {}
+        if ' <none@none>' in commit.author:
+            author = commit.author[:-12]
 
         # if named branch, add to extra
         if hg_branch:
@@ -737,7 +755,7 @@ class GitHandler(object):
             extra['hg-git'] ='octopus-done'
 
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
-                             commit.author, date, extra)
+                             author, date, extra)
         node = self.repo.commitctx(ctx)
 
         # save changeset to mapping file
