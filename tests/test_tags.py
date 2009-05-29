@@ -71,14 +71,17 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('tag_by_rename_branch.svndump',
                                             stupid=stupid)
         repo = self.repo
-        self.assertEqual(repo['tip'], repo['closed-branches'])
-        self.assertEqual(node.hex(repo['tip'].node()),
-                         '2f0a3abe2004c0fa01f5f6074a8b5441e9c80c2a')
-        taggedrev = repo['tip'].parents()[0]
-        self.assertEqual(node.hex(taggedrev.node()),
-                         '50c67c73267987de705ee335183c5486641e56e9')
-        self.assertEqual(node.hex(repo['tag/dummy'].node()),
-                         '50c67c73267987de705ee335183c5486641e56e9')
+        branches = set()
+        for h in repo.heads():
+            ctx = repo[h]
+            if 'close' not in ctx.extra():
+                branches.add(ctx.branch())
+
+        self.assert_('dummy' not in branches)
+        self.assertEqual(repo['tag/dummy'], repo['tip'].parents()[0])
+        extra = repo['tip'].extra().copy()
+        extra.pop('convert_revision', None)
+        self.assertEqual(extra, {'branch': 'dummy', 'close': '1'})
 
     def test_tag_by_renaming_branch_stupid(self):
         self.test_tag_by_renaming_branch(stupid=True)

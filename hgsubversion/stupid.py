@@ -436,7 +436,8 @@ def checkbranch(hg_editor, r, branch):
         return None
     branchtip = branchedits[0][1]
     for child in hg_editor.repo[branchtip].children():
-        if child.branch() == 'closed-branches':
+        b = child.branch() != 'default' and child.branch() or None
+        if b == branch and child.extra().get('close'):
             return None
     return branchtip
 
@@ -551,10 +552,7 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
     for b, parent in deleted_branches.iteritems():
         if parent == node.nullid:
             continue
-        closed = node.nullid
-        if 'closed-branches' in hg_editor.repo.branchtags():
-            closed = hg_editor.repo['closed-branches'].node()
-        hg_editor.delbranch(b, (parent, closed), r)
+        hg_editor.delbranch(b, parent, r)
 
     # save the changed metadata
     hg_editor._save_metadata()

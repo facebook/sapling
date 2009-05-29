@@ -111,11 +111,14 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             assert False, 'Unhandled case in rebuildmeta'
         revmap.write('%s %s %s\n' % (revision, ctx.hex(), commitpath))
 
-        # deal with branches
         revision = int(revision)
         noderevnums[ctx.node()] = revision
         if revision > last_rev:
             last_rev = revision
+
+        # deal with branches
+        if ctx.extra().get('close'): # don't re-add, we just deleted!
+            continue
         branch = ctx.branch()
         if branch == 'default':
             branch = None
@@ -132,10 +135,10 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
                                   noderevnums.get(parent.node(), 0),
                                   revision)
 
-        # deal with branch closing
-        for c in ctx.children():
-            if c.branch() == 'closed-branches':
+        for cctx in ctx.children():
+            if cctx.extra().get('close'):
                 branchinfo.pop(branch, None)
+                break
 
     # save off branch info
     branchinfofile = open(os.path.join(svnmetadir, 'branch_info'), 'w')

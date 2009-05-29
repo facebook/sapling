@@ -64,10 +64,8 @@ class TestFetchBranches(test_util.TestBase):
         repo = self._load_fixture_and_fetch('replace_trunk_with_branch.svndump',
                                             stupid)
         self.assertEqual(repo['default'].parents()[0].branch(), 'test')
-        self.assertEqual(node.hex(repo['closed-branches'].parents()[0].node()),
-                         '2cd09772e0f6ddf2d13c60ef3c1be11ad5a7dfae')
-        self.assertEqual(node.hex(repo['default'].node()),
-                         '8a525ca0671f456e6b1417187bf86c6115d2cb78')
+        self.assertEqual(repo['tip'].branch(), 'default')
+        self.assertEqual(repo['tip'].extra().get('close'), '1')
         self.assertEqual(self.openbranches(repo), ['default'])
 
     def test_replace_trunk_with_branch_stupid(self):
