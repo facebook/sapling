@@ -551,27 +551,10 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
     for b, parent in deleted_branches.iteritems():
         if parent == node.nullid:
             continue
-        parentctx = hg_editor.repo[parent]
-        files_touched = parentctx.manifest().keys()
-        def filectxfn(repo, memctx, path):
-            raise IOError()
         closed = node.nullid
         if 'closed-branches' in hg_editor.repo.branchtags():
             closed = hg_editor.repo['closed-branches'].node()
-        parents = (parent, closed)
-        extra = {}
-        if hg_editor.usebranchnames:
-                extra['branch'] = 'closed-branches'
-        current_ctx = context.memctx(hg_editor.repo,
-                                     parents,
-                                     r.message or util.default_commit_msg,
-                                     files_touched,
-                                     filectxfn,
-                                     hg_editor.authors[r.author],
-                                     date,
-                                     extra)
-        ha = hg_editor.repo.commitctx(current_ctx)
-        ui.status('Marked branch %s as closed.\n' % (b or 'default'))
+        hg_editor.delbranch(b, (parent, closed), r)
 
     # save the changed metadata
     hg_editor._save_metadata()

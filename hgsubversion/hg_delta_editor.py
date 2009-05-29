@@ -749,28 +749,28 @@ class HgChangeReceiver(delta.Editor):
             ha = closebranches.get(branch)
             if ha is None:
                 continue
-            parentctx = self.repo.changectx(ha)
-            parents = (ha, closed)
-            def del_all_files(*args):
-                raise IOError
-            files = parentctx.manifest().keys()
-            extra = {}
-            if self.usebranchnames:
-                extra['branch'] = 'closed-branches'
-            current_ctx = context.memctx(self.repo,
-                                         parents,
-                                         rev.message or ' ',
-                                         files,
-                                         del_all_files,
-                                         self.authors[rev.author],
-                                         date,
-                                         extra)
-            new_hash = self.repo.commitctx(current_ctx)
-            self.ui.status('Marked branch %s as closed.\n' % (branch or
-                                                              'default'))
+            self.delbranch(branch, (ha, closed), rev)
 
         self._save_metadata()
         self.clear_current_info()
+
+    def delbranch(self, branch, parents, rev):
+        def del_all_files(*args):
+            raise IOError
+        files = self.repo[parents[0]].manifest().keys()
+        extra = {}
+        if self.usebranchnames:
+            extra['branch'] = 'closed-branches'
+        ctx = context.memctx(self.repo,
+                             parents,
+                             rev.message or util.default_commit_msg,
+                             files,
+                             del_all_files,
+                             self.authors[rev.author],
+                             self.fixdate(rev.date),
+                             extra)
+        new = self.repo.commitctx(ctx)
+        self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))
 
     def readfilemap(self, filemapfile):
         self.ui.note(
