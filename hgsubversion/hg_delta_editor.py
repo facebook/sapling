@@ -566,8 +566,9 @@ class HgChangeReceiver(delta.Editor):
                     and branch not in added_branches):
                     parent = {branch: (None, 0, revision.revnum)}
             added_branches.update(parent)
+        rmtags = dict((t, self.tags[t][0]) for t in tags_to_delete)
         return {
-            'tags': (added_tags, tags_to_delete),
+            'tags': (added_tags, rmtags),
             'branches': (added_branches, self.branches_to_delete),
         }
 
@@ -615,6 +616,52 @@ class HgChangeReceiver(delta.Editor):
     def branchedits(self, branch, rev):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
         return sorted(filter(check, self.revmap.iteritems()), reverse=True)
+
+    def committags(self, delta, rev, endbranches):
+
+        date = self.fixdate(rev.date)
+        # determine additions/deletions per branch
+        branches = {}
+        for tag, source in delta[0].iteritems():
+            b, r = source
+            branches.setdefault(b, []).append(('add', tag, r))
+        for tag, branch in delta[1].iteritems():
+            branches.setdefault(branch, []).append(('rm', tag, None))
+
+        for b, tags in branches.iteritems():
+
+            # modify parent's .hgtags source
+            parent = self.repo[{None: 'default'}.get(b, b)]
+            if '.hgtags' not in parent:
+                src = ''
+            else:
+                src = parent['.hgtags'].data()
+            for op, tag, r in sorted(tags, reverse=True):
+                if op == 'add':
+                    tagged = node.hex(self.revmap[r, b])
+                elif op == 'rm':
+                    tagged = node.hex(node.nullid)
+                src += '%s %s\n' % (tagged, tag)
+
+            # add new changeset containing updated .hgtags
+            def fctxfun(repo, memctx, path):
+                return context.memfilectx(path='.hgtags', data=src,
+                                          islink=False, isexec=False,
+                                          copied=None)
+            extra = util.build_extra(rev.revnum, b, self.uuid, self.subdir)
+            ctx = context.memctx(self.repo,
+                                 (parent.node(), node.nullid),
+                                 rev.message or ' ',
+                                 ['.hgtags'],
+                                 fctxfun,
+                                 self.authors[rev.author],
+                                 date,
+                                 extra)
+            new = self.repo.commitctx(ctx)
+            if (rev.revnum, b) not in self.revmap:
+                self.add_to_revmap(rev.revnum, b, new)
+            if b in endbranches:
+                endbranches[b] = new
 
     def commit_current_delta(self, tbdelta):
         if hasattr(self, '_exception_info'):  #pragma: no cover
@@ -740,7 +787,11 @@ class HgChangeReceiver(delta.Editor):
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
 
-        # 3. close any branches that need it
+        # 3. handle tags
+        if tbdelta['tags'][0] or tbdelta['tags'][1]:
+            self.committags(tbdelta['tags'], rev, closebranches)
+
+        # 4. close any branches that need it
         for branch in tbdelta['branches'][1]:
             # self.get_parent_revision(rev.revnum, branch)
             ha = closebranches.get(branch)
@@ -752,9 +803,10 @@ class HgChangeReceiver(delta.Editor):
         self.clear_current_info()
 
     def delbranch(self, branch, node, rev):
-        def del_all_files(*args):
-            raise IOError
-        files = self.repo[node].manifest().keys()
+        pctx = self.repo[node]
+        def filectxfun(repo, memctx, path):
+            return pctx[path]
+        files = pctx.manifest().keys()
         extra = {'close': 1}
         if self.usebranchnames:
             extra['branch'] = branch or 'default'
@@ -762,7 +814,7 @@ class HgChangeReceiver(delta.Editor):
                              (node, revlog.nullid),
                              rev.message or util.default_commit_msg,
                              files,
-                             del_all_files,
+                             filectxfun,
                              self.authors[rev.author],
                              self.fixdate(rev.date),
                              extra)

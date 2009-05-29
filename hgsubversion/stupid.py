@@ -549,6 +549,9 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
         if closed is not None:
             deleted_branches[branch] = closed
 
+    if tbdelta['tags'][0] or tbdelta['tags'][1]:
+        hg_editor.committags(tbdelta['tags'], r, deleted_branches)
+
     for b, parent in deleted_branches.iteritems():
         if parent == node.nullid:
             continue

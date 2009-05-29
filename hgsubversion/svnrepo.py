@@ -74,15 +74,6 @@ def generate_repo_class(ui, repo):
             raise hgutil.Abort('cannot display incoming changes from '
                                'Subversion repositories, yet')
 
-        @localsvn
-        def tags(self):
-            tags = superclass.tags(self)
-            hg_editor = hg_delta_editor.HgChangeReceiver(repo=self)
-            for tag, source in hg_editor.tags.iteritems():
-                target = hg_editor.get_parent_revision(source[1]+1, source[0])
-                tags['tag/%s' % tag] = target
-            return tags
-
     repo.__class__ = svnlocalrepo
 
 class svnremoterepo(mercurial.repo.repository):
