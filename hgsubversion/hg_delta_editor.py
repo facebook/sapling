@@ -643,19 +643,25 @@ class HgChangeReceiver(delta.Editor):
             if b not in branch_batches:
                 branch_batches[b] = []
             branch_batches[b].append((p, f))
-        # close any branches that need it
-        closed_revs = set()
+
+        closebranches = {}
         for branch in tbdelta['branches'][1]:
-            closed = revlog.nullid
-            if 'closed-branches' in self.repo.branchtags():
-                closed = self.repo['closed-branches'].node()
             branchedits = self.branchedits(branch, rev)
             if len(branchedits) < 1:
                 # can't close a branch that never existed
                 continue
             ha = branchedits[0][1]
-            closed_revs.add(ha)
+            closebranches[branch] = ha
+
+        # 1. close any branches that need it
+        for branch in tbdelta['branches'][1]:
+            closed = revlog.nullid
+            if 'closed-branches' in self.repo.branchtags():
+                closed = self.repo['closed-branches'].node()
             # self.get_parent_revision(rev.revnum, branch)
+            ha = closebranches.get(branch)
+            if ha is None:
+                continue
             parentctx = self.repo.changectx(ha)
             parents = (ha, closed)
             def del_all_files(*args):
@@ -675,6 +681,9 @@ class HgChangeReceiver(delta.Editor):
             new_hash = self.repo.commitctx(current_ctx)
             self.ui.status('Marked branch %s as closed.\n' % (branch or
                                                               'default'))
+
+        # 2. handle normal commits
+        closedrevs = closebranches.values()
         for branch, files in branch_batches.iteritems():
             if branch in self.commit_branches_empty and files:
                 del self.commit_branches_empty[branch]
@@ -682,7 +691,7 @@ class HgChangeReceiver(delta.Editor):
 
             parents = (self.get_parent_revision(rev.revnum, branch),
                        revlog.nullid)
-            if parents[0] in closed_revs and branch in self.branches_to_delete:
+            if parents[0] in closedrevs and branch in self.branches_to_delete:
                 continue
             extra = util.build_extra(rev.revnum, branch, self.uuid, self.subdir)
             if branch is not None:
@@ -731,7 +740,8 @@ class HgChangeReceiver(delta.Editor):
             util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
                 self.add_to_revmap(rev.revnum, branch, new_hash)
-        # now we handle branches that need to be committed without any files
+
+        # 3. handle branches that need to be committed without any files
         for branch in self.commit_branches_empty:
             ha = self.get_parent_revision(rev.revnum, branch)
             if ha == node.nullid:
@@ -739,7 +749,7 @@ class HgChangeReceiver(delta.Editor):
             parent_ctx = self.repo.changectx(ha)
             def del_all_files(*args):
                 raise IOError
-           # True here meant nuke all files, shouldn't happen with branch closing
+            # True here meant nuke all files, shouldn't happen with branch closing
             if self.commit_branches_empty[branch]: #pragma: no cover
                raise hgutil.Abort('Empty commit to an open branch attempted. '
                                   'Please report this issue.')
