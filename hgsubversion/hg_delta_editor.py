@@ -846,18 +846,6 @@ class HgChangeReceiver(delta.Editor):
         return self.meta_file_named('authors')
     authors_file = property(authors_file)
 
-    def load_base_from_ctx(self, svnpath, path, ctx):
-        if not self._is_path_valid(svnpath):
-            return
-        if path in ctx:
-            fctx = ctx.filectx(path)
-            base = fctx.data()
-            if 'l' in fctx.flags():
-                base = 'link ' + base
-            self.set_file(svnpath, base, 'x' in fctx.flags(), 'l' in fctx.flags())
-        else:
-            self.missing_plaintexts.add(svnpath)
-
     def aresamefiles(self, parentctx, childctx, files):
         """Assuming all files exist in childctx and parentctx, return True
         if none of them was changed in-between.
@@ -912,21 +900,37 @@ class HgChangeReceiver(delta.Editor):
     def open_file(self, path, parent_baton, base_revision, p=None):
         self.current_file = None
         fpath, branch = self._path_and_branch_for_path(path)
-        if fpath:
-            self.current_file = path
-            self.ui.note('M %s\n' % path)
-            if base_revision != -1:
-                self.base_revision = base_revision
-            else:
-                self.base_revision = None
-            if self.current_file not in self.current_files:
-                baserev = base_revision
-                if baserev is None or baserev == -1:
-                    baserev = self.current_rev.revnum - 1
-                parent = self.get_parent_revision(baserev + 1, branch)
-                self.load_base_from_ctx(path, fpath, self.repo.changectx(parent))
-        else:
+        if not fpath:
             self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
+            return
+
+        self.current_file = path
+        self.ui.note('M %s\n' % path)
+        if base_revision != -1:
+            self.base_revision = base_revision
+        else:
+            self.base_revision = None
+
+        if self.current_file in self.current_files:
+            return
+
+        baserev = base_revision
+        if baserev is None or baserev == -1:
+            baserev = self.current_rev.revnum - 1
+        parent = self.get_parent_revision(baserev + 1, branch)
+
+        ctx = self.repo[parent]
+        if not self._is_path_valid(path):
+            return
+
+        if fpath not in ctx:
+            self.missing_plaintexts.add(svnpath)
+
+        fctx = ctx.filectx(fpath)
+        base = fctx.data()
+        if 'l' in fctx.flags():
+            base = 'link ' + base
+        self.set_file(path, base, 'x' in fctx.flags(), 'l' in fctx.flags())
 
     @ieditor
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
