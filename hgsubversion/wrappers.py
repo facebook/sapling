@@ -228,14 +228,14 @@ def pull(repo, source, heads=[], force=False):
             if (r.author is None and
                 r.message == 'This is an empty revision for padding.'):
                 continue
-            hg_editor.update_branch_tag_map_for_rev(r)
+            tbdelta = hg_editor.update_branch_tag_map_for_rev(r)
             # got a 502? Try more than once!
             tries = 0
             converted = False
             while not converted:
                 try:
                     util.describe_revision(ui, r)
-                    pullfuns[have_replay](ui, hg_editor, svn, r)
+                    pullfuns[have_replay](ui, hg_editor, svn, r, tbdelta)
                     converted = True
                 except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                     ui.status('%s\n' % e.message)

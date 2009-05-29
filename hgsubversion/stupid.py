@@ -430,8 +430,10 @@ def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
 
     return files, filectxfn
 
-def convert_rev(ui, hg_editor, svn, r):
+def convert_rev(ui, hg_editor, svn, r, tbdelta):
     # this server fails at replay
+
+    hg_editor.save_tbdelta(tbdelta)
     branches = hg_editor.branches_in_paths(r.paths, r.revnum, svn.checkpath, svn.list_files)
     deleted_branches = {}
     brpaths = branches.values()
@@ -533,7 +535,6 @@ def convert_rev(ui, hg_editor, svn, r):
             if not branch in hg_editor.branches:
                 hg_editor.branches[branch] = None, 0, r.revnum
             hg_editor.add_to_revmap(r.revnum, b, ha)
-            hg_editor._save_metadata()
             util.describe_commit(ui, ha, b)
     # These are branches which would have an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.
@@ -573,4 +574,6 @@ def convert_rev(ui, hg_editor, svn, r):
                                      extra)
         ha = hg_editor.repo.commitctx(current_ctx)
         ui.status('Marked branch %s as closed.\n' % (b or 'default'))
-        hg_editor._save_metadata()
+
+    # save the changed metadata
+    hg_editor._save_metadata()

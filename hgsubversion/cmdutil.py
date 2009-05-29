@@ -54,9 +54,10 @@ def parentrev(ui, repo, hge, svn_commit_hashes):
     return workingctx
 
 
-def replay_convert_rev(ui, hg_editor, svn, r):
+def replay_convert_rev(ui, hg_editor, svn, r, tbdelta):
     # ui is only passed in for similarity with stupid.convert_rev()
     hg_editor.set_current_rev(r)
+    hg_editor.save_tbdelta(tbdelta) # needed by get_replay()
     svn.get_replay(r.revnum, hg_editor)
     i = 1
     if hg_editor.missing_plaintexts:
@@ -85,7 +86,7 @@ def replay_convert_rev(ui, hg_editor, svn, r):
             hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
         hg_editor.missing_plaintexts = set()
         hg_editor.ui.note('\n')
-    hg_editor.commit_current_delta()
+    hg_editor.commit_current_delta(tbdelta)
 
 
 def _isdir(svn, branchpath, svndir):

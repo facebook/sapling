@@ -566,16 +566,21 @@ class HgChangeReceiver(delta.Editor):
                     and branch not in added_branches):
                     parent = {branch: (None, 0, revision.revnum)}
             added_branches.update(parent)
-        for t in tags_to_delete:
+        return {
+            'tags': (added_tags, tags_to_delete),
+            'branches': (added_branches, self.branches_to_delete),
+        }
+
+    def save_tbdelta(self, tbdelta):
+        for t in tbdelta['tags'][1]:
             del self.tags[t]
-        for br in self.branches_to_delete:
+        for br in tbdelta['branches'][1]:
             del self.branches[br]
-        for t, info in added_tags.items():
+        for t, info in tbdelta['tags'][0].items():
             self.ui.status('Tagged %s@%s as %s\n' %
                            (info[0] or 'trunk', info[1], t))
-        self.tags.update(added_tags)
-        self.branches.update(added_branches)
-        self._save_metadata()
+        self.tags.update(tbdelta['tags'][0])
+        self.branches.update(tbdelta['branches'][0])
 
     def _updateexternals(self):
         if not self.externals:
@@ -607,7 +612,7 @@ class HgChangeReceiver(delta.Editor):
             else:
                 self.delete_file(path)
 
-    def commit_current_delta(self):
+    def commit_current_delta(self, tbdelta):
         if hasattr(self, '_exception_info'):  #pragma: no cover
             traceback.print_exception(*self._exception_info)
             raise ReplayException()
@@ -636,7 +641,7 @@ class HgChangeReceiver(delta.Editor):
             branch_batches[b].append((p, f))
         # close any branches that need it
         closed_revs = set()
-        for branch in self.branches_to_delete:
+        for branch in tbdelta['branches'][1]:
             closed = revlog.nullid
             if 'closed-branches' in self.repo.branchtags():
                 closed = self.repo['closed-branches'].node()
