@@ -21,6 +21,12 @@ class TestFetchBranches(test_util.TestBase):
         repo = hg.clone(ui.ui(), source=source, dest=self.wc_path)
         return hg.repository(ui.ui(), self.wc_path)
 
+    def openbranches(self, repo):
+        hctxs = [repo[hn] for hn in repo.heads(closed=False)]
+        branches = set(ctx.branch() for ctx in hctxs)
+        branches.discard('closed-branches')
+        return sorted(branches)
+
     def test_unrelatedbranch(self, stupid=False):
         repo = self._load_fixture_and_fetch('unrelatedbranch.svndump', stupid)
         heads = [repo[n] for n in repo.heads()]
@@ -48,6 +54,8 @@ class TestFetchBranches(test_util.TestBase):
                          '14d252aef315857df241dd3fa4bc7833b09bd2f5')
         self.assertEqual(repo['default'].parents()[0].branch(), 'dev_branch')
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
+        expected = ['default', 'old_trunk']
+        self.assertEqual(self.openbranches(repo), expected)
 
     def test_renamed_branch_to_trunk_stupid(self):
         self.test_renamed_branch_to_trunk(stupid=True)
@@ -60,6 +68,7 @@ class TestFetchBranches(test_util.TestBase):
                          '2cd09772e0f6ddf2d13c60ef3c1be11ad5a7dfae')
         self.assertEqual(node.hex(repo['default'].node()),
                          '8a525ca0671f456e6b1417187bf86c6115d2cb78')
+        self.assertEqual(self.openbranches(repo), ['default'])
 
     def test_replace_trunk_with_branch_stupid(self):
         self.test_replace_trunk_with_branch(stupid=True)
