@@ -77,56 +77,67 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     branchinfo = {}
     noderevnums = {}
     for rev in repo:
+
         ctx = repo[rev]
         convinfo = ctx.extra().get('convert_revision', None)
-        if convinfo:
-            assert convinfo.startswith('svn:')
-            revpath, revision = convinfo[40:].split('@')
-            if subdir and subdir[0] != '/':
-                subdir = '/' + subdir
-            if subdir and subdir[-1] == '/':
-                subdir = subdir[:-1]
-            assert revpath.startswith(subdir), ('That does not look like the '
-                                                'right location in the repo.')
-            if uuid is None:
-                uuid = convinfo[4:40]
-                assert uuid == svn.uuid, 'UUIDs did not match!'
-                uuidfile = open(os.path.join(svnmetadir, 'uuid'), 'w')
-                uuidfile.write(uuid)
-                uuidfile.close()
-            commitpath = revpath[len(subdir)+1:]
-            if commitpath.startswith('branches'):
-                commitpath = commitpath[len('branches/'):]
-            elif commitpath == 'trunk':
-                commitpath = ''
-            else:
-                assert False, 'Unhandled case in rebuildmeta'
-            revmap.write('%s %s %s\n' % (revision,
-                                         node.hex(ctx.node()),
-                                         commitpath))
-            revision = int(revision)
-            noderevnums[ctx.node()] = revision
-            if revision > last_rev:
-                last_rev = revision
-            branch = ctx.branch()
-            if branch == 'default':
-                branch = None
-            if branch not in branchinfo:
-                parent = ctx.parents()[0]
-                if (parent.node() in noderevnums
-                    and parent.branch() != ctx.branch()):
-                    parentbranch = parent.branch()
-                    if parentbranch == 'default':
-                        parentbranch = None
-                else:
+        if not convinfo:
+            continue
+
+        # check that the conversion metadata matches expectations
+        assert convinfo.startswith('svn:')
+        revpath, revision = convinfo[40:].split('@')
+        if subdir and subdir[0] != '/':
+            subdir = '/' + subdir
+        if subdir and subdir[-1] == '/':
+            subdir = subdir[:-1]
+        assert revpath.startswith(subdir), ('That does not look like the '
+                                            'right location in the repo.')
+
+        # write repository uuid if required
+        if uuid is None:
+            uuid = convinfo[4:40]
+            assert uuid == svn.uuid, 'UUIDs did not match!'
+            uuidfile = open(os.path.join(svnmetadir, 'uuid'), 'w')
+            uuidfile.write(uuid)
+            uuidfile.close()
+
+        # find commitpath, write to revmap
+        commitpath = revpath[len(subdir)+1:]
+        if commitpath.startswith('branches'):
+            commitpath = commitpath[len('branches/'):]
+        elif commitpath == 'trunk':
+            commitpath = ''
+        else:
+            assert False, 'Unhandled case in rebuildmeta'
+        revmap.write('%s %s %s\n' % (revision, ctx.hex(), commitpath))
+
+        # deal with branches
+        revision = int(revision)
+        noderevnums[ctx.node()] = revision
+        if revision > last_rev:
+            last_rev = revision
+        branch = ctx.branch()
+        if branch == 'default':
+            branch = None
+        if branch not in branchinfo:
+            parent = ctx.parents()[0]
+            if (parent.node() in noderevnums
+                and parent.branch() != ctx.branch()):
+                parentbranch = parent.branch()
+                if parentbranch == 'default':
                     parentbranch = None
-                branchinfo[branch] = (parentbranch,
-                                      noderevnums.get(parent.node(), 0),
-                                      revision)
-            for c in ctx.children():
-                if c.branch() == 'closed-branches':
-                    if branch in branchinfo:
-                        del branchinfo[branch]
+            else:
+                parentbranch = None
+            branchinfo[branch] = (parentbranch,
+                                  noderevnums.get(parent.node(), 0),
+                                  revision)
+
+        # deal with branch closing
+        for c in ctx.children():
+            if c.branch() == 'closed-branches':
+                branchinfo.pop(branch, None)
+
+    # save off branch info
     branchinfofile = open(os.path.join(svnmetadir, 'branch_info'), 'w')
     pickle.dump(branchinfo, branchinfofile)
     branchinfofile.close()
