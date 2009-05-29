@@ -430,12 +430,21 @@ def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
 
     return files, filectxfn
 
+def checkbranch(hg_editor, r, branch):
+    branchedits = hg_editor.branchedits(branch, r)
+    if not branchedits:
+        return None
+    branchtip = branchedits[0][1]
+    for child in hg_editor.repo[branchtip].children():
+        if child.branch() == 'closed-branches':
+            return None
+    return branchtip
+
 def convert_rev(ui, hg_editor, svn, r, tbdelta):
     # this server fails at replay
 
     hg_editor.save_tbdelta(tbdelta)
     branches = hg_editor.branches_in_paths(r.paths, r.revnum, svn.checkpath, svn.list_files)
-    deleted_branches = {}
     brpaths = branches.values()
     bad_branch_paths = {}
     for br, bp in branches.iteritems():
@@ -453,21 +462,17 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
             bad = hg_editor._remotename(existingbr)
             if bad.startswith(bp) and len(bad) > len(bp):
                 bad_branch_paths[br].append(bad[len(bp)+1:])
+
+    deleted_branches = {}
     for p in r.paths:
         if hg_editor._is_path_tag(p):
             continue
         branch = hg_editor._localname(p)
-        if r.paths[p].action == 'R' and branch in hg_editor.branches:
-            branchedits = hg_editor.branchedits(branch, r)
-            is_closed = False
-            if len(branchedits) > 0:
-                branchtip = branchedits[0][1]
-                for child in hg_editor.repo[branchtip].children():
-                    if child.branch() == 'closed-branches':
-                        is_closed = True
-                        break
-                if not is_closed:
-                    deleted_branches[branch] = branchtip
+        if not (r.paths[p].action == 'R' and branch in hg_editor.branches):
+            continue
+        closed = checkbranch(hg_editor, r, branch)
+        if closed is not None:
+            deleted_branches[branch] = closed
 
     date = hg_editor.fixdate(r.date)
     check_deleted_branches = set()
@@ -535,19 +540,14 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
                 hg_editor.branches[branch] = None, 0, r.revnum
             hg_editor.add_to_revmap(r.revnum, b, ha)
             util.describe_commit(ui, ha, b)
-    # These are branches which would have an 'R' status in svn log. This means they were
+
+    # These are branches with an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.
     for branch in check_deleted_branches:
-        branchedits = hg_editor.branchedits(branch, r)
-        is_closed = False
-        if len(branchedits) > 0:
-            branchtip = branchedits[0][1]
-            for child in hg_editor.repo[branchtip].children():
-                if child.branch() == 'closed-branches':
-                    is_closed = True
-                    break
-            if not is_closed:
-                deleted_branches[branch] = branchtip
+        closed = checkbranch(hg_editor, r, branch)
+        if closed is not None:
+            deleted_branches[branch] = closed
+
     for b, parent in deleted_branches.iteritems():
         if parent == node.nullid:
             continue
