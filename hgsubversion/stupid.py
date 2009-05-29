@@ -458,8 +458,7 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
             continue
         branch = hg_editor._localname(p)
         if r.paths[p].action == 'R' and branch in hg_editor.branches:
-            branchedits = sorted(filter(lambda x: x[0][1] == branch and x[0][0] < r.revnum,
-                                        hg_editor.revmap.iteritems()), reverse=True)
+            branchedits = hg_editor.branchedits(branch, r)
             is_closed = False
             if len(branchedits) > 0:
                 branchtip = branchedits[0][1]
@@ -539,8 +538,7 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
     # These are branches which would have an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.
     for branch in check_deleted_branches:
-        branchedits = sorted(filter(lambda x: x[0][1] == branch and x[0][0] < r.revnum,
-                                    hg_editor.revmap.iteritems()), reverse=True)
+        branchedits = hg_editor.branchedits(branch, r)
         is_closed = False
         if len(branchedits) > 0:
             branchtip = branchedits[0][1]

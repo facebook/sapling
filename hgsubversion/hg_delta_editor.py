@@ -612,6 +612,10 @@ class HgChangeReceiver(delta.Editor):
             else:
                 self.delete_file(path)
 
+    def branchedits(self, branch, rev):
+        check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
+        return sorted(filter(check, self.revmap.iteritems()), reverse=True)
+
     def commit_current_delta(self, tbdelta):
         if hasattr(self, '_exception_info'):  #pragma: no cover
             traceback.print_exception(*self._exception_info)
@@ -645,8 +649,7 @@ class HgChangeReceiver(delta.Editor):
             closed = revlog.nullid
             if 'closed-branches' in self.repo.branchtags():
                 closed = self.repo['closed-branches'].node()
-            branchedits = sorted(filter(lambda x: x[0][1] == branch and x[0][0] < rev.revnum,
-                                        self.revmap.iteritems()), reverse=True)
+            branchedits = self.branchedits(branch, rev)
             if len(branchedits) < 1:
                 # can't close a branch that never existed
                 continue
