@@ -18,7 +18,8 @@ def version(ui):
     """Guess the version of hgsubversion.
     """
     # TODO make this say something other than "unknown" for installed hgsubversion
-    repo = hg.repository(ui, os.path.dirname(__file__))
+    dn = os.path.dirname
+    repo = hg.repository(ui, dn(dn(__file__)))
     ver = repo.dirstate.parents()[0]
     return node.hex(ver)[:12]
 
