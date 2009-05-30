@@ -57,12 +57,86 @@ class statusentry:
         return self.rev + ':' + self.name
 
 class patchheader(object):
-    def __init__(self, message, comments, user, date, haspatch):
+    def __init__(self, pf):
+        def eatdiff(lines):
+            while lines:
+                l = lines[-1]
+                if (l.startswith("diff -") or
+                    l.startswith("Index:") or
+                    l.startswith("===========")):
+                    del lines[-1]
+                else:
+                    break
+        def eatempty(lines):
+            while lines:
+                l = lines[-1]
+                if re.match('\s*$', l):
+                    del lines[-1]
+                else:
+                    break
+
+        message = []
+        comments = []
+        user = None
+        date = None
+        format = None
+        subject = None
+        diffstart = 0
+
+        for line in file(pf):
+            line = line.rstrip()
+            if line.startswith('diff --git'):
+                diffstart = 2
+                break
+            if diffstart:
+                if line.startswith('+++ '):
+                    diffstart = 2
+                break
+            if line.startswith("--- "):
+                diffstart = 1
+                continue
+            elif format == "hgpatch":
+                # parse values when importing the result of an hg export
+                if line.startswith("# User "):
+                    user = line[7:]
+                elif line.startswith("# Date "):
+                    date = line[7:]
+                elif not line.startswith("# ") and line:
+                    message.append(line)
+                    format = None
+            elif line == '# HG changeset patch':
+                format = "hgpatch"
+            elif (format != "tagdone" and (line.startswith("Subject: ") or
+                                           line.startswith("subject: "))):
+                subject = line[9:]
+                format = "tag"
+            elif (format != "tagdone" and (line.startswith("From: ") or
+                                           line.startswith("from: "))):
+                user = line[6:]
+                format = "tag"
+            elif format == "tag" and line == "":
+                # when looking for tags (subject: from: etc) they
+                # end once you find a blank line in the source
+                format = "tagdone"
+            elif message or line:
+                message.append(line)
+            comments.append(line)
+
+        eatdiff(message)
+        eatdiff(comments)
+        eatempty(message)
+        eatempty(comments)
+
+        # make sure message isn't empty
+        if format and format.startswith("tag") and subject:
+            message.insert(0, "")
+            message.insert(0, subject)
+
         self.message = message
         self.comments = comments
         self.user = user
         self.date = date
-        self.haspatch = haspatch
+        self.haspatch = diffstart > 1
 
     def setuser(self, user):
         if not self.setheader(['From: ', '# User '], user):
@@ -314,83 +388,6 @@ class queue:
         if self.series_dirty: write_list(self.full_series, self.series_path)
         if self.guards_dirty: write_list(self.active_guards, self.guards_path)
 
-    def readheaders(self, patch):
-        def eatdiff(lines):
-            while lines:
-                l = lines[-1]
-                if (l.startswith("diff -") or
-                    l.startswith("Index:") or
-                    l.startswith("===========")):
-                    del lines[-1]
-                else:
-                    break
-        def eatempty(lines):
-            while lines:
-                l = lines[-1]
-                if re.match('\s*$', l):
-                    del lines[-1]
-                else:
-                    break
-
-        pf = self.join(patch)
-        message = []
-        comments = []
-        user = None
-        date = None
-        format = None
-        subject = None
-        diffstart = 0
-
-        for line in file(pf):
-            line = line.rstrip()
-            if line.startswith('diff --git'):
-                diffstart = 2
-                break
-            if diffstart:
-                if line.startswith('+++ '):
-                    diffstart = 2
-                break
-            if line.startswith("--- "):
-                diffstart = 1
-                continue
-            elif format == "hgpatch":
-                # parse values when importing the result of an hg export
-                if line.startswith("# User "):
-                    user = line[7:]
-                elif line.startswith("# Date "):
-                    date = line[7:]
-                elif not line.startswith("# ") and line:
-                    message.append(line)
-                    format = None
-            elif line == '# HG changeset patch':
-                format = "hgpatch"
-            elif (format != "tagdone" and (line.startswith("Subject: ") or
-                                           line.startswith("subject: "))):
-                subject = line[9:]
-                format = "tag"
-            elif (format != "tagdone" and (line.startswith("From: ") or
-                                           line.startswith("from: "))):
-                user = line[6:]
-                format = "tag"
-            elif format == "tag" and line == "":
-                # when looking for tags (subject: from: etc) they
-                # end once you find a blank line in the source
-                format = "tagdone"
-            elif message or line:
-                message.append(line)
-            comments.append(line)
-
-        eatdiff(message)
-        eatdiff(comments)
-        eatempty(message)
-        eatempty(comments)
-
-        # make sure message isn't empty
-        if format and format.startswith("tag") and subject:
-            message.insert(0, "")
-            message.insert(0, subject)
-        return patchheader(message, comments, user, date, diffstart > 1)
-
     def removeundo(self, repo):
         undo = repo.sjoin('undo')
         if not os.path.exists(undo):
@@ -433,7 +430,7 @@ class queue:
         if n is None:
             raise util.Abort(_("repo commit failed"))
         try:
-            ph = mergeq.readheaders(patch)
+            ph = patchheader(mergeq.join(patch))
         except:
             raise util.Abort(_("unable to read %s") % patch)
 
@@ -560,7 +557,7 @@ class queue:
             pf = os.path.join(patchdir, patchname)
 
             try:
-                ph = self.readheaders(patchname)
+                ph = patchheader(self.join(patchname))
             except:
                 self.ui.warn(_("Unable to read %s\n") % patchname)
                 err = 1
@@ -1120,7 +1117,7 @@ class queue:
                 raise util.Abort(_("cannot refresh a revision with children"))
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
-            ph = self.readheaders(patchfn)
+            ph = patchheader(self.join(patchfn))
 
             patchf = self.opener(patchfn, 'r')
 
@@ -1349,7 +1346,7 @@ class queue:
                 summary=False):
         def displayname(patchname):
             if summary:
-                ph = self.readheaders(patchname)
+                ph = patchheader(self.join(patchname))
                 msg = ph.message
                 msg = msg and ': ' + msg[0] or ': '
             else:
@@ -1922,7 +1919,7 @@ def refresh(ui, repo, *pats, **opts):
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
         patch = q.applied[-1].name
-        ph = q.readheaders(patch)
+        ph = patchheader(q.join(patch))
         message = ui.edit('\n'.join(ph.message), ph.user or ui.username())
     setupheaderopts(ui, opts)
     ret = q.refresh(repo, pats, msg=message, **opts)
@@ -1984,7 +1981,7 @@ def fold(ui, repo, *files, **opts):
 
     for p in patches:
         if not message:
-            ph = q.readheaders(p)
+            ph = patchheader(q.join(p))
             if ph.message:
                 messages.append(ph.message)
         pf = q.join(p)
@@ -1994,7 +1991,7 @@ def fold(ui, repo, *files, **opts):
         patch.updatedir(ui, repo, files)
 
     if not message:
-        ph = q.readheaders(parent)
+        ph = patchheader(q.join(parent))
         message, user = ph.message, ph.user
         for msg in messages:
             message.append('* * *')
@@ -2075,7 +2072,7 @@ def header(ui, repo, patch=None):
             ui.write('no patches applied\n')
             return 1
         patch = q.lookup('qtip')
-    ph = repo.mq.readheaders(patch)
+    ph = patchheader(repo.mq.join(patch))
 
     ui.write('\n'.join(ph.message) + '\n')
 
