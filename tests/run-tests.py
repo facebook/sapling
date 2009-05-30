@@ -205,7 +205,6 @@ def usecorrectpython():
         shutil.copymode(sys.executable, mypython)
 
 def installhg(options):
-    global PYTHON
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
     pure = options.pure and "--pure" or ""
@@ -239,8 +238,6 @@ def installhg(options):
     os.environ["PYTHONPATH"] = pythonpath
 
     usecorrectpython()
-    global hgpkg
-    hgpkg = _hgpath()
 
     vlog("# Installing dummy diffstat")
     f = open(os.path.join(BINDIR, 'diffstat'), 'w')
@@ -269,15 +266,6 @@ def installhg(options):
                  os.path.join(BINDIR, '_hg.py')))
         f.close()
         os.chmod(os.path.join(BINDIR, 'hg'), 0700)
-        PYTHON = '"%s" "%s" -x -p' % (sys.executable,
-                                      os.path.join(TESTDIR, 'coverage.py'))
-
-def _hgpath():
-    cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
-    hgpath = os.popen(cmd % PYTHON)
-    path = hgpath.read().strip()
-    hgpath.close()
-    return path
 
 def outputcoverage(options):
 
@@ -496,11 +484,35 @@ def runone(options, test, skips, fails):
         return None
     return ret == 0
 
-def runchildren(options, expecthg, tests):
+_hgpath = None
+
+def _gethgpath():
+    """Return the path to the mercurial package that is actually found by
+    the current Python interpreter."""
+    global _hgpath
+    if _hgpath is not None:
+        return _hgpath
+
+    cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
+    pipe = os.popen(cmd % PYTHON)
+    try:
+        _hgpath = pipe.read().strip()
+    finally:
+        pipe.close()
+    return _hgpath
+
+def _checkhglib(verb):
+    """Ensure that the 'mercurial' package imported by python is
+    the one we expect it to be.  If not, print a message to stdout."""
+    expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
+    actualhg = _gethgpath()
+    if actualhg != expecthg:
+        print '# %s unexpected mercurial: %s' % (verb, actualhg)
+
+def runchildren(options, tests):
     if not options.with_hg:
         installhg(options)
-        if hgpkg != expecthg:
-            print '# Testing unexpected mercurial: %s' % hgpkg
+        _checkhglib("Testing")
 
     optcopy = dict(options.__dict__)
     optcopy['jobs'] = 1
@@ -554,13 +566,12 @@ def runchildren(options, expecthg, tests):
     for s in fails:
         print "Failed %s: %s" % (s[0], s[1])
 
-    if hgpkg != expecthg:
-        print '# Tested unexpected mercurial: %s' % hgpkg
+    _checkhglib("Tested")
     print "# Ran %d tests, %d skipped, %d failed." % (
         tested, skipped, failed)
     sys.exit(failures != 0)
 
-def runtests(options, expecthg, tests):
+def runtests(options, tests):
     global DAEMON_PIDS, HGRCPATH
     DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
     HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
@@ -568,9 +579,7 @@ def runtests(options, expecthg, tests):
     try:
         if not options.with_hg:
             installhg(options)
-
-            if hgpkg != expecthg:
-                print '# Testing unexpected mercurial: %s' % hgpkg
+            _checkhglib("Testing")
 
         if options.timeout > 0:
             try:
@@ -632,8 +641,7 @@ def runtests(options, expecthg, tests):
                 print "Skipped %s: %s" % s
             for s in fails:
                 print "Failed %s: %s" % s
-            if hgpkg != expecthg:
-                print '# Tested unexpected mercurial: %s' % hgpkg
+            _checkhglib("Tested")
             print "# Ran %d tests, %d skipped, %d failed." % (
                 tested, skipped, failed)
 
@@ -684,8 +692,6 @@ def main():
     PYTHONDIR = os.path.join(INST, "lib", "python")
     COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
-    expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
-
     if len(args) == 0:
         args = os.listdir(".")
         args.sort()
@@ -705,9 +711,9 @@ def main():
 
     try:
         if len(tests) > 1 and options.jobs > 1:
-            runchildren(options, expecthg, tests)
+            runchildren(options, tests)
         else:
-            runtests(options, expecthg, tests)
+            runtests(options, tests)
     finally:
         cleanup(options)
 
