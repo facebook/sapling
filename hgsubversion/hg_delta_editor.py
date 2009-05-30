@@ -575,7 +575,8 @@ class HgChangeReceiver(delta.Editor):
                 src = parent['.hgtags'].data()
             for op, tag, r in sorted(tags, reverse=True):
                 if op == 'add':
-                    tagged = node.hex(self.revmap[r, b])
+                    tagged = node.hex(self.revmap[
+                        self.get_parent_svn_branch_and_rev(r+1, b)])
                 elif op == 'rm':
                     tagged = node.hex(node.nullid)
                 src += '%s %s\n' % (tagged, tag)
