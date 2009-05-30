@@ -916,7 +916,7 @@ class HgChangeReceiver(delta.Editor):
             return
 
         if fpath not in ctx:
-            self.missing_plaintexts.add(svnpath)
+            self.missing_plaintexts.add(path)
 
         fctx = ctx.filectx(fpath)
         base = fctx.data()
