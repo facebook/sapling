@@ -503,11 +503,13 @@ def _gethgpath():
 
 def _checkhglib(verb):
     """Ensure that the 'mercurial' package imported by python is
-    the one we expect it to be.  If not, print a message to stdout."""
-    expecthg = os.path.join(HGTMP, 'install', 'lib', 'python', 'mercurial')
+    the one we expect it to be.  If not, print a warning to stderr."""
+    expecthg = os.path.join(PYTHONDIR, 'mercurial')
     actualhg = _gethgpath()
     if actualhg != expecthg:
-        print '# %s unexpected mercurial: %s' % (verb, actualhg)
+        sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
+                         '         (expected %s)\n'
+                         % (verb, actualhg, expecthg))
 
 def runchildren(options, tests):
     if not options.with_hg:
