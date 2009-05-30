@@ -139,7 +139,7 @@ class patchheader(object):
         self.haspatch = diffstart > 1
 
     def setuser(self, user):
-        if not self.setheader(['From: ', '# User '], user):
+        if not self.updateheader(['From: ', '# User '], user):
             try:
                 patchheaderat = self.comments.index('# HG changeset patch')
                 self.comments.insert(patchheaderat + 1,'# User ' + user)
@@ -148,7 +148,7 @@ class patchheader(object):
         self.user = user
 
     def setdate(self, date):
-        if self.setheader(['# Date '], date):
+        if self.updateheader(['# Date '], date):
             self.date = date
 
     def setmessage(self, message):
@@ -157,9 +157,9 @@ class patchheader(object):
         self.message = [message]
         self.comments += self.message
 
-    def setheader(self, prefixes, new):
+    def updateheader(self, prefixes, new):
         '''Update all references to a field in the patch header.
-        If none found, add it email style.'''
+        Return whether the field is present.'''
         res = False
         for prefix in prefixes:
             for i in xrange(len(self.comments)):
