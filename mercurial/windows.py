@@ -164,7 +164,7 @@ def explain_exit(code):
 
 # if you change this stub into a real check, please try to implement the
 # username and groupname functions above, too.
-def isowner(fp, st=None):
+def isowner(st):
     return True
 
 def find_exe(command):

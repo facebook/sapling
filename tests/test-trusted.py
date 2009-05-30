@@ -44,7 +44,7 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
         return group
     util.groupname = groupname
 
-    def isowner(fp, st=None):
+    def isowner(st):
         return user == cuser
     util.isowner = isowner
 

@@ -40,7 +40,7 @@ class ui(object):
 
     def _is_trusted(self, fp, f):
         st = util.fstat(fp)
-        if util.isowner(fp, st):
+        if util.isowner(st):
             return True
 
         tusers, tgroups = self._trustusers, self._trustgroups

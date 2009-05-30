@@ -139,13 +139,8 @@ def explain_exit(code):
         return _("stopped by signal %d") % val, val
     raise ValueError(_("invalid exit code"))
 
-def isowner(fp, st=None):
-    """Return True if the file object f belongs to the current user.
-
-    The return value of a util.fstat(f) may be passed as the st argument.
-    """
-    if st is None:
-        st = fstat(fp)
+def isowner(st):
+    """Return True if the stat object st is from the current user."""
     return st.st_uid == os.getuid()
 
 def find_exe(command):
