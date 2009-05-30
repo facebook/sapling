@@ -1,10 +1,12 @@
 % basic
 % unknown
-*** [alias] unknown: command bargle is unknown
+alias 'unknown' resolves to unknown command 'bargle'
 % ambiguous
-*** [alias] ambiguous: command s is ambiguous
+alias 'ambiguous' resolves to ambiguous command 's'
 % recursive
-*** [alias] recursive: circular dependency on recursive
+alias 'recursive' resolves to unknown command 'recursive'
+% no definition
+no definition for alias 'nodefinition'
 adding foo
 % with opts
 C foo
@@ -13,3 +15,12 @@ C foo
 % interaction with defaults
 0:e63c23eaa88a
 -1:000000000000
+% properly recursive
+changeset:   -1:0000000000000000000000000000000000000000
+parent:      -1:0000000000000000000000000000000000000000
+parent:      -1:0000000000000000000000000000000000000000
+manifest:    -1:0000000000000000000000000000000000000000
+user:        
+date:        Thu Jan 01 00:00:00 1970 +0000
+extra:       branch=default
+

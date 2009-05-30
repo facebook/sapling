@@ -100,6 +100,29 @@ This section describes the different sections that may appear in a
 Mercurial "hgrc" file, the purpose of each section, its possible
 keys, and their possible values.
 
+[[alias]]
+alias::
+ Defines command aliases.
+  Aliases allow you to define your own commands in terms of other
+  commands (or aliases), optionally including arguments.
++
+Alias definitions consist of lines of the form:
++
+    <alias> = <command> [<argument]...
++
+For example, this definition:
++
+    latest = log --limit 5
++
+creates a new command `latest` that shows only the five most recent
+changesets. You can define subsequent aliases using earlier ones:
++
+    stable5 = latest -b stable
++
+*Note*: It is possible to create aliases with the same names as
+existing commands, which will then override the original
+definitions. This is almost always a bad idea!
+
 [[auth]]
 auth::
   Authentication credentials for HTTP authentication.
