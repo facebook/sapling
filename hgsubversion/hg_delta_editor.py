@@ -215,69 +215,6 @@ class HgChangeReceiver(delta.Editor):
         pickle_atomic(self.branches, self.branch_info_file, self.meta_data_dir)
         pickle_atomic(self.tags, self.tag_info_file, self.meta_data_dir)
 
-    def branches_in_paths(self, paths, revnum, checkpath, listdir):
-        '''Given a list of paths, return mapping of all branches touched
-        to their branch path.
-        '''
-        branches = {}
-        paths_need_discovery = []
-        for p in paths:
-            relpath, branch, branchpath = self._split_branch_path(p)
-            if relpath is not None:
-                branches[branch] = branchpath
-            elif paths[p].action == 'D' and not self._is_path_tag(p):
-                ln = self._localname(p)
-                # must check in branches_to_delete as well, because this runs after we
-                # already updated the branch map
-                if ln in self.branches or ln in self.branches_to_delete:
-                    branches[self._localname(p)] = p
-            else:
-                paths_need_discovery.append(p)
-        if paths_need_discovery:
-            paths_need_discovery = [(len(p), p) for p in paths_need_discovery]
-            paths_need_discovery.sort()
-            paths_need_discovery = [p[1] for p in paths_need_discovery]
-            actually_files = []
-            while paths_need_discovery:
-                p = paths_need_discovery.pop(0)
-                path_could_be_file = True
-                ind = 0
-                while ind < len(paths_need_discovery) and not paths_need_discovery:
-                    if op.startswith(p):
-                        path_could_be_file = False
-                    ind += 1
-                if path_could_be_file:
-                    if checkpath(p, revnum) == 'f':
-                        actually_files.append(p)
-                    # if there's a copyfrom_path and there were files inside that copyfrom,
-                    # we need to detect those branches. It's a little thorny and slow, but
-                    # seems to be the best option.
-                    elif paths[p].copyfrom_path and not p.startswith('tags/'):
-                        paths_need_discovery.extend(['%s/%s' % (p,x[0])
-                                                     for x in listdir(p, revnum)
-                                                     if x[1] == 'f'])
-            if actually_files:
-                filepaths = [p.split('/') for p in actually_files]
-                filepaths = [(len(p), p) for p in filepaths]
-                filepaths.sort()
-                filepaths = [p[1] for p in filepaths]
-                while filepaths:
-                    path = filepaths.pop(0)
-                    parentdir = '/'.join(path[:-1])
-                    filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
-                    branchpath = self._normalize_path(parentdir)
-                    if branchpath.startswith('tags/'):
-                        continue
-                    branchname = self._localname(branchpath)
-                    if branchpath.startswith('trunk/'):
-                        branches[self._localname('trunk')] = 'trunk'
-                        continue
-                    if branchname and branchname.startswith('../'):
-                        continue
-                    branches[branchname] = branchpath
-
-        return branches
-
     def _path_and_branch_for_path(self, path, existing=True):
         return self._split_branch_path(path, existing=existing)[:2]
 

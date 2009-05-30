@@ -441,11 +441,80 @@ def checkbranch(hg_editor, r, branch):
             return None
     return branchtip
 
+def branches_in_paths(hge, paths, revnum, checkpath, listdir):
+    '''Given a list of paths, return mapping of all branches touched
+    to their branch path.
+    '''
+    branches = {}
+    paths_need_discovery = []
+    for p in paths:
+        relpath, branch, branchpath = hge._split_branch_path(p)
+        if relpath is not None:
+            branches[branch] = branchpath
+        elif paths[p].action == 'D' and not hge._is_path_tag(p):
+            ln = hge._localname(p)
+            # must check in branches_to_delete as well, because this runs after we
+            # already updated the branch map
+            if ln in hge.branches or ln in hge.branches_to_delete:
+                branches[ln] = p
+        else:
+            paths_need_discovery.append(p)
+
+    if not paths_need_discovery:
+        return branches
+
+    paths_need_discovery = [(len(p), p) for p in paths_need_discovery]
+    paths_need_discovery.sort()
+    paths_need_discovery = [p[1] for p in paths_need_discovery]
+    actually_files = []
+    while paths_need_discovery:
+        p = paths_need_discovery.pop(0)
+        path_could_be_file = True
+        ind = 0
+        while ind < len(paths_need_discovery) and not paths_need_discovery:
+            if op.startswith(p):
+                path_could_be_file = False
+            ind += 1
+        if path_could_be_file:
+            if checkpath(p, revnum) == 'f':
+                actually_files.append(p)
+            # if there's a copyfrom_path and there were files inside that copyfrom,
+            # we need to detect those branches. It's a little thorny and slow, but
+            # seems to be the best option.
+            elif paths[p].copyfrom_path and not p.startswith('tags/'):
+                paths_need_discovery.extend(['%s/%s' % (p,x[0])
+                                             for x in listdir(p, revnum)
+                                             if x[1] == 'f'])
+
+        if not actually_files:
+            continue
+
+        filepaths = [p.split('/') for p in actually_files]
+        filepaths = [(len(p), p) for p in filepaths]
+        filepaths.sort()
+        filepaths = [p[1] for p in filepaths]
+        while filepaths:
+            path = filepaths.pop(0)
+            parentdir = '/'.join(path[:-1])
+            filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
+            branchpath = hge._normalize_path(parentdir)
+            if branchpath.startswith('tags/'):
+                continue
+            branchname = hge._localname(branchpath)
+            if branchpath.startswith('trunk/'):
+                branches[hge._localname('trunk')] = 'trunk'
+                continue
+            if branchname and branchname.startswith('../'):
+                continue
+            branches[branchname] = branchpath
+
+    return branches
+
 def convert_rev(ui, hg_editor, svn, r, tbdelta):
     # this server fails at replay
 
     hg_editor.save_tbdelta(tbdelta)
-    branches = hg_editor.branches_in_paths(r.paths, r.revnum, svn.checkpath, svn.list_files)
+    branches = branches_in_paths(hg_editor, r.paths, r.revnum, svn.checkpath, svn.list_files)
     brpaths = branches.values()
     bad_branch_paths = {}
     for br, bp in branches.iteritems():
