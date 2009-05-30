@@ -96,7 +96,13 @@ def parseargs():
                            options.annotate)
 
     if options.verbose:
+        if options.jobs > 1 or options.child is not None:
+            pid = "[%d]" % os.getpid()
+        else:
+            pid = None
         def vlog(*msg):
+            if pid:
+                print pid,
             for m in msg:
                 print m,
             print
@@ -178,8 +184,7 @@ def checktools():
 
 def cleanup(options):
     if not options.keep_tmpdir:
-        if options.verbose:
-            print "# Cleaning up HGTMP", HGTMP
+        vlog("# Cleaning up HGTMP", HGTMP)
         shutil.rmtree(HGTMP, True)
 
 def usecorrectpython():
