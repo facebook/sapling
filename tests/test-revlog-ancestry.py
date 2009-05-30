@@ -1,6 +1,5 @@
 import os
 from mercurial import hg, ui, merge
-from hgext import graphlog
 
 u = ui.ui()
 

@@ -1,5 +1,4 @@
 import os
-import os.path
 from mercurial import hg, ui
 from mercurial.util import walkrepos
 from os import mkdir, chdir

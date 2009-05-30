@@ -6,7 +6,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
-import errno, getpass, os, re, socket, sys, tempfile, traceback
+import errno, getpass, os, socket, sys, tempfile, traceback
 import config, util, error
 
 _booleans = {'1': True, 'yes': True, 'true': True, 'on': True,

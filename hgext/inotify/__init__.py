@@ -13,7 +13,7 @@
 
 from mercurial.i18n import _
 from mercurial import cmdutil, util
-import os, server
+import server
 from weakref import proxy
 from client import client, QueryFailed
 

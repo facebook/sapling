@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, struct
+import struct
 from mercurial import bdiff, mpatch
 
 def test1(a, b):

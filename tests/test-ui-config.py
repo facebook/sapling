@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from mercurial import ui, util, dispatch, error
+from mercurial import ui, dispatch, error
 
 testui = ui.ui()
 parsed = dispatch._parseconfig(testui, [

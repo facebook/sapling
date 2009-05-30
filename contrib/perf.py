@@ -1,6 +1,5 @@
 # perf.py - performance test routines
 
-from mercurial.i18n import _
 from mercurial import cmdutil, match, commands
 import time, os, sys
 

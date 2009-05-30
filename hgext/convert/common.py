@@ -8,7 +8,7 @@
 import base64, errno
 import os
 import cPickle as pickle
-from mercurial import util, strutil
+from mercurial import util
 from mercurial.i18n import _
 
 def encodeargs(args):
