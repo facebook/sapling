@@ -500,9 +500,10 @@ class svn_source(converter_source):
                         if tagid and tagname not in tags:
                             tags[tagname] = tagid
                     except SvnPathNotFound:
-                        # It happens when we are following directories we assumed
-                        # were copied with their parents but were really created
-                        # in the tag directory.
+                        # It happens when we are following directories
+                        # we assumed were copied with their parents
+                        # but were really created in the tag
+                        # directory.
                         pass
                 pendings = remainings
                 tagspath = srctagspath
@@ -563,9 +564,9 @@ class svn_source(converter_source):
         if not dirent:
             raise SvnPathNotFound(_('%s not found up to revision %d') % (path, stop))
 
-        # stat() gives us the previous revision on this line of development, but
-        # it might be in *another module*. Fetch the log and detect renames down
-        # to the latest revision.
+        # stat() gives us the previous revision on this line of
+        # development, but it might be in *another module*. Fetch the
+        # log and detect renames down to the latest revision.
         stream = self._getlog([path], stop, dirent.created_rev)
         try:
             for entry in stream:
@@ -623,7 +624,9 @@ class svn_source(converter_source):
 
     def expandpaths(self, rev, paths, parents):
         entries = []
-        copyfrom = {} # Map of entrypath, revision for finding source of deleted revisions.
+        # Map of entrypath, revision for finding source of deleted
+        # revisions.
+        copyfrom = {}
         copies = {}
 
         new_module, revnum = self.revsplit(rev)[1:]
@@ -640,8 +643,8 @@ class svn_source(converter_source):
                 entries.append(self.recode(entry))
                 if not ent.copyfrom_path or not parents:
                     continue
-                # Copy sources not in parent revisions cannot be represented,
-                # ignore their origin for now
+                # Copy sources not in parent revisions cannot be
+                # represented, ignore their origin for now
                 pmodule, prevnum = self.revsplit(parents[0])[1:]
                 if ent.copyfrom_rev < prevnum:
                     continue
@@ -654,10 +657,10 @@ class svn_source(converter_source):
             elif kind == 0: # gone, but had better be a deleted *file*
                 self.ui.debug(_("gone from %s\n") % ent.copyfrom_rev)
 
-                # if a branch is created but entries are removed in the same
-                # changeset, get the right fromrev
-                # parents cannot be empty here, you cannot remove things from
-                # a root revision.
+                # if a branch is created but entries are removed in
+                # the same changeset, get the right fromrev
+                # parents cannot be empty here, you cannot remove
+                # things from a root revision.
                 uuid, old_module, fromrev = self.revsplit(parents[0])
 
                 basepath = old_module + "/" + self.getrelpath(path)
@@ -678,7 +681,8 @@ class svn_source(converter_source):
 
                 frompath, froment = lookup_parts(entrypath) or (None, revnum - 1)
 
-                # need to remove fragment from lookup_parts and replace with copyfrom_path
+                # need to remove fragment from lookup_parts and
+                # replace with copyfrom_path
                 if frompath is not None:
                     self.ui.debug(_("munge-o-matic\n"))
                     self.ui.debug(entrypath + '\n')
@@ -687,8 +691,8 @@ class svn_source(converter_source):
                     fromrev = froment.copyfrom_rev
                     self.ui.debug(_("info: %s %s %s %s\n") % (frompath, froment, ent, entrypath))
 
-                # We can avoid the reparent calls if the module has not changed
-                # but it probably does not worth the pain.
+                # We can avoid the reparent calls if the module has
+                # not changed but it probably does not worth the pain.
                 prevmodule = self.reparent('')
                 fromkind = svn.ra.check_path(self.ra, entrypath.strip('/'), fromrev)
                 self.reparent(prevmodule)
@@ -698,7 +702,8 @@ class svn_source(converter_source):
                 elif fromkind == svn.core.svn_node_dir:
                     # print "Deleted/moved non-file:", revnum, path, ent
                     # children = self._find_children(path, revnum - 1)
-                    # print "find children %s@%d from %d action %s" % (path, revnum, ent.copyfrom_rev, ent.action)
+                    # print ("find children %s@%d from %d action %s" %
+                    #        (path, revnum, ent.copyfrom_rev, ent.action))
                     # Sometimes this is tricky. For example: in
                     # The Subversion Repository revision 6940 a dir
                     # was copied and one of its files was deleted
@@ -739,7 +744,8 @@ class svn_source(converter_source):
 
                 # Also this could create duplicate entries. Not sure
                 # whether this will matter. Maybe should make entries a set.
-                # print "Changed directory", revnum, path, ent.action, ent.copyfrom_path, ent.copyfrom_rev
+                # print "Changed directory", revnum, path, ent.action, \
+                #     ent.copyfrom_path, ent.copyfrom_rev
                 # This will fail if a directory was copied
                 # from another branch and then some of its files
                 # were deleted in the same transaction.
@@ -757,13 +763,12 @@ class svn_source(converter_source):
                         if kind != svn.core.svn_node_dir:
                             entries.append(self.recode(entrypath))
 
-                # Copies here (must copy all from source)
-                # Probably not a real problem for us if
-                # source does not exist
+                # Copies here (must copy all from source) Probably not
+                # a real problem for us if source does not exist
                 if not ent.copyfrom_path or not parents:
                     continue
-                # Copy sources not in parent revisions cannot be represented,
-                # ignore their origin for now
+                # Copy sources not in parent revisions cannot be
+                # represented, ignore their origin for now
                 pmodule, prevnum = self.revsplit(parents[0])[1:]
                 if ent.copyfrom_rev < prevnum:
                     continue
