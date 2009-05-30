@@ -470,7 +470,7 @@ class revlog(object):
                 raise RevlogError(_("index %s is corrupted") % (self.indexfile))
             self.index, self.nodemap, self._chunkcache = d
             if not self._chunkcache:
-                self._chunkcache = (0, '')
+                self._chunkclear()
 
         # add the magic null revision at -1 (if it hasn't been done already)
         if (self.index == [] or isinstance(self.index, lazyindex) or
@@ -551,7 +551,7 @@ class revlog(object):
 
         l = len(text)
         for x in xrange(base + 1, rev + 1):
-            l = mdiff.patchedsize(l, self.chunk(x))
+            l = mdiff.patchedsize(l, self._chunk(x))
         return l
         """
 
@@ -919,12 +919,11 @@ class revlog(object):
         else:
             self._chunkcache = offset, data
 
-    def _loadchunk(self, offset, length, df=None):
-        if not df:
-            if self._inline:
-                df = self.opener(self.indexfile)
-            else:
-                df = self.opener(self.datafile)
+    def _loadchunk(self, offset, length):
+        if self._inline:
+            df = self.opener(self.indexfile)
+        else:
+            df = self.opener(self.datafile)
 
         readahead = max(65536, length)
         df.seek(offset)
@@ -934,7 +933,7 @@ class revlog(object):
             return d[:length]
         return d
 
-    def _getchunk(self, offset, length, df=None):
+    def _getchunk(self, offset, length):
         o, d = self._chunkcache
         l = len(d)
 
@@ -946,26 +945,25 @@ class revlog(object):
                 return d # avoid a copy
             return d[cachestart:cacheend]
 
-        return self._loadchunk(offset, length, df)
+        return self._loadchunk(offset, length)
 
-    def _prime(self, startrev, endrev, df):
+    def _chunkraw(self, startrev, endrev):
         start = self.start(startrev)
-        end = self.end(endrev)
+        length = self.end(endrev) - start
         if self._inline:
             start += (startrev + 1) * self._io.size
-            end += (startrev + 1) * self._io.size
-        self._loadchunk(start, end - start, df)
+        return self._getchunk(start, length)
 
-    def chunk(self, rev, df=None):
-        start, length = self.start(rev), self.length(rev)
-        if self._inline:
-            start += (rev + 1) * self._io.size
-        return decompress(self._getchunk(start, length, df))
+    def _chunk(self, rev):
+        return decompress(self._chunkraw(rev, rev))
+
+    def _chunkclear(self):
+        self._chunkcache = (0, '')
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
         if rev1 + 1 == rev2 and self.base(rev1) == self.base(rev2):
-            return self.chunk(rev2)
+            return self._chunk(rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
                               self.revision(self.node(rev2)))
@@ -987,24 +985,17 @@ class revlog(object):
             raise RevlogError(_('incompatible revision flag %x') %
                               (self.index[rev][0] & 0xFFFF))
 
-        df = None
-
         # do we have useful data cached?
         if self._cache and self._cache[1] >= base and self._cache[1] < rev:
             base = self._cache[1]
             text = str(self._cache[2])
-            self._loadindex(base, rev + 1)
-            if not self._inline and rev > base + 1:
-                df = self.opener(self.datafile)
-                self._prime(base, rev, df)
-        else:
-            self._loadindex(base, rev + 1)
-            if not self._inline and rev > base:
-                df = self.opener(self.datafile)
-                self._prime(base, rev, df)
-            text = self.chunk(base, df=df)
 
-        bins = [self.chunk(r, df) for r in xrange(base + 1, rev + 1)]
+        self._loadindex(base, rev + 1)
+        self._chunkraw(base, rev)
+        if text is None:
+            text = self._chunk(base)
+
+        bins = [self._chunk(r) for r in xrange(base + 1, rev + 1)]
         text = mdiff.patches(text, bins)
         p1, p2 = self.parents(node)
         if node != hash(text, p1, p2):
@@ -1034,12 +1025,8 @@ class revlog(object):
 
         df = self.opener(self.datafile, 'w')
         try:
-            calc = self._io.size
             for r in self:
-                start = self.start(r) + (r + 1) * calc
-                length = self.length(r)
-                d = self._getchunk(start, length)
-                df.write(d)
+                df.write(self._chunkraw(r, r))
         finally:
             df.close()
 
@@ -1054,8 +1041,8 @@ class revlog(object):
         # real index
         fp.rename()
 
-        tr.replace(self.indexfile, trindex * calc)
-        self._chunkcache = (0, '')
+        tr.replace(self.indexfile, trindex * self._io.size)
+        self._chunkclear()
 
     def addrevision(self, text, transaction, link, p1, p2, d=None):
         """add a revision to the log
@@ -1341,7 +1328,7 @@ class revlog(object):
 
         # then reset internal state in memory to forget those revisions
         self._cache = None
-        self._chunkcache = (0, '')
+        self._chunkclear()
         for x in xrange(rev, len(self)):
             del self.nodemap[self.node(x)]
 
