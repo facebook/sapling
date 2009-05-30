@@ -34,7 +34,8 @@ class logentry(object):
         .revision  - revision number as tuple
         .tags      - list of tags on the file
         .synthetic - is this a synthetic "file ... added on ..." revision?
-        .mergepoint- the branch that has been merged from (if present in rlog output)
+        .mergepoint- the branch that has been merged from
+                     (if present in rlog output)
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -105,14 +106,18 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     re_00 = re.compile('RCS file: (.+)$')
     re_01 = re.compile('cvs \\[r?log aborted\\]: (.+)$')
     re_02 = re.compile('cvs (r?log|server): (.+)\n$')
-    re_03 = re.compile("(Cannot access.+CVSROOT)|(can't create temporary directory.+)$")
+    re_03 = re.compile("(Cannot access.+CVSROOT)|"
+                       "(can't create temporary directory.+)$")
     re_10 = re.compile('Working file: (.+)$')
     re_20 = re.compile('symbolic names:')
     re_30 = re.compile('\t(.+): ([\\d.]+)$')
     re_31 = re.compile('----------------------------$')
-    re_32 = re.compile('=============================================================================$')
+    re_32 = re.compile('======================================='
+                       '======================================$')
     re_50 = re.compile('revision ([\\d.]+)(\s+locked by:\s+.+;)?$')
-    re_60 = re.compile(r'date:\s+(.+);\s+author:\s+(.+);\s+state:\s+(.+?);(\s+lines:\s+(\+\d+)?\s+(-\d+)?;)?(.*mergepoint:\s+([^;]+);)?')
+    re_60 = re.compile(r'date:\s+(.+);\s+author:\s+(.+);\s+state:\s+(.+?);'
+                       r'(\s+lines:\s+(\+\d+)?\s+(-\d+)?;)?'
+                       r'(.*mergepoint:\s+([^;]+);)?')
     re_70 = re.compile('branches: (.+);$')
 
     file_added_re = re.compile(r'file [^/]+ was (initially )?added on branch')
@@ -282,7 +287,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             if re_31.match(line):
                 state = 5
             else:
-                assert not re_32.match(line), _('must have at least some revisions')
+                assert not re_32.match(line), _('must have at least '
+                                                'some revisions')
 
         elif state == 5:
             # expecting revision number and possibly (ignored) lock indication
@@ -308,7 +314,9 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             if len(d.split()) != 3:
                 # cvs log dates always in GMT
                 d = d + ' UTC'
-            e.date = util.parsedate(d, ['%y/%m/%d %H:%M:%S', '%Y/%m/%d %H:%M:%S', '%Y-%m-%d %H:%M:%S'])
+            e.date = util.parsedate(d, ['%y/%m/%d %H:%M:%S',
+                                        '%Y/%m/%d %H:%M:%S',
+                                        '%Y-%m-%d %H:%M:%S'])
             e.author = scache(match.group(2))
             e.dead = match.group(3).lower() == 'dead'
 
@@ -443,7 +451,8 @@ class changeset(object):
         .parents   - list of one or two parent changesets
         .tags      - list of tags on this changeset
         .synthetic - from synthetic revision "file ... added on branch ..."
-        .mergepoint- the branch that has been merged from (if present in rlog output)
+        .mergepoint- the branch that has been merged from
+                     (if present in rlog output)
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -689,9 +698,10 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
 
 def debugcvsps(ui, *args, **opts):
-    '''Read CVS rlog for current directory or named path in repository, and
-    convert the log to changesets based on matching commit log entries and dates.'''
-
+    '''Read CVS rlog for current directory or named path in
+    repository, and convert the log to changesets based on matching
+    commit log entries and dates.
+    '''
     if opts["new_cache"]:
         cache = "write"
     elif opts["update_cache"]:
@@ -724,7 +734,8 @@ def debugcvsps(ui, *args, **opts):
 
         if opts["ancestors"]:
             if cs.branch not in branches and cs.parents and cs.parents[0].id:
-                ancestors[cs.branch] = changesets[cs.parents[0].id-1].branch, cs.parents[0].id
+                ancestors[cs.branch] = (changesets[cs.parents[0].id-1].branch,
+                                        cs.parents[0].id)
             branches[cs.branch] = cs.id
 
         # limit by branches
@@ -736,7 +747,8 @@ def debugcvsps(ui, *args, **opts):
             #       bug-for-bug compatibility with cvsps.
             ui.write('---------------------\n')
             ui.write('PatchSet %d \n' % cs.id)
-            ui.write('Date: %s\n' % util.datestr(cs.date, '%Y/%m/%d %H:%M:%S %1%2'))
+            ui.write('Date: %s\n' % util.datestr(cs.date,
+                                                 '%Y/%m/%d %H:%M:%S %1%2'))
             ui.write('Author: %s\n' % cs.author)
             ui.write('Branch: %s\n' % (cs.branch or 'HEAD'))
             ui.write('Tag%s: %s \n' % (['', 's'][len(cs.tags)>1],
