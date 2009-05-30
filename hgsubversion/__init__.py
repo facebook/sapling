@@ -156,8 +156,6 @@ def svn(ui, repo, subcommand, *args, **opts):
     path = os.path.dirname(repo.path)
     try:
         commandfunc = svncommands.table[subcommand]
-        if subcommand not in svncommands.nourl:
-            opts['svn_url'] = open(os.path.join(repo.path, 'svn', 'url')).read()
         return commandfunc(ui, args=args, hg_repo_path=path, repo=repo, **opts)
     except core.SubversionException, e:
         if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:

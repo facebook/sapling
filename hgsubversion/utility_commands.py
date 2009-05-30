@@ -117,8 +117,6 @@ def version(ui, **opts):
     ui.status('svn bindings: %s\n' % svnwrap.version())
     ui.status('hgsubversion: %s\n' % util.version(ui))
 
-
-nourl = ['version', 'listauthors']
 table = {
     'genignore': genignore,
     'info': info,
