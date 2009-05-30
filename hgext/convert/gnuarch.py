@@ -83,7 +83,8 @@ class gnuarch_source(converter_source, commandline):
 
             archive = treeversion.split('/')[0]
             if archive not in self.archives:
-                self.ui.status(_('tree analysis stopped because it points to an unregistered archive %s...\n') % archive)
+                self.ui.status(_('tree analysis stopped because it points to '
+                                 'an unregistered archive %s...\n') % archive)
                 break
 
             # Get the complete list of revisions for that tree version
@@ -178,8 +179,8 @@ class gnuarch_source(converter_source, commandline):
 
     def getcommit(self, rev):
         changes = self.changes[rev]
-        return commit(author = changes.author, date = changes.date,
-                      desc = changes.summary, parents = self.parents[rev], rev=rev)
+        return commit(author=changes.author, date=changes.date,
+                      desc=changes.summary, parents=self.parents[rev], rev=rev)
 
     def gettags(self):
         return self.tags
