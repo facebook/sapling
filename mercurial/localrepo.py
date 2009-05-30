@@ -1402,7 +1402,9 @@ class localrepository(repo.repository):
                 cg = remote.changegroup(fetch, 'pull')
             else:
                 if not remote.capable('changegroupsubset'):
-                    raise util.Abort(_("Partial pull cannot be done because other repository doesn't support changegroupsubset."))
+                    raise util.Abort(_("Partial pull cannot be done because "
+                                       "other repository doesn't support "
+                                       "changegroupsubset."))
                 cg = remote.changegroupsubset(fetch, heads, 'pull')
             return self.addchangegroup(cg, 'pull', remote.url())
         finally:

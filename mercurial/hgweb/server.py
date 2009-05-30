@@ -69,8 +69,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
             self._start_response("500 Internal Server Error", [])
             self._write("Internal Server Error")
             tb = "".join(traceback.format_exception(*sys.exc_info()))
-            self.log_error("Exception happened during processing request '%s':\n%s",
-                           self.path, tb)
+            self.log_error("Exception happened during processing "
+                           "request '%s':\n%s", self.path, tb)
 
     def do_GET(self):
         self.do_POST()
@@ -126,7 +126,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
 
     def send_headers(self):
         if not self.saved_status:
-            raise AssertionError("Sending headers before start_response() called")
+            raise AssertionError("Sending headers before "
+                                 "start_response() called")
         saved_status = self.saved_status.split(None, 1)
         saved_status[0] = int(saved_status[0])
         self.send_response(*saved_status)
@@ -163,7 +164,8 @@ class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_headers()
         if self.length is not None:
             if len(data) > self.length:
-                raise AssertionError("Content-length header sent, but more bytes than specified are being written.")
+                raise AssertionError("Content-length header sent, but more "
+                                     "bytes than specified are being written.")
             self.length = self.length - len(data)
         self.wfile.write(data)
         self.wfile.flush()

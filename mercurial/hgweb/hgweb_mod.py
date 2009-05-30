@@ -68,7 +68,8 @@ class hgweb(object):
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
-            raise RuntimeError("This function is only intended to be called while running as a CGI script.")
+            raise RuntimeError("This function is only intended to be "
+                               "called while running as a CGI script.")
         import mercurial.hgweb.wsgicgi as wsgicgi
         wsgicgi.launch(self)
 
