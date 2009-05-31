@@ -190,7 +190,9 @@ def commit_from_rev(ui, repo, rev_ctx, hg_editor, svn_url, base_revision,
     props = {}
     copies = {}
     for file in rev_ctx.files():
-        if file == '.hgsvnexternals':
+        if file in ('.hgsvnexternals',
+                    '.hgtags',
+                    ):
             continue
         new_data = base_data = ''
         action = ''
