@@ -83,12 +83,8 @@ class match(object):
     def bad(self, f, msg):
         '''callback for each explicit file that can't be
         found/accessed, with an error message
-
-        return True to keep file in results, False to discard
-
-        default behavior is to silently keep
         '''
-        return True
+        pass
     def dir(self, f):
         pass
     def missing(self, f):

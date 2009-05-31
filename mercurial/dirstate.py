@@ -515,8 +515,7 @@ class dirstate(object):
                             dostep3 = True
                             break
                     else:
-                        if badfn(ff, inst.strerror) and not ignore(nf):
-                            results[nf] = None
+                        badfn(ff, inst.strerror)
 
         # step 2: visit subdirectories
         while work:

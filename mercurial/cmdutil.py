@@ -256,7 +256,6 @@ def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
                     opts.get('include'), opts.get('exclude'), default)
     def badfn(f, msg):
         repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
-        return False
     m.bad = badfn
     return m
 
