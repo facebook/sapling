@@ -106,10 +106,6 @@ class always(match):
     def __init__(self, root, cwd):
         match.__init__(self, root, cwd, [])
 
-class never(match):
-    def __init__(self, root, cwd):
-        match.__init__(self, root, cwd, [], exact = True)
-
 def patkind(pat):
     return _patsplit(pat, None)[0]
 

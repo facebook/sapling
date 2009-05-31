@@ -61,7 +61,7 @@ def buildmatch(ui, repo, user, key):
              (key, len(pats), user))
     if pats:
         return match.match(repo.root, '', pats)
-    return match.never(repo.root, '')
+    return match.exact(repo.root, '', [])
 
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
