@@ -506,22 +506,16 @@ class dirstate(object):
                     if nf in dmap:
                         results[nf] = None
             except OSError, inst:
-                keep = False
                 if nf in dmap: # does it exactly match a file?
                     results[nf] = None
-                    keep = True
                 else: # does it match a directory?
                     prefix = nf + "/"
                     for fn in dmap:
                         if fn.startswith(prefix):
                             dostep3 = True
-                            keep = True
                             break
-                if not keep:
-                    if inst.errno != errno.ENOENT:
-                        fwarn(ff, inst.strerror)
-                    elif badfn(ff, inst.strerror):
-                        if nf not in results and not ignore(nf) and matchfn(nf):
+                    else:
+                        if badfn(ff, inst.strerror) and not ignore(nf):
                             results[nf] = None
 
         # step 2: visit subdirectories
