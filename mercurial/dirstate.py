@@ -509,17 +509,16 @@ class dirstate(object):
                         results[nf] = None
             except OSError, inst:
                 keep = False
-                prefix = nf + "/"
-                for fn in dmap:
-                    if nf == fn:
-                        if matchfn(nf):
-                            results[nf] = None
-                        keep = True
-                        break
-                    elif fn.startswith(prefix):
-                        dostep3 = True
-                        keep = True
-                        break
+                if nf in dmap: # does it exactly match a file?
+                    results[nf] = None
+                    keep = True
+                else: # does it match a directory?
+                    prefix = nf + "/"
+                    for fn in dmap:
+                        if fn.startswith(prefix):
+                            dostep3 = True
+                            keep = True
+                            break
                 if not keep:
                     if inst.errno != errno.ENOENT:
                         fwarn(ff, inst.strerror)
