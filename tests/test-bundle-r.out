@@ -156,7 +156,7 @@ checking files
 4 files, 9 changesets, 7 total revisions
 rolling back last transaction
 % should fail
-abort: --base is incompatible with specifiying a destination
+abort: --base is incompatible with specifying a destination
 abort: repository default-push not found!
 2 changesets found
 4 changesets found

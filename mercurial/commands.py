@@ -497,7 +497,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         base = opts.get('base')
     if base:
         if dest:
-            raise util.Abort(_("--base is incompatible with specifiying "
+            raise util.Abort(_("--base is incompatible with specifying "
                                "a destination"))
         base = [repo.lookup(rev) for rev in base]
         # create the right base
