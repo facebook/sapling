@@ -60,7 +60,9 @@ echo
 echo "# default is internal merge:"
 beforemerge
 echo "# hg merge -r 2"
-PATH=$BINDIR hg merge -r 2
+# override $PATH to ensure hgmerge not visible; use $PYTHON in case we're
+# running from a devel copy, not a temp installation
+PATH=$BINDIR $PYTHON $BINDIR/hg merge -r 2
 aftermerge
 
 echo "# simplest hgrc using false for merge:"

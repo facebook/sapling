@@ -7,6 +7,38 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
+# Modifying this script is tricky because it has many modes:
+#   - serial (default) vs parallel (-jN, N > 1)
+#   - no coverage (default) vs coverage (-c, -C, -s)
+#   - temp install (default) vs specific hg script (--with-hg, --local)
+#   - tests are a mix of shell scripts and Python scripts
+#
+# If you change this script, it is recommended that you ensure you
+# haven't broken it by running it in various modes with a representative
+# sample of test scripts.  For example:
+# 
+#  1) serial, no coverage, temp install:
+#      ./run-tests.py test-s*
+#  2) serial, no coverage, local hg:
+#      ./run-tests.py --local test-s*
+#  3) serial, coverage, temp install:
+#      ./run-tests.py -c test-s*
+#  4) serial, coverage, local hg:
+#      ./run-tests.py -c --local test-s*      # unsupported
+#  5) parallel, no coverage, temp install:
+#      ./run-tests.py -j2 test-s*
+#  6) parallel, no coverage, local hg:
+#      ./run-tests.py -j2 --local test-s*
+#  7) parallel, coverage, temp install:
+#      ./run-tests.py -j2 -c test-s*          # currently broken
+#  8) parallel, coverage, local install
+#      ./run-tests.py -j2 -c --local test-s*  # unsupported (and broken)
+#
+# (You could use any subset of the tests: test-s* happens to match
+# enough that it's worth doing parallel runs, few enough that it
+# completes fairly quickly, includes both shell and Python scripts, and
+# includes some scripts that run daemon processes.)
+
 import difflib
 import errno
 import optparse
@@ -34,7 +66,6 @@ SKIPPED_STATUS = 80
 SKIPPED_PREFIX = 'skipped: '
 FAILED_PREFIX  = 'hghave check failed: '
 PYTHON = sys.executable
-hgpkg = None
 
 requiredtools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
 
@@ -81,7 +112,11 @@ def parseargs():
     parser.add_option("-n", "--nodiff", action="store_true",
         help="skip showing test changes")
     parser.add_option("--with-hg", type="string",
-        help="test existing install at given location")
+        metavar="HG",
+        help="test using specified hg script rather than a "
+             "temporary installation")
+    parser.add_option("--local", action="store_true",
+        help="shortcut for --with-hg=<testdir>/../hg")
     parser.add_option("--pure", action="store_true",
         help="use pure Python code instead of C extensions")
 
@@ -90,11 +125,32 @@ def parseargs():
     parser.set_defaults(**defaults)
     (options, args) = parser.parse_args()
 
-    global vlog
+    if options.with_hg:
+        if not (os.path.isfile(options.with_hg) and
+                os.access(options.with_hg, os.X_OK)):
+            parser.error('--with-hg must specify an executable hg script')
+        if not os.path.basename(options.with_hg) == 'hg':
+            sys.stderr.write('warning: --with-hg should specify an hg script')
+    if options.local:
+        testdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+        hgbin = os.path.join(os.path.dirname(testdir), 'hg')
+        if not os.access(hgbin, os.X_OK):
+            parser.error('--local specified, but %r not found or not executable'
+                         % hgbin)
+        options.with_hg = hgbin
+
     options.anycoverage = (options.cover or
                            options.cover_stdlib or
                            options.annotate)
 
+    if options.anycoverage and options.with_hg:
+        # I'm not sure if this is a fundamental limitation or just a
+        # bug.  But I don't want to waste people's time and energy doing
+        # test runs that don't give the results they want.
+        parser.error("sorry, coverage options do not work when --with-hg "
+                     "or --local specified")
+
+    global vlog
     if options.verbose:
         if options.jobs > 1 or options.child is not None:
             pid = "[%d]" % os.getpid()
@@ -226,16 +282,6 @@ def installhg(options):
         f.close()
         sys.exit(1)
     os.chdir(TESTDIR)
-
-    os.environ["PATH"] = "%s%s%s" % (BINDIR, os.pathsep, os.environ["PATH"])
-
-    pydir = os.pathsep.join([PYTHONDIR, TESTDIR])
-    pythonpath = os.environ.get("PYTHONPATH")
-    if pythonpath:
-        pythonpath = pydir + os.pathsep + pythonpath
-    else:
-        pythonpath = pydir
-    os.environ["PYTHONPATH"] = pythonpath
 
     usecorrectpython()
 
@@ -512,13 +558,14 @@ def _checkhglib(verb):
                          % (verb, actualhg, expecthg))
 
 def runchildren(options, tests):
-    if not options.with_hg:
+    if INST:
         installhg(options)
         _checkhglib("Testing")
 
     optcopy = dict(options.__dict__)
     optcopy['jobs'] = 1
-    optcopy['with_hg'] = INST
+    if optcopy['with_hg'] is None:
+        optcopy['with_hg'] = os.path.join(BINDIR, "hg")
     opts = []
     for opt, value in optcopy.iteritems():
         name = '--' + opt.replace('_', '-')
@@ -579,7 +626,7 @@ def runtests(options, tests):
     HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
 
     try:
-        if not options.with_hg:
+        if INST:
             installhg(options)
             _checkhglib("Testing")
 
@@ -687,11 +734,31 @@ def main():
     os.environ["HGPORT2"] = str(options.port + 2)
 
     if options.with_hg:
-        INST = options.with_hg
+        INST = None
+        BINDIR = os.path.dirname(os.path.realpath(options.with_hg))
+
+        # This looks redundant with how Python initializes sys.path from
+        # the location of the script being executed.  Needed because the
+        # "hg" specified by --with-hg is not the only Python script
+        # executed in the test suite that needs to import 'mercurial'
+        # ... which means it's not really redundant at all.
+        PYTHONDIR = BINDIR
     else:
         INST = os.path.join(HGTMP, "install")
-    BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
-    PYTHONDIR = os.path.join(INST, "lib", "python")
+        BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
+        PYTHONDIR = os.path.join(INST, "lib", "python")
+
+    os.environ["BINDIR"] = BINDIR
+    os.environ["PYTHON"] = PYTHON
+
+    if not options.child:
+        path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
+        os.environ["PATH"] = os.pathsep.join(path)
+
+        # Deliberately override existing PYTHONPATH: do not want success
+        # to depend on what happens to be in caller's environment.
+        os.environ["PYTHONPATH"] = PYTHONDIR
+
     COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
     if len(args) == 0:
@@ -710,6 +777,8 @@ def main():
 
     vlog("# Using TESTDIR", TESTDIR)
     vlog("# Using HGTMP", HGTMP)
+    vlog("# Using PATH", os.environ["PATH"])
+    vlog("# Using PYTHONPATH", os.environ["PYTHONPATH"])
 
     try:
         if len(tests) > 1 and options.jobs > 1:
