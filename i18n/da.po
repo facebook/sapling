@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-05-21 23:44+0200\n"
-"PO-Revision-Date: 2009-05-24 17:03+0200\n"
+"POT-Creation-Date: 2009-05-31 19:37+0200\n"
+"PO-Revision-Date: 2009-05-31 19:47+0200\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -80,31 +80,6 @@ msgstr "acl: bruger %s ikke tilladt på %s\n"
 #, python-format
 msgid "acl: allowing changeset %s\n"
 msgstr "acl: tillader ændring %s\n"
-
-msgid ""
-"allow user-defined command aliases\n"
-"\n"
-"To use, create entries in your hgrc of the form\n"
-"\n"
-"[alias]\n"
-"mycmd = cmd --args\n"
-msgstr ""
-
-#, python-format
-msgid "*** [alias] %s: command %s is unknown"
-msgstr ""
-
-#, python-format
-msgid "*** [alias] %s: command %s is ambiguous"
-msgstr ""
-
-#, python-format
-msgid "*** [alias] %s: circular dependency on %s"
-msgstr ""
-
-#, python-format
-msgid "*** [alias] %s: no definition\n"
-msgstr ""
 
 msgid ""
 "mercurial bookmarks\n"
@@ -508,7 +483,7 @@ msgid ""
 "[extensions]\n"
 "color =\n"
 "\n"
-"Default effects my be overriden from the .hgrc file:\n"
+"Default effects my be overridden from the .hgrc file:\n"
 "\n"
 "[color]\n"
 "status.modified = blue bold underline red_background\n"
@@ -600,7 +575,7 @@ msgid ""
 "\n"
 "    The 'include' directive causes a file, or all files under a\n"
 "    directory, to be included in the destination repository, and the\n"
-"    exclusion of all other files and directories not explicitely included.\n"
+"    exclusion of all other files and directories not explicitly included.\n"
 "    The 'exclude' directive causes files or directories to be omitted.\n"
 "    The 'rename' directive renames a file or directory. To rename from\n"
 "    a subdirectory into the root of the repository, use '.' as the\n"
@@ -651,7 +626,7 @@ msgid ""
 "    in the sandbox to find the CVS repository, and then uses CVS rlog\n"
 "    commands to find files to convert. This means that unless a\n"
 "    filemap is given, all files under the starting directory will be\n"
-"    converted, and that any directory reorganisation in the CVS\n"
+"    converted, and that any directory reorganization in the CVS\n"
 "    sandbox is ignored.\n"
 "\n"
 "    Because CVS does not have changesets, it is necessary to collect\n"
@@ -659,7 +634,7 @@ msgid ""
 "    source uses its internal changeset merging code by default but can\n"
 "    be configured to call the external 'cvsps' program by setting:\n"
 "        --config convert.cvsps='cvsps -A -u --cvs-direct -q'\n"
-"    This is a legacy option and may be removed in future.\n"
+"    This option is deprecated and will be removed in Mercurial 1.4.\n"
 "\n"
 "    The options shown are the defaults.\n"
 "\n"
@@ -702,9 +677,9 @@ msgid ""
 "    its subdirectories are listed as possible branches. If\n"
 "    \"svn://repo/path/tags\" exists, it is looked for tags referencing\n"
 "    converted branches. Default \"trunk\", \"branches\" and \"tags\" values\n"
-"    can be overriden with following options. Set them to paths\n"
-"    relative to the source URL, or leave them blank to disable\n"
-"    autodetection.\n"
+"    can be overridden with following options. Set them to paths\n"
+"    relative to the source URL, or leave them blank to disable auto\n"
+"    detection.\n"
 "\n"
 "    --config convert.svn.branches=branches    (directory name)\n"
 "        specify the directory containing branches\n"
@@ -923,6 +898,11 @@ msgstr ""
 msgid "assuming destination %s\n"
 msgstr ""
 
+msgid ""
+"warning: support for external cvsps is deprecated and will be removed in "
+"Mercurial 1.4\n"
+msgstr ""
+
 #, python-format
 msgid "revision %s is not a patchset number or date"
 msgstr ""
@@ -1068,7 +1048,7 @@ msgid "obtaining revision %s...\n"
 msgstr "henter revision %s...\n"
 
 #, python-format
-msgid "analysing revision %s...\n"
+msgid "analyzing revision %s...\n"
 msgstr "analyserer revision %s...\n"
 
 #, python-format
@@ -1091,6 +1071,9 @@ msgstr ""
 
 #, python-format
 msgid "pulling from %s into %s\n"
+msgstr ""
+
+msgid "filtering out empty revision\n"
 msgstr ""
 
 msgid "updating tags\n"
@@ -1299,7 +1282,7 @@ msgid ""
 "\n"
 "  # add new command called vimdiff, runs gvimdiff with DirDiff plugin\n"
 "  # (see http://www.vim.org/scripts/script.php?script_id=102)\n"
-"  # Non english user, be sure to put \"let g:DirDiffDynamicDiffText = 1\" "
+"  # Non English user, be sure to put \"let g:DirDiffDynamicDiffText = 1\" "
 "in\n"
 "  # your .vimrc\n"
 "  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'\n"
@@ -1538,7 +1521,7 @@ msgid ""
 "show revision graphs in terminal windows\n"
 "\n"
 "This extension adds a --graph option to the incoming, outgoing and log\n"
-"commands. When this options is given, an ascii representation of the\n"
+"commands. When this options is given, an ASCII representation of the\n"
 "revision graph is also shown.\n"
 msgstr ""
 
@@ -1755,7 +1738,7 @@ msgstr ""
 msgid ""
 "syntax highlighting in hgweb, based on Pygments\n"
 "\n"
-"It depends on the pygments syntax highlighting library:\n"
+"It depends on the Pygments syntax highlighting library:\n"
 "http://pygments.org/\n"
 "\n"
 "To enable the extension add this to hgrc:\n"
@@ -1779,6 +1762,31 @@ msgstr ""
 msgid "start an inotify server for this repository"
 msgstr ""
 
+msgid ""
+"debugging information for inotify extension\n"
+"\n"
+"    Prints the list of directories being watched by the inotify server.\n"
+"    "
+msgstr ""
+
+msgid "directories being watched:\n"
+msgstr ""
+
+msgid "run server in background"
+msgstr ""
+
+msgid "used internally by daemon mode"
+msgstr ""
+
+msgid "minutes to sit idle before exiting"
+msgstr ""
+
+msgid "name of file to write process ID to"
+msgstr ""
+
+msgid "hg inserve [OPT]..."
+msgstr ""
+
 msgid "(found dead inotify server socket; removing it)\n"
 msgstr ""
 
@@ -1800,23 +1808,12 @@ msgstr ""
 msgid "failed to contact inotify server: %s\n"
 msgstr ""
 
-msgid "run server in background"
-msgstr ""
-
-msgid "used internally by daemon mode"
-msgstr ""
-
-msgid "minutes to sit idle before exiting"
-msgstr ""
-
-msgid "name of file to write process ID to"
-msgstr ""
-
-msgid "hg inserve [OPT]..."
+#, python-format
+msgid "(inotify: received response from incompatible server version %d)\n"
 msgstr ""
 
 #, python-format
-msgid "(inotify: received response from incompatible server version %d)\n"
+msgid "(inotify: received '%s' response when expecting '%s')\n"
 msgstr ""
 
 msgid "this system does not seem to support inotify"
@@ -1912,11 +1909,11 @@ msgid "%s hooking back up with %d bytes readable\n"
 msgstr ""
 
 #, python-format
-msgid "%s processing %d deferred events as %d\n"
+msgid "could not start server: %s"
 msgstr ""
 
 #, python-format
-msgid "could not start server: %s"
+msgid "answering query for %r\n"
 msgstr ""
 
 #, python-format
@@ -1924,7 +1921,7 @@ msgid "received query from incompatible client version %d\n"
 msgstr ""
 
 #, python-format
-msgid "answering query for %r\n"
+msgid "unrecognized query type: %s\n"
 msgstr ""
 
 msgid "finished setup\n"
@@ -1978,7 +1975,7 @@ msgid ""
 "kwdemo\" to control the results of your config changes.\n"
 "\n"
 "Before changing/disabling active keywords, run \"hg kwshrink\" to avoid\n"
-"the risk of inadvertedly storing expanded keywords in the change\n"
+"the risk of inadvertently storing expanded keywords in the change\n"
 "history.\n"
 "\n"
 "To force expansion after enabling it, or a configuration change, run\n"
@@ -3261,7 +3258,7 @@ msgid ""
 "\n"
 "For example, if you can refer to a revision as \"foo\", then:\n"
 "\n"
-"- foo^N = Nth parent of foo:\n"
+"- foo^N = Nth parent of foo\n"
 "  foo^0 = foo\n"
 "  foo^1 = first parent of foo\n"
 "  foo^2 = second parent of foo\n"
@@ -3516,7 +3513,7 @@ msgid ""
 "    This means that purge will delete:\n"
 "     - Unknown files: files marked with \"?\" by \"hg status\"\n"
 "     - Empty directories: in fact Mercurial ignores directories unless\n"
-"       they contain files under source control managment\n"
+"       they contain files under source control management\n"
 "    But it will leave untouched:\n"
 "     - Modified and unmodified tracked files\n"
 "     - Ignored files (unless --all is specified)\n"
@@ -4029,17 +4026,17 @@ msgid ""
 "splitting path, case conversion, etc.) with its encoded bytes. We call\n"
 "such a encoding (i.e. shift_jis and big5) as \"problematic encoding\".\n"
 "This extension can be used to fix the issue with those encodings by\n"
-"wrapping some functions to convert to unicode string before path\n"
+"wrapping some functions to convert to Unicode string before path\n"
 "operation.\n"
 "\n"
-"This extension is usefull for:\n"
+"This extension is useful for:\n"
 " * Japanese Windows users using shift_jis encoding.\n"
 " * Chinese Windows users using big5 encoding.\n"
 " * All users who use a repository with one of problematic encodings on\n"
 "   case-insensitive file system.\n"
 "\n"
 "This extension is not needed for:\n"
-" * Any user who use only ascii chars in path.\n"
+" * Any user who use only ASCII chars in path.\n"
 " * Any user who do not use any of problematic encodings.\n"
 "\n"
 "Note that there are some limitations on using this extension:\n"
@@ -4052,7 +4049,7 @@ msgid ""
 "  [extensions]\n"
 "  hgext.win32mbcs =\n"
 "\n"
-"Path encoding conversion are done between unicode and\n"
+"Path encoding conversion are done between Unicode and\n"
 "encoding.encoding which is decided by mercurial from current locale\n"
 "setting or HGENCODING.\n"
 "\n"
@@ -4724,7 +4721,7 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "--base is incompatible with specifiying a destination"
+msgid "--base is incompatible with specifying a destination"
 msgstr ""
 
 msgid "unknown bundle type specified with --type"
@@ -4944,13 +4941,13 @@ msgstr ""
 msgid ""
 "show combined config settings from all hgrc files\n"
 "\n"
-"    With no args, print names and values of all config items.\n"
+"    With no arguments, print names and values of all config items.\n"
 "\n"
-"    With one arg of the form section.name, print just the value of\n"
-"    that config item.\n"
+"    With one argument of the form section.name, print just the value\n"
+"    of that config item.\n"
 "\n"
-"    With multiple args, print names and values of all config items\n"
-"    with matching section names.\n"
+"    With multiple arguments, print names and values of all config\n"
+"    items with matching section names.\n"
 "\n"
 "    With the --debug flag, the source (filename and line number) is\n"
 "    printed for each config item.\n"
@@ -6679,7 +6676,7 @@ msgstr ""
 msgid "show parents from the specified revision"
 msgstr ""
 
-msgid "hg parents [-r REV] [FILE]"
+msgid "[-r REV] [FILE]"
 msgstr ""
 
 msgid "[NAME]"
@@ -6881,6 +6878,9 @@ msgstr ""
 msgid "  file %s -> %s\n"
 msgstr ""
 
+msgid "working directory state appears damaged!"
+msgstr ""
+
 #, python-format
 msgid "'\\n' and '\\r' disallowed in filenames: %r"
 msgstr ""
@@ -7016,6 +7016,22 @@ msgstr "** Mercurial Distributed SCM (version %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
+msgstr ""
+
+#, python-format
+msgid "no definition for alias '%s'\n"
+msgstr ""
+
+#, python-format
+msgid "alias '%s' resolves to unknown command '%s'\n"
+msgstr ""
+
+#, python-format
+msgid "alias '%s' resolves to ambiguous command '%s'\n"
+msgstr ""
+
+#, python-format
+msgid "alias '%s' shadows command\n"
 msgstr ""
 
 #, python-format
@@ -7523,7 +7539,7 @@ msgid ""
 "          the given date/time and the current date/time.\n"
 "    - basename: Any text. Treats the text as a path, and returns the\n"
 "          last component of the path after splitting by the path\n"
-"          separator (ignoring trailing seprators). For example,\n"
+"          separator (ignoring trailing separators). For example,\n"
 "          \"foo/bar/baz\" becomes \"baz\" and \"foo/bar//\" becomes \"bar"
 "\".\n"
 "    - stripdir: Treat the text as path and strip a directory level, if\n"
@@ -7545,6 +7561,7 @@ msgid ""
 "    - hgdate: Date. Returns the date as a pair of numbers:\n"
 "          \"1157407993 25200\" (Unix timestamp, timezone offset).\n"
 "    - isodate: Date. Returns the date in ISO 8601 format.\n"
+"    - localdate: Date. Converts a date to local date.\n"
 "    - obfuscate: Any text. Returns the input text rendered as a\n"
 "          sequence of XML entities.\n"
 "    - person: Any text. Returns the text before an email address.\n"
@@ -7861,6 +7878,10 @@ msgid "tag '%s' refers to unknown node"
 msgstr "mærkaten '%s' henviser til en ukendt knude"
 
 #, python-format
+msgid "working directory has unknown parent '%s'!"
+msgstr "arbejdsbiblioteket har ukendt forældre '%s'!"
+
+#, python-format
 msgid "unknown revision '%s'"
 msgstr "ukendt revision '%s'"
 
@@ -8023,11 +8044,15 @@ msgid ""
 "changegroupsubset."
 msgstr ""
 
+#, python-format
+msgid "abort: push creates new remote branch '%s'!\n"
+msgstr "afbrudt: skub laver ny gren '%s' i fjernarkivet!\n"
+
 msgid "abort: push creates new remote heads!\n"
-msgstr ""
+msgstr "afbrudt: skub laver nye fjern-hoveder!\n"
 
 msgid "(did you forget to merge? use push -f to force)\n"
-msgstr ""
+msgstr "(glemte du at sammenføje? brug push -f for at gennemtvinge)\n"
 
 msgid "note: unsynced remote changes!\n"
 msgstr ""
@@ -8226,7 +8251,7 @@ msgstr "henter %s\n"
 
 #, python-format
 msgid "getting %s to %s\n"
-msgstr ""
+msgstr "henter %s til %s\n"
 
 #, python-format
 msgid "warning: detected divergent renames of %s to:\n"
@@ -8234,30 +8259,33 @@ msgstr ""
 
 #, python-format
 msgid "branch %s not found"
-msgstr ""
+msgstr "gren %s blev ikke fundet"
 
 msgid "can't merge with ancestor"
-msgstr ""
+msgstr "kan ikke sammenføje med forfader"
 
 msgid "nothing to merge (use 'hg update' or check 'hg heads')"
-msgstr ""
+msgstr "intet at sammenføje (brug 'hg update' eller kontroller 'hg heads')"
+
+msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
+msgstr "udestående uarkiverede ændringer (brug 'hg status' for at se ændringer)"
 
 msgid "crosses branches (use 'hg merge' or 'hg update -C' to discard changes)"
-msgstr ""
+msgstr "krydser grene (brug 'hg merge' eller 'hg update -C' for at kassere ændringerne)"
 
 msgid "crosses branches (use 'hg merge' or 'hg update -C')"
-msgstr ""
+msgstr "krydser grene (brug 'hg merge' eller 'hg update -C')"
 
 msgid "crosses named branches (use 'hg update -C' to discard changes)"
-msgstr ""
+msgstr "krydser navngivne grene (brug 'hg update -C' for at kassere ændringerne)"
 
 #, python-format
 msgid "cannot create %s: destination already exists"
-msgstr ""
+msgstr "kan ikke oprette %s: destinationen findes allerede"
 
 #, python-format
 msgid "cannot create %s: unable to create destination directory"
-msgstr ""
+msgstr "kan ikke oprette %s: ikke i stand til at oprette biblioteket"
 
 #, python-format
 msgid "found patch at byte %d\n"
