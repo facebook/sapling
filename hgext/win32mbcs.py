@@ -15,7 +15,7 @@ Some MBCS encodings are not good for some path operations (i.e.
 splitting path, case conversion, etc.) with its encoded bytes. We call
 such a encoding (i.e. shift_jis and big5) as "problematic encoding".
 This extension can be used to fix the issue with those encodings by
-wrapping some functions to convert to unicode string before path
+wrapping some functions to convert to Unicode string before path
 operation.
 
 This extension is usefull for:
@@ -38,7 +38,7 @@ To use this extension, enable the extension in .hg/hgrc or ~/.hgrc:
   [extensions]
   hgext.win32mbcs =
 
-Path encoding conversion are done between unicode and
+Path encoding conversion are done between Unicode and
 encoding.encoding which is decided by mercurial from current locale
 setting or HGENCODING.
 
