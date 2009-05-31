@@ -10,7 +10,7 @@
 
 """syntax highlighting in hgweb, based on Pygments
 
-It depends on the pygments syntax highlighting library:
+It depends on the Pygments syntax highlighting library:
 http://pygments.org/
 
 To enable the extension add this to hgrc:
