@@ -8,6 +8,7 @@ basic commands:
  commit     commit the specified files or all outstanding changes
  diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
+ forget     forget the specified files on the next commit
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
@@ -26,6 +27,7 @@ use "hg help" for the full list of commands or "hg -v" for details
  commit     commit the specified files or all outstanding changes
  diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
+ forget     forget the specified files on the next commit
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
@@ -55,6 +57,7 @@ list of commands:
  copy         mark files as copied for the next commit
  diff         diff repository (or selected files)
  export       dump the header and diffs for one or more changesets
+ forget       forget the specified files on the next commit
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
  help         show help for a given topic or a help overview
@@ -117,6 +120,7 @@ use "hg -v help" to show aliases and global options
  copy         mark files as copied for the next commit
  diff         diff repository (or selected files)
  export       dump the header and diffs for one or more changesets
+ forget       forget the specified files on the next commit
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
  help         show help for a given topic or a help overview
@@ -170,7 +174,7 @@ add the specified files on the next commit
     repository.
 
     The files will be added to the repository at the next commit. To
-    undo an add before that, see hg revert.
+    undo an add before that, see hg forget.
 
     If no names are given, add all files to the repository.
 
@@ -190,7 +194,7 @@ add the specified files on the next commit
     repository.
 
     The files will be added to the repository at the next commit. To
-    undo an add before that, see hg revert.
+    undo an add before that, see hg forget.
 
     If no names are given, add all files to the repository.
 
@@ -309,6 +313,7 @@ basic commands:
  commit     commit the specified files or all outstanding changes
  diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
+ forget     forget the specified files on the next commit
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
@@ -332,6 +337,7 @@ basic commands:
  commit     commit the specified files or all outstanding changes
  diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
+ forget     forget the specified files on the next commit
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision

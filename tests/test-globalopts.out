@@ -164,6 +164,7 @@ list of commands:
  copy         mark files as copied for the next commit
  diff         diff repository (or selected files)
  export       dump the header and diffs for one or more changesets
+ forget       forget the specified files on the next commit
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
  help         show help for a given topic or a help overview
@@ -230,6 +231,7 @@ list of commands:
  copy         mark files as copied for the next commit
  diff         diff repository (or selected files)
  export       dump the header and diffs for one or more changesets
+ forget       forget the specified files on the next commit
  grep         search for a pattern in specified files and revisions
  heads        show current repository heads or show branch heads
  help         show help for a given topic or a help overview

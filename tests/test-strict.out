@@ -11,6 +11,7 @@ basic commands:
  commit     commit the specified files or all outstanding changes
  diff       diff repository (or selected files)
  export     dump the header and diffs for one or more changesets
+ forget     forget the specified files on the next commit
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision

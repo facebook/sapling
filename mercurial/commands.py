@@ -24,7 +24,7 @@ def add(ui, repo, *pats, **opts):
     repository.
 
     The files will be added to the repository at the next commit. To
-    undo an add before that, see hg revert.
+    undo an add before that, see hg forget.
 
     If no names are given, add all files to the repository.
     """
@@ -1137,6 +1137,37 @@ def export(ui, repo, *changesets, **opts):
     patch.export(repo, revs, template=opts.get('output'),
                  switch_parent=opts.get('switch_parent'),
                  opts=patch.diffopts(ui, opts))
+
+def forget(ui, repo, *pats, **opts):
+    """forget the specified files on the next commit
+
+    Mark the specified files so they will no longer be tracked
+    after the next commit.
+
+    This only removes files from the current branch, not from the
+    entire project history, and it does not delete them from the
+    working directory.
+
+    To undo a forget before the next commit, see hg add.
+    """
+
+    if not pats:
+        raise util.Abort(_('no files specified'))
+
+    m = cmdutil.match(repo, pats, opts)
+    s = repo.status(match=m, clean=True)
+    forget = sorted(s[0] + s[1] + s[3] + s[6])
+
+    for f in m.files():
+        if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
+            ui.warn(_('not removing %s: file is already untracked\n')
+                    % m.rel(f))
+
+    for f in forget:
+        if ui.verbose or not m.exact(f):
+            ui.status(_('removing %s\n') % m.rel(f))
+
+    repo.remove(forget, unlink=False)
 
 def grep(ui, repo, pattern, *pats, **opts):
     """search for a pattern in specified files and revisions
@@ -3269,6 +3300,10 @@ table = {
           ('', 'switch-parent', None, _('diff against the second parent'))
           ] + diffopts,
          _('[OPTION]... [-o OUTFILESPEC] REV...')),
+    "^forget":
+        (forget,
+         [] + walkopts,
+         _('[OPTION]... FILE...')),
     "grep":
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),

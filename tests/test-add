@@ -7,6 +7,9 @@ hg add -n
 hg st
 hg add
 hg st
+hg forget a
+hg add
+hg st
 
 echo b > b
 hg add -n b
@@ -36,6 +39,9 @@ hg resolve -m a
 hg ci -m merge
 
 echo % issue683
+hg forget a
+hg add a
+hg st
 hg rm a
 hg st
 echo a > a

@@ -2,6 +2,8 @@ adding a
 ? a
 adding a
 A a
+adding a
+A a
 A a
 ? b
 A a
@@ -26,6 +28,7 @@ a already tracked!
 M a
 ? a.orig
 % issue683
+? a.orig
 R a
 ? a.orig
 M a
