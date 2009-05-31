@@ -3,7 +3,7 @@ import cStringIO
 import os, re, shutil, stat, subprocess
 from mercurial import util as hgutil
 from mercurial.i18n import _
-from hgsubversion import util
+import util
 
 class externalsfile(dict):
     """Map svn directories to lists of externals entries.
