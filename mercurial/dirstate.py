@@ -425,9 +425,6 @@ class dirstate(object):
         def fwarn(f, msg):
             self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
             return False
-        badfn = fwarn
-        if hasattr(match, 'bad'):
-            badfn = match.bad
 
         def badtype(f, mode):
             kind = _('unknown')
@@ -450,6 +447,7 @@ class dirstate(object):
             dirignore = util.always
 
         matchfn = match.matchfn
+        badfn = match.bad
         dmap = self._map
         normpath = util.normpath
         normalize = self.normalize
