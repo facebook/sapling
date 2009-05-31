@@ -782,13 +782,13 @@ def debugcheckstate(ui, repo):
 def showconfig(ui, repo, *values, **opts):
     """show combined config settings from all hgrc files
 
-    With no args, print names and values of all config items.
+    With no arguments, print names and values of all config items.
 
-    With one arg of the form section.name, print just the value of
-    that config item.
+    With one argument of the form section.name, print just the value
+    of that config item.
 
-    With multiple args, print names and values of all config items
-    with matching section names.
+    With multiple arguments, print names and values of all config
+    items with matching section names.
 
     With the --debug flag, the source (filename and line number) is
     printed for each config item.
