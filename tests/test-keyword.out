@@ -31,7 +31,7 @@ replaced with customized keywords and templates. Again, run "hg
 kwdemo" to control the results of your config changes.
 
 Before changing/disabling active keywords, run "hg kwshrink" to avoid
-the risk of inadvertedly storing expanded keywords in the change
+the risk of inadvertently storing expanded keywords in the change
 history.
 
 To force expansion after enabling it, or a configuration change, run

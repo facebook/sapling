@@ -18,7 +18,7 @@ This extension can be used to fix the issue with those encodings by
 wrapping some functions to convert to Unicode string before path
 operation.
 
-This extension is usefull for:
+This extension is useful for:
  * Japanese Windows users using shift_jis encoding.
  * Chinese Windows users using big5 encoding.
  * All users who use a repository with one of problematic encodings on

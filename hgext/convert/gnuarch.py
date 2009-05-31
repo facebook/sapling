@@ -257,7 +257,7 @@ class gnuarch_source(converter_source, commandline):
         self.ui.debug(_('obtaining revision %s...\n') % rev)
         output = self._execute('get', rev, self.tmppath)
         self.checkexit(output)
-        self.ui.debug(_('analysing revision %s...\n') % rev)
+        self.ui.debug(_('analyzing revision %s...\n') % rev)
         files = self._readcontents(self.tmppath)
         self.changes[rev].add_files += files
 

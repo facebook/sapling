@@ -35,7 +35,7 @@ you do not need to type "hg extdiff -p kdiff3" always.
 
   # add new command called vimdiff, runs gvimdiff with DirDiff plugin
   # (see http://www.vim.org/scripts/script.php?script_id=102)
-  # Non english user, be sure to put "let g:DirDiffDynamicDiffText = 1" in
+  # Non English user, be sure to put "let g:DirDiffDynamicDiffText = 1" in
   # your .vimrc
   vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
 

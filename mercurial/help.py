@@ -320,7 +320,7 @@ PYTHONPATH::
           the given date/time and the current date/time.
     - basename: Any text. Treats the text as a path, and returns the
           last component of the path after splitting by the path
-          separator (ignoring trailing seprators). For example,
+          separator (ignoring trailing separators). For example,
           "foo/bar/baz" becomes "baz" and "foo/bar//" becomes "bar".
     - stripdir: Treat the text as path and strip a directory level, if
           possible. For example, "foo" and "foo/bar" becomes "foo".

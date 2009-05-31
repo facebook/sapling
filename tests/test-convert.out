@@ -53,7 +53,7 @@ convert a foreign SCM repository to a Mercurial one.
 
     The 'include' directive causes a file, or all files under a
     directory, to be included in the destination repository, and the
-    exclusion of all other files and directories not explicitely included.
+    exclusion of all other files and directories not explicitly included.
     The 'exclude' directive causes files or directories to be omitted.
     The 'rename' directive renames a file or directory. To rename from
     a subdirectory into the root of the repository, use '.' as the
@@ -104,7 +104,7 @@ convert a foreign SCM repository to a Mercurial one.
     in the sandbox to find the CVS repository, and then uses CVS rlog
     commands to find files to convert. This means that unless a
     filemap is given, all files under the starting directory will be
-    converted, and that any directory reorganisation in the CVS
+    converted, and that any directory reorganization in the CVS
     sandbox is ignored.
 
     Because CVS does not have changesets, it is necessary to collect
@@ -155,9 +155,9 @@ convert a foreign SCM repository to a Mercurial one.
     its subdirectories are listed as possible branches. If
     "svn://repo/path/tags" exists, it is looked for tags referencing
     converted branches. Default "trunk", "branches" and "tags" values
-    can be overriden with following options. Set them to paths
-    relative to the source URL, or leave them blank to disable
-    autodetection.
+    can be overridden with following options. Set them to paths
+    relative to the source URL, or leave them blank to disable auto
+    detection.
 
     --config convert.svn.branches=branches    (directory name)
         specify the directory containing branches

@@ -33,7 +33,7 @@ To enable this extension, add this to your .hgrc file:
 [extensions]
 color =
 
-Default effects my be overriden from the .hgrc file:
+Default effects my be overridden from the .hgrc file:
 
 [color]
 status.modified = blue bold underline red_background
