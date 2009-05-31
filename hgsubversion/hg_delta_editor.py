@@ -122,10 +122,6 @@ class HgChangeReceiver(delta.Editor):
             self.branches = pickle.load(f)
             f.close()
         self.tags = {}
-        if os.path.exists(self.tag_info_file):
-            f = open(self.tag_info_file)
-            self.tags = pickle.load(f)
-            f.close()
         if os.path.exists(self.tag_locations_file):
             f = open(self.tag_locations_file)
             self.tag_locations = pickle.load(f)
@@ -213,7 +209,6 @@ class HgChangeReceiver(delta.Editor):
         every revision is created.
         '''
         pickle_atomic(self.branches, self.branch_info_file, self.meta_data_dir)
-        pickle_atomic(self.tags, self.tag_info_file, self.meta_data_dir)
 
     def _path_and_branch_for_path(self, path, existing=True):
         return self._split_branch_path(path, existing=existing)[:2]
@@ -834,10 +829,6 @@ class HgChangeReceiver(delta.Editor):
     def branch_info_file(self):
         return self.meta_file_named('branch_info')
     branch_info_file = property(branch_info_file)
-
-    def tag_info_file(self):
-        return self.meta_file_named('tag_info')
-    tag_info_file = property(tag_info_file)
 
     def tag_locations_file(self):
         return self.meta_file_named('tag_locations')

@@ -145,42 +145,6 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     pickle.dump(branchinfo, branchinfofile)
     branchinfofile.close()
 
-    # now handle tags
-    tagsinfo = {}
-    realtags = svn.tags
-    tagsleft = realtags.items()
-    while tagsleft:
-        tag, tagparent = tagsleft.pop(0)
-        source, rev = tagparent
-        if source.startswith('tags/'):
-            src = source[len('tags/'):]
-            if src in tagsinfo:
-                tagsinfo[tag] = tagsinfo[src]
-            elif src in realtags:
-                if (realtags[src][1] <= last_rev
-                    or realtags[src][0].startswith('tags/')):
-                    tagsleft.append(src)
-            else:
-                older_tags = svn.tags_at_rev(rev)
-                newsrc, newrev = older_tags[src]
-                tagsleft.append((tag, (newsrc, newrev)))
-            continue
-        else:
-            # determine the branch
-            assert not source.startswith('tags/'), "Tags can't be tags of other tags."
-            if source.startswith('branches/'):
-                source = source[len('branches/'):]
-            elif source == 'trunk':
-                source = None
-            else:
-                source = '../' + source
-        if rev <= last_rev and (source or 'default') in repo.branchtags():
-            tagsinfo[tag] = source, rev
-
-    tagsinfofile = open(os.path.join(svnmetadir, 'tag_info'), 'w')
-    pickle.dump(tagsinfo, tagsinfofile)
-    tagsinfofile.close()
-
 
 def help(ui, args=None, **opts):
     """show help for a given subcommands or a help overview

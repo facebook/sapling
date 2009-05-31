@@ -22,8 +22,6 @@ def _do_case(self, name):
     hg.clone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
     self.repo2 = hg.repository(ui.ui(), wc2_path)
     self.assertEqual(self.repo.branchtags(), self.repo2.branchtags())
-    self.assertEqual(pickle.load(open(os.path.join(self.wc_path, '.hg', 'svn', 'tag_info'))),
-                     pickle.load(open(os.path.join(wc2_path, '.hg', 'svn', 'tag_info'))))
 
 
 def buildmethod(case, name):
