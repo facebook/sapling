@@ -460,21 +460,12 @@ class dirstate(object):
         work = []
         wadd = work.append
 
-        if match.anypats(): # match.match or .exact with patterns
-            dostep3 = True
-            exact = False
-        elif matchfn == match.exact: # match.exact without patterns
-            dostep3 = False
+        exact = skipstep3 = False
+        if matchfn == match.exact: # match.exact
             exact = True
-        elif match.files(): # match.match without patterns
-            dostep3 = False
-            exact = False
-        else: # match.always
-            dostep3 = True
-            exact = False
-
-        if exact: # skip step 2
-            dirignore = util.always
+            dirignore = util.always # skip step 2
+        elif match.files() and not match.anypats(): # match.match, no patterns
+            skipstep3 = True
 
         files = set(match.files())
         if not files or '.' in files:
@@ -491,7 +482,7 @@ class dirstate(object):
                 st = lstat(join(nf))
                 kind = getkind(st.st_mode)
                 if kind == dirkind:
-                    dostep3 = True
+                    skipstep3 = False
                     if nf in dmap:
                         #file deleted on disk but still in dirstate
                         results[nf] = None
@@ -510,7 +501,7 @@ class dirstate(object):
                     prefix = nf + "/"
                     for fn in dmap:
                         if fn.startswith(prefix):
-                            dostep3 = True
+                            skipstep3 = False
                             break
                     else:
                         badfn(ff, inst.strerror)
@@ -550,7 +541,7 @@ class dirstate(object):
                         results[nf] = None
 
         # step 3: report unseen items in the dmap hash
-        if dostep3 and not exact:
+        if not skipstep3 and not exact:
             visit = sorted([f for f in dmap if f not in results and matchfn(f)])
             for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
                 if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
