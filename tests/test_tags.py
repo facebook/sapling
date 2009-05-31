@@ -64,5 +64,15 @@ class TestTags(test_util.TestBase):
     def test_tag_by_renaming_branch_stupid(self):
         self.test_tag_by_renaming_branch(stupid=True)
 
+    def test_deletion_of_tag_on_trunk_after_branching(self):
+        repo = self._load_fixture_and_fetch('tag_deletion_tag_branch.svndump')
+        branches = set(repo[h].extra()['branch'] for h in repo.heads(closed=False))
+        self.assertEqual(branches, set(['default', 'from_2', ]))
+        self.assertEqual(
+            repo.tags(),
+            {'tip': 'g\xdd\xcd\x93\x03g\x1e\x7f\xa6-[V%\x99\x07\xd3\x9d>(\x94',
+             'new_tag': '=\xb8^\xb5\x18\xa9M\xdb\xf9\xb62Z\xa0\xb5R6+\xfe6.'})
+
+
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(TestTags)
