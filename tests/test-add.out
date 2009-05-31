@@ -30,8 +30,8 @@ R a
 ? a.orig
 M a
 ? a.orig
-c does not exist!
-d does not exist!
+c: No such file or directory
+d: No such file or directory
 M a
 A c
 ? a.orig

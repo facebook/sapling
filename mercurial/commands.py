@@ -29,24 +29,22 @@ def add(ui, repo, *pats, **opts):
     If no names are given, add all files to the repository.
     """
 
-    rejected = None
+    bad = []
     exacts = {}
     names = []
     m = cmdutil.match(repo, pats, opts)
-    m.bad = lambda x,y: True
-    for abs in repo.walk(m):
-        if m.exact(abs):
-            if ui.verbose:
-                ui.status(_('adding %s\n') % m.rel(abs))
-            names.append(abs)
-            exacts[abs] = 1
-        elif abs not in repo.dirstate:
-            ui.status(_('adding %s\n') % m.rel(abs))
-            names.append(abs)
+    oldbad = m.bad
+    m.bad = lambda x,y: bad.append(x) or oldbad(x,y)
+
+    for f in repo.walk(m):
+        exact = m.exact(f)
+        if exact or f not in repo.dirstate:
+            names.append(f)
+            if ui.verbose or not exact:
+                ui.status(_('adding %s\n') % m.rel(f))
     if not opts.get('dry_run'):
-        rejected = repo.add(names)
-        rejected = [p for p in rejected if p in exacts]
-    return rejected and 1 or 0
+        bad += [f for f in repo.add(names) if f in m.files()]
+    return bad and 1 or 0
 
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files
@@ -2486,13 +2484,12 @@ def revert(ui, repo, *pats, **opts):
 
         def badfn(path, msg):
             if path in names:
-                return False
+                return
             path_ = path + '/'
             for f in names:
                 if f.startswith(path_):
-                    return False
+                    return
             ui.warn("%s: %s\n" % (m.rel(path), msg))
-            return False
 
         m = cmdutil.match(repo, pats, opts)
         m.bad = badfn
