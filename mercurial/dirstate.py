@@ -460,21 +460,20 @@ class dirstate(object):
         work = []
         wadd = work.append
 
-        if match.anypats():
-            #match.match with patterns
+        if match.anypats(): # match.match or .exact with patterns
             dostep3 = True
-            nomatches = False
-        elif not match.files():
-            #match.always or match.never
-            dostep3 = matchfn('')
-            nomatches = not dostep3
-        else:
-            #match.exact or match.match without pattern
+            exact = False
+        elif matchfn == match.exact: # match.exact without patterns
             dostep3 = False
-            nomatches = matchfn == match.exact
+            exact = True
+        elif match.files(): # match.match without patterns
+            dostep3 = False
+            exact = False
+        else: # match.always
+            dostep3 = True
+            exact = False
 
-        if nomatches:
-            #skip step 2
+        if exact: # skip step 2
             dirignore = util.always
 
         files = set(match.files())
@@ -551,7 +550,7 @@ class dirstate(object):
                         results[nf] = None
 
         # step 3: report unseen items in the dmap hash
-        if dostep3 and not nomatches:
+        if dostep3 and not exact:
             visit = sorted([f for f in dmap if f not in results and matchfn(f)])
             for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
                 if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
