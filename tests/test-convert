@@ -47,4 +47,6 @@ hg convert --debug --filemap filemap a partialb | \
 
 echo % converting empty dir should fail "nicely"
 mkdir emptydir
-PATH=$BINDIR hg convert emptydir 2>&1 | sed 's,file://.*/emptydir,.../emptydir,g'
+# override $PATH to ensure p4 not visible; use $PYTHON in case we're
+# running from a devel copy, not a temp installation
+PATH=$BINDIR $PYTHON $BINDIR/hg convert emptydir 2>&1 | sed 's,file://.*/emptydir,.../emptydir,g'

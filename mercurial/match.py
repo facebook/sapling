@@ -81,7 +81,10 @@ class match(object):
         for f in self._files:
             yield f
     def bad(self, f, msg):
-        return True
+        '''callback for each explicit file that can't be
+        found/accessed, with an error message
+        '''
+        pass
     def dir(self, f):
         pass
     def missing(self, f):
@@ -102,10 +105,6 @@ class exact(match):
 class always(match):
     def __init__(self, root, cwd):
         match.__init__(self, root, cwd, [])
-
-class never(match):
-    def __init__(self, root, cwd):
-        match.__init__(self, root, cwd, [], exact = True)
 
 def patkind(pat):
     return _patsplit(pat, None)[0]

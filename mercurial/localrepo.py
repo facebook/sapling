@@ -948,7 +948,6 @@ class localrepository(repo.repository):
             def bad(f, msg):
                 if f not in ctx1:
                     self.ui.warn('%s: %s\n' % (self.dirstate.pathto(f), msg))
-                return False
             match.bad = bad
 
         if working: # we need to scan the working dir
