@@ -362,8 +362,6 @@ class HgChangeReceiver(delta.Editor):
             longer = len(path) > len('%s/' % tagspath)
             if path and onpath and longer:
                 tag, subpath = path[len(tagspath) + 1:], ''
-                if '/' in tag:
-                    tag, subpath = tag.split('/', 1)
                 return tag
         return False
 
@@ -449,10 +447,12 @@ class HgChangeReceiver(delta.Editor):
                         if not from_tag:
                             continue
                         branch, src_rev = self.tags[from_tag]
-                    if t_name not in added_tags:
+                    if t_name not in added_tags and file is '':
                         added_tags[t_name] = branch, src_rev
-                    elif file and src_rev > added_tags[t_name][1]:
-                        added_tags[t_name] = branch, src_rev
+                    elif file:
+                        t_name = t_name[:-(len(file)+1)]
+                        if src_rev > added_tags[t_name][1]:
+                            added_tags[t_name] = branch, src_rev
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
                         tags_to_delete.add(t_name)

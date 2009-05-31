@@ -73,6 +73,19 @@ class TestTags(test_util.TestBase):
             {'tip': 'g\xdd\xcd\x93\x03g\x1e\x7f\xa6-[V%\x99\x07\xd3\x9d>(\x94',
              'new_tag': '=\xb8^\xb5\x18\xa9M\xdb\xf9\xb62Z\xa0\xb5R6+\xfe6.'})
 
+    def test_tags_in_unusual_location(self):
+        repo = self._load_fixture_and_fetch('unusual_tags.svndump')
+        branches = set(repo[h].extra()['branch']
+                       for h in repo.heads(closed=False))
+        self.assertEqual(branches, set(['default', 'dev_branch']))
+        tags = repo.tags()
+        del tags['tip']
+        self.assertEqual(
+            tags,
+            {'blah/trunktag': '\xd3$@\xd7\xd8Nu\xce\xa6%\xf1u\xd9b\x1a\xb2\x81\xc2\xb0\xb1',
+             'versions/branch_version': 'I\x89\x1c>z#\xfc._K#@:\xd6\x1f\x96\xd6\x83\x1b|',
+             })
+
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(TestTags)
