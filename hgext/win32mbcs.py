@@ -25,7 +25,7 @@ This extension is usefull for:
    case-insensitive file system.
 
 This extension is not needed for:
- * Any user who use only ascii chars in path.
+ * Any user who use only ASCII chars in path.
  * Any user who do not use any of problematic encodings.
 
 Note that there are some limitations on using this extension:

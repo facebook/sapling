@@ -8,7 +8,7 @@
 '''show revision graphs in terminal windows
 
 This extension adds a --graph option to the incoming, outgoing and log
-commands. When this options is given, an ascii representation of the
+commands. When this options is given, an ASCII representation of the
 revision graph is also shown.
 '''
 
