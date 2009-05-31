@@ -426,15 +426,14 @@ class dirstate(object):
             self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
             return False
 
-        def badtype(f, mode):
+        def badtype(mode):
             kind = _('unknown')
             if stat.S_ISCHR(mode): kind = _('character device')
             elif stat.S_ISBLK(mode): kind = _('block device')
             elif stat.S_ISFIFO(mode): kind = _('fifo')
             elif stat.S_ISSOCK(mode): kind = _('socket')
             elif stat.S_ISDIR(mode): kind = _('directory')
-            self._ui.warn(_('%s: unsupported file type (type is %s)\n')
-                          % (self.pathto(f), kind))
+            return _('unsupported file type (type is %s)') % kind
 
         ignore = self._ignore
         dirignore = self._dirignore
@@ -502,7 +501,7 @@ class dirstate(object):
                 elif kind == regkind or kind == lnkkind:
                     results[nf] = st
                 else:
-                    badtype(ff, kind)
+                    badfn(ff, badtype(kind))
                     if nf in dmap:
                         results[nf] = None
             except OSError, inst:
