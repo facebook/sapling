@@ -755,9 +755,12 @@ def main():
         path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
         os.environ["PATH"] = os.pathsep.join(path)
 
-        # Deliberately override existing PYTHONPATH: do not want success
-        # to depend on what happens to be in caller's environment.
-        os.environ["PYTHONPATH"] = PYTHONDIR
+        # We have to augment PYTHONPATH, rather than simply replacing
+        # it, in case external libraries are only available via current
+        # PYTHONPATH.  (In particular, the Subversion bindings on OS X
+        # are in /opt/subversion.)
+        os.environ["PYTHONPATH"] = (PYTHONDIR + os.pathsep +
+                                    os.environ.get("PYTHONPATH", ""))
 
     COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
