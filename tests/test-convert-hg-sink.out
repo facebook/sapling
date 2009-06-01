@@ -48,3 +48,15 @@ no changes found
 % no copies
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 baz not renamed
+% test tag rewriting
+initializing destination new-filemap repository
+scanning source...
+sorting...
+converting...
+4 add foo and bar
+3 remove foo
+2 add foo/file
+1 Added tag some-tag for changeset ad681a868e44
+0 add baz
+tip                                2:6f4fd1df87fb
+some-tag                           0:ba8636729451

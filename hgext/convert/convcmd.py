@@ -297,7 +297,8 @@ class converter(object):
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
-        newnode = self.dest.putcommit(files, copies, parents, commit, self.source)
+        newnode = self.dest.putcommit(files, copies, parents, commit, 
+                                      self.source, self.map)
         self.source.converted(rev, newnode)
         self.map[rev] = newnode
 

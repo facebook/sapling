@@ -1170,7 +1170,7 @@ class svn_sink(converter_sink, commandline):
     def revid(self, rev):
         return u"svn:%s@%s" % (self.uuid, rev)
 
-    def putcommit(self, files, copies, parents, commit, source):
+    def putcommit(self, files, copies, parents, commit, source, revmap):
         # Apply changes to working copy
         for f, v in files:
             try:

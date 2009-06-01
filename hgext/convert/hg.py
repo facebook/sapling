@@ -18,7 +18,7 @@
 #   source.
 
 
-import os, time
+import os, time, cStringIO
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, error
@@ -112,13 +112,27 @@ class mercurial_sink(converter_sink):
                 self.repo.pull(prepo, [prepo.lookup(h) for h in heads])
             self.before()
 
-    def putcommit(self, files, copies, parents, commit, source):
+    def _rewritetags(self, source, revmap, data):
+        fp = cStringIO.StringIO()
+        for line in data.splitlines():
+            s = line.split(' ', 1)
+            if len(s) != 2:
+                continue
+            revid = revmap.get(source.lookuprev(s[0]))
+            if not revid:
+                continue
+            fp.write('%s %s\n' % (revid, s[1]))
+        return fp.getvalue()
+
+    def putcommit(self, files, copies, parents, commit, source, revmap):
 
         files = dict(files)
         def getfilectx(repo, memctx, f):
             v = files[f]
             data = source.getfile(f, v)
             e = source.getmode(f, v)
+            if f == '.hgtags':
+                data = self._rewritetags(source, revmap, data)
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copies.get(f))
 
         pl = []
@@ -341,3 +355,9 @@ class mercurial_source(converter_source):
 
     def hasnativeorder(self):
         return True
+
+    def lookuprev(self, rev):
+        try:
+            return hex(self.repo.lookup(rev))
+        except error.RepoError:
+            return None

@@ -144,6 +144,12 @@ class converter_source(object):
         """
         return False
 
+    def lookuprev(self, rev):
+        """If rev is a meaningful revision reference in source, return
+        the referenced identifier in the same format used by getcommit().
+        return None otherwise.
+        """
+        return None
 
 class converter_sink(object):
     """Conversion sink (target) interface"""
@@ -174,13 +180,15 @@ class converter_sink(object):
         mapping equivalent authors identifiers for each system."""
         return None
 
-    def putcommit(self, files, copies, parents, commit, source):
+    def putcommit(self, files, copies, parents, commit, source, revmap):
         """Create a revision with all changed files listed in 'files'
-        and having listed parents. 'commit' is a commit object containing
-        at a minimum the author, date, and message for this changeset.
-        'files' is a list of (path, version) tuples, 'copies'is a dictionary
-        mapping destinations to sources, and 'source' is the source repository.
-        Only getfile() and getmode() should be called on 'source'.
+        and having listed parents. 'commit' is a commit object
+        containing at a minimum the author, date, and message for this
+        changeset.  'files' is a list of (path, version) tuples,
+        'copies' is a dictionary mapping destinations to sources,
+        'source' is the source repository, and 'revmap' is a mapfile
+        of source revisions to converted revisions. Only getfile(),
+        getmode(), and lookuprev() should be called on 'source'.
 
         Note that the sink repository is not told to update itself to
         a particular revision (or even what that revision would be)

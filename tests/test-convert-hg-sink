@@ -55,3 +55,13 @@ diff debugstate new-debugstate
 echo '% no copies'
 hg up -C
 hg debugrename baz
+cd ..
+
+echo '% test tag rewriting'
+cat > filemap <<EOF
+exclude foo
+EOF
+hg convert --filemap filemap orig new-filemap 2>&1 | grep -v 'subversion python bindings could not be loaded'
+cd new-filemap
+hg tags
+cd ..
