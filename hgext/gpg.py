@@ -6,7 +6,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 import os, tempfile, binascii
-from mercurial import util, commands
+from mercurial import util, commands, match
 from mercurial import node as hgnode
 from mercurial.i18n import _
 
@@ -255,7 +255,8 @@ def sign(ui, repo, *revs, **opts):
                              % hgnode.short(n)
                              for n in nodes])
     try:
-        repo.commit([".hgsigs"], message, opts['user'], opts['date'])
+        m = match.exact(['.hgsigs'])
+        repo.commit(None, message, opts['user'], opts['date'], match=m)
     except ValueError, inst:
         raise util.Abort(str(inst))
 
