@@ -114,7 +114,7 @@ class converter(object):
 
         return parents
 
-    def toposort(self, parents):
+    def toposort(self, parents, sortmode):
         '''Return an ordering such that every uncommitted changeset is
         preceeded by all its uncommitted ancestors.'''
 
@@ -182,10 +182,12 @@ class converter(object):
 
             return picknext
 
-        if self.opts.get('datesort'):
+        if sortmode == 'branchsort':
+            picknext = makebranchsorter()
+        elif sortmode == 'datesort':
             picknext = makedatesorter()
         else:
-            picknext = makebranchsorter()
+            raise util.Abort(_('unknown sort mode: %s') % sortmode)
 
         children, actives = mapchildren(parents)
 
@@ -290,8 +292,7 @@ class converter(object):
         self.source.converted(rev, newnode)
         self.map[rev] = newnode
 
-    def convert(self):
-
+    def convert(self, sortmode):
         try:
             self.source.before()
             self.dest.before()
@@ -300,7 +301,7 @@ class converter(object):
             heads = self.source.getheads()
             parents = self.walktree(heads)
             self.ui.status(_("sorting...\n"))
-            t = self.toposort(parents)
+            t = self.toposort(parents, sortmode)
             num = len(t)
             c = None
 
@@ -361,6 +362,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
             shutil.rmtree(path, True)
         raise
 
+    sortmode = 'branchsort'
+    if opts.get('datesort'):
+        sortmode = 'datesort'
+
     fmap = opts.get('filemap')
     if fmap:
         srcc = filemap.filemap_source(ui, srcc, fmap)
@@ -373,5 +378,5 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
             revmapfile = os.path.join(destc, "map")
 
     c = converter(ui, srcc, destc, revmapfile, opts)
-    c.convert()
+    c.convert(sortmode)
 
