@@ -351,3 +351,6 @@ class filemap_source(converter_source):
 
     def gettags(self):
         return self.base.gettags()
+
+    def hasnativeorder(self):
+        return self.base.hasnativeorder()

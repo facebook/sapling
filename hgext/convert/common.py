@@ -137,6 +137,13 @@ class converter_source(object):
         '''Notify the source that a revision has been converted.'''
         pass
 
+    def hasnativeorder(self):
+        """Return true if this source has a meaningful, native revision
+        order. For instance, Mercurial revisions are store sequentially
+        while there is no such global ordering with Darcs.
+        """
+        return False
+
 
 class converter_sink(object):
     """Conversion sink (target) interface"""

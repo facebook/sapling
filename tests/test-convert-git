@@ -165,5 +165,9 @@ cd ..
 
 echo '% convert author committer'
 hg convert git-repo4 git-repo4-hg
-cd git-repo4-hg
-hg log -v
+hg -R git-repo4-hg log -v
+
+echo '% --sourceorder should fail'
+hg convert --sourcesort git-repo4 git-repo4-sourcesort-hg
+
+true

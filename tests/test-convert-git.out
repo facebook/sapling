@@ -124,3 +124,6 @@ description:
 addfoo
 
 
+% --sourceorder should fail
+initializing destination git-repo4-sourcesort-hg repository
+abort: --sourcesort is not supported by this data source

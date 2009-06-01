@@ -338,3 +338,6 @@ class mercurial_source(converter_source):
 
     def after(self):
         self.ui.debug(_('run hg source post-conversion action\n'))
+
+    def hasnativeorder(self):
+        return True
