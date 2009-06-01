@@ -284,11 +284,12 @@ class GitHandler(object):
                 extra_message += "rename : " + oldfile + " => " + newfile + "\n"
 
         for key, value in extra.iteritems():
-            if key in ['committer', 'encoding', 'branch', 'hg-git', 'git']:
+            if key in ['committer', 'encoding', 'branch', 'hg-git']:
                 continue
             else:
                 add_extras = True        
                 extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
+
 
         if add_extras:
             commit['message'] += "\n--HG--\n" + extra_message
@@ -635,7 +636,6 @@ class GitHandler(object):
         split = message.split("\n\n--HG--\n", 1)
         renames = {}
         extra = {}
-        files = []
         branch = False
         if len(split) == 2:
             message, meta = split
@@ -651,15 +651,13 @@ class GitHandler(object):
                     renames[after] = before
                 if command == 'branch':
                     branch = data
-                if command == 'files':
-                    files.append(data)
                 if command == 'extra':
                     before, after = data.split(" : ", 1)
                     extra[before] = urllib.unquote(after)
-        return (message, renames, branch, files, extra)
+        return (message, renames, branch, extra)
 
     def pseudo_import_git_commit(self, commit):
-        (strip_message, hg_renames, hg_branch) = self.extract_hg_metadata(commit.message)
+        (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
         cs = self.map_hg_get(commit.id)
         p1 = nullid
         p2 = nullid
@@ -685,11 +683,11 @@ class GitHandler(object):
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
 
-        (strip_message, hg_renames, hg_branch, files, extra) = self.extract_hg_metadata(commit.message)
+        (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
         
         # get a list of the changed, added, removed files
         files = self.git.get_files_changed(commit)
-
+        
         date = (commit.author_time, -commit.author_timezone)
         text = strip_message
 
@@ -714,7 +712,7 @@ class GitHandler(object):
             def commit_octopus(p1, p2):
                 ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                                      commit.author, date, {'hg-git': 'octopus'})
-                return hex(self.repo.commitctx(ctx))
+                return hex(self.repo.commitctx(ctx, None))
 
             octopus = len(gparents) > 2
             p2 = gparents.pop()
@@ -725,15 +723,17 @@ class GitHandler(object):
         else:
             if gparents:
                 p1 = gparents.pop()
+        
+        files = list(set(files))
 
-        # wierd hack for explicit file renames in first but not second branch
+        pa = None
         if not (p2 == nullid):
-            vals = [item for item in self.renames[p1].values() if not item in self.renames[p2].values()]
-            for removefile in vals:
-                files.remove(removefile)
+            node1 = self.repo.changectx(p1)
+            node2 = self.repo.changectx(p2)
+            pa = node1.ancestor(node2)
+
         author = commit.author
 
-        extra = {}
         if ' <none@none>' in commit.author:
             author = commit.author[:-12]
 
@@ -756,7 +756,8 @@ class GitHandler(object):
 
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              author, date, extra)
-        node = self.repo.commitctx(ctx)
+        
+        node = self.repo.commitctx(ctx, pa)
 
         # save changeset to mapping file
         cs = hex(node)

@@ -20,8 +20,9 @@ from mercurial.i18n import _
 from git_handler import GitHandler
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
-import gitrepo
+import gitrepo, hgrepo
 hg.schemes['git'] = gitrepo
+hg.schemes['file'] = hgrepo
 
 def gclone(ui, git_url, hg_repo_path=None):
     # determine new repo name
@@ -31,6 +32,8 @@ def gclone(ui, git_url, hg_repo_path=None):
             hg_repo_path = hg_repo_path[:-4]
         hg_repo_path += '-hg'
     dest_repo = hg.repository(ui, hg_repo_path, create=True)
+
+    print dest_repo
 
     # fetch the initial git data
     git = GitHandler(dest_repo, ui)
