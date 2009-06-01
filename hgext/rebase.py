@@ -160,7 +160,6 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped=None,
         skipped = set()
 
     # Commit, record the old nodeid
-    m, a, r = repo.status()[:3]
     newrev = nullrev
     try:
         if last:
@@ -175,7 +174,7 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped=None,
         extra = {'rebase_source': repo[rev].hex()}
         if extrafn:
             extrafn(repo[rev], extra)
-        newrev = repo.commit(m+a+r,
+        newrev = repo.commit(None,
                             text=commitmsg,
                             user=repo[rev].user(),
                             date=repo[rev].date(),
