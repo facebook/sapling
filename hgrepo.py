@@ -4,7 +4,7 @@ from mercurial.node import bin, hex, nullid, nullrev, short
 
 class hgrepo(localrepo.localrepository):
 
-    def commitctx(self, wctx, ancestor):
+    def commitctx(self, wctx, ancestor, force_files = False):
     
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
@@ -64,9 +64,6 @@ class hgrepo(localrepo.localrepository):
 
                 except (OSError, IOError):
                     remove.append(f)
-
-            print 'CHANGED'
-            print changed
             
             updated, added = [], []
             for f in sorted(changed):
@@ -99,8 +96,14 @@ class hgrepo(localrepo.localrepository):
                 raise util.Abort(_("empty commit message"))
             text = '\n'.join(lines)
 
+            file_list = []
+            if len(force_files) > 0:
+                file_list = force_files
+            else:
+                file_list = changed + removed
+            
             self.changelog.delayupdate()
-            n = self.changelog.add(mn, changed + removed, text, trp, p1, p2,
+            n = self.changelog.add(mn, file_list, text, trp, p1, p2,
                                    user, wctx.date(), extra)
             p = lambda: self.changelog.writepending() and self.root or ""
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,

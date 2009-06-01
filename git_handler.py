@@ -114,6 +114,7 @@ class GitHandler(object):
         self.save_map()
 
     def push(self, remote_name):
+        self.fetch(remote_name) # get and convert objects if they already exist
         self.ui.status(_("pushing to : %s\n") % remote_name)
         self.export_commits()
         self.update_remote_references(remote_name)
@@ -290,6 +291,11 @@ class GitHandler(object):
                 add_extras = True        
                 extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
 
+        # save file context listing on merge commit
+        if (len(parents) > 1):
+            add_extras = True
+            for filenm in ctx.files():
+                extra_message += "files : " + filenm + "\n"
 
         if add_extras:
             commit['message'] += "\n--HG--\n" + extra_message
@@ -546,7 +552,6 @@ class GitHandler(object):
         todo = []
         done = set()
         convert_list = {}
-        self.renames = {}
 
         # get a list of all the head shas
         if refs: 
@@ -591,9 +596,6 @@ class GitHandler(object):
             commit = convert_list[csha]
             if not self.map_hg_get(csha): # it's already here
                 self.import_git_commit(commit)
-            else:
-                # we need to get rename info for further upstream
-                self.pseudo_import_git_commit(commit)
 
         self.update_hg_bookmarks(remote_name)
 
@@ -636,6 +638,7 @@ class GitHandler(object):
         split = message.split("\n\n--HG--\n", 1)
         renames = {}
         extra = {}
+        files = []
         branch = False
         if len(split) == 2:
             message, meta = split
@@ -651,39 +654,19 @@ class GitHandler(object):
                     renames[after] = before
                 if command == 'branch':
                     branch = data
+                if command == 'files':
+                    files.append(data)
                 if command == 'extra':
                     before, after = data.split(" : ", 1)
                     extra[before] = urllib.unquote(after)
-        return (message, renames, branch, extra)
-
-    def pseudo_import_git_commit(self, commit):
-        (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
-        cs = self.map_hg_get(commit.id)
-        p1 = nullid
-        p2 = nullid
-        if len(commit.parents) > 0:
-            sha = commit.parents[0]
-            p1 = self.map_hg_get(sha)
-        if len(commit.parents) > 1:
-            sha = commit.parents[1]
-            p2 = self.map_hg_get(sha)
-        if len(commit.parents) > 2:
-            # TODO : map extra parents to the extras file
-            pass
-        # saving rename info
-        if (not (p2 == nullid) or (p1 == nullid)):
-            self.renames[cs] = {}
-        else:
-            self.renames[cs] = self.renames[p1].copy()
-
-        self.renames[cs].update(hg_renames)
+        return (message, renames, branch, files, extra)
     
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
 
-        (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
+        (strip_message, hg_renames, hg_branch, force_files, extra) = self.extract_hg_metadata(commit.message)
         
         # get a list of the changed, added, removed files
         files = self.git.get_files_changed(commit)
@@ -757,20 +740,11 @@ class GitHandler(object):
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              author, date, extra)
         
-        node = self.repo.commitctx(ctx, pa)
+        node = self.repo.commitctx(ctx, pa, force_files)
 
         # save changeset to mapping file
         cs = hex(node)
-        self.map_set(commit.id, cs)
-        
-        # saving rename info
-        if (not (p2 == nullid) or (p1 == nullid)):
-            self.renames[cs] = {}
-        else:
-            self.renames[cs] = self.renames[p1].copy()
-            
-        self.renames[cs].update(hg_renames)
-        
+        self.map_set(commit.id, cs)        
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
