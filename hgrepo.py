@@ -38,7 +38,9 @@ class hgrepo(localrepo.localrepository):
             tr = self.transaction()
             trp = weakref.proxy(tr)
 
-            # retarded.  this is retarded.
+            # looking for files that have not actually changed content-wise,
+            # but have different nodeids because they were changed and then
+            # reverted, so they have changed in the revlog.
             for f in m1:
                 if (f in m2) and (not f in commit) and (not m1[f] == m2[f]):
                     commit.append(f)
