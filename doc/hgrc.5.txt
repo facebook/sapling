@@ -130,7 +130,8 @@ auth::
 
     <name>.<argument> = <value>
 
-  where <name> is used to group arguments into authentication entries.
+  where <name> is used to group arguments into authentication
+  entries.
   Example:
 
     foo.prefix = hg.intevation.org/mercurial
@@ -159,8 +160,8 @@ auth::
     respectively, as well.
     Default: https.
 
-  If no suitable authentication entry is found, the user is prompted for
-  credentials as usual if required by the remote.
+  If no suitable authentication entry is found, the user is
+  prompted for credentials as usual if required by the remote.
 
 [[decode]]
 decode/encode::
@@ -175,7 +176,8 @@ decode/encode::
   in ".c" anywhere in the repository, use the pattern "**.c".
 
   The filter command can start with a specifier, either "pipe:" or
-  "tempfile:". If no specifier is given, "pipe:" is used by default.
+  "tempfile:". If no specifier is given, "pipe:" is used by
+  default.
 
   A "pipe:" command must accept data on stdin and return the
   transformed data on stdout.
@@ -192,18 +194,19 @@ decode/encode::
     # can safely omit "pipe:", because it's the default)
     *.gz = gzip
 
-  A "tempfile:" command is a template. The string INFILE is replaced
-  with the name of a temporary file that contains the data to be
-  filtered by the command. The string OUTFILE is replaced with the
-  name of an empty temporary file, where the filtered data must be
-  written by the command.
+  A "tempfile:" command is a template. The string INFILE is
+  replaced with the name of a temporary file that contains the data
+  to be filtered by the command. The string OUTFILE is replaced
+  with the name of an empty temporary file, where the filtered data
+  must be written by the command.
 
   NOTE: the tempfile mechanism is recommended for Windows systems,
   where the standard shell I/O redirection operators often have
   strange effects and may corrupt the contents of your files.
 
   The most common usage is for LF <-> CRLF translation on Windows.
-  For this, use the "smart" convertors which check for binary files:
+  For this, use the "smart" convertors which check for binary
+  files:
 
     [extensions]
     hgext.win32text =
@@ -307,17 +310,18 @@ extensions::
   Mercurial has an extension mechanism for adding new features. To
   enable an extension, create an entry for it in this section.
 
-  If you know that the extension is already in Python's search path,
-  you can give the name of the module, followed by "=", with nothing
-  after the "=".
+  If you know that the extension is already in Python's search
+  path, you can give the name of the module, followed by "=", with
+  nothing after the "=".
 
-  Otherwise, give a name that you choose, followed by "=", followed by
-  the path to the ".py" file (including the file name extension) that
-  defines the extension.
+  Otherwise, give a name that you choose, followed by "=", followed
+  by the path to the ".py" file (including the file name extension)
+  that defines the extension.
 
   To explicitly disable an extension that is enabled in an hgrc of
   broader scope, prepend its path with '!', as in
-  'hgext.foo = !/ext/path' or 'hgext.foo = !' when no path is supplied.
+  'hgext.foo = !/ext/path' or 'hgext.foo = !' when no path is
+  supplied.
 
   Example for ~/.hgrc:
 
@@ -442,8 +446,9 @@ hooks::
     incoming.autobuild = /my/build/hook
 
   Most hooks are run with environment variables set that give added
-  useful information. For each hook below, the environment variables
-  it is passed are listed with names of the form "$HG_foo".
+  useful information. For each hook below, the environment
+  variables it is passed are listed with names of the form
+  "$HG_foo".
 
   changegroup;;
     Run after a changegroup has been added via push, pull or
@@ -523,31 +528,34 @@ hooks::
     is in $HG_PARENT2. If update succeeded, $HG_ERROR=0. If update
     failed (e.g. because conflicts not resolved), $HG_ERROR=1.
 
-  Note: it is generally better to use standard hooks rather than the
-  generic pre- and post- command hooks as they are guaranteed to be
-  called in the appropriate contexts for influencing transactions.
-  Also, hooks like "commit" will be called in all contexts that
-  generate a commit (eg. tag) and not just the commit command.
+  Note: it is generally better to use standard hooks rather
+  than the generic pre- and post- command hooks as they are
+  guaranteed to be called in the appropriate contexts for
+  influencing transactions. Also, hooks like "commit" will be
+  called in all contexts that generate a commit (eg. tag) and
+  not just the commit command.
 
-  Note2: Environment variables with empty values may not be passed to
-  hooks on platforms like Windows. For instance, $HG_PARENT2 will
-  not be available under Windows for non-merge changesets while being
-  set to an empty value under Unix-like systems.
+  Note2: Environment variables with empty values may not be
+  passed to hooks on platforms like Windows. For instance,
+  $HG_PARENT2 will not be available under Windows for non-merge
+  changesets while being set to an empty value under Unix-like
+  systems.
 
   The syntax for Python hooks is as follows:
 
     hookname = python:modulename.submodule.callable
     hookname = python:/path/to/python/module.py:callable
 
-  Python hooks are run within the Mercurial process. Each hook is
-  called with at least three keyword arguments: a ui object (keyword
-  "ui"), a repository object (keyword "repo"), and a "hooktype"
-  keyword that tells what kind of hook is used. Arguments listed as
-  environment variables above are passed as keyword arguments, with no
-  "HG_" prefix, and names in lower case.
+  Python hooks are run within the Mercurial process. Each hook
+  is called with at least three keyword arguments: a ui object
+  (keyword "ui"), a repository object (keyword "repo"), and a
+  "hooktype" keyword that tells what kind of hook is used.
+  Arguments listed as environment variables above are passed as
+  keyword arguments, with no "HG_" prefix, and names in lower
+  case.
 
-  If a Python hook returns a "true" value or raises an exception, this
-  is treated as failure of the hook.
+  If a Python hook returns a "true" value or raises an
+  exception, this is treated as failure of the hook.
 
 [[http_proxy]]
 http_proxy::
@@ -698,7 +706,8 @@ ui::
       internal:fail;;
         fail to merge
 
-    See the merge-tools section for more information on configuring tools.
+    See the merge-tools section for more information on
+    configuring tools.
 
   patch;;
     command to use to apply patches. Look for 'gpatch' or 'patch' in PATH if
