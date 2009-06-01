@@ -121,15 +121,14 @@ def fetch(ui, repo, source='default', **opts):
             err = hg.merge(repo, secondparent, remind=False)
 
         if not err:
-            mod, add, rem = repo.status()[:3]
             message = (cmdutil.logmessage(opts) or
                        (_('Automated merge with %s') %
                         url.removeauth(other.url())))
             editor = cmdutil.commiteditor
             if opts.get('force_editor') or opts.get('edit'):
                 editor = cmdutil.commitforceeditor
-            n = repo.commit(mod + add + rem, message, opts['user'],
-                            opts['date'], force=True, editor=editor)
+            n = repo.commit(None, message, opts['user'], opts['date'],
+                            force=True, editor=editor)
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
                                            short(n)))
