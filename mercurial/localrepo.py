@@ -809,8 +809,7 @@ class localrepository(repo.repository):
             wctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
             if editor:
-                wctx._text = editor(self, wctx,
-                                    changes[1], changes[0], changes[2])
+                wctx._text = editor(self, wctx)
             ret = self.commitctx(wctx, True)
 
             # update dirstate and mergestate

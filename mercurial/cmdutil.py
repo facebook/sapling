@@ -1231,13 +1231,14 @@ def commit(ui, repo, commitfunc, pats, opts):
     except ValueError, inst:
         raise util.Abort(str(inst))
 
-def commiteditor(repo, ctx, added, updated, removed):
+def commiteditor(repo, ctx):
     if ctx.description():
         return ctx.description()
-    return commitforceeditor(repo, ctx, added, updated, removed)
+    return commitforceeditor(repo, ctx)
 
-def commitforceeditor(repo, ctx, added, updated, removed):
+def commitforceeditor(repo, ctx):
     edittext = []
+    modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
     if ctx.description():
         edittext.append(ctx.description())
     edittext.append("")
@@ -1253,9 +1254,9 @@ def commitforceeditor(repo, ctx, added, updated, removed):
         edittext.append(_("HG: branch '%s'")
                         % encoding.tolocal(ctx.branch()))
     edittext.extend([_("HG: added %s") % f for f in added])
-    edittext.extend([_("HG: changed %s") % f for f in updated])
+    edittext.extend([_("HG: changed %s") % f for f in modified])
     edittext.extend([_("HG: removed %s") % f for f in removed])
-    if not added and not updated and not removed:
+    if not added and not modified and not removed:
         edittext.append(_("HG: no files changed"))
     edittext.append("")
     # run editor in the repository root
