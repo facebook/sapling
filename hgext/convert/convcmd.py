@@ -117,31 +117,60 @@ class converter(object):
     def toposort(self, parents):
         '''Return an ordering such that every uncommitted changeset is
         preceeded by all its uncommitted ancestors.'''
-        visit = parents.keys()
-        seen = set()
-        children = {}
-        actives = []
 
-        while visit:
-            n = visit.pop(0)
-            if n in seen: continue
-            seen.add(n)
-            # Ensure that nodes without parents are present in the 'children'
-            # mapping.
-            children.setdefault(n, [])
-            hasparent = False
-            for p in parents[n]:
-                if not p in self.map:
-                    visit.append(p)
-                    hasparent = True
-                children.setdefault(p, []).append(n)
-            if not hasparent:
-                actives.append(n)
+        def mapchildren(parents):
+            """Return a (children, roots) tuple where 'children' maps parent
+            revision identifiers to children ones, and 'roots' is the list of
+            revisions without parents. 'parents' must be a mapping of revision
+            identifier to its parents ones.
+            """
+            visit = parents.keys()
+            seen = set()
+            children = {}
+            roots = []
 
-        del seen
-        del visit
+            while visit:
+                n = visit.pop(0)
+                if n in seen:
+                    continue
+                seen.add(n)
+                # Ensure that nodes without parents are present in the
+                # 'children' mapping.
+                children.setdefault(n, [])
+                hasparent = False
+                for p in parents[n]:
+                    if not p in self.map:
+                        visit.append(p)
+                        hasparent = True
+                    children.setdefault(p, []).append(n)
+                if not hasparent:
+                    roots.append(n)
 
-        if self.opts.get('datesort'):
+            return children, roots
+
+        # Sort functions are supposed to take a list of revisions which
+        # can be converted immediately and pick one
+
+        def makebranchsorter():
+            """If the previously converted revision has a child in the
+            eligible revisions list, pick it. Return the list head
+            otherwise. Branch sort attempts to minimize branch
+            switching, which is harmful for Mercurial backend
+            compression.
+            """
+            prev = [None]
+            def picknext(nodes):
+                next = nodes[0]
+                for n in nodes:
+                    if prev[0] in parents[n]:
+                        next = n
+                        break
+                prev[0] = next
+                return next
+            return picknext
+
+        def makedatesorter():
+            """Sort revisions by date."""
             dates = {}
             def getdate(n):
                 if n not in dates:
@@ -150,18 +179,15 @@ class converter(object):
 
             def picknext(nodes):
                 return min([(getdate(n), n) for n in nodes])[1]
+
+            return picknext
+
+        if self.opts.get('datesort'):
+            picknext = makedatesorter()
         else:
-            prev = [None]
-            def picknext(nodes):
-                # Return the first eligible child of the previously converted
-                # revision, or any of them.
-                next = nodes[0]
-                for n in nodes:
-                    if prev[0] in parents[n]:
-                        next = n
-                        break
-                prev[0] = next
-                return next
+            picknext = makebranchsorter()
+
+        children, actives = mapchildren(parents)
 
         s = []
         pendings = {}
