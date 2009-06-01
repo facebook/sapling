@@ -801,7 +801,9 @@ class localrepository(repo.repository):
                         self.ui.warn(_("%s not tracked!\n") % f)
                 changes = [modified, [], removed, [], []]
             else:
-                changes = self.status(match=match)
+                changes = self.status(match=match, clean=force)
+                if force:
+                    changes[0].extend(changes[6])
 
             if (not force and not extra.get("close") and p2 == nullid
                 and not (changes[0] or changes[1] or changes[2])
