@@ -302,7 +302,8 @@ class mercurial_source(converter_source):
             crev = None
         return commit(author=ctx.user(), date=util.datestr(ctx.date()),
                       desc=ctx.description(), rev=crev, parents=parents,
-                      branch=ctx.branch(), extra=ctx.extra())
+                      branch=ctx.branch(), extra=ctx.extra(),
+                      sortkey=ctx.rev())
 
     def gettags(self):
         tags = [t for t in self.repo.tagslist() if t[0] != 'tip']

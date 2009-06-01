@@ -169,6 +169,13 @@ class converter(object):
                 return next
             return picknext
 
+        def makesourcesorter():
+            """Source specific sort."""
+            keyfn = lambda n: self.commitcache[n].sortkey
+            def picknext(nodes):
+                return sorted(nodes, key=keyfn)[0]
+            return picknext
+
         def makedatesorter():
             """Sort revisions by date."""
             dates = {}
@@ -186,6 +193,8 @@ class converter(object):
             picknext = makebranchsorter()
         elif sortmode == 'datesort':
             picknext = makedatesorter()
+        elif sortmode == 'sourcesort':
+            picknext = makesourcesorter()
         else:
             raise util.Abort(_('unknown sort mode: %s') % sortmode)
 
@@ -362,9 +371,11 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
             shutil.rmtree(path, True)
         raise
 
-    sortmode = 'branchsort'
-    if opts.get('datesort'):
-        sortmode = 'datesort'
+    sortmodes = ('datesort', 'sourcesort')
+    sortmode = [m for m in sortmodes if opts.get(m)]
+    if len(sortmode) > 1:
+        raise util.Abort(_('more than one sort mode specified'))
+    sortmode = sortmode and sortmode[0] or 'branchsort'
 
     fmap = opts.get('filemap')
     if fmap:

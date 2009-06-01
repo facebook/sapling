@@ -247,7 +247,8 @@ cmdtable = {
           ('s', 'source-type', '', _('source repository type')),
           ('', 'splicemap', '', _('splice synthesized history into place')),
           ('', 'branchmap', '', _('change branch names while converting')),
-          ('', 'datesort', None, _('try to sort changesets by date'))],
+          ('', 'datesort', None, _('try to sort changesets by date')),
+          ('', 'sourcesort', None, _('preserve source changesets order'))],
          _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]')),
     "debugsvnlog":
         (debugsvnlog,

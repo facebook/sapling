@@ -210,6 +210,7 @@ options:
     --splicemap    splice synthesized history into place
     --branchmap    change branch names while converting
     --datesort     try to sort changesets by date
+    --sourcesort   preserve source changesets order
 
 use "hg -v help convert" to show global options
 adding a
