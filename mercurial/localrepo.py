@@ -183,7 +183,8 @@ class localrepository(repo.repository):
         if '.hgtags' not in self.dirstate:
             self.add(['.hgtags'])
 
-        tagnode = self.commit(['.hgtags'], message, user, date, extra=extra)
+        m = match_.exact(self.root, '', ['.hgtags'])
+        tagnode = self.commit(None, message, user, date, extra=extra, match=m)
 
         for name in names:
             self.hook('tag', node=hex(node), tag=name, local=local)
