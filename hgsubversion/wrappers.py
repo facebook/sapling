@@ -223,35 +223,36 @@ def pull(repo, source, heads=[], force=False):
 
     revisions = 0
     try:
-        # start converting revisions
-        for r in svn.revisions(start=start, stop=stopat_rev):
-            if (r.author is None and
-                r.message == 'This is an empty revision for padding.'):
-                continue
-            tbdelta = hg_editor.update_branch_tag_map_for_rev(r)
-            # got a 502? Try more than once!
-            tries = 0
-            converted = False
-            while not converted:
-                try:
-                    util.describe_revision(ui, r)
-                    pullfuns[have_replay](ui, hg_editor, svn, r, tbdelta)
-                    converted = True
-                except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
-                    ui.status('%s\n' % e.message)
-                    stupidmod.print_your_svn_is_old_message(ui)
-                    have_replay = False
-                except core.SubversionException, e: #pragma: no cover
-                    if (e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED
-                        and '502' in str(e)
-                        and tries < 3):
-                        tries += 1
-                        ui.status('Got a 502, retrying (%s)\n' % tries)
-                    else:
-                        raise hgutil.Abort(*e.args)
-            revisions += 1
-    except KeyboardInterrupt:
-        pass
+        try:
+            # start converting revisions
+            for r in svn.revisions(start=start, stop=stopat_rev):
+                if (r.author is None and
+                    r.message == 'This is an empty revision for padding.'):
+                    continue
+                tbdelta = hg_editor.update_branch_tag_map_for_rev(r)
+                # got a 502? Try more than once!
+                tries = 0
+                converted = False
+                while not converted:
+                    try:
+                        util.describe_revision(ui, r)
+                        pullfuns[have_replay](ui, hg_editor, svn, r, tbdelta)
+                        converted = True
+                    except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
+                        ui.status('%s\n' % e.message)
+                        stupidmod.print_your_svn_is_old_message(ui)
+                        have_replay = False
+                    except core.SubversionException, e: #pragma: no cover
+                        if (e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED
+                            and '502' in str(e)
+                            and tries < 3):
+                            tries += 1
+                            ui.status('Got a 502, retrying (%s)\n' % tries)
+                        else:
+                            raise hgutil.Abort(*e.args)
+                revisions += 1
+        except KeyboardInterrupt:
+            pass
     finally:
         util.swap_out_encoding(old_encoding)
 
