@@ -87,5 +87,19 @@ class TestTags(test_util.TestBase):
              })
 
 
+    def test_tags_in_unusual_location(self):
+        repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')
+        self.assertEqual(len(repo.heads()), 1)
+        branches = set(repo[h].extra()['branch']
+                       for h in repo.heads(closed=False))
+        self.assertEqual(branches, set(['magic', ]))
+        tags = repo.tags()
+        del tags['tip']
+        self.assertEqual(
+            tags,
+            {'magic': '\xa2b\xb9\x03\xc6\xbd\x903\x95\xf5\x0f\x94\xcey\xc4E\xfaE6\xaa',
+             'magic2': '\xa3\xa2D\x86aM\xc0v\xb9\xb0\x18\x14\xad\xacwBUi}\xe2',
+             })
+
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(TestTags)

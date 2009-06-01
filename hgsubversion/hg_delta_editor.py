@@ -563,7 +563,7 @@ class HgChangeReceiver(delta.Editor):
         for b, tags in branches.iteritems():
 
             # modify parent's .hgtags source
-            parent = self.repo[{None: 'default'}.get(b, b)]
+            parent = self.repo[self.get_parent_revision(rev.revnum, b)]
             if '.hgtags' not in parent:
                 src = ''
             else:
