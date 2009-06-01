@@ -30,15 +30,15 @@ def recode(s):
         return s.decode('utf-8').encode(orig_encoding, 'replace')
 
 source_converters = [
-    ('cvs', convert_cvs),
-    ('git', convert_git),
-    ('svn', svn_source),
-    ('hg', mercurial_source),
-    ('darcs', darcs_source),
-    ('mtn', monotone_source),
-    ('gnuarch', gnuarch_source),
-    ('bzr', bzr_source),
-    ('p4', p4_source),
+    ('cvs', convert_cvs, 'branchsort'),
+    ('git', convert_git, 'branchsort'),
+    ('svn', svn_source, 'branchsort'),
+    ('hg', mercurial_source, 'sourcesort'),
+    ('darcs', darcs_source, 'branchsort'),
+    ('mtn', monotone_source, 'branchsort'),
+    ('gnuarch', gnuarch_source, 'branchsort'),
+    ('bzr', bzr_source, 'branchsort'),
+    ('p4', p4_source, 'branchsort'),
     ]
 
 sink_converters = [
@@ -48,10 +48,10 @@ sink_converters = [
 
 def convertsource(ui, path, type, rev):
     exceptions = []
-    for name, source in source_converters:
+    for name, source, sortmode in source_converters:
         try:
             if not type or name == type:
-                return source(ui, path, rev)
+                return source(ui, path, rev), sortmode
         except (NoRepo, MissingTool), inst:
             exceptions.append(inst)
     if not ui.quiet:
@@ -364,18 +364,18 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     destc = convertsink(ui, dest, opts.get('dest_type'))
 
     try:
-        srcc = convertsource(ui, src, opts.get('source_type'),
-                             opts.get('rev'))
+        srcc, defaultsort = convertsource(ui, src, opts.get('source_type'),
+                                          opts.get('rev'))
     except Exception:
         for path in destc.created:
             shutil.rmtree(path, True)
         raise
 
-    sortmodes = ('datesort', 'sourcesort')
+    sortmodes = ('branchsort', 'datesort', 'sourcesort')
     sortmode = [m for m in sortmodes if opts.get(m)]
     if len(sortmode) > 1:
         raise util.Abort(_('more than one sort mode specified'))
-    sortmode = sortmode and sortmode[0] or 'branchsort'
+    sortmode = sortmode and sortmode[0] or defaultsort
     if sortmode == 'sourcesort' and not srcc.hasnativeorder():
         raise util.Abort(_('--sourcesort is not supported by this data source'))
 

@@ -39,7 +39,7 @@ o |  5 "b0"
 |/
 o  0 "a0"
 
-% convert with datesort
+% convert with datesort (default mode)
 initializing destination t-sourcesort repository
 scanning source...
 sorting...

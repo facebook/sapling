@@ -38,8 +38,8 @@ hg convert --datesort t t-datesort
 echo % graph converted repo
 hg -R t-datesort glog --template '{rev} "{desc}"\n'
 
-echo % convert with datesort
-hg convert --sourcesort t t-sourcesort
+echo '% convert with datesort (default mode)'
+hg convert t t-sourcesort
 echo % graph converted repo
 hg -R t-sourcesort glog --template '{rev} "{desc}"\n'
 

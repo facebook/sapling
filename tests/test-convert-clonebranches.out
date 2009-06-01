@@ -3,10 +3,10 @@ marked working directory as branch branch0
 (branch merge, don't forget to commit)
 % convert
 3 adda
-2 addb
+2 changea
+1 addb
 pulling from default into branch0
 1 changesets found
-1 changea
 0 mergeab
 pulling from default into branch0
 1 changesets found
@@ -16,11 +16,11 @@ marked working directory as branch branch2
 (branch merge, don't forget to commit)
 marked working directory as branch branch3
 % incremental conversion
-2 c2
-pulling from branch0 into branch2
-2 changesets found
-1 c1
+2 c1
 pulling from branch0 into branch1
+2 changesets found
+1 c2
+pulling from branch0 into branch2
 2 changesets found
 0 c3
 pulling from branch2 into branch3
