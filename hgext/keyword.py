@@ -449,8 +449,8 @@ def reposetup(ui, repo):
             data = super(kwrepo, self).wread(filename)
             return kwt.wread(filename, data)
 
-        def commit(self, files=None, text='', user=None, date=None,
-                   match=None, force=False, editor=None, extra={}):
+        def commit(self, text='', user=None, date=None, match=None,
+                   force=False, editor=None, extra={}):
             wlock = lock = None
             _p1 = _p2 = None
             try:
@@ -471,8 +471,8 @@ def reposetup(ui, repo):
                     else:
                         _p2 = hex(_p2)
 
-                n = super(kwrepo, self).commit(files, text, user, date, match,
-                                               force, editor, extra)
+                n = super(kwrepo, self).commit(text, user, date, match, force,
+                                               editor, extra)
 
                 # restore commit hooks
                 for name, cmd in commithooks.iteritems():

@@ -174,11 +174,8 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped=None,
         extra = {'rebase_source': repo[rev].hex()}
         if extrafn:
             extrafn(repo[rev], extra)
-        newrev = repo.commit(None,
-                            text=commitmsg,
-                            user=repo[rev].user(),
-                            date=repo[rev].date(),
-                            extra=extra)
+        newrev = repo.commit(text=commitmsg, user=repo[rev].user(),
+                             date=repo[rev].date(), extra=extra)
         repo.dirstate.setbranch(repo[newrev].branch())
         return newrev
     except util.Abort:

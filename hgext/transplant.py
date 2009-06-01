@@ -246,7 +246,7 @@ class transplanter:
         else:
             m = match.exact(repo.root, '', files)
 
-        n = repo.commit(None, message, user, date, extra=extra, match=m)
+        n = repo.commit(message, user, date, extra=extra, match=m)
         if not merge:
             self.transplants.set(n, node)
 
@@ -288,7 +288,7 @@ class transplanter:
                                  revlog.hex(parents[0]))
             if merge:
                 repo.dirstate.setparents(p1, parents[1])
-            n = repo.commit(None, message, user, date, extra=extra)
+            n = repo.commit(message, user, date, extra=extra)
             if not n:
                 raise util.Abort(_('commit failed'))
             if not merge:

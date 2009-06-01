@@ -184,7 +184,7 @@ class localrepository(repo.repository):
             self.add(['.hgtags'])
 
         m = match_.exact(self.root, '', ['.hgtags'])
-        tagnode = self.commit(None, message, user, date, extra=extra, match=m)
+        tagnode = self.commit(message, user, date, extra=extra, match=m)
 
         for name in names:
             self.hook('tag', node=hex(node), tag=name, local=local)
@@ -773,13 +773,13 @@ class localrepository(repo.repository):
 
         return fparent1
 
-    def commit(self, files=None, text="", user=None, date=None, match=None,
-               force=False, editor=False, extra={}):
+    def commit(self, text="", user=None, date=None, match=None, force=False,
+               editor=False, extra={}):
         """Add a new revision to current repository.
 
-        Revision information is gathered from the working directory, files and
-        match can be used to filter the committed files.
-        If editor is supplied, it is called to get a commit message.
+        Revision information is gathered from the working directory,
+        match can be used to filter the committed files. If editor is
+        supplied, it is called to get a commit message.
         """
         wlock = self.wlock()
         try:
@@ -790,21 +790,9 @@ class localrepository(repo.repository):
                 raise util.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
 
-            if files:
-                modified, removed = [], []
-                for f in sorted(set(files)):
-                    s = self.dirstate[f]
-                    if s in 'nma':
-                        modified.append(f)
-                    elif s == 'r':
-                        removed.append(f)
-                    else:
-                        self.ui.warn(_("%s not tracked!\n") % f)
-                changes = [modified, [], removed, [], []]
-            else:
-                changes = self.status(match=match, clean=force)
-                if force:
-                    changes[0].extend(changes[6])
+            changes = self.status(match=match, clean=force)
+            if force:
+                changes[0].extend(changes[6]) # mq may commit unchanged files
 
             if (not force and not extra.get("close") and p2 == nullid
                 and not (changes[0] or changes[1] or changes[2])

@@ -426,7 +426,7 @@ class queue:
         ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
-        n = repo.commit(None, ctx.description(), ctx.user(), force=1)
+        n = repo.commit(ctx.description(), ctx.user(), force=True)
         if n is None:
             raise util.Abort(_("repo commit failed"))
         try:
@@ -471,7 +471,7 @@ class queue:
             # the first patch in the queue is never a merge patch
             #
             pname = ".hg.patches.merge.marker"
-            n = repo.commit(None, '[mq]: merge marker', force=1)
+            n = repo.commit('[mq]: merge marker', force=True)
             self.removeundo(repo)
             self.applied.append(statusentry(hex(n), pname))
             self.applied_dirty = 1
@@ -597,8 +597,7 @@ class queue:
 
             files = patch.updatedir(self.ui, repo, files)
             match = cmdutil.matchfiles(repo, files or [])
-            n = repo.commit(None, message, ph.user, ph.date, match=match,
-                            force=True)
+            n = repo.commit(message, ph.user, ph.date, match=match, force=True)
 
             if n is None:
                 raise util.Abort(_("repo commit failed"))
@@ -763,7 +762,7 @@ class queue:
                 if hasattr(msg, '__call__'):
                     msg = msg()
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
-                n = repo.commit(None, commitmsg, user, date, match=match, force=True)
+                n = repo.commit(commitmsg, user, date, match=match, force=True)
                 if n is None:
                     raise util.Abort(_("repo commit failed"))
                 try:
@@ -1284,8 +1283,8 @@ class queue:
                 try:
                     # might be nice to attempt to roll back strip after this
                     patchf.rename()
-                    n = repo.commit(None, message, user, ph.date,
-                                    match=match, force=1)
+                    n = repo.commit(message, user, ph.date, match=match,
+                                    force=True)
                     self.applied.append(statusentry(hex(n), patchfn))
                 except:
                     ctx = repo[cparents[0]]
@@ -1470,7 +1469,7 @@ class queue:
         msg += "\n\nPatch Data:\n"
         text = msg + "\n".join([str(x) for x in self.applied]) + '\n' + (ar and
                    "\n".join(ar) + '\n' or "")
-        n = repo.commit(None, text, force=1)
+        n = repo.commit(text, force=True)
         if not n:
             self.ui.warn(_("repo commit failed\n"))
             return 1

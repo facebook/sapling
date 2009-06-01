@@ -256,7 +256,7 @@ def sign(ui, repo, *revs, **opts):
                              for n in nodes])
     try:
         m = match.exact(['.hgsigs'])
-        repo.commit(None, message, opts['user'], opts['date'], match=m)
+        repo.commit(message, opts['user'], opts['date'], match=m)
     except ValueError, inst:
         raise util.Abort(str(inst))
 

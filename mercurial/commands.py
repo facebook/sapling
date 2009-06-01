@@ -645,8 +645,8 @@ def commit(ui, repo, *pats, **opts):
         e = cmdutil.commitforceeditor
 
     def commitfunc(ui, repo, message, match, opts):
-        return repo.commit(None, message, opts.get('user'),
-            opts.get('date'), match, editor=e, extra=extra)
+        return repo.commit(message, opts.get('user'), opts.get('date'), match,
+                           editor=e, extra=extra)
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
@@ -1754,7 +1754,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     files = patch.updatedir(ui, repo, files, similarity=sim/100.)
                 if not opts.get('no_commit'):
                     m = cmdutil.matchfiles(repo, files or [])
-                    n = repo.commit(None, message, opts.get('user') or user,
+                    n = repo.commit(message, opts.get('user') or user,
                                     opts.get('date') or date, match=m,
                                     editor=cmdutil.commiteditor)
                     if opts.get('exact'):
