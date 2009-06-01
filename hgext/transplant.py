@@ -15,7 +15,7 @@ map from a changeset hash to its hash in the source repository.
 
 from mercurial.i18n import _
 import os, tempfile
-from mercurial import bundlerepo, changegroup, cmdutil, hg, merge
+from mercurial import bundlerepo, changegroup, cmdutil, hg, merge, match
 from mercurial import patch, revlog, util, error
 
 class transplantentry:
@@ -242,8 +242,11 @@ class transplanter:
         if merge:
             p1, p2 = repo.dirstate.parents()
             repo.dirstate.setparents(p1, node)
+            m = match.always(repo.root, '')
+        else:
+            m = match.exact(repo.root, '', files)
 
-        n = repo.commit(files, message, user, date, extra=extra)
+        n = repo.commit(None, message, user, date, extra=extra, match=m)
         if not merge:
             self.transplants.set(n, node)
 
