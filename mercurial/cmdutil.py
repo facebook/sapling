@@ -1194,42 +1194,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     if opts.get('addremove'):
         addremove(repo, pats, opts)
 
-    m = match(repo, pats, opts)
-    if pats:
-        modified, added, removed = repo.status(match=m)[:3]
-        files = sorted(modified + added + removed)
-
-        def is_dir(f):
-            name = f + '/'
-            i = bisect.bisect(files, name)
-            return i < len(files) and files[i].startswith(name)
-
-        for f in m.files():
-            if f == '.':
-                continue
-            if f not in files:
-                rf = repo.wjoin(f)
-                rel = repo.pathto(f)
-                try:
-                    mode = os.lstat(rf)[stat.ST_MODE]
-                except OSError:
-                    if is_dir(f): # deleted directory ?
-                        continue
-                    raise util.Abort(_("file %s not found!") % rel)
-                if stat.S_ISDIR(mode):
-                    if not is_dir(f):
-                        raise util.Abort(_("no match under directory %s!")
-                                         % rel)
-                elif not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
-                    raise util.Abort(_("can't commit %s: "
-                                       "unsupported file type!") % rel)
-                elif f not in repo.dirstate:
-                    raise util.Abort(_("file %s not tracked!") % rel)
-        m = matchfiles(repo, files)
-    try:
-        return commitfunc(ui, repo, message, m, opts)
-    except ValueError, inst:
-        raise util.Abort(str(inst))
+    return commitfunc(ui, repo, message, match(repo, pats, opts), opts)
 
 def commiteditor(repo, ctx):
     if ctx.description():

@@ -1,4 +1,4 @@
-abort: file dangling not tracked!
+abort: dangling: file not tracked!
 changeset:   0:cabd88b706fc
 tag:         tip
 user:        test

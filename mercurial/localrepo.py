@@ -14,7 +14,7 @@ import util, extensions, hook, error
 import match as match_
 import merge as merge_
 from lock import release
-import weakref, stat, errno, os, time, inspect
+import weakref, stat, errno, os, time, inspect, bisect
 propertycache = util.propertycache
 
 class localrepository(repo.repository):
@@ -781,6 +781,7 @@ class localrepository(repo.repository):
         match can be used to filter the committed files. If editor is
         supplied, it is called to get a commit message.
         """
+
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
@@ -790,9 +791,37 @@ class localrepository(repo.repository):
                 raise util.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
 
+            def fail(f, msg):
+                raise util.Abort('%s: %s' % (f, msg))
+
+            if not match:
+                match = match_.always(self.root, '')
+
+            if not force:
+                vdirs = []
+                match.dir = vdirs.append
+                match.bad = fail
+
             changes = self.status(match=match, clean=force)
             if force:
                 changes[0].extend(changes[6]) # mq may commit unchanged files
+
+            # make sure all explicit patterns are matched
+            if not force and match.files():
+                files = sorted(changes[0] + changes[1] + changes[2])
+
+                for f in match.files():
+                    if f == '.' or f in files: # matched
+                        continue
+                    if f in changes[3]: # missing
+                        fail(f, _('file not found!'))
+                    if f in vdirs: # visited directory
+                        d = f + '/'
+                        i = bisect.bisect(files, d)
+                        if i >= len(files) or not files[i].startswith(d):
+                            fail(f, _("no match under directory!"))
+                    elif f not in self.dirstate:
+                        fail(f, _("file not tracked!"))
 
             if (not force and not extra.get("close") and p2 == nullid
                 and not (changes[0] or changes[1] or changes[2])

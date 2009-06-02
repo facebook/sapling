@@ -6,20 +6,19 @@ abort: invalid date: 'foo bar'
 abort: date exceeds 32 bits: 111111111111
 % commit added file that has been deleted
 nothing changed
-abort: file bar not found!
+abort: bar: file not found!
 adding dir/file
 dir/file
 committed changeset 2:d2a76177cb42
 adding dir.file
-abort: no match under directory dir!
-abort: no match under directory .!
-abort: no match under directory ../dir2!
+abort: dir: no match under directory!
+abort: bleh: no match under directory!
+abort: dir2: no match under directory!
 dir/file
 committed changeset 3:1cd62a2d8db5
-does-not-exist: No such file or directory
-abort: file does-not-exist not found!
-abort: file baz not tracked!
-abort: file quux not tracked!
+abort: does-not-exist: No such file or directory
+abort: baz: file not tracked!
+abort: quux: file not tracked!
 dir/file
 committed changeset 4:49176991390e
 % partial subdir commit test
