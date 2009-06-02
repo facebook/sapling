@@ -486,6 +486,7 @@ class dirstate(object):
                     if nf in dmap:
                         #file deleted on disk but still in dirstate
                         results[nf] = None
+                    match.dir(nf)
                     if not dirignore(nf):
                         wadd(nf)
                 elif kind == regkind or kind == lnkkind:
@@ -501,6 +502,7 @@ class dirstate(object):
                     prefix = nf + "/"
                     for fn in dmap:
                         if fn.startswith(prefix):
+                            match.dir(nf)
                             skipstep3 = False
                             break
                     else:
@@ -509,8 +511,6 @@ class dirstate(object):
         # step 2: visit subdirectories
         while work:
             nd = work.pop()
-            if hasattr(match, 'dir'):
-                match.dir(nd)
             skip = None
             if nd == '.':
                 nd = ''
@@ -528,6 +528,7 @@ class dirstate(object):
                 if nf not in results:
                     if kind == dirkind:
                         if not ignore(nf):
+                            match.dir(nf)
                             wadd(nf)
                         if nf in dmap and matchfn(nf):
                             results[nf] = None
