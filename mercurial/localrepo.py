@@ -808,17 +808,19 @@ class localrepository(repo.repository):
 
             # make sure all explicit patterns are matched
             if not force and match.files():
-                files = sorted(changes[0] + changes[1] + changes[2])
+                matched = set(changes[0] + changes[1] + changes[2])
 
                 for f in match.files():
-                    if f == '.' or f in files: # matched
+                    if f == '.' or f in matched: # matched
                         continue
                     if f in changes[3]: # missing
                         fail(f, _('file not found!'))
                     if f in vdirs: # visited directory
                         d = f + '/'
-                        i = bisect.bisect(files, d)
-                        if i >= len(files) or not files[i].startswith(d):
+                        for mf in matched:
+                            if mf.startswith(d):
+                                break
+                        else:
                             fail(f, _("no match under directory!"))
                     elif f not in self.dirstate:
                         fail(f, _("file not tracked!"))
