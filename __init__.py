@@ -20,8 +20,10 @@ from mercurial.i18n import _
 from git_handler import GitHandler
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
+# also hg clone git+ssh://git@github.com/schacon/simplegit.git
 import gitrepo, hgrepo
 hg.schemes['git'] = gitrepo
+hg.schemes['git+ssh'] = gitrepo
 hg.schemes['file'] = hgrepo
 
 def gclone(ui, git_url, hg_repo_path=None):

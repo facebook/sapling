@@ -4,7 +4,7 @@ from mercurial.node import bin, hex, nullid, nullrev, short
 
 class hgrepo(localrepo.localrepository):
 
-    def commitctx(self, wctx, ancestor, force_files = False):
+    def commit_import_ctx(self, wctx, ancestor, force_files = None):
     
         tr = None
         valid = 0 # don't save the dirstate if this isn't set
@@ -99,10 +99,13 @@ class hgrepo(localrepo.localrepository):
             text = '\n'.join(lines)
 
             file_list = []
-            if len(force_files) > 0:
-                file_list = force_files
+            if force_files == False:
+                file_list = []
             else:
-                file_list = changed + removed
+                if force_files and len(force_files) > 0:
+                    file_list = force_files
+                else:
+                    file_list = changed + removed
             
             self.changelog.delayupdate()
             n = self.changelog.add(mn, file_list, text, trp, p1, p2,

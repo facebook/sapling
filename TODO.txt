@@ -1,9 +1,10 @@
 GENERAL
 ==========
-* fully integrate as native protocol handler
+* fully integrate as native protocol handler (see hgsubversion)
   - hg push git@...
   - hg fetch [remote] (remote is url, hg alias or hg-git remote)
   - hg clone url
+
 * work fine with eclipse plugin or tortoise-hg
 
 MAPPING ISSUES

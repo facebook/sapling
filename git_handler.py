@@ -294,8 +294,11 @@ class GitHandler(object):
         # save file context listing on merge commit
         if (len(parents) > 1):
             add_extras = True
-            for filenm in ctx.files():
-                extra_message += "files : " + filenm + "\n"
+            if len(ctx.files()) > 0:
+                for filenm in ctx.files():
+                    extra_message += "files : " + filenm + "\n"
+            else: # hack for 'fetch' extension idiocy
+                extra_message += "emptychangelog : true\n"
 
         if add_extras:
             commit['message'] += "\n--HG--\n" + extra_message
@@ -656,6 +659,8 @@ class GitHandler(object):
                     branch = data
                 if command == 'files':
                     files.append(data)
+                if command == 'emptychangelog':
+                    files = False
                 if command == 'extra':
                     before, after = data.split(" : ", 1)
                     extra[before] = urllib.unquote(after)
@@ -695,7 +700,7 @@ class GitHandler(object):
             def commit_octopus(p1, p2):
                 ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                                      commit.author, date, {'hg-git': 'octopus'})
-                return hex(self.repo.commitctx(ctx, None))
+                return hex(self.repo.commitctx(ctx))
 
             octopus = len(gparents) > 2
             p2 = gparents.pop()
@@ -740,7 +745,7 @@ class GitHandler(object):
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              author, date, extra)
         
-        node = self.repo.commitctx(ctx, pa, force_files)
+        node = self.repo.commit_import_ctx(ctx, pa, force_files)
 
         # save changeset to mapping file
         cs = hex(node)
