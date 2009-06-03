@@ -100,6 +100,7 @@ class GitHandler(object):
         self.save_map()
 
     def fetch(self, remote_name):
+        remote_name = self.remote_name_from_url(remote_name)
         self.ui.status(_("fetching from : %s\n") % remote_name)
         self.export_git_objects()
         refs = self.fetch_pack(remote_name)
@@ -116,6 +117,7 @@ class GitHandler(object):
         self.save_map()
 
     def push(self, remote_name):
+        remote_name = self.remote_name_from_url(remote_name)
         self.fetch(remote_name) # get and convert objects if they already exist
         self.ui.status(_("pushing to : %s\n") % remote_name)
         self.export_commits(False)
@@ -148,6 +150,13 @@ class GitHandler(object):
 
     def remote_name_to_url(self, remote_name):
         return self._config['remote.' + remote_name + '.url']
+
+    def remote_name_from_url(self, remote):
+        if 'remote.' + remote + '.url' in self._config:
+            return remote
+        if remote in self._config.values():
+            return [key[7:-4] for key in self._config
+                    if self._config[key] == remote][0]
 
     def update_references(self):
         try:

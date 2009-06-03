@@ -2,6 +2,10 @@ from mercurial import localrepo, lock, node
 from mercurial import changelog, dirstate, filelog, manifest, context, weakref
 from mercurial.node import bin, hex, nullid, nullrev, short
 
+from git_handler import GitHandler
+from gitrepo import gitrepo
+
+
 class hgrepo(localrepo.localrepository):
 
     def commit_import_ctx(self, wctx, ancestor, force_files = None):
@@ -133,5 +137,25 @@ class hgrepo(localrepo.localrepository):
                 self.dirstate.invalidate()
             del tr
 
+    def clone(self, remote, heads=[], stream=False):
+        if isinstance(remote, gitrepo):
+            git = GitHandler(self, self.ui)
+            git.remote_add('origin', remote.path)
+
+        super(hgrepo, self).clone(remote, heads)
+
+    def pull(self, remote, heads=None, force=False):
+        if isinstance(remote, gitrepo):
+            git = GitHandler(self, self.ui)
+            git.fetch(remote.path)
+        else:
+            super(hgrepo, self).pull(remote, heads, force)
+
+    def push(self, remote, force=False, revs=None):
+        if isinstance(remote, gitrepo):
+            git = GitHandler(self, self.ui)
+            git.push(remote.path)
+        else:
+            super(hgrepo, self).push(remote, force, revs)
 
 instance = hgrepo
