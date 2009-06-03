@@ -409,28 +409,27 @@ class GitHandler(object):
         for dirnm in dirs:
             tree_data = []
             sha_group = []
+
+            # calculating a sha for the tree, so we don't write it twice
+            listsha = make_sha()
             for entry in trees[dirnm]:
                 # replace tree path with tree SHA
                 if entry[0] == 'tree':
                     sha = tree_shas[entry[2]]
                     entry[2] = sha
-                sha_group.append(entry[2])
+                listsha.update(entry[1])
+                listsha.update(entry[2])
                 tree_data.append(entry)
-
-            # calculating a sha for the tree, so we don't write it twice
-            listsha = make_sha()
-            for s in sha_group:
-                listsha.update(s)
             listsha = listsha.hexdigest()
             
             if listsha in self.written_trees:
-                tree_shas[dirnm] = self.written_trees[listsha]
+                tree_sha = self.written_trees[listsha]
+                tree_shas[dirnm] = tree_sha
             else:
                 tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
                 tree_shas[dirnm] = tree_sha
                 self.written_trees[listsha] = tree_sha
-            tree_sha = tree_shas[dirnm]
-
+            
         return (tree_sha, renames) # should be the last root tree sha
 
     def remote_head(self, remote_name):
