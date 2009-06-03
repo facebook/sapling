@@ -189,7 +189,7 @@ class GitHandler(object):
         return dict(filter(is_local_head, refs.items()))
 
     def export_git_objects(self):
-        self.manifest_renames = {}
+        self.previous_entries = {}
         self.written_trees = {}
         self.ui.status(_("importing Hg objects into Git\n"))
         total = len(self.repo.changelog)
@@ -332,23 +332,30 @@ class GitHandler(object):
     def write_git_tree(self, ctx):
         trees = {}
         man = ctx.manifest()
+        ctx_id = hex(ctx.node())
+
         renames = []
         for filenm, nodesha in man.iteritems():
             file_id = hex(nodesha)
+            if ctx_id not in self.previous_entries:
+                self.previous_entries[ctx_id] = {}
+            self.previous_entries[ctx_id][filenm] = file_id
+
             # write blob if not in our git database
-            fctx = ctx.filectx(filenm) 
-            filerename = None
-            if file_id in self.manifest_renames:
-                filerename = self.manifest_renames[file_id]
-            else:
+            fctx = ctx.filectx(filenm)
+
+            same_as_last = False
+            for par in ctx.parents():
+                par_id = hex(par.node())
+                if par_id in self.previous_entries:
+                    if filenm in self.previous_entries[par_id]:
+                        if self.previous_entries[par_id][filenm] == file_id:
+                            same_as_last = True
+            if not same_as_last:
                 rename = fctx.renamed()
                 if rename:
                     filerename, sha = rename
-                    self.manifest_renames[file_id] = filerename
-                else:
-                    self.manifest_renames[file_id] = None                    
-            if filerename:
-                renames.append((filerename, filenm))
+                    renames.append((filerename, filenm))
             is_exec = 'x' in fctx.flags()
             is_link = 'l' in fctx.flags()
             blob_sha = self.map_git_get(file_id)
