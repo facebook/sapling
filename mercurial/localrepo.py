@@ -1113,7 +1113,7 @@ class localrepository(repo.repository):
             finally:
                 wlock.release()
 
-    def heads(self, start=None, closed=True):
+    def heads(self, start=None, closed=False):
         heads = self.changelog.heads(start)
         def display(head):
             if closed:
@@ -1124,7 +1124,7 @@ class localrepository(repo.repository):
         heads = [(-self.changelog.rev(h), h) for h in heads if display(h)]
         return [n for (r, n) in sorted(heads)]
 
-    def branchheads(self, branch=None, start=None, closed=True):
+    def branchheads(self, branch=None, start=None, closed=False):
         if branch is None:
             branch = self[None].branch()
         branches = self.branchmap()

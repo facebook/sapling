@@ -1,0 +1,51 @@
+#!/bin/sh
+
+hgcommit() {
+    hg commit -u user -d '0 0' "$@"
+}
+
+hg init clhead
+cd clhead
+
+
+touch foo && hg add && hgcommit -m 'foo'
+touch bar && hg add && hgcommit -m 'bar'
+touch baz && hg add && hgcommit -m 'baz'
+
+echo "flub" > foo
+hgcommit -m "flub"
+echo "nub" > foo
+hgcommit -m "nub"
+
+hg up -C 2
+
+echo "c1" > c1
+hg add c1
+hgcommit -m "c1"
+echo "c2" > c1
+hgcommit -m "c2"
+
+hg up -C 2
+
+echo "d1" > d1
+hg add d1
+hgcommit -m "d1"
+echo "d2" > d1
+hgcommit -m "d2"
+hg tag -l good
+
+echo '% fail with three heads'
+hg up -C good
+hg merge
+
+echo '% close one of the heads'
+hg up -C 6
+hgcommit -m 'close this head' --close-branch
+
+echo '% succeed with two open heads'
+hg up -C good
+hg up -C good
+hg merge
+hgcommit -m 'merged heads'
+
+
