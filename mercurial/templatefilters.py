@@ -96,6 +96,7 @@ def domain(author):
 
 def person(author):
     '''get name of author, or else username.'''
+    if not '@' in author: return author
     f = author.find('<')
     if f == -1: return util.shortuser(author)
     return author[:f].rstrip()
