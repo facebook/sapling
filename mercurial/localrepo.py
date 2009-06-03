@@ -837,11 +837,11 @@ class localrepository(repo.repository):
                     raise util.Abort(_("unresolved merge conflicts "
                                                     "(see hg resolve)"))
 
-            wctx = context.workingctx(self, (p1, p2), text, user, date,
+            cctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
             if editor:
-                wctx._text = editor(self, wctx)
-            ret = self.commitctx(wctx, True)
+                cctx._text = editor(self, cctx)
+            ret = self.commitctx(cctx, True)
 
             # update dirstate and mergestate
             for f in changes[0] + changes[1]:
