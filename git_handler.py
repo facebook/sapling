@@ -187,6 +187,7 @@ class GitHandler(object):
         return dict(filter(is_local_head, refs.items()))
 
     def export_git_objects(self):
+        self.manifest_renames = {}
         self.ui.status(_("importing Hg objects into Git\n"))
         total = len(self.repo.changelog)
         if total:
@@ -331,16 +332,24 @@ class GitHandler(object):
         trees = {}
         man = ctx.manifest()
         renames = []
-        for filenm in man.keys():
+        for filenm, nodesha in man.iteritems():
+            file_id = hex(nodesha)
             # write blob if not in our git database
-            fctx = ctx.filectx(filenm)
-            rename = fctx.renamed()
-            if rename:
-                filerename, sha = rename
+            fctx = ctx.filectx(filenm) 
+            filerename = None
+            if file_id in self.manifest_renames:
+                filerename = self.manifest_renames[file_id]
+            else:
+                rename = fctx.renamed()
+                if rename:
+                    filerename, sha = rename
+                    self.manifest_renames[file_id] = filerename
+                else:
+                    self.manifest_renames[file_id] = None                    
+            if filerename:
                 renames.append((filerename, filenm))
             is_exec = 'x' in fctx.flags()
             is_link = 'l' in fctx.flags()
-            file_id = hex(fctx.filenode())
             blob_sha = self.map_git_get(file_id)
             if not blob_sha:
                 blob_sha = self.git.write_blob(fctx.data()) # writing new blobs to git

@@ -30,6 +30,7 @@ WEBSITE
 
 SPEED/EFFICIENCY
 ================
+* cache rename detection on push (seems to be very expensive)
 * switch object mapping to hg->git since the many to one is that direction
 * don't send blobs/trees already on server (thin pack)
 * packfile creation benchmarking (seems to take a while sometimes)
