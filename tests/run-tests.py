@@ -331,6 +331,10 @@ def outputcoverage(options):
     omit = ','.join(omit)
 
     covrun('-c') # combine from parallel processes
+    for fn in os.listdir(TESTDIR):
+        if fn.startswith('.coverage.'):
+            os.unlink(os.path.join(TESTDIR, fn))
+
     covrun('-i', '-r', '"--omit=%s"' % omit) # report
     if options.annotate:
         adir = os.path.join(TESTDIR, 'annotated')
