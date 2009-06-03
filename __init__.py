@@ -35,28 +35,11 @@ def gclone(ui, git_url, hg_repo_path=None):
         hg_repo_path += '-hg'
     dest_repo = hg.repository(ui, hg_repo_path, create=True)
 
-    print dest_repo
-
     # fetch the initial git data
     git = GitHandler(dest_repo, ui)
     git.remote_add('origin', git_url)
     
-    import cProfile, pstats
-    import lsprofcalltree
-    prof = cProfile.Profile()
-    prof = prof.runctx("git.fetch('origin')", globals(), locals())
-    stats = pstats.Stats(prof)
-    k = lsprofcalltree.KCacheGrind(prof)
-    data = open('/tmp/prof.kgrind', 'w+')
-    k.output(data)
-    data.close()
-    stats.sort_stats("cumulative")  # Or cumulative
-    stats.print_stats(80)  # 80 = how many to print
-    # The rest is optional.
-    #stats.print_callees()
-    #stats.print_callers()
-    
-    #git.fetch('origin')
+    git.fetch('origin')
     
     # checkout the tip
     node = git.remote_head('origin')

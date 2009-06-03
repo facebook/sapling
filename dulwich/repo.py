@@ -108,6 +108,7 @@ class Repo(object):
         self.path = root
         self.tags = Tags(self.tagdir(), self.get_tags())
         self._object_store = None
+        self.tree_cache = {}
 
     def controldir(self):
         """Return the path of the control directory."""
@@ -315,7 +316,12 @@ class Repo(object):
         return ret
 
     def get_object(self, sha):
-        return self.object_store[sha]
+        if sha in self.tree_cache:
+            return self.tree_cache[sha]
+        obj = self.object_store[sha]
+        if obj._type == 'tree':
+            self.tree_cache[sha] = obj
+        return obj
 
     def get_parents(self, sha):
         return self.commit(sha).parents
