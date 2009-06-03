@@ -1,4 +1,4 @@
-import os, errno, sys, time, datetime, pickle, copy, math, urllib, re
+import os, errno, sys, time, datetime, pickle, copy, math, urllib, re, sha
 import toposort
 import dulwich
 from dulwich.repo import Repo
@@ -7,6 +7,7 @@ from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, error
+from dulwich.misc import make_sha
 from dulwich.objects import (
     Blob,
     Commit,
@@ -107,8 +108,9 @@ class GitHandler(object):
             self.import_local_tags(refs)
         self.save_map()
 
-    def export_commits(self):
-        self.export_git_objects()
+    def export_commits(self, export_objects=True):
+        if export_objects:
+            self.export_git_objects()
         self.export_hg_tags()
         self.update_references()
         self.save_map()
@@ -116,7 +118,7 @@ class GitHandler(object):
     def push(self, remote_name):
         self.fetch(remote_name) # get and convert objects if they already exist
         self.ui.status(_("pushing to : %s\n") % remote_name)
-        self.export_commits()
+        self.export_commits(False)
         self.update_remote_references(remote_name)
         self.upload_pack(remote_name)
 
@@ -188,6 +190,7 @@ class GitHandler(object):
 
     def export_git_objects(self):
         self.manifest_renames = {}
+        self.written_trees = {}
         self.ui.status(_("importing Hg objects into Git\n"))
         total = len(self.repo.changelog)
         if total:
@@ -267,8 +270,6 @@ class GitHandler(object):
             if len(a.group(3)) > 0:
                 name += ' ext:(' + urllib.quote(a.group(3)) + ')'
             author = name + ' <' + email + '>'
-            print "AUTHOR"
-            print author
         else:
             author = author + ' <none@none>'
         commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
@@ -401,21 +402,36 @@ class GitHandler(object):
             # manifest is empty => make empty root tree
             trees['/'] = []
             dirs = ['/']
-
+        
         # write all the trees
         tree_sha = None
         tree_shas = {}
         for dirnm in dirs:
             tree_data = []
+            sha_group = []
             for entry in trees[dirnm]:
                 # replace tree path with tree SHA
                 if entry[0] == 'tree':
                     sha = tree_shas[entry[2]]
                     entry[2] = sha
+                sha_group.append(entry[2])
                 tree_data.append(entry)
-            tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
-            tree_shas[dirnm] = tree_sha
-        
+            print sha_group
+            
+            listsha = make_sha()
+            for s in sha_group:
+                listsha.update(s)
+            listsha = listsha.hexdigest()
+            print listsha
+            
+            if listsha in self.written_trees:
+                tree_shas[dirnm] = self.written_trees[listsha]
+            else:
+                tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
+                tree_shas[dirnm] = tree_sha
+                self.written_trees[listsha] = tree_sha
+            tree_sha = tree_shas[dirnm]
+
         return (tree_sha, renames) # should be the last root tree sha
 
     def remote_head(self, remote_name):

@@ -57,7 +57,7 @@ def gpush(ui, repo, remote_name='origin', branch=None):
     data = open('/tmp/prof.kgrind', 'w+')
     k.output(data)
     data.close()
-    stats.sort_stats("time")  # Or cumulative
+    stats.sort_stats("cumulative")  # Or cumulative
     stats.print_stats(80)  # 80 = how many to print
     # The rest is optional.
     #stats.print_callees()
