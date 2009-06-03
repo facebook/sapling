@@ -48,7 +48,15 @@ def gclone(ui, git_url, hg_repo_path=None):
 
 def gpush(ui, repo, remote_name='origin', branch=None):
     git = GitHandler(repo, ui)
-    git.push(remote_name)
+    import cProfile, pstats
+    prof = cProfile.Profile()
+    prof = prof.runctx("git.push(remote_name)", globals(), locals())
+    stats = pstats.Stats(prof)
+    stats.sort_stats("time")  # Or cumulative
+    stats.print_stats(80)  # 80 = how many to print
+    # The rest is optional.
+    # stats.print_callees()
+    # stats.print_callers()
 
 def gimport(ui, repo, remote_name=None):
     git = GitHandler(repo, ui)
