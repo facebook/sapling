@@ -48,20 +48,7 @@ def gclone(ui, git_url, hg_repo_path=None):
 
 def gpush(ui, repo, remote_name='origin', branch=None):
     git = GitHandler(repo, ui)
-    import cProfile, pstats
-    import lsprofcalltree
-    prof = cProfile.Profile()
-    prof = prof.runctx("git.push(remote_name)", globals(), locals())
-    stats = pstats.Stats(prof)
-    k = lsprofcalltree.KCacheGrind(prof)
-    data = open('/tmp/prof.kgrind', 'w+')
-    k.output(data)
-    data.close()
-    stats.sort_stats("cumulative")  # Or cumulative
-    stats.print_stats(80)  # 80 = how many to print
-    # The rest is optional.
-    #stats.print_callees()
-    #stats.print_callers()
+    git.push(remote_name)
 
 def gimport(ui, repo, remote_name=None):
     git = GitHandler(repo, ui)
