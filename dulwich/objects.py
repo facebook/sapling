@@ -389,7 +389,6 @@ def parse_tree(text):
         count = count + 20
     return ret
 
-
 class Tree(ShaFile):
     """A Git tree object"""
 
@@ -457,7 +456,14 @@ class Tree(ShaFile):
 
     def _parse_text(self):
         """Grab the entries in the tree"""
-        self._entries = parse_tree(self._text)
+        tc = TreeCache()
+        parsed_tree = tc.get(self.id)
+        if parsed_tree:
+            self._entries = parsed_tree
+        else:
+            tree_ent = parse_tree(self._text)
+            tc.put(self.id, tree_ent)
+            self._entries = tree_ent
         self._needs_parsing = False
 
     def serialize(self):
@@ -657,6 +663,50 @@ class Commit(ShaFile):
         "Returns the zone the author time is in.")
 
 
+class TreeCache:
+    """ A python singleton """
+
+    class __impl:
+        """ Implementation of the singleton interface """
+        def __init__(self):
+            self.trees = {}
+        
+        def get(self, sha):
+            """ Test method, return singleton id """
+            if sha in self.trees:
+                return self.trees[sha]
+            else:
+                return None
+
+        def put(self, sha, tree):
+            """ Test method, return singleton id """
+            self.trees[sha] = tree
+
+        def size(self):
+            return len(self.trees)
+
+    # storage for the instance reference
+    __instance = None
+
+    def __init__(self):
+        """ Create singleton instance """
+        # Check whether we already have an instance
+        if TreeCache.__instance is None:
+            # Create and remember instance
+            TreeCache.__instance = TreeCache.__impl()
+
+        # Store instance reference as the only member in the handle
+        self.__dict__['_TreeCache__instance'] = TreeCache.__instance
+
+    def __getattr__(self, attr):
+        """ Delegate access to implementation """
+        return getattr(self.__instance, attr)
+
+    def __setattr__(self, attr, value):
+        """ Delegate access to implementation """
+        return setattr(self.__instance, attr, value)
+        
+      
 type_map = {
     BLOB_ID : Blob,
     TREE_ID : Tree,

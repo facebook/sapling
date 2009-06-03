@@ -416,13 +416,12 @@ class GitHandler(object):
                     entry[2] = sha
                 sha_group.append(entry[2])
                 tree_data.append(entry)
-            print sha_group
-            
+
+            # calculating a sha for the tree, so we don't write it twice
             listsha = make_sha()
             for s in sha_group:
                 listsha.update(s)
             listsha = listsha.hexdigest()
-            print listsha
             
             if listsha in self.written_trees:
                 tree_shas[dirnm] = self.written_trees[listsha]

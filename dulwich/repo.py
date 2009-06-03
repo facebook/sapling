@@ -323,14 +323,8 @@ class Repo(object):
     def commit(self, sha):
         return self._get_object(sha, Commit)
 
-    # we call this a lot on import, so we're caching it a bit
-    already_parsed_trees = {}
     def tree(self, sha):
-        if sha in self.already_parsed_trees:
-            return self.already_parsed_trees[sha]
-        tree = self._get_object(sha, Tree)
-        self.already_parsed_trees[sha] = tree
-        return tree
+        return self._get_object(sha, Tree)
 
     def tag(self, sha):
         return self._get_object(sha, Tag)
