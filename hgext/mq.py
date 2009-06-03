@@ -2413,16 +2413,14 @@ def reposetup(ui, repo):
                 if parent in [s.rev for s in self.mq.applied]:
                     raise util.Abort(errmsg)
 
-        def commit(self, *args, **opts):
-            if len(args) >= 6:
-                force = args[5]
-            else:
-                force = opts.get('force')
+        def commit(self, text="", user=None, date=None, match=None,
+                   force=False, editor=False, extra={}):
             self.abort_if_wdir_patched(
                 _('cannot commit over an applied mq patch'),
                 force)
 
-            return super(mqrepo, self).commit(*args, **opts)
+            return super(mqrepo, self).commit(text, user, date, match, force,
+                                              editor, extra)
 
         def push(self, remote, force=False, revs=None):
             if self.mq.applied and not force and not revs:
