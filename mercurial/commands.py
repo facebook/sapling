@@ -1317,11 +1317,14 @@ def heads(ui, repo, *branchrevs, **opts):
         start = repo.lookup(opts['rev'])
     else:
         start = None
-    closed = not opts.get('active')
+    closed = opts.get('closed')
+    hideinactive, _heads = opts.get('active'), None
     if not branchrevs:
         # Assume we're looking repo-wide heads if no revs were specified.
         heads = repo.heads(start, closed=closed)
     else:
+        if hideinactive:
+            _heads = repo.heads(start, closed=closed)
         heads = []
         visitedset = set()
         for branchrev in branchrevs:
@@ -1338,6 +1341,8 @@ def heads(ui, repo, *branchrevs, **opts):
                 else:
                     ui.warn(_("no changes on branch %s are reachable from %s\n")
                             % (branch, opts.get('rev')))
+            if hideinactive:
+                bheads = [bhead for bhead in bheads if bhead in _heads]
             heads.extend(bheads)
     if not heads:
         return 1
@@ -3237,6 +3242,8 @@ table = {
          [('r', 'rev', '', _('show only heads which are descendants of REV')),
           ('a', 'active', False,
            _('show only the active heads from open branches')),
+          ('c', 'closed', False,
+           _('show normal and closed heads')),
          ] + templateopts,
          _('[-r REV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),

@@ -62,8 +62,8 @@ hg commit -d '8 0' -m 'adding head to branch b'
 echo 'xxx3' >> b
 hg commit -d '9 0' -m 'adding another cset to branch b'
 hg branches
+hg heads --closed
 hg heads
-hg heads -a
 hg commit -d '9 0' --close-branch -m 'prune bad branch'
 hg branches -a
 hg up -C b
@@ -75,5 +75,5 @@ echo 'xxx4' >> b
 hg commit -d '9 0' -m 'reopen branch with a change'
 echo '--- branch b is back in action'
 hg branches -a
+hg heads -c
 hg heads
-hg heads -a
