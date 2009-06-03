@@ -4,13 +4,12 @@ GENERAL
   - hg push git@...
   - hg fetch [remote] (remote is url, hg alias or hg-git remote)
   - hg clone url
-
+* file:/// support
 * work fine with eclipse plugin or tortoise-hg
 
 MAPPING ISSUES
 ==============
 * work in Git on a named branch created in Hg is forward-ported to be named branch commits in Hg and stripped back out if re-exported
-* timezone issues (?)
 
 
 REMOTE/BRANCH STUFF

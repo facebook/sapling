@@ -1,4 +1,4 @@
-import os, errno, sys, time, datetime, pickle, copy, math, urllib
+import os, errno, sys, time, datetime, pickle, copy, math, urllib, re
 import toposort
 import dulwich
 from dulwich.repo import Repo
@@ -255,7 +255,20 @@ class GitHandler(object):
 
         # hg authors might not have emails
         author = ctx.user()
-        if not '>' in author: 
+        
+        # check for git author pattern compliance
+        regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
+        a = regex.match(author)
+
+        if a:
+            name = a.group(1)
+            email = a.group(2)
+            if len(a.group(3)) > 0:
+                name += ' ext:(' + urllib.quote(a.group(3)) + ')'
+            author = name + ' <' + email + '>'
+            print "AUTHOR"
+            print author
+        else:
             author = author + ' <none@none>'
         commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
         message = ctx.description()
@@ -722,6 +735,16 @@ class GitHandler(object):
 
         author = commit.author
 
+        # convert extra data back to the end
+        if ' ext:' in commit.author:
+            regex = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
+            m = regex.match(commit.author)
+            if m:
+                name = m.group(1)
+                ex = urllib.unquote(m.group(2))
+                email = m.group(3)
+                author = name + ' <' + email + '>' + ex
+            
         if ' <none@none>' in commit.author:
             author = commit.author[:-12]
 

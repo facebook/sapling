@@ -91,13 +91,13 @@ class hgrepo(localrepo.localrepository):
             mn = self.manifest.add(m1, trp, linkrev, c1[0], c2[0],
                                    (new, removed1))
 
-            lines = [line.rstrip() for line in text.rstrip().splitlines()]
-            while lines and not lines[0]:
-                del lines[0]
-            if not lines and use_dirstate:
-                raise util.Abort(_("empty commit message"))
-            text = '\n'.join(lines)
-
+            #lines = [line.rstrip() for line in text.rstrip().splitlines()]
+            #while lines and not lines[0]:
+            #    del lines[0]
+            #text = '\n'.join(lines)
+            if text[-1] == "\n":
+                text = text[:-1]
+            
             file_list = []
             if force_files == False:
                 file_list = []
