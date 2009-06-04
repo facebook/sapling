@@ -618,6 +618,13 @@ class workingctx(changectx):
     def walk(self, match):
         return sorted(self._repo.dirstate.walk(match, True, False))
 
+    def dirty(self, missing=False):
+        "check whether a working directory is modified"
+
+        return (self.p2() or self.branch() != self.p1().branch() or
+                self.modified() or self.added() or self.removed() or
+                (missing and self.deleted()))
+
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
