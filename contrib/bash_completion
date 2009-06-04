@@ -221,6 +221,9 @@ _hg_command_specific()
 	add)
 	    _hg_status "u"
 	;;
+	merge)
+	    _hg_tags
+	;;
 	commit)
 	    _hg_status "mar"
 	;;
