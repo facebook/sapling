@@ -782,6 +782,17 @@ class localrepository(repo.repository):
         supplied, it is called to get a commit message.
         """
 
+        def fail(f, msg):
+            raise util.Abort('%s: %s' % (f, msg))
+
+        if not match:
+            match = match_.always(self.root, '')
+
+        if not force:
+            vdirs = []
+            match.dir = vdirs.append
+            match.bad = fail
+
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
@@ -790,17 +801,6 @@ class localrepository(repo.repository):
                 (match.files() or match.anypats())):
                 raise util.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
-
-            def fail(f, msg):
-                raise util.Abort('%s: %s' % (f, msg))
-
-            if not match:
-                match = match_.always(self.root, '')
-
-            if not force:
-                vdirs = []
-                match.dir = vdirs.append
-                match.bad = fail
 
             changes = self.status(match=match, clean=force)
             if force:
