@@ -16,7 +16,10 @@ project that is in Git.  A bridger of worlds, this plugin be.
 
 from mercurial import commands
 from mercurial import hg
+from mercurial import util
+from mercurial import bundlerepo
 from mercurial.i18n import _
+import os
 from git_handler import GitHandler
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
@@ -24,7 +27,12 @@ from git_handler import GitHandler
 import gitrepo, hgrepo
 hg.schemes['git'] = gitrepo
 hg.schemes['git+ssh'] = gitrepo
-hg.schemes['file'] = hgrepo
+
+def _local(path):
+    return (os.path.isfile(util.drop_scheme('file', path)) and
+            bundlerepo or hgrepo)
+
+hg.schemes['file'] = _local
 
 def gclone(ui, git_url, hg_repo_path=None):
     # determine new repo name
