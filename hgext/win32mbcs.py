@@ -109,7 +109,7 @@ funcs = '''os.path.join os.path.split os.path.splitext
 problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs
  hkscs cp932 932 ms932 mskanji ms-kanji shift_jis csshiftjis shiftjis
  sjis s_jis shift_jis_2004 shiftjis2004 sjis_2004 sjis2004
- shift_jisx0213 shiftjisx0213 sjisx0213 s_jisx0213'''
+ shift_jisx0213 shiftjisx0213 sjisx0213 s_jisx0213 950 cp950 ms950 '''
 
 def reposetup(ui, repo):
     # TODO: decide use of config section for this extension
