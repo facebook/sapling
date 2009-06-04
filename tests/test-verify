@@ -35,7 +35,7 @@ hg add a
 hg ci -m a
 
 echo 'corrupted' > b
-head -c 20 .hg/store/data/a.i > start
+dd if=.hg/store/data/a.i of=start bs=1 count=20 2>/dev/null
 cat start b > .hg/store/data/a.i
 
 echo
