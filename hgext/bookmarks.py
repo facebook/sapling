@@ -119,10 +119,10 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
     deleted. It is possible to use bookmark names in 'hg merge' and
     'hg update' to update to a given bookmark.
 
-    You can use 'hg bookmark NAME' to set a bookmark on the current
-    tip with the given name. If you specify a revision using -r REV
-    (where REV may be an existing bookmark), the bookmark is set to
-    that revision.
+    You can use 'hg bookmark NAME' to set a bookmark on the working
+    directory's parent revision with the given name. If you specify
+    a revision using -r REV (where REV may be an existing bookmark),
+    the bookmark is assigned to that revision.
     '''
     hexfn = ui.debugflag and hex or short
     marks = parse(repo)
