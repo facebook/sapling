@@ -133,7 +133,7 @@ branches = branches.tmpl
 branchentry = '
   <li class="tagEntry parity{parity}">
     <tt class="node">{node}</tt>
-    <a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{branch|escape}</a>
+    <a href="{url}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">{branch|escape}</a>
   </li>'
 diffblock = '<pre class="parity{parity}">{lines}</pre>'
 changelogtag = '<tr><th class="tag">tag:</th><td class="tag">{tag|escape}</td></tr>'

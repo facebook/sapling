@@ -196,6 +196,8 @@ h3 {
 .fileline { font-family: monospace; }
 .fileline img { border: 0; }
 
+.tagEntry .closed { color: #99f; }
+
 /* Changeset entry */
 #changesetEntry {
   border-collapse: collapse;

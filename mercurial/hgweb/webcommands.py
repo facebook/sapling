@@ -361,16 +361,20 @@ def tags(web, req, tmpl):
 def branches(web, req, tmpl):
     b = web.repo.branchtags()
     tips = (web.repo[n] for t, n in web.repo.branchtags().iteritems())
+    open = set(web.repo[n].branch() for n in web.repo.heads(closed=False))
     parity = paritygen(web.stripecount)
+    sortkey = lambda ctx: ('close' not in ctx.extra(), ctx.rev())
 
     def entries(limit, **map):
         count = 0
-        for ctx in sorted(tips, key=lambda x: x.rev(), reverse=True):
+        for ctx in sorted(tips, key=sortkey, reverse=True):
             if limit > 0 and count >= limit:
                 return
             count += 1
+            status = ctx.branch() in open and 'open' or 'closed'
             yield {'parity': parity.next(),
                    'branch': ctx.branch(),
+                   'status': status,
                    'node': ctx.hex(),
                    'date': ctx.date()}
 

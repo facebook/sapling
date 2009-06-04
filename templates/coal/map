@@ -136,7 +136,7 @@ branches = ../paper/branches.tmpl
 branchentry = '
   <tr class="tagEntry parity{parity}">
     <td>
-      <a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">
+      <a href="{url}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
         {branch|escape}
       </a>
     </td>

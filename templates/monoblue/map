@@ -142,7 +142,7 @@ branchentry = '
   <tr class="parity{parity}">
     <td class="nowrap">{date|age} ago</td>
     <td><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
-    <td>{branch|escape}</td>
+    <td class="{status}">{branch|escape}</td>
     <td class="nowrap">
       <a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
       <a href="{url}log/{node|short}{sessionvars%urlparameter}">changelog</a> |
