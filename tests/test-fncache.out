@@ -43,39 +43,29 @@ checking files
 (first damaged changeset appears to be 0)
 % non store repo
 adding tst.d/foo
-.hg:
-00changelog.i
-00manifest.i
-data
-dirstate
-requires
-undo
-undo.branch
-undo.dirstate
-
-.hg/data:
-tst.d.hg
-
-.hg/data/tst.d.hg:
-foo.i
+.hg
+.hg/00changelog.i
+.hg/00manifest.i
+.hg/data
+.hg/data/tst.d.hg
+.hg/data/tst.d.hg/foo.i
+.hg/dirstate
+.hg/requires
+.hg/undo
+.hg/undo.branch
+.hg/undo.dirstate
 % non fncache repo
 adding tst.d/Foo
-.hg:
-00changelog.i
-dirstate
-requires
-store
-undo.branch
-undo.dirstate
-
-.hg/store:
-00changelog.i
-00manifest.i
-data
-undo
-
-.hg/store/data:
-tst.d.hg
-
-.hg/store/data/tst.d.hg:
-_foo.i
+.hg
+.hg/00changelog.i
+.hg/dirstate
+.hg/requires
+.hg/store
+.hg/store/00changelog.i
+.hg/store/00manifest.i
+.hg/store/data
+.hg/store/data/tst.d.hg
+.hg/store/data/tst.d.hg/_foo.i
+.hg/store/undo
+.hg/undo.branch
+.hg/undo.dirstate
