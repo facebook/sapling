@@ -1,25 +1,21 @@
-import os, errno, sys, time, datetime, pickle, copy, math, urllib, re, sha
+import os, sys, math, urllib, re
 import toposort
-import dulwich
 from dulwich.repo import Repo
 from dulwich.client import SimpleFetchGraphWalker
 from hgext import bookmarks
 from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
-from mercurial import hg, util, context, error
+from mercurial.node import hex, nullid
+from mercurial import context
 from dulwich.misc import make_sha
 from dulwich.objects import (
     Blob,
     Commit,
-    ShaFile,
     Tag,
     Tree,
     hex_to_sha,
-    sha_to_hex,
     format_timezone,
     )
 
-import math
 
 class GitHandler(object):
 
@@ -138,10 +134,9 @@ class GitHandler(object):
         key = 'remote.' + remote_name + '.url'
         if key in self._config:
             name = self._config[key]
-            self.ui.status(_("URL for %s : %s\n") % (remote_name, name, ))
+            self.ui.status(_("URL for %s : %s\n") % (remote_name, name))
         else:
             self.ui.status(_("No remote named : %s\n") % remote_name)
-        return
 
     def remote_list(self):
         for key, value in self._config.iteritems():
@@ -184,7 +179,7 @@ class GitHandler(object):
             if tag[-3:] == '^{}':
                 continue
             if tag == 'tip':
-                continue 
+                continue
             self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
 
     # Make sure there's a refs/remotes/remote_name/name
@@ -209,7 +204,7 @@ class GitHandler(object):
         for i, rev in enumerate(self.repo.changelog):
             if i%100 == 0:
                 self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
-            
+
             ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
@@ -233,7 +228,7 @@ class GitHandler(object):
         if pgit_sha:
             return pgit_sha, True
 
-        self.ui.status(_("converting revision %s\n") % str(rev))
+        self.ui.note(_("converting revision %s\n") % rev)
 
         # make sure parents are converted first
         ctx = self.repo.changectx(rev)
@@ -261,14 +256,14 @@ class GitHandler(object):
                     self.export_hg_commit(p_rev)
 
         tree_sha, renames = self.write_git_tree(ctx)
-        
+
         commit = {}
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
 
         # hg authors might not have emails
         author = ctx.user()
-        
+
         # check for git author pattern compliance
         regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
         a = regex.match(author)
@@ -312,7 +307,7 @@ class GitHandler(object):
             if key in ['committer', 'encoding', 'branch', 'hg-git']:
                 continue
             else:
-                add_extras = True        
+                add_extras = True
                 extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
 
         # save file context listing on merge commit
@@ -418,7 +413,7 @@ class GitHandler(object):
             # manifest is empty => make empty root tree
             trees['/'] = []
             dirs = ['/']
-        
+
         # write all the trees
         tree_sha = None
         tree_shas = {}
@@ -437,7 +432,7 @@ class GitHandler(object):
                 listsha.update(entry[2])
                 tree_data.append(entry)
             listsha = listsha.hexdigest()
-            
+
             if listsha in self.written_trees:
                 tree_sha = self.written_trees[listsha]
                 tree_shas[dirnm] = tree_sha
@@ -445,7 +440,7 @@ class GitHandler(object):
                 tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
                 tree_shas[dirnm] = tree_sha
                 self.written_trees[listsha] = tree_sha
-            
+
         return (tree_sha, renames) # should be the last root tree sha
 
     def remote_head(self, remote_name):
@@ -503,7 +498,7 @@ class GitHandler(object):
                     if local_ref:
                         if not local_ref == refs[ref_name]:
                             changed[ref_name] = local_ref
-        
+
         # Also push any local branches not on the server yet
         for head in self.local_heads():
             if not head in refs:
@@ -524,9 +519,9 @@ class GitHandler(object):
             else:
                 shas.add(next)
             next = graph_walker.next()
-        
+
         seen = []
-        
+
         # so now i have the shas, need to turn them into a list of
         # tuples (sha, path) for ALL the objects i'm sending
         # TODO : don't send blobs or trees they already have
@@ -538,7 +533,7 @@ class GitHandler(object):
                     continue
                 if sha in seen:
                     continue
-                    
+
                 obj = self.git.get_object(sha)
                 seen.append(sha)
                 if isinstance (obj, Blob):
@@ -571,9 +566,8 @@ class GitHandler(object):
             else:
                 self.ui.status(_("nothing new on the server\n"))
             return refs
-        except:
+        finally:
             f.close()
-            raise
 
     # take refs just fetched, add local tags for all tags not in .hgtags
     def import_local_tags(self, refs):
@@ -595,12 +589,11 @@ class GitHandler(object):
                     if isinstance (obj, Tag): # annotated
                         (obj_type, obj_sha) = obj.get_object()
                         obj = self.git.get_object(obj_sha)
-                        if isinstance (obj, Commit):                
+                        if isinstance (obj, Commit):
                             sha = self.map_hg_get(obj_sha)
                     if sha:
                         self.repo.tag(ref_name, hex_to_sha(sha), '', True, None, None)
-                    
-        
+
     def import_git_objects(self, remote_name=None, refs=None):
         self.ui.status(_("importing Git objects into Hg\n"))
         # import heads and fetched tags as remote references
@@ -609,7 +602,7 @@ class GitHandler(object):
         convert_list = {}
 
         # get a list of all the head shas
-        if refs: 
+        if refs:
           for head, sha in refs.iteritems():
             todo.append(sha)
         else:
@@ -629,19 +622,19 @@ class GitHandler(object):
                 continue
             done.add(sha)
             obj = self.git.get_object(sha)
-            if isinstance (obj, Commit):                
+            if isinstance (obj, Commit):
                 convert_list[sha] = obj
                 todo.extend([p for p in obj.parents if p not in done])
             if isinstance(obj, Tag):
                 (obj_type, obj_sha) = obj.get_object()
                 obj = self.git.get_object(obj_sha)
-                if isinstance (obj, Commit):                
+                if isinstance (obj, Commit):
                     convert_list[sha] = obj
                     todo.extend([p for p in obj.parents if p not in done])
 
         # sort the commits
         commits = toposort.TopoSort(convert_list).items()
-        
+
         # import each of the commits, oldest first
         total = len(commits)
         magnitude = int(math.log(total, 10)) + 1 if total else 1
@@ -700,10 +693,10 @@ class GitHandler(object):
             lines = meta.split("\n")
             for line in lines:
                 if line == '':
-                    continue 
-                
+                    continue
+
                 command, data = line.split(" : ", 1)
-                
+
                 if command == 'rename':
                     before, after = data.split(" => ", 1)
                     renames[after] = before
@@ -717,17 +710,17 @@ class GitHandler(object):
                     before, after = data.split(" : ", 1)
                     extra[before] = urllib.unquote(after)
         return (message, renames, branch, files, extra)
-    
+
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
 
         (strip_message, hg_renames, hg_branch, force_files, extra) = self.extract_hg_metadata(commit.message)
-        
+
         # get a list of the changed, added, removed files
         files = self.git.get_files_changed(commit)
-        
+
         date = (commit.author_time, -commit.author_timezone)
         text = strip_message
 
@@ -763,7 +756,7 @@ class GitHandler(object):
         else:
             if gparents:
                 p1 = gparents.pop()
-        
+
         files = list(set(files))
 
         pa = None
@@ -783,7 +776,7 @@ class GitHandler(object):
                 ex = urllib.unquote(m.group(2))
                 email = m.group(3)
                 author = name + ' <' + email + '>' + ex
-            
+
         if ' <none@none>' in commit.author:
             author = commit.author[:-12]
 
@@ -806,12 +799,12 @@ class GitHandler(object):
 
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              author, date, extra)
-        
+
         node = self.repo.commit_import_ctx(ctx, pa, force_files)
 
         # save changeset to mapping file
         cs = hex(node)
-        self.map_set(commit.id, cs)        
+        self.map_set(commit.id, cs)
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
