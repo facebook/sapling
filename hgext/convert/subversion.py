@@ -161,10 +161,13 @@ protomap = {'http': httpcheck,
             'file': filecheck,
             }
 def issvnurl(url):
-    if not '://' in url:
-        return False
-    proto, path = url.split('://', 1)
-    path = urllib.url2pathname(path).replace(os.sep, '/')
+    try:
+        proto, path = url.split('://', 1)
+        path = urllib.url2pathname(path)
+    except ValueError:
+        proto = 'file'
+        path = os.path.abspath(url)
+    path = path.replace(os.sep, '/')
     check = protomap.get(proto, lambda p, p2: False)
     while '/' in path:
         if check(path, proto):
