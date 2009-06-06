@@ -15,6 +15,14 @@ class TestSubversionUrls(test_util.TestBase):
         self.assertEqual((None, 't3stpw', 'svn+ssh://svn.testurl.com/repo'),
                          parse_url('svn+ssh://:t3stpw@svn.testurl.com/repo'))
 
+    def test_svnssh_preserve_user(self):
+        self.assertEqual(
+            ('user', 't3stpw', 'svn+ssh://user@svn.testurl.com/repo', ),
+            parse_url('svn+ssh://user:t3stpw@svn.testurl.com/repo'))
+        self.assertEqual(
+            ('user2', None, 'svn+ssh://user2@svn.testurl.com/repo', ),
+            parse_url('svn+ssh://user2@svn.testurl.com/repo'))
+
     def test_user_password_url(self):
         self.assertEqual(('joe', 't3stpw', 'https://svn.testurl.com/repo'),
                          parse_url('https://joe:t3stpw@svn.testurl.com/repo'))

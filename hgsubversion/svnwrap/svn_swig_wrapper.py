@@ -115,6 +115,7 @@ def _create_auth_baton(pool):
 
     return core.svn_auth_open(providers, pool)
 
+
 def parse_url(url):
     """Parse a URL and return a tuple (username, password, url)
     """
@@ -124,11 +125,16 @@ def parse_url(url):
         userpass, netloc = netloc.split('@')
         if ':' in userpass:
             user, passwd = userpass.split(':')
-            user, passwd = urllib.unquote(user) or None, urllib.unquote(passwd) or None
+            user, passwd = (urllib.unquote(user) or None,
+                            urllib.unquote(passwd) or None,
+                            )
         else:
             user = urllib.unquote(userpass) or None
+        if user and scheme == 'svn+ssh':
+            netloc = '@'.join((user, netloc, ))
     url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
     return (user, passwd, url)
+
 
 class Revision(tuple):
     """Wrapper for a Subversion revision.
