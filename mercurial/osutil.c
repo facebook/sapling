@@ -23,6 +23,11 @@
 # include <unistd.h>
 #endif
 
+// some platforms lack the PATH_MAX definition (eg. GNU/Hurd)
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #ifdef _WIN32
 /*
 stat struct compatible with hg expectations
