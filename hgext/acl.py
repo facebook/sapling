@@ -47,7 +47,7 @@
 
 from mercurial.i18n import _
 from mercurial import util, match
-import getpass
+import getpass, urllib
 
 def buildmatch(ui, repo, user, key):
     '''return tuple of (match function, list enabled).'''
@@ -72,7 +72,15 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         ui.debug(_('acl: changes have source "%s" - skipping\n') % source)
         return
 
-    user = getpass.getuser()
+    user = None
+    if source == 'serve' and 'url' in kwargs:
+        url = kwargs['url'].split(':')
+        if url[0] == 'remote' and url[1].startswith('http'):
+            user = urllib.unquote(url[2])
+
+    if user is None:
+        user = getpass.getuser()
+
     cfg = ui.config('acl', 'config')
     if cfg:
         ui.readconfig(cfg, sections = ['acl.allow', 'acl.deny'])
