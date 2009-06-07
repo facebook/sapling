@@ -12,7 +12,8 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-The hg(1) command provides a command line interface to the Mercurial system.
+The hg(1) command provides a command line interface to the Mercurial
+system.
 
 COMMAND ELEMENTS
 ----------------
@@ -25,8 +26,9 @@ path::
     indicates a path on the local machine
 
 revision::
-    indicates a changeset which can be specified as a changeset revision
-    number, a tag, or a unique substring of the changeset hash value
+    indicates a changeset which can be specified as a changeset
+    revision number, a tag, or a unique substring of the changeset
+    hash value
 
 repository path::
     either the pathname of a local repository or the URI of a remote
@@ -37,28 +39,29 @@ include::hg.1.gendoc.txt[]
 FILES
 -----
  .hgignore::
-    This file contains regular expressions (one per line) that describe file
-    names that should be ignored by hg. For details, see hgignore(5).
+    This file contains regular expressions (one per line) that
+    describe file names that should be ignored by hg. For details, see
+    hgignore(5).
 
  .hgtags::
-    This file contains changeset hash values and text tag names (one of each
-    separated by spaces) that correspond to tagged versions of the repository
-    contents.
+    This file contains changeset hash values and text tag names (one
+    of each separated by spaces) that correspond to tagged versions of
+    the repository contents.
 
  /etc/mercurial/hgrc, $HOME/.hgrc, .hg/hgrc::
     This file contains defaults and configuration. Values in .hg/hgrc
-    override those in $HOME/.hgrc, and these override settings made in the
-    global /etc/mercurial/hgrc configuration. See hgrc(5) for details of
-    the contents and format of these files.
+    override those in $HOME/.hgrc, and these override settings made in
+    the global /etc/mercurial/hgrc configuration. See hgrc(5) for
+    details of the contents and format of these files.
 
 Some commands (e.g. revert) produce backup files ending in .orig, if
-the .orig file already exists and is not tracked by Mercurial, it
-will be overwritten.
+the .orig file already exists and is not tracked by Mercurial, it will
+be overwritten.
 
 BUGS
 ----
-Probably lots, please post them to the mailing list (See Resources below)
-when you find them.
+Probably lots, please post them to the mailing list (See Resources
+below) when you find them.
 
 SEE ALSO
 --------
