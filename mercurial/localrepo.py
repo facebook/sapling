@@ -14,7 +14,7 @@ import util, extensions, hook, error
 import match as match_
 import merge as merge_
 from lock import release
-import weakref, stat, errno, os, time, inspect, bisect
+import weakref, stat, errno, os, time, inspect
 propertycache = util.propertycache
 
 class localrepository(repo.repository):

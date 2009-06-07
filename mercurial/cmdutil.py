@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _
-import os, sys, bisect, stat, errno, re, glob
+import os, sys, errno, re, glob
 import mdiff, bdiff, util, templater, patch, error, encoding
 import match as _match
 
