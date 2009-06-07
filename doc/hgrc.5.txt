@@ -320,7 +320,7 @@ extensions::
 
   To explicitly disable an extension that is enabled in an hgrc of
   broader scope, prepend its path with '!', as in
-  'hgext.foo = !/ext/path' or 'hgext.foo = !' when no path is
+  'hgext.foo = !/ext/path' or 'hgext.foo = !' when path is not
   supplied.
 
   Example for ~/.hgrc:
@@ -445,10 +445,9 @@ hooks::
     incoming.email = /my/email/hook
     incoming.autobuild = /my/build/hook
 
-  Most hooks are run with environment variables set that give added
-  useful information. For each hook below, the environment
-  variables it is passed are listed with names of the form
-  "$HG_foo".
+  Most hooks are run with environment variables set that give useful
+  additional information. For each hook below, the environment
+  variables it is passed are listed with names of the form "$HG_foo".
 
   changegroup;;
     Run after a changegroup has been added via push, pull or
@@ -525,21 +524,21 @@ hooks::
   update;;
     Run after updating the working directory. Changeset ID of first
     new parent is in $HG_PARENT1. If merge, ID of second new parent
-    is in $HG_PARENT2. If update succeeded, $HG_ERROR=0. If update
-    failed (e.g. because conflicts not resolved), $HG_ERROR=1.
+    is in $HG_PARENT2. If the update succeeded, $HG_ERROR=0. If the
+    update failed (e.g. because conflicts not resolved), $HG_ERROR=1.
 
   Note: it is generally better to use standard hooks rather
   than the generic pre- and post- command hooks as they are
   guaranteed to be called in the appropriate contexts for
   influencing transactions. Also, hooks like "commit" will be
-  called in all contexts that generate a commit (eg. tag) and
+  called in all contexts that generate a commit (e.g. tag) and
   not just the commit command.
 
   Note2: Environment variables with empty values may not be
-  passed to hooks on platforms like Windows. For instance,
-  $HG_PARENT2 will not be available under Windows for non-merge
-  changesets while being set to an empty value under Unix-like
-  systems.
+  passed to hooks on platforms such as Windows. As an
+  example, $HG_PARENT2 will have an empty value under
+  Unix-like platforms for non-merge changesets, while it
+  will not be available at all under Windows.
 
   The syntax for Python hooks is as follows:
 
@@ -555,7 +554,7 @@ hooks::
   case.
 
   If a Python hook returns a "true" value or raises an
-  exception, this is treated as failure of the hook.
+  exception, this is treated as a failure.
 
 [[http_proxy]]
 http_proxy::
@@ -706,8 +705,8 @@ ui::
       internal:fail;;
         fail to merge
 
-    See the merge-tools section for more information on
-    configuring tools.
+    For more information on configuring merge tools see the
+    merge-tools section.
 
   patch;;
     command to use to apply patches. Look for 'gpatch' or 'patch' in PATH if
