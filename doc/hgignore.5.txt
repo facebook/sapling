@@ -18,9 +18,8 @@ DESCRIPTION
 
 Mercurial ignores every unmanaged file that matches any pattern in an
 ignore file. The patterns in an ignore file do not apply to files
-managed by Mercurial. To control Mercurial's handling of files that
-it manages, see the hg(1) man page. Look for the "-I" and "-X"
-options.
+managed by Mercurial. To control Mercurial's handling of files that it
+manages, see the hg(1) man page. Look for the "-I" and "-X" options.
 
 In addition, a Mercurial configuration file can point to a set of
 per-user or global ignore files. See the hgrc(5) man page for details
@@ -31,9 +30,9 @@ SYNTAX
 ------
 
 An ignore file is a plain text file consisting of a list of patterns,
-with one pattern per line. Empty lines are skipped. The "#"
-character is treated as a comment character, and the "\" character is
-treated as an escape character.
+with one pattern per line. Empty lines are skipped. The "#" character
+is treated as a comment character, and the "\" character is treated as
+an escape character.
 
 Mercurial supports several pattern syntaxes. The default syntax used
 is Python/Perl-style regular expressions.
@@ -54,8 +53,8 @@ follow, until another syntax is selected.
 
 Neither glob nor regexp patterns are rooted. A glob-syntax pattern of
 the form "*.c" will match a file ending in ".c" in any directory, and
-a regexp pattern of the form "\.c$" will do the same. To root a
-regexp pattern, start it with "^".
+a regexp pattern of the form "\.c$" will do the same. To root a regexp
+pattern, start it with "^".
 
 EXAMPLE
 -------
