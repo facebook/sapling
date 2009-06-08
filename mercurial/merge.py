@@ -222,7 +222,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     act("prompt keep", "a", f)
             else:
                 act("other deleted", "r", f)
-        elif overwrite and n[20:] == "a": # do not erase the working copy
+        elif n[20:] == "a": # only forget locally-added
             act("remote deleted", "f", f)
         else:
             # file is created on branch or in working directory
