@@ -130,7 +130,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (pa, p1, p2))
 
     action = []
-    copy, copied, diverge = {}, {}, {}
+    copy, copied = {}, {}
     m1 = p1.manifest()
     m2 = p2.manifest()
 
@@ -164,9 +164,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if pa and repo.ui.configbool("merge", "followcopies", True):
             dirs = repo.ui.configbool("merge", "followdirs", True)
             copy, diverge = copies.copies(repo, p1, p2, pa, dirs)
-        copied = set(copy.values())
-        for of, fl in diverge.iteritems():
-            act("divergent renames", "dr", of, fl)
+            for of, fl in diverge.iteritems():
+                act("divergent renames", "dr", of, fl)
+            copied = set(copy.values())
 
     # Compare manifests
     for f, n in m1.iteritems():
