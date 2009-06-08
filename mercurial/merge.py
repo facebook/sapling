@@ -178,19 +178,20 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             # are files different?
             if n != m2[f]:
                 a = ma.get(f, nullid)
-                # are we clobbering?
-                if overwrite:
-                    act("clobbering", "g", f, rflags)
-                # or are we going back in time and clean?
-                elif backwards:
-                    if not n[20:] or not p2[f].cmp(p1[f].data()):
-                        act("reverting", "g", f, rflags)
                 # are both different from the ancestor?
-                elif n != a and m2[f] != a:
+                if n != a and m2[f] != a:
                     act("versions differ", "m", f, f, f, rflags, False)
                 # is remote's version newer?
                 elif m2[f] != a:
-                    act("remote is newer", "g", f, rflags)
+                    # are we clobbering?
+                    if overwrite:
+                        act("clobbering", "g", f, rflags)
+                    # or are we going back in time and clean?
+                    elif backwards:
+                        if not n[20:] or not p2[f].cmp(p1[f].data()):
+                            act("reverting", "g", f, rflags)
+                    else:
+                        act("remote is newer", "g", f, rflags)
                 # local is newer, not overwrite, check mode bits
                 elif m1.flags(f) != rflags:
                     act("update permissions", "e", f, rflags)
