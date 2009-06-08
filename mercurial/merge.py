@@ -133,6 +133,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     m2 = p2.manifest()
     ma = pa.manifest()
     backwards = (pa == p2)
+
+    if backwards or overwrite:
+        ma = m1
+
     action = []
     copy, copied, diverge = {}, {}, {}
 
@@ -209,7 +213,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             else: # case 4,21 A/B/B
                 act("local moved to " + f2, "m",
                     f, f2, f, fmerge(f, f2, f2), False)
-        elif f in ma:
+        elif f in ma and not n[20:]:
             if n != ma[f] and not overwrite:
                 if repo.ui.prompt(
                     _(" local changed %s which remote deleted\n"

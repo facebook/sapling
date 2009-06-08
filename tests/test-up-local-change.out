@@ -38,7 +38,7 @@ summary:     2
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 802f095af299+ remote 33aaa84a386b
- b: remote deleted -> r
+ b: other deleted -> r
 removing b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 changeset:   0:33aaa84a386b
