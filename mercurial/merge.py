@@ -248,9 +248,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 act("remote moved to " + f, "m",
                     f2, f, f, fmerge(f2, f, f2), True)
         elif f in ma:
-            if overwrite or backwards:
-                act("recreating", "g", f, m2.flags(f))
-            elif n != ma[f]:
+            if n != ma[f]:
                 if repo.ui.prompt(
                     _("remote changed %s which local deleted\n"
                       "use (c)hanged version or leave (d)eleted?") % f,
