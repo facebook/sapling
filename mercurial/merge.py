@@ -174,22 +174,16 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             continue
         if f in m2:
             rflags = fmerge(f, f, f)
-            # are files different?
-            if n != m2[f]:
-                a = ma.get(f, nullid)
-                # is remote's version newer?
-                if m2[f] != a:
-                    # are both different from the ancestor?
-                    if n != a:
-                        act("versions differ", "m", f, f, f, rflags, False)
-                    else:
-                        act("remote is newer", "g", f, rflags)
-                    continue
-            # contents don't need updating, check mode bits
-            if m1.flags(f) != rflags:
-                act("update permissions", "e", f, rflags)
-        elif f in copied:
-            continue
+            a = ma.get(f, nullid)
+            if n == m2[f] or m2[f] == a: # same or local newer
+                if m1.flags(f) != rflags:
+                    act("update permissions", "e", f, rflags)
+            elif n == a: # remote newer
+                act("remote is newer", "g", f, rflags)
+            else: # both changed
+                act("versions differ", "m", f, f, f, rflags, False)
+        elif f in copied: # files we'll deal with on m2 side
+            pass
         elif f in copy:
             f2 = copy[f]
             if f2 not in m2: # directory rename
@@ -215,9 +209,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     for f, n in m2.iteritems():
         if partial and not partial(f):
             continue
-        if f in m1:
-            continue
-        if f in copied:
+        if f in m1 or f in copied: # files already visited
             continue
         if f in copy:
             f2 = copy[f]
