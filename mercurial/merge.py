@@ -213,7 +213,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             else: # case 4,21 A/B/B
                 act("local moved to " + f2, "m",
                     f, f2, f, fmerge(f, f2, f2), False)
-        elif f in ma and not n[20:]:
+        elif n[20:] == "a": # added, no remote
+            act("remote deleted", "f", f)
+        elif f in ma: # clean, a different, no remote
             if n != ma[f]:
                 if repo.ui.prompt(
                     _(" local changed %s which remote deleted\n"
@@ -222,10 +224,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     act("prompt delete", "r", f)
                 else:
                     act("prompt keep", "a", f)
-            else:
+            elif n[20:] != "u":
                 act("other deleted", "r", f)
-        elif n[20:] == "a": # only forget locally-added
-            act("remote deleted", "f", f)
         else:
             # file is created on branch or in working directory
             if (overwrite and n[20:] != "u") or (backwards and not n[20:]):
