@@ -174,10 +174,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if partial and not partial(f):
             continue
         if f in m2:
-            if overwrite or backwards:
-                rflags = m2.flags(f)
-            else:
-                rflags = fmerge(f, f, f)
+            rflags = fmerge(f, f, f)
             # are files different?
             if n != m2[f]:
                 a = ma.get(f, nullid)
