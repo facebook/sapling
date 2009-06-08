@@ -114,12 +114,6 @@ class dirstate(object):
     def _checkcase(self):
         return not util.checkcase(self._join('.hg'))
 
-    @propertycache
-    def normalize(self):
-        if self._checkcase:
-            return self._normalize
-        return lambda x, y=False: x
-
     def _join(self, f):
         # much faster than os.path.join()
         # it's safe because f is always a relative path
@@ -345,7 +339,7 @@ class dirstate(object):
         except KeyError:
             self._ui.warn(_("not in dirstate: %s\n") % f)
 
-    def _normalize(self, path, knownpath=False):
+    def _normalize(self, path, knownpath):
         norm_path = os.path.normcase(path)
         fold_path = self._foldmap.get(norm_path, None)
         if fold_path is None:
@@ -450,7 +444,6 @@ class dirstate(object):
         badfn = match.bad
         dmap = self._map
         normpath = util.normpath
-        normalize = self.normalize
         listdir = osutil.listdir
         lstat = os.lstat
         getkind = stat.S_IFMT
@@ -460,6 +453,11 @@ class dirstate(object):
         join = self._join
         work = []
         wadd = work.append
+
+        if self._checkcase:
+            normalize = self._normalize
+        else:
+            normalize = lambda x, y: x
 
         exact = skipstep3 = False
         if matchfn == match.exact: # match.exact
@@ -475,7 +473,7 @@ class dirstate(object):
 
         # step 1: find all explicit files
         for ff in sorted(files):
-            nf = normalize(normpath(ff))
+            nf = normalize(normpath(ff), True)
             if nf in results:
                 continue
 
