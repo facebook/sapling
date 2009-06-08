@@ -191,8 +191,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                         act("clobbering", "g", f, rflags)
                     # or are we going back in time and clean?
                     elif backwards:
-                        if not n[20:] or not p2[f].cmp(p1[f].data()):
-                            act("reverting", "g", f, rflags)
+                        act("reverting", "g", f, rflags)
                     else:
                         act("remote is newer", "g", f, rflags)
                 # local is newer, not overwrite, check mode bits
