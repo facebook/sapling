@@ -129,19 +129,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     repo.ui.debug(_(" overwrite %s partial %s\n") % (overwrite, bool(partial)))
     repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (pa, p1, p2))
 
-    m1 = p1.manifest()
-    m2 = p2.manifest()
-    backwards = (pa == p2)
-
-    if overwrite:
-        ma = m1
-    elif backwards:
-        ma = p1.p1().manifest()
-    else:
-        ma = pa.manifest()
-
     action = []
     copy, copied, diverge = {}, {}, {}
+    m1 = p1.manifest()
+    m2 = p2.manifest()
 
     def fmerge(f, f2, fa):
         """merge flags"""
@@ -164,8 +155,13 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
-    if pa and not (backwards or overwrite):
-        if repo.ui.configbool("merge", "followcopies", True):
+    if overwrite:
+        ma = m1
+    elif p2 == pa: # backwards
+        ma = p1.p1().manifest()
+    else:
+        ma = pa.manifest()
+        if pa and repo.ui.configbool("merge", "followcopies", True):
             dirs = repo.ui.configbool("merge", "followdirs", True)
             copy, diverge = copies.copies(repo, p1, p2, pa, dirs)
         copied = set(copy.values())
