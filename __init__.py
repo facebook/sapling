@@ -34,29 +34,6 @@ def _local(path):
 
 hg.schemes['file'] = _local
 
-def gclone(ui, git_url, hg_repo_path=None):
-    # determine new repo name
-    if not hg_repo_path:
-        hg_repo_path = hg.defaultdest(git_url)
-        if hg_repo_path.endswith('.git'):
-            hg_repo_path = hg_repo_path[:-4]
-        hg_repo_path += '-hg'
-    dest_repo = hg.repository(ui, hg_repo_path, create=True)
-
-    # fetch the initial git data
-    git = GitHandler(dest_repo, ui)
-    git.remote_add('origin', git_url)
-    
-    git.fetch('origin')
-    
-    # checkout the tip
-    node = git.remote_head('origin')
-    hg.update(dest_repo, node)
-
-def gpush(ui, repo, remote_name='origin', branch=None):
-    git = GitHandler(repo, ui)
-    git.push(remote_name)
-
 def gimport(ui, repo, remote_name=None):
     git = GitHandler(repo, ui)
     git.import_commits(remote_name)
@@ -65,57 +42,17 @@ def gexport(ui, repo):
     git = GitHandler(repo, ui)
     git.export_commits()
 
-def gremote(ui, repo, *args):
-    git = GitHandler(repo, ui)
-
-    if len(args) == 0:
-        git.remote_list()
-    elif len(args) < 2:
-        repo.ui.warn(_("must supply an action and a remote\n"))
-    else:
-        verb = args[0]
-        nick = args[1]
-
-        if verb == 'add':
-            if len(args) == 3:
-                git.remote_add(nick, args[2])
-            else:
-                repo.ui.warn(_("must supply a url to add as a remote\n"))
-        elif verb == 'rm':
-            git.remote_remove(nick)
-        elif verb == 'show':
-            git.remote_show(nick)
-        else:
-            repo.ui.warn(_("unrecognized command to gremote\n"))
-
 def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
     git = GitHandler(repo, ui)
     git.clear()
 
-def gfetch(ui, repo, remote_name='origin'):
-    repo.ui.status(_("pulling from git url\n"))
-    git = GitHandler(repo, ui)
-    git.fetch(remote_name)
-    
 commands.norepo += " gclone"
 cmdtable = {
-  "gclone":
-      (gclone, [],
-       _('Clone a git repository into an hg repository.'),
-       ),
-  "gpush":
-        (gpush, [], _('hg gpush remote')),
   "gimport":
         (gimport, [], _('hg gimport')),
   "gexport":
         (gexport, [], _('hg gexport')),
-  "gfetch":
-        (gfetch, [],
-        #[('m', 'merge', None, _('merge automatically'))],
-        _('hg gfetch remote')),
-  "gremote":
-      (gremote, [], _('hg gremote add remote (url)')),
   "gclear":
       (gclear, [], _('Clears out the Git cached data')),
-}    
+}

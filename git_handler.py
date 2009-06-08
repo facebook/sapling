@@ -23,7 +23,6 @@ class GitHandler(object):
         self.repo = dest_repo
         self.ui = ui
         self.mapfile = 'git-mapfile'
-        self.configfile = 'git-config'
 
         if ui.config('git', 'intree'):
             self.gitdir = self.repo.wjoin('.git')
@@ -37,7 +36,6 @@ class GitHandler(object):
         self.init_if_missing()
         self.load_git()
         self.load_map()
-        self.load_config()
 
     # make the git data directory
     def init_if_missing(self):
@@ -75,20 +73,6 @@ class GitHandler(object):
             file.write("%s %s\n" % (gitsha, hgsha))
         file.rename()
 
-    def load_config(self):
-        self._config = {}
-        if os.path.exists(self.repo.join(self.configfile)):
-            for line in self.repo.opener(self.configfile):
-                key, value = line.strip().split(' ', 1)
-                self._config[key] = value
-
-    def save_config(self):
-        file = self.repo.opener(self.configfile, 'w+', atomictemp=True)
-        for key, value in self._config.iteritems():
-            file.write("%s %s\n" % (key, value))
-        file.rename()
-
-
     ## END FILE LOAD AND SAVE METHODS
 
     def import_commits(self, remote_name):
@@ -96,7 +80,6 @@ class GitHandler(object):
         self.save_map()
 
     def fetch(self, remote_name):
-        remote_name = self.remote_name_from_url(remote_name)
         self.ui.status(_("fetching from : %s\n") % remote_name)
         self.export_git_objects()
         refs = self.fetch_pack(remote_name)
@@ -113,45 +96,11 @@ class GitHandler(object):
         self.save_map()
 
     def push(self, remote_name):
-        remote_name = self.remote_name_from_url(remote_name)
         self.fetch(remote_name) # get and convert objects if they already exist
         self.ui.status(_("pushing to : %s\n") % remote_name)
         self.export_commits(False)
         self.update_remote_references(remote_name)
         self.upload_pack(remote_name)
-
-    def remote_add(self, remote_name, git_url):
-        self._config['remote.' + remote_name + '.url'] = git_url
-        self.save_config()
-
-    def remote_remove(self, remote_name):
-        key = 'remote.' + remote_name + '.url'
-        if key in self._config:
-            del self._config[key]
-        self.save_config()
-
-    def remote_show(self, remote_name):
-        key = 'remote.' + remote_name + '.url'
-        if key in self._config:
-            name = self._config[key]
-            self.ui.status(_("URL for %s : %s\n") % (remote_name, name))
-        else:
-            self.ui.status(_("No remote named : %s\n") % remote_name)
-
-    def remote_list(self):
-        for key, value in self._config.iteritems():
-            if key[0:6] == 'remote':
-                self.ui.status('%s\t%s\n' % (key, value, ))
-
-    def remote_name_to_url(self, remote_name):
-        return self._config['remote.' + remote_name + '.url']
-
-    def remote_name_from_url(self, remote):
-        if 'remote.' + remote + '.url' in self._config:
-            return remote
-        if remote in self._config.values():
-            return [key[7:-4] for key in self._config
-                    if self._config[key] == remote][0]
 
     def update_references(self):
         try:
@@ -450,8 +399,7 @@ class GitHandler(object):
         return None
 
     def upload_pack(self, remote_name):
-        git_url = self.remote_name_to_url(remote_name)
-        client, path = self.get_transport_and_path(git_url)
+        client, path = self.get_transport_and_path(remote_name)
         changed = self.get_changed_refs
         genpack = self.generate_pack_contents
         try:
@@ -552,8 +500,7 @@ class GitHandler(object):
         return objects
 
     def fetch_pack(self, remote_name):
-        git_url = self.remote_name_to_url(remote_name)
-        client, path = self.get_transport_and_path(git_url)
+        client, path = self.get_transport_and_path(remote_name)
         graphwalker = SimpleFetchGraphWalker(self.git.heads().values(), self.git.get_parents)
         f, commit = self.git.object_store.add_pack()
         try:

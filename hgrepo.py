@@ -137,13 +137,6 @@ class hgrepo(localrepo.localrepository):
                 self.dirstate.invalidate()
             del tr
 
-    def clone(self, remote, heads=[], stream=False):
-        if isinstance(remote, gitrepo):
-            git = GitHandler(self, self.ui)
-            git.remote_add('origin', remote.path)
-
-        super(hgrepo, self).clone(remote, heads)
-
     def pull(self, remote, heads=None, force=False):
         if isinstance(remote, gitrepo):
             git = GitHandler(self, self.ui)
