@@ -217,7 +217,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                       "use (c)hanged version or (d)elete?") % f,
                     (_("&Changed"), _("&Delete")), _("c")) == _("d"):
                     act("prompt delete", "r", f)
-                act("prompt keep", "a", f)
+                else:
+                    act("prompt keep", "a", f)
             else:
                 act("other deleted", "r", f)
         elif overwrite and n[20:] == "a": # do not erase the working copy
