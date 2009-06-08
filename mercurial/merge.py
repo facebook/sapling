@@ -125,15 +125,6 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     partial = function to filter file lists
     """
 
-    repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(_(" overwrite %s partial %s\n") % (overwrite, bool(partial)))
-    repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (pa, p1, p2))
-
-    action = []
-    copy, copied = {}, {}
-    m1 = p1.manifest()
-    m2 = p2.manifest()
-
     def fmerge(f, f2, fa):
         """merge flags"""
         a, m, n = ma.flags(fa), m1.flags(f), m2.flags(f2)
@@ -155,18 +146,24 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
+    action, copy = [], {}
+
     if overwrite:
-        ma = m1
-    elif p2 == pa: # backwards
-        ma = p1.p1().manifest()
-    else:
-        ma = pa.manifest()
-        if pa and repo.ui.configbool("merge", "followcopies", True):
-            dirs = repo.ui.configbool("merge", "followdirs", True)
-            copy, diverge = copies.copies(repo, p1, p2, pa, dirs)
-            for of, fl in diverge.iteritems():
-                act("divergent renames", "dr", of, fl)
-            copied = set(copy.values())
+        pa = p1
+    elif pa == p2: # backwards
+        pa = p1.p1()
+    elif pa and repo.ui.configbool("merge", "followcopies", True):
+        dirs = repo.ui.configbool("merge", "followdirs", True)
+        copy, diverge = copies.copies(repo, p1, p2, pa, dirs)
+        for of, fl in diverge.iteritems():
+            act("divergent renames", "dr", of, fl)
+
+    repo.ui.note(_("resolving manifests\n"))
+    repo.ui.debug(_(" overwrite %s partial %s\n") % (overwrite, bool(partial)))
+    repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (pa, p1, p2))
+
+    m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
+    copied = set(copy.values())
 
     # Compare manifests
     for f, n in m1.iteritems():

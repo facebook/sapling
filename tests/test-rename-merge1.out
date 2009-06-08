@@ -2,9 +2,6 @@ checkout
 2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 created new head
 merge
-resolving manifests
- overwrite None partial False
- ancestor af1939970a1c local f26ec4fc3fa3+ remote 8e765a822af2
   searching for copies back to rev 1
   unmatched files in local:
    c2
@@ -17,6 +14,9 @@ resolving manifests
    b2 -> a2 !
   checking for directory renames
  a2: divergent renames -> dr
+resolving manifests
+ overwrite None partial False
+ ancestor af1939970a1c local f26ec4fc3fa3+ remote 8e765a822af2
  a: remote moved to b -> m
  b2: remote created -> g
 preserving a for resolve of b

@@ -22,10 +22,10 @@ created new head
 1:5cd961e4045d 
 0:2665aaee66e9 
 % this should use bar@rev2 as the ancestor
+  searching for copies back to rev 1
 resolving manifests
  overwrite None partial False
  ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 7d3b554bfdf1
-  searching for copies back to rev 1
  bar: versions differ -> m
 preserving bar for resolve of bar
 picked tool 'internal:merge' for bar (binary False symlink False)
@@ -72,10 +72,10 @@ created new head
 1:5cd961e4045d 
 0:2665aaee66e9 
 % this should use bar@rev2 as the ancestor
+  searching for copies back to rev 1
 resolving manifests
  overwrite None partial False
  ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 96ab80c60897
-  searching for copies back to rev 1
  bar: versions differ -> m
 preserving bar for resolve of bar
 picked tool 'internal:merge' for bar (binary False symlink False)

@@ -1,7 +1,4 @@
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-resolving manifests
- overwrite None partial False
- ancestor 583c7b748052 local fb3948d97f07+ remote 40da226db0f0
   searching for copies back to rev 1
   unmatched files in other:
    b
@@ -10,6 +7,9 @@ resolving manifests
    c -> a *
    b -> a *
   checking for directory renames
+resolving manifests
+ overwrite None partial False
+ ancestor 583c7b748052 local fb3948d97f07+ remote 40da226db0f0
  a: remote moved to c -> m
  a: remote moved to b -> m
 preserving a for resolve of b

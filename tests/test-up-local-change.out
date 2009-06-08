@@ -15,12 +15,12 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
-resolving manifests
- overwrite False partial False
- ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
   searching for copies back to rev 1
   unmatched files in other:
    b
+resolving manifests
+ overwrite False partial False
+ ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
  a: versions differ -> m
  b: remote created -> g
 preserving a for resolve of a
@@ -37,7 +37,7 @@ summary:     2
 
 resolving manifests
  overwrite False partial False
- ancestor 33aaa84a386b local 802f095af299+ remote 33aaa84a386b
+ ancestor 802f095af299 local 802f095af299+ remote 33aaa84a386b
  a: versions differ -> m
  b: other deleted -> r
 preserving a for resolve of a
@@ -59,12 +59,12 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     1
 
-resolving manifests
- overwrite False partial False
- ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
   searching for copies back to rev 1
   unmatched files in other:
    b
+resolving manifests
+ overwrite False partial False
+ ancestor 33aaa84a386b local 33aaa84a386b+ remote 802f095af299
  a: versions differ -> m
  b: remote created -> g
 preserving a for resolve of a
@@ -115,10 +115,10 @@ abort: crosses branches (use 'hg merge' or 'hg update -C' to discard changes)
 failed
 abort: outstanding uncommitted changes (use 'hg status' to list changes)
 failed
+  searching for copies back to rev 1
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 802f095af299+ remote 030602aee63d
-  searching for copies back to rev 1
  a: versions differ -> m
  b: versions differ -> m
 preserving a for resolve of a
