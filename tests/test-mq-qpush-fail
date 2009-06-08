@@ -16,6 +16,10 @@ echo 'syntax: glob' > .hgignore
 echo '.hgignore' >> .hgignore
 
 hg qinit
+
+echo '% test qpush on empty series'
+hg qpush
+
 hg qnew patch1
 echo >> foo
 hg qrefresh -m 'patch 1'

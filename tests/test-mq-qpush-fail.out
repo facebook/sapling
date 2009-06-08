@@ -1,4 +1,6 @@
 adding foo
+% test qpush on empty series
+no patches in series
 patch queue now empty
 applying patch1
 applying patch2

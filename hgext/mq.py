@@ -902,14 +902,14 @@ class queue(object):
     def push(self, repo, patch=None, force=False, list=False,
              mergeq=None, all=False):
         wlock = repo.wlock()
-        if repo.dirstate.parents()[0] not in repo.heads():
-            self.ui.status(_("(working directory not at a head)\n"))
-
-        if not self.series:
-            self.ui.warn(_('no patches in series\n'))
-            return 0
-
         try:
+            if repo.dirstate.parents()[0] not in repo.heads():
+                self.ui.status(_("(working directory not at a head)\n"))
+
+            if not self.series:
+                self.ui.warn(_('no patches in series\n'))
+                return 0
+
             patch = self.lookup(patch)
             # Suppose our series file is: A B C and the current 'top'
             # patch is B. qpush C should be performed (moving forward)
