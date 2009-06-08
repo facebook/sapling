@@ -136,24 +136,17 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     action = []
     copy, copied, diverge = {}, {}, {}
 
-    def fmerge(f, f2=None, fa=None):
+    def fmerge(f, f2, fa):
         """merge flags"""
-        if not f2:
-            f2 = f
-            fa = f
         a, m, n = ma.flags(fa), m1.flags(f), m2.flags(f2)
         if m == n: # flags agree
             return m # unchanged
-        if m and n: # flags are set but don't agree
-            if not a: # both differ from parent
-                r = repo.ui.prompt(
-                    _(" conflicting flags for %s\n"
-                      "(n)one, e(x)ec or sym(l)ink?") % f,
-                    (_("&None"), _("E&xec"), _("Sym&link")), _("n"))
-                return r != _("n") and r or ''
-            if m == a:
-                return n # changed from m to n
-            return m # changed from n to m
+        if m and n and not a: # flags set, don't agree, differ from parent
+            r = repo.ui.prompt(
+                _(" conflicting flags for %s\n"
+                  "(n)one, e(x)ec or sym(l)ink?") % f,
+                (_("&None"), _("E&xec"), _("Sym&link")), _("n"))
+            return r != _("n") and r or ''
         if m and m != a: # changed from a to m
             return m
         if n and n != a: # changed from a to n
@@ -180,7 +173,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             if overwrite or backwards:
                 rflags = m2.flags(f)
             else:
-                rflags = fmerge(f)
+                rflags = fmerge(f, f, f)
             # are files different?
             if n != m2[f]:
                 a = ma.get(f, nullid)
