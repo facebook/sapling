@@ -44,7 +44,7 @@ resolving manifests
    b -> a *
   checking for directory renames
  a: remote is newer -> g
- b: local copied to a -> m
+ b: local copied/moved to a -> m
  rev: versions differ -> m
 preserving b for resolve of b
 preserving rev for resolve of rev
@@ -109,7 +109,7 @@ resolving manifests
   all copies found (* = to merge, ! = divergent):
    b -> a *
   checking for directory renames
- b: local moved to a -> m
+ b: local copied/moved to a -> m
  rev: versions differ -> m
 preserving b for resolve of b
 preserving rev for resolve of rev
@@ -546,7 +546,7 @@ resolving manifests
   all copies found (* = to merge, ! = divergent):
    b -> a *
   checking for directory renames
- b: local moved to a -> m
+ b: local copied/moved to a -> m
  rev: versions differ -> m
 preserving b for resolve of b
 preserving rev for resolve of rev
@@ -578,7 +578,7 @@ resolving manifests
   all copies found (* = to merge, ! = divergent):
    b -> a *
   checking for directory renames
- b: local moved to a -> m
+ b: local copied/moved to a -> m
  rev: versions differ -> m
  c: remote created -> g
 preserving b for resolve of b

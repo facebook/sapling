@@ -29,7 +29,7 @@ resolving manifests
   all copies found (* = to merge, ! = divergent):
    1a -> 1 *
   checking for directory renames
- 1a: local moved to 1 -> m
+ 1a: local copied/moved to 1 -> m
 preserving 1a for resolve of 1a
 picked tool 'internal:merge' for 1a (binary False symlink False)
 merging 1a and 1 to 1a
