@@ -198,8 +198,6 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             else: # case 2 A,B/B/B or case 4,21 A/B/B
                 act("local copied/moved to " + f2, "m",
                     f, f2, f, fmerge(f, f2, f2), False)
-        elif n[20:] == "a": # added, no remote
-            act("remote deleted", "f", f)
         elif f in ma: # clean, a different, no remote
             if n != ma[f]:
                 if repo.ui.prompt(
@@ -209,6 +207,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     act("prompt delete", "r", f)
                 else:
                     act("prompt keep", "a", f)
+            elif n[20:] == "a": # added, no remote
+                act("remote deleted", "f", f)
             elif n[20:] != "u":
                 act("other deleted", "r", f)
 
