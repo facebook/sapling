@@ -38,9 +38,15 @@ summary:     2
 resolving manifests
  overwrite False partial False
  ancestor 33aaa84a386b local 802f095af299+ remote 33aaa84a386b
+ a: versions differ -> m
  b: other deleted -> r
+preserving a for resolve of a
 removing b
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+picked tool 'true' for a (binary False symlink False)
+merging a
+my a@802f095af299+ other a@33aaa84a386b ancestor a@33aaa84a386b
+ premerge successful
+0 files updated, 1 files merged, 1 files removed, 0 files unresolved
 changeset:   0:33aaa84a386b
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000

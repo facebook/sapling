@@ -314,7 +314,7 @@ win32text =
 [encode]
 ** = !
 
-3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 hello<NUL><CR><LF>
 some<LF>text<LF>
 rem empty<LF>

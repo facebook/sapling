@@ -43,7 +43,7 @@ hg cat stuff.txt
 
 echo '% Fresh checkout:'
 rm stuff.txt
-hg up
+hg up -C
 cat stuff.txt
 echo >> stuff.txt <<EOF
 Very very carefully.

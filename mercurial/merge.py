@@ -131,11 +131,14 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     m1 = p1.manifest()
     m2 = p2.manifest()
-    ma = pa.manifest()
     backwards = (pa == p2)
 
-    if backwards or overwrite:
+    if overwrite:
         ma = m1
+    elif backwards:
+        ma = p1.p1().manifest()
+    else:
+        ma = pa.manifest()
 
     action = []
     copy, copied, diverge = {}, {}, {}

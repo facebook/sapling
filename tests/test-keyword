@@ -117,7 +117,7 @@ hg status
 
 rm sym a b
 echo % update
-hg update
+hg update -C
 echo % cat
 cat a b
 

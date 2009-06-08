@@ -28,7 +28,7 @@ echo %% uncompress our working dir copy
 gunzip < a.gz
 
 rm a.gz
-hg co
+hg co -C
 
 echo %% uncompress our new working dir copy
 gunzip < a.gz
