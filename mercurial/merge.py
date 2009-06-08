@@ -226,10 +226,6 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     act("prompt keep", "a", f)
             elif n[20:] != "u":
                 act("other deleted", "r", f)
-        else:
-            # file is created on branch or in working directory
-            if (overwrite and n[20:] != "u") or (backwards and not n[20:]):
-                act("remote deleted", "r", f)
 
     for f, n in m2.iteritems():
         if partial and not partial(f):
