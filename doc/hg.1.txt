@@ -1,6 +1,8 @@
 HG(1)
 =====
 Matt Mackall <mpm@selenic.com>
+:man source: Mercurial
+:man manual: Mercurial Manual
 
 NAME
 ----

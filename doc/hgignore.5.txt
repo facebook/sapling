@@ -1,6 +1,8 @@
 HGIGNORE(5)
 ===========
 Vadim Gelfer <vadim.gelfer@gmail.com>
+:man source: Mercurial
+:man manual: Mercurial Manual
 
 NAME
 ----

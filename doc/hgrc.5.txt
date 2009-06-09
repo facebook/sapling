@@ -1,6 +1,8 @@
 HGRC(5)
 =======
 Bryan O'Sullivan <bos@serpentine.com>
+:man source: Mercurial
+:man manual: Mercurial Manual
 
 NAME
 ----
