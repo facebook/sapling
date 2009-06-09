@@ -9,7 +9,7 @@ hgignore - syntax for Mercurial ignore files
 SYNOPSIS
 --------
 
-The Mercurial system uses a file called .hgignore in the root
+The Mercurial system uses a file called `.hgignore` in the root
 directory of a repository to control its behavior when it finds files
 that it is not currently managing.
 
