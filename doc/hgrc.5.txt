@@ -139,9 +139,9 @@ auth::
   Supported arguments:
 
   prefix;;
-    Either '*' or a URI prefix with or without the scheme part. The
+    Either "`*`" or a URI prefix with or without the scheme part. The
     authentication entry with the longest matching prefix is used
-    (where '*' matches everything and counts as a match of length 1).
+    (where "`*`" matches everything and counts as a match of length 1).
     If the prefix doesn't include a scheme, the match is performed
     against the URI with its scheme stripped as well, and the schemes
     argument, q.v., is then subsequently consulted.
