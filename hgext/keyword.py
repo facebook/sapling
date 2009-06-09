@@ -280,7 +280,7 @@ def demo(ui, repo, *args, **opts):
     '''print [keywordmaps] configuration and an expansion example
 
     Show current, custom, or default keyword template maps and their
-    expansion.
+    expansions.
 
     Extend current configuration by specifying maps as arguments and
     optionally by reading from an additional hgrc file.
@@ -358,7 +358,7 @@ def demo(ui, repo, *args, **opts):
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 def expand(ui, repo, *pats, **opts):
-    '''expand keywords in working directory
+    '''expand keywords in the working directory
 
     Run after (re)enabling keyword expansion.
 
@@ -390,7 +390,7 @@ def files(ui, repo, *pats, **opts):
             ui.write(fmt % repo.pathto(f, cwd))
 
 def shrink(ui, repo, *pats, **opts):
-    '''revert expanded keywords in working directory
+    '''revert expanded keywords in the working directory
 
     Run before changing/disabling active keywords or if you experience
     problems with "hg import" or "hg merge".

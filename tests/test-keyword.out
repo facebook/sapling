@@ -49,9 +49,9 @@ like CVS' $Log$, are not supported. A keyword template map
 list of commands:
 
  kwdemo     print [keywordmaps] configuration and an expansion example
- kwexpand   expand keywords in working directory
+ kwexpand   expand keywords in the working directory
  kwfiles    print files currently configured for keyword expansion
- kwshrink   revert expanded keywords in working directory
+ kwshrink   revert expanded keywords in the working directory
 
 enabled extensions:
 
