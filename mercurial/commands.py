@@ -88,7 +88,7 @@ def annotate(ui, repo, *pats, **opts):
     getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
 
     if not pats:
-        raise util.Abort(_('at least one file name or pattern required'))
+        raise util.Abort(_('at least one filename or pattern is required'))
 
     opmap = [('user', lambda x: ui.shortuser(x[0].user())),
              ('number', lambda x: str(x[0].rev())),
@@ -630,7 +630,7 @@ def commit(ui, repo, *pats, **opts):
     will be committed.
 
     If you are committing the result of a merge, do not provide any
-    file names or -I/-X filters.
+    filenames or -I/-X filters.
 
     If no commit message is specified, the configured editor is
     started to prompt you for a message.
@@ -1894,8 +1894,8 @@ def log(ui, repo, *pats, **opts):
     project.
 
     File history is shown without following rename or copy history of
-    files. Use -f/--follow with a file name to follow history across
-    renames and copies. --follow without a file name will only show
+    files. Use -f/--follow with a filename to follow history across
+    renames and copies. --follow without a filename will only show
     ancestors or descendants of the starting revision. --follow-first
     only follows the first parent of merge revisions.
 
@@ -2151,7 +2151,7 @@ def parents(ui, repo, file_=None, **opts):
     if file_:
         m = cmdutil.match(repo, (file_,), opts)
         if m.anypats() or len(m.files()) != 1:
-            raise util.Abort(_('can only specify an explicit file name'))
+            raise util.Abort(_('can only specify an explicit filename'))
         file_ = m.files()[0]
         filenodes = []
         for cp in ctx.parents():

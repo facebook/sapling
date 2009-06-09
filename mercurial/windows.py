@@ -91,7 +91,7 @@ def user_rcpath():
     return path
 
 def parse_patch_output(output_line):
-    """parses the output produced by patch and returns the file name"""
+    """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
     if pf[0] == '`':
         pf = pf[1:-1] # Remove the quotes

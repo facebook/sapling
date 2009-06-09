@@ -46,7 +46,7 @@ def user_rcpath():
     return [os.path.expanduser('~/.hgrc')]
 
 def parse_patch_output(output_line):
-    """parses the output produced by patch and returns the file name"""
+    """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
     if os.sys.platform == 'OpenVMS':
         if pf[0] == '`':

@@ -102,7 +102,7 @@ cmdtable = {
         (purge,
          [('a', 'abort-on-err', None, _('abort if an error occurs')),
           ('',  'all', None, _('purge ignored files too')),
-          ('p', 'print', None, _('print the file names instead of deleting them')),
+          ('p', 'print', None, _('print filenames instead of deleting them')),
           ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
                                   ' (implies -p/--print)')),
          ] + commands.walkopts,

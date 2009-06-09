@@ -1,4 +1,4 @@
-# match.py - file name matching
+# match.py - filename matching
 #
 #  Copyright 2008, 2009 Matt Mackall <mpm@selenic.com> and others
 #

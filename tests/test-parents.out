@@ -53,7 +53,7 @@ date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     a
 
 % hg parents -r 2 glob:a
-abort: can only specify an explicit file name
+abort: can only specify an explicit filename
 % merge working dir with 2 parents, hg parents c
 merging c
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved

@@ -71,7 +71,7 @@ def staticfile(directory, fname, req):
         req.respond(HTTP_OK, ct, length = os.path.getsize(path))
         return file(path, 'rb').read()
     except TypeError:
-        raise ErrorResponse(HTTP_SERVER_ERROR, 'illegal file name')
+        raise ErrorResponse(HTTP_SERVER_ERROR, 'illegal filename')
     except OSError, err:
         if err.errno == errno.ENOENT:
             raise ErrorResponse(HTTP_NOT_FOUND)

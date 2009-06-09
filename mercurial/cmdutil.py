@@ -217,7 +217,7 @@ def make_filename(repo, pat, node,
             i += 1
         return ''.join(newname)
     except KeyError, inst:
-        raise util.Abort(_("invalid format spec '%%%s' in output file name") %
+        raise util.Abort(_("invalid format spec '%%%s' in output filename") %
                          inst.args[0])
 
 def make_file(repo, pat, node=None,
@@ -1005,7 +1005,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
     positive if walking forwards through revs, last rev in the
     sequence iterated over - use to reset state for the current window
 
-    "add", rev, fns: out-of-order traversal of the given file names
+    "add", rev, fns: out-of-order traversal of the given filenames
     fns, which changed during revision rev - use to gather data for
     possible display
 
@@ -1096,7 +1096,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
     if slowpath:
         if follow:
             raise util.Abort(_('can only follow copies/renames for explicit '
-                               'file names'))
+                               'filenames'))
 
         # The slow path checks files modified in every changeset.
         def changerevgen():

@@ -1350,7 +1350,7 @@ def diffstatdata(lines):
             if line.startswith('diff --git'):
                 filename = gitre.search(line).group(1)
             else:
-                # format: "diff -r ... -r ... file name"
+                # format: "diff -r ... -r ... filename"
                 filename = line.split(None, 5)[-1]
         elif line.startswith('+') and not line.startswith('+++'):
             adds += 1

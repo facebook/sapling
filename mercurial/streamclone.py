@@ -28,7 +28,7 @@ class StreamException(Exception):
 #
 # then for each file:
 #
-#   server writes out line that says file name, how many bytes in
+#   server writes out line that says filename, how many bytes in
 #   file.  separator is ascii nul, byte count is string.
 #
 #   server writes out raw file data.

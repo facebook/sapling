@@ -503,7 +503,7 @@ class queue:
 
     def patch(self, repo, patchfile):
         '''Apply patchfile  to the working directory.
-        patchfile: file name of patch'''
+        patchfile: name of patch file'''
         files = {}
         try:
             fuzz = patch.patch(patchfile, self.ui, strip=1, cwd=repo.root,
@@ -2541,7 +2541,7 @@ cmdtable = {
     "^qimport":
         (qimport,
          [('e', 'existing', None, _('import file in patch directory')),
-          ('n', 'name', '', _('patch file name')),
+          ('n', 'name', '', _('name of patch file')),
           ('f', 'force', None, _('overwrite existing files')),
           ('r', 'rev', [], _('place existing revisions under mq control')),
           ('g', 'git', None, _('use git extended diff format')),

@@ -148,7 +148,7 @@ def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
             msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
         p = mail.mimetextpatch('\n'.join(patch), 'x-patch', opts.get('test'))
         binnode = bin(node)
-        # if node is mq patch, it will have patch file name as tag
+        # if node is mq patch, it will have the patch file's name as a tag
         if not patchname:
             patchtags = [t for t in repo.nodetags(binnode)
                          if t.endswith('.patch') or t.endswith('.diff')]
@@ -490,7 +490,7 @@ cmdtable = {
           ('b', 'bundle', None,
            _('send changes not in target as a binary bundle')),
           ('', 'bundlename', 'bundle',
-           _('file name of the bundle attachment')),
+           _('name of the bundle attachment file')),
           ('r', 'rev', [], _('a revision to send')),
           ('', 'force', None,
            _('run even when remote repository is unrelated '
