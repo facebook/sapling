@@ -104,39 +104,42 @@ alias::
   Aliases allow you to define your own commands in terms of other
   commands (or aliases), optionally including arguments.
 +
+--
 Alias definitions consist of lines of the form:
-+
+
     <alias> = <command> [<argument]...
-+
+
 For example, this definition:
-+
+
     latest = log --limit 5
-+
+
 creates a new command `latest` that shows only the five most recent
 changesets. You can define subsequent aliases using earlier ones:
-+
+
     stable5 = latest -b stable
-+
+
 *Note*: It is possible to create aliases with the same names as
 existing commands, which will then override the original definitions.
 This is almost always a bad idea!
+--
 
 [[auth]]
 auth::
-  Authentication credentials for HTTP authentication. Each line has
-  the following format:
+Authentication credentials for HTTP authentication. Each line has
+the following format:
 
     <name>.<argument> = <value>
-
-  where <name> is used to group arguments into authentication entries.
-  Example:
++
+--
+where <name> is used to group arguments into authentication entries.
+Example:
 
     foo.prefix = hg.intevation.org/mercurial
     foo.username = foo
     foo.password = bar
     foo.schemes = http https
 
-  Supported arguments:
+Supported arguments:
 
   prefix;;
     Either "`*`" or a URI prefix with or without the scheme part. The
@@ -157,83 +160,88 @@ auth::
     static-http and static-https respectively, as well.
     Default: https.
 
-  If no suitable authentication entry is found, the user is prompted
-  for credentials as usual if required by the remote.
+If no suitable authentication entry is found, the user is prompted
+for credentials as usual if required by the remote.
+--
 
 [[decode]]
 decode/encode::
   Filters for transforming files on checkout/checkin. This would
   typically be used for newline processing or other
   localization/canonicalization of files.
++
+--
+Filters consist of a filter pattern followed by a filter command.
+Filter patterns are globs by default, rooted at the repository root.
+For example, to match any file ending in "`.txt`" in the root
+directory only, use the pattern "`*.txt`". To match any file ending in
+"`.c`" anywhere in the repository, use the pattern "`**.c`".
 
-  Filters consist of a filter pattern followed by a filter command.
-  Filter patterns are globs by default, rooted at the repository root.
-  For example, to match any file ending in "`.txt`" in the root
-  directory only, use the pattern "`*.txt`". To match any file ending in
-  "`.c`" anywhere in the repository, use the pattern "`**.c`".
+The filter command can start with a specifier, either "pipe:" or
+"tempfile:". If no specifier is given, "pipe:" is used by default.
 
-  The filter command can start with a specifier, either "pipe:" or
-  "tempfile:". If no specifier is given, "pipe:" is used by default.
+A "pipe:" command must accept data on stdin and return the
+transformed data on stdout.
 
-  A "pipe:" command must accept data on stdin and return the
-  transformed data on stdout.
+Pipe example:
 
-  Pipe example:
+  [encode]
+  # uncompress gzip files on checkin to improve delta compression
+  # note: not necessarily a good idea, just an example
+  *.gz = pipe: gunzip
 
-    [encode]
-    # uncompress gzip files on checkin to improve delta compression
-    # note: not necessarily a good idea, just an example
-    *.gz = pipe: gunzip
+  [decode]
+  # recompress gzip files when writing them to the working dir (we
+  # can safely omit "pipe:", because it's the default)
+  *.gz = gzip
 
-    [decode]
-    # recompress gzip files when writing them to the working dir (we
-    # can safely omit "pipe:", because it's the default)
-    *.gz = gzip
+A "tempfile:" command is a template. The string INFILE is replaced
+with the name of a temporary file that contains the data to be
+filtered by the command. The string OUTFILE is replaced with the
+name of an empty temporary file, where the filtered data must be
+written by the command.
 
-  A "tempfile:" command is a template. The string INFILE is replaced
-  with the name of a temporary file that contains the data to be
-  filtered by the command. The string OUTFILE is replaced with the
-  name of an empty temporary file, where the filtered data must be
-  written by the command.
+NOTE: the tempfile mechanism is recommended for Windows systems,
+where the standard shell I/O redirection operators often have
+strange effects and may corrupt the contents of your files.
 
-  NOTE: the tempfile mechanism is recommended for Windows systems,
-  where the standard shell I/O redirection operators often have
-  strange effects and may corrupt the contents of your files.
+The most common usage is for LF <-> CRLF translation on Windows. For
+this, use the "smart" convertors which check for binary files:
 
-  The most common usage is for LF <-> CRLF translation on Windows. For
-  this, use the "smart" convertors which check for binary files:
+  [extensions]
+  hgext.win32text =
+  [encode]
+  ** = cleverencode:
+  [decode]
+  ** = cleverdecode:
 
-    [extensions]
-    hgext.win32text =
-    [encode]
-    ** = cleverencode:
-    [decode]
-    ** = cleverdecode:
+or if you only want to translate certain files:
 
-  or if you only want to translate certain files:
-
-    [extensions]
-    hgext.win32text =
-    [encode]
-    **.txt = dumbencode:
-    [decode]
-    **.txt = dumbdecode:
+  [extensions]
+  hgext.win32text =
+  [encode]
+  **.txt = dumbencode:
+  [decode]
+  **.txt = dumbdecode:
+--
 
 [[defaults]]
 defaults::
   Use the [defaults] section to define command defaults, i.e. the
   default options/arguments to pass to the specified commands.
++
+--
+The following example makes 'hg log' run in verbose mode, and 'hg
+status' show only the modified files, by default.
 
-  The following example makes 'hg log' run in verbose mode, and 'hg
-  status' show only the modified files, by default.
+  [defaults]
+  log = -v
+  status = -m
 
-    [defaults]
-    log = -v
-    status = -m
-
-  The actual commands, instead of their aliases, must be used when
-  defining command defaults. The command defaults will also be applied
-  to the aliases of the commands defined.
+The actual commands, instead of their aliases, must be used when
+defining command defaults. The command defaults will also be applied
+to the aliases of the commands defined.
+--
 
 [[diff]]
 diff::
@@ -280,49 +288,53 @@ email::
     to which conversion from local encoding (`$HGENCODING`,
     `ui.fallbackencoding`) succeeds. If correct conversion fails, the
     text in question is sent as is. Defaults to empty (explicit) list.
++
+--
+Order of outgoing email charsets:
 
-  Order of outgoing email charsets:
- 
-    us-ascii             always first, regardless of settings
-    email.charsets       in order given by user
-    ui.fallbackencoding  if not in email.charsets
-    $HGENCODING          if not in email.charsets
-    utf-8                always last, regardless of settings
+  us-ascii             always first, regardless of settings
+  email.charsets       in order given by user
+  ui.fallbackencoding  if not in email.charsets
+  $HGENCODING          if not in email.charsets
+  utf-8                always last, regardless of settings
 
-  Email example:
+Email example:
 
-    [email]
-    from = Joseph User <joe.user@example.com>
-    method = /usr/sbin/sendmail
-    # charsets for western europeans
-    # us-ascii, utf-8 omitted, as they are tried first and last
-    charsets = iso-8859-1, iso-8859-15, windows-1252
+  [email]
+  from = Joseph User <joe.user@example.com>
+  method = /usr/sbin/sendmail
+  # charsets for western europeans
+  # us-ascii, utf-8 omitted, as they are tried first and last
+  charsets = iso-8859-1, iso-8859-15, windows-1252
+--
 
 [[extensions]]
 extensions::
   Mercurial has an extension mechanism for adding new features. To
   enable an extension, create an entry for it in this section.
++
+--
+If you know that the extension is already in Python's search path,
+you can give the name of the module, followed by "=", with nothing
+after the "=".
 
-  If you know that the extension is already in Python's search path,
-  you can give the name of the module, followed by "=", with nothing
-  after the "=".
+Otherwise, give a name that you choose, followed by "=", followed by
+the path to the ".py" file (including the file name extension) that
+defines the extension.
 
-  Otherwise, give a name that you choose, followed by "=", followed by
-  the path to the ".py" file (including the file name extension) that
-  defines the extension.
+To explicitly disable an extension that is enabled in an hgrc of
+broader scope, prepend its path with '!', as in
+'hgext.foo = !/ext/path' or 'hgext.foo = !' when path is not
+supplied.
 
-  To explicitly disable an extension that is enabled in an hgrc of
-  broader scope, prepend its path with '!', as in
-  'hgext.foo = !/ext/path' or 'hgext.foo = !' when path is not
-  supplied.
+Example for `~/.hgrc`:
 
-  Example for `~/.hgrc`:
-
-    [extensions]
-    # (the mq extension will get loaded from mercurial's path)
-    hgext.mq =
-    # (this extension will get loaded from the file specified)
-    myfeature = ~/.hgext/myfeature.py
+  [extensions]
+  # (the mq extension will get loaded from mercurial's path)
+  hgext.mq =
+  # (this extension will get loaded from the file specified)
+  myfeature = ~/.hgext/myfeature.py
+--
 
 [[format]]
 format::
@@ -349,81 +361,83 @@ merge-patterns::
   patterns. Tools matched here will take precedence over the default
   merge tool. Patterns are globs by default, rooted at the repository
   root.
-
-  Example:
-
-    [merge-patterns]
-    **.c = kdiff3
-    **.jpg = myimgmerge
++
+Example:
++
+  [merge-patterns]
+  **.c = kdiff3
+  **.jpg = myimgmerge
 
 [[merge-tools]]
 merge-tools::
   This section configures external merge tools to use for file-level
   merges.
++
+--
+Example `~/.hgrc`:
 
-  Example `~/.hgrc`:
+  [merge-tools]
+  # Override stock tool location
+  kdiff3.executable = ~/bin/kdiff3
+  # Specify command line
+  kdiff3.args = $base $local $other -o $output
+  # Give higher priority
+  kdiff3.priority = 1
 
-    [merge-tools]
-    # Override stock tool location
-    kdiff3.executable = ~/bin/kdiff3
-    # Specify command line
-    kdiff3.args = $base $local $other -o $output
-    # Give higher priority
-    kdiff3.priority = 1
+  # Define new tool
+  myHtmlTool.args = -m $local $other $base $output
+  myHtmlTool.regkey = Software\FooSoftware\HtmlMerge
+  myHtmlTool.priority = 1
 
-    # Define new tool
-    myHtmlTool.args = -m $local $other $base $output
-    myHtmlTool.regkey = Software\FooSoftware\HtmlMerge
-    myHtmlTool.priority = 1
+Supported arguments:
 
-  Supported arguments:
-
-  priority;;
-    The priority in which to evaluate this tool.
-    Default: 0.
-  executable;;
-    Either just the name of the executable or its pathname.
-    Default: the tool name.
-  args;;
-    The arguments to pass to the tool executable. You can refer to the
-    files being merged as well as the output file through these
-    variables: `$base`, `$local`, `$other`, `$output`.
-    Default: `$local $base $other`
-  premerge;;
-    Attempt to run internal non-interactive 3-way merge tool before
-    launching external tool.
-    Default: True
-  binary;;
-    This tool can merge binary files. Defaults to False, unless tool
-    was selected by file pattern match.
-  symlink;;
-    This tool can merge symlinks. Defaults to False, even if tool was
-    selected by file pattern match.
-  checkconflicts;;
-    Check whether there are conflicts even though the tool reported
-    success.
-    Default: False
-  checkchanged;;
-    Check whether outputs were written even though the tool reported
-    success.
-    Default: False
-  fixeol;;
-    Attempt to fix up EOL changes caused by the merge tool.
-    Default: False
-  gui;;
-    This tool requires a graphical interface to run. Default: False
-  regkey;;
-    Windows registry key which describes install location of this
-    tool. Mercurial will search for this key first under
-    `HKEY_CURRENT_USER` and then under `HKEY_LOCAL_MACHINE`.
-    Default: None
-  regname;;
-    Name of value to read from specified registry key. Defaults to the
-    unnamed (default) value.
-  regappend;;
-    String to append to the value read from the registry, typically
-    the executable name of the tool.
-    Default: None
+priority;;
+  The priority in which to evaluate this tool.
+  Default: 0.
+executable;;
+  Either just the name of the executable or its pathname.
+  Default: the tool name.
+args;;
+  The arguments to pass to the tool executable. You can refer to the
+  files being merged as well as the output file through these
+  variables: `$base`, `$local`, `$other`, `$output`.
+  Default: `$local $base $other`
+premerge;;
+  Attempt to run internal non-interactive 3-way merge tool before
+  launching external tool.
+  Default: True
+binary;;
+  This tool can merge binary files. Defaults to False, unless tool
+  was selected by file pattern match.
+symlink;;
+  This tool can merge symlinks. Defaults to False, even if tool was
+  selected by file pattern match.
+checkconflicts;;
+  Check whether there are conflicts even though the tool reported
+  success.
+  Default: False
+checkchanged;;
+  Check whether outputs were written even though the tool reported
+  success.
+  Default: False
+fixeol;;
+  Attempt to fix up EOL changes caused by the merge tool.
+  Default: False
+gui;;
+  This tool requires a graphical interface to run. Default: False
+regkey;;
+  Windows registry key which describes install location of this
+  tool. Mercurial will search for this key first under
+  `HKEY_CURRENT_USER` and then under `HKEY_LOCAL_MACHINE`.
+  Default: None
+regname;;
+  Name of value to read from specified registry key. Defaults to the
+  unnamed (default) value.
+regappend;;
+  String to append to the value read from the registry, typically
+  the executable name of the tool.
+  Default: None
+--
 
 [[hooks]]
 hooks::
@@ -432,123 +446,125 @@ hooks::
   hooks can be run for the same action by appending a suffix to the
   action. Overriding a site-wide hook can be done by changing its
   value or setting it to an empty string.
++
+--
+Example `.hg/hgrc`:
 
-  Example `.hg/hgrc`:
+  [hooks]
+  # do not use the site-wide hook
+  incoming =
+  incoming.email = /my/email/hook
+  incoming.autobuild = /my/build/hook
 
-    [hooks]
-    # do not use the site-wide hook
-    incoming =
-    incoming.email = /my/email/hook
-    incoming.autobuild = /my/build/hook
+Most hooks are run with environment variables set that give useful
+additional information. For each hook below, the environment
+variables it is passed are listed with names of the form "$HG_foo".
 
-  Most hooks are run with environment variables set that give useful
-  additional information. For each hook below, the environment
-  variables it is passed are listed with names of the form "$HG_foo".
+changegroup;;
+  Run after a changegroup has been added via push, pull or unbundle.
+  ID of the first new changeset is in `$HG_NODE`. URL from which
+  changes came is in `$HG_URL`.
+commit;;
+  Run after a changeset has been created in the local repository. ID
+  of the newly created changeset is in `$HG_NODE`. Parent changeset
+  IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
+incoming;;
+  Run after a changeset has been pulled, pushed, or unbundled into
+  the local repository. The ID of the newly arrived changeset is in
+  `$HG_NODE`. URL that was source of changes came is in `$HG_URL`.
+outgoing;;
+  Run after sending changes from local repository to another. ID of
+  first changeset sent is in `$HG_NODE`. Source of operation is in
+  `$HG_SOURCE`; see "preoutgoing" hook for description.
+post-<command>;;
+  Run after successful invocations of the associated command. The
+  contents of the command line are passed as `$HG_ARGS` and the result
+  code in `$HG_RESULT`. Hook failure is ignored.
+pre-<command>;;
+  Run before executing the associated command. The contents of the
+  command line are passed as `$HG_ARGS`. If the hook returns failure,
+  the command doesn't execute and Mercurial returns the failure
+  code.
+prechangegroup;;
+  Run before a changegroup is added via push, pull or unbundle. Exit
+  status 0 allows the changegroup to proceed. Non-zero status will
+  cause the push, pull or unbundle to fail. URL from which changes
+  will come is in `$HG_URL`.
+precommit;;
+  Run before starting a local commit. Exit status 0 allows the
+  commit to proceed. Non-zero status will cause the commit to fail.
+  Parent changeset IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
+preoutgoing;;
+  Run before collecting changes to send from the local repository to
+  another. Non-zero status will cause failure. This lets you prevent
+  pull over http or ssh. Also prevents against local pull, push
+  (outbound) or bundle commands, but not effective, since you can
+  just copy files instead then. Source of operation is in
+  `$HG_SOURCE`. If "serve", operation is happening on behalf of remote
+  ssh or http repository. If "push", "pull" or "bundle", operation
+  is happening on behalf of repository on same system.
+pretag;;
+  Run before creating a tag. Exit status 0 allows the tag to be
+  created. Non-zero status will cause the tag to fail. ID of
+  changeset to tag is in `$HG_NODE`. Name of tag is in `$HG_TAG`. Tag is
+  local if `$HG_LOCAL=1`, in repo if `$HG_LOCAL=0`.
+pretxnchangegroup;;
+  Run after a changegroup has been added via push, pull or unbundle,
+  but before the transaction has been committed. Changegroup is
+  visible to hook program. This lets you validate incoming changes
+  before accepting them. Passed the ID of the first new changeset in
+  `$HG_NODE`. Exit status 0 allows the transaction to commit. Non-zero
+  status will cause the transaction to be rolled back and the push,
+  pull or unbundle will fail. URL that was source of changes is in
+  `$HG_URL`.
+pretxncommit;;
+  Run after a changeset has been created but the transaction not yet
+  committed. Changeset is visible to hook program. This lets you
+  validate commit message and changes. Exit status 0 allows the
+  commit to proceed. Non-zero status will cause the transaction to
+  be rolled back. ID of changeset is in `$HG_NODE`. Parent changeset
+  IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
+preupdate;;
+  Run before updating the working directory. Exit status 0 allows
+  the update to proceed. Non-zero status will prevent the update.
+  Changeset ID of first new parent is in `$HG_PARENT1`. If merge, ID
+  of second new parent is in `$HG_PARENT2`.
+tag;;
+  Run after a tag is created. ID of tagged changeset is in `$HG_NODE`.
+  Name of tag is in `$HG_TAG`. Tag is local if `$HG_LOCAL=1`, in repo if
+  `$HG_LOCAL=0`.
+update;;
+  Run after updating the working directory. Changeset ID of first
+  new parent is in `$HG_PARENT1`. If merge, ID of second new parent is
+  in `$HG_PARENT2`. If the update succeeded, `$HG_ERROR=0`. If the
+  update failed (e.g. because conflicts not resolved), `$HG_ERROR=1`.
 
-  changegroup;;
-    Run after a changegroup has been added via push, pull or unbundle.
-    ID of the first new changeset is in `$HG_NODE`. URL from which
-    changes came is in `$HG_URL`.
-  commit;;
-    Run after a changeset has been created in the local repository. ID
-    of the newly created changeset is in `$HG_NODE`. Parent changeset
-    IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
-  incoming;;
-    Run after a changeset has been pulled, pushed, or unbundled into
-    the local repository. The ID of the newly arrived changeset is in
-    `$HG_NODE`. URL that was source of changes came is in `$HG_URL`.
-  outgoing;;
-    Run after sending changes from local repository to another. ID of
-    first changeset sent is in `$HG_NODE`. Source of operation is in
-    `$HG_SOURCE`; see "preoutgoing" hook for description.
-  post-<command>;;
-    Run after successful invocations of the associated command. The
-    contents of the command line are passed as `$HG_ARGS` and the result
-    code in `$HG_RESULT`. Hook failure is ignored.
-  pre-<command>;;
-    Run before executing the associated command. The contents of the
-    command line are passed as `$HG_ARGS`. If the hook returns failure,
-    the command doesn't execute and Mercurial returns the failure
-    code.
-  prechangegroup;;
-    Run before a changegroup is added via push, pull or unbundle. Exit
-    status 0 allows the changegroup to proceed. Non-zero status will
-    cause the push, pull or unbundle to fail. URL from which changes
-    will come is in `$HG_URL`.
-  precommit;;
-    Run before starting a local commit. Exit status 0 allows the
-    commit to proceed. Non-zero status will cause the commit to fail.
-    Parent changeset IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
-  preoutgoing;;
-    Run before collecting changes to send from the local repository to
-    another. Non-zero status will cause failure. This lets you prevent
-    pull over http or ssh. Also prevents against local pull, push
-    (outbound) or bundle commands, but not effective, since you can
-    just copy files instead then. Source of operation is in
-    `$HG_SOURCE`. If "serve", operation is happening on behalf of remote
-    ssh or http repository. If "push", "pull" or "bundle", operation
-    is happening on behalf of repository on same system.
-  pretag;;
-    Run before creating a tag. Exit status 0 allows the tag to be
-    created. Non-zero status will cause the tag to fail. ID of
-    changeset to tag is in `$HG_NODE`. Name of tag is in `$HG_TAG`. Tag is
-    local if `$HG_LOCAL=1`, in repo if `$HG_LOCAL=0`.
-  pretxnchangegroup;;
-    Run after a changegroup has been added via push, pull or unbundle,
-    but before the transaction has been committed. Changegroup is
-    visible to hook program. This lets you validate incoming changes
-    before accepting them. Passed the ID of the first new changeset in
-    `$HG_NODE`. Exit status 0 allows the transaction to commit. Non-zero
-    status will cause the transaction to be rolled back and the push,
-    pull or unbundle will fail. URL that was source of changes is in
-    `$HG_URL`.
-  pretxncommit;;
-    Run after a changeset has been created but the transaction not yet
-    committed. Changeset is visible to hook program. This lets you
-    validate commit message and changes. Exit status 0 allows the
-    commit to proceed. Non-zero status will cause the transaction to
-    be rolled back. ID of changeset is in `$HG_NODE`. Parent changeset
-    IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
-  preupdate;;
-    Run before updating the working directory. Exit status 0 allows
-    the update to proceed. Non-zero status will prevent the update.
-    Changeset ID of first new parent is in `$HG_PARENT1`. If merge, ID
-    of second new parent is in `$HG_PARENT2`.
-  tag;;
-    Run after a tag is created. ID of tagged changeset is in `$HG_NODE`.
-    Name of tag is in `$HG_TAG`. Tag is local if `$HG_LOCAL=1`, in repo if
-    `$HG_LOCAL=0`.
-  update;;
-    Run after updating the working directory. Changeset ID of first
-    new parent is in `$HG_PARENT1`. If merge, ID of second new parent is
-    in `$HG_PARENT2`. If the update succeeded, `$HG_ERROR=0`. If the
-    update failed (e.g. because conflicts not resolved), `$HG_ERROR=1`.
+Note: it is generally better to use standard hooks rather than the
+generic pre- and post- command hooks as they are guaranteed to be
+called in the appropriate contexts for influencing transactions.
+Also, hooks like "commit" will be called in all contexts that
+generate a commit (e.g. tag) and not just the commit command.
 
-  Note: it is generally better to use standard hooks rather than the
-  generic pre- and post- command hooks as they are guaranteed to be
-  called in the appropriate contexts for influencing transactions.
-  Also, hooks like "commit" will be called in all contexts that
-  generate a commit (e.g. tag) and not just the commit command.
+Note2: Environment variables with empty values may not be passed to
+hooks on platforms such as Windows. As an example, `$HG_PARENT2` will
+have an empty value under Unix-like platforms for non-merge
+changesets, while it will not be available at all under Windows.
 
-  Note2: Environment variables with empty values may not be passed to
-  hooks on platforms such as Windows. As an example, `$HG_PARENT2` will
-  have an empty value under Unix-like platforms for non-merge
-  changesets, while it will not be available at all under Windows.
+The syntax for Python hooks is as follows:
 
-  The syntax for Python hooks is as follows:
+  hookname = python:modulename.submodule.callable
+  hookname = python:/path/to/python/module.py:callable
 
-    hookname = python:modulename.submodule.callable
-    hookname = python:/path/to/python/module.py:callable
+Python hooks are run within the Mercurial process. Each hook is
+called with at least three keyword arguments: a ui object (keyword
+"ui"), a repository object (keyword "repo"), and a "hooktype"
+keyword that tells what kind of hook is used. Arguments listed as
+environment variables above are passed as keyword arguments, with no
+"HG_" prefix, and names in lower case.
 
-  Python hooks are run within the Mercurial process. Each hook is
-  called with at least three keyword arguments: a ui object (keyword
-  "ui"), a repository object (keyword "repo"), and a "hooktype"
-  keyword that tells what kind of hook is used. Arguments listed as
-  environment variables above are passed as keyword arguments, with no
-  "HG_" prefix, and names in lower case.
-
-  If a Python hook returns a "true" value or raises an exception, this
-  is treated as a failure.
+If a Python hook returns a "true" value or raises an exception, this
+is treated as a failure.
+--
 
 [[http_proxy]]
 http_proxy::
@@ -644,19 +660,23 @@ trusted::
   user or to a trusted group. The main exception is the web interface,
   which automatically uses some safe settings, since it's common to
   serve repositories from different users.
++
+--
+This section specifies what users and groups are trusted. The
+current user is always trusted. To trust everybody, list a user or a
+group with name "*".
 
-  This section specifies what users and groups are trusted. The
-  current user is always trusted. To trust everybody, list a user or a
-  group with name "*".
-
-  users;;
-    Comma-separated list of trusted users.
-  groups;;
-    Comma-separated list of trusted groups.
+users;;
+  Comma-separated list of trusted users.
+groups;;
+  Comma-separated list of trusted groups.
+--
 
 [[ui]]
 ui::
   User interface controls.
++
+--
   archivemeta;;
     Whether to include the .hg_archival.txt file containing metadata
     (hashes for the repository base and for tip) in archives created
@@ -689,7 +709,7 @@ ui::
   merge;;
     The conflict resolution program to use during a manual merge.
     There are some internal tools available:
-
++
       internal:local;;
         keep the local version
       internal:other;;
@@ -698,9 +718,9 @@ ui::
         use the internal non-interactive merge tool
       internal:fail;;
         fail to merge
-
-    For more information on configuring merge tools see the
-    merge-tools section.
++
+For more information on configuring merge tools see the
+merge-tools section.
 
   patch;;
     command to use to apply patches. Look for 'gpatch' or 'patch' in
@@ -737,7 +757,7 @@ ui::
     "username =" in the system hgrc).
   verbose;;
     Increase the amount of output printed. True or False. Default is False.
-
+--
 
 [[web]]
 web::
