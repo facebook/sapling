@@ -1645,7 +1645,7 @@ def delete(ui, repo, *patches, **opts):
     -r/--rev parameter. At least one patch or revision is required.
 
     With --rev, mq will stop managing the named revisions (converting
-    them to regular mercurial changesets). The qfinish command should
+    them to regular Mercurial changesets). The qfinish command should
     be used as an alternative for qdelete -r, as the latter option is
     deprecated.
 
@@ -1753,7 +1753,7 @@ def clone(ui, source, dest=None, **opts):
     Source patch repository is looked for in <src>/.hg/patches by
     default. Use -p <url> to change.
 
-    The patch directory must be a nested mercurial repository, as
+    The patch directory must be a nested Mercurial repository, as
     would be created by qinit -c.
     '''
     def patchdir(repo):

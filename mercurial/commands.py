@@ -1728,7 +1728,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 wp = repo.parents()
                 if opts.get('exact'):
                     if not nodeid or not p1:
-                        raise util.Abort(_('not a mercurial patch'))
+                        raise util.Abort(_('not a Mercurial patch'))
                     p1 = repo.lookup(p1)
                     p2 = repo.lookup(p2 or hex(nullid))
 

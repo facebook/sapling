@@ -39,7 +39,7 @@ To use this extension, enable the extension in .hg/hgrc or ~/.hgrc:
   hgext.win32mbcs =
 
 Path encoding conversion are done between Unicode and
-encoding.encoding which is decided by mercurial from current locale
+encoding.encoding which is decided by Mercurial from current locale
 setting or HGENCODING.
 
 """

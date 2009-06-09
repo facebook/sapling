@@ -12,7 +12,7 @@ graphical way. It requires Tcl/Tk version 8.4 or later. (Tcl/Tk is not
 distributed with Mercurial.)
 
 hgk consists of two parts: a Tcl script that does the displaying and
-querying of information, and an extension to mercurial named hgk.py,
+querying of information, and an extension to Mercurial named hgk.py,
 which provides hooks for hgk to get information. hgk can be found in
 the contrib directory, and hgk.py can be found in the hgext directory.
 
