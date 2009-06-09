@@ -12,7 +12,7 @@ SYNOPSIS
 --------
 
 The Mercurial system uses a set of configuration files to control
-aspects of its behaviour.
+aspects of its behavior.
 
 FILES
 -----
@@ -59,7 +59,7 @@ given below, settings from later paths override earlier ones.
     Per-user configuration file(s), for the user running Mercurial. On
     Windows 9x, `%HOME%` is replaced by `%APPDATA%`.
     Options in these files apply to all Mercurial commands executed by
-    this user in any directory. Options in thes files override
+    this user in any directory. Options in these files override
     per-installation and per-system options.
 
 (Unix, Windows) `<repo>/.hg/hgrc`::
@@ -208,7 +208,7 @@ where the standard shell I/O redirection operators often have
 strange effects and may corrupt the contents of your files.
 
 The most common usage is for LF <-> CRLF translation on Windows. For
-this, use the "smart" convertors which check for binary files:
+this, use the "smart" converters which check for binary files:
 
   [extensions]
   hgext.win32text =
@@ -247,7 +247,7 @@ to the aliases of the commands defined.
 
 [[diff]]
 diff::
-  Settings used when displaying diffs. They are all boolean and
+  Settings used when displaying diffs. They are all Boolean and
   defaults to False.
   git;;
     Use git extended diff format.
@@ -284,15 +284,16 @@ email::
     message on stdin). Normally, setting this to "sendmail" or
     "/usr/sbin/sendmail" is enough to use sendmail to send messages.
   charsets;;
-    Optional. Comma-separated list of charsets considered convenient
-    for recipients. Addresses, headers, and parts not containing
-    patches of outgoing messages will be encoded in the first charset
-    to which conversion from local encoding (`$HGENCODING`,
-    `ui.fallbackencoding`) succeeds. If correct conversion fails, the
-    text in question is sent as is. Defaults to empty (explicit) list.
+    Optional. Comma-separated list of character sets considered
+    convenient for recipients. Addresses, headers, and parts not
+    containing patches of outgoing messages will be encoded in the
+    first character set to which conversion from local encoding
+    (`$HGENCODING`, `ui.fallbackencoding`) succeeds. If correct
+    conversion fails, the text in question is sent as is. Defaults to
+    empty (explicit) list.
 +
 --
-Order of outgoing email charsets:
+Order of outgoing email character sets:
 
   us-ascii             always first, regardless of settings
   email.charsets       in order given by user
@@ -305,7 +306,7 @@ Email example:
   [email]
   from = Joseph User <joe.user@example.com>
   method = /usr/sbin/sendmail
-  # charsets for western europeans
+  # charsets for western Europeans
   # us-ascii, utf-8 omitted, as they are tried first and last
   charsets = iso-8859-1, iso-8859-15, windows-1252
 --
@@ -332,7 +333,7 @@ supplied.
 Example for `~/.hgrc`:
 
   [extensions]
-  # (the mq extension will get loaded from mercurial's path)
+  # (the mq extension will get loaded from Mercurial's path)
   hgext.mq =
   # (this extension will get loaded from the file specified)
   myfeature = ~/.hgext/myfeature.py
@@ -499,17 +500,17 @@ precommit;;
 preoutgoing;;
   Run before collecting changes to send from the local repository to
   another. Non-zero status will cause failure. This lets you prevent
-  pull over http or ssh. Also prevents against local pull, push
+  pull over HTTP or SSH. Also prevents against local pull, push
   (outbound) or bundle commands, but not effective, since you can
   just copy files instead then. Source of operation is in
   `$HG_SOURCE`. If "serve", operation is happening on behalf of remote
-  ssh or http repository. If "push", "pull" or "bundle", operation
+  SSH or HTTP repository. If "push", "pull" or "bundle", operation
   is happening on behalf of repository on same system.
 pretag;;
   Run before creating a tag. Exit status 0 allows the tag to be
   created. Non-zero status will cause the tag to fail. ID of
   changeset to tag is in `$HG_NODE`. Name of tag is in `$HG_TAG`. Tag is
-  local if `$HG_LOCAL=1`, in repo if `$HG_LOCAL=0`.
+  local if `$HG_LOCAL=1`, in repository if `$HG_LOCAL=0`.
 pretxnchangegroup;;
   Run after a changegroup has been added via push, pull or unbundle,
   but before the transaction has been committed. Changegroup is
@@ -533,8 +534,8 @@ preupdate;;
   of second new parent is in `$HG_PARENT2`.
 tag;;
   Run after a tag is created. ID of tagged changeset is in `$HG_NODE`.
-  Name of tag is in `$HG_TAG`. Tag is local if `$HG_LOCAL=1`, in repo if
-  `$HG_LOCAL=0`.
+  Name of tag is in `$HG_TAG`. Tag is local if `$HG_LOCAL=1`, in
+  repository if `$HG_LOCAL=0`.
 update;;
   Run after updating the working directory. Changeset ID of first
   new parent is in `$HG_PARENT1`. If merge, ID of second new parent is
@@ -646,14 +647,14 @@ profiling::
 server::
   Controls generic server settings.
   uncompressed;;
-    Whether to allow clients to clone a repo using the uncompressed
-    streaming protocol. This transfers about 40% more data than a
-    regular clone, but uses less memory and CPU on both server and
-    client. Over a LAN (100Mbps or better) or a very fast WAN, an
-    uncompressed streaming clone is a lot faster (~10x) than a regular
-    clone. Over most WAN connections (anything slower than about
-    6Mbps), uncompressed streaming is slower, because of the extra
-    data transfer overhead. Default is False.
+    Whether to allow clients to clone a repository using the
+    uncompressed streaming protocol. This transfers about 40% more
+    data than a regular clone, but uses less memory and CPU on both
+    server and client. Over a LAN (100 Mbps or better) or a very fast
+    WAN, an uncompressed streaming clone is a lot faster (~10x) than a
+    regular clone. Over most WAN connections (anything slower than
+    about 6 Mbps), uncompressed streaming is slower, because of the
+    extra data transfer overhead. Default is False.
 
 [[trusted]]
 trusted::
@@ -680,7 +681,7 @@ ui::
 +
 --
   archivemeta;;
-    Whether to include the .hg_archival.txt file containing metadata
+    Whether to include the .hg_archival.txt file containing meta data
     (hashes for the repository base and for tip) in archives created
     by the hg archive command or downloaded via hgweb.
     Default is true.
@@ -772,10 +773,12 @@ web::
     List of archive format (bz2, gz, zip) allowed for downloading.
     Default is empty.
   allowbz2;;
-    (DEPRECATED) Whether to allow .tar.bz2 downloading of repo revisions.
+    (DEPRECATED) Whether to allow .tar.bz2 downloading of repository
+    revisions.
     Default is false.
   allowgz;;
-    (DEPRECATED) Whether to allow .tar.gz downloading of repo revisions.
+    (DEPRECATED) Whether to allow .tar.gz downloading of repository
+    revisions.
     Default is false.
   allowpull;;
     Whether to allow pulling from the repository. Default is true.
@@ -799,8 +802,8 @@ web::
     contents of the allow_read list are examined after the deny_read
     list.
   allowzip;;
-    (DEPRECATED) Whether to allow .zip downloading of repo revisions.
-    Default is false. This feature creates temporary files.
+    (DEPRECATED) Whether to allow .zip downloading of repository
+    revisions. Default is false. This feature creates temporary files.
   baseurl;;
     Base URL to use when publishing URLs in other locations, so
     third-party tools like email notification hooks can construct
