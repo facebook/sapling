@@ -81,6 +81,6 @@ http://selenic.com/mailman/listinfo/mercurial[Mailing list]
 
 COPYING
 -------
-Copyright \(C) 2005-2007 Matt Mackall.
+Copyright \(C) 2005-2009 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
 Public License (GPL).
