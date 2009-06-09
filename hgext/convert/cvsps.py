@@ -36,6 +36,7 @@ class logentry(object):
         .synthetic - is this a synthetic "file ... added on ..." revision?
         .mergepoint- the branch that has been merged from
                      (if present in rlog output)
+        .branchpoints- the branches that start at the current entry
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -400,6 +401,19 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             else:
                 e.branch = None
 
+            # find the branches starting from this revision
+            branchpoints = set()
+            for branch, revision in branchmap.iteritems():
+                revparts = tuple([int(i) for i in revision.split('.')])
+                if revparts[-2] == 0 and revparts[-1] % 2 == 0:
+                    # normal branch
+                    if revparts[:-2] == e.revision:
+                        branchpoints.add(branch)
+                elif revparts == (1,1,1): # vendor branch
+                    if revparts in e.branches:
+                        branchpoints.add(branch)
+            e.branchpoints = branchpoints
+
             log.append(e)
 
             if len(log) % 100 == 0:
@@ -453,6 +467,7 @@ class changeset(object):
         .synthetic - from synthetic revision "file ... added on branch ..."
         .mergepoint- the branch that has been merged from
                      (if present in rlog output)
+        .branchpoints- the branches that start at the current entry
     '''
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -477,17 +492,34 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     for i, e in enumerate(log):
 
         # Check if log entry belongs to the current changeset or not.
+
+        # Since CVS is file centric, two different file revisions with
+        # different branchpoints should be treated as belonging to two
+        # different changesets (and the ordering is important and not
+        # honoured by cvsps at this point).
+        #
+        # Consider the following case:
+        # foo 1.1 branchpoints: [MYBRANCH]
+        # bar 1.1 branchpoints: [MYBRANCH, MYBRANCH2]
+        #
+        # Here foo is part only of MYBRANCH, but not MYBRANCH2, e.g. a
+        # later version of foo may be in MYBRANCH2, so foo should be the
+        # first changeset and bar the next and MYBRANCH and MYBRANCH2
+        # should both start off of the bar changeset. No provisions are
+        # made to ensure that this is, in fact, what happens.
         if not (c and
                   e.comment == c.comment and
                   e.author == c.author and
                   e.branch == c.branch and
+                  e.branchpoints == c.branchpoints and
                   ((c.date[0] + c.date[1]) <=
                    (e.date[0] + e.date[1]) <=
                    (c.date[0] + c.date[1]) + fuzz) and
                   e.file not in files):
             c = changeset(comment=e.comment, author=e.author,
                           branch=e.branch, date=e.date, entries=[],
-                          mergepoint=getattr(e, 'mergepoint', None))
+                          mergepoint=getattr(e, 'mergepoint', None),
+                          branchpoints=getattr(e, 'branchpoints', set()))
             changesets.append(c)
             files = set()
             if len(changesets) % 100 == 0:
@@ -613,8 +645,17 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
         if c.branch in branches:
             p = branches[c.branch]
         else:
-            for f in c.entries:
-                p = max(p, versions.get((f.rcs, f.parent), None))
+            # first changeset on a new branch
+            # the parent is a changeset with the branch in its
+            # branchpoints such that it is the latest possible
+            # commit without any intervening, unrelated commits.
+
+            for candidate in xrange(i):
+                if c.branch not in changesets[candidate].branchpoints:
+                    if p is not None:
+                        break
+                    continue
+                p = candidate
 
         c.parents = []
         if p is not None:
@@ -753,6 +794,9 @@ def debugcvsps(ui, *args, **opts):
             ui.write('Branch: %s\n' % (cs.branch or 'HEAD'))
             ui.write('Tag%s: %s \n' % (['', 's'][len(cs.tags)>1],
                                   ','.join(cs.tags) or '(none)'))
+            branchpoints = getattr(cs, 'branchpoints', None)
+            if branchpoints:
+                ui.write('Branchpoints: %s \n' % ', '.join(branchpoints))
             if opts["parents"] and cs.parents:
                 if len(cs.parents)>1:
                     ui.write('Parents: %s\n' % (','.join([str(p.id) for p in cs.parents])))

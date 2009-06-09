@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # This is http://www.selenic.com/mercurial/bts/issue1148
+#     and http://www.selenic.com/mercurial/bts/issue1447
 
 "$TESTDIR/hghave" cvs || exit 80
 
@@ -62,3 +63,50 @@ hg convert src | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
 echo % Check the result
 
 hg -R src-hg glog --template '{rev} ({branches}) {desc} files: {files}\n'
+
+echo ""
+
+echo % issue 1447
+cvscall()
+{
+    echo cvs -f "$@"
+    cvs -f "$@"
+    sleep 1
+}
+
+cvsci()
+{
+    echo cvs -f ci "$@"
+    cvs -f ci "$@" >/dev/null 2>&1
+    sleep 1
+}
+
+cvscall -Q -d `pwd`/cvsmaster2 init >/dev/null 2>&1
+cd cvsmaster2
+export CVSROOT=`pwd`
+mkdir foo
+cd ..
+cvscall -Q co -d cvswork2 foo
+
+cd cvswork2
+echo foo > a.txt
+echo bar > b.txt
+cvscall -Q add a.txt b.txt
+cvsci -m "Initial commit"
+
+echo foo > b.txt
+cvsci -m "Fix b on HEAD"
+
+echo bar > a.txt
+cvsci -m "Small fix in a on HEAD"
+
+cvscall -Q tag -b BRANCH
+cvscall -Q up -P -rBRANCH
+
+echo baz > b.txt
+cvsci -m "Change on BRANCH in b"
+
+hg debugcvsps -x --parents foo | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/'
+
+cd ..
+

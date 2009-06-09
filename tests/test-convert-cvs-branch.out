@@ -51,3 +51,71 @@ o  5 () update tags files: .hgtags
 |/
 o  0 () Initial revision files: a b
 
+
+% issue 1447
+cvs -f -Q co -d cvswork2 foo
+cvs -f -Q add a.txt b.txt
+cvs -f ci -m Initial commit
+cvs -f ci -m Fix b on HEAD
+cvs -f ci -m Small fix in a on HEAD
+cvs -f -Q tag -b BRANCH
+cvs -f -Q up -P -rBRANCH
+cvs -f ci -m Change on BRANCH in b
+collecting CVS rlog
+5 log entries
+creating changesets
+4 changeset entries
+---------------------
+PatchSet 1 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Log:
+Initial commit
+
+Members: 
+	a.txt:INITIAL->1.1 
+	b.txt:INITIAL->1.1 
+
+---------------------
+PatchSet 2 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Branchpoints: BRANCH 
+Parent: 1
+Log:
+Fix b on HEAD
+
+Members: 
+	b.txt:1.1->1.2 
+
+---------------------
+PatchSet 3 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Branchpoints: BRANCH 
+Parent: 2
+Log:
+Small fix in a on HEAD
+
+Members: 
+	a.txt:1.1->1.2 
+
+---------------------
+PatchSet 4 
+Date:
+Author:
+Branch: BRANCH
+Tag: (none) 
+Parent: 3
+Log:
+Change on BRANCH in b
+
+Members: 
+	b.txt:1.2->1.2.2.1 
+

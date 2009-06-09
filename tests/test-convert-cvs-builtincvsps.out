@@ -104,7 +104,6 @@ creating changesets
 sorting...
 converting...
 0 ci2
-a
 c
 d
 % convert again with --filemap
@@ -142,13 +141,13 @@ o  6 (branch) funny
 |  ----------------------------
 |  log message files: a
 o  5 (branch) ci2 files: b/c
+
+o  4 () ci1 files: a b/c
 |
-| o  4 () ci1 files: a b/c
-| |
-| o  3 () update tags files: .hgtags
-| |
-| o  2 () ci0 files: b/c
-|/
+o  3 () update tags files: .hgtags
+|
+o  2 () ci0 files: b/c
+|
 | o  1 (INITIAL) import files:
 |/
 o  0 () Initial revision files: a b/c
@@ -157,22 +156,35 @@ o  0 () Initial revision files: a b/c
 collecting CVS rlog
 9 log entries
 creating changesets
-6 changeset entries
+8 changeset entries
 ---------------------
 PatchSet 1 
 Date:
 Author:
 Branch: HEAD
 Tag: (none) 
+Branchpoints: INITIAL 
 Log:
 Initial revision
 
 Members: 
 	a:INITIAL->1.1 
-	b/c:INITIAL->1.1 
 
 ---------------------
 PatchSet 2 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Branchpoints: INITIAL, branch 
+Log:
+Initial revision
+
+Members: 
+	b/c:INITIAL->1.1 
+
+---------------------
+PatchSet 3 
 Date:
 Author:
 Branch: INITIAL
@@ -185,7 +197,7 @@ Members:
 	b/c:1.1->1.1.1.1 
 
 ---------------------
-PatchSet 3 
+PatchSet 4 
 Date:
 Author:
 Branch: HEAD
@@ -197,7 +209,20 @@ Members:
 	b/c:1.1->1.2 
 
 ---------------------
-PatchSet 4 
+PatchSet 5 
+Date:
+Author:
+Branch: HEAD
+Tag: (none) 
+Branchpoints: branch 
+Log:
+ci1
+
+Members: 
+	a:1.1->1.2 
+
+---------------------
+PatchSet 6 
 Date:
 Author:
 Branch: HEAD
@@ -206,11 +231,10 @@ Log:
 ci1
 
 Members: 
-	a:1.1->1.2 
 	b/c:1.2->1.3 
 
 ---------------------
-PatchSet 5 
+PatchSet 7 
 Date:
 Author:
 Branch: branch
@@ -222,7 +246,7 @@ Members:
 	b/c:1.1->1.1.2.1 
 
 ---------------------
-PatchSet 6 
+PatchSet 8 
 Date:
 Author:
 Branch: branch

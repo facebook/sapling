@@ -94,7 +94,6 @@ cd ..
 
 echo % convert again
 hg convert src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
-hgcat a
 hgcat b/c
 
 echo % convert again with --filemap
