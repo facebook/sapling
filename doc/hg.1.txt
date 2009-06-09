@@ -10,7 +10,7 @@ hg - Mercurial source code management system
 
 SYNOPSIS
 --------
-'hg' [global option]... <command> [command/global option]... [argument]...
+*hg* 'command' ['option']... ['argument']...
 
 DESCRIPTION
 -----------
