@@ -584,6 +584,8 @@ class HgChangeReceiver(delta.Editor):
             extra = util.build_extra(rev.revnum, b, self.uuid, self.subdir)
             if not self.usebranchnames:
                 extra.pop('branch', None)
+            if b in endbranches:
+                extra['close'] = 1
             ctx = context.memctx(self.repo,
                                  (parent.node(), node.nullid),
                                  rev.message or ' ',
@@ -596,7 +598,9 @@ class HgChangeReceiver(delta.Editor):
             if (rev.revnum, b) not in self.revmap:
                 self.add_to_revmap(rev.revnum, b, new)
             if b in endbranches:
-                endbranches[b] = new
+                endbranches.pop(b)
+                bname = b or 'default'
+                self.ui.status('Marked branch %s as closed.\n' % bname)
 
     def commit_current_delta(self, tbdelta):
         if hasattr(self, '_exception_info'):  #pragma: no cover

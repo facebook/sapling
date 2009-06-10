@@ -56,7 +56,7 @@ class TestTags(test_util.TestBase):
                                             stupid=stupid)
         branches = set(repo[h] for h in repo.heads(closed=False))
         self.assert_('dummy' not in branches)
-        self.assertEqual(repo['dummy'], repo['tip'].parents()[0].parents()[0])
+        self.assertEqual(repo['dummy'], repo['tip'].parents()[0])
         extra = repo['tip'].extra().copy()
         extra.pop('convert_revision', None)
         self.assertEqual(extra, {'branch': 'dummy', 'close': '1'})
