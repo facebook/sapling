@@ -441,7 +441,7 @@ def checkbranch(hg_editor, r, branch):
             return None
     return branchtip
 
-def branches_in_paths(hge, paths, revnum, checkpath, listdir):
+def branches_in_paths(hge, tbdelta, paths, revnum, checkpath, listdir):
     '''Given a list of paths, return mapping of all branches touched
     to their branch path.
     '''
@@ -455,7 +455,7 @@ def branches_in_paths(hge, paths, revnum, checkpath, listdir):
             ln = hge._localname(p)
             # must check in branches_to_delete as well, because this runs after we
             # already updated the branch map
-            if ln in hge.branches or ln in hge.current.closebranches:
+            if ln in hge.branches or ln in tbdelta['branches'][1]:
                 branches[ln] = p
         else:
             paths_need_discovery.append(p)
@@ -514,7 +514,8 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
     # this server fails at replay
 
     hg_editor.save_tbdelta(tbdelta)
-    branches = branches_in_paths(hg_editor, r.paths, r.revnum, svn.checkpath, svn.list_files)
+    branches = branches_in_paths(hg_editor, tbdelta, r.paths, r.revnum,
+                                 svn.checkpath, svn.list_files)
     brpaths = branches.values()
     bad_branch_paths = {}
     for br, bp in branches.iteritems():
