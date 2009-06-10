@@ -309,3 +309,59 @@ def rebase(orig, ui, repo, **opts):
     return orig(ui, repo, dest=node.hex(target_rev.node()),
                 base=node.hex(sourcerev),
                 extrafn=extrafn)
+
+
+optionmap = {
+    'tagpaths': ('hgsubversion', 'tagpaths'),
+    'authors': ('hgsubversion', 'authormap'),
+    'filemap': ('hgsubversion', 'filemap'),
+    'stupid': ('hgsubversion', 'stupid'),
+    'defaulthost': ('hgsubversion', 'defaulthost'),
+    'defaultauthors': ('hgsubversion', 'defaultauthors'),
+    'usebranchnames': ('hgsubversion', 'usebranchnames'),
+}
+
+dontretain = { 'hgsubversion': set(['authormap', 'filemap']) }
+
+def clone(orig, ui, source, dest=None, **opts):
+    """
+    Some of the options listed below only apply to Subversion
+    %(target)s. See 'hg help %(extension)s' for more information on
+    them as well as other ways of customising the conversion process.
+    """
+
+    for opt, (section, name) in optionmap.iteritems():
+        if opt in opts and opts[opt]:
+            ui.setconfig(section, name, str(opts.pop(opt)))
+
+    # this must be kept in sync with mercurial/commands.py
+    srcrepo, dstrepo = hg.clone(hgcmdutil.remoteui(ui, opts), source, dest,
+                                pull=opts.get('pull'),
+                                stream=opts.get('uncompressed'),
+                                rev=opts.get('rev'),
+                                update=not opts.get('noupdate'))
+
+    if dstrepo.local() and srcrepo.capable('subversion'):
+        fd = dstrepo.opener("hgrc", "a", text=True)
+        for section in set(s for s, v in optionmap.itervalues()):
+            config = dict(ui.configitems(section))
+            for name in dontretain[section]:
+                config.pop(name, None)
+
+            if config:
+                fd.write('\n[%s]\n' % section)
+                map(fd.write, ('%s = %s\n' % p for p in config.iteritems()))
+
+
+def generic(orig, ui, repo, *args, **opts):
+    """
+    Subversion %(target)s can be used for %(command)s. See 'hg help
+    %(extension)s' for more on the conversion process.
+    """
+    for opt, (section, name) in optionmap.iteritems():
+        if opt in opts and opts[opt]:
+            if isinstance(repo, str):
+                ui.setconfig(section, name, opts.pop(opt))
+            else:
+                repo.ui.setconfig(section, name, opts.pop(opt))
+    return orig(ui, repo, *args, **opts)
