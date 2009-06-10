@@ -731,12 +731,10 @@ class HgChangeReceiver(delta.Editor):
             self.committags(tbdelta['tags'], rev, closebranches)
 
         # 4. close any branches that need it
-        for branch in tbdelta['branches'][1]:
-            # self.get_parent_revision(rev.revnum, branch)
-            ha = closebranches.get(branch)
-            if ha is None:
+        for branch, parent in closebranches.iteritems():
+            if parent is None:
                 continue
-            self.delbranch(branch, ha, rev)
+            self.delbranch(branch, parent, rev)
 
         self._save_metadata()
         self.clear_current_info()
