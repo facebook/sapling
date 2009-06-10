@@ -71,9 +71,19 @@ hg commit -d '9 0' --close-branch -m 'close this part branch too'
 echo '--- b branch should be inactive'
 hg branches
 hg branches -a
+hg heads b
+hg heads --closed b
 echo 'xxx4' >> b
 hg commit -d '9 0' -m 'reopen branch with a change'
 echo '--- branch b is back in action'
 hg branches -a
-hg heads -c
+echo '---- test heads listings'
 hg heads
+echo '% branch default'
+hg heads default
+echo '% branch a'
+hg heads a
+hg heads --active a
+echo '% branch b'
+hg heads b
+hg heads --closed b

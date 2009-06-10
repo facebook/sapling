@@ -361,7 +361,7 @@ def tags(web, req, tmpl):
 def branches(web, req, tmpl):
     b = web.repo.branchtags()
     tips = (web.repo[n] for t, n in web.repo.branchtags().iteritems())
-    open = set(web.repo[n].branch() for n in web.repo.heads(closed=False))
+    heads = web.repo.heads()
     parity = paritygen(web.stripecount)
     sortkey = lambda ctx: ('close' not in ctx.extra(), ctx.rev())
 
@@ -371,7 +371,12 @@ def branches(web, req, tmpl):
             if limit > 0 and count >= limit:
                 return
             count += 1
-            status = ctx.branch() in open and 'open' or 'closed'
+            if ctx.node() not in heads:
+                status = 'inactive'
+            elif not web.repo.branchheads(ctx.branch()):
+                status = 'closed'
+            else:
+                status = 'open'
             yield {'parity': parity.next(),
                    'branch': ctx.branch(),
                    'status': status,

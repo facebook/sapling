@@ -113,9 +113,25 @@ c                              6:589736a22561 (inactive)
 a                              5:d8cbc61dbaa6 (inactive)
 default                        0:19709c5a4e75 (inactive)
 a branch name much longer than the default justification used by branches 7:10ff5895aa57
+no open branch heads on branch b
+changeset:   12:2da6583810df
+branch:      b
+tag:         tip
+parent:      8:eebb944467c9
+user:        test
+date:        Thu Jan 01 00:00:09 1970 +0000
+summary:     close this part branch too
+
+changeset:   11:c84627f3c15d
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:09 1970 +0000
+summary:     prune bad branch
+
 --- branch b is back in action
 b                             13:6ac12926b8c3
 a branch name much longer than the default justification used by branches 7:10ff5895aa57
+---- test heads listings
 changeset:   13:6ac12926b8c3
 branch:      b
 tag:         tip
@@ -135,6 +151,21 @@ user:        test
 date:        Thu Jan 01 00:00:06 1970 +0000
 summary:     Adding d branch
 
+% branch default
+changeset:   0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
+
+% branch a
+changeset:   5:d8cbc61dbaa6
+branch:      a
+parent:      2:881fe2b92ad0
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+% branch b
 changeset:   13:6ac12926b8c3
 branch:      b
 tag:         tip
@@ -142,9 +173,16 @@ user:        test
 date:        Thu Jan 01 00:00:09 1970 +0000
 summary:     reopen branch with a change
 
-changeset:   7:10ff5895aa57
-branch:      a branch name much longer than the default justification used by branches
+changeset:   13:6ac12926b8c3
+branch:      b
+tag:         tip
 user:        test
-date:        Thu Jan 01 00:00:06 1970 +0000
-summary:     Adding d branch
+date:        Thu Jan 01 00:00:09 1970 +0000
+summary:     reopen branch with a change
+
+changeset:   11:c84627f3c15d
+branch:      b
+user:        test
+date:        Thu Jan 01 00:00:09 1970 +0000
+summary:     prune bad branch
 

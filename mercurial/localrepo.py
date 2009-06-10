@@ -1134,15 +1134,10 @@ class localrepository(repo.repository):
             finally:
                 wlock.release()
 
-    def heads(self, start=None, closed=False):
+    def heads(self, start=None):
         heads = self.changelog.heads(start)
-        def display(head):
-            if closed:
-                return True
-            extras = self.changelog.read(head)[5]
-            return ('close' not in extras)
         # sort the output in rev descending order
-        heads = [(-self.changelog.rev(h), h) for h in heads if display(h)]
+        heads = [(-self.changelog.rev(h), h) for h in heads]
         return [n for (r, n) in sorted(heads)]
 
     def branchheads(self, branch=None, start=None, closed=False):

@@ -532,7 +532,7 @@ branches |
 <tr class="parity1">
 <td class="age"><i>many years ago</i></td>
 <td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
-<td class="closed">default</td>
+<td class="inactive">default</td>
 <td class="link">
 <a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> |
 <a href="/log/a4f92ed23982?style=gitweb">changelog</a> |

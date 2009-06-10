@@ -446,8 +446,12 @@ def branches(ui, repo, active=False):
     """
     hexfunc = ui.debugflag and hex or short
     activebranches = [encoding.tolocal(repo[n].branch())
-                            for n in repo.heads(closed=False)]
-    branches = sorted([(tag in activebranches, repo.changelog.rev(node), tag)
+                            for n in repo.heads()]
+    def testactive(tag, node):
+        realhead = tag in activebranches
+        open = node in repo.branchheads(tag, closed=False)
+        return realhead and open
+    branches = sorted([(testactive(tag, node), repo.changelog.rev(node), tag)
                           for tag, node in repo.branchtags().items()],
                       reverse=True)
 
@@ -1302,17 +1306,22 @@ def heads(ui, repo, *branchrevs, **opts):
 
     With no arguments, show all repository head changesets.
 
-    If branch names or revisions are given this will show the heads of
-    the specified branches or the branches those revisions are tagged
-    with.
-
     Repository "heads" are changesets that don't have child
     changesets. They are where development generally takes place and
     are the usual targets for update and merge operations.
 
-    Branch heads are changesets that have a given branch tag, but have
-    no child changesets with that tag. They are usually where
-    development on a given branch takes place.
+    If one or more REV is given, the "branch heads" will be shown for
+    the named branch associated with that revision. The name of the
+    branch is called the revision's branch tag.
+
+    Branch heads are revisions on a given named branch that do not have
+    any children on the same branch. A branch head could be a true head
+    or it could be the last changeset on a branch before a new branch
+    was created. If none of the branch heads are true heads, the branch
+    is considered inactive.
+
+    If STARTREV is specified only those heads (or branch heads) that
+    are descendants of STARTREV will be displayed.
     """
     if opts.get('rev'):
         start = repo.lookup(opts['rev'])
@@ -1322,10 +1331,10 @@ def heads(ui, repo, *branchrevs, **opts):
     hideinactive, _heads = opts.get('active'), None
     if not branchrevs:
         # Assume we're looking repo-wide heads if no revs were specified.
-        heads = repo.heads(start, closed=closed)
+        heads = repo.heads(start)
     else:
         if hideinactive:
-            _heads = repo.heads(start, closed=closed)
+            _heads = repo.heads(start)
         heads = []
         visitedset = set()
         for branchrev in branchrevs:
@@ -1335,7 +1344,9 @@ def heads(ui, repo, *branchrevs, **opts):
             visitedset.add(branch)
             bheads = repo.branchheads(branch, start, closed=closed)
             if not bheads:
-                if branch != branchrev:
+                if not opts.get('rev'):
+                    ui.warn(_("no open branch heads on branch %s\n") % branch)
+                elif branch != branchrev:
                     ui.warn(_("no changes on branch %s containing %s are "
                               "reachable from %s\n")
                             % (branch, branchrev, opts.get('rev')))
@@ -3251,7 +3262,7 @@ table = {
           ('c', 'closed', False,
            _('show normal and closed heads')),
          ] + templateopts,
-         _('[-r REV] [REV]...')),
+         _('[-r STARTREV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),
     "identify|id":
         (identify,
