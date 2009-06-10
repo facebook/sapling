@@ -32,8 +32,8 @@ SYNTAX
 ------
 
 An ignore file is a plain text file consisting of a list of patterns,
-with one pattern per line. Empty lines are skipped. The "#" character
-is treated as a comment character, and the "\" character is treated as
+with one pattern per line. Empty lines are skipped. The "``#``" character
+is treated as a comment character, and the "``\``" character is treated as
 an escape character.
 
 Mercurial supports several pattern syntaxes. The default syntax used
@@ -54,9 +54,9 @@ The chosen syntax stays in effect when parsing all patterns that
 follow, until another syntax is selected.
 
 Neither glob nor regexp patterns are rooted. A glob-syntax pattern of
-the form "*.c" will match a file ending in ".c" in any directory, and
-a regexp pattern of the form "\.c$" will do the same. To root a regexp
-pattern, start it with "^".
+the form "``*.c``" will match a file ending in "``.c``" in any directory, and
+a regexp pattern of the form "``\.c$``" will do the same. To root a regexp
+pattern, start it with "``^``".
 
 EXAMPLE
 -------
