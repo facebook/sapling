@@ -149,6 +149,9 @@ class HgChangeReceiver(delta.Editor):
         if filemap and os.path.exists(filemap):
             self.readfilemap(filemap)
 
+    def hashes(self):
+        return dict((v, k) for (k, v) in self.revmap.iteritems())
+
     def fixdate(self, date):
         if date is not None:
             date = date.replace('T', ' ').replace('Z', '').split('.')[0]

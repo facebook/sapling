@@ -37,9 +37,8 @@ def parents(orig, ui, repo, *args, **opts):
     if not opts.get('svn', False):
         return orig(ui, repo, *args, **opts)
     hge = hg_delta_editor.HgChangeReceiver(repo)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    ha = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
+    hashes = hge.hashes()
+    ha = cmdutil.parentrev(ui, repo, hge, hashes)
     if ha.node() == node.nullid:
         raise hgutil.Abort('No parent svn revision!')
     displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
@@ -80,10 +79,8 @@ def outgoing(repo, dest=None, heads=None, force=False):
     # split off #rev; TODO implement --revision/#rev support
     svnurl, revs, checkout = hg.parseurl(dest.svnurl, heads)
     hge = hg_delta_editor.HgChangeReceiver(repo)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    return util.outgoing_revisions(repo.ui, repo, hge, svn_commit_hashes,
-                                   repo.parents()[0].node())
+    parent = repo.parents()[0].node()
+    return util.outgoing_revisions(repo.ui, repo, hge, hge.hashes(), parent)
 
 
 def diff(orig, ui, repo, *args, **opts):
@@ -91,20 +88,17 @@ def diff(orig, ui, repo, *args, **opts):
     """
     if not opts.get('svn', False) or opts.get('change', None):
         return orig(ui, repo, *args, **opts)
-    svn_commit_hashes = {}
     hge = hg_delta_editor.HgChangeReceiver(repo)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
+    hashes = hge.hashes()
     if not opts.get('rev', None):
         parent = repo.parents()[0]
-        o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes,
-                                      parent.node())
+        o_r = util.outgoing_revisions(ui, repo, hge, hashes, parent.node())
         if o_r:
             parent = repo[o_r[-1]].parents()[0]
         opts['rev'] = ['%s:.' % node.hex(parent.node()), ]
     node1, node2 = hgcmdutil.revpair(repo, opts['rev'])
-    baserev, _junk = svn_commit_hashes.get(node1, (-1, 'junk', ))
-    newrev, _junk = svn_commit_hashes.get(node2, (-1, 'junk', ))
+    baserev, _junk = hashes.get(node1, (-1, 'junk'))
+    newrev, _junk = hashes.get(node2, (-1, 'junk'))
     it = patch.diff(repo, node1, node2,
                     opts=patch.diffopts(ui, opts={'git': True,
                                                   'show_function': False,
@@ -138,9 +132,8 @@ def push(repo, dest, force, revs):
         return 1
     workingrev = repo.parents()[0]
     ui.status('searching for changes\n')
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    outgoing = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, workingrev.node())
+    hashes = hge.hashes()
+    outgoing = util.outgoing_revisions(ui, repo, hge, hashes, workingrev.node())
     if not (outgoing and len(outgoing)):
         ui.status('no changes found\n')
         return 0
@@ -156,13 +149,13 @@ def push(repo, dest, force, revs):
         svnbranch = repo[base_n].branch()
         oldtip = base_n
         samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
-                              and c.node() in svn_commit_hashes]
+                              and c.node() in hashes]
         while samebranchchildren:
             oldtip = samebranchchildren[0].node()
             samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
-                                  and c.node() in svn_commit_hashes]
+                                  and c.node() in hashes]
         # 2. Commit oldest revision that needs to be pushed
-        base_revision = svn_commit_hashes[base_n][0]
+        base_revision = hashes[base_n][0]
         try:
             cmdutil.commit_from_rev(ui, repo, old_ctx, hge, svnurl,
                                     base_revision, user, passwd)
@@ -204,7 +197,7 @@ def push(repo, dest, force, revs):
                         rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
         # TODO: stop constantly creating the HgChangeReceiver instances.
         hge = hg_delta_editor.HgChangeReceiver(hge.repo, svn.uuid)
-        svn_commit_hashes = dict(zip(hge.revmap.itervalues(), hge.revmap.iterkeys()))
+        hashes = hge.hashes()
     util.swap_out_encoding(old_encoding)
     return 0
 
@@ -312,9 +305,8 @@ def rebase(orig, ui, repo, **opts):
     extrafn = opts.get('svnextrafn', extrafn2)
     sourcerev = opts.get('svnsourcerev', repo.parents()[0].node())
     hge = hg_delta_editor.HgChangeReceiver(repo)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    o_r = util.outgoing_revisions(ui, repo, hge, svn_commit_hashes, sourcerev=sourcerev)
+    hashes = hge.hashes()
+    o_r = util.outgoing_revisions(ui, repo, hge, hashes, sourcerev=sourcerev)
     if not o_r:
         ui.status('Nothing to rebase!\n')
         return 0
@@ -329,8 +321,7 @@ def rebase(orig, ui, repo, **opts):
         for c in target_rev.children():
             exhausted_choices = True
             n = c.node()
-            if (n in svn_commit_hashes and
-                svn_commit_hashes[n][1] == svn_commit_hashes[p_n][1]):
+            if (n in hashes and hashes[n][1] == hashes[p_n][1]):
                 target_rev = c
                 exhausted_choices = False
                 break

@@ -19,10 +19,9 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
-    r, br = svn_commit_hashes[parent.node()]
+    hashes = hge.hashes()
+    parent = cmdutil.parentrev(ui, repo, hge, hashes)
+    r, br = hashes[parent.node()]
     if br == None:
         branchpath = 'trunk'
     else:
@@ -48,14 +47,13 @@ def info(ui, repo, hg_repo_path, **opts):
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
-                                 hge.revmap.iterkeys()))
-    parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
+    hashes = hge.hashes()
+    parent = cmdutil.parentrev(ui, repo, hge, hashes)
     pn = parent.node()
-    if pn not in svn_commit_hashes:
+    if pn not in hashes:
         ui.status('Not a child of an svn revision.\n')
         return 0
-    r, br = svn_commit_hashes[pn]
+    r, br = hashes[pn]
     subdir = parent.extra()['convert_revision'][40:].split('@')[0]
     if br == None:
         branchpath = '/trunk'
