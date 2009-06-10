@@ -102,3 +102,28 @@ def swap_out_encoding(new_encoding="UTF-8"):
     old = encoding.encoding
     encoding.encoding = new_encoding
     return old
+
+
+def aresamefiles(parentctx, childctx, files):
+    """Assuming all files exist in childctx and parentctx, return True
+    if none of them was changed in-between.
+    """
+    if parentctx == childctx:
+        return True
+    if parentctx.rev() > childctx.rev():
+        parentctx, childctx = childctx, parentctx
+
+    def selfandancestors(selfctx):
+        yield selfctx
+        for ctx in selfctx.ancestors():
+            yield ctx
+
+    files = dict.fromkeys(files)
+    for pctx in selfandancestors(childctx):
+        if pctx.rev() <= parentctx.rev():
+            return True
+        for f in pctx.files():
+            if f in files:
+                return False
+    # parentctx is not an ancestor of childctx, files are unrelated
+    return False

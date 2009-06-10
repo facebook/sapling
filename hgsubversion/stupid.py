@@ -321,7 +321,7 @@ def getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx):
         if sourcectx is None:
             continue
         sources = [s[1] for s in copies]
-        if not hg_editor.aresamefiles(sourcectx, parentctx, sources):
+        if not util.aresamefiles(sourcectx, parentctx, sources):
             continue
         hgcopies.update(copies)
     return hgcopies

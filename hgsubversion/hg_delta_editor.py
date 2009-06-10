@@ -725,30 +725,6 @@ class HgChangeReceiver(delta.Editor):
     def authors_file(self):
         return os.path.join(self.meta_data_dir, 'authors')
 
-    def aresamefiles(self, parentctx, childctx, files):
-        """Assuming all files exist in childctx and parentctx, return True
-        if none of them was changed in-between.
-        """
-        if parentctx == childctx:
-            return True
-        if parentctx.rev() > childctx.rev():
-            parentctx, childctx = childctx, parentctx
-
-        def selfandancestors(selfctx):
-            yield selfctx
-            for ctx in selfctx.ancestors():
-                yield ctx
-
-        files = dict.fromkeys(files)
-        for pctx in selfandancestors(childctx):
-            if pctx.rev() <= parentctx.rev():
-                return True
-            for f in pctx.files():
-                if f in files:
-                    return False
-        # parentctx is not an ancestor of childctx, files are unrelated
-        return False
-
     # Here come all the actual editor methods
 
     @ieditor
@@ -847,7 +823,7 @@ class HgChangeReceiver(delta.Editor):
                                                 branch)
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
-                if self.aresamefiles(parentctx, ctx, [from_file]):
+                if util.aresamefiles(parentctx, ctx, [from_file]):
                     self.copies[path] = from_file
 
     @ieditor
@@ -906,7 +882,7 @@ class HgChangeReceiver(delta.Editor):
             parentid = self.get_parent_revision(self.current_rev.revnum, branch)
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
-                if self.aresamefiles(parentctx, cp_f_ctx, copies.values()):
+                if util.aresamefiles(parentctx, cp_f_ctx, copies.values()):
                     self.copies.update(copies)
         return path
 
