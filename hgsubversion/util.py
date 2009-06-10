@@ -32,27 +32,6 @@ def normalize_url(svnurl):
     return url
 
 
-REVMAP_FILE_VERSION = 1
-def parse_revmap(revmap_filename):
-    revmap = {}
-    f = open(revmap_filename)
-    ver = int(f.readline())
-    if ver == 1:
-        for l in f:
-            revnum, node_hash, branch = l.split(' ', 2)
-            if branch == '\n':
-                branch = None
-            else:
-                branch = branch[:-1]
-            revmap[int(revnum), branch] = node.bin(node_hash)
-        f.close()
-    else: #pragma: no cover
-        print ('Your revmap was made by a newer version of hgsubversion.'
-               ' Please upgrade.')
-        raise NotImplementedError
-    return revmap
-
-
 class PrefixMatch(object):
     def __init__(self, prefix):
         self.p = prefix

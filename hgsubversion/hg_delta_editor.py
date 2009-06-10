@@ -66,12 +66,6 @@ def ieditor(fn):
 
 
 class HgChangeReceiver(delta.Editor):
-    def add_to_revmap(self, revnum, branch, node_hash):
-        f = open(self.revmap_file, 'a')
-        f.write(str(revnum) + ' ' + node.hex(node_hash) + ' ' + (branch or '') + '\n')
-        f.flush()
-        f.close()
-        self.revmap[revnum, branch] = node_hash
 
     def last_known_revision(self):
         """Obtain the highest numbered -- i.e. latest -- revision known.
@@ -99,15 +93,7 @@ class HgChangeReceiver(delta.Editor):
             os.makedirs(self.meta_data_dir)
         self._set_uuid(uuid)
         # TODO: validate subdir too
-
-        if os.path.isfile(self.revmap_file):
-            self.revmap = util.parse_revmap(self.revmap_file)
-        else:
-            self.revmap = {}
-            f = open(self.revmap_file, 'w')
-            f.write('%s\n' % util.REVMAP_FILE_VERSION)
-            f.flush()
-            f.close()
+        self.revmap = maps.RevMap(repo)
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
         authors = self.ui.config('hgsubversion', 'authormap')
@@ -572,7 +558,7 @@ class HgChangeReceiver(delta.Editor):
                                  extra)
             new = self.repo.commitctx(ctx)
             if (rev.revnum, b) not in self.revmap:
-                self.add_to_revmap(rev.revnum, b, new)
+                self.revmap[rev.revnum, b] = new
             if b in endbranches:
                 endbranches.pop(b)
                 bname = b or 'default'
@@ -672,7 +658,7 @@ class HgChangeReceiver(delta.Editor):
             new_hash = self.repo.commitctx(current_ctx)
             util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
-                self.add_to_revmap(rev.revnum, branch, new_hash)
+                self.revmap[rev.revnum, branch] = new_hash
 
         # 2. handle branches that need to be committed without any files
         for branch in self.commit_branches_empty:
@@ -700,7 +686,7 @@ class HgChangeReceiver(delta.Editor):
             new_hash = self.repo.commitctx(current_ctx)
             util.describe_commit(self.ui, new_hash, branch)
             if (rev.revnum, branch) not in self.revmap:
-                self.add_to_revmap(rev.revnum, branch, new_hash)
+                self.revmap[rev.revnum, branch] = new_hash
 
         # 3. handle tags
         if tbdelta['tags'][0] or tbdelta['tags'][1]:
@@ -789,10 +775,6 @@ class HgChangeReceiver(delta.Editor):
 
     uuid = property(_get_uuid, _set_uuid, None,
                     'Error-checked UUID of source Subversion repository.')
-
-    @property
-    def revmap_file(self):
-        return os.path.join(self.meta_data_dir, 'rev_map')
 
     @property
     def meta_data_dir(self):

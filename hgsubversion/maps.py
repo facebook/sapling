@@ -2,6 +2,7 @@
 
 import os
 from mercurial import util as hgutil
+from mercurial import node
 
 class AuthorMap(dict):
     '''A mapping from Subversion-style authors to Mercurial-style
@@ -91,3 +92,46 @@ class AuthorMap(dict):
         else:
             # Mercurial incorrectly splits at e.g. '.', so we roll our own.
             return author.rsplit('@', 1)[0]
+
+
+class RevMap(dict):
+
+    VERSION = 1
+
+    def __init__(self, repo):
+        dict.__init__(self)
+        self.path = os.path.join(repo.path, 'svn', 'rev_map')
+        if os.path.isfile(self.path):
+            self._load()
+        else:
+            self._write()
+
+    def _load(self):
+        f = open(self.path)
+        ver = int(f.readline())
+        if ver != self.VERSION:
+            print 'revmap too new -- please upgrade'
+            raise NotImplementedError
+        for l in f:
+            revnum, hash, branch = l.split(' ', 2)
+            if branch == '\n':
+                branch = None
+            else:
+                branch = branch[:-1]
+            dict.__setitem__(self, (int(revnum), branch), node.bin(hash))
+        f.close()
+
+    def _write(self):
+        f = open(self.path, 'w')
+        f.write('%s\n' % self.VERSION)
+        f.flush()
+        f.close()
+
+    def __setitem__(self, key, hash):
+        revnum, branch = key
+        f = open(self.path, 'a')
+        b = branch or ''
+        f.write(str(revnum) + ' ' + node.hex(hash) + ' ' + b + '\n')
+        f.flush()
+        f.close()
+        dict.__setitem__(self, (revnum, branch), hash)

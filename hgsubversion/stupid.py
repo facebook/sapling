@@ -616,7 +616,7 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
         branch = extra.get('branch', None)
         if not branch in hg_editor.branches:
             hg_editor.branches[branch] = None, 0, r.revnum
-        hg_editor.add_to_revmap(r.revnum, b, ha)
+        hg_editor.revmap[r.revnum, b] = ha
         util.describe_commit(ui, ha, b)
 
     # These are branches with an 'R' status in svn log. This means they were
