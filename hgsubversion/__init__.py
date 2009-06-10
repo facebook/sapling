@@ -50,6 +50,7 @@ wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
     ]),
     'pull': (True, 'sources', True, True, []),
     'push': (True, 'destinations', True, True, []),
+    'incoming': (False, 'sources', True, True, []),
     'clone': (False, 'sources', True, True, [
         ('T', 'tagpaths', '',
          'list of paths to search for tags in Subversion repositories'),

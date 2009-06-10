@@ -68,12 +68,6 @@ def generate_repo_class(ui, repo):
         def findoutgoing(self, remote, base=None, heads=None, force=False):
             return wrappers.outgoing(repo, remote, heads, force)
 
-        @remotesvn
-        def findcommonincoming(self, remote, base=None, heads=None,
-                               force=False):
-            raise hgutil.Abort('cannot display incoming changes from '
-                               'Subversion repositories, yet')
-
     repo.__class__ = svnlocalrepo
 
 class svnremoterepo(mercurial.repo.repository):

@@ -13,48 +13,6 @@ import utility_commands
 import svnexternals
 
 
-def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
-             tag_locations='tags', authors=None, filemap=None, **opts):
-    """show incoming revisions from Subversion
-    """
-    svn_url = util.normalize_url(svn_url)
-
-    initializing_repo = False
-    user, passwd = util.getuserpass(opts)
-    svn = svnwrap.SubversionRepo(svn_url, user, passwd)
-    author_host = ui.config('hgsubversion', 'defaulthost', svn.uuid)
-    tag_locations = tag_locations.split(',')
-    hg_editor = hg_delta_editor.HgChangeReceiver(hg_repo_path,
-                                                 ui_=ui,
-                                                 subdir=svn.subdir,
-                                                 author_host=author_host,
-                                                 tag_locations=tag_locations,
-                                                 authors=authors,
-                                                 filemap=filemap,
-                                                 uuid=svn.uuid)
-    start = max(hg_editor.last_known_revision(), skipto_rev)
-    initializing_repo = (hg_editor.last_known_revision() <= 0)
-
-    if initializing_repo and start > 0:
-        raise hgutil.Abort('Revision skipping at repository initialization '
-                           'remains unimplemented.')
-
-    rev_stuff = (('revision', 'revnum'),
-                 ('user', 'author'),
-                 ('date', 'date'),
-                 ('message', 'message')
-                )
-
-    ui.status('incoming changes from %s\n' % svn_url)
-
-    for r in svn.revisions(start=start):
-        ui.status('\n')
-        for label, attr in rev_stuff:
-            l1 = label+':'
-            ui.status('%s%s\n' % (l1.ljust(13),
-                                  str(r.__getattribute__(attr)).strip(), ))
-
-
 def verify(ui, repo, *args, **opts):
     '''verify current revision against Subversion repository
     '''
@@ -249,7 +207,6 @@ table = {
     'update': update,
     'help': help,
     'rebuildmeta': rebuildmeta,
-    'incoming': incoming,
     'updateexternals': svnexternals.updateexternals,
     'verify': verify,
 }

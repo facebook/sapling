@@ -24,6 +24,13 @@ pullfuns = {
     False: stupidmod.convert_rev,
 }
 
+revmeta = [
+    ('revision', 'revnum'),
+    ('user', 'author'),
+    ('date', 'date'),
+    ('message', 'message'),
+]
+
 def parents(orig, ui, repo, *args, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
     """
@@ -38,6 +45,31 @@ def parents(orig, ui, repo, *args, **opts):
     displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
     displayer.show(ha)
     return 0
+
+
+def incoming(orig, ui, repo, source='default', **opts):
+    """show incoming revisions from Subversion
+    """
+
+    source, revs, checkout = hg.parseurl(ui.expandpath(source))
+    other = hg.repository(ui, source)
+    if 'subversion' not in other.capabilities:
+        return orig(ui, repo, source, **opts)
+
+    user, passwd = util.getuserpass(opts)
+    svn = svnwrap.SubversionRepo(other.svnurl, user, passwd)
+    hg_editor = hg_delta_editor.HgChangeReceiver(repo=repo)
+    start = hg_editor.last_known_revision()
+
+    ui.status('incoming changes from %s\n' % other.svnurl)
+    for r in svn.revisions(start=start):
+        ui.status('\n')
+        for label, attr in revmeta:
+            l1 = label + ':'
+            val = str(getattr(r, attr)).strip()
+            if not ui.verbose:
+                val = val.split('\n')[0]
+            ui.status('%s%s\n' % (l1.ljust(13), val))
 
 
 def outgoing(repo, dest=None, heads=None, force=False):
