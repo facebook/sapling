@@ -582,6 +582,8 @@ class HgChangeReceiver(delta.Editor):
                                           islink=False, isexec=False,
                                           copied=None)
             extra = util.build_extra(rev.revnum, b, self.uuid, self.subdir)
+            if not self.usebranchnames:
+                extra.pop('branch', None)
             ctx = context.memctx(self.repo,
                                  (parent.node(), node.nullid),
                                  rev.message or ' ',
