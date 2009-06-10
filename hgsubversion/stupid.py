@@ -547,69 +547,77 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
     date = hg_editor.fixdate(r.date)
     check_deleted_branches = set()
     for b in branches:
+
         parentctx = hg_editor.repo[hg_editor.get_parent_revision(r.revnum, b)]
         if parentctx.branch() != (b or 'default'):
             check_deleted_branches.add(b)
+
         kind = svn.checkpath(branches[b], r.revnum)
         if kind != 'd':
             # Branch does not exist at this revision. Get parent revision and
             # remove everything.
             deleted_branches[b] = parentctx.node()
             continue
-        else:
-            try:
-                files_touched, filectxfn2 = diff_branchrev(
-                    ui, svn, hg_editor, b, r, parentctx)
-            except BadPatchApply, e:
-                # Either this revision or the previous one does not exist.
-                ui.status("Fetching entire revision: %s.\n" % e.args[0])
-                files_touched, filectxfn2 = fetch_branchrev(
-                    svn, hg_editor, b, branches[b], r, parentctx)
 
-            externals = fetch_externals(svn, branches[b], r, parentctx)
-            if externals is not None:
-                files_touched.append('.hgsvnexternals')
+        try:
+            files_touched, filectxfn2 = diff_branchrev(
+                                           ui, svn, hg_editor, b, r, parentctx)
+        except BadPatchApply, e:
+            # Either this revision or the previous one does not exist.
+            ui.status("Fetching entire revision: %s.\n" % e.args[0])
+            files_touched, filectxfn2 = fetch_branchrev(
+                svn, hg_editor, b, branches[b], r, parentctx)
 
-            def filectxfn(repo, memctx, path):
-                if path == '.hgsvnexternals':
-                    if not externals:
-                        raise IOError()
-                    return context.memfilectx(path=path, data=externals.write(),
-                                              islink=False, isexec=False, copied=None)
-                for bad in bad_branch_paths[b]:
-                    if path.startswith(bad):
-                        raise IOError()
-                return filectxfn2(repo, memctx, path)
+        externals = fetch_externals(svn, branches[b], r, parentctx)
+        if externals is not None:
+            files_touched.append('.hgsvnexternals')
 
-        extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
+        def filectxfn(repo, memctx, path):
+            if path == '.hgsvnexternals':
+                if not externals:
+                    raise IOError()
+                return context.memfilectx(path=path, data=externals.write(),
+                                          islink=False, isexec=False, copied=None)
+            for bad in bad_branch_paths[b]:
+                if path.startswith(bad):
+                    raise IOError()
+            return filectxfn2(repo, memctx, path)
+
         if '' in files_touched:
             files_touched.remove('')
         excluded = [f for f in files_touched
-                    if not hg_editor._is_file_included(f)]
+                            if not hg_editor._is_file_included(f)]
         for f in excluded:
             files_touched.remove(f)
-        if parentctx.node() != node.nullid or files_touched:
-            for f in files_touched:
-                if f:
-                    # this is a case that really shouldn't ever happen, it means something
-                    # is very wrong
-                    assert f[0] != '/'
-            current_ctx = context.memctx(hg_editor.repo,
-                                         [parentctx.node(), revlog.nullid],
-                                         r.message or util.default_commit_msg,
-                                         files_touched,
-                                         filectxfn,
-                                         hg_editor.authors[r.author],
-                                         date,
-                                         extra)
-            branch = extra.get('branch', None)
-            if not hg_editor.usebranchnames:
-                extra.pop('branch', None)
-            ha = hg_editor.repo.commitctx(current_ctx)
-            if not branch in hg_editor.branches:
-                hg_editor.branches[branch] = None, 0, r.revnum
-            hg_editor.add_to_revmap(r.revnum, b, ha)
-            util.describe_commit(ui, ha, b)
+
+        if parentctx.node() == node.nullid and not files_touched:
+            continue
+
+        for f in files_touched:
+            if f:
+                # this is a case that really shouldn't ever happen, it means
+                # something is very wrong
+                assert f[0] != '/'
+
+        extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
+        if not hg_editor.usebranchnames:
+            extra.pop('branch', None)
+
+        current_ctx = context.memctx(hg_editor.repo,
+                                     [parentctx.node(), revlog.nullid],
+                                     r.message or util.default_commit_msg,
+                                     files_touched,
+                                     filectxfn,
+                                     hg_editor.authors[r.author],
+                                     date,
+                                     extra)
+        ha = hg_editor.repo.commitctx(current_ctx)
+
+        branch = extra.get('branch', None)
+        if not branch in hg_editor.branches:
+            hg_editor.branches[branch] = None, 0, r.revnum
+        hg_editor.add_to_revmap(r.revnum, b, ha)
+        util.describe_commit(ui, ha, b)
 
     # These are branches with an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.
