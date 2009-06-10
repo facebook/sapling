@@ -767,54 +767,48 @@ class HgChangeReceiver(delta.Editor):
                     % (filemapfile, line.rstrip()))
         f.close()
 
-    def meta_data_dir(self):
-        return os.path.join(self.path, '.hg', 'svn')
-    meta_data_dir = property(meta_data_dir)
-
-    def meta_file_named(self, name):
-        return os.path.join(self.meta_data_dir, name)
-
-    def revmap_file(self):
-        return self.meta_file_named('rev_map')
-    revmap_file = property(revmap_file)
-
     def _get_uuid(self):
-        return open(self.meta_file_named('uuid')).read()
+        return open(os.path.join(self.meta_data_dir, 'uuid')).read()
 
     def _set_uuid(self, uuid):
         if not uuid:
-            return self._get_uuid()
-        elif os.path.isfile(self.meta_file_named('uuid')):
+            return
+        elif os.path.isfile(os.path.join(self.meta_data_dir, 'uuid')):
             stored_uuid = self._get_uuid()
             assert stored_uuid
             if uuid != stored_uuid:
                 raise hgutil.Abort('unable to operate on unrelated repository')
-            else:
-                return stored_uuid
         else:
             if uuid:
-                f = open(self.meta_file_named('uuid'), 'w')
+                f = open(os.path.join(self.meta_data_dir, 'uuid'), 'w')
                 f.write(uuid)
                 f.flush()
                 f.close()
-                return self._get_uuid()
             else:
                 raise hgutil.Abort('unable to operate on unrelated repository')
 
     uuid = property(_get_uuid, _set_uuid, None,
                     'Error-checked UUID of source Subversion repository.')
 
+    @property
+    def revmap_file(self):
+        return os.path.join(self.meta_data_dir, 'rev_map')
+
+    @property
+    def meta_data_dir(self):
+        return os.path.join(self.path, '.hg', 'svn')
+
+    @property
     def branch_info_file(self):
-        return self.meta_file_named('branch_info')
-    branch_info_file = property(branch_info_file)
+        return os.path.join(self.meta_data_dir, 'branch_info')
 
+    @property
     def tag_locations_file(self):
-        return self.meta_file_named('tag_locations')
-    tag_locations_file = property(tag_locations_file)
+        return os.path.join(self.meta_data_dir, 'tag_locations')
 
+    @property
     def authors_file(self):
-        return self.meta_file_named('authors')
-    authors_file = property(authors_file)
+        return os.path.join(self.meta_data_dir, 'authors')
 
     def aresamefiles(self, parentctx, childctx, files):
         """Assuming all files exist in childctx and parentctx, return True
