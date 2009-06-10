@@ -76,7 +76,7 @@ class UtilityTests(test_util.TestBase):
                              {'branch': 'localbranch', })
         new = self.repo.commitctx(ctx)
         hg.update(self.repo, new)
-        wrappers.parent(lambda x, y: None, u, self.repo, svn=True)
+        wrappers.parents(lambda x, y: None, u, self.repo, svn=True)
         actual = u.popbuffer()
         self.assertEqual(actual,
                          'changeset:   3:4e256962fc5d\n'
@@ -88,19 +88,19 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'default')
         # Make sure styles work
         u.pushbuffer()
-        wrappers.parent(lambda x, y: None, u, self.repo, svn=True, style='compact')
+        wrappers.parents(lambda x, y: None, u, self.repo, svn=True, style='compact')
         actual = u.popbuffer()
         self.assertEqual(actual,
                          '4:1   1083037b18d8   2008-10-08 01:39 +0000   durin\n'
                          '  Add gamma on trunk.\n\n')
         # custom templates too
         u.pushbuffer()
-        wrappers.parent(lambda x, y: None, u, self.repo, svn=True, template='{node}\n')
+        wrappers.parents(lambda x, y: None, u, self.repo, svn=True, template='{node}\n')
         actual = u.popbuffer()
         self.assertEqual(actual, '1083037b18d85cd84fa211c5adbaeff0fea2cd9f\n')
 
         u.pushbuffer()
-        wrappers.parent(lambda x, y: None, u, self.repo, svn=True)
+        wrappers.parents(lambda x, y: None, u, self.repo, svn=True)
         actual = u.popbuffer()
         self.assertEqual(actual,
                          'changeset:   4:1083037b18d8\n'

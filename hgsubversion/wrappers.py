@@ -24,7 +24,7 @@ pullfuns = {
     False: stupidmod.convert_rev,
 }
 
-def parent(orig, ui, repo, *args, **opts):
+def parents(orig, ui, repo, *args, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
     """
     if not opts.get('svn', False):

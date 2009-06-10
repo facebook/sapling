@@ -36,55 +36,57 @@ import cmdutil
 import svnrepo
 import wrappers
 
-svnopts = (('', 'stupid', None, 'use slower, but more compatible, protocol for '
-            'Subversion'),)
+svnopts = [
+    ('', 'stupid', None,
+     'use slower, but more compatible, protocol for Subversion'),
+]
 
-svncloneopts = (('T', 'tagpaths', '', 'list of path s to search for tags '
-                 'in Subversion repositories'),
-                ('A', 'authors', '', 'path to file mapping Subversion '
-                 'usernames to Mercurial authors'),
-                ('', 'filemap', '', 'path to file containing rules for '
-                 'remapping Subversion repository paths'),)
-
-wraptype = {False: wrappers.generic, True: wrappers.clone}
+wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
+    'parents': (False, None, False, False, [
+        ('', 'svn', None, 'show parent svn revision instead'),
+    ]),
+    'diff': (False, None, False, False, [
+        ('', 'svn', None, 'show svn diffs against svn parent'),
+    ]),
+    'pull': (True, 'sources', True, True, []),
+    'push': (True, 'destinations', True, True, []),
+    'clone': (False, 'sources', True, True, [
+        ('T', 'tagpaths', '',
+         'list of paths to search for tags in Subversion repositories'),
+        ('A', 'authors', '',
+         'file mapping Subversion usernames to Mercurial authors'),
+        ('', 'filemap', '',
+         'file containing rules for remapping Subversion repository paths'),
+    ]),
+}
 
 def uisetup(ui):
-    """Do our UI setup.
-
-    Does the following wrappings:
-     * parent -> utility_commands.parent
-     * outgoing -> utility_commands.outgoing
-     """
-    entry = extensions.wrapcommand(commands.table, 'parents',
-                                   wrappers.parent)
-    entry[1].append(('', 'svn', None, "show parent svn revision instead"))
-    entry = extensions.wrapcommand(commands.table, 'diff',
-                                   wrappers.diff)
-    entry[1].append(('', 'svn', None,
-                     "show svn-style diffs, default against svn parent"))
+    """insert command wrappers for a bunch of commands"""
 
     docvals = {'extension': 'hgsubversion'}
-    for command, target, isclone in [('clone', 'sources', True),
-                                     ('pull', 'sources', False),
-                                     ('push', 'destinations', False)]:
+    for cmd, (generic, target, fixdoc, ppopts, opts) in wrapcmds.iteritems():
 
-        docvals['command'] = command
-        docvals['Command'] = command.capitalize()
-        docvals['target'] = target
-        doc = wrappers.generic.__doc__.strip() % docvals
-        fn = getattr(commands, command)
-        fn.__doc__ = fn.__doc__.rstrip() + '\n\n    ' + doc
+        if fixdoc:
+            docvals['command'] = cmd
+            docvals['Command'] = cmd.capitalize()
+            docvals['target'] = target
+            doc = wrappers.generic.__doc__.strip() % docvals
+            fn = getattr(commands, cmd)
+            fn.__doc__ = fn.__doc__.rstrip() + '\n\n    ' + doc
 
-        wrapped = wraptype[isclone]
-        entry = extensions.wrapcommand(commands.table, command, wrapped)
-        entry[1].extend(svnopts)
-        if isclone: entry[1].extend(svncloneopts)
+        wrapped = generic and wrappers.generic or getattr(wrappers, cmd)
+        entry = extensions.wrapcommand(commands.table, cmd, wrapped)
+        if ppopts:
+            entry[1].extend(svnopts)
+        if opts:
+            entry[1].extend(opts)
 
     try:
         rebase = extensions.find('rebase')
-        if rebase:
-            entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', wrappers.rebase)
-            entry[1].append(('', 'svn', None, 'automatic svn rebase', ))
+        if not rebase:
+            return
+        entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', wrappers.rebase)
+        entry[1].append(('', 'svn', None, 'automatic svn rebase'))
     except:
         pass
 
