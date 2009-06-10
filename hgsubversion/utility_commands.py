@@ -18,8 +18,7 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     url = util.normalize_url(repo.ui.config('paths', 'default'))
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
-    hge = hg_delta_editor.HgChangeReceiver(path=hg_repo_path, repo=repo,
-                                           ui_=ui, uuid=svn.uuid)
+    hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)
@@ -48,8 +47,7 @@ def info(ui, repo, hg_repo_path, **opts):
     url = util.normalize_url(repo.ui.config('paths', 'default'))
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
-    hge = hg_delta_editor.HgChangeReceiver(path=hg_repo_path, repo=repo,
-                                           ui_=ui, uuid=svn.uuid)
+    hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
     svn_commit_hashes = dict(zip(hge.revmap.itervalues(),
                                  hge.revmap.iterkeys()))
     parent = cmdutil.parentrev(ui, repo, hge, svn_commit_hashes)

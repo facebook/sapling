@@ -85,30 +85,34 @@ class HgChangeReceiver(delta.Editor):
         except ValueError:
             return 0
 
-    def __init__(self, repo=None, path=None, ui_=None,
-                 subdir='', author_host='',
-                 tag_locations=[],
-                 authors=None, filemap=None, uuid=None):
+    def __init__(self, repo, uuid=None, subdir=''):
         """path is the path to the target hg repo.
 
         subdir is the subdirectory of the edits *on the svn server*.
         It is needed for stripping paths off in certain cases.
         """
-        if repo and repo.ui and not ui_:
-            ui_ = repo.ui
-        if not ui_:
-            ui_ = ui.ui()
-        self.ui = ui_
-        self.__setup_repo(uuid, repo, path, subdir)
+        self.ui = repo.ui
+        self.repo = repo
+        self.path = os.path.normpath(repo.join('..'))
 
-        if not author_host:
-            author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
-        if not authors:
-            authors = self.ui.config('hgsubversion', 'authormap')
-        if not filemap:
-            filemap = self.ui.config('hgsubversion', 'filemap')
-        if not tag_locations:
-            tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
+        if not os.path.isdir(self.meta_data_dir):
+            os.makedirs(self.meta_data_dir)
+        self._set_uuid(uuid)
+        # TODO: validate subdir too
+
+        if os.path.isfile(self.revmap_file):
+            self.revmap = util.parse_revmap(self.revmap_file)
+        else:
+            self.revmap = {}
+            f = open(self.revmap_file, 'w')
+            f.write('%s\n' % util.REVMAP_FILE_VERSION)
+            f.flush()
+            f.close()
+
+        author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
+        authors = self.ui.config('hgsubversion', 'authormap')
+        filemap = self.ui.config('hgsubversion', 'filemap')
+        tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                   'usebranchnames', True)
 
@@ -153,37 +157,6 @@ class HgChangeReceiver(delta.Editor):
         else:
             date = self.lastdate
         return date
-
-    def __setup_repo(self, uuid, repo, path, subdir):
-        """Verify the repo is going to work out for us.
-
-        This method will fail an assertion if the repo exists but doesn't have
-        the Subversion metadata.
-        """
-        if repo:
-            self.repo = repo
-            self.path = os.path.normpath(self.repo.join('..'))
-        elif path:
-            self.repo = hg.repository(self.ui, path,
-                                      create=(not os.path.exists(path)))
-            self.path = os.path.normpath(os.path.join(path, '..'))
-        else: #pragma: no cover
-            raise TypeError("editor requires either a path or a repository "
-                            "specified")
-
-        if not os.path.isdir(self.meta_data_dir):
-            os.makedirs(self.meta_data_dir)
-        self._set_uuid(uuid)
-        # TODO: validate subdir too
-
-        if os.path.isfile(self.revmap_file):
-            self.revmap = util.parse_revmap(self.revmap_file)
-        else:
-            self.revmap = {}
-            f = open(self.revmap_file, 'w')
-            f.write('%s\n' % util.REVMAP_FILE_VERSION)
-            f.flush()
-            f.close()
 
     def clear_current_info(self):
         '''Clear the info relevant to a replayed revision so that the next

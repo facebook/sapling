@@ -38,18 +38,16 @@ def _do_case(self, name, stupid):
     srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))
     destbi = pickle.load(open(os.path.join(dest.path, 'svn', 'branch_info')))
     self.assertEqual(sorted(srcbi.keys()), sorted(destbi.keys()))
+    revkeys = hg_delta_editor.HgChangeReceiver(dest).revmap.keys()
     for branch in destbi:
         srcinfo = srcbi[branch]
         destinfo = destbi[branch]
-        hge = hg_delta_editor.HgChangeReceiver(path=os.path.dirname(dest.path),
-                                                   repo=dest,
-                                                   ui_=u)
         if destinfo[:2] == (None, 0):
             self.assert_(srcinfo[2] <= destinfo[2])
             self.assertEqual(srcinfo[0], destinfo[0])
         else:
             pr = sorted(filter(lambda x: x[1] == srcinfo[0] and x[0] <= srcinfo[1],
-                        hge.revmap.keys()), reverse=True)[0][0]
+                        revkeys), reverse=True)[0][0]
             self.assertEqual(pr, destinfo[1])
             self.assertEqual(srcinfo[2], destinfo[2])
 
