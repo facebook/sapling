@@ -19,10 +19,10 @@ cat: a: No such file or directory
 adding a
 adding b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-abort: cannot back out change on a different branch
+abort: cannot backout change on a different branch
 adding c
 created new head
-abort: cannot back out change on a different branch
+abort: cannot backout change on a different branch
 # backout with merge
 adding a
 reverting a
@@ -54,7 +54,7 @@ created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 # backout of merge should fail
-abort: cannot back out a merge changeset without --parent
+abort: cannot backout a merge changeset without --parent
 # backout of merge with bad parent should fail
 abort: cb9a9f314b8b is not a parent of b2f3bb92043e
 # backout of non-merge with parent should fail

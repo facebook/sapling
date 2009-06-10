@@ -151,8 +151,8 @@ list of commands:
 
  add          add the specified files on the next commit
  addremove    add all new files, delete all missing files
- annotate     show changeset information per file line
- archive      create unversioned archive of a repository revision
+ annotate     show changeset information by line for each file
+ archive      create an unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
  bisect       subdivision search of changesets
  branch       set or show the current branch name
@@ -216,8 +216,8 @@ list of commands:
 
  add          add the specified files on the next commit
  addremove    add all new files, delete all missing files
- annotate     show changeset information per file line
- archive      create unversioned archive of a repository revision
+ annotate     show changeset information by line for each file
+ archive      create an unversioned archive of a repository revision
  backout      reverse effect of earlier changeset
  bisect       subdivision search of changesets
  branch       set or show the current branch name

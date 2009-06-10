@@ -5,7 +5,7 @@ Mercurial Distributed SCM
 basic commands:
 
  add        add the specified files on the next commit
- annotate   show changeset information per file line
+ annotate   show changeset information by line for each file
  clone      make a copy of an existing repository
  commit     commit the specified files or all outstanding changes
  diff       diff repository (or selected files)
