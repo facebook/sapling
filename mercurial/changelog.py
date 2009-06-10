@@ -36,7 +36,7 @@ def encodeextra(d):
     items = [_string_escape('%s:%s' % (k, d[k])) for k in sorted(d)]
     return "\0".join(items)
 
-class appender:
+class appender(object):
     '''the changelog index must be updated last on disk, so we use this class
     to delay writes to it'''
     def __init__(self, fp, buf):

@@ -14,7 +14,7 @@ from email.Parser import Parser
 
 class gnuarch_source(converter_source, commandline):
 
-    class gnuarch_rev:
+    class gnuarch_rev(object):
         def __init__(self, rev):
             self.rev = rev
             self.summary = ''

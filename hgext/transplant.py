@@ -18,12 +18,12 @@ import os, tempfile
 from mercurial import bundlerepo, changegroup, cmdutil, hg, merge, match
 from mercurial import patch, revlog, util, error
 
-class transplantentry:
+class transplantentry(object):
     def __init__(self, lnode, rnode):
         self.lnode = lnode
         self.rnode = rnode
 
-class transplants:
+class transplants(object):
     def __init__(self, path=None, transplantfile=None, opener=None):
         self.path = path
         self.transplantfile = transplantfile
@@ -64,7 +64,7 @@ class transplants:
         del self.transplants[self.transplants.index(transplant)]
         self.dirty = True
 
-class transplanter:
+class transplanter(object):
     def __init__(self, ui, repo):
         self.ui = ui
         self.path = repo.join('transplant')

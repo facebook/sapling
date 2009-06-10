@@ -165,7 +165,7 @@ def _calcmode(path):
 
 _data = 'data 00manifest.d 00manifest.i 00changelog.d  00changelog.i'
 
-class basicstore:
+class basicstore(object):
     '''base class for local repository stores'''
     def __init__(self, path, opener, pathjoiner):
         self.pathjoiner = pathjoiner

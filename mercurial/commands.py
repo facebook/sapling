@@ -2697,7 +2697,7 @@ def serve(ui, repo, **opts):
         raise error.RepoError(_("There is no Mercurial repository here"
                                 " (.hg not found)"))
 
-    class service:
+    class service(object):
         def init(self):
             util.set_signal_handler()
             self.httpd = server.create_server(baseui, repo)

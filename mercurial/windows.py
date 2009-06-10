@@ -20,7 +20,7 @@ def posixfile(name, mode='r', buffering=-1):
         raise WinIOError(err)
 posixfile.__doc__ = osutil.posixfile.__doc__
 
-class winstdout:
+class winstdout(object):
     '''stdout on windows misbehaves if sent through a pipe'''
 
     def __init__(self, fp):

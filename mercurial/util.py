@@ -749,7 +749,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
         raise
     return temp
 
-class atomictempfile:
+class atomictempfile(object):
     """file-like object that atomically updates a file
 
     All writes will be redirected to a temporary copy of the original

@@ -118,7 +118,7 @@ def debugsvnlog(ui, **opts):
     args = decodeargs(sys.stdin.read())
     get_log_child(sys.stdout, *args)
 
-class logstream:
+class logstream(object):
     """Interruptible revision log iterator."""
     def __init__(self, stdout):
         self._stdout = stdout

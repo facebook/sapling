@@ -34,7 +34,7 @@ def tidyprefix(dest, prefix, suffixes):
         raise util.Abort(_('archive prefix contains illegal components'))
     return prefix
 
-class tarit:
+class tarit(object):
     '''write archive to tar file or stream.  can write uncompressed,
     or compress with gzip or bzip2.'''
 
@@ -106,7 +106,7 @@ class tarit:
     def done(self):
         self.z.close()
 
-class tellable:
+class tellable(object):
     '''provide tell method for zipfile.ZipFile when writing to http
     response file object.'''
 
@@ -124,7 +124,7 @@ class tellable:
     def tell(self):
         return self.offset
 
-class zipit:
+class zipit(object):
     '''write archive to zip file or stream.  can write uncompressed,
     or compressed with deflate.'''
 
@@ -156,7 +156,7 @@ class zipit:
     def done(self):
         self.z.close()
 
-class fileit:
+class fileit(object):
     '''write archive as files in directory.'''
 
     def __init__(self, name, prefix, mtime):

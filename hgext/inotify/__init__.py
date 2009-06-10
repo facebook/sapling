@@ -23,7 +23,7 @@ def serve(ui, repo, **opts):
     if timeout:
         timeout = float(timeout) * 1e3
 
-    class service:
+    class service(object):
         def init(self):
             try:
                 self.master = server.master(ui, repo, timeout)

@@ -147,7 +147,7 @@ GP_PATCH  = 1 << 0  # we have to run patch
 GP_FILTER = 1 << 1  # there's some copy/rename operation
 GP_BINARY = 1 << 2  # there's a binary patch
 
-class patchmeta:
+class patchmeta(object):
     """Patched file metadata
 
     'op' is the performed operation within ADD, DELETE, RENAME, MODIFY
@@ -232,7 +232,7 @@ def readgitpatch(lr):
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 
-class patchfile:
+class patchfile(object):
     def __init__(self, ui, fname, opener, missing=False):
         self.fname = fname
         self.opener = opener
@@ -432,7 +432,7 @@ class patchfile:
         self.rej.append(h)
         return -1
 
-class hunk:
+class hunk(object):
     def __init__(self, desc, num, lr, context, create=False, remove=False):
         self.number = num
         self.desc = desc
@@ -782,7 +782,7 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
 
     return fname, missing
 
-class linereader:
+class linereader(object):
     # simple class to allow pushing lines back into the input stream
     def __init__(self, fp):
         self.fp = fp

@@ -42,7 +42,7 @@ commands.norepo += " qclone"
 # They must be joinable with queue directory and result in the patch path.
 normname = util.normpath
 
-class statusentry:
+class statusentry(object):
     def __init__(self, rev, name=None):
         if not name:
             fields = rev.split(':', 1)
@@ -191,7 +191,7 @@ class patchheader(object):
                 ci += 1
             del self.comments[ci]
 
-class queue:
+class queue(object):
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
         self.path = patchdir or os.path.join(path, "patches")

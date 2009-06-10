@@ -1110,7 +1110,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 fncache[rev] = matches
                 wanted.add(rev)
 
-    class followfilter:
+    class followfilter(object):
         def __init__(self, onlyfirst=False):
             self.startrev = nullrev
             self.roots = []

@@ -10,7 +10,7 @@ from mercurial import util, commands, match
 from mercurial import node as hgnode
 from mercurial.i18n import _
 
-class gpg:
+class gpg(object):
     def __init__(self, path, key=None):
         self.path = path
         self.key = (key and " --local-user \"%s\"" % key) or ""

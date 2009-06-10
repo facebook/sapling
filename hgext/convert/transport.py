@@ -97,7 +97,7 @@ class SvnRaTransport(object):
             self.ra = ra
             svn.ra.reparent(self.ra, self.svn_url.encode('utf8'))
 
-    class Reporter:
+    class Reporter(object):
         def __init__(self, (reporter, report_baton)):
             self._reporter = reporter
             self._baton = report_baton

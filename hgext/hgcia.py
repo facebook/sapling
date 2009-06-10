@@ -99,7 +99,7 @@ class ciamsg(object):
         return '\n'.join(msg)
 
     def diffstat(self):
-        class patchbuf:
+        class patchbuf(object):
             def __init__(self):
                 self.lines = []
                 # diffstat is stupid
