@@ -55,6 +55,57 @@ def incoming(ui, svn_url, hg_repo_path, skipto_rev=0, stupid=None,
                                   str(r.__getattribute__(attr)).strip(), ))
 
 
+def verify(ui, repo, *args, **opts):
+    '''verify current revision against Subversion repository
+    '''
+
+    if not args:
+        url = repo.ui.expandpath('default')
+    else:
+        url = args[0]
+
+    ctx = repo['.']
+    if 'close' in ctx.extra():
+        ui.write('cannot verify closed branch')
+        return 0
+    srev = ctx.extra().get('convert_revision')
+    if srev is None:
+        raise hgutil.Abort('revision %s not from SVN' % ctx)
+
+    srev = int(srev.split('@')[1])
+    ui.write('verifying %s against r%i\n' % (ctx, srev))
+
+    url = util.normalize_url(url.rstrip('/'))
+    user, passwd = util.getuserpass(opts)
+    svn = svnwrap.SubversionRepo(url, user, passwd)
+
+    btypes = {'default': 'trunk'}
+    branchpath = btypes.get(ctx.branch(), 'branches/%s' % ctx.branch())
+    svnfiles = set()
+    result = 0
+    for fn, type in svn.list_files(branchpath, srev):
+        if type != 'f':
+            continue
+        svnfiles.add(fn)
+        data, mode = svn.get_file(branchpath + '/'  + fn, srev)
+        fctx = ctx[fn]
+        dmatch = fctx.data() == data
+        mmatch = fctx.flags() == mode
+        if not (dmatch and mmatch):
+            ui.write('difference in file %s' % fn)
+            result = 1
+
+    hgfiles = set(ctx)
+    hgfiles.discard('.hgtags')
+    hgfiles.discard('.hgsvnexternals')
+    if hgfiles != svnfiles:
+        missing = set(hgfiles).symmetric_difference(svnfiles)
+        ui.write('missing files: %s' % (', '.join(missing)))
+        result = 1
+
+    return result
+
+
 def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
@@ -200,6 +251,7 @@ table = {
     'rebuildmeta': rebuildmeta,
     'incoming': incoming,
     'updateexternals': svnexternals.updateexternals,
+    'verify': verify,
 }
 
 table.update(utility_commands.table)

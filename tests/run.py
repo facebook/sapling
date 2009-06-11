@@ -26,6 +26,7 @@ import test_utility_commands
 import test_urls
 
 from comprehensive import test_stupid_pull
+from comprehensive import test_verify
 
 def comprehensive(mod):
     dir = os.path.basename(os.path.dirname(mod.__file__))
