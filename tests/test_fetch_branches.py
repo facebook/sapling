@@ -68,6 +68,15 @@ class TestFetchBranches(test_util.TestBase):
         self.assertEqual(repo['tip'].extra().get('close'), '1')
         self.assertEqual(self.openbranches(repo), ['default'])
 
+    def test_copybeforeclose(self, stupid=False):
+        repo = self._load_fixture_and_fetch('copybeforeclose.svndump', stupid)
+        self.assertEqual(repo['tip'].branch(), 'test')
+        self.assertEqual(repo['test'].extra().get('close'), '1')
+        self.assertEqual(repo['test']['b'].data(), 'a\n')
+
+    def test_copybeforeclose_stupid(self):
+        self.test_copybeforeclose(True)
+
     def test_replace_trunk_with_branch_stupid(self):
         self.test_replace_trunk_with_branch(stupid=True)
 

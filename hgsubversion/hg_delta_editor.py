@@ -737,8 +737,6 @@ class HgChangeReceiver(delta.Editor):
 
     def delbranch(self, branch, node, rev):
         pctx = self.repo[node]
-        def filectxfun(repo, memctx, path):
-            return pctx[path]
         files = pctx.manifest().keys()
         extra = {'close': 1}
         if self.usebranchnames:
@@ -746,8 +744,8 @@ class HgChangeReceiver(delta.Editor):
         ctx = context.memctx(self.repo,
                              (node, revlog.nullid),
                              rev.message or util.default_commit_msg,
-                             files,
-                             filectxfun,
+                             [],
+                             lambda x, y, z: None,
                              self.authors[rev.author],
                              self.fixdate(rev.date),
                              extra)
