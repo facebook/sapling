@@ -95,18 +95,6 @@ class RevisionData(object):
 
 class HgChangeReceiver(delta.Editor):
 
-    def last_known_revision(self):
-        """Obtain the highest numbered -- i.e. latest -- revision known.
-
-        Currently, this function just iterates over the entire revision map
-        using the max() builtin. This may be slow for extremely large
-        repositories, but for now, it's fast enough.
-        """
-        try:
-            return max(k[0] for k in self.revmap.iterkeys())
-        except ValueError:
-            return 0
-
     def __init__(self, repo, uuid=None, subdir=''):
         """path is the path to the target hg repo.
 
@@ -159,8 +147,63 @@ class HgChangeReceiver(delta.Editor):
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.filemap = maps.FileMap(repo)
 
+    def _get_uuid(self):
+        return open(os.path.join(self.meta_data_dir, 'uuid')).read()
+
+    def _set_uuid(self, uuid):
+        if not uuid:
+            return
+        elif os.path.isfile(os.path.join(self.meta_data_dir, 'uuid')):
+            stored_uuid = self._get_uuid()
+            assert stored_uuid
+            if uuid != stored_uuid:
+                raise hgutil.Abort('unable to operate on unrelated repository')
+        else:
+            if uuid:
+                f = open(os.path.join(self.meta_data_dir, 'uuid'), 'w')
+                f.write(uuid)
+                f.flush()
+                f.close()
+            else:
+                raise hgutil.Abort('unable to operate on unrelated repository')
+
+    uuid = property(_get_uuid, _set_uuid, None,
+                    'Error-checked UUID of source Subversion repository.')
+
+    @property
+    def meta_data_dir(self):
+        return os.path.join(self.path, '.hg', 'svn')
+
+    @property
+    def branch_info_file(self):
+        return os.path.join(self.meta_data_dir, 'branch_info')
+
+    @property
+    def tag_locations_file(self):
+        return os.path.join(self.meta_data_dir, 'tag_locations')
+
+    @property
+    def authors_file(self):
+        return os.path.join(self.meta_data_dir, 'authors')
+
     def hashes(self):
         return dict((v, k) for (k, v) in self.revmap.iteritems())
+
+    def branchedits(self, branch, rev):
+        check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
+        return sorted(filter(check, self.revmap.iteritems()), reverse=True)
+
+    def last_known_revision(self):
+        """Obtain the highest numbered -- i.e. latest -- revision known.
+
+        Currently, this function just iterates over the entire revision map
+        using the max() builtin. This may be slow for extremely large
+        repositories, but for now, it's fast enough.
+        """
+        try:
+            return max(k[0] for k in self.revmap.iterkeys())
+        except ValueError:
+            return 0
 
     def fixdate(self, date):
         if date is not None:
@@ -176,12 +219,6 @@ class HgChangeReceiver(delta.Editor):
         every revision is created.
         '''
         pickle_atomic(self.branches, self.branch_info_file, self.meta_data_dir)
-
-    def _path_and_branch_for_path(self, path, existing=True):
-        return self._split_branch_path(path, existing=existing)[:2]
-
-    def _branch_for_path(self, path, existing=True):
-        return self._path_and_branch_for_path(path, existing=existing)[1]
 
     def _localname(self, path):
         """Compute the local name for a branch located at path.
@@ -199,6 +236,34 @@ class HgChangeReceiver(delta.Editor):
         elif branch.startswith('../'):
             return branch[3:]
         return 'branches/%s' % branch
+
+    def _normalize_path(self, path):
+        '''Normalize a path to strip of leading slashes and our subdir if we
+        have one.
+        '''
+        if path and path[0] == '/':
+            path = path[1:]
+        if path and path.startswith(self.subdir):
+            path = path[len(self.subdir):]
+        if path and path[0] == '/':
+            path = path[1:]
+        return path
+
+    def _is_path_tag(self, path):
+        """If path could represent the path to a tag, returns the potential tag
+        name. Otherwise, returns False.
+
+        Note that it's only a tag if it was copied from the path '' in a branch
+        (or tag) we have, for our purposes.
+        """
+        path = self._normalize_path(path)
+        for tagspath in self.tag_locations:
+            onpath = path.startswith(tagspath)
+            longer = len(path) > len('%s/' % tagspath)
+            if path and onpath and longer:
+                tag, subpath = path[len(tagspath) + 1:], ''
+                return tag
+        return False
 
     def _split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
@@ -239,37 +304,6 @@ class HgChangeReceiver(delta.Editor):
             return None, None, None
         return path, ln, test
 
-    def set_file(self, path, data, isexec=False, islink=False):
-        if islink:
-            data = 'link ' + data
-        self.current.files[path] = data
-        self.current.execfiles[path] = isexec
-        self.current.symlinks[path] = islink
-        if path in self.current.deleted:
-            del self.current.deleted[path]
-        if path in self.current.missing:
-            self.current.missing.remove(path)
-
-    def delete_file(self, path):
-        self.current.deleted[path] = True
-        if path in self.current.files:
-            del self.current.files[path]
-        self.current.execfiles[path] = False
-        self.current.symlinks[path] = False
-        self.ui.note('D %s\n' % path)
-
-    def _normalize_path(self, path):
-        '''Normalize a path to strip of leading slashes and our subdir if we
-        have one.
-        '''
-        if path and path[0] == '/':
-            path = path[1:]
-        if path and path.startswith(self.subdir):
-            path = path[len(self.subdir):]
-        if path and path[0] == '/':
-            path = path[1:]
-        return path
-
     def _is_path_valid(self, path):
         if path is None:
             return False
@@ -277,22 +311,6 @@ class HgChangeReceiver(delta.Editor):
         if subpath is None:
             return False
         return subpath in self.filemap
-
-    def _is_path_tag(self, path):
-        """If path could represent the path to a tag, returns the potential tag
-        name. Otherwise, returns False.
-
-        Note that it's only a tag if it was copied from the path '' in a branch
-        (or tag) we have, for our purposes.
-        """
-        path = self._normalize_path(path)
-        for tagspath in self.tag_locations:
-            onpath = path.startswith(tagspath)
-            longer = len(path) > len('%s/' % tagspath)
-            if path and onpath and longer:
-                tag, subpath = path[len(tagspath) + 1:], ''
-                return tag
-        return False
 
     def get_parent_svn_branch_and_rev(self, number, branch):
         number -= 1
@@ -332,28 +350,6 @@ class HgChangeReceiver(delta.Editor):
         if r is not None:
             return self.revmap[r, br]
         return revlog.nullid
-
-    def _svnpath(self, branch):
-        """Return the relative path in svn of branch.
-        """
-        if branch == None or branch == 'default':
-            return 'trunk'
-        elif branch.startswith('../'):
-            return branch[3:]
-        return 'branches/%s' % branch
-
-    def _determine_parent_branch(self, p, src_path, src_rev, revnum):
-        if src_path is not None:
-            src_file, src_branch = self._path_and_branch_for_path(src_path)
-            src_tag = self._is_path_tag(src_path)
-            if src_tag != False:
-                # also case 2
-                src_branch, src_rev = self.tags[src_tag]
-                return {self._localname(p): (src_branch, src_rev, revnum )}
-            if src_file == '':
-                # case 2
-                return {self._localname(p): (src_branch, src_rev, revnum )}
-        return {}
 
     def update_branch_tag_map_for_rev(self, revision):
         paths = revision.paths
@@ -449,40 +445,6 @@ class HgChangeReceiver(delta.Editor):
         self.tags.update(tbdelta['tags'][0])
         self.branches.update(tbdelta['branches'][0])
 
-    def _updateexternals(self):
-        if not self.current.externals:
-            return
-        # Accumulate externals records for all branches
-        revnum = self.current.rev.revnum
-        branches = {}
-        for path, entry in self.current.externals.iteritems():
-            if not self._is_path_valid(path):
-                self.ui.warn('WARNING: Invalid path %s in externals\n' % path)
-                continue
-            p, b, bp = self._split_branch_path(path)
-            if bp not in branches:
-                external = svnexternals.externalsfile()
-                parent = self.get_parent_revision(revnum, b)
-                pctx = self.repo[parent]
-                if '.hgsvnexternals' in pctx:
-                    external.read(pctx['.hgsvnexternals'].data())
-                branches[bp] = external
-            else:
-                external = branches[bp]
-            external[p] = entry
-
-        # Register the file changes
-        for bp, external in branches.iteritems():
-            path = bp + '/.hgsvnexternals'
-            if external:
-                self.set_file(path, external.write(), False, False)
-            else:
-                self.delete_file(path)
-
-    def branchedits(self, branch, rev):
-        check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
-        return sorted(filter(check, self.revmap.iteritems()), reverse=True)
-
     def committags(self, delta, rev, endbranches):
 
         date = self.fixdate(rev.date)
@@ -535,6 +497,100 @@ class HgChangeReceiver(delta.Editor):
                 endbranches.pop(b)
                 bname = b or 'default'
                 self.ui.status('Marked branch %s as closed.\n' % bname)
+
+    def delbranch(self, branch, node, rev):
+        pctx = self.repo[node]
+        files = pctx.manifest().keys()
+        extra = {'close': 1}
+        if self.usebranchnames:
+            extra['branch'] = branch or 'default'
+        ctx = context.memctx(self.repo,
+                             (node, revlog.nullid),
+                             rev.message or util.default_commit_msg,
+                             [],
+                             lambda x, y, z: None,
+                             self.authors[rev.author],
+                             self.fixdate(rev.date),
+                             extra)
+        new = self.repo.commitctx(ctx)
+        self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))
+
+    def set_file(self, path, data, isexec=False, islink=False):
+        if islink:
+            data = 'link ' + data
+        self.current.files[path] = data
+        self.current.execfiles[path] = isexec
+        self.current.symlinks[path] = islink
+        if path in self.current.deleted:
+            del self.current.deleted[path]
+        if path in self.current.missing:
+            self.current.missing.remove(path)
+
+    def delete_file(self, path):
+        self.current.deleted[path] = True
+        if path in self.current.files:
+            del self.current.files[path]
+        self.current.execfiles[path] = False
+        self.current.symlinks[path] = False
+        self.ui.note('D %s\n' % path)
+
+    def _svnpath(self, branch):
+        """Return the relative path in svn of branch.
+        """
+        if branch == None or branch == 'default':
+            return 'trunk'
+        elif branch.startswith('../'):
+            return branch[3:]
+        return 'branches/%s' % branch
+
+    def _path_and_branch_for_path(self, path, existing=True):
+        return self._split_branch_path(path, existing=existing)[:2]
+
+    def _branch_for_path(self, path, existing=True):
+        return self._path_and_branch_for_path(path, existing=existing)[1]
+
+    def _determine_parent_branch(self, p, src_path, src_rev, revnum):
+        if src_path is not None:
+            src_file, src_branch = self._path_and_branch_for_path(src_path)
+            src_tag = self._is_path_tag(src_path)
+            if src_tag != False:
+                # also case 2
+                src_branch, src_rev = self.tags[src_tag]
+                return {self._localname(p): (src_branch, src_rev, revnum )}
+            if src_file == '':
+                # case 2
+                return {self._localname(p): (src_branch, src_rev, revnum )}
+        return {}
+
+    def _updateexternals(self):
+        if not self.current.externals:
+            return
+        # Accumulate externals records for all branches
+        revnum = self.current.rev.revnum
+        branches = {}
+        for path, entry in self.current.externals.iteritems():
+            if not self._is_path_valid(path):
+                self.ui.warn('WARNING: Invalid path %s in externals\n' % path)
+                continue
+            p, b, bp = self._split_branch_path(path)
+            if bp not in branches:
+                external = svnexternals.externalsfile()
+                parent = self.get_parent_revision(revnum, b)
+                pctx = self.repo[parent]
+                if '.hgsvnexternals' in pctx:
+                    external.read(pctx['.hgsvnexternals'].data())
+                branches[bp] = external
+            else:
+                external = branches[bp]
+            external[p] = entry
+
+        # Register the file changes
+        for bp, external in branches.iteritems():
+            path = bp + '/.hgsvnexternals'
+            if external:
+                self.set_file(path, external.write(), False, False)
+            else:
+                self.delete_file(path)
 
     def commit_current_delta(self, tbdelta):
         if hasattr(self, '_exception_info'):  #pragma: no cover
@@ -672,62 +728,6 @@ class HgChangeReceiver(delta.Editor):
 
         self._save_metadata()
         self.current.clear()
-
-    def delbranch(self, branch, node, rev):
-        pctx = self.repo[node]
-        files = pctx.manifest().keys()
-        extra = {'close': 1}
-        if self.usebranchnames:
-            extra['branch'] = branch or 'default'
-        ctx = context.memctx(self.repo,
-                             (node, revlog.nullid),
-                             rev.message or util.default_commit_msg,
-                             [],
-                             lambda x, y, z: None,
-                             self.authors[rev.author],
-                             self.fixdate(rev.date),
-                             extra)
-        new = self.repo.commitctx(ctx)
-        self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))
-
-    def _get_uuid(self):
-        return open(os.path.join(self.meta_data_dir, 'uuid')).read()
-
-    def _set_uuid(self, uuid):
-        if not uuid:
-            return
-        elif os.path.isfile(os.path.join(self.meta_data_dir, 'uuid')):
-            stored_uuid = self._get_uuid()
-            assert stored_uuid
-            if uuid != stored_uuid:
-                raise hgutil.Abort('unable to operate on unrelated repository')
-        else:
-            if uuid:
-                f = open(os.path.join(self.meta_data_dir, 'uuid'), 'w')
-                f.write(uuid)
-                f.flush()
-                f.close()
-            else:
-                raise hgutil.Abort('unable to operate on unrelated repository')
-
-    uuid = property(_get_uuid, _set_uuid, None,
-                    'Error-checked UUID of source Subversion repository.')
-
-    @property
-    def meta_data_dir(self):
-        return os.path.join(self.path, '.hg', 'svn')
-
-    @property
-    def branch_info_file(self):
-        return os.path.join(self.meta_data_dir, 'branch_info')
-
-    @property
-    def tag_locations_file(self):
-        return os.path.join(self.meta_data_dir, 'tag_locations')
-
-    @property
-    def authors_file(self):
-        return os.path.join(self.meta_data_dir, 'authors')
 
     # Here come all the actual editor methods
 
