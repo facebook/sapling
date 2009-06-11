@@ -99,7 +99,7 @@ class bzr_source(converter_source):
 
     def getfile(self, name, rev):
         revtree = self.sourcerepo.revision_tree(rev)
-        fileid = revtree.path2id(name)
+        fileid = revtree.path2id(name.decode(self.encoding or 'utf-8'))
         kind = None
         if fileid is not None:
             kind = revtree.kind(fileid)
