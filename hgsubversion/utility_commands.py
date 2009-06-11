@@ -2,10 +2,10 @@ import os
 
 from mercurial import util as hgutil
 
+import svnmeta
 import svnwrap
 import cmdutil
 import util
-import hg_delta_editor
 
 def genignore(ui, repo, hg_repo_path, force=False, **opts):
     """generate .hgignore from svn:ignore properties.
@@ -18,9 +18,9 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     url = util.normalize_url(repo.ui.config('paths', 'default'))
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
-    hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    hashes = hge.meta.revmap.hashes()
-    parent = cmdutil.parentrev(ui, repo, hge, hashes)
+    meta = svnmeta.SVNMeta(repo, svn.uuid)
+    hashes = meta.revmap.hashes()
+    parent = cmdutil.parentrev(ui, repo, meta, hashes)
     r, br = hashes[parent.node()]
     if br == None:
         branchpath = 'trunk'
@@ -46,9 +46,9 @@ def info(ui, repo, hg_repo_path, **opts):
     url = util.normalize_url(repo.ui.config('paths', 'default'))
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
-    hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    hashes = hge.meta.revmap.hashes()
-    parent = cmdutil.parentrev(ui, repo, hge, hashes)
+    meta = svnmeta.SVNMeta(repo, svn.uuid)
+    hashes = meta.revmap.hashes()
+    parent = cmdutil.parentrev(ui, repo, meta, hashes)
     pn = parent.node()
     if pn not in hashes:
         ui.status('Not a child of an svn revision.\n')
@@ -66,7 +66,7 @@ def info(ui, repo, hg_repo_path, **opts):
     if url[-1] == '/':
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
-    author = hge.meta.authors.reverselookup(parent.user())
+    author = meta.authors.reverselookup(parent.user())
     # cleverly figure out repo root w/o actually contacting the server
     reporoot = url[:len(url)-len(subdir)]
     ui.status('''URL: %(url)s
@@ -78,7 +78,7 @@ Last Changed Author: %(author)s
 Last Changed Rev: %(revision)s
 Last Changed Date: %(date)s\n''' %
               {'reporoot': reporoot,
-               'uuid': hge.meta.uuid,
+               'uuid': meta.uuid,
                'url': url,
                'author': author,
                'revision': r,

@@ -14,7 +14,7 @@ from svn import core
 from svn import delta
 
 import cmdutil
-import hg_delta_editor
+import svnmeta
 import stupid as stupidmod
 import svnwrap
 import util
@@ -36,9 +36,9 @@ def parents(orig, ui, repo, *args, **opts):
     """
     if not opts.get('svn', False):
         return orig(ui, repo, *args, **opts)
-    hge = hg_delta_editor.HgChangeReceiver(repo)
-    hashes = hge.meta.revmap.hashes()
-    ha = cmdutil.parentrev(ui, repo, hge, hashes)
+    meta = svnmeta.SVNMeta(repo)
+    hashes = meta.revmap.hashes()
+    ha = cmdutil.parentrev(ui, repo, meta, hashes)
     if ha.node() == node.nullid:
         raise hgutil.Abort('No parent svn revision!')
     displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
@@ -57,10 +57,10 @@ def incoming(orig, ui, repo, source='default', **opts):
 
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(other.svnurl, user, passwd)
-    hg_editor = hg_delta_editor.HgChangeReceiver(repo)
+    meta = svnmeta.SVNMeta(repo)
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    for r in svn.revisions(start=hg_editor.meta.revmap.seen):
+    for r in svn.revisions(start=meta.revmap.seen):
         ui.status('\n')
         for label, attr in revmeta:
             l1 = label + ':'
@@ -77,10 +77,10 @@ def outgoing(repo, dest=None, heads=None, force=False):
 
     # split off #rev; TODO implement --revision/#rev support
     svnurl, revs, checkout = hg.parseurl(dest.svnurl, heads)
-    hge = hg_delta_editor.HgChangeReceiver(repo)
+    meta = svnmeta.SVNMeta(repo)
     parent = repo.parents()[0].node()
-    hashes = hge.meta.revmap.hashes()
-    return util.outgoing_revisions(repo.ui, repo, hge, hashes, parent)
+    hashes = meta.revmap.hashes()
+    return util.outgoing_revisions(repo, hashes, parent)
 
 
 def diff(orig, ui, repo, *args, **opts):
@@ -88,11 +88,11 @@ def diff(orig, ui, repo, *args, **opts):
     """
     if not opts.get('svn', False) or opts.get('change', None):
         return orig(ui, repo, *args, **opts)
-    hge = hg_delta_editor.HgChangeReceiver(repo)
-    hashes = hge.meta.revmap.hashes()
+    meta = svnmeta.SVNMeta(repo)
+    hashes = meta.revmap.hashes()
     if not opts.get('rev', None):
         parent = repo.parents()[0]
-        o_r = util.outgoing_revisions(ui, repo, hge, hashes, parent.node())
+        o_r = util.outgoing_revisions(repo, hashes, parent.node())
         if o_r:
             parent = repo[o_r[-1]].parents()[0]
         opts['rev'] = ['%s:.' % node.hex(parent.node()), ]
@@ -123,7 +123,7 @@ def push(repo, dest, force, revs):
     user = repo.ui.config('hgsubversion', 'username')
     passwd = repo.ui.config('hgsubversion', 'password')
     svn = svnwrap.SubversionRepo(svnurl, user, passwd)
-    hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
+    meta = svnmeta.SVNMeta(repo, svn.uuid)
 
     # Strategy:
     # 1. Find all outgoing commits from this head
@@ -132,8 +132,8 @@ def push(repo, dest, force, revs):
         return 1
     workingrev = repo.parents()[0]
     ui.status('searching for changes\n')
-    hashes = hge.meta.revmap.hashes()
-    outgoing = util.outgoing_revisions(ui, repo, hge, hashes, workingrev.node())
+    hashes = meta.revmap.hashes()
+    outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())
     if not (outgoing and len(outgoing)):
         ui.status('no changes found\n')
         return 0
@@ -157,7 +157,7 @@ def push(repo, dest, force, revs):
         # 2. Commit oldest revision that needs to be pushed
         base_revision = hashes[base_n][0]
         try:
-            cmdutil.commit_from_rev(ui, repo, old_ctx, hge, svnurl,
+            cmdutil.commit_from_rev(ui, repo, old_ctx, meta, svnurl,
                                     base_revision, user, passwd)
         except cmdutil.NoFilesException:
             ui.warn("Could not push revision %s because it had no changes in svn.\n" %
@@ -183,7 +183,7 @@ def push(repo, dest, force, revs):
             # TODO: can we avoid calling our own rebase wrapper here?
             rebase(hgrebase.rebase, ui, repo, svn=True, svnextrafn=extrafn,
                    svnsourcerev=needs_transplant)
-            repo = hg.repository(ui, hge.meta.path)
+            repo = hg.repository(ui, meta.path)
             for child in repo[replacement.node()].children():
                 rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
                 if rebasesrc in outgoing:
@@ -195,9 +195,9 @@ def push(repo, dest, force, revs):
                         if children:
                             child = children[0]
                         rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
-        # TODO: stop constantly creating the HgChangeReceiver instances.
-        hge = hg_delta_editor.HgChangeReceiver(hge.repo, svn.uuid)
-        hashes = hge.meta.revmap.hashes()
+        # TODO: stop constantly creating the SVNMeta instances.
+        meta = svnmeta.SVNMeta(meta.repo, svn.uuid)
+        hashes = meta.revmap.hashes()
     util.swap_out_encoding(old_encoding)
     return 0
 
@@ -235,10 +235,10 @@ def pull(repo, source, heads=[], force=False):
     user = repo.ui.config('hgsubversion', 'username')
     passwd = repo.ui.config('hgsubversion', 'password')
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
-    hg_editor = hg_delta_editor.HgChangeReceiver(repo, svn.uuid, svn.subdir)
+    meta = svnmeta.SVNMeta(repo, svn.uuid, svn.subdir)
 
-    start = max(hg_editor.meta.revmap.seen, skipto_rev)
-    initializing_repo = hg_editor.meta.revmap.seen <= 0
+    start = max(meta.revmap.seen, skipto_rev)
+    initializing_repo = meta.revmap.seen <= 0
     ui = repo.ui
 
     if initializing_repo and start > 0:
@@ -253,14 +253,14 @@ def pull(repo, source, heads=[], force=False):
                 if (r.author is None and
                     r.message == 'This is an empty revision for padding.'):
                     continue
-                tbdelta = hg_editor.meta.update_branch_tag_map_for_rev(r)
+                tbdelta = meta.update_branch_tag_map_for_rev(r)
                 # got a 502? Try more than once!
                 tries = 0
                 converted = False
                 while not converted:
                     try:
                         util.describe_revision(ui, r)
-                        pullfuns[have_replay](ui, hg_editor, svn, r, tbdelta)
+                        pullfuns[have_replay](ui, meta, svn, r, tbdelta)
                         converted = True
                     except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                         ui.status('%s\n' % e.message)
@@ -304,9 +304,9 @@ def rebase(orig, ui, repo, **opts):
         extra['branch'] = ctx.branch()
     extrafn = opts.get('svnextrafn', extrafn2)
     sourcerev = opts.get('svnsourcerev', repo.parents()[0].node())
-    hge = hg_delta_editor.HgChangeReceiver(repo)
-    hashes = hge.meta.revmap.hashes()
-    o_r = util.outgoing_revisions(ui, repo, hge, hashes, sourcerev=sourcerev)
+    meta = svnmeta.SVNMeta(repo)
+    hashes = meta.revmap.hashes()
+    o_r = util.outgoing_revisions(repo, hashes, sourcerev=sourcerev)
     if not o_r:
         ui.status('Nothing to rebase!\n')
         return 0

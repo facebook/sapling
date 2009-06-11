@@ -42,7 +42,7 @@ class PrefixMatch(object):
     def __call__(self, fn):
         return fn.startswith(self.p)
 
-def outgoing_revisions(ui, repo, hg_editor, reverse_map, sourcerev):
+def outgoing_revisions(repo, reverse_map, sourcerev):
     """Given a repo and an hg_editor, determines outgoing revisions for the
     current working copy state.
     """

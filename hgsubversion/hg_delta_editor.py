@@ -9,7 +9,6 @@ from mercurial import node
 from svn import delta
 from svn import core
 
-import svnmeta
 import svnexternals
 import util
 
@@ -71,10 +70,10 @@ class RevisionData(object):
 
 class HgChangeReceiver(delta.Editor):
 
-    def __init__(self, repo, uuid=None, subdir=''):
-        self.ui = repo.ui
-        self.repo = repo
-        self.meta = svnmeta.SVNMeta(repo, uuid, subdir)
+    def __init__(self, meta):
+        self.meta = meta
+        self.ui = meta.ui
+        self.repo = meta.repo
         self.current = RevisionData()
 
     def set_file(self, path, data, isexec=False, islink=False):

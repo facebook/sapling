@@ -76,13 +76,13 @@ def mempatchproxy(parentctx, files):
     return mempatch
 
 
-def filteriterhunks(hg_editor):
+def filteriterhunks(meta):
     iterhunks = patch.iterhunks
     def filterhunks(ui, fp, sourcefile=None):
         applycurrent = False
         for data in iterhunks(ui, fp, sourcefile):
             if data[0] == 'file':
-                if data[1][1] in hg_editor.meta.filemap:
+                if data[1][1] in meta.filemap:
                     applycurrent = True
                 else:
                     applycurrent = False
@@ -92,7 +92,7 @@ def filteriterhunks(hg_editor):
     return filterhunks
 
 
-def diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
+def diff_branchrev(ui, svn, meta, branch, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
@@ -106,7 +106,7 @@ def diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
         elif branch.startswith('../'):
             return branch[3:]
         return 'branches/%s' % branch
-    parent_rev, br_p = hg_editor.meta.get_parent_svn_branch_and_rev(r.revnum, branch)
+    parent_rev, br_p = meta.get_parent_svn_branch_and_rev(r.revnum, branch)
     diff_path = make_diff_path(branch)
     try:
         if br_p == branch:
@@ -149,7 +149,7 @@ def diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
             oldpatchfile = patch.patchfile
             olditerhunks = patch.iterhunks
             patch.patchfile = mempatchproxy(parentctx, files_data)
-            patch.iterhunks = filteriterhunks(hg_editor)
+            patch.iterhunks = filteriterhunks(meta)
             try:
                 # We can safely ignore the changed list since we are
                 # handling non-git patches. Touched files are known
@@ -211,7 +211,7 @@ def diff_branchrev(ui, svn, hg_editor, branch, r, parentctx):
     for f in files_data:
         touched_files[f] = 1
 
-    copies = getcopies(svn, hg_editor, branch, diff_path, r, touched_files,
+    copies = getcopies(svn, meta, branch, diff_path, r, touched_files,
                        parentctx)
 
     def filectxfn(repo, memctx, path):
@@ -282,7 +282,7 @@ def makecopyfinder(r, branchpath, rootdir):
 
     return finder
 
-def getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx):
+def getcopies(svn, meta, branch, branchpath, r, files, parentctx):
     """Return a mapping {dest: source} for every file copied into r.
     """
     if parentctx.node() == revlog.nullid:
@@ -307,10 +307,10 @@ def getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx):
     def getctx(svnrev):
         if svnrev in ctxs:
             return ctxs[svnrev]
-        changeid = hg_editor.meta.get_parent_revision(svnrev + 1, branch)
+        changeid = meta.get_parent_revision(svnrev + 1, branch)
         ctx = None
         if changeid != revlog.nullid:
-            ctx = hg_editor.repo.changectx(changeid)
+            ctx = meta.repo.changectx(changeid)
         ctxs[svnrev] = ctx
         return ctx
 
@@ -378,7 +378,7 @@ def fetch_externals(svn, branchpath, r, parentctx):
     return externals
 
 
-def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
+def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
@@ -396,7 +396,7 @@ def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
         for path, e in r.paths.iteritems():
             if not path.startswith(branchprefix):
                 continue
-            if not hg_editor.meta._is_path_valid(path):
+            if not meta._is_path_valid(path):
                 continue
             kind = svn.checkpath(path, r.revnum)
             path = path[len(branchprefix):]
@@ -418,7 +418,7 @@ def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
                 deleted = [f for f in parentctx if f.startswith(path)]
                 files += deleted
 
-    copies = getcopies(svn, hg_editor, branch, branchpath, r, files, parentctx)
+    copies = getcopies(svn, meta, branch, branchpath, r, files, parentctx)
 
     def filectxfn(repo, memctx, path):
         data, mode = svn.get_file(branchpath + '/' + path, r.revnum)
@@ -430,32 +430,32 @@ def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
 
     return files, filectxfn
 
-def checkbranch(hg_editor, r, branch):
-    branchedits = hg_editor.meta.revmap.branchedits(branch, r)
+def checkbranch(meta, r, branch):
+    branchedits = meta.revmap.branchedits(branch, r)
     if not branchedits:
         return None
     branchtip = branchedits[0][1]
-    for child in hg_editor.repo[branchtip].children():
+    for child in meta.repo[branchtip].children():
         b = child.branch() != 'default' and child.branch() or None
         if b == branch and child.extra().get('close'):
             return None
     return branchtip
 
-def branches_in_paths(hge, tbdelta, paths, revnum, checkpath, listdir):
+def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
     '''Given a list of paths, return mapping of all branches touched
     to their branch path.
     '''
     branches = {}
     paths_need_discovery = []
     for p in paths:
-        relpath, branch, branchpath = hge.meta._split_branch_path(p)
+        relpath, branch, branchpath = meta._split_branch_path(p)
         if relpath is not None:
             branches[branch] = branchpath
-        elif paths[p].action == 'D' and not hge.meta._is_path_tag(p):
-            ln = hge.meta._localname(p)
+        elif paths[p].action == 'D' and not meta._is_path_tag(p):
+            ln = meta._localname(p)
             # must check in branches_to_delete as well, because this runs after we
             # already updated the branch map
-            if ln in hge.meta.branches or ln in tbdelta['branches'][1]:
+            if ln in meta.branches or ln in tbdelta['branches'][1]:
                 branches[ln] = p
         else:
             paths_need_discovery.append(p)
@@ -497,12 +497,12 @@ def branches_in_paths(hge, tbdelta, paths, revnum, checkpath, listdir):
             path = filepaths.pop(0)
             parentdir = '/'.join(path[:-1])
             filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
-            branchpath = hge.meta._normalize_path(parentdir)
+            branchpath = meta._normalize_path(parentdir)
             if branchpath.startswith('tags/'):
                 continue
-            branchname = hge.meta._localname(branchpath)
+            branchname = meta._localname(branchpath)
             if branchpath.startswith('trunk/'):
-                branches[hge.meta._localname('trunk')] = 'trunk'
+                branches[meta._localname('trunk')] = 'trunk'
                 continue
             if branchname and branchname.startswith('../'):
                 continue
@@ -510,11 +510,11 @@ def branches_in_paths(hge, tbdelta, paths, revnum, checkpath, listdir):
 
     return branches
 
-def convert_rev(ui, hg_editor, svn, r, tbdelta):
+def convert_rev(ui, meta, svn, r, tbdelta):
     # this server fails at replay
 
-    hg_editor.meta.save_tbdelta(tbdelta)
-    branches = branches_in_paths(hg_editor, tbdelta, r.paths, r.revnum,
+    meta.save_tbdelta(tbdelta)
+    branches = branches_in_paths(meta, tbdelta, r.paths, r.revnum,
                                  svn.checkpath, svn.list_files)
     brpaths = branches.values()
     bad_branch_paths = {}
@@ -529,27 +529,27 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
 
         # We've go a branch that contains other branches. We have to be careful to
         # get results similar to real replay in this case.
-        for existingbr in hg_editor.meta.branches:
-            bad = hg_editor.meta._remotename(existingbr)
+        for existingbr in meta.branches:
+            bad = meta._remotename(existingbr)
             if bad.startswith(bp) and len(bad) > len(bp):
                 bad_branch_paths[br].append(bad[len(bp)+1:])
 
     deleted_branches = {}
     for p in r.paths:
-        if hg_editor.meta._is_path_tag(p):
+        if meta._is_path_tag(p):
             continue
-        branch = hg_editor.meta._localname(p)
-        if not (r.paths[p].action == 'R' and branch in hg_editor.meta.branches):
+        branch = meta._localname(p)
+        if not (r.paths[p].action == 'R' and branch in meta.branches):
             continue
-        closed = checkbranch(hg_editor, r, branch)
+        closed = checkbranch(meta, r, branch)
         if closed is not None:
             deleted_branches[branch] = closed
 
-    date = hg_editor.meta.fixdate(r.date)
+    date = meta.fixdate(r.date)
     check_deleted_branches = set()
     for b in branches:
 
-        parentctx = hg_editor.repo[hg_editor.meta.get_parent_revision(r.revnum, b)]
+        parentctx = meta.repo[meta.get_parent_revision(r.revnum, b)]
         if parentctx.branch() != (b or 'default'):
             check_deleted_branches.add(b)
 
@@ -562,12 +562,12 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
 
         try:
             files_touched, filectxfn2 = diff_branchrev(
-                                           ui, svn, hg_editor, b, r, parentctx)
+                                           ui, svn, meta, b, r, parentctx)
         except BadPatchApply, e:
             # Either this revision or the previous one does not exist.
             ui.status("Fetching entire revision: %s.\n" % e.args[0])
             files_touched, filectxfn2 = fetch_branchrev(
-                svn, hg_editor, b, branches[b], r, parentctx)
+                svn, meta, b, branches[b], r, parentctx)
 
         externals = fetch_externals(svn, branches[b], r, parentctx)
         if externals is not None:
@@ -586,7 +586,7 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
 
         if '' in files_touched:
             files_touched.remove('')
-        excluded = [f for f in files_touched if f not in hg_editor.meta.filemap]
+        excluded = [f for f in files_touched if f not in meta.filemap]
         for f in excluded:
             files_touched.remove(f)
 
@@ -600,39 +600,39 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
                 assert f[0] != '/'
 
         extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
-        if not hg_editor.meta.usebranchnames:
+        if not meta.usebranchnames:
             extra.pop('branch', None)
 
-        current_ctx = context.memctx(hg_editor.repo,
+        current_ctx = context.memctx(meta.repo,
                                      [parentctx.node(), revlog.nullid],
                                      r.message or util.default_commit_msg,
                                      files_touched,
                                      filectxfn,
-                                     hg_editor.meta.authors[r.author],
+                                     meta.authors[r.author],
                                      date,
                                      extra)
-        ha = hg_editor.repo.commitctx(current_ctx)
+        ha = meta.repo.commitctx(current_ctx)
 
         branch = extra.get('branch', None)
-        if not branch in hg_editor.meta.branches:
-            hg_editor.meta.branches[branch] = None, 0, r.revnum
-        hg_editor.meta.revmap[r.revnum, b] = ha
+        if not branch in meta.branches:
+            meta.branches[branch] = None, 0, r.revnum
+        meta.revmap[r.revnum, b] = ha
         util.describe_commit(ui, ha, b)
 
     # These are branches with an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.
     for branch in check_deleted_branches:
-        closed = checkbranch(hg_editor, r, branch)
+        closed = checkbranch(meta, r, branch)
         if closed is not None:
             deleted_branches[branch] = closed
 
     if tbdelta['tags'][0] or tbdelta['tags'][1]:
-        hg_editor.meta.committags(tbdelta['tags'], r, deleted_branches)
+        meta.committags(tbdelta['tags'], r, deleted_branches)
 
     for b, parent in deleted_branches.iteritems():
         if parent == node.nullid:
             continue
-        hg_editor.meta.delbranch(b, parent, r)
+        meta.delbranch(b, parent, r)
 
     # save the changed metadata
-    hg_editor.meta._save_metadata()
+    meta._save_metadata()
