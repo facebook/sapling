@@ -102,10 +102,10 @@ class HgChangeReceiver(delta.Editor):
         revnum = self.current.rev.revnum
         branches = {}
         for path, entry in self.current.externals.iteritems():
-            if not self.meta._is_path_valid(path):
+            if not self.meta.is_path_valid(path):
                 self.ui.warn('WARNING: Invalid path %s in externals\n' % path)
                 continue
-            p, b, bp = self.meta._split_branch_path(path)
+            p, b, bp = self.meta.split_branch_path(path)
             if bp not in branches:
                 external = svnexternals.externalsfile()
                 parent = self.meta.get_parent_revision(revnum, b)
@@ -146,9 +146,9 @@ class HgChangeReceiver(delta.Editor):
 
         # build up the branches that have files on them
         for f in files_to_commit:
-            if not self.meta._is_path_valid(f):
+            if not self.meta.is_path_valid(f):
                 continue
-            p, b = self.meta._path_and_branch_for_path(f)
+            p, b = self.meta.path_and_branch_for_path(f)
             if b not in branch_batches:
                 branch_batches[b] = []
             branch_batches[b].append((p, f))
@@ -259,14 +259,14 @@ class HgChangeReceiver(delta.Editor):
                 continue
             self.meta.delbranch(branch, parent, rev)
 
-        self.meta._save_metadata()
+        self.meta.save()
         self.current.clear()
 
     # Here come all the actual editor methods
 
     @ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
-        br_path, branch = self.meta._path_and_branch_for_path(path)
+        br_path, branch = self.meta.path_and_branch_for_path(path)
         if br_path == '':
             self.meta.closebranches.add(branch)
         if br_path is not None:
@@ -291,7 +291,7 @@ class HgChangeReceiver(delta.Editor):
     @ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
         self.current.file = None
-        fpath, branch = self.meta._path_and_branch_for_path(path)
+        fpath, branch = self.meta.path_and_branch_for_path(path)
         if not fpath:
             self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
             return
@@ -312,7 +312,7 @@ class HgChangeReceiver(delta.Editor):
         parent = self.meta.get_parent_revision(baserev + 1, branch)
 
         ctx = self.repo[parent]
-        if not self.meta._is_path_valid(path):
+        if not self.meta.is_path_valid(path):
             return
 
         if fpath not in ctx:
@@ -331,7 +331,7 @@ class HgChangeReceiver(delta.Editor):
         self.current.base = None
         if path in self.current.deleted:
             del self.current.deleted[path]
-        fpath, branch = self.meta._path_and_branch_for_path(path, existing=False)
+        fpath, branch = self.meta.path_and_branch_for_path(path, existing=False)
         if not fpath:
             return
         if branch not in self.meta.branches:
@@ -344,7 +344,7 @@ class HgChangeReceiver(delta.Editor):
             return
         self.ui.note('A+ %s\n' % path)
         (from_file,
-         from_branch) = self.meta._path_and_branch_for_path(copyfrom_path)
+         from_branch) = self.meta.path_and_branch_for_path(copyfrom_path)
         if not from_file:
             self.current.missing.add(path)
             return
@@ -367,7 +367,7 @@ class HgChangeReceiver(delta.Editor):
     def add_directory(self, path, parent_baton, copyfrom_path,
                       copyfrom_revision, dir_pool=None):
         self.current.batons[path] = path
-        br_path, branch = self.meta._path_and_branch_for_path(path)
+        br_path, branch = self.meta.path_and_branch_for_path(path)
         if br_path is not None:
             if not copyfrom_path and not br_path:
                 self.current.emptybranches[branch] = True
@@ -376,10 +376,10 @@ class HgChangeReceiver(delta.Editor):
         if br_path is None or not copyfrom_path:
             return path
         if copyfrom_path:
-            tag = self.meta._is_path_tag(copyfrom_path)
+            tag = self.meta.is_path_tag(copyfrom_path)
             if tag not in self.meta.tags:
                 tag = None
-            if not self.meta._is_path_valid(copyfrom_path) and not tag:
+            if not self.meta.is_path_valid(copyfrom_path) and not tag:
                 self.current.missing.add('%s/' % path)
                 return path
         if tag:
@@ -387,7 +387,7 @@ class HgChangeReceiver(delta.Editor):
             cp_f = ''
         else:
             source_rev = copyfrom_revision
-            cp_f, source_branch = self.meta._path_and_branch_for_path(copyfrom_path)
+            cp_f, source_branch = self.meta.path_and_branch_for_path(copyfrom_path)
             if cp_f == '' and br_path == '':
                 assert br_path is not None
                 tmp = source_branch, source_rev, self.current.rev.revnum
@@ -441,7 +441,7 @@ class HgChangeReceiver(delta.Editor):
     @ieditor
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
         self.current.batons[path] = path
-        p_, branch = self.meta._path_and_branch_for_path(path)
+        p_, branch = self.meta.path_and_branch_for_path(path)
         if p_ == '':
             self.current.emptybranches[branch] = False
         return path
@@ -458,7 +458,7 @@ class HgChangeReceiver(delta.Editor):
         # 2) Missing a base text (bail quick since we have to fetch a full plaintext)
         # 3) Has a base text in self.current.files, apply deltas
         base = ''
-        if not self.meta._is_path_valid(self.current.file):
+        if not self.meta.is_path_valid(self.current.file):
             return lambda x: None
         assert self.current.file not in self.current.deleted, (
             'Cannot apply_textdelta to a deleted file: %s' % self.current.file)
@@ -477,7 +477,7 @@ class HgChangeReceiver(delta.Editor):
                                'cannot call handler!')
         def txdelt_window(window):
             try:
-                if not self.meta._is_path_valid(self.current.file):
+                if not self.meta.is_path_valid(self.current.file):
                     return
                 handler(window, baton)
                 # window being None means commit this file

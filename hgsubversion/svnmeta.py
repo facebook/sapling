@@ -136,13 +136,13 @@ class SVNMeta(object):
             date = self.lastdate
         return date
 
-    def _save_metadata(self):
+    def save(self):
         '''Save the Subversion metadata. This should really be called after
         every revision is created.
         '''
         pickle_atomic(self.branches, self.branch_info_file, self.meta_data_dir)
 
-    def _localname(self, path):
+    def localname(self, path):
         """Compute the local name for a branch located at path.
         """
         assert not path.startswith('tags/')
@@ -152,14 +152,14 @@ class SVNMeta(object):
             return path[len('branches/'):]
         return  '../%s' % path
 
-    def _remotename(self, branch):
+    def remotename(self, branch):
         if branch == 'default' or branch is None:
             return 'trunk'
         elif branch.startswith('../'):
             return branch[3:]
         return 'branches/%s' % branch
 
-    def _normalize_path(self, path):
+    def normalize(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
         have one.
         '''
@@ -171,14 +171,14 @@ class SVNMeta(object):
             path = path[1:]
         return path
 
-    def _is_path_tag(self, path):
+    def is_path_tag(self, path):
         """If path could represent the path to a tag, returns the potential tag
         name. Otherwise, returns False.
 
         Note that it's only a tag if it was copied from the path '' in a branch
         (or tag) we have, for our purposes.
         """
-        path = self._normalize_path(path)
+        path = self.normalize(path)
         for tagspath in self.tag_locations:
             onpath = path.startswith(tagspath)
             longer = len(path) > len('%s/' % tagspath)
@@ -187,7 +187,7 @@ class SVNMeta(object):
                 return tag
         return False
 
-    def _split_branch_path(self, path, existing=True):
+    def split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
 
@@ -197,18 +197,18 @@ class SVNMeta(object):
         branch. If existing=False, then it will guess what the branch would be if it were
         known.
         """
-        path = self._normalize_path(path)
+        path = self.normalize(path)
         if path.startswith('tags/'):
             return None, None, None
         test = ''
         path_comps = path.split('/')
-        while self._localname(test) not in self.branches and len(path_comps):
+        while self.localname(test) not in self.branches and len(path_comps):
             if not test:
                 test = path_comps.pop(0)
             else:
                 test += '/%s' % path_comps.pop(0)
-        if self._localname(test) in self.branches:
-            return path[len(test)+1:], self._localname(test), test
+        if self.localname(test) in self.branches:
+            return path[len(test)+1:], self.localname(test), test
         if existing:
             return None, None, None
         if path == 'trunk' or path.startswith('trunk/'):
@@ -221,29 +221,29 @@ class SVNMeta(object):
         else:
             path = test.split('/')[-1]
             test = '/'.join(test.split('/')[:-1])
-        ln =  self._localname(test)
+        ln =  self.localname(test)
         if ln and ln.startswith('../'):
             return None, None, None
         return path, ln, test
 
-    def _path_and_branch_for_path(self, path, existing=True):
-        return self._split_branch_path(path, existing=existing)[:2]
+    def path_and_branch_for_path(self, path, existing=True):
+        return self.split_branch_path(path, existing=existing)[:2]
 
     def _determine_parent_branch(self, p, src_path, src_rev, revnum):
         if src_path is not None:
-            src_file, src_branch = self._path_and_branch_for_path(src_path)
-            src_tag = self._is_path_tag(src_path)
+            src_file, src_branch = self.path_and_branch_for_path(src_path)
+            src_tag = self.is_path_tag(src_path)
             if src_tag != False or src_file == '': # case 2
-                ln = self._localname(p)
+                ln = self.localname(p)
                 if src_tag != False:
                     src_branch, src_rev = self.tags[src_tag]
                 return {ln: (src_branch, src_rev, revnum)}
         return {}
 
-    def _is_path_valid(self, path):
+    def is_path_valid(self, path):
         if path is None:
             return False
-        subpath = self._split_branch_path(path)[0]
+        subpath = self.split_branch_path(path)[0]
         if subpath is None:
             return False
         return subpath in self.filemap
@@ -294,17 +294,17 @@ class SVNMeta(object):
         self.closebranches = set()
         tags_to_delete = set()
         for p in sorted(paths):
-            t_name = self._is_path_tag(p)
+            t_name = self.is_path_tag(p)
             if t_name != False:
                 src_p, src_rev = paths[p].copyfrom_path, paths[p].copyfrom_rev
                 # if you commit to a tag, I'm calling you stupid and ignoring
                 # you.
                 if src_p is not None and src_rev is not None:
-                    file, branch = self._path_and_branch_for_path(src_p)
+                    file, branch = self.path_and_branch_for_path(src_p)
                     if file is None:
                         # some crazy people make tags from other tags
                         file = ''
-                        from_tag = self._is_path_tag(src_p)
+                        from_tag = self.is_path_tag(src_p)
                         if not from_tag:
                             continue
                         branch, src_rev = self.tags[from_tag]
@@ -340,7 +340,7 @@ class SVNMeta(object):
             #    already-known branches, so we mark them as deleted.
             # 6. It's a branch being replaced by another branch - the
             #    action will be 'R'.
-            fi, br = self._path_and_branch_for_path(p)
+            fi, br = self.path_and_branch_for_path(p)
             if fi is not None:
                 if fi == '':
                     if paths[p].action == 'D':
@@ -353,12 +353,12 @@ class SVNMeta(object):
                 continue # case 1
             if paths[p].action == 'D':
                 for known in self.branches:
-                    if self._remotename(known).startswith(p):
+                    if self.remotename(known).startswith(p):
                         self.current.closebranches.add(known) # case 5
             parent = self._determine_parent_branch(
                 p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
             if not parent and paths[p].copyfrom_path:
-                bpath, branch = self._path_and_branch_for_path(p, False)
+                bpath, branch = self.path_and_branch_for_path(p, False)
                 if (bpath is not None
                     and branch not in self.branches
                     and branch not in added_branches):

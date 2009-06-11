@@ -396,7 +396,7 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
         for path, e in r.paths.iteritems():
             if not path.startswith(branchprefix):
                 continue
-            if not meta._is_path_valid(path):
+            if not meta.is_path_valid(path):
                 continue
             kind = svn.checkpath(path, r.revnum)
             path = path[len(branchprefix):]
@@ -448,11 +448,11 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
     branches = {}
     paths_need_discovery = []
     for p in paths:
-        relpath, branch, branchpath = meta._split_branch_path(p)
+        relpath, branch, branchpath = meta.split_branch_path(p)
         if relpath is not None:
             branches[branch] = branchpath
-        elif paths[p].action == 'D' and not meta._is_path_tag(p):
-            ln = meta._localname(p)
+        elif paths[p].action == 'D' and not meta.is_path_tag(p):
+            ln = meta.localname(p)
             # must check in branches_to_delete as well, because this runs after we
             # already updated the branch map
             if ln in meta.branches or ln in tbdelta['branches'][1]:
@@ -497,12 +497,12 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
             path = filepaths.pop(0)
             parentdir = '/'.join(path[:-1])
             filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
-            branchpath = meta._normalize_path(parentdir)
+            branchpath = meta.normalize(parentdir)
             if branchpath.startswith('tags/'):
                 continue
-            branchname = meta._localname(branchpath)
+            branchname = meta.localname(branchpath)
             if branchpath.startswith('trunk/'):
-                branches[meta._localname('trunk')] = 'trunk'
+                branches[meta.localname('trunk')] = 'trunk'
                 continue
             if branchname and branchname.startswith('../'):
                 continue
@@ -530,15 +530,15 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         # We've go a branch that contains other branches. We have to be careful to
         # get results similar to real replay in this case.
         for existingbr in meta.branches:
-            bad = meta._remotename(existingbr)
+            bad = meta.remotename(existingbr)
             if bad.startswith(bp) and len(bad) > len(bp):
                 bad_branch_paths[br].append(bad[len(bp)+1:])
 
     deleted_branches = {}
     for p in r.paths:
-        if meta._is_path_tag(p):
+        if meta.is_path_tag(p):
             continue
-        branch = meta._localname(p)
+        branch = meta.localname(p)
         if not (r.paths[p].action == 'R' and branch in meta.branches):
             continue
         closed = checkbranch(meta, r, branch)
@@ -635,4 +635,4 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         meta.delbranch(b, parent, r)
 
     # save the changed metadata
-    meta._save_metadata()
+    meta.save()
