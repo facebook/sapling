@@ -25,6 +25,12 @@ import test_tags
 import test_utility_commands
 import test_urls
 
+from comprehensive import test_stupid_pull
+
+def comprehensive(mod):
+    dir = os.path.basename(os.path.dirname(mod.__file__))
+    return dir == 'comprehensive'
+
 if __name__ == '__main__':
 
     kwargs = {'descriptions': 2}
@@ -43,7 +49,9 @@ if __name__ == '__main__':
     args = [i.split('.py')[0].replace('-', '_') for i in args]
 
     if not args:
-        suite = [i[1].suite() for i in sorted(all.iteritems())]
+        check = lambda x: '-A' in sys.argv or not comprehensive(x)
+        mods = [m for (n, m) in sorted(all.iteritems()) if check(m)]
+        suite = [m.suite() for m in mods]
     else:
         suite = []
         for arg in args:
