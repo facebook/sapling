@@ -57,7 +57,7 @@ def parentrev(ui, repo, hge, svn_commit_hashes):
 def replay_convert_rev(ui, hg_editor, svn, r, tbdelta):
     # ui is only passed in for similarity with stupid.convert_rev()
     hg_editor.current.rev = r
-    hg_editor.save_tbdelta(tbdelta) # needed by get_replay()
+    hg_editor.meta.save_tbdelta(tbdelta) # needed by get_replay()
     svn.get_replay(r.revnum, hg_editor)
     i = 1
     if hg_editor.current.missing:

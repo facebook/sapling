@@ -19,7 +19,7 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    hashes = hge.hashes()
+    hashes = hge.meta.hashes()
     parent = cmdutil.parentrev(ui, repo, hge, hashes)
     r, br = hashes[parent.node()]
     if br == None:
@@ -47,7 +47,7 @@ def info(ui, repo, hg_repo_path, **opts):
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    hashes = hge.hashes()
+    hashes = hge.meta.hashes()
     parent = cmdutil.parentrev(ui, repo, hge, hashes)
     pn = parent.node()
     if pn not in hashes:
@@ -66,7 +66,7 @@ def info(ui, repo, hg_repo_path, **opts):
     if url[-1] == '/':
         url = url[:-1]
     url = '%s%s' % (url, branchpath)
-    author = hge.authors.reverselookup(parent.user())
+    author = hge.meta.authors.reverselookup(parent.user())
     # cleverly figure out repo root w/o actually contacting the server
     reporoot = url[:len(url)-len(subdir)]
     ui.status('''URL: %(url)s
@@ -78,7 +78,7 @@ Last Changed Author: %(author)s
 Last Changed Rev: %(revision)s
 Last Changed Date: %(date)s\n''' %
               {'reporoot': reporoot,
-               'uuid': hge.uuid,
+               'uuid': hge.meta.uuid,
                'url': url,
                'author': author,
                'revision': r,

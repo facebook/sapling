@@ -38,7 +38,7 @@ def _do_case(self, name, stupid):
     srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))
     destbi = pickle.load(open(os.path.join(dest.path, 'svn', 'branch_info')))
     self.assertEqual(sorted(srcbi.keys()), sorted(destbi.keys()))
-    revkeys = hg_delta_editor.HgChangeReceiver(dest).revmap.keys()
+    revkeys = hg_delta_editor.HgChangeReceiver(dest).meta.revmap.keys()
     for branch in destbi:
         srcinfo = srcbi[branch]
         destinfo = destbi[branch]

@@ -5,8 +5,6 @@ from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
 
-
-import hg_delta_editor
 import svnwrap
 import util
 import utility_commands
