@@ -68,7 +68,7 @@ class RevisionData(object):
         self.externals = {}
 
 
-class HgChangeReceiver(delta.Editor):
+class HgEditor(delta.Editor):
 
     def __init__(self, meta):
         self.meta = meta

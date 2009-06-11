@@ -9,7 +9,7 @@ from mercurial import node
 
 import util
 import maps
-import hg_delta_editor
+import editor
 
 
 def pickle_atomic(data, file_path, dir=None):
@@ -85,7 +85,7 @@ class SVNMeta(object):
     @property
     def editor(self):
         if not hasattr(self, '_editor'):
-            self._editor = hg_delta_editor.HgChangeReceiver(self)
+            self._editor = editor.HgEditor(self)
         return self._editor
 
     def _get_uuid(self):
