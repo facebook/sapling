@@ -97,7 +97,6 @@ class HgChangeReceiver(delta.Editor):
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
         authors = self.ui.config('hgsubversion', 'authormap')
-        filemap = self.ui.config('hgsubversion', 'filemap')
         tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                   'usebranchnames', True)
@@ -130,10 +129,7 @@ class HgChangeReceiver(delta.Editor):
         if authors: self.authors.load(authors)
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
-        self.includepaths = {}
-        self.excludepaths = {}
-        if filemap and os.path.exists(filemap):
-            self.readfilemap(filemap)
+        self.filemap = maps.FileMap(repo)
 
     def hashes(self):
         return dict((v, k) for (k, v) in self.revmap.iteritems())
@@ -270,41 +266,13 @@ class HgChangeReceiver(delta.Editor):
             path = path[1:]
         return path
 
-    def _is_file_included(self, subpath):
-        def checkpathinmap(path, mapping):
-            def rpairs(name):
-                yield '.', name
-                e = len(name)
-                while e != -1:
-                    yield name[:e], name[e+1:]
-                    e = name.rfind('/', 0, e)
-
-            for pre, suf in rpairs(path):
-                try:
-                    return mapping[pre]
-                except KeyError, err:
-                    pass
-            return None
-
-        if len(self.includepaths) and len(subpath):
-            inc = checkpathinmap(subpath, self.includepaths)
-        else:
-            inc = subpath
-        if len(self.excludepaths) and len(subpath):
-            exc = checkpathinmap(subpath, self.excludepaths)
-        else:
-            exc = None
-        if inc is None or exc is not None:
-            return False
-        return True
-
     def _is_path_valid(self, path):
         if path is None:
             return False
         subpath = self._split_branch_path(path)[0]
         if subpath is None:
             return False
-        return self._is_file_included(subpath)
+        return subpath in self.filemap
 
     def _is_path_tag(self, path):
         """If path could represent the path to a tag, returns the potential tag
@@ -717,41 +685,6 @@ class HgChangeReceiver(delta.Editor):
                              extra)
         new = self.repo.commitctx(ctx)
         self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))
-
-    def readfilemap(self, filemapfile):
-        self.ui.note(
-            ('Reading file map from %s\n')
-            % filemapfile)
-        def addpathtomap(path, mapping, mapname):
-            if path in mapping:
-                self.ui.warn(('Duplicate %s entry in %s: "%d"\n') %
-                             (mapname, filemapfile, path))
-            else:
-                self.ui.debug(('%sing %s\n') %
-                              (mapname.capitalize().strip('e'), path))
-                mapping[path] = path
-
-        f = open(filemapfile, 'r')
-        for line in f:
-            if line.strip() == '' or line.strip()[0] == '#':
-                continue
-            try:
-                cmd, path = line.split(' ', 1)
-                cmd = cmd.strip()
-                path = path.strip()
-                if cmd == 'include':
-                    addpathtomap(path, self.includepaths, 'include')
-                elif cmd == 'exclude':
-                    addpathtomap(path, self.excludepaths, 'exclude')
-                else:
-                    self.ui.warn(
-                        ('Unknown filemap command %s\n')
-                        % cmd)
-            except IndexError:
-                self.ui.warn(
-                    ('Ignoring bad line in filemap %s: %s\n')
-                    % (filemapfile, line.rstrip()))
-        f.close()
 
     def _get_uuid(self):
         return open(os.path.join(self.meta_data_dir, 'uuid')).read()

@@ -135,3 +135,71 @@ class RevMap(dict):
         f.flush()
         f.close()
         dict.__setitem__(self, (revnum, branch), hash)
+
+
+class FileMap(object):
+
+    def __init__(self, repo):
+        self.ui = repo.ui
+        self.include = {}
+        self.exclude = {}
+        filemap = repo.ui.config('hgsubversion', 'filemap')
+        if filemap and os.path.exists(filemap):
+            self.load(filemap)
+
+    def _rpairs(self, name):
+        yield '.', name
+        e = len(name)
+        while e != -1:
+            yield name[:e], name[e+1:]
+            e = name.rfind('/', 0, e)
+
+    def check(self, map, path):
+        map = getattr(self, map)
+        for pre, suf in self._rpairs(path):
+            if pre not in map:
+                continue
+            return map[pre]
+        return None
+
+    def __contains__(self, path):
+        if len(self.include) and len(path):
+            inc = self.check('include', path)
+        else:
+            inc = path
+        if len(self.exclude) and len(path):
+            exc = self.check('exclude', path)
+        else:
+            exc = None
+        if inc is None or exc is not None:
+            return False
+        return True
+
+    def add(self, fn, map, path):
+        mapping = getattr(self, map)
+        if path in mapping:
+            msg = 'duplicate %s entry in %s: "%d"\n'
+            self.ui.warn(msg % (map, fn, path))
+            return
+        bits = map.strip('e'), path
+        self.ui.debug('%sing %s\n' % bits)
+        mapping[path] = path
+
+    def load(self, fn):
+        self.ui.note('reading file map from %s\n' % fn)
+        f = open(fn, 'r')
+        for line in f:
+            if line.strip() == '' or line.strip()[0] == '#':
+                continue
+            try:
+                cmd, path = line.split(' ', 1)
+                cmd = cmd.strip()
+                path = path.strip()
+                if cmd in ('include', 'exclude'):
+                    self.add(fn, cmd, path)
+                    continue
+                self.ui.warn('unknown filemap command %s\n' % cmd)
+            except IndexError:
+                msg = 'ignoring bad line in filemap %s: %s\n'
+                self.ui.warn(msg % (fn, line.rstrip()))
+        f.close()

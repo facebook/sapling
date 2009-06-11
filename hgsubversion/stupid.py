@@ -82,7 +82,7 @@ def filteriterhunks(hg_editor):
         applycurrent = False
         for data in iterhunks(ui, fp, sourcefile):
             if data[0] == 'file':
-                if hg_editor._is_file_included(data[1][1]):
+                if data[1][1] in hg_editor.filemap:
                     applycurrent = True
                 else:
                     applycurrent = False
@@ -585,8 +585,7 @@ def convert_rev(ui, hg_editor, svn, r, tbdelta):
 
         if '' in files_touched:
             files_touched.remove('')
-        excluded = [f for f in files_touched
-                            if not hg_editor._is_file_included(f)]
+        excluded = [f for f in files_touched if f not in hg_editor.filemap]
         for f in excluded:
             files_touched.remove(f)
 
