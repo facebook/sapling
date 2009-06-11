@@ -48,7 +48,7 @@ if __name__ == '__main__':
         suite = []
         for arg in args:
             if arg not in all:
-                print 'test module %s not available' % arg
+                print >> sys.stderr, 'test module %s not available' % arg
             else:
                 suite.append(all[arg].suite())
 
