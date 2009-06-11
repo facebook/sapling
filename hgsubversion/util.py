@@ -1,5 +1,4 @@
 import os
-import shutil
 
 from mercurial import hg
 from mercurial import node

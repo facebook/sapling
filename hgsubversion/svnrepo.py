@@ -15,12 +15,10 @@ subclass: pull() is called on the instance pull *to*, but not the one pulled
 """
 
 from mercurial import error
-from mercurial import node
 from mercurial import util as hgutil
 from mercurial import httprepo
 import mercurial.repo
 
-import hg_delta_editor
 import util
 import wrappers
 

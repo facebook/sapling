@@ -66,6 +66,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
     if len(args) != 1:
+        dest = args[0]
         url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     else:
         url = args[0]

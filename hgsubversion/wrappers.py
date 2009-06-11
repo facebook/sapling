@@ -1,9 +1,6 @@
-import os
-
 from hgext import rebase as hgrebase
 
 from mercurial import cmdutil as hgcmdutil
-from mercurial import commands
 from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
