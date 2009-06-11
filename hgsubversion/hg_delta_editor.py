@@ -148,7 +148,7 @@ class HgChangeReceiver(delta.Editor):
         for f in files_to_commit:
             if not self.meta.is_path_valid(f):
                 continue
-            p, b = self.meta.path_and_branch_for_path(f)
+            p, b = self.meta.split_branch_path(f)[:2]
             if b not in branch_batches:
                 branch_batches[b] = []
             branch_batches[b].append((p, f))
@@ -265,7 +265,7 @@ class HgChangeReceiver(delta.Editor):
 
     @ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
-        br_path, branch = self.meta.path_and_branch_for_path(path)
+        br_path, branch = self.meta.split_branch_path(path)[:2]
         if br_path == '':
             self.meta.closebranches.add(branch)
         if br_path is not None:
@@ -290,7 +290,7 @@ class HgChangeReceiver(delta.Editor):
     @ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
         self.current.file = None
-        fpath, branch = self.meta.path_and_branch_for_path(path)
+        fpath, branch = self.meta.split_branch_path(path)[:2]
         if not fpath:
             self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
             return
@@ -330,7 +330,7 @@ class HgChangeReceiver(delta.Editor):
         self.current.base = None
         if path in self.current.deleted:
             del self.current.deleted[path]
-        fpath, branch = self.meta.path_and_branch_for_path(path, existing=False)
+        fpath, branch = self.meta.split_branch_path(path, existing=False)[:2]
         if not fpath:
             return
         if branch not in self.meta.branches:
@@ -343,7 +343,7 @@ class HgChangeReceiver(delta.Editor):
             return
         self.ui.note('A+ %s\n' % path)
         (from_file,
-         from_branch) = self.meta.path_and_branch_for_path(copyfrom_path)
+         from_branch) = self.meta.split_branch_path(copyfrom_path)[:2]
         if not from_file:
             self.current.missing.add(path)
             return
@@ -366,7 +366,7 @@ class HgChangeReceiver(delta.Editor):
     def add_directory(self, path, parent_baton, copyfrom_path,
                       copyfrom_revision, dir_pool=None):
         self.current.batons[path] = path
-        br_path, branch = self.meta.path_and_branch_for_path(path)
+        br_path, branch = self.meta.split_branch_path(path)[:2]
         if br_path is not None:
             if not copyfrom_path and not br_path:
                 self.current.emptybranches[branch] = True
@@ -386,7 +386,7 @@ class HgChangeReceiver(delta.Editor):
             cp_f = ''
         else:
             source_rev = copyfrom_revision
-            cp_f, source_branch = self.meta.path_and_branch_for_path(copyfrom_path)
+            cp_f, source_branch = self.meta.split_branch_path(copyfrom_path)[:2]
             if cp_f == '' and br_path == '':
                 assert br_path is not None
                 tmp = source_branch, source_rev, self.current.rev.revnum
@@ -440,7 +440,7 @@ class HgChangeReceiver(delta.Editor):
     @ieditor
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
         self.current.batons[path] = path
-        p_, branch = self.meta.path_and_branch_for_path(path)
+        p_, branch = self.meta.split_branch_path(path)[:2]
         if p_ == '':
             self.current.emptybranches[branch] = False
         return path

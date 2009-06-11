@@ -226,12 +226,9 @@ class SVNMeta(object):
             return None, None, None
         return path, ln, test
 
-    def path_and_branch_for_path(self, path, existing=True):
-        return self.split_branch_path(path, existing=existing)[:2]
-
     def _determine_parent_branch(self, p, src_path, src_rev, revnum):
         if src_path is not None:
-            src_file, src_branch = self.path_and_branch_for_path(src_path)
+            src_file, src_branch = self.split_branch_path(src_path)[:2]
             src_tag = self.is_path_tag(src_path)
             if src_tag != False or src_file == '': # case 2
                 ln = self.localname(p)
@@ -300,7 +297,7 @@ class SVNMeta(object):
                 # if you commit to a tag, I'm calling you stupid and ignoring
                 # you.
                 if src_p is not None and src_rev is not None:
-                    file, branch = self.path_and_branch_for_path(src_p)
+                    file, branch = self.split_branch_path(src_p)[:2]
                     if file is None:
                         # some crazy people make tags from other tags
                         file = ''
@@ -340,7 +337,7 @@ class SVNMeta(object):
             #    already-known branches, so we mark them as deleted.
             # 6. It's a branch being replaced by another branch - the
             #    action will be 'R'.
-            fi, br = self.path_and_branch_for_path(p)
+            fi, br = self.split_branch_path(p)[:2]
             if fi is not None:
                 if fi == '':
                     if paths[p].action == 'D':
@@ -358,7 +355,7 @@ class SVNMeta(object):
             parent = self._determine_parent_branch(
                 p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
             if not parent and paths[p].copyfrom_path:
-                bpath, branch = self.path_and_branch_for_path(p, False)
+                bpath, branch = self.split_branch_path(p, False)[:2]
                 if (bpath is not None
                     and branch not in self.branches
                     and branch not in added_branches):
