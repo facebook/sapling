@@ -261,6 +261,7 @@ def pull(repo, source, heads=[], force=False):
                     try:
                         util.describe_revision(ui, r)
                         pullfuns[have_replay](ui, meta, svn, r, tbdelta)
+                        meta.save()
                         converted = True
                     except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                         ui.status('%s\n' % e.message)

@@ -633,6 +633,3 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         if parent == node.nullid:
             continue
         meta.delbranch(b, parent, r)
-
-    # save the changed metadata
-    meta.save()

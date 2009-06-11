@@ -259,7 +259,6 @@ class HgChangeReceiver(delta.Editor):
                 continue
             self.meta.delbranch(branch, parent, rev)
 
-        self.meta.save()
         self.current.clear()
 
     # Here come all the actual editor methods
