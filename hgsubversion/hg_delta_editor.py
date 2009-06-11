@@ -156,7 +156,7 @@ class HgChangeReceiver(delta.Editor):
 
         closebranches = {}
         for branch in tbdelta['branches'][1]:
-            branchedits = self.meta.branchedits(branch, rev)
+            branchedits = self.meta.revmap.branchedits(branch, rev)
             if len(branchedits) < 1:
                 # can't close a branch that never existed
                 continue

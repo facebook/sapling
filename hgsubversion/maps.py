@@ -101,10 +101,18 @@ class RevMap(dict):
     def __init__(self, repo):
         dict.__init__(self)
         self.path = os.path.join(repo.path, 'svn', 'rev_map')
+        self.seen = 0
         if os.path.isfile(self.path):
             self._load()
         else:
             self._write()
+
+    def hashes(self):
+        return dict((v, k) for (k, v) in self.iteritems())
+
+    def branchedits(self, branch, rev):
+        check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
+        return sorted(filter(check, self.iteritems()), reverse=True)
 
     def _load(self):
         f = open(self.path)
@@ -118,7 +126,9 @@ class RevMap(dict):
                 branch = None
             else:
                 branch = branch[:-1]
-            dict.__setitem__(self, (int(revnum), branch), node.bin(hash))
+            revnum = int(revnum)
+            self.seen = max(self.seen, revnum)
+            dict.__setitem__(self, (revnum, branch), node.bin(hash))
         f.close()
 
     def _write(self):
@@ -134,6 +144,7 @@ class RevMap(dict):
         f.write(str(revnum) + ' ' + node.hex(hash) + ' ' + b + '\n')
         f.flush()
         f.close()
+        self.seen = max(self.seen, revnum)
         dict.__setitem__(self, (revnum, branch), hash)
 
 

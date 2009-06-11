@@ -120,25 +120,6 @@ class SVNMeta(object):
     def authors_file(self):
         return os.path.join(self.meta_data_dir, 'authors')
 
-    def hashes(self):
-        return dict((v, k) for (k, v) in self.revmap.iteritems())
-
-    def branchedits(self, branch, rev):
-        check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
-        return sorted(filter(check, self.revmap.iteritems()), reverse=True)
-
-    def last_known_revision(self):
-        """Obtain the highest numbered -- i.e. latest -- revision known.
-
-        Currently, this function just iterates over the entire revision map
-        using the max() builtin. This may be slow for extremely large
-        repositories, but for now, it's fast enough.
-        """
-        try:
-            return max(k[0] for k in self.revmap.iterkeys())
-        except ValueError:
-            return 0
-
     def fixdate(self, date):
         if date is not None:
             date = date.replace('T', ' ').replace('Z', '').split('.')[0]

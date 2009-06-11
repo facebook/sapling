@@ -37,7 +37,7 @@ def parents(orig, ui, repo, *args, **opts):
     if not opts.get('svn', False):
         return orig(ui, repo, *args, **opts)
     hge = hg_delta_editor.HgChangeReceiver(repo)
-    hashes = hge.meta.hashes()
+    hashes = hge.meta.revmap.hashes()
     ha = cmdutil.parentrev(ui, repo, hge, hashes)
     if ha.node() == node.nullid:
         raise hgutil.Abort('No parent svn revision!')
@@ -58,10 +58,9 @@ def incoming(orig, ui, repo, source='default', **opts):
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(other.svnurl, user, passwd)
     hg_editor = hg_delta_editor.HgChangeReceiver(repo)
-    start = hg_editor.meta.last_known_revision()
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    for r in svn.revisions(start=start):
+    for r in svn.revisions(start=hg_editor.meta.revmap.seen):
         ui.status('\n')
         for label, attr in revmeta:
             l1 = label + ':'
@@ -80,7 +79,8 @@ def outgoing(repo, dest=None, heads=None, force=False):
     svnurl, revs, checkout = hg.parseurl(dest.svnurl, heads)
     hge = hg_delta_editor.HgChangeReceiver(repo)
     parent = repo.parents()[0].node()
-    return util.outgoing_revisions(repo.ui, repo, hge, hge.meta.hashes(), parent)
+    hashes = hge.meta.revmap.hashes()
+    return util.outgoing_revisions(repo.ui, repo, hge, hashes, parent)
 
 
 def diff(orig, ui, repo, *args, **opts):
@@ -89,7 +89,7 @@ def diff(orig, ui, repo, *args, **opts):
     if not opts.get('svn', False) or opts.get('change', None):
         return orig(ui, repo, *args, **opts)
     hge = hg_delta_editor.HgChangeReceiver(repo)
-    hashes = hge.meta.hashes()
+    hashes = hge.meta.revmap.hashes()
     if not opts.get('rev', None):
         parent = repo.parents()[0]
         o_r = util.outgoing_revisions(ui, repo, hge, hashes, parent.node())
@@ -132,7 +132,7 @@ def push(repo, dest, force, revs):
         return 1
     workingrev = repo.parents()[0]
     ui.status('searching for changes\n')
-    hashes = hge.meta.hashes()
+    hashes = hge.meta.revmap.hashes()
     outgoing = util.outgoing_revisions(ui, repo, hge, hashes, workingrev.node())
     if not (outgoing and len(outgoing)):
         ui.status('no changes found\n')
@@ -197,7 +197,7 @@ def push(repo, dest, force, revs):
                         rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
         # TODO: stop constantly creating the HgChangeReceiver instances.
         hge = hg_delta_editor.HgChangeReceiver(hge.repo, svn.uuid)
-        hashes = hge.meta.hashes()
+        hashes = hge.meta.revmap.hashes()
     util.swap_out_encoding(old_encoding)
     return 0
 
@@ -237,8 +237,8 @@ def pull(repo, source, heads=[], force=False):
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
     hg_editor = hg_delta_editor.HgChangeReceiver(repo, svn.uuid, svn.subdir)
 
-    start = max(hg_editor.meta.last_known_revision(), skipto_rev)
-    initializing_repo = (hg_editor.meta.last_known_revision() <= 0)
+    start = max(hg_editor.meta.revmap.seen, skipto_rev)
+    initializing_repo = hg_editor.meta.revmap.seen <= 0
     ui = repo.ui
 
     if initializing_repo and start > 0:
@@ -305,7 +305,7 @@ def rebase(orig, ui, repo, **opts):
     extrafn = opts.get('svnextrafn', extrafn2)
     sourcerev = opts.get('svnsourcerev', repo.parents()[0].node())
     hge = hg_delta_editor.HgChangeReceiver(repo)
-    hashes = hge.meta.hashes()
+    hashes = hge.meta.revmap.hashes()
     o_r = util.outgoing_revisions(ui, repo, hge, hashes, sourcerev=sourcerev)
     if not o_r:
         ui.status('Nothing to rebase!\n')

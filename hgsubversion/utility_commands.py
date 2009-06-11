@@ -19,7 +19,7 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    hashes = hge.meta.hashes()
+    hashes = hge.meta.revmap.hashes()
     parent = cmdutil.parentrev(ui, repo, hge, hashes)
     r, br = hashes[parent.node()]
     if br == None:
@@ -47,7 +47,7 @@ def info(ui, repo, hg_repo_path, **opts):
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     hge = hg_delta_editor.HgChangeReceiver(repo, svn.uuid)
-    hashes = hge.meta.hashes()
+    hashes = hge.meta.revmap.hashes()
     parent = cmdutil.parentrev(ui, repo, hge, hashes)
     pn = parent.node()
     if pn not in hashes:

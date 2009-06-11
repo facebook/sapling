@@ -431,7 +431,7 @@ def fetch_branchrev(svn, hg_editor, branch, branchpath, r, parentctx):
     return files, filectxfn
 
 def checkbranch(hg_editor, r, branch):
-    branchedits = hg_editor.meta.branchedits(branch, r)
+    branchedits = hg_editor.meta.revmap.branchedits(branch, r)
     if not branchedits:
         return None
     branchtip = branchedits[0][1]
