@@ -455,7 +455,7 @@ def branches_in_paths(hge, paths, revnum, checkpath, listdir):
             ln = hge._localname(p)
             # must check in branches_to_delete as well, because this runs after we
             # already updated the branch map
-            if ln in hge.branches or ln in hge.branches_to_delete:
+            if ln in hge.branches or ln in hge.current.closebranches:
                 branches[ln] = p
         else:
             paths_need_discovery.append(p)

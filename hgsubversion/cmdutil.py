@@ -56,16 +56,16 @@ def parentrev(ui, repo, hge, svn_commit_hashes):
 
 def replay_convert_rev(ui, hg_editor, svn, r, tbdelta):
     # ui is only passed in for similarity with stupid.convert_rev()
-    hg_editor.set_current_rev(r)
+    hg_editor.current.rev = r
     hg_editor.save_tbdelta(tbdelta) # needed by get_replay()
     svn.get_replay(r.revnum, hg_editor)
     i = 1
-    if hg_editor.missing_plaintexts:
+    if hg_editor.current.missing:
         hg_editor.ui.debug('Fetching %s files that could not use replay.\n' %
-                           len(hg_editor.missing_plaintexts))
+                           len(hg_editor.current.missing))
         files_to_grab = set()
         rootpath = svn.subdir and svn.subdir[1:] or ''
-        for p in hg_editor.missing_plaintexts:
+        for p in hg_editor.current.missing:
             hg_editor.ui.note('.')
             hg_editor.ui.flush()
             if p[-1] == '/':
@@ -84,7 +84,7 @@ def replay_convert_rev(ui, hg_editor, svn, r, tbdelta):
             i += 1
             data, mode = svn.get_file(p, r.revnum)
             hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
-        hg_editor.missing_plaintexts = set()
+        hg_editor.current.missing = set()
         hg_editor.ui.note('\n')
     hg_editor.commit_current_delta(tbdelta)
 
