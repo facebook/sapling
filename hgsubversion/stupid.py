@@ -599,7 +599,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 # something is very wrong
                 assert f[0] != '/'
 
-        extra = util.build_extra(r.revnum, b, svn.uuid, svn.subdir)
+        extra = meta.genextra(r.revnum, b)
         if not meta.usebranchnames:
             extra.pop('branch', None)
 

@@ -159,6 +159,26 @@ class SVNMeta(object):
             return branch[3:]
         return 'branches/%s' % branch
 
+    def genextra(self, revnum, branch):
+        extra = {}
+        branchpath = 'trunk'
+        if branch:
+            extra['branch'] = branch
+            branchpath = 'branches/%s' % branch
+
+        subdir = self.subdir
+        if subdir and subdir[-1] == '/':
+            subdir = subdir[:-1]
+        if subdir and subdir[0] != '/':
+            subdir = '/' + subdir
+
+        extra['convert_revision'] = 'svn:%(uuid)s%(path)s@%(rev)s' % {
+            'uuid': self.uuid,
+            'path': '%s/%s' % (subdir , branchpath),
+            'rev': revnum,
+        }
+        return extra
+
     def normalize(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
         have one.
@@ -410,7 +430,7 @@ class SVNMeta(object):
                 return context.memfilectx(path='.hgtags', data=src,
                                           islink=False, isexec=False,
                                           copied=None)
-            extra = util.build_extra(rev.revnum, b, self.uuid, self.subdir)
+            extra = self.genextra(rev.revnum, b)
             if not self.usebranchnames:
                 extra.pop('branch', None)
             if b in endbranches:

@@ -173,7 +173,7 @@ class HgEditor(delta.Editor):
                        revlog.nullid)
             if parents[0] in closedrevs and branch in self.meta.closebranches:
                 continue
-            extra = util.build_extra(rev.revnum, branch, self.meta.uuid, self.meta.subdir)
+            extra = self.meta.genextra(rev.revnum, branch)
             if branch is not None:
                 if (branch not in self.meta.branches
                     and branch not in self.repo.branchtags()):
@@ -233,7 +233,7 @@ class HgEditor(delta.Editor):
             if self.current.emptybranches[branch]: #pragma: no cover
                raise hgutil.Abort('Empty commit to an open branch attempted. '
                                   'Please report this issue.')
-            extra = util.build_extra(rev.revnum, branch, self.meta.uuid, self.meta.subdir)
+            extra = self.meta.genextra(rev.revnum, branch)
             if not self.meta.usebranchnames:
                 extra.pop('branch', None)
             current_ctx = context.memctx(self.repo,
