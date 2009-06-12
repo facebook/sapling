@@ -109,6 +109,10 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             uuidfile.write(uuid)
             uuidfile.close()
 
+        # don't reflect closed branches
+        if ctx.extra().get('close') and not ctx.files():
+            continue
+
         # find commitpath, write to revmap
         commitpath = revpath[len(subdir)+1:]
         if commitpath.startswith('branches'):
@@ -125,7 +129,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             last_rev = revision
 
         # deal with branches
-        if ctx.extra().get('close'): # don't re-add, we just deleted!
+        if ctx.extra().get('close'):
             continue
         branch = ctx.branch()
         if branch == 'default':

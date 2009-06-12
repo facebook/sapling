@@ -454,7 +454,8 @@ class SVNMeta(object):
     def delbranch(self, branch, node, rev):
         pctx = self.repo[node]
         files = pctx.manifest().keys()
-        extra = {'close': 1}
+        extra = self.genextra(rev.revnum, branch)
+        extra['close'] = 1
         if self.usebranchnames:
             extra['branch'] = branch or 'default'
         ctx = context.memctx(self.repo,
