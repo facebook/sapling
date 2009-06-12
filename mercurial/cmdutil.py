@@ -101,10 +101,10 @@ def loglimit(opts):
 def remoteui(src, opts):
     'build a remote ui from ui or repo and opts'
     if hasattr(src, 'baseui'): # looks like a repository
-        dst = src.baseui # drop repo-specific config
+        dst = src.baseui.copy() # drop repo-specific config
         src = src.ui # copy target options from repo
     else: # assume it's a global ui object
-        dst = src # keep all global options
+        dst = src.copy() # keep all global options
 
     # copy ssh-specific options
     for o in 'ssh', 'remotecmd':
