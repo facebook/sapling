@@ -81,6 +81,64 @@ def localpath(path):
         return path[5:]
     return path
 
+def share(ui, source, dest, update=True):
+    '''create a shared repository'''
+
+    if not islocal(source):
+        raise util.Abort(_('can only share local repositories'))
+
+    if isinstance(source, str):
+        origsource = ui.expandpath(source)
+        source, rev, checkout = parseurl(origsource, '')
+        srcrepo = repository(ui, source)
+    else:
+        srcrepo = source
+        origsource = source = srcrepo.url()
+        checkout = None
+
+    sharedpath = srcrepo.sharedpath # if our source is already sharing
+
+    root = os.path.realpath(dest)
+    roothg = os.path.join(root, '.hg')
+
+    if os.path.exists(roothg):
+        raise util.Abort(_('destination already exists'))
+
+    if not os.path.isdir(root):
+        os.mkdir(root)
+    os.mkdir(roothg)
+
+    requirements = ''
+    try:
+        requirements = srcrepo.opener('requires').read()
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+
+    requirements += 'shared\n'
+    file(os.path.join(roothg, 'requires'), 'w').write(requirements)
+    file(os.path.join(roothg, 'sharedpath'), 'w').write(sharedpath)
+
+    default = srcrepo.ui.config('paths', 'default')
+    if default:
+        f = file(os.path.join(roothg, 'hgrc'), 'w')
+        f.write('[paths]\ndefault = %s\n' % default)
+        f.close()
+
+    r = repository(ui, root)
+
+    if update:
+        r.ui.status(_("updating working directory\n"))
+        if update is not True:
+            checkout = update
+        for test in (checkout, 'default', 'tip'):
+            try:
+                uprev = r.lookup(test)
+                break
+            except:
+                continue
+        _update(r, uprev)
+
 def clone(ui, source, dest=None, pull=False, rev=None, update=True,
           stream=False):
     """Make a copy of an existing repository.
