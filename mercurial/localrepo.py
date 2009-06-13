@@ -19,7 +19,7 @@ propertycache = util.propertycache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap'))
-    supported = set('revlogv1 store fncache'.split())
+    supported = set('revlogv1 store fncache shared'.split())
 
     def __init__(self, baseui, path=None, create=0):
         repo.repository.__init__(self)
@@ -72,7 +72,18 @@ class localrepository(repo.repository):
             for r in requirements - self.supported:
                 raise error.RepoError(_("requirement '%s' not supported") % r)
 
-        self.store = store.store(requirements, self.path, util.opener)
+        self.sharedpath = self.path
+        try:
+            s = os.path.realpath(self.opener("sharedpath").read())
+            if not os.path.exists(s):
+                raise error.RepoError(
+                    _('.hg/sharedpath points to nonexistent directory %s' % s))
+            self.sharedpath = s
+        except IOError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+
+        self.store = store.store(requirements, self.sharedpath, util.opener)
         self.spath = self.store.path
         self.sopener = self.store.opener
         self.sjoin = self.store.join
