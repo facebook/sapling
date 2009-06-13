@@ -83,6 +83,24 @@ hg bisect -s
 hg bisect -s 
 hg bisect -g
 
+set +e
+
 echo % test invalid command
 hg bisect -r
 hg bisect --command 'foobar'
+
+echo % test bisecting command
+cat > script.py <<EOF
+#!/usr/bin/env python
+import sys
+from mercurial import ui, hg
+repo = hg.repository(ui.ui(), '.')
+if repo['.'].rev() < 6:
+    sys.exit(1)
+EOF
+chmod +x script.py
+hg bisect -r
+hg bisect --good tip
+hg bisect --bad 0
+hg bisect --command "`pwd`/script.py"
+true
