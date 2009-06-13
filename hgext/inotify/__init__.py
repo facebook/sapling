@@ -37,7 +37,9 @@ def serve(ui, repo, **opts):
                 self.master.shutdown()
 
     service = service()
-    cmdutil.service(opts, initfn=service.init, runfn=service.run)
+    logfile = ui.config('inotify', 'log')
+    cmdutil.service(opts, initfn=service.init, runfn=service.run,
+                    logfile=logfile)
 
 def debuginotify(ui, repo, **opts):
     '''debugging information for inotify extension
