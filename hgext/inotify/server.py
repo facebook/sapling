@@ -142,6 +142,24 @@ class pollable(object):
     def shutdown(self):
         raise NotImplementedError
 
+def eventaction(code):
+    """
+    Decorator to help handle events in repowatcher
+    """
+    def decorator(f):
+        def wrapper(self, wpath):
+            if code == 'm' and wpath in self.lastevent and \
+                self.lastevent[wpath] in 'cm':
+                return
+            self.lastevent[wpath] = code
+            self.timeout = 250
+
+            f(self, wpath)
+
+        wrapper.func_name = f.func_name
+        return wrapper
+    return decorator
+
 class repowatcher(pollable):
     """
     Watches inotify events
@@ -438,21 +456,6 @@ class repowatcher(pollable):
         except OSError:
             self.statcache.pop(wpath, None)
             raise
-
-    def eventaction(code):
-        def decorator(f):
-            def wrapper(self, wpath):
-                if code == 'm' and wpath in self.lastevent and \
-                    self.lastevent[wpath] in 'cm':
-                    return
-                self.lastevent[wpath] = code
-                self.timeout = 250
-
-                f(self, wpath)
-
-            wrapper.func_name = f.func_name
-            return wrapper
-        return decorator
 
     @eventaction('c')
     def created(self, wpath):
