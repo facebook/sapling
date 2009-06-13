@@ -767,17 +767,18 @@ class atomictempfile(object):
         return getattr(self._fp, name)
 
     def rename(self):
-        if not self.closed:
+        if not self._fp.closed:
             self._fp.close()
             rename(self.temp, localpath(self.__name))
 
     def __del__(self):
-        if not self.closed:
+        if not self._fp:
+            return
+        if not self._fp.closed:
             try:
                 os.unlink(self.temp)
             except: pass
-            if self._fp:
-                self._fp.close()
+            self._fp.close()
 
 def makedirs(name, mode=None):
     """recursive directory creation with parent mode inheritance"""
