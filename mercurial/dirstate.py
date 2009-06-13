@@ -473,7 +473,7 @@ class dirstate(object):
 
         # step 1: find all explicit files
         for ff in sorted(files):
-            nf = normalize(normpath(ff), True)
+            nf = normalize(normpath(ff), False)
             if nf in results:
                 continue
 
