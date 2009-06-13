@@ -88,7 +88,7 @@ def walk(repo, root):
 
     return walkit(root, root == '')
 
-def _explain_watch_limit(ui, repo, count):
+def _explain_watch_limit(ui, repo):
     path = '/proc/sys/fs/inotify/max_user_watches'
     try:
         limit = int(file(path).read())
@@ -219,7 +219,7 @@ class repowatcher(pollable):
                     return
                 if err.errno != errno.ENOSPC:
                     raise
-                _explain_watch_limit(self.ui, self.repo, self.watches)
+                _explain_watch_limit(self.ui, self.repo)
 
     def setup(self):
         self.ui.note(_('watching directories under %r\n') % self.repo.root)
@@ -357,7 +357,6 @@ class repowatcher(pollable):
             for d in dirs:
                 self.add_watch(join(root, d), self.mask)
             wroot = root[len(self.wprefix):]
-            d = self.dir(self.tree, wroot)
             for fn in files:
                 wfn = join(wroot, fn)
                 self.updatefile(wfn, self.getstat(wfn))
