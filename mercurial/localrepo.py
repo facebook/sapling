@@ -28,6 +28,14 @@ class localrepository(repo.repository):
         self.origroot = path
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)
+        self.baseui = baseui
+        self.ui = baseui.copy()
+
+        try:
+            self.ui.readconfig(self.join("hgrc"), self.root)
+            extensions.loadall(self.ui)
+        except IOError:
+            pass
 
         if not os.path.isdir(self.path):
             if create:
@@ -35,10 +43,10 @@ class localrepository(repo.repository):
                     os.mkdir(path)
                 os.mkdir(self.path)
                 requirements = ["revlogv1"]
-                if baseui.configbool('format', 'usestore', True):
+                if self.ui.configbool('format', 'usestore', True):
                     os.mkdir(os.path.join(self.path, "store"))
                     requirements.append("store")
-                    if baseui.configbool('format', 'usefncache', True):
+                    if self.ui.configbool('format', 'usefncache', True):
                         requirements.append("fncache")
                     # create an invalid changelog
                     self.opener("00changelog.i", "a").write(
@@ -69,14 +77,6 @@ class localrepository(repo.repository):
         self.sopener = self.store.opener
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
-
-        self.baseui = baseui
-        self.ui = baseui.copy()
-        try:
-            self.ui.readconfig(self.join("hgrc"), self.root)
-            extensions.loadall(self.ui)
-        except IOError:
-            pass
 
         self.tagscache = None
         self._tagstypecache = None
