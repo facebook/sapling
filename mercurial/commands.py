@@ -357,9 +357,9 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                     raise util.Abort(_("%s killed") % command)
                 else:
                     transition = "bad"
-                node = repo.lookup(rev or '.')
-                state[transition].append(node)
-                ui.note(_('Changeset %s: %s\n') % (short(node), transition))
+                ctx = repo[rev or '.']
+                state[transition].append(ctx.node())
+                ui.status(_('Changeset %d:%s: %s\n') % (ctx, ctx, transition))
                 check_state(state, interactive=False)
                 # bisect
                 nodes, changesets, good = hbisect.bisect(repo.changelog, state)
