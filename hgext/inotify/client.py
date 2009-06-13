@@ -91,7 +91,13 @@ class client(object):
         Raises QueryFailed on error
         """
         cs = common.recvcs(self.sock)
-        version = ord(cs.read(1))
+        try:
+            version = ord(cs.read(1))
+        except TypeError:
+            # empty answer, assume the server crashed
+            self.ui.warn(_('received empty answer from inotify server'))
+            raise QueryFailed('server crashed')
+
         if version != common.version:
             self.ui.warn(_('(inotify: received response from incompatible '
                       'server version %d)\n') % version)
