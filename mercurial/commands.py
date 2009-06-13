@@ -339,6 +339,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     if command:
         commandpath = util.find_exe(command)
+        if commandpath is None:
+            raise util.Abort(_("cannot find executable: %s") % command)
         changesets = 1
         try:
             while changesets:

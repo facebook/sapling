@@ -303,3 +303,5 @@ user:        test
 date:        Thu Jan 01 00:00:06 1970 +0000
 summary:     msg 6
 
+% test invalid command
+abort: cannot find executable: foobar
