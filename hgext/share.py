@@ -9,7 +9,7 @@ import os
 from mercurial.i18n import _
 from mercurial import hg, commands
 
-def share(ui, source, dest, noupdate=False):
+def share(ui, source, dest=None, noupdate=False):
     """create a new shared repository (experimental)
 
     Initialize a new repository and working directory that shares its
@@ -25,7 +25,7 @@ cmdtable = {
     "share":
     (share,
      [('U', 'noupdate', None, _('do not create a working copy'))],
-     _('[-U] SOURCE DEST')),
+     _('[-U] SOURCE [DEST]')),
 }
 
 commands.norepo += " share"

@@ -81,11 +81,14 @@ def localpath(path):
         return path[5:]
     return path
 
-def share(ui, source, dest, update=True):
+def share(ui, source, dest=None, update=True):
     '''create a shared repository'''
 
     if not islocal(source):
         raise util.Abort(_('can only share local repositories'))
+
+    if not dest:
+        dest = os.path.basename(source)
 
     if isinstance(source, str):
         origsource = ui.expandpath(source)
