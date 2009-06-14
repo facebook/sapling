@@ -146,6 +146,9 @@ def has_symlink():
 def has_tla():
     return matchoutput('tla --version 2>&1', r'The GNU Arch Revision')
 
+def has_gpg():
+    return matchoutput('gpg --version 2>&1', r'GnuPG')
+
 def has_unix_permissions():
     d = tempfile.mkdtemp(prefix=tempprefix, dir=".")
     try:
@@ -183,6 +186,7 @@ checks = {
     "execbit": (has_executablebit, "executable bit"),
     "fifo": (has_fifo, "named pipes"),
     "git": (has_git, "git command line client"),
+    "gpg": (has_gpg, "gpg client"),
     "hotshot": (has_hotshot, "python hotshot module"),
     "icasefs": (has_icasefs, "case insensitive file system"),
     "inotify": (has_inotify, "inotify extension support"),
