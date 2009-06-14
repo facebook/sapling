@@ -255,7 +255,7 @@ def sign(ui, repo, *revs, **opts):
                              % hgnode.short(n)
                              for n in nodes])
     try:
-        m = match.exact(['.hgsigs'])
+        m = match.exact(repo.root, '', ['.hgsigs'])
         repo.commit(message, opts['user'], opts['date'], match=m)
     except ValueError, inst:
         raise util.Abort(str(inst))
