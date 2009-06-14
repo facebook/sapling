@@ -1,0 +1,16 @@
+adding .hgignore
+adding a
+% invalid eol
+applying eol.diff
+abort: Unsupported line endings type: LFCR
+% force LF
+applying eol.diff
+'a\ny\nc\nd\nz'
+% force CRLF
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying eol.diff
+'a\r\ny\r\nc\r\nd\r\nz'
+adding b
+% binary patch with --eol
+applying bin.diff
+'a\x00\nc'

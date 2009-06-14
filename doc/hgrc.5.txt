@@ -607,6 +607,17 @@ smtp::
     Optional. It's the hostname that the sender can use to identify
     itself to the MTA.
 
+[[patch]]
+patch::
+  Settings used when applying patches, for instance through the 'import'
+  command or with Mercurial Queues extension.
+  eol;;
+    When set to 'strict' patch content and patched files end of lines
+    are preserved. When set to 'lf' or 'crlf', both files end of lines
+    are ignored when patching and the result line endings are
+    normalized to either LF (Unix) or CRLF (Windows).
+    Default: strict.
+
 [[paths]]
 paths::
   Assigns symbolic names to repositories. The left side is the

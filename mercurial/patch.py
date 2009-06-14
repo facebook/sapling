@@ -228,13 +228,42 @@ def readgitpatch(lr):
 
     return (dopatch, gitpatches)
 
+class linereader:
+    # simple class to allow pushing lines back into the input stream
+    def __init__(self, fp, textmode=False):
+        self.fp = fp
+        self.buf = []
+        self.textmode = textmode
+
+    def push(self, line):
+        if line is not None:
+            self.buf.append(line)
+
+    def readline(self):
+        if self.buf:
+            l = self.buf[0]
+            del self.buf[0]
+            return l
+        l = self.fp.readline()
+        if self.textmode and l.endswith('\r\n'):
+            l = l[:-2] + '\n'
+        return l
+
+    def __iter__(self):
+        while 1:
+            l = self.readline()
+            if not l:
+                break
+            yield l
+
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 
 class patchfile(object):
-    def __init__(self, ui, fname, opener, missing=False):
+    def __init__(self, ui, fname, opener, missing=False, eol=None):
         self.fname = fname
+        self.eol = eol
         self.opener = opener
         self.ui = ui
         self.lines = []
@@ -260,14 +289,20 @@ class patchfile(object):
     def readlines(self, fname):
         fp = self.opener(fname, 'r')
         try:
-            return fp.readlines()
+            return list(linereader(fp, self.eol is not None))
         finally:
             fp.close()
 
     def writelines(self, fname, lines):
         fp = self.opener(fname, 'w')
         try:
-            fp.writelines(lines)
+            if self.eol and self.eol != '\n':
+                for l in lines:
+                    if l and l[-1] == '\n':
+                        l = l[:1] + self.eol
+                    fp.write(l)
+            else:
+                fp.writelines(lines)
         finally:
             fp.close()
 
@@ -782,28 +817,6 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
 
     return fname, missing
 
-class linereader(object):
-    # simple class to allow pushing lines back into the input stream
-    def __init__(self, fp):
-        self.fp = fp
-        self.buf = []
-
-    def push(self, line):
-        if line is not None:
-            self.buf.append(line)
-
-    def readline(self):
-        if self.buf:
-            return self.buf.pop(0)
-        return self.fp.readline()
-
-    def __iter__(self):
-        while 1:
-            l = self.readline()
-            if not l:
-                break
-            yield l
-
 def scangitpatch(lr, firstline):
     """
     Git patches can emit:
@@ -824,19 +837,21 @@ def scangitpatch(lr, firstline):
         fp = lr.fp
     except IOError:
         fp = cStringIO.StringIO(lr.fp.read())
-    gitlr = linereader(fp)
+    gitlr = linereader(fp, lr.textmode)
     gitlr.push(firstline)
     (dopatch, gitpatches) = readgitpatch(gitlr)
     fp.seek(pos)
     return dopatch, gitpatches
 
-def iterhunks(ui, fp, sourcefile=None):
+def iterhunks(ui, fp, sourcefile=None, textmode=False):
     """Read a patch and yield the following events:
     - ("file", afile, bfile, firsthunk): select a new target file.
     - ("hunk", hunk): a new hunk is ready to be applied, follows a
     "file" event.
     - ("git", gitchanges): current diff is in git format, gitchanges
     maps filenames to gitpatch records. Unique event.
+
+    If textmode is True, input line-endings are normalized to LF.
     """
     changed = {}
     current_hunk = None
@@ -850,7 +865,7 @@ def iterhunks(ui, fp, sourcefile=None):
     # our states
     BFILE = 1
     context = None
-    lr = linereader(fp)
+    lr = linereader(fp, textmode)
     dopatch = True
     # gitworkdone is True if a git operation (copy, rename, ...) was
     # performed already for the current file. Useful when the file
@@ -954,17 +969,25 @@ def iterhunks(ui, fp, sourcefile=None):
     if hunknum == 0 and dopatch and not gitworkdone:
         raise NoHunks
 
-def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
-    """reads a patch from fp and tries to apply it.  The dict 'changed' is
-       filled in with all of the filenames changed by the patch.  Returns 0
-       for a clean patch, -1 if any rejects were found and 1 if there was
-       any fuzz."""
+def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
+              eol=None):
+    """
+    Reads a patch from fp and tries to apply it. 
 
+    The dict 'changed' is filled in with all of the filenames changed
+    by the patch. Returns 0 for a clean patch, -1 if any rejects were
+    found and 1 if there was any fuzz.
+
+    If 'eol' is None, the patch content and patched file are read in
+    binary mode. Otherwise, line endings are ignored when patching then
+    normalized to 'eol' (usually '\n' or \r\n').
+    """
     rejects = 0
     err = 0
     current_file = None
     gitpatches = None
     opener = util.opener(os.getcwd())
+    textmode = eol is not None
 
     def closefile():
         if not current_file:
@@ -972,7 +995,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
         current_file.close()
         return len(current_file.rej)
 
-    for state, values in iterhunks(ui, fp, sourcefile):
+    for state, values in iterhunks(ui, fp, sourcefile, textmode):
         if state == 'hunk':
             if not current_file:
                 continue
@@ -987,11 +1010,11 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False):
             afile, bfile, first_hunk = values
             try:
                 if sourcefile:
-                    current_file = patchfile(ui, sourcefile, opener)
+                    current_file = patchfile(ui, sourcefile, opener, eol=eol)
                 else:
                     current_file, missing = selectfile(afile, bfile, first_hunk,
                                             strip, reverse)
-                    current_file = patchfile(ui, current_file, opener, missing)
+                    current_file = patchfile(ui, current_file, opener, missing, eol)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
                 current_file, current_hunk = None, None
@@ -1104,9 +1127,17 @@ def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
                          util.explain_exit(code)[0])
     return fuzz
 
-def internalpatch(patchobj, ui, strip, cwd, files={}):
+def internalpatch(patchobj, ui, strip, cwd, files={}, eolmode='strict'):
     """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""
+
+    if eolmode is None:
+        eolmode = ui.config('patch', 'eol', 'strict')
+    try:
+        eol = {'strict': None, 'crlf': '\r\n', 'lf': '\n'}[eolmode.lower()]
+    except KeyError:
+        raise util.Abort(_('Unsupported line endings type: %s') % eolmode)
+            
     try:
         fp = file(patchobj, 'rb')
     except TypeError:
@@ -1115,7 +1146,7 @@ def internalpatch(patchobj, ui, strip, cwd, files={}):
         curdir = os.getcwd()
         os.chdir(cwd)
     try:
-        ret = applydiff(ui, fp, files, strip=strip)
+        ret = applydiff(ui, fp, files, strip=strip, eol=eol)
     finally:
         if cwd:
             os.chdir(curdir)
@@ -1123,9 +1154,18 @@ def internalpatch(patchobj, ui, strip, cwd, files={}):
         raise PatchError
     return ret > 0
 
-def patch(patchname, ui, strip=1, cwd=None, files={}):
-    """apply <patchname> to the working directory.
-    returns whether patch was applied with fuzz factor."""
+def patch(patchname, ui, strip=1, cwd=None, files={}, eolmode='strict'):
+    """Apply <patchname> to the working directory.
+
+    'eolmode' specifies how end of lines should be handled. It can be:
+    - 'strict': inputs are read in binary mode, EOLs are preserved
+    - 'crlf': EOLs are ignored when patching and reset to CRLF
+    - 'lf': EOLs are ignored when patching and reset to LF
+    - None: get it from user settings, default to 'strict'
+    'eolmode' is ignored when using an external patcher program.
+
+    Returns whether patch was applied with fuzz factor.
+    """
     patcher = ui.config('ui', 'patch')
     args = []
     try:
@@ -1134,7 +1174,7 @@ def patch(patchname, ui, strip=1, cwd=None, files={}):
                                  files)
         else:
             try:
-                return internalpatch(patchname, ui, strip, cwd, files)
+                return internalpatch(patchname, ui, strip, cwd, files, eolmode)
             except NoHunks:
                 patcher = util.find_exe('gpatch') or util.find_exe('patch') or 'patch'
                 ui.debug(_('no valid hunks found; trying with %r instead\n') %

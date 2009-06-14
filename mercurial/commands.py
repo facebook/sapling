@@ -1764,7 +1764,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 files = {}
                 try:
                     patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
-                                files=files)
+                                files=files, eolmode=None)
                 finally:
                     files = patch.updatedir(ui, repo, files, similarity=sim/100.)
                 if not opts.get('no_commit'):
