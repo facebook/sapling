@@ -134,3 +134,26 @@ chmod +x test-filter
 hg transplant -s ../t -b tip -a --filter ./test-filter |\
     sed 's/filtering.*/filtering/g'
 hg log --template '{rev} {parents} {desc}\n'
+cd ..
+
+echo '% test with a win32ext like setup (differing EOLs)'
+hg init twin1
+cd twin1
+echo a > a
+echo b > b
+echo b >> b
+hg ci -Am t
+echo a > b
+echo b >> b
+hg ci -m changeb
+cd ..
+
+hg init twin2
+cd twin2
+echo '[patch]' >> .hg/hgrc
+echo 'eol = crlf' >> .hg/hgrc
+python -c "file('b', 'wb').write('b\r\nb\r\n')"
+hg ci -m addb
+hg transplant -s ../twin1 tip
+python -c "print repr(file('b', 'rb').read())"
+cd ..

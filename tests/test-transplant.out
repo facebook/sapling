@@ -159,3 +159,10 @@ a53251cdf717 transplanted to 14f8512272b5
 2  b2
 1  b1
 0  r2
+% test with a win32ext like setup (differing EOLs)
+adding a
+adding b
+nothing changed
+applying 2e849d776c17
+2e849d776c17 transplanted to 589cea8ba85b
+'a\r\nb\r\n'

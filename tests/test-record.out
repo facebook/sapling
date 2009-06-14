@@ -572,3 +572,27 @@ new mode 100644
  b
 +c
 
+% with win32ext
+diff --git a/subdir/f1 b/subdir/f1
+1 hunks, 1 lines changed
+examine changes to 'subdir/f1'? [Ynsfdaq?]  @@ -3,3 +3,4 @@
+ a
+ b
+ c
++d
+record this change to 'subdir/f1'? [Ynsfdaq?]  
+changeset:   25:49b3838dc9e7
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:23 1970 +0000
+summary:     w1
+
+diff -r 8fd83ff53ce6 -r 49b3838dc9e7 subdir/f1
+--- a/subdir/f1	Thu Jan 01 00:00:22 1970 +0000
++++ b/subdir/f1	Thu Jan 01 00:00:23 1970 +0000
+@@ -3,3 +3,4 @@
+ a
+ b
+ c
++d
+

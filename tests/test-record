@@ -296,3 +296,23 @@ y
 y
 EOF
 echo; hg tip --config diff.git=True -p
+
+
+echo % with win32ext
+cd ..
+echo '[extensions]' >> .hg/hgrc
+echo 'win32text = ' >> .hg/hgrc
+echo '[decode]' >> .hg/hgrc
+echo '** = cleverdecode:' >> .hg/hgrc
+echo '[encode]' >> .hg/hgrc
+echo '** = cleverencode:' >> .hg/hgrc
+echo '[patch]' >> .hg/hgrc
+echo 'eol = crlf' >> .hg/hgrc
+
+echo d >> subdir/f1
+hg record -d '23 0' -mw1 <<EOF
+y
+y
+EOF
+echo; hg tip -p
+

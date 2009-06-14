@@ -481,7 +481,8 @@ def dorecord(ui, repo, committer, *pats, **opts):
                     ui.debug(_('applying patch\n'))
                     ui.debug(fp.getvalue())
                     pfiles = {}
-                    patch.internalpatch(fp, ui, 1, repo.root, files=pfiles)
+                    patch.internalpatch(fp, ui, 1, repo.root, files=pfiles,
+                                        eolmode=None)
                     patch.updatedir(ui, repo, pfiles)
                 except patch.PatchError, err:
                     s = str(err)
