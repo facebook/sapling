@@ -7,7 +7,7 @@
 
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
-import repo, changegroup
+import repo, changegroup, subrepo
 import changelog, dirstate, filelog, manifest, context
 import lock, transaction, store, encoding
 import util, extensions, hook, error
@@ -807,6 +807,7 @@ class localrepository(repo.repository):
         wlock = self.wlock()
         try:
             p1, p2 = self.dirstate.parents()
+            wctx = self[None]
 
             if (not force and p2 != nullid and match and
                 (match.files() or match.anypats())):
@@ -817,12 +818,20 @@ class localrepository(repo.repository):
             if force:
                 changes[0].extend(changes[6]) # mq may commit unchanged files
 
+            # check subrepos
+            subs = []
+            for s in wctx.substate:
+                if match(s) and wctx.sub(s).dirty():
+                    subs.append(s)
+            if subs and '.hgsubstate' not in changes[0]:
+                changes[0].insert(0, '.hgsubstate')
+
             # make sure all explicit patterns are matched
             if not force and match.files():
                 matched = set(changes[0] + changes[1] + changes[2])
 
                 for f in match.files():
-                    if f == '.' or f in matched: # matched
+                    if f == '.' or f in matched or f in wctx.substate:
                         continue
                     if f in changes[3]: # missing
                         fail(f, _('file not found!'))
@@ -852,6 +861,16 @@ class localrepository(repo.repository):
                                       extra, changes)
             if editor:
                 cctx._text = editor(self, cctx)
+
+            # commit subs
+            if subs:
+                state = wctx.substate.copy()
+                for s in subs:
+                    self.ui.status(_('committing subrepository %s\n') % s)
+                    sr = wctx.sub(s).commit(cctx._text, user, date)
+                    state[s] = (state[s][0], sr)
+                subrepo.writestate(self, state)
+
             ret = self.commitctx(cctx, True)
 
             # update dirstate and mergestate

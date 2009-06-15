@@ -5,7 +5,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import config, util, errno
+import errno, os
+import config, util, node, error
+localrepo = None
+
+nullstate = ('', '')
 
 def state(ctx):
     p = config.config()
@@ -33,3 +37,46 @@ def state(ctx):
         state[path] = (src, rev.get(path, ''))
 
     return state
+
+def writestate(repo, state):
+    repo.wwrite('.hgsubstate',
+                ''.join(['%s %s\n' % (state[s][1], s)
+                         for s in sorted(state)]), '')
+
+def subrepo(ctx, path):
+    # subrepo inherently violates our import layering rules
+    # because it wants to make repo objects from deep inside the stack
+    # so we manually delay the circular imports to not break
+    # scripts that don't use our demand-loading
+    global localrepo
+    import localrepo as l
+    localrepo = l
+
+    state = ctx.substate.get(path, nullstate)
+    if state[0].startswith('['): # future expansion
+        raise error.Abort('unknown subrepo source %s' % state[0])
+    return hgsubrepo(ctx, path, state)
+
+class hgsubrepo(object):
+    def __init__(self, ctx, path, state):
+        self._parent = ctx
+        self._path = path
+        self._state = state
+        r = ctx._repo
+        root = r.wjoin(path)
+        self._repo = localrepo.localrepository(r.ui, root)
+
+    def dirty(self):
+        r = self._state[1]
+        if r == '':
+            return True
+        w = self._repo[None]
+        if w.p1() != self._repo[r]: # version checked out changed
+            return True
+        return w.dirty() # working directory changed
+
+    def commit(self, text, user, date):
+        n = self._repo.commit(text, user, date)
+        if not n:
+            return self._repo['.'].hex() # different version checked out
+        return node.hex(n)

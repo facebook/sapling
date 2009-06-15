@@ -184,6 +184,9 @@ class changectx(object):
             if match.bad(fn, 'No such file in rev ' + str(self)) and match(fn):
                 yield fn
 
+    def sub(self, path):
+        return subrepo.subrepo(self, path)
+
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
