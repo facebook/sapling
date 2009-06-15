@@ -1,0 +1,106 @@
+#!/bin/sh
+
+rm -rf sub
+mkdir sub
+cd sub
+hg init t
+cd t
+
+echo % first revision, no sub
+echo a > a
+hg ci -Am0
+
+echo % add first sub
+echo s = s > .hgsub
+hg add .hgsub
+hg init s
+echo a > s/a
+hg -R s ci -Ams0
+hg ci -m1
+
+echo % add sub sub
+echo ss = ss > s/.hgsub
+hg init s/ss
+echo a > s/ss/a
+hg -R s add s/.hgsub
+hg -R s/ss add s/ss/a
+hg ci -m2
+
+echo % bump sub rev
+echo b > s/a
+hg -R s ci -ms1
+hg ci -m3
+
+echo % leave sub dirty
+echo c > s/a
+hg ci -m4
+hg tip -R s
+
+echo % check caching
+hg co 0
+hg debugsub
+echo % restore
+hg co
+hg debugsub
+
+echo % new branch for merge tests
+hg co 1
+echo t = t >> .hgsub
+hg init t
+echo t > t/t
+hg -R t add t
+echo % 5
+hg ci -m5 # add sub
+echo t2 > t/t
+echo % 6
+hg st -R s
+hg ci -m6 # change sub
+hg debugsub
+echo t3 > t/t
+echo % 7
+hg ci -m7 # change sub again for conflict test
+hg rm .hgsub
+echo % 8
+hg ci -m8 # remove sub
+
+echo % merge tests
+hg co -C 3
+hg merge 5 # test adding
+hg debugsub
+hg ci -m9
+hg merge 6 --debug # test change
+hg debugsub
+echo conflict > t/t
+hg ci -m10
+HGMERGE=internal:merge hg merge --debug 7 # test conflict
+echo % should conflict
+cat t/t
+
+echo % clone
+cd ..
+hg clone t tc
+cd tc
+hg debugsub
+
+echo % push
+echo bah > t/t
+hg ci -m11
+hg push | sed 's/ .*sub/ ...sub/g'
+
+echo % push -f
+echo bah > s/a
+hg ci -m12
+hg push | sed 's/ .*sub/ ...sub/g'
+hg push -f | sed 's/ .*sub/ ...sub/g'
+
+echo % update
+cd ../t
+hg up -C # discard our earlier merge
+echo blah > t/t
+hg ci -m13
+
+echo % pull
+cd ../tc
+hg pull | sed 's/ .*sub/ ...sub/g'
+hg up # should pull t
+cat t/t

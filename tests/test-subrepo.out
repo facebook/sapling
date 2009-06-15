@@ -1,0 +1,199 @@
+% first revision, no sub
+adding a
+% add first sub
+adding a
+committing subrepository s
+nothing changed
+% add sub sub
+committing subrepository s
+committing subrepository ss
+% bump sub rev
+committing subrepository s
+nothing changed
+% leave sub dirty
+committing subrepository s
+changeset:   3:1c833a7a9e3a
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     4
+
+% check caching
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+% restore
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+path s
+ source   s
+ revision 1c833a7a9e3a4445c711aaf0f012379cd0d4034e
+% new branch for merge tests
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding t/t
+% 5
+committing subrepository t
+created new head
+% 6
+committing subrepository t
+path s
+ source   s
+ revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+path t
+ source   t
+ revision 6747d179aa9a688023c4b0cad32e4c92bb7f34ad
+% 7
+committing subrepository t
+% 8
+% merge tests
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+path s
+ source   s
+ revision fc627a69481fcbe5f1135069e8a3881c023e4cf5
+path t
+ source   t
+ revision 60ca1237c19474e7a3978b0dc1ca4e6f36d51382
+created new head
+  searching for copies back to rev 2
+resolving manifests
+ overwrite None partial False
+ ancestor 1f14a2e2d3ec local f0d2028bf86d+ remote 1831e14459c4
+ .hgsubstate: versions differ -> m
+resolving manifests
+ overwrite True partial False
+ ancestor 60ca1237c194+ local 60ca1237c194+ remote 6747d179aa9a
+ t: remote is newer -> g
+getting t
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+path s
+ source   s
+ revision fc627a69481fcbe5f1135069e8a3881c023e4cf5
+path t
+ source   t
+ revision 6747d179aa9a688023c4b0cad32e4c92bb7f34ad
+committing subrepository t
+  searching for copies back to rev 2
+resolving manifests
+ overwrite None partial False
+ ancestor 1831e14459c4 local e45c8b14af55+ remote f94576341bcf
+ .hgsubstate: versions differ -> m
+  searching for copies back to rev 2
+resolving manifests
+ overwrite None partial False
+ ancestor 6747d179aa9a local 20a0db6fbf6c+ remote 7af322bc1198
+ t: versions differ -> m
+preserving t for resolve of t
+picked tool 'internal:merge' for t (binary False symlink False)
+merging t
+my t@20a0db6fbf6c+ other t@7af322bc1198 ancestor t@6747d179aa9a
+warning: conflicts during merge.
+merging t failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to abandon
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% should conflict
+<<<<<<< local
+conflict
+=======
+t3
+>>>>>>> other
+% clone
+updating working directory
+pulling subrepo s
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 5 changes to 3 files
+pulling subrepo ss
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+pulling subrepo t
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 4 changesets with 4 changes to 1 files (+1 heads)
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+path s
+ source   s
+ revision fc627a69481fcbe5f1135069e8a3881c023e4cf5
+path t
+ source   t
+ revision 20a0db6fbf6c3d2836e6519a642ae929bfc67c0e
+% push
+committing subrepository t
+pushing ...sub/t
+pushing ...subrepo ss
+searching for changes
+no changes found
+pushing ...subrepo s
+searching for changes
+no changes found
+pushing ...subrepo t
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+% push -f
+committing subrepository s
+abort: push creates new remote heads!
+pushing ...sub/t
+pushing ...subrepo ss
+searching for changes
+no changes found
+pushing ...subrepo s
+searching for changes
+(did you forget to merge? use push -f to force)
+pushing ...subrepo t
+searching for changes
+no changes found
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+pushing ...sub/t
+pushing ...subrepo ss
+searching for changes
+no changes found
+pushing ...subrepo s
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+pushing ...subrepo t
+searching for changes
+no changes found
+searching for changes
+no changes found
+% update
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+committing subrepository t
+% pull
+pulling ...sub/t
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+(run 'hg update' to get a working copy)
+pulling subrepo t
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+blah
