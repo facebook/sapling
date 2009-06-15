@@ -297,6 +297,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             fp.write("default = %s\n" % abspath)
             fp.close()
 
+            dest_repo.ui.setconfig('paths', 'default', abspath)
+
             if update:
                 dest_repo.ui.status(_("updating working directory\n"))
                 if update is not True:

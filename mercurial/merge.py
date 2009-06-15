@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import util, filemerge, copies
+import util, filemerge, copies, subrepo
 import errno, os, shutil
 
 class mergestate(object):
@@ -241,12 +241,15 @@ def applyupdates(repo, action, wctx, mctx):
     ms.reset(wctx.parents()[0].node())
     moves = []
     action.sort(key=actionkey)
+    substate = wctx.substate # prime
 
     # prescan for merges
     for a in action:
         f, m = a[:2]
         if m == 'm': # merge
             f2, fd, flags, move = a[2:]
+            if f == '.hgsubstate': # merged internally
+                continue
             repo.ui.debug(_("preserving %s for resolve of %s\n") % (f, fd))
             fcl = wctx[f]
             fco = mctx[f2]
@@ -270,6 +273,8 @@ def applyupdates(repo, action, wctx, mctx):
         if m == "r": # remove
             repo.ui.note(_("removing %s\n") % f)
             audit_path(f)
+            if f == '.hgsubstate': # subrepo states need updating
+                subrepo.submerge(repo, wctx, mctx, wctx)
             try:
                 util.unlink(repo.wjoin(f))
             except OSError, inst:
@@ -278,6 +283,9 @@ def applyupdates(repo, action, wctx, mctx):
                                  (f, inst.strerror))
             removed += 1
         elif m == "m": # merge
+            if f == '.hgsubstate': # subrepo states need updating
+                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx))
+                continue
             f2, fd, flags, move = a[2:]
             r = ms.resolve(fd, wctx, mctx)
             if r > 0:
@@ -297,6 +305,8 @@ def applyupdates(repo, action, wctx, mctx):
             t = mctx.filectx(f).data()
             repo.wwrite(f, t, flags)
             updated += 1
+            if f == '.hgsubstate': # subrepo states need updating
+                subrepo.submerge(repo, wctx, mctx, wctx)
         elif m == "d": # directory rename
             f2, fd, flags = a[2:]
             if f:

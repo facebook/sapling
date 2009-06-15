@@ -6,8 +6,9 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 import errno, os
+from i18n import _
 import config, util, node, error
-localrepo = None
+localrepo = hg = None
 
 nullstate = ('', '')
 
@@ -43,14 +44,81 @@ def writestate(repo, state):
                 ''.join(['%s %s\n' % (state[s][1], s)
                          for s in sorted(state)]), '')
 
+def submerge(repo, wctx, mctx, actx):
+    if mctx == actx: # backwards?
+        actx = wctx.p1()
+    s1 = wctx.substate
+    s2 = mctx.substate
+    sa = actx.substate
+    sm = {}
+
+    for s, l in s1.items():
+        a = sa.get(s, nullstate)
+        if s in s2:
+            r = s2[s]
+            if l == r or r == a: # no change or local is newer
+                sm[s] = l
+                continue
+            elif l == a: # other side changed
+                wctx.sub(s).get(r)
+                sm[s] = r
+            elif l[0] != r[0]: # sources differ
+                if repo.ui.prompt(
+                    _(' subrepository sources for %s differ\n'
+                      'use (l)ocal source (%s) or (r)emote source (%s)?'
+                      % (s, l[0], r[0]),
+                      (_('&Local'), _('&Remote')), _('l'))) == _('r'):
+                    wctx.sub(s).get(r)
+                    sm[s] = r
+            elif l[1] == a[1]: # local side is unchanged
+                wctx.sub(s).get(r)
+                sm[s] = r
+            else:
+                wctx.sub(s).merge(r)
+                sm[s] = l
+        elif l == a: # remote removed, local unchanged
+            wctx.sub(s).remove()
+        else:
+            if repo.ui.prompt(
+                _(' local changed subrepository %s which remote removed\n'
+                  'use (c)hanged version or (d)elete?' % s,
+                  (_('&Changed'), _('&Delete')), _('c'))) == _('d'):
+                wctx.sub(s).remove()
+
+    for s, r in s2.items():
+        if s in s1:
+            continue
+        elif s not in sa:
+            wctx.sub(s).get(r)
+            sm[s] = r
+        elif r != sa[s]:
+            if repo.ui.prompt(
+                _(' remote changed subrepository %s which local removed\n'
+                  'use (c)hanged version or (d)elete?' % s,
+                  (_('&Changed'), _('&Delete')), _('c'))) == _('c'):
+                wctx.sub(s).get(r)
+                sm[s] = r
+
+    # record merged .hgsubstate
+    writestate(repo, sm)
+
+def _abssource(repo):
+    if hasattr(repo, '_subparent'):
+        source = repo._subsource
+        if source.startswith('/') or '://' in source:
+            return source
+        return os.path.join(_abssource(repo._subparent), repo._subsource)
+    return repo.ui.config('paths', 'default', repo.root)
+
 def subrepo(ctx, path):
     # subrepo inherently violates our import layering rules
     # because it wants to make repo objects from deep inside the stack
     # so we manually delay the circular imports to not break
     # scripts that don't use our demand-loading
-    global localrepo
-    import localrepo as l
+    global localrepo, hg
+    import localrepo as l, hg as h
     localrepo = l
+    hg = h
 
     state = ctx.substate.get(path, nullstate)
     if state[0].startswith('['): # future expansion
@@ -64,7 +132,13 @@ class hgsubrepo(object):
         self._state = state
         r = ctx._repo
         root = r.wjoin(path)
-        self._repo = localrepo.localrepository(r.ui, root)
+        if os.path.exists(os.path.join(root, '.hg')):
+            self._repo = localrepo.localrepository(r.ui, root)
+        else:
+            util.makedirs(root)
+            self._repo = localrepo.localrepository(r.ui, root, create=True)
+        self._repo._subparent = r
+        self._repo._subsource = state[0]
 
     def dirty(self):
         r = self._state[1]
@@ -80,3 +154,25 @@ class hgsubrepo(object):
         if not n:
             return self._repo['.'].hex() # different version checked out
         return node.hex(n)
+
+    def remove(self):
+        # we can't fully delete the repository as it may contain
+        # local-only history
+        self._repo.ui.note(_('removing subrepo %s\n') % self._path)
+        hg.clean(self._repo, node.nullid, False)
+
+    def get(self, state):
+        source, revision = state
+        try:
+            self._repo.lookup(revision)
+        except error.RepoError:
+            self._repo._subsource = source
+            self._repo.ui.status(_('pulling subrepo %s\n') % self._path)
+            srcurl = _abssource(self._repo)
+            other = hg.repository(self._repo.ui, srcurl)
+            self._repo.pull(other)
+
+        hg.clean(self._repo, revision, False)
+
+    def merge(self, state):
+        hg.merge(self._repo, state[1], remind=False)
