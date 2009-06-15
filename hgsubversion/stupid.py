@@ -55,8 +55,8 @@ def mempatchproxy(parentctx, files):
     patchfile = patch.patchfile
 
     class mempatch(patchfile):
-        def __init__(self, ui, fname, opener, missing=False):
-            patchfile.__init__(self, ui, fname, None, False)
+        def __init__(self, ui, fname, opener, missing=False, eol=None):
+            patchfile.__init__(self, ui, fname, None, False, eol)
 
         def readlines(self, fname):
             if fname not in parentctx:
@@ -78,9 +78,11 @@ def mempatchproxy(parentctx, files):
 
 def filteriterhunks(meta):
     iterhunks = patch.iterhunks
-    def filterhunks(ui, fp, sourcefile=None):
+    def filterhunks(ui, fp, sourcefile=None, textmode=False):
         applycurrent = False
-        for data in iterhunks(ui, fp, sourcefile):
+        # Passing False instead of textmode because we should never
+        # be ignoring EOL type.
+        for data in iterhunks(ui, fp, sourcefile, False):
             if data[0] == 'file':
                 if data[1][1] in meta.filemap:
                     applycurrent = True
