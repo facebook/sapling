@@ -54,7 +54,7 @@ class TestTags(test_util.TestBase):
     def test_tag_by_renaming_branch(self, stupid=False):
         repo = self._load_fixture_and_fetch('tag_by_rename_branch.svndump',
                                             stupid=stupid)
-        branches = set(repo[h] for h in repo.heads(closed=False))
+        branches = set(repo[h] for h in repo.heads())
         self.assert_('dummy' not in branches)
         self.assertEqual(repo['dummy'], repo['tip'].parents()[0])
         extra = repo['tip'].extra().copy()
@@ -66,7 +66,7 @@ class TestTags(test_util.TestBase):
 
     def test_deletion_of_tag_on_trunk_after_branching(self):
         repo = self._load_fixture_and_fetch('tag_deletion_tag_branch.svndump')
-        branches = set(repo[h].extra()['branch'] for h in repo.heads(closed=False))
+        branches = set(repo[h].extra()['branch'] for h in repo.heads())
         self.assertEqual(branches, set(['default', 'from_2', ]))
         self.assertEqual(
             repo.tags(),
@@ -76,7 +76,7 @@ class TestTags(test_util.TestBase):
     def test_tags_in_unusual_location(self):
         repo = self._load_fixture_and_fetch('unusual_tags.svndump')
         branches = set(repo[h].extra()['branch']
-                       for h in repo.heads(closed=False))
+                       for h in repo.heads())
         self.assertEqual(branches, set(['default', 'dev_branch']))
         tags = repo.tags()
         del tags['tip']
@@ -91,7 +91,7 @@ class TestTags(test_util.TestBase):
         repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')
         self.assertEqual(len(repo.heads()), 1)
         branches = set(repo[h].extra()['branch']
-                       for h in repo.heads(closed=False))
+                       for h in repo.heads())
         self.assertEqual(branches, set(['magic', ]))
         tags = repo.tags()
         del tags['tip']

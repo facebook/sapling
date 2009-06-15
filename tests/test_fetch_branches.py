@@ -22,9 +22,9 @@ class TestFetchBranches(test_util.TestBase):
         return hg.repository(ui.ui(), self.wc_path)
 
     def openbranches(self, repo):
-        hctxs = [repo[hn] for hn in repo.heads(closed=False)]
-        branches = set(ctx.branch() for ctx in hctxs)
-        branches.discard('closed-branches')
+        hctxs = [repo[hn] for hn in repo.heads()]
+        branches = set(ctx.branch() for ctx in hctxs if
+                       ctx.extra().get('close', None) != '1')
         return sorted(branches)
 
     def test_unrelatedbranch(self, stupid=False):
