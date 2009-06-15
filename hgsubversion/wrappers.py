@@ -256,10 +256,20 @@ def pull(repo, source, heads=[], force=False):
                 converted = False
                 while not converted:
                     try:
-                        util.describe_revision(ui, r)
+
+                        msg = r.message.strip()
+                        if not msg:
+                            msg = util.default_commit_msg
+                        else:
+                            msg = [s.strip() for s in msg.splitlines() if s][0]
+                        w = hgutil.termwidth()
+                        bits = (r.revnum, r.author, msg)
+                        ui.status(('[r%d] %s: %s\n' % bits)[:w])
+
                         pullfuns[have_replay](ui, meta, svn, r, tbdelta)
                         meta.save()
                         converted = True
+
                     except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                         ui.status('%s\n' % e.message)
                         stupidmod.print_your_svn_is_old_message(ui)
