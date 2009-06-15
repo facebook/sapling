@@ -9,6 +9,8 @@ from mercurial import node
 
 import test_util
 
+from hgsubversion import maps
+
 class MapTests(test_util.TestBase):
     @property
     def authors(self):
@@ -54,6 +56,18 @@ class MapTests(test_util.TestBase):
 
     def test_author_map_closing_author_stupid(self):
         self.test_author_map_closing_author(True)
+
+    def test_author_map_no_overwrite(self):
+        cwd = os.path.dirname(__file__)
+        orig = os.path.join(cwd, 'fixtures', 'author-map-test.txt')
+        new = open(self.authors, 'w')
+        new.write(open(orig).read())
+        new.close()
+        test = maps.AuthorMap(ui.ui(), self.authors)
+        fromself = set(test)
+        test.load(orig)
+        all = set(test)
+        self.assertEqual(fromself.symmetric_difference(all), set())
 
     def test_file_map(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')

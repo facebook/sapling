@@ -34,9 +34,17 @@ class AuthorMap(dict):
         ''' Load mappings from a file at the specified path. '''
         if not os.path.exists(path):
             return
+
+        writing = False
+        if path != self.path:
+            writing = open(self.path, 'a')
+
         self.ui.note('reading authormap from %s\n' % path)
         f = open(path, 'r')
         for number, line in enumerate(f):
+
+            if writing:
+                writing.write(line)
 
             line = line.split('#')[0]
             if not line.strip():
@@ -51,23 +59,16 @@ class AuthorMap(dict):
 
             src = src.strip()
             dst = dst.strip()
+            self.ui.debug('adding author %s to author map\n' % src)
             if src in self and dst != self[src]:
                 msg = 'overriding author: "%s" to "%s" (%s)\n'
                 self.ui.warn(msg % (self[src], dst, src))
-            else:
-                self[src] = dst
+            self[src] = dst
 
         f.close()
-
-    def __setitem__(self, key, value):
-        ''' Similar to dict.__setitem__, but also updates the new mapping in the
-        backing store. '''
-        self.super.__setitem__(key, value)
-        self.ui.debug('adding author %s to author map\n' % self.path)
-        f = open(self.path, 'w+')
-        for k, v in self.iteritems():
-            f.write("%s=%s\n" % (k, v))
-        f.close()
+        if writing:
+            writing.flush()
+            writing.close()
 
     def __getitem__(self, author):
         ''' Similar to dict.__getitem__, except in case of an unknown author.
