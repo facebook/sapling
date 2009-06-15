@@ -20,7 +20,8 @@ def verify(ui, repo, *args, **opts):
     else:
         url = args[0]
 
-    ctx = repo['.']
+    rev = opts.get('verifynode', '.')
+    ctx = repo[rev]
     if 'close' in ctx.extra():
         ui.write('cannot verify closed branch')
         return 0
