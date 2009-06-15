@@ -249,18 +249,9 @@ class HgEditor(delta.Editor):
             if (rev.revnum, branch) not in self.meta.revmap:
                 self.meta.revmap[rev.revnum, branch] = new_hash
 
-        # 3. handle tags
-        if tbdelta['tags'][0] or tbdelta['tags'][1]:
-            self.meta.committags(tbdelta['tags'], rev, closebranches)
-
-        # 4. close any branches that need it
-        for branch, parent in closebranches.iteritems():
-            if parent is None:
-                continue
-            self.meta.delbranch(branch, parent, rev)
-
         self.current.clear()
-
+        return closebranches
+	
     # Here come all the actual editor methods
 
     @ieditor

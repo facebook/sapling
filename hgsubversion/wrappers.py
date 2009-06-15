@@ -266,7 +266,14 @@ def pull(repo, source, heads=[], force=False):
                         bits = (r.revnum, r.author, msg)
                         ui.status(('[r%d] %s: %s\n' % bits)[:w])
 
-                        pullfuns[have_replay](ui, meta, svn, r, tbdelta)
+                        close = pullfuns[have_replay](ui, meta, svn, r, tbdelta)
+                        if tbdelta['tags'][0] or tbdelta['tags'][1]:
+                            meta.committags(tbdelta['tags'], r, close)
+                        for branch, parent in close.iteritems():
+                            if parent in (None, node.nullid):
+                                continue
+                            meta.delbranch(branch, parent, r)
+
                         meta.save()
                         converted = True
 

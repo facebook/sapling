@@ -628,10 +628,4 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         if closed is not None:
             deleted_branches[branch] = closed
 
-    if tbdelta['tags'][0] or tbdelta['tags'][1]:
-        meta.committags(tbdelta['tags'], r, deleted_branches)
-
-    for b, parent in deleted_branches.iteritems():
-        if parent == node.nullid:
-            continue
-        meta.delbranch(b, parent, r)
+    return deleted_branches

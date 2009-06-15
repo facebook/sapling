@@ -86,7 +86,7 @@ def replay_convert_rev(ui, meta, svn, r, tbdelta):
             hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
         hg_editor.current.missing = set()
         meta.ui.note('\n')
-    hg_editor.commit_current_delta(tbdelta)
+    return hg_editor.commit_current_delta(tbdelta)
 
 
 def _isdir(svn, branchpath, svndir):
