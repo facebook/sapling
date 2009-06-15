@@ -102,12 +102,14 @@ def submerge(repo, wctx, mctx, actx):
     # record merged .hgsubstate
     writestate(repo, sm)
 
-def _abssource(repo):
+def _abssource(repo, push=False):
     if hasattr(repo, '_subparent'):
         source = repo._subsource
         if source.startswith('/') or '://' in source:
             return source
         return os.path.join(_abssource(repo._subparent), repo._subsource)
+    if push and repo.ui.config('paths', 'default-push'):
+        return repo.ui.config('paths', 'default-push', repo.root)
     return repo.ui.config('paths', 'default', repo.root)
 
 def subrepo(ctx, path):
@@ -127,7 +129,6 @@ def subrepo(ctx, path):
 
 class hgsubrepo(object):
     def __init__(self, ctx, path, state):
-        self._parent = ctx
         self._path = path
         self._state = state
         r = ctx._repo
@@ -176,3 +177,16 @@ class hgsubrepo(object):
 
     def merge(self, state):
         hg.merge(self._repo, state[1], remind=False)
+
+    def push(self, force):
+        # push subrepos depth-first for coherent ordering
+        c = self._repo['']
+        subs = c.substate # only repos that are committed
+        for s in sorted(subs):
+            c.sub(s).push(force)
+
+        self._repo.ui.status(_('pushing subrepo %s\n') % self._path)
+        dsturl = _abssource(self._repo, True)
+        other = hg.repository(self._repo.ui, dsturl)
+        self._repo.push(other, force)
+

@@ -2289,6 +2289,13 @@ def push(ui, repo, dest=None, **opts):
     ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
+
+    # push subrepos depth-first for coherent ordering
+    c = repo['']
+    subs = c.substate # only repos that are committed
+    for s in sorted(subs):
+        c.sub(s).push(opts.get('force'))
+
     r = repo.push(other, opts.get('force'), revs=revs)
     return r == 0
 
