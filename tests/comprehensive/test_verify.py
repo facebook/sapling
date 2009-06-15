@@ -2,7 +2,12 @@ import os
 import pickle
 import unittest
 
-import test_util
+# wrapped in a try/except because of weirdness in how
+# run.py works as compared to nose.
+try:
+    import test_util
+except ImportError:
+    from tests import test_util
 
 from mercurial import hg
 from mercurial import ui
