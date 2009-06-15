@@ -857,6 +857,14 @@ def debugstate(ui, repo, nodates=None):
     for f in repo.dirstate.copies():
         ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
 
+def debugsub(ui, repo, rev=None):
+    if rev == '':
+        rev = None
+    for k,v in sorted(repo[rev].substate.items()):
+        ui.write('path %s\n' % k)
+        ui.write(' source   %s\n' % v[0])
+        ui.write(' revision %s\n' % v[1])
+
 def debugdata(ui, file_, rev):
     """dump the contents of a data file revision"""
     r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_[:-2] + ".i")
@@ -3228,6 +3236,10 @@ table = {
         (debugstate,
          [('', 'nodates', None, _('do not display the saved mtime'))],
          _('[OPTION]...')),
+    "debugsub":
+        (debugsub,
+         [('r', 'rev', '', _('revision to check'))],
+         _('[-r REV] [REV]')),
     "debugwalk": (debugwalk, walkopts, _('[OPTION]... [FILE]...')),
     "^diff":
         (diff,

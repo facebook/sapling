@@ -73,6 +73,7 @@ debugrebuildstate
 debugrename
 debugsetparents
 debugstate
+debugsub
 debugwalk
 
 % Do not show the alias of a debug command if there are other candidates
@@ -199,6 +200,7 @@ debugrebuildstate: rev
 debugrename: rev
 debugsetparents: 
 debugstate: nodates
+debugsub: rev
 debugwalk: include, exclude
 grep: print0, all, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
 heads: rev, active, closed, style, template

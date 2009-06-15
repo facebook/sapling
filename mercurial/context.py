@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, short, hex
 from i18n import _
-import ancestor, bdiff, error, util
+import ancestor, bdiff, error, util, subrepo
 import os, errno
 
 propertycache = util.propertycache
@@ -72,6 +72,10 @@ class changectx(object):
         if p[1] == nullrev:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
+
+    @propertycache
+    def substate(self):
+        return subrepo.state(self)
 
     def __contains__(self, key):
         return key in self._manifest
