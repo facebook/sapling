@@ -92,8 +92,8 @@ filterpath cvscall -Q update -P -jMYBRANCH1_2
 cvsci -m "merge2"
 
 REALCVS=`which cvs`
-echo "for x in \$*; do if [ \"\$x\" = \"rlog\" ]; then echo \"RCS file: $CVSROOT/foo/foo.txt,v\"; cat $TESTDIR/test-convert-cvsnt-mergepoints.rlog; exit 0; fi; done; $REALCVS \$*" > cvs
-chmod +x cvs
-PATH=.:${PATH} hg debugcvsps --parents foo | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/'
+echo "for x in \$*; do if [ \"\$x\" = \"rlog\" ]; then echo \"RCS file: $CVSROOT/foo/foo.txt,v\"; cat $TESTDIR/test-convert-cvsnt-mergepoints.rlog; exit 0; fi; done; $REALCVS \$*" > ../cvs
+chmod +x ../cvs
+PATH=..:${PATH} hg debugcvsps --parents foo | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/'
 
 cd ..
