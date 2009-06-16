@@ -75,6 +75,8 @@ class GitHandler(object):
 
     ## END FILE LOAD AND SAVE METHODS
 
+    ## COMMANDS METHODS
+
     def import_commits(self, remote_name):
         self.import_git_objects(remote_name)
         self.save_map()
@@ -102,44 +104,19 @@ class GitHandler(object):
         self.update_remote_references(remote_name)
         self.upload_pack(remote_name)
 
-    def update_references(self):
-        try:
-            # We only care about bookmarks of the form 'name',
-            # not 'remote/name'.
-            def is_local_ref(item): return item[0].count('/') == 0
-            bms = bookmarks.parse(self.repo)
-            bms = dict(filter(is_local_ref, bms.items()))
+    def clear(self):
+        mapfile = self.repo.join(self.mapfile)
+        if os.path.exists(self.gitdir):
+            for root, dirs, files in os.walk(self.gitdir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(self.gitdir)
+        if os.path.exists(mapfile):
+            os.remove(mapfile)
 
-            # Create a local Git branch name for each
-            # Mercurial bookmark.
-            for key in bms:
-                hg_sha  = hex(bms[key])
-                git_sha = self.map_git_get(hg_sha)
-                self.git.set_ref('refs/heads/' + key, git_sha)
-        except AttributeError:
-            # No bookmarks extension
-            pass
-
-        c = self.map_git_get(hex(self.repo.changelog.tip()))
-        self.git.set_ref(self.exportbranch, c)
-
-    def export_hg_tags(self):
-        for tag, sha in self.repo.tags().iteritems():
-            if tag[-3:] == '^{}':
-                continue
-            if tag == 'tip':
-                continue
-            self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
-
-    # Make sure there's a refs/remotes/remote_name/name
-    #           for every refs/heads/name
-    def update_remote_references(self, remote_name):
-        self.git.set_remote_refs(self.local_heads(), remote_name)
-
-    def local_heads(self):
-        def is_local_head(item): return item[0].startswith('refs/heads')
-        refs = self.git.get_refs()
-        return dict(filter(is_local_head, refs.items()))
+    ## CHANGESET CONVERSION METHODS
 
     def export_git_objects(self):
         self.previous_entries = {}
@@ -392,11 +369,155 @@ class GitHandler(object):
 
         return (tree_sha, renames) # should be the last root tree sha
 
-    def remote_head(self, remote_name):
-        for head, sha in self.git.remote_refs(remote_name).iteritems():
-            if head == 'HEAD':
-                return self.map_hg_get(sha)
-        return None
+    def import_git_objects(self, remote_name=None, refs=None):
+        self.ui.status(_("importing Git objects into Hg\n"))
+        # import heads and fetched tags as remote references
+        todo = []
+        done = set()
+        convert_list = {}
+
+        # get a list of all the head shas
+        if refs:
+          for head, sha in refs.iteritems():
+            todo.append(sha)
+        else:
+          if remote_name:
+              todo = self.git.remote_refs(remote_name).values()[:]
+          elif self.importbranch:
+              branches = self.importbranch.split(',')
+              todo = [self.git.ref(i.strip()) for i in branches]
+          else:
+              todo = self.git.heads().values()[:]
+
+        # traverse the heads getting a list of all the unique commits
+        while todo:
+            sha = todo.pop()
+            assert isinstance(sha, str)
+            if sha in done:
+                continue
+            done.add(sha)
+            obj = self.git.get_object(sha)
+            if isinstance (obj, Commit):
+                convert_list[sha] = obj
+                todo.extend([p for p in obj.parents if p not in done])
+            if isinstance(obj, Tag):
+                (obj_type, obj_sha) = obj.get_object()
+                obj = self.git.get_object(obj_sha)
+                if isinstance (obj, Commit):
+                    convert_list[sha] = obj
+                    todo.extend([p for p in obj.parents if p not in done])
+
+        # sort the commits
+        commits = toposort.TopoSort(convert_list).items()
+
+        # import each of the commits, oldest first
+        total = len(commits)
+        magnitude = int(math.log(total, 10)) + 1 if total else 1
+        for i, csha in enumerate(commits):
+            if i%100 == 0:
+                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
+            commit = convert_list[csha]
+            if not self.map_hg_get(csha): # it's already here
+                self.import_git_commit(commit)
+
+        self.update_hg_bookmarks(remote_name)
+
+    def import_git_commit(self, commit):
+        self.ui.debug(_("importing: %s\n") % commit.id)
+        # TODO : Do something less coarse-grained than try/except on the
+        #        get_file call for removed files
+
+        (strip_message, hg_renames, hg_branch, force_files, extra) = self.extract_hg_metadata(commit.message)
+
+        # get a list of the changed, added, removed files
+        files = self.git.get_files_changed(commit)
+
+        date = (commit.author_time, -commit.author_timezone)
+        text = strip_message
+
+        def getfilectx(repo, memctx, f):
+            try:
+                (mode, sha, data) = self.git.get_file(commit, f)
+                e = self.convert_git_int_mode(mode)
+            except TypeError:
+                raise IOError()
+            if f in hg_renames:
+                copied_path = hg_renames[f]
+            else:
+                copied_path = None
+            return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
+
+        gparents = map(self.map_hg_get, commit.parents)
+        p1, p2 = (nullid, nullid)
+        octopus = False
+
+        if len(gparents) > 1:
+            # merge, possibly octopus
+            def commit_octopus(p1, p2):
+                ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
+                                     commit.author, date, {'hg-git': 'octopus'})
+                return hex(self.repo.commitctx(ctx))
+
+            octopus = len(gparents) > 2
+            p2 = gparents.pop()
+            p1 = gparents.pop()
+            while len(gparents) > 0:
+                p2 = commit_octopus(p1, p2)
+                p1 = gparents.pop()
+        else:
+            if gparents:
+                p1 = gparents.pop()
+
+        files = list(set(files))
+
+        pa = None
+        if not (p2 == nullid):
+            node1 = self.repo.changectx(p1)
+            node2 = self.repo.changectx(p2)
+            pa = node1.ancestor(node2)
+
+        author = commit.author
+
+        # convert extra data back to the end
+        if ' ext:' in commit.author:
+            regex = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
+            m = regex.match(commit.author)
+            if m:
+                name = m.group(1)
+                ex = urllib.unquote(m.group(2))
+                email = m.group(3)
+                author = name + ' <' + email + '>' + ex
+
+        if ' <none@none>' in commit.author:
+            author = commit.author[:-12]
+
+        # if named branch, add to extra
+        if hg_branch:
+            extra['branch'] = hg_branch
+
+        # if committer is different than author, add it to extra
+        if not commit._author_raw == commit._committer_raw:
+            extra['committer'] = "%s %d %d" % (commit.committer, commit.commit_time, -commit.commit_timezone)
+
+        if commit._encoding:
+            extra['encoding'] = commit._encoding
+
+        if hg_branch:
+            extra['branch'] = hg_branch
+
+        if octopus:
+            extra['hg-git'] ='octopus-done'
+
+        ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
+                             author, date, extra)
+
+        node = self.repo.commit_import_ctx(ctx, pa, force_files)
+
+        # save changeset to mapping file
+        cs = hex(node)
+        self.map_set(commit.id, cs)
+
+    ## PACK UPLOADING AND FETCHING
 
     def upload_pack(self, remote_name):
         client, path = self.get_transport_and_path(remote_name)
@@ -516,6 +637,47 @@ class GitHandler(object):
         finally:
             f.close()
 
+    ## REFERENCES HANDLING
+
+    def update_references(self):
+        try:
+            # We only care about bookmarks of the form 'name',
+            # not 'remote/name'.
+            def is_local_ref(item): return item[0].count('/') == 0
+            bms = bookmarks.parse(self.repo)
+            bms = dict(filter(is_local_ref, bms.items()))
+
+            # Create a local Git branch name for each
+            # Mercurial bookmark.
+            for key in bms:
+                hg_sha  = hex(bms[key])
+                git_sha = self.map_git_get(hg_sha)
+                self.git.set_ref('refs/heads/' + key, git_sha)
+        except AttributeError:
+            # No bookmarks extension
+            pass
+
+        c = self.map_git_get(hex(self.repo.changelog.tip()))
+        self.git.set_ref(self.exportbranch, c)
+
+    def export_hg_tags(self):
+        for tag, sha in self.repo.tags().iteritems():
+            if tag[-3:] == '^{}':
+                continue
+            if tag == 'tip':
+                continue
+            self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
+
+    # Make sure there's a refs/remotes/remote_name/name
+    #           for every refs/heads/name
+    def update_remote_references(self, remote_name):
+        self.git.set_remote_refs(self.local_heads(), remote_name)
+
+    def local_heads(self):
+        def is_local_head(item): return item[0].startswith('refs/heads')
+        refs = self.git.get_refs()
+        return dict(filter(is_local_head, refs.items()))
+
     # take refs just fetched, add local tags for all tags not in .hgtags
     def import_local_tags(self, refs):
         keys = refs.keys()
@@ -541,59 +703,6 @@ class GitHandler(object):
                     if sha:
                         self.repo.tag(ref_name, hex_to_sha(sha), '', True, None, None)
 
-    def import_git_objects(self, remote_name=None, refs=None):
-        self.ui.status(_("importing Git objects into Hg\n"))
-        # import heads and fetched tags as remote references
-        todo = []
-        done = set()
-        convert_list = {}
-
-        # get a list of all the head shas
-        if refs:
-          for head, sha in refs.iteritems():
-            todo.append(sha)
-        else:
-          if remote_name:
-              todo = self.git.remote_refs(remote_name).values()[:]
-          elif self.importbranch:
-              branches = self.importbranch.split(',')
-              todo = [self.git.ref(i.strip()) for i in branches]
-          else:
-              todo = self.git.heads().values()[:]
-
-        # traverse the heads getting a list of all the unique commits
-        while todo:
-            sha = todo.pop()
-            assert isinstance(sha, str)
-            if sha in done:
-                continue
-            done.add(sha)
-            obj = self.git.get_object(sha)
-            if isinstance (obj, Commit):
-                convert_list[sha] = obj
-                todo.extend([p for p in obj.parents if p not in done])
-            if isinstance(obj, Tag):
-                (obj_type, obj_sha) = obj.get_object()
-                obj = self.git.get_object(obj_sha)
-                if isinstance (obj, Commit):
-                    convert_list[sha] = obj
-                    todo.extend([p for p in obj.parents if p not in done])
-
-        # sort the commits
-        commits = toposort.TopoSort(convert_list).items()
-
-        # import each of the commits, oldest first
-        total = len(commits)
-        magnitude = int(math.log(total, 10)) + 1 if total else 1
-        for i, csha in enumerate(commits):
-            if i%100 == 0:
-                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
-            commit = convert_list[csha]
-            if not self.map_hg_get(csha): # it's already here
-                self.import_git_commit(commit)
-
-        self.update_hg_bookmarks(remote_name)
-
     def update_hg_bookmarks(self, remote_name):
         try:
             bms = bookmarks.parse(self.repo)
@@ -618,6 +727,8 @@ class GitHandler(object):
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
                          ' bookmarks enabled?\n'))
+
+    ## UTILITY FUNCTIONS
 
     def convert_git_int_mode(self, mode):
 	# TODO : make these into constants
@@ -658,101 +769,6 @@ class GitHandler(object):
                     extra[before] = urllib.unquote(after)
         return (message, renames, branch, files, extra)
 
-    def import_git_commit(self, commit):
-        self.ui.debug(_("importing: %s\n") % commit.id)
-        # TODO : Do something less coarse-grained than try/except on the
-        #        get_file call for removed files
-
-        (strip_message, hg_renames, hg_branch, force_files, extra) = self.extract_hg_metadata(commit.message)
-
-        # get a list of the changed, added, removed files
-        files = self.git.get_files_changed(commit)
-
-        date = (commit.author_time, -commit.author_timezone)
-        text = strip_message
-
-        def getfilectx(repo, memctx, f):
-            try:
-                (mode, sha, data) = self.git.get_file(commit, f)
-                e = self.convert_git_int_mode(mode)
-            except TypeError:
-                raise IOError()
-            if f in hg_renames:
-                copied_path = hg_renames[f]
-            else:
-                copied_path = None
-            return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
-
-        gparents = map(self.map_hg_get, commit.parents)
-        p1, p2 = (nullid, nullid)
-        octopus = False
-
-        if len(gparents) > 1:
-            # merge, possibly octopus
-            def commit_octopus(p1, p2):
-                ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
-                                     commit.author, date, {'hg-git': 'octopus'})
-                return hex(self.repo.commitctx(ctx))
-
-            octopus = len(gparents) > 2
-            p2 = gparents.pop()
-            p1 = gparents.pop()
-            while len(gparents) > 0:
-                p2 = commit_octopus(p1, p2)
-                p1 = gparents.pop()
-        else:
-            if gparents:
-                p1 = gparents.pop()
-
-        files = list(set(files))
-
-        pa = None
-        if not (p2 == nullid):
-            node1 = self.repo.changectx(p1)
-            node2 = self.repo.changectx(p2)
-            pa = node1.ancestor(node2)
-
-        author = commit.author
-
-        # convert extra data back to the end
-        if ' ext:' in commit.author:
-            regex = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
-            m = regex.match(commit.author)
-            if m:
-                name = m.group(1)
-                ex = urllib.unquote(m.group(2))
-                email = m.group(3)
-                author = name + ' <' + email + '>' + ex
-
-        if ' <none@none>' in commit.author:
-            author = commit.author[:-12]
-
-        # if named branch, add to extra
-        if hg_branch:
-            extra['branch'] = hg_branch
-
-        # if committer is different than author, add it to extra
-        if not commit._author_raw == commit._committer_raw:
-            extra['committer'] = "%s %d %d" % (commit.committer, commit.commit_time, -commit.commit_timezone)
-
-        if commit._encoding:
-            extra['encoding'] = commit._encoding
-
-        if hg_branch:
-            extra['branch'] = hg_branch
-
-        if octopus:
-            extra['hg-git'] ='octopus-done'
-
-        ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
-                             author, date, extra)
-
-        node = self.repo.commit_import_ctx(ctx, pa, force_files)
-
-        # save changeset to mapping file
-        cs = hex(node)
-        self.map_set(commit.id, cs)
-
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
             self.ui.warn("YOU NEED TO SETUP BOOKMARKS\n")
@@ -769,15 +785,3 @@ class GitHandler(object):
                 return transport(host), '/' + path
         # if its not git or git+ssh, try a local url..
         return SubprocessGitClient(), uri
-
-    def clear(self):
-        mapfile = self.repo.join(self.mapfile)
-        if os.path.exists(self.gitdir):
-            for root, dirs, files in os.walk(self.gitdir, topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
-                for name in dirs:
-                    os.rmdir(os.path.join(root, name))
-            os.rmdir(self.gitdir)
-        if os.path.exists(mapfile):
-            os.remove(mapfile)
