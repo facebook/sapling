@@ -20,49 +20,48 @@ class ReplayException(Exception):
     """
 
 def convert_rev(ui, meta, svn, r, tbdelta):
-    # ui is only passed in for similarity with stupid.convert_rev()
-    hg_editor = meta.editor
-    hg_editor.current.clear()
-    hg_editor.current.rev = r
-    meta.save_tbdelta(tbdelta) # needed by get_replay()
-    svn.get_replay(r.revnum, meta.editor)
-    hg_editor.current.findmissing(svn)
-    _updateexternals(meta, hg_editor.current)
-    return commit_current_delta(meta, tbdelta, hg_editor.current)
 
+    editor = meta.editor
+    editor.current.clear()
+    editor.current.rev = r
+    meta.save_tbdelta(tbdelta)
+    svn.get_replay(r.revnum, editor)
+    current = editor.current
+    current.findmissing(svn)
 
-def _updateexternals(meta, current):
-    if not current.externals:
-        return
-    # Accumulate externals records for all branches
-    revnum = current.rev.revnum
-    branches = {}
-    for path, entry in current.externals.iteritems():
-        if not meta.is_path_valid(path):
-            meta.ui.warn('WARNING: Invalid path %s in externals\n' % path)
-            continue
-        p, b, bp = meta.split_branch_path(path)
-        if bp not in branches:
-            external = svnexternals.externalsfile()
-            parent = meta.get_parent_revision(revnum, b)
-            pctx = meta.repo[parent]
-            if '.hgsvnexternals' in pctx:
-                external.read(pctx['.hgsvnexternals'].data())
-            branches[bp] = external
-        else:
-            external = branches[bp]
-        external[p] = entry
+    # update externals
 
-    # Register the file changes
-    for bp, external in branches.iteritems():
-        path = bp + '/.hgsvnexternals'
-        if external:
-            current.set(path, external.write(), False, False)
-        else:
-            current.delete(path)
+    if current.externals:
 
+        # accumulate externals records for all branches
+        revnum = current.rev.revnum
+        branches = {}
+        for path, entry in current.externals.iteritems():
 
-def commit_current_delta(meta, tbdelta, current):
+            if not meta.is_path_valid(path):
+                ui.warn('WARNING: Invalid path %s in externals\n' % path)
+                continue
+
+            p, b, bp = meta.split_branch_path(path)
+            if bp not in branches:
+                external = svnexternals.externalsfile()
+                parent = meta.get_parent_revision(revnum, b)
+                pctx = meta.repo[parent]
+                if '.hgsvnexternals' in pctx:
+                    external.read(pctx['.hgsvnexternals'].data())
+                branches[bp] = external
+            else:
+                external = branches[bp]
+
+            external[p] = entry
+
+        # register externals file changes
+        for bp, external in branches.iteritems():
+            path = bp + '/.hgsvnexternals'
+            if external:
+                current.set(path, external.write(), False, False)
+            else:
+                current.delete(path)
 
     if current.exception is not None:  #pragma: no cover
         traceback.print_exception(*current.exception)
@@ -138,8 +137,8 @@ def commit_current_delta(meta, tbdelta, current):
                 if is_link and data.startswith('link '):
                     data = data[len('link '):]
                 elif is_link:
-                    meta.ui.warn('file marked as link, but contains data: '
-                                 '%s (%r)\n' % (current_file, flags))
+                    ui.warn('file marked as link, but contains data: '
+                            '%s (%r)\n' % (current_file, flags))
             else:
                 data = parent_ctx.filectx(path).data()
             return context.memfilectx(path=path,
@@ -159,7 +158,7 @@ def commit_current_delta(meta, tbdelta, current):
                                      extra)
 
         new_hash = meta.repo.commitctx(current_ctx)
-        util.describe_commit(meta.ui, new_hash, branch)
+        util.describe_commit(ui, new_hash, branch)
         if (rev.revnum, branch) not in meta.revmap:
             meta.revmap[rev.revnum, branch] = new_hash
 
@@ -192,7 +191,7 @@ def commit_current_delta(meta, tbdelta, current):
                                      date,
                                      extra)
         new_hash = meta.repo.commitctx(current_ctx)
-        util.describe_commit(meta.ui, new_hash, branch)
+        util.describe_commit(ui, new_hash, branch)
         if (rev.revnum, branch) not in meta.revmap:
             meta.revmap[rev.revnum, branch] = new_hash
 
