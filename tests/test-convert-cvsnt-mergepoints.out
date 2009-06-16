@@ -52,6 +52,7 @@ Date:
 Author:
 Branch: HEAD
 Tag: (none) 
+Branchpoints: MYBRANCH1_1, MYBRANCH1 
 Log:
 foo.txt
 
@@ -77,6 +78,7 @@ Date:
 Author:
 Branch: MYBRANCH1
 Tag: (none) 
+Branchpoints: MYBRANCH1_2 
 Parent: 2
 Log:
 baz
