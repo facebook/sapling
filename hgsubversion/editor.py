@@ -1,26 +1,14 @@
 import cStringIO
 import sys
-import traceback
 
-from mercurial import context
 from mercurial import util as hgutil
 from mercurial import revlog
 from mercurial import node
 from svn import delta
 from svn import core
 
-import svnexternals
 import util
 
-class MissingPlainTextError(Exception):
-    """Exception raised when the repo lacks a source file required for replaying
-    a txdelta.
-    """
-
-class ReplayException(Exception):
-    """Exception raised when you try and commit but the replay encountered an
-    exception.
-    """
 
 def ieditor(fn):
     """Helps identify methods used by the SVN editor interface.
@@ -97,165 +85,6 @@ class HgEditor(delta.Editor):
         self.ui = meta.ui
         self.repo = meta.repo
         self.current = RevisionData(meta.ui)
-
-    def _updateexternals(self):
-        if not self.current.externals:
-            return
-        # Accumulate externals records for all branches
-        revnum = self.current.rev.revnum
-        branches = {}
-        for path, entry in self.current.externals.iteritems():
-            if not self.meta.is_path_valid(path):
-                self.ui.warn('WARNING: Invalid path %s in externals\n' % path)
-                continue
-            p, b, bp = self.meta.split_branch_path(path)
-            if bp not in branches:
-                external = svnexternals.externalsfile()
-                parent = self.meta.get_parent_revision(revnum, b)
-                pctx = self.repo[parent]
-                if '.hgsvnexternals' in pctx:
-                    external.read(pctx['.hgsvnexternals'].data())
-                branches[bp] = external
-            else:
-                external = branches[bp]
-            external[p] = entry
-
-        # Register the file changes
-        for bp, external in branches.iteritems():
-            path = bp + '/.hgsvnexternals'
-            if external:
-                self.current.set(path, external.write(), False, False)
-            else:
-                self.current.delete(path)
-
-    def commit_current_delta(self, tbdelta):
-        if self.current.exception is not None:  #pragma: no cover
-            traceback.print_exception(*self.current.exception)
-            raise ReplayException()
-        if self.current.missing:
-            raise MissingPlainTextError()
-        self._updateexternals()
-        # paranoidly generate the list of files to commit
-        files_to_commit = set(self.current.files.keys())
-        files_to_commit.update(self.current.symlinks.keys())
-        files_to_commit.update(self.current.execfiles.keys())
-        files_to_commit.update(self.current.deleted.keys())
-        # back to a list and sort so we get sane behavior
-        files_to_commit = list(files_to_commit)
-        files_to_commit.sort()
-        branch_batches = {}
-        rev = self.current.rev
-        date = self.meta.fixdate(rev.date)
-
-        # build up the branches that have files on them
-        for f in files_to_commit:
-            if not self.meta.is_path_valid(f):
-                continue
-            p, b = self.meta.split_branch_path(f)[:2]
-            if b not in branch_batches:
-                branch_batches[b] = []
-            branch_batches[b].append((p, f))
-
-        closebranches = {}
-        for branch in tbdelta['branches'][1]:
-            branchedits = self.meta.revmap.branchedits(branch, rev)
-            if len(branchedits) < 1:
-                # can't close a branch that never existed
-                continue
-            ha = branchedits[0][1]
-            closebranches[branch] = ha
-
-        # 1. handle normal commits
-        closedrevs = closebranches.values()
-        for branch, files in branch_batches.iteritems():
-            if branch in self.current.emptybranches and files:
-                del self.current.emptybranches[branch]
-            files = dict(files)
-
-            parents = (self.meta.get_parent_revision(rev.revnum, branch),
-                       revlog.nullid)
-            if parents[0] in closedrevs and branch in self.meta.closebranches:
-                continue
-            extra = self.meta.genextra(rev.revnum, branch)
-            if branch is not None:
-                if (branch not in self.meta.branches
-                    and branch not in self.repo.branchtags()):
-                    continue
-            parent_ctx = self.repo.changectx(parents[0])
-            if '.hgsvnexternals' not in parent_ctx and '.hgsvnexternals' in files:
-                # Do not register empty externals files
-                if (files['.hgsvnexternals'] in self.current.files
-                    and not self.current.files[files['.hgsvnexternals']]):
-                    del files['.hgsvnexternals']
-
-            def filectxfn(repo, memctx, path):
-                current_file = files[path]
-                if current_file in self.current.deleted:
-                    raise IOError()
-                copied = self.current.copies.get(current_file)
-                flags = parent_ctx.flags(path)
-                is_exec = self.current.execfiles.get(current_file, 'x' in flags)
-                is_link = self.current.symlinks.get(current_file, 'l' in flags)
-                if current_file in self.current.files:
-                    data = self.current.files[current_file]
-                    if is_link and data.startswith('link '):
-                        data = data[len('link '):]
-                    elif is_link:
-                        self.ui.warn('file marked as link, but contains data: '
-                                     '%s (%r)\n' % (current_file, flags))
-                else:
-                    data = parent_ctx.filectx(path).data()
-                return context.memfilectx(path=path,
-                                          data=data,
-                                          islink=is_link, isexec=is_exec,
-                                          copied=copied)
-            if not self.meta.usebranchnames:
-                extra.pop('branch', None)
-            current_ctx = context.memctx(self.repo,
-                                         parents,
-                                         rev.message or '...',
-                                         files.keys(),
-                                         filectxfn,
-                                         self.meta.authors[rev.author],
-                                         date,
-                                         extra)
-            new_hash = self.repo.commitctx(current_ctx)
-            util.describe_commit(self.ui, new_hash, branch)
-            if (rev.revnum, branch) not in self.meta.revmap:
-                self.meta.revmap[rev.revnum, branch] = new_hash
-
-        # 2. handle branches that need to be committed without any files
-        for branch in self.current.emptybranches:
-            ha = self.meta.get_parent_revision(rev.revnum, branch)
-            if ha == node.nullid:
-                continue
-            parent_ctx = self.repo.changectx(ha)
-            def del_all_files(*args):
-                raise IOError
-            # True here meant nuke all files, shouldn't happen with branch closing
-            if self.current.emptybranches[branch]: #pragma: no cover
-               raise hgutil.Abort('Empty commit to an open branch attempted. '
-                                  'Please report this issue.')
-            extra = self.meta.genextra(rev.revnum, branch)
-            if not self.meta.usebranchnames:
-                extra.pop('branch', None)
-            current_ctx = context.memctx(self.repo,
-                                         (ha, node.nullid),
-                                         rev.message or ' ',
-                                         [],
-                                         del_all_files,
-                                         self.meta.authors[rev.author],
-                                         date,
-                                         extra)
-            new_hash = self.repo.commitctx(current_ctx)
-            util.describe_commit(self.ui, new_hash, branch)
-            if (rev.revnum, branch) not in self.meta.revmap:
-                self.meta.revmap[rev.revnum, branch] = new_hash
-
-        self.current.clear()
-        return closebranches
-	
-    # Here come all the actual editor methods
 
     @ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):

@@ -12,12 +12,13 @@ from svn import delta
 
 import cmdutil
 import svnmeta
+import replay
 import stupid as stupidmod
 import svnwrap
 import util
 
 pullfuns = {
-    True: cmdutil.replay_convert_rev,
+    True: replay.convert_rev,
     False: stupidmod.convert_rev,
 }
 

@@ -53,42 +53,6 @@ def parentrev(ui, repo, meta, hashes):
     return workingctx
 
 
-def replay_convert_rev(ui, meta, svn, r, tbdelta):
-    # ui is only passed in for similarity with stupid.convert_rev()
-    hg_editor = meta.editor
-    hg_editor.current.rev = r
-    meta.save_tbdelta(tbdelta) # needed by get_replay()
-    svn.get_replay(r.revnum, meta.editor)
-    i = 1
-    if hg_editor.current.missing:
-        meta.ui.debug('Fetching %s files that could not use replay.\n' %
-                      len(hg_editor.current.missing))
-        files_to_grab = set()
-        rootpath = svn.subdir and svn.subdir[1:] or ''
-        for p in hg_editor.current.missing:
-            meta.ui.note('.')
-            meta.ui.flush()
-            if p[-1] == '/':
-                dirpath = p[len(rootpath):]
-                files_to_grab.update([dirpath + f for f,k in
-                                      svn.list_files(dirpath, r.revnum)
-                                      if k == 'f'])
-            else:
-                files_to_grab.add(p[len(rootpath):])
-        meta.ui.note('\nFetching files...\n')
-        for p in files_to_grab:
-            meta.ui.note('.')
-            meta.ui.flush()
-            if i % 50 == 0:
-                svn.init_ra_and_client()
-            i += 1
-            data, mode = svn.get_file(p, r.revnum)
-            hg_editor.current.set(p, data, 'x' in mode, 'l' in mode)
-        hg_editor.current.missing = set()
-        meta.ui.note('\n')
-    return hg_editor.commit_current_delta(tbdelta)
-
-
 def _isdir(svn, branchpath, svndir):
     try:
         svn.list_dir('%s/%s' % (branchpath, svndir))
