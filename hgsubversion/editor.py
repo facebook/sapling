@@ -77,6 +77,41 @@ class RevisionData(object):
         self.symlinks[path] = False
         self.ui.note('D %s\n' % path)
 
+    def findmissing(self, svn):
+
+        if not self.missing:
+            return
+
+        msg = 'fetching %s files that could not use replay.\n'
+        self.ui.debug(msg % len(self.missing))
+        root = svn.subdir and svn.subdir[1:] or ''
+        r = self.rev.revnum
+
+        files = set()
+        for p in self.missing:
+            self.ui.note('.')
+            self.ui.flush()
+            if p[-1] == '/':
+                dir = p[len(root):]
+                new = [dir + f for f, k in svn.list_files(dir, r) if k == 'f']
+                files.update(new)
+            else:
+                files.add(p[len(root):])
+
+        i = 1
+        self.ui.note('\nfetching files...\n')
+        for p in files:
+            self.ui.note('.')
+            self.ui.flush()
+            if i % 50 == 0:
+                svn.init_ra_and_client()
+            i += 1
+            data, mode = svn.get_file(p, r)
+            self.set(p, data, 'x' in mode, 'l' in mode)
+
+        self.missing = set()
+        self.ui.note('\n')
+
 
 class HgEditor(delta.Editor):
 

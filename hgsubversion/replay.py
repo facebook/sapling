@@ -26,33 +26,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     hg_editor.current.rev = r
     meta.save_tbdelta(tbdelta) # needed by get_replay()
     svn.get_replay(r.revnum, meta.editor)
-    i = 1
-    if hg_editor.current.missing:
-        meta.ui.debug('Fetching %s files that could not use replay.\n' %
-                      len(hg_editor.current.missing))
-        files_to_grab = set()
-        rootpath = svn.subdir and svn.subdir[1:] or ''
-        for p in hg_editor.current.missing:
-            meta.ui.note('.')
-            meta.ui.flush()
-            if p[-1] == '/':
-                dirpath = p[len(rootpath):]
-                files_to_grab.update([dirpath + f for f,k in
-                                      svn.list_files(dirpath, r.revnum)
-                                      if k == 'f'])
-            else:
-                files_to_grab.add(p[len(rootpath):])
-        meta.ui.note('\nFetching files...\n')
-        for p in files_to_grab:
-            meta.ui.note('.')
-            meta.ui.flush()
-            if i % 50 == 0:
-                svn.init_ra_and_client()
-            i += 1
-            data, mode = svn.get_file(p, r.revnum)
-            hg_editor.current.set(p, data, 'x' in mode, 'l' in mode)
-        hg_editor.current.missing = set()
-        meta.ui.note('\n')
+    hg_editor.current.findmissing(svn)
     _updateexternals(meta, hg_editor.current)
     return commit_current_delta(meta, tbdelta, hg_editor.current)
 
