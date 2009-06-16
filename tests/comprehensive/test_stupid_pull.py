@@ -21,7 +21,7 @@ def _do_case(self, name):
     u.setconfig('hgsubversion', 'stupid', '1')
     hg.clone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
     self.repo2 = hg.repository(ui.ui(), wc2_path)
-    self.assertEqual(self.repo.branchtags(), self.repo2.branchtags())
+    self.assertEqual(self.repo.heads(), self.repo2.heads())
 
 
 def buildmethod(case, name):
