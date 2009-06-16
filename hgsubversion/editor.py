@@ -36,8 +36,8 @@ def ieditor(fn):
         try:
             return fn(self, *args, **kwargs)
         except: #pragma: no cover
-            if not hasattr(self, '_exception_info'):
-                self._exception_info = sys.exc_info()
+            if self.current.exception is not None:
+                self.current.exception = sys.exc_info()
             raise
     return fun
 
@@ -47,6 +47,7 @@ class RevisionData(object):
     __slots__ = [
         'file', 'files', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
         'copies', 'missing', 'emptybranches', 'base', 'externals', 'ui',
+        'exception',
     ]
 
     def __init__(self, ui):
@@ -67,6 +68,7 @@ class RevisionData(object):
         self.emptybranches = {}
         self.base = None
         self.externals = {}
+        self.exception = None
 
     def set(self, path, data, isexec=False, islink=False):
         if islink:
@@ -127,8 +129,8 @@ class HgEditor(delta.Editor):
                 self.current.delete(path)
 
     def commit_current_delta(self, tbdelta):
-        if hasattr(self, '_exception_info'):  #pragma: no cover
-            traceback.print_exception(*self._exception_info)
+        if self.current.exception is not None:  #pragma: no cover
+            traceback.print_exception(*self.current.exception)
             raise ReplayException()
         if self.current.missing:
             raise MissingPlainTextError()
