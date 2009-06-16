@@ -28,6 +28,8 @@ from mercurial import commands
 from mercurial import extensions
 from mercurial import hg
 from mercurial import util as hgutil
+from mercurial import demandimport
+demandimport.ignore.append('svn')
 
 from svn import core
 
