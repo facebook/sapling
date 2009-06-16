@@ -92,13 +92,17 @@ def countrate(ui, repo, amap, *pats, **opts):
 
 
 def churn(ui, repo, *pats, **opts):
-    '''graph count of revisions grouped by template
+    '''histogram of changes to the repository
 
-    Will graph count of changed lines or revisions grouped by template
-    or alternatively by date, if dateformat is used. In this case it
-    will override template.
+    This command will display a histogram representing the number
+    of changed lines or revisions, grouped according to the given
+    template. The default template will group changes by author.
+    The --dateformat option may be used to group the results by
+    date instead.
 
-    By default statistics are counted for number of changed lines.
+    Statistics are based on the number of changed lines, or
+    alternatively the number of matching revisions if the
+    --changesets option is specified.
 
     Examples:
 
@@ -114,12 +118,13 @@ def churn(ui, repo, *pats, **opts):
       # display count of lines changed in every year
       hg churn -f '%Y' -s
 
-    The map file format used to specify aliases is fairly simple:
-
+    It is possible to map alternate email addresses to a main address
+    by providing a file using the following format:
+    
     <alias email> <actual email>
 
-    By default .hgchurn in the working directory root will be used, if
-    it exists. Use the --aliases option to override this.
+    Such a file may be specified with the --aliases option, otherwise a
+    .hgchurn file will be looked for in the working directory root.
     '''
     def pad(s, l):
         return (s + " " * l)[:l]
