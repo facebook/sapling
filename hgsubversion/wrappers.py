@@ -267,6 +267,7 @@ def pull(repo, source, heads=[], force=False):
                         bits = (r.revnum, r.author, msg)
                         ui.status(('[r%d] %s: %s\n' % bits)[:w])
 
+                        meta.save_tbdelta(tbdelta)
                         close = pullfuns[have_replay](ui, meta, svn, r, tbdelta)
                         if tbdelta['tags'][0] or tbdelta['tags'][1]:
                             meta.committags(tbdelta['tags'], r, close)

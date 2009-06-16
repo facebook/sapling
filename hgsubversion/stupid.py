@@ -515,7 +515,6 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
 def convert_rev(ui, meta, svn, r, tbdelta):
     # this server fails at replay
 
-    meta.save_tbdelta(tbdelta)
     branches = branches_in_paths(meta, tbdelta, r.paths, r.revnum,
                                  svn.checkpath, svn.list_files)
     brpaths = branches.values()

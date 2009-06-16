@@ -24,7 +24,6 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     editor = meta.editor
     editor.current.clear()
     editor.current.rev = r
-    meta.save_tbdelta(tbdelta)
     svn.get_replay(r.revnum, editor)
     current = editor.current
     current.findmissing(svn)
