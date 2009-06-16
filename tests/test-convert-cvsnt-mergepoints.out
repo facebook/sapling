@@ -1,46 +1,46 @@
 % create cvs repository
-U cvsworktmp/CVSROOT/checkoutlist
-U cvsworktmp/CVSROOT/commitinfo
-U cvsworktmp/CVSROOT/config
-U cvsworktmp/CVSROOT/cvswrappers
-U cvsworktmp/CVSROOT/loginfo
-U cvsworktmp/CVSROOT/modules
-U cvsworktmp/CVSROOT/notify
-U cvsworktmp/CVSROOT/postadmin
-U cvsworktmp/CVSROOT/postproxy
-U cvsworktmp/CVSROOT/posttag
-U cvsworktmp/CVSROOT/postwatch
-U cvsworktmp/CVSROOT/preproxy
-U cvsworktmp/CVSROOT/rcsinfo
-U cvsworktmp/CVSROOT/taginfo
-U cvsworktmp/CVSROOT/verifymsg
-
-cvs add: use `cvs commit' to add this file permanently
-checking in
+cvs -f -Q -d *REPO* init
+% checkout #1: add foo.txt
+cvs -f -Q checkout -d cvsworktmp .
+cvs -f -Q add foo
+cvs -f -Q add foo.txt
+cvs -f ci -m foo.txt
 initial revision: 1.1
-U cvswork/foo.txt
-checking in
+% checkout #2: create MYBRANCH1 and modify foo.txt on it
+cvs -f -Q checkout -d cvswork foo
+cvs -f -q rtag -b -R MYBRANCH1 foo
+cvs -f -Q update -P -r MYBRANCH1
+cvs -f ci -m bar
 new revision: 1.1.2.1; previous revision: 1.1
-checking in
+cvs -f ci -m baz
 new revision: 1.1.2.2; previous revision: 1.1.2.1
-checking in
+% create MYBRANCH1_2 and modify foo.txt some more
+cvs -f -q rtag -b -R -r MYBRANCH1 MYBRANCH1_2 foo
+cvs -f -Q update -P -r MYBRANCH1_2
+cvs -f ci -m bazzie
 new revision: 1.1.2.2.2.1; previous revision: 1.1.2.2
-U foo.txt
-checking in
+% create MYBRANCH1_1 and modify foo.txt yet again
+cvs -f -q rtag -b -R MYBRANCH1_1 foo
+cvs -f -Q update -P -r MYBRANCH1_1
+cvs -f ci -m quux
 new revision: 1.1.4.1; previous revision: 1.1
+% merge MYBRANCH1 to MYBRANCH1_1
 rcsmerge: warning: conflicts during merge
-merging MYBRANCH1
+cvs -f -Q update -P -jMYBRANCH1
+RCS file: *REPO*/foo/foo.txt,v
 retrieving revision 1.1
 retrieving revision 1.1.2.2
 Merging differences between 1.1 and 1.1.2.2 into foo.txt
-checking in
+cvs -f ci -m merge1
 new revision: 1.1.4.2; previous revision: 1.1.4.1
-U foo.txt
-merging MYBRANCH1_2
+% return to trunk and merge MYBRANCH1_2
+cvs -f -Q update -P -A
+cvs -f -Q update -P -jMYBRANCH1_2
+RCS file: *REPO*/foo/foo.txt,v
 retrieving revision 1.1
 retrieving revision 1.1.2.2.2.1
 Merging differences between 1.1 and 1.1.2.2.2.1 into foo.txt
-checking in
+cvs -f ci -m merge2
 new revision: 1.2; previous revision: 1.1
 collecting CVS rlog
 7 log entries

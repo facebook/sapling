@@ -2,9 +2,23 @@
 
 "$TESTDIR/hghave" cvs || exit 80
 
+filterpath()
+{
+    eval "$@" | sed "s:$CVSROOT:*REPO*:g"
+}
+
 cvscall()
 {
+    echo cvs -f "$@"
     cvs -f "$@"
+}
+
+# output of 'cvs ci' varies unpredictably, so discard most of it
+# -- just keep the part that matters
+cvsci()
+{
+    echo cvs -f ci "$@"
+    cvs -f ci "$@" 2>&1 | egrep "^(new|initial) revision:"
 }
 
 hgcat()
@@ -18,7 +32,7 @@ echo "graphlog = " >> $HGRCPATH
 echo "[convert]" >> $HGRCPATH
 echo "cvsps=builtin" >> $HGRCPATH
 
-echo % create cvs repository
+echo "% create cvs repository"
 mkdir cvsmaster
 cd cvsmaster
 CVSROOT=`pwd`
@@ -26,51 +40,56 @@ export CVSROOT
 CVS_OPTIONS=-f
 export CVS_OPTIONS
 cd ..
+filterpath cvscall -Q -d "$CVSROOT" init
 
-cvscall -q -d "$CVSROOT" init
-
-cvscall -q checkout -d cvsworktmp .
+echo "% checkout #1: add foo.txt"
+cvscall -Q checkout -d cvsworktmp .
 cd cvsworktmp
 mkdir foo
-cvscall -q add foo | sed -e 's/Directory .* added to the repository//g'
+cvscall -Q add foo
 cd foo
 echo foo > foo.txt
-cvscall -q add foo.txt 
-cvscall -q ci -m "foo.txt" | sed 's/.*,v.*/checking in/g'
+cvscall -Q add foo.txt 
+cvsci -m "foo.txt"
  
 cd ../..
 rm -rf cvsworktmp
 
-cvscall -q checkout -d cvswork foo
+echo "% checkout #2: create MYBRANCH1 and modify foo.txt on it"
+cvscall -Q checkout -d cvswork foo
 
 cd cvswork
 
 cvscall -q rtag -b -R MYBRANCH1 foo
-cvscall -q up -P -r MYBRANCH1
+cvscall -Q update -P -r MYBRANCH1
 echo bar > foo.txt
-cvscall -q ci -m "bar" | sed 's/.*,v.*/checking in/g'
+cvsci -m "bar"
 echo baz > foo.txt
-cvscall -q ci -m "baz" | sed 's/.*,v.*/checking in/g'
+cvsci -m "baz"
 
+echo "% create MYBRANCH1_2 and modify foo.txt some more"
 cvscall -q rtag -b -R -r MYBRANCH1 MYBRANCH1_2 foo
-cvscall -q up -P -r MYBRANCH1_2
+cvscall -Q update -P -r MYBRANCH1_2
 
 echo bazzie > foo.txt
-cvscall -q ci -m "bazzie" | sed 's/.*,v.*/checking in/g'
+cvsci -m "bazzie"
 
+echo "% create MYBRANCH1_1 and modify foo.txt yet again"
 cvscall -q rtag -b -R MYBRANCH1_1 foo
-cvscall -q up -P -r MYBRANCH1_1
+cvscall -Q update -P -r MYBRANCH1_1
 
 echo quux > foo.txt
-cvscall -q ci -m "quux" | sed 's/.*,v.*/checking in/g'
-cvscall -q up -P -jMYBRANCH1 | sed 's/RCS file: .*,v/merging MYBRANCH1/g'
+cvsci -m "quux"
+
+echo "% merge MYBRANCH1 to MYBRANCH1_1"
+filterpath cvscall -Q update -P -jMYBRANCH1
 echo xyzzy > foo.txt
-cvscall -q ci -m "merge" | sed 's/.*,v.*/checking in/g'
+cvsci -m "merge1"
 
-cvscall -q up -P -A
-
-cvscall -q up -P -jMYBRANCH1_2 | sed 's/RCS file: .*,v/merging MYBRANCH1_2/g'
-cvscall -q ci -m "merge" | sed 's/.*,v.*/checking in/g'
+echo "% return to trunk and merge MYBRANCH1_2"
+cvscall -Q update -P -A
+filterpath cvscall -Q update -P -jMYBRANCH1_2
+cvsci -m "merge2"
 
 REALCVS=`which cvs`
 echo "for x in \$*; do if [ \"\$x\" = \"rlog\" ]; then echo \"RCS file: $CVSROOT/foo/foo.txt,v\"; cat $TESTDIR/test-convert-cvsnt-mergepoints.rlog; exit 0; fi; done; $REALCVS \$*" > cvs
