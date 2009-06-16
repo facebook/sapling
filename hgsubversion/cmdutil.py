@@ -57,9 +57,3 @@ def islocalrepo(url):
             return True
         path = path.rsplit('/', 1)[0]
     return False
-
-def issvnurl(url):
-    for scheme in ('svn', 'http', 'https', 'svn+ssh'):
-        if url.startswith(scheme + '://'):
-            return True
-    return islocalrepo(url)
