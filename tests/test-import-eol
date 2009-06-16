@@ -9,9 +9,10 @@ w('--- a/a\n')
 w('+++ b/a\n')
 w('@@ -1,5 +1,5 @@\n')
 w(' a\n')
-w('-b\r\n')
-w('+y\r\n')
-w(' c\r\n')
+w('-bbb\r\n')
+w('+yyyy\r\n')
+w(' cc\r\n')
+w(' \n')
 w(' d\n')
 w('-e\n')
 w('\ No newline at end of file\n')
@@ -24,7 +25,7 @@ cd repo
 echo '\.diff' > .hgignore
 
 # Test different --eol values
-python -c 'file("a", "wb").write("a\nb\nc\nd\ne")'
+python -c 'file("a", "wb").write("a\nbbb\ncc\n\nd\ne")'
 hg ci -Am adda
 python ../makepatch.py
 echo % invalid eol

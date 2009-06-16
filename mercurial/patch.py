@@ -299,7 +299,7 @@ class patchfile(object):
             if self.eol and self.eol != '\n':
                 for l in lines:
                     if l and l[-1] == '\n':
-                        l = l[:1] + self.eol
+                        l = l[:-1] + self.eol
                     fp.write(l)
             else:
                 fp.writelines(lines)

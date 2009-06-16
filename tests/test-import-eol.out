@@ -5,11 +5,11 @@ applying eol.diff
 abort: Unsupported line endings type: LFCR
 % force LF
 applying eol.diff
-'a\ny\nc\nd\nz'
+'a\nyyyy\ncc\n\nd\ne'
 % force CRLF
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying eol.diff
-'a\r\ny\r\nc\r\nd\r\nz'
+'a\r\nyyyy\r\ncc\r\n\r\nd\r\ne'
 adding b
 % binary patch with --eol
 applying bin.diff
