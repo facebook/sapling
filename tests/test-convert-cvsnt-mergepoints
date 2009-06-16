@@ -17,8 +17,8 @@ cvscall()
 # -- just keep the part that matters
 cvsci()
 {
-    echo cvs -f ci "$@"
-    cvs -f ci "$@" 2>&1 | egrep "^(new|initial) revision:"
+    echo cvs -f ci -f "$@"
+    cvs -f ci -f "$@" 2>&1 | egrep "^(new|initial) revision:"
 }
 
 hgcat()
@@ -50,7 +50,7 @@ cvscall -Q add foo
 cd foo
 echo foo > foo.txt
 cvscall -Q add foo.txt 
-cvsci -m "foo.txt"
+cvsci -m "add foo.txt" foo.txt
  
 cd ../..
 rm -rf cvsworktmp
@@ -63,33 +63,38 @@ cd cvswork
 cvscall -q rtag -b -R MYBRANCH1 foo
 cvscall -Q update -P -r MYBRANCH1
 echo bar > foo.txt
-cvsci -m "bar"
+cvsci -m "bar" foo.txt
 echo baz > foo.txt
-cvsci -m "baz"
+cvsci -m "baz" foo.txt
 
 echo "% create MYBRANCH1_2 and modify foo.txt some more"
 cvscall -q rtag -b -R -r MYBRANCH1 MYBRANCH1_2 foo
 cvscall -Q update -P -r MYBRANCH1_2
 
 echo bazzie > foo.txt
-cvsci -m "bazzie"
+cvsci -m "bazzie" foo.txt
 
 echo "% create MYBRANCH1_1 and modify foo.txt yet again"
 cvscall -q rtag -b -R MYBRANCH1_1 foo
 cvscall -Q update -P -r MYBRANCH1_1
 
 echo quux > foo.txt
-cvsci -m "quux"
+cvsci -m "quux" foo.txt
 
 echo "% merge MYBRANCH1 to MYBRANCH1_1"
 filterpath cvscall -Q update -P -jMYBRANCH1
+# carefully placed sleep to dodge cvs bug (optimization?) where it
+# sometimes ignores a "commit" command if it comes too fast (the -f
+# option in cvsci seems to work for all the other commits in this
+# script)
+sleep 1
 echo xyzzy > foo.txt
-cvsci -m "merge1"
+cvsci -m "merge1+clobber" foo.txt
 
 echo "% return to trunk and merge MYBRANCH1_2"
 cvscall -Q update -P -A
 filterpath cvscall -Q update -P -jMYBRANCH1_2
-cvsci -m "merge2"
+cvsci -m "merge2" foo.txt
 
 REALCVS=`which cvs`
 echo "for x in \$*; do if [ \"\$x\" = \"rlog\" ]; then echo \"RCS file: $CVSROOT/foo/foo.txt,v\"; cat $TESTDIR/test-convert-cvsnt-mergepoints.rlog; exit 0; fi; done; $REALCVS \$*" > ../cvs
