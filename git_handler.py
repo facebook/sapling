@@ -31,7 +31,8 @@ class GitHandler(object):
 
         self.importbranch = ui.config('git', 'importbranch')
         self.exportbranch = ui.config('git', 'exportbranch', 'refs/heads/master')
-        self.bookbranch = ui.config('git', 'bookbranch', '')
+
+        self.paths = ui.configitems('paths')
 
         self.init_if_missing()
         self.load_git()
@@ -81,13 +82,22 @@ class GitHandler(object):
         self.import_git_objects(remote_name)
         self.save_map()
 
-    def fetch(self, remote_name):
-        self.ui.status(_("fetching from : %s\n") % remote_name)
+    def fetch(self, remote):
+        self.ui.status(_("fetching from : %s\n") % remote)
         self.export_git_objects()
-        refs = self.fetch_pack(remote_name)
+        refs = self.fetch_pack(remote)
+        remote_name = self.remote_name(remote)
+
         if refs:
             self.import_git_objects(remote_name, refs)
             self.import_local_tags(refs)
+            self.update_hg_bookmarks(refs)
+            if remote_name:
+                self.update_remote_branches(remote_name, refs)
+            elif not self.paths:
+                # intial cloning
+                self.update_remote_branches('default', refs)
+
         self.save_map()
 
     def export_commits(self, export_objects=True):
@@ -420,8 +430,6 @@ class GitHandler(object):
             if not self.map_hg_get(csha): # it's already here
                 self.import_git_commit(commit)
 
-        self.update_hg_bookmarks(remote_name)
-
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
         # TODO : Do something less coarse-grained than try/except on the
@@ -519,20 +527,21 @@ class GitHandler(object):
 
     ## PACK UPLOADING AND FETCHING
 
-    def upload_pack(self, remote_name):
-        client, path = self.get_transport_and_path(remote_name)
+    def upload_pack(self, remote):
+        client, path = self.get_transport_and_path(remote)
         changed = self.get_changed_refs
         genpack = self.generate_pack_contents
         try:
             self.ui.status(_("creating and sending data\n"))
             changed_refs = client.send_pack(path, changed, genpack)
-            if changed_refs:
+            remote_name = self.remote_name(remote)
+            if remote_name and changed_refs:
                 new_refs = {}
                 for ref, sha in changed_refs.iteritems():
                     self.ui.status("    "+ remote_name + "::" + ref + " => GIT:" + sha[0:8] + "\n")
                     new_refs[ref] = sha
                 self.git.set_remote_refs(new_refs, remote_name)
-                self.update_hg_bookmarks(remote_name)
+                self.update_remote_branches(remote_name, new_refs)
         except:
             # TODO : remove try/except or do something useful here
             raise
@@ -703,30 +712,37 @@ class GitHandler(object):
                     if sha:
                         self.repo.tag(ref_name, hex_to_sha(sha), '', True, None, None)
 
-    def update_hg_bookmarks(self, remote_name):
+    def update_hg_bookmarks(self, refs):
         try:
             bms = bookmarks.parse(self.repo)
-            if remote_name:
-                heads = self.git.remote_refs(remote_name)
-            else:
-                branches = self.bookbranch.split(',')
-                heads = dict((i, self.git.ref(i.strip())) for i in branches)
-
-            base_name = (remote_name + '/') if remote_name else '' 
+            heads = dict([(ref[11:],refs[ref]) for ref in refs
+                          if ref.startswith('refs/heads/')])
 
             for head, sha in heads.iteritems():
-                if not sha:
-                    self.ui.warn(_("Could not resolve head %s.\n") % head)
-                    continue
                 hgsha = hex_to_sha(self.map_hg_get(sha))
-                if not head == 'HEAD':
-                    bms[base_name + head] = hgsha
+                if not head in bms:
+                    # new branch
+                    bms[head] = hgsha
+                else:
+                    bm = self.repo[bms[head]]
+                    if bm.ancestor(self.repo[hgsha]) == bm:
+                        # fast forward
+                        bms[head] = hgsha
             if heads:
                 bookmarks.write(self.repo, bms)
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
                          ' bookmarks enabled?\n'))
+
+    def update_remote_branches(self, remote_name, refs):
+        heads = dict([(ref[11:],refs[ref]) for ref in refs
+                      if ref.startswith('refs/heads/')])
+
+        for head, sha in heads.iteritems():
+            hgsha = hex_to_sha(self.map_hg_get(sha))
+            tag = '%s/%s' % (remote_name, head)
+            self.repo.tag(tag, hgsha, '', True, None, None)
 
     ## UTILITY FUNCTIONS
 
@@ -768,6 +784,11 @@ class GitHandler(object):
                     before, after = data.split(" : ", 1)
                     extra[before] = urllib.unquote(after)
         return (message, renames, branch, files, extra)
+
+    def remote_name(self, remote):
+        names = [name for name, path in self.paths if path == remote]
+        if names:
+            return names[0]
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
