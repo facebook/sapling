@@ -34,7 +34,7 @@ demandimport.ignore.append('svn')
 from svn import core
 
 import svncommands
-import cmdutil
+import util
 import svnrepo
 import wrappers
 
@@ -134,7 +134,7 @@ def reposetup(ui, repo):
 
 
 def _lookup(url):
-    if cmdutil.islocalrepo(url):
+    if util.islocalrepo(url):
         return svnrepo
     else:
         return hg._local(url)

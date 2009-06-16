@@ -1,6 +1,6 @@
 from hgext import rebase as hgrebase
 
-from mercurial import cmdutil as hgcmdutil
+from mercurial import cmdutil
 from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
@@ -10,7 +10,6 @@ from mercurial import i18n
 from svn import core
 from svn import delta
 
-import cmdutil
 import svnmeta
 import replay
 import pushmod
@@ -37,10 +36,10 @@ def parents(orig, ui, repo, *args, **opts):
         return orig(ui, repo, *args, **opts)
     meta = svnmeta.SVNMeta(repo)
     hashes = meta.revmap.hashes()
-    ha = cmdutil.parentrev(ui, repo, meta, hashes)
+    ha = util.parentrev(ui, repo, meta, hashes)
     if ha.node() == node.nullid:
         raise hgutil.Abort('No parent svn revision!')
-    displayer = hgcmdutil.show_changeset(ui, repo, opts, buffered=False)
+    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
     displayer.show(ha)
     return 0
 
@@ -95,7 +94,7 @@ def diff(orig, ui, repo, *args, **opts):
         if o_r:
             parent = repo[o_r[-1]].parents()[0]
         opts['rev'] = ['%s:.' % node.hex(parent.node()), ]
-    node1, node2 = hgcmdutil.revpair(repo, opts['rev'])
+    node1, node2 = cmdutil.revpair(repo, opts['rev'])
     baserev, _junk = hashes.get(node1, (-1, 'junk'))
     newrev, _junk = hashes.get(node2, (-1, 'junk'))
     it = patch.diff(repo, node1, node2,
@@ -107,7 +106,7 @@ def diff(orig, ui, repo, *args, **opts):
                                                   'unified': True,
                                                   'text': False,
                                                   }))
-    ui.write(cmdutil.filterdiff(''.join(it), baserev, newrev))
+    ui.write(util.filterdiff(''.join(it), baserev, newrev))
 
 def push(repo, dest, force, revs):
     """push revisions starting at a specified head back to Subversion.
@@ -374,7 +373,7 @@ def clone(orig, ui, source, dest=None, **opts):
             ui.setconfig(section, name, str(opts.pop(opt)))
 
     # this must be kept in sync with mercurial/commands.py
-    srcrepo, dstrepo = hg.clone(hgcmdutil.remoteui(ui, opts), source, dest,
+    srcrepo, dstrepo = hg.clone(cmdutil.remoteui(ui, opts), source, dest,
                                 pull=opts.get('pull'),
                                 stream=opts.get('uncompressed'),
                                 rev=opts.get('rev'),

@@ -4,7 +4,6 @@ from mercurial import util as hgutil
 
 import svnmeta
 import svnwrap
-import cmdutil
 import util
 
 def genignore(ui, repo, hg_repo_path, force=False, **opts):
@@ -20,7 +19,7 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     svn = svnwrap.SubversionRepo(url, user, passwd)
     meta = svnmeta.SVNMeta(repo, svn.uuid)
     hashes = meta.revmap.hashes()
-    parent = cmdutil.parentrev(ui, repo, meta, hashes)
+    parent = util.parentrev(ui, repo, meta, hashes)
     r, br = hashes[parent.node()]
     if br == None:
         branchpath = 'trunk'
@@ -48,7 +47,7 @@ def info(ui, repo, hg_repo_path, **opts):
     svn = svnwrap.SubversionRepo(url, user, passwd)
     meta = svnmeta.SVNMeta(repo, svn.uuid)
     hashes = meta.revmap.hashes()
-    parent = cmdutil.parentrev(ui, repo, meta, hashes)
+    parent = util.parentrev(ui, repo, meta, hashes)
     pn = parent.node()
     if pn not in hashes:
         ui.status('Not a child of an svn revision.\n')
