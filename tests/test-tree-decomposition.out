@@ -1,18 +1,20 @@
 Initialized empty Git repository in gitrepo/.git/
 
-[master (root-commit) 60fd61f] initial
+Created initial commit 60fd61f: initial
  0 files changed, 0 insertions(+), 0 deletions(-)
  create mode 100644 d1/f1
  create mode 100644 d1/f2
-[master a2e8665] rename
+Created commit a2e8665: rename
  1 files changed, 0 insertions(+), 0 deletions(-)
  rename {d1 => d2}/f2 (100%)
-fetching from : origin
-exporting git objects
+fetching from : git://localhost/gitrepo
+importing Hg objects into Git
 Counting objects: 8, done.
 Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
 Total 8 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
+at: 0/2
+updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adds: d2/f2
 dels: d1/f2

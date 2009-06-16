@@ -4,15 +4,18 @@ rm 'alpha'
 rm 'foo/bar'
 % final manifest in git is just beta
 beta
-fetching from : origin
-exporting git objects
+fetching from : git://localhost/gitrepo
+importing Hg objects into Git
 Counting objects: 14, done.
 Compressing objects:  12% (1/8)   Compressing objects:  25% (2/8)   Compressing objects:  37% (3/8)   Compressing objects:  50% (4/8)   Compressing objects:  62% (5/8)   Compressing objects:  75% (6/8)   Compressing objects:  87% (7/8)   Compressing objects: 100% (8/8)   Compressing objects: 100% (8/8), done.
 Total 14 (delta 1), reused 0 (delta 0)
 importing Git objects into Hg
+at: 0/5
+updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   4:ea41a3f0ed10
-|  tag:         origin/master
+|  tag:         master
+|  tag:         default/master
 |  tag:         tip
 |  user:        test <test@example.org>
 |  date:        Mon Jan 01 00:00:14 2007 +0000

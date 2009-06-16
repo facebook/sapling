@@ -1,14 +1,15 @@
 Initialized empty Git repository in gitrepo/.git/
 
-[master (root-commit) 6782568] empty
-fetching from : origin
-exporting git objects
+Created initial commit 6782568: empty
+fetching from : git://localhost/gitrepo
+importing Hg objects into Git
 Counting objects: 2, done.
 Total 2 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
+at: 0/1
+updating working directory
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 files: 
 clearing out the git cache data
-exporting git objects
+importing Hg objects into Git
 at: 0/1
-converting revision 0
