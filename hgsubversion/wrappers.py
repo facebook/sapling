@@ -13,6 +13,7 @@ from svn import delta
 import cmdutil
 import svnmeta
 import replay
+import pushmod
 import stupid as stupidmod
 import svnwrap
 import util
@@ -155,9 +156,9 @@ def push(repo, dest, force, revs):
         # 2. Commit oldest revision that needs to be pushed
         base_revision = hashes[base_n][0]
         try:
-            cmdutil.commit_from_rev(ui, repo, old_ctx, meta, svnurl,
-                                    base_revision, user, passwd)
-        except cmdutil.NoFilesException:
+            pushmod.commit(ui, repo, old_ctx, meta, svnurl,
+                           base_revision, user, passwd)
+        except pushmod.NoFilesException:
             ui.warn("Could not push revision %s because it had no changes in svn.\n" %
                      old_ctx)
             return 1
