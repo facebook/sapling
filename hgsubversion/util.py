@@ -114,9 +114,6 @@ def outgoing_revisions(repo, reverse_map, sourcerev):
     if sourcerev.node() != node.nullid:
         return outgoing_rev_hashes
 
-def is_svn_repo(repo):
-    return os.path.exists(os.path.join(repo.path, 'svn', 'uuid'))
-
 default_commit_msg = '*** empty log message ***'
 
 def describe_commit(ui, h, b):

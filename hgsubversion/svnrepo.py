@@ -27,16 +27,6 @@ def generate_repo_class(ui, repo):
 
     superclass = repo.__class__
 
-    def localsvn(fn):
-        """
-        Filter for instance methods which only apply to local Subversion
-        repositories.
-        """
-        if util.is_svn_repo(repo):
-            return fn
-        else:
-            return getattr(repo, fn.__name__)
-
     def remotesvn(fn):
         """
         Filter for instance methods which require the first argument
