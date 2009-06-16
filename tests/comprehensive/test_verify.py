@@ -20,7 +20,7 @@ def _do_case(self, name, stupid):
     assert len(self.repo) > 0
     for i in repo:
         ctx = repo[i]
-        self.assertEqual(svncommands.verify(repo.ui, repo, verifynode=ctx.node()), 0)
+        self.assertEqual(svncommands.verify(repo.ui, repo, rev=ctx.node()), 0)
 
 def buildmethod(case, name, stupid):
     m = lambda self: self._do_case(case, stupid)
