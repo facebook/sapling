@@ -6,6 +6,7 @@ from mercurial import node
 from mercurial import util as hgutil
 
 import svnwrap
+import svnmeta
 import util
 import utility_commands
 import svnexternals
@@ -185,24 +186,27 @@ def help(ui, args=None, **opts):
 def update(ui, args, repo, clean=False, **opts):
     """update to a specified Subversion revision number
     """
+
     assert len(args) == 1
     rev = int(args[0])
-    path = os.path.join(repo.path, 'svn', 'rev_map')
+    meta = svnmeta.SVNMeta(repo)
+
     answers = []
-    for k,v in util.parse_revmap(path).iteritems():
+    for k, v in meta.revmap.iteritems():
         if k[0] == rev:
             answers.append((v, k[1]))
+
     if len(answers) == 1:
         if clean:
             return hg.clean(repo, answers[0][0])
         return hg.update(repo, answers[0][0])
     elif len(answers) == 0:
-        ui.status('Revision %s did not produce an hg revision.\n' % rev)
+        ui.status('revision %s did not produce an hg revision\n' % rev)
         return 1
     else:
-        ui.status('Ambiguous revision!\n')
-        ui.status('\n'.join(['%s on %s' % (node.hex(a[0]), a[1]) for a in
-                             answers]+['']))
+        ui.status('ambiguous revision!\n')
+        revs = ['%s on %s' % (node.hex(a[0]), a[1]) for a in answers] + ['']
+        ui.status('\n'.join(revs))
     return 1
 
 
