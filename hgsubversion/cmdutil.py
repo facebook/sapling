@@ -83,7 +83,7 @@ def replay_convert_rev(ui, meta, svn, r, tbdelta):
                 svn.init_ra_and_client()
             i += 1
             data, mode = svn.get_file(p, r.revnum)
-            hg_editor.set_file(p, data, 'x' in mode, 'l' in mode)
+            hg_editor.current.set(p, data, 'x' in mode, 'l' in mode)
         hg_editor.current.missing = set()
         meta.ui.note('\n')
     return hg_editor.commit_current_delta(tbdelta)

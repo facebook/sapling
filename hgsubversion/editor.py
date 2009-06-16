@@ -46,10 +46,11 @@ class RevisionData(object):
 
     __slots__ = [
         'file', 'files', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
-        'copies', 'missing', 'emptybranches', 'base', 'externals',
+        'copies', 'missing', 'emptybranches', 'base', 'externals', 'ui',
     ]
 
-    def __init__(self):
+    def __init__(self, ui):
+        self.ui = ui
         self.clear()
 
     def clear(self):
@@ -67,6 +68,25 @@ class RevisionData(object):
         self.base = None
         self.externals = {}
 
+    def set(self, path, data, isexec=False, islink=False):
+        if islink:
+            data = 'link ' + data
+        self.files[path] = data
+        self.execfiles[path] = isexec
+        self.symlinks[path] = islink
+        if path in self.deleted:
+            del self.deleted[path]
+        if path in self.missing:
+            self.missing.remove(path)
+
+    def delete(self, path):
+        self.deleted[path] = True
+        if path in self.files:
+            del self.files[path]
+        self.execfiles[path] = False
+        self.symlinks[path] = False
+        self.ui.note('D %s\n' % path)
+
 
 class HgEditor(delta.Editor):
 
@@ -74,26 +94,7 @@ class HgEditor(delta.Editor):
         self.meta = meta
         self.ui = meta.ui
         self.repo = meta.repo
-        self.current = RevisionData()
-
-    def set_file(self, path, data, isexec=False, islink=False):
-        if islink:
-            data = 'link ' + data
-        self.current.files[path] = data
-        self.current.execfiles[path] = isexec
-        self.current.symlinks[path] = islink
-        if path in self.current.deleted:
-            del self.current.deleted[path]
-        if path in self.current.missing:
-            self.current.missing.remove(path)
-
-    def delete_file(self, path):
-        self.current.deleted[path] = True
-        if path in self.current.files:
-            del self.current.files[path]
-        self.current.execfiles[path] = False
-        self.current.symlinks[path] = False
-        self.ui.note('D %s\n' % path)
+        self.current = RevisionData(meta.ui)
 
     def _updateexternals(self):
         if not self.current.externals:
@@ -121,9 +122,9 @@ class HgEditor(delta.Editor):
         for bp, external in branches.iteritems():
             path = bp + '/.hgsvnexternals'
             if external:
-                self.set_file(path, external.write(), False, False)
+                self.current.set(path, external.write(), False, False)
             else:
-                self.delete_file(path)
+                self.current.delete(path)
 
     def commit_current_delta(self, tbdelta):
         if hasattr(self, '_exception_info'):  #pragma: no cover
@@ -270,13 +271,13 @@ class HgEditor(delta.Editor):
                     br_path2 = br_path + '/'
                 # assuming it is a directory
                 self.current.externals[path] = None
-                map(self.delete_file, [pat for pat in self.current.files.iterkeys()
-                                       if pat.startswith(path+'/')])
+                map(self.current.delete, [pat for pat in self.current.files.iterkeys()
+                                          if pat.startswith(path+'/')])
                 for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current.files:
-                        self.delete_file(f_p)
-            self.delete_file(path)
+                        self.current.delete(f_p)
+            self.current.delete(path)
 
     @ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
@@ -312,7 +313,7 @@ class HgEditor(delta.Editor):
         base = fctx.data()
         if 'l' in fctx.flags():
             base = 'link ' + base
-        self.set_file(path, base, 'x' in fctx.flags(), 'l' in fctx.flags())
+        self.current.set(path, base, 'x' in fctx.flags(), 'l' in fctx.flags())
 
     @ieditor
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
@@ -330,7 +331,7 @@ class HgEditor(delta.Editor):
         self.current.file = path
         if not copyfrom_path:
             self.ui.note('A %s\n' % path)
-            self.set_file(path, '', False, False)
+            self.current.set(path, '', False, False)
             return
         self.ui.note('A+ %s\n' % path)
         (from_file,
@@ -344,7 +345,7 @@ class HgEditor(delta.Editor):
         if from_file in ctx:
             fctx = ctx.filectx(from_file)
             flags = fctx.flags()
-            self.set_file(path, fctx.data(), 'x' in flags, 'l' in flags)
+            self.current.set(path, fctx.data(), 'x' in flags, 'l' in flags)
         if from_branch == branch:
             parentid = self.meta.get_parent_revision(self.current.rev.revnum,
                                                      branch)
@@ -398,7 +399,7 @@ class HgEditor(delta.Editor):
             f2 = f[len(cp_f):]
             fctx = cp_f_ctx.filectx(f)
             fp_c = path + '/' + f2
-            self.set_file(fp_c, fctx.data(), 'x' in fctx.flags(), 'l' in fctx.flags())
+            self.current.set(fp_c, fctx.data(), 'x' in fctx.flags(), 'l' in fctx.flags())
             if fp_c in self.current.deleted:
                 del self.current.deleted[fp_c]
             if branch == source_branch:
