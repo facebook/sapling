@@ -9,7 +9,7 @@ compatability can be offered. It is, however, quite useful for the cases where
 it works, and a good platform for further improvements.
 
 Before using hgsubversion, we *strongly* encourage running the
-automated tests. See `README' in the hgsubversion directory for
+automated tests. See 'README' in the hgsubversion directory for
 details.
 
 The operation of hgsubversion can be customised with the following variables:
