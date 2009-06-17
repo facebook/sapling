@@ -397,6 +397,13 @@ def patchbomb(ui, repo, *revs, **opts):
     ui.write('\n')
 
     parent = opts.get('in_reply_to') or None
+    # angle brackets may be omitted, they're not semantically part of the msg-id
+    if parent is not None:
+        if not parent.startswith('<'):
+            parent = '<' + parent
+        if not parent.endswith('>'):
+            parent += '>'
+
     first = True
 
     sender_addr = email.Utils.parseaddr(sender)[1]
