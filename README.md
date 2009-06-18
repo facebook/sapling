@@ -20,19 +20,19 @@ Commands
 
 You can clone a Git repository from Hg by running `hg gclone [url]`.  It will create a directory appended with a '-hg', for example, if you were to run `hg gclone git://github.com/schacon/munger.git` it would clone the repository down into the directory 'munger-hg', then convert it to an Hg repository for you.
 
-	hg gclone git://github.com/schacon/munger.git
+	hg clone git://github.com/schacon/munger.git
 	
 If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as a Git remote and then run `hg gpush` from within your project.  For example:
 
 	$ cd hg-git # (an Hg repository)
-	$ hg gremote add origin git@github.com/schacon/hg-git.git
+	$ (edit .hg/hgrc and add the target git repo in the path section)
 	$ hg push
 
 This will convert all our Hg data into Git objects and push them up to the Git server.
 	
-Now that you have an Hg repository that can push/pull to/from a Git repository, you can fetch updates with `hg gfetch`.
+Now that you have an Hg repository that can push/pull to/from a Git repository, you can fetch updates with `hg pull`.
 
-	$ hg gfetch
+	$ hg pull
 	
 That will pull down any commits that have been pushed to the server in the meantime and give you a new head that you can merge in.
 
