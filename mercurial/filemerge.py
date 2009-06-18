@@ -16,7 +16,8 @@ def _toolstr(ui, tool, part, default=""):
 def _toolbool(ui, tool, part, default=False):
     return ui.configbool("merge-tools", tool + "." + part, default)
 
-_internal = ['internal:' + s for s in 'fail local other merge prompt'.split()]
+_internal = ['internal:' + s
+             for s in 'fail local other merge prompt dump'.split()]
 
 def _findtool(ui, tool):
     if tool in _internal:
@@ -191,6 +192,12 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
 
     if tool == "internal:merge":
         r = simplemerge.simplemerge(ui, a, b, c, label=['local', 'other'])
+    elif tool == 'internal:dump':
+        a = repo.wjoin(fd)
+        util.copyfile(a, a + ".local")
+        repo.wwrite(a + ".other", fco.data(), fco.flags())
+        repo.wwrite(a + ".base", fca.data(), fca.flags())
+        return 1 # unresolved
     else:
         args = _toolstr(ui, tool, "args", '$local $base $other')
         if "$output" in args:
