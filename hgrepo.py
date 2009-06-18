@@ -151,4 +151,34 @@ class hgrepo(localrepo.localrepository):
         else:
             super(hgrepo, self).push(remote, force, revs)
 
+    def tag(self, names, node, message, local, user, date):
+        if local:
+            super(hgrepo, self).tag(names, node, message, local, user, date)
+            return
+
+        if isinstance(names, str):
+            names = (names,)
+
+        allchars = ''.join(names)
+        for c in self.tag_disallowed:
+            if c in allchars:
+                raise util.Abort('%r cannot be used in a tag name' % c)
+
+        git = GitHandler(self, self.ui)
+        for name in names:
+            git.tags[name] = hex(node)
+
+        git.save_tags()
+
+    def tags(self):
+        if self.tagscache:
+            return self.tagscache
+
+        git = GitHandler(self, self.ui)
+        tagscache = super(hgrepo, self).tags()
+        tagscache.update(dict([(tag, bin(rev)) for (tag,rev) in git.tags.iteritems()]))
+        tagstypes = dict([(tag, 'git') for tag in git.tags])
+        self._tagstypecache.update(tagstypes)
+        return tagscache
+
 instance = hgrepo

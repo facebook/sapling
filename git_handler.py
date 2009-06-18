@@ -23,6 +23,7 @@ class GitHandler(object):
         self.repo = dest_repo
         self.ui = ui
         self.mapfile = 'git-mapfile'
+        self.tagsfile = 'git-tags'
 
         if ui.config('git', 'intree'):
             self.gitdir = self.repo.wjoin('.git')
@@ -37,6 +38,7 @@ class GitHandler(object):
         self.init_if_missing()
         self.load_git()
         self.load_map()
+        self.load_tags()
 
     # make the git data directory
     def init_if_missing(self):
@@ -74,6 +76,20 @@ class GitHandler(object):
             file.write("%s %s\n" % (gitsha, hgsha))
         file.rename()
 
+
+    def load_tags(self):
+        self.tags = {}
+        if os.path.exists(self.repo.join(self.tagsfile)):
+            for line in self.repo.opener(self.tagsfile):
+                sha, name = line.strip().split(' ', 1)
+                self.tags[name] = sha
+
+    def save_tags(self):
+        file = self.repo.opener(self.tagsfile, 'w+', atomictemp=True)
+        for name, sha in sorted(self.tags.iteritems()):
+            file.write("%s %s\n" % (sha, name))
+        file.rename()
+
     ## END FILE LOAD AND SAVE METHODS
 
     ## COMMANDS METHODS
@@ -90,7 +106,7 @@ class GitHandler(object):
 
         if refs:
             self.import_git_objects(remote_name, refs)
-            self.import_local_tags(refs)
+            self.import_tags(refs)
             self.update_hg_bookmarks(refs)
             if remote_name:
                 self.update_remote_branches(remote_name, refs)
@@ -695,11 +711,8 @@ class GitHandler(object):
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
-            if tag[-3:] == '^{}':
-                continue
-            if tag == 'tip':
-                continue
-            self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
+            if self.repo.tagtype(tag) == 'git':
+                self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
 
     # Make sure there's a refs/remotes/remote_name/name
     #           for every refs/heads/name
@@ -711,12 +724,11 @@ class GitHandler(object):
         refs = self.git.get_refs()
         return dict(filter(is_local_head, refs.items()))
 
-    # take refs just fetched, add local tags for all tags not in .hgtags
-    def import_local_tags(self, refs):
+    def import_tags(self, refs):
         keys = refs.keys()
         if not keys:
-            return None
-        for k in keys[0:]:
+            return
+        for k in keys[:]:
             ref_name = k
             parts = k.split('/')
             if (parts[0] == 'refs' and parts[1] == 'tags'):
@@ -728,13 +740,15 @@ class GitHandler(object):
                     sha = None
                     if isinstance (obj, Commit): # lightweight
                         sha = self.map_hg_get(refs[k])
-                    if isinstance (obj, Tag): # annotated
+                        self.tags[ref_name] = sha
+                    elif isinstance (obj, Tag): # annotated
                         (obj_type, obj_sha) = obj.get_object()
                         obj = self.git.get_object(obj_sha)
                         if isinstance (obj, Commit):
                             sha = self.map_hg_get(obj_sha)
-                    if sha:
-                        self.repo.tag(ref_name, hex_to_sha(sha), '', True, None, None)
+                            # TODO: better handling for annotated tags
+                            self.tags[ref_name] = sha
+        self.save_tags()
 
     def update_hg_bookmarks(self, refs):
         try:
