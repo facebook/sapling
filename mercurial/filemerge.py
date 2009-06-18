@@ -16,8 +16,10 @@ def _toolstr(ui, tool, part, default=""):
 def _toolbool(ui, tool, part, default=False):
     return ui.configbool("merge-tools", tool + "." + part, default)
 
+_internal = ['internal:' + s for s in 'fail local other merge prompt'.split()]
+
 def _findtool(ui, tool):
-    if tool in ("internal:fail", "internal:local", "internal:other"):
+    if tool in _internal:
         return tool
     k = _toolstr(ui, tool, "regkey")
     if k:
@@ -140,7 +142,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     ui.debug(_("picked tool '%s' for %s (binary %s symlink %s)\n") %
                (tool, fd, binary, symlink))
 
-    if not tool:
+    if not tool or tool == 'internal:prompt':
         tool = "internal:local"
         if ui.prompt(_(" no tool found to merge %s\n"
                        "keep (l)ocal or take (o)ther?") % fd,
