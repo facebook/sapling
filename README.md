@@ -18,14 +18,14 @@ This plugin is implemented entirely in Python - there are no Git binary dependen
 Commands
 =========
 
-You can clone a Git repository from Hg by running `hg gclone [url]`.  It will create a directory appended with a '-hg', for example, if you were to run `hg gclone git://github.com/schacon/munger.git` it would clone the repository down into the directory 'munger-hg', then convert it to an Hg repository for you.
+You can clone a Git repository from Hg by running `hg clone [url]`.  For example, if you were to run `hg clone git://github.com/schacon/munger.git` it would clone the repository down into the directory 'munger.git', then convert it to an Hg repository for you.
 
 	hg clone git://github.com/schacon/munger.git
 	
-If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as a Git remote and then run `hg gpush` from within your project.  For example:
+If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as default path or default-push path in your .hg/hgrc and then run `hg push` from within your project.  For example:
 
 	$ cd hg-git # (an Hg repository)
-	$ (edit .hg/hgrc and add the target git repo in the path section)
+	$ (edit .hg/hgrc and add the target git url in the path section)
 	$ hg push
 
 This will convert all our Hg data into Git objects and push them up to the Git server.
