@@ -1,0 +1,18 @@
+# -*- coding: latin-1 -*-
+
+# this file contains some latin-1 messages for test-encoding
+
+GIT_AUTHOR_NAME='tést èncödîng'; export GIT_AUTHOR_NAME
+echo beta > beta
+git add beta
+commit -m 'add beta'
+
+echo gamma > gamma
+git add gamma
+commit -m 'add gämmâ'
+
+# test the commit encoding field
+git config i18n.commitencoding latin-1
+echo delta > delta
+git add delta
+commit -m 'add déltà'

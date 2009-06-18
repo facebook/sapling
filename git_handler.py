@@ -197,24 +197,32 @@ class GitHandler(object):
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
 
-        # hg authors might not have emails
-        author = ctx.user()
-
-        # check for git author pattern compliance
-        regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
-        a = regex.match(author)
-
-        if a:
-            name = a.group(1)
-            email = a.group(2)
-            if len(a.group(3)) > 0:
-                name += ' ext:(' + urllib.quote(a.group(3)) + ')'
-            author = name + ' <' + email + '>'
+        if 'git-author' in extra:
+            author = extra['git-author']
         else:
-            author = author + ' <none@none>'
+            # hg authors might not have emails
+            author = ctx.user()
+
+            # check for git author pattern compliance
+            regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
+            a = regex.match(author)
+
+            if a:
+                name = a.group(1)
+                email = a.group(2)
+                if len(a.group(3)) > 0:
+                    name += ' ext:(' + urllib.quote(a.group(3)) + ')'
+                author = name + ' <' + email + '>'
+            else:
+                author = author + ' <none@none>'
+
         commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
-        message = ctx.description()
-        commit['message'] = ctx.description() + "\n"
+
+        if 'git-commit-message' in extra:
+            commit['message'] = extra['git-commit-message']
+        else:
+            message = ctx.description()
+            commit['message'] = ctx.description() + "\n"
 
         if 'committer' in extra:
             # fixup timezone
@@ -443,6 +451,35 @@ class GitHandler(object):
         date = (commit.author_time, -commit.author_timezone)
         text = strip_message
 
+        try:
+            text.decode('utf-8')
+        except UnicodeDecodeError:
+            extra['git-commit-message'] = text
+            text = self.decode_guess(text, commit._encoding)
+
+        author = commit.author
+
+        # convert extra data back to the end
+        if ' ext:' in commit.author:
+            regex = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
+            m = regex.match(commit.author)
+            if m:
+                name = m.group(1)
+                ex = urllib.unquote(m.group(2))
+                email = m.group(3)
+                author = name + ' <' + email + '>' + ex
+
+        if ' <none@none>' in commit.author:
+            author = commit.author[:-12]
+
+        try:
+            author.decode('utf-8')
+        except UnicodeDecodeError:
+            extra['git-author'] = author
+            author = self.decode_guess(author, commit._encoding)
+
+        oldenc = self.swap_out_encoding()
+
         def getfilectx(repo, memctx, f):
             try:
                 (mode, sha, data) = self.git.get_file(commit, f)
@@ -463,7 +500,7 @@ class GitHandler(object):
             # merge, possibly octopus
             def commit_octopus(p1, p2):
                 ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
-                                     commit.author, date, {'hg-git': 'octopus'})
+                                     author, date, {'hg-git': 'octopus'})
                 return hex(self.repo.commitctx(ctx))
 
             octopus = len(gparents) > 2
@@ -483,21 +520,6 @@ class GitHandler(object):
             node1 = self.repo.changectx(p1)
             node2 = self.repo.changectx(p2)
             pa = node1.ancestor(node2)
-
-        author = commit.author
-
-        # convert extra data back to the end
-        if ' ext:' in commit.author:
-            regex = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
-            m = regex.match(commit.author)
-            if m:
-                name = m.group(1)
-                ex = urllib.unquote(m.group(2))
-                email = m.group(3)
-                author = name + ' <' + email + '>' + ex
-
-        if ' <none@none>' in commit.author:
-            author = commit.author[:-12]
 
         # if named branch, add to extra
         if hg_branch:
@@ -520,6 +542,8 @@ class GitHandler(object):
                              author, date, extra)
 
         node = self.repo.commit_import_ctx(ctx, pa, force_files)
+
+        self.swap_out_encoding(oldenc)
 
         # save changeset to mapping file
         cs = hex(node)
@@ -789,6 +813,30 @@ class GitHandler(object):
         names = [name for name, path in self.paths if path == remote]
         if names:
             return names[0]
+
+    # Stolen from hgsubversion
+    def swap_out_encoding(self, new_encoding='UTF-8'):
+        try:
+            from mercurial import encoding
+            old = encoding.encoding
+            encoding.encoding = new_encoding
+        except ImportError:
+            old = hgutil._encoding
+            hgutil._encoding = new_encoding
+        return old
+
+    def decode_guess(self, string, encoding):
+        # text is not valid utf-8, try to make sense of it
+        if encoding:
+            try:
+                return string.decode(encoding).encode('utf-8')
+            except UnicodeDecodeError:
+                pass
+
+        try:
+            return string.decode('latin-1').encode('utf-8')
+        except UnicodeDecodeError:
+            return string.decode('ascii', 'replace').encode('utf-8')
 
     def check_bookmarks(self):
         if self.ui.config('extensions', 'hgext.bookmarks') is not None:
