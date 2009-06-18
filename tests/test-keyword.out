@@ -1,5 +1,5 @@
 % help
-keyword extension - keyword expansion in local repositories
+keyword extension - keyword expansion in tracked files
 
 This extension expands RCS/CVS-like or self-customized $Keywords$ in
 tracked text files selected by your configuration.
@@ -55,7 +55,7 @@ list of commands:
 
 enabled extensions:
 
- keyword   keyword expansion in local repositories
+ keyword   keyword expansion in tracked files
  mq        patch management and development
  notify    hook extension to email notifications on commits/pushes
 
