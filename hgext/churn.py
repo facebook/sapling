@@ -120,7 +120,7 @@ def churn(ui, repo, *pats, **opts):
 
     It is possible to map alternate email addresses to a main address
     by providing a file using the following format:
-    
+
     <alias email> <actual email>
 
     Such a file may be specified with the --aliases option, otherwise a
