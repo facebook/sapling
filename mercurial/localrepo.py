@@ -290,26 +290,24 @@ class localrepository(repo.repository):
                 globaltags[k] = an, ah
                 tagtypes[k] = tagtype
 
-        def tagctxs():
-            seen = set()
-            f = None
-            ret = []
-            for node in self.heads():
-                try:
-                    fnode = self[node].filenode('.hgtags')
-                except error.LookupError:
-                    continue
-                if fnode not in seen:
-                    seen.add(fnode)
-                    if not f:
-                        f = self.filectx('.hgtags', fileid=fnode)
-                    else:
-                        f = f.filectx(fnode)
-                    ret.append(f)
-            return reversed(ret)
+        seen = set()
+        f = None
+        ctxs = []
+        for node in self.heads():
+            try:
+                fnode = self[node].filenode('.hgtags')
+            except error.LookupError:
+                continue
+            if fnode not in seen:
+                seen.add(fnode)
+                if not f:
+                    f = self.filectx('.hgtags', fileid=fnode)
+                else:
+                    f = f.filectx(fnode)
+                ctxs.append(f)
 
         # read the tags file from each head, ending with the tip
-        for f in tagctxs():
+        for f in reversed(ctxs):
             readtags(f.data().splitlines(), f, "global")
 
         try:
