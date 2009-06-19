@@ -627,13 +627,23 @@ class queue(object):
         appliedbase = 0
         patches = []
         for rev in sorted(revs):
+
             if rev < firstrev:
                 raise util.Abort(_('revision %d is not managed') % rev)
             base = bin(self.applied[appliedbase].rev)
-            node = repo.changelog.node(rev)
-            if node != base:
-                raise util.Abort(_('cannot delete revision %d above '
-                                   'applied patches') % rev)
+
+            ctx = repo[rev]
+            if ctx.node() != base:
+                msg = _('cannot delete revision %d above applied patches')
+                raise util.Abort(msg % rev)
+
+            patch = self.applied[appliedbase].name
+            for fmt in ('[mq]: %s', 'imported patch %s'):
+                if ctx.description() == fmt % patch:
+                    msg = _('patch %s finalized without changeset message\n')
+                    repo.ui.status(msg % patch)
+                    break
+
             patches.append(self.applied[appliedbase].name)
             appliedbase += 1
 

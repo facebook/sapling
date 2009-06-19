@@ -32,11 +32,14 @@ abort: unknown revision 'c'!
 applying c
 patch c is empty
 now at: c
+patch a finalized without changeset message
+patch b finalized without changeset message
 c
 3 imported patch c
 2 [mq]: b
 1 [mq]: a
 0 base
+patch c finalized without changeset message
 3 imported patch c
 2 [mq]: b
 1 [mq]: a
