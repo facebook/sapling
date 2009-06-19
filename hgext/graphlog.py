@@ -18,41 +18,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
-from mercurial import hg, url, util
-
-def revisions(repo, start, stop):
-    """cset DAG generator yielding (rev, node, [parents]) tuples
-
-    This generator function walks through the revision history from revision
-    start to revision stop (which must be less than or equal to start).
-    """
-    assert start >= stop
-    cur = start
-    while cur >= stop:
-        ctx = repo[cur]
-        parents = [p.rev() for p in ctx.parents() if p.rev() != nullrev]
-        parents.sort()
-        yield (ctx, parents)
-        cur -= 1
-
-def filerevs(repo, path, start, stop):
-    """file cset DAG generator yielding (rev, node, [parents]) tuples
-
-    This generator function walks through the revision history of a single
-    file from revision start to revision stop (which must be less than or
-    equal to start).
-    """
-    assert start >= stop
-    filerev = len(repo.file(path)) - 1
-    while filerev >= 0:
-        fctx = repo.filectx(path, fileid=filerev)
-        parents = [f.linkrev() for f in fctx.parents() if f.path() == path]
-        parents.sort()
-        if fctx.rev() <= start:
-            yield (fctx, parents)
-        if fctx.rev() <= stop:
-            break
-        filerev -= 1
+from mercurial import hg, url, util, graphmod
 
 def grapher(nodes):
     """grapher for asciigraph on a list of nodes and their parents
@@ -278,9 +244,9 @@ def graphlog(ui, repo, path=None, **opts):
     if path:
         path = util.canonpath(repo.root, os.getcwd(), path)
     if path: # could be reset in canonpath
-        revdag = filerevs(repo, path, start, stop)
+        revdag = graphmod.filerevs(repo, path, start, stop)
     else:
-        revdag = revisions(repo, start, stop)
+        revdag = graphmod.revisions(repo, start, stop)
 
     graphdag = graphabledag(ui, repo, revdag, opts)
     ascii(ui, grapher(graphdag))

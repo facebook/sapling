@@ -8,6 +8,40 @@
 
 from node import nullrev
 
+def revisions(repo, start, stop):
+    """cset DAG generator yielding (rev, node, [parents]) tuples
+
+    This generator function walks through the revision history from revision
+    start to revision stop (which must be less than or equal to start).
+    """
+    assert start >= stop
+    cur = start
+    while cur >= stop:
+        ctx = repo[cur]
+        parents = [p.rev() for p in ctx.parents() if p.rev() != nullrev]
+        parents.sort()
+        yield (ctx, parents)
+        cur -= 1
+
+def filerevs(repo, path, start, stop):
+    """file cset DAG generator yielding (rev, node, [parents]) tuples
+
+    This generator function walks through the revision history of a single
+    file from revision start to revision stop (which must be less than or
+    equal to start).
+    """
+    assert start >= stop
+    filerev = len(repo.file(path)) - 1
+    while filerev >= 0:
+        fctx = repo.filectx(path, fileid=filerev)
+        parents = [f.linkrev() for f in fctx.parents() if f.path() == path]
+        parents.sort()
+        if fctx.rev() <= start:
+            yield (fctx, parents)
+        if fctx.rev() <= stop:
+            break
+        filerev -= 1
+
 def graph(repo, start_rev, stop_rev):
     """incremental revision grapher
 
