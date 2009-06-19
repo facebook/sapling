@@ -65,9 +65,9 @@ def submerge(repo, wctx, mctx, actx):
             elif l[0] != r[0]: # sources differ
                 if repo.ui.prompt(
                     _(' subrepository sources for %s differ\n'
-                      'use (l)ocal source (%s) or (r)emote source (%s)?'
+                      'use (l)ocal source (%s) or (r)emote source (%s)?')
                       % (s, l[0], r[0]),
-                      (_('&Local'), _('&Remote')), _('l'))) == _('r'):
+                      (_('&Local'), _('&Remote')), _('l')) == _('r'):
                     wctx.sub(s).get(r)
                     sm[s] = r
             elif l[1] == a[1]: # local side is unchanged
@@ -81,8 +81,8 @@ def submerge(repo, wctx, mctx, actx):
         else:
             if repo.ui.prompt(
                 _(' local changed subrepository %s which remote removed\n'
-                  'use (c)hanged version or (d)elete?' % s,
-                  (_('&Changed'), _('&Delete')), _('c'))) == _('d'):
+                  'use (c)hanged version or (d)elete?') % s,
+                  (_('&Changed'), _('&Delete')), _('c')) == _('d'):
                 wctx.sub(s).remove()
 
     for s, r in s2.items():
@@ -94,8 +94,8 @@ def submerge(repo, wctx, mctx, actx):
         elif r != sa[s]:
             if repo.ui.prompt(
                 _(' remote changed subrepository %s which local removed\n'
-                  'use (c)hanged version or (d)elete?' % s,
-                  (_('&Changed'), _('&Delete')), _('c'))) == _('c'):
+                  'use (c)hanged version or (d)elete?') % s,
+                  (_('&Changed'), _('&Delete')), _('c')) == _('c'):
                 wctx.sub(s).get(r)
                 sm[s] = r
 
