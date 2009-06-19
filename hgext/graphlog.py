@@ -12,7 +12,7 @@ commands. When this options is given, an ASCII representation of the
 revision graph is also shown.
 '''
 
-import os
+import os, sys
 from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts
 from mercurial.i18n import _
@@ -252,17 +252,11 @@ def graphlog(ui, repo, path=None, **opts):
     ascii(ui, grapher(graphdag))
 
 def graphrevs(repo, nodes, opts):
-    include = set(nodes)
     limit = cmdutil.loglimit(opts)
-    count = 0
-    for node in reversed(nodes):
-        if count >= limit:
-            break
-        ctx = repo[node]
-        parents = [p.rev() for p in ctx.parents() if p.node() in include]
-        parents.sort()
-        yield (ctx, parents)
-        count += 1
+    nodes.reverse()
+    if limit < sys.maxint:
+        nodes = nodes[:limit]
+    return graphmod.nodes(repo, nodes)
 
 def graphabledag(ui, repo, revdag, opts):
     showparents = [ctx.node() for ctx in repo[None].parents()]

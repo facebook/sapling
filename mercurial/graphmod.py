@@ -42,6 +42,14 @@ def filerevs(repo, path, start, stop):
             break
         filerev -= 1
 
+def nodes(repo, nodes):
+    include = set(nodes)
+    for node in nodes:
+        ctx = repo[node]
+        parents = [p.rev() for p in ctx.parents() if p.node() in include]
+        parents.sort()
+        yield (ctx, parents)
+
 def graph(repo, start_rev, stop_rev):
     """incremental revision grapher
 
