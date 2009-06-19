@@ -290,9 +290,25 @@ class localrepository(repo.repository):
                 globaltags[k] = an, ah
                 tagtypes[k] = tagtype
 
+        def tagnodes():
+            last = {}
+            ret = []
+            for node in reversed(self.heads()):
+                c = self[node]
+                rev = c.rev()
+                try:
+                    fnode = c.filenode('.hgtags')
+                except error.LookupError:
+                    continue
+                ret.append((rev, node, fnode))
+                if fnode in last:
+                    ret[last[fnode]] = None
+                last[fnode] = len(ret) - 1
+            return [item for item in ret if item]
+
         # read the tags file from each head, ending with the tip
         f = None
-        for rev, node, fnode in self._hgtagsnodes():
+        for rev, node, fnode in tagnodes():
             f = (f and f.filectx(fnode) or
                  self.filectx('.hgtags', fileid=fnode))
             readtags(f.data().splitlines(), f, "global")
@@ -327,22 +343,6 @@ class localrepository(repo.repository):
         self.tags()
 
         return self._tagstypecache.get(tagname)
-
-    def _hgtagsnodes(self):
-        last = {}
-        ret = []
-        for node in reversed(self.heads()):
-            c = self[node]
-            rev = c.rev()
-            try:
-                fnode = c.filenode('.hgtags')
-            except error.LookupError:
-                continue
-            ret.append((rev, node, fnode))
-            if fnode in last:
-                ret[last[fnode]] = None
-            last[fnode] = len(ret) - 1
-        return [item for item in ret if item]
 
     def tagslist(self):
         '''return a list of tags ordered by revision'''
