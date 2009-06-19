@@ -291,19 +291,18 @@ class localrepository(repo.repository):
                 tagtypes[k] = tagtype
 
         def tagnodes():
-            last = {}
+            seen = set()
             ret = []
-            for node in reversed(self.heads()):
+            for node in self.heads():
                 c = self[node]
                 try:
                     fnode = c.filenode('.hgtags')
                 except error.LookupError:
                     continue
-                ret.append((node, fnode))
-                if fnode in last:
-                    ret[last[fnode]] = None
-                last[fnode] = len(ret) - 1
-            return [item for item in ret if item]
+                if fnode not in seen:
+                    ret.append((node, fnode))
+                    seen.add(fnode)
+            return reversed(ret)
 
         # read the tags file from each head, ending with the tip
         f = None
