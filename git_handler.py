@@ -4,7 +4,7 @@ from dulwich.repo import Repo
 from dulwich.client import SimpleFetchGraphWalker
 from hgext import bookmarks
 from mercurial.i18n import _
-from mercurial.node import hex, nullid
+from mercurial.node import hex, bin, nullid
 from mercurial import context
 from dulwich.misc import make_sha
 from dulwich.objects import (
@@ -12,7 +12,6 @@ from dulwich.objects import (
     Commit,
     Tag,
     Tree,
-    hex_to_sha,
     format_timezone,
     )
 
@@ -757,7 +756,7 @@ class GitHandler(object):
                           if ref.startswith('refs/heads/')])
 
             for head, sha in heads.iteritems():
-                hgsha = hex_to_sha(self.map_hg_get(sha))
+                hgsha = bin(self.map_hg_get(sha))
                 if not head in bms:
                     # new branch
                     bms[head] = hgsha
@@ -778,7 +777,7 @@ class GitHandler(object):
                       if ref.startswith('refs/heads/')])
 
         for head, sha in heads.iteritems():
-            hgsha = hex_to_sha(self.map_hg_get(sha))
+            hgsha = bin(self.map_hg_get(sha))
             tag = '%s/%s' % (remote_name, head)
             self.repo.tag(tag, hgsha, '', True, None, None)
 
