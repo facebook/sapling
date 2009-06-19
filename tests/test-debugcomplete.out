@@ -169,7 +169,7 @@ diff: rev, change, text, git, nodates, show-function, ignore-all-space, ignore-s
 export: output, switch-parent, text, git, nodates
 init: ssh, remotecmd
 log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, prune, patch, git, limit, no-merges, style, template, include, exclude
-merge: force, rev, show
+merge: force, rev, preview
 parents: rev, style, template
 pull: update, force, rev, ssh, remotecmd
 push: force, rev, ssh, remotecmd

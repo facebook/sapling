@@ -2108,7 +2108,7 @@ def merge(ui, repo, node=None, **opts):
                                'use "hg update" or merge with an explicit rev'))
         node = parent == bheads[0] and bheads[-1] or bheads[0]
 
-    if opts.get('show'):
+    if opts.get('preview'):
         p1 = repo['.']
         p2 = repo[node]
         common = p1.ancestor(p2)
@@ -3358,7 +3358,7 @@ table = {
         (merge,
          [('f', 'force', None, _('force a merge with outstanding changes')),
           ('r', 'rev', '', _('revision to merge')),
-          ('S', 'show', None,
+          ('P', 'preview', None,
            _('review revisions to merge (no merge is performed)'))],
          _('[-f] [[-r] REV]')),
     "outgoing|out":
