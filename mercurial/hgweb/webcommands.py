@@ -668,10 +668,13 @@ def graph(web, req, tmpl):
     count = len(web.repo)
     changenav = webutil.revnavgen(rev, revcount, count, web.repo.changectx)
 
-    tree = list(graphmod.graph(web.repo, rev, downrev))
+    dag = graphmod.revisions(web.repo, rev, downrev)
+    tree = list(graphmod.colored(dag))
     canvasheight = (len(tree) + 1) * bg_height - 27;
     data = []
-    for (ctx, vtx, edges) in tree:
+    for (id, type, ctx, vtx, edges) in tree:
+        if type != graphmod.CHANGESET:
+            continue
         node = short(ctx.node())
         age = templatefilters.age(ctx.date())
         desc = templatefilters.firstline(ctx.description())

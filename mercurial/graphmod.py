@@ -29,7 +29,6 @@ def revisions(repo, start, stop):
     returns a tuple for each node. The node and parent ids are arbitrary
     integers which identify a node in the context of the graph returned.
     """
-    assert start >= stop
     cur = start
     while cur >= stop:
         ctx = repo[cur]
@@ -41,10 +40,8 @@ def filerevs(repo, path, start, stop):
     """file cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
 
     This generator function walks through the revision history of a single
-    file from revision start to revision stop (which must be less than or
-    equal to start).
+    file from revision start down to revision stop.
     """
-    assert start >= stop
     filerev = len(repo.file(path)) - 1
     while filerev >= 0:
         fctx = repo.filectx(path, fileid=filerev)
@@ -68,32 +65,24 @@ def nodes(repo, nodes):
         parents = [p.rev() for p in ctx.parents() if p.node() in include]
         yield (ctx.rev(), CHANGESET, ctx, sorted(parents))
 
-def graph(repo, start_rev, stop_rev):
-    """incremental revision grapher
+def colored(dag):
+    """annotates a DAG with colored edge information
 
-    This generator function walks through the revision history from
-    revision start_rev to revision stop_rev (which must be less than
-    or equal to start_rev) and for each revision emits tuples with the
-    following elements:
+    For each DAG node this function emits tuples::
 
-      - Context of the current node
+      (id, type, data, (col, color), [(col, nextcol, color)])
+
+    with the following new elements:
+
       - Tuple (col, color) with column and color index for the current node
-      - Edges; a list of (col, next_col, color) indicating the edges between
-        the current node and its parents.
+      - A list of tuples indicating the edges between the current node and its
+        parents.
     """
-
-    if start_rev == nullrev and not stop_rev:
-        return
-
-    assert start_rev >= stop_rev
-    assert stop_rev >= 0
-    cur = start_rev
     seen = []
-    cl = repo.changelog
     colors = {}
     newcolor = 1
+    for (cur, type, data, parents) in dag:
 
-    while cur >= stop_rev:
         # Compute seen and next
         if cur not in seen:
             seen.append(cur) # new head
@@ -104,8 +93,7 @@ def graph(repo, start_rev, stop_rev):
         color = colors.pop(cur)
         next = seen[:]
 
-        # Add parents to next_revs
-        parents = [x for x in cl.parentrevs(cur) if x != nullrev]
+        # Add parents to next
         addparents = [p for p in parents if p not in next]
         next[col:col + 1] = addparents
 
@@ -122,11 +110,10 @@ def graph(repo, start_rev, stop_rev):
         for ecol, eid in enumerate(seen):
             if eid in next:
                 edges.append((ecol, next.index(eid), colors[eid]))
-            elif eid == id:
+            elif eid == cur:
                 for p in parents:
                     edges.append((ecol, next.index(p), colors[p]))
 
         # Yield and move on
-        yield (repo[cur], (col, color), edges)
+        yield (cur, type, data, (col, color), edges)
         seen = next
-        cur -= 1
