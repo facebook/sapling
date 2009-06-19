@@ -295,12 +295,11 @@ class localrepository(repo.repository):
             ret = []
             for node in reversed(self.heads()):
                 c = self[node]
-                rev = c.rev()
                 try:
                     fnode = c.filenode('.hgtags')
                 except error.LookupError:
                     continue
-                ret.append((rev, node, fnode))
+                ret.append((node, fnode))
                 if fnode in last:
                     ret[last[fnode]] = None
                 last[fnode] = len(ret) - 1
@@ -308,7 +307,7 @@ class localrepository(repo.repository):
 
         # read the tags file from each head, ending with the tip
         f = None
-        for rev, node, fnode in tagnodes():
+        for node, fnode in tagnodes():
             f = (f and f.filectx(fnode) or
                  self.filectx('.hgtags', fileid=fnode))
             readtags(f.data().splitlines(), f, "global")
