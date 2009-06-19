@@ -20,27 +20,24 @@ from mercurial.node import nullrev
 from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
 from mercurial import hg, url, util, graphmod
 
+ASCIIDATA = 'ASC'
+
 def asciiformat(ui, repo, revdag, opts):
     """formats a changelog DAG walk for ASCII output"""
     showparents = [ctx.node() for ctx in repo[None].parents()]
     displayer = show_changeset(ui, repo, opts, buffered=True)
-    for (ctx, parents) in revdag:
+    for (id, type, ctx, parentids) in revdag:
+        if type != graphmod.CHANGESET:
+            continue
         displayer.show(ctx)
         lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
         char = ctx.node() in showparents and '@' or 'o'
-        yield (ctx.rev(), parents, char, lines)
+        yield (id, ASCIIDATA, (char, lines), parentids)
 
 def asciiedges(nodes):
-    """adds edge info to ascii formatted changelog DAG walk suitable for ascii()
-
-    nodes must generate tuples (node, parents, char, lines) where
-     - parents must generate the parents of node, in sorted order,
-       and max length 2,
-     - char is the char to print as the node symbol, and
-     - lines are the lines to display next to the node.
-    """
+    """adds edge info to changelog DAG walk suitable for ascii()"""
     seen = []
-    for node, parents, char, lines in nodes:
+    for node, type, data, parents in nodes:
         if node not in seen:
             seen.append(node)
         nodeidx = seen.index(node)
@@ -64,7 +61,7 @@ def asciiedges(nodes):
             edges.append((nodeidx, nodeidx + 1))
         nmorecols = len(nextseen) - ncols
         seen = nextseen
-        yield (char, lines, nodeidx, edges, ncols, nmorecols)
+        yield (nodeidx, type, data, edges, ncols, nmorecols)
 
 def fix_long_right_edges(edges):
     for (i, (start, end)) in enumerate(edges):
@@ -123,9 +120,11 @@ def ascii(ui, dag):
 
     dag is a generator that emits tuples with the following elements:
 
-      - Character to use as node's symbol.
-      - List of lines to display as the node's text.
       - Column of the current node in the set of ongoing edges.
+      - Type indicator of node data == ASCIIDATA.
+      - Payload: (char, lines):
+        - Character to use as node's symbol.
+        - List of lines to display as the node's text.
       - Edges; a list of (col, next_col) indicating the edges between
         the current node and its parents.
       - Number of columns (ongoing edges) in the current revision.
@@ -136,7 +135,7 @@ def ascii(ui, dag):
     """
     prev_n_columns_diff = 0
     prev_node_index = 0
-    for (node_ch, node_lines, node_index, edges, n_columns, n_columns_diff) in dag:
+    for (node_index, type, (node_ch, node_lines), edges, n_columns, n_columns_diff) in dag:
 
         assert -2 < n_columns_diff < 2
         if n_columns_diff == -1:
