@@ -142,6 +142,11 @@ Example:
     foo.password = bar
     foo.schemes = http https
 
+    bar.prefix = secure.example.org
+    bar.key = path/to/file.key
+    bar.cert = path/to/file.cert
+    bar.schemes = https
+
 Supported arguments:
 
   prefix;;
@@ -152,10 +157,17 @@ Supported arguments:
     against the URI with its scheme stripped as well, and the schemes
     argument, q.v., is then subsequently consulted.
   username;;
-    Username to authenticate with.
-  password;;
-    Optional. Password to authenticate with. If not given the user
+    Optional. Username to authenticate with. If not given, and the
+    remote site requires basic or digest authentication, the user
     will be prompted for it.
+  password;;
+    Optional. Password to authenticate with. If not given, and the
+    remote site requires basic or digest authentication, the user
+    will be prompted for it.
+  key;;
+    Optional. PEM encoded client certificate key file.
+  cert;;
+    Optional. PEM encoded client certificate chain file.
   schemes;;
     Optional. Space separated list of URI schemes to use this
     authentication entry with. Only used if the prefix doesn't include
