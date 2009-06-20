@@ -262,7 +262,7 @@ class localrepository(repo.repository):
                     warn(_("node '%s' is not well formed") % node)
                     continue
                 if bin_n not in self.changelog.nodemap:
-                    warn(_("tag '%s' refers to unknown node") % key)
+                    # silently ignore as pull -r might cause this
                     continue
 
                 h = []
