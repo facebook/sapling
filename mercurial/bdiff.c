@@ -18,6 +18,10 @@
 # define inline
 #endif
 
+#ifdef __linux
+# define inline __inline
+#endif
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #define inline __inline
