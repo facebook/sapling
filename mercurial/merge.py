@@ -131,11 +131,13 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if m == n: # flags agree
             return m # unchanged
         if m and n and not a: # flags set, don't agree, differ from parent
-            r = repo.ui.prompt(
+            r = repo.ui.promptchoice(
                 _(" conflicting flags for %s\n"
                   "(n)one, e(x)ec or sym(l)ink?") % f,
-                (_("&None"), _("E&xec"), _("Sym&link")), _("n"))
-            return r != _("n") and r or ''
+                (_("&None"), _("E&xec"), _("Sym&link")), 0)
+            if r == 1: return "x" # Exec
+            if r == 2: return "l" # Symlink
+            return ""
         if m and m != a: # changed from a to m
             return m
         if n and n != a: # changed from a to n
@@ -191,10 +193,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     f, f2, f, fmerge(f, f2, f2), False)
         elif f in ma: # clean, a different, no remote
             if n != ma[f]:
-                if repo.ui.prompt(
+                if repo.ui.promptchoice(
                     _(" local changed %s which remote deleted\n"
                       "use (c)hanged version or (d)elete?") % f,
-                    (_("&Changed"), _("&Delete")), _("c")) == _("d"):
+                    (_("&Changed"), _("&Delete")), 0):
                     act("prompt delete", "r", f)
                 else:
                     act("prompt keep", "a", f)
@@ -222,10 +224,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         elif f not in ma:
             act("remote created", "g", f, m2.flags(f))
         elif n != ma[f]:
-            if repo.ui.prompt(
+            if repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version or leave (d)eleted?") % f,
-                (_("&Changed"), _("&Deleted")), _("c")) == _("c"):
+                (_("&Changed"), _("&Deleted")), 0) == 0:
                 act("prompt recreating", "g", f, m2.flags(f))
 
     return action

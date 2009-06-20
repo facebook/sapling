@@ -291,25 +291,28 @@ def filterpatch(ui, chunks):
                     _('Record &all changes to all remaining files'),
                     _('&Quit, recording no changes'),
                     _('&?'))
-            r = (ui.prompt("%s %s " % (query, resps), choices)
-                 or _('y')).lower()
-            if r == _('?'):
+            r = ui.promptchoice("%s %s " % (query, resps), choices)
+            if r == 7: # ?
                 doc = gettext(record.__doc__)
                 c = doc.find(_('y - record this change'))
                 for l in doc[c:].splitlines():
                     if l: ui.write(l.strip(), '\n')
                 continue
-            elif r == _('s'):
-                r = resp_file[0] = 'n'
-            elif r == _('f'):
-                r = resp_file[0] = 'y'
-            elif r == _('d'):
-                r = resp_all[0] = 'n'
-            elif r == _('a'):
-                r = resp_all[0] = 'y'
-            elif r == _('q'):
+            elif r == 0: # yes
+                ret = 'y'
+            elif r == 1: # no
+                ret = 'n'
+            elif r == 2: # Skip
+                ret = resp_file[0] = 'n'
+            elif r == 3: # file (Record remaining)
+                ret = resp_file[0] = 'y'
+            elif r == 4: # done, skip remaining
+                ret = resp_all[0] = 'n'
+            elif r == 5: # all
+                ret = resp_all[0] = 'y'
+            elif r == 6: # quit
                 raise util.Abort(_('user quit'))
-            return r
+            return ret
     pos, total = 0, len(chunks) - 1
     while chunks:
         chunk = chunks.pop()
