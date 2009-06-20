@@ -18,8 +18,8 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-06-21 00:59+0200\n"
-"PO-Revision-Date: 2009-06-21 12:38+0200\n"
-"Last-Translator:  <mg@daimi.au.dk>\n"
+"PO-Revision-Date: 2009-06-21 16:50+0200\n"
+"Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1332,7 +1332,7 @@ msgstr ""
 
 #, python-format
 msgid "making snapshot of %d files from rev %s\n"
-msgstr ""
+msgstr "laver øjebliksbillede af %d filer fra rev %s\n"
 
 #, python-format
 msgid "making snapshot of %d files from working directory\n"
@@ -1588,7 +1588,7 @@ msgid "show the revision DAG"
 msgstr ""
 
 msgid "limit number of changes displayed"
-msgstr ""
+msgstr "begræns antaln viste ændringer"
 
 msgid "show patch"
 msgstr ""
@@ -1810,16 +1810,16 @@ msgid "directories being watched:\n"
 msgstr ""
 
 msgid "run server in background"
-msgstr ""
+msgstr "kører serveren i baggrunden"
 
 msgid "used internally by daemon mode"
-msgstr ""
+msgstr "brugt internt i daemon mode"
 
 msgid "minutes to sit idle before exiting"
 msgstr ""
 
 msgid "name of file to write process ID to"
-msgstr ""
+msgstr "navn på fil at skrive process ID til"
 
 msgid "hg inserve [OPT]..."
 msgstr ""
@@ -2948,7 +2948,7 @@ msgid "hg qapplied [-s] [PATCH]"
 msgstr ""
 
 msgid "use pull protocol to copy metadata"
-msgstr ""
+msgstr "brug træk-protokol til at kopiere metadata"
 
 msgid "do not update the new working directories"
 msgstr ""
@@ -3493,10 +3493,10 @@ msgid "Sending "
 msgstr ""
 
 msgid "send patches as attachments"
-msgstr ""
+msgstr "send lapper som vedhæftede filer"
 
 msgid "send patches as inline attachments"
-msgstr ""
+msgstr "send lapper som integreret tekst"
 
 msgid "email addresses of blind carbon copy recipients"
 msgstr ""
@@ -3505,7 +3505,7 @@ msgid "email addresses of copy recipients"
 msgstr ""
 
 msgid "add diffstat output to messages"
-msgstr ""
+msgstr "tilføj diffstat resultat til beskeder"
 
 msgid "use the given date as the sending date"
 msgstr ""
@@ -3794,14 +3794,14 @@ msgid "interactive change selection during commit or qrefresh"
 msgstr ""
 
 msgid "this modifies a binary file (all or nothing)\n"
-msgstr ""
+msgstr "dette ændrer en binær fil (alt eller intet)\n"
 
 msgid "this is a binary file\n"
-msgstr ""
+msgstr "dette er en binær fil\n"
 
 #, python-format
 msgid "%d hunks, %d lines changed\n"
-msgstr ""
+msgstr "%d stumper, %d linjer ændret\n"
 
 msgid "[Ynsfdaq?]"
 msgstr ""
@@ -3855,14 +3855,14 @@ msgid "q"
 msgstr ""
 
 msgid "user quit"
-msgstr ""
+msgstr "user quit"
 
 #, python-format
 msgid "examine changes to %s?"
 msgstr ""
 
 msgid " and "
-msgstr ""
+msgstr " og "
 
 #, python-format
 msgid "record this change to %r?"
@@ -3909,17 +3909,17 @@ msgstr ""
 
 #, python-format
 msgid "backup %r as %r\n"
-msgstr ""
+msgstr "sikkerhedskopier %r som %r\n"
 
 msgid "applying patch\n"
-msgstr ""
+msgstr "tilføjer lap\n"
 
 msgid "patch failed to apply"
-msgstr ""
+msgstr "lap kunne ikke tilføjes"
 
 #, python-format
 msgid "restoring %r to %r\n"
-msgstr ""
+msgstr "gendanner %r som %r\n"
 
 msgid "hg record [OPTION]... [FILE]..."
 msgstr ""
@@ -4966,7 +4966,7 @@ msgid "find the ancestor revision of two revisions in a given index"
 msgstr ""
 
 msgid "There is no Mercurial repository here (.hg not found)"
-msgstr "Der er ikke noget Mercurial arkiv her (fandt ikke .hg)"
+msgstr "Der er intet Mercurial depot her (.hg ikke fundet)"
 
 msgid "either two or three arguments required"
 msgstr "kræver enten to eller tre argumenter"
@@ -5333,7 +5333,7 @@ msgid ""
 msgstr ""
 
 msgid "global options:"
-msgstr ""
+msgstr "globale indstillinger:"
 
 msgid "use \"hg help\" for the full list of commands"
 msgstr "brug \"hg help\" for den fulde liste af kommandoer"
@@ -5364,7 +5364,7 @@ msgid ""
 "aliases: %s\n"
 msgstr ""
 "\n"
-"aliaser %s:\n"
+"aliasser: %s\n"
 
 msgid "(no help text available)"
 msgstr "(ingen hjælpetekst tilgængelig)"
@@ -5393,7 +5393,7 @@ msgstr "ingen hjælpetekst tilgængelig"
 
 #, python-format
 msgid "%s extension - %s\n"
-msgstr ""
+msgstr "%s udvidelse - %s\n"
 
 msgid "Mercurial Distributed SCM\n"
 msgstr "Mercurial Distribueret SCM\n"
@@ -6153,7 +6153,7 @@ msgstr ""
 
 #, python-format
 msgid "Removed tag %s"
-msgstr ""
+msgstr "Mærke %s er fjernet"
 
 #, python-format
 msgid "tag '%s' already exists (use -f to force)"
@@ -6285,7 +6285,7 @@ msgid ""
 msgstr ""
 
 msgid "repository root directory or symbolic path name"
-msgstr ""
+msgstr "depotrodfolder eller symbolsk stinavn"
 
 msgid "change working directory"
 msgstr "skift arbejdskatalog"
@@ -6297,7 +6297,7 @@ msgid "suppress output"
 msgstr "undertryk output"
 
 msgid "enable additional output"
-msgstr ""
+msgstr "aktiver yderlig output"
 
 msgid "set/override config option"
 msgstr ""
@@ -6306,7 +6306,7 @@ msgid "enable debugging output"
 msgstr ""
 
 msgid "start debugger"
-msgstr ""
+msgstr "start debugger"
 
 msgid "set the charset encoding"
 msgstr ""
@@ -6327,7 +6327,7 @@ msgid "output version information and exit"
 msgstr ""
 
 msgid "display help and exit"
-msgstr ""
+msgstr "vis hjælp og exit"
 
 msgid "do not perform actions, just print output"
 msgstr "udfør ingen handlinger, udskriv kun outputttet"
@@ -6351,7 +6351,7 @@ msgid "read commit message from <file>"
 msgstr "læs arkiveringsbeskeden fra <fil>"
 
 msgid "record datecode as commit date"
-msgstr ""
+msgstr "noter dato som integrationsdato"
 
 msgid "record the specified user as committer"
 msgstr ""
@@ -6540,10 +6540,10 @@ msgid "[COMMAND]"
 msgstr "[KOMMANDO]"
 
 msgid "show the command options"
-msgstr ""
+msgstr "vis kommando-flag"
 
 msgid "[-o] CMD"
-msgstr ""
+msgstr "[-o] KOMMANDO"
 
 msgid "try extended date formats"
 msgstr ""
@@ -6815,10 +6815,10 @@ msgid "[OPTION]... [-r REV] [NAME]..."
 msgstr ""
 
 msgid "name of access log file to write to"
-msgstr ""
+msgstr "navn på adgangslogfilen der skrives til"
 
 msgid "name of error log file to write to"
-msgstr ""
+msgstr "navn på fejlllog fil der skrives til"
 
 msgid "port to listen on (default: 8000)"
 msgstr ""
@@ -6827,7 +6827,7 @@ msgid "address to listen on (default: all interfaces)"
 msgstr ""
 
 msgid "prefix path to serve from (default: server root)"
-msgstr ""
+msgstr "prefiks sti at udstille fra (default: server-rod)"
 
 msgid "name to show in web pages (default: working directory)"
 msgstr ""
@@ -6836,19 +6836,19 @@ msgid "name of the webdir config file (serve more than one repository)"
 msgstr ""
 
 msgid "for remote clients"
-msgstr ""
+msgstr "for fjernklienter"
 
 msgid "web templates to use"
-msgstr ""
+msgstr "web-skabelon"
 
 msgid "template style to use"
-msgstr ""
+msgstr "skabelon-stil"
 
 msgid "use IPv6 in addition to IPv4"
 msgstr "brug IPv6 og IPv4"
 
 msgid "SSL certificate file"
-msgstr "SSL-certifikatfil"
+msgstr "SSL certifikatfil"
 
 msgid "show untrusted configuration options"
 msgstr ""
@@ -7147,7 +7147,7 @@ msgid "repository '%s' is not local"
 msgstr "arkiv '%s' er ikke lokalt"
 
 msgid "invalid arguments"
-msgstr "ugyldige argumenter"
+msgstr "ugyldige parametre"
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
@@ -7201,7 +7201,7 @@ msgid "&Other"
 msgstr ""
 
 msgid "l"
-msgstr ""
+msgstr "l"
 
 #, python-format
 msgid "merging %s and %s to %s\n"
@@ -8701,7 +8701,7 @@ msgid "username %s contains a newline\n"
 msgstr "brugernavn %s indeholder et linieskift\n"
 
 msgid "unrecognized response\n"
-msgstr ""
+msgstr "svar ikke genkendt\n"
 
 msgid "response expected"
 msgstr "svar forventet"
