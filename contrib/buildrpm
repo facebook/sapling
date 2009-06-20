@@ -37,10 +37,10 @@ fi
 
 tmpspec=/tmp/`basename "$specfile"`.$$ # FIXME: Insecure /tmp handling
 # Use the most recent tag as the version.
-version=`hg tags | perl -e 'while(<STDIN>){if(/^(\d\S+)/){print$1;exit}}'`
+version=`hg tags | python -c 'import sys; print [l for l in sys.stdin.readlines() if l[0].isdigit()][0].split()[0]'`
 # Compute the release number as the difference in revision numbers
 # between the tip and the most recent tag.
-release=`hg tags | perl -e 'while(<STDIN>){($tag,$id)=/^(\S+)\s+(\d+)/;if($tag eq "tip"){$tip = $id}elsif($tag=~/^\d/){print $tip-$id+1;exit}}'`
+release=`hg tags | python -c 'import sys; l = sys.stdin.readlines(); print int(l[0].split()[1].split(":")[0]) - int([x for x in l if x[0].isdigit()][0].split()[1].split(":")[0])'`
 tip=`hg -q tip`
 
 # Beat up the spec file
