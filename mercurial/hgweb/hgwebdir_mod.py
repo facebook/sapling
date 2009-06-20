@@ -70,6 +70,8 @@ class hgwebdir(object):
         elif isinstance(self.conf, dict):
             paths = self.conf.items()
 
+        encoding.encoding = self.ui.config('web', 'encoding',
+                                           encoding.encoding)
         self.motd = self.ui.config('web', 'motd')
         self.style = self.ui.config('web', 'style', 'paper')
         self.stripecount = self.ui.config('web', 'stripes', 1)

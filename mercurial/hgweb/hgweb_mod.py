@@ -64,7 +64,8 @@ class hgweb(object):
             self.maxshortchanges = int(self.config("web", "maxshortchanges", 60))
             self.maxfiles = int(self.config("web", "maxfiles", 10))
             self.allowpull = self.configbool("web", "allowpull", True)
-            self.encoding = self.config("web", "encoding", encoding.encoding)
+            encoding.encoding = self.config("web", "encoding",
+                                            encoding.encoding)
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
@@ -160,7 +161,7 @@ class hgweb(object):
 
         try:
             tmpl = self.templater(req)
-            ctype = tmpl('mimetype', encoding=self.encoding)
+            ctype = tmpl('mimetype', encoding=encoding.encoding)
             ctype = templater.stringify(ctype)
 
             # check read permissions non-static content
@@ -219,7 +220,7 @@ class hgweb(object):
         # some functions for the templater
 
         def header(**map):
-            yield tmpl('header', encoding=self.encoding, **map)
+            yield tmpl('header', encoding=encoding.encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)
