@@ -99,6 +99,7 @@ additional help topics:
  diffs        Diff Formats
  templating   Template Usage
  urls         URL Paths
+ extensions   Using additional features
 
 use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
@@ -160,6 +161,7 @@ additional help topics:
  diffs        Diff Formats
  templating   Template Usage
  urls         URL Paths
+ extensions   Using additional features
 hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit

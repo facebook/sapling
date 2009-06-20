@@ -5,7 +5,117 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-from i18n import _
+import os, sys
+from i18n import _, gettext
+import extensions
+
+
+# borrowed from pydoc
+def pathdirs():
+    '''Convert sys.path into a list of absolute, existing, unique paths.'''
+    dirs = []
+    normdirs = []
+    for dir in sys.path:
+        dir = os.path.abspath(dir or '.')
+        normdir = os.path.normcase(dir)
+        if normdir not in normdirs and os.path.isdir(dir):
+            dirs.append(dir)
+            normdirs.append(normdir)
+    return dirs
+
+# loosely inspired by pydoc.source_synopsis()
+# rewritten to handle ''' as well as """
+# and to return the whole text instead of just the synopsis
+def moduledoc(file):
+    '''Return the top python documentation for the given file'''
+    result = []
+
+    line = file.readline()
+    while line[:1] == '#' or not line.strip():
+        line = file.readline()
+        if not line: break
+
+    start = line[:3]
+    if start == '"""' or start == "'''":
+        line = line[3:]
+        while line:
+            if line.rstrip().endswith(start):
+                line = line.split(start)[0]
+                if line:
+                    result.append(line)
+                break
+            elif not line:
+                return None # unmatched delimiter
+            result.append(line)
+            line = file.readline()
+    else:
+        return None
+
+    return ''.join(result)
+
+def additionalextensions():
+    '''Find the extensions shipped with Mercurial but not enabled
+
+    Returns extensions names and descriptions, and the max name length
+    '''
+    exts = {}
+    maxlength = 0
+
+    for dir in filter(os.path.isdir,
+                      (os.path.join(pd, 'hgext') for pd in pathdirs())):
+        for e in os.listdir(dir):
+            if e.endswith('.py'):
+                name = e.rsplit('.', 1)[0]
+                path = os.path.join(dir, e)
+            else:
+                name = e
+                path = os.path.join(dir, e, '__init__.py')
+
+            if name in exts or name == '__init__' or not os.path.exists(path):
+                continue
+
+            try:
+                extensions.find(name)
+            except KeyError:
+                pass
+            else:
+                continue # enabled extension
+
+            try:
+                file = open(path)
+            except IOError:
+                continue
+            else:
+                doc = moduledoc(file)
+                file.close()
+
+            if doc: # extracting localized synopsis
+                exts[name] = gettext(doc).splitlines()[0]
+            else:
+                exts[name] = _('(no help text available)')
+            if len(name) > maxlength:
+                maxlength = len(name)
+
+    return exts, maxlength
+
+def topicextensions():
+    doc = _(r'''
+    Mercurial has an extension mechanism for adding new features.
+
+    To enable an extension "foo" bundled with Mercurial, create an
+    entry for it your hgrc, like this:
+    
+       [extensions]
+       foo =
+    ''')
+
+    exts, maxlength = additionalextensions()
+    if exts:
+        doc += _('\nnon-enabled extensions:\n\n')
+    for name, desc in sorted(exts.iteritems()):
+        doc += ' %s  %s\n' % (name.ljust(maxlength), desc)
+
+    return doc
 
 helptable = (
     (["dates"], _("Date Formats"),
@@ -418,4 +528,5 @@ PYTHONPATH::
       The push command will look for a path named 'default-push', and
       prefer it over 'default' if both are defined.
     ''')),
+    (["extensions"], _("Using additional features"), topicextensions),
 )
