@@ -119,22 +119,22 @@ msgid ""
 msgstr ""
 
 msgid "a bookmark of this name does not exist"
-msgstr ""
+msgstr "et bogmærke med dette navn findes ikke"
 
 msgid "a bookmark of the same name already exists"
-msgstr ""
+msgstr "et bogmærke med samme navn findes allerede"
 
 msgid "new bookmark name required"
-msgstr ""
+msgstr "nyt bogmærkenavn påkrævet"
 
 msgid "bookmark name required"
-msgstr ""
+msgstr "bogmærkenavn påkrævet"
 
 msgid "bookmark name cannot contain newlines"
 msgstr "bogmærkenavn kan ikke indeholde linieskift"
 
 msgid "a bookmark cannot have the name of an existing branch"
-msgstr ""
+msgstr "et bogmærke kan ikke hedde det samme som en eksisterende gren"
 
 msgid "force"
 msgstr ""
@@ -143,10 +143,10 @@ msgid "revision"
 msgstr ""
 
 msgid "delete a given bookmark"
-msgstr ""
+msgstr "slet et givent bogmærke"
 
 msgid "rename a given bookmark"
-msgstr ""
+msgstr "omdøb et givet bogmærke"
 
 msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
 msgstr ""
@@ -297,7 +297,7 @@ msgstr "kører notificeringskommando %s\n"
 
 #, python-format
 msgid "bugzilla notify command %s"
-msgstr ""
+msgstr "bugzilla notificeringskommando %s"
 
 msgid "done\n"
 msgstr "færdig\n"
@@ -308,15 +308,15 @@ msgstr "slår bruger %s op\n"
 
 #, python-format
 msgid "cannot find bugzilla user id for %s"
-msgstr ""
+msgstr "kan ikke finde bugzilla bruger-id for %s"
 
 #, python-format
 msgid "cannot find bugzilla user id for %s or %s"
-msgstr ""
+msgstr "kan ikke finde bugzilla bruger-id for %s eller %s"
 
 #, python-format
 msgid "bugzilla version %s not supported"
-msgstr ""
+msgstr "bugzilla version %s ikke understøttet"
 
 msgid ""
 "changeset {node|short} in repo {root} refers to bug {bug}.\n"
@@ -326,7 +326,7 @@ msgstr ""
 
 #, python-format
 msgid "python mysql support not available: %s"
-msgstr ""
+msgstr "python mysql-understøttelse ikke tilgængelig: %s"
 
 #, python-format
 msgid "hook type %s does not pass a changeset id"
@@ -334,7 +334,7 @@ msgstr ""
 
 #, python-format
 msgid "database error: %s"
-msgstr ""
+msgstr "databasefejl: %s"
 
 msgid ""
 "show the children of the given or working directory revision\n"
@@ -346,27 +346,27 @@ msgid ""
 "    argument to --rev if given) is printed.\n"
 "    "
 msgstr ""
-"vis børnene til arbejdskatalogets eller en given revision\n"
+"vis børnene til arbejdskataloget eller en given revision\n"
 "\n"
-"    Udskriv arbejdskatalogets børnerevisioner. Hvis en revision\n"
-"    angivet med -r/--rev, så udskrives børnene til denne revision.\n"
+"    Udskriv arbejdskatalogets børnerevisioner. Hvis en revision er\n"
+"    angivet med -r/--rev, udskrives børnene til denne revision.\n"
 "    Hvis en fil er angivet, udskrives revisionen i hvilken filen sidst\n"
 "    blev ændret (efter arbejdskatalogets revision eller argumentet til\n"
 "    --rev, hvis givet).\n"
 "    "
 
 msgid "show children of the specified revision"
-msgstr ""
+msgstr "vis børn af den givne revision"
 
 msgid "hg children [-r REV] [FILE]"
 msgstr ""
 
 msgid "command to show certain statistics about revision history"
-msgstr ""
+msgstr "kommando til at vise statestikker om revisionshistorikken"
 
 #, python-format
 msgid "Revision %d is a merge, ignoring...\n"
-msgstr ""
+msgstr "Revision %d er en sammenføjning; ignorerer...\n"
 
 #, python-format
 msgid "generating stats: %d%%"
@@ -445,7 +445,7 @@ msgid "count rate for revisions matching date spec"
 msgstr "lav statistik for revisioner som matcher dato specifikationen"
 
 msgid "template to group changesets"
-msgstr "mønster for gruppering af ændringer"
+msgstr "skabelon for gruppering af ændringer"
 
 msgid "strftime-compatible format for grouping by date"
 msgstr "strftime-kompatibelt format til gruppering efter dato"
@@ -454,7 +454,7 @@ msgid "count rate by number of changesets"
 msgstr "lav statistik efter antallet af ændringer"
 
 msgid "sort by key (default: sort by count)"
-msgstr "sortér efter nøgle (standard: sortering efter antal)"
+msgstr "sorter efter nøgle (standard: sorter efter antal)"
 
 msgid "file with email aliases"
 msgstr "fil med email-aliaser"
@@ -739,46 +739,46 @@ msgid ""
 msgstr ""
 
 msgid "username mapping filename"
-msgstr ""
+msgstr "brugernavnsafbildningsfilnavn"
 
 msgid "destination repository type"
 msgstr "type for destinations repository"
 
 msgid "remap file names using contents of file"
-msgstr ""
+msgstr "konverter filnavne ved brug af filindhold"
 
 msgid "import up to target revision REV"
-msgstr ""
+msgstr "importer op til revision REV"
 
 msgid "source repository type"
-msgstr ""
+msgstr "kildedepotstype"
 
 msgid "splice synthesized history into place"
 msgstr ""
 
 msgid "change branch names while converting"
-msgstr ""
+msgstr "omdøb grene under konverteringen"
 
 msgid "try to sort changesets by date"
-msgstr ""
+msgstr "forsøg at sortere ændringer efter dato"
 
 msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
 msgstr ""
 
 msgid "only return changes on specified branches"
-msgstr ""
+msgstr "returner kun ændringer på givne grene"
 
 msgid "prefix to remove from file names"
-msgstr ""
+msgstr "præfix der skal fjernes fra filnavne"
 
 msgid "only return changes after or between specified tags"
-msgstr ""
+msgstr "returner kun ændringer efter eller mellem givne mærkater"
 
 msgid "update cvs log cache"
-msgstr ""
+msgstr "opdater cvs log cache"
 
 msgid "create new cvs log cache"
-msgstr ""
+msgstr "opret ny cvs log cache"
 
 msgid "set commit time fuzz in seconds"
 msgstr ""
@@ -787,7 +787,7 @@ msgid "specify cvsroot"
 msgstr ""
 
 msgid "show parent changesets"
-msgstr "vis forældre-ændring"
+msgstr "vis forældre-ændringer"
 
 msgid "show current changeset in ancestor branches"
 msgstr ""
@@ -962,10 +962,10 @@ msgid "must have at least some revisions"
 msgstr ""
 
 msgid "expected revision number"
-msgstr ""
+msgstr "forventede et revisionsnummer"
 
 msgid "revision must be followed by date line"
-msgstr ""
+msgstr "revision skal efterfølges af datolinje"
 
 #, python-format
 msgid "found synthetic revision in %s: %r\n"
@@ -983,7 +983,7 @@ msgid "creating changesets\n"
 msgstr "opretter ændringer\n"
 
 msgid "synthetic changeset cannot have multiple parents"
-msgstr ""
+msgstr "syntetisk ændring kan ikke have flere forældre"
 
 #, python-format
 msgid ""
@@ -1003,10 +1003,10 @@ msgid "cleaning up %s\n"
 msgstr "rydder op %s\n"
 
 msgid "internal calling inconsistency"
-msgstr ""
+msgstr "intern kaldeinkonsistens"
 
 msgid "errors in filemap"
-msgstr ""
+msgstr "fejl i filafbildning"
 
 #, python-format
 msgid "%s:%d: %r already in %s list\n"
@@ -1024,7 +1024,7 @@ msgid "%s does not look like a GNU Arch repo"
 msgstr ""
 
 msgid "cannot find a GNU Arch tool"
-msgstr ""
+msgstr "kan ikke finde GNU Arch"
 
 #, python-format
 msgid "analyzing tree version %s...\n"
@@ -1335,10 +1335,10 @@ msgid ""
 msgstr ""
 
 msgid "comparison program to run"
-msgstr ""
+msgstr "sammenligningsprogram der skal køres"
 
 msgid "pass option to comparison program"
-msgstr ""
+msgstr "videregiv argument til sammenligningsprogram"
 
 msgid "change made by revision"
 msgstr ""
@@ -6764,10 +6764,10 @@ msgid "template style to use"
 msgstr ""
 
 msgid "use IPv6 in addition to IPv4"
-msgstr ""
+msgstr "brug IPv6 og IPv4"
 
 msgid "SSL certificate file"
-msgstr ""
+msgstr "SSL-certifikatfil"
 
 msgid "show untrusted configuration options"
 msgstr ""
@@ -6776,67 +6776,67 @@ msgid "[-u] [NAME]..."
 msgstr ""
 
 msgid "show status of all files"
-msgstr ""
+msgstr "vis status på alle filer"
 
 msgid "show only modified files"
-msgstr ""
+msgstr "vis kun ændrede filer"
 
 msgid "show only added files"
-msgstr ""
+msgstr "vis kun tilføjede filer"
 
 msgid "show only removed files"
-msgstr ""
+msgstr "vis kun fjernede filer"
 
 msgid "show only deleted (but tracked) files"
-msgstr ""
+msgstr "vis kun slettede (men kendte) filer"
 
 msgid "show only files without changes"
-msgstr ""
+msgstr "vis kun filer unden ændringer"
 
 msgid "show only unknown (not tracked) files"
-msgstr ""
+msgstr "vis kun ukendte filer"
 
 msgid "show only ignored files"
-msgstr ""
+msgstr "vis kun ignorerede filer"
 
 msgid "hide status prefix"
-msgstr ""
+msgstr "skjul statuspræfix"
 
 msgid "show source of copied files"
-msgstr ""
+msgstr "vis kilder for kopierede filer"
 
 msgid "show difference from revision"
-msgstr ""
+msgstr "vis forskelle fra revision"
 
 msgid "replace existing tag"
-msgstr ""
+msgstr "erstat eksisterende mærkat"
 
 msgid "make the tag local"
-msgstr ""
+msgstr "gør mærkaten lokal"
 
 msgid "revision to tag"
-msgstr ""
+msgstr "revision der skal mærkes"
 
 msgid "remove a tag"
-msgstr ""
+msgstr "fjern en mærkat"
 
 msgid "[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
 msgstr ""
 
 msgid "[-p]"
-msgstr ""
+msgstr "[-p]"
 
 msgid "update to new tip if changesets were unbundled"
-msgstr ""
+msgstr "opdater til ny spids hvis ændringer blev pakket ud"
 
 msgid "[-u] FILE..."
-msgstr ""
+msgstr "[-u] FIL..."
 
 msgid "overwrite locally modified files (no backup)"
-msgstr ""
+msgstr "overskrev lokalt modificerede filer (uden sikkerhedskopi)"
 
 msgid "[-C] [-d DATE] [[-r] REV]"
-msgstr ""
+msgstr "[-C] [-d DATO] [[-r] REV]"
 
 #, python-format
 msgid "config error at %s:%d: '%s'"
@@ -6846,7 +6846,7 @@ msgid "not found in manifest"
 msgstr "blev ikke fundet i manifest"
 
 msgid "branch name not in UTF-8!"
-msgstr ""
+msgstr "grennavn er ikke i UTF-8!"
 
 #, python-format
 msgid "  searching for copies back to rev %d\n"
@@ -6879,15 +6879,15 @@ msgid "  file %s -> %s\n"
 msgstr ""
 
 msgid "working directory state appears damaged!"
-msgstr ""
+msgstr "arbejdskatalogtilstand virker beskadiget!"
 
 #, python-format
 msgid "'\\n' and '\\r' disallowed in filenames: %r"
-msgstr ""
+msgstr "'\\n' og '\\r' må ikke forekomme i filnavne: %r"
 
 #, python-format
 msgid "directory %r already in dirstate"
-msgstr ""
+msgstr "katalog %r er allerede i dirstate"
 
 #, python-format
 msgid "file %r in dirstate clashes with %r"
@@ -6895,7 +6895,7 @@ msgstr ""
 
 #, python-format
 msgid "not in dirstate: %s\n"
-msgstr ""
+msgstr "ikke i dirstate: %s\n"
 
 msgid "unknown"
 msgstr "ukendt"
@@ -6941,7 +6941,7 @@ msgstr ""
 
 #, python-format
 msgid "lock held by %s"
-msgstr ""
+msgstr "lås holdt af %s"
 
 #, python-format
 msgid "abort: %s: %s\n"
@@ -6985,10 +6985,10 @@ msgstr "(er din Python installeret korrekt?)\n"
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr ""
+msgstr "afbrudt: fejl: %s\n"
 
 msgid "broken pipe\n"
-msgstr ""
+msgstr "afbrudt pipe"
 
 msgid "interrupted!\n"
 msgstr "standset!\n"
@@ -6997,6 +6997,8 @@ msgid ""
 "\n"
 "broken pipe\n"
 msgstr ""
+"\n"
+"afbrudt pipe\n"
 
 msgid "abort: out of memory\n"
 msgstr "afbrudt: løbet tør for hukommelse\n"
@@ -7016,23 +7018,23 @@ msgstr "** Mercurial Distributed SCM (version %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
-msgstr ""
+msgstr "** Udvidelser indlæst: %s\n"
 
 #, python-format
 msgid "no definition for alias '%s'\n"
-msgstr ""
+msgstr "ingen definition for alias '%s'\n"
 
 #, python-format
 msgid "alias '%s' resolves to unknown command '%s'\n"
-msgstr ""
+msgstr "alias '%s' oversætter til ukendt kommando '%s'\n"
 
 #, python-format
 msgid "alias '%s' resolves to ambiguous command '%s'\n"
-msgstr ""
+msgstr "alias '%s' oversætter til tvetydig kommando '%s'\n"
 
 #, python-format
 msgid "alias '%s' shadows command\n"
-msgstr ""
+msgstr "alias '%s' skygger for en kommando\n"
 
 #, python-format
 msgid "malformed --config option: %s"
@@ -7040,19 +7042,19 @@ msgstr ""
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
-msgstr ""
+msgstr "udvidelse '%s' overskriver kommandoer: %s\n"
 
 msgid "Option --config may not be abbreviated!"
-msgstr "tilvalget --config må ikke forkortes!"
+msgstr "Tilvalget --config må ikke forkortes!"
 
 msgid "Option --cwd may not be abbreviated!"
-msgstr "tilvalget --cwd må ikke forkortes!"
+msgstr "Tilvalget --cwd må ikke forkortes!"
 
 msgid ""
-"Option -R has to be separated from other options (i.e. not -qR) and --"
+"Option -R has to be separated from other options (e.g. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
-"tilvalget -R skal adskilles fra andre tilvalg (i.e. ikke -qR) og --"
+"Tilvalget -R skal adskilles fra andre tilvalg (fx ikke -qR) og --"
 "repository må kun forkortes som --repo!"
 
 #, python-format
@@ -8553,7 +8555,7 @@ msgid "unrecognized response\n"
 msgstr ""
 
 msgid "response expected"
-msgstr ""
+msgstr "svar forventet"
 
 msgid "password: "
 msgstr "kodeord: "
@@ -8569,7 +8571,7 @@ msgstr ""
 
 #, python-format
 msgid "realm: %s\n"
-msgstr ""
+msgstr "realm: %s\n"
 
 #, python-format
 msgid "user: %s\n"
@@ -8666,18 +8668,18 @@ msgid "%.0f bytes"
 msgstr "%.0f byte"
 
 msgid "cannot verify bundle or remote repos"
-msgstr ""
+msgstr "kan ikke verificere bundt eller fjerndepoter"
 
 msgid "interrupted"
 msgstr "afbrudt"
 
 #, python-format
 msgid "empty or missing %s"
-msgstr "tom eller mangler %s"
+msgstr "tom eller manglende %s"
 
 #, python-format
 msgid "data length off by %d bytes"
-msgstr ""
+msgstr "datalænge er %d bytes forkert"
 
 #, python-format
 msgid "index contains %d extra bytes"
@@ -8693,11 +8695,11 @@ msgstr "advarsel: '%s' bruger revlog format 0"
 
 #, python-format
 msgid "rev %d points to nonexistent changeset %d"
-msgstr ""
+msgstr "rev %d peger på ikke eksisterende ændring %d"
 
 #, python-format
 msgid "rev %d points to unexpected changeset %d"
-msgstr ""
+msgstr "rev %d peger på uventet ændring %d"
 
 #, python-format
 msgid " (expected %s)"
@@ -8731,31 +8733,31 @@ msgid "unpacking changeset %s"
 msgstr "udpakker ændring %s"
 
 msgid "checking manifests\n"
-msgstr ""
+msgstr "kontrollerer manifester\n"
 
 #, python-format
 msgid "%s not in changesets"
 msgstr "%s ikke i ændringer"
 
 msgid "file without name in manifest"
-msgstr ""
+msgstr "fil uden navn i manifest"
 
 #, python-format
 msgid "reading manifest delta %s"
-msgstr ""
+msgstr "læser manifestforskel %s"
 
 msgid "crosschecking files in changesets and manifests\n"
-msgstr ""
+msgstr "krydstjekker filer i ændringer og manifester\n"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
-msgstr ""
+msgstr "ændring refererer til et ukendt manifest %s"
 
 msgid "in changeset but not in manifest"
-msgstr ""
+msgstr "i ændring men ikke i manifest"
 
 msgid "in manifest but not in changeset"
-msgstr ""
+msgstr "i manifest men ikke i ændring"
 
 msgid "checking files\n"
 msgstr "kontrollerer filer\n"
@@ -8766,7 +8768,7 @@ msgstr "kan ikke dekode filnavn '%s'"
 
 #, python-format
 msgid "broken revlog! (%s)"
-msgstr ""
+msgstr "beskadiget revlog! (%s)"
 
 msgid "missing revlog!"
 msgstr "manglende revlog!"
@@ -8809,7 +8811,7 @@ msgstr "%d filer, %d ændringer, ialt %d revisioner\n"
 
 #, python-format
 msgid "%d warnings encountered!\n"
-msgstr "mødte %d advarsler!\n"
+msgstr "fandt %d advarsler!\n"
 
 #, python-format
 msgid "%d integrity errors encountered!\n"
