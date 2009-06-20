@@ -14,20 +14,8 @@ distributed with Mercurial.)
 hgk consists of two parts: a Tcl script that does the displaying and
 querying of information, and an extension to Mercurial named hgk.py,
 which provides hooks for hgk to get information. hgk can be found in
-the contrib directory, and hgk.py can be found in the hgext directory.
-
-To load the hgext.py extension, add it to your .hgrc file (you have to
-use your global $HOME/.hgrc file, not one in a repository). You can
-specify an absolute path:
-
-  [extensions]
-  hgk=/usr/local/lib/hgk.py
-
-Mercurial can also scan the default python library path for a file
-named 'hgk.py' if you set hgk empty:
-
-  [extensions]
-  hgk=
+the contrib directory, and the extension is shipped in the hgext
+repository, and needs to be enabled.
 
 The hg view command will launch the hgk Tcl script. For this command
 to work, hgk must be in your search path. Alternately, you can specify

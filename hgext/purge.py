@@ -6,10 +6,6 @@
 # This program was inspired by the "cvspurge" script contained in CVS utilities
 # (http://www.red-bean.com/cvsutils/).
 #
-# To enable the "purge" extension put these lines in your ~/.hgrc:
-#  [extensions]
-#  hgext.purge =
-#
 # For help on the usage of "hg purge" use:
 #  hg help purge
 #

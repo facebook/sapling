@@ -28,11 +28,6 @@ With the -d/--diffstat option, you will be prompted for each changeset
 with a diffstat summary and the changeset summary, so you can be sure
 you are sending the right changes.
 
-To enable this extension:
-
-  [extensions]
-  hgext.patchbomb =
-
 To configure other defaults, add a section like this to your hgrc
 file:
 

@@ -13,11 +13,6 @@
 It depends on the Pygments syntax highlighting library:
 http://pygments.org/
 
-To enable the extension add this to hgrc:
-
-[extensions]
-hgext.highlight =
-
 There is a single configuration option:
 
 [web]
