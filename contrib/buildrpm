@@ -1,11 +1,13 @@
 #!/bin/sh
 #
 # Build a Mercurial RPM in place.
-# Known to work on:
-# - Fedora 9
-# - Fedora 10
 #
 # Bryan O'Sullivan <bos@serpentine.com>
+#
+# Tested on
+# - Fedora 10
+# - Fedora 11
+# - Centos 5.3 (with Fedora EPEL repo for asciidoc)
 
 if hg --version > /dev/null 2>&1; then :
 else
