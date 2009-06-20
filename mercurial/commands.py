@@ -2975,7 +2975,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 
     return postincoming(ui, repo, modheads, opts.get('update'), None)
 
-def update(ui, repo, node=None, rev=None, clean=False, date=None):
+def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     """update working directory
 
     Update the repository's working directory to the specified
@@ -2991,7 +2991,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
 
     When there are uncommitted changes, use option -C/--clean to
     discard them, forcibly replacing the state of the working
-    directory with the requested revision.
+    directory with the requested revision. Alternately, use -c/--check
+    to abort.
 
     When there are uncommitted changes and option -C/--clean is not
     used, and the parent revision and requested revision are on the
@@ -3010,6 +3011,12 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
 
     if not rev:
         rev = node
+
+    if not clean and check:
+        # we could use dirty() but we can ignore merge and branch trivia
+        c = repo[None]
+        if c.modified() or c.added() or c.removed():
+            raise util.Abort(_("uncommitted local changes"))
 
     if date:
         if rev:
@@ -3502,6 +3509,7 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('C', 'clean', None, _('overwrite locally modified files (no backup)')),
+          ('c', 'check', None, _('check for uncommitted changes')),
           ('d', 'date', '', _('tipmost revision matching date')),
           ('r', 'rev', '', _('revision'))],
          _('[-C] [-d DATE] [[-r] REV]')),

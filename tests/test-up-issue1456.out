@@ -1,3 +1,4 @@
+abort: uncommitted local changes
 dirty
 M foo
 % validate update of standalone execute bit change

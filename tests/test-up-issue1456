@@ -10,7 +10,7 @@ chmod +x foo
 hg ci -m1
 hg co -q 0
 echo dirty > foo
-sleep 1
+hg up -c
 hg up -q
 cat foo
 hg st -A
