@@ -2680,7 +2680,8 @@ def rollback(ui, repo):
     This command should be used with care. There is only one level of
     rollback, and there is no way to undo a rollback. It will also
     restore the dirstate at the time of the last transaction, losing
-    any dirstate changes since that time.
+    any dirstate changes since that time. This command does not alter
+    the working directory.
 
     Transactions are used to encapsulate the effects of all commands
     that create new changesets or propagate existing changesets into a
