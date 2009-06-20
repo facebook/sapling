@@ -127,13 +127,37 @@ def extensionslisting(header, exts, maxlength):
 
 def topicextensions():
     doc = _(r'''
-    Mercurial has an extension mechanism for adding new features.
+    Mercurial has a mechanism for adding new features through the
+    use of extensions. Extensions may bring new commands, or new
+    hooks, or change some behaviors of Mercurial.
 
-    To enable an extension "foo" bundled with Mercurial, create an
-    entry for it your hgrc, like this:
-    
-       [extensions]
-       foo =
+    Extensions are not loaded by default for a variety of reasons,
+    they may be meant for an advanced usage or provide potentially
+    dangerous commands (eg. mq or rebase allow to rewrite history),
+    they might not be yet ready for prime-time, or they may alter
+    some usual behaviors of stock Mercurial. It is thus up to the
+    user to activate the extensions as needed.
+
+    To enable an extension "foo" which is either shipped with
+    Mercurial or in the Python search path, create an entry for
+    it in your hgrc, like this:
+
+      [extensions]
+      foo =
+
+    You may also specify the full path where an extension resides:
+
+      [extensions]
+      myfeature = ~/.hgext/myfeature.py
+
+    To explicitly disable an extension which is enabled in an hgrc
+    of broader scope, prepend its path with !:
+
+      [extensions]
+      # disabling extension bar residing in /ext/path
+      hgext.bar = !/path/to/extension/bar.py
+      # ditto, but no path was supplied for extension baz
+      hgext.baz = !
     ''')
 
     exts, maxlength = enabledextensions()
