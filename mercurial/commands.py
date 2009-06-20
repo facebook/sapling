@@ -1483,18 +1483,10 @@ def help_(ui, name=None, with_version=False):
             else:
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
-        exts = list(extensions.extensions())
-        if exts and name != 'shortlist':
-            ui.write(_('\nenabled extensions:\n\n'))
-            maxlength = 0
-            exthelps = []
-            for ename, ext in exts:
-                doc = (gettext(ext.__doc__) or _('(no help text available)'))
-                ename = ename.split('.')[-1]
-                maxlength = max(len(ename), maxlength)
-                exthelps.append((ename, doc.splitlines(0)[0].strip()))
-            for ename, text in exthelps:
-                ui.write(_(' %s   %s\n') % (ename.ljust(maxlength), text))
+        if name != 'shortlist':
+            exts, maxlength = help.enabledextensions()
+            ui.write(help.extensionslisting(_('enabled extensions:'),
+                                            exts, maxlength))
 
         if not ui.quiet:
             addglobalopts(True)

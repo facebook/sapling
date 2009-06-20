@@ -98,6 +98,33 @@ def additionalextensions():
 
     return exts, maxlength
 
+def enabledextensions():
+    '''Return the list of enabled extensions, and max name length'''
+    enabled = list(extensions.extensions())
+    exts = {}
+    maxlength = 0
+
+    if enabled:
+        exthelps = []
+        for ename, ext in enabled:
+            doc = (gettext(ext.__doc__) or _('(no help text available)'))
+            ename = ename.split('.')[-1]
+            maxlength = max(len(ename), maxlength)
+            exts[ename] = doc.splitlines(0)[0].strip()
+
+    return exts, maxlength
+
+def extensionslisting(header, exts, maxlength):
+    '''Return a text listing of the given extensions'''
+    result = ''
+
+    if exts:
+        result += '\n%s\n\n' % header
+        for name, desc in sorted(exts.iteritems()):
+            result += ' %s   %s\n' % (name.ljust(maxlength), desc)
+
+    return result
+
 def topicextensions():
     doc = _(r'''
     Mercurial has an extension mechanism for adding new features.
@@ -109,11 +136,11 @@ def topicextensions():
        foo =
     ''')
 
+    exts, maxlength = enabledextensions()
+    doc += extensionslisting(_('enabled extensions:'), exts, maxlength)
+
     exts, maxlength = additionalextensions()
-    if exts:
-        doc += _('\nnon-enabled extensions:\n\n')
-    for name, desc in sorted(exts.iteritems()):
-        doc += ' %s  %s\n' % (name.ljust(maxlength), desc)
+    doc += extensionslisting(_('non-enabled extensions:'), exts, maxlength)
 
     return doc
 
