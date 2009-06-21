@@ -121,6 +121,20 @@ domerge -r 2 --config ui.merge=internal:local
 echo "# ui.merge specifies internal:other:"
 domerge -r 2 --config ui.merge=internal:other
 
+echo "# ui.merge specifies internal:prompt:"
+domerge -r 2 --config ui.merge=internal:prompt
+
+echo "# ui.merge specifies internal:dump:"
+domerge -r 2 --config ui.merge=internal:dump
+echo f.base:
+cat f.base
+echo f.local:
+cat f.local
+echo f.other:
+cat f.other
+rm f.base f.local f.other
+echo
+
 echo "# ui.merge specifies internal:other but is overruled by pattern for false:"
 domerge -r 2 --config ui.merge=internal:other --config merge-patterns.f=false
 
