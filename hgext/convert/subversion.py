@@ -700,20 +700,14 @@ class svn_source(converter_source):
                         nroot = path.strip('/')
                         children = self._find_children(oroot, fromrev)
                         children = [s.replace(oroot,nroot) for s in children]
-                    # Mark all [files, not directories] as deleted.
+
                     for child in children:
-                        # Can we move a child directory and its
-                        # parent in the same commit? (probably can). Could
-                        # cause problems if instead of revnum -1,
-                        # we have to look in (copyfrom_path, revnum - 1)
-                        entrypath = self.getrelpath("/" + child, module=old_module)
-                        if entrypath:
-                            entry = self.recode(entrypath.decode(self.encoding))
-                            if entry in copies:
-                                # deleted file within a copy
-                                del copies[entry]
-                            else:
-                                entries.append(entry)
+                        entrypath = self.getrelpath("/" + child, old_module)
+                        if not entrypath:
+                            continue
+                        if entrypath in copies:
+                            del copies[entrypath]
+                        entries.append(entrypath)
                 else:
                     self.ui.debug(_('unknown path in revision %d: %s\n') % \
                                   (revnum, path))
