@@ -588,30 +588,44 @@ class GitHandler(object):
             return None
 
         # TODO : this is a huge hack
-        if keys[0] == 'capabilities^{}': # nothing on the server yet - first push
-            changed['refs/heads/master'] = self.git.ref('master')
+        if keys[0] == 'capabilities^{}':
+            # nothing on the server yet - first push
+            if not 'master' in self.repo.tags():
+                tip = self.repo.lookup('tip')
+                changed['refs/heads/master'] = self.map_git_get(hex(tip))
 
-        tags = self.git.get_tags()
-        for tag, sha in tags.iteritems():
+        for tag, sha in self.tags.iteritems():
             tag_name = 'refs/tags/' + tag
             if tag_name not in refs:
-                changed[tag_name] = sha
+                changed[tag_name] = self.map_git_get(sha)
 
         for ref_name in keys:
             parts = ref_name.split('/')
-            if parts[0] == 'refs': # strip off 'refs/heads'
-                if parts[1] == 'heads':
-                    head = "/".join([v for v in parts[2:]])
-                    local_ref = self.git.ref(ref_name)
-                    if local_ref:
-                        if not local_ref == refs[ref_name]:
-                            changed[ref_name] = local_ref
+            if parts[0] == 'refs' and parts[1] == 'heads':
+                # strip off 'refs/heads'
+                head = "/".join([v for v in parts[2:]])
+                try:
+                    local_ref = self.repo.lookup(head)
+                    remote_ref = self.map_hg_get(refs[ref_name])
+                    if remote_ref:
+                        remotectx = self.repo[remote_ref]
+                        localctx = self.repo[local_ref]
+                        if remotectx.ancestor(localctx) == remotectx:
+                            # fast forward push
+                            changed[ref_name] = self.map_git_get(hex(local_ref))
+                        else:
+                            # XXX: maybe abort completely
+                            ui.warn('not pushing branch %s, please merge'% head)
+                except RepoError:
+                    # remote_ref is not here
+                    pass
 
         # Also push any local branches not on the server yet
         for head in self.local_heads():
-            if not head in refs:
-                ref = self.git.ref(head)
-                changed[head] = ref
+            ref = 'refs/heads/' + head
+            if not ref in refs:
+                node = self.repo.lookup(head)
+                changed[ref] = self.map_git_get(hex(node))
 
         return changed
 
@@ -710,9 +724,11 @@ class GitHandler(object):
         self.git.set_remote_refs(self.local_heads(), remote_name)
 
     def local_heads(self):
-        def is_local_head(item): return item[0].startswith('refs/heads')
-        refs = self.git.get_refs()
-        return dict(filter(is_local_head, refs.items()))
+        try:
+            bms = bookmarks.parse(self.repo)
+            return dict([(bm, self.map_git_get(hex(bms[bm]))) for bm in bms])
+        except AttributeError:
+            return {}
 
     def import_tags(self, refs):
         keys = refs.keys()
@@ -721,7 +737,7 @@ class GitHandler(object):
         for k in keys[:]:
             ref_name = k
             parts = k.split('/')
-            if (parts[0] == 'refs' and parts[1] == 'tags'):
+            if parts[0] == 'refs' and parts[1] == 'tags':
                 ref_name = "/".join([v for v in parts[2:]])
                 if ref_name[-3:] == '^{}':
                     ref_name = ref_name[:-3]
