@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-06-21 00:59+0200\n"
-"PO-Revision-Date: 2009-06-21 01:05+0200\n"
+"PO-Revision-Date: 2009-06-21 12:38+0200\n"
 "Last-Translator:  <mg@daimi.au.dk>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -372,7 +372,6 @@ msgstr "Revision %d er en sammenføjning; ignorerer...\n"
 msgid "generating stats: %d%%"
 msgstr "genererer statistik: %d%%"
 
-#, fuzzy
 msgid ""
 "histogram of changes to the repository\n"
 "\n"
@@ -409,14 +408,17 @@ msgid ""
 "    .hgchurn file will be looked for in the working directory root.\n"
 "    "
 msgstr ""
-"plot antallet af revisioner grupperet efter et mønster\n"
+"histogram over ændringer i depotet\n"
 "\n"
-"    Plotter antallet af ændrede linier eller antallet af revisioner\n"
-"    grupperet efter et mønster eller alternativt efter dato, hvis\n"
-"    dateformat bruges. I så tilfælde bruges mønstret ikke.\n"
+"    Denne kommando vil vise et histogram som repræsenterer antallet af\n"
+"    ændrede linier eller revisioner, grupperet efter en given\n"
+"    skabelon. Standardskabelonen vil gruppere ændringer efter\n"
+"    forfatter. Med --dateformat tilvalget kan resultaterne i stedet\n"
+"    grupperes efter dato.\n"
 "\n"
-"    Som udgangspunkt laves der statistik over antallet af ændrede\n"
-"    linier.\n"
+"    Statistikken er basseret på antallet af ændrede linier eller\n"
+"    alternativt på antallet af matchende revisioner, hvis --changesets\n"
+"    tilvalget er specificeret.\n"
 "\n"
 "    Eksempler:\n"
 "\n"
@@ -432,12 +434,13 @@ msgstr ""
 "      # viser antallet af linier ændret hvert år\n"
 "      hg churn -f '%Y' -s\n"
 "\n"
-"    Formatet for map-filen er rimelig simpelt:\n"
+"    Det er muligt at afbilde alternative e-mail-adresser til\n"
+"    hoved-adresser ved at bruge en fil med følgende format:\n"
 "\n"
 "    <alias email> <faktisk email>\n"
 "\n"
-"    Som standard bruges .hgchurn i arbejdskatalogets rod, hvis denne\n"
-"    findes. Brug --aliases tilvalget for at ændre dette.\n"
+"    En sådan fil kan angivet med --aliases tilvalget. Som standard\n"
+"    bruges .hgchurn i arbejdskatalogets rod, hvis denne findes.\n"
 "    "
 
 #, python-format
@@ -777,16 +780,14 @@ msgstr ""
 msgid "change branch names while converting"
 msgstr "omdøb grene under konverteringen"
 
-#, fuzzy
 msgid "try to sort changesets by branches"
-msgstr "forsøg at sortere ændringer efter dato"
+msgstr "forsøg at sortere ændringer efter gren"
 
 msgid "try to sort changesets by date"
 msgstr "forsøg at sortere ændringer efter dato"
 
-#, fuzzy
 msgid "preserve source changesets order"
-msgstr "forsøg at sortere ændringer efter dato"
+msgstr "bevar kildeændringerne ordning"
 
 msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
 msgstr ""
@@ -880,9 +881,9 @@ msgstr ""
 msgid "%s: unknown repository type"
 msgstr "%s: ukendt arkivtype"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown sort mode: %s"
-msgstr "ukendt CVS svar: %s"
+msgstr "ukendt sortering: %s"
 
 #, python-format
 msgid "cycle detected between %s and %s"
@@ -3006,9 +3007,8 @@ msgstr ""
 msgid "import file in patch directory"
 msgstr ""
 
-#, fuzzy
 msgid "name of patch file"
-msgstr "ingen rettelser anvendt"
+msgstr "navn på rettelsesfil"
 
 msgid "overwrite existing files"
 msgstr ""
@@ -3938,9 +3938,8 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid "do not create a working copy"
-msgstr "%s: slettet i arbejdskopien\n"
+msgstr "opret ikke en arbejdskopi"
 
 msgid "[-U] SOURCE [DEST]"
 msgstr ""
@@ -4500,7 +4499,6 @@ msgstr ""
 msgid "similarity must be between 0 and 100"
 msgstr ""
 
-#, fuzzy
 msgid ""
 "show changeset information by line for each file\n"
 "\n"
@@ -4516,17 +4514,18 @@ msgid ""
 "    nor desirable.\n"
 "    "
 msgstr ""
-"vis information om ændringer pr linie\n"
+"vis information om ændringer pr linie for hver fil\n"
 "\n"
 "    Vis ændringer i filer ved at vise revisions ID'et som er\n"
 "    ansvarligt for hver linie\n"
 "\n"
-"    Denne kommando er nyttig til at opdage hvem der lavede en ændring\n"
-"    og hvornår en ændring blev foretaget.\n"
+"    Denne kommando er nyttig til at opdage hvornår en ændring blev\n"
+"    foretaget og af hvem.\n"
 "\n"
 "    Uden -a/--text tilvalget vil annotate undgå at behandle filer som\n"
 "    den detekterer som binære. Med -a vil annotate generere en\n"
-"    annotering alligevel, sandsynligvis med et uønsket resultat.\n"
+"    annotering alligevel, selvom resultatet sandsynligvis vil være\n"
+"    hverken brugbart eller ønskværdigt.\n"
 "    "
 
 msgid "at least one filename or pattern is required"
@@ -4574,7 +4573,6 @@ msgstr ""
 msgid "cannot archive plain files to stdout"
 msgstr ""
 
-#, fuzzy
 msgid ""
 "reverse effect of earlier changeset\n"
 "\n"
@@ -4618,17 +4616,14 @@ msgstr "angiv venligst kun en revision"
 msgid "please specify a revision to backout"
 msgstr ""
 
-#, fuzzy
 msgid "cannot backout change on a different branch"
-msgstr "kan ikke bakke en ændring på en anden gren ud"
+msgstr "kan ikke omgøre en ændring på en anden gren"
 
-#, fuzzy
 msgid "cannot backout a change with no parents"
-msgstr "kan ikke bakke en ændring ud uden forældre"
+msgstr "kan ikke omgøre en ændring uden forældre"
 
-#, fuzzy
 msgid "cannot backout a merge changeset without --parent"
-msgstr "kan ikke bakke en ændring ud uden forældre"
+msgstr "kan ikke omgøre en sammenføjning uden --parent"
 
 #, python-format
 msgid "%s is not a parent of %s"
@@ -4702,9 +4697,9 @@ msgstr ""
 msgid "incompatible arguments"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "cannot find executable: %s"
-msgstr "ikke i dirstate: %s\n"
+msgstr "kan ikke finde program: %s"
 
 #, python-format
 msgid "failed to execute %s"
@@ -4714,9 +4709,9 @@ msgstr ""
 msgid "%s killed"
 msgstr "%s dræbt"
 
-#, fuzzy, python-format
+#, python-format
 msgid "Changeset %d:%s: %s\n"
-msgstr "Ændring: %s: %s\n"
+msgstr "Ændring %d:%s: %s\n"
 
 #, python-format
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
@@ -4811,7 +4806,6 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid ""
 "make a copy of an existing repository\n"
 "\n"
@@ -4884,7 +4878,7 @@ msgstr ""
 "\n"
 "    Det er muligt at specificere en ssh:// URL som destination, men\n"
 "    der vil ikke bliver oprettet nogen .hg/hgrc fil eller noget\n"
-"    arbejdskatalog på den anden side. Se hjælpeteksten for URLer for\n"
+"    arbejdskatalog på den anden side. Se venligst 'hg help urls' for\n"
 "    vigtige detaljer om ssh:// URLer.\n"
 "\n"
 "    Af effektivitetsgrunde bruges hårde lænker ved kloning når kilden\n"
@@ -4908,7 +4902,6 @@ msgstr ""
 "\n"
 "    "
 
-#, fuzzy
 msgid ""
 "commit the specified files or all outstanding changes\n"
 "\n"
@@ -5192,7 +5185,6 @@ msgstr ""
 "    git diff-format. For mere information, læs hg help diffs.\n"
 "    "
 
-#, fuzzy
 msgid ""
 "dump the header and diffs for one or more changesets\n"
 "\n"
@@ -5257,7 +5249,7 @@ msgstr ""
 "    annotering alligevel, sandsynligvis med et uønsket resultat.\n"
 "\n"
 "    Brug -g/--git tilvalget for at generere ændringer i det udvidede\n"
-"    git diff-format. For mere information, læs hg help diffs.\n"
+"    git diff-format. Se 'hg help diffs' for mere information.\n"
 "\n"
 "    Med --switch-parent tilvalget vil ændringerne blive beregnet i\n"
 "    forhold til den anden forælder. Dette kan være nyttigt til at\n"
@@ -5319,9 +5311,9 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "no open branch heads on branch %s\n"
-msgstr "indskrænker forgreningssøgning til %s:%s\n"
+msgstr "ingen åbne gren-hoveder på gren %s\n"
 
 #, python-format
 msgid "no changes on branch %s containing %s are reachable from %s\n"
@@ -5486,9 +5478,8 @@ msgstr ""
 "meddelse:\n"
 "%s\n"
 
-#, fuzzy
 msgid "not a Mercurial patch"
-msgstr "%s er ikke en Mercurial bundle fil"
+msgstr "ikke en Mercurial patch"
 
 msgid "patch is damaged or loses information"
 msgstr ""
@@ -5507,7 +5498,6 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid ""
 "create a new repository in the given directory\n"
 "\n"
@@ -5594,7 +5584,6 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid ""
 "merge working directory with another revision\n"
 "\n"
@@ -5614,14 +5603,13 @@ msgid ""
 msgstr ""
 "sammenføj arbejdskataloget med en anden revision\n"
 "\n"
-"    Indholdet af det nuværende arbejdskatalog opdateres med alle\n"
-"    ændringer lavet i den ønskede revision siden den sidste fælles\n"
-"    foregående revision.\n"
+"    Det nuværende arbejdskatalog opdateres med alle ændringer lavet i\n"
+"    den ønskede revision siden den sidste fælles foregående revision.\n"
 "\n"
 "    Filer som ændrede sig i forhold til en af forældrene bliver\n"
-"    markeret som ændret med hensyn til næste arkivering, og\n"
-"    arkiveringen skal laves før yderligere opdateringer er tilladt.\n"
-"    Den næste arkiverede ændring får to forældre.\n"
+"    markeret som ændret med hensyn til næste arkivering, og en\n"
+"    arkivering skal laves før yderligere opdateringer er tilladt. Den\n"
+"    næste arkiverede ændring får to forældre.\n"
 "\n"
 "    Hvis ingen revision angives og arbejdskatalogets forælder er en\n"
 "    hovedrevision og den nuværende gren indeholder præcis et andet\n"
@@ -5660,7 +5648,6 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid ""
 "show the parents of the working directory or revision\n"
 "\n"
@@ -5712,7 +5699,6 @@ msgstr "(kør 'hg heads' for at se hoveder, 'hg merge' for at sammenføje)\n"
 msgid "(run 'hg update' to get a working copy)\n"
 msgstr "(kør 'hg update' for at få en arbejdskopi)\n"
 
-#, fuzzy
 msgid ""
 "pull changes from the specified source\n"
 "\n"
@@ -5734,21 +5720,22 @@ msgid ""
 msgstr ""
 "hent ændringer fra den angivne kilde\n"
 "\n"
-"    Hiver ændringer fra et fjert arkiv til det lokale.\n"
+"    Hiver ændringer fra et fjert arkiv til et lokalt.\n"
 "\n"
 "    Dette finder alle ændringer fra arkivet på den specificerede sti\n"
-"    eller URL og tilføjer dem til det lokale arkiv. Som standard\n"
-"    opdateres arbejdskataloget ikke.\n"
+"    eller URL og tilføjer dem til et lokalt arkiv (det nuværende arkiv\n"
+"    med mindre -R er angivet). Som standard opdateres arbejdskataloget\n"
+"    ikke.\n"
 "\n"
-"    Brug hg incoming hvis du vil se hvad der vil blive tilføjet til\n"
-"    arkivet ved næste pull, men uden rent faktisk at tilføje\n"
-"    ændringerne til arkivet.\n"
+"    Brug hg incoming for at se hvad der ville være blevet tilføjet på\n"
+"    det tidspunkt du udførte kommandoen. Hvis du derefter beslutter at\n"
+"    tilføje disse ændringer til arkivet, så bør du bruge pull -r X\n"
+"    hvor X er den sidste ændring nævnt af hg incoming.\n"
 "\n"
 "    Hvis KILDE udelades, så bruges 'default' stien.\n"
 "    Se 'hg help urls' for mere information.\n"
 "    "
 
-#, fuzzy
 msgid ""
 "push changes to the specified destination\n"
 "\n"
@@ -5782,13 +5769,13 @@ msgstr ""
 "\n"
 "    Som standard vil push nægte af køre hvis den detekterer at den vil\n"
 "    øge antallet af hoveder i destinationen. Dette indikerer normalt\n"
-"    at klienten har glemt at henge og sammenføje ændringerne før\n"
+"    at brugeren har glemt at hente og sammenføje ændringerne før\n"
 "    skubningen.\n"
 "\n"
 "    Hvis -r/--rev bruges, så vil den navngivne revision og alle dets\n"
 "    forfædre bliver skubbet til det andet arkiv.\n"
 "\n"
-"    Se hjælpeteksten for URL'er for vigtige detaljer om ssh:// URL'er.\n"
+"    Se venligst 'hg help urls' for vigtige detaljer om ssh:// URL'er.\n"
 "    Hvis DESTINATION udelades vil en standard sti blive brugt.\n"
 "    Se 'hg help urls' for mere information.\n"
 "    "
@@ -5808,7 +5795,6 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid ""
 "remove the specified files on the next commit\n"
 "\n"
@@ -5844,13 +5830,13 @@ msgstr ""
 "    projektets historie. -A/--after kan bruges til kun at fjerne filer\n"
 "    som allerede er slettet, -f/--force kan bruges for at gennemtvinge\n"
 "    en sletning, og -Af kan bruges til at fjerne filer fra næste\n"
-"    revision uden at slette dem.\n"
+"    revision uden at slette dem fra arbejdskataloget.\n"
 "\n"
 "    Den følgende tabel viser opførslen af remove for forskellige\n"
-"    tilstande af filer (søjler) og kombinationer af tilvalg (rækker).\n"
-"    Filtilstandene er Added, Clean, Modified og Missing (som\n"
-"    rapporteret af hg status). Handlingerne er Warn, Remove (fra gren)\n"
-"    og Delete (fra disk).\n"
+"    filtilstande (søjler) og kombinationer af tilvalg (rækker). Mulige\n"
+"    filtilstande er tilføjet [A], ren [C], ændret [M] og manglende [!]\n"
+"    (som rapporteret af hg status). Handlingerne er Warn, Remove (fra\n"
+"    gren) og Delete (fra disk).\n"
 "\n"
 "           A  C  M  !\n"
 "    none   W  RD W  R\n"
@@ -6055,7 +6041,6 @@ msgstr ""
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
 msgstr "lytter på http://%s%s/%s (bundet til %s:%d)\n"
 
-#, fuzzy
 msgid ""
 "show changed files in the working directory\n"
 "\n"
@@ -6119,7 +6104,7 @@ msgstr ""
 "    ! = mangler (slettet af en ikke-hg kommando, men følges stadig)\n"
 "    ? = følges ikke\n"
 "    I = ignoreret\n"
-"      = den foregående fil blev kopieret herfra\n"
+"      = den foregående fil markeret som A (tilføjet) stammer herfra\n"
 "    "
 
 msgid ""
@@ -6596,9 +6581,8 @@ msgstr ""
 msgid "[OPTION]..."
 msgstr ""
 
-#, fuzzy
 msgid "revision to check"
-msgstr "revision som skal bakkes ud"
+msgstr "revision som skal undersøges"
 
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr ""
@@ -6639,9 +6623,8 @@ msgstr ""
 msgid "show only the active heads from open branches"
 msgstr ""
 
-#, fuzzy
 msgid "show normal and closed heads"
-msgstr "vis kun tilføjede filer"
+msgstr "vis normale og lukkede hoveder"
 
 msgid "[-r STARTREV] [REV]..."
 msgstr ""
@@ -7748,9 +7731,8 @@ msgstr ""
 msgid "can only share local repositories"
 msgstr ""
 
-#, fuzzy
 msgid "destination already exists"
-msgstr "%s eksisterer allerede"
+msgstr "destinationen eksisterer allerede"
 
 msgid "updating working directory\n"
 msgstr "opdaterer arbejdskatalog\n"
@@ -7962,9 +7944,9 @@ msgstr "arkivet %s eksisterer allerede"
 msgid "requirement '%s' not supported"
 msgstr "betingelse '%s' er ikke understøttet"
 
-#, fuzzy, python-format
+#, python-format
 msgid ".hg/sharedpath points to nonexistent directory %s"
-msgstr "rev %d peger på ikke eksisterende ændring %d"
+msgstr ".hg/sharedpath peger på et ikke-eksisterende katalog %s"
 
 #, python-format
 msgid "%r cannot be used in a tag name"
@@ -8042,17 +8024,14 @@ msgstr ""
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
 
-#, fuzzy
 msgid "file not found!"
-msgstr "filen %s blev ikke fundet!"
+msgstr "filen blev ikke fundet!"
 
-#, fuzzy
 msgid "no match under directory!"
-msgstr "skift arbejdskatalog"
+msgstr "ingen træffer under kataloget!"
 
-#, fuzzy
 msgid "file not tracked!"
-msgstr "%s følges ikke\n"
+msgstr "filen følges ikke!"
 
 msgid "nothing changed\n"
 msgstr "ingen ændringer\n"
@@ -8060,9 +8039,9 @@ msgstr "ingen ændringer\n"
 msgid "unresolved merge conflicts (see hg resolve)"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "committing subrepository %s\n"
-msgstr "kloner hovedarkiv\n"
+msgstr "arkiverer underarkiv %s\n"
 
 #, python-format
 msgid "trouble committing %s!\n"
@@ -8491,9 +8470,9 @@ msgstr ""
 msgid "patch command failed: %s"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "Unsupported line endings type: %s"
-msgstr "ikke i dirstate: %s\n"
+msgstr "Linieendelse %s understøttes ikke"
 
 #, python-format
 msgid "no valid hunks found; trying with %r instead\n"
@@ -8644,17 +8623,17 @@ msgid ""
 "use (c)hanged version or (d)elete?"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "removing subrepo %s\n"
-msgstr "fjerner %s\n"
+msgstr "fjerner underarkiv %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "pulling subrepo %s\n"
-msgstr "hiver fra %s\n"
+msgstr "hiver fra underarkiv %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "pushing subrepo %s\n"
-msgstr "skubber til %s\n"
+msgstr "skubber til underarkiv %s\n"
 
 msgid "unmatched quotes"
 msgstr ""
