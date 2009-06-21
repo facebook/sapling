@@ -624,11 +624,10 @@ class svn_source(converter_source):
 
         for path, ent in paths:
             entrypath = self.getrelpath(path)
-            entry = entrypath.decode(self.encoding)
 
             kind = self._checkpath(entrypath, revnum)
             if kind == svn.core.svn_node_file:
-                entries.append(self.recode(entry))
+                entries.append(self.recode(entrypath))
                 if not ent.copyfrom_path or not parents:
                     continue
                 # Copy sources not in parent revisions cannot be
@@ -641,7 +640,7 @@ class svn_source(converter_source):
                     continue
                 self.ui.debug(_("copied to %s from %s@%s\n") %
                               (entrypath, copyfrom_path, ent.copyfrom_rev))
-                copies[self.recode(entry)] = self.recode(copyfrom_path)
+                copies[self.recode(entrypath)] = self.recode(copyfrom_path)
             elif kind == 0: # gone, but had better be a deleted *file*
                 self.ui.debug(_("gone from %s\n") % ent.copyfrom_rev)
                 pmodule, prevnum = self.revsplit(parents[0])[1:]
@@ -655,7 +654,7 @@ class svn_source(converter_source):
                 self.reparent(prevmodule)
 
                 if fromkind == svn.core.svn_node_file:
-                    entries.append(self.recode(entry))
+                    entries.append(self.recode(entrypath))
                 elif fromkind == svn.core.svn_node_dir:
                     if ent.action == 'C':
                         children = self._find_children(path, prevnum)
