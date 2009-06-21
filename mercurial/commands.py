@@ -2721,9 +2721,9 @@ def serve(ui, repo, **opts):
 
     baseui = repo and repo.baseui or ui
     optlist = ("name templates style address port prefix ipv6"
-               " accesslog errorlog webdir_conf certificate")
+               " accesslog errorlog webdir_conf certificate encoding")
     for o in optlist.split():
-        if opts[o]:
+        if opts.get(o, None):
             baseui.setconfig("web", o, str(opts[o]))
             if (repo is not None) and (repo.ui != baseui):
                 repo.ui.setconfig("web", o, str(opts[o]))
