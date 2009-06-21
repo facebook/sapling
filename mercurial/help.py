@@ -50,16 +50,18 @@ def listexts(header, exts, maxlength):
 
 def extshelp():
     doc = _(r'''
-    Mercurial has a mechanism for adding new features through the
-    use of extensions. Extensions may bring new commands, or new
-    hooks, or change Mercurial's behavior.
+    Mercurial has the ability to add new features through the use of
+    extensions. Extensions may add new commands, add options to
+    existing commands, change the default behavior of commands, or
+    implement hooks.
 
-    Extensions are not loaded by default for a variety of reasons,
-    they may be meant for advanced users or provide potentially
-    dangerous commands (e.g. mq and rebase allow history to be
-    rewritten), they might not be ready for prime-time yet, or
-    they may alter Mercurial's behavior. It is thus up to the user
-    to activate extensions as desired.
+    Extensions are not loaded by default for a variety of reasons:
+    they can increase startup overhead; they may be meant for
+    advanced usage only; they may provide potentially dangerous
+    abilities (such as letting you destroy or modify history); they
+    might not be ready for prime time; or they may alter some
+    usual behaviors of stock Mercurial. It is thus up to the user to
+    activate extensions as needed.
 
     To enable the "foo" extension, either shipped with Mercurial
     or in the Python search path, create an entry for it in your
