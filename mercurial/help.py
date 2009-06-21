@@ -84,7 +84,7 @@ def extshelp():
     scope, prepend its path with !:
 
       [extensions]
-      # disabling extension bar residing in /ext/path
+      # disabling extension bar residing in /path/to/extension/bar.py
       hgext.bar = !/path/to/extension/bar.py
       # ditto, but no path was supplied for extension baz
       hgext.baz = !
