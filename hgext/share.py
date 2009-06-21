@@ -1,9 +1,9 @@
-# Mercurial extension to provide the 'hg share' command
-#
 # Copyright 2006, 2007 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
+
+'''provides the hg share command'''
 
 import os
 from mercurial.i18n import _

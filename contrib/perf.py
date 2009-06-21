@@ -1,4 +1,5 @@
 # perf.py - performance test routines
+'''helper extension to measure performance'''
 
 from mercurial import cmdutil, match, commands
 import time, os, sys

@@ -5,45 +5,45 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 #
-# this hook allows to allow or deny access to parts of a repo when
-# taking incoming changesets.
-#
-# authorization is against local user name on system where hook is
-# run, not committer of original changeset (since that is easy to
-# spoof).
-#
-# acl hook is best to use if you use hgsh to set up restricted shells
-# for authenticated users to only push to / pull from.  not safe if
-# user has interactive shell access, because they can disable hook.
-# also not safe if remote users share one local account, because then
-# no way to tell remote users apart.
-#
-# to use, configure acl extension in hgrc like this:
-#
-#   [extensions]
-#   hgext.acl =
-#
-#   [hooks]
-#   pretxnchangegroup.acl = python:hgext.acl.hook
-#
-#   [acl]
-#   sources = serve        # check if source of incoming changes in this list
-#                          # ("serve" == ssh or http, "push", "pull", "bundle")
-#
-# allow and deny lists have subtree pattern (default syntax is glob)
-# on left, user names on right. deny list checked before allow list.
-#
-#   [acl.allow]
-#   # if acl.allow not present, all users allowed by default
-#   # empty acl.allow = no users allowed
-#   docs/** = doc_writer
-#   .hgtags = release_engineer
-#
-#   [acl.deny]
-#   # if acl.deny not present, no users denied by default
-#   # empty acl.deny = all users allowed
-#   glob pattern = user4, user5
-#   ** = user6
+
+'''provide simple hooks for access control
+
+Authorization is against local user name on system where hook is run, not
+committer of original changeset (since that is easy to spoof).
+
+The acl hook is best to use if you use hgsh to set up restricted shells for
+authenticated users to only push to / pull from. It's not safe if user has
+interactive shell access, because they can disable the hook. It's also not
+safe if remote users share one local account, because then there's no way to
+tell remote users apart.
+
+To use, configure the acl extension in hgrc like this:
+
+  [extensions]
+  hgext.acl =
+
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
+
+  [acl]
+  sources = serve        # check if source of incoming changes in this list
+                         # ("serve" == ssh or http, "push", "pull", "bundle")
+
+Allow and deny lists have a subtree pattern (default syntax is glob) on the
+left and user names on right. The deny list is checked before the allow list.
+
+  [acl.allow]
+  # if acl.allow not present, all users allowed by default
+  # empty acl.allow = no users allowed
+  docs/** = doc_writer
+  .hgtags = release_engineer
+
+  [acl.deny]
+  # if acl.deny not present, no users denied by default
+  # empty acl.deny = all users allowed
+  glob pattern = user4, user5
+   ** = user6
+'''
 
 from mercurial.i18n import _
 from mercurial import util, match
