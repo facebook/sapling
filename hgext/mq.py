@@ -543,6 +543,8 @@ class queue(object):
 
     def _apply(self, repo, series, list=False, update_status=True,
                strict=False, patchdir=None, merge=None, all_files={}):
+        '''returns (error, hash)
+        error = 1 for unable to read, 2 for patch failed, 3 for patch fuzz'''
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
@@ -559,7 +561,7 @@ class queue(object):
             try:
                 ph = patchheader(self.join(patchname))
             except:
-                self.ui.warn(_("Unable to read %s\n") % patchname)
+                self.ui.warn(_("unable to read %s\n") % patchname)
                 err = 1
                 break
 
@@ -607,12 +609,12 @@ class queue(object):
 
             if patcherr:
                 self.ui.warn(_("patch failed, rejects left in working dir\n"))
-                err = 1
+                err = 2
                 break
 
             if fuzz and strict:
                 self.ui.warn(_("fuzz found when applying patch, stopping\n"))
-                err = 1
+                err = 3
                 break
         return (err, n)
 
@@ -953,6 +955,7 @@ class queue(object):
                 end = start + 1
             else:
                 end = self.series.index(patch, start) + 1
+
             s = self.series[start:end]
             all_files = {}
             try:
@@ -972,13 +975,15 @@ class queue(object):
                         util.unlink(repo.wjoin(f))
                 self.ui.warn(_('done\n'))
                 raise
+
             top = self.applied[-1].name
-            if ret[0]:
-                self.ui.write(_("errors during apply, please fix and "
-                                "refresh %s\n") % top)
+            if ret[0] and ret[0] > 1:
+                msg = _("errors during apply, please fix and refresh %s\n")
+                self.ui.write(msg % top)
             else:
                 self.ui.write(_("now at: %s\n") % top)
             return ret[0]
+
         finally:
             wlock.release()
 

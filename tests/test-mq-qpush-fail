@@ -45,3 +45,12 @@ hg parents
 
 echo '% bar should be gone; other unknown/ignored files should still be around'
 hg status -A
+
+echo '% preparing qpush of a missing patch'
+hg qpop -a
+hg qpush
+rm .hg/patches/patch2
+echo '% now we expect the push to fail, but it should NOT complain about patch1'
+hg qpush
+
+true # happy ending
