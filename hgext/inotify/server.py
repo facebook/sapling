@@ -717,6 +717,12 @@ class server(pollable):
         if version != common.version:
             self.ui.warn(_('received query from incompatible client '
                            'version %d\n') % version)
+            try:
+                # try to send back our version to the client
+                # this way, the client too is informed of the mismatch
+                sock.sendall(chr(common.version))
+            except:
+                pass
             return
 
         type = cs.read(4)
