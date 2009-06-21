@@ -1,0 +1,13 @@
+#!/bin/sh
+
+"$TESTDIR/hghave" svn svn-bindings || exit 80
+
+echo "[extensions]" >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
+
+svnadmin create svn-repo
+cat "$TESTDIR/svn/encoding.svndump" | svnadmin load svn-repo > /dev/null
+
+echo '% convert while testing all possible outputs'
+hg --debug convert svn-repo A-hg > /dev/null
+

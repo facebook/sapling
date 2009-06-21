@@ -744,8 +744,7 @@ class svn_source(converter_source):
                 pmodule, prevnum = self.revsplit(parents[0])[1:]
                 if ent.copyfrom_rev < prevnum:
                     continue
-                copyfrompath = ent.copyfrom_path.decode(self.encoding)
-                copyfrompath = self.getrelpath(copyfrompath, pmodule)
+                copyfrompath = self.getrelpath(ent.copyfrom_path, pmodule)
                 if not copyfrompath:
                     continue
                 copyfrom[path] = ent
@@ -757,10 +756,9 @@ class svn_source(converter_source):
                     entrypath = self.getrelpath("/" + child, pmodule)
                     if not entrypath:
                         continue
-                    entry = entrypath.decode(self.encoding)
-                    copytopath = path + entry[len(copyfrompath):]
+                    copytopath = path + entrypath[len(copyfrompath):]
                     copytopath = self.getrelpath(copytopath)
-                    copies[self.recode(copytopath)] = self.recode(entry, pmodule)
+                    copies[self.recode(copytopath)] = self.recode(entrypath)
 
         return (list(set(entries)), copies)
 
