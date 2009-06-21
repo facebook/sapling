@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
+import textwrap
 from i18n import _
 import extensions
 
@@ -45,7 +46,11 @@ def listexts(header, exts, maxlength):
         return ''
     result = '\n%s\n\n' % header
     for name, desc in sorted(exts.iteritems()):
-        result += ' %s   %s\n' % (name.ljust(maxlength), desc)
+        # wrap desc at 70 characters, just like the main help texts
+        desc = textwrap.wrap(desc, width=70 - maxlength - 4)
+        pad = '\n' + ' ' * (maxlength + 4)
+        result += ' %s   %s\n' % (name.ljust(maxlength),
+                                  pad.join(desc))
     return result
 
 def extshelp():
