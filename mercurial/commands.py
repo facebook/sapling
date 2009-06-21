@@ -2282,7 +2282,6 @@ def push(ui, repo, dest=None, **opts):
 
     Please see 'hg help urls' for important details about ssh://
     URLs. If DESTINATION is omitted, a default path will be used.
-    See 'hg help urls' for more information.
     """
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
