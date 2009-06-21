@@ -1,0 +1,77 @@
+Initialized empty Git repository in gitrepo/.git/
+
+Warning: commit message does not conform to UTF-8.
+You may want to amend it after fixing the message, or set the config
+variable i18n.commitencoding to the encoding your project uses.
+Warning: commit message does not conform to UTF-8.
+You may want to amend it after fixing the message, or set the config
+variable i18n.commitencoding to the encoding your project uses.
+fetching from : git://localhost/gitrepo
+importing Hg objects into Git
+Counting objects: 12, done.
+Compressing objects:  14% (1/7)   Compressing objects:  28% (2/7)   Compressing objects:  42% (3/7)   Compressing objects:  57% (4/7)   Compressing objects:  71% (5/7)   Compressing objects:  85% (6/7)   Compressing objects: 100% (7/7)   Compressing objects: 100% (7/7), done.
+Total 12 (delta 1), reused 0 (delta 0)
+importing Git objects into Hg
+at: 0/4
+updating working directory
+4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  changeset:   3:6b43c82c4322c117a8b8b6fab37534af23c1632d
+|  tag:         master
+|  tag:         default/master
+|  tag:         tip
+|  parent:      2:b2e3167afdf71f860238838daa0065b6f8660f15
+|  parent:      -1:0000000000000000000000000000000000000000
+|  manifest:    3:ea49f93388380ead5601c8fcbfa187516e7c2ed8
+|  user:        tést èncödîng <test@example.org>
+|  date:        Mon Jan 01 00:00:13 2007 +0000
+|  files+:      delta
+|  extra:       branch=default
+|  extra:       committer=test <test@example.org> 1167609613 0
+|  extra:       encoding=latin-1
+|  extra:       git-author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
+|  extra:       git-commit-message=\nadd d\xe9lt\xe0\n
+|  description:
+|  add déltà
+|
+|
+o  changeset:   2:b2e3167afdf71f860238838daa0065b6f8660f15
+|  parent:      1:d62a8db24a4f5d5f77b6b55ddf481a254f4e6635
+|  parent:      -1:0000000000000000000000000000000000000000
+|  manifest:    2:f580e7da3673c137370da2b931a1dee83590d7b4
+|  user:        tést èncödîng <test@example.org>
+|  date:        Mon Jan 01 00:00:12 2007 +0000
+|  files+:      gamma
+|  extra:       branch=default
+|  extra:       committer=test <test@example.org> 1167609612 0
+|  extra:       git-author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
+|  extra:       git-commit-message=add g\xe4mm\xe2\n
+|  description:
+|  add gämmâ
+|
+|
+o  changeset:   1:d62a8db24a4f5d5f77b6b55ddf481a254f4e6635
+|  parent:      0:bb7d36568d6188ce0de2392246c43f6f213df954
+|  parent:      -1:0000000000000000000000000000000000000000
+|  manifest:    1:f0bd6fbafbaebe4bb59c35108428f6fce152431d
+|  user:        tést èncödîng <test@example.org>
+|  date:        Mon Jan 01 00:00:11 2007 +0000
+|  files+:      beta
+|  extra:       branch=default
+|  extra:       committer=test <test@example.org> 1167609611 0
+|  extra:       git-author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
+|  description:
+|  add beta
+|
+|
+o  changeset:   0:bb7d36568d6188ce0de2392246c43f6f213df954
+   parent:      -1:0000000000000000000000000000000000000000
+   parent:      -1:0000000000000000000000000000000000000000
+   manifest:    0:8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
+   user:        test <test@example.org>
+   date:        Mon Jan 01 00:00:10 2007 +0000
+   files+:      alpha
+   extra:       branch=default
+   description:
+   add älphà
+
+
