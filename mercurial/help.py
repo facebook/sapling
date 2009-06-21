@@ -9,11 +9,11 @@ from i18n import _
 import extensions
 
 
-# loosely inspired by pydoc.source_synopsis()
-# rewritten to handle ''' as well as """
-# and to return the whole text instead of just the synopsis
 def moduledoc(file):
-    '''Return the top python documentation for the given file'''
+    '''return the top-level python documentation for the given file
+
+    Loosely inspired by pydoc.source_synopsis(), but rewritten to handle \'''
+    as well as """ and to return the whole text instead of just the synopsis'''
     result = []
 
     line = file.readline()
@@ -39,44 +39,42 @@ def moduledoc(file):
 
     return ''.join(result)
 
-def extensionslisting(header, exts, maxlength):
-    '''Return a text listing of the given extensions'''
-    result = ''
-
-    if exts:
-        result += '\n%s\n\n' % header
-        for name, desc in sorted(exts.iteritems()):
-            result += ' %s   %s\n' % (name.ljust(maxlength), desc)
-
+def listexts(header, exts, maxlength):
+    '''return a text listing of the given extensions'''
+    if not exts:
+        return ''
+    result = '\n%s\n\n' % header
+    for name, desc in sorted(exts.iteritems()):
+        result += ' %s   %s\n' % (name.ljust(maxlength), desc)
     return result
 
-def topicextensions():
+def extshelp():
     doc = _(r'''
     Mercurial has a mechanism for adding new features through the
     use of extensions. Extensions may bring new commands, or new
-    hooks, or change some behaviors of Mercurial.
+    hooks, or change Mercurial's behavior.
 
     Extensions are not loaded by default for a variety of reasons,
-    they may be meant for an advanced usage or provide potentially
-    dangerous commands (eg. mq or rebase allow to rewrite history),
-    they might not be yet ready for prime-time, or they may alter
-    some usual behaviors of stock Mercurial. It is thus up to the
-    user to activate the extensions as needed.
+    they may be meant for advanced users or provide potentially
+    dangerous commands (e.g. mq and rebase allow history to be
+    rewritten), they might not be ready for prime-time yet, or
+    they may alter Mercurial's behavior. It is thus up to the user
+    to activate extensions as desired.
 
-    To enable an extension "foo" which is either shipped with
-    Mercurial or in the Python search path, create an entry for
-    it in your hgrc, like this:
+    To enable the "foo" extension, either shipped with Mercurial
+    or in the Python search path, create an entry for it in your
+    hgrc, like this:
 
       [extensions]
       foo =
 
-    You may also specify the full path where an extension resides:
+    You may also specify the full path to an extension:
 
       [extensions]
       myfeature = ~/.hgext/myfeature.py
 
-    To explicitly disable an extension which is enabled in an hgrc
-    of broader scope, prepend its path with !:
+    To explicitly disable an extension enabled in an hgrc of broader
+    scope, prepend its path with !:
 
       [extensions]
       # disabling extension bar residing in /ext/path
@@ -86,10 +84,10 @@ def topicextensions():
     ''')
 
     exts, maxlength = extensions.enabled()
-    doc += extensionslisting(_('enabled extensions:'), exts, maxlength)
+    doc += listexts(_('enabled extensions:'), exts, maxlength)
 
     exts, maxlength = extensions.disabled()
-    doc += extensionslisting(_('non-enabled extensions:'), exts, maxlength)
+    doc += listexts(_('disabled extensions:'), exts, maxlength)
 
     return doc
 
@@ -504,5 +502,5 @@ PYTHONPATH::
       The push command will look for a path named 'default-push', and
       prefer it over 'default' if both are defined.
     ''')),
-    (["extensions"], _("Using additional features"), topicextensions),
+    (["extensions"], _("Using additional features"), extshelp),
 )

@@ -1485,8 +1485,7 @@ def help_(ui, name=None, with_version=False):
 
         if name != 'shortlist':
             exts, maxlength = extensions.enabled()
-            ui.write(help.extensionslisting(_('enabled extensions:'),
-                                            exts, maxlength))
+            ui.write(help.listexts(_('enabled extensions:'), exts, maxlength))
 
         if not ui.quiet:
             addglobalopts(True)
