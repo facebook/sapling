@@ -138,15 +138,8 @@ def disabled():
             if not os.path.exists(path):
                 continue
 
-        if name in exts or name == '__init__':
+        if name in exts or name in _order or name == '__init__':
             continue
-
-        try:
-            find(name)
-        except KeyError:
-            pass
-        else:
-            continue # enabled extension
 
         try:
             file = open(path)
