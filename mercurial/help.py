@@ -5,23 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import os, sys
-from i18n import _, gettext
+from i18n import _
 import extensions
 
-
-# borrowed from pydoc
-def pathdirs():
-    '''Convert sys.path into a list of absolute, existing, unique paths.'''
-    dirs = []
-    normdirs = []
-    for dir in sys.path:
-        dir = os.path.abspath(dir or '.')
-        normdir = os.path.normcase(dir)
-        if normdir not in normdirs and os.path.isdir(dir):
-            dirs.append(dir)
-            normdirs.append(normdir)
-    return dirs
 
 # loosely inspired by pydoc.source_synopsis()
 # rewritten to handle ''' as well as """
@@ -52,67 +38,6 @@ def moduledoc(file):
         return None
 
     return ''.join(result)
-
-def additionalextensions():
-    '''Find the extensions shipped with Mercurial but not enabled
-
-    Returns extensions names and descriptions, and the max name length
-    '''
-    exts = {}
-    maxlength = 0
-
-    for dir in filter(os.path.isdir,
-                      (os.path.join(pd, 'hgext') for pd in pathdirs())):
-        for e in os.listdir(dir):
-            if e.endswith('.py'):
-                name = e.rsplit('.', 1)[0]
-                path = os.path.join(dir, e)
-            else:
-                name = e
-                path = os.path.join(dir, e, '__init__.py')
-
-            if name in exts or name == '__init__' or not os.path.exists(path):
-                continue
-
-            try:
-                extensions.find(name)
-            except KeyError:
-                pass
-            else:
-                continue # enabled extension
-
-            try:
-                file = open(path)
-            except IOError:
-                continue
-            else:
-                doc = moduledoc(file)
-                file.close()
-
-            if doc: # extracting localized synopsis
-                exts[name] = gettext(doc).splitlines()[0]
-            else:
-                exts[name] = _('(no help text available)')
-            if len(name) > maxlength:
-                maxlength = len(name)
-
-    return exts, maxlength
-
-def enabledextensions():
-    '''Return the list of enabled extensions, and max name length'''
-    enabled = list(extensions.extensions())
-    exts = {}
-    maxlength = 0
-
-    if enabled:
-        exthelps = []
-        for ename, ext in enabled:
-            doc = (gettext(ext.__doc__) or _('(no help text available)'))
-            ename = ename.split('.')[-1]
-            maxlength = max(len(ename), maxlength)
-            exts[ename] = doc.splitlines(0)[0].strip()
-
-    return exts, maxlength
 
 def extensionslisting(header, exts, maxlength):
     '''Return a text listing of the given extensions'''
@@ -160,10 +85,10 @@ def topicextensions():
       hgext.baz = !
     ''')
 
-    exts, maxlength = enabledextensions()
+    exts, maxlength = extensions.enabled()
     doc += extensionslisting(_('enabled extensions:'), exts, maxlength)
 
-    exts, maxlength = additionalextensions()
+    exts, maxlength = extensions.disabled()
     doc += extensionslisting(_('non-enabled extensions:'), exts, maxlength)
 
     return doc

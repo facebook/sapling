@@ -1484,7 +1484,7 @@ def help_(ui, name=None, with_version=False):
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
         if name != 'shortlist':
-            exts, maxlength = help.enabledextensions()
+            exts, maxlength = extensions.enabled()
             ui.write(help.extensionslisting(_('enabled extensions:'),
                                             exts, maxlength))
 
