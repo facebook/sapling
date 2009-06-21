@@ -27,3 +27,5 @@ now at: b.diff
 adding another.diff to series file
 applying another.diff
 now at: another.diff
+patch b.diff finalized without changeset message
+patch another.diff finalized without changeset message

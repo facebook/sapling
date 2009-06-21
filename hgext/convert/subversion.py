@@ -472,7 +472,7 @@ class svn_source(converter_source):
                 # Here/tags/tag.1 discarded as well as its children.
                 # It happens with tools like cvs2svn. Such tags cannot
                 # be represented in mercurial.
-                addeds = dict((p, e.copyfrom_path) for p,e 
+                addeds = dict((p, e.copyfrom_path) for p, e
                               in origpaths.iteritems() if e.action == 'A')
                 badroots = set()
                 for destroot in addeds:
@@ -484,7 +484,7 @@ class svn_source(converter_source):
                         break
 
                 for badroot in badroots:
-                    pendings = [p for p in pendings if p[2] != badroot 
+                    pendings = [p for p in pendings if p[2] != badroot
                                 and not p[2].startswith(badroot + '/')]
 
                 # Tell tag renamings from tag creations
@@ -497,7 +497,7 @@ class svn_source(converter_source):
                     if tagname in tags:
                         # Keep the latest tag value
                         continue
-                    # From revision may be fake, get one with changes                    
+                    # From revision may be fake, get one with changes
                     try:
                         tagid = self.latest(source, sourcerev)
                         if tagid and tagname not in tags:

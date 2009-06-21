@@ -64,10 +64,14 @@ def write(repo, refs):
         util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
     if current(repo) not in refs:
         setcurrent(repo, None)
-    file = repo.opener('bookmarks', 'w+')
-    for refspec, node in refs.iteritems():
-        file.write("%s %s\n" % (hex(node), refspec))
-    file.close()
+    wlock = repo.wlock()
+    try:
+        file = repo.opener('bookmarks', 'w', atomictemp=True)
+        for refspec, node in refs.iteritems():
+            file.write("%s %s\n" % (hex(node), refspec))
+        file.rename()
+    finally:
+        wlock.release()
 
 def current(repo):
     '''Get the current bookmark
@@ -106,9 +110,13 @@ def setcurrent(repo, mark):
         return
     if mark not in refs:
         mark = ''
-    file = repo.opener('bookmarks.current', 'w+')
-    file.write(mark)
-    file.close()
+    wlock = repo.wlock()
+    try:
+        file = repo.opener('bookmarks.current', 'w', atomictemp=True)
+        file.write(mark)
+        file.rename()
+    finally:
+        wlock.release()
     repo._bookmarkcurrent = mark
 
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
@@ -242,26 +250,30 @@ def reposetup(ui, repo):
         def commit(self, *k, **kw):
             """Add a revision to the repository and
             move the bookmark"""
-            node  = super(bookmark_repo, self).commit(*k, **kw)
-            if node is None:
-                return None
-            parents = repo.changelog.parents(node)
-            if parents[1] == nullid:
-                parents = (parents[0],)
-            marks = parse(repo)
-            update = False
-            for mark, n in marks.items():
-                if ui.configbool('bookmarks', 'track.current'):
-                    if mark == current(repo) and n in parents:
-                        marks[mark] = node
-                        update = True
-                else:
-                    if n in parents:
-                        marks[mark] = node
-                        update = True
-            if update:
-                write(repo, marks)
-            return node
+            wlock = self.wlock() # do both commit and bookmark with lock held
+            try:
+                node  = super(bookmark_repo, self).commit(*k, **kw)
+                if node is None:
+                    return None
+                parents = repo.changelog.parents(node)
+                if parents[1] == nullid:
+                    parents = (parents[0],)
+                marks = parse(repo)
+                update = False
+                for mark, n in marks.items():
+                    if ui.configbool('bookmarks', 'track.current'):
+                        if mark == current(repo) and n in parents:
+                            marks[mark] = node
+                            update = True
+                    else:
+                        if n in parents:
+                            marks[mark] = node
+                            update = True
+                if update:
+                    write(repo, marks)
+                return node
+            finally:
+                wlock.release()
 
         def addchangegroup(self, source, srctype, url, emptyok=False):
             parents = repo.dirstate.parents()

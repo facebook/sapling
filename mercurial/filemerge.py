@@ -195,8 +195,8 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     elif tool == 'internal:dump':
         a = repo.wjoin(fd)
         util.copyfile(a, a + ".local")
-        repo.wwrite(a + ".other", fco.data(), fco.flags())
-        repo.wwrite(a + ".base", fca.data(), fca.flags())
+        repo.wwrite(fd + ".other", fco.data(), fco.flags())
+        repo.wwrite(fd + ".base", fca.data(), fca.flags())
         return 1 # unresolved
     else:
         args = _toolstr(ui, tool, "args", '$local $base $other')

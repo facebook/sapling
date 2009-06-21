@@ -14,12 +14,8 @@ This extension allows the use of a special syntax in summaries,
 which will be automatically expanded into links or any other
 arbitrary expression, much like InterWiki does.
 
-To enable this extension, add the following lines to your hgrc:
-
-  [extensions]
-  interhg =
-
-A few example patterns (link to bug tracking, etc.):
+A few example patterns (link to bug tracking, etc.) that may
+be used in your hgrc:
 
   [interhg]
   issues = s!issue(\\d+)!<a href="http://bts/issue\\1">issue\\1</a>!

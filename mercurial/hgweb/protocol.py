@@ -162,8 +162,10 @@ def unbundle(repo, req):
                 sys.stderr = sys.stdout = cStringIO.StringIO()
 
                 try:
-                    url = 'remote:%s:%s' % (proto,
-                                            req.env.get('REMOTE_HOST', ''))
+                    url = 'remote:%s:%s:%s' % (
+                          proto,
+                          urllib.quote(req.env.get('REMOTE_HOST', '')),
+                          urllib.quote(req.env.get('REMOTE_USER', '')))
                     try:
                         ret = repo.addchangegroup(gen, 'serve', url)
                     except util.Abort, inst:

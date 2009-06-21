@@ -543,6 +543,8 @@ class queue(object):
 
     def _apply(self, repo, series, list=False, update_status=True,
                strict=False, patchdir=None, merge=None, all_files={}):
+        '''returns (error, hash)
+        error = 1 for unable to read, 2 for patch failed, 3 for patch fuzz'''
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
@@ -559,7 +561,7 @@ class queue(object):
             try:
                 ph = patchheader(self.join(patchname))
             except:
-                self.ui.warn(_("Unable to read %s\n") % patchname)
+                self.ui.warn(_("unable to read %s\n") % patchname)
                 err = 1
                 break
 
@@ -607,46 +609,60 @@ class queue(object):
 
             if patcherr:
                 self.ui.warn(_("patch failed, rejects left in working dir\n"))
-                err = 1
+                err = 2
                 break
 
             if fuzz and strict:
                 self.ui.warn(_("fuzz found when applying patch, stopping\n"))
-                err = 1
+                err = 3
                 break
         return (err, n)
 
-    def _clean_series(self, patches):
+    def _cleanup(self, patches, numrevs, keep=False):
+        if not keep:
+            r = self.qrepo()
+            if r:
+                r.remove(patches, True)
+            else:
+                for p in patches:
+                    os.unlink(self.join(p))
+
+        if numrevs:
+            del self.applied[:numrevs]
+            self.applied_dirty = 1
+
         for i in sorted([self.find_series(p) for p in patches], reverse=True):
             del self.full_series[i]
         self.parse_series()
         self.series_dirty = 1
 
-    def finish(self, repo, revs):
+    def _revpatches(self, repo, revs):
         firstrev = repo[self.applied[0].rev].rev()
-        appliedbase = 0
         patches = []
-        for rev in sorted(revs):
+        for i, rev in enumerate(revs):
+
             if rev < firstrev:
                 raise util.Abort(_('revision %d is not managed') % rev)
-            base = bin(self.applied[appliedbase].rev)
-            node = repo.changelog.node(rev)
-            if node != base:
-                raise util.Abort(_('cannot delete revision %d above '
-                                   'applied patches') % rev)
-            patches.append(self.applied[appliedbase].name)
-            appliedbase += 1
 
-        r = self.qrepo()
-        if r:
-            r.remove(patches, True)
-        else:
-            for p in patches:
-                os.unlink(self.join(p))
+            ctx = repo[rev]
+            base = bin(self.applied[i].rev)
+            if ctx.node() != base:
+                msg = _('cannot delete revision %d above applied patches')
+                raise util.Abort(msg % rev)
 
-        del self.applied[:appliedbase]
-        self.applied_dirty = 1
-        self._clean_series(patches)
+            patch = self.applied[i].name
+            for fmt in ('[mq]: %s', 'imported patch %s'):
+                if ctx.description() == fmt % patch:
+                    msg = _('patch %s finalized without changeset message\n')
+                    repo.ui.status(msg % patch)
+                    break
+
+            patches.append(patch)
+        return patches
+
+    def finish(self, repo, revs):
+        patches = self._revpatches(repo, sorted(revs))
+        self._cleanup(patches, len(patches))
 
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):
@@ -663,37 +679,18 @@ class queue(object):
                 raise util.Abort(_("patch %s not in series file") % patch)
             realpatches.append(patch)
 
-        appliedbase = 0
+        numrevs = 0
         if opts.get('rev'):
             if not self.applied:
                 raise util.Abort(_('no patches applied'))
             revs = cmdutil.revrange(repo, opts['rev'])
             if len(revs) > 1 and revs[0] > revs[1]:
                 revs.reverse()
-            for rev in revs:
-                if appliedbase >= len(self.applied):
-                    raise util.Abort(_("revision %d is not managed") % rev)
+            revpatches = self._revpatches(repo, revs)
+            realpatches += revpatches
+            numrevs = len(revpatches)
 
-                base = bin(self.applied[appliedbase].rev)
-                node = repo.changelog.node(rev)
-                if node != base:
-                    raise util.Abort(_("cannot delete revision %d above "
-                                       "applied patches") % rev)
-                realpatches.append(self.applied[appliedbase].name)
-                appliedbase += 1
-
-        if not opts.get('keep'):
-            r = self.qrepo()
-            if r:
-                r.remove(realpatches, True)
-            else:
-                for p in realpatches:
-                    os.unlink(self.join(p))
-
-        if appliedbase:
-            del self.applied[:appliedbase]
-            self.applied_dirty = 1
-        self._clean_series(realpatches)
+        self._cleanup(realpatches, numrevs, opts.get('keep'))
 
     def check_toppatch(self, repo):
         if len(self.applied) > 0:
@@ -958,6 +955,7 @@ class queue(object):
                 end = start + 1
             else:
                 end = self.series.index(patch, start) + 1
+
             s = self.series[start:end]
             all_files = {}
             try:
@@ -977,13 +975,15 @@ class queue(object):
                         util.unlink(repo.wjoin(f))
                 self.ui.warn(_('done\n'))
                 raise
+
             top = self.applied[-1].name
-            if ret[0]:
-                self.ui.write(_("errors during apply, please fix and "
-                                "refresh %s\n") % top)
+            if ret[0] and ret[0] > 1:
+                msg = _("errors during apply, please fix and refresh %s\n")
+                self.ui.write(msg % top)
             else:
                 self.ui.write(_("now at: %s\n") % top)
             return ret[0]
+
         finally:
             wlock.release()
 

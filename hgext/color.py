@@ -29,10 +29,6 @@ also available. Effects are rendered with the ECMA-48 SGR control
 function (aka ANSI escape codes). This module also provides the
 render_text function, which can be used to add effects to any text.
 
-To enable this extension, add this to your .hgrc file:
-[extensions]
-color =
-
 Default effects may be overridden from the .hgrc file:
 
 [color]

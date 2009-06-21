@@ -21,12 +21,6 @@
 #
 # Binary files are not touched.
 #
-# Setup in hgrc:
-#
-#   [extensions]
-#   # enable extension
-#   hgext.keyword =
-#
 # Files to act upon/ignore are specified in the [keyword] section.
 # Customized keyword template mappings in the [keywordmaps] section.
 #

@@ -15,6 +15,8 @@ bar
 430ed4828a74fa4047bc816a25500f7472ab4bfe:foo
 %
 foo
+patch foo finalized without changeset message
+patch bar finalized without changeset message
 %%%
 4e7abb4840c46a910f6d7b4d3c3fc7e5209e684c foo
 430ed4828a74fa4047bc816a25500f7472ab4bfe bar

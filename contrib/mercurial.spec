@@ -71,6 +71,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/hg-viz
 %{_bindir}/git-rev-tree
 %{_bindir}/mercurial-convert-repo
-%{_libdir}/python%{pythonver}/site-packages/%{name}-*-py2.5.egg-info
+%if "%{?pythonver}" != "2.4"
+%{_libdir}/python%{pythonver}/site-packages/%{name}-*-py%{pythonver}.egg-info
+%endif
 %{pythonlib}
 %{hgext}

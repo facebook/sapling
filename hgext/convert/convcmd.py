@@ -80,7 +80,7 @@ class converter(object):
         self.authorfile = None
 
         # Record converted revisions persistently: maps source revision
-        # ID to target revision ID (both strings).  (This is how 
+        # ID to target revision ID (both strings).  (This is how
         # incremental conversions work.)
         self.map = mapfile(ui, revmapfile)
 
@@ -297,7 +297,7 @@ class converter(object):
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
-        newnode = self.dest.putcommit(files, copies, parents, commit, 
+        newnode = self.dest.putcommit(files, copies, parents, commit,
                                       self.source, self.map)
         self.source.converted(rev, newnode)
         self.map[rev] = newnode

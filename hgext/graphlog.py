@@ -12,59 +12,32 @@ commands. When this options is given, an ASCII representation of the
 revision graph is also shown.
 '''
 
-import os
+import os, sys
 from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
-from mercurial import hg, url, util
+from mercurial import hg, url, util, graphmod
 
-def revisions(repo, start, stop):
-    """cset DAG generator yielding (rev, node, [parents]) tuples
+ASCIIDATA = 'ASC'
 
-    This generator function walks through the revision history from revision
-    start to revision stop (which must be less than or equal to start).
-    """
-    assert start >= stop
-    cur = start
-    while cur >= stop:
-        ctx = repo[cur]
-        parents = [p.rev() for p in ctx.parents() if p.rev() != nullrev]
-        parents.sort()
-        yield (ctx, parents)
-        cur -= 1
+def asciiformat(ui, repo, revdag, opts):
+    """formats a changelog DAG walk for ASCII output"""
+    showparents = [ctx.node() for ctx in repo[None].parents()]
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    for (id, type, ctx, parentids) in revdag:
+        if type != graphmod.CHANGESET:
+            continue
+        displayer.show(ctx)
+        lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
+        char = ctx.node() in showparents and '@' or 'o'
+        yield (id, ASCIIDATA, (char, lines), parentids)
 
-def filerevs(repo, path, start, stop):
-    """file cset DAG generator yielding (rev, node, [parents]) tuples
-
-    This generator function walks through the revision history of a single
-    file from revision start to revision stop (which must be less than or
-    equal to start).
-    """
-    assert start >= stop
-    filerev = len(repo.file(path)) - 1
-    while filerev >= 0:
-        fctx = repo.filectx(path, fileid=filerev)
-        parents = [f.linkrev() for f in fctx.parents() if f.path() == path]
-        parents.sort()
-        if fctx.rev() <= start:
-            yield (fctx, parents)
-        if fctx.rev() <= stop:
-            break
-        filerev -= 1
-
-def grapher(nodes):
-    """grapher for asciigraph on a list of nodes and their parents
-
-    nodes must generate tuples (node, parents, char, lines) where
-     - parents must generate the parents of node, in sorted order,
-       and max length 2,
-     - char is the char to print as the node symbol, and
-     - lines are the lines to display next to the node.
-    """
+def asciiedges(nodes):
+    """adds edge info to changelog DAG walk suitable for ascii()"""
     seen = []
-    for node, parents, char, lines in nodes:
+    for node, type, data, parents in nodes:
         if node not in seen:
             seen.append(node)
         nodeidx = seen.index(node)
@@ -88,7 +61,7 @@ def grapher(nodes):
             edges.append((nodeidx, nodeidx + 1))
         nmorecols = len(nextseen) - ncols
         seen = nextseen
-        yield (char, lines, nodeidx, edges, ncols, nmorecols)
+        yield (nodeidx, type, data, edges, ncols, nmorecols)
 
 def fix_long_right_edges(edges):
     for (i, (start, end)) in enumerate(edges):
@@ -142,14 +115,16 @@ def get_padding_line(ni, n_columns, edges):
     line.extend(["|", " "] * (n_columns - ni - 1))
     return line
 
-def ascii(ui, grapher):
-    """prints an ASCII graph of the DAG returned by the grapher
+def ascii(ui, dag):
+    """prints an ASCII graph of the DAG
 
-    grapher is a generator that emits tuples with the following elements:
+    dag is a generator that emits tuples with the following elements:
 
-      - Character to use as node's symbol.
-      - List of lines to display as the node's text.
       - Column of the current node in the set of ongoing edges.
+      - Type indicator of node data == ASCIIDATA.
+      - Payload: (char, lines):
+        - Character to use as node's symbol.
+        - List of lines to display as the node's text.
       - Edges; a list of (col, next_col) indicating the edges between
         the current node and its parents.
       - Number of columns (ongoing edges) in the current revision.
@@ -160,7 +135,7 @@ def ascii(ui, grapher):
     """
     prev_n_columns_diff = 0
     prev_node_index = 0
-    for (node_ch, node_lines, node_index, edges, n_columns, n_columns_diff) in grapher:
+    for (node_index, type, (node_ch, node_lines), edges, n_columns, n_columns_diff) in dag:
 
         assert -2 < n_columns_diff < 2
         if n_columns_diff == -1:
@@ -278,34 +253,19 @@ def graphlog(ui, repo, path=None, **opts):
     if path:
         path = util.canonpath(repo.root, os.getcwd(), path)
     if path: # could be reset in canonpath
-        revdag = filerevs(repo, path, start, stop)
+        revdag = graphmod.filerevs(repo, path, start, stop)
     else:
-        revdag = revisions(repo, start, stop)
+        revdag = graphmod.revisions(repo, start, stop)
 
-    graphdag = graphabledag(ui, repo, revdag, opts)
-    ascii(ui, grapher(graphdag))
+    fmtdag = asciiformat(ui, repo, revdag, opts)
+    ascii(ui, asciiedges(fmtdag))
 
 def graphrevs(repo, nodes, opts):
-    include = set(nodes)
     limit = cmdutil.loglimit(opts)
-    count = 0
-    for node in reversed(nodes):
-        if count >= limit:
-            break
-        ctx = repo[node]
-        parents = [p.rev() for p in ctx.parents() if p.node() in include]
-        parents.sort()
-        yield (ctx, parents)
-        count += 1
-
-def graphabledag(ui, repo, revdag, opts):
-    showparents = [ctx.node() for ctx in repo[None].parents()]
-    displayer = show_changeset(ui, repo, opts, buffered=True)
-    for (ctx, parents) in revdag:
-        displayer.show(ctx)
-        lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
-        char = ctx.node() in showparents and '@' or 'o'
-        yield (ctx.rev(), parents, char, lines)
+    nodes.reverse()
+    if limit < sys.maxint:
+        nodes = nodes[:limit]
+    return graphmod.nodes(repo, nodes)
 
 def goutgoing(ui, repo, dest=None, **opts):
     """show the outgoing changesets alongside an ASCII revision graph
@@ -332,8 +292,8 @@ def goutgoing(ui, repo, dest=None, **opts):
 
     o = repo.changelog.nodesbetween(o, revs)[0]
     revdag = graphrevs(repo, o, opts)
-    graphdag = graphabledag(ui, repo, revdag, opts)
-    ascii(ui, grapher(graphdag))
+    fmtdag = asciiformat(ui, repo, revdag, opts)
+    ascii(ui, asciiedges(fmtdag))
 
 def gincoming(ui, repo, source="default", **opts):
     """show the incoming changesets alongside an ASCII revision graph
@@ -381,8 +341,8 @@ def gincoming(ui, repo, source="default", **opts):
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
         revdag = graphrevs(other, chlist, opts)
-        graphdag = graphabledag(ui, repo, revdag, opts)
-        ascii(ui, grapher(graphdag))
+        fmtdag = asciiformat(ui, repo, revdag, opts)
+        ascii(ui, asciiedges(fmtdag))
 
     finally:
         if hasattr(other, 'close'):

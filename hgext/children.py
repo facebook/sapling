@@ -8,6 +8,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
+'''provides children command to show children changesets'''
+
 from mercurial import cmdutil
 from mercurial.commands import templateopts
 from mercurial.i18n import _

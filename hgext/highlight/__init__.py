@@ -13,11 +13,6 @@
 It depends on the Pygments syntax highlighting library:
 http://pygments.org/
 
-To enable the extension add this to hgrc:
-
-[extensions]
-hgext.highlight =
-
 There is a single configuration option:
 
 [web]
@@ -30,10 +25,10 @@ The default is 'colorful'.
 
 import highlight
 from mercurial.hgweb import webcommands, webutil, common
-from mercurial import extensions
+from mercurial import extensions, encoding
 
 def filerevision_highlight(orig, web, tmpl, fctx):
-    mt = ''.join(tmpl('mimetype', encoding=web.encoding))
+    mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
     # only pygmentize for mimetype containing 'html' so we both match
     # 'text/html' and possibly 'application/xhtml+xml' in the future
     # so that we don't have to touch the extension when the mimetype
@@ -47,7 +42,7 @@ def filerevision_highlight(orig, web, tmpl, fctx):
     return orig(web, tmpl, fctx)
 
 def annotate_highlight(orig, web, req, tmpl):
-    mt = ''.join(tmpl('mimetype', encoding=web.encoding))
+    mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
     if 'html' in mt:
         fctx = webutil.filectx(web.repo, req)
         style = web.config('web', 'pygments_style', 'colorful')

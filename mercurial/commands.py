@@ -1230,16 +1230,14 @@ def grep(ui, repo, pattern, *pats, **opts):
                 for i in xrange(blo, bhi):
                     yield ('+', b[i])
 
-    prev = {}
-    def display(fn, rev, states, prevstates):
+    def display(fn, r, pstates, states):
         datefunc = ui.quiet and util.shortdate or util.datestr
         found = False
         filerevmatches = {}
-        r = prev.get(fn, -1)
         if opts.get('all'):
-            iter = difflinestates(states, prevstates)
+            iter = difflinestates(pstates, states)
         else:
-            iter = [('', l) for l in prevstates]
+            iter = [('', l) for l in states]
         for change, l in iter:
             cols = [fn, str(r)]
             if opts.get('line_number'):
@@ -1261,8 +1259,8 @@ def grep(ui, repo, pattern, *pats, **opts):
             found = True
         return found
 
-    fstate = {}
     skip = {}
+    revfiles = {}
     get = util.cachefunc(lambda r: repo[r].changeset())
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
     found = False
@@ -1270,46 +1268,58 @@ def grep(ui, repo, pattern, *pats, **opts):
     for st, rev, fns in changeiter:
         if st == 'window':
             matches.clear()
+            revfiles.clear()
         elif st == 'add':
             ctx = repo[rev]
-            matches[rev] = {}
+            pctx = ctx.parents()[0]
+            parent = pctx.rev()
+            matches.setdefault(rev, {})
+            matches.setdefault(parent, {})
+            files = revfiles.setdefault(rev, [])
             for fn in fns:
-                if fn in skip:
-                    continue
+                flog = getfile(fn)
                 try:
-                    grepbody(fn, rev, getfile(fn).read(ctx.filenode(fn)))
-                    fstate.setdefault(fn, [])
-                    if follow:
-                        copied = getfile(fn).renamed(ctx.filenode(fn))
-                        if copied:
-                            copies.setdefault(rev, {})[fn] = copied[0]
+                    fnode = ctx.filenode(fn)
                 except error.LookupError:
-                    pass
+                    continue
+
+                copied = flog.renamed(fnode)
+                copy = follow and copied and copied[0]
+                if copy:
+                    copies.setdefault(rev, {})[fn] = copy
+                if fn in skip:
+                    if copy:
+                        skip[copy] = True
+                    continue
+                files.append(fn)
+
+                if not matches[rev].has_key(fn):
+                    grepbody(fn, rev, flog.read(fnode))
+
+                pfn = copy or fn
+                if not matches[parent].has_key(pfn):
+                    try:
+                        fnode = pctx.filenode(pfn)
+                        grepbody(pfn, parent, flog.read(fnode))
+                    except error.LookupError:
+                        pass
         elif st == 'iter':
-            for fn, m in sorted(matches[rev].items()):
+            parent = repo[rev].parents()[0].rev()
+            for fn in sorted(revfiles.get(rev, [])):
+                states = matches[rev][fn]
                 copy = copies.get(rev, {}).get(fn)
                 if fn in skip:
                     if copy:
                         skip[copy] = True
                     continue
-                if fn in prev or fstate[fn]:
-                    r = display(fn, rev, m, fstate[fn])
+                pstates = matches.get(parent, {}).get(copy or fn, [])
+                if pstates or states:
+                    r = display(fn, rev, pstates, states)
                     found = found or r
                     if r and not opts.get('all'):
                         skip[fn] = True
                         if copy:
                             skip[copy] = True
-                fstate[fn] = m
-                if copy:
-                    fstate[copy] = m
-                prev[fn] = rev
-
-    for fn, state in sorted(fstate.items()):
-        if fn in skip:
-            continue
-        if fn not in copies.get(prev[fn], {}):
-            found = display(fn, rev, {}, state) or found
-    return (not found and 1) or 0
 
 def heads(ui, repo, *branchrevs, **opts):
     """show current repository heads or show branch heads
@@ -1473,18 +1483,9 @@ def help_(ui, name=None, with_version=False):
             else:
                 ui.write(' %-*s   %s\n' % (m, f, h[f]))
 
-        exts = list(extensions.extensions())
-        if exts and name != 'shortlist':
-            ui.write(_('\nenabled extensions:\n\n'))
-            maxlength = 0
-            exthelps = []
-            for ename, ext in exts:
-                doc = (gettext(ext.__doc__) or _('(no help text available)'))
-                ename = ename.split('.')[-1]
-                maxlength = max(len(ename), maxlength)
-                exthelps.append((ename, doc.splitlines(0)[0].strip()))
-            for ename, text in exthelps:
-                ui.write(_(' %s   %s\n') % (ename.ljust(maxlength), text))
+        if name != 'shortlist':
+            exts, maxlength = extensions.enabled()
+            ui.write(help.listexts(_('enabled extensions:'), exts, maxlength))
 
         if not ui.quiet:
             addglobalopts(True)
@@ -2108,7 +2109,7 @@ def merge(ui, repo, node=None, **opts):
                                'use "hg update" or merge with an explicit rev'))
         node = parent == bheads[0] and bheads[-1] or bheads[0]
 
-    if opts.get('show'):
+    if opts.get('preview'):
         p1 = repo['.']
         p2 = repo[node]
         common = p1.ancestor(p2)
@@ -2670,7 +2671,8 @@ def rollback(ui, repo):
     This command should be used with care. There is only one level of
     rollback, and there is no way to undo a rollback. It will also
     restore the dirstate at the time of the last transaction, losing
-    any dirstate changes since that time.
+    any dirstate changes since that time. This command does not alter
+    the working directory.
 
     Transactions are used to encapsulate the effects of all commands
     that create new changesets or propagate existing changesets into a
@@ -2718,9 +2720,9 @@ def serve(ui, repo, **opts):
 
     baseui = repo and repo.baseui or ui
     optlist = ("name templates style address port prefix ipv6"
-               " accesslog errorlog webdir_conf certificate")
+               " accesslog errorlog webdir_conf certificate encoding")
     for o in optlist.split():
-        if opts[o]:
+        if opts.get(o, None):
             baseui.setconfig("web", o, str(opts[o]))
             if (repo is not None) and (repo.ui != baseui):
                 repo.ui.setconfig("web", o, str(opts[o]))
@@ -2965,7 +2967,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 
     return postincoming(ui, repo, modheads, opts.get('update'), None)
 
-def update(ui, repo, node=None, rev=None, clean=False, date=None):
+def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     """update working directory
 
     Update the repository's working directory to the specified
@@ -2981,7 +2983,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
 
     When there are uncommitted changes, use option -C/--clean to
     discard them, forcibly replacing the state of the working
-    directory with the requested revision.
+    directory with the requested revision. Alternately, use -c/--check
+    to abort.
 
     When there are uncommitted changes and option -C/--clean is not
     used, and the parent revision and requested revision are on the
@@ -3000,6 +3003,12 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None):
 
     if not rev:
         rev = node
+
+    if not clean and check:
+        # we could use dirty() but we can ignore merge and branch trivia
+        c = repo[None]
+        if c.modified() or c.added() or c.removed():
+            raise util.Abort(_("uncommitted local changes"))
 
     if date:
         if rev:
@@ -3358,7 +3367,7 @@ table = {
         (merge,
          [('f', 'force', None, _('force a merge with outstanding changes')),
           ('r', 'rev', '', _('revision to merge')),
-          ('S', 'show', None,
+          ('P', 'preview', None,
            _('review revisions to merge (no merge is performed)'))],
          _('[-f] [[-r] REV]')),
     "outgoing|out":
@@ -3492,6 +3501,7 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('C', 'clean', None, _('overwrite locally modified files (no backup)')),
+          ('c', 'check', None, _('check for uncommitted changes')),
           ('d', 'date', '', _('tipmost revision matching date')),
           ('r', 'rev', '', _('revision'))],
          _('[-C] [-d DATE] [[-r] REV]')),

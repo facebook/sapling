@@ -64,7 +64,8 @@ class hgweb(object):
             self.maxshortchanges = int(self.config("web", "maxshortchanges", 60))
             self.maxfiles = int(self.config("web", "maxfiles", 10))
             self.allowpull = self.configbool("web", "allowpull", True)
-            self.encoding = self.config("web", "encoding", encoding.encoding)
+            encoding.encoding = self.config("web", "encoding",
+                                            encoding.encoding)
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
@@ -80,28 +81,6 @@ class hgweb(object):
     def run_wsgi(self, req):
 
         self.refresh()
-
-        # process this if it's a protocol request
-        # protocol bits don't need to create any URLs
-        # and the clients always use the old URL structure
-
-        cmd = req.form.get('cmd', [''])[0]
-        if cmd and cmd in protocol.__all__:
-            try:
-                if cmd in perms:
-                    try:
-                        self.check_perm(req, perms[cmd])
-                    except ErrorResponse, inst:
-                        if cmd == 'unbundle':
-                            req.drain()
-                        raise
-                method = getattr(protocol, cmd)
-                return method(self.repo, req)
-            except ErrorResponse, inst:
-                req.respond(inst, protocol.HGTYPE)
-                if not inst.message:
-                    return []
-                return '0\n%s\n' % inst.message,
 
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
@@ -121,6 +100,30 @@ class hgweb(object):
         else:
             query = req.env['QUERY_STRING'].split('&', 1)[0]
             query = query.split(';', 1)[0]
+
+        # process this if it's a protocol request
+        # protocol bits don't need to create any URLs
+        # and the clients always use the old URL structure
+
+        cmd = req.form.get('cmd', [''])[0]
+        if cmd and cmd in protocol.__all__:
+            if query:
+                raise ErrorResponse(HTTP_NOT_FOUND)
+            try:
+                if cmd in perms:
+                    try:
+                        self.check_perm(req, perms[cmd])
+                    except ErrorResponse, inst:
+                        if cmd == 'unbundle':
+                            req.drain()
+                        raise
+                method = getattr(protocol, cmd)
+                return method(self.repo, req)
+            except ErrorResponse, inst:
+                req.respond(inst, protocol.HGTYPE)
+                if not inst.message:
+                    return []
+                return '0\n%s\n' % inst.message,
 
         # translate user-visible url structure to internal structure
 
@@ -160,7 +163,7 @@ class hgweb(object):
 
         try:
             tmpl = self.templater(req)
-            ctype = tmpl('mimetype', encoding=self.encoding)
+            ctype = tmpl('mimetype', encoding=encoding.encoding)
             ctype = templater.stringify(ctype)
 
             # check read permissions non-static content
@@ -219,7 +222,7 @@ class hgweb(object):
         # some functions for the templater
 
         def header(**map):
-            yield tmpl('header', encoding=self.encoding, **map)
+            yield tmpl('header', encoding=encoding.encoding, **map)
 
         def footer(**map):
             yield tmpl("footer", **map)

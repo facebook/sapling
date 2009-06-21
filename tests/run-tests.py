@@ -16,7 +16,7 @@
 # If you change this script, it is recommended that you ensure you
 # haven't broken it by running it in various modes with a representative
 # sample of test scripts.  For example:
-# 
+#
 #  1) serial, no coverage, temp install:
 #      ./run-tests.py test-s*
 #  2) serial, no coverage, local hg:

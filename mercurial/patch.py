@@ -972,7 +972,7 @@ def iterhunks(ui, fp, sourcefile=None, textmode=False):
 def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
               eol=None):
     """
-    Reads a patch from fp and tries to apply it. 
+    Reads a patch from fp and tries to apply it.
 
     The dict 'changed' is filled in with all of the filenames changed
     by the patch. Returns 0 for a clean patch, -1 if any rejects were
@@ -1137,7 +1137,7 @@ def internalpatch(patchobj, ui, strip, cwd, files={}, eolmode='strict'):
         eol = {'strict': None, 'crlf': '\r\n', 'lf': '\n'}[eolmode.lower()]
     except KeyError:
         raise util.Abort(_('Unsupported line endings type: %s') % eolmode)
-            
+
     try:
         fp = file(patchobj, 'rb')
     except TypeError:

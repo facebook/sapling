@@ -6,10 +6,6 @@
 # This program was inspired by the "cvspurge" script contained in CVS utilities
 # (http://www.red-bean.com/cvsutils/).
 #
-# To enable the "purge" extension put these lines in your ~/.hgrc:
-#  [extensions]
-#  hgext.purge =
-#
 # For help on the usage of "hg purge" use:
 #  hg help purge
 #
@@ -26,6 +22,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+'''enable removing untracked files only'''
 
 from mercurial import util, commands, cmdutil
 from mercurial.i18n import _

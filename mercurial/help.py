@@ -6,6 +6,90 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from i18n import _
+import extensions
+
+
+def moduledoc(file):
+    '''return the top-level python documentation for the given file
+
+    Loosely inspired by pydoc.source_synopsis(), but rewritten to handle \'''
+    as well as """ and to return the whole text instead of just the synopsis'''
+    result = []
+
+    line = file.readline()
+    while line[:1] == '#' or not line.strip():
+        line = file.readline()
+        if not line: break
+
+    start = line[:3]
+    if start == '"""' or start == "'''":
+        line = line[3:]
+        while line:
+            if line.rstrip().endswith(start):
+                line = line.split(start)[0]
+                if line:
+                    result.append(line)
+                break
+            elif not line:
+                return None # unmatched delimiter
+            result.append(line)
+            line = file.readline()
+    else:
+        return None
+
+    return ''.join(result)
+
+def listexts(header, exts, maxlength):
+    '''return a text listing of the given extensions'''
+    if not exts:
+        return ''
+    result = '\n%s\n\n' % header
+    for name, desc in sorted(exts.iteritems()):
+        result += ' %s   %s\n' % (name.ljust(maxlength), desc)
+    return result
+
+def extshelp():
+    doc = _(r'''
+    Mercurial has a mechanism for adding new features through the
+    use of extensions. Extensions may bring new commands, or new
+    hooks, or change Mercurial's behavior.
+
+    Extensions are not loaded by default for a variety of reasons,
+    they may be meant for advanced users or provide potentially
+    dangerous commands (e.g. mq and rebase allow history to be
+    rewritten), they might not be ready for prime-time yet, or
+    they may alter Mercurial's behavior. It is thus up to the user
+    to activate extensions as desired.
+
+    To enable the "foo" extension, either shipped with Mercurial
+    or in the Python search path, create an entry for it in your
+    hgrc, like this:
+
+      [extensions]
+      foo =
+
+    You may also specify the full path to an extension:
+
+      [extensions]
+      myfeature = ~/.hgext/myfeature.py
+
+    To explicitly disable an extension enabled in an hgrc of broader
+    scope, prepend its path with !:
+
+      [extensions]
+      # disabling extension bar residing in /ext/path
+      hgext.bar = !/path/to/extension/bar.py
+      # ditto, but no path was supplied for extension baz
+      hgext.baz = !
+    ''')
+
+    exts, maxlength = extensions.enabled()
+    doc += listexts(_('enabled extensions:'), exts, maxlength)
+
+    exts, maxlength = extensions.disabled()
+    doc += listexts(_('disabled extensions:'), exts, maxlength)
+
+    return doc
 
 helptable = (
     (["dates"], _("Date Formats"),
@@ -418,4 +502,5 @@ PYTHONPATH::
       The push command will look for a path named 'default-push', and
       prefer it over 'default' if both are defined.
     ''')),
+    (["extensions"], _("Using additional features"), extshelp),
 )

@@ -26,14 +26,12 @@ created new head
 .hgtags@c071f74ab5eb, line 2: cannot parse entry
 .hgtags@c071f74ab5eb, line 4: node 'foo' is not well formed
 .hgtags@4ca6f1b1a68c, line 2: node 'x' is not well formed
-localtags, line 1: tag 'invalid' refers to unknown node
 tip                                8:4ca6f1b1a68c
 first                              0:0acdaf898367
 changeset:   8:4ca6f1b1a68c
 .hgtags@c071f74ab5eb, line 2: cannot parse entry
 .hgtags@c071f74ab5eb, line 4: node 'foo' is not well formed
 .hgtags@4ca6f1b1a68c, line 2: node 'x' is not well formed
-localtags, line 1: tag 'invalid' refers to unknown node
 tag:         tip
 parent:      3:b2ef3841386b
 user:        test

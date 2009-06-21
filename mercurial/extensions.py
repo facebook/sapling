@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import imp, os
-import util, cmdutil
-from i18n import _
+import imp, os, sys
+import util, cmdutil, help
+from i18n import _, gettext
 
 _extensions = {}
 _order = []
@@ -117,3 +117,61 @@ def wrapfunction(container, funcname, wrapper):
     origfn = getattr(container, funcname)
     setattr(container, funcname, wrap)
     return origfn
+
+def disabled():
+    '''find disabled extensions from hgext
+    returns a dict of {name: desc}, and the max name length'''
+
+    import hgext
+    extpath = os.path.dirname(os.path.abspath(hgext.__file__))
+
+    exts = {}
+    maxlength = 0
+    for e in os.listdir(extpath):
+
+        if e.endswith('.py'):
+            name = e.rsplit('.', 1)[0]
+            path = os.path.join(extpath, e)
+        else:
+            name = e
+            path = os.path.join(extpath, e, '__init__.py')
+            if not os.path.exists(path):
+                continue
+
+        if name in exts or name in _order or name == '__init__':
+            continue
+
+        try:
+            file = open(path)
+        except IOError:
+            continue
+        else:
+            doc = help.moduledoc(file)
+            file.close()
+
+        if doc: # extracting localized synopsis
+            exts[name] = gettext(doc).splitlines()[0]
+        else:
+            exts[name] = _('(no help text available)')
+
+        if len(name) > maxlength:
+            maxlength = len(name)
+
+    return exts, maxlength
+
+def enabled():
+    '''return a dict of {name: desc} of extensions, and the max name length'''
+
+    if not enabled:
+        return {}, 0
+
+    exts = {}
+    maxlength = 0
+    exthelps = []
+    for ename, ext in extensions():
+        doc = (gettext(ext.__doc__) or _('(no help text available)'))
+        ename = ename.split('.')[-1]
+        maxlength = max(len(ename), maxlength)
+        exts[ename] = doc.splitlines(0)[0].strip()
+
+    return exts, maxlength

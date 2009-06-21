@@ -262,7 +262,7 @@ class localrepository(repo.repository):
                     warn(_("node '%s' is not well formed") % node)
                     continue
                 if bin_n not in self.changelog.nodemap:
-                    warn(_("tag '%s' refers to unknown node") % key)
+                    # silently ignore as pull -r might cause this
                     continue
 
                 h = []
@@ -290,11 +290,24 @@ class localrepository(repo.repository):
                 globaltags[k] = an, ah
                 tagtypes[k] = tagtype
 
-        # read the tags file from each head, ending with the tip
+        seen = set()
         f = None
-        for rev, node, fnode in self._hgtagsnodes():
-            f = (f and f.filectx(fnode) or
-                 self.filectx('.hgtags', fileid=fnode))
+        ctxs = []
+        for node in self.heads():
+            try:
+                fnode = self[node].filenode('.hgtags')
+            except error.LookupError:
+                continue
+            if fnode not in seen:
+                seen.add(fnode)
+                if not f:
+                    f = self.filectx('.hgtags', fileid=fnode)
+                else:
+                    f = f.filectx(fnode)
+                ctxs.append(f)
+
+        # read the tags file from each head, ending with the tip
+        for f in reversed(ctxs):
             readtags(f.data().splitlines(), f, "global")
 
         try:
@@ -327,22 +340,6 @@ class localrepository(repo.repository):
         self.tags()
 
         return self._tagstypecache.get(tagname)
-
-    def _hgtagsnodes(self):
-        last = {}
-        ret = []
-        for node in reversed(self.heads()):
-            c = self[node]
-            rev = c.rev()
-            try:
-                fnode = c.filenode('.hgtags')
-            except error.LookupError:
-                continue
-            ret.append((rev, node, fnode))
-            if fnode in last:
-                ret[last[fnode]] = None
-            last[fnode] = len(ret) - 1
-        return [item for item in ret if item]
 
     def tagslist(self):
         '''return a list of tags ordered by revision'''

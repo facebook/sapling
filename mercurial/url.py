@@ -109,7 +109,9 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             return (user, passwd)
 
         if not user:
-            user, passwd = self._readauthtoken(authuri)
+            auth = self.readauthtoken(authuri)
+            if auth:
+                user, passwd = auth.get('username'), auth.get('password')
         if not user or not passwd:
             if not self.ui.interactive():
                 raise util.Abort(_('http authorization required'))
@@ -132,7 +134,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
         msg = _('http auth: user %s, password %s\n')
         self.ui.debug(msg % (user, passwd and '*' * len(passwd) or 'not set'))
 
-    def _readauthtoken(self, uri):
+    def readauthtoken(self, uri):
         # Read configuration
         config = dict()
         for key, val in self.ui.configitems('auth'):
@@ -143,7 +145,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
         # Find the best match
         scheme, hostpath = uri.split('://', 1)
         bestlen = 0
-        bestauth = None, None
+        bestauth = None
         for auth in config.itervalues():
             prefix = auth.get('prefix')
             if not prefix: continue
@@ -155,7 +157,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             if (prefix == '*' or hostpath.startswith(prefix)) and \
                 len(prefix) > bestlen and scheme in schemes:
                 bestlen = len(prefix)
-                bestauth = auth.get('username'), auth.get('password')
+                bestauth = auth
         return bestauth
 
 class proxyhandler(urllib2.ProxyHandler):
@@ -411,8 +413,38 @@ if has_https:
         send = _gen_sendfile(httplib.HTTPSConnection)
 
     class httpshandler(keepalive.KeepAliveHandler, urllib2.HTTPSHandler):
+        def __init__(self, ui):
+            keepalive.KeepAliveHandler.__init__(self)
+            urllib2.HTTPSHandler.__init__(self)
+            self.ui = ui
+            self.pwmgr = passwordmgr(self.ui)
+
         def https_open(self, req):
-            return self.do_open(httpsconnection, req)
+            self.auth = self.pwmgr.readauthtoken(req.get_full_url())
+            return self.do_open(self._makeconnection, req)
+
+        def _makeconnection(self, host, port=443, *args, **kwargs):
+            keyfile = None
+            certfile = None
+
+            if args: # key_file
+                keyfile = args.pop(0)
+            if args: # cert_file
+                certfile = args.pop(0)
+
+            # if the user has specified different key/cert files in
+            # hgrc, we prefer these
+            if self.auth and 'key' in self.auth and 'cert' in self.auth:
+                keyfile = self.auth['key']
+                certfile = self.auth['cert']
+
+            # let host port take precedence
+            if ':' in host and '[' not in host or ']:' in host:
+                host, port = host.rsplit(':', 1)
+                if '[' in host:
+                    host = host[1:-1]
+
+            return httpsconnection(host, port, keyfile, certfile, *args, **kwargs)
 
 # In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
 # it doesn't know about the auth type requested.  This can happen if
@@ -460,7 +492,7 @@ def opener(ui, authinfo=None):
     '''
     handlers = [httphandler()]
     if has_https:
-        handlers.append(httpshandler())
+        handlers.append(httpshandler(ui))
 
     handlers.append(proxyhandler(ui))
 

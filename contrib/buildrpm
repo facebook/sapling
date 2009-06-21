@@ -1,19 +1,19 @@
 #!/bin/sh
 #
 # Build a Mercurial RPM in place.
-# Known to work on:
-# - Fedora 9
-# - Fedora 10
 #
 # Bryan O'Sullivan <bos@serpentine.com>
+#
+# Tested on
+# - Fedora 10
+# - Fedora 11
+# - Centos 5.3 (with Fedora EPEL repo for asciidoc)
 
-if hg --version > /dev/null 2>&1; then :
-else
-    echo 'hg command not available!' 1>&2
-    exit 1
-fi
+HG="`dirname $0`/../hg"
+PYTHONPATH="`dirname $0`/../mercurial/pure"
+export PYTHONPATH
 
-root="`hg root 2>/dev/null`"
+root="`$HG root 2>/dev/null`"
 specfile=contrib/mercurial.spec
 
 if [ -z "$root" ]; then
@@ -26,7 +26,7 @@ rpmdir=/tmp/"`basename $root | sed 's/ /_/'`"-rpm # FIXME: Insecure /tmp handlin
 cd "$root"
 rm -rf $rpmdir
 mkdir -p $rpmdir/RPMS
-hg clone "$root" $rpmdir/BUILD
+$HG clone "$root" $rpmdir/BUILD
 
 if [ ! -f $specfile ]; then
     echo "Cannot find $specfile!" 1>&2
@@ -35,11 +35,11 @@ fi
 
 tmpspec=/tmp/`basename "$specfile"`.$$ # FIXME: Insecure /tmp handling
 # Use the most recent tag as the version.
-version=`hg tags | perl -e 'while(<STDIN>){if(/^(\d\S+)/){print$1;exit}}'`
+version=`$HG tags | python -c 'import sys; print [l for l in sys.stdin.readlines() if l[0].isdigit()][0].split()[0]'`
 # Compute the release number as the difference in revision numbers
 # between the tip and the most recent tag.
-release=`hg tags | perl -e 'while(<STDIN>){($tag,$id)=/^(\S+)\s+(\d+)/;if($tag eq "tip"){$tip = $id}elsif($tag=~/^\d/){print $tip-$id+1;exit}}'`
-tip=`hg -q tip`
+release=`$HG tags | python -c 'import sys; l = sys.stdin.readlines(); print int(l[0].split()[1].split(":")[0]) - int([x for x in l if x[0].isdigit()][0].split()[1].split(":")[0])'`
+tip=`$HG -q tip`
 
 # Beat up the spec file
 sed -e 's,^Source:.*,Source: /dev/null,' \
@@ -51,11 +51,11 @@ sed -e 's,^Source:.*,Source: /dev/null,' \
 
 cat <<EOF >> $tmpspec
 %changelog
-* `date +'%a %b %d %Y'` `hg showconfig ui.username` $version-$release
+* `date +'%a %b %d %Y'` `$HG showconfig ui.username` $version-$release
 - Automatically built via $0
 
 EOF
-hg log \
+$HG log \
      --template '* {date|rfc822date} {author}\n- {desc|firstline}\n\n' \
      .hgtags \
   | sed -e 's/^\(\* [MTWFS][a-z][a-z]\), \([0-3][0-9]\) \([A-Z][a-z][a-z]\) /\1 \3 \2 /' \

@@ -13,9 +13,12 @@ a
 b
 series
 status
+patch a finalized without changeset message
 1 [mq]: a
 0 base
 abort: cannot delete revision 3 above applied patches
+patch d finalized without changeset message
+patch e finalized without changeset message
 f
 4 [mq]: f
 3 [mq]: e
@@ -32,11 +35,14 @@ abort: unknown revision 'c'!
 applying c
 patch c is empty
 now at: c
+patch a finalized without changeset message
+patch b finalized without changeset message
 c
 3 imported patch c
 2 [mq]: b
 1 [mq]: a
 0 base
+patch c finalized without changeset message
 3 imported patch c
 2 [mq]: b
 1 [mq]: a

@@ -224,7 +224,6 @@ def addaliases(ui, cmdtable):
     # but only if they have been defined prior to the current definition.
     for alias, definition in ui.configitems('alias'):
         aliasdef = cmdalias(alias, definition, cmdtable)
-        
         cmdtable[alias] = (aliasdef, aliasdef.opts, aliasdef.help)
         if aliasdef.norepo:
             commands.norepo += ' %s' % alias
