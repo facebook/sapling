@@ -135,8 +135,10 @@ def disabled():
         else:
             name = e
             path = os.path.join(extpath, e, '__init__.py')
+            if not os.path.exists(path):
+                continue
 
-        if name in exts or name == '__init__' or not os.path.exists(path):
+        if name in exts or name == '__init__':
             continue
 
         try:
