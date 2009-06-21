@@ -644,70 +644,34 @@ class svn_source(converter_source):
                 copies[self.recode(entry)] = self.recode(copyfrom_path)
             elif kind == 0: # gone, but had better be a deleted *file*
                 self.ui.debug(_("gone from %s\n") % ent.copyfrom_rev)
-
-                # if a branch is created but entries are removed in
-                # the same changeset, get the right fromrev
-                # parents cannot be empty here, you cannot remove
-                # things from a root revision.
-                uuid, old_module, fromrev = self.revsplit(parents[0])
-
-                basepath = old_module + "/" + self.getrelpath(path)
-                entrypath = basepath
-
-                def lookup_parts(p):
-                    rc = None
-                    parts = p.split("/")
-                    for i in range(len(parts)):
-                        part = "/".join(parts[:i])
-                        info = part, copyfrom.get(part, None)
-                        if info[1] is not None:
-                            self.ui.debug(_("found parent directory %s\n") % info[1])
-                            rc = info
-                    return rc
-
-                self.ui.debug(_("base, entry %s %s\n") % (basepath, entrypath))
-
-                frompath, froment = lookup_parts(entrypath) or (None, revnum - 1)
-
-                # need to remove fragment from lookup_parts and
-                # replace with copyfrom_path
-                if frompath is not None:
-                    self.ui.debug(_("munge-o-matic\n"))
-                    self.ui.debug(entrypath + '\n')
-                    self.ui.debug(entrypath[len(frompath):] + '\n')
-                    entrypath = froment.copyfrom_path + entrypath[len(frompath):]
-                    fromrev = froment.copyfrom_rev
-                    self.ui.debug(_("info: %s %s %s %s\n") % (frompath, froment, ent, entrypath))
+                pmodule, prevnum = self.revsplit(parents[0])[1:]
+                parentpath = pmodule + "/" + entrypath
+                self.ui.debug(_("entry %s\n") % parentpath)
 
                 # We can avoid the reparent calls if the module has
                 # not changed but it probably does not worth the pain.
                 prevmodule = self.reparent('')
-                fromkind = svn.ra.check_path(self.ra, entrypath.strip('/'), fromrev)
+                fromkind = svn.ra.check_path(self.ra, parentpath.strip('/'), prevnum)
                 self.reparent(prevmodule)
 
                 if fromkind == svn.core.svn_node_file:
                     entries.append(self.recode(entry))
                 elif fromkind == svn.core.svn_node_dir:
-                    # Sometimes this is tricky. For example: in The
-                    # Subversion Repository revision 6940 a dir was
-                    # copied and one of its files was deleted from the
-                    # new location in the same commit. This code can't
-                    # deal with that yet.
                     if ent.action == 'C':
-                        children = self._find_children(path, fromrev)
+                        children = self._find_children(path, prevnum)
                     else:
-                        oroot = entrypath.strip('/')
+                        oroot = parentpath.strip('/')
                         nroot = path.strip('/')
-                        children = self._find_children(oroot, fromrev)
+                        children = self._find_children(oroot, prevnum)
                         children = [s.replace(oroot,nroot) for s in children]
 
                     for child in children:
-                        entrypath = self.getrelpath("/" + child, old_module)
-                        if not entrypath:
+                        childpath = self.getrelpath("/" + child, pmodule)
+                        if not childpath:
                             continue
-                        if entrypath in copies:
-                            del copies[entrypath]
-                        entries.append(entrypath)
+                        if childpath in copies:
+                            del copies[childpath]
+                        entries.append(childpath)
                 else:
                     self.ui.debug(_('unknown path in revision %d: %s\n') % \
                                   (revnum, path))

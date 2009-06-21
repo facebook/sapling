@@ -22,15 +22,19 @@ cd project
 echo a > trunk/a
 echo b > trunk/b
 echo c > trunk/c
+mkdir trunk/dir
+echo e > trunk/dir/e
 # Add a file within branches, used to confuse branch detection
 echo d > branches/notinbranch
-svn add trunk/a trunk/b trunk/c branches/notinbranch
+svn add trunk/a trunk/b trunk/c trunk/dir branches/notinbranch
 svn ci -m hello
+svn up
 
 # Branch to old
 svn copy trunk branches/old
 svn rm branches/old/c
-svn ci -m "branch trunk, remove c"
+svn rm branches/old/dir
+svn ci -m "branch trunk, remove c and dir"
 svn up
 
 # Update trunk

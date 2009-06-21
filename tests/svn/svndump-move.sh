@@ -57,6 +57,17 @@ else
     # Copy a directory from a past revision
     svn copy -r 7 $svnurl/subproject/trunk/d2 $svnurl/subproject/trunk -m copydirfrompast
 fi
+
+# Copy a directory while removing a subdirectory
+svn up
+mkdir -p subproject/trunk/d3/d31
+echo e > subproject/trunk/d3/d31/e
+echo f > subproject/trunk/d3/f
+svn add subproject/trunk/d3
+svn ci -m "add d3"
+svn copy subproject/trunk/d3 subproject/trunk/d4
+svn rm subproject/trunk/d3/d31
+svn ci -m "copy dir and remove subdir"
 cd ..
 
 svnadmin dump svn-repo > ../move.svndump
