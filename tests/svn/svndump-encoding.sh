@@ -45,6 +45,13 @@ svn up
 svn cp branches/branché branches/branchée
 echo a >> branches/branché/a
 svn ci -m 'branch to branchée'
+
+# Create tag with weird name
+svn up
+svn cp trunk tags/branché
+svn ci -m 'tag trunk'
+svn cp branches/branchée tags/branchée
+svn ci -m 'tag branché'
 cd ..
 
 svnadmin dump svn-repo > ../encoding.svndump
