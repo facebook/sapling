@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import imp, os, sys
+import imp, os
 import util, cmdutil, help
 from i18n import _, gettext
 
