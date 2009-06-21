@@ -147,12 +147,14 @@ class GitHandler(object):
         self.previous_entries = {}
         self.written_trees = {}
         self.ui.status(_("importing Hg objects into Git\n"))
-        total = len(self.repo.changelog)
+        nodes = [self.repo.lookup(n) for n in self.repo]
+        export = [node for node in nodes if not hex(node) in self._map_hg]
+        total = len(export)
         if total:
           magnitude = int(math.log(total, 10)) + 1
         else:
           magnitude = 1
-        for i, rev in enumerate(self.repo.changelog):
+        for i, rev in enumerate(export):
             if i%100 == 0:
                 self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
 
@@ -161,9 +163,8 @@ class GitHandler(object):
             if state == 'octopus':
                 self.ui.debug("revision %d is a part of octopus explosion\n" % rev)
                 continue
-            pgit_sha, already_written = self.export_hg_commit(rev)
-            if not already_written:
-                self.save_map()
+            self.export_hg_commit(rev)
+            self.save_map()
 
     # convert this commit into git objects
     # go through the manifest, convert all blobs/trees we don't have
@@ -171,13 +172,6 @@ class GitHandler(object):
     def export_hg_commit(self, rev):
         def is_octopus_part(ctx):
             return ctx.extra().get('hg-git', None) in set(['octopus', 'octopus-done'])
-
-        # return if we've already processed this
-        node = self.repo.changelog.lookup(rev)
-        phgsha = hex(node)
-        pgit_sha = self.map_git_get(phgsha)
-        if pgit_sha:
-            return pgit_sha, True
 
         self.ui.note(_("converting revision %s\n") % rev)
 
@@ -199,12 +193,9 @@ class GitHandler(object):
             parents = ctx.parents()
 
         for parent in parents:
-            p_rev = parent.rev()
-            hgsha = hex(parent.node())
-            git_sha = self.map_git_get(hgsha)
-            if not p_rev == -1:
-                if not git_sha:
-                    self.export_hg_commit(p_rev)
+            p_node = parent.node()
+            if p_node != nullid and not hex(p_node) in self._map_hg:
+                self.export_hg_commit(p_rev)
 
         tree_sha, renames = self.write_git_tree(ctx)
 
@@ -289,8 +280,8 @@ class GitHandler(object):
                 commit['parents'].append(git_sha)
 
         commit_sha = self.git.write_commit_hash(commit) # writing new blobs to git
-        self.map_set(commit_sha, phgsha)
-        return commit_sha, False
+        self.map_set(commit_sha, ctx.hex())
+        return commit_sha
 
     def write_git_tree(self, ctx):
         trees = {}
@@ -412,7 +403,7 @@ class GitHandler(object):
         # get a list of all the head shas
         if refs:
           for head, sha in refs.iteritems():
-            todo.append(sha)
+              todo.append(sha)
         else:
           if remote_name:
               todo = self.git.remote_refs(remote_name).values()[:]
@@ -443,6 +434,7 @@ class GitHandler(object):
         # sort the commits
         commits = toposort.TopoSort(convert_list).items()
 
+        commits = [commit for commit in commits if not commit in self._map_git]
         # import each of the commits, oldest first
         total = len(commits)
         magnitude = int(math.log(total, 10)) + 1 if total else 1
@@ -450,8 +442,7 @@ class GitHandler(object):
             if i%100 == 0:
                 self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
             commit = convert_list[csha]
-            if not self.map_hg_get(csha): # it's already here
-                self.import_git_commit(commit)
+            self.import_git_commit(commit)
 
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
