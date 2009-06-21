@@ -249,11 +249,6 @@ class svn_source(converter_source):
             raise util.Abort(_('svn: start revision %s is not an integer')
                              % self.startrev)
 
-        try:
-            self.get_blacklist()
-        except IOError:
-            pass
-
         self.head = self.latest(self.module, latest)
         if not self.head:
             raise util.Abort(_('no revision found in module %s')
@@ -576,26 +571,6 @@ class svn_source(converter_source):
             return None
         return self.revid(dirent.created_rev, path)
 
-    def get_blacklist(self):
-        """Avoid certain revision numbers.
-        It is not uncommon for two nearby revisions to cancel each other
-        out, e.g. 'I copied trunk into a subdirectory of itself instead
-        of making a branch'. The converted repository is significantly
-        smaller if we ignore such revisions.
-        """
-        self.blacklist = set()
-        blacklist = self.blacklist
-        for line in file("blacklist.txt", "r"):
-            if not line.startswith("#"):
-                try:
-                    svn_rev = int(line.strip())
-                    blacklist.add(svn_rev)
-                except ValueError:
-                    pass # not an integer or a comment
-
-    def is_blacklisted(self, svn_rev):
-        return svn_rev in self.blacklist
-
     def reparent(self, module):
         """Reparent the svn transport and return the previous parent."""
         if self.prevmodule == module:
@@ -809,10 +784,6 @@ class svn_source(converter_source):
                     if revnum < self.startrev:
                         lastonbranch = True
                         break
-                    if self.is_blacklisted(revnum):
-                        self.ui.note(_('skipping blacklisted revision %d\n')
-                                     % revnum)
-                        continue
                     if not paths:
                         self.ui.debug(_('revision %d has no entries\n') % revnum)
                         continue
