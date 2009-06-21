@@ -10,7 +10,7 @@ import cPickle as pickle
 import tempfile
 import urllib
 
-from mercurial import strutil, util
+from mercurial import strutil, util, encoding
 from mercurial.i18n import _
 
 # Subversion stuff. Works best with very recent Python SVN bindings
@@ -50,6 +50,9 @@ def geturl(path):
         path = os.path.normpath(os.path.abspath(path))
         if os.name == 'nt':
             path = '/' + util.normpath(path)
+        # Module URL is later compared with the repository URL returned
+        # by svn API, which is UTF-8.
+        path = encoding.tolocal(path)
         return 'file://%s' % urllib.quote(path)
     return path
 
@@ -226,7 +229,7 @@ class svn_source(converter_source):
             self.rootmodule = self.module
             self.commits = {}
             self.paths = {}
-            self.uuid = svn.ra.get_uuid(self.ra).decode(self.encoding)
+            self.uuid = svn.ra.get_uuid(self.ra)
         except SubversionException:
             ui.traceback()
             raise NoRepo("%s does not look like a Subversion repo" % self.url)
@@ -253,8 +256,8 @@ class svn_source(converter_source):
 
         self.head = self.latest(self.module, latest)
         if not self.head:
-            raise util.Abort(_('no revision found in module %s') %
-                             self.module.encode(self.encoding))
+            raise util.Abort(_('no revision found in module %s')
+                             % self.module)
         self.last_changed = self.revnum(self.head)
 
         self._changescache = None
@@ -314,8 +317,8 @@ class svn_source(converter_source):
             self.module += '/' + trunk
             self.head = self.latest(self.module, self.last_changed)
             if not self.head:
-                raise util.Abort(_('no revision found in module %s') %
-                                 self.module.encode(self.encoding))
+                raise util.Abort(_('no revision found in module %s') 
+                                 % self.module)
 
         # First head in the list is the module's head
         self.heads = [self.head]
@@ -333,8 +336,7 @@ class svn_source(converter_source):
                     continue
                 brevid = self.latest(module, self.last_changed)
                 if not brevid:
-                    self.ui.note(_('ignoring empty branch %s\n') %
-                                   branch.encode(self.encoding))
+                    self.ui.note(_('ignoring empty branch %s\n') % branch)
                     continue
                 self.ui.note(_('found branch %s at %d\n') %
                              (branch, self.revnum(brevid)))
@@ -511,16 +513,13 @@ class svn_source(converter_source):
         self.convertfp.flush()
 
     def revid(self, revnum, module=None):
-        if not module:
-            module = self.module
-        return u"svn:%s%s@%s" % (self.uuid, module.decode(self.encoding),
-                                 revnum)
+        return 'svn:%s%s@%s' % (self.uuid, module or self.module, revnum)
 
     def revnum(self, rev):
         return int(rev.split('@')[-1])
 
     def revsplit(self, rev):
-        url, revnum = rev.encode(self.encoding).rsplit('@', 1)
+        url, revnum = rev.rsplit('@', 1)
         revnum = int(revnum)
         parts = url.split('/', 1)
         uuid = parts.pop(0)[4:]
@@ -786,7 +785,7 @@ class svn_source(converter_source):
                           desc=log,
                           parents=parents,
                           branch=branch,
-                          rev=rev.encode('utf-8'))
+                          rev=rev)
 
             self.commits[rev] = cset
             # The parents list is *shared* among self.paths and the

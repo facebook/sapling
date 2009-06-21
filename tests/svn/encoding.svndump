@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 64cf20ed-79ff-4f10-8aaf-041d1993b42e
+UUID: 7ec0009b-ac71-43a6-9416-7fc295ee5ca1
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2009-06-21T10:05:28.031033Z
+2009-06-21T15:50:22.535630Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T10:05:28.108227Z
+2009-06-21T15:50:22.584588Z
 PROPS-END
 
 Node-path: branches
@@ -72,7 +72,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T10:05:29.109026Z
+2009-06-21T15:50:23.143007Z
 PROPS-END
 
 Node-path: trunk/à
@@ -125,7 +125,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T10:05:32.061964Z
+2009-06-21T15:50:26.088415Z
 PROPS-END
 
 Node-path: trunk/è
@@ -167,7 +167,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T10:05:33.096353Z
+2009-06-21T15:50:27.162784Z
 PROPS-END
 
 Node-path: trunk/è
@@ -176,5 +176,55 @@ Node-action: delete
 
 Node-path: trunk/ù
 Node-action: delete
+
+
+Revision-number: 5
+Prop-content-length: 120
+Content-length: 120
+
+K 7
+svn:log
+V 18
+branch to branché
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-06-21T15:50:30.079728Z
+PROPS-END
+
+Node-path: branches/branché
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 4
+Node-copyfrom-path: trunk
+
+
+Revision-number: 6
+Prop-content-length: 121
+Content-length: 121
+
+K 7
+svn:log
+V 19
+branch to branchée
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-06-21T15:50:33.072456Z
+PROPS-END
+
+Node-path: branches/branchée
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: branches/branché
 
 

@@ -35,6 +35,16 @@ svn ci -m "copy files"
 svn rm trunk/è
 svn rm trunk/ù
 svn ci -m 'remove files'
+
+# Create branches with and from weird names
+svn up
+svn cp trunk branches/branché
+echo a > branches/branché/a
+svn ci -m 'branch to branché'
+svn up
+svn cp branches/branché branches/branchée
+echo a >> branches/branché/a
+svn ci -m 'branch to branchée'
 cd ..
 
 svnadmin dump svn-repo > ../encoding.svndump
