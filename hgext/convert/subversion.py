@@ -1,19 +1,6 @@
 # Subversion 1.4/1.5 Python API backend
 #
 # Copyright(C) 2007 Daniel Holth et al
-#
-# Configuration options:
-#
-# convert.svn.trunk
-#   Relative path to the trunk (default: "trunk")
-# convert.svn.branches
-#   Relative path to tree of branches (default: "branches")
-# convert.svn.tags
-#   Relative path to tree of tags (default: "tags")
-#
-# Set these in a hgrc, or on the command line as follows:
-#
-#   hg convert --config convert.svn.trunk=wackoname [...]
 
 import locale
 import os
@@ -213,7 +200,6 @@ class svn_source(converter_source):
             raise MissingTool(_('Subversion python bindings are too old, 1.4 '
                                 'or later required'))
 
-        self.encoding = locale.getpreferredencoding()
         self.lastrevs = {}
 
         latest = None
@@ -524,8 +510,6 @@ class svn_source(converter_source):
         self.convertfp.write('%s %d\n' % (destrev, self.revnum(rev)))
         self.convertfp.flush()
 
-    # -- helper functions --
-
     def revid(self, revnum, module=None):
         if not module:
             module = self.module
@@ -598,7 +582,8 @@ class svn_source(converter_source):
         It is not uncommon for two nearby revisions to cancel each other
         out, e.g. 'I copied trunk into a subdirectory of itself instead
         of making a branch'. The converted repository is significantly
-        smaller if we ignore such revisions."""
+        smaller if we ignore such revisions.
+        """
         self.blacklist = set()
         blacklist = self.blacklist
         for line in file("blacklist.txt", "r"):
@@ -700,18 +685,14 @@ class svn_source(converter_source):
                 fromkind = svn.ra.check_path(self.ra, entrypath.strip('/'), fromrev)
                 self.reparent(prevmodule)
 
-                if fromkind == svn.core.svn_node_file:   # a deleted file
+                if fromkind == svn.core.svn_node_file:
                     entries.append(self.recode(entry))
                 elif fromkind == svn.core.svn_node_dir:
-                    # print "Deleted/moved non-file:", revnum, path, ent
-                    # children = self._find_children(path, revnum - 1)
-                    # print ("find children %s@%d from %d action %s" %
-                    #        (path, revnum, ent.copyfrom_rev, ent.action))
-                    # Sometimes this is tricky. For example: in
-                    # The Subversion Repository revision 6940 a dir
-                    # was copied and one of its files was deleted
-                    # from the new location in the same commit. This
-                    # code can't deal with that yet.
+                    # Sometimes this is tricky. For example: in The
+                    # Subversion Repository revision 6940 a dir was
+                    # copied and one of its files was deleted from the
+                    # new location in the same commit. This code can't
+                    # deal with that yet.
                     if ent.action == 'C':
                         children = self._find_children(path, fromrev)
                     else:
@@ -737,21 +718,11 @@ class svn_source(converter_source):
                     self.ui.debug(_('unknown path in revision %d: %s\n') % \
                                   (revnum, path))
             elif kind == svn.core.svn_node_dir:
-                # Should probably synthesize normal file entries
-                # and handle as above to clean up copy/rename handling.
-
                 # If the directory just had a prop change,
                 # then we shouldn't need to look for its children.
                 if ent.action == 'M':
                     continue
 
-                # Also this could create duplicate entries. Not sure
-                # whether this will matter. Maybe should make entries a set.
-                # print "Changed directory", revnum, path, ent.action, \
-                #     ent.copyfrom_path, ent.copyfrom_rev
-                # This will fail if a directory was copied
-                # from another branch and then some of its files
-                # were deleted in the same transaction.
                 children = sorted(self._find_children(path, revnum))
                 for child in children:
                     # Can we move a child directory and its
@@ -759,15 +730,13 @@ class svn_source(converter_source):
                     # cause problems if instead of revnum -1,
                     # we have to look in (copyfrom_path, revnum - 1)
                     entrypath = self.getrelpath("/" + child)
-                    # print child, self.module, entrypath
                     if entrypath:
                         # Need to filter out directories here...
                         kind = self._checkpath(entrypath, revnum)
                         if kind != svn.core.svn_node_dir:
                             entries.append(self.recode(entrypath))
 
-                # Copies here (must copy all from source) Probably not
-                # a real problem for us if source does not exist
+                # Handle directory copies
                 if not ent.copyfrom_path or not parents:
                     continue
                 # Copy sources not in parent revisions cannot be
