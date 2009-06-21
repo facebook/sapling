@@ -118,19 +118,6 @@ def wrapfunction(container, funcname, wrapper):
     setattr(container, funcname, wrap)
     return origfn
 
-def pathdirs():
-    '''convert sys.path into a list of absolute, existing, unique paths
-    (taken from pydoc)'''
-    dirs = []
-    normdirs = []
-    for dir in sys.path:
-        dir = os.path.abspath(dir or '.')
-        normdir = os.path.normcase(dir)
-        if normdir not in normdirs and os.path.isdir(dir):
-            dirs.append(dir)
-            normdirs.append(normdir)
-    return dirs
-
 def disabled():
     '''find disabled extensions from hgext
     returns a dict of {name: desc}, and the max name length'''
