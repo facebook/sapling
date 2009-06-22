@@ -6,8 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''inotify-based status acceleration for Linux systems
-'''
+'''accelerate status report using system level services'''
 
 # todo: socket permissions
 

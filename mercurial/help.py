@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
+import textwrap
 from i18n import _
 import extensions
 
@@ -45,21 +46,27 @@ def listexts(header, exts, maxlength):
         return ''
     result = '\n%s\n\n' % header
     for name, desc in sorted(exts.iteritems()):
-        result += ' %s   %s\n' % (name.ljust(maxlength), desc)
+        # wrap desc at 70 characters, just like the main help texts
+        desc = textwrap.wrap(desc, width=70 - maxlength - 4)
+        pad = '\n' + ' ' * (maxlength + 4)
+        result += ' %s   %s\n' % (name.ljust(maxlength),
+                                  pad.join(desc))
     return result
 
 def extshelp():
     doc = _(r'''
-    Mercurial has a mechanism for adding new features through the
-    use of extensions. Extensions may bring new commands, or new
-    hooks, or change Mercurial's behavior.
+    Mercurial has the ability to add new features through the use of
+    extensions. Extensions may add new commands, add options to
+    existing commands, change the default behavior of commands, or
+    implement hooks.
 
-    Extensions are not loaded by default for a variety of reasons,
-    they may be meant for advanced users or provide potentially
-    dangerous commands (e.g. mq and rebase allow history to be
-    rewritten), they might not be ready for prime-time yet, or
-    they may alter Mercurial's behavior. It is thus up to the user
-    to activate extensions as desired.
+    Extensions are not loaded by default for a variety of reasons:
+    they can increase startup overhead; they may be meant for
+    advanced usage only; they may provide potentially dangerous
+    abilities (such as letting you destroy or modify history); they
+    might not be ready for prime time; or they may alter some
+    usual behaviors of stock Mercurial. It is thus up to the user to
+    activate extensions as needed.
 
     To enable the "foo" extension, either shipped with Mercurial
     or in the Python search path, create an entry for it in your
@@ -77,7 +84,7 @@ def extshelp():
     scope, prepend its path with !:
 
       [extensions]
-      # disabling extension bar residing in /ext/path
+      # disabling extension bar residing in /path/to/extension/bar.py
       hgext.bar = !/path/to/extension/bar.py
       # ditto, but no path was supplied for extension baz
       hgext.baz = !

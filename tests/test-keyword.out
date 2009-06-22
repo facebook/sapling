@@ -1,5 +1,5 @@
 % help
-keyword extension - keyword expansion in tracked files
+keyword extension - expand keywords in tracked files
 
 This extension expands RCS/CVS-like or self-customized $Keywords$ in
 tracked text files selected by your configuration.
@@ -55,9 +55,9 @@ list of commands:
 
 enabled extensions:
 
- keyword   keyword expansion in tracked files
- mq        patch management and development
- notify    hook extension to email notifications on commits/pushes
+ keyword   expand keywords in tracked files
+ mq        work with a stack of patches
+ notify    send e-mail notifications for commits/pushes
 
 use "hg -v help keyword" to show aliases and global options
 % hg kwdemo

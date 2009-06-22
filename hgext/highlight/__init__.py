@@ -8,7 +8,7 @@
 # The original module was split in an interface and an implementation
 # file to defer pygments loading and speedup extension setup.
 
-"""syntax highlighting in hgweb, based on Pygments
+"""syntax highlighting for hgweb
 
 It depends on the Pygments syntax highlighting library:
 http://pygments.org/

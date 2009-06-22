@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''zeroconf support for Mercurial repositories
+'''discover and advertise repositories on the local network
 
 Zeroconf enabled repositories will be announced in a network without
 the need to configure a server or a service. They can be discovered

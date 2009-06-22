@@ -3,16 +3,22 @@ initializing destination A-hg repository
 scanning source...
 sorting...
 converting...
-9 createtrunk
-8 moved1
-7 moved1
-6 moved2
-5 changeb and rm d2
-4 changeb and rm d2
-3 moved1again
-2 moved1again
-1 copyfilefrompast
-0 copydirfrompast
+11 createtrunk
+10 moved1
+9 moved1
+8 moved2
+7 changeb and rm d2
+6 changeb and rm d2
+5 moved1again
+4 moved1again
+3 copyfilefrompast
+2 copydirfrompast
+1 add d3
+0 copy dir and remove subdir
+o  11 copy dir and remove subdir files: d3/d31/e d4/d31/e d4/f
+|
+o  10 add d3 files: d3/d31/e d3/f
+|
 o  9 copydirfrompast files: d2/d
 |
 o  8 copyfilefrompast files: d
@@ -33,5 +39,5 @@ o |  2 moved1 files: d1/b d1/c
 |
 o  0 createtrunk files:
 
-default                        9:
+default                       11:
 d1                             6:

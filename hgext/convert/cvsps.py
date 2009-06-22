@@ -511,7 +511,9 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                   e.comment == c.comment and
                   e.author == c.author and
                   e.branch == c.branch and
-                  e.branchpoints == c.branchpoints and
+                  (not hasattr(e, 'branchpoints') or
+                    not hasattr (c, 'branchpoints') or
+                    e.branchpoints == c.branchpoints) and
                   ((c.date[0] + c.date[1]) <=
                    (e.date[0] + e.date[1]) <=
                    (c.date[0] + c.date[1]) + fuzz) and

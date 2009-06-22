@@ -9,7 +9,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 #
 
-"""allow to use MBCS path with problematic encoding.
+'''allow the use of MBCS paths with problematic encoding
 
 Some MBCS encodings are not good for some path operations (i.e.
 splitting path, case conversion, etc.) with its encoded bytes. We call
@@ -36,8 +36,7 @@ Note that there are some limitations on using this extension:
 Path encoding conversion are done between Unicode and
 encoding.encoding which is decided by Mercurial from current locale
 setting or HGENCODING.
-
-"""
+'''
 
 import os
 from mercurial.i18n import _

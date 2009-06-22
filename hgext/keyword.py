@@ -26,7 +26,7 @@
 #
 # Run "hg help keyword" and "hg kwdemo" to get info on configuration.
 
-'''keyword expansion in tracked files
+'''expand keywords in tracked files
 
 This extension expands RCS/CVS-like or self-customized $Keywords$ in
 tracked text files selected by your configuration.

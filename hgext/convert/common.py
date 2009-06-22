@@ -103,7 +103,10 @@ class converter_source(object):
         raise NotImplementedError()
 
     def gettags(self):
-        """Return the tags as a dictionary of name: revision"""
+        """Return the tags as a dictionary of name: revision
+
+        Tag names must be UTF-8 strings.
+        """
         raise NotImplementedError()
 
     def recode(self, s, encoding=None):
@@ -198,7 +201,9 @@ class converter_sink(object):
 
     def puttags(self, tags):
         """Put tags into sink.
-        tags: {tagname: sink_rev_id, ...}"""
+
+        tags: {tagname: sink_rev_id, ...} where tagname is an UTF-8 string.
+        """
         raise NotImplementedError()
 
     def setbranch(self, branch, pbranches):

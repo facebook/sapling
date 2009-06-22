@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 0682b859-320d-4a69-a164-a7cab5695072
+UUID: 9de99ecc-876b-46e5-bc59-bff9b2b58b1e
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-12-06T13:33:36.768573Z
+2009-06-21T14:32:26.678698Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:37.083146Z
+2009-06-21T14:32:27.278689Z
 PROPS-END
 
 Node-path: trunk
@@ -45,6 +45,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
 Content-length: 12
 
 PROPS-END
@@ -66,6 +67,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
 Content-length: 12
 
 PROPS-END
@@ -78,6 +80,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Text-content-sha1: 2b66fd261ee5c6cfc8de7fa466bab600bcfe4f69
 Content-length: 12
 
 PROPS-END
@@ -99,6 +102,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: e29311f6f1bf1af907f9ef9f44b8328b
+Text-content-sha1: e983f374794de9c64e3d1c1de1d490c0756eeeff
 Content-length: 12
 
 PROPS-END
@@ -120,7 +124,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:38.152773Z
+2009-06-21T14:32:28.312955Z
 PROPS-END
 
 Node-path: trunk/a
@@ -128,6 +132,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 4
 Text-content-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-content-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
 Content-length: 4
 
 a
@@ -139,6 +144,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 4
 Text-content-md5: 63fad9092ad37713ebe26b3193f89c41
+Text-content-sha1: ccfb93b7bac6f1520f0adc0eebc2cafe9da80f42
 Content-length: 4
 
 c
@@ -160,7 +166,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:39.146388Z
+2009-06-21T14:32:29.183467Z
 PROPS-END
 
 Node-path: subproject
@@ -189,7 +195,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:40.179944Z
+2009-06-21T14:32:30.300975Z
 PROPS-END
 
 Node-path: subproject/trunk
@@ -216,7 +222,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:41.184505Z
+2009-06-21T14:32:31.354398Z
 PROPS-END
 
 Node-path: subproject/branches
@@ -243,7 +249,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:42.153312Z
+2009-06-21T14:32:32.121901Z
 PROPS-END
 
 Node-path: subproject/trunk/d1
@@ -272,7 +278,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:42.206313Z
+2009-06-21T14:32:32.317815Z
 PROPS-END
 
 Node-path: subproject/trunk/d2
@@ -301,7 +307,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:43.182355Z
+2009-06-21T14:32:33.418320Z
 PROPS-END
 
 Node-path: subproject/trunk/d1/b
@@ -309,6 +315,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 4
 Text-content-md5: 06ac26ed8b614fc0b141e4542aa067c2
+Text-content-sha1: f6980469e74f7125178e88ec571e06fe6ce86e95
 Content-length: 4
 
 b
@@ -334,7 +341,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:44.153682Z
+2009-06-21T14:32:34.126542Z
 PROPS-END
 
 Node-path: subproject/branches/d1
@@ -363,7 +370,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:44.298011Z
+2009-06-21T14:32:34.436015Z
 PROPS-END
 
 Node-path: subproject/trunk/d
@@ -372,6 +379,7 @@ Node-action: add
 Node-copyfrom-rev: 7
 Node-copyfrom-path: subproject/trunk/d2/d
 Text-copy-source-md5: e29311f6f1bf1af907f9ef9f44b8328b
+Text-copy-source-sha1: e983f374794de9c64e3d1c1de1d490c0756eeeff
 
 
 Revision-number: 11
@@ -389,7 +397,7 @@ pmezard
 K 8
 svn:date
 V 27
-2008-12-06T13:33:44.349920Z
+2009-06-21T14:32:34.803189Z
 PROPS-END
 
 Node-path: subproject/trunk/d2
@@ -397,5 +405,96 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 7
 Node-copyfrom-path: subproject/trunk/d2
+
+
+Revision-number: 12
+Prop-content-length: 107
+Content-length: 107
+
+K 7
+svn:log
+V 6
+add d3
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-06-21T14:32:36.531735Z
+PROPS-END
+
+Node-path: subproject/trunk/d3
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subproject/trunk/d3/d31
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subproject/trunk/d3/d31/e
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 9ffbf43126e33be52cd2bf7e01d627f9
+Text-content-sha1: 094e3afb2fe8dfe82f63731cdcd3b999f4856cff
+Content-length: 12
+
+PROPS-END
+e
+
+
+Node-path: subproject/trunk/d3/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 9a8ad92c50cae39aa2c5604fd0ab6d8c
+Text-content-sha1: a9fcd54b25e7e863d72cd47c08af46e61b74b561
+Content-length: 12
+
+PROPS-END
+f
+
+
+Revision-number: 13
+Prop-content-length: 128
+Content-length: 128
+
+K 7
+svn:log
+V 26
+copy dir and remove subdir
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-06-21T14:32:38.281829Z
+PROPS-END
+
+Node-path: subproject/trunk/d3/d31
+Node-action: delete
+
+
+Node-path: subproject/trunk/d4
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 12
+Node-copyfrom-path: subproject/trunk/d3
 
 
