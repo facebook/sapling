@@ -228,7 +228,7 @@ def readgitpatch(lr):
 
     return (dopatch, gitpatches)
 
-class linereader:
+class linereader(object):
     # simple class to allow pushing lines back into the input stream
     def __init__(self, fp, textmode=False):
         self.fp = fp
