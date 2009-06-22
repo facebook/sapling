@@ -7,22 +7,24 @@
 
 '''Mercurial bookmarks
 
-Mercurial bookmarks are local moveable pointers to changesets. Every
-bookmark points to a changeset identified by its hash. If you commit a
-changeset that is based on a changeset that has a bookmark on it, the
-bookmark is forwarded to the new changeset.
+Bookmarks are local movable markers to changesets. Every bookmark
+points to a changeset identified by its hash. If you commit a
+changeset that is based on a changeset that has a bookmark on it,
+the bookmark shifts to the new changeset.
 
-It is possible to use bookmark names in every revision lookup (e.g. hg
-merge, hg update).
+It is possible to use bookmark names in every revision lookup
+(e.g. hg merge, hg update).
 
-The bookmark extension offers the possiblity to have a more git-like
-experience by adding the following configuration option to your .hgrc:
+By default, when several bookmarks point to the same changeset, they
+will all move forward together. It is possible to obtain a more
+git-like experience by adding the following configuration option to
+your .hgrc:
 
-[bookmarks]
-track.current = True
+  [bookmarks]
+  track.current = True
 
-This will cause bookmarks to track the bookmark that you are currently
-on, and just updates it. This is similar to git's approach to
+This will cause Mercurial to track the bookmark that you are currently
+using, and only update it. This is similar to git's approach to
 branching.
 '''
 
@@ -123,7 +125,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
     '''Mercurial bookmarks
 
     Bookmarks are pointers to certain commits that move when
-    commiting. Bookmarks are local. They can be renamed, copied and
+    committing. Bookmarks are local. They can be renamed, copied and
     deleted. It is possible to use bookmark names in 'hg merge' and
     'hg update' to merge and update respectively to a given bookmark.
 
