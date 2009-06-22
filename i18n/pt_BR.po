@@ -549,13 +549,17 @@ msgid "generating stats: %d%%"
 msgstr "gerando estatísticas: %d%%"
 
 msgid ""
-"graph count of revisions grouped by template\n"
+"histogram of changes to the repository\n"
 "\n"
-"    Will graph count of changed lines or revisions grouped by template\n"
-"    or alternatively by date, if dateformat is used. In this case it\n"
-"    will override template.\n"
+"    This command will display a histogram representing the number\n"
+"    of changed lines or revisions, grouped according to the given\n"
+"    template. The default template will group changes by author.\n"
+"    The --dateformat option may be used to group the results by\n"
+"    date instead.\n"
 "\n"
-"    By default statistics are counted for number of changed lines.\n"
+"    Statistics are based on the number of changed lines, or\n"
+"    alternatively the number of matching revisions if the\n"
+"    --changesets option is specified.\n"
 "\n"
 "    Examples:\n"
 "\n"
@@ -571,22 +575,26 @@ msgid ""
 "      # display count of lines changed in every year\n"
 "      hg churn -f '%Y' -s\n"
 "\n"
-"    The map file format used to specify aliases is fairly simple:\n"
-"\n"
+"    It is possible to map alternate email addresses to a main address\n"
+"    by providing a file using the following format:\n"
+"    \n"
 "    <alias email> <actual email>\n"
 "\n"
-"    By default .hgchurn in the working directory root will be used, if\n"
-"    it exists. Use the --aliases option to override this.\n"
+"    Such a file may be specified with the --aliases option, otherwise a\n"
+"    .hgchurn file will be looked for in the working directory root.\n"
 "    "
 msgstr ""
-"Contagem gráfica de revisões, agrupadas por um modelo\n"
+"Histograma de mudanças do repositório\n"
 "\n"
-"    Irá contar graficamente as linhas alteradas ou revisões,\n"
-"    agrupadas de acordo com um modelo, ou alternativamente por\n"
-"    data (se for utilizado algum formato de data).\n"
+"    Este comando exibe um histograma representando o número de linhas\n"
+"    alteradas ou revisões, agrupadas de acordo com o modelo pedido.\n"
+"    O modelo padrão agrupa mudanças por autor. Alternativamente, a\n"
+"    opção --dateformat pode ser usada para agrupar os resultados por\n"
+"    data.\n"
 "\n"
-"    Por padrão as estatísticas são contadas por número de linhas\n"
-"    alteradas.\n"
+"    As estatísticas se baseiam no número de linhas modificadas, ou\n"
+"    alternativamente no número de revisões, se for usada a opção\n"
+"    --changesets.\n"
 "\n"
 "    Exemplos:\n"
 "\n"
@@ -599,14 +607,15 @@ msgstr ""
 "      # exibe atividades dos desenvolvedores por mês\n"
 "      hg churn -f '%Y-%m' -s -c\n"
 "\n"
-"    O formato do arquivo de mapeamento usado para especificar\n"
-"    apelidos é bem simples:\n"
+"    É possível mapear endereços de email alternativos para um\n"
+"    endereço principal provendo um arquivo usando o seguinte\n"
+"    formato:\n"
 "\n"
-"    <e-mail apelido> <e-mail real>\n"
+"    <email alternativo> <email principal>\n"
 "\n"
-"    Por padrão será usado o arquivo .hgchurn no raiz do diretório de\n"
-"    trabalho, se ele existir. Use a opção --aliases para usar outro\n"
-"    arquivo.\n"
+"    Esse arquivo pode ser especificado com a opção --aliases; de\n"
+"    outro modo, será usado um arquivo .hgchurn no raiz do diretório\n"
+"    de trabalho, se existir.\n"
 "    "
 
 #, python-format
@@ -2509,6 +2518,9 @@ msgstr "(servidor inotify não está em execução)\n"
 msgid "failed to contact inotify server: %s\n"
 msgstr "falha ao contatar servidor inotify: %s\n"
 
+msgid "received empty answer from inotify server"
+msgstr "resposta vazia recebida do servidor inotify"
+
 #, python-format
 msgid "(inotify: received response from incompatible server version %d)\n"
 msgstr "(inotify: recebida resposta de uma versão de servidor incompatível %d)\n"
@@ -2631,13 +2643,6 @@ msgstr "tipo de consulta não reconhecido: %s\n"
 
 msgid "finished setup\n"
 msgstr "setup encerrado\n"
-
-msgid "polling: no timeout\n"
-msgstr "polling: sem timeout\n"
-
-#, python-format
-msgid "polling: %sms timeout\n"
-msgstr "polling: timeout de %sms \n"
 
 #, python-format
 msgid "interhg: invalid pattern for %s: %s\n"
@@ -5210,6 +5215,31 @@ msgid "hg qrecord [OPTION]... PATCH [FILE]..."
 msgstr "hg qrecord [OPÇÃO]... PATCH [ARQUIVO]..."
 
 msgid ""
+"create a new shared repository (experimental)\n"
+"\n"
+"    Initialize a new repository and working directory that shares its\n"
+"    history with another repository.\n"
+"\n"
+"    NOTE: actions that change history such as rollback or moving the\n"
+"    source may confuse sharers.\n"
+"    "
+msgstr ""
+"cria um novo repositório compartilhado (experimental)\n"
+"\n"
+"    Inicializa um novo repositório e diretório de trabalho que\n"
+"    compartilha seu histórico com outro repositório.\n"
+"\n"
+"    NOTA: ações que mudem o histórico, como rollback ou mover a\n"
+"    origem, podem confundir repositórios compartilhados.\n"
+"    "
+
+msgid "do not create a working copy"
+msgstr "não cria uma cópia de trabalho"
+
+msgid "[-U] SOURCE [DEST]"
+msgstr "[-U] ORIGEM [DEST]"
+
+msgid ""
 "patch transplanting tool\n"
 "\n"
 "This extension allows you to transplant patches from another branch.\n"
@@ -6155,6 +6185,10 @@ msgid "incompatible arguments"
 msgstr "argumentos incompatíveis"
 
 #, python-format
+msgid "cannot find executable: %s"
+msgstr "não foi possível encontrar executável: %s"
+
+#, python-format
 msgid "failed to execute %s"
 msgstr "falhou ao executar %s"
 
@@ -6163,8 +6197,8 @@ msgid "%s killed"
 msgstr "%s morto"
 
 #, python-format
-msgid "Changeset %s: %s\n"
-msgstr "Changeset %s: %s\n"
+msgid "Changeset %d:%s: %s\n"
+msgstr "Changeset %d:%s: %s\n"
 
 #, python-format
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
@@ -6869,38 +6903,52 @@ msgid ""
 "\n"
 "    With no arguments, show all repository head changesets.\n"
 "\n"
-"    If branch names or revisions are given this will show the heads of\n"
-"    the specified branches or the branches those revisions are tagged\n"
-"    with.\n"
-"\n"
 "    Repository \"heads\" are changesets that don't have child\n"
 "    changesets. They are where development generally takes place and\n"
 "    are the usual targets for update and merge operations.\n"
 "\n"
-"    Branch heads are changesets that have a given branch tag, but have\n"
-"    no child changesets with that tag. They are usually where\n"
-"    development on a given branch takes place.\n"
+"    If one or more REV is given, the \"branch heads\" will be shown for\n"
+"    the named branch associated with that revision. The name of the\n"
+"    branch is called the revision's branch tag.\n"
+"\n"
+"    Branch heads are revisions on a given named branch that do not have\n"
+"    any children on the same branch. A branch head could be a true head\n"
+"    or it could be the last changeset on a branch before a new branch\n"
+"    was created. If none of the branch heads are true heads, the branch\n"
+"    is considered inactive.\n"
+"\n"
+"    If STARTREV is specified only those heads (or branch heads) that\n"
+"    are descendants of STARTREV will be displayed.\n"
 "    "
 msgstr ""
 "mostra as cabeças atuais do repositório ou cabeças de ramo\n"
 "\n"
-"    Sem argumentos, mostra todos os changesets de cabeça do\n"
-"    repositório.\n"
-"\n"
-"    Se nomes de ramo ou revisões forem dados, irá mostrar as\n"
-"    cabeças dos ramos especificados ou dos ramos que marcam tais\n"
-"    revisões.\n"
+"    Sem argumentos, mostra todas as cabeças do repositório.\n"
 "\n"
 "    \"Cabeças\" do repositório são changesets que não têm nenhum\n"
-"    changeset filho. Elas geralmente são onde o desenvolvimento\n"
+"    changeset filho. Elas são onde o desenvolvimento geralmente\n"
 "    acontece e são os alvos costumeiros para operações update e\n"
 "    merge.\n"
 "\n"
-"    Cabeças de ramo são changesets que possuem uma determinada\n"
-"    etiqueta de ramo, mas não possuem changesets filhos com essa\n"
-"    etiqueta. É nelas onde tipicamente o desenvolvimento no tal\n"
-"    ramo acontece.\n"
+"    Se um ou mais argumentos REV forem dados, as \"cabeças de ramo\"\n"
+"    serão mostradas para os ramos nomeados associados a tais\n"
+"    revisões. O nome do ramo é chamado de etiqueta de ramo da\n"
+"    revisão.\n"
+"\n"
+"    Cabeças de ramo são revisões em um determinado ramo nomeado que\n"
+"    não têm nenhuma revisão filha nesse mesmo ramo. Uma cabeça de\n"
+"    ramo pode ser uma cabeça verdadeira ou pode ser o último\n"
+"    changeset em um ramo antes que um novo ramo nomeado fosse criado.\n"
+"    Se nenhuma das cabeças de ramo forem cabeças verdadeiras, o ramo\n"
+"    é considerado inativo.\n"
+"\n"
+"    Se REVINICIAL for especificada, serão mostradas apenas cabeças\n"
+"    (ou cabeças de ramo) descendentes de REVINICIAL.\n"
 "    "
+
+#, python-format
+msgid "no open branch heads on branch %s\n"
+msgstr "nenhuma cabeça de ramo aberta no ramo %s\n"
 
 #, python-format
 msgid "no changes on branch %s containing %s are reachable from %s\n"
@@ -8486,6 +8534,9 @@ msgstr "não exibe o mtime armazenado"
 msgid "[OPTION]..."
 msgstr "[OPÇÃO]..."
 
+msgid "revision to check"
+msgstr "revisão para verificar"
+
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr "[OPÇÃO]... [-r REV1 [-r REV2]] [ARQUIVO]..."
 
@@ -8530,8 +8581,8 @@ msgstr "mostra apenas as cabeças ativas de ramos abertos"
 msgid "show normal and closed heads"
 msgstr "mostra cabeças normais e fechadas"
 
-msgid "[-r REV] [REV]..."
-msgstr "[-r REV] [REV]..."
+msgid "[-r STARTREV] [REV]..."
+msgstr "[-r REVINICIAL] [REV]..."
 
 msgid "[TOPIC]"
 msgstr "[TÓPICO]"
@@ -10037,6 +10088,15 @@ msgstr ""
 "      e o usará ao invés de 'default' se ambos estiverem definidos.\n"
 "    "
 
+msgid "can only share local repositories"
+msgstr "só é possível compartilhar repositórios locais"
+
+msgid "destination already exists"
+msgstr "o destino já existe"
+
+msgid "updating working directory\n"
+msgstr "atualizando diretório de trabalho\n"
+
 #, python-format
 msgid "destination directory: %s\n"
 msgstr "diretório de destino: %s\n"
@@ -10058,9 +10118,6 @@ msgstr ""
 
 msgid "clone from remote to remote not supported"
 msgstr "clone de origem remota para destino remoto não suportado"
-
-msgid "updating working directory\n"
-msgstr "atualizando diretório de trabalho\n"
 
 msgid "updated"
 msgstr "atualizados"
@@ -10252,6 +10309,10 @@ msgid "requirement '%s' not supported"
 msgstr "requisito '%s' não suportado"
 
 #, python-format
+msgid ".hg/sharedpath points to nonexistent directory %s"
+msgstr ".hg/sharedpath aponta para diretório %s inexistente"
+
+#, python-format
 msgid "%r cannot be used in a tag name"
 msgstr "%r não pode ser usado em um nome de etiqueta"
 
@@ -10345,6 +10406,10 @@ msgstr "nada mudou\n"
 
 msgid "unresolved merge conflicts (see hg resolve)"
 msgstr "conflitos de mesclagem não resolvidos (veja hg resolve)"
+
+#, python-format
+msgid "committing subrepository %s\n"
+msgstr "consolidando sub-repositório %s\n"
 
 #, python-format
 msgid "trouble committing %s!\n"
@@ -10786,6 +10851,10 @@ msgid "patch command failed: %s"
 msgstr "comando de patch falhou: %s"
 
 #, python-format
+msgid "Unsupported line endings type: %s"
+msgstr "Tipo de quebra de linha não suportado: %s"
+
+#, python-format
 msgid "no valid hunks found; trying with %r instead\n"
 msgstr "nenhum trecho válido encontrado; tentando com %r\n"
 
@@ -10908,6 +10977,48 @@ msgstr "%d arquivos, %d bytes para transferir\n"
 #, python-format
 msgid "sending %s (%d bytes)\n"
 msgstr "enviando %s (%d bytes)\n"
+
+#, python-format
+msgid ""
+" subrepository sources for %s differ\n"
+"use (l)ocal source (%s) or (r)emote source (%s)?"
+msgstr ""
+" origens do sub-repositório para %s diferem\n"
+"usar fonte (l)ocal (%s) ou (r)emota (%s)?"
+
+msgid "&Remote"
+msgstr "&Remoto"
+
+msgid "r"
+msgstr "r"
+
+#, python-format
+msgid ""
+" local changed subrepository %s which remote removed\n"
+"use (c)hanged version or (d)elete?"
+msgstr ""
+" local mudou sub-repositório %s, que a remota removeu\n"
+"use (c) a versão alterada, ou (d) apague?"
+
+#, python-format
+msgid ""
+" remote changed subrepository %s which local removed\n"
+"use (c)hanged version or (d)elete?"
+msgstr ""
+" remota mudou sub-repositório %s apagado pela local\n"
+"use (c) a versão alterada ou (d) apague?"
+
+#, python-format
+msgid "removing subrepo %s\n"
+msgstr "removendo sub-repositório %s\n"
+
+#, python-format
+msgid "pulling subrepo %s\n"
+msgstr "trazendo sub-repositório %s\n"
+
+#, python-format
+msgid "pushing subrepo %s\n"
+msgstr "enviando sub-repositório %s\n"
 
 msgid "unmatched quotes"
 msgstr "aspas não combinam"
