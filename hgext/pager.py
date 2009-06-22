@@ -12,7 +12,7 @@
 #
 # Run "hg help pager" to get info on configuration.
 
-'''browse command output with external pager
+'''browse command output with an external pager
 
 To set the pager that should be used, set the application variable:
 

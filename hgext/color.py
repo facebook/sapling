@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-'''add color output to status, qseries, and diff-related commands
+'''colorize output from some commands
 
 This extension modifies the status command to add color to its output
 to reflect file status, the qseries command to add color to reflect

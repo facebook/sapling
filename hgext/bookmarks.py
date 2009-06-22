@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''Mercurial bookmarks
+'''track a line of development with movable markers
 
 Bookmarks are local movable markers to changesets. Every bookmark
 points to a changeset identified by its hash. If you commit a
@@ -122,7 +122,7 @@ def setcurrent(repo, mark):
     repo._bookmarkcurrent = mark
 
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
-    '''Mercurial bookmarks
+    '''track a line of development with movable markers
 
     Bookmarks are pointers to certain commits that move when
     committing. Bookmarks are local. They can be renamed, copied and

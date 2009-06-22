@@ -6,7 +6,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 #
 
-'''provide simple hooks for access control
+'''control access to a repository using simple hooks
 
 This hook makes it possible to allow or deny write access to portions
 of a repository when receiving incoming changesets.

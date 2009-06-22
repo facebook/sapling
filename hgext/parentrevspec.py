@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''use suffixes to refer to ancestor revisions
+'''interpret suffixes to refer to ancestor revisions
 
 This extension allows you to use git-style suffixes to refer to the
 ancestors of a specific revision.
