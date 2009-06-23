@@ -29,9 +29,6 @@ class GitHandler(object):
         else:
             self.gitdir = self.repo.join('git')
 
-        self.importbranch = ui.config('git', 'importbranch')
-        self.exportbranch = ui.config('git', 'exportbranch', 'refs/heads/master')
-
         self.paths = ui.configitems('paths')
 
         self.init_if_missing()
@@ -404,14 +401,10 @@ class GitHandler(object):
         if refs:
           for head, sha in refs.iteritems():
               todo.append(sha)
+        elif remote_name:
+            todo = self.git.remote_refs(remote_name).values()[:]
         else:
-          if remote_name:
-              todo = self.git.remote_refs(remote_name).values()[:]
-          elif self.importbranch:
-              branches = self.importbranch.split(',')
-              todo = [self.git.ref(i.strip()) for i in branches]
-          else:
-              todo = self.git.heads().values()[:]
+            todo = self.git.heads().values()[:]
 
         # traverse the heads getting a list of all the unique commits
         while todo:
@@ -693,25 +686,12 @@ class GitHandler(object):
     ## REFERENCES HANDLING
 
     def update_references(self):
-        try:
-            # We only care about bookmarks of the form 'name',
-            # not 'remote/name'.
-            def is_local_ref(item): return item[0].count('/') == 0
-            bms = bookmarks.parse(self.repo)
-            bms = dict(filter(is_local_ref, bms.items()))
+        heads = self.local_heads()
 
-            # Create a local Git branch name for each
-            # Mercurial bookmark.
-            for key in bms:
-                hg_sha  = hex(bms[key])
-                git_sha = self.map_git_get(hg_sha)
-                self.git.set_ref('refs/heads/' + key, git_sha)
-        except AttributeError:
-            # No bookmarks extension
-            pass
-
-        c = self.map_git_get(hex(self.repo.changelog.tip()))
-        self.git.set_ref(self.exportbranch, c)
+        # Create a local Git branch name for each
+        # Mercurial bookmark.
+        for key in heads:
+            self.git.set_ref('refs/heads/' + key, heads[key])
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
