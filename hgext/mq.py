@@ -1641,16 +1641,14 @@ class queue(object):
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
-    The patches must not be applied, unless they are arguments to the
-    -r/--rev parameter. At least one patch or revision is required.
-
-    With --rev, mq will stop managing the named revisions (converting
-    them to regular Mercurial changesets). The qfinish command should
-    be used as an alternative for qdelete -r, as the latter option is
-    deprecated.
+    The patches must not be applied, and at least one patch is
+    required.
 
     With -k/--keep, the patch files are preserved in the patch
-    directory."""
+    directory.
+
+    To stop managing a patch and move it into permanent history,
+    use the qfinish command."""
     q = repo.mq
     q.delete(repo, patches, opts)
     q.save_dirty()
@@ -2520,7 +2518,7 @@ cmdtable = {
     "qdelete|qremove|qrm":
         (delete,
          [('k', 'keep', None, _('keep patch file')),
-          ('r', 'rev', [], _('stop managing a revision'))],
+          ('r', 'rev', [], _('stop managing a revision (DEPRECATED)'))],
          _('hg qdelete [-k] [-r REV]... [PATCH]...')),
     'qfold':
         (fold,
