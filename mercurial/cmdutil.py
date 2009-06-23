@@ -323,12 +323,10 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         repo.add(add)
     if similarity > 0:
         for old, new, score in findrenames(repo, m, similarity):
-            oldexact, newexact = m.exact(old), m.exact(new)
-            if repo.ui.verbose or not oldexact or not newexact:
-                oldrel, newrel = m.rel(old), m.rel(new)
+            if repo.ui.verbose or not m.exact(old) or not m.exact(new):
                 repo.ui.status(_('recording removal of %s as rename to %s '
                                  '(%d%% similar)\n') %
-                               (oldrel, newrel, score * 100))
+                               (m.rel(old), m.rel(new), score * 100))
             if not dry_run:
                 repo.copy(old, new)
 
