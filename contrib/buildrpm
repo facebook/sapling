@@ -51,7 +51,7 @@ sed -e 's,^Source:.*,Source: /dev/null,' \
 
 cat <<EOF >> $tmpspec
 %changelog
-* `date +'%a %b %d %Y'` `$HG showconfig ui.username` $version-$release
+* `LANG=en_US date +'%a %b %d %Y'` `$HG showconfig ui.username` $version-$release
 - Automatically built via $0
 
 EOF
