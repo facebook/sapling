@@ -482,9 +482,11 @@ def bundle(ui, repo, fname, dest=None, **opts):
     If no destination repository is specified the destination is
     assumed to have all the nodes specified by one or more --base
     parameters. To create a bundle containing all changesets, use
-    -a/--all (or --base null). To change the compression method
-    applied, use the -t/--type option (by default, bundles are
-    compressed using bz2).
+    -a/--all (or --base null).
+
+    To change the compression method applied, use the -t/--type
+    option. The available compression methods are: none, bzip2, and
+    gzip (by default, bundles are compressed using bzip2).
 
     The bundle file can then be transferred using conventional means
     and applied to another repository with the unbundle or pull
