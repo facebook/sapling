@@ -73,8 +73,8 @@ hg grep octarine
 # Used to crash here
 hg grep -r 1 octarine
 
-# Issue337: grep did not compared changesets by their revision numbers
-# instead of following parent-child relationships.
+# Issue337: test that grep follows parent-child relationships instead
+# of just using revision numbers.
 cd ..
 echo % issue 337
 hg init issue337
