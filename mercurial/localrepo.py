@@ -77,7 +77,7 @@ class localrepository(repo.repository):
             s = os.path.realpath(self.opener("sharedpath").read())
             if not os.path.exists(s):
                 raise error.RepoError(
-                    _('.hg/sharedpath points to nonexistent directory %s' % s))
+                    _('.hg/sharedpath points to nonexistent directory %s') % s)
             self.sharedpath = s
         except IOError, inst:
             if inst.errno != errno.ENOENT:
@@ -1512,8 +1512,8 @@ class localrepository(repo.repository):
             if warn:
                 if not rheads: # new branch requires --force
                     self.ui.warn(_("abort: push creates new"
-                                   " remote branch '%s'!\n" %
-                                   self[updatelh[0]].branch()))
+                                   " remote branch '%s'!\n") %
+                                   self[updatelh[0]].branch())
                 else:
                     self.ui.warn(_("abort: push creates new remote heads!\n"))
 

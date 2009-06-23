@@ -1,26 +1,16 @@
-# Danish translations for Mercurial
-# Danske oversættelser for Mercurial
-# Copyright (C) 2009 Matt Mackall and others
+# Greek translations for Mercurial
+# Ελληνική μετάφραση των μηνυμάτων του Mercurial
 #
-# Translation dictionary:
-#
-# changeset           ændring
-# commit              arkivering
-# merge               sammenføje
-# patch               rettelse
-# repo(sitory)        arkiv
-# revision            revision
-# tag                 mærkat
-# working directory   arbejdskatalog
+# Copyright (C) 2009 Matt Mackall και άλλοι
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-06-21 19:16+0200\n"
-"PO-Revision-Date: 2009-06-21 19:26+0200\n"
-"Last-Translator:  <mg@lazybytes.net>\n"
-"Language-Team: Danish\n"
+"POT-Creation-Date: 2009-06-21 04:21+0300\n"
+"PO-Revision-Date: 2009-02-13 16:27+0200\n"
+"Last-Translator: <keramida@ceid.upatras.gr>\n"
+"Language-Team: Greek\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -29,100 +19,58 @@ msgstr ""
 
 #, python-format
 msgid " (default: %s)"
-msgstr " (standard: %s)"
+msgstr " (προκαθορισμένο: %s)"
 
 msgid "OPTIONS"
-msgstr ""
+msgstr "ΕΠΙΛΟΓΕΣ"
 
 msgid "COMMANDS"
-msgstr "KOMMANDOER"
+msgstr "ΕΝΤΟΛΕΣ"
 
 msgid "    options:\n"
-msgstr ""
+msgstr "    επιλογές:\n"
 
 #, python-format
 msgid ""
 "    aliases: %s\n"
 "\n"
 msgstr ""
-"    aliaser %s:\n"
+"    ψευδώνυμα: %s\n"
 "\n"
-
-msgid ""
-"provide simple hooks for access control\n"
-"\n"
-"Authorization is against local user name on system where hook is run, not\n"
-"committer of original changeset (since that is easy to spoof).\n"
-"\n"
-"The acl hook is best to use if you use hgsh to set up restricted shells for\n"
-"authenticated users to only push to / pull from. It's not safe if user has\n"
-"interactive shell access, because they can disable the hook. It's also not\n"
-"safe if remote users share one local account, because then there's no way "
-"to\n"
-"tell remote users apart.\n"
-"\n"
-"To use, configure the acl extension in hgrc like this:\n"
-"\n"
-"  [extensions]\n"
-"  hgext.acl =\n"
-"\n"
-"  [hooks]\n"
-"  pretxnchangegroup.acl = python:hgext.acl.hook\n"
-"\n"
-"  [acl]\n"
-"  sources = serve        # check if source of incoming changes in this list\n"
-"                         # (\"serve\" == ssh or http, \"push\", \"pull\", "
-"\"bundle\")\n"
-"\n"
-"Allow and deny lists have a subtree pattern (default syntax is glob) on the\n"
-"left and user names on right. The deny list is checked before the allow "
-"list.\n"
-"\n"
-"  [acl.allow]\n"
-"  # if acl.allow not present, all users allowed by default\n"
-"  # empty acl.allow = no users allowed\n"
-"  docs/** = doc_writer\n"
-"  .hgtags = release_engineer\n"
-"\n"
-"  [acl.deny]\n"
-"  # if acl.deny not present, no users denied by default\n"
-"  # empty acl.deny = all users allowed\n"
-"  glob pattern = user4, user5\n"
-"   ** = user6\n"
-msgstr ""
 
 #, python-format
 msgid "acl: %s not enabled\n"
-msgstr "acl: %s er ikke slået til\n"
+msgstr "acl: %s ανενεργό\n"
 
 #, python-format
 msgid "acl: %s enabled, %d entries for user %s\n"
-msgstr "acl: %s slået til, %d optegnelser for bruger %s\n"
+msgstr "acl: %s ενεργό, %d εγγραφές για τον χρήστη %s\n"
 
 #, python-format
 msgid "config error - hook type \"%s\" cannot stop incoming changesets"
 msgstr ""
-"konfigurationsfejl - hook type \"%s\" kan ikke stoppe indgående ændringer"
+"πρόβλημα ρυθμίσεων - το hook \"%s\" δε μπορεί να εμποδίσει εισερχόμενες "
+"αλλαγές"
 
 #, python-format
 msgid "acl: changes have source \"%s\" - skipping\n"
-msgstr "acl: ændringer har kilde \"%s\" - springer over\n"
+msgstr "acl: αλλαγές από \"%s\" - εξαίρεση αλλαγών\n"
 
 #, python-format
 msgid "acl: user %s denied on %s\n"
-msgstr "acl: bruger %s nægtet adgang til %s\n"
+msgstr "acl: ο χρήστης %s δεν επιτρέπεται να κάνει αλλαγές στο %s\n"
 
 #, python-format
 msgid "acl: access denied for changeset %s"
-msgstr "acl: adgang nægtet til ændring %s"
+msgstr "acl: η πρόσβαση για την αλλαγή %s δεν επιτρέπεται"
 
 #, python-format
 msgid "acl: user %s not allowed on %s\n"
-msgstr "acl: bruger %s ikke tilladt på %s\n"
+msgstr "acl: ο χρήστης %s δεν επιτρέπεται στο %s\n"
 
 #, python-format
 msgid "acl: allowing changeset %s\n"
-msgstr "acl: tillader ændring %s\n"
+msgstr "acl: αποδοχή αλλαγής %s\n"
 
 msgid ""
 "Mercurial bookmarks\n"
@@ -162,37 +110,41 @@ msgid ""
 msgstr ""
 
 msgid "a bookmark of this name does not exist"
-msgstr "et bogmærke med dette navn findes ikke"
+msgstr "δεν υπάρχει σελιδοδείκτης με αυτό το όνομα"
 
 msgid "a bookmark of the same name already exists"
-msgstr "et bogmærke med samme navn findes allerede"
+msgstr "υπάρχει ήδη σελιδοδείκτης με αυτό το όνομα"
 
 msgid "new bookmark name required"
-msgstr "nyt bogmærkenavn påkrævet"
+msgstr "απαιτείται ένα όνομα νέου σελιδοδείκτη"
 
 msgid "bookmark name required"
-msgstr "bogmærkenavn påkrævet"
+msgstr "απαιτείται όνομα σελιδοδείκτη"
 
 msgid "bookmark name cannot contain newlines"
-msgstr "bogmærkenavn kan ikke indeholde linieskift"
+msgstr ""
+"το όνομα ενός σελιδοδείκτη δεν επιτρέπεται να περιέχει χαρακτήρεςαλλαγής "
+"γραμμής"
 
 msgid "a bookmark cannot have the name of an existing branch"
-msgstr "et bogmærke kan ikke hedde det samme som en eksisterende gren"
+msgstr ""
+"οι σελιδοδείκτες δεν επιτρέπεται να έχουν το όνομα ενός υπάρχοντος κλάδου"
 
 msgid "force"
 msgstr ""
 
 msgid "revision"
-msgstr ""
+msgstr "αλλαγή"
 
 msgid "delete a given bookmark"
-msgstr "slet et givent bogmærke"
+msgstr "διαγραφή ενός σελιδοδείκτη"
 
 msgid "rename a given bookmark"
-msgstr "omdøb et givet bogmærke"
+msgstr "μετονομασία ενός σελιδοδείκτη"
 
+#, fuzzy
 msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
-msgstr ""
+msgstr "hg bookmarks [-d] [-m ΟΝΟΜΑ] [-r ΟΝΟΜΑ] [ΟΝΟΜΑ]"
 
 msgid ""
 "Bugzilla integration\n"
@@ -310,56 +262,56 @@ msgstr ""
 
 #, python-format
 msgid "connecting to %s:%s as %s, password %s\n"
-msgstr "forbinder til %s:%s som %s, kodeord %s\n"
+msgstr "σύνδεση στο %s:%s ως %s, κωδικός %s\n"
 
 #, python-format
 msgid "query: %s %s\n"
-msgstr "forespørgsel: %s %s\n"
+msgstr "αίτηση: %s %s\n"
 
 #, python-format
 msgid "failed query: %s %s\n"
-msgstr "fejlet forespørgsel: %s %s\n"
+msgstr "αποτυχία αίτησης: %s %s\n"
 
 msgid "unknown database schema"
-msgstr "ukendt databaseskema"
+msgstr "άγνωστο σχήμα βάσης"
 
 #, python-format
 msgid "bug %d already knows about changeset %s\n"
-msgstr "fejl %d kender allerede til ændring %s\n"
+msgstr "το πρόβλημα %d έχει ενημερωθεί ήδη για την αλλαγή %s\n"
 
 msgid "telling bugzilla to send mail:\n"
-msgstr "beder bugzilla om at sende mail:\n"
+msgstr ""
 
 #, python-format
 msgid "  bug %s\n"
-msgstr "  fejl %s\n"
+msgstr "  πρόβλημα %s\n"
 
 #, python-format
 msgid "running notify command %s\n"
-msgstr "kører notificeringskommando %s\n"
+msgstr ""
 
 #, python-format
 msgid "bugzilla notify command %s"
-msgstr "bugzilla notificeringskommando %s"
+msgstr ""
 
 msgid "done\n"
-msgstr "færdig\n"
+msgstr "ολοκληρώθηκε\n"
 
 #, python-format
 msgid "looking up user %s\n"
-msgstr "slår bruger %s op\n"
+msgstr "αναζήτηση χρήστη %s\n"
 
 #, python-format
 msgid "cannot find bugzilla user id for %s"
-msgstr "kan ikke finde bugzilla bruger-id for %s"
+msgstr "δε βρέθηκε χρήστης bugzilla με το αναγνωριστικό %s"
 
 #, python-format
 msgid "cannot find bugzilla user id for %s or %s"
-msgstr "kan ikke finde bugzilla bruger-id for %s eller %s"
+msgstr "δε βρέθηκε χρήστης bugzilla με το αναγνωριστικό %s ή %s"
 
 #, python-format
 msgid "bugzilla version %s not supported"
-msgstr "bugzilla version %s ikke understøttet"
+msgstr "η έκδοση %s του bugzilla δεν υποστηρίζεται"
 
 msgid ""
 "changeset {node|short} in repo {root} refers to bug {bug}.\n"
@@ -369,18 +321,15 @@ msgstr ""
 
 #, python-format
 msgid "python mysql support not available: %s"
-msgstr "python mysql-understøttelse ikke tilgængelig: %s"
+msgstr "δεν έχει εγκατασταθεί η υποστήριξη mysql για την python: %s"
 
 #, python-format
 msgid "hook type %s does not pass a changeset id"
-msgstr ""
+msgstr "τα hooks τύπου %s δεν περνούν αναγνωριστικό αλλαγής"
 
 #, python-format
 msgid "database error: %s"
-msgstr "databasefejl: %s"
-
-msgid "provides children command to show children changesets"
-msgstr ""
+msgstr "σφάλμα βάσης δεδομένων: %s"
 
 msgid ""
 "show the children of the given or working directory revision\n"
@@ -392,32 +341,27 @@ msgid ""
 "    argument to --rev if given) is printed.\n"
 "    "
 msgstr ""
-"vis børnene til arbejdskataloget eller en given revision\n"
-"\n"
-"    Udskriv arbejdskatalogets børnerevisioner. Hvis en revision er\n"
-"    angivet med -r/--rev, udskrives børnene til denne revision.\n"
-"    Hvis en fil er angivet, udskrives revisionen i hvilken filen sidst\n"
-"    blev ændret (efter arbejdskatalogets revision eller argumentet til\n"
-"    --rev, hvis givet).\n"
-"    "
 
+#, fuzzy
 msgid "show children of the specified revision"
-msgstr "vis børn af den givne revision"
+msgstr "lav statistik for de specificerede revisioner"
 
 msgid "hg children [-r REV] [FILE]"
-msgstr ""
+msgstr "hg children [-r ΕΚΔΟΣΗ] [ΑΡΧΕΙΟ]"
 
 msgid "command to show certain statistics about revision history"
-msgstr "kommando til at vise statestikker om revisionshistorikken"
+msgstr ""
+"εντολή η οποία δείχνει κάποια στατιστικά για το ιστορικό του αποθετηρίου"
 
 #, python-format
 msgid "Revision %d is a merge, ignoring...\n"
-msgstr "Revision %d er en sammenføjning; ignorerer...\n"
+msgstr ""
 
 #, python-format
 msgid "generating stats: %d%%"
-msgstr "genererer statistik: %d%%"
+msgstr ""
 
+#, fuzzy
 msgid ""
 "histogram of changes to the repository\n"
 "\n"
@@ -447,24 +391,21 @@ msgid ""
 "\n"
 "    It is possible to map alternate email addresses to a main address\n"
 "    by providing a file using the following format:\n"
-"\n"
+"    \n"
 "    <alias email> <actual email>\n"
 "\n"
 "    Such a file may be specified with the --aliases option, otherwise a\n"
 "    .hgchurn file will be looked for in the working directory root.\n"
 "    "
 msgstr ""
-"histogram over ændringer i depotet\n"
+"plot antallet af revisioner grupperet efter et mønster\n"
 "\n"
-"    Denne kommando vil vise et histogram som repræsenterer antallet af\n"
-"    ændrede linier eller revisioner, grupperet efter en given\n"
-"    skabelon. Standardskabelonen vil gruppere ændringer efter\n"
-"    forfatter. Med --dateformat tilvalget kan resultaterne i stedet\n"
-"    grupperes efter dato.\n"
+"    Plotter antallet af ændrede linier eller antallet af revisioner\n"
+"    grupperet efter et mønster eller alternativt efter dato, hvis\n"
+"    dateformat bruges. I så tilfælde bruges mønstret ikke.\n"
 "\n"
-"    Statistikken er basseret på antallet af ændrede linier eller\n"
-"    alternativt på antallet af matchende revisioner, hvis --changesets\n"
-"    tilvalget er specificeret.\n"
+"    Som udgangspunkt laves der statistik over antallet af ændrede\n"
+"    linier.\n"
 "\n"
 "    Eksempler:\n"
 "\n"
@@ -480,45 +421,41 @@ msgstr ""
 "      # viser antallet af linier ændret hvert år\n"
 "      hg churn -f '%Y' -s\n"
 "\n"
-"    Det er muligt at afbilde alternative e-mail-adresser til\n"
-"    hoved-adresser ved at bruge en fil med følgende format:\n"
+"    Formatet for map-filen er rimelig simpelt:\n"
 "\n"
-"    <alias email> <faktisk email>\n"
-"\n"
-"    En sådan fil kan angivet med --aliases tilvalget. Som standard\n"
-"    bruges .hgchurn i arbejdskatalogets rod, hvis denne findes.\n"
-"    "
+"    <alias email> <faktisk email>"
 
 #, python-format
 msgid "assuming %i character terminal\n"
 msgstr ""
 
 msgid "count rate for the specified revision or range"
-msgstr "lav statistik for de specificerede revisioner"
+msgstr ""
 
+#, fuzzy
 msgid "count rate for revisions matching date spec"
-msgstr "lav statistik for revisioner som matcher dato specifikationen"
+msgstr ""
 
 msgid "template to group changesets"
-msgstr "skabelon for gruppering af ændringer"
+msgstr ""
 
 msgid "strftime-compatible format for grouping by date"
-msgstr "strftime-kompatibelt format til gruppering efter dato"
+msgstr ""
 
 msgid "count rate by number of changesets"
-msgstr "lav statistik efter antallet af ændringer"
+msgstr ""
 
 msgid "sort by key (default: sort by count)"
-msgstr "sorter efter nøgle (standard: sorter efter antal)"
+msgstr ""
 
 msgid "file with email aliases"
-msgstr "fil med email-aliaser"
+msgstr ""
 
 msgid "show progress"
-msgstr "vis fremskridt"
+msgstr ""
 
 msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]"
-msgstr "hg churn [-d DATO] [-r REVISIONER] [--aliases FIL] [--progress] [FIL]"
+msgstr ""
 
 msgid ""
 "add color output to status, qseries, and diff-related commands\n"
@@ -533,6 +470,10 @@ msgid ""
 "also available. Effects are rendered with the ECMA-48 SGR control\n"
 "function (aka ANSI escape codes). This module also provides the\n"
 "render_text function, which can be used to add effects to any text.\n"
+"\n"
+"To enable this extension, add this to your .hgrc file:\n"
+"[extensions]\n"
+"color =\n"
 "\n"
 "Default effects may be overridden from the .hgrc file:\n"
 "\n"
@@ -802,52 +743,52 @@ msgid ""
 msgstr ""
 
 msgid "username mapping filename"
-msgstr "brugernavnsafbildningsfilnavn"
+msgstr ""
 
 msgid "destination repository type"
-msgstr "type for destinations repository"
+msgstr ""
 
 msgid "remap file names using contents of file"
-msgstr "konverter filnavne ved brug af filindhold"
+msgstr ""
 
 msgid "import up to target revision REV"
-msgstr "importer op til revision REV"
+msgstr ""
 
 msgid "source repository type"
-msgstr "kildedepotstype"
+msgstr ""
 
 msgid "splice synthesized history into place"
 msgstr ""
 
 msgid "change branch names while converting"
-msgstr "omdøb grene under konverteringen"
+msgstr ""
 
 msgid "try to sort changesets by branches"
-msgstr "forsøg at sortere ændringer efter gren"
+msgstr ""
 
 msgid "try to sort changesets by date"
-msgstr "forsøg at sortere ændringer efter dato"
+msgstr ""
 
 msgid "preserve source changesets order"
-msgstr "bevar kildeændringerne ordning"
+msgstr ""
 
 msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
 msgstr ""
 
 msgid "only return changes on specified branches"
-msgstr "returner kun ændringer på givne grene"
+msgstr ""
 
 msgid "prefix to remove from file names"
-msgstr "præfix der skal fjernes fra filnavne"
+msgstr ""
 
 msgid "only return changes after or between specified tags"
-msgstr "returner kun ændringer efter eller mellem givne mærkater"
+msgstr ""
 
 msgid "update cvs log cache"
-msgstr "opdater cvs log cache"
+msgstr ""
 
 msgid "create new cvs log cache"
-msgstr "opret ny cvs log cache"
+msgstr ""
 
 msgid "set commit time fuzz in seconds"
 msgstr ""
@@ -856,7 +797,7 @@ msgid "specify cvsroot"
 msgstr ""
 
 msgid "show parent changesets"
-msgstr "vis forældre-ændringer"
+msgstr ""
 
 msgid "show current changeset in ancestor branches"
 msgstr ""
@@ -893,7 +834,7 @@ msgstr ""
 
 #, python-format
 msgid "running: %s\n"
-msgstr "kører: %s\n"
+msgstr ""
 
 #, python-format
 msgid "%s error:\n"
@@ -921,11 +862,11 @@ msgstr ""
 
 #, python-format
 msgid "%s: unknown repository type"
-msgstr "%s: ukendt arkivtype"
+msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "unknown sort mode: %s"
-msgstr "ukendt sortering: %s"
+msgstr ""
 
 #, python-format
 msgid "cycle detected between %s and %s"
@@ -994,25 +935,25 @@ msgid "connecting to %s\n"
 msgstr ""
 
 msgid "CVS pserver authentication failed"
-msgstr "CVS pserver godkendelse fejlede"
+msgstr ""
 
 msgid "server sucks"
 msgstr ""
 
 #, python-format
 msgid "%d bytes missing from remote file"
-msgstr "%d byte mangler i fjernfilen"
+msgstr ""
 
 #, python-format
 msgid "cvs server: %s\n"
-msgstr "cvs server: %s\n"
+msgstr ""
 
 #, python-format
 msgid "unknown CVS response: %s"
-msgstr "ukendt CVS svar: %s"
+msgstr ""
 
 msgid "collecting CVS rlog\n"
-msgstr "samler CVS rlog\n"
+msgstr ""
 
 #, python-format
 msgid "reading cvs log cache %s\n"
@@ -1028,41 +969,41 @@ msgstr ""
 
 #, python-format
 msgid "running %s\n"
-msgstr "kører %s\n"
+msgstr "εκτέλεση %s\n"
 
 #, python-format
 msgid "prefix=%r directory=%r root=%r\n"
-msgstr ""
+msgstr "πρόθεμα=%r κατάλογος=%r αρχικός-κατάλογος=%r\n"
 
 msgid "RCS file must be followed by working file"
-msgstr ""
+msgstr "το αρχείο RCS πρέπει να ακολουθείται από ένα αρχείο εργασίας"
 
 msgid "must have at least some revisions"
-msgstr ""
+msgstr "πρέπει να υπάρχουν κάποιες εκδόσεις αρχείων"
 
 msgid "expected revision number"
-msgstr "forventede et revisionsnummer"
+msgstr "αναμένεται αριθμός έκδοσης αρχείου"
 
 msgid "revision must be followed by date line"
-msgstr "revision skal efterfølges af datolinje"
+msgstr "η έκδοση αρχείου πρέπει να ακολουθείται από γραμμή ημερομηνίας"
 
-#, python-format
+#, fuzzy, python-format
 msgid "found synthetic revision in %s: %r\n"
 msgstr ""
 
 #, python-format
 msgid "writing cvs log cache %s\n"
-msgstr ""
+msgstr "αποθήκευση προσωρινού αντιγράφου cvs log %s\n"
 
 #, python-format
 msgid "%d log entries\n"
-msgstr ""
+msgstr "%d εκδόσεις αρχείων\n"
 
 msgid "creating changesets\n"
-msgstr "opretter ændringer\n"
+msgstr "δημιουργία αλλαγών\n"
 
 msgid "synthetic changeset cannot have multiple parents"
-msgstr "syntetisk ændring kan ikke have flere forældre"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -1072,47 +1013,49 @@ msgstr ""
 
 #, python-format
 msgid "%d changeset entries\n"
-msgstr "%d ændringer\n"
+msgstr "%d αλλαγές\n"
 
 msgid "Python ElementTree module is not available"
-msgstr ""
+msgstr "δεν είναι διαθέσιμο το άρθρωμα ElementTree της Python"
 
 #, python-format
 msgid "cleaning up %s\n"
-msgstr "rydder op %s\n"
+msgstr "καθαρισμός %s\n"
 
 msgid "internal calling inconsistency"
-msgstr "intern kaldeinkonsistens"
+msgstr "εσωτερικό πρόβλημα κλήσης"
 
 msgid "errors in filemap"
-msgstr "fejl i filafbildning"
+msgstr "λάθη στο filemap"
 
 #, python-format
 msgid "%s:%d: %r already in %s list\n"
-msgstr ""
+msgstr "%s:%d: η εγγραφή %r υπάρχει ήδη στη λίστα %s\n"
 
 #, python-format
 msgid "%s:%d: unknown directive %r\n"
-msgstr ""
+msgstr "%s:%d: άγνωστη εντολή %r\n"
 
 msgid "source repository doesn't support --filemap"
-msgstr ""
+msgstr "το αποθετήριο πηγής δεν υποστηρίζει την επιλογή --filemap"
 
 #, python-format
 msgid "%s does not look like a GNU Arch repo"
-msgstr ""
+msgstr "το %s δε φαίνεται να είναι αποθετήριο Arch"
 
 msgid "cannot find a GNU Arch tool"
-msgstr "kan ikke finde GNU Arch"
+msgstr "δεν είναι διαθέσιμο το εργαλείο GNU Arch"
 
 #, python-format
 msgid "analyzing tree version %s...\n"
-msgstr ""
+msgstr "ανάλυση καταλόγου αρχείων για την έκδοση %s...\n"
 
 #, python-format
 msgid ""
 "tree analysis stopped because it points to an unregistered archive %s...\n"
 msgstr ""
+"η ανάλυση καταλόγου διακόπηκε επειδή περιέχει αναφορά στην συλλογή αρχείων %"
+"s, η οποία δεν υπάρχει ή δεν είναι διαθέσιμη...\n"
 
 #, python-format
 msgid "applying revision %s...\n"
@@ -1120,15 +1063,15 @@ msgstr ""
 
 #, python-format
 msgid "computing changeset between %s and %s...\n"
-msgstr "beregner ændringer mellem %s og %s...\n"
+msgstr ""
 
 #, python-format
 msgid "obtaining revision %s...\n"
-msgstr "henter revision %s...\n"
+msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "analyzing revision %s...\n"
-msgstr "analyserer revision %s...\n"
+msgstr "ανάλυση καταλόγου αρχείων για την έκδοση %s...\n"
 
 #, python-format
 msgid "could not parse cat-log of %s"
@@ -1164,7 +1107,7 @@ msgstr ""
 
 #, python-format
 msgid "ignoring: %s\n"
-msgstr "ignorerer: %s\n"
+msgstr ""
 
 msgid "run hg source pre-conversion action\n"
 msgstr ""
@@ -1180,11 +1123,13 @@ msgstr ""
 msgid "copying file in renamed directory from '%s' to '%s'"
 msgstr ""
 
+#, fuzzy
 msgid "reading p4 views\n"
-msgstr ""
+msgstr "καθαρισμός %s\n"
 
+#, fuzzy
 msgid "collecting p4 changelists\n"
-msgstr ""
+msgstr "δημιουργία αλλαγών\n"
 
 msgid "Subversion python bindings could not be loaded"
 msgstr ""
@@ -1331,13 +1276,17 @@ msgid "XXX TAGS NOT IMPLEMENTED YET\n"
 msgstr ""
 
 msgid ""
-"allow external programs to compare revisions\n"
 "\n"
 "The `extdiff' Mercurial extension allows you to use external programs\n"
 "to compare revisions, or revision with working directory. The external diff\n"
 "programs are called with a configurable set of options and two\n"
 "non-option arguments: paths to directories containing snapshots of\n"
 "files to compare.\n"
+"\n"
+"To enable this extension:\n"
+"\n"
+"  [extensions]\n"
+"  hgext.extdiff =\n"
 "\n"
 "The `extdiff' extension also allows to configure new diff commands, so\n"
 "you do not need to type \"hg extdiff -p kdiff3\" always.\n"
@@ -1370,7 +1319,7 @@ msgstr ""
 
 #, python-format
 msgid "making snapshot of %d files from rev %s\n"
-msgstr "laver øjebliksbillede af %d filer fra rev %s\n"
+msgstr ""
 
 #, python-format
 msgid "making snapshot of %d files from working directory\n"
@@ -1410,10 +1359,10 @@ msgid ""
 msgstr ""
 
 msgid "comparison program to run"
-msgstr "sammenligningsprogram der skal køres"
+msgstr ""
 
 msgid "pass option to comparison program"
-msgstr "videregiv argument til sammenligningsprogram"
+msgstr ""
 
 msgid "change made by revision"
 msgstr ""
@@ -1456,10 +1405,10 @@ msgid "outstanding uncommitted merge"
 msgstr ""
 
 msgid "outstanding uncommitted changes"
-msgstr ""
+msgstr "υπάρχουν τοπικές αλλαγές ακόμη"
 
 msgid "working directory is missing some files"
-msgstr "arbejdskataloget mangler nogle filer"
+msgstr "λείπουν ορισμένα αρχεία από το χώρο εργασίας"
 
 msgid ""
 "multiple heads in this branch (use \"hg heads .\" and \"hg merge\" to merge)"
@@ -1467,7 +1416,7 @@ msgstr ""
 
 #, python-format
 msgid "pulling from %s\n"
-msgstr "hiver fra %s\n"
+msgstr ""
 
 msgid ""
 "Other repository doesn't support revision lookup, so a rev cannot be "
@@ -1482,11 +1431,11 @@ msgstr ""
 
 #, python-format
 msgid "updating to %d:%s\n"
-msgstr "opdaterer til %d:%s\n"
+msgstr ""
 
 #, python-format
 msgid "merging with %d:%s\n"
-msgstr "sammenføjer med %d:%s\n"
+msgstr ""
 
 #, python-format
 msgid "Automated merge with %s"
@@ -1494,7 +1443,7 @@ msgstr ""
 
 #, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
-msgstr "ny ændring %d:%s fletter fjernændringer sammen med lokale\n"
+msgstr ""
 
 msgid "a specific revision you would like to pull"
 msgstr ""
@@ -1509,9 +1458,6 @@ msgid "switch parents when merging"
 msgstr ""
 
 msgid "hg fetch [SOURCE]"
-msgstr ""
-
-msgid "GnuPG signing extension for Mercurial"
 msgstr ""
 
 msgid "error while verifying signature"
@@ -1530,18 +1476,18 @@ msgid "%s Note: This key has expired (signed by: \"%s\")\n"
 msgstr ""
 
 msgid "list signed changesets"
-msgstr "vis underskrevne ændringer"
+msgstr ""
 
 #, python-format
 msgid "%s:%d node does not exist\n"
-msgstr "%s:%d knude findes ikke\n"
+msgstr ""
 
 msgid "verify all the signatures there may be for a particular revision"
-msgstr "verificer alle underskrifter der måtte være for en given revision"
+msgstr ""
 
 #, python-format
 msgid "No valid signature for %s\n"
-msgstr "Ingen gyldig signatur for %s\n"
+msgstr ""
 
 msgid ""
 "add a signature for the current or given revision\n"
@@ -1557,7 +1503,7 @@ msgid "uncommitted merge - please provide a specific revision"
 msgstr ""
 
 msgid "Error while signing"
-msgstr "Fejl ved underskrivning"
+msgstr ""
 
 msgid ""
 "working copy of .hgsigs is changed (please commit .hgsigs manually or use --"
@@ -1620,19 +1566,19 @@ msgstr ""
 
 #, python-format
 msgid "comparing with %s\n"
-msgstr "sammenligner med %s\n"
+msgstr "σύγκριση με %s\n"
 
 msgid "no changes found\n"
-msgstr "fandt ingen ændringer\n"
+msgstr "δεν υπάρχουν αλλαγές\n"
 
 msgid "show the revision DAG"
 msgstr ""
 
 msgid "limit number of changes displayed"
-msgstr "begræns antaln viste ændringer"
+msgstr ""
 
 msgid "show patch"
-msgstr ""
+msgstr "προβολή patch"
 
 msgid "show the specified revision or range"
 msgstr ""
@@ -1685,10 +1631,10 @@ msgid "email.from must be defined when sending by email"
 msgstr ""
 
 msgid "cia: no user specified"
-msgstr "cia: ingen bruger angivet"
+msgstr ""
 
 msgid "cia: no project specified"
-msgstr "cia: intet project angivet"
+msgstr ""
 
 msgid ""
 "browsing the repository in a graphical way\n"
@@ -1700,8 +1646,20 @@ msgid ""
 "hgk consists of two parts: a Tcl script that does the displaying and\n"
 "querying of information, and an extension to Mercurial named hgk.py,\n"
 "which provides hooks for hgk to get information. hgk can be found in\n"
-"the contrib directory, and the extension is shipped in the hgext\n"
-"repository, and needs to be enabled.\n"
+"the contrib directory, and hgk.py can be found in the hgext directory.\n"
+"\n"
+"To load the hgext.py extension, add it to your .hgrc file (you have to\n"
+"use your global $HOME/.hgrc file, not one in a repository). You can\n"
+"specify an absolute path:\n"
+"\n"
+"  [extensions]\n"
+"  hgk=/usr/local/lib/hgk.py\n"
+"\n"
+"Mercurial can also scan the default python library path for a file\n"
+"named 'hgk.py' if you set hgk empty:\n"
+"\n"
+"  [extensions]\n"
+"  hgk=\n"
 "\n"
 "The hg view command will launch the hgk Tcl script. For this command\n"
 "to work, hgk must be in your search path. Alternately, you can specify\n"
@@ -1766,7 +1724,7 @@ msgid "detect copies"
 msgstr ""
 
 msgid "search"
-msgstr "søg"
+msgstr ""
 
 msgid "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
 msgstr ""
@@ -1781,7 +1739,7 @@ msgid "hg debug-merge-base node node"
 msgstr ""
 
 msgid "ignored"
-msgstr "Ignoreret"
+msgstr ""
 
 msgid "hg debug-rev-parse REV"
 msgstr ""
@@ -1806,6 +1764,11 @@ msgid ""
 "\n"
 "It depends on the Pygments syntax highlighting library:\n"
 "http://pygments.org/\n"
+"\n"
+"To enable the extension add this to hgrc:\n"
+"\n"
+"[extensions]\n"
+"hgext.highlight =\n"
 "\n"
 "There is a single configuration option:\n"
 "\n"
@@ -1834,16 +1797,16 @@ msgid "directories being watched:\n"
 msgstr ""
 
 msgid "run server in background"
-msgstr "kører serveren i baggrunden"
+msgstr ""
 
 msgid "used internally by daemon mode"
-msgstr "brugt internt i daemon mode"
+msgstr ""
 
 msgid "minutes to sit idle before exiting"
 msgstr ""
 
 msgid "name of file to write process ID to"
-msgstr "navn på fil at skrive process ID til"
+msgstr ""
 
 msgid "hg inserve [OPT]..."
 msgstr ""
@@ -1998,8 +1961,12 @@ msgid ""
 "which will be automatically expanded into links or any other\n"
 "arbitrary expression, much like InterWiki does.\n"
 "\n"
-"A few example patterns (link to bug tracking, etc.) that may\n"
-"be used in your hgrc:\n"
+"To enable this extension, add the following lines to your hgrc:\n"
+"\n"
+"  [extensions]\n"
+"  interhg =\n"
+"\n"
+"A few example patterns (link to bug tracking, etc.):\n"
 "\n"
 "  [interhg]\n"
 "  issues = s!issue(\\d+)!<a href=\"http://bts/issue\\1\">issue\\1</a>!\n"
@@ -2098,9 +2065,9 @@ msgid ""
 "\t%s\n"
 msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "creating temporary repository at %s\n"
-msgstr ""
+msgstr "δημιουργία αποθετηρίου για το queue"
 
 #, python-format
 msgid ""
@@ -2172,6 +2139,7 @@ msgstr ""
 msgid "hg kwshrink [OPTION]... [FILE]..."
 msgstr ""
 
+#, fuzzy
 msgid ""
 "patch management and development\n"
 "\n"
@@ -2222,7 +2190,7 @@ msgstr ""
 
 #, python-format
 msgid "%s appears more than once in %s"
-msgstr "%s findes mere end én gang i %s"
+msgstr ""
 
 msgid "guard cannot be an empty string"
 msgstr ""
@@ -2288,42 +2256,40 @@ msgstr ""
 
 #, python-format
 msgid "unable to read %s"
-msgstr "ikke i stand til at læse %s"
+msgstr ""
 
 #, python-format
 msgid "patch %s does not exist\n"
-msgstr "rettelsen %s findes ikke\n"
+msgstr ""
 
 #, python-format
 msgid "patch %s is not applied\n"
-msgstr "rettelsen %s er ikke anvendt\n"
+msgstr ""
 
 msgid "patch failed, unable to continue (try -v)\n"
 msgstr ""
 
 #, python-format
 msgid "applying %s\n"
-msgstr "anvender %s\n"
+msgstr ""
 
 #, python-format
-msgid "unable to read %s\n"
-msgstr "kan ikke læse %s\n"
+msgid "Unable to read %s\n"
+msgstr ""
 
 #, python-format
 msgid "imported patch %s\n"
-msgstr "importeret rettelse %s\n"
+msgstr ""
 
 #, python-format
 msgid ""
 "\n"
 "imported patch %s"
 msgstr ""
-"\n"
-"importeret rettelse %s"
 
 #, python-format
 msgid "patch %s is empty\n"
-msgstr "rettelse %s er tom\n"
+msgstr ""
 
 msgid "patch failed, rejects left in working dir\n"
 msgstr ""
@@ -2337,10 +2303,6 @@ msgstr ""
 
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr "kan ikke slette revision %d ovenover anvendte rettelser"
-
-#, python-format
-msgid "patch %s finalized without changeset message\n"
 msgstr ""
 
 msgid "qdelete requires at least one revision or patch name"
@@ -2348,49 +2310,50 @@ msgstr ""
 
 #, python-format
 msgid "cannot delete applied patch %s"
-msgstr "kan ikke slette den anvendte rettelse %s"
+msgstr ""
 
 #, python-format
 msgid "patch %s not in series file"
-msgstr "rettelse %s er ikke i series filen"
+msgstr ""
 
 msgid "no patches applied"
-msgstr "ingen rettelser anvendt"
+msgstr ""
 
 msgid "working directory revision is not qtip"
 msgstr ""
 
 msgid "local changes found, refresh first"
-msgstr "lokale ændringer fundet, genopfrisk først"
+msgstr ""
 
 msgid "local changes found"
-msgstr "lokale ændringer fundet"
+msgstr ""
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
+msgstr ""
 
 #, python-format
 msgid "patch \"%s\" already exists"
-msgstr "rettelsen \"%s\" findes allerede"
+msgstr ""
 
 #, python-format
 msgid "error unlinking %s\n"
-msgstr "fejl ved sletning af %s\n"
+msgstr ""
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
-msgstr "rettelsen \"%s\" er tvetydigt:\n"
+msgstr ""
 
 #, python-format
 msgid "patch %s not in series"
 msgstr ""
 
+#, fuzzy
 msgid "(working directory not at a head)\n"
-msgstr "(arbejdskatalog er ikke ved et hoved)\n"
+msgstr "χώρος εργασίας του %s"
 
 msgid "no patches in series\n"
-msgstr "ingen patches i serien\n"
+msgstr ""
 
 #, python-format
 msgid "cannot push to a previous patch: %s"
@@ -2409,16 +2372,16 @@ msgstr ""
 
 #, python-format
 msgid "cannot push '%s' - %s\n"
-msgstr "kan ikke skubbe '%s' - %s\n"
+msgstr ""
 
 msgid "all patches are currently applied\n"
-msgstr "alle rettelser er i øjeblikket anvendt\n"
+msgstr ""
 
 msgid "patch series already fully applied\n"
 msgstr ""
 
 msgid "cleaning up working directory..."
-msgstr "rydder op i arbejdskataloget..."
+msgstr ""
 
 #, python-format
 msgid "errors during apply, please fix and refresh %s\n"
@@ -2426,14 +2389,14 @@ msgstr ""
 
 #, python-format
 msgid "now at: %s\n"
-msgstr "nu ved: %s\n"
+msgstr "τώρα στο: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
-msgstr "rettelse %s er ikke anvendt"
+msgstr ""
 
 msgid "no patches applied\n"
-msgstr "ingen rettelser anvendt\n"
+msgstr ""
 
 #, python-format
 msgid "qpop: %s is already at the top\n"
@@ -2453,7 +2416,7 @@ msgid "deletions found between repo revs"
 msgstr ""
 
 msgid "patch queue now empty\n"
-msgstr "rettelseskøen er nu tom\n"
+msgstr ""
 
 msgid "cannot refresh a revision with children"
 msgstr ""
@@ -2468,14 +2431,14 @@ msgstr ""
 
 #, python-format
 msgid "patch %s is not in series file"
-msgstr "rettelse %s er ikke i series filen"
+msgstr ""
 
 msgid "No saved patch data found\n"
 msgstr ""
 
 #, python-format
 msgid "restoring status: %s\n"
-msgstr "genopretter status: %s\n"
+msgstr ""
 
 msgid "save entry has children, leaving it alone\n"
 msgstr ""
@@ -2545,14 +2508,14 @@ msgstr ""
 
 #, python-format
 msgid "patch %s does not exist"
-msgstr "rettelse %s eksisterer ikke"
+msgstr ""
 
 msgid "need --name to import a patch from -"
 msgstr ""
 
 #, python-format
 msgid "adding %s to series file\n"
-msgstr "tilføjer %s til series filen\n"
+msgstr ""
 
 msgid ""
 "remove patches from queue\n"
@@ -2570,10 +2533,10 @@ msgid ""
 msgstr ""
 
 msgid "print the patches already applied"
-msgstr "udskriver rettelserne som allerede er anvendt"
+msgstr ""
 
 msgid "print the patches not yet applied"
-msgstr "udskriver rettelserne som ikke er anvendt endnu"
+msgstr ""
 
 msgid ""
 "import a patch\n"
@@ -2632,17 +2595,20 @@ msgid ""
 msgstr ""
 
 msgid "versioned patch repository not found (see qinit -c)"
-msgstr "versionsstyret arkiv til rettelser blev ikke fundet (se qinit -c)"
+msgstr ""
 
+#, fuzzy
 msgid "cloning main repository\n"
-msgstr "kloner hovedarkiv\n"
+msgstr ""
 
+#, fuzzy
 msgid "cloning patch repository\n"
-msgstr "kloner rettelsesarkiv\n"
+msgstr "δε μπορεί να δημιουργηθεί ένα νέο αποθετήριο μέσω http"
 
 msgid "stripping applied patches from destination repository\n"
 msgstr ""
 
+#, fuzzy
 msgid "updating destination repository\n"
 msgstr ""
 
@@ -2650,22 +2616,22 @@ msgid "commit changes in the queue repository"
 msgstr ""
 
 msgid "print the entire series file"
-msgstr "udskriver hele series filen"
+msgstr ""
 
 msgid "print the name of the current patch"
-msgstr "udskriver navnet på den nuværende rettelse"
+msgstr ""
 
 msgid "print the name of the next patch"
-msgstr "udskriver navnet på den næste rettelse"
+msgstr ""
 
 msgid "all patches applied\n"
-msgstr "alle rettelser er anvendt\n"
+msgstr "όλα τα patches έχουν εφαρμοστεί\n"
 
 msgid "print the name of the previous patch"
-msgstr "udskriver navnet på den forgående rettelse"
+msgstr "προβολή του ονόματος του προηγούμενου patch"
 
 msgid "only one patch applied\n"
-msgstr "kun én rettelse er anvendt\n"
+msgstr "μόνο ένα patch έχει εφαρμοστεί\n"
 
 msgid ""
 "create a new patch\n"
@@ -2746,7 +2712,7 @@ msgid "qfold requires at least one patch name"
 msgstr ""
 
 msgid "No patches applied"
-msgstr "Ingen rettelser anvendt"
+msgstr ""
 
 #, python-format
 msgid "Skipping already folded patch %s"
@@ -2789,7 +2755,7 @@ msgstr ""
 
 #, python-format
 msgid "no patch named %s"
-msgstr "ingen patch ved navn %s"
+msgstr ""
 
 msgid "print the header of the topmost or specified patch"
 msgstr ""
@@ -2831,7 +2797,7 @@ msgstr ""
 
 #, python-format
 msgid "%s already exists"
-msgstr "%s eksisterer allerede"
+msgstr ""
 
 #, python-format
 msgid "A patch named %s already exists in the series file"
@@ -2972,7 +2938,7 @@ msgid "hg qapplied [-s] [PATCH]"
 msgstr ""
 
 msgid "use pull protocol to copy metadata"
-msgstr "brug træk-protokol til at kopiere metadata"
+msgstr ""
 
 msgid "do not update the new working directories"
 msgstr ""
@@ -2980,8 +2946,9 @@ msgstr ""
 msgid "use uncompressed transfer (fast over LAN)"
 msgstr ""
 
+#, fuzzy
 msgid "location of source patch repository"
-msgstr ""
+msgstr "δε μπορεί να δημιουργηθεί ένα νέο αποθετήριο μέσω http"
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
 msgstr ""
@@ -3031,8 +2998,9 @@ msgstr ""
 msgid "import file in patch directory"
 msgstr ""
 
+#, fuzzy
 msgid "name of patch file"
-msgstr "navn på rettelsesfil"
+msgstr ""
 
 msgid "overwrite existing files"
 msgstr ""
@@ -3041,7 +3009,7 @@ msgid "place existing revisions under mq control"
 msgstr ""
 
 msgid "use git extended diff format"
-msgstr ""
+msgstr "χρήση των επεκτάσεων του git για τα αρχεία diff"
 
 msgid "qpush after importing"
 msgstr ""
@@ -3050,13 +3018,13 @@ msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
 msgstr ""
 
 msgid "create queue repository"
-msgstr "opret kø-repository"
+msgstr "δημιουργία αποθετηρίου για το queue"
 
 msgid "hg qinit [-c]"
 msgstr ""
 
 msgid "import uncommitted changes into patch"
-msgstr ""
+msgstr "ενσωμάτωση τοπικών αλλαγών στο patch"
 
 msgid "add \"From: <current user>\" to patch"
 msgstr ""
@@ -3080,13 +3048,13 @@ msgid "hg qprev [-s]"
 msgstr ""
 
 msgid "pop all patches"
-msgstr ""
+msgstr "αφαίρεση όλων των patches"
 
 msgid "queue name to pop"
 msgstr ""
 
 msgid "forget any local changes"
-msgstr ""
+msgstr "ακύρωση όλων των τοπικών αλλαγών"
 
 msgid "hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]"
 msgstr ""
@@ -3133,8 +3101,9 @@ msgstr ""
 msgid "delete save entry"
 msgstr ""
 
+#, fuzzy
 msgid "update queue working directory"
-msgstr ""
+msgstr "χώρος εργασίας του %s"
 
 msgid "hg qrestore [-d] [-u] REV"
 msgstr ""
@@ -3194,10 +3163,10 @@ msgid "hg qunapplied [-s] [PATCH]"
 msgstr ""
 
 msgid "finish all applied changesets"
-msgstr "afslut alle anvendte ændringer"
+msgstr ""
 
 msgid "hg qfinish [-a] [REV...]"
-msgstr "hg qfinish [-a] [REV...]"
+msgstr ""
 
 msgid ""
 "hook extension to email notifications on commits/pushes\n"
@@ -3265,11 +3234,11 @@ msgstr ""
 
 #, python-format
 msgid "%s: %d new changesets"
-msgstr "%s: %d nye ændringer"
+msgstr ""
 
 #, python-format
 msgid "notify: sending %d subscribers %d changes\n"
-msgstr "notify: sender %d abonnenter %d ændringer\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -3372,6 +3341,11 @@ msgid ""
 "with a diffstat summary and the changeset summary, so you can be sure\n"
 "you are sending the right changes.\n"
 "\n"
+"To enable this extension:\n"
+"\n"
+"  [extensions]\n"
+"  hgext.patchbomb =\n"
+"\n"
 "To configure other defaults, add a section like this to your hgrc\n"
 "file:\n"
 "\n"
@@ -3422,7 +3396,7 @@ msgid "does the diffstat above look okay? "
 msgstr ""
 
 msgid "diffstat rejected"
-msgstr "diffstat afvist"
+msgstr ""
 
 msgid ""
 "send changesets by email\n"
@@ -3476,13 +3450,13 @@ msgid ""
 msgstr ""
 
 msgid "specify at least one changeset with -r or -o"
-msgstr "angiv mindst en ændring med -r eller -o"
+msgstr "ορίστε τουλάχιστον μια αλλαγή με -r ή -o"
 
 msgid "--outgoing mode always on with --bundle; do not re-specify --outgoing"
 msgstr ""
 
 msgid "too many destinations"
-msgstr "for mange destinationer"
+msgstr "πολύ μεγάλος αριθμός παραληπτών"
 
 msgid "use only one form to specify the revision"
 msgstr ""
@@ -3512,10 +3486,10 @@ msgid "Sending "
 msgstr ""
 
 msgid "send patches as attachments"
-msgstr "send lapper som vedhæftede filer"
+msgstr ""
 
 msgid "send patches as inline attachments"
-msgstr "send lapper som integreret tekst"
+msgstr ""
 
 msgid "email addresses of blind carbon copy recipients"
 msgstr ""
@@ -3524,7 +3498,7 @@ msgid "email addresses of copy recipients"
 msgstr ""
 
 msgid "add diffstat output to messages"
-msgstr "tilføj diffstat resultat til beskeder"
+msgstr ""
 
 msgid "use the given date as the sending date"
 msgstr ""
@@ -3566,7 +3540,7 @@ msgid "a revision to send"
 msgstr ""
 
 msgid "run even when remote repository is unrelated (with -b/--bundle)"
-msgstr "kør selv hvis fjernarkivet er urelateret (med -b/--bundle)"
+msgstr ""
 
 msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
 msgstr ""
@@ -3575,9 +3549,6 @@ msgid "send an introduction email for a single patch"
 msgstr ""
 
 msgid "hg email [OPTION]... [DEST]..."
-msgstr ""
-
-msgid "enable removing untracked files only"
 msgstr ""
 
 msgid ""
@@ -3705,7 +3676,7 @@ msgstr ""
 
 #, python-format
 msgid " update to %d:%s\n"
-msgstr " opdater til %d:%s\n"
+msgstr " ενημέρωση σε %d:%s\n"
 
 msgid " already in target\n"
 msgstr ""
@@ -3816,14 +3787,14 @@ msgid "interactive change selection during commit or qrefresh"
 msgstr ""
 
 msgid "this modifies a binary file (all or nothing)\n"
-msgstr "dette ændrer en binær fil (alt eller intet)\n"
+msgstr ""
 
 msgid "this is a binary file\n"
-msgstr "dette er en binær fil\n"
+msgstr ""
 
 #, python-format
 msgid "%d hunks, %d lines changed\n"
-msgstr "%d stumper, %d linjer ændret\n"
+msgstr ""
 
 msgid "[Ynsfdaq?]"
 msgstr ""
@@ -3846,6 +3817,7 @@ msgstr ""
 msgid "Record &all changes to all remaining files"
 msgstr ""
 
+#, fuzzy
 msgid "&Quit, recording no changes"
 msgstr ""
 
@@ -3877,14 +3849,14 @@ msgid "q"
 msgstr ""
 
 msgid "user quit"
-msgstr "user quit"
+msgstr ""
 
 #, python-format
 msgid "examine changes to %s?"
 msgstr ""
 
 msgid " and "
-msgstr " og "
+msgstr ""
 
 #, python-format
 msgid "record this change to %r?"
@@ -3931,25 +3903,22 @@ msgstr ""
 
 #, python-format
 msgid "backup %r as %r\n"
-msgstr "sikkerhedskopier %r som %r\n"
+msgstr ""
 
 msgid "applying patch\n"
-msgstr "tilføjer lap\n"
+msgstr ""
 
 msgid "patch failed to apply"
-msgstr "lap kunne ikke tilføjes"
+msgstr ""
 
 #, python-format
 msgid "restoring %r to %r\n"
-msgstr "gendanner %r som %r\n"
+msgstr ""
 
 msgid "hg record [OPTION]... [FILE]..."
 msgstr ""
 
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
-msgstr ""
-
-msgid "provides the hg share command"
 msgstr ""
 
 msgid ""
@@ -3963,8 +3932,9 @@ msgid ""
 "    "
 msgstr ""
 
+#, fuzzy
 msgid "do not create a working copy"
-msgstr "opret ikke en arbejdskopi"
+msgstr "(δώστε 'hg update' για να εξάγετε αντίγραφο εργασίας)\n"
 
 msgid "[-U] SOURCE [DEST]"
 msgstr ""
@@ -4006,7 +3976,7 @@ msgstr ""
 
 #, python-format
 msgid "%s: empty changeset"
-msgstr "%s: tom ændring"
+msgstr ""
 
 msgid "Fix up the merge and run hg transplant --continue"
 msgstr ""
@@ -4097,7 +4067,7 @@ msgid "pull all changesets up to BRANCH"
 msgstr ""
 
 msgid "skip over REV"
-msgstr "spring over REV"
+msgstr ""
 
 msgid "merge at REV"
 msgstr ""
@@ -4140,6 +4110,11 @@ msgid ""
 " * You should set same encoding for the repository by locale or\n"
 "   HGENCODING.\n"
 "\n"
+"To use this extension, enable the extension in .hg/hgrc or ~/.hgrc:\n"
+"\n"
+"  [extensions]\n"
+"  hgext.win32mbcs =\n"
+"\n"
 "Path encoding conversion are done between Unicode and\n"
 "encoding.encoding which is decided by Mercurial from current locale\n"
 "setting or HGENCODING.\n"
@@ -4155,36 +4130,6 @@ msgstr ""
 
 #, python-format
 msgid "[win32mbcs] activated with encoding: %s\n"
-msgstr ""
-
-msgid ""
-"LF <-> CRLF/CR translation utilities\n"
-"\n"
-"To perform automatic newline conversion, use:\n"
-"\n"
-"[extensions]\n"
-"hgext.win32text =\n"
-"[encode]\n"
-"** = cleverencode:\n"
-"# or ** = macencode:\n"
-"\n"
-"[decode]\n"
-"** = cleverdecode:\n"
-"# or ** = macdecode:\n"
-"\n"
-"If not doing conversion, to make sure you do not commit CRLF/CR by "
-"accident:\n"
-"\n"
-"[hooks]\n"
-"pretxncommit.crlf = python:hgext.win32text.forbidcrlf\n"
-"# or pretxncommit.cr = python:hgext.win32text.forbidcr\n"
-"\n"
-"To do the same check on a server to prevent CRLF/CR from being\n"
-"pushed or pulled:\n"
-"\n"
-"[hooks]\n"
-"pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf\n"
-"# or pretxnchangegroup.cr = python:hgext.win32text.forbidcr\n"
 msgstr ""
 
 #, python-format
@@ -4229,6 +4174,12 @@ msgid ""
 "the need to configure a server or a service. They can be discovered\n"
 "without knowing their actual IP address.\n"
 "\n"
+"To use the zeroconf extension add the following entry to your hgrc\n"
+"file:\n"
+"\n"
+"[extensions]\n"
+"hgext.zeroconf =\n"
+"\n"
 "To allow other people to discover your repository using run \"hg serve\"\n"
 "in your repository.\n"
 "\n"
@@ -4242,57 +4193,58 @@ msgid ""
 msgstr ""
 
 msgid "archive prefix contains illegal components"
-msgstr "arkivpræfix indeholder ugyldige komponenter"
+msgstr ""
 
 msgid "cannot give prefix when archiving to files"
-msgstr "kan ikke give præfix ved arkivering til filer"
+msgstr ""
 
 #, python-format
 msgid "unknown archive type '%s'"
-msgstr "ukendt arkivtype '%s'"
+msgstr ""
 
 msgid "invalid changegroup"
 msgstr ""
 
 msgid "unknown parent"
-msgstr "ukendt forælder"
+msgstr ""
 
 #, python-format
 msgid "integrity check failed on %s:%d"
-msgstr "integritetstjek fejlede på %s:%d"
+msgstr ""
 
 #, python-format
 msgid "%s: not a Mercurial bundle file"
-msgstr "%s er ikke en Mercurial bundle fil"
+msgstr ""
 
 #, python-format
 msgid "%s: unknown bundle version"
-msgstr "%s: ukendt bundle version"
+msgstr ""
 
 #, python-format
 msgid "%s: unknown bundle compression type"
-msgstr "%s: ukendt bundle kompressionstype"
+msgstr ""
 
 msgid "cannot create new bundle repository"
 msgstr ""
 
 #, python-format
 msgid "premature EOF reading chunk (got %d bytes, expected %d)"
-msgstr "for tidlig EOF ved læsning af chunk (fik %d bytes, forventede %d)"
+msgstr ""
 
+#, fuzzy
 msgid "empty username"
-msgstr "tomt brugernavn"
+msgstr ""
 
 #, python-format
 msgid "username %s contains a newline"
-msgstr "brugernavn %s indeholder et linieskift"
+msgstr ""
 
 msgid "options --message and --logfile are mutually exclusive"
 msgstr ""
 
 #, python-format
 msgid "can't read commit message '%s': %s"
-msgstr "Kan ikke læse arkiveringsbesked '%s': %s"
+msgstr ""
 
 msgid "limit must be a positive integer"
 msgstr ""
@@ -4301,7 +4253,7 @@ msgid "limit must be positive"
 msgstr ""
 
 msgid "too many revisions specified"
-msgstr "der er specificeret for mange revisioner"
+msgstr ""
 
 #, python-format
 msgid "invalid format spec '%%%s' in output filename"
@@ -4309,47 +4261,47 @@ msgstr ""
 
 #, python-format
 msgid "adding %s\n"
-msgstr "tilføjer %s\n"
+msgstr "προσθήκη του %s\n"
 
 #, python-format
 msgid "removing %s\n"
-msgstr "fjerner %s\n"
+msgstr "αφαίρεση του %s\n"
 
 #, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
-msgstr "noterer fjernelse af %s som en omdøbning til %s (%d%% lighed)\n"
+msgstr ""
 
 #, python-format
 msgid "%s: not copying - file is not managed\n"
-msgstr "%s: kopierer ikke - filen er ikke versionsstyret\n"
+msgstr ""
 
 #, python-format
 msgid "%s: not copying - file has been marked for remove\n"
-msgstr "%s: kopierer ikke - filen er markeret til sletning\n"
+msgstr ""
 
 #, python-format
 msgid "%s: not overwriting - %s collides with %s\n"
-msgstr "%s: overskriver ikke - %s kolliderer med %s\n"
+msgstr ""
 
 #, python-format
 msgid "%s: not overwriting - file exists\n"
-msgstr "%s: overskriver ikke - filen eksisterer\n"
+msgstr ""
 
 #, python-format
 msgid "%s: deleted in working copy\n"
-msgstr "%s: slettet i arbejdskopien\n"
+msgstr ""
 
 #, python-format
 msgid "%s: cannot copy - %s\n"
-msgstr "%s: kan ikke kopiere - %s\n"
+msgstr ""
 
 #, python-format
 msgid "moving %s to %s\n"
-msgstr ""
+msgstr "μετακίνηση του %s στο %s\n"
 
-#, python-format
+#, fuzzy, python-format
 msgid "copying %s to %s\n"
-msgstr ""
+msgstr "μετακίνηση του %s στο %s\n"
 
 #, python-format
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
@@ -4358,10 +4310,10 @@ msgstr ""
 "s.\n"
 
 msgid "no source or destination specified"
-msgstr "ingen kilde eller destination angivet"
+msgstr ""
 
 msgid "no destination specified"
-msgstr "ingen destination angivet"
+msgstr ""
 
 msgid "with multiple sources, destination must be an existing directory"
 msgstr ""
@@ -4369,29 +4321,29 @@ msgstr ""
 
 #, python-format
 msgid "destination %s is not a directory"
-msgstr "destinationen %s er ikke en mappe"
+msgstr ""
 
 msgid "no files to copy"
-msgstr "ingen filer at kopiere"
+msgstr ""
 
 msgid "(consider using --after)\n"
-msgstr "(overvej at bruge --after)\n"
+msgstr ""
 
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr "ændring:     %d:%s\n"
+msgstr ""
 
 #, python-format
 msgid "branch:      %s\n"
-msgstr "gren:        %s\n"
+msgstr ""
 
 #, python-format
 msgid "tag:         %s\n"
-msgstr "mærkat:      %s\n"
+msgstr ""
 
 #, python-format
 msgid "parent:      %d:%s\n"
-msgstr "forælder:    %d:%s\n"
+msgstr ""
 
 #, python-format
 msgid "manifest:    %d:%s\n"
@@ -4399,39 +4351,39 @@ msgstr ""
 
 #, python-format
 msgid "user:        %s\n"
-msgstr "bruger:      %s\n"
+msgstr ""
 
 #, python-format
 msgid "date:        %s\n"
-msgstr "dato:        %s\n"
+msgstr ""
 
 msgid "files+:"
-msgstr "filer+:"
+msgstr ""
 
 msgid "files-:"
-msgstr "filer-:"
+msgstr ""
 
 msgid "files:"
 msgstr ""
 
 #, python-format
 msgid "files:       %s\n"
-msgstr "filer:       %s\n"
+msgstr ""
 
 #, python-format
 msgid "copies:      %s\n"
-msgstr "kopier:      %s\n"
+msgstr ""
 
 #, python-format
 msgid "extra:       %s=%s\n"
-msgstr "ekstra:      %s=%s\n"
+msgstr ""
 
 msgid "description:\n"
-msgstr "beskrivelse:\n"
+msgstr ""
 
 #, python-format
 msgid "summary:     %s\n"
-msgstr "uddrag:      %s\n"
+msgstr ""
 
 #, python-format
 msgid "%s: no key named '%s'"
@@ -4461,40 +4413,40 @@ msgstr ""
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
 msgstr ""
-"HG: Skriv arkiveringsbesked. Linier som starter med 'HG:' bliver fjernet."
 
 msgid "HG: Leave message empty to abort commit."
 msgstr ""
 
 #, python-format
 msgid "HG: user: %s"
-msgstr "HG: bruger: %s"
+msgstr ""
 
 msgid "HG: branch merge"
 msgstr ""
 
 #, python-format
 msgid "HG: branch '%s'"
-msgstr "HG: gren '%s'"
+msgstr ""
 
 #, python-format
 msgid "HG: added %s"
-msgstr "HG: tilføjet %s"
+msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "HG: changed %s"
-msgstr "HG: ændret %s"
+msgstr "προσθήκη αλλαγής %s\n"
 
-#, python-format
+#, fuzzy, python-format
 msgid "HG: removed %s"
-msgstr "HG: fjernet %s"
+msgstr ""
 
 msgid "HG: no files changed"
-msgstr "HG: ingen filændringer"
+msgstr ""
 
 msgid "empty commit message"
-msgstr "tom arkiveringsbesked"
+msgstr ""
 
+#, fuzzy
 msgid ""
 "add the specified files on the next commit\n"
 "\n"
@@ -4507,15 +4459,16 @@ msgid ""
 "    If no names are given, add all files to the repository.\n"
 "    "
 msgstr ""
-"tilføj de angivne filer ved næste arkivering\n"
+"tilføj de angivne filer ved næste commit\n"
 "\n"
-"    Opskriv filer til at blive versionsstyret og tilføjet til arkivet.\n"
+"    Opskriv filer til at blive versionsstyret og tilføjet til\n"
+"    repository'et.\n"
 "\n"
-"    Filerne vil bliver tilføjet til arkivet ved næste arkivering. For\n"
-"    at omgøre en tilføjelse før det, se hg revert.\n"
+"    Filerne vil bliver tilføjet til repository'et ved næste commit.\n"
+"    For at omgøre en tilføjelse før det, se hg revert.\n"
 "\n"
-"    Hvis der ikke er angivet nogen navne tilføjes alle filer til\n"
-"    arkivet.\n"
+"    Hvis der ikke er angivet nogen navne tilføjes alle filer i\n"
+"    repository'et.\n"
 "    "
 
 msgid ""
@@ -4558,19 +4511,6 @@ msgid ""
 "    nor desirable.\n"
 "    "
 msgstr ""
-"vis information om ændringer pr linie for hver fil\n"
-"\n"
-"    Vis ændringer i filer ved at vise revisions ID'et som er\n"
-"    ansvarligt for hver linie\n"
-"\n"
-"    Denne kommando er nyttig til at opdage hvornår en ændring blev\n"
-"    foretaget og af hvem.\n"
-"\n"
-"    Uden -a/--text tilvalget vil annotate undgå at behandle filer som\n"
-"    den detekterer som binære. Med -a vil annotate generere en\n"
-"    annotering alligevel, selvom resultatet sandsynligvis vil være\n"
-"    hverken brugbart eller ønskværdigt.\n"
-"    "
 
 msgid "at least one filename or pattern is required"
 msgstr ""
@@ -4635,43 +4575,25 @@ msgid ""
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
-"omgør effekten af tidligere ændringer\n"
-"\n"
-"    Arkiverer de omgjorte ændringer som en ny ændring. Den nye ændring\n"
-"    er et barn af den omgjorte ændring.\n"
-"\n"
-"    Hvis du omgør en ændring som ikke er spidsen, så vil et der blive\n"
-"    lavet et nyt hoved. Dette hoved vil være den nye spids og du bør\n"
-"    sammenføje denne omgjorte ændring med et andet hoved (det\n"
-"    nuværende hoved som standard).\n"
-"\n"
-"    Med --merge tilvalget vil forælderen til arbejdskataloget blive\n"
-"    husket og det nye hoved vil blive sammenføjet med denne ændring\n"
-"    bagefter. Dette sparer dig for at lave sammenføjningen selv.\n"
-"    Resultatet af denne sammenføjning er ikke arkiveret, som ved en\n"
-"    normal sammenføjning.\n"
-"\n"
-"    Se 'hg help dates' for en liste af gyldige formater til -d/--date.\n"
-"    "
 
 msgid "please specify just one revision"
-msgstr "angiv venligst kun en revision"
+msgstr "παρακαλώ ορίστε μόνο μία αλλαγή"
 
 msgid "please specify a revision to backout"
 msgstr ""
 
 msgid "cannot backout change on a different branch"
-msgstr "kan ikke omgøre en ændring på en anden gren"
+msgstr ""
 
 msgid "cannot backout a change with no parents"
-msgstr "kan ikke omgøre en ændring uden forældre"
+msgstr ""
 
 msgid "cannot backout a merge changeset without --parent"
-msgstr "kan ikke omgøre en sammenføjning uden --parent"
+msgstr ""
 
 #, python-format
 msgid "%s is not a parent of %s"
-msgstr "%s er ikke forælder til %s"
+msgstr "η αλλαγή %s δεν είναι γονική αλλαγή της %s"
 
 msgid "cannot use --parent on non-merge changeset"
 msgstr ""
@@ -4682,7 +4604,7 @@ msgstr ""
 
 #, python-format
 msgid "changeset %s backs out changeset %s\n"
-msgstr "ændring %s bakker ændring %s ud\n"
+msgstr ""
 
 #, python-format
 msgid "merging with changeset %s\n"
@@ -4717,11 +4639,13 @@ msgid ""
 "    "
 msgstr ""
 
+#, fuzzy
 msgid "The first good revision is:\n"
-msgstr "Den første gode revision er:\n"
+msgstr "Η πρώτη %s αλλαγή είναι:\n"
 
+#, fuzzy
 msgid "The first bad revision is:\n"
-msgstr "Den første dårlige revision er:\n"
+msgstr "Η πρώτη %s αλλαγή είναι:\n"
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
 msgstr ""
@@ -4743,7 +4667,7 @@ msgstr ""
 
 #, python-format
 msgid "cannot find executable: %s"
-msgstr "kan ikke finde program: %s"
+msgstr ""
 
 #, python-format
 msgid "failed to execute %s"
@@ -4751,11 +4675,11 @@ msgstr ""
 
 #, python-format
 msgid "%s killed"
-msgstr "%s dræbt"
+msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "Changeset %d:%s: %s\n"
-msgstr "Ændring %d:%s: %s\n"
+msgstr "Αλλαγή: %s: %s\n"
 
 #, python-format
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
@@ -4898,53 +4822,6 @@ msgid ""
 "\n"
 "    "
 msgstr ""
-"lav en kopi af et eksisterende arkiv\n"
-"\n"
-"    Lav en kopi af et eksisterende arkiv i en ny mappe.\n"
-"\n"
-"    Hvis der ikke angivet et navn til destinationen, så bruges\n"
-"    grundnavnet for kilden.\n"
-"\n"
-"    Placeringen af kilden tilføjes til det nye arkivs .hg/hgrc fil som\n"
-"    den nye standard for fremtidige kald til 'hg pull'.\n"
-"\n"
-"    Hvis du bruger -r/--rev tilvalget for at klone op til en specifik\n"
-"    revision, så vil ingen efterfølgende revisioner (inklusiv\n"
-"    efterfølgende mærkater) findes i det klonede arkiv. Denne\n"
-"    valgmulighed medfører --pull, selv ved lokale arkiver.\n"
-"\n"
-"    Som udgangspunkt vil clone hente hovedet af 'default' grenen. Hvis\n"
-"    -U/--noupdate tilvalget bruges vil den nye klon kun indeholde et\n"
-"    arkiv (.hg) og intet arbejdskatalog (arbejdskatalogets forælder er\n"
-"    sat til nul revisionen).\n"
-"\n"
-"    Se 'hg help urls' for detaljer om gyldige formatter for kilden.\n"
-"\n"
-"    Det er muligt at specificere en ssh:// URL som destination, men\n"
-"    der vil ikke bliver oprettet nogen .hg/hgrc fil eller noget\n"
-"    arbejdskatalog på den anden side. Se venligst 'hg help urls' for\n"
-"    vigtige detaljer om ssh:// URLer.\n"
-"\n"
-"    Af effektivitetsgrunde bruges hårde lænker ved kloning når kilden\n"
-"    og destinationen er på det samme filsystem (bemærk at dette kun\n"
-"    gælder for arkivdata og ikke for de udhentede filer). Nogle\n"
-"    filsystemer, såsom AFS, implementerer ikke hårde lænker korrekt,\n"
-"    men rapporterer ingen fejl. I disse tilfælde skal --pull bruges\n"
-"    for at undgå hårde lænker.\n"
-"\n"
-"    I nogle tilfælde kan man klone arkiver og udhentede filer med\n"
-"\n"
-"      $ cp -al ARKIV ARKIVKLON\n"
-"\n"
-"    Dette er den hurtigste måde at klone på, men det er ikke altid\n"
-"    sikkert. Operationen er ikke atomisk (det er op til dig at sikre\n"
-"    at ARKIV ikke bliver modificeret undervejs) og du skal selv sørge\n"
-"    for at din tekstbehandler bryder hårde lænker (Emacs og de fleste\n"
-"    Linux Kernel værktøjer gør det). Dette er desuden ikke kompatibelt\n"
-"    med visse udvidelser som placerer deres metadata under .hg mappen,\n"
-"    såsom mq.\n"
-"\n"
-"    "
 
 msgid ""
 "commit the specified files or all outstanding changes\n"
@@ -4965,30 +4842,13 @@ msgid ""
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
-"arkiver de specificerede filer eller alle udestående ændringer\n"
-"\n"
-"    Arkiver ændringer i de angivne filer ind i arkivet. Dette er en\n"
-"    lokal operation, i modsætning til et centraliseret RCS. Se hg push\n"
-"    for en måde til aktivt distribuere dine ændringer.\n"
-"\n"
-"    Hvis en liste af filer udelades vil alle ændringer rapporteret af\n"
-"    \"hg status\" blive arkiveret.\n"
-"\n"
-"    Hvis du arkiverer resultatet af en sammenføjning, undlad da at\n"
-"    angive filnavne eller -I/-X filtre.\n"
-"\n"
-"    Hvis der ikke angives en arkiveringsbesked, så starten den\n"
-"    konfigurerede editor for at bede dig om en besked.\n"
-"\n"
-"    Se 'hg help dates' for en liste af gyldige formater til -d/--date.\n"
-"    "
 
 msgid "created new head\n"
-msgstr "lavede et nyt hoved\n"
+msgstr "δημιουργήθηκε νέο παρακλάδι\n"
 
 #, python-format
 msgid "committed changeset %d:%s\n"
-msgstr ""
+msgstr "αποθηκεύθηκε η αλλαγή %d:%s\n"
 
 msgid ""
 "mark files as copied for the next commit\n"
@@ -5010,10 +4870,10 @@ msgid "find the ancestor revision of two revisions in a given index"
 msgstr ""
 
 msgid "There is no Mercurial repository here (.hg not found)"
-msgstr "Der er intet Mercurial depot her (.hg ikke fundet)"
+msgstr "Δεν υπάρχει αποθετήριο Mercurial εδώ (δε βρέθηκε υποκατάλογος .hg)"
 
 msgid "either two or three arguments required"
-msgstr "kræver enten to eller tre argumenter"
+msgstr "απαιτούνται είτε δύο ή τρία ορίσματα"
 
 msgid "returns the completion list associated with the given command"
 msgstr ""
@@ -5075,14 +4935,14 @@ msgstr ""
 
 #, python-format
 msgid "copy: %s -> %s\n"
-msgstr "kopi: %s -> %s\n"
+msgstr "αντιγραφή: %s -> %s\n"
 
 msgid "dump the contents of a data file revision"
 msgstr ""
 
 #, python-format
 msgid "invalid revision identifier %s"
-msgstr "ugyldig revisionsidentification %s"
+msgstr "μη έγκυρο όνομα αλλαγής: %s"
 
 msgid "parse and display a date"
 msgstr ""
@@ -5160,7 +5020,7 @@ msgid " (specify a username in your .hgrc file)\n"
 msgstr ""
 
 msgid "No problems detected\n"
-msgstr "Fandt ingen problemer\n"
+msgstr "Δε βρέθηκε κανένα πρόβλημα\n"
 
 #, python-format
 msgid "%s problems detected, please check your install!\n"
@@ -5171,11 +5031,11 @@ msgstr ""
 
 #, python-format
 msgid "%s renamed from %s:%s\n"
-msgstr "%s omdøbt fra %s:%s\n"
+msgstr "το %s μετονομάστηκε από το %s:%s\n"
 
 #, python-format
 msgid "%s not renamed\n"
-msgstr "%s ikke omdøbt\n"
+msgstr "το %s δε μετονομάστηκε\n"
 
 msgid "show how files match on given patterns"
 msgstr ""
@@ -5205,29 +5065,6 @@ msgid ""
 "    format. For more information, read 'hg help diffs'.\n"
 "    "
 msgstr ""
-"find ændringer i hele arkivet (eller udvalgte filer)\n"
-"\n"
-"    Vis ændringer mellem revisioner for de udvalgte filer.\n"
-"\n"
-"    Ændringerne mellem filerne vises i unified diff-formatet.\n"
-"\n"
-"    BEMÆRK: diff kan generere overraskende resultater for\n"
-"    sammenføjninger, idet den som udgangspunkt vil sammenligne med\n"
-"    arbejdskatalogets første forælder, hvis der ikke angivet en\n"
-"    revision.\n"
-"\n"
-"    Når der gives to revisioner som argumenter, så vises ændringer\n"
-"    mellem disse. Hvis der kun angives en revision, så sammenlignes\n"
-"    denne revision med arbejdskataloget, og når der ikke angives nogen\n"
-"    revisioner, så sammenlignes arbejdskataloget med dennes forælder.\n"
-"\n"
-"    Uden -a/--text tilvalget vil diff undgå at generere ændringer for\n"
-"    filer som den detekterer som binære. Med -a vil diff generere\n"
-"    ændringer alligevel, sandsynligvis med uønskede resultater.\n"
-"\n"
-"    Brug -g/--git tilvalget for at generere ændringer i det udvidede\n"
-"    git diff-format. For mere information, læs hg help diffs.\n"
-"    "
 
 msgid ""
 "dump the header and diffs for one or more changesets\n"
@@ -5264,41 +5101,6 @@ msgid ""
 "    second parent. It can be useful to review a merge.\n"
 "    "
 msgstr ""
-"dump hovedet og ændringerne for en eller flere ændringer\n"
-"\n"
-"    Udskriv ændrings-hovedet og ændringerne for en eller flere\n"
-"    revisioner.\n"
-"\n"
-"    Informationen som vises i ændrings-hovedet er: forfatter,\n"
-"    ændringshash, forældrene og arkiveringsbeskeden.\n"
-"\n"
-"    BEMÆRK: export kan generere uventet diff uddata for\n"
-"    sammenføjningsændringer idet den kun vil sammenligne\n"
-"    sammenføjningsændringen med dennes første forælder.\n"
-"\n"
-"    Uddata kan gemmes i en fil, og filnavnet er givet ved en\n"
-"    format-streng. Formatteringsreglerne er som følger:\n"
-"\n"
-"    %%   litteral % tegn\n"
-"    %H   ændringshash (40 byte heksadecimal)\n"
-"    %N   antallet af rettelser som bliver genereret\n"
-"    %R   revisionnummer for ændringen\n"
-"    %b   grundnavn for det eksporterede arkiv\n"
-"    %h   kortform ændringshash (12 byte heksadecimal)\n"
-"    %n   nul-fyldt sekvensnummer, startende ved 1\n"
-"    %r   nul-fyldt revisionsnummer for ændringen\n"
-"\n"
-"    Uden -a/--text tilvalget vil annotate undgå at behandle filer som\n"
-"    den detekterer som binære. Med -a vil annotate generere en\n"
-"    annotering alligevel, sandsynligvis med et uønsket resultat.\n"
-"\n"
-"    Brug -g/--git tilvalget for at generere ændringer i det udvidede\n"
-"    git diff-format. Se 'hg help diffs' for mere information.\n"
-"\n"
-"    Med --switch-parent tilvalget vil ændringerne blive beregnet i\n"
-"    forhold til den anden forælder. Dette kan være nyttigt til at\n"
-"    gennemse en sammenføjning.\n"
-"    "
 
 msgid "export requires at least one changeset"
 msgstr ""
@@ -5357,7 +5159,7 @@ msgstr ""
 
 #, python-format
 msgid "no open branch heads on branch %s\n"
-msgstr "ingen åbne gren-hoveder på gren %s\n"
+msgstr ""
 
 #, python-format
 msgid "no changes on branch %s containing %s are reachable from %s\n"
@@ -5377,10 +5179,10 @@ msgid ""
 msgstr ""
 
 msgid "global options:"
-msgstr "globale indstillinger:"
+msgstr ""
 
 msgid "use \"hg help\" for the full list of commands"
-msgstr "brug \"hg help\" for den fulde liste af kommandoer"
+msgstr "δείτε τη βοήθεια \"hg help\" για την πλήρη λίστα εντολών"
 
 msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
 msgstr ""
@@ -5389,17 +5191,18 @@ msgstr ""
 
 #, python-format
 msgid "use \"hg -v help%s\" to show aliases and global options"
-msgstr "brug \"hg -v help%s\" for at vise aliaser og globale valgmuligheder"
+msgstr ""
+"δώστε \"hg -v help%s\" για τη λίστα εικονικών εντολών και κεντρικών επιλογών"
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
-msgstr "brug \"hg -v help %s\" for at vise globale valgmuligheder"
+msgstr "δώστε \"hg -v help %s\" για τη λίστα κεντρικών επιλογών"
 
 msgid ""
 "list of commands:\n"
 "\n"
 msgstr ""
-"liste af kommandoer:\n"
+"λίστα εντολών:\n"
 "\n"
 
 #, python-format
@@ -5408,35 +5211,45 @@ msgid ""
 "aliases: %s\n"
 msgstr ""
 "\n"
-"aliasser: %s\n"
+"εικονικές εντολές %s:\n"
 
 msgid "(no help text available)"
-msgstr "(ingen hjælpetekst tilgængelig)"
+msgstr "(δεν υπάρχει κείμενο βοήθειας)"
 
 msgid "options:\n"
-msgstr "valgmuligheder:\n"
+msgstr "επιλογές:\n"
 
 msgid "no commands defined\n"
-msgstr "ingen kommandoer defineret\n"
+msgstr "δεν έχει οριστεί καμία εντολή\n"
 
-msgid "enabled extensions:"
-msgstr "aktiverede udvidelser:"
+msgid ""
+"\n"
+"enabled extensions:\n"
+"\n"
+msgstr ""
+"\n"
+"ενεργές επεκτάσεις:\n"
+"\n"
+
+#, python-format
+msgid " %s   %s\n"
+msgstr ""
 
 msgid "no help text available"
-msgstr "ingen hjælpetekst tilgængelig"
+msgstr "δεν υπάρχει κείμενο βοήθειας"
 
 #, python-format
 msgid "%s extension - %s\n"
-msgstr "%s udvidelse - %s\n"
+msgstr ""
 
 msgid "Mercurial Distributed SCM\n"
-msgstr "Mercurial Distribueret SCM\n"
+msgstr "Mercurial Κατανεμημένο SCM\n"
 
 msgid ""
 "basic commands:\n"
 "\n"
 msgstr ""
-"basale kommandoer:\n"
+"βασικές εντολές:\n"
 "\n"
 
 msgid ""
@@ -5445,7 +5258,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"yderligere hjælpeemner:\n"
+"περισσότερα θέματα βοήθειας:\n"
 "\n"
 
 msgid ""
@@ -5513,7 +5326,7 @@ msgstr ""
 "%s\n"
 
 msgid "not a Mercurial patch"
-msgstr "ikke en Mercurial patch"
+msgstr ""
 
 msgid "patch is damaged or loses information"
 msgstr ""
@@ -5544,17 +5357,6 @@ msgid ""
 "    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
-"opret et nyt arkiv i det givne katalog\n"
-"\n"
-"    Initialiser et nyt arkiv i det givne katalog. Hvis det givne\n"
-"    katalog ikke findes vil det blive oprettet.\n"
-"\n"
-"    Hvis intet katalog er angivet vil det nuværende katalog bliver\n"
-"    anvendt.\n"
-"\n"
-"    Det er muligt at angive en ssh:// URL som destination.\n"
-"    Se 'hg help urls' for mere information.\n"
-"    "
 
 msgid ""
 "locate files matching specific patterns\n"
@@ -5635,21 +5437,6 @@ msgid ""
 "    explicit revision with which to merge with must be provided.\n"
 "    "
 msgstr ""
-"sammenføj arbejdskataloget med en anden revision\n"
-"\n"
-"    Det nuværende arbejdskatalog opdateres med alle ændringer lavet i\n"
-"    den ønskede revision siden den sidste fælles foregående revision.\n"
-"\n"
-"    Filer som ændrede sig i forhold til en af forældrene bliver\n"
-"    markeret som ændret med hensyn til næste arkivering, og en\n"
-"    arkivering skal laves før yderligere opdateringer er tilladt. Den\n"
-"    næste arkiverede ændring får to forældre.\n"
-"\n"
-"    Hvis ingen revision angives og arbejdskatalogets forælder er en\n"
-"    hovedrevision og den nuværende gren indeholder præcis et andet\n"
-"    hoved, så sammenføjes der med dette hoved som standard. Ellers\n"
-"    skal en eksplicit revision angives.\n"
-"    "
 
 #, python-format
 msgid "branch '%s' has %d heads - please merge with an explicit rev"
@@ -5664,7 +5451,7 @@ msgstr ""
 
 #, python-format
 msgid "%s - use \"hg update\" instead"
-msgstr "%s - brug \"hg update\" istedet"
+msgstr "%s - δώστε \"hg update\" καλύτερα"
 
 msgid ""
 "working dir not at a head rev - use \"hg update\" or merge with an explicit "
@@ -5692,14 +5479,6 @@ msgid ""
 "    argument to --rev if given) is printed.\n"
 "    "
 msgstr ""
-"vis forældrene til arbejdskataloget eller en revision\n"
-"\n"
-"    Udskriv arbejdskatalogets forældrerevisioner. Hvis en revision\n"
-"    angivet med -r/--rev, så udskrives forældren til denne revision.\n"
-"    Hvis en fil er angivet, udskrives revisionen i hvilken filen sidst\n"
-"    blev ændret (før arbejdskatalogets revision eller argumentet til\n"
-"    --rev, hvis givet).\n"
-"    "
 
 msgid "can only specify an explicit filename"
 msgstr ""
@@ -5722,16 +5501,17 @@ msgid ""
 msgstr ""
 
 msgid "not found!\n"
-msgstr "ikke fundet!\n"
+msgstr "δε βρέθηκε!\n"
 
 msgid "not updating, since new heads added\n"
-msgstr "opdaterer ikke idet nye hoveder er tilføjet\n"
+msgstr "δεν εξάγεται κάποια αλλαγή, επειδή δημιουργήθηκε νέο παρακλάδι\n"
 
 msgid "(run 'hg heads' to see heads, 'hg merge' to merge)\n"
-msgstr "(kør 'hg heads' for at se hoveder, 'hg merge' for at sammenføje)\n"
+msgstr ""
+"(δώστε 'hg heads' για να δείτε τα παρακλάδια, 'hg merge' για συγχώνευση)\n"
 
 msgid "(run 'hg update' to get a working copy)\n"
-msgstr "(kør 'hg update' for at få en arbejdskopi)\n"
+msgstr "(δώστε 'hg update' για να εξάγετε αντίγραφο εργασίας)\n"
 
 msgid ""
 "pull changes from the specified source\n"
@@ -5752,23 +5532,6 @@ msgid ""
 "    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
-"hent ændringer fra den angivne kilde\n"
-"\n"
-"    Hiver ændringer fra et fjert arkiv til et lokalt.\n"
-"\n"
-"    Dette finder alle ændringer fra arkivet på den specificerede sti\n"
-"    eller URL og tilføjer dem til et lokalt arkiv (det nuværende arkiv\n"
-"    med mindre -R er angivet). Som standard opdateres arbejdskataloget\n"
-"    ikke.\n"
-"\n"
-"    Brug hg incoming for at se hvad der ville være blevet tilføjet på\n"
-"    det tidspunkt du udførte kommandoen. Hvis du derefter beslutter at\n"
-"    tilføje disse ændringer til arkivet, så bør du bruge pull -r X\n"
-"    hvor X er den sidste ændring nævnt af hg incoming.\n"
-"\n"
-"    Hvis KILDE udelades, så bruges 'default' stien.\n"
-"    Se 'hg help urls' for mere information.\n"
-"    "
 
 msgid ""
 "push changes to the specified destination\n"
@@ -5789,32 +5552,13 @@ msgid ""
 "\n"
 "    Please see 'hg help urls' for important details about ssh://\n"
 "    URLs. If DESTINATION is omitted, a default path will be used.\n"
+"    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
-"skub ændringer til den angivne destination\n"
-"\n"
-"    Skubber ændringer fra det lokale arkiv til den givne destination.\n"
-"\n"
-"    Dette er den symmetriske operation for pull. Den flytter ændringer\n"
-"    fra det nuværende arkiv til et andet. Hvis destinationen er lokal,\n"
-"    så er dette identisk til et pull i destinationen af det nuværende\n"
-"    arkiv.\n"
-"\n"
-"    Som standard vil push nægte af køre hvis den detekterer at den vil\n"
-"    øge antallet af hoveder i destinationen. Dette indikerer normalt\n"
-"    at brugeren har glemt at hente og sammenføje ændringerne før\n"
-"    skubningen.\n"
-"\n"
-"    Hvis -r/--rev bruges, så vil den navngivne revision og alle dets\n"
-"    forfædre bliver skubbet til det andet arkiv.\n"
-"\n"
-"    Se venligst 'hg help urls' for vigtige detaljer om ssh:// URL'er.\n"
-"    Hvis DESTINATION udelades vil en standard sti blive brugt.\n"
-"    "
 
 #, python-format
 msgid "pushing to %s\n"
-msgstr "skubber til %s\n"
+msgstr ""
 
 msgid ""
 "roll back an interrupted transaction\n"
@@ -5854,51 +5598,26 @@ msgid ""
 "    To undo a remove before that, see hg revert.\n"
 "    "
 msgstr ""
-"fjern de angivne filer ved næste arkivering\n"
-"\n"
-"    Planlæg de angivne filer til sletning fra arkivet.\n"
-"\n"
-"    Dette fjerner kun filerne fra den nuværende gren, ikke fra hele\n"
-"    projektets historie. -A/--after kan bruges til kun at fjerne filer\n"
-"    som allerede er slettet, -f/--force kan bruges for at gennemtvinge\n"
-"    en sletning, og -Af kan bruges til at fjerne filer fra næste\n"
-"    revision uden at slette dem fra arbejdskataloget.\n"
-"\n"
-"    Den følgende tabel viser opførslen af remove for forskellige\n"
-"    filtilstande (søjler) og kombinationer af tilvalg (rækker). Mulige\n"
-"    filtilstande er tilføjet [A], ren [C], ændret [M] og manglende [!]\n"
-"    (som rapporteret af hg status). Handlingerne er Warn, Remove (fra\n"
-"    gren) og Delete (fra disk).\n"
-"\n"
-"           A  C  M  !\n"
-"    none   W  RD W  R\n"
-"    -f     R  RD RD R\n"
-"    -A     W  W  W  R\n"
-"    -Af    R  R  R  R\n"
-"\n"
-"    Denne kommando planlægger filerne til at blive fjernet ved næste\n"
-"    arkivering. For at omgøre en fjernelse før det, se hg revert.\n"
-"    "
 
 msgid "no files specified"
 msgstr ""
 
 #, python-format
 msgid "not removing %s: file is untracked\n"
-msgstr "fjerner ikke %s: filen følges ikke\n"
+msgstr ""
 
 #, python-format
 msgid "not removing %s: file %s (use -f to force removal)\n"
-msgstr "fjerner ikke %s: filen %s (brug -f for at forcere fjernelsen)\n"
+msgstr ""
 
 msgid "still exists"
-msgstr "eksisterer stadig"
+msgstr "υπάρχει ακόμη"
 
 msgid "is modified"
-msgstr "er modificeret"
+msgstr "έχει τροποποιηθεί"
 
 msgid "has been marked for add"
-msgstr "er markeret som tilføjet"
+msgstr "έχει σημειωθεί για προσθήκη"
 
 msgid ""
 "rename files; equivalent of copy + remove\n"
@@ -5984,28 +5703,26 @@ msgid ""
 msgstr ""
 
 msgid "you can't specify a revision and a date"
-msgstr "du kan ikke specificeret en revision og en dato"
+msgstr "δεν επιτρέπεται η χρήση αλλαγής και ημερομηνίας ταυτόχρονα"
 
 msgid "no files or directories specified; use --all to revert the whole repo"
 msgstr ""
-"ingen filer eller mapper specificeret; brug --all for at føre hele repo'et "
-"tilbage"
 
 #, python-format
 msgid "forgetting %s\n"
-msgstr "glemmer %s\n"
-
-#, python-format
-msgid "reverting %s\n"
-msgstr "fører %s tilbage\n"
-
-#, python-format
-msgid "undeleting %s\n"
 msgstr ""
 
 #, python-format
+msgid "reverting %s\n"
+msgstr "επαναφορά %s\n"
+
+#, python-format
+msgid "undeleting %s\n"
+msgstr "επανάκτηση %s\n"
+
+#, python-format
 msgid "saving current version of %s as %s\n"
-msgstr "gemmer nuværende version af %s som %s\n"
+msgstr ""
 
 #, python-format
 msgid "file not managed: %s\n"
@@ -6021,8 +5738,7 @@ msgid ""
 "    This command should be used with care. There is only one level of\n"
 "    rollback, and there is no way to undo a rollback. It will also\n"
 "    restore the dirstate at the time of the last transaction, losing\n"
-"    any dirstate changes since that time. This command does not alter\n"
-"    the working directory.\n"
+"    any dirstate changes since that time.\n"
 "\n"
 "    Transactions are used to encapsulate the effects of all commands\n"
 "    that create new changesets or propagate existing changesets into a\n"
@@ -6061,18 +5777,10 @@ msgid ""
 "    files.\n"
 "    "
 msgstr ""
-"eksporter arkivet via HTTP\n"
-"\n"
-"    Start en lokal HTTP arkivbrowser og pull-server.\n"
-"\n"
-"    Som standard logger serveren forespørgsler til stdout og fejl til\n"
-"    stderr. Brug -A/--accesslog og -E/--errorlog tilvalgene for at\n"
-"    logge til filer.\n"
-"    "
 
 #, python-format
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
-msgstr "lytter på http://%s%s/%s (bundet til %s:%d)\n"
+msgstr ""
 
 msgid ""
 "show changed files in the working directory\n"
@@ -6107,39 +5815,8 @@ msgid ""
 "      = origin of the previous file listed as A (added)\n"
 "    "
 msgstr ""
-"vis ændrede filer i arbejdskataloget\n"
-"\n"
-"    Vis status for filer i arkivet. Hvis der angivet navne, så vil kun\n"
-"    disse filer blive vist. Filer som er rene eller ignorerede eller\n"
-"    kilden i en kopierings/flytnings operation vises ikke med mindre\n"
-"    -c/--clear, -i/--ignored, -C/--copies eller -A/--all er angivet.\n"
-"    Med mindre tilvalgene beskrevet med \"vis kun ...\" bruges, så\n"
-"    bruges -mardu tilvalgene.\n"
-"\n"
-"    Tilvalget -q/--quiet skjuler filer som ikke bliver fulgt (ukendte\n"
-"    eller ignorerede filer) med mindre disse eksplicit vælges med\n"
-"    -u/--unknown eller -i/--ignored.\n"
-"\n"
-"    BEMÆRK: status kan tilsyneladende være forskellig fra diff hvis\n"
-"    rettigheder er blevet ændret eller hvis en sammenføjning har\n"
-"    fundet sted. Det normale diff-format rapporterer ikke ændringer i\n"
-"    rettigheder og diff rapporterer kun ænringer relativt til en\n"
-"    sammenføjningsforældre.\n"
-"\n"
-"    Hvis der angivet en revision bruges denne som en basisrevision.\n"
-"    Hvis der angives to revisioner, da vises forskellene mellem dem.\n"
-"\n"
-"    Koderne som bruges til at vise status for filerne er:\n"
-"    M = ændret\n"
-"    A = tilføjet\n"
-"    R = fjernet\n"
-"    C = ren\n"
-"    ! = mangler (slettet af en ikke-hg kommando, men følges stadig)\n"
-"    ? = følges ikke\n"
-"    I = ignoreret\n"
-"      = den foregående fil markeret som A (tilføjet) stammer herfra\n"
-"    "
 
+#, fuzzy
 msgid ""
 "add one or more tags for the current or given revision\n"
 "\n"
@@ -6161,6 +5838,31 @@ msgid ""
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
+"προσθήκη μιας ή περισσότερων ετικετών για την τρέχουσα ή κάποια άλλη έκδοση\n"
+"\n"
+"    Ονομασία μιας συγκεκριμένης αλλαγής με ένα νέο <όνομα>.\n"
+"\n"
+"    Οι ετικέτες μπορούν να χρησιμοποιηθούν ως συμβολικά ονόματα των αλλαγών\n"
+"    ενός αποθετηρίου και είναι πολύ χρήσιμες για την προβολή των διαφορών\n"
+"    μεταξύ δύο σημαντικών εκδόσεων, για να επιστρέφει κανείς σε πιο παλιές\n"
+"    εκδόσεις ή για την καταγραφή της αρχής ενός κλάδου, του σημείου στο\n"
+"    οποίο έγινε μια επίσημη έκδοση, κλπ.\n"
+"\n"
+"    Οταν δεν έχει οριστεί συγκεκριμένη αλλαγή, τότε η νέα ετικέτα τίθεται\n"
+"    στη γονική αλλαγή του χώρου εργασίας, ή στο tip όταν δεν υπάρχουν στο\n"
+"    χώρο εργασίας τα αρχεία κάποιας έκδοσης.\n"
+"\n"
+"    Για να διατηρείται το ιστορικό των ετικετών, να διανέμονται σε άλλους\n"
+"    κλώνους του αποθετηρίου και να μπορεί να γίνει συγχώνευσή τους, όλες\n"
+"    οι ετικέτες αποθηκεύονται σε ένα αρχείο με το όνομα \".hgtags\", το\n"
+"    οποίο συντηρείται όπως και κάθε άλλο αρχείο του αποθετηρίου και μπορεί\n"
+"    να το επεξεργαστεί κανείς ως απλό αρχείο κειμένου αν χρειαστεί.  Το\n"
+"    αρχείο '.hg/localtags' χρησιμοποιείται για τις τοπικές ετικέτες\n"
+"    (αυτές που δε διανέμονται σε άλλους κλώνους του αποθετηρίου).\n"
+"\n"
+"    Δείτε επίσης: 'hg help dates' για μια λίστα μορφών ημερομηνίας τις\n"
+"    οποίες δέχονται οι επιλογές -d/--date.\n"
+"    "
 
 msgid "tag names must be unique"
 msgstr ""
@@ -6186,7 +5888,7 @@ msgstr ""
 
 #, python-format
 msgid "Removed tag %s"
-msgstr "Mærke %s er fjernet"
+msgstr ""
 
 #, python-format
 msgid "tag '%s' already exists (use -f to force)"
@@ -6194,7 +5896,7 @@ msgstr ""
 
 #, python-format
 msgid "Added tag %s for changeset %s"
-msgstr "Tilføjede mærkat %s til ændring %s"
+msgstr ""
 
 msgid ""
 "list repository tags\n"
@@ -6203,11 +5905,6 @@ msgid ""
 "    switch is used, a third column \"local\" is printed for local tags.\n"
 "    "
 msgstr ""
-"vis arkivmærkater\n"
-"\n"
-"    Viser både normale og lokale mærkater. Når -v/--verbose flaget\n"
-"    bruges, udskrives en tredje kolonne \"local\" for lokale mærkater.\n"
-"    "
 
 msgid ""
 "show the tip revision\n"
@@ -6247,8 +5944,7 @@ msgid ""
 "\n"
 "    When there are uncommitted changes, use option -C/--clean to\n"
 "    discard them, forcibly replacing the state of the working\n"
-"    directory with the requested revision. Alternately, use -c/--check\n"
-"    to abort.\n"
+"    directory with the requested revision.\n"
 "\n"
 "    When there are uncommitted changes and option -C/--clean is not\n"
 "    used, and the parent revision and requested revision are on the\n"
@@ -6262,38 +5958,6 @@ msgid ""
 "\n"
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
-msgstr ""
-"opdater arbejdskataloget\n"
-"\n"
-"    Opdater arkivets arbejdskatalog til den angivne revision, eller\n"
-"    spidsen af den nuværende gren hvis ingen revision er angivet. Brug\n"
-"    null som revision for at fjerne arbejdskataloget (ligesom 'hg\n"
-"    clone -U').\n"
-"\n"
-"    Hvis arbejdskataloget ikke indeholder nogen uarkiverede ændringer,\n"
-"    da vil det blive erstattet af den ønskede revision fra arkivet.\n"
-"    Hvis den ønskede revision er på en anden gren, så vil\n"
-"    arbejdskataloget yderligere blive skiftet til denne gren.\n"
-"\n"
-"    Hvis der er uarkiverede ændringer kan -C/--clean tilvalget bruges\n"
-"    for at kassere dem og sætte tilstanden af arbejdskataloget lig\n"
-"    tilstanden i den ønskede revision. Alternativt, brug -c/--check\n"
-"    for at afbryde.\n"
-"\n"
-"    Hvis der er uarkiverede ændringer, og -C/--clean tilvalget ikke\n"
-"    bruges, og forældrerevisionen og den ønskede revision begge er på\n"
-"    samme gren, og en af dem er en forfar til den anden, så vil det\n"
-"    nye arbejdskatalog indeholde den ønskede revision sammenføjet med\n"
-"    de uarkiverede ændringer. Ellers vil opdateringen fejle med et\n"
-"    forslag til at bruge 'merge' eller 'update -C' i stedet.\n"
-"\n"
-"    Hvis du vil opdatere blot en enkelt fil til en ældre revision,\n"
-"    brug da revert.\n"
-"\n"
-"    Se 'hg help dates' for en liste af gyldige formater til -d/--date.\n"
-"    "
-
-msgid "uncommitted local changes"
 msgstr ""
 
 msgid ""
@@ -6313,7 +5977,7 @@ msgstr ""
 
 #, python-format
 msgid "Mercurial Distributed SCM (version %s)\n"
-msgstr "Mercurial Distributed SCM (version %s)\n"
+msgstr "Mercurial Κατανεμημένο SCM (version %s)\n"
 
 msgid ""
 "\n"
@@ -6323,19 +5987,19 @@ msgid ""
 msgstr ""
 
 msgid "repository root directory or symbolic path name"
-msgstr "depotrodfolder eller symbolsk stinavn"
+msgstr ""
 
 msgid "change working directory"
-msgstr "skift arbejdskatalog"
+msgstr ""
 
 msgid "do not prompt, assume 'yes' for any required answers"
-msgstr "spørg ikke, antag alle svar er 'ja'"
+msgstr ""
 
 msgid "suppress output"
-msgstr "undertryk output"
+msgstr ""
 
 msgid "enable additional output"
-msgstr "aktiver yderlig output"
+msgstr ""
 
 msgid "set/override config option"
 msgstr ""
@@ -6344,7 +6008,7 @@ msgid "enable debugging output"
 msgstr ""
 
 msgid "start debugger"
-msgstr "start debugger"
+msgstr ""
 
 msgid "set the charset encoding"
 msgstr ""
@@ -6365,31 +6029,31 @@ msgid "output version information and exit"
 msgstr ""
 
 msgid "display help and exit"
-msgstr "vis hjælp og exit"
+msgstr ""
 
 msgid "do not perform actions, just print output"
-msgstr "udfør ingen handlinger, udskriv kun outputttet"
+msgstr ""
 
 msgid "specify ssh command to use"
-msgstr "specificer ssh kommandoen som skal bruges"
+msgstr ""
 
 msgid "specify hg command to run on the remote side"
 msgstr ""
 
 msgid "include names matching the given patterns"
-msgstr "inkluder navne som matcher det givne mønster"
+msgstr ""
 
 msgid "exclude names matching the given patterns"
-msgstr "ekskluder navne som matcher det givne mønster"
+msgstr ""
 
 msgid "use <text> as commit message"
-msgstr "brug <tekst> som arkiveringsbesked"
+msgstr ""
 
 msgid "read commit message from <file>"
-msgstr "læs arkiveringsbeskeden fra <fil>"
+msgstr ""
 
 msgid "record datecode as commit date"
-msgstr "noter dato som integrationsdato"
+msgstr ""
 
 msgid "record the specified user as committer"
 msgstr ""
@@ -6404,7 +6068,7 @@ msgid "do not show merges"
 msgstr ""
 
 msgid "treat all files as text"
-msgstr "behandl alle filer som tekst"
+msgstr ""
 
 msgid "don't include dates in diff headers"
 msgstr ""
@@ -6431,25 +6095,25 @@ msgid "[OPTION]... [FILE]..."
 msgstr ""
 
 msgid "annotate the specified revision"
-msgstr "annotér den angivne revision"
+msgstr ""
 
 msgid "follow file copies and renames"
-msgstr "følg kopier og omdøbninger"
+msgstr ""
 
 msgid "list the author (long with -v)"
-msgstr "vis forfatteren (lang med -v)"
+msgstr ""
 
 msgid "list the date (short with -q)"
-msgstr "vis datoen (kort med -q)"
+msgstr ""
 
 msgid "list the revision number (default)"
-msgstr "vis revisionsnummeret (standard)"
+msgstr ""
 
 msgid "list the changeset"
-msgstr "vis ændringen"
+msgstr ""
 
 msgid "show line number at the first appearance"
-msgstr "vil linienummeret for den første forekomst"
+msgstr ""
 
 msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
 msgstr ""
@@ -6476,28 +6140,28 @@ msgid "parent to choose when backing out merge"
 msgstr ""
 
 msgid "revision to backout"
-msgstr "revision som skal bakkes ud"
+msgstr ""
 
 msgid "[OPTION]... [-r] REV"
 msgstr ""
 
 msgid "reset bisect state"
-msgstr "nulstil bisect"
+msgstr ""
 
 msgid "mark changeset good"
-msgstr "marker ændring som god"
+msgstr ""
 
 msgid "mark changeset bad"
-msgstr "marker ændring som dårlig"
+msgstr ""
 
 msgid "skip testing changeset"
 msgstr ""
 
 msgid "use command to check changeset state"
-msgstr "brug kommando for at kontrollere tilstanden af ændringen"
+msgstr ""
 
 msgid "do not update to target"
-msgstr "undlad at opdatere til målet"
+msgstr ""
 
 msgid "[-gbsr] [-c CMD] [REV]"
 msgstr ""
@@ -6518,7 +6182,7 @@ msgid "[-a]"
 msgstr ""
 
 msgid "run even when remote repository is unrelated"
-msgstr "kør selv hvis fjernarkivet er urelateret"
+msgstr ""
 
 msgid "a changeset up to which you would like to bundle"
 msgstr ""
@@ -6574,14 +6238,15 @@ msgstr ""
 msgid "[INDEX] REV1 REV2"
 msgstr ""
 
+#, fuzzy
 msgid "[COMMAND]"
-msgstr "[KOMMANDO]"
+msgstr "ΕΝΤΟΛΕΣ"
 
 msgid "show the command options"
-msgstr "vis kommando-flag"
+msgstr ""
 
 msgid "[-o] CMD"
-msgstr "[-o] KOMMANDO"
+msgstr ""
 
 msgid "try extended date formats"
 msgstr ""
@@ -6619,8 +6284,9 @@ msgstr ""
 msgid "[OPTION]..."
 msgstr ""
 
+#, fuzzy
 msgid "revision to check"
-msgstr "revision som skal undersøges"
+msgstr "αλλαγή"
 
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr ""
@@ -6662,7 +6328,7 @@ msgid "show only the active heads from open branches"
 msgstr ""
 
 msgid "show normal and closed heads"
-msgstr "vis normale og lukkede hoveder"
+msgstr ""
 
 msgid "[-r STARTREV] [REV]..."
 msgstr ""
@@ -6670,6 +6336,7 @@ msgstr ""
 msgid "[TOPIC]"
 msgstr ""
 
+#, fuzzy
 msgid "identify the specified revision"
 msgstr ""
 
@@ -6683,7 +6350,7 @@ msgid "show branch"
 msgstr ""
 
 msgid "show tags"
-msgstr "vis mærkater"
+msgstr ""
 
 msgid "[-nibt] [-r REV] [SOURCE]"
 msgstr ""
@@ -6741,6 +6408,7 @@ msgstr ""
 msgid "only follow the first parent of merge changesets"
 msgstr ""
 
+#, fuzzy
 msgid "show revisions matching date spec"
 msgstr ""
 
@@ -6792,11 +6460,13 @@ msgstr ""
 msgid "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
 msgstr ""
 
+#, fuzzy
 msgid "show parents from the specified revision"
 msgstr ""
 
+#, fuzzy
 msgid "[-r REV] [FILE]"
-msgstr ""
+msgstr "[-r ΕΚΔΟΣΗ] [ΑΡΧΕΙΟ]"
 
 msgid "[NAME]"
 msgstr ""
@@ -6853,10 +6523,10 @@ msgid "[OPTION]... [-r REV] [NAME]..."
 msgstr ""
 
 msgid "name of access log file to write to"
-msgstr "navn på adgangslogfilen der skrives til"
+msgstr ""
 
 msgid "name of error log file to write to"
-msgstr "navn på fejlllog fil der skrives til"
+msgstr ""
 
 msgid "port to listen on (default: 8000)"
 msgstr ""
@@ -6865,7 +6535,7 @@ msgid "address to listen on (default: all interfaces)"
 msgstr ""
 
 msgid "prefix path to serve from (default: server root)"
-msgstr "prefiks sti at udstille fra (default: server-rod)"
+msgstr ""
 
 msgid "name to show in web pages (default: working directory)"
 msgstr ""
@@ -6874,19 +6544,19 @@ msgid "name of the webdir config file (serve more than one repository)"
 msgstr ""
 
 msgid "for remote clients"
-msgstr "for fjernklienter"
+msgstr ""
 
 msgid "web templates to use"
-msgstr "web-skabelon"
+msgstr ""
 
 msgid "template style to use"
-msgstr "skabelon-stil"
+msgstr ""
 
 msgid "use IPv6 in addition to IPv4"
-msgstr "brug IPv6 og IPv4"
+msgstr ""
 
 msgid "SSL certificate file"
-msgstr "SSL certifikatfil"
+msgstr ""
 
 msgid "show untrusted configuration options"
 msgstr ""
@@ -6895,84 +6565,81 @@ msgid "[-u] [NAME]..."
 msgstr ""
 
 msgid "show status of all files"
-msgstr "vis status på alle filer"
+msgstr ""
 
 msgid "show only modified files"
-msgstr "vis kun ændrede filer"
+msgstr ""
 
 msgid "show only added files"
-msgstr "vis kun tilføjede filer"
+msgstr ""
 
 msgid "show only removed files"
-msgstr "vis kun fjernede filer"
+msgstr ""
 
 msgid "show only deleted (but tracked) files"
-msgstr "vis kun slettede (men kendte) filer"
+msgstr ""
 
 msgid "show only files without changes"
-msgstr "vis kun filer unden ændringer"
+msgstr ""
 
 msgid "show only unknown (not tracked) files"
-msgstr "vis kun ukendte filer"
+msgstr ""
 
 msgid "show only ignored files"
-msgstr "vis kun ignorerede filer"
+msgstr ""
 
 msgid "hide status prefix"
-msgstr "skjul statuspræfix"
+msgstr ""
 
 msgid "show source of copied files"
-msgstr "vis kilder for kopierede filer"
+msgstr ""
 
 msgid "show difference from revision"
-msgstr "vis forskelle fra revision"
+msgstr ""
 
 msgid "replace existing tag"
-msgstr "erstat eksisterende mærkat"
+msgstr ""
 
 msgid "make the tag local"
-msgstr "gør mærkaten lokal"
+msgstr ""
 
 msgid "revision to tag"
-msgstr "revision der skal mærkes"
+msgstr ""
 
 msgid "remove a tag"
-msgstr "fjern en mærkat"
+msgstr ""
 
 msgid "[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
 msgstr ""
 
 msgid "[-p]"
-msgstr "[-p]"
+msgstr ""
 
 msgid "update to new tip if changesets were unbundled"
-msgstr "opdater til ny spids hvis ændringer blev pakket ud"
+msgstr ""
 
 msgid "[-u] FILE..."
-msgstr "[-u] FIL..."
+msgstr ""
 
 msgid "overwrite locally modified files (no backup)"
-msgstr "overskrev lokalt modificerede filer (uden sikkerhedskopi)"
-
-msgid "check for uncommitted changes"
 msgstr ""
 
 msgid "[-C] [-d DATE] [[-r] REV]"
-msgstr "[-C] [-d DATO] [[-r] REV]"
+msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "config error at %s:%d: '%s'"
-msgstr "konfigurationsfejl på %s:%d: '%s'"
+msgstr ""
 
 msgid "not found in manifest"
-msgstr "blev ikke fundet i manifest"
+msgstr ""
 
 msgid "branch name not in UTF-8!"
-msgstr "grennavn er ikke i UTF-8!"
+msgstr ""
 
 #, python-format
 msgid "  searching for copies back to rev %d\n"
-msgstr "  søger efter kopier tilbage til revision %d\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -7000,16 +6667,17 @@ msgstr ""
 msgid "  file %s -> %s\n"
 msgstr ""
 
+#, fuzzy
 msgid "working directory state appears damaged!"
-msgstr "arbejdskatalogtilstand virker beskadiget!"
+msgstr "χώρος εργασίας του %s"
 
 #, python-format
 msgid "'\\n' and '\\r' disallowed in filenames: %r"
-msgstr "'\\n' og '\\r' må ikke forekomme i filnavne: %r"
+msgstr ""
 
 #, python-format
 msgid "directory %r already in dirstate"
-msgstr "katalog %r er allerede i dirstate"
+msgstr ""
 
 #, python-format
 msgid "file %r in dirstate clashes with %r"
@@ -7017,10 +6685,10 @@ msgstr ""
 
 #, python-format
 msgid "not in dirstate: %s\n"
-msgstr "ikke i dirstate: %s\n"
+msgstr ""
 
 msgid "unknown"
-msgstr "ukendt"
+msgstr ""
 
 msgid "character device"
 msgstr ""
@@ -7043,7 +6711,7 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s\n"
-msgstr "afbrudt: %s\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -7055,7 +6723,7 @@ msgstr ""
 
 #, python-format
 msgid "hg: %s\n"
-msgstr "hg: %s\n"
+msgstr ""
 
 #, python-format
 msgid "timed out waiting for lock held by %s"
@@ -7063,100 +6731,100 @@ msgstr ""
 
 #, python-format
 msgid "lock held by %s"
-msgstr "lås holdt af %s"
+msgstr ""
 
 #, python-format
 msgid "abort: %s: %s\n"
-msgstr "afbrudt: %s: %s\n"
+msgstr ""
 
 #, python-format
 msgid "abort: could not lock %s: %s\n"
-msgstr "afbrudt: kunne ikke låse %s: %s\n"
+msgstr ""
 
 #, python-format
 msgid "hg %s: %s\n"
-msgstr "hg %s: %s\n"
+msgstr ""
 
 #, python-format
 msgid "abort: %s!\n"
-msgstr "afbrudt: %s!\n"
+msgstr ""
 
 #, python-format
 msgid "abort: %s"
-msgstr "afbrudt: %s"
+msgstr ""
 
 msgid " empty string\n"
-msgstr " tom streng\n"
+msgstr ""
 
 msgid "killed!\n"
-msgstr "dræbt!\n"
+msgstr ""
 
 #, python-format
 msgid "hg: unknown command '%s'\n"
-msgstr "hg: ukendt kommando '%s'\n"
+msgstr ""
 
 #, python-format
 msgid "abort: could not import module %s!\n"
-msgstr "afbrudt: kunne ikke importere modul %s!\n"
+msgstr ""
 
 msgid "(did you forget to compile extensions?)\n"
-msgstr "(glemte du at kompilere udvidelserne?)\n"
+msgstr ""
 
 msgid "(is your Python install correct?)\n"
-msgstr "(er din Python installeret korrekt?)\n"
+msgstr ""
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr "afbrudt: fejl: %s\n"
+msgstr ""
 
 msgid "broken pipe\n"
-msgstr "afbrudt pipe\n"
+msgstr ""
 
 msgid "interrupted!\n"
-msgstr "standset!\n"
+msgstr ""
 
 msgid ""
 "\n"
 "broken pipe\n"
 msgstr ""
-"\n"
-"afbrudt pipe\n"
 
 msgid "abort: out of memory\n"
-msgstr "afbrudt: løbet tør for hukommelse\n"
+msgstr ""
 
 msgid "** unknown exception encountered, details follow\n"
-msgstr "** der opstod en ukendt fejl, detaljer følger\n"
+msgstr ""
 
 msgid "** report bug details to http://www.selenic.com/mercurial/bts\n"
-msgstr "** angiv fejldetaljer på http://www.selenic.com/mercurial/bts\n"
+msgstr ""
 
 msgid "** or mercurial@selenic.com\n"
-msgstr "** eller mercurial@selenic.com\n"
+msgstr ""
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
-msgstr "** Mercurial Distributed SCM (version %s)\n"
+msgstr "** Mercurial Κατανεμημένο SCM (έκδοση %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
-msgstr "** Udvidelser indlæst: %s\n"
+msgstr "** Ενεργές επεκτάσεις: %s\n"
 
 #, python-format
 msgid "no definition for alias '%s'\n"
-msgstr "ingen definition for alias '%s'\n"
+msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "alias '%s' resolves to unknown command '%s'\n"
-msgstr "alias '%s' oversætter til ukendt kommando '%s'\n"
+msgstr "η αλλαγή αναφέρεται σε άγνωστο manifest %s"
 
 #, python-format
 msgid "alias '%s' resolves to ambiguous command '%s'\n"
-msgstr "alias '%s' oversætter til tvetydig kommando '%s'\n"
+msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "alias '%s' shadows command\n"
-msgstr "alias '%s' skygger for en kommando\n"
+msgstr ""
+"λίστα εντολών:\n"
+"\n"
 
 #, python-format
 msgid "malformed --config option: %s"
@@ -7164,20 +6832,18 @@ msgstr ""
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
-msgstr "udvidelse '%s' overskriver kommandoer: %s\n"
+msgstr ""
 
 msgid "Option --config may not be abbreviated!"
-msgstr "Tilvalget --config må ikke forkortes!"
+msgstr ""
 
 msgid "Option --cwd may not be abbreviated!"
-msgstr "Tilvalget --cwd må ikke forkortes!"
+msgstr ""
 
 msgid ""
 "Option -R has to be separated from other options (e.g. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
-"Tilvalget -R skal adskilles fra andre tilvalg (fx ikke -qR) og --repository "
-"må kun forkortes som --repo!"
 
 #, python-format
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
@@ -7185,10 +6851,10 @@ msgstr ""
 
 #, python-format
 msgid "repository '%s' is not local"
-msgstr "arkiv '%s' er ikke lokalt"
+msgstr ""
 
 msgid "invalid arguments"
-msgstr "ugyldige parametre"
+msgstr ""
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
@@ -7198,36 +6864,34 @@ msgid ""
 "lsprof not available - install from http://codespeak.net/svn/user/arigo/hack/"
 "misc/lsprof/"
 msgstr ""
-"lsprof er ikke tilgængelig - installer fra http://codespeak.net/svn/user/"
-"arigo/hack/misc/lsprof/"
 
 #, python-format
 msgid "*** failed to import extension %s from %s: %s\n"
-msgstr "*** import af udvidelse %s fra %s fejlede: %s\n"
+msgstr ""
 
 #, python-format
 msgid "*** failed to import extension %s: %s\n"
-msgstr "*** import af udvidelse %s fejlede: %s\n"
+msgstr ""
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
-msgstr "kunne ikke finde sammenføjningsværktøj %s\n"
+msgstr ""
 
 #, python-format
 msgid "tool %s can't handle symlinks\n"
-msgstr "værktøj %s kan ikke håndtere symbolske lænker\n"
+msgstr ""
 
 #, python-format
 msgid "tool %s can't handle binary\n"
-msgstr "værktøj %s kan ikke håndtere binære filer\n"
+msgstr ""
 
 #, python-format
 msgid "tool %s requires a GUI\n"
-msgstr "værktøj %s kræver et GUI\n"
+msgstr ""
 
 #, python-format
 msgid "picked tool '%s' for %s (binary %s symlink %s)\n"
-msgstr "valgte værktøj '%s' til %s (binær %s symbolsk link %s)\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -7242,22 +6906,22 @@ msgid "&Other"
 msgstr ""
 
 msgid "l"
-msgstr "l"
+msgstr ""
 
 #, python-format
 msgid "merging %s and %s to %s\n"
-msgstr "føjer %s og %s sammen til %s\n"
+msgstr ""
 
 #, python-format
 msgid "merging %s\n"
-msgstr "sammenføjer %s\n"
+msgstr ""
 
 #, python-format
 msgid "my %s other %s ancestor %s\n"
 msgstr ""
 
 msgid " premerge successful\n"
-msgstr "præ-sammenføjning succesfuld\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -7286,48 +6950,10 @@ msgstr ""
 msgid "unknown bisect kind %s"
 msgstr ""
 
-msgid ""
-"\n"
-"    Mercurial has a mechanism for adding new features through the\n"
-"    use of extensions. Extensions may bring new commands, or new\n"
-"    hooks, or change Mercurial's behavior.\n"
-"\n"
-"    Extensions are not loaded by default for a variety of reasons,\n"
-"    they may be meant for advanced users or provide potentially\n"
-"    dangerous commands (e.g. mq and rebase allow history to be\n"
-"    rewritten), they might not be ready for prime-time yet, or\n"
-"    they may alter Mercurial's behavior. It is thus up to the user\n"
-"    to activate extensions as desired.\n"
-"\n"
-"    To enable the \"foo\" extension, either shipped with Mercurial\n"
-"    or in the Python search path, create an entry for it in your\n"
-"    hgrc, like this:\n"
-"\n"
-"      [extensions]\n"
-"      foo =\n"
-"\n"
-"    You may also specify the full path to an extension:\n"
-"\n"
-"      [extensions]\n"
-"      myfeature = ~/.hgext/myfeature.py\n"
-"\n"
-"    To explicitly disable an extension enabled in an hgrc of broader\n"
-"    scope, prepend its path with !:\n"
-"\n"
-"      [extensions]\n"
-"      # disabling extension bar residing in /ext/path\n"
-"      hgext.bar = !/path/to/extension/bar.py\n"
-"      # ditto, but no path was supplied for extension baz\n"
-"      hgext.baz = !\n"
-"    "
+msgid "Date Formats"
 msgstr ""
 
-msgid "disabled extensions:"
-msgstr "deaktiverede udvidelser:"
-
-msgid "Date Formats"
-msgstr "Datoformater"
-
+#, fuzzy
 msgid ""
 "\n"
 "    Some commands allow the user to specify a date, e.g.:\n"
@@ -7368,9 +6994,9 @@ msgid ""
 "    "
 msgstr ""
 "\n"
-"    Nogle kommandoer tillader brugeren at specificere en dato, f.eks.:\n"
-"    * backout, commit, import, tag: specificer commit-datoen.\n"
-"    * log, revert, update: vælg revisioner efter dato.\n"
+"    Nogle kommandoer tillader brugeren at specificere en dato:\n"
+"    backout, commit, import, tag: specificer commit-datøn.\n"
+"    log, revert, update: vælg revisioner eftre dato.\n"
 "\n"
 "    Der er mange gyldige datoformater. Her er nogle eksempler:\n"
 "\n"
@@ -7392,17 +7018,17 @@ msgstr ""
 "\n"
 "    \"1165432709 0\" (Ons 6. dec. 13:18:29 2006 UTC)\n"
 "\n"
-"    Dette er den interne repræsentation af datoer. unixtime er\n"
+"    Dette er den interne representation af datoer. unixtime er\n"
 "    antallet af sekunder siden begyndelsen af epoken (1970-01-01 00:00\n"
 "    UTC). offset er den lokale tidszone, angivet i antal sekunder vest\n"
 "    for UTC (negativ hvis tidszonen er øst for UTC).\n"
 "\n"
 "    Kommandoen log accepterer også datointervaller:\n"
 "\n"
-"    \"<{date}\" - på eller før den angivne dato/tidspunkt\n"
-"    \">{date}\" - på eller efter den angivne dato/tidspunkt\n"
+"    \"<{date}\" - på eller før den angivne dato\n"
+"    \">{date}\" - på eller efter den angivne dato\n"
 "    \"{date} to {date}\" - et datointerval, inklusiv endepunkterne\n"
-"    \"-{days}\" - indenfor et angivet antal dage, fra dags dato\n"
+"    \"-{days}\" - indenfor et angivet antal date, fra dags dato\n"
 "    "
 
 msgid "File Name Patterns"
@@ -7456,7 +7082,7 @@ msgid ""
 msgstr ""
 
 msgid "Environment Variables"
-msgstr "Miljøvariable"
+msgstr ""
 
 msgid ""
 "\n"
@@ -7539,7 +7165,7 @@ msgid ""
 msgstr ""
 
 msgid "Specifying Single Revisions"
-msgstr "Angivning af en enkelt revision"
+msgstr ""
 
 msgid ""
 "\n"
@@ -7577,7 +7203,7 @@ msgid ""
 msgstr ""
 
 msgid "Specifying Multiple Revisions"
-msgstr "Angivning af flere revisioner"
+msgstr ""
 
 msgid ""
 "\n"
@@ -7743,7 +7369,7 @@ msgid ""
 msgstr ""
 
 msgid "URL Paths"
-msgstr "URL-stier"
+msgstr ""
 
 msgid ""
 "\n"
@@ -7808,17 +7434,15 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "Using additional features"
-msgstr "Brug af yderligere funktioner"
-
 msgid "can only share local repositories"
 msgstr ""
 
+#, fuzzy
 msgid "destination already exists"
-msgstr "destinationen eksisterer allerede"
+msgstr ""
 
 msgid "updating working directory\n"
-msgstr "opdaterer arbejdskatalog\n"
+msgstr ""
 
 #, python-format
 msgid "destination directory: %s\n"
@@ -7828,7 +7452,7 @@ msgstr ""
 msgid "destination '%s' already exists"
 msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "destination '%s' is not empty"
 msgstr ""
 
@@ -7841,20 +7465,20 @@ msgid "clone from remote to remote not supported"
 msgstr ""
 
 msgid "updated"
-msgstr "opdateret"
+msgstr ""
 
 msgid "merged"
-msgstr "sammenføjet"
+msgstr ""
 
 msgid "removed"
-msgstr "fjernet"
+msgstr ""
 
 msgid "unresolved"
-msgstr "uløst"
+msgstr ""
 
 #, python-format
 msgid "%d files %s"
-msgstr "%d filer %s"
+msgstr ""
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr ""
@@ -7872,14 +7496,15 @@ msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr ""
 
 msgid "SSL support is unavailable"
-msgstr "understøttelse for SSL er ikke tilstede"
+msgstr ""
 
+#, fuzzy
 msgid "IPv6 is not available on this system"
-msgstr "IPv6 er ikke til rådighed på dette system"
+msgstr ""
 
 #, python-format
 msgid "cannot start server at '%s:%d': %s"
-msgstr "kan ikke starte server på '%s:%d': %s"
+msgstr ""
 
 #, python-format
 msgid "calling hook %s: %s\n"
@@ -7930,33 +7555,33 @@ msgid "warning: %s hook %s\n"
 msgstr ""
 
 msgid "connection ended unexpectedly"
-msgstr "forbindelsen blev uventet afsluttet"
+msgstr ""
 
 #, python-format
 msgid "unsupported URL component: \"%s\""
-msgstr "ikke-understøttet URL-komponent: \"%s\""
+msgstr ""
 
 #, python-format
 msgid "using %s\n"
-msgstr "bruger %s\n"
+msgstr ""
 
 #, python-format
 msgid "capabilities: %s\n"
-msgstr "kapaciteter: %s\n"
+msgstr ""
 
 msgid "operation not supported over http"
-msgstr "operationen understøttes ikke over http"
+msgstr ""
 
 #, python-format
 msgid "sending %s command\n"
-msgstr "sender %s kommando\n"
+msgstr ""
 
 #, python-format
 msgid "sending %s bytes\n"
-msgstr "sender %s bytes\n"
+msgstr ""
 
 msgid "authorization failed"
-msgstr "autorisation fejlede"
+msgstr ""
 
 #, python-format
 msgid "http error while sending %s command\n"
@@ -7967,11 +7592,11 @@ msgstr ""
 
 #, python-format
 msgid "real URL is %s\n"
-msgstr "den rigtige URL er %s\n"
+msgstr ""
 
 #, python-format
 msgid "requested URL: '%s'\n"
-msgstr "forespurgt URL: '%s'\n"
+msgstr ""
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -7983,7 +7608,7 @@ msgstr ""
 
 #, python-format
 msgid "'%s' uses newer protocol %s"
-msgstr "'%s' bruger nyere protokol %s"
+msgstr ""
 
 msgid "look up remote revision"
 msgstr ""
@@ -7999,17 +7624,17 @@ msgstr ""
 
 #, python-format
 msgid "push failed: %s"
-msgstr "skub fejlede: %s"
-
-msgid "Python support for SSL and HTTPS is not installed"
 msgstr ""
 
+msgid "Python support for SSL and HTTPS is not installed"
+msgstr "δεν έχει εγκατασταθεί υποστήριξη SSL και HTTPS για την Python"
+
 msgid "cannot create new http repository"
-msgstr "kan ikke lave nyt http arkiv"
+msgstr "δε μπορεί να δημιουργηθεί ένα νέο αποθετήριο μέσω http"
 
 #, python-format
 msgid "%s: ignoring invalid syntax '%s'\n"
-msgstr "%s: ignorerer ugyldig syntaks '%s'\n"
+msgstr ""
 
 #, python-format
 msgid "skipping unreadable ignore file '%s': %s\n"
@@ -8017,30 +7642,30 @@ msgstr ""
 
 #, python-format
 msgid "repository %s not found"
-msgstr "arkivet %s blev ikke fundet"
+msgstr "το αποθετήριο %s δε βρέθηκε"
 
 #, python-format
 msgid "repository %s already exists"
-msgstr "arkivet %s eksisterer allerede"
+msgstr "το αποθετήριο %s υπάρχει ήδη"
 
 #, python-format
 msgid "requirement '%s' not supported"
-msgstr "betingelse '%s' er ikke understøttet"
+msgstr ""
 
 #, python-format
 msgid ".hg/sharedpath points to nonexistent directory %s"
-msgstr ".hg/sharedpath peger på et ikke-eksisterende katalog %s"
+msgstr ""
 
 #, python-format
 msgid "%r cannot be used in a tag name"
-msgstr "%r kan ikke bruges i et mærkatnavnet"
+msgstr "το %r δε μπορεί να χρησιμοποιηθεί ως όνομα ετικέτας"
 
 msgid "working copy of .hgtags is changed (please commit .hgtags manually)"
 msgstr ""
 
 #, python-format
 msgid "%s, line %s: %s\n"
-msgstr "%s, linie %s: %s\n"
+msgstr "%s, γραμμή %s: %s\n"
 
 msgid "cannot parse entry"
 msgstr ""
@@ -8050,35 +7675,39 @@ msgid "node '%s' is not well formed"
 msgstr ""
 
 #, python-format
+msgid "tag '%s' refers to unknown node"
+msgstr ""
+
+#, fuzzy, python-format
 msgid "working directory has unknown parent '%s'!"
-msgstr "arbejdsbiblioteket har ukendt forældre '%s'!"
+msgstr "χώρος εργασίας του %s"
 
 #, python-format
 msgid "unknown revision '%s'"
-msgstr "ukendt revision '%s'"
+msgstr ""
 
 #, python-format
 msgid "filtering %s through %s\n"
-msgstr "filtrerer %s gennem %s\n"
+msgstr ""
 
 msgid "journal already exists - run hg recover"
-msgstr "journalen eksisterer allerede -- kør hg recover"
+msgstr ""
 
 msgid "rolling back interrupted transaction\n"
-msgstr "ruller afbrudt transaktion tilbage\n"
+msgstr ""
 
 msgid "no interrupted transaction available\n"
-msgstr "ingen afbrudt transaktion tilgængelig\n"
+msgstr ""
 
 msgid "rolling back last transaction\n"
-msgstr "ruller sidste transaktion tilbage\n"
+msgstr ""
 
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
 
 msgid "no rollback information available\n"
-msgstr "ingen tilbagerulningsinformation til stede\n"
+msgstr ""
 
 #, python-format
 msgid "waiting for lock on %s held by %r\n"
@@ -8086,11 +7715,11 @@ msgstr ""
 
 #, python-format
 msgid "repository %s"
-msgstr "arkiv %s"
+msgstr ""
 
 #, python-format
 msgid "working directory of %s"
-msgstr "arbejdskatalog for %s"
+msgstr "χώρος εργασίας του %s"
 
 #, python-format
 msgid " %s: searching for copy revision for %s\n"
@@ -8103,32 +7732,33 @@ msgstr ""
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
 
+#, fuzzy
 msgid "file not found!"
-msgstr "filen blev ikke fundet!"
+msgstr "δε βρέθηκε!\n"
 
 msgid "no match under directory!"
-msgstr "ingen træffer under kataloget!"
+msgstr ""
 
 msgid "file not tracked!"
-msgstr "filen følges ikke!"
+msgstr ""
 
 msgid "nothing changed\n"
-msgstr "ingen ændringer\n"
+msgstr ""
 
 msgid "unresolved merge conflicts (see hg resolve)"
 msgstr ""
 
 #, python-format
 msgid "committing subrepository %s\n"
-msgstr "arkiverer underarkiv %s\n"
+msgstr ""
 
 #, python-format
 msgid "trouble committing %s!\n"
-msgstr "problem ved arkivering %s!\n"
+msgstr ""
 
 #, python-format
 msgid "%s does not exist!\n"
-msgstr "%s eksisterer ikke!\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -8142,87 +7772,87 @@ msgstr ""
 
 #, python-format
 msgid "%s already tracked!\n"
-msgstr "%s følges allerede!\n"
+msgstr ""
 
 #, python-format
 msgid "%s not added!\n"
-msgstr "%s ikke tilføjet!\n"
+msgstr ""
 
 #, python-format
 msgid "%s still exists!\n"
-msgstr "%s eksisterer stadig!\n"
+msgstr ""
 
 #, python-format
 msgid "%s not tracked!\n"
-msgstr "%s følges ikke\n"
+msgstr ""
 
 #, python-format
 msgid "%s not removed!\n"
-msgstr "%s ikke fjernet!\n"
+msgstr ""
 
 #, python-format
 msgid "copy failed: %s is not a file or a symbolic link\n"
-msgstr "kopiering fejlede: %s er ikke en fil eller en symbolsk længe\n"
+msgstr ""
 
 msgid "searching for changes\n"
-msgstr "leder efter ændringer\n"
+msgstr ""
 
 #, python-format
 msgid "examining %s:%s\n"
-msgstr "undersøger %s:%s\n"
+msgstr ""
 
 msgid "branch already found\n"
-msgstr "gren er allerede fundet\n"
+msgstr ""
 
 #, python-format
 msgid "found incomplete branch %s:%s\n"
-msgstr "fandt ukomplet gren %s:%s\n"
+msgstr ""
 
 #, python-format
 msgid "found new changeset %s\n"
-msgstr "fandt ny ændring %s\n"
+msgstr ""
 
 #, python-format
 msgid "request %d: %s\n"
-msgstr "forespørgsel %d: %s\n"
+msgstr ""
 
 #, python-format
 msgid "received %s:%s\n"
-msgstr "modtog %s:%s\n"
+msgstr ""
 
 #, python-format
 msgid "narrowing %d:%d %s\n"
-msgstr "indskrænker %d:%d %s\n"
+msgstr ""
 
 #, python-format
 msgid "found new branch changeset %s\n"
-msgstr "fandt ny forgreningsændring %s\n"
+msgstr ""
 
 #, python-format
 msgid "narrowed branch search to %s:%s\n"
-msgstr "indskrænker forgreningssøgning til %s:%s\n"
+msgstr ""
 
 msgid "already have changeset "
-msgstr "har allerede ændringen "
+msgstr ""
 
 msgid "warning: repository is unrelated\n"
-msgstr "advarsel: arkivet er urelateret\n"
+msgstr ""
 
 msgid "repository is unrelated"
-msgstr "arkivet er urelateret"
+msgstr ""
 
 msgid "found new changesets starting at "
-msgstr "fandt nye ændringer startende ved "
+msgstr ""
 
 #, python-format
 msgid "%d total queries\n"
-msgstr "%d forespørgsler i alt\n"
+msgstr ""
 
 msgid "common changesets up to "
-msgstr "fælles ændringer op til "
+msgstr ""
 
 msgid "requesting all changes\n"
-msgstr "anmoder om alle ændringer\n"
+msgstr ""
 
 msgid ""
 "Partial pull cannot be done because other repository doesn't support "
@@ -8231,13 +7861,13 @@ msgstr ""
 
 #, python-format
 msgid "abort: push creates new remote branch '%s'!\n"
-msgstr "afbrudt: skub laver ny gren '%s' i fjernarkivet!\n"
+msgstr ""
 
 msgid "abort: push creates new remote heads!\n"
-msgstr "afbrudt: skub laver nye fjern-hoveder!\n"
+msgstr ""
 
 msgid "(did you forget to merge? use push -f to force)\n"
-msgstr "(glemte du at sammenføje? brug push -f for at gennemtvinge)\n"
+msgstr ""
 
 msgid "note: unsynced remote changes!\n"
 msgstr ""
@@ -8255,34 +7885,34 @@ msgstr ""
 
 #, python-format
 msgid "add changeset %s\n"
-msgstr "tilføj ændring %s\n"
+msgstr "προσθήκη αλλαγής %s\n"
 
 msgid "adding changesets\n"
-msgstr "tilføjer ændringer\n"
+msgstr "προσθήκη αλλαγών\n"
 
 msgid "received changelog group is empty"
 msgstr ""
 
 msgid "adding manifests\n"
-msgstr "tilføjer manifester\n"
+msgstr ""
 
 msgid "adding file changes\n"
-msgstr "tilføjer filændringer\n"
+msgstr ""
 
 #, python-format
 msgid "adding %s revisions\n"
-msgstr "tilføjer %s ændringer\n"
+msgstr ""
 
 msgid "received file revlog group is empty"
 msgstr ""
 
 #, python-format
 msgid " (%+d heads)"
-msgstr " (%+d hoveder)"
+msgstr ""
 
 #, python-format
 msgid "added %d changesets with %d changes to %d files%s\n"
-msgstr "tilføjede %d ændringer med %d ændringer i %d filer%s\n"
+msgstr ""
 
 msgid "updating the branch cache\n"
 msgstr ""
@@ -8308,7 +7938,7 @@ msgstr ""
 
 #, python-format
 msgid "adding %s (%s)\n"
-msgstr "tilføjer %s (%s)\n"
+msgstr ""
 
 #, python-format
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
@@ -8378,8 +8008,9 @@ msgid ""
 "(n)one, e(x)ec or sym(l)ink?"
 msgstr ""
 
+#, fuzzy
 msgid "&None"
-msgstr ""
+msgstr "ολοκληρώθηκε\n"
 
 msgid "E&xec"
 msgstr ""
@@ -8424,7 +8055,7 @@ msgstr ""
 
 #, python-format
 msgid "preserving %s for resolve of %s\n"
-msgstr "bevarer %s til løsning af %s\n"
+msgstr ""
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
@@ -8432,11 +8063,11 @@ msgstr ""
 
 #, python-format
 msgid "getting %s\n"
-msgstr "henter %s\n"
+msgstr "λήψη του %s\n"
 
 #, python-format
 msgid "getting %s to %s\n"
-msgstr "henter %s til %s\n"
+msgstr "λήψη του %s στο %s\n"
 
 #, python-format
 msgid "warning: detected divergent renames of %s to:\n"
@@ -8444,37 +8075,34 @@ msgstr ""
 
 #, python-format
 msgid "branch %s not found"
-msgstr "gren %s blev ikke fundet"
+msgstr ""
 
 msgid "can't merge with ancestor"
-msgstr "kan ikke sammenføje med forfader"
+msgstr ""
 
 msgid "nothing to merge (use 'hg update' or check 'hg heads')"
-msgstr "intet at sammenføje (brug 'hg update' eller kontroller 'hg heads')"
-
-msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
 msgstr ""
-"udestående uarkiverede ændringer (brug 'hg status' for at se ændringer)"
+
+#, fuzzy
+msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
+msgstr "υπάρχουν τοπικές αλλαγές ακόμη"
 
 msgid "crosses branches (use 'hg merge' or 'hg update -C' to discard changes)"
 msgstr ""
-"krydser grene (brug 'hg merge' eller 'hg update -C' for at kassere "
-"ændringerne)"
 
 msgid "crosses branches (use 'hg merge' or 'hg update -C')"
-msgstr "krydser grene (brug 'hg merge' eller 'hg update -C')"
+msgstr ""
 
 msgid "crosses named branches (use 'hg update -C' to discard changes)"
 msgstr ""
-"krydser navngivne grene (brug 'hg update -C' for at kassere ændringerne)"
 
 #, python-format
 msgid "cannot create %s: destination already exists"
-msgstr "kan ikke oprette %s: destinationen findes allerede"
+msgstr ""
 
 #, python-format
 msgid "cannot create %s: unable to create destination directory"
-msgstr "kan ikke oprette %s: ikke i stand til at oprette biblioteket"
+msgstr ""
 
 #, python-format
 msgid "found patch at byte %d\n"
@@ -8489,7 +8117,7 @@ msgstr ""
 
 #, python-format
 msgid "patching file %s\n"
-msgstr "retter fil %s\n"
+msgstr ""
 
 #, python-format
 msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
@@ -8501,7 +8129,7 @@ msgstr ""
 
 #, python-format
 msgid "file %s already exists\n"
-msgstr "filen %s eksisterer allerede\n"
+msgstr ""
 
 #, python-format
 msgid "Hunk #%d succeeded at %d %s(offset %d line).\n"
@@ -8551,7 +8179,7 @@ msgstr ""
 
 #, python-format
 msgid "Unsupported line endings type: %s"
-msgstr "Linieendelse %s understøttes ikke"
+msgstr ""
 
 #, python-format
 msgid "no valid hunks found; trying with %r instead\n"
@@ -8559,25 +8187,25 @@ msgstr ""
 
 #, python-format
 msgid "exited with status %d"
-msgstr "afsluttede med status %d"
+msgstr ""
 
 #, python-format
 msgid "killed by signal %d"
-msgstr "dræbt af signal %d"
+msgstr ""
 
 #, python-format
 msgid "stopped by signal %d"
-msgstr "stoppet af signal %d"
+msgstr ""
 
 msgid "invalid exit code"
-msgstr "ugyldig returkode"
+msgstr ""
 
 #, python-format
 msgid "saving bundle to %s\n"
 msgstr ""
 
 msgid "adding branch\n"
-msgstr "tilføjer gren\n"
+msgstr ""
 
 #, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
@@ -8599,9 +8227,9 @@ msgstr ""
 msgid "index %s unknown format %d"
 msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "index %s is corrupted"
-msgstr "indeks %s er ødelagt"
+msgstr ""
 
 msgid "no node"
 msgstr ""
@@ -8644,7 +8272,7 @@ msgid "could not create remote repo"
 msgstr ""
 
 msgid "remote: "
-msgstr "fjernsystem: "
+msgstr "απομακρυσμένο:"
 
 msgid "no suitable response from remote hg"
 msgstr ""
@@ -8671,7 +8299,7 @@ msgstr ""
 
 #, python-format
 msgid "%d files, %d bytes to transfer\n"
-msgstr "%d filer, skal overføre %d bytes\n"
+msgstr ""
 
 #, python-format
 msgid "sending %s (%d bytes)\n"
@@ -8685,7 +8313,7 @@ msgstr ""
 
 #, fuzzy
 msgid "&Remote"
-msgstr "fjernsystem: "
+msgstr "απομακρυσμένο:"
 
 msgid "r"
 msgstr ""
@@ -8702,28 +8330,28 @@ msgid ""
 "use (c)hanged version or (d)elete?"
 msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "removing subrepo %s\n"
-msgstr "fjerner underarkiv %s\n"
+msgstr "αφαίρεση του %s\n"
 
-#, python-format
+#, fuzzy, python-format
 msgid "pulling subrepo %s\n"
-msgstr "hiver fra underarkiv %s\n"
+msgstr "καθαρισμός %s\n"
 
-#, python-format
+#, fuzzy, python-format
 msgid "pushing subrepo %s\n"
-msgstr "skubber til underarkiv %s\n"
+msgstr ""
 
 msgid "unmatched quotes"
 msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "error expanding '%s%%%s'"
-msgstr "fejl ved ekspansion af '%s%%%s'"
+msgstr ""
 
 #, python-format
 msgid "unknown filter '%s'"
-msgstr "ukendt filter '%s'"
+msgstr ""
 
 #, python-format
 msgid "style not found: %s"
@@ -8738,58 +8366,58 @@ msgstr ""
 
 #, python-format
 msgid "failed to truncate %s\n"
-msgstr "kunne ikke trunkere %s\n"
+msgstr ""
 
 msgid "transaction abort!\n"
-msgstr "transaktionen er afbrudt!\n"
+msgstr ""
 
 msgid "rollback completed\n"
-msgstr "tilbagerulning gennemført\n"
+msgstr ""
 
 msgid "rollback failed - please run hg recover\n"
-msgstr "tilbagerulning fejlede - kør venligst hg recover\n"
+msgstr ""
 
 #, python-format
 msgid "Not trusting file %s from untrusted user %s, group %s\n"
-msgstr "Stoler ikke på filen %s fra ubetroet bruger %s, gruppe %s\n"
+msgstr ""
 
 #, python-format
 msgid "Ignored: %s\n"
-msgstr "Ignoreret: %s\n"
+msgstr ""
 
 #, python-format
 msgid "ignoring untrusted configuration option %s.%s = %s\n"
 msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "%s.%s not a boolean ('%s')"
-msgstr "%s.%s er ikke en sandhedsværdi ('%s')"
+msgstr "η αλλαγή %s δεν είναι γονική αλλαγή της %s"
 
 msgid "enter a commit username:"
-msgstr "angiv et arkiveringsbrugernavn:"
+msgstr ""
 
 #, python-format
 msgid "No username found, using '%s' instead\n"
-msgstr "Fandt intet brugernavn, bruger '%s' istedet\n"
+msgstr ""
 
 msgid "Please specify a username."
-msgstr "Angiv venligst et brugernavn."
+msgstr ""
 
 #, python-format
 msgid "username %s contains a newline\n"
-msgstr "brugernavn %s indeholder et linieskift\n"
+msgstr ""
 
 msgid "unrecognized response\n"
-msgstr "svar ikke genkendt\n"
+msgstr ""
 
 msgid "response expected"
-msgstr "svar forventet"
+msgstr ""
 
 msgid "password: "
-msgstr "kodeord: "
+msgstr "κωδικός: "
 
 msgid "edit failed"
-msgstr "redigering fejlede"
+msgstr "η επεξεργασία απέτυχε"
 
 msgid "http authorization required"
 msgstr ""
@@ -8799,18 +8427,18 @@ msgstr ""
 
 #, python-format
 msgid "realm: %s\n"
-msgstr "realm: %s\n"
+msgstr ""
 
 #, python-format
 msgid "user: %s\n"
-msgstr "bruger: %s\n"
+msgstr ""
 
 msgid "user:"
-msgstr "bruger:"
+msgstr ""
 
 #, python-format
 msgid "http auth: user %s, password %s\n"
-msgstr "http godkendelse: bruger %s, kodeord %s\n"
+msgstr ""
 
 #, python-format
 msgid "proxying through http://%s:%s\n"
@@ -8818,38 +8446,38 @@ msgstr ""
 
 #, python-format
 msgid "command '%s' failed: %s"
-msgstr "kommandoen '%s' fejlede: %s"
+msgstr ""
 
 #, python-format
 msgid "path contains illegal component: %s"
-msgstr "stien indeholder ugyldig komponent: %s"
+msgstr ""
 
 #, python-format
 msgid "path %r is inside repo %r"
-msgstr "stien %r er inde i repo %r"
+msgstr ""
 
 #, python-format
 msgid "path %r traverses symbolic link %r"
-msgstr "stien %r følger symbolsk link %r"
+msgstr ""
 
 msgid "Hardlinks not supported"
-msgstr "Hardlinks er ikke supporteret"
+msgstr ""
 
 #, python-format
 msgid "could not symlink to %r: %s"
-msgstr "kunne ikke lave et symbolsk link til %r: %s"
+msgstr ""
 
 #, python-format
 msgid "invalid date: %r "
-msgstr "ugyldig dato: %r "
+msgstr ""
 
 #, python-format
 msgid "date exceeds 32 bits: %d"
-msgstr "dato overskrider 32 bit: %d"
+msgstr ""
 
 #, python-format
 msgid "impossible time zone offset: %d"
-msgstr "umuligt tidszone: %d"
+msgstr ""
 
 #, python-format
 msgid "invalid day spec: %s"
@@ -8893,137 +8521,139 @@ msgstr "%.2f KB"
 
 #, python-format
 msgid "%.0f bytes"
-msgstr "%.0f byte"
+msgstr "%.0f bytes"
 
 msgid "cannot verify bundle or remote repos"
-msgstr "kan ikke verificere bundt eller fjerndepoter"
+msgstr ""
 
 msgid "interrupted"
-msgstr "afbrudt"
+msgstr ""
 
 #, python-format
 msgid "empty or missing %s"
-msgstr "tom eller manglende %s"
+msgstr "κενό ή μη υπαρκτό %s"
 
 #, python-format
 msgid "data length off by %d bytes"
-msgstr "datalænge er %d bytes forkert"
+msgstr "το μέγεθος των δεδομένων διαφέρει κατά %d bytes"
 
 #, python-format
 msgid "index contains %d extra bytes"
-msgstr "indekset indeholder %d ekstra bytes"
+msgstr ""
 
 #, python-format
 msgid "warning: `%s' uses revlog format 1"
-msgstr "advarsel: '%s' bruger revlog format 1"
+msgstr "προειδοποίηση: το '%s' χρησιμοποιεί revlog έκδοσης 1"
 
 #, python-format
 msgid "warning: `%s' uses revlog format 0"
-msgstr "advarsel: '%s' bruger revlog format 0"
+msgstr "προειδοποίηση: το '%s' χρησιμοποιεί revlog έκδοσης 0"
 
-#, python-format
+#, fuzzy, python-format
 msgid "rev %d points to nonexistent changeset %d"
-msgstr "rev %d peger på ikke eksisterende ændring %d"
+msgstr "η έκδοση %d αναφέρεται στο %s της αλλαγής %d"
 
-#, python-format
+#, fuzzy, python-format
 msgid "rev %d points to unexpected changeset %d"
-msgstr "rev %d peger på uventet ændring %d"
+msgstr "η έκδοση %d αναφέρεται στο %s της αλλαγής %d"
 
 #, python-format
 msgid " (expected %s)"
-msgstr " (forventede %s)"
+msgstr " (αναμενόταν %s)"
 
 #, python-format
 msgid "unknown parent 1 %s of %s"
-msgstr "ukendt forælder 1 %s til %s"
+msgstr ""
 
 #, python-format
 msgid "unknown parent 2 %s of %s"
-msgstr "ukendt forælder 2 %s til %s"
+msgstr ""
 
 #, python-format
 msgid "checking parents of %s"
-msgstr "kontrollerer forældre til %s"
+msgstr ""
 
 #, python-format
 msgid "duplicate revision %d (%d)"
-msgstr "duplikeret revision %d (%d)"
+msgstr "διπλή έκδοση %d (%d)"
 
 #, python-format
 msgid "repository uses revlog format %d\n"
-msgstr "arkivet bruger revlog format %d\n"
+msgstr "το αποθετήριο χρησιμοποιεί τη μορφή revlog %d\n"
 
 msgid "checking changesets\n"
-msgstr "kontrollerer ændringer\n"
+msgstr "έλεγχος αλλαγών\n"
 
 #, python-format
 msgid "unpacking changeset %s"
-msgstr "udpakker ændring %s"
+msgstr "εξαγωγή αλλαγής %s"
 
 msgid "checking manifests\n"
-msgstr "kontrollerer manifester\n"
+msgstr "έλεγχος manifests\n"
 
-#, python-format
+#, fuzzy, python-format
 msgid "%s not in changesets"
-msgstr "%s ikke i ændringer"
+msgstr "το %s δεν υπάρχει στα manifests"
 
 msgid "file without name in manifest"
-msgstr "fil uden navn i manifest"
+msgstr "αρχείο χωρίς όνομα στο manifest"
 
 #, python-format
 msgid "reading manifest delta %s"
-msgstr "læser manifestforskel %s"
+msgstr "ανάγνωση αλλαγής manifest %s"
 
 msgid "crosschecking files in changesets and manifests\n"
-msgstr "krydstjekker filer i ændringer og manifester\n"
+msgstr "διασταύρωση αρχείων στις αλλαγές και τα manifests\n"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
-msgstr "ændring refererer til et ukendt manifest %s"
+msgstr "η αλλαγή αναφέρεται σε άγνωστο manifest %s"
 
 msgid "in changeset but not in manifest"
-msgstr "i ændring men ikke i manifest"
+msgstr "υπάρχει στην αλλαγή αλλά όχι στο manifest"
 
 msgid "in manifest but not in changeset"
-msgstr "i manifest men ikke i ændring"
+msgstr "υπάρχει στο manifest αλλά όχι στην αλλαγή"
 
 msgid "checking files\n"
-msgstr "kontrollerer filer\n"
+msgstr "έλεγχος αρχείων\n"
 
 #, python-format
 msgid "cannot decode filename '%s'"
-msgstr "kan ikke dekode filnavn '%s'"
+msgstr "δε μπορεί να αποκωδικοποιηθεί το όνομα αρχείου '%s'"
 
 #, python-format
 msgid "broken revlog! (%s)"
-msgstr "beskadiget revlog! (%s)"
+msgstr "μη έγκυρο revlog! (%s)"
 
 msgid "missing revlog!"
-msgstr "manglende revlog!"
+msgstr "δεν υπάρχει αυτό το revlog!"
 
 #, python-format
 msgid "%s not in manifests"
-msgstr ""
+msgstr "το %s δεν υπάρχει στα manifests"
 
 #, python-format
 msgid "unpacked size is %s, %s expected"
-msgstr "udpakket størrelse er %s, forventede %s"
+msgstr "μέγεθος εξαγόμενων δεδομένων %s, αναμενόταν %s"
 
 #, python-format
 msgid "unpacking %s"
-msgstr "udpakker %s"
+msgstr "εξαγωγή του %s"
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
-msgstr ""
+msgstr "κενό ή μη έγκυρο revlog προέλευσης %s:%s"
 
 #, python-format
 msgid "warning: %s@%s: copy source revision is nullid %s:%s"
 msgstr ""
+"προειδοποίηση: %s@%s: η έκδοση προέλευσης της αντιγραφής αρχείου είναι το "
+"nullid %s:%s"
 
 #, python-format
 msgid "checking rename of %s"
-msgstr "kontrollerer omdøbning af %s"
+msgstr "έλεγχος μετονομασίας του %s"
 
 #, python-format
 msgid "%s in manifests not found"
@@ -9031,23 +8661,119 @@ msgstr ""
 
 #, python-format
 msgid "warning: orphan revlog '%s'"
-msgstr "advarsel: forældreløs revlog '%s'"
+msgstr "προειδοποίηση: ορφανό revlog '%s'"
 
 #, python-format
 msgid "%d files, %d changesets, %d total revisions\n"
-msgstr "%d filer, %d ændringer, ialt %d revisioner\n"
+msgstr "%d αρχεία, %d αλλαγές, %d εκδόσεις αρχείων\n"
 
 #, python-format
 msgid "%d warnings encountered!\n"
-msgstr "fandt %d advarsler!\n"
+msgstr "%d ειδοποιήσεις λάθους!\n"
 
 #, python-format
 msgid "%d integrity errors encountered!\n"
-msgstr "fandt %d integritetsfejl!\n"
+msgstr "βρέθηκαν %d λάθη!\n"
 
 #, python-format
 msgid "(first damaged changeset appears to be %d)\n"
-msgstr "(første beskadigede ændring er tilsyneladende %d)\n"
+msgstr "(η πρώτη προβληματική αλλαγή φαίνεται να είναι η %d)\n"
 
 msgid "user name not available - set USERNAME environment variable"
-msgstr "der er ikke noget brugernavn - sæt USERNAME miljøvariabel"
+msgstr ""
+
+#~ msgid "return tuple of (match function, list enabled)."
+#~ msgstr "επιστρέφει ένα tuple (match function, list enabled)."
+
+#~ msgid ""
+#~ "allow user-defined command aliases\n"
+#~ "\n"
+#~ "To use, create entries in your hgrc of the form\n"
+#~ "\n"
+#~ "[alias]\n"
+#~ "mycmd = cmd --args\n"
+#~ msgstr ""
+#~ "ορισμός προσαρμοσμένων εντολών\n"
+#~ "\n"
+#~ "Για να ορίσετε δικές σας εντολές, προσθέστε στο αρχείο hgrc ένα τμήμα\n"
+#~ "σαν το παρακάτω\n"
+#~ "\n"
+#~ "[alias]\n"
+#~ "mycmd = cmd --args\n"
+
+#~ msgid ""
+#~ "defer command lookup until needed, so that extensions loaded\n"
+#~ "    after alias can be aliased"
+#~ msgstr ""
+#~ "καθυστέρηση ελέγχου εντολών μέχρι να έχουν φορτωθεί όλες οι\n"
+#~ "    επεκτάσεις και να ορισθούν όλα τα aliases"
+
+#~ msgid "*** [alias] %s: command %s is unknown"
+#~ msgstr "*** [alias] %s: η εντολή %s είναι άγνωστη"
+
+#~ msgid "*** [alias] %s: command %s is ambiguous"
+#~ msgstr "*** [alias] %s: η εντολή %s είναι ασαφής"
+
+#~ msgid "*** [alias] %s: circular dependency on %s"
+#~ msgstr "*** [alias] %s: κυκλική εξάρτηση από την εντολή %s"
+
+#~ msgid "*** [alias] %s: no definition\n"
+#~ msgstr "*** [alias] %s: δεν υπάρχει ορισμός\n"
+
+#~ msgid ""
+#~ "Strip bookmarks if revisions are stripped using\n"
+#~ "    the mercurial.strip method. This usually happens during\n"
+#~ "    qpush and qpop"
+#~ msgstr ""
+#~ "Αφαίρεση των σελιδοδεικτών όταν αφαιρούνται κάποιες\n"
+#~ "    αλλαγές από το αποθετήριο με τη μέθοδο mercurial.strip.\n"
+#~ "    Αυτό γίνεται συνήθως με τις εντολές qpush και qpop"
+
+#~ msgid ""
+#~ "Add a revision to the repository and\n"
+#~ "            move the bookmark"
+#~ msgstr ""
+#~ "Προσθήκη μιας αλλαγής στο αποθετήριο και\n"
+#~ "            μετακίνηση του σελιδοδείκτη"
+
+#~ msgid "Merge bookmarks with normal tags"
+#~ msgstr "Συγχώνευση σελιδοδεικτών με τα κανονικά tags"
+
+#~ msgid ""
+#~ "Set the current bookmark\n"
+#~ "\n"
+#~ "    If the user updates to a bookmark we update the .hg/bookmarks."
+#~ "current\n"
+#~ "    file.\n"
+#~ "    "
+#~ msgstr ""
+#~ "Ορισμός ενεργού σελιδοδείκτη\n"
+#~ "\n"
+#~ "    Αυτόματη ενημέρωση του .hg/bookmarks.current κάθε φορά που ο χρήστης\n"
+#~ "    εξάγει τα αρχεία με βάση ένα σελιδοδείκτη.\n"
+#~ "    "
+
+#~ msgid "support for bugzilla version 2.16."
+#~ msgstr "υποστήριξη για το buzgilla 2.16."
+
+#~ msgid "run a query."
+#~ msgstr "εκτέλεση μιας αίτησης."
+
+#~ msgid "look up numeric bugzilla user id."
+#~ msgstr "αναζήτηση χρήστη με βάση τον αριθμό id του."
+
+#~ msgid "map name of committer to bugzilla user name."
+#~ msgstr ""
+#~ "αντιστοίχηση ονόματος συγγραφέα αλλαγών με όνομα χρήστη στο bugzilla."
+
+#~ msgid "support for bugzilla 2.18 series."
+#~ msgstr "υποστήριξη για τη σειρά bugzilla 2.18."
+
+#~ msgid "support for bugzilla 3.0 series."
+#~ msgstr "υποστήριξη για τη σειρά bugzilla 3.0."
+
+#~ msgid "unable to open %s: %s"
+#~ msgstr ""
+
+#~ msgid "%s, please check your locale settings"
+#~ msgstr ""

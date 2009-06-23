@@ -386,7 +386,7 @@ def _dispatch(ui, args):
         raise util.Abort(_("Option --cwd may not be abbreviated!"))
     if options["repository"]:
         raise util.Abort(_(
-            "Option -R has to be separated from other options (i.e. not -qR) "
+            "Option -R has to be separated from other options (e.g. not -qR) "
             "and --repository may only be abbreviated as --repo!"))
 
     if options["encoding"]:

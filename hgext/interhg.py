@@ -18,9 +18,9 @@ A few example patterns (link to bug tracking, etc.) that may
 be used in your hgrc:
 
   [interhg]
-  issues = s!issue(\d+)!<a href="http://bts/issue\1">issue\1<\/a>!
-  bugzilla = s!((?:bug|b=|(?=#?\d{4,}))(?:\s*#?)(\d+))!<a..=\2">\1</a>!i
-  boldify = s/(^|\s)#(\d+)\b/ <b>#\2<\/b>/
+  issues = s!issue(\\d+)!<a href="http://bts/issue\\1">issue\\1</a>!
+  bugzilla = s!((?:bug|b=|(?=#?\\d{4,}))(?:\\s*#?)(\\d+))!<a..=\\2">\\1</a>!i
+  boldify = s!(^|\\s)#(\\d+)\\b! <b>#\\2</b>!
 '''
 
 import re
