@@ -75,8 +75,8 @@ ones.
 SYNTAX
 ------
 
-A configuration file consists of sections, led by a "[section]" header
-and followed by "name: value" entries; "name=value" is also accepted.
+A configuration file consists of sections, led by a "`[section]`" header
+and followed by "`name: value`" entries; "`name=value`" is also accepted.
 
     [spam]
     eggs=ham
@@ -91,7 +91,7 @@ Leading whitespace is removed from values. Empty lines are skipped.
 The optional values can contain format strings which refer to other
 values in the same section, or values in a special DEFAULT section.
 
-Lines beginning with "#" or ";" are ignored and may be used to provide
+Lines beginning with "`#`" or "`;`" are ignored and may be used to provide
 comments.
 
 SECTIONS
@@ -331,16 +331,16 @@ extensions::
 +
 --
 If you know that the extension is already in Python's search path,
-you can give the name of the module, followed by "=", with nothing
-after the "=".
+you can give the name of the module, followed by "`=`", with nothing
+after the "`=`".
 
-Otherwise, give a name that you choose, followed by "=", followed by
-the path to the ".py" file (including the file name extension) that
+Otherwise, give a name that you choose, followed by "`=`", followed by
+the path to the "`.py`" file (including the file name extension) that
 defines the extension.
 
 To explicitly disable an extension that is enabled in an hgrc of
-broader scope, prepend its path with '!', as in
-'hgext.foo = !/ext/path' or 'hgext.foo = !' when path is not
+broader scope, prepend its path with "`!`", as in
+"`hgext.foo = !/ext/path`" or "`hgext.foo = !`"  when path is not
 supplied.
 
 Example for `~/.hgrc`:
