@@ -109,6 +109,8 @@ class GitHandler(object):
             elif not self.paths:
                 # intial cloning
                 self.update_remote_branches('default', refs)
+        else:
+            self.ui.status(_("nothing new on the server\n"))
 
         self.save_map()
 
@@ -119,12 +121,19 @@ class GitHandler(object):
         self.update_references()
         self.save_map()
 
-    def push(self, remote_name):
-        self.fetch(remote_name) # get and convert objects if they already exist
-        self.ui.status(_("pushing to : %s\n") % remote_name)
+    def push(self, remote):
+        self.fetch(remote) # get and convert objects if they already exist
+        self.ui.status(_("pushing to : %s\n") % remote)
         self.export_commits(False)
-        self.update_remote_references(remote_name)
-        self.upload_pack(remote_name)
+        changed_refs = self.upload_pack(remote)
+        remote_name = self.remote_name(remote)
+
+        if remote_name and changed_refs:
+            for ref, sha in changed_refs.iteritems():
+                self.ui.status("    "+ remote_name + "::" + ref + " => GIT:" + sha[0:8] + "\n")
+
+            self.update_remote_branches(remote_name, changed_refs)
+
 
     def clear(self):
         mapfile = self.repo.join(self.mapfile)
@@ -557,14 +566,6 @@ class GitHandler(object):
         try:
             self.ui.status(_("creating and sending data\n"))
             changed_refs = client.send_pack(path, changed, genpack)
-            remote_name = self.remote_name(remote)
-            if remote_name and changed_refs:
-                new_refs = {}
-                for ref, sha in changed_refs.iteritems():
-                    self.ui.status("    "+ remote_name + "::" + ref + " => GIT:" + sha[0:8] + "\n")
-                    new_refs[ref] = sha
-                self.git.set_remote_refs(new_refs, remote_name)
-                self.update_remote_branches(remote_name, new_refs)
         except:
             # TODO : remove try/except or do something useful here
             raise
@@ -675,10 +676,6 @@ class GitHandler(object):
             refs = client.fetch_pack(path, determine_wants, graphwalker, f.write, sys.stdout.write)
             f.close()
             commit()
-            if refs:
-                self.git.set_remote_refs(refs, remote_name)
-            else:
-                self.ui.status(_("nothing new on the server\n"))
             return refs
         finally:
             f.close()
@@ -697,11 +694,6 @@ class GitHandler(object):
         for tag, sha in self.repo.tags().iteritems():
             if self.repo.tagtype(tag) == 'git':
                 self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
-
-    # Make sure there's a refs/remotes/remote_name/name
-    #           for every refs/heads/name
-    def update_remote_references(self, remote_name):
-        self.git.set_remote_refs(self.local_heads(), remote_name)
 
     def local_heads(self):
         try:
@@ -767,6 +759,9 @@ class GitHandler(object):
             hgsha = bin(self.map_hg_get(sha))
             tag = '%s/%s' % (remote_name, head)
             self.repo.tag(tag, hgsha, '', True, None, None)
+
+        self.git.set_remote_refs(refs, remote_name)
+
 
     ## UTILITY FUNCTIONS
 
