@@ -2,10 +2,10 @@ Summary: Mercurial -- a distributed SCM
 Name: mercurial
 Version: snapshot
 Release: 0
-License: GPL
+License: GPLv2
 Group: Development/Tools
-Source: http://mercurial.selenic.com/release/%{name}-%{version}.tar.gz
-URL: http://mercurial.selenic.com
+URL: http://mercurial.selenic.com/
+Source0: http://mercurial.selenic.com/release/%{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 # From the README:
@@ -18,10 +18,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 # run-time dependency.
 #
 BuildRequires: python >= 2.4, python-devel, make, gcc, asciidoc, xmlto
+Provides: hg = %{version}-%{release}
 
 %define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
-%define pythonlib %{_libdir}/python%{pythonver}/site-packages/%{name}
-%define hgext %{_libdir}/python%{pythonver}/site-packages/hgext
+%define emacs_lispdir %{_datadir}/emacs/site-lisp
 
 %description
 Mercurial is a fast, lightweight source control management system designed
@@ -45,23 +45,26 @@ install contrib/git-viz/{hg-viz,git-rev-tree} $RPM_BUILD_ROOT%{_bindir}
 
 bash_completion_dir=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 mkdir -p $bash_completion_dir
-install contrib/bash_completion $bash_completion_dir/mercurial.sh
+install -m 644 contrib/bash_completion $bash_completion_dir/mercurial.sh
 
 zsh_completion_dir=$RPM_BUILD_ROOT%{_datadir}/zsh/site-functions
 mkdir -p $zsh_completion_dir
-install contrib/zsh_completion $zsh_completion_dir/_mercurial
+install -m 644 contrib/zsh_completion $zsh_completion_dir/_mercurial
 
-lisp_dir=$RPM_BUILD_ROOT%{_datadir}/emacs/site-lisp
-mkdir -p $lisp_dir
-install contrib/mercurial.el $lisp_dir
+mkdir -p $RPM_BUILD_ROOT%{emacs_lispdir}
+install contrib/mercurial.el $RPM_BUILD_ROOT%{emacs_lispdir}
+
+mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/mercurial/hgrc.d
+install contrib/mergetools.hgrc $RPM_BUILD_ROOT%{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html doc/ja *.cgi
-%{_mandir}/man?/hg*.gz
+%doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html doc/ja *.cgi contrib/*.fcgi
+%doc %attr(644,root,root) %{_mandir}/man?/hg*.gz
+%doc %attr(644,root,root) contrib/*.svg contrib/sample.hgrc
 %{_sysconfdir}/bash_completion.d/mercurial.sh
 %{_datadir}/zsh/site-functions/_mercurial
 %{_datadir}/emacs/site-lisp/mercurial.el
@@ -71,8 +74,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/hg-viz
 %{_bindir}/git-rev-tree
 %{_bindir}/mercurial-convert-repo
+%dir %{_sysconfdir}/bash_completion.d/
+%dir %{_datadir}/zsh/site-functions/
+%dir %{_sysconfdir}/mercurial
+%dir %{_sysconfdir}/mercurial/hgrc.d
+%config(noreplace) %{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
 %if "%{?pythonver}" != "2.4"
 %{_libdir}/python%{pythonver}/site-packages/%{name}-*-py%{pythonver}.egg-info
 %endif
-%{pythonlib}
-%{hgext}
+%{_libdir}/python%{pythonver}/site-packages/%{name}
+%{_libdir}/python%{pythonver}/site-packages/hgext
