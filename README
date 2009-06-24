@@ -5,6 +5,6 @@ Basic install:
  $ hg debuginstall # sanity-check setup
  $ hg              # see help
 
-See http://www.selenic.com/mercurial/ for detailed installation
+See http://mercurial.selenic.com/ for detailed installation
 instructions, platform-specific notes, and Mercurial user information.
 

@@ -1226,7 +1226,7 @@ finish
 
 Author:  Mathieu Clabaut <mathieu.clabaut@gmail.com>
 Credits:  Bob Hiestand <bob.hiestand@gmail.com>
-Mercurial: http://www.selenic.com/mercurial
+Mercurial: http://mercurial.selenic.com/
    Mercurial (noted Hg) is a fast, lightweight Source Control Management
    system designed for efficient handling of very large distributed projects.
 

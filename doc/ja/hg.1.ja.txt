@@ -852,7 +852,7 @@ Matt Mackall <mpm@selenic.com> により書かれました。
 
 情報源
 ---
-http://selenic.com/mercurial[主なウェブサイト]
+http://mercurial.selenic.com/[主なウェブサイト]
 
 http://www.serpentine.com/mercurial[Wiki サイト]
 

@@ -4,8 +4,8 @@ Version: snapshot
 Release: 0
 License: GPL
 Group: Development/Tools
-Source: http://www.selenic.com/mercurial/release/%{name}-%{version}.tar.gz
-URL: http://www.selenic.com/mercurial
+Source: http://mercurial.selenic.com/release/%{name}-%{version}.tar.gz
+URL: http://mercurial.selenic.com
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 # From the README:

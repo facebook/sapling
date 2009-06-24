@@ -18,7 +18,7 @@
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -87,7 +87,7 @@ files, or words in the commit message</div>
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -157,7 +157,7 @@ files, or words in the commit message</div>
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -296,7 +296,7 @@ graph.render(data);
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>

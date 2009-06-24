@@ -1,5 +1,5 @@
 #!/bin/sh
-# http://www.selenic.com/mercurial/bts/issue352
+# http://mercurial.selenic.com/bts/issue352
 
 "$TESTDIR/hghave" eol-in-paths || exit 80
 

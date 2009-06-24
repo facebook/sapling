@@ -21,7 +21,7 @@ adding d1/d2/foo
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>

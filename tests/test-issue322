@@ -1,5 +1,5 @@
 #!/bin/sh
-# http://www.selenic.com/mercurial/bts/issue322
+# http://mercurial.selenic.com/bts/issue322
 
 echo % file replaced with directory
 

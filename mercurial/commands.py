@@ -987,7 +987,7 @@ def debuginstall(ui):
                        " or misconfigured. Please check your .hgrc file)\n"))
         else:
             ui.write(_(" Internal patcher failure, please report this error"
-                       " to http://www.selenic.com/mercurial/bts\n"))
+                       " to http://mercurial.selenic.com/bts/\n"))
     problems += patchproblems
 
     os.unlink(fa)
