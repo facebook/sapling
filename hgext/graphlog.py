@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''view revision graphs from a shell
+'''command to view revision graphs from a shell
 
 This extension adds a --graph option to the incoming, outgoing and log
 commands. When this options is given, an ASCII representation of the

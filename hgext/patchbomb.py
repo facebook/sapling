@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''send Mercurial changesets as a series of patch e-mails
+'''command to send changesets as (a series of) patch e-mails
 
 The series is started off with a "[PATCH 0 of N]" introduction, which
 describes the series as a whole.

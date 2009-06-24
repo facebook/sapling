@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''transplant changesets from another branch
+'''command to transplant changesets from another branch
 
 This extension allows you to transplant patches from another branch.
 

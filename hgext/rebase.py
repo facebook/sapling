@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''move sets of revisions to a different ancestor
+'''command to move sets of revisions to a different ancestor
 
 This extension lets you rebase changesets in an existing Mercurial
 repository.
