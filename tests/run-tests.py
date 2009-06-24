@@ -266,7 +266,9 @@ def installhg(options):
     pure = options.pure and "--pure" or ""
 
     # Run installer in hg root
-    os.chdir(os.path.join(os.path.dirname(sys.argv[0]), '..'))
+    script = os.path.realpath(sys.argv[0])
+    hgroot = os.path.dirname(os.path.dirname(script))
+    os.chdir(hgroot)
     cmd = ('%s setup.py %s clean --all'
            ' install --force --prefix="%s" --install-lib="%s"'
            ' --install-scripts="%s" >%s 2>&1'
