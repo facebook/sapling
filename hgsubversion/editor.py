@@ -191,7 +191,8 @@ class HgEditor(delta.Editor):
         fpath, branch = self.meta.split_branch_path(path, existing=False)[:2]
         if not fpath:
             return
-        if branch not in self.meta.branches:
+        if (branch not in self.meta.branches and
+            not self.meta.is_path_tag(self.meta.remotename(branch))):
             # we know this branch will exist now, because it has at least one file. Rock.
             self.meta.branches[branch] = None, 0, self.current.rev.revnum
         self.current.file = path

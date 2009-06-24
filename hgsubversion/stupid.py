@@ -601,9 +601,18 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 assert f[0] != '/'
 
         extra = meta.genextra(r.revnum, b)
-        if not meta.usebranchnames:
-            extra.pop('branch', None)
 
+        tag = False
+        tag = meta.is_path_tag(meta.remotename(b))
+
+        if tag:
+            if parentctx.node() == node.nullid:
+                continue
+            extra.update({'branch': parentctx.extra().get('branch', None),
+                          'close': 1})
+
+        if not meta.usebranchnames or extra.get('branch', None) == 'default':
+            extra.pop('branch', None)
         current_ctx = context.memctx(meta.repo,
                                      [parentctx.node(), revlog.nullid],
                                      r.message or util.default_commit_msg,
@@ -615,10 +624,14 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         ha = meta.repo.commitctx(current_ctx)
 
         branch = extra.get('branch', None)
-        if not branch in meta.branches:
+        if (not branch in meta.branches
+            and not meta.is_path_tag(meta.remotename(branch))):
             meta.branches[branch] = None, 0, r.revnum
-        meta.revmap[r.revnum, b] = ha
+        if not tag:
+            meta.revmap[r.revnum, b] = ha
         util.describe_commit(ui, ha, b)
+        if tag:
+            meta.movetag(tag, ha, parentctx.extra().get('branch', None), r, date)
 
     # These are branches with an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.

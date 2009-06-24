@@ -145,7 +145,6 @@ class SVNMeta(object):
     def localname(self, path):
         """Compute the local name for a branch located at path.
         """
-        assert not path.startswith('tags/')
         if path == 'trunk':
             return None
         elif path.startswith('branches/'):
@@ -164,7 +163,10 @@ class SVNMeta(object):
         branchpath = 'trunk'
         if branch:
             extra['branch'] = branch
-            branchpath = 'branches/%s' % branch
+            if branch.startswith('../'):
+                branchpath = branch[3:]
+            else:
+                branchpath = 'branches/%s' % branch
 
         subdir = self.subdir
         if subdir and subdir[-1] == '/':
@@ -218,8 +220,16 @@ class SVNMeta(object):
         known.
         """
         path = self.normalize(path)
-        if path.startswith('tags/'):
-            return None, None, None
+        if self.is_path_tag(path):
+            tag = self.is_path_tag(path)
+            matched = [t for t in self.tags.iterkeys() if tag.startswith(t+'/')]
+            if not matched:
+                return None, None, None
+            matched.sort(cmp=lambda x,y: cmp(len(x),len(y)), reverse=True)
+            brpath = tag[len(matched[0])+1:]
+            svrpath = path[:-(len(brpath)+1)]
+            ln = self.localname(svrpath)
+            return brpath, ln, svrpath
         test = ''
         path_comps = path.split('/')
         while self.localname(test) not in self.branches and len(path_comps):
@@ -299,7 +309,11 @@ class SVNMeta(object):
     def get_parent_revision(self, number, branch):
         '''Get the parent revision hash for a commit on a specific branch.
         '''
-        r, br = self.get_parent_svn_branch_and_rev(number, branch)
+        tag = self.is_path_tag(self.remotename(branch))
+        if tag and tag in self.tags:
+            br, r = self.tags[tag]
+        else:
+            r, br = self.get_parent_svn_branch_and_rev(number, branch)
         if r is not None:
             return self.revmap[r, br]
         return revlog.nullid
@@ -397,6 +411,39 @@ class SVNMeta(object):
                            (info[0] or 'trunk', info[1], t))
         self.tags.update(tbdelta['tags'][0])
         self.branches.update(tbdelta['branches'][0])
+
+    def movetag(self, tag, hash, branch, rev, date):
+        if branch == 'default':
+            branch = None
+        parentctx = self.repo[self.get_parent_revision(rev.revnum, branch)]
+        if '.hgtags' in parentctx:
+            tagdata = parentctx.filectx('.hgtags').data()
+        else:
+            tagdata = ''
+        tagdata += '%s %s\n' % (node.hex(hash), tag, )
+        def hgtagsfn(repo, memctx, path):
+            assert path == '.hgtags'
+            return context.memfilectx(path=path,
+                                      data=tagdata,
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        pextra = parentctx.extra()
+        ctx = context.memctx(self.repo,
+                             (parentctx.node(), node.nullid),
+                             rev.message or '...',
+                             ['.hgtags', ],
+                             hgtagsfn,
+                             self.authors[rev.author],
+                             date,
+                             pextra)
+        new_hash = self.repo.commitctx(ctx)
+        prefix, revnum = pextra['convert_revision'].rsplit('@', 1)
+        branch = self.localname(self.normalize('/' + prefix.split('/', 1)[1]))
+        assert self.revmap[int(revnum), branch] == parentctx.node()
+        self.revmap[int(revnum), branch] = new_hash
+
+        util.describe_commit(self.ui, new_hash, branch)
 
     def committags(self, delta, rev, endbranches):
 

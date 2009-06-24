@@ -120,6 +120,10 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             commitpath = commitpath[len('branches/'):]
         elif commitpath == 'trunk':
             commitpath = ''
+        elif commitpath.startswith('tags'):
+            if ctx.extra().get('close'):
+                continue
+            commitpath = '../' + commitpath
         else:
             assert False, 'Unhandled case in rebuildmeta'
         revmap.write('%s %s %s\n' % (revision, ctx.hex(), commitpath))

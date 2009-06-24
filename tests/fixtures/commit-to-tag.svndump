@@ -1,0 +1,325 @@
+SVN-fs-dump-format-version: 2
+
+UUID: af82cc90-c2d2-43cd-b1aa-c8a78449440a
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2009-06-21T18:31:52.697525Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 102
+Content-length: 102
+
+K 7
+svn:log
+V 3
+btt
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:31:53.092074Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: branches/magic
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+Add file alpha
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:31:54.113073Z
+PROPS-END
+
+Node-path: branches/magic/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Revision-number: 3
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 13
+Add file beta
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:31:55.071743Z
+PROPS-END
+
+Node-path: branches/magic/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Revision-number: 4
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+Add file gamma
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:31:56.073236Z
+PROPS-END
+
+Node-path: branches/magic/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 5
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 16
+Make tag to edit
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:31:58.056126Z
+PROPS-END
+
+Node-path: tags/will-edit
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 4
+Node-copyfrom-path: branches/magic
+
+
+Revision-number: 6
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+Add file delta
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:31:59.064850Z
+PROPS-END
+
+Node-path: branches/magic/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Content-length: 16
+
+PROPS-END
+delta
+
+
+Revision-number: 7
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 13
+Add file iota
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:32:00.080479Z
+PROPS-END
+
+Node-path: branches/magic/iota
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: ebcf3971120220589f1dfbf8d56e25b9
+Content-length: 15
+
+PROPS-END
+iota
+
+
+Revision-number: 8
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 15
+Add file lambda
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:32:01.079819Z
+PROPS-END
+
+Node-path: branches/magic/lambda
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 7
+Text-content-md5: 8c8a4646591ee0d9a43d3149320ed577
+Content-length: 17
+
+PROPS-END
+lambda
+
+
+Revision-number: 9
+Prop-content-length: 151
+Content-length: 151
+
+K 7
+svn:log
+V 51
+removed alpha on a tag. Moves tag, implicit branch.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:32:02.140778Z
+PROPS-END
+
+Node-path: tags/will-edit/alpha
+Node-action: delete
+
+
+Revision-number: 10
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+Add file omega
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-21T18:32:03.083676Z
+PROPS-END
+
+Node-path: branches/magic/omega
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 14723c69541ee556d75c581b787dc217
+Content-length: 16
+
+PROPS-END
+omega
+
+

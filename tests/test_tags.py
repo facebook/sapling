@@ -86,6 +86,28 @@ class TestTags(test_util.TestBase):
              'versions/branch_version': 'I\x89\x1c>z#\xfc._K#@:\xd6\x1f\x96\xd6\x83\x1b|',
              })
 
+    def test_edited_tag_stupid(self):
+        self.test_edited_tag(True)
+
+    def test_edited_tag(self, stupid=False):
+       repo = self._load_fixture_and_fetch('commit-to-tag.svndump',
+                                           stupid=stupid)
+       self.assertEqual(len(repo.heads()), 2)
+       heads = repo.heads()
+       openheads = [h for h in heads if not repo[h].extra().get('close', False)]
+       closedheads = set(heads) - set(openheads)
+       self.assertEqual(len(openheads), 1)
+       self.assertEqual(len(closedheads), 1)
+       tagged = list(closedheads)[0]
+       self.assertEqual(
+           repo[tagged].extra(),
+           {'close': '1',
+            'branch': 'magic',
+            'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/will-edit@9'})
+       self.assertEqual(tagged, repo.tags()['will-edit'])
+       self.assertEqual(repo['will-edit'].manifest().keys(), ['beta',
+                                                              'gamma',
+                                                              ])
 
     def test_tags_in_unusual_location(self):
         repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')

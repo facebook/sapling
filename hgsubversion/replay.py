@@ -111,13 +111,22 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             continue
 
         extra = meta.genextra(rev.revnum, branch)
+        tag = False
         if branch is not None:
-            if (branch not in meta.branches
-                and branch not in meta.repo.branchtags()):
+            tag = meta.is_path_tag(meta.remotename(branch))
+            if (not (tag and tag in meta.tags) and
+                (branch not in meta.branches
+                and branch not in meta.repo.branchtags())):
                 continue
 
-        parent_ctx = meta.repo.changectx(parents[0])
-        if '.hgsvnexternals' not in parent_ctx and '.hgsvnexternals' in files:
+        parentctx = meta.repo.changectx(parents[0])
+        if tag:
+            if parentctx.node() == node.nullid:
+                continue
+            extra.update({'branch': parentctx.extra().get('branch', None),
+                          'close': 1})
+
+        if '.hgsvnexternals' not in parentctx and '.hgsvnexternals' in files:
             # Do not register empty externals files
             if (files['.hgsvnexternals'] in current.files
                 and not current.files[files['.hgsvnexternals']]):
@@ -128,7 +137,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             if current_file in current.deleted:
                 raise IOError()
             copied = current.copies.get(current_file)
-            flags = parent_ctx.flags(path)
+            flags = parentctx.flags(path)
             is_exec = current.execfiles.get(current_file, 'x' in flags)
             is_link = current.symlinks.get(current_file, 'l' in flags)
             if current_file in current.files:
@@ -139,13 +148,13 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                     ui.warn('file marked as link, but contains data: '
                             '%s (%r)\n' % (current_file, flags))
             else:
-                data = parent_ctx.filectx(path).data()
+                data = parentctx.filectx(path).data()
             return context.memfilectx(path=path,
                                       data=data,
                                       islink=is_link, isexec=is_exec,
                                       copied=copied)
 
-        if not meta.usebranchnames:
+        if not meta.usebranchnames or extra.get('branch', None) == 'default':
             extra.pop('branch', None)
         current_ctx = context.memctx(meta.repo,
                                      parents,
@@ -158,8 +167,10 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
         new_hash = meta.repo.commitctx(current_ctx)
         util.describe_commit(ui, new_hash, branch)
-        if (rev.revnum, branch) not in meta.revmap:
+        if (rev.revnum, branch) not in meta.revmap and not tag:
             meta.revmap[rev.revnum, branch] = new_hash
+        if tag:
+            meta.movetag(tag, new_hash, parentctx.extra().get('branch', None), rev, date)
 
     # 2. handle branches that need to be committed without any files
     for branch in current.emptybranches:
@@ -178,6 +189,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                                'Please report this issue.')
 
         extra = meta.genextra(rev.revnum, branch)
+
         if not meta.usebranchnames:
             extra.pop('branch', None)
 
