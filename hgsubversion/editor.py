@@ -241,7 +241,8 @@ class HgEditor(delta.Editor):
                 self.current.missing.add('%s/' % path)
                 return path
         if tag:
-            source_branch, source_rev = self.meta.tags[tag]
+            ci = self.meta.repo[self.meta.tags[tag]].extra()['convert_revision']
+            source_rev, source_branch, = self.meta.parse_converted_revision(ci)
             cp_f = ''
         else:
             source_rev = copyfrom_revision

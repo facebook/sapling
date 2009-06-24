@@ -95,6 +95,57 @@ class AuthorMap(dict):
             return author.rsplit('@', 1)[0]
 
 
+class TagMap(dict):
+
+    VERSION = 1
+
+    def __init__(self, repo):
+        dict.__init__(self)
+        self.path = os.path.join(repo.path, 'svn', 'tagmap')
+        self.seen = 0
+        if os.path.isfile(self.path):
+            self._load()
+        else:
+            self._write()
+
+    def _load(self):
+        f = open(self.path)
+        ver = int(f.readline())
+        if ver != self.VERSION:
+            print 'tagmap too new -- please upgrade'
+            raise NotImplementedError
+        for l in f:
+            hash, tag = l.split(' ', 1)
+            tag = tag[:-1]
+            dict.__setitem__(self, tag, node.bin(hash))
+        f.close()
+
+    def _write(self):
+        f = open(self.path, 'w')
+        f.write('%s\n' % self.VERSION)
+        f.flush()
+        f.close()
+
+    def update(self, other):
+        for k,v in other.iteritems():
+            self[k] = v
+
+    def __contains__(self, tag):
+        return dict.__contains__(self, tag) and dict.__getitem__(self, tag) != node.nullid
+
+    def __getitem__(self, tag):
+        if tag in self:
+            return dict.__getitem__(self, tag)
+        raise KeyError()
+
+    def __setitem__(self, tag, hash):
+        f = open(self.path, 'a')
+        f.write(node.hex(hash) + ' ' + tag + '\n')
+        f.flush()
+        f.close()
+        dict.__setitem__(self, tag, hash)
+
+
 class RevMap(dict):
 
     VERSION = 1

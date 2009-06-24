@@ -5,6 +5,7 @@ from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
 
+import maps
 import svnwrap
 import svnmeta
 import util
@@ -85,12 +86,22 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     last_rev = -1
     branchinfo = {}
     noderevnums = {}
+    tags = maps.TagMap(repo)
     for rev in repo:
 
         ctx = repo[rev]
         convinfo = ctx.extra().get('convert_revision', None)
         if not convinfo:
             continue
+        if '.hgtags' in ctx.files():
+            parent = ctx.parents()[0]
+            parentdata = ''
+            if '.hgtags' in parent:
+                parentdata = parent.filectx('.hgtags').data()
+            newdata = ctx.filectx('.hgtags').data()
+            for newtag in newdata[len(parentdata):-1].split('\n'):
+                ha, tag = newtag.split(' ', 1)
+                tags[tag] = node.bin(ha)
 
         # check that the conversion metadata matches expectations
         assert convinfo.startswith('svn:')

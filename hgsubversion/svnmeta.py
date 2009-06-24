@@ -62,7 +62,7 @@ class SVNMeta(object):
             f = open(self.branch_info_file)
             self.branches = pickle.load(f)
             f.close()
-        self.tags = {}
+        self.tags = maps.TagMap(repo)
         if os.path.exists(self.tag_locations_file):
             f = open(self.tag_locations_file)
             self.tag_locations = pickle.load(f)
@@ -263,7 +263,8 @@ class SVNMeta(object):
             if src_tag != False or src_file == '': # case 2
                 ln = self.localname(p)
                 if src_tag != False:
-                    src_branch, src_rev = self.tags[src_tag]
+                    ci = self.repo[self.tags[src_tag]].extra()['convert_revision']
+                    src_rev, src_branch, = self.parse_converted_revision(ci)
                 return {ln: (src_branch, src_rev, revnum)}
         return {}
 
@@ -311,12 +312,17 @@ class SVNMeta(object):
         '''
         tag = self.is_path_tag(self.remotename(branch))
         if tag and tag in self.tags:
-            br, r = self.tags[tag]
+            ha = self.tags[tag]
+            r, br = self.parse_converted_revision(self.repo[ha].extra()['convert_revision'])
         else:
             r, br = self.get_parent_svn_branch_and_rev(number, branch)
         if r is not None:
             return self.revmap[r, br]
         return revlog.nullid
+
+    def parse_converted_revision(self, convertedrev):
+        branch, revnum = convertedrev[40:].rsplit('@', 1)
+        return int(revnum), self.localname(self.normalize(branch))
 
     def update_branch_tag_map_for_rev(self, revision):
         paths = revision.paths
@@ -338,7 +344,8 @@ class SVNMeta(object):
                         from_tag = self.is_path_tag(src_p)
                         if not from_tag:
                             continue
-                        branch, src_rev = self.tags[from_tag]
+                        ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
+                        src_rev, branch, = self.parse_converted_revision(ci)
                     if t_name not in added_tags and file is '':
                         added_tags[t_name] = branch, src_rev
                     elif file:
@@ -395,21 +402,18 @@ class SVNMeta(object):
                     and branch not in added_branches):
                     parent = {branch: (None, 0, revision.revnum)}
             added_branches.update(parent)
-        rmtags = dict((t, self.tags[t][0]) for t in tags_to_delete)
+        def branchoftag(tag):
+            cr = self.repo[self.tags[tag]].extra()['convert_revision']
+            return self.parse_converted_revision(cr)[1]
+        rmtags = dict((t, branchoftag(t)) for t in tags_to_delete)
         return {
             'tags': (added_tags, rmtags),
             'branches': (added_branches, self.closebranches),
         }
 
     def save_tbdelta(self, tbdelta):
-        for t in tbdelta['tags'][1]:
-            del self.tags[t]
         for br in tbdelta['branches'][1]:
             del self.branches[br]
-        for t, info in tbdelta['tags'][0].items():
-            self.ui.status('Tagged %s@%s as %s\n' %
-                           (info[0] or 'trunk', info[1], t))
-        self.tags.update(tbdelta['tags'][0])
         self.branches.update(tbdelta['branches'][0])
 
     def movetag(self, tag, hash, branch, rev, date):
@@ -438,11 +442,10 @@ class SVNMeta(object):
                              date,
                              pextra)
         new_hash = self.repo.commitctx(ctx)
-        prefix, revnum = pextra['convert_revision'].rsplit('@', 1)
-        branch = self.localname(self.normalize('/' + prefix.split('/', 1)[1]))
-        assert self.revmap[int(revnum), branch] == parentctx.node()
-        self.revmap[int(revnum), branch] = new_hash
-
+        revnum, branch = self.parse_converted_revision(pextra['convert_revision'])
+        assert self.revmap[revnum, branch] == parentctx.node()
+        self.revmap[revnum, branch] = new_hash
+        self.tags[tag] = hash
         util.describe_commit(self.ui, new_hash, branch)
 
     def committags(self, delta, rev, endbranches):
@@ -471,6 +474,7 @@ class SVNMeta(object):
                 elif op == 'rm':
                     tagged = node.hex(node.nullid)
                 src += '%s %s\n' % (tagged, tag)
+                self.tags[tag] = node.bin(tagged)
 
             # add new changeset containing updated .hgtags
             def fctxfun(repo, memctx, path):
