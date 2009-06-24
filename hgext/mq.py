@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''work with a stack of patches
+'''manage a stack of patches
 
 This extension lets you work with a stack of patches in a Mercurial
 repository. It manages two stacks of patches - all known patches, and

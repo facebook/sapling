@@ -56,7 +56,7 @@ list of commands:
 enabled extensions:
 
  keyword   expand keywords in tracked files
- mq        work with a stack of patches
+ mq        manage a stack of patches
  notify    send e-mail notifications for commits/pushes
 
 use "hg -v help keyword" to show aliases and global options

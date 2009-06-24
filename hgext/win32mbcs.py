@@ -9,7 +9,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 #
 
-'''allow the use of MBCS paths with problematic encoding
+'''allow the use of MBCS paths with problematic encodings
 
 Some MBCS encodings are not good for some path operations (i.e.
 splitting path, case conversion, etc.) with its encoded bytes. We call

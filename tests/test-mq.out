@@ -1,5 +1,5 @@
 % help
-mq extension - work with a stack of patches
+mq extension - manage a stack of patches
 
 This extension lets you work with a stack of patches in a Mercurial
 repository. It manages two stacks of patches - all known patches, and
@@ -53,7 +53,7 @@ list of commands:
 
 enabled extensions:
 
- mq   work with a stack of patches
+ mq   manage a stack of patches
 
 use "hg -v help mq" to show aliases and global options
 adding a
