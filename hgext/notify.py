@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''send e-mail notifications for commits/pushes
+'''hooks for sending email notifications at commit/push time
 
 Subscriptions can be managed through hgrc. Default mode is to print
 messages to stdout, for testing and configuring.

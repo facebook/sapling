@@ -1,7 +1,7 @@
 # Copyright (C) 2007-8 Brendan Cully <brendan@kublai.com>
 # Published under the GNU GPL
 
-"""integrate Mercurial with a CIA notification service
+"""hooks for integrating with the CIA.vc notification service
 
 This is meant to be run as a changegroup or incoming hook.
 To configure it, set the following options in your hgrc:
