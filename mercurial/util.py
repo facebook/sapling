@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil
 import cStringIO, errno, re, shutil, sys, tempfile, traceback
-import os, stat, time, calendar, random
+import os, stat, time, calendar, random, textwrap
 import imp
 
 # Python compatibility
@@ -1241,6 +1241,10 @@ def termwidth():
     except ImportError:
         pass
     return 80
+
+def wrap(line, hangindent, width=78):
+    padding = '\n' + ' ' * hangindent
+    return padding.join(textwrap.wrap(line, width=width - hangindent))
 
 def iterlines(iterator):
     for chunk in iterator:

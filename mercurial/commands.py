@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, textwrap, subprocess, difflib, time
+import os, re, sys, subprocess, difflib, time
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
 import patch, help, mdiff, tempfile, url, encoding
 import archival, changegroup, cmdutil, sshserver, hbisect
@@ -1514,7 +1514,7 @@ def help_(ui, name=None, with_version=False):
                 commands = cmds[f].replace("|",", ")
                 ui.write(" %s:\n      %s\n"%(commands, h[f]))
             else:
-                ui.write(' %-*s   %s\n' % (m, f, h[f]))
+                ui.write(' %-*s   %s\n' % (m, f, util.wrap(h[f], m + 4)))
 
         if name != 'shortlist':
             exts, maxlength = extensions.enabled()
@@ -1617,11 +1617,8 @@ def help_(ui, name=None, with_version=False):
         opts_len = max([len(line[0]) for line in opt_output if line[1]] or [0])
         for first, second in opt_output:
             if second:
-                # wrap descriptions at 70 characters, just like the
-                # main help texts
-                second = textwrap.wrap(second, width=70 - opts_len - 3)
-                pad = '\n' + ' ' * (opts_len + 3)
-                ui.write(" %-*s  %s\n" % (opts_len, first, pad.join(second)))
+                second = util.wrap(second, opts_len + 3)
+                ui.write(" %-*s  %s\n" % (opts_len, first, second))
             else:
                 ui.write("%s\n" % first)
 
