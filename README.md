@@ -20,20 +20,27 @@ Commands
 
 You can clone a Git repository from Hg by running `hg clone [url]`.  For example, if you were to run `hg clone git://github.com/schacon/munger.git` it would clone the repository down into the directory 'munger.git', then convert it to an Hg repository for you.
 
-	hg clone git://github.com/schacon/munger.git
-	
+	hg clone git://github.com/schacon/hg-git.git
+
 If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as default path or default-push path in your .hg/hgrc and then run `hg push` from within your project.  For example:
 
-	$ cd hg-git # (an Hg repository)
-	$ (edit .hg/hgrc and add the target git url in the path section)
-	$ hg push
+	cd hg-git # (an Hg repository)
+	(edit .hg/hgrc and add the target git url in the path section)
+	hg push
 
-This will convert all our Hg data into Git objects and push them up to the Git server.
-	
+This will convert all your Hg data into Git objects and push them up to the Git server.
+
+If you want to clone a github repository for later pushing (or any other repository you access 
+via ssh), you need to convert the ssh url to a format with explicit protocol prefix (mind the 
+switch from colon to slash after the host!): 
+
+	git clone git@github.com:schacon/hg-git.git
+	hg clone git+ssh://git@github.com/schacon/hg-git.git
+
 Now that you have an Hg repository that can push/pull to/from a Git repository, you can fetch updates with `hg pull`.
 
 	$ hg pull
-	
+
 That will pull down any commits that have been pushed to the server in the meantime and give you a new head that you can merge in.
 
 Hg Bookmarks Integration
