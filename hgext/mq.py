@@ -1641,11 +1641,8 @@ class queue(object):
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
-    The patches must not be applied, and at least one patch is
-    required.
-
-    With -k/--keep, the patch files are preserved in the patch
-    directory.
+    The patches must not be applied, and at least one patch is required. With
+    -k/--keep, the patch files are preserved in the patch directory.
 
     To stop managing a patch and move it into permanent history,
     use the qfinish command."""
