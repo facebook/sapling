@@ -419,7 +419,7 @@ class SVNMeta(object):
     def movetag(self, tag, hash, branch, rev, date):
         if branch == 'default':
             branch = None
-        parentctx = self.repo[self.get_parent_revision(rev.revnum, branch)]
+        parentctx = self.repo[self.get_parent_revision(rev.revnum+1, branch)]
         if '.hgtags' in parentctx:
             tagdata = parentctx.filectx('.hgtags').data()
         else:

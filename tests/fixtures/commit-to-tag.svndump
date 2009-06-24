@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2009-06-21T18:31:52.697525Z
+2009-06-24T02:53:15.860217Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:31:53.092074Z
+2009-06-24T02:53:17.530891Z
 PROPS-END
 
 Node-path: branches
@@ -81,7 +81,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:31:54.113073Z
+2009-06-24T02:53:18.122469Z
 PROPS-END
 
 Node-path: branches/magic/alpha
@@ -111,7 +111,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:31:55.071743Z
+2009-06-24T02:53:19.101676Z
 PROPS-END
 
 Node-path: branches/magic/beta
@@ -141,7 +141,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:31:56.073236Z
+2009-06-24T02:53:20.081433Z
 PROPS-END
 
 Node-path: branches/magic/gamma
@@ -171,7 +171,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:31:58.056126Z
+2009-06-24T02:53:22.103708Z
 PROPS-END
 
 Node-path: tags/will-edit
@@ -196,7 +196,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:31:59.064850Z
+2009-06-24T02:53:23.077083Z
 PROPS-END
 
 Node-path: branches/magic/delta
@@ -226,7 +226,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:32:00.080479Z
+2009-06-24T02:53:24.107494Z
 PROPS-END
 
 Node-path: branches/magic/iota
@@ -256,7 +256,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:32:01.079819Z
+2009-06-24T02:53:25.092428Z
 PROPS-END
 
 Node-path: branches/magic/lambda
@@ -286,7 +286,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:32:02.140778Z
+2009-06-24T02:53:26.443673Z
 PROPS-END
 
 Node-path: tags/will-edit/alpha
@@ -308,7 +308,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-21T18:32:03.083676Z
+2009-06-24T02:53:27.067556Z
 PROPS-END
 
 Node-path: branches/magic/omega
@@ -323,3 +323,64 @@ PROPS-END
 omega
 
 
+Revision-number: 11
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 16
+Make tag to edit
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-24T02:53:29.049217Z
+PROPS-END
+
+Node-path: tags/also-edit
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 10
+Node-copyfrom-path: branches/magic
+
+
+Revision-number: 12
+Prop-content-length: 156
+Content-length: 156
+
+K 7
+svn:log
+V 56
+edit both the tag and its source branch at the same time
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-24T02:53:30.063026Z
+PROPS-END
+
+Node-path: branches/magic/omega
+Node-kind: file
+Node-action: change
+Text-content-length: 10
+Text-content-md5: 9b26a47955b0778e131aae04743f2b8c
+Content-length: 10
+
+not omega
+
+
+Node-path: tags/also-edit/omega
+Node-kind: file
+Node-action: change
+Text-content-length: 10
+Text-content-md5: 9b26a47955b0778e131aae04743f2b8c
+Content-length: 10
+
+not omega

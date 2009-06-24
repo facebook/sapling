@@ -39,6 +39,13 @@ for a in omega; do
     svn ci -m "Add file $a"
 done
 cd ../..
+svn up
+svn cp $REPOPATH/branches/magic $REPOPATH/tags/also-edit -m 'Make tag to edit'
+svn up
+
+echo not omega > branches/magic/omega
+echo not omega > tags/also-edit/omega
+svn ci -m 'edit both the tag and its source branch at the same time'
 
 cd ../..
 svnadmin dump temp/repo > commit-to-tag.svndump
