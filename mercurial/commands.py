@@ -440,7 +440,7 @@ def branches(ui, repo, active=False):
     """list repository named branches
 
     List the repository's named branches, indicating which ones are
-    inactive. If active is specified, only show active branches.
+    inactive. If -a/--active is specified, only show active branches.
 
     A branch is considered active if it contains repository heads.
 
