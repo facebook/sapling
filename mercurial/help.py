@@ -47,7 +47,7 @@ def listexts(header, exts, maxlength):
     result = '\n%s\n\n' % header
     for name, desc in sorted(exts.iteritems()):
         # wrap desc at 70 characters, just like the main help texts
-        desc = textwrap.wrap(desc, width=70 - maxlength - 4)
+        desc = textwrap.wrap(desc, width=78 - maxlength - 4)
         pad = '\n' + ' ' * (maxlength + 4)
         result += ' %s   %s\n' % (name.ljust(maxlength),
                                   pad.join(desc))
