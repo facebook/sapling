@@ -243,7 +243,7 @@ class GitHandler(object):
                 timezone = format_timezone(-int(timezone))
                 commit['committer'] = '%s %s' % (name_timestamp, timezone)
             except ValueError:
-                self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%s: '%s'.\n") % (rev, timezone))
+                self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%d: '%s'.\n") % (ctx, timezone))
         if 'encoding' in extra:
             commit['encoding'] = extra['encoding']
 
