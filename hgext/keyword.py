@@ -281,9 +281,6 @@ def demo(ui, repo, *args, **opts):
 
     Override current keyword template maps with "default" option.
     '''
-    def demostatus(stat):
-        ui.status(_('\n\t%s\n') % stat)
-
     def demoitems(section, items):
         ui.write('[%s]\n' % section)
         for k, v in items:
@@ -323,7 +320,7 @@ def demo(ui, repo, *args, **opts):
         if k.endswith('keyword'):
             extension = '%s = %s' % (k, v)
             break
-    demostatus('config using %s keyword template maps' % kwstatus)
+    ui.status(_('\n\tconfig using %s keyword template maps\n') % kwstatus)
     ui.write('[extensions]\n%s\n' % extension)
     demoitems('keyword', ui.configitems('keyword'))
     demoitems('keywordmaps', kwmaps.iteritems())
@@ -346,7 +343,7 @@ def demo(ui, repo, *args, **opts):
     ui.note('hg -R "%s" ci -m "%s"\n' % (tmpdir, msg))
     repo.commit(text=msg)
     fmt = ui.verbose and ' in %s' % path or ''
-    demostatus('%s keywords expanded%s' % (kwstatus, fmt))
+    ui.status(_('\n\t%s keywords expanded%s\n') % (kwstatus, fmt))
     ui.write(repo.wread(fn))
     ui.debug(_('\nremoving temporary repository %s\n') % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
