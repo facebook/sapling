@@ -261,6 +261,15 @@ def _setupcmd(ui, cmd, table, func, effectsmap):
     ])
 
     for status in effectsmap:
-        effects = ui.configlist('color', cmd + '.' + status)
+        configkey = cmd + '.' + status
+        effects = ui.configlist('color', configkey)
         if effects:
-            effectsmap[status] = effects
+            good = []
+            for e in effects:
+                if e in _effect_params:
+                    good.append(e)
+                else:
+                    ui.warn(_("ignoring unknown color/effect %r "
+                              "(configured in color.%s)\n")
+                            % (e, configkey))
+            effectsmap[status] = good
