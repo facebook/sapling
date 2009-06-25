@@ -8,7 +8,6 @@
 from i18n import _
 import osutil, error
 import errno, msvcrt, os, re, sys
-from mercurial import win32
 
 nulldev = 'NUL:'
 umask = 002
@@ -18,7 +17,7 @@ def posixfile(name, mode='r', buffering=-1):
     try:
         return osutil.posixfile(name, mode, buffering)
     except WindowsError, err:
-        raise win32.WinIOError(err)
+        raise IOError(err.errno, err.strerror)
 posixfile.__doc__ = osutil.posixfile.__doc__
 
 class winstdout(object):
