@@ -384,3 +384,31 @@ Text-content-md5: 9b26a47955b0778e131aae04743f2b8c
 Content-length: 10
 
 not omega
+
+
+Revision-number: 13
+Prop-content-length: 122
+Content-length: 122
+
+K 7
+svn:log
+V 19
+Edit an edited tag.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-26T15:28:20.055574Z
+PROPS-END
+
+Node-path: tags/also-edit/omega
+Node-kind: file
+Node-action: change
+Text-content-length: 15
+Text-content-md5: a8d56f18cc28a34d6fe2cee5291ac1cc
+Content-length: 15
+
+more stupidity

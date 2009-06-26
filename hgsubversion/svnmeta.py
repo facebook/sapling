@@ -313,9 +313,8 @@ class SVNMeta(object):
         tag = self.is_path_tag(self.remotename(branch))
         if tag and tag in self.tags:
             ha = self.tags[tag]
-            r, br = self.parse_converted_revision(self.repo[ha].extra()['convert_revision'])
-        else:
-            r, br = self.get_parent_svn_branch_and_rev(number, branch)
+            return ha
+        r, br = self.get_parent_svn_branch_and_rev(number, branch)
         if r is not None:
             return self.revmap[r, br]
         return revlog.nullid
