@@ -52,6 +52,13 @@ svn ci -m 'Edit an edited tag.'
 
 svn cp $REPOPATH/tags/also-edit $REPOPATH/tags/did-edits -m 'Tag an edited tag'
 
+svn cp $REPOPATH/branches/magic $REPOPATH/branches/closeme -m 'Make extra branch for another bogus case'
+svn cp $REPOPATH/branches/closeme $REPOPATH/tags/edit-later -m 'Make tag to edit after branch closes'
+svn rm $REPOPATH/branches/closeme -m 'Close the branch'
+svn up
+echo boofar > tags/edit-later/delta
+svn ci -m 'Edit this tag after its parent closed'
+
 cd ../..
 svnadmin dump temp/repo > commit-to-tag.svndump
 echo

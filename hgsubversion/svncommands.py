@@ -87,6 +87,9 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     branchinfo = {}
     noderevnums = {}
     tags = maps.TagMap(repo)
+
+    skipped = set()
+
     for rev in repo:
 
         ctx = repo[rev]
@@ -122,7 +125,9 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             uuidfile.close()
 
         # don't reflect closed branches
-        if ctx.extra().get('close') and not ctx.files():
+        if (ctx.extra().get('close') and not ctx.files() or
+            ctx.parents()[0].node() in skipped):
+            skipped.add(ctx.node())
             continue
 
         # find commitpath, write to revmap

@@ -624,14 +624,15 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         ha = meta.repo.commitctx(current_ctx)
 
         branch = extra.get('branch', None)
-        if (not branch in meta.branches
-            and not meta.is_path_tag(meta.remotename(branch))):
-            meta.branches[branch] = None, 0, r.revnum
         if not tag:
+            if (not branch in meta.branches
+                and not meta.is_path_tag(meta.remotename(branch))):
+                print tag, 'madebranch', branch
+                meta.branches[branch] = None, 0, r.revnum
             meta.revmap[r.revnum, b] = ha
-        util.describe_commit(ui, ha, b)
-        if tag:
+        else:
             meta.movetag(tag, ha, parentctx.extra().get('branch', None), r, date)
+        util.describe_commit(ui, ha, b)
 
     # These are branches with an 'R' status in svn log. This means they were
     # replaced by some other branch, so we need to verify they get marked as closed.

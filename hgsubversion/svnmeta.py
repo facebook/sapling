@@ -432,6 +432,17 @@ class SVNMeta(object):
                                       isexec=False,
                                       copied=False)
         pextra = parentctx.extra()
+        revnum, branch = self.parse_converted_revision(pextra['convert_revision'])
+        newparent = None
+        for child in parentctx.children():
+            cextra = child.extra()
+            if (self.parse_converted_revision(cextra['convert_revision'])[1] == branch
+                and cextra.get('close', False)):
+                newparent = child
+        if newparent:
+            parentctx = newparent
+            pextra = parentctx.extra()
+            revnum, branch = self.parse_converted_revision(pextra['convert_revision'])
         ctx = context.memctx(self.repo,
                              (parentctx.node(), node.nullid),
                              rev.message or '...',
@@ -441,9 +452,9 @@ class SVNMeta(object):
                              date,
                              pextra)
         new_hash = self.repo.commitctx(ctx)
-        revnum, branch = self.parse_converted_revision(pextra['convert_revision'])
-        assert self.revmap[revnum, branch] == parentctx.node()
-        self.revmap[revnum, branch] = new_hash
+        if not newparent:
+            assert self.revmap[revnum, branch] == parentctx.node()
+            self.revmap[revnum, branch] = new_hash
         self.tags[tag] = hash
         util.describe_commit(self.ui, new_hash, branch)
 

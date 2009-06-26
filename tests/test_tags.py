@@ -92,15 +92,21 @@ class TestTags(test_util.TestBase):
     def test_edited_tag(self, stupid=False):
        repo = self._load_fixture_and_fetch('commit-to-tag.svndump',
                                            stupid=stupid)
-       self.assertEqual(len(repo.heads()), 3)
+       self.assertEqual(len(repo.heads()), 4)
        heads = repo.heads()
        openheads = [h for h in heads if not repo[h].extra().get('close', False)]
        closedheads = set(heads) - set(openheads)
-       self.assertEqual(len(openheads), 1)
-       self.assertEqual(len(closedheads), 2)
+       self.assertEqual(len(openheads), 0)
+       self.assertEqual(len(closedheads), 4)
        closedheads = sorted(list(closedheads), cmp=lambda x,y: cmp(repo[x].rev(),
                                                                    repo[y].rev()))
-       willedit, alsoedit = closedheads
+       # closeme has no open heads
+       for h in openheads:
+           self.assertNotEqual('closeme', repo[openheads[0]].branch())
+
+       self.assertEqual(1, len(self.repo.branchheads('magic')))
+
+       willedit, alsoedit, editlater, closeme = closedheads
        self.assertEqual(
            repo[willedit].extra(),
            {'close': '1',
@@ -126,6 +132,13 @@ class TestTags(test_util.TestBase):
                          'gamma',
                          'lambda',
                          ])
+
+       self.assertEqual(editlater, repo['edit-later'].node())
+       self.assertEqual(
+           repo[closeme].extra(),
+           {'close': '1',
+            'branch': 'closeme',
+            'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/branches/closeme@17'})
 
     def test_tags_in_unusual_location(self):
         repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')

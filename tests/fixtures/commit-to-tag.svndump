@@ -437,3 +437,103 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 13
 Node-copyfrom-path: tags/also-edit
+
+
+Revision-number: 15
+Prop-content-length: 143
+Content-length: 143
+
+K 7
+svn:log
+V 40
+Make extra branch for another bogus case
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-26T19:26:28.086924Z
+PROPS-END
+
+Node-path: branches/closeme
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 14
+Node-copyfrom-path: branches/magic
+
+
+Revision-number: 16
+Prop-content-length: 139
+Content-length: 139
+
+K 7
+svn:log
+V 36
+Make tag to edit after branch closes
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-26T19:26:28.119751Z
+PROPS-END
+
+Node-path: tags/edit-later
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 15
+Node-copyfrom-path: branches/closeme
+
+
+Revision-number: 17
+Prop-content-length: 119
+Content-length: 119
+
+K 7
+svn:log
+V 16
+Close the branch
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-26T19:26:28.149674Z
+PROPS-END
+
+Node-path: branches/closeme
+Node-action: delete
+
+
+Revision-number: 18
+Prop-content-length: 140
+Content-length: 140
+
+K 7
+svn:log
+V 37
+Edit this tag after its parent closed
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-26T19:26:29.059216Z
+PROPS-END
+
+Node-path: tags/edit-later/delta
+Node-kind: file
+Node-action: change
+Text-content-length: 7
+Text-content-md5: 5bbd00dab68c937673171d0b2e205c96
+Content-length: 7
+
+boofar
