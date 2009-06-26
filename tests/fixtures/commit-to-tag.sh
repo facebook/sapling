@@ -50,6 +50,8 @@ svn ci -m 'edit both the tag and its source branch at the same time'
 echo more stupidity > tags/also-edit/omega
 svn ci -m 'Edit an edited tag.'
 
+svn cp $REPOPATH/tags/also-edit $REPOPATH/tags/did-edits -m 'Tag an edited tag'
+
 cd ../..
 svnadmin dump temp/repo > commit-to-tag.svndump
 echo

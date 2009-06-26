@@ -114,8 +114,8 @@ class TestTags(test_util.TestBase):
            repo[alsoedit].extra(),
            {'close': '1',
             'branch': 'magic',
-            'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/also-edit@13'})
-       self.assertEqual(alsoedit, repo.tags()['also-edit'])
+            'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/also-edit@14'})
+       self.assertEqual(repo[alsoedit].parents()[0].node(), repo.tags()['also-edit'])
        self.assertEqual(repo['also-edit'].manifest().keys(),
                         ['beta',
                          '.hgtags',

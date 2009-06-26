@@ -459,7 +459,7 @@ class SVNMeta(object):
             branches.setdefault(branch, []).append(('rm', tag, None))
 
         for b, tags in branches.iteritems():
-
+            fromtag = self.is_path_tag(self.remotename(b))
             # modify parent's .hgtags source
             parent = self.repo[self.get_parent_revision(rev.revnum, b)]
             if '.hgtags' not in parent:
@@ -468,8 +468,11 @@ class SVNMeta(object):
                 src = parent['.hgtags'].data()
             for op, tag, r in sorted(tags, reverse=True):
                 if op == 'add':
-                    tagged = node.hex(self.revmap[
-                        self.get_parent_svn_branch_and_rev(r+1, b)])
+                    if fromtag:
+                        tagged = node.hex(self.tags[fromtag])
+                    else:
+                        tagged = node.hex(self.revmap[
+                            self.get_parent_svn_branch_and_rev(r+1, b)])
                 elif op == 'rm':
                     tagged = node.hex(node.nullid)
                 src += '%s %s\n' % (tagged, tag)
@@ -481,9 +484,11 @@ class SVNMeta(object):
                                           islink=False, isexec=False,
                                           copied=None)
             extra = self.genextra(rev.revnum, b)
+            if fromtag:
+                extra['branch'] = parent.extra().get('branch', 'default')
             if not self.usebranchnames:
                 extra.pop('branch', None)
-            if b in endbranches:
+            if b in endbranches or fromtag:
                 extra['close'] = 1
             ctx = context.memctx(self.repo,
                                  (parent.node(), node.nullid),
@@ -494,7 +499,8 @@ class SVNMeta(object):
                                  date,
                                  extra)
             new = self.repo.commitctx(ctx)
-            if (rev.revnum, b) not in self.revmap:
+
+            if not fromtag and (rev.revnum, b) not in self.revmap:
                 self.revmap[rev.revnum, b] = new
             if b in endbranches:
                 endbranches.pop(b)
