@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-06-24 17:38+0200\n"
-"PO-Revision-Date: 2009-06-24 20:49+0200\n"
+"PO-Revision-Date: 2009-06-27 12:20+0200\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -199,7 +199,7 @@ msgid "rename a given bookmark"
 msgstr "omdøb et givet bogmærke"
 
 msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
-msgstr ""
+msgstr "hg bookmarks [-f] [-d] [-m NAVN] [-r REV] [NAVN]"
 
 msgid ""
 "integrate Mercurial with a Bugzilla bug tracker\n"
@@ -412,7 +412,7 @@ msgid "show children of the specified revision"
 msgstr "vis børn af den givne revision"
 
 msgid "hg children [-r REV] [FILE]"
-msgstr ""
+msgstr "hg children [-r REV] [FIL]"
 
 msgid "display statistics about repository history"
 msgstr "vis statistikker om revisionshistorikken"
@@ -525,7 +525,7 @@ msgid "show progress"
 msgstr "vis fremskridt"
 
 msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]"
-msgstr "hg churn [-d DATO] [-r REVISIONER] [--aliases FIL] [--progress] [FIL]"
+msgstr "hg churn [-d DATO] [-r REV] [--aliases FIL] [--progress] [FIL]"
 
 msgid ""
 "colorize output from some commands\n"
@@ -839,7 +839,7 @@ msgid "preserve source changesets order"
 msgstr "bevar kildeændringerne ordning"
 
 msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
-msgstr ""
+msgstr "hg convert [TILVALG]... KILDE [MÅL [REV-AFBILDNING]]"
 
 msgid "only return changes on specified branches"
 msgstr "returner kun ændringer på givne grene"
@@ -872,7 +872,7 @@ msgid "ignored for compatibility"
 msgstr ""
 
 msgid "hg debugcvsps [OPTION]... [PATH]..."
-msgstr ""
+msgstr "hg debugcvsps [TILVALG]... [STI]..."
 
 msgid ""
 "warning: lightweight checkouts may cause conversion failures, try with a "
@@ -1411,11 +1411,11 @@ msgid "change made by revision"
 msgstr ""
 
 msgid "hg extdiff [OPT]... [FILE]..."
-msgstr ""
+msgstr "hg extdiff [TILVALG]... [FIL]..."
 
 #, python-format
 msgid "hg %s [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg %s [TILVALG]... [FIL]..."
 
 msgid "pull, update and merge in one command"
 msgstr ""
@@ -1501,7 +1501,7 @@ msgid "switch parents when merging"
 msgstr ""
 
 msgid "hg fetch [SOURCE]"
-msgstr ""
+msgstr "hg fetch [KILDE]"
 
 msgid "sign and verify changesets"
 msgstr "underskriv og verificer ændringer"
@@ -1579,13 +1579,13 @@ msgid "commit message"
 msgstr ""
 
 msgid "hg sign [OPTION]... [REVISION]..."
-msgstr ""
+msgstr "hg sign [TILVALG]... [REVISION]..."
 
 msgid "hg sigcheck REVISION"
-msgstr ""
+msgstr "hg sigcheck REVISION"
 
 msgid "hg sigs"
-msgstr ""
+msgstr "hg sigs"
 
 msgid ""
 "show revision graphs in terminals\n"
@@ -1630,7 +1630,7 @@ msgid "show the specified revision or range"
 msgstr ""
 
 msgid "hg glog [OPTION]... [FILE]"
-msgstr ""
+msgstr "hg glog [TILVALG]... [FIL]"
 
 msgid ""
 "integrate Mercurial with a CIA notification service\n"
@@ -1740,7 +1740,7 @@ msgid "start interactive history viewer"
 msgstr ""
 
 msgid "hg view [-l LIMIT] [REVRANGE]"
-msgstr ""
+msgstr "hg view [-l GRÆNSE] [REV-INTERVAL]"
 
 msgid "generate patch"
 msgstr ""
@@ -1761,22 +1761,22 @@ msgid "search"
 msgstr "søg"
 
 msgid "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
-msgstr ""
+msgstr "hg git-diff-tree [TILVALG]... KNUDE1 KNUDE2 [FIL]..."
 
 msgid "hg debug-cat-file [OPTION]... TYPE FILE"
-msgstr ""
+msgstr "hg debug-cat-file [TILVALG      ]... TYPE FIL"
 
 msgid "hg debug-config"
-msgstr ""
+msgstr "hg debug-config"
 
 msgid "hg debug-merge-base node node"
-msgstr ""
+msgstr "hg debug-merge-base knude knude"
 
 msgid "ignored"
 msgstr "Ignoreret"
 
 msgid "hg debug-rev-parse REV"
-msgstr ""
+msgstr "hg debug-rev-parse REV"
 
 msgid "header"
 msgstr ""
@@ -1791,7 +1791,7 @@ msgid "max-count"
 msgstr ""
 
 msgid "hg debug-rev-list [options] revs"
-msgstr ""
+msgstr "hg debug-rev-list [tilvalg] revisioner"
 
 msgid ""
 "syntax highlighting for hgweb\n"
@@ -1838,7 +1838,7 @@ msgid "name of file to write process ID to"
 msgstr "navn på fil at skrive process ID til"
 
 msgid "hg inserve [OPT]..."
-msgstr ""
+msgstr "hg inserve [TILVALG]..."
 
 msgid "(found dead inotify server socket; removing it)\n"
 msgstr ""
@@ -2147,7 +2147,7 @@ msgid "hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]..."
 msgstr ""
 
 msgid "hg kwexpand [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg kwexpand [TILVALG]... [FIL]..."
 
 msgid "show keyword status flags of all files"
 msgstr ""
@@ -2159,10 +2159,10 @@ msgid "additionally show untracked files"
 msgstr ""
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg kwfiles [TILVALG]... [FIL]..."
 
 msgid "hg kwshrink [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg kwshrink [TILVALG]... [FIL]..."
 
 msgid ""
 "work with a stack of patches\n"
@@ -3035,7 +3035,7 @@ msgid "print first line of patch header"
 msgstr ""
 
 msgid "hg qapplied [-s] [PATCH]"
-msgstr ""
+msgstr "hg qapplied [-s] [LAP]"
 
 msgid "use pull protocol to copy metadata"
 msgstr "brug træk-protokol til at kopiere metadata"
@@ -3050,13 +3050,13 @@ msgid "location of source patch repository"
 msgstr ""
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
-msgstr ""
+msgstr "hg qclone [TILVALG]... KILDE [MÅL]"
 
 msgid "hg qcommit [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg qcommit [TILVALG]... [FIL]..."
 
 msgid "hg qdiff [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg qdiff [TILVALG]... [FIL]..."
 
 msgid "keep patch file"
 msgstr ""
@@ -3065,7 +3065,7 @@ msgid "stop managing a revision (DEPRECATED)"
 msgstr ""
 
 msgid "hg qdelete [-k] [-r REV]... [PATCH]..."
-msgstr ""
+msgstr "hg qdelete [-k] [-r REV]... [LAP]..."
 
 msgid "edit patch header"
 msgstr ""
@@ -3074,13 +3074,13 @@ msgid "keep folded patch files"
 msgstr ""
 
 msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
-msgstr ""
+msgstr "hg qfold [-e] [-k] [-m TEKST] [-l FIL] LAP..."
 
 msgid "overwrite any local changes"
 msgstr ""
 
 msgid "hg qgoto [OPTION]... PATCH"
-msgstr ""
+msgstr "hg qgoto [TILVALG]... LAP"
 
 msgid "list all patches and guards"
 msgstr ""
@@ -3089,10 +3089,10 @@ msgid "drop all guards"
 msgstr ""
 
 msgid "hg qguard [-l] [-n] -- [PATCH] [+GUARD]... [-GUARD]..."
-msgstr ""
+msgstr "hg qguard [-l] [-n] -- [LAP] [+VAGT]... [-VAGT]..."
 
 msgid "hg qheader [PATCH]"
-msgstr ""
+msgstr "hg qheader [LAP]"
 
 msgid "import file in patch directory"
 msgstr ""
@@ -3113,13 +3113,13 @@ msgid "qpush after importing"
 msgstr ""
 
 msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
-msgstr ""
+msgstr "hg qimport [-e] [-n NAVN] [-f] [-g] [-P] [-r REV]... FIL..."
 
 msgid "create queue repository"
 msgstr "opret kø-repository"
 
 msgid "hg qinit [-c]"
-msgstr ""
+msgstr "hg qinit [-c]"
 
 msgid "import uncommitted changes into patch"
 msgstr ""
@@ -3137,13 +3137,13 @@ msgid "add \"Date: <given date>\" to patch"
 msgstr ""
 
 msgid "hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]..."
-msgstr ""
+msgstr "hg qnew [-e] [-m TEKST] [-l FIL] [-f] LAP [FIL]..."
 
 msgid "hg qnext [-s]"
-msgstr ""
+msgstr "hg qnext [-s]"
 
 msgid "hg qprev [-s]"
-msgstr ""
+msgstr "hg qprev [-s]"
 
 msgid "pop all patches"
 msgstr ""
@@ -3155,7 +3155,7 @@ msgid "forget any local changes"
 msgstr ""
 
 msgid "hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]"
-msgstr ""
+msgstr "hg qpop [-a] [-n NAVN] [-f] [LAP | INDEKS]"
 
 msgid "apply if the patch has rejects"
 msgstr ""
@@ -3173,7 +3173,7 @@ msgid "merge queue name"
 msgstr ""
 
 msgid "hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]"
-msgstr ""
+msgstr "hg qpush [-f] [-l] [-a] [-m] [-n NAVN] [LAP | INDEKS]"
 
 msgid "refresh only files already in the patch and specified files"
 msgstr ""
@@ -3191,10 +3191,10 @@ msgid "update \"Date: <given date>\" in patch (if present)"
 msgstr ""
 
 msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
-msgstr ""
+msgstr "hg qrefresh [-I] [-X] [-e] [-m TEKST] [-l FIL] [-s] [FIL]..."
 
 msgid "hg qrename PATCH1 [PATCH2]"
-msgstr ""
+msgstr "hg qrename LAP1 [LAP2]"
 
 msgid "delete save entry"
 msgstr ""
@@ -3203,7 +3203,7 @@ msgid "update queue working directory"
 msgstr ""
 
 msgid "hg qrestore [-d] [-u] REV"
-msgstr ""
+msgstr "hg qrestore [-d] [-u] REV"
 
 msgid "copy patch directory"
 msgstr ""
@@ -3218,7 +3218,7 @@ msgid "force copy"
 msgstr ""
 
 msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
-msgstr ""
+msgstr "hg qsave [-m TEKST] [-l FIL] [-c] [-n NAVN] [-e] [-f]"
 
 msgid "disable all guards"
 msgstr ""
@@ -3233,13 +3233,13 @@ msgid "pop, then reapply patches"
 msgstr ""
 
 msgid "hg qselect [OPTION]... [GUARD]..."
-msgstr ""
+msgstr "hg qselect [TILVALG]... [VAGT]..."
 
 msgid "print patches not in series"
 msgstr ""
 
 msgid "hg qseries [-ms]"
-msgstr ""
+msgstr "hg qseries [-ms]"
 
 msgid "force removal with local changes"
 msgstr ""
@@ -3251,13 +3251,13 @@ msgid "no backups"
 msgstr ""
 
 msgid "hg strip [-f] [-b] [-n] REV"
-msgstr ""
+msgstr "hg strip [-f] [-b] [-n] REV"
 
 msgid "hg qtop [-s]"
-msgstr ""
+msgstr "hg qtop [-s]"
 
 msgid "hg qunapplied [-s] [PATCH]"
-msgstr ""
+msgstr "hg qunapplied [-s] [LAP]"
 
 msgid "finish all applied changesets"
 msgstr "afslut alle anvendte ændringer"
@@ -3641,7 +3641,7 @@ msgid "send an introduction email for a single patch"
 msgstr ""
 
 msgid "hg email [OPTION]... [DEST]..."
-msgstr ""
+msgstr "hg email [TILVALG]... [MÅL]..."
 
 msgid "delete files not tracked from the working directory"
 msgstr ""
@@ -3700,7 +3700,7 @@ msgid "end filenames with NUL, for use with xargs (implies -p/--print)"
 msgstr ""
 
 msgid "hg purge [OPTION]... [DIR]..."
-msgstr ""
+msgstr "hg purge [TILVALG]... [KATALOG]..."
 
 msgid ""
 "move sets of revisions to a different ancestor\n"
@@ -3877,6 +3877,8 @@ msgid ""
 "hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] "
 "| [-c] | [-a]"
 msgstr ""
+"hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] "
+"| [-c] | [-a]"
 
 msgid "interactively select which sets of changes to commit/qrefresh"
 msgstr ""
@@ -4010,10 +4012,10 @@ msgid "restoring %r to %r\n"
 msgstr "gendanner %r som %r\n"
 
 msgid "hg record [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg record [TILVALG]... [FIL]..."
 
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
-msgstr ""
+msgstr "hg qrecord [TILVALG]... LAP [FIL]..."
 
 msgid "share a common history between several working directories"
 msgstr ""
@@ -4179,7 +4181,7 @@ msgstr ""
 
 msgid ""
 "hg transplant [-s REPOSITORY] [-b BRANCH [-a]] [-p REV] [-m REV] [REV]..."
-msgstr ""
+msgstr "hg transplant [-s DEPOT] [-b GREN [-a]] [-p REV] [-m REV] [REV]..."
 
 msgid ""
 "allow the use of MBCS paths with problematic encoding\n"
@@ -8589,7 +8591,8 @@ msgid "nothing to merge (use 'hg update' or check 'hg heads')"
 msgstr "intet at sammenføje (brug 'hg update' eller kontroller 'hg heads')"
 
 msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
-msgstr "udestående ikke-deponerede ændringer (brug 'hg status' for at se ændringer)"
+msgstr ""
+"udestående ikke-deponerede ændringer (brug 'hg status' for at se ændringer)"
 
 msgid "crosses branches (use 'hg merge' or 'hg update -C' to discard changes)"
 msgstr ""
