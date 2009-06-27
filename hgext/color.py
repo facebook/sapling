@@ -146,9 +146,9 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
     for patch in patches:
         patchname = patch
         if opts['summary']:
-            patchname = patchname.split(': ')[0]
+            patchname = patchname.split(': ', 1)[0]
         if ui.verbose:
-            patchname = patchname.split(' ', 2)[-1]
+            patchname = patchname.lstrip().split(' ', 2)[-1]
 
         if opts['missing']:
             effects = _patch_effects['missing']
@@ -158,7 +158,9 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
             effects = _patch_effects['applied']
         else:
             effects = _patch_effects['unapplied']
-        ui.write(render_effects(patch, effects) + '\n')
+
+        patch = patch.replace(patchname, render_effects(patchname, effects), 1)
+        ui.write(patch + '\n')
     return retval
 
 _patch_effects = { 'applied': ['blue', 'bold', 'underline'],
