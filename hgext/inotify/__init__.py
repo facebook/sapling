@@ -107,5 +107,5 @@ cmdtable = {
           ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('t', 'idle-timeout', '', _('minutes to sit idle before exiting')),
           ('', 'pid-file', '', _('name of file to write process ID to'))],
-         _('hg inserve [OPT]...')),
+         _('hg inserve [OPTION]...')),
     }
