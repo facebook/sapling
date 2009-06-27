@@ -331,7 +331,7 @@ cmdtable = {
     "debug-config":
         (config, [], _('hg debug-config')),
     "debug-merge-base":
-        (base, [], _('hg debug-merge-base node node')),
+        (base, [], _('hg debug-merge-base REV REV')),
     "debug-rev-parse":
         (revparse,
          [('', 'default', '', _('ignored'))],
@@ -342,5 +342,5 @@ cmdtable = {
           ('t', 'topo-order', None, _('topo-order')),
           ('p', 'parents', None, _('parents')),
           ('n', 'max-count', 0, _('max-count'))],
-         _('hg debug-rev-list [options] revs')),
+         _('hg debug-rev-list [OPTION]... REV...')),
 }
