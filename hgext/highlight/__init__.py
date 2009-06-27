@@ -19,8 +19,6 @@ There is a single configuration option:
 pygments_style = <style>
 
 The default is 'colorful'.
-
--- Adam Hupp <adam@hupp.org>
 """
 
 import highlight
