@@ -2621,5 +2621,5 @@ cmdtable = {
     "qfinish":
         (finish,
          [('a', 'applied', None, _('finish all applied changesets'))],
-         _('hg qfinish [-a] [REV...]')),
+         _('hg qfinish [-a] [REV]...')),
 }
