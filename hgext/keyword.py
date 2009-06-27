@@ -359,11 +359,16 @@ def expand(ui, repo, *pats, **opts):
     _kwfwrite(ui, repo, True, *pats, **opts)
 
 def files(ui, repo, *pats, **opts):
-    '''print files currently configured for keyword expansion
+    '''print filenames configured for keyword expansion
 
-    Crosscheck which files in working directory are potential targets
-    for keyword expansion. That is, files matched by [keyword] config
-    patterns but not symlinks.
+    Check which filenames in the working directory are matched by the
+    [keyword] configuration patterns.
+
+    Useful to prevent inadvertent keyword expansion and to speed up
+    execution by including only filenames that are actual candidates
+    for expansion.
+
+    Use -u/--untracked to display untracked filenames as well.
     '''
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
