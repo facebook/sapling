@@ -22,20 +22,18 @@ You can clone a Git repository from Hg by running `hg clone [url]`.  For example
 
 	hg clone git://github.com/schacon/hg-git.git
 
-If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as default path or default-push path in your .hg/hgrc and then run `hg push` from within your project.  For example:
-
-	cd hg-git # (an Hg repository)
-	(edit .hg/hgrc and add the target git url in the path section)
-	hg push
-
-This will convert all your Hg data into Git objects and push them up to the Git server.
-
-If you want to clone a github repository for later pushing (or any other repository you access 
-via ssh), you need to convert the ssh url to a format with explicit protocol prefix (mind the 
-switch from colon to slash after the host!): 
+If you want to clone a github repository for later pushing (or any other repository you access via ssh), you need to convert the ssh url to a format with explicit protocol prefix (mind the switch from colon to slash after the host!):
 
 	git clone git@github.com:schacon/hg-git.git
 	hg clone git+ssh://git@github.com/schacon/hg-git.git
+
+If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as default path or default-push path in your .hg/hgrc and then run `hg push` from within your project.  For example:
+
+	cd hg-git # (an Hg repository)
+	(edit .hg/hgrc and add the target git url in the paths section)
+	hg push
+
+This will convert all your Hg data into Git objects and push them up to the Git server.
 
 Now that you have an Hg repository that can push/pull to/from a Git repository, you can fetch updates with `hg pull`.
 
@@ -46,7 +44,7 @@ That will pull down any commits that have been pushed to the server in the meant
 Hg Bookmarks Integration
 ========================
 
-Hg-Git works will use your bookmarks if you have any or have the bookmarks extension enabled.  It will allow you to push your bookmarks up to the Git server as branches and will pull Git branches down and set them up as bookmarks if you want.
+If you have the bookmarks extension enabled, Hg-Git will use it. It will push your bookmarks up to the Git server as branches and will pull Git branches down and set them up as bookmarks.
 
 This is actually pretty cool, since you can use this extension to transfer your Hg bookmarks via the Git protocol, rather than having to scp them, as the Hg transfer protocol does not currently support transferring bookmarks.
 
