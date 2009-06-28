@@ -57,9 +57,6 @@ def reposetup(ui, repo):
     if not hasattr(repo, 'dirstate'):
         return
 
-    # XXX: weakref until hg stops relying on __del__
-    repo = proxy(repo)
-
     class inotifydirstate(repo.dirstate.__class__):
 
         # We'll set this to false after an unsuccessful attempt so that
