@@ -5355,65 +5355,78 @@ msgid ""
 msgstr ""
 
 msgid "global options:"
-msgstr ""
+msgstr "options globales :"
 
 msgid "use \"hg help\" for the full list of commands"
-msgstr ""
+msgstr "utiliser \"hg help\" pour la liste complète des commandes"
 
 msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
 msgstr ""
+"utiliser \"hg help\" pour la liste complète des commandes ou \"hg -v\" pour "
+"plus de détails"
 
+# la chaîne passée est préfixée par un espace
 #, python-format
 msgid "use \"hg -v help%s\" to show aliases and global options"
 msgstr ""
+"utiliser \"hg -v help%s\" pour afficher les alias et les options globales"
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
-msgstr ""
+msgstr "utiliser \"hg -v help %s\" pour afficher les options globales"
 
 msgid ""
 "list of commands:\n"
 "\n"
 msgstr ""
+"liste des commandes :\n"
+"\n"
 
 #, python-format
 msgid ""
 "\n"
 "aliases: %s\n"
 msgstr ""
+"\n"
+"alias : %s\n"
 
 msgid "(no help text available)"
-msgstr ""
+msgstr "(pas d'aide disponible)"
 
 msgid "options:\n"
-msgstr ""
+msgstr "options :\n"
 
 msgid "no commands defined\n"
-msgstr ""
+msgstr "pas de commandes définies\n"
 
 msgid "enabled extensions:"
-msgstr ""
+msgstr "extensions activées :"
 
 msgid "no help text available"
-msgstr ""
+msgstr "pas d'aide disponible"
 
 #, python-format
 msgid "%s extension - %s\n"
-msgstr ""
+msgstr "extension %s - %s\n"
 
 msgid "Mercurial Distributed SCM\n"
-msgstr ""
+msgstr "Mercurial, système de gestion de sources distribué\n"
 
 msgid ""
 "basic commands:\n"
 "\n"
 msgstr ""
+"commandes de base :\n"
+"\n"
 
 msgid ""
 "\n"
 "additional help topics:\n"
 "\n"
 msgstr ""
+"\n"
+"sujets d'aide supplémentaires :\n"
+"\n"
 
 msgid ""
 "identify the working copy or specified revision\n"
