@@ -312,7 +312,8 @@ class repowatcher(pollable):
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
-        self.wprefix = self.repo.wjoin('')
+        self.wprefix = join(repo.root, '')
+        self.prefixlen = len(self.wprefix)
         try:
             self.watcher = watcher.watcher()
         except OSError, err:
@@ -363,7 +364,7 @@ class repowatcher(pollable):
             return
         if self.watcher.path(path) is None:
             if self.ui.debugflag:
-                self.ui.note(_('watching %r\n') % path[len(self.wprefix):])
+                self.ui.note(_('watching %r\n') % path[self.prefixlen:])
             try:
                 self.watcher.add(path, mask)
             except OSError, err:
@@ -374,7 +375,7 @@ class repowatcher(pollable):
                 _explain_watch_limit(self.ui, self.repo)
 
     def setup(self):
-        self.ui.note(_('watching directories under %r\n') % self.repo.root)
+        self.ui.note(_('watching directories under %r\n') % self.wprefix)
         self.add_watch(self.repo.path, inotify.IN_DELETE)
         self.check_dirstate()
 
@@ -466,11 +467,11 @@ class repowatcher(pollable):
 
     def scan(self, topdir=''):
         ds = self.repo.dirstate._map.copy()
-        self.add_watch(join(self.repo.root, topdir), self.mask)
+        self.add_watch(join(self.wprefix, topdir), self.mask)
         for root, dirs, files in walk(self.repo, topdir):
             for d in dirs:
                 self.add_watch(join(root, d), self.mask)
-            wroot = root[len(self.wprefix):]
+            wroot = root[self.prefixlen:]
             for fn in files:
                 wfn = join(wroot, fn)
                 self.updatefile(wfn, self.getstat(wfn))
@@ -633,7 +634,7 @@ class repowatcher(pollable):
                          (self.event_time(), len(events)))
         for evt in events:
             assert evt.fullpath.startswith(self.wprefix)
-            wpath = evt.fullpath[len(self.wprefix):]
+            wpath = evt.fullpath[self.prefixlen:]
 
             # paths have been normalized, wpath never ends with a '/'
 
@@ -671,7 +672,7 @@ class repowatcher(pollable):
         Returns a sorted list of relatives paths currently watched,
         for debugging purposes.
         """
-        return sorted(tuple[0][len(self.wprefix):] for tuple in self.watcher)
+        return sorted(tuple[0][self.prefixlen:] for tuple in self.watcher)
 
 class server(pollable):
     """
