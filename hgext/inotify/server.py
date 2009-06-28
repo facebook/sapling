@@ -34,13 +34,11 @@ def split(path):
 
 walk_ignored_errors = (errno.ENOENT, errno.ENAMETOOLONG)
 
-def walkrepodirs(repo):
+def walkrepodirs(dirstate, absroot):
     '''Iterate over all subdirectories of this repo.
     Exclude the .hg directory, any nested repos, and ignored dirs.'''
-    rootslash = repo.root + os.sep
-
     def walkit(dirname, top):
-        fullpath = rootslash + dirname
+        fullpath = join(absroot, dirname)
         try:
             for name, kind in osutil.listdir(fullpath):
                 if kind == stat.S_IFDIR:
@@ -49,7 +47,7 @@ def walkrepodirs(repo):
                             return
                     else:
                         d = join(dirname, name)
-                        if repo.dirstate._ignore(d):
+                        if dirstate._ignore(d):
                             continue
                         for subdir in walkit(d, False):
                             yield subdir
@@ -60,18 +58,16 @@ def walkrepodirs(repo):
 
     return walkit('', True)
 
-def walk(repo, root):
+def walk(dirstate, absroot, root):
     '''Like os.walk, but only yields regular files.'''
 
     # This function is critical to performance during startup.
-
-    rootslash = repo.root + os.sep
 
     def walkit(root, reporoot):
         files, dirs = [], []
 
         try:
-            fullpath = rootslash + root
+            fullpath = join(absroot, root)
             for name, kind in osutil.listdir(fullpath):
                 if kind == stat.S_IFDIR:
                     if name == '.hg':
@@ -80,7 +76,7 @@ def walk(repo, root):
                     else:
                         dirs.append(name)
                         path = join(root, name)
-                        if repo.dirstate._ignore(path):
+                        if dirstate._ignore(path):
                             continue
                         for result in walkit(path, False):
                             yield result
@@ -98,7 +94,7 @@ def walk(repo, root):
 
     return walkit(root, root == '')
 
-def _explain_watch_limit(ui, repo):
+def _explain_watch_limit(ui, dirstate, rootabs):
     path = '/proc/sys/fs/inotify/max_user_watches'
     try:
         limit = int(file(path).read())
@@ -112,7 +108,7 @@ def _explain_watch_limit(ui, repo):
     ui.warn(_('*** this limit is too low to watch every '
               'directory in this repository\n'))
     ui.warn(_('*** counting directories: '))
-    ndirs = len(list(walkrepodirs(repo)))
+    ndirs = len(list(walkrepodirs(dirstate, rootabs)))
     ui.warn(_('found %d\n') % ndirs)
     newlimit = min(limit, 1024)
     while newlimit < ((limit + ndirs) * 1.1):
@@ -121,7 +117,7 @@ def _explain_watch_limit(ui, repo):
             (limit, newlimit))
     ui.warn(_('***  echo %d > %s\n') % (newlimit, path))
     raise util.Abort(_('cannot watch %s until inotify watch limit is raised')
-                     % repo.root)
+                     % rootabs)
 
 class pollable(object):
     """
@@ -309,10 +305,11 @@ class repowatcher(pollable):
         inotify.IN_UNMOUNT |
         0)
 
-    def __init__(self, ui, repo):
+    def __init__(self, ui, dirstate, root):
         self.ui = ui
-        self.repo = repo
-        self.wprefix = join(repo.root, '')
+        self.dirstate = dirstate
+
+        self.wprefix = join(root, '')
         self.prefixlen = len(self.wprefix)
         try:
             self.watcher = watcher.watcher()
@@ -352,7 +349,7 @@ class repowatcher(pollable):
 
     def dirstate_info(self):
         try:
-            st = os.lstat(self.repo.join('dirstate'))
+            st = os.lstat(self.wprefix + '.hg/dirstate')
             return st.st_mtime, st.st_ino
         except OSError, err:
             if err.errno != errno.ENOENT:
@@ -372,16 +369,16 @@ class repowatcher(pollable):
                     return
                 if err.errno != errno.ENOSPC:
                     raise
-                _explain_watch_limit(self.ui, self.repo)
+                _explain_watch_limit(self.ui, self.dirstate, self.wprefix)
 
     def setup(self):
         self.ui.note(_('watching directories under %r\n') % self.wprefix)
-        self.add_watch(self.repo.path, inotify.IN_DELETE)
+        self.add_watch(self.wprefix + '.hg', inotify.IN_DELETE)
         self.check_dirstate()
 
     def filestatus(self, fn, st):
         try:
-            type_, mode, size, time = self.repo.dirstate._map[fn][:4]
+            type_, mode, size, time = self.dirstate._map[fn][:4]
         except KeyError:
             type_ = '?'
         if type_ == 'n':
@@ -393,7 +390,7 @@ class repowatcher(pollable):
             if time != int(st_mtime):
                 return 'l'
             return 'n'
-        if type_ == '?' and self.repo.dirstate._ignore(fn):
+        if type_ == '?' and self.dirstate._ignore(fn):
             return 'i'
         return type_
 
@@ -458,7 +455,7 @@ class repowatcher(pollable):
         # may have vanished from the dirstate; we must clean them up.
         nuke = []
         for wfn, ignore in self.statustrees[key].walk(key):
-            if wfn not in self.repo.dirstate:
+            if wfn not in self.dirstate:
                 nuke.append(wfn)
         for wfn in nuke:
             root, fn = split(wfn)
@@ -466,9 +463,9 @@ class repowatcher(pollable):
             del self.tree.dir(root).files[fn]
 
     def scan(self, topdir=''):
-        ds = self.repo.dirstate._map.copy()
+        ds = self.dirstate._map.copy()
         self.add_watch(join(self.wprefix, topdir), self.mask)
-        for root, dirs, files in walk(self.repo, topdir):
+        for root, dirs, files in walk(self.dirstate, self.wprefix, topdir):
             for d in dirs:
                 self.add_watch(join(root, d), self.mask)
             wroot = root[self.prefixlen:]
@@ -500,7 +497,7 @@ class repowatcher(pollable):
         if not self.ui.debugflag:
             self.last_event = None
         self.ui.note(_('%s dirstate reload\n') % self.event_time())
-        self.repo.dirstate.invalidate()
+        self.dirstate.invalidate()
         self.handle_timeout()
         self.scan()
         self.ui.note(_('%s end dirstate reload\n') % self.event_time())
@@ -516,8 +513,8 @@ class repowatcher(pollable):
         # But it's easier to do nothing than to open that can of
         # worms.
 
-        if '_ignore' in self.repo.dirstate.__dict__:
-            delattr(self.repo.dirstate, '_ignore')
+        if '_ignore' in self.dirstate.__dict__:
+            delattr(self.dirstate, '_ignore')
             self.ui.note(_('rescanning due to .hgignore change\n'))
             self.handle_timeout()
             self.scan()
@@ -560,7 +557,7 @@ class repowatcher(pollable):
         try:
             st = self.stat(wpath)
             if stat.S_ISREG(st[0]):
-                if self.repo.dirstate[wpath] in 'lmn':
+                if self.dirstate[wpath] in 'lmn':
                     self.updatefile(wpath, st)
         except OSError:
             pass
@@ -574,7 +571,7 @@ class repowatcher(pollable):
                 self.check_dirstate()
             return
 
-        self.deletefile(wpath, self.repo.dirstate[wpath])
+        self.deletefile(wpath, self.dirstate[wpath])
 
     def process_create(self, wpath, evt):
         if self.ui.debugflag:
@@ -678,12 +675,11 @@ class server(pollable):
     """
     Listens for client queries on unix socket inotify.sock
     """
-    def __init__(self, ui, repo, repowatcher, timeout):
+    def __init__(self, ui, root, repowatcher, timeout):
         self.ui = ui
-        self.repo = repo
         self.repowatcher = repowatcher
         self.sock = socket.socket(socket.AF_UNIX)
-        self.sockpath = self.repo.join('inotify.sock')
+        self.sockpath = join(root, '.hg/inotify.sock')
         self.realsockpath = None
         try:
             self.sock.bind(self.sockpath)
@@ -813,9 +809,8 @@ class server(pollable):
 class master(object):
     def __init__(self, ui, repo, timeout=None):
         self.ui = ui
-        self.repo = repo
-        self.repowatcher = repowatcher(ui, repo)
-        self.server = server(ui, repo, self.repowatcher, timeout)
+        self.repowatcher = repowatcher(ui, repo.dirstate, repo.root)
+        self.server = server(ui, repo.root, self.repowatcher, timeout)
 
     def shutdown(self):
         for obj in pollable.instances.itervalues():
