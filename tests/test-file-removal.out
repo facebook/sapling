@@ -4,6 +4,8 @@ rm 'alpha'
 rm 'foo/bar'
 % final manifest in git is just beta
 beta
+Initialized empty Git repository in gitrepo2/.git/
+
 fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 14, done.
@@ -48,3 +50,40 @@ foo/bar
 
 % make sure that only beta is in the manifest
 beta
+clearing out the git cache data
+pushing to git://localhost/gitrepo2
+fetching from : git://localhost/gitrepo2
+importing Hg objects into Git
+at: 0/5
+nothing new on the server
+pushing to : git://localhost/gitrepo2
+creating and sending data
+commit b991de8952c482a7cd51162674ffff8474862218
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:14 2007 +0000
+
+    remove foo/bar
+
+commit b0edaf0adac19392cf2867498b983bc5192b41dd
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:13 2007 +0000
+
+    remove alpha
+
+commit f2d0d5bfa905e12dee728b509b96cf265bb6ee43
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:12 2007 +0000
+
+    add foo
+
+commit 9497a4ee62e16ee641860d7677cdb2589ea15554
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:11 2007 +0000
+
+    add beta
+
+commit 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:10 2007 +0000
+
+    add alpha

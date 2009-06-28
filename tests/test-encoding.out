@@ -6,6 +6,8 @@ variable i18n.commitencoding to the encoding your project uses.
 Warning: commit message does not conform to UTF-8.
 You may want to amend it after fixing the message, or set the config
 variable i18n.commitencoding to the encoding your project uses.
+Initialized empty Git repository in gitrepo2/.git/
+
 fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 12, done.
@@ -75,3 +77,34 @@ o  changeset:   0:bb7d36568d6188ce0de2392246c43f6f213df954
    add Ã¤lphÃ 
 
 
+clearing out the git cache data
+pushing to git://localhost/gitrepo2
+fetching from : git://localhost/gitrepo2
+importing Hg objects into Git
+at: 0/4
+nothing new on the server
+pushing to : git://localhost/gitrepo2
+creating and sending data
+commit da0edb01d4f3d1abf08b1be298379b0b2960e680
+Author: tést èncödîng <test@example.org>
+Date:   Mon Jan 1 00:00:13 2007 +0000
+
+    add déltà
+
+commit 2372b6c8f1b91f2db8ae5eb0f9e0427c318b449c
+Author: tést èncödîng <test@example.org>
+Date:   Mon Jan 1 00:00:12 2007 +0000
+
+    add gämmâ
+
+commit 9ef7f6dcffe643b89ba63f3323621b9a923e4802
+Author: tést èncödîng <test@example.org>
+Date:   Mon Jan 1 00:00:11 2007 +0000
+
+    add beta
+
+commit 0530b75d8c203e10dc934292a6a4032c6e958a83
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:10 2007 +0000
+
+    add Ã¤lphÃ 

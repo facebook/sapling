@@ -39,17 +39,29 @@ mkdir d2
 git mv d1/f2 d2/f2
 git commit -m 'rename'
 
+cd ..
+mkdir gitrepo2
+cd gitrepo2
+git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
+
 # dulwich does not presently support local git repos, workaround
 cd ..
 git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all\
-  --pid-file=gitdaemon.pid \
- --detach --reuseaddr
+ --pid-file=gitdaemon.pid \
+ --detach --reuseaddr \
+ --enable=receive-pack
 
 hg clone git://localhost/gitrepo hgrepo
 cd hgrepo
 hg log -r tip --template 'adds: {file_adds}\ndels: {file_dels}\n'
+
+hg gclear
+hg push git://localhost/gitrepo2
+
+cd ../gitrepo2
+git log
 
 cd ..
 kill `cat gitdaemon.pid`

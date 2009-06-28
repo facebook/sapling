@@ -7,6 +7,8 @@ Created initial commit 60fd61f: initial
 Created commit a2e8665: rename
  1 files changed, 0 insertions(+), 0 deletions(-)
  rename {d1 => d2}/f2 (100%)
+Initialized empty Git repository in gitrepo2/.git/
+
 fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 8, done.
@@ -18,3 +20,22 @@ updating working directory
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adds: d2/f2
 dels: d1/f2
+clearing out the git cache data
+pushing to git://localhost/gitrepo2
+fetching from : git://localhost/gitrepo2
+importing Hg objects into Git
+at: 0/2
+nothing new on the server
+pushing to : git://localhost/gitrepo2
+creating and sending data
+commit a2e8665d117167742ceb040f1669a73289d79ac8
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:00 2007 +0000
+
+    rename
+
+commit 60fd61fbaca983e6d0ee911668ef7547abbf720c
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:00 2007 +0000
+
+    initial

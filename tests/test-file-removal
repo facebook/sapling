@@ -47,13 +47,19 @@ commit -m 'remove foo/bar'
 echo % final manifest in git is just beta
 git ls-files
 
+cd ..
+mkdir gitrepo2
+cd gitrepo2
+git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
+
 # dulwich does not presently support local git repos, workaround
 cd ..
 git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all\
-  --pid-file=gitdaemon.pid \
- --detach --reuseaddr
+ --pid-file=gitdaemon.pid \
+ --detach --reuseaddr \
+ --enable=receive-pack
 
 hg clone git://localhost/gitrepo hgrepo
 cd hgrepo
@@ -66,6 +72,12 @@ hg manifest -r 3
 echo
 echo % make sure that only beta is in the manifest
 hg manifest
+
+hg gclear
+hg push git://localhost/gitrepo2
+
+cd ../gitrepo2
+git log
 
 cd ..
 kill `cat gitdaemon.pid`

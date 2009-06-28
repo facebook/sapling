@@ -42,7 +42,7 @@ cd ..
 git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all\
-  --pid-file=gitdaemon.pid \
+ --pid-file=gitdaemon.pid \
  --detach --reuseaddr
 
 hg clone git://localhost/gitrepo hgrepo
