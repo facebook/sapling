@@ -443,14 +443,13 @@ class repowatcher(pollable):
         if oldstatus and oldstatus in self.statuskeys \
             and oldstatus != newstatus:
             del self.statustrees[oldstatus].dir(root).files[fn]
-        if newstatus and newstatus != 'i':
-            d.files[fn] = newstatus
-            if newstatus in self.statuskeys:
-                dd = self.statustrees[newstatus].dir(root)
-                if oldstatus != newstatus or fn not in dd.files:
-                    dd.files[fn] = newstatus
-        else:
+
+        if newstatus in (None, 'i'):
             d.files.pop(fn, None)
+        elif oldstatus != newstatus:
+            d.files[fn] = newstatus
+            if newstatus != 'n':
+                self.statustrees[newstatus].dir(root).files[fn] = newstatus
 
 
     def check_deleted(self, key):
