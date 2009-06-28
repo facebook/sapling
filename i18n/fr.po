@@ -2,6 +2,86 @@
 # Traductions françaises de Mercurial
 # Copyright (C) 2009 Matt Mackall <mpm@selenic.com> and others
 #
+# Quelques règles :
+# - dans l'aide d'une commande, la première ligne descriptive
+#   commence par un verbe au présent sans majuscule
+# - dans l'aide d'une commande, la description des options
+#   utilise un verbe à l'infinitif
+#
+# Note : la terminologie ci-dessous est loin d'être complète, figée ou
+#        parfaite. À compléter et à améliorer, particulièrement les
+#        termes comportant un point d'interrogation...
+#
+# Dictionnaire de termes courants :
+#  - to  apply a patch        appliquer un patch
+#  - a   branch               une branche
+#  - to  check out            extraire (terminologie utilisée par svn)
+#  -     children             des rejetons ? des descendants ?
+#  - to  clone                clôner
+#  - a   conflict             un conflit
+#  - an  extension            une extension (au sens de module Mercurial)
+#  - to  fold patches         agréger des patchs (replier des patch ?? bof)
+#  - an  integrity check      une vérification d'intégrité (ou de cohérence ?)
+#  - a   mail                 un courriel, un courrier électronique
+#  - a   merge                une fusion
+#  - to  merge                fusionner
+#  - a   node                 un nœud ?
+#  - a   patch queue/stack    une pile de patchs (mq)
+#                             - à l'utilisation c'est vraiment une _pile_
+#                               (on y empile et dépile des patchs)
+#                             - l'unique cas où _file_ conviendrait est dans le
+#                               contexte de la commande qfinish
+#                             => terme unique de pile pour plus de cohérence
+#  - the patch series         la série (complète) de patchs (suite ?)
+#  -     rejects              des rejets ? (à propos de l'application d'un
+#                             patch)
+#  - a   repository           un dépôt
+#  - to  revert               annuler des modifications (ou défaire ?)
+#  - a   revision             une révision
+#  - the topmost patch        le dernier patch appliqué
+#  - a   tree                 une arborescence
+#  - an  unrelated repository un dépôt non apparenté
+#  -     unversioned
+#        unmanaged
+#        untracked            non suivi, non géré, pas sous contrôle du dépôt,
+#                             hors révision ?
+#  - the working directory    le répertoire de travail
+#
+# Termes très courants repris de l'anglais - à utiliser sans guillemets
+# pour ne pas alourdir inutilement la traduction :
+#  - a   diff                 un diff ? (ou également un patch ? synonymes...)
+#  - a   hook                 un hook
+#  - a   patch                un patch
+#  - a   tag                  un tag
+#  - to  tag                  taguer
+#
+# Termes anglais avec une signification très spécifique, difficile à
+# paraphraser sans alourdir ou perdre le sens - à utiliser avec guillemets :
+#  - a   bundle               un \"bundle\"
+#  - to  bundle               créer un \"bundle\" ?
+#  - a   changeset            un \"changeset\"
+#  - a   changegroup          un \"changegroup\"
+#  - the tip                  la révision \"tip\"
+#
+# Termes dont le classement / la traduction sont à déterminer :
+#  - a   commit               un commit, un \"commit\"
+#  - to  commit               \"committer\" ? (beuark, même dit tous les jours)
+#  - a   guard                une \"garde\" ? (une protection ?)
+#  - to  guard a patch        \"garder\" un patch ?
+#  - to  pull                 rapatrier des \"changesets\" ? effectuer une
+#                             opération de \"pull\" ? \"puller\" ?? (argh !)
+#  - to  push                 propager ? (utilisé par svn pour commit)
+#                             publier ? pousser ?? envoyer ??
+#  - the series file (mq)     ?
+#
+# Notes :
+#  - (cédric) je verrais bien l'ajout d'une rubrique générale dans l'aide
+#    (par exemple 'hg help glossary') librement remplissable par chaque équipe
+#    de traduction, qui introduirait succintement à l'utilisateur les termes
+#    qui vont être rencontrés dans mercurial - et en particulier permettrait
+#    de faire le lien avec des termes franglisants parfois utilisés
+#    (par ex. fusionner = "merger", etc.) ... ?
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
