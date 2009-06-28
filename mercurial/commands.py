@@ -484,8 +484,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     parameters. To create a bundle containing all changesets, use
     -a/--all (or --base null).
 
-    To change the compression method applied, use the -t/--type
-    option. The available compression methods are: none, bzip2, and
+    You can change compression method with the -t/--type option.
+    The available compression methods are: none, bzip2, and
     gzip (by default, bundles are compressed using bzip2).
 
     The bundle file can then be transferred using conventional means
