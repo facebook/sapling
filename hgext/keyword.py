@@ -359,16 +359,19 @@ def expand(ui, repo, *pats, **opts):
     _kwfwrite(ui, repo, True, *pats, **opts)
 
 def files(ui, repo, *pats, **opts):
-    '''print filenames configured for keyword expansion
+    '''show files configured for keyword expansion
 
-    Check which filenames in the working directory are matched by the
+    List which files in the working directory are matched by the
     [keyword] configuration patterns.
 
     Useful to prevent inadvertent keyword expansion and to speed up
-    execution by including only filenames that are actual candidates
+    execution by including only files that are actual candidates
     for expansion.
 
-    Use -u/--untracked to display untracked filenames as well.
+    See "hg help keyword" on how to construct patterns both for
+    inclusion and exclusion of files.
+
+    Use -u/--untracked to list untracked files as well.
 
     With -a/--all and -v/--verbose the codes used to show the status
     of files are:
