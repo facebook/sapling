@@ -807,10 +807,10 @@ class server(pollable):
                 raise
 
 class master(object):
-    def __init__(self, ui, repo, timeout=None):
+    def __init__(self, ui, dirstate, root, timeout=None):
         self.ui = ui
-        self.repowatcher = repowatcher(ui, repo.dirstate, repo.root)
-        self.server = server(ui, repo.root, self.repowatcher, timeout)
+        self.repowatcher = repowatcher(ui, dirstate, root)
+        self.server = server(ui, root, self.repowatcher, timeout)
 
     def shutdown(self):
         for obj in pollable.instances.itervalues():
@@ -823,7 +823,7 @@ class master(object):
             sys.exit(0)
         pollable.run()
 
-def start(ui, repo):
+def start(ui, dirstate, root):
     def closefds(ignore):
         # (from python bug #1177468)
         # close all inherited file descriptors
@@ -844,7 +844,7 @@ def start(ui, repo):
             except OSError:
                 pass
 
-    m = master(ui, repo)
+    m = master(ui, dirstate, root)
     sys.stdout.flush()
     sys.stderr.flush()
 
