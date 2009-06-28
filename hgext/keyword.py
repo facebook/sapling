@@ -369,17 +369,27 @@ def files(ui, repo, *pats, **opts):
     for expansion.
 
     Use -u/--untracked to display untracked filenames as well.
+
+    With -a/--all and -v/--verbose the codes used to show the status
+    of files are:
+    K = keyword expansion candidate
+    k = keyword expansion candidate (untracked)
+    I = ignored
+    i = ignored (untracked)
     '''
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
-    files = sorted(modified + added + clean + unknown)
+    files = sorted(modified + added + clean)
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
+    kwuntracked = [f for f in unknown if kwt.iskwfile(f, wctx.flags)]
     cwd = pats and repo.getcwd() or ''
-    kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()
+    kwfstats = (not opts.get('ignore') and
+                (('K', kwfiles), ('k', kwuntracked),) or ())
     if opts.get('all') or opts.get('ignore'):
-        kwfstats += (('I', [f for f in files if f not in kwfiles]),)
+        kwfstats += (('I', [f for f in files if f not in kwfiles]),
+                     ('i', [f for f in unknown if f not in kwuntracked]),)
     for char, filenames in kwfstats:
         fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
         for f in filenames:
