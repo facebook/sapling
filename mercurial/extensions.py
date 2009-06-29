@@ -125,9 +125,14 @@ def disabled():
     import hgext
     extpath = os.path.dirname(os.path.abspath(hgext.__file__))
 
+    try: # might not be a filesystem path
+        files = os.listdir(extpath)
+    except OSError:
+        return None, 0
+
     exts = {}
     maxlength = 0
-    for e in os.listdir(extpath):
+    for e in files:
 
         if e.endswith('.py'):
             name = e.rsplit('.', 1)[0]
