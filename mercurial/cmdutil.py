@@ -265,7 +265,7 @@ def matchall(repo):
 def matchfiles(repo, files):
     return _match.exact(repo.root, repo.getcwd(), files)
 
-def findrenames(repo, match=None, threshold=0.5):
+def findrenames(repo, match, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
     added, removed = repo.status(match=match)[1:3]
     ctx = repo['.']
