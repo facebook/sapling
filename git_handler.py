@@ -167,7 +167,7 @@ class GitHandler(object):
             ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
-                self.ui.debug("revision %d is a part of octopus explosion\n" % rev)
+                self.ui.debug("revision %d is a part of octopus explosion\n" % ctx.rev())
                 continue
             self.export_hg_commit(rev)
             self.save_map()
@@ -180,6 +180,8 @@ class GitHandler(object):
             return ctx.extra().get('hg-git', None) in set(['octopus', 'octopus-done'])
 
         self.ui.note(_("converting revision %s\n") % rev)
+
+        oldenc = self.swap_out_encoding()
 
         # make sure parents are converted first
         ctx = self.repo.changectx(rev)
@@ -209,8 +211,8 @@ class GitHandler(object):
         commit['tree'] = tree_sha
         (time, timezone) = ctx.date()
 
-        if 'git-author' in extra:
-            author = extra['git-author']
+        if 'author' in extra:
+            author = extra['author']
         else:
             # hg authors might not have emails
             author = ctx.user()
@@ -230,8 +232,8 @@ class GitHandler(object):
 
         commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
 
-        if 'git-commit-message' in extra:
-            commit['message'] = extra['git-commit-message']
+        if 'message' in extra:
+            commit['message'] = extra['message']
         else:
             message = ctx.description()
             commit['message'] = ctx.description() + "\n"
@@ -260,7 +262,7 @@ class GitHandler(object):
                 extra_message += "rename : " + oldfile + " => " + newfile + "\n"
 
         for key, value in extra.iteritems():
-            if key in ['committer', 'encoding', 'branch', 'hg-git']:
+            if key in ('author', 'committer', 'encoding', 'message', 'branch', 'hg-git'):
                 continue
             else:
                 add_extras = True
@@ -287,6 +289,9 @@ class GitHandler(object):
 
         commit_sha = self.git.write_commit_hash(commit) # writing new blobs to git
         self.map_set(commit_sha, ctx.hex())
+
+        self.swap_out_encoding(oldenc)
+
         return commit_sha
 
     def write_git_tree(self, ctx):
@@ -462,7 +467,7 @@ class GitHandler(object):
         try:
             text.decode('utf-8')
         except UnicodeDecodeError:
-            extra['git-commit-message'] = text
+            extra['message'] = text
             text = self.decode_guess(text, commit._encoding)
 
         author = commit.author
@@ -483,7 +488,7 @@ class GitHandler(object):
         try:
             author.decode('utf-8')
         except UnicodeDecodeError:
-            extra['git-author'] = author
+            extra['author'] = author
             author = self.decode_guess(author, commit._encoding)
 
         oldenc = self.swap_out_encoding()

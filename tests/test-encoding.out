@@ -17,50 +17,50 @@ importing Git objects into Hg
 at: 0/4
 updating working directory
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  changeset:   3:6b43c82c4322c117a8b8b6fab37534af23c1632d
+@  changeset:   3:4194aac3187933e5859d85d8f572234e41f79f3d
 |  tag:         master
 |  tag:         default/master
 |  tag:         tip
-|  parent:      2:b2e3167afdf71f860238838daa0065b6f8660f15
+|  parent:      2:c7896464e6b20cb173d7f3dbe69d99498aa4264a
 |  parent:      -1:0000000000000000000000000000000000000000
 |  manifest:    3:ea49f93388380ead5601c8fcbfa187516e7c2ed8
 |  user:        tést èncödîng <test@example.org>
 |  date:        Mon Jan 01 00:00:13 2007 +0000
 |  files+:      delta
+|  extra:       author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
 |  extra:       branch=default
 |  extra:       committer=test <test@example.org> 1167609613 0
 |  extra:       encoding=latin-1
-|  extra:       git-author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
-|  extra:       git-commit-message=\nadd d\xe9lt\xe0\n
+|  extra:       message=\nadd d\xe9lt\xe0\n
 |  description:
 |  add déltà
 |
 |
-o  changeset:   2:b2e3167afdf71f860238838daa0065b6f8660f15
-|  parent:      1:d62a8db24a4f5d5f77b6b55ddf481a254f4e6635
+o  changeset:   2:c7896464e6b20cb173d7f3dbe69d99498aa4264a
+|  parent:      1:ee2901710a4e5d3a1c79f937c0e2ee62074489de
 |  parent:      -1:0000000000000000000000000000000000000000
 |  manifest:    2:f580e7da3673c137370da2b931a1dee83590d7b4
 |  user:        tést èncödîng <test@example.org>
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  files+:      gamma
+|  extra:       author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
 |  extra:       branch=default
 |  extra:       committer=test <test@example.org> 1167609612 0
-|  extra:       git-author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
-|  extra:       git-commit-message=add g\xe4mm\xe2\n
+|  extra:       message=add g\xe4mm\xe2\n
 |  description:
 |  add gämmâ
 |
 |
-o  changeset:   1:d62a8db24a4f5d5f77b6b55ddf481a254f4e6635
+o  changeset:   1:ee2901710a4e5d3a1c79f937c0e2ee62074489de
 |  parent:      0:bb7d36568d6188ce0de2392246c43f6f213df954
 |  parent:      -1:0000000000000000000000000000000000000000
 |  manifest:    1:f0bd6fbafbaebe4bb59c35108428f6fce152431d
 |  user:        tést èncödîng <test@example.org>
 |  date:        Mon Jan 01 00:00:11 2007 +0000
 |  files+:      beta
+|  extra:       author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
 |  extra:       branch=default
 |  extra:       committer=test <test@example.org> 1167609611 0
-|  extra:       git-author=t\xe9st \xe8nc\xf6d\xeeng <test@example.org>
 |  description:
 |  add beta
 |
