@@ -454,15 +454,30 @@ class localrepository(repo.repository):
             pass
 
     def _updatebranchcache(self, partial, start, end):
+        # collect new branch entries
+        newbranches = {}
         for r in xrange(start, end):
             c = self[r]
-            b = c.branch()
-            bheads = partial.setdefault(b, [])
-            bheads.append(c.node())
-            for p in c.parents():
-                pn = p.node()
-                if pn in bheads:
-                    bheads.remove(pn)
+            newbranches.setdefault(c.branch(), []).append(c.node())
+        # if older branchheads are reachable from new ones, they aren't
+        # really branchheads. Note checking parents is insufficient:
+        # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
+        for branch, newnodes in newbranches.iteritems():
+            bheads = partial.setdefault(branch, [])
+            bheads.extend(newnodes)
+            if len(bheads) < 2:
+                continue
+            newbheads = []
+            # starting from tip means fewer passes over reachable
+            while newnodes:
+                latest = newnodes.pop()
+                if latest not in bheads:
+                    continue
+                reachable = self.changelog.reachable(latest, bheads[0])
+                bheads = [b for b in bheads if b not in reachable]
+                newbheads.insert(0, latest)
+            bheads.extend(newbheads)
+            partial[branch] = bheads
 
     def lookup(self, key):
         if isinstance(key, int):

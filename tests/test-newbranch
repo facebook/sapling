@@ -19,6 +19,9 @@ hg branch default
 hg branch -f default
 hg ci -m "clear branch name" -d "1000000 0"
 
+echo % there should be only one default branch head
+hg heads .
+
 hg co foo
 hg branch
 echo bleah > a
