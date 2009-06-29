@@ -1368,7 +1368,7 @@ def heads(ui, repo, *branchrevs, **opts):
     branch is called the revision's branch tag.
 
     Branch heads are revisions on a given named branch that do not have
-    any children on the same branch. A branch head could be a true head
+    any descendants on the same branch. A branch head could be a true head
     or it could be the last changeset on a branch before a new branch
     was created. If none of the branch heads are true heads, the branch
     is considered inactive.
