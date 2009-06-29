@@ -268,15 +268,6 @@ class GitHandler(object):
                 add_extras = True
                 extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
 
-        # save file context listing on merge commit
-        if (len(parents) > 1):
-            add_extras = True
-            if len(ctx.files()) > 0:
-                for filenm in ctx.files():
-                    extra_message += "files : " + filenm + "\n"
-            else: # hack for 'fetch' extension idiocy
-                extra_message += "emptychangelog : true\n"
-
         if add_extras:
             commit['message'] += "\n--HG--\n" + extra_message
 
@@ -456,7 +447,7 @@ class GitHandler(object):
         # TODO : Do something less coarse-grained than try/except on the
         #        get_file call for removed files
 
-        (strip_message, hg_renames, hg_branch, force_files, extra) = self.extract_hg_metadata(commit.message)
+        (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
 
         # get a list of the changed, added, removed files
         files = self.git.get_files_changed(commit)
@@ -554,7 +545,7 @@ class GitHandler(object):
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              author, date, extra)
 
-        node = self.repo.commit_import_ctx(ctx, pa, force_files)
+        node = self.repo.commit_import_ctx(ctx, pa)
 
         self.swap_out_encoding(oldenc)
 
@@ -784,7 +775,6 @@ class GitHandler(object):
         split = message.split("\n\n--HG--\n", 1)
         renames = {}
         extra = {}
-        files = []
         branch = False
         if len(split) == 2:
             message, meta = split
@@ -800,14 +790,10 @@ class GitHandler(object):
                     renames[after] = before
                 if command == 'branch':
                     branch = data
-                if command == 'files':
-                    files.append(data)
-                if command == 'emptychangelog':
-                    files = False
                 if command == 'extra':
                     before, after = data.split(" : ", 1)
                     extra[before] = urllib.unquote(after)
-        return (message, renames, branch, files, extra)
+        return (message, renames, branch, extra)
 
     def remote_name(self, remote):
         names = [name for name, path in self.paths if path == remote]

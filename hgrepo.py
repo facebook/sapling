@@ -105,14 +105,7 @@ class hgrepo(localrepo.localrepository):
             if text[-1] == "\n":
                 text = text[:-1]
             
-            file_list = []
-            if force_files == False:
-                file_list = []
-            else:
-                if force_files and len(force_files) > 0:
-                    file_list = force_files
-                else:
-                    file_list = changed + removed
+            file_list = changed + removed
             
             self.changelog.delayupdate()
             n = self.changelog.add(mn, file_list, text, trp, p1, p2,
