@@ -359,7 +359,7 @@ class Repo(object):
         commit_data += 'author ' + commit['author'] + "\n"
         commit_data += 'committer ' + commit['committer'] + "\n"
         if 'encoding' in commit:
-            commit_data += 'encoding ' + commit['encoding'] + "\n"
+            commit_data += 'encoding ' + commit['encoding']
         commit_data += "\n"
         commit_data += commit['message']
         sha = self.write_object('commit', commit_data)
