@@ -257,14 +257,14 @@ def reposetup(ui, repo):
                 node  = super(bookmark_repo, self).commit(*k, **kw)
                 if node is None:
                     return None
-                parents = repo.changelog.parents(node)
+                parents = self.changelog.parents(node)
                 if parents[1] == nullid:
                     parents = (parents[0],)
-                marks = parse(repo)
+                marks = parse(self)
                 update = False
                 for mark, n in marks.items():
                     if ui.configbool('bookmarks', 'track.current'):
-                        if mark == current(repo) and n in parents:
+                        if mark == current(self) and n in parents:
                             marks[mark] = node
                             update = True
                     else:
@@ -272,28 +272,28 @@ def reposetup(ui, repo):
                             marks[mark] = node
                             update = True
                 if update:
-                    write(repo, marks)
+                    write(self, marks)
                 return node
             finally:
                 wlock.release()
 
         def addchangegroup(self, source, srctype, url, emptyok=False):
-            parents = repo.dirstate.parents()
+            parents = self.dirstate.parents()
 
             result = super(bookmark_repo, self).addchangegroup(
                 source, srctype, url, emptyok)
             if result > 1:
                 # We have more heads than before
                 return result
-            node = repo.changelog.tip()
-            marks = parse(repo)
+            node = self.changelog.tip()
+            marks = parse(self)
             update = False
             for mark, n in marks.items():
                 if n in parents:
                     marks[mark] = node
                     update = True
             if update:
-                write(repo, marks)
+                write(self, marks)
             return result
 
         def tags(self):
@@ -302,7 +302,7 @@ def reposetup(ui, repo):
                 return self.tagscache
 
             tagscache = super(bookmark_repo, self).tags()
-            tagscache.update(parse(repo))
+            tagscache.update(parse(self))
             return tagscache
 
     repo.__class__ = bookmark_repo

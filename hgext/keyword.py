@@ -15,7 +15,7 @@
 # audience not running a version control system.
 #
 # For in-depth discussion refer to
-# <http://www.selenic.com/mercurial/wiki/index.cgi/KeywordPlan>.
+# <http://mercurial.selenic.com/wiki/KeywordPlan>.
 #
 # Keyword expansion is based on Mercurial's changeset template mappings.
 #
@@ -281,9 +281,6 @@ def demo(ui, repo, *args, **opts):
 
     Override current keyword template maps with "default" option.
     '''
-    def demostatus(stat):
-        ui.status(_('\n\t%s\n') % stat)
-
     def demoitems(section, items):
         ui.write('[%s]\n' % section)
         for k, v in items:
@@ -323,7 +320,7 @@ def demo(ui, repo, *args, **opts):
         if k.endswith('keyword'):
             extension = '%s = %s' % (k, v)
             break
-    demostatus('config using %s keyword template maps' % kwstatus)
+    ui.status(_('\n\tconfig using %s keyword template maps\n') % kwstatus)
     ui.write('[extensions]\n%s\n' % extension)
     demoitems('keyword', ui.configitems('keyword'))
     demoitems('keywordmaps', kwmaps.iteritems())
@@ -346,7 +343,7 @@ def demo(ui, repo, *args, **opts):
     ui.note('hg -R "%s" ci -m "%s"\n' % (tmpdir, msg))
     repo.commit(text=msg)
     fmt = ui.verbose and ' in %s' % path or ''
-    demostatus('%s keywords expanded%s' % (kwstatus, fmt))
+    ui.status(_('\n\t%s keywords expanded%s\n') % (kwstatus, fmt))
     ui.write(repo.wread(fn))
     ui.debug(_('\nremoving temporary repository %s\n') % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
@@ -362,22 +359,40 @@ def expand(ui, repo, *pats, **opts):
     _kwfwrite(ui, repo, True, *pats, **opts)
 
 def files(ui, repo, *pats, **opts):
-    '''print files currently configured for keyword expansion
+    '''show files configured for keyword expansion
 
-    Crosscheck which files in working directory are potential targets
-    for keyword expansion. That is, files matched by [keyword] config
-    patterns but not symlinks.
+    List which files in the working directory are matched by the
+    [keyword] configuration patterns.
+
+    Useful to prevent inadvertent keyword expansion and to speed up
+    execution by including only files that are actual candidates
+    for expansion.
+
+    See "hg help keyword" on how to construct patterns both for
+    inclusion and exclusion of files.
+
+    Use -u/--untracked to list untracked files as well.
+
+    With -a/--all and -v/--verbose the codes used to show the status
+    of files are:
+    K = keyword expansion candidate
+    k = keyword expansion candidate (untracked)
+    I = ignored
+    i = ignored (untracked)
     '''
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
-    files = sorted(modified + added + clean + unknown)
+    files = sorted(modified + added + clean)
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
+    kwuntracked = [f for f in unknown if kwt.iskwfile(f, wctx.flags)]
     cwd = pats and repo.getcwd() or ''
-    kwfstats = not opts.get('ignore') and (('K', kwfiles),) or ()
+    kwfstats = (not opts.get('ignore') and
+                (('K', kwfiles), ('k', kwuntracked),) or ())
     if opts.get('all') or opts.get('ignore'):
-        kwfstats += (('I', [f for f in files if f not in kwfiles]),)
+        kwfstats += (('I', [f for f in files if f not in kwfiles]),
+                     ('i', [f for f in unknown if f not in kwuntracked]),)
     for char, filenames in kwfstats:
         fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
         for f in filenames:

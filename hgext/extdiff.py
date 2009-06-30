@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''allow external programs to compare revisions
+'''command to allow external programs to compare revisions
 
 The `extdiff' Mercurial extension allows you to use external programs
 to compare revisions, or revision with working directory. The external diff

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''work with a stack of patches
+'''manage a stack of patches
 
 This extension lets you work with a stack of patches in a Mercurial
 repository. It manages two stacks of patches - all known patches, and
@@ -1641,11 +1641,8 @@ class queue(object):
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
-    The patches must not be applied, and at least one patch is
-    required.
-
-    With -k/--keep, the patch files are preserved in the patch
-    directory.
+    The patches must not be applied, and at least one patch is required. With
+    -k/--keep, the patch files are preserved in the patch directory.
 
     To stop managing a patch and move it into permanent history,
     use the qfinish command."""
@@ -2624,5 +2621,5 @@ cmdtable = {
     "qfinish":
         (finish,
          [('a', 'applied', None, _('finish all applied changesets'))],
-         _('hg qfinish [-a] [REV...]')),
+         _('hg qfinish [-a] [REV]...')),
 }

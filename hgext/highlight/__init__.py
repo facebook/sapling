@@ -8,7 +8,7 @@
 # The original module was split in an interface and an implementation
 # file to defer pygments loading and speedup extension setup.
 
-"""syntax highlighting for hgweb
+"""syntax highlighting for hgweb (requires Pygments)
 
 It depends on the Pygments syntax highlighting library:
 http://pygments.org/
@@ -19,8 +19,6 @@ There is a single configuration option:
 pygments_style = <style>
 
 The default is 'colorful'.
-
--- Adam Hupp <adam@hupp.org>
 """
 
 import highlight

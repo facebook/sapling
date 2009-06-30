@@ -58,10 +58,10 @@ summary:     a
 %% earlygetopt with illegal abbreviations
 abort: Option --config may not be abbreviated!
 abort: Option --cwd may not be abbreviated!
-abort: Option -R has to be separated from other options (i.e. not -qR) and --repository may only be abbreviated as --repo!
-abort: Option -R has to be separated from other options (i.e. not -qR) and --repository may only be abbreviated as --repo!
-abort: Option -R has to be separated from other options (i.e. not -qR) and --repository may only be abbreviated as --repo!
-abort: Option -R has to be separated from other options (i.e. not -qR) and --repository may only be abbreviated as --repo!
+abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
 %% --cwd
 changeset:   0:8580ff50825a
 tag:         tip

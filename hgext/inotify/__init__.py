@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''accelerate status report using system level services'''
+'''accelerate status report using Linux's inotify service'''
 
 # todo: socket permissions
 
@@ -107,5 +107,5 @@ cmdtable = {
           ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('t', 'idle-timeout', '', _('minutes to sit idle before exiting')),
           ('', 'pid-file', '', _('name of file to write process ID to'))],
-         _('hg inserve [OPT]...')),
+         _('hg inserve [OPTION]...')),
     }

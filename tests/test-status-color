@@ -61,6 +61,9 @@ hg remove removed
 rm deleted
 hg copy modified copied
 
+echo "% test unknown color"
+hg --config color.status.modified=periwinkle status --color=always
+
 # Run status with 2 different flags.
 # Check if result is the same or different.
 # If result is not as expected, raise error

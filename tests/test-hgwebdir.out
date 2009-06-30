@@ -56,7 +56,7 @@ error: repository c not found
 
 <div class="container">
 <div class="menu">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
 </div>
 <div class="main">
@@ -192,7 +192,7 @@ error: repository c not found
 
 <div class="container">
 <div class="menu">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
 </div>
 <div class="main">

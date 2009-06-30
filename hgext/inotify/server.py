@@ -288,14 +288,6 @@ class repowatcher(pollable):
         self.add_watch(self.repo.path, inotify.IN_DELETE)
         self.check_dirstate()
 
-    def wpath(self, evt):
-        path = evt.fullpath
-        if path == self.repo.root:
-            return ''
-        if path.startswith(self.wprefix):
-            return path[len(self.wprefix):]
-        raise 'wtf? ' + path
-
     def dir(self, tree, path):
         if path:
             for name in path.split('/'):
@@ -585,7 +577,9 @@ class repowatcher(pollable):
             self.ui.note(_('%s reading %d events\n') %
                          (self.event_time(), len(events)))
         for evt in events:
-            wpath = self.wpath(evt)
+            assert evt.fullpath.startswith(self.wprefix)
+            wpath = evt.fullpath[len(self.wprefix):]
+
             if evt.mask & inotify.IN_UNMOUNT:
                 self.process_unmount(wpath, evt)
             elif evt.mask & (inotify.IN_MODIFY | inotify.IN_ATTRIB):
@@ -717,6 +711,12 @@ class server(pollable):
         if version != common.version:
             self.ui.warn(_('received query from incompatible client '
                            'version %d\n') % version)
+            try:
+                # try to send back our version to the client
+                # this way, the client too is informed of the mismatch
+                sock.sendall(chr(common.version))
+            except:
+                pass
             return
 
         type = cs.read(4)

@@ -277,7 +277,7 @@ class ui(object):
         insensitive. If ui is not interactive, the default is returned.
         """
         if not self.interactive():
-            self.note(msg, ' ', default, "\n")
+            self.write(msg, ' ', default, "\n")
             return default
         while True:
             try:

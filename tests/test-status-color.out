@@ -124,3 +124,11 @@ adding .hgignore
 adding deleted
 adding modified
 adding removed
+% test unknown color
+ignoring unknown color/effect 'periwinkle' (configured in color.status.modified)
+M modified
+[0;32;1mA added[0m
+[0;32;1mA copied[0m
+[0;31;1mR removed[0m
+[0;36;1;4m! deleted[0m
+[0;35;1;4m? unknown[0m

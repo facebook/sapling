@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, textwrap, subprocess, difflib, time
+import os, re, sys, subprocess, difflib, time
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
 import patch, help, mdiff, tempfile, url, encoding
 import archival, changegroup, cmdutil, sshserver, hbisect
@@ -440,7 +440,7 @@ def branches(ui, repo, active=False):
     """list repository named branches
 
     List the repository's named branches, indicating which ones are
-    inactive. If active is specified, only show active branches.
+    inactive. If -a/--active is specified, only show active branches.
 
     A branch is considered active if it contains repository heads.
 
@@ -484,8 +484,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     parameters. To create a bundle containing all changesets, use
     -a/--all (or --base null).
 
-    To change the compression method applied, use the -t/--type
-    option. The available compression methods are: none, bzip2, and
+    You can change compression method with the -t/--type option.
+    The available compression methods are: none, bzip2, and
     gzip (by default, bundles are compressed using bzip2).
 
     The bundle file can then be transferred using conventional means
@@ -987,7 +987,7 @@ def debuginstall(ui):
                        " or misconfigured. Please check your .hgrc file)\n"))
         else:
             ui.write(_(" Internal patcher failure, please report this error"
-                       " to http://www.selenic.com/mercurial/bts\n"))
+                       " to http://mercurial.selenic.com/bts/\n"))
     problems += patchproblems
 
     os.unlink(fa)
@@ -1368,7 +1368,7 @@ def heads(ui, repo, *branchrevs, **opts):
     branch is called the revision's branch tag.
 
     Branch heads are revisions on a given named branch that do not have
-    any children on the same branch. A branch head could be a true head
+    any descendants on the same branch. A branch head could be a true head
     or it could be the last changeset on a branch before a new branch
     was created. If none of the branch heads are true heads, the branch
     is considered inactive.
@@ -1514,7 +1514,7 @@ def help_(ui, name=None, with_version=False):
                 commands = cmds[f].replace("|",", ")
                 ui.write(" %s:\n      %s\n"%(commands, h[f]))
             else:
-                ui.write(' %-*s   %s\n' % (m, f, h[f]))
+                ui.write(' %-*s   %s\n' % (m, f, util.wrap(h[f], m + 4)))
 
         if name != 'shortlist':
             exts, maxlength = extensions.enabled()
@@ -1617,11 +1617,8 @@ def help_(ui, name=None, with_version=False):
         opts_len = max([len(line[0]) for line in opt_output if line[1]] or [0])
         for first, second in opt_output:
             if second:
-                # wrap descriptions at 70 characters, just like the
-                # main help texts
-                second = textwrap.wrap(second, width=70 - opts_len - 3)
-                pad = '\n' + ' ' * (opts_len + 3)
-                ui.write(" %-*s  %s\n" % (opts_len, first, pad.join(second)))
+                second = util.wrap(second, opts_len + 3)
+                ui.write(" %-*s  %s\n" % (opts_len, first, second))
             else:
                 ui.write("%s\n" % first)
 
@@ -1729,7 +1726,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     With -s/--similarity, hg will attempt to discover renames and
     copies in the patch in the same way as 'addremove'.
 
-    To read a patch from standard input, use "-" as the patch name.
+    To read a patch from standard input, use "-" as the patch name. If
+    a URL is specified, the patch will be downloaded from it.
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
     patches = (patch1,) + patches

@@ -106,7 +106,7 @@ diff -r 000000000000 -r 6563da9dcf87 b
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -189,7 +189,7 @@ files, or words in the commit message</div>
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -272,7 +272,7 @@ files, or words in the commit message</div>
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -350,7 +350,7 @@ files, or words in the commit message</div>
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -424,7 +424,7 @@ files, or words in the commit message</div>
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
 </div>
 <ul>
@@ -559,7 +559,7 @@ b@1e88685f5dde
 
 
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
 

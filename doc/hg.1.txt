@@ -75,7 +75,7 @@ Written by Matt Mackall <mpm@selenic.com>
 
 RESOURCES
 ---------
-http://selenic.com/mercurial[Main Web Site]
+http://mercurial.selenic.com/[Main Web Site]
 
 http://selenic.com/hg[Source code repository]
 

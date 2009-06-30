@@ -103,7 +103,7 @@ hg clone full.hg full-clone
 hg -R full-clone heads
 rm -r full-clone
 
-# test for http://www.selenic.com/mercurial/bts/issue216
+# test for http://mercurial.selenic.com/bts/issue216
 echo "====== Unbundle incremental bundles into fresh empty in one go"
 rm -r empty
 hg init empty
@@ -131,7 +131,7 @@ cd ../orig
 hg incoming ../bundle.hg
 cd ..
 
-# test for http://www.selenic.com/mercurial/bts/issue1144
+# test for http://mercurial.selenic.com/bts/issue1144
 echo "===== test that verify bundle does not traceback"
 # partial history bundle, fails w/ unkown parent
 hg -R bundle.hg verify

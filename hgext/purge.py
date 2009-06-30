@@ -1,6 +1,6 @@
 # Copyright (C) 2006 - Marco Barisione <marco@barisione.org>
 #
-# This is a small extension for Mercurial (http://www.selenic.com/mercurial)
+# This is a small extension for Mercurial (http://mercurial.selenic.com/)
 # that removes files not known to mercurial
 #
 # This program was inspired by the "cvspurge" script contained in CVS utilities
@@ -23,7 +23,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-'''delete files not tracked from the working directory'''
+'''command to delete untracked files from the working directory'''
 
 from mercurial import util, commands, cmdutil
 from mercurial.i18n import _

@@ -172,7 +172,7 @@ marked working directory as branch stable
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -251,7 +251,7 @@ files, or words in the commit message</div>
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -378,7 +378,7 @@ drwxr-xr-x da
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="/static/hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
@@ -502,7 +502,7 @@ files, or words in the commit message</div>
 <body>
 
 <div class="page_header">
-<a href="http://127.0.0.1/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / branches
+<a href="http://127.0.0.1/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / branches
 </div>
 
 <div class="page_nav">
@@ -573,7 +573,7 @@ branches |
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / summary
+<a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / summary
 
 <form action="/log">
 <input type="hidden" name="style" value="gitweb" />
@@ -724,7 +724,7 @@ summary |
 <body>
 
 <div class="page_header">
-<a href="http://www.selenic.com/mercurial/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / graph
+<a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / graph
 </div>
 
 <form action="/log">

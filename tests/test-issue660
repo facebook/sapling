@@ -1,5 +1,5 @@
 #!/bin/sh
-# http://www.selenic.com/mercurial/bts/issue660
+# http://mercurial.selenic.com/bts/issue660
 
 
 hg init a

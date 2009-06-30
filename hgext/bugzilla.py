@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-'''integrate Mercurial with a Bugzilla bug tracker
+'''hooks for integrating with the Bugzilla bug tracker
 
 This hook extension adds comments on bugs in Bugzilla when changesets
 that refer to bugs by Bugzilla ID are seen. The hook does not change

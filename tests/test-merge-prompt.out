@@ -4,6 +4,10 @@ adding file2
 created new head
 
 # non-interactive merge
+ local changed file1 which remote deleted
+use (c)hanged version or (d)elete? c
+remote changed file2 which local deleted
+use (c)hanged version or leave (d)eleted? c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 status:

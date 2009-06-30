@@ -143,7 +143,7 @@ def _runcatch(ui, args):
     except:
         ui.warn(_("** unknown exception encountered, details follow\n"))
         ui.warn(_("** report bug details to "
-                 "http://www.selenic.com/mercurial/bts\n"))
+                 "http://mercurial.selenic.com/bts/\n"))
         ui.warn(_("** or mercurial@selenic.com\n"))
         ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
                % util.version())

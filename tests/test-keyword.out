@@ -50,14 +50,14 @@ list of commands:
 
  kwdemo     print [keywordmaps] configuration and an expansion example
  kwexpand   expand keywords in the working directory
- kwfiles    print files currently configured for keyword expansion
+ kwfiles    show files configured for keyword expansion
  kwshrink   revert expanded keywords in the working directory
 
 enabled extensions:
 
  keyword   expand keywords in tracked files
- mq        work with a stack of patches
- notify    send e-mail notifications for commits/pushes
+ mq        manage a stack of patches
+ notify    hooks for sending email notifications at commit/push time
 
 use "hg -v help keyword" to show aliases and global options
 % hg kwdemo

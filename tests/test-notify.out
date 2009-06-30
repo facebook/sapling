@@ -1,4 +1,4 @@
-notify extension - send e-mail notifications for commits/pushes
+notify extension - hooks for sending email notifications at commit/push time
 
 Subscriptions can be managed through hgrc. Default mode is to print
 messages to stdout, for testing and configuring.

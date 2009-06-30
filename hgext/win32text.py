@@ -48,7 +48,7 @@ def checknewline(s, newline, ui=None, repo=None, filename=None):
     # warn if already has 'newline' in repository.
     # it might cause unexpected eol conversion.
     # see issue 302:
-    #   http://www.selenic.com/mercurial/bts/issue302
+    #   http://mercurial.selenic.com/bts/issue302
     if newline in s and ui and filename and repo:
         ui.warn(_('WARNING: %s already has %s line endings\n'
                   'and does not need EOL conversion by the win32text plugin.\n'
