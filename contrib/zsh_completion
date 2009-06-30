@@ -14,7 +14,7 @@
 # compinit
 #
 # Copyright (C) 2005, 2006 Steve Borho <steve@borho.org>
-# Copyright (C) 2006, 2007, 2008 Brendan Cully <brendan@kublai.com>
+# Copyright (C) 2006-9 Brendan Cully <brendan@kublai.com>
 #
 # Permission is hereby granted, without written agreement and without
 # licence or royalty fees, to use, copy, modify, and distribute this
@@ -754,6 +754,18 @@ _hg_qunapplied() {
   (( $#patches )) && _describe -t hg-unapplied-patches 'unapplied patches' patches
 }
 
+# unapplied, including guarded patches
+_hg_qdeletable() {
+  typeset -a unapplied
+  unapplied=(${(f)"$(_hg_cmd qseries 2>/dev/null)"})
+  for p in $(_hg_cmd qapplied 2>/dev/null)
+  do
+    unapplied=(${unapplied:#$p})
+  done
+
+  (( $#unapplied )) && _describe -t hg-allunapplied-patches 'all unapplied patches' unapplied
+}
+
 _hg_qguards() {
   typeset -a guards
   local guard
@@ -776,7 +788,7 @@ _hg_cmd_qdelete() {
   _arguments -s -w : $_hg_global_opts \
   '(--keep -k)'{-k,--keep}'[keep patch file]' \
   '*'{-r+,--rev}'[stop managing a revision]:applied patch:_hg_revrange' \
-  '*:unapplied patch:_hg_qunapplied'
+  '*:unapplied patch:_hg_qdeletable'
 }
 
 _hg_cmd_qdiff() {
