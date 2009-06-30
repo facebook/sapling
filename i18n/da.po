@@ -7,7 +7,7 @@
 # changeset           ændring
 # commit              deponere
 # merge               sammenføje
-# patch               rettelse
+# patch               lap
 # repo(sitory)        depot
 # revision            revision
 # tag                 mærkat
@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-06-24 17:38+0200\n"
-"PO-Revision-Date: 2009-06-30 20:24+0200\n"
+"PO-Revision-Date: 2009-06-30 23:15+0200\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -1630,7 +1630,7 @@ msgid "no changes found\n"
 msgstr "fandt ingen ændringer\n"
 
 msgid "show the revision DAG"
-msgstr ""
+msgstr "vis revisionsgrafen"
 
 msgid "limit number of changes displayed"
 msgstr "begræns antaln viste ændringer"
@@ -1728,10 +1728,10 @@ msgid "diff trees from two commits"
 msgstr ""
 
 msgid "output common ancestor information"
-msgstr ""
+msgstr "udskriv information om fælles forfar"
 
 msgid "cat a specific revision"
-msgstr ""
+msgstr "udskriv en bestemt revision"
 
 msgid "cat-file: type or revision not supplied\n"
 msgstr ""
@@ -1755,7 +1755,7 @@ msgid "hg view [-l LIMIT] [REVRANGE]"
 msgstr "hg view [-l GRÆNSE] [REV-INTERVAL]"
 
 msgid "generate patch"
-msgstr ""
+msgstr "generer lap"
 
 msgid "recursive"
 msgstr "rekursiv"
@@ -2205,26 +2205,26 @@ msgstr ""
 "arbejd med en stak af lapper\n"
 "\n"
 "Denne udvidelse lader dig arbejde med en stak af lapper (patches) i et\n"
-"Mercurial repository. Den håndterer to stakke af patches - alle kendte\n"
-"patches og alle anvendte patches (en delmængde af de kendte patches).\n"
+"Mercurial repository. Den håndterer to stakke af lapper - alle kendte\n"
+"lapper og alle anvendte lapper (en delmængde af de kendte lapper).\n"
 "\n"
-"Kendte patches er repræsenteret som patch-filer i .hg/patches\n"
-"biblioteket. Anvendte patches er både patch-filer og Mercurial\n"
+"Kendte lapper er repræsenteret som lap-filer i .hg/patches\n"
+"biblioteket. Anvendte lapper er både lap-filer og Mercurial\n"
 "ændringer.\n"
 "\n"
 "Almindelige opgaver (brug \"hg help kommado\" for flere detaljer):\n"
 "\n"
-"forbered repository til at arbejde med patches   qinit\n"
-"opret ny patch                                   qnew\n"
-"importer eksisterende patch                      qimport\n"
+"forbered repository til at arbejde med lapper    qinit\n"
+"opret ny lap                                     qnew\n"
+"importer eksisterende lap                        qimport\n"
 "\n"
-"list patch-serien                                qseries\n"
-"list anvendte patches                            qapplied\n"
-"list navnet på den øverste patch                 qtop\n"
+"list lap-serien                                  qseries\n"
+"list anvendte lapper                             qapplied\n"
+"list navnet på den øverste lap                   qtop\n"
 "\n"
-"anvend og put patch på stakken                   qpush\n"
-"fjern patch fra stakken                          qpop\n"
-"genopfrisk indholdet af den øverste patch        qrefresh\n"
+"anvend og put lap på stakken                     qpush\n"
+"fjern lap fra stakken                            qpop\n"
+"genopfrisk indholdet af den øverste lap          qrefresh\n"
 
 #, python-format
 msgid "%s appears more than once in %s"
@@ -2279,11 +2279,11 @@ msgstr ""
 
 #, python-format
 msgid "apply failed for patch %s"
-msgstr ""
+msgstr "lap %s kunne ikke anvendes"
 
 #, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr ""
+msgstr "lap virkede ikke, sammenføjer %s\n"
 
 #, python-format
 msgid "update returned %d"
@@ -2298,14 +2298,14 @@ msgstr "ikke i stand til at læse %s"
 
 #, python-format
 msgid "patch %s does not exist\n"
-msgstr "rettelsen %s findes ikke\n"
+msgstr "lappen %s findes ikke\n"
 
 #, python-format
 msgid "patch %s is not applied\n"
-msgstr "rettelsen %s er ikke anvendt\n"
+msgstr "lappen %s er ikke anvendt\n"
 
 msgid "patch failed, unable to continue (try -v)\n"
-msgstr ""
+msgstr "lapning fejlede, kan ikke fortsætte (prøv -v)\n"
 
 #, python-format
 msgid "applying %s\n"
@@ -2317,22 +2317,20 @@ msgstr "kan ikke læse %s\n"
 
 #, python-format
 msgid "imported patch %s\n"
-msgstr "importeret rettelse %s\n"
+msgstr "importeret lap %s\n"
 
 #, python-format
 msgid ""
 "\n"
 "imported patch %s"
-msgstr ""
-"\n"
-"importeret rettelse %s"
+msgstr "\nimporteret lap %s"
 
 #, python-format
 msgid "patch %s is empty\n"
-msgstr "rettelse %s er tom\n"
+msgstr "lappen %s er tom\n"
 
 msgid "patch failed, rejects left in working dir\n"
-msgstr ""
+msgstr "lapning fejlede, afvisninger efter efterladt i arbejdskataloget\n"
 
 msgid "fuzz found when applying patch, stopping\n"
 msgstr ""
@@ -2343,28 +2341,28 @@ msgstr ""
 
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr "kan ikke slette revision %d ovenover anvendte rettelser"
+msgstr "kan ikke slette revision %d ovenover anvendte lapper"
 
 #, python-format
 msgid "patch %s finalized without changeset message\n"
-msgstr ""
+msgstr "lappen %s er færdiggjort uden en ændringsbesked\n"
 
 msgid "qdelete requires at least one revision or patch name"
-msgstr ""
+msgstr "qdelete kræver mindst en revision eller navnet på en lap"
 
 #, python-format
 msgid "cannot delete applied patch %s"
-msgstr "kan ikke slette den anvendte rettelse %s"
+msgstr "kan ikke slette den anvendte lap %s"
 
 #, python-format
 msgid "patch %s not in series file"
-msgstr "rettelse %s er ikke i series filen"
+msgstr "lappen %s er ikke i series filen"
 
 msgid "no patches applied"
-msgstr "ingen rettelser anvendt"
+msgstr "ingen lapper anvendt"
 
 msgid "working directory revision is not qtip"
-msgstr ""
+msgstr "arbejdskatalogets revision er ikke qtip"
 
 msgid "local changes found, refresh first"
 msgstr "lokale ændringer fundet, genopfrisk først"
@@ -2374,11 +2372,11 @@ msgstr "lokale ændringer fundet"
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
+msgstr "\"%s\" kan ikke bruges som navnet på en lap"
 
 #, python-format
 msgid "patch \"%s\" already exists"
-msgstr "rettelsen \"%s\" findes allerede"
+msgstr "lappen \"%s\" findes allerede"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -2386,7 +2384,7 @@ msgstr "fejl ved sletning af %s\n"
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
-msgstr "rettelsen \"%s\" er tvetydigt:\n"
+msgstr "lappen \"%s\" er tvetydigt:\n"
 
 #, python-format
 msgid "patch %s not in series"
@@ -2418,7 +2416,7 @@ msgid "cannot push '%s' - %s\n"
 msgstr "kan ikke skubbe '%s' - %s\n"
 
 msgid "all patches are currently applied\n"
-msgstr "alle rettelser er i øjeblikket anvendt\n"
+msgstr "alle lapper er i øjeblikket anvendt\n"
 
 msgid "patch series already fully applied\n"
 msgstr ""
@@ -2436,10 +2434,10 @@ msgstr "nu ved: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
-msgstr "rettelse %s er ikke anvendt"
+msgstr "lappen %s er ikke anvendt"
 
 msgid "no patches applied\n"
-msgstr "ingen rettelser anvendt\n"
+msgstr "ingen lapper anvendt\n"
 
 #, python-format
 msgid "qpop: %s is already at the top\n"
@@ -2459,7 +2457,7 @@ msgid "deletions found between repo revs"
 msgstr ""
 
 msgid "patch queue now empty\n"
-msgstr "rettelseskøen er nu tom\n"
+msgstr "køen af lapper er nu tom\n"
 
 msgid "cannot refresh a revision with children"
 msgstr ""
@@ -2474,7 +2472,7 @@ msgstr ""
 
 #, python-format
 msgid "patch %s is not in series file"
-msgstr "rettelse %s er ikke i series filen"
+msgstr "lappen %s er ikke i series filen"
 
 msgid "No saved patch data found\n"
 msgstr ""
@@ -2551,7 +2549,7 @@ msgstr "-e er ikke kompatibelt med importering fra -"
 
 #, python-format
 msgid "patch %s does not exist"
-msgstr "rettelse %s eksisterer ikke"
+msgstr "lappen %s eksisterer ikke"
 
 msgid "need --name to import a patch from -"
 msgstr "har brug for --name for at importere lap fra -"
@@ -2574,10 +2572,10 @@ msgid ""
 msgstr ""
 
 msgid "print the patches already applied"
-msgstr "udskriver rettelserne som allerede er anvendt"
+msgstr "udskriver lapperne som allerede er anvendt"
 
 msgid "print the patches not yet applied"
-msgstr "udskriver rettelserne som ikke er anvendt endnu"
+msgstr "udskriver lapperne som ikke er anvendt endnu"
 
 msgid ""
 "import a patch\n"
@@ -2669,13 +2667,13 @@ msgid ""
 msgstr ""
 
 msgid "versioned patch repository not found (see qinit -c)"
-msgstr "versionsstyret depot til rettelser blev ikke fundet (se qinit -c)"
+msgstr "versionsstyret depot til lapper blev ikke fundet (se qinit -c)"
 
 msgid "cloning main repository\n"
 msgstr "kloner hoveddepot\n"
 
 msgid "cloning patch repository\n"
-msgstr "kloner rettelsesdepot\n"
+msgstr "kloner depotet til lapper\n"
 
 msgid "stripping applied patches from destination repository\n"
 msgstr ""
@@ -2690,19 +2688,19 @@ msgid "print the entire series file"
 msgstr "udskriver hele series filen"
 
 msgid "print the name of the current patch"
-msgstr "udskriver navnet på den nuværende rettelse"
+msgstr "udskriver navnet på den nuværende lap"
 
 msgid "print the name of the next patch"
-msgstr "udskriver navnet på den næste rettelse"
+msgstr "udskriver navnet på den næste lap"
 
 msgid "all patches applied\n"
-msgstr "alle rettelser er anvendt\n"
+msgstr "alle lapper er anvendt\n"
 
 msgid "print the name of the previous patch"
-msgstr "udskriver navnet på den forgående rettelse"
+msgstr "udskriver navnet på den forgående lap"
 
 msgid "only one patch applied\n"
-msgstr "kun én rettelse er anvendt\n"
+msgstr "kun én lap er anvendt\n"
 
 msgid ""
 "create a new patch\n"
@@ -2809,7 +2807,7 @@ msgid "qfold requires at least one patch name"
 msgstr ""
 
 msgid "No patches applied"
-msgstr "Ingen rettelser anvendt"
+msgstr "Der er ikke anvendt nogen lapper"
 
 #, python-format
 msgid "Skipping already folded patch %s"
@@ -3112,7 +3110,7 @@ msgid "import file in patch directory"
 msgstr ""
 
 msgid "name of patch file"
-msgstr "navn på rettelsesfil"
+msgstr "navn på lap"
 
 msgid "overwrite existing files"
 msgstr ""
