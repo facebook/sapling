@@ -189,7 +189,8 @@ class kwtemplater(object):
                 if found:
                     notify(msg % f)
                     self.repo.wwrite(f, data, mf.flags(f))
-                    self.repo.dirstate.normal(f)
+                    if node is None:
+                        self.repo.dirstate.normal(f)
             self.restrict = False
 
     def shrinktext(self, text):
@@ -460,8 +461,14 @@ def reposetup(ui, repo):
 
         def commit(self, text='', user=None, date=None, match=None,
                    force=False, editor=None, extra={}):
+            # use custom commitctx for user commands
+            # other extensions can still wrap repo.commitctx directly
+            repo.commitctx = self.kwcommitctx
+            return super(kwrepo, self).commit(text, user, date, match, force,
+                         editor, extra)
+
+        def kwcommitctx(self, ctx, error=False):
             wlock = lock = None
-            _p1 = _p2 = None
             try:
                 wlock = self.wlock()
                 lock = self.lock()
@@ -472,23 +479,17 @@ def reposetup(ui, repo):
                         commithooks[name] = cmd
                         ui.setconfig('hooks', name, None)
                 if commithooks:
-                    # store parents for commit hook environment
-                    _p1, _p2 = repo.dirstate.parents()
-                    _p1 = hex(_p1)
-                    if _p2 == nullid:
-                        _p2 = ''
-                    else:
-                        _p2 = hex(_p2)
+                    # store parents for commit hooks
+                    p1, p2 = ctx.p1(), ctx.p2()
+                    xp1, xp2 = p1.hex(), p2 and p2.hex() or ''
 
-                n = super(kwrepo, self).commit(text, user, date, match, force,
-                                               editor, extra)
+                n = super(kwrepo, self).commitctx(ctx, error)
 
-                # restore commit hooks
-                for name, cmd in commithooks.iteritems():
-                    ui.setconfig('hooks', name, cmd)
-                if n is not None:
-                    kwt.overwrite(n, True, None)
-                    repo.hook('commit', node=n, parent1=_p1, parent2=_p2)
+                kwt.overwrite(n, True, None)
+                if commithooks:
+                    for name, cmd in commithooks.iteritems():
+                        ui.setconfig('hooks', name, cmd)
+                    repo.hook('commit', node=n, parent1=xp1, parent2=xp2)
                 return n
             finally:
                 release(lock, wlock)
