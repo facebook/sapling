@@ -297,7 +297,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         dry_run = opts.get('dry_run')
     if similarity is None:
         similarity = float(opts.get('similarity') or 0)
-    add, remove = [], []
+    unknown, deleted = [], []
     audit_path = util.path_auditor(repo.root)
     m = match(repo, pats, opts)
     for abs in repo.walk(m):
@@ -310,17 +310,17 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         rel = m.rel(abs)
         exact = m.exact(abs)
         if good and abs not in repo.dirstate:
-            add.append(abs)
+            unknown.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
         if repo.dirstate[abs] != 'r' and (not good or not util.lexists(target)
             or (os.path.isdir(target) and not os.path.islink(target))):
-            remove.append(abs)
+            deleted.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
     if not dry_run:
-        repo.remove(remove)
-        repo.add(add)
+        repo.remove(deleted)
+        repo.add(unknown)
     if similarity > 0:
         for old, new, score in findrenames(repo, m, similarity):
             if repo.ui.verbose or not m.exact(old) or not m.exact(new):
