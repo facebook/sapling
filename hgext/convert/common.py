@@ -289,7 +289,7 @@ class commandline(object):
                 self.ui.warn(_('%s error:\n') % self.command)
                 self.ui.warn(output)
             msg = util.explain_exit(status)[0]
-            raise util.Abort(_('%s %s') % (self.command, msg))
+            raise util.Abort('%s %s' % (self.command, msg))
 
     def run0(self, cmd, *args, **kwargs):
         output, status = self.run(cmd, *args, **kwargs)
