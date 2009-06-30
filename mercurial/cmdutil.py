@@ -265,14 +265,15 @@ def matchall(repo):
 def matchfiles(repo, files):
     return _match.exact(repo.root, repo.getcwd(), files)
 
-def findrenames(repo, match, threshold):
+def findrenames(repo, added, removed, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
-    added, removed = repo.status(match=match)[1:3]
     ctx = repo['.']
     for a in added:
         aa = repo.wread(a)
         bestname, bestscore = None, threshold
         for r in removed:
+            if r not in ctx:
+                continue
             rr = ctx.filectx(r).data()
 
             # bdiff.blocks() returns blocks of matching lines
@@ -322,7 +323,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         repo.remove(deleted)
         repo.add(unknown)
     if similarity > 0:
-        for old, new, score in findrenames(repo, m, similarity):
+        for old, new, score in findrenames(repo, unknown, deleted, similarity):
             if repo.ui.verbose or not m.exact(old) or not m.exact(new):
                 repo.ui.status(_('recording removal of %s as rename to %s '
                                  '(%d%% similar)\n') %
