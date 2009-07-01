@@ -2,7 +2,6 @@
 #
 # Copyright(C) 2007 Daniel Holth et al
 
-import locale
 import os
 import re
 import sys

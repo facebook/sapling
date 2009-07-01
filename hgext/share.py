@@ -5,7 +5,6 @@
 
 '''share a common history between several working directories'''
 
-import os
 from mercurial.i18n import _
 from mercurial import hg, commands
 
