@@ -424,6 +424,11 @@ _hg_cmd_backout() {
     '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt'
 }
 
+_hg_cmd_branches() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--active -a)'{-a,--active}'[show only branches that have unmerge heads]'
+}
+
 _hg_cmd_bundle() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[run even when remote repository is unrelated]' \
