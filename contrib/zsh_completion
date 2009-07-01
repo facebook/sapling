@@ -424,6 +424,12 @@ _hg_cmd_backout() {
     '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt'
 }
 
+_hg_cmd_branch() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[set branch name even if it shadows an existing branch]' \
+  '(--clean -C)'{-C,--clean}'[reset branch name to parent branch name]'
+}
+
 _hg_cmd_branches() {
   _arguments -s -w : $_hg_global_opts \
   '(--active -a)'{-a,--active}'[show only branches that have unmerge heads]'
