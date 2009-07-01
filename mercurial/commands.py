@@ -419,7 +419,8 @@ def branch(ui, repo, label=None, **opts):
     the parent of the working directory, negating a previous branch
     change.
 
-    Use the command 'hg update' to switch to an existing branch.
+    Use the command 'hg update' to switch to an existing branch. Use
+    'hg commit --close-branch' to mark this branch as closed.
     """
 
     if opts.get('clean'):
@@ -1376,7 +1377,8 @@ def heads(ui, repo, *branchrevs, **opts):
     any descendants on the same branch. A branch head could be a true head
     or it could be the last changeset on a branch before a new branch
     was created. If none of the branch heads are true heads, the branch
-    is considered inactive.
+    is considered inactive. If -c/--closed is specified, also show branch
+    heads marked closed (see hg commit --close-branch).
 
     If STARTREV is specified only those heads (or branch heads) that
     are descendants of STARTREV will be displayed.
