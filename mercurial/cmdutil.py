@@ -1209,12 +1209,12 @@ def commit(ui, repo, commitfunc, pats, opts):
 
     return commitfunc(ui, repo, message, match(repo, pats, opts), opts)
 
-def commiteditor(repo, ctx):
+def commiteditor(repo, ctx, subs):
     if ctx.description():
         return ctx.description()
-    return commitforceeditor(repo, ctx)
+    return commitforceeditor(repo, ctx, subs)
 
-def commitforceeditor(repo, ctx):
+def commitforceeditor(repo, ctx, subs):
     edittext = []
     modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
     if ctx.description():
@@ -1231,6 +1231,7 @@ def commitforceeditor(repo, ctx):
     if ctx.branch():
         edittext.append(_("HG: branch '%s'")
                         % encoding.tolocal(ctx.branch()))
+    edittext.extend([_("HG: subrepo %s") % s for s in subs])
     edittext.extend([_("HG: added %s") % f for f in added])
     edittext.extend([_("HG: changed %s") % f for f in modified])
     edittext.extend([_("HG: removed %s") % f for f in removed])

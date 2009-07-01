@@ -872,7 +872,7 @@ class localrepository(repo.repository):
             cctx = context.workingctx(self, (p1, p2), text, user, date,
                                       extra, changes)
             if editor:
-                cctx._text = editor(self, cctx)
+                cctx._text = editor(self, cctx, subs)
 
             # commit subs
             if subs:
