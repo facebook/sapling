@@ -7,7 +7,7 @@
 # changeset           ændring
 # commit              deponere
 # merge               sammenføje
-# patch               rettelse
+# patch               lap
 # repo(sitory)        depot
 # revision            revision
 # tag                 mærkat
@@ -17,14 +17,13 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-06-24 17:38+0200\n"
-"PO-Revision-Date: 2009-06-27 13:35+0200\n"
+"POT-Creation-Date: 2009-06-30 23:18+0200\n"
+"PO-Revision-Date: 2009-06-30 23:28+0200\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: pygettext.py 1.5\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #, python-format
@@ -49,7 +48,7 @@ msgstr ""
 "\n"
 
 msgid ""
-"control access to a repository using simple hooks\n"
+"hooks for controlling repository access\n"
 "\n"
 "This hook makes it possible to allow or deny write access to portions\n"
 "of a repository when receiving incoming changesets.\n"
@@ -202,7 +201,7 @@ msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
 msgstr "hg bookmarks [-f] [-d] [-m NAVN] [-r REV] [NAVN]"
 
 msgid ""
-"integrate Mercurial with a Bugzilla bug tracker\n"
+"hooks for integrating with the Bugzilla bug tracker\n"
 "\n"
 "This hook extension adds comments on bugs in Bugzilla when changesets\n"
 "that refer to bugs by Bugzilla ID are seen. The hook does not change\n"
@@ -386,8 +385,8 @@ msgstr ""
 msgid "database error: %s"
 msgstr "databasefejl: %s"
 
-msgid "display children changesets"
-msgstr "vis børne-ændringer"
+msgid "command to display child changesets"
+msgstr "kommando til at vise børne-ændringer"
 
 msgid ""
 "show the children of the given or working directory revision\n"
@@ -414,8 +413,8 @@ msgstr "vis børn af den givne revision"
 msgid "hg children [-r REV] [FILE]"
 msgstr "hg children [-r REV] [FIL]"
 
-msgid "display statistics about repository history"
-msgstr "vis statistikker om revisionshistorikken"
+msgid "command to display statistics about repository history"
+msgstr "kommando til at vise statistikker om depotets historie"
 
 #, python-format
 msgid "Revision %d is a merge, ignoring...\n"
@@ -576,8 +575,12 @@ msgstr "hvornår der skal farvelægges (altid, automatisk eller aldrig)"
 msgid "don't colorize output"
 msgstr "farvelæg ikke output"
 
-msgid "import from foreign VCS repositories into Mercurial"
-msgstr "importer fra fremmede VCS depoter ind i Mercurial"
+#, python-format
+msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
+msgstr ""
+
+msgid "import revisions from foreign VCS repositories into Mercurial"
+msgstr "importer revisioner fra fremmede VCS depoter ind i Mercurial"
 
 msgid ""
 "convert a foreign SCM repository to a Mercurial one.\n"
@@ -907,12 +910,8 @@ msgid "%s error:\n"
 msgstr "%s fejl:\n"
 
 #, python-format
-msgid "%s %s"
-msgstr ""
-
-#, python-format
 msgid "syntax error in %s(%d): key/value pair expected"
-msgstr ""
+msgstr "syntaksfejl i %s(%d): nøgle/værdi-par forventet"
 
 #, python-format
 msgid "could not open map file %r: %s"
@@ -982,7 +981,7 @@ msgid "more than one sort mode specified"
 msgstr "mere end end sorteringsmetode angivet"
 
 msgid "--sourcesort is not supported by this data source"
-msgstr ""
+msgstr "--sourcesort er ikke supporteret at denne datakilde"
 
 msgid ""
 "warning: support for external cvsps is deprecated and will be removed in "
@@ -1006,7 +1005,7 @@ msgid "CVS pserver authentication failed"
 msgstr "CVS pserver godkendelse fejlede"
 
 msgid "server sucks"
-msgstr ""
+msgstr "serveren sutter"
 
 #, python-format
 msgid "%d bytes missing from remote file"
@@ -1078,6 +1077,8 @@ msgid ""
 "warning: CVS commit message references non-existent branch %r:\n"
 "%s\n"
 msgstr ""
+"advarsel: CVS deponeringsbesked refererer en ikke-eksisterende gren %r:\n"
+"%s\n"
 
 #, python-format
 msgid "%d changeset entries\n"
@@ -1325,7 +1326,7 @@ msgid "XXX TAGS NOT IMPLEMENTED YET\n"
 msgstr ""
 
 msgid ""
-"allow external programs to compare revisions\n"
+"command to allow external programs to compare revisions\n"
 "\n"
 "The `extdiff' Mercurial extension allows you to use external programs\n"
 "to compare revisions, or revision with working directory. The external diff\n"
@@ -1445,6 +1446,8 @@ msgstr ""
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
 msgstr ""
+"arbejdskataloget er ikke ved gren-spidsen (brug \"hg update\" for at hente "
+"gren-spidsen)"
 
 msgid "outstanding uncommitted merge"
 msgstr "udestående udeponeret sammenføjning"
@@ -1475,6 +1478,8 @@ msgid ""
 "not merging with %d other new branch heads (use \"hg heads .\" and \"hg merge"
 "\" to merge them)\n"
 msgstr ""
+"sammenføjer ikke med %d andre nye gren-hoveder (brug \"hg heads .\" og \"hg "
+"merge\" for at sammenføje dem)\n"
 
 #, python-format
 msgid "updating to %d:%s\n"
@@ -1493,13 +1498,13 @@ msgid "new changeset %d:%s merges remote changes with local\n"
 msgstr "ny ændring %d:%s fletter fjernændringer sammen med lokale\n"
 
 msgid "a specific revision you would like to pull"
-msgstr ""
+msgstr "en bestemt revision som du gerne vil hive ned"
 
 msgid "edit commit message"
 msgstr "rediger deponeringsbesked"
 
 msgid "edit commit message (DEPRECATED)"
-msgstr ""
+msgstr "rediger deponeringsbesked (FORÆLDET)"
 
 msgid "switch parents when merging"
 msgstr "ombyt forældre ved sammenføjning"
@@ -1507,8 +1512,8 @@ msgstr "ombyt forældre ved sammenføjning"
 msgid "hg fetch [SOURCE]"
 msgstr "hg fetch [KILDE]"
 
-msgid "sign and verify changesets"
-msgstr "underskriv og verificer ændringer"
+msgid "commands to sign and verify changesets"
+msgstr "kommandoer til at underskrive og verificere ændringer"
 
 msgid "error while verifying signature"
 msgstr "fejl ved verifikation af underskrift"
@@ -1559,6 +1564,8 @@ msgid ""
 "working copy of .hgsigs is changed (please commit .hgsigs manually or use --"
 "force)"
 msgstr ""
+"arbejdskopien af .hgsigs er ændret (deponer venligst .hgsigs manuelt eller "
+"brug --force)"
 
 #, python-format
 msgid "Added signature for changeset %s"
@@ -1571,10 +1578,10 @@ msgid "make the signature local"
 msgstr "lav underskriften lokal"
 
 msgid "sign even if the sigfile is modified"
-msgstr ""
+msgstr "underskriv selv hvis signaturfilen er ændret"
 
 msgid "do not commit the sigfile after signing"
-msgstr ""
+msgstr "deponer ikke signaturfilen efter underskrivning"
 
 msgid "the key id to sign with"
 msgstr "nøgle ID der skal underskrives med"
@@ -1592,7 +1599,7 @@ msgid "hg sigs"
 msgstr "hg sigs"
 
 msgid ""
-"show revision graphs in terminals\n"
+"command to view revision graphs from a shell\n"
 "\n"
 "This extension adds a --graph option to the incoming, outgoing and log\n"
 "commands. When this options is given, an ASCII representation of the\n"
@@ -1622,7 +1629,7 @@ msgid "no changes found\n"
 msgstr "fandt ingen ændringer\n"
 
 msgid "show the revision DAG"
-msgstr ""
+msgstr "vis revisionsgrafen"
 
 msgid "limit number of changes displayed"
 msgstr "begræns antaln viste ændringer"
@@ -1637,7 +1644,7 @@ msgid "hg glog [OPTION]... [FILE]"
 msgstr "hg glog [TILVALG]... [FIL]"
 
 msgid ""
-"integrate Mercurial with a CIA notification service\n"
+"hooks for integrating with the CIA.vc notification service\n"
 "\n"
 "This is meant to be run as a changegroup or incoming hook.\n"
 "To configure it, set the following options in your hgrc:\n"
@@ -1720,10 +1727,10 @@ msgid "diff trees from two commits"
 msgstr ""
 
 msgid "output common ancestor information"
-msgstr ""
+msgstr "udskriv information om fælles forfar"
 
 msgid "cat a specific revision"
-msgstr ""
+msgstr "udskriv en bestemt revision"
 
 msgid "cat-file: type or revision not supplied\n"
 msgstr ""
@@ -1735,31 +1742,31 @@ msgid "parse given revisions"
 msgstr ""
 
 msgid "print revisions"
-msgstr ""
+msgstr "udskriv revisioner"
 
 msgid "print extension options"
-msgstr ""
+msgstr "udskriv udvidelses valgmuligheder"
 
 msgid "start interactive history viewer"
-msgstr ""
+msgstr "start interaktiv historievisning"
 
 msgid "hg view [-l LIMIT] [REVRANGE]"
 msgstr "hg view [-l GRÆNSE] [REV-INTERVAL]"
 
 msgid "generate patch"
-msgstr ""
+msgstr "generer lap"
 
 msgid "recursive"
-msgstr ""
+msgstr "rekursiv"
 
 msgid "pretty"
-msgstr ""
+msgstr "pæn"
 
 msgid "stdin"
-msgstr ""
+msgstr "standardinddata"
 
 msgid "detect copies"
-msgstr ""
+msgstr "detekter kopier"
 
 msgid "search"
 msgstr "søg"
@@ -1773,8 +1780,8 @@ msgstr "hg debug-cat-file [TILVALG      ]... TYPE FIL"
 msgid "hg debug-config"
 msgstr "hg debug-config"
 
-msgid "hg debug-merge-base node node"
-msgstr "hg debug-merge-base knude knude"
+msgid "hg debug-merge-base REV REV"
+msgstr "hg debug-merge-base REV REV"
 
 msgid "ignored"
 msgstr "Ignoreret"
@@ -1786,19 +1793,19 @@ msgid "header"
 msgstr ""
 
 msgid "topo-order"
-msgstr ""
+msgstr "topologisk ordning"
 
 msgid "parents"
-msgstr ""
+msgstr "forældre"
 
 msgid "max-count"
 msgstr ""
 
-msgid "hg debug-rev-list [options] revs"
-msgstr "hg debug-rev-list [tilvalg] revisioner"
+msgid "hg debug-rev-list [OPTION]... REV..."
+msgstr "hg debug-rev-list [TILVALG]... REV..."
 
 msgid ""
-"syntax highlighting for hgweb\n"
+"syntax highlighting for hgweb (requires Pygments)\n"
 "\n"
 "It depends on the Pygments syntax highlighting library:\n"
 "http://pygments.org/\n"
@@ -1809,12 +1816,10 @@ msgid ""
 "pygments_style = <style>\n"
 "\n"
 "The default is 'colorful'.\n"
-"\n"
-"-- Adam Hupp <adam@hupp.org>\n"
 msgstr ""
 
-msgid "accelerate status report using system level services"
-msgstr "accelerer statusreporter ved hjælp af systemservices"
+msgid "accelerate status report using Linux's inotify service"
+msgstr "accelerer statusreporter ved brug af Linux's inotify service"
 
 msgid "start an inotify server for this repository"
 msgstr "start en inotify server for dette depot"
@@ -1836,12 +1841,12 @@ msgid "used internally by daemon mode"
 msgstr "brugt internt i daemon mode"
 
 msgid "minutes to sit idle before exiting"
-msgstr ""
+msgstr "antal minutter der skal ventes i tomgang før afslutning"
 
 msgid "name of file to write process ID to"
 msgstr "navn på fil at skrive process ID til"
 
-msgid "hg inserve [OPT]..."
+msgid "hg inserve [OPTION]..."
 msgstr "hg inserve [TILVALG]..."
 
 msgid "(found dead inotify server socket; removing it)\n"
@@ -2070,10 +2075,10 @@ msgid "overwriting %s shrinking keywords\n"
 msgstr ""
 
 msgid "[keyword] patterns cannot match"
-msgstr ""
+msgstr "[keyword] mønstre kan ikke matche"
 
 msgid "no [keyword] patterns configured"
-msgstr ""
+msgstr "ingen [keyword] mønstre konfigureret"
 
 msgid ""
 "print [keywordmaps] configuration and an expansion example\n"
@@ -2089,14 +2094,14 @@ msgid ""
 msgstr ""
 
 #, python-format
-msgid ""
-"\n"
-"\t%s\n"
-msgstr ""
-
-#, python-format
 msgid "creating temporary repository at %s\n"
 msgstr "opretter midlertidigt depot ved %s\n"
+
+#, python-format
+msgid ""
+"\n"
+"\tconfig using %s keyword template maps\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -2105,6 +2110,12 @@ msgid ""
 msgstr ""
 
 msgid "unhooked all commit hooks\n"
+msgstr ""
+
+#, python-format
+msgid ""
+"\n"
+"\t%s keywords expanded%s\n"
 msgstr ""
 
 #, python-format
@@ -2125,11 +2136,26 @@ msgid ""
 msgstr ""
 
 msgid ""
-"print files currently configured for keyword expansion\n"
+"show files configured for keyword expansion\n"
 "\n"
-"    Crosscheck which files in working directory are potential targets\n"
-"    for keyword expansion. That is, files matched by [keyword] config\n"
-"    patterns but not symlinks.\n"
+"    List which files in the working directory are matched by the\n"
+"    [keyword] configuration patterns.\n"
+"\n"
+"    Useful to prevent inadvertent keyword expansion and to speed up\n"
+"    execution by including only files that are actual candidates\n"
+"    for expansion.\n"
+"\n"
+"    See \"hg help keyword\" on how to construct patterns both for\n"
+"    inclusion and exclusion of files.\n"
+"\n"
+"    Use -u/--untracked to list untracked files as well.\n"
+"\n"
+"    With -a/--all and -v/--verbose the codes used to show the status\n"
+"    of files are:\n"
+"    K = keyword expansion candidate\n"
+"    k = keyword expansion candidate (untracked)\n"
+"    I = ignored\n"
+"    i = ignored (untracked)\n"
 "    "
 msgstr ""
 
@@ -2144,7 +2170,7 @@ msgid ""
 msgstr ""
 
 msgid "show default keyword template maps"
-msgstr ""
+msgstr "vis standard keyword skabelon-afbildninger"
 
 msgid "read maps from rcfile"
 msgstr ""
@@ -2156,13 +2182,13 @@ msgid "hg kwexpand [OPTION]... [FILE]..."
 msgstr "hg kwexpand [TILVALG]... [FIL]..."
 
 msgid "show keyword status flags of all files"
-msgstr ""
+msgstr "vis keyword status for alle filer"
 
 msgid "show files excluded from expansion"
-msgstr ""
+msgstr "vis filer ekskluderet fra ekspansion"
 
 msgid "additionally show untracked files"
-msgstr ""
+msgstr "vis også ikke-fulgte filer"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr "hg kwfiles [TILVALG]... [FIL]..."
@@ -2171,7 +2197,7 @@ msgid "hg kwshrink [OPTION]... [FILE]..."
 msgstr "hg kwshrink [TILVALG]... [FIL]..."
 
 msgid ""
-"work with a stack of patches\n"
+"manage a stack of patches\n"
 "\n"
 "This extension lets you work with a stack of patches in a Mercurial\n"
 "repository. It manages two stacks of patches - all known patches, and\n"
@@ -2194,29 +2220,29 @@ msgid ""
 "remove patch from applied stack           qpop\n"
 "refresh contents of top applied patch     qrefresh\n"
 msgstr ""
-"arbejd med en stak af lapper\n"
+"håndter en stak af lapper\n"
 "\n"
 "Denne udvidelse lader dig arbejde med en stak af lapper (patches) i et\n"
-"Mercurial repository. Den håndterer to stakke af patches - alle kendte\n"
-"patches og alle anvendte patches (en delmængde af de kendte patches).\n"
+"Mercurial repository. Den håndterer to stakke af lapper - alle kendte\n"
+"lapper og alle anvendte lapper (en delmængde af de kendte lapper).\n"
 "\n"
-"Kendte patches er repræsenteret som patch-filer i .hg/patches\n"
-"biblioteket. Anvendte patches er både patch-filer og Mercurial\n"
+"Kendte lapper er repræsenteret som lap-filer i .hg/patches\n"
+"biblioteket. Anvendte lapper er både lap-filer og Mercurial\n"
 "ændringer.\n"
 "\n"
 "Almindelige opgaver (brug \"hg help kommado\" for flere detaljer):\n"
 "\n"
-"forbered repository til at arbejde med patches   qinit\n"
-"opret ny patch                                   qnew\n"
-"importer eksisterende patch                      qimport\n"
+"forbered repository til at arbejde med lapper    qinit\n"
+"opret ny lap                                     qnew\n"
+"importer eksisterende lap                        qimport\n"
 "\n"
-"list patch-serien                                qseries\n"
-"list anvendte patches                            qapplied\n"
-"list navnet på den øverste patch                 qtop\n"
+"list lap-serien                                  qseries\n"
+"list anvendte lapper                             qapplied\n"
+"list navnet på den øverste lap                   qtop\n"
 "\n"
-"anvend og put patch på stakken                   qpush\n"
-"fjern patch fra stakken                          qpop\n"
-"genopfrisk indholdet af den øverste patch        qrefresh\n"
+"anvend og put lap på stakken                     qpush\n"
+"fjern lap fra stakken                            qpop\n"
+"genopfrisk indholdet af den øverste lap          qrefresh\n"
 
 #, python-format
 msgid "%s appears more than once in %s"
@@ -2271,18 +2297,18 @@ msgstr ""
 
 #, python-format
 msgid "apply failed for patch %s"
-msgstr ""
+msgstr "lap %s kunne ikke anvendes"
 
 #, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr ""
+msgstr "lap virkede ikke, sammenføjer %s\n"
 
 #, python-format
 msgid "update returned %d"
-msgstr ""
+msgstr "opdatering returnerede %d"
 
 msgid "repo commit failed"
-msgstr ""
+msgstr "deponering fejlede"
 
 #, python-format
 msgid "unable to read %s"
@@ -2290,14 +2316,14 @@ msgstr "ikke i stand til at læse %s"
 
 #, python-format
 msgid "patch %s does not exist\n"
-msgstr "rettelsen %s findes ikke\n"
+msgstr "lappen %s findes ikke\n"
 
 #, python-format
 msgid "patch %s is not applied\n"
-msgstr "rettelsen %s er ikke anvendt\n"
+msgstr "lappen %s er ikke anvendt\n"
 
 msgid "patch failed, unable to continue (try -v)\n"
-msgstr ""
+msgstr "lapning fejlede, kan ikke fortsætte (prøv -v)\n"
 
 #, python-format
 msgid "applying %s\n"
@@ -2309,7 +2335,7 @@ msgstr "kan ikke læse %s\n"
 
 #, python-format
 msgid "imported patch %s\n"
-msgstr "importeret rettelse %s\n"
+msgstr "importeret lap %s\n"
 
 #, python-format
 msgid ""
@@ -2317,14 +2343,14 @@ msgid ""
 "imported patch %s"
 msgstr ""
 "\n"
-"importeret rettelse %s"
+"importeret lap %s"
 
 #, python-format
 msgid "patch %s is empty\n"
-msgstr "rettelse %s er tom\n"
+msgstr "lappen %s er tom\n"
 
 msgid "patch failed, rejects left in working dir\n"
-msgstr ""
+msgstr "lapning fejlede, afvisninger efter efterladt i arbejdskataloget\n"
 
 msgid "fuzz found when applying patch, stopping\n"
 msgstr ""
@@ -2335,28 +2361,28 @@ msgstr ""
 
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr "kan ikke slette revision %d ovenover anvendte rettelser"
+msgstr "kan ikke slette revision %d ovenover anvendte lapper"
 
 #, python-format
 msgid "patch %s finalized without changeset message\n"
-msgstr ""
+msgstr "lappen %s er færdiggjort uden en ændringsbesked\n"
 
 msgid "qdelete requires at least one revision or patch name"
-msgstr ""
+msgstr "qdelete kræver mindst en revision eller navnet på en lap"
 
 #, python-format
 msgid "cannot delete applied patch %s"
-msgstr "kan ikke slette den anvendte rettelse %s"
+msgstr "kan ikke slette den anvendte lap %s"
 
 #, python-format
 msgid "patch %s not in series file"
-msgstr "rettelse %s er ikke i series filen"
+msgstr "lappen %s er ikke i series filen"
 
 msgid "no patches applied"
-msgstr "ingen rettelser anvendt"
+msgstr "ingen lapper anvendt"
 
 msgid "working directory revision is not qtip"
-msgstr ""
+msgstr "arbejdskatalogets revision er ikke qtip"
 
 msgid "local changes found, refresh first"
 msgstr "lokale ændringer fundet, genopfrisk først"
@@ -2366,11 +2392,11 @@ msgstr "lokale ændringer fundet"
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
+msgstr "\"%s\" kan ikke bruges som navnet på en lap"
 
 #, python-format
 msgid "patch \"%s\" already exists"
-msgstr "rettelsen \"%s\" findes allerede"
+msgstr "lappen \"%s\" findes allerede"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -2378,7 +2404,7 @@ msgstr "fejl ved sletning af %s\n"
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
-msgstr "rettelsen \"%s\" er tvetydigt:\n"
+msgstr "lappen \"%s\" er tvetydigt:\n"
 
 #, python-format
 msgid "patch %s not in series"
@@ -2410,7 +2436,7 @@ msgid "cannot push '%s' - %s\n"
 msgstr "kan ikke skubbe '%s' - %s\n"
 
 msgid "all patches are currently applied\n"
-msgstr "alle rettelser er i øjeblikket anvendt\n"
+msgstr "alle lapper er i øjeblikket anvendt\n"
 
 msgid "patch series already fully applied\n"
 msgstr ""
@@ -2428,10 +2454,10 @@ msgstr "nu ved: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
-msgstr "rettelse %s er ikke anvendt"
+msgstr "lappen %s er ikke anvendt"
 
 msgid "no patches applied\n"
-msgstr "ingen rettelser anvendt\n"
+msgstr "ingen lapper anvendt\n"
 
 #, python-format
 msgid "qpop: %s is already at the top\n"
@@ -2451,7 +2477,7 @@ msgid "deletions found between repo revs"
 msgstr ""
 
 msgid "patch queue now empty\n"
-msgstr "rettelseskøen er nu tom\n"
+msgstr "køen af lapper er nu tom\n"
 
 msgid "cannot refresh a revision with children"
 msgstr ""
@@ -2466,7 +2492,7 @@ msgstr ""
 
 #, python-format
 msgid "patch %s is not in series file"
-msgstr "rettelse %s er ikke i series filen"
+msgstr "lappen %s er ikke i series filen"
 
 msgid "No saved patch data found\n"
 msgstr ""
@@ -2543,7 +2569,7 @@ msgstr "-e er ikke kompatibelt med importering fra -"
 
 #, python-format
 msgid "patch %s does not exist"
-msgstr "rettelse %s eksisterer ikke"
+msgstr "lappen %s eksisterer ikke"
 
 msgid "need --name to import a patch from -"
 msgstr "har brug for --name for at importere lap fra -"
@@ -2555,21 +2581,19 @@ msgstr "tilføjer %s til series filen\n"
 msgid ""
 "remove patches from queue\n"
 "\n"
-"    The patches must not be applied, and at least one patch is\n"
-"    required.\n"
-"\n"
-"    With -k/--keep, the patch files are preserved in the patch\n"
-"    directory.\n"
+"    The patches must not be applied, and at least one patch is required. "
+"With\n"
+"    -k/--keep, the patch files are preserved in the patch directory.\n"
 "\n"
 "    To stop managing a patch and move it into permanent history,\n"
 "    use the qfinish command."
 msgstr ""
 
 msgid "print the patches already applied"
-msgstr "udskriver rettelserne som allerede er anvendt"
+msgstr "udskriver lapperne som allerede er anvendt"
 
 msgid "print the patches not yet applied"
-msgstr "udskriver rettelserne som ikke er anvendt endnu"
+msgstr "udskriver lapperne som ikke er anvendt endnu"
 
 msgid ""
 "import a patch\n"
@@ -2661,13 +2685,13 @@ msgid ""
 msgstr ""
 
 msgid "versioned patch repository not found (see qinit -c)"
-msgstr "versionsstyret depot til rettelser blev ikke fundet (se qinit -c)"
+msgstr "versionsstyret depot til lapper blev ikke fundet (se qinit -c)"
 
 msgid "cloning main repository\n"
 msgstr "kloner hoveddepot\n"
 
 msgid "cloning patch repository\n"
-msgstr "kloner rettelsesdepot\n"
+msgstr "kloner depotet til lapper\n"
 
 msgid "stripping applied patches from destination repository\n"
 msgstr ""
@@ -2682,19 +2706,19 @@ msgid "print the entire series file"
 msgstr "udskriver hele series filen"
 
 msgid "print the name of the current patch"
-msgstr "udskriver navnet på den nuværende rettelse"
+msgstr "udskriver navnet på den nuværende lap"
 
 msgid "print the name of the next patch"
-msgstr "udskriver navnet på den næste rettelse"
+msgstr "udskriver navnet på den næste lap"
 
 msgid "all patches applied\n"
-msgstr "alle rettelser er anvendt\n"
+msgstr "alle lapper er anvendt\n"
 
 msgid "print the name of the previous patch"
-msgstr "udskriver navnet på den forgående rettelse"
+msgstr "udskriver navnet på den forgående lap"
 
 msgid "only one patch applied\n"
-msgstr "kun én rettelse er anvendt\n"
+msgstr "kun én lap er anvendt\n"
 
 msgid ""
 "create a new patch\n"
@@ -2801,7 +2825,7 @@ msgid "qfold requires at least one patch name"
 msgstr ""
 
 msgid "No patches applied"
-msgstr "Ingen rettelser anvendt"
+msgstr "Der er ikke anvendt nogen lapper"
 
 #, python-format
 msgid "Skipping already folded patch %s"
@@ -2911,15 +2935,15 @@ msgstr ""
 
 #, python-format
 msgid "destination %s exists and is not a directory"
-msgstr ""
+msgstr "målet %s eksisterer og er ikke et katalog"
 
 #, python-format
 msgid "destination %s exists, use -f to force"
-msgstr ""
+msgstr "målet %s eksisterer, brug -f for at gennemtvinge"
 
 #, python-format
 msgid "copy %s to %s\n"
-msgstr ""
+msgstr "kopier %s til %s\n"
 
 msgid ""
 "strip a revision and all its descendants from the repository\n"
@@ -3104,7 +3128,7 @@ msgid "import file in patch directory"
 msgstr ""
 
 msgid "name of patch file"
-msgstr "navn på rettelsesfil"
+msgstr "navn på lap"
 
 msgid "overwrite existing files"
 msgstr ""
@@ -3268,11 +3292,11 @@ msgstr "hg qunapplied [-s] [LAP]"
 msgid "finish all applied changesets"
 msgstr "afslut alle anvendte ændringer"
 
-msgid "hg qfinish [-a] [REV...]"
-msgstr "hg qfinish [-a] [REV...]"
+msgid "hg qfinish [-a] [REV]..."
+msgstr "hg qfinish [-a] [REV]..."
 
 msgid ""
-"send e-mail notifications for commits/pushes\n"
+"hooks for sending email notifications at commit/push time\n"
 "\n"
 "Subscriptions can be managed through hgrc. Default mode is to print\n"
 "messages to stdout, for testing and configuring.\n"
@@ -3359,11 +3383,11 @@ msgstr ""
 
 #, python-format
 msgid "notify: no subscribers to repository %s\n"
-msgstr ""
+msgstr "notify: ingen abonnementer til depot %s\n"
 
 #, python-format
 msgid "notify: changes have source \"%s\" - skipping\n"
-msgstr ""
+msgstr "notify: ændringer har kilde \"%s\" - springer over\n"
 
 msgid ""
 "browse command output with an external pager\n"
@@ -3421,7 +3445,7 @@ msgid ""
 msgstr ""
 
 msgid ""
-"send Mercurial changesets as a series of patch e-mails\n"
+"command to send changesets as (a series of) patch emails\n"
 "\n"
 "The series is started off with a \"[PATCH 0 of N]\" introduction, which\n"
 "describes the series as a whole.\n"
@@ -3649,8 +3673,8 @@ msgstr ""
 msgid "hg email [OPTION]... [DEST]..."
 msgstr "hg email [TILVALG]... [MÅL]..."
 
-msgid "delete files not tracked from the working directory"
-msgstr ""
+msgid "command to delete untracked files from the working directory"
+msgstr "kommando til at slette filer fra arbejdskataloget som ikke følges"
 
 msgid ""
 "removes files not tracked by Mercurial\n"
@@ -3679,7 +3703,7 @@ msgstr ""
 
 #, python-format
 msgid "%s cannot be removed"
-msgstr ""
+msgstr "%s kan ikke slettes"
 
 #, python-format
 msgid "warning: %s\n"
@@ -3694,28 +3718,28 @@ msgid "Removing directory %s\n"
 msgstr "Fjerner katalog %s\n"
 
 msgid "abort if an error occurs"
-msgstr ""
+msgstr "afbryd hvis der opstår en fejl"
 
 msgid "purge ignored files too"
-msgstr ""
+msgstr "udrens også ignorerede filer"
 
 msgid "print filenames instead of deleting them"
-msgstr ""
+msgstr "udskriv filnavne i stedet for at slette dem"
 
 msgid "end filenames with NUL, for use with xargs (implies -p/--print)"
-msgstr ""
+msgstr "afslut filnavne med NUL, for brug med xargs (medfører -p/--print)"
 
 msgid "hg purge [OPTION]... [DIR]..."
 msgstr "hg purge [TILVALG]... [KATALOG]..."
 
 msgid ""
-"move sets of revisions to a different ancestor\n"
+"command to move sets of revisions to a different ancestor\n"
 "\n"
 "This extension lets you rebase changesets in an existing Mercurial\n"
 "repository.\n"
 "\n"
 "For more information:\n"
-"http://www.selenic.com/mercurial/wiki/index.cgi/RebaseProject\n"
+"http://mercurial.selenic.com/wiki/RebaseProject\n"
 msgstr ""
 
 msgid "first revision, do not change ancestor\n"
@@ -3886,7 +3910,7 @@ msgstr ""
 "hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] "
 "| [-c] | [-a]"
 
-msgid "interactively select which sets of changes to commit/qrefresh"
+msgid "commands to interactively select changes for commit/qrefresh"
 msgstr ""
 
 msgid "this modifies a binary file (all or nothing)\n"
@@ -3955,18 +3979,18 @@ msgstr "user quit"
 
 #, python-format
 msgid "examine changes to %s?"
-msgstr ""
+msgstr "undersøg ændringer i %s?"
 
 msgid " and "
 msgstr " og "
 
 #, python-format
 msgid "record this change to %r?"
-msgstr ""
+msgstr "optag denne ændring i %r?"
 
 #, python-format
 msgid "record change %d/%d to %r?"
-msgstr ""
+msgstr "optag ændring %d/%d i %r?"
 
 msgid ""
 "interactively select changes to commit\n"
@@ -4044,7 +4068,7 @@ msgid "[-U] SOURCE [DEST]"
 msgstr ""
 
 msgid ""
-"transplant changesets from another branch\n"
+"command to transplant changesets from another branch\n"
 "\n"
 "This extension allows you to transplant patches from another branch.\n"
 "\n"
@@ -4066,7 +4090,7 @@ msgstr ""
 
 #, python-format
 msgid "%s transplanted to %s\n"
-msgstr ""
+msgstr "%s transplanteret til %s\n"
 
 #, python-format
 msgid "filtering %s\n"
@@ -4190,7 +4214,7 @@ msgid ""
 msgstr "hg transplant [-s DEPOT] [-b GREN [-a]] [-p REV] [-m REV] [REV]..."
 
 msgid ""
-"allow the use of MBCS paths with problematic encoding\n"
+"allow the use of MBCS paths with problematic encodings\n"
 "\n"
 "Some MBCS encodings are not good for some path operations (i.e.\n"
 "splitting path, case conversion, etc.) with its encoded bytes. We call\n"
@@ -4418,11 +4442,11 @@ msgstr "%s: kan ikke kopiere - %s\n"
 
 #, python-format
 msgid "moving %s to %s\n"
-msgstr ""
+msgstr "flytter %s til %s\n"
 
 #, python-format
 msgid "copying %s to %s\n"
-msgstr ""
+msgstr "kopierer %s til %s\n"
 
 #, python-format
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
@@ -4485,7 +4509,7 @@ msgid "files-:"
 msgstr "filer-:"
 
 msgid "files:"
-msgstr ""
+msgstr "filer:"
 
 #, python-format
 msgid "files:       %s\n"
@@ -4537,14 +4561,14 @@ msgstr ""
 "HG: Skriv deponeringsbesked. Linier som starter med 'HG:' bliver fjernet."
 
 msgid "HG: Leave message empty to abort commit."
-msgstr ""
+msgstr "HG: Efterlad beskeden tom for at afbryde deponeringen."
 
 #, python-format
 msgid "HG: user: %s"
 msgstr "HG: bruger: %s"
 
 msgid "HG: branch merge"
-msgstr ""
+msgstr "HG: gren-sammenføjning"
 
 #, python-format
 msgid "HG: branch '%s'"
@@ -4653,7 +4677,7 @@ msgstr ""
 
 #, python-format
 msgid "%s: binary file\n"
-msgstr ""
+msgstr "%s: binær fil\n"
 
 msgid ""
 "create an unversioned archive of a repository revision\n"
@@ -4682,7 +4706,7 @@ msgid ""
 msgstr ""
 
 msgid "no working directory: please specify a revision"
-msgstr ""
+msgstr "intet arbejdskatalog: angive venligst en revision"
 
 msgid "repository root cannot be destination"
 msgstr ""
@@ -4731,7 +4755,7 @@ msgid "please specify just one revision"
 msgstr "angiv venligst kun en revision"
 
 msgid "please specify a revision to backout"
-msgstr ""
+msgstr "angiv venligst en revision der skal omgøres"
 
 msgid "cannot backout change on a different branch"
 msgstr "kan ikke omgøre en ændring på en anden gren"
@@ -4759,7 +4783,7 @@ msgstr "ændring %s bakker ændring %s ud\n"
 
 #, python-format
 msgid "merging with changeset %s\n"
-msgstr ""
+msgstr "sammenføjer med ændring %s\n"
 
 msgid "the backout changeset is a new head - do not forget to merge\n"
 msgstr ""
@@ -4798,9 +4822,13 @@ msgstr "Den første dårlige revision er:\n"
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
 msgstr ""
+"På grund af oversprungne revisioner kan den første gode revision være en "
+"hvilken som helst af:\n"
 
 msgid "Due to skipped revisions, the first bad revision could be any of:\n"
 msgstr ""
+"På grund af oversprungne revisioner kan den første dårlige revision være en "
+"hvilken som helst af:\n"
 
 msgid "cannot bisect (no known good revisions)"
 msgstr ""
@@ -4812,7 +4840,7 @@ msgid "(use of 'hg bisect <cmd>' is deprecated)\n"
 msgstr ""
 
 msgid "incompatible arguments"
-msgstr ""
+msgstr "inkompatible argumenter"
 
 #, python-format
 msgid "cannot find executable: %s"
@@ -4832,7 +4860,7 @@ msgstr "Ændring %d:%s: %s\n"
 
 #, python-format
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
-msgstr ""
+msgstr "Tester ændring %s:%s (%s ændringer tilbage, ~%s test)\n"
 
 msgid ""
 "set or show the current branch name\n"
@@ -4860,16 +4888,17 @@ msgstr ""
 
 msgid "a branch of the same name already exists (use --force to override)"
 msgstr ""
+"en gren ved samme navn eksisterer allerede (brug --force for at gennemtvinge)"
 
 #, python-format
 msgid "marked working directory as branch %s\n"
-msgstr ""
+msgstr "markerede arbejdskataloget som gren %s\n"
 
 msgid ""
 "list repository named branches\n"
 "\n"
 "    List the repository's named branches, indicating which ones are\n"
-"    inactive. If active is specified, only show active branches.\n"
+"    inactive. If -a/--active is specified, only show active branches.\n"
 "\n"
 "    A branch is considered active if it contains repository heads.\n"
 "\n"
@@ -4879,7 +4908,7 @@ msgstr ""
 "vis navngivne grene i depotet\n"
 "\n"
 "    Viser depotets navngivne grene og indikerer hvilke der er\n"
-"    inaktive. Hvis active angivet, da vises kun aktive grene\n"
+"    inaktive. Hvis -a/--active angivet, da vises kun aktive grene.\n"
 "\n"
 "    En gren er anses for at være aktiv hvis den indeholder\n"
 "    depothoveder.\n"
@@ -4899,8 +4928,8 @@ msgid ""
 "    parameters. To create a bundle containing all changesets, use\n"
 "    -a/--all (or --base null).\n"
 "\n"
-"    To change the compression method applied, use the -t/--type\n"
-"    option. The available compression methods are: none, bzip2, and\n"
+"    You can change compression method with the -t/--type option.\n"
+"    The available compression methods are: none, bzip2, and\n"
 "    gzip (by default, bundles are compressed using bzip2).\n"
 "\n"
 "    The bundle file can then be transferred using conventional means\n"
@@ -5074,7 +5103,7 @@ msgstr "lavede et nyt hoved\n"
 
 #, python-format
 msgid "committed changeset %d:%s\n"
-msgstr ""
+msgstr "deponerede ændring %d:%s\n"
 
 msgid ""
 "mark files as copied for the next commit\n"
@@ -5180,7 +5209,7 @@ msgid "dump an index DAG as a graphviz dot file"
 msgstr ""
 
 msgid "test Mercurial installation"
-msgstr ""
+msgstr "test Mercurial installationen"
 
 #, python-format
 msgid "Checking encoding (%s)...\n"
@@ -5222,8 +5251,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-" Internal patcher failure, please report this error to http://www.selenic."
-"com/mercurial/bts\n"
+" Internal patcher failure, please report this error to http://mercurial."
+"selenic.com/bts/\n"
 msgstr ""
 
 msgid "Checking commit editor...\n"
@@ -5421,7 +5450,7 @@ msgstr ""
 "    "
 
 msgid "no files specified"
-msgstr ""
+msgstr "ingen filer angivet"
 
 #, python-format
 msgid "not removing %s: file is already untracked\n"
@@ -5447,7 +5476,7 @@ msgstr ""
 
 #, python-format
 msgid "grep: invalid match pattern: %s\n"
-msgstr ""
+msgstr "grep: ugyldigt søgemønster: %s\n"
 
 msgid ""
 "show current repository heads or show branch heads\n"
@@ -5463,7 +5492,7 @@ msgid ""
 "    branch is called the revision's branch tag.\n"
 "\n"
 "    Branch heads are revisions on a given named branch that do not have\n"
-"    any children on the same branch. A branch head could be a true head\n"
+"    any descendants on the same branch. A branch head could be a true head\n"
 "    or it could be the last changeset on a branch before a new branch\n"
 "    was created. If none of the branch heads are true heads, the branch\n"
 "    is considered inactive.\n"
@@ -5479,11 +5508,11 @@ msgstr "ingen åbne gren-hoveder på gren %s\n"
 
 #, python-format
 msgid "no changes on branch %s containing %s are reachable from %s\n"
-msgstr ""
+msgstr "ingen ændringer på gren %s som indeholder %s kan nås fra %s\n"
 
 #, python-format
 msgid "no changes on branch %s are reachable from %s\n"
-msgstr ""
+msgstr "ingen ændringer på gren %s kan nås fra %s\n"
 
 msgid ""
 "show help for a given topic or a help overview\n"
@@ -5611,16 +5640,17 @@ msgid ""
 "    With -s/--similarity, hg will attempt to discover renames and\n"
 "    copies in the patch in the same way as 'addremove'.\n"
 "\n"
-"    To read a patch from standard input, use \"-\" as the patch name.\n"
+"    To read a patch from standard input, use \"-\" as the patch name. If\n"
+"    a URL is specified, the patch will be downloaded from it.\n"
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
 
 msgid "applying patch from stdin\n"
-msgstr ""
+msgstr "anvender lap fra standardinddata\n"
 
 msgid "no diffs found"
-msgstr ""
+msgstr "fandt ingen ændringer"
 
 #, python-format
 msgid ""
@@ -5634,7 +5664,7 @@ msgid "not a Mercurial patch"
 msgstr "ikke en Mercurial patch"
 
 msgid "patch is damaged or loses information"
-msgstr ""
+msgstr "lappen er beskadiget eller mister information"
 
 msgid ""
 "show new changesets found in source\n"
@@ -5799,13 +5829,14 @@ msgstr ""
 #, python-format
 msgid "branch '%s' has %d heads - please merge with an explicit rev"
 msgstr ""
+"gren '%s' har %d hoveder - sammenføj venligst med en eksplicit revision"
 
 #, python-format
 msgid "branch '%s' has one head - please merge with an explicit rev"
-msgstr ""
+msgstr "gren '%s' har et hoved - sammenføj venligst med en eksplicit revision"
 
 msgid "there is nothing to merge"
-msgstr ""
+msgstr "der er ikke noget at sammenføje"
 
 #, python-format
 msgid "%s - use \"hg update\" instead"
@@ -5815,6 +5846,8 @@ msgid ""
 "working dir not at a head rev - use \"hg update\" or merge with an explicit "
 "rev"
 msgstr ""
+"arbejdskataloget er ikke ved en hovedrevision - brug \"hg update\" eller "
+"sammenføj med en eksplicit revision"
 
 msgid ""
 "show changesets not found in destination\n"
@@ -5851,7 +5884,7 @@ msgstr ""
 
 #, python-format
 msgid "'%s' not found in manifest!"
-msgstr ""
+msgstr "'%s' ikke fundet i manifest!"
 
 msgid ""
 "show aliases for remote repositories\n"
@@ -6080,10 +6113,10 @@ msgid ""
 msgstr ""
 
 msgid "too many options specified"
-msgstr ""
+msgstr "der er angivet for mange tilvalg"
 
 msgid "can't specify --all and patterns"
-msgstr ""
+msgstr "kan ikke angive --all og mønstre"
 
 msgid "no files or directories specified; use --all to remerge all files"
 msgstr ""
@@ -6143,7 +6176,7 @@ msgstr "fører %s tilbage\n"
 
 #, python-format
 msgid "undeleting %s\n"
-msgstr ""
+msgstr "usletter %s\n"
 
 #, python-format
 msgid "saving current version of %s as %s\n"
@@ -6151,11 +6184,11 @@ msgstr "gemmer nuværende version af %s som %s\n"
 
 #, python-format
 msgid "file not managed: %s\n"
-msgstr ""
+msgstr "filen er ikke håndteret: %s\n"
 
 #, python-format
 msgid "no changes needed to %s\n"
-msgstr ""
+msgstr "%s behøver ingen ændringer\n"
 
 msgid ""
 "roll back the last transaction\n"
@@ -6305,26 +6338,26 @@ msgid ""
 msgstr ""
 
 msgid "tag names must be unique"
-msgstr ""
+msgstr "mærkatnavne skal være unikke"
 
 #, python-format
 msgid "the name '%s' is reserved"
-msgstr ""
+msgstr "navnet '%s' er reserveret"
 
 msgid "--rev and --remove are incompatible"
-msgstr ""
+msgstr "--rev og --remove er inkompatible"
 
 #, python-format
 msgid "tag '%s' does not exist"
-msgstr ""
+msgstr "mærkaten '%s' eksisterer ikke"
 
 #, python-format
 msgid "tag '%s' is not a global tag"
-msgstr ""
+msgstr "mærkaten '%s' er ikke en global mærkat"
 
 #, python-format
 msgid "tag '%s' is not a local tag"
-msgstr ""
+msgstr "mærkaten '%s' er ikke en lokal mærkat"
 
 #, python-format
 msgid "Removed tag %s"
@@ -6332,7 +6365,7 @@ msgstr "Mærke %s er fjernet"
 
 #, python-format
 msgid "tag '%s' already exists (use -f to force)"
-msgstr ""
+msgstr "mærkaten '%s' eksisterer allerede (brug -f for at gennemtvinge)"
 
 #, python-format
 msgid "Added tag %s for changeset %s"
@@ -6436,7 +6469,7 @@ msgstr ""
 "    "
 
 msgid "uncommitted local changes"
-msgstr ""
+msgstr "udeponerede lokale ændringer"
 
 msgid ""
 "verify the integrity of the repository\n"
@@ -6451,11 +6484,11 @@ msgid ""
 msgstr ""
 
 msgid "output version and copyright information"
-msgstr ""
+msgstr "udskriv version- og copyrightinformation"
 
 #, python-format
 msgid "Mercurial Distributed SCM (version %s)\n"
-msgstr "Mercurial Distributed SCM (version %s)\n"
+msgstr "Mercurial Distribueret SCM (version %s)\n"
 
 msgid ""
 "\n"
@@ -6480,34 +6513,34 @@ msgid "enable additional output"
 msgstr "aktiver yderlig output"
 
 msgid "set/override config option"
-msgstr ""
+msgstr "sæt/overskriv konfigurationopsætning"
 
 msgid "enable debugging output"
-msgstr ""
+msgstr "aktiver fejlsøgningsinformation"
 
 msgid "start debugger"
-msgstr "start debugger"
+msgstr "start fejlsøgningsprogram"
 
 msgid "set the charset encoding"
-msgstr ""
+msgstr "angiv tegnkodningen"
 
 msgid "set the charset encoding mode"
-msgstr ""
+msgstr "angiv tegnkodningstilstand"
 
 msgid "print traceback on exception"
-msgstr ""
+msgstr "udskriv traceback ved exception"
 
 msgid "time how long the command takes"
-msgstr ""
+msgstr "tag tid på hvor lang tid kommandoen tager"
 
 msgid "print command execution profile"
 msgstr ""
 
 msgid "output version information and exit"
-msgstr ""
+msgstr "udskriv versionsinformation og afslut"
 
 msgid "display help and exit"
-msgstr "vis hjælp og exit"
+msgstr "vis hjælp og afslut"
 
 msgid "do not perform actions, just print output"
 msgstr "udfør ingen handlinger, udskriv kun outputttet"
@@ -6516,7 +6549,7 @@ msgid "specify ssh command to use"
 msgstr "specificer ssh kommandoen som skal bruges"
 
 msgid "specify hg command to run on the remote side"
-msgstr ""
+msgstr "angiv hg kommando som skal udføres på fjernsystemet"
 
 msgid "include names matching the given patterns"
 msgstr "inkluder navne som matcher det givne mønster"
@@ -6537,40 +6570,40 @@ msgid "record the specified user as committer"
 msgstr ""
 
 msgid "display using template map file"
-msgstr ""
+msgstr "vis med skabelon-fil"
 
 msgid "display with template"
-msgstr ""
+msgstr "vis med skabelon"
 
 msgid "do not show merges"
-msgstr ""
+msgstr "vis ikke sammenføjninger"
 
 msgid "treat all files as text"
 msgstr "behandl alle filer som tekst"
 
 msgid "don't include dates in diff headers"
-msgstr ""
+msgstr "inkluder ikke datoer i diff-hoveder"
 
 msgid "show which function each change is in"
-msgstr ""
+msgstr "vis hvilken funktion hver ændring er i"
 
 msgid "ignore white space when comparing lines"
-msgstr ""
+msgstr "ignorer blanktegn når linier sammenlignes"
 
 msgid "ignore changes in the amount of white space"
-msgstr ""
+msgstr "ignorer ændringer i mængden af blanktegn"
 
 msgid "ignore changes whose lines are all blank"
-msgstr ""
+msgstr "ignorer ændringer hvis linier alle er blanke"
 
 msgid "number of lines of context to show"
-msgstr ""
+msgstr "antal linier kontekst der skal vises"
 
 msgid "guess renamed files by similarity (0<=s<=100)"
-msgstr ""
+msgstr "gæt omdøbte filer ud fra enshed (0<=s<=100)"
 
 msgid "[OPTION]... [FILE]..."
-msgstr ""
+msgstr "[TILVALG]... [FIL]..."
 
 msgid "annotate the specified revision"
 msgstr "annotér den angivne revision"
@@ -6594,22 +6627,22 @@ msgid "show line number at the first appearance"
 msgstr "vil linienummeret for den første forekomst"
 
 msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
-msgstr ""
+msgstr "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FIL..."
 
 msgid "do not pass files through decoders"
-msgstr ""
+msgstr "kør ikke filerne igennem dekodere"
 
 msgid "directory prefix for files in archive"
-msgstr ""
+msgstr "katalogpræfiks for filerne i arkivet"
 
 msgid "revision to distribute"
-msgstr ""
+msgstr "revision som skal distribueres"
 
 msgid "type of distribution to create"
-msgstr ""
+msgstr "distributionstype der skal oprettes"
 
 msgid "[OPTION]... DEST"
-msgstr ""
+msgstr "[TILVALG]... MÅL"
 
 msgid "merge with old dirstate parent after backout"
 msgstr ""
@@ -6621,7 +6654,7 @@ msgid "revision to backout"
 msgstr "revision som skal bakkes ud"
 
 msgid "[OPTION]... [-r] REV"
-msgstr ""
+msgstr "[TILVALG]... [-r] REV"
 
 msgid "reset bisect state"
 msgstr "nulstil bisect"
@@ -6633,7 +6666,7 @@ msgid "mark changeset bad"
 msgstr "marker ændring som dårlig"
 
 msgid "skip testing changeset"
-msgstr ""
+msgstr "spring testen af denne ændring over"
 
 msgid "use command to check changeset state"
 msgstr "brug kommando for at kontrollere tilstanden af ændringen"
@@ -6642,7 +6675,7 @@ msgid "do not update to target"
 msgstr "undlad at opdatere til målet"
 
 msgid "[-gbsr] [-c CMD] [REV]"
-msgstr ""
+msgstr "[-gbsr] [-c KOMMANDO] [REV]"
 
 msgid "set branch name even if it shadows an existing branch"
 msgstr ""
@@ -6651,13 +6684,13 @@ msgid "reset branch name to parent branch name"
 msgstr ""
 
 msgid "[-fC] [NAME]"
-msgstr ""
+msgstr "[-fC] [NAVN]"
 
 msgid "show only branches that have unmerged heads"
-msgstr ""
+msgstr "vil kun grene som har usammenføjne hoveder"
 
 msgid "[-a]"
-msgstr ""
+msgstr "[-a]"
 
 msgid "run even when remote repository is unrelated"
 msgstr "kør selv hvis fjerndepotet er urelateret"
@@ -6675,34 +6708,34 @@ msgid "bundle compression type to use"
 msgstr ""
 
 msgid "[-f] [-a] [-r REV]... [--base REV]... FILE [DEST]"
-msgstr ""
+msgstr "[-f] [-a] [-r REV]... [--base REV]... FIL [MÅL]"
 
 msgid "print output to file with formatted name"
 msgstr ""
 
 msgid "print the given revision"
-msgstr ""
+msgstr "udskriv den angivne revision"
 
 msgid "apply any matching decode filter"
 msgstr ""
 
 msgid "[OPTION]... FILE..."
-msgstr ""
+msgstr "[TILVALG]... FIL..."
 
 msgid "the clone will only contain a repository (no working copy)"
-msgstr ""
+msgstr "klonen vil kun indeholde et depot (intet arbejdsbibliotek)"
 
 msgid "a changeset you would like to have after cloning"
-msgstr ""
+msgstr "en ændringer du gerne vil have efter kloningen"
 
 msgid "[OPTION]... SOURCE [DEST]"
-msgstr ""
+msgstr "[TILVALG]... KILDE [MÅL]"
 
 msgid "mark new/missing files as added/removed before committing"
-msgstr ""
+msgstr "marker nye/manglende filer som tilføjede/fjernede før deponering"
 
 msgid "mark a branch as closed, hiding it from the branch list"
-msgstr ""
+msgstr "marker en gren som lukket, skuler den fra listen af grene"
 
 msgid "record a copy that has already occurred"
 msgstr ""
@@ -6711,10 +6744,10 @@ msgid "forcibly copy over an existing managed file"
 msgstr ""
 
 msgid "[OPTION]... [SOURCE]... DEST"
-msgstr ""
+msgstr "[TILVALG]... [KILDE]... MÅL"
 
 msgid "[INDEX] REV1 REV2"
-msgstr ""
+msgstr "[INDEKS] REV1 REV2"
 
 msgid "[COMMAND]"
 msgstr "[KOMMANDO]"
@@ -6726,58 +6759,58 @@ msgid "[-o] CMD"
 msgstr "[-o] KOMMANDO"
 
 msgid "try extended date formats"
-msgstr ""
+msgstr "prøv udvidede datoformater"
 
 msgid "[-e] DATE [RANGE]"
-msgstr ""
+msgstr "[-e] DATO [INTERVAL]"
 
 msgid "FILE REV"
-msgstr ""
+msgstr "FIL REV"
 
 msgid "[PATH]"
-msgstr ""
+msgstr "[STI]"
 
 msgid "FILE"
-msgstr ""
+msgstr "FIL"
 
 msgid "revision to rebuild to"
-msgstr ""
+msgstr "revision til hvilken der skal gendannes til"
 
 msgid "[-r REV] [REV]"
-msgstr ""
+msgstr "[-r REV] [REV]"
 
 msgid "revision to debug"
-msgstr ""
+msgstr "revision der skal fejlsøges"
 
 msgid "[-r REV] FILE"
-msgstr ""
+msgstr "[-r REV] FIL"
 
 msgid "REV1 [REV2]"
-msgstr ""
+msgstr "REV1 [REV2]"
 
 msgid "do not display the saved mtime"
-msgstr ""
+msgstr "vis ikke den gemte mtime"
 
 msgid "[OPTION]..."
-msgstr ""
+msgstr "[TILVALG]..."
 
 msgid "revision to check"
 msgstr "revision som skal undersøges"
 
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
-msgstr ""
+msgstr "[TILVALG]... [-r REV1 [-r REV2]] [FIL]..."
 
 msgid "diff against the second parent"
 msgstr ""
 
 msgid "[OPTION]... [-o OUTFILESPEC] REV..."
-msgstr ""
+msgstr "[TILVALG]... [-o UDFILSPECIFIKATION] REV..."
 
 msgid "end fields with NUL"
-msgstr ""
+msgstr "afslut felter med NUL"
 
 msgid "print all revisions that match"
-msgstr ""
+msgstr "udskriv alle revisioner som matcher"
 
 msgid "follow changeset history, or file history across copies and renames"
 msgstr ""
@@ -6786,49 +6819,49 @@ msgid "ignore case when matching"
 msgstr ""
 
 msgid "print only filenames and revisions that match"
-msgstr ""
+msgstr "udskriv kun filnavne og revisioner som matcher"
 
 msgid "print matching line numbers"
-msgstr ""
+msgstr "udskriv matchende linienumre"
 
 msgid "search in given revision range"
-msgstr ""
+msgstr "søg i det angivne interval"
 
 msgid "[OPTION]... PATTERN [FILE]..."
-msgstr ""
+msgstr "[TILVALG]... MØNSTER [FIL]..."
 
 msgid "show only heads which are descendants of REV"
-msgstr ""
+msgstr "vis kun hoveder som er efterkommere af REV"
 
 msgid "show only the active heads from open branches"
-msgstr ""
+msgstr "vis kun aktive hoveder fra åbne grene"
 
 msgid "show normal and closed heads"
 msgstr "vis normale og lukkede hoveder"
 
 msgid "[-r STARTREV] [REV]..."
-msgstr ""
+msgstr "[-r STARTREV] [REV]..."
 
 msgid "[TOPIC]"
-msgstr ""
+msgstr "[EMNE]"
 
 msgid "identify the specified revision"
-msgstr ""
+msgstr "identificer den angivne revision"
 
 msgid "show local revision number"
-msgstr ""
+msgstr "vis lokalt revisionsnummer"
 
 msgid "show global revision id"
-msgstr ""
+msgstr "vis globalt revisionsnummer"
 
 msgid "show branch"
-msgstr ""
+msgstr "vis gren"
 
 msgid "show tags"
 msgstr "vis mærkater"
 
 msgid "[-nibt] [-r REV] [SOURCE]"
-msgstr ""
+msgstr "[-nibt] [-r REV] [KILDE]"
 
 msgid ""
 "directory strip option for patch. This has the same meaning as the "
@@ -6839,160 +6872,160 @@ msgid "base path"
 msgstr ""
 
 msgid "skip check for outstanding uncommitted changes"
-msgstr ""
+msgstr "spring kontrollen for udeponerede ændringer over"
 
 msgid "don't commit, just update the working directory"
-msgstr ""
+msgstr "deponer ikke, opdater blot arbejdskataloget"
 
 msgid "apply patch to the nodes from which it was generated"
-msgstr ""
+msgstr "anvend lap på den knude hvorfra den var genereret"
 
 msgid "use any branch information in patch (implied by --exact)"
 msgstr ""
 
 msgid "[OPTION]... PATCH..."
-msgstr ""
+msgstr "[TILVALG]... LAP..."
 
 msgid "show newest record first"
-msgstr ""
+msgstr "vis nyeste postering først"
 
 msgid "file to store the bundles into"
-msgstr ""
+msgstr "fil hvor bundterne skal gemmes"
 
 msgid "a specific revision up to which you would like to pull"
-msgstr ""
+msgstr "en specifik revision hvortil du gerne vil trække"
 
 msgid "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"
-msgstr ""
+msgstr "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILNAVN] [KILDE]"
 
 msgid "[-e CMD] [--remotecmd CMD] [DEST]"
-msgstr ""
+msgstr "[-e KOMMANDO] [--remotecmd KOMMANDO] [MÅL]"
 
 msgid "search the repository as it stood at REV"
 msgstr ""
 
 msgid "end filenames with NUL, for use with xargs"
-msgstr ""
+msgstr "afslut filnavne med NUL, til brug med xargs"
 
 msgid "print complete paths from the filesystem root"
-msgstr ""
+msgstr "udskriv fulde stier fra filsystemets rod"
 
 msgid "[OPTION]... [PATTERN]..."
-msgstr ""
+msgstr "[TILVALG]... [MØNSTER]..."
 
 msgid "only follow the first parent of merge changesets"
-msgstr ""
+msgstr "følg kun den første forælder for sammenføjningsændringer"
 
 msgid "show revisions matching date spec"
-msgstr ""
+msgstr "vis revisioner som matcher datoangivelsen"
 
 msgid "show copied files"
-msgstr ""
+msgstr "vis kopierede filer"
 
 msgid "do case-insensitive search for a keyword"
-msgstr ""
+msgstr "lav søgning efter nøgleord uden forskel på små/store bogstaver"
 
 msgid "include revisions where files were removed"
-msgstr ""
+msgstr "inkluder revisioner hvor filer blev slettet"
 
 msgid "show only merges"
-msgstr ""
+msgstr "vis kun sammenføjninger"
 
 msgid "revisions committed by user"
-msgstr ""
+msgstr "revisioner deponeret af bruger"
 
 msgid "show only changesets within the given named branch"
-msgstr ""
+msgstr "vis kun ændringer på den angivne navngivne gren"
 
 msgid "do not display revision or any of its ancestors"
-msgstr ""
+msgstr "vis ikke revision eller nogen af den forfædre"
 
 msgid "[OPTION]... [FILE]"
-msgstr ""
+msgstr "[TILVALG]... [FIL]"
 
 msgid "revision to display"
-msgstr ""
+msgstr "revision der skal vises"
 
 msgid "[-r REV]"
-msgstr ""
+msgstr "[-r REV]"
 
 msgid "force a merge with outstanding changes"
 msgstr ""
 
 msgid "revision to merge"
-msgstr ""
+msgstr "revision der skal sammenføjes"
 
 msgid "review revisions to merge (no merge is performed)"
 msgstr ""
 
 msgid "[-f] [[-r] REV]"
-msgstr ""
+msgstr "[-f] [[-r] REV]"
 
 msgid "a specific revision up to which you would like to push"
 msgstr ""
 
 msgid "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
-msgstr ""
+msgstr "[-M] [-p] [-n] [-f] [-r REV]... [MÅL]"
 
 msgid "show parents from the specified revision"
-msgstr ""
+msgstr "vis forældre for den angivne revision"
 
 msgid "[-r REV] [FILE]"
-msgstr ""
+msgstr "[-r REV] [FIL]"
 
 msgid "[NAME]"
-msgstr ""
+msgstr "[NAVN]"
 
 msgid "update to new tip if changesets were pulled"
-msgstr ""
+msgstr "opdater til den nye spids hvis ændringer blev trukket ned"
 
 msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
-msgstr ""
+msgstr "[-u] [-f] [-r REV]... [-e KOMMANDO] [--remotecmd KOMMANDO] [KILDE]"
 
 msgid "force push"
-msgstr ""
+msgstr "gennemtving skubning"
 
 msgid "[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]"
-msgstr ""
+msgstr "[-f] [-r REV]... [-e KOMMANDO] [--remotecmd KOMMANDO] [MÅL]"
 
 msgid "record delete for missing files"
 msgstr ""
 
 msgid "remove (and delete) file even if added or modified"
-msgstr ""
+msgstr "fjern (og slet) fil selv hvis tilføjet eller ændret"
 
 msgid "record a rename that has already occurred"
 msgstr ""
 
 msgid "[OPTION]... SOURCE... DEST"
-msgstr ""
+msgstr "[TILVALG]... KILDE... MÅL"
 
 msgid "remerge all unresolved files"
-msgstr ""
+msgstr "gen-sammenføj alle uløste filer"
 
 msgid "list state of files needing merge"
-msgstr ""
+msgstr "vis tilstand af filer som har brug for sammenføjning"
 
 msgid "mark files as resolved"
-msgstr ""
+msgstr "marker filer som løste"
 
 msgid "unmark files as resolved"
-msgstr ""
+msgstr "marker filer som uløste"
 
 msgid "revert all changes when no arguments given"
-msgstr ""
+msgstr "før alle ændringer tilbage når inget argument angives"
 
 msgid "tipmost revision matching date"
 msgstr ""
 
 msgid "revision to revert to"
-msgstr ""
+msgstr "revision der skal føres tilbage til"
 
 msgid "do not save backup copies of files"
-msgstr ""
+msgstr "gem ikke sikkerhedskopier af filer"
 
 msgid "[OPTION]... [-r REV] [NAME]..."
-msgstr ""
+msgstr "[TILVALG]... [-r REV] [NAVN]..."
 
 msgid "name of access log file to write to"
 msgstr "navn på adgangslogfilen der skrives til"
@@ -7001,19 +7034,19 @@ msgid "name of error log file to write to"
 msgstr "navn på fejlllog fil der skrives til"
 
 msgid "port to listen on (default: 8000)"
-msgstr ""
+msgstr "port der skal lyttes på (standard: 8000)"
 
 msgid "address to listen on (default: all interfaces)"
-msgstr ""
+msgstr "adresse der skal lyttes til (standard: alle grænseflader)"
 
 msgid "prefix path to serve from (default: server root)"
 msgstr "prefiks sti at udstille fra (default: server-rod)"
 
 msgid "name to show in web pages (default: working directory)"
-msgstr ""
+msgstr "navn der skal vises på websider (standard: arbejdskatalog)"
 
 msgid "name of the webdir config file (serve more than one repository)"
-msgstr ""
+msgstr "navn på webdir konfigurationsfil (serve mere end et depot)"
 
 msgid "for remote clients"
 msgstr "for fjernklienter"
@@ -7031,10 +7064,10 @@ msgid "SSL certificate file"
 msgstr "SSL certifikatfil"
 
 msgid "show untrusted configuration options"
-msgstr ""
+msgstr "vis ikke-betroede konfigurationsværdier"
 
 msgid "[-u] [NAME]..."
-msgstr ""
+msgstr "[-u] [NAVN]..."
 
 msgid "show status of all files"
 msgstr "vis status på alle filer"
@@ -7082,7 +7115,7 @@ msgid "remove a tag"
 msgstr "fjern en mærkat"
 
 msgid "[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
-msgstr ""
+msgstr "[-l] [-m TEKST] [-d DATO] [-u BRUGER] [-r REV] NAVN..."
 
 msgid "[-p]"
 msgstr "[-p]"
@@ -7097,7 +7130,7 @@ msgid "overwrite locally modified files (no backup)"
 msgstr "overskrev lokalt modificerede filer (uden sikkerhedskopi)"
 
 msgid "check for uncommitted changes"
-msgstr ""
+msgstr "kontroller for udeponerede ændringer"
 
 msgid "[-C] [-d DATE] [[-r] REV]"
 msgstr "[-C] [-d DATO] [[-r] REV]"
@@ -7132,15 +7165,15 @@ msgid "  all copies found (* = to merge, ! = divergent):\n"
 msgstr ""
 
 msgid "  checking for directory renames\n"
-msgstr ""
+msgstr "  undersøger katalogomdøbninger\n"
 
 #, python-format
 msgid "  dir %s -> %s\n"
-msgstr ""
+msgstr "  katalog %s -> %s\n"
 
 #, python-format
 msgid "  file %s -> %s\n"
-msgstr ""
+msgstr "  fil %s -> %s\n"
 
 msgid "working directory state appears damaged!"
 msgstr "arbejdskatalogtilstand virker beskadiget!"
@@ -7165,23 +7198,23 @@ msgid "unknown"
 msgstr "ukendt"
 
 msgid "character device"
-msgstr ""
+msgstr "tegn-specialfil"
 
 msgid "block device"
-msgstr ""
+msgstr "blok-specialfil"
 
 msgid "fifo"
-msgstr ""
+msgstr "fifo"
 
 msgid "socket"
-msgstr ""
+msgstr "sokkel"
 
 msgid "directory"
-msgstr ""
+msgstr "katalog"
 
 #, python-format
 msgid "unsupported file type (type is %s)"
-msgstr ""
+msgstr "usupporteret filtype (typen er %s)"
 
 #, python-format
 msgid "abort: %s\n"
@@ -7201,7 +7234,7 @@ msgstr "hg: %s\n"
 
 #, python-format
 msgid "timed out waiting for lock held by %s"
-msgstr ""
+msgstr "tiden løb ud ved vent på lås holdt af %s"
 
 #, python-format
 msgid "lock held by %s"
@@ -7270,8 +7303,8 @@ msgstr "afbrudt: løbet tør for hukommelse\n"
 msgid "** unknown exception encountered, details follow\n"
 msgstr "** der opstod en ukendt fejl, detaljer følger\n"
 
-msgid "** report bug details to http://www.selenic.com/mercurial/bts\n"
-msgstr "** angiv fejldetaljer på http://www.selenic.com/mercurial/bts\n"
+msgid "** report bug details to http://mercurial.selenic.com/bts/\n"
+msgstr "** angiv fejldetaljer på http://mercurial.selenic.com/bts/\n"
 
 msgid "** or mercurial@selenic.com\n"
 msgstr "** eller mercurial@selenic.com\n"
@@ -7302,7 +7335,7 @@ msgstr "alias '%s' skygger for en kommando\n"
 
 #, python-format
 msgid "malformed --config option: %s"
-msgstr ""
+msgstr "misdannet --config tilvalg: %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
@@ -7334,7 +7367,7 @@ msgstr "ugyldige parametre"
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
-msgstr ""
+msgstr "profileringsformat '%s' ikke genkendt - Ignoreret\n"
 
 msgid ""
 "lsprof not available - install from http://codespeak.net/svn/user/arigo/hack/"
@@ -7396,7 +7429,7 @@ msgstr "sammenføjer %s\n"
 
 #, python-format
 msgid "my %s other %s ancestor %s\n"
-msgstr ""
+msgstr "min %s anden %s forfar %s\n"
 
 msgid " premerge successful\n"
 msgstr "præ-sammenføjning succesfuld\n"
@@ -7418,7 +7451,7 @@ msgstr ""
 
 #, python-format
 msgid "merging %s failed!\n"
-msgstr ""
+msgstr "sammenføjning af %s fejlede!\n"
 
 #, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
@@ -7550,7 +7583,7 @@ msgstr ""
 "    "
 
 msgid "File Name Patterns"
-msgstr ""
+msgstr "Mønstre for filnavne"
 
 msgid ""
 "\n"
@@ -7783,7 +7816,7 @@ msgid ""
 msgstr ""
 
 msgid "Template Usage"
-msgstr ""
+msgstr "Brug af skabeloner"
 
 msgid ""
 "\n"
@@ -7956,7 +7989,7 @@ msgid "Using additional features"
 msgstr "Brug af yderligere funktioner"
 
 msgid "can only share local repositories"
-msgstr ""
+msgstr "kan kun dele lokale depoter"
 
 msgid "destination already exists"
 msgstr "destinationen eksisterer allerede"
@@ -7966,15 +7999,15 @@ msgstr "opdaterer arbejdskatalog\n"
 
 #, python-format
 msgid "destination directory: %s\n"
-msgstr ""
+msgstr "målkatalog: %s\n"
 
 #, python-format
 msgid "destination '%s' already exists"
-msgstr ""
+msgstr "målet '%s' eksisterer allerede"
 
 #, python-format
 msgid "destination '%s' is not empty"
-msgstr ""
+msgstr "målet '%s' er ikke tomt"
 
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
@@ -7982,7 +8015,7 @@ msgid ""
 msgstr ""
 
 msgid "clone from remote to remote not supported"
-msgstr ""
+msgstr "kloning fra fjerndepot til fjerndepot er ikke understøttet"
 
 msgid "updated"
 msgstr "opdateret"
@@ -8001,19 +8034,21 @@ msgid "%d files %s"
 msgstr "%d filer %s"
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
-msgstr ""
+msgstr "brug 'hg resolve' for at prøve at sammenføje uløste filer igen\n"
 
 msgid ""
 "use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to "
 "abandon\n"
 msgstr ""
+"brug 'hg resolve' for at prøve at sammenføje uløste filer igen eller 'hg up "
+"--clean' for at opgive\n"
 
 msgid "(branch merge, don't forget to commit)\n"
-msgstr ""
+msgstr "(grensammenføjning, glem ikke at deponere)\n"
 
 #, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
-msgstr ""
+msgstr "fejl ved læsning af %s/.hg/hgrc: %s\n"
 
 msgid "SSL support is unavailable"
 msgstr "understøttelse for SSL er ikke tilstede"
@@ -8104,10 +8139,10 @@ msgstr "autorisation fejlede"
 
 #, python-format
 msgid "http error while sending %s command\n"
-msgstr ""
+msgstr "http-fejl mens %s kommandoen blev sendt\n"
 
 msgid "http error, possibly caused by proxy setting"
-msgstr ""
+msgstr "http-fejl, skyldes muligvis proxy-indstillinger"
 
 #, python-format
 msgid "real URL is %s\n"
@@ -8119,11 +8154,11 @@ msgstr "forespurgt URL: '%s'\n"
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
-msgstr ""
+msgstr "'%s' ser ikke ud til at være et hg depot"
 
 #, python-format
 msgid "'%s' sent a broken Content-Type header (%s)"
-msgstr ""
+msgstr "'%s' sendte ødelagt Content-Type header (%s)"
 
 #, python-format
 msgid "'%s' uses newer protocol %s"
@@ -8133,20 +8168,20 @@ msgid "look up remote revision"
 msgstr ""
 
 msgid "unexpected response:"
-msgstr ""
+msgstr "uventet svar:"
 
 msgid "look up remote changes"
 msgstr ""
 
 msgid "push failed (unexpected response):"
-msgstr ""
+msgstr "skub fejlede (uventet svar):"
 
 #, python-format
 msgid "push failed: %s"
 msgstr "skub fejlede: %s"
 
 msgid "Python support for SSL and HTTPS is not installed"
-msgstr ""
+msgstr "Python support for SSL og HTTPS er ikke installeret"
 
 msgid "cannot create new http repository"
 msgstr "kan ikke lave nyt http depot"
@@ -8157,7 +8192,7 @@ msgstr "%s: ignorerer ugyldig syntaks '%s'\n"
 
 #, python-format
 msgid "skipping unreadable ignore file '%s': %s\n"
-msgstr ""
+msgstr "springer ulæselig ignorefil '%s' over: %s\n"
 
 #, python-format
 msgid "repository %s not found"
@@ -8180,7 +8215,7 @@ msgid "%r cannot be used in a tag name"
 msgstr "%r kan ikke bruges i et mærkatnavnet"
 
 msgid "working copy of .hgtags is changed (please commit .hgtags manually)"
-msgstr ""
+msgstr "arbejdskopien af .hgtags er ændret (deponer venligst .hgtags manuelt)"
 
 #, python-format
 msgid "%s, line %s: %s\n"
@@ -8191,7 +8226,7 @@ msgstr ""
 
 #, python-format
 msgid "node '%s' is not well formed"
-msgstr ""
+msgstr "knude '%s' er ikke korrekt formet"
 
 #, python-format
 msgid "working directory has unknown parent '%s'!"
@@ -8220,13 +8255,14 @@ msgstr "ruller sidste transaktion tilbage\n"
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
+"Navngiven gren kunne ikke nulstilles, den nuværende gren er stadig: %s\n"
 
 msgid "no rollback information available\n"
 msgstr "ingen tilbagerulningsinformation til stede\n"
 
 #, python-format
 msgid "waiting for lock on %s held by %r\n"
-msgstr ""
+msgstr "venter på lås af %s holdt af %r\n"
 
 #, python-format
 msgid "repository %s"
@@ -8260,7 +8296,7 @@ msgid "nothing changed\n"
 msgstr "ingen ændringer\n"
 
 msgid "unresolved merge conflicts (see hg resolve)"
-msgstr ""
+msgstr "uløste sammenføjningskonflikter (se hg resolve)"
 
 #, python-format
 msgid "committing subrepository %s\n"
@@ -8283,6 +8319,7 @@ msgstr ""
 #, python-format
 msgid "%s not added: only files and symlinks supported currently\n"
 msgstr ""
+"%s ikke tilføjet: i øjeblikket understøttes kun filer og symbolske lænker\n"
 
 #, python-format
 msgid "%s already tracked!\n"
@@ -8388,14 +8425,14 @@ msgstr ""
 
 #, python-format
 msgid "%d changesets found\n"
-msgstr ""
+msgstr "fandt %d ændringer\n"
 
 msgid "list of changesets:\n"
-msgstr ""
+msgstr "liste af ændringer:\n"
 
 #, python-format
 msgid "empty or missing revlog for %s"
-msgstr ""
+msgstr "tom eller manglende revlog for %s"
 
 #, python-format
 msgid "add changeset %s\n"
@@ -8405,7 +8442,7 @@ msgid "adding changesets\n"
 msgstr "tilføjer ændringer\n"
 
 msgid "received changelog group is empty"
-msgstr ""
+msgstr "modtagen changelog-gruppe er tom"
 
 msgid "adding manifests\n"
 msgstr "tilføjer manifester\n"
@@ -8432,13 +8469,13 @@ msgid "updating the branch cache\n"
 msgstr ""
 
 msgid "Unexpected response from remote server:"
-msgstr ""
+msgstr "Uventet svar fra fjernserver:"
 
 msgid "operation forbidden by server"
-msgstr ""
+msgstr "operationen er forbudt af serveren"
 
 msgid "locking the remote repository failed"
-msgstr ""
+msgstr "låsning af fjerndepotet fejlede"
 
 msgid "the server sent an unknown error code"
 msgstr ""
@@ -8448,7 +8485,7 @@ msgstr ""
 
 #, python-format
 msgid "%d files to transfer, %s of data\n"
-msgstr ""
+msgstr "%d filer at overføre, %s data\n"
 
 #, python-format
 msgid "adding %s (%s)\n"
@@ -8456,7 +8493,7 @@ msgstr "tilføjer %s (%s)\n"
 
 #, python-format
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
-msgstr ""
+msgstr "overførte %s i %.1f sekunder (%s/sek)\n"
 
 msgid "no [smtp]host in hgrc - cannot send mail"
 msgstr ""
@@ -8466,18 +8503,18 @@ msgid "sending mail: smtp host %s, port %s\n"
 msgstr ""
 
 msgid "can't use TLS: Python SSL support not installed"
-msgstr ""
+msgstr "kan ikke bruge TLS: Python SSL support er ikke installeret"
 
 msgid "(using tls)\n"
-msgstr ""
+msgstr "(bruger tsl)\n"
 
 #, python-format
 msgid "(authenticating to mail server as %s)\n"
-msgstr ""
+msgstr "(autentificerer til mailserver som %s)\n"
 
 #, python-format
 msgid "sending mail: %s\n"
-msgstr ""
+msgstr "sender post: %s\n"
 
 msgid "smtp specified as email transport, but no smtp host configured"
 msgstr ""
@@ -8492,15 +8529,15 @@ msgstr ""
 
 #, python-format
 msgid "invalid email address: %s"
-msgstr ""
+msgstr "ugyldig e-post-adresse: %s"
 
 #, python-format
 msgid "invalid local address: %s"
-msgstr ""
+msgstr "ugyldig lokal adresse: %s"
 
 #, python-format
 msgid "failed to remove %s from manifest"
-msgstr ""
+msgstr "kunne ikke fjerne %s fra manifest"
 
 #, python-format
 msgid "diff context lines count must be an integer, not %r"
@@ -8532,7 +8569,7 @@ msgid "Sym&link"
 msgstr ""
 
 msgid "resolving manifests\n"
-msgstr ""
+msgstr "løser manifester\n"
 
 #, python-format
 msgid " overwrite %s partial %s\n"
@@ -8572,7 +8609,7 @@ msgstr "bevarer %s til løsning af %s\n"
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
-msgstr ""
+msgstr "opdatering kunne ikke fjerne %s: %s!\n"
 
 #, python-format
 msgid "getting %s\n"
@@ -8625,11 +8662,11 @@ msgid "found patch at byte %d\n"
 msgstr ""
 
 msgid "patch generated by hg export\n"
-msgstr ""
+msgstr "lap genereret af hg export\n"
 
 #, python-format
 msgid "unable to find '%s' for patching\n"
-msgstr ""
+msgstr "kan ikke finde '%s' til lapning\n"
 
 #, python-format
 msgid "patching file %s\n"
@@ -8672,11 +8709,11 @@ msgstr ""
 
 #, python-format
 msgid "binary patch is %d bytes, not %d"
-msgstr ""
+msgstr "binær lap er %d byte, ikke %d"
 
 #, python-format
 msgid "unable to strip away %d dirs from %s"
-msgstr ""
+msgstr "kan ikke strippe %d kataloger fra %s"
 
 msgid "undefined source and destination files"
 msgstr ""
@@ -8691,7 +8728,7 @@ msgstr ""
 
 #, python-format
 msgid "patch command failed: %s"
-msgstr ""
+msgstr "patch kommando fejlede: %s"
 
 #, python-format
 msgid "Unsupported line endings type: %s"
@@ -8718,30 +8755,30 @@ msgstr "ugyldig returkode"
 
 #, python-format
 msgid "saving bundle to %s\n"
-msgstr ""
+msgstr "gemmer bundt i %s\n"
 
 msgid "adding branch\n"
 msgstr "tilføjer gren\n"
 
 #, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
-msgstr ""
+msgstr "kan ikke %s: fjerdepotet understøtter ikke %r egenskaben"
 
 #, python-format
 msgid "unknown compression type %r"
-msgstr ""
+msgstr "ukendt kompressionstype %r"
 
 #, python-format
 msgid "index %s unknown flags %#04x for format v0"
-msgstr ""
+msgstr "indeks %s ukendt flag %#04x for format v0"
 
 #, python-format
 msgid "index %s unknown flags %#04x for revlogng"
-msgstr ""
+msgstr "indeks %s ukendt flag %#04x for revlogng"
 
 #, python-format
 msgid "index %s unknown format %d"
-msgstr ""
+msgstr "indeks %s ukendt format %d"
 
 #, python-format
 msgid "index %s is corrupted"
@@ -8762,64 +8799,64 @@ msgstr ""
 
 #, python-format
 msgid "%s not found in the transaction"
-msgstr ""
+msgstr "%s ikke fundet i transaktionen"
 
 msgid "unknown base"
 msgstr ""
 
 msgid "consistency error adding group"
-msgstr ""
+msgstr "konsistensfejl ved tilføjelse af gruppe"
 
 #, python-format
 msgid "%s looks like a binary file."
-msgstr ""
+msgstr "%s ser ud som en binær fil."
 
 msgid "can only specify two labels."
 msgstr ""
 
 msgid "warning: conflicts during merge.\n"
-msgstr ""
+msgstr "advarsel: konflikter ved sammenføjning.\n"
 
 #, python-format
 msgid "couldn't parse location %s"
 msgstr ""
 
 msgid "could not create remote repo"
-msgstr ""
+msgstr "kunne ikke oprette fjerndepot"
 
 msgid "remote: "
 msgstr "fjernsystem: "
 
 msgid "no suitable response from remote hg"
-msgstr ""
+msgstr "intet brugbart svar fra fjernsystemets hg"
 
 #, python-format
 msgid "push refused: %s"
-msgstr ""
+msgstr "skub afvist: %s"
 
 msgid "unsynced changes"
 msgstr ""
 
 msgid "cannot lock static-http repository"
-msgstr ""
+msgstr "kan ikke låse static-http depot"
 
 msgid "cannot create new static-http repository"
-msgstr ""
+msgstr "kan ikke oprette nyt static-http depot"
 
 #, python-format
 msgid "invalid entry in fncache, line %s"
 msgstr ""
 
 msgid "scanning\n"
-msgstr ""
+msgstr "skanner\n"
 
 #, python-format
 msgid "%d files, %d bytes to transfer\n"
-msgstr "%d filer, skal overføre %d bytes\n"
+msgstr "%d filer, skal overføre %d byte\n"
 
 #, python-format
 msgid "sending %s (%d bytes)\n"
-msgstr ""
+msgstr "sender %s (%d byte)\n"
 
 #, python-format
 msgid ""
@@ -8874,7 +8911,7 @@ msgstr ""
 
 #, python-format
 msgid "template file %s: %s"
-msgstr ""
+msgstr "skabelon-fil %s: %s"
 
 msgid "cannot use transaction when it is already committed/aborted"
 msgstr ""
@@ -8996,7 +9033,7 @@ msgstr "umuligt tidszone: %d"
 
 #, python-format
 msgid "invalid day spec: %s"
-msgstr ""
+msgstr "ugyldig datospecifikation: %s"
 
 #, python-format
 msgid "%.0f GB"
@@ -9050,11 +9087,11 @@ msgstr "tom eller manglende %s"
 
 #, python-format
 msgid "data length off by %d bytes"
-msgstr "datalænge er %d bytes forkert"
+msgstr "datalænge er %d byte forkert"
 
 #, python-format
 msgid "index contains %d extra bytes"
-msgstr "indekset indeholder %d ekstra bytes"
+msgstr "indekset indeholder %d ekstra byte"
 
 #, python-format
 msgid "warning: `%s' uses revlog format 1"
