@@ -3333,6 +3333,8 @@ msgid ""
 "specify them in the global .hgrc\n"
 msgstr ""
 
+# première ligne trop longue -> traduction abrégée (à retraduire quand hg
+# sera capable de replier automatiquement la première ligne d'aide)
 msgid ""
 "interpret suffixes to refer to ancestor revisions\n"
 "\n"
@@ -3352,8 +3354,26 @@ msgid ""
 "  foo~1 = foo^1 = foo^ = first parent of foo\n"
 "  foo~2 = foo^1^1 = foo^^ = first parent of first parent of foo\n"
 msgstr ""
+"suffixes faisant référence à des révisions antérieures\n"
+"\n"
+"Cette extension permet d'utiliser des suffixes à la mode git pour\n"
+"faire référence aux ancêtres d'une révision donnée.\n"
+"\n"
+"Par exemple, si \"foo\" désigne une révision, alors :\n"
+"\n"
+"- foo^N = Nième parent de foo\n"
+"  foo^0 = foo\n"
+"  foo^1 = premier parent de foo\n"
+"  foo^2 = second parent de foo\n"
+"  foo^  = foo^1\n"
+"\n"
+"- foo~N = Nième premier grand-parent de foo\n"
+"  foo~0 = foo\n"
+"  foo~1 = foo^1 = foo^ = premier parent de foo\n"
+"  foo~2 = foo^1^1 = foo^^ = premier parent du premier parent de foo\n"
 
-# première ligne trop longue -> traduction abrégée
+# première ligne trop longue -> traduction abrégée (à retraduire quand hg
+# sera capable de replier automatiquement la première ligne d'aide)
 msgid ""
 "command to send changesets as (a series of) patch emails\n"
 "\n"
