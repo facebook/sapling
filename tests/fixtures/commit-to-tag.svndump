@@ -387,8 +387,8 @@ not omega
 
 
 Revision-number: 13
-Prop-content-length: 122
-Content-length: 122
+Prop-content-length: 119
+Content-length: 119
 
 K 7
 svn:log
@@ -415,8 +415,8 @@ more stupidity
 
 
 Revision-number: 14
-Prop-content-length: 120
-Content-length: 120
+Prop-content-length: 117
+Content-length: 117
 
 K 7
 svn:log
@@ -440,8 +440,8 @@ Node-copyfrom-path: tags/also-edit
 
 
 Revision-number: 15
-Prop-content-length: 143
-Content-length: 143
+Prop-content-length: 140
+Content-length: 140
 
 K 7
 svn:log
@@ -465,8 +465,8 @@ Node-copyfrom-path: branches/magic
 
 
 Revision-number: 16
-Prop-content-length: 139
-Content-length: 139
+Prop-content-length: 136
+Content-length: 136
 
 K 7
 svn:log
@@ -490,8 +490,8 @@ Node-copyfrom-path: branches/closeme
 
 
 Revision-number: 17
-Prop-content-length: 119
-Content-length: 119
+Prop-content-length: 116
+Content-length: 116
 
 K 7
 svn:log
@@ -504,7 +504,7 @@ durin
 K 8
 svn:date
 V 27
-2009-06-26T19:26:28.149674Z
+2009-06-29T00:12:57.367624Z
 PROPS-END
 
 Node-path: branches/closeme
@@ -512,8 +512,8 @@ Node-action: delete
 
 
 Revision-number: 18
-Prop-content-length: 140
-Content-length: 140
+Prop-content-length: 137
+Content-length: 137
 
 K 7
 svn:log
@@ -537,3 +537,29 @@ Text-content-md5: 5bbd00dab68c937673171d0b2e205c96
 Content-length: 7
 
 boofar
+
+
+Revision-number: 19
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 18
+Revert revision 9.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-06-29T00:13:01.537589Z
+PROPS-END
+
+Node-path: tags/will-edit/alpha
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 8
+Node-copyfrom-path: tags/will-edit/alpha
+Text-copy-source-md5: 9f9f90dbe3e5ee1218c86b8839db1995

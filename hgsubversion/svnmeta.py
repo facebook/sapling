@@ -311,8 +311,9 @@ class SVNMeta(object):
         '''Get the parent revision hash for a commit on a specific branch.
         '''
         tag = self.is_path_tag(self.remotename(branch))
-        if tag and tag in self.tags:
-            ha = self.tags[tag]
+        limitedtags = maps.TagMap(self.repo, endrev=number-1)
+        if tag and tag in limitedtags:
+            ha = limitedtags[tag]
             return ha
         r, br = self.get_parent_svn_branch_and_rev(number, branch)
         if r is not None:
@@ -349,7 +350,8 @@ class SVNMeta(object):
                         added_tags[t_name] = branch, src_rev
                     elif file:
                         t_name = t_name[:-(len(file)+1)]
-                        if src_rev > added_tags[t_name][1]:
+                        if (t_name in added_tags
+                            and src_rev > added_tags[t_name][1]):
                             added_tags[t_name] = branch, src_rev
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
@@ -455,7 +457,7 @@ class SVNMeta(object):
         if not newparent:
             assert self.revmap[revnum, branch] == parentctx.node()
             self.revmap[revnum, branch] = new_hash
-        self.tags[tag] = hash
+        self.tags[tag] = hash, rev.revnum
         util.describe_commit(self.ui, new_hash, branch)
 
     def committags(self, delta, rev, endbranches):
@@ -487,7 +489,7 @@ class SVNMeta(object):
                 elif op == 'rm':
                     tagged = node.hex(node.nullid)
                 src += '%s %s\n' % (tagged, tag)
-                self.tags[tag] = node.bin(tagged)
+                self.tags[tag] = node.bin(tagged), rev.revnum
 
             # add new changeset containing updated .hgtags
             def fctxfun(repo, memctx, path):

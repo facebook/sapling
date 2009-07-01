@@ -4,6 +4,8 @@ import os
 from mercurial import util as hgutil
 from mercurial import node
 
+import svncommands
+
 class AuthorMap(dict):
     '''A mapping from Subversion-style authors to Mercurial-style
     authors, and back. The data is stored persistently on disk.
@@ -97,30 +99,41 @@ class AuthorMap(dict):
 
 class TagMap(dict):
 
-    VERSION = 1
+    VERSION = 2
 
-    def __init__(self, repo):
+    def __init__(self, repo, endrev=None):
         dict.__init__(self)
         self.path = os.path.join(repo.path, 'svn', 'tagmap')
         self.seen = 0
+        self.endrev=endrev
         if os.path.isfile(self.path):
-            self._load()
+            self._load(repo)
         else:
             self._write()
 
-    def _load(self):
+    def _load(self, repo):
         f = open(self.path)
         ver = int(f.readline())
-        if ver != self.VERSION:
+        if ver < self.VERSION:
+            repo.ui.warn('tag map outdated, running rebuildmeta...')
+            f.close()
+            os.unlink(self.path)
+            svncommands.rebuildmeta(repo.ui, repo, os.path.dirname(repo.path), ())
+            return
+        elif ver != self.VERSION:
             print 'tagmap too new -- please upgrade'
             raise NotImplementedError
         for l in f:
-            hash, tag = l.split(' ', 1)
+            hash, revision, tag = l.split(' ', 2)
+            revision = int(revision)
             tag = tag[:-1]
+            if self.endrev is not None and revision > self.endrev:
+                break
             dict.__setitem__(self, tag, node.bin(hash))
         f.close()
 
     def _write(self):
+        assert self.endrev is None
         f = open(self.path, 'w')
         f.write('%s\n' % self.VERSION)
         f.flush()
@@ -138,9 +151,10 @@ class TagMap(dict):
             return dict.__getitem__(self, tag)
         raise KeyError()
 
-    def __setitem__(self, tag, hash):
+    def __setitem__(self, tag, info):
+        hash, revision = info
         f = open(self.path, 'a')
-        f.write(node.hex(hash) + ' ' + tag + '\n')
+        f.write('%s %s %s\n' % (node.hex(hash), revision, tag))
         f.flush()
         f.close()
         dict.__setitem__(self, tag, hash)

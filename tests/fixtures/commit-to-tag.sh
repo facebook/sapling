@@ -59,6 +59,12 @@ svn up
 echo boofar > tags/edit-later/delta
 svn ci -m 'Edit this tag after its parent closed'
 
+# try and revert will-edit to its original state
+svn up
+svn merge -r9:8 $REPOPATH .
+svn ci -m 'Revert revision 9.'
+
+
 cd ../..
 svnadmin dump temp/repo > commit-to-tag.svndump
 echo
