@@ -139,7 +139,7 @@ _hg_get_commands() {
   typeset -gA _hg_alias_list
   local hline cmd cmdalias
 
-  _call_program hg hg debugcomplete -v 2>/dev/null | while read -A hline
+  _call_program hg hg debugcomplete -v | while read -A hline
   do
     cmd=$hline[1]
     _hg_cmd_list+=($cmd)
@@ -166,11 +166,24 @@ _hg_tags() {
   typeset -a tags
   local tag rev
 
-  _hg_cmd tags 2> /dev/null | while read tag
+  _hg_cmd tags | while read tag
   do
     tags+=(${tag/ #    [0-9]#:*})
   done
   (( $#tags )) && _describe -t tags 'tags' tags
+}
+
+# likely merge candidates
+_hg_mergerevs() {
+  typeset -a heads
+  local myrev
+
+  heads=(${(f)"$(_hg_cmd heads --template '{rev}\\n')"})
+  # exclude own revision
+  myrev=$(_hg_cmd log -r . --template '{rev}\\n')
+  heads=(${heads:#$myrev})
+
+  (( $#heads )) && _describe -t heads 'heads' heads
 }
 
 _hg_files() {
@@ -192,7 +205,7 @@ _hg_files() {
 
 _hg_status() {
   [[ -d $PREFIX ]] || PREFIX=$PREFIX:h
-  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 ./$PREFIX 2>/dev/null)"})
+  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 ./$PREFIX)"})
 }
 
 _hg_unknown() {
@@ -214,11 +227,11 @@ _hg_modified() {
 }
 
 _hg_resolve() {
-  local rstate rpah
+  local rstate rpath
 
   [[ -d $PREFIX ]] || PREFIX=$PREFIX:h
 
-  _hg_cmd resolve -l ./$PREFIX 2> /dev/null | while read rstate rpath
+  _hg_cmd resolve -l ./$PREFIX | while read rstate rpath
   do
     [[ $rstate == 'R' ]] && resolved_files+=($rpath)
     [[ $rstate == 'U' ]] && unresolved_files+=($rpath)
@@ -262,7 +275,7 @@ _hg_ssh_urls() {
       compset -P '*/'
       if _cache_invalid "$cacheid" || ! _retrieve_cache "$cacheid"
       then
-        remdirs=(${${(M)${(f)"$(_call_program files ssh -a -x $host ls -1FL "${(q)rempath}" 2> /dev/null)"}##*/}%/})
+        remdirs=(${${(M)${(f)"$(_call_program files ssh -a -x $host ls -1FL "${(q)rempath}")"}##*/}%/})
         _store_cache "$cacheid" remdirs
       fi
       _describe -t directories 'remote directory' remdirs -S/
@@ -300,7 +313,7 @@ _hg_urls() {
 
 _hg_paths() {
   typeset -a paths pnames
-  _hg_cmd paths 2> /dev/null | while read -A pnames
+  _hg_cmd paths | while read -A pnames
   do
     paths+=($pnames[1])
   done
@@ -365,7 +378,7 @@ _hg_remote_opts=(
 
 _hg_cmd() {
   _call_program hg hg --config ui.verbose=0 --config defaults."$1"= \
-    "$_hg_cmd_globals[@]" "$@"
+    "$_hg_cmd_globals[@]" "$@" 2> /dev/null
 }
 
 _hg_cmd_add() {
@@ -565,6 +578,14 @@ _hg_cmd_manifest() {
   ':revision:_hg_tags'
 }
 
+_hg_cmd_merge() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[force a merge with outstanding changes]' \
+  '(--rev -r)'{-r,--rev}'[revision to merge]:revision:_hg_tags' \
+  '(--preview -P)'{-P,--preview}'[review revisions to merge (no merge is performed)]' \
+  ':revision:_hg_mergerevs'
+}
+
 _hg_cmd_outgoing() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_style_opts \
   '(--no-merges -M)'{-M,--no-merges}'[do not show merge revisions]' \
@@ -735,13 +756,13 @@ _hg_cmd_view() {
 # MQ
 _hg_qseries() {
   typeset -a patches
-  patches=(${(f)"$(_hg_cmd qseries 2>/dev/null)"})
+  patches=(${(f)"$(_hg_cmd qseries)"})
   (( $#patches )) && _describe -t hg-patches 'patches' patches
 }
 
 _hg_qapplied() {
   typeset -a patches
-  patches=(${(f)"$(_hg_cmd qapplied 2>/dev/null)"})
+  patches=(${(f)"$(_hg_cmd qapplied)"})
   if (( $#patches ))
   then
     patches+=(qbase qtip)
@@ -751,15 +772,15 @@ _hg_qapplied() {
 
 _hg_qunapplied() {
   typeset -a patches
-  patches=(${(f)"$(_hg_cmd qunapplied 2>/dev/null)"})
+  patches=(${(f)"$(_hg_cmd qunapplied)"})
   (( $#patches )) && _describe -t hg-unapplied-patches 'unapplied patches' patches
 }
 
 # unapplied, including guarded patches
 _hg_qdeletable() {
   typeset -a unapplied
-  unapplied=(${(f)"$(_hg_cmd qseries 2>/dev/null)"})
-  for p in $(_hg_cmd qapplied 2>/dev/null)
+  unapplied=(${(f)"$(_hg_cmd qseries)"})
+  for p in $(_hg_cmd qapplied)
   do
     unapplied=(${unapplied:#$p})
   done
@@ -771,7 +792,7 @@ _hg_qguards() {
   typeset -a guards
   local guard
   compset -P "+|-"
-  _hg_cmd qselect -s 2>/dev/null | while read guard
+  _hg_cmd qselect -s | while read guard
   do
     guards+=(${guard#(+|-)})
   done
