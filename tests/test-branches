@@ -70,6 +70,7 @@ hg up -C b
 hg commit -d '9 0' --close-branch -m 'close this part branch too'
 echo '--- b branch should be inactive'
 hg branches
+hg branches -c
 hg branches -a
 hg heads b
 hg heads --closed b

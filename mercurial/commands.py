@@ -436,16 +436,19 @@ def branch(ui, repo, label=None, **opts):
     else:
         ui.write("%s\n" % encoding.tolocal(repo.dirstate.branch()))
 
-def branches(ui, repo, active=False):
+def branches(ui, repo, active=False, closed=False):
     """list repository named branches
 
     List the repository's named branches, indicating which ones are
-    inactive. If -a/--active is specified, only show active branches.
+    inactive. If -c/--closed is specified, also list branches which have
+    been marked closed (see hg commit --close-branch).
 
-    A branch is considered active if it contains repository heads.
+    If -a/--active is specified, only show active branches. A branch
+    is considered active if it contains repository heads.
 
     Use the command 'hg update' to switch to an existing branch.
     """
+
     hexfunc = ui.debugflag and hex or short
     activebranches = [encoding.tolocal(repo[n].branch())
                             for n in repo.heads()]
@@ -466,6 +469,8 @@ def branches(ui, repo, active=False):
                 if isactive:
                     notice = ''
                 elif hn not in repo.branchheads(tag, closed=False):
+                    if not closed:
+                        continue
                     notice = ' (closed)'
                 else:
                     notice = ' (inactive)'
@@ -3205,7 +3210,9 @@ table = {
     "branches":
         (branches,
          [('a', 'active', False,
-           _('show only branches that have unmerged heads'))],
+           _('show only branches that have unmerged heads')),
+          ('c', 'closed', False,
+           _('show normal and closed heads'))],
          _('[-a]')),
     "bundle":
         (bundle,

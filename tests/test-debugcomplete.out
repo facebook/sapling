@@ -184,7 +184,7 @@ archive: no-decode, prefix, rev, type, include, exclude
 backout: merge, parent, rev, include, exclude, message, logfile, date, user
 bisect: reset, good, bad, skip, command, noupdate
 branch: force, clean
-branches: active
+branches: active, closed
 bundle: force, rev, base, all, type, ssh, remotecmd
 cat: output, rev, decode, include, exclude
 copy: after, force, include, exclude, dry-run

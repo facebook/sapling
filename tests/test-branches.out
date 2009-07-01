@@ -108,6 +108,10 @@ a branch name much longer than the default justification used by branches 7:10ff
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 --- b branch should be inactive
 a branch name much longer than the default justification used by branches 7:10ff5895aa57
+c                              6:589736a22561 (inactive)
+a                              5:d8cbc61dbaa6 (inactive)
+default                        0:19709c5a4e75 (inactive)
+a branch name much longer than the default justification used by branches 7:10ff5895aa57
 b                             12:2da6583810df (closed)
 c                              6:589736a22561 (inactive)
 a                              5:d8cbc61dbaa6 (inactive)
