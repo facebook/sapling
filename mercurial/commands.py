@@ -396,8 +396,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         while size <= changesets:
             tests, size = tests + 1, size * 2
         rev = repo.changelog.rev(node)
-        ui.write(_("Testing changeset %s:%s "
-                   "(%s changesets remaining, ~%s tests)\n")
+        ui.write(_("Testing changeset %d:%s "
+                   "(%d changesets remaining, ~%d tests)\n")
                  % (rev, short(node), changesets, tests))
         if not noupdate:
             cmdutil.bail_if_changed(repo)
