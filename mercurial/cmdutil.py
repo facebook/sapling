@@ -298,7 +298,8 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         dry_run = opts.get('dry_run')
     if similarity is None:
         similarity = float(opts.get('similarity') or 0)
-    unknown, deleted = [], []
+    # we'd use status here, except handling of symlinks and ignore is tricky
+    added, unknown, deleted, removed = [], [], [], []
     audit_path = util.path_auditor(repo.root)
     m = match(repo, pats, opts)
     for abs in repo.walk(m):
@@ -314,16 +315,22 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             unknown.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        if repo.dirstate[abs] != 'r' and (not good or not util.lexists(target)
+        elif repo.dirstate[abs] != 'r' and (not good or not util.lexists(target)
             or (os.path.isdir(target) and not os.path.islink(target))):
             deleted.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
+        # for finding renames
+        elif repo.dirstate[abs] == 'r':
+            removed.append(abs)
+        elif repo.dirstate[abs] == 'a':
+            added.append(abs)
     if not dry_run:
         repo.remove(deleted)
         repo.add(unknown)
     if similarity > 0:
-        for old, new, score in findrenames(repo, unknown, deleted, similarity):
+        for old, new, score in findrenames(repo, added + unknown,
+                                           removed + deleted, similarity):
             if repo.ui.verbose or not m.exact(old) or not m.exact(new):
                 repo.ui.status(_('recording removal of %s as rename to %s '
                                  '(%d%% similar)\n') %

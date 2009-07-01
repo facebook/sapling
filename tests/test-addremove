@@ -22,5 +22,6 @@ hg commit -Ama
 mv a b
 rm c
 echo d > d
+hg addremove -n -s 50 # issue 1696
 hg addremove -s 50
 hg commit -mb
