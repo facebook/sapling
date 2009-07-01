@@ -262,7 +262,7 @@ class SVNMeta(object):
             src_tag = self.is_path_tag(src_path)
             if src_tag != False or src_file == '': # case 2
                 ln = self.localname(p)
-                if src_tag != False:
+                if src_tag != False and src_tag in self.tags:
                     ci = self.repo[self.tags[src_tag]].extra()['convert_revision']
                     src_rev, src_branch, = self.parse_converted_revision(ci)
                 return {ln: (src_branch, src_rev, revnum)}
@@ -344,8 +344,9 @@ class SVNMeta(object):
                         from_tag = self.is_path_tag(src_p)
                         if not from_tag:
                             continue
-                        ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
-                        src_rev, branch, = self.parse_converted_revision(ci)
+                        if from_tag in self.tags:
+                            ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
+                            src_rev, branch, = self.parse_converted_revision(ci)
                     if t_name not in added_tags and file is '':
                         added_tags[t_name] = branch, src_rev
                     elif file:
