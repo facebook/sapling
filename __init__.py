@@ -28,11 +28,9 @@ import gitrepo, hgrepo
 hg.schemes['git'] = gitrepo
 hg.schemes['git+ssh'] = gitrepo
 
-def _local(path):
-    return (os.path.isfile(util.drop_scheme('file', path)) and
-            bundlerepo or hgrepo)
-
-hg.schemes['file'] = _local
+def reposetup(ui, repo):
+    klass = hgrepo.generate_repo_subclass(repo.__class__)
+    repo.__class__ = klass
 
 def gimport(ui, repo, remote_name=None):
     git = GitHandler(repo, ui)
