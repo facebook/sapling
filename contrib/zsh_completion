@@ -424,6 +424,16 @@ _hg_cmd_backout() {
     '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt'
 }
 
+_hg_cmd_bisect() {
+  _arguments -s -w : $_hg_global_opts \
+  '(-)'{-r,--reset}'[reset bisect state]' \
+  '(--good -g --bad -b --skip -s --reset -r)'{-g,--good}'[mark changeset good]'::revision:_hg_tags \
+  '(--good -g --bad -b --skip -s --reset -r)'{-b,--bad}'[mark changeset bad]'::revision:_hg_tags \
+  '(--good -g --bad -b --skip -s --reset -r)'{-s,--skip}'[skip testing changeset]' \
+  '(--command -c --noupdate -U)'{-c+,--command}'[use command to check changeset state]':commands:_command_names \
+  '(--command -c --noupdate -U)'{-U,--noupdate}'[do not update to target]'
+}
+
 _hg_cmd_branch() {
   _arguments -s -w : $_hg_global_opts \
   '(--force -f)'{-f,--force}'[set branch name even if it shadows an existing branch]' \
@@ -592,7 +602,7 @@ _hg_cmd_manifest() {
 _hg_cmd_merge() {
   _arguments -s -w : $_hg_global_opts \
   '(--force -f)'{-f,--force}'[force a merge with outstanding changes]' \
-  '(--rev -r)'{-r,--rev}'[revision to merge]:revision:_hg_tags' \
+  '(--rev -r 1)'{-r,--rev}'[revision to merge]:revision:_hg_mergerevs' \
   '(--preview -P)'{-P,--preview}'[review revisions to merge (no merge is performed)]' \
   ':revision:_hg_mergerevs'
 }
@@ -750,11 +760,6 @@ _hg_cmd_update() {
   '(--clean -C)'{-C,--clean}'[overwrite locally modified files]' \
   '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
   ':revision:_hg_tags'
-}
-
-# bisect extension
-_hg_cmd_bisect() {
-  _arguments -s -w : $_hg_global_opts ':evaluation:(help init reset next good bad)'
 }
 
 # HGK
