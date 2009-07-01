@@ -3767,37 +3767,65 @@ msgid ""
 "    option.\n"
 "    "
 msgstr ""
+"retire les fichiers non suivis par Mercurial\n"
+"\n"
+"    Supprime les fichiers non connus de Mercurial, ce qui peut être\n"
+"    utile pour tester des changements locaux non enregistrés à\n"
+"    l'intérieur d'une arborescence de sources propre.\n"
+"\n"
+"    Ainsi, purge effacera :\n"
+"     - les fichiers inconnus : fichiers que \"hg status\" indique\n"
+"       par un point d'interrogation\n"
+"     - les répertoires vides : en fait Mercurial ignore complètement\n"
+"       les répertoires, à moins qu'ils ne contiennent des fichiers\n"
+"       sous son contrôle\n"
+"    Seront par contre laissés intacts :\n"
+"     - Les fichiers placés sous contrôle, qu'ils aient été modifiés\n"
+"       ou non\n"
+"     - Les fichiers ignorés (sauf si --all est utilisé)\n"
+"     - Les fichiers nouvellement ajoutés au dépôt (avec \"hg add\")\n"
+"\n"
+"    Si des répertoires sont spécifiés sur la ligne de commande,\n"
+"    seuls les fichiers qu'ils contiennent seront considérés.\n"
+"\n"
+"    Soyez prudent en utilisant purge, si vous avez oublié d'ajouter\n"
+"    des fichiers au dépôt, ils seront perdus irrémédiablement.\n"
+"    Si vous souhaitez seulement afficher la liste des fichiers qui\n"
+"    seraient effacés par purge, utilisez l'option --print.\n"
+"    "
 
 #, python-format
 msgid "%s cannot be removed"
-msgstr ""
+msgstr "%s ne peut être supprimé"
 
 #, python-format
 msgid "warning: %s\n"
-msgstr ""
+msgstr "attention: %s\n"
 
 #, python-format
 msgid "Removing file %s\n"
-msgstr ""
+msgstr "Suppression du fichier %s\n"
 
 #, python-format
 msgid "Removing directory %s\n"
-msgstr ""
+msgstr "Suppression du répertoire %s\n"
 
 msgid "abort if an error occurs"
-msgstr ""
+msgstr "abandonner en cas d'erreur"
 
 msgid "purge ignored files too"
-msgstr ""
+msgstr "supprimer également les fichiers ignorés"
 
 msgid "print filenames instead of deleting them"
-msgstr ""
+msgstr "afficher les nom des fichiers au lieu de les supprimer"
 
 msgid "end filenames with NUL, for use with xargs (implies -p/--print)"
 msgstr ""
+"terminer les noms de fichiers par un caractère nul, pour utilisation avec "
+"xargs (implique -p/--print)"
 
 msgid "hg purge [OPTION]... [DIR]..."
-msgstr ""
+msgstr "hg purge [OPTION]... [RÉPERTOIRE]..."
 
 msgid ""
 "command to move sets of revisions to a different ancestor\n"
