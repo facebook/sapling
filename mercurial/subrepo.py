@@ -122,6 +122,7 @@ def subrepo(ctx, path):
     localrepo = l
     hg = h
 
+    util.path_auditor(ctx._repo.root)(path)
     state = ctx.substate.get(path, nullstate)
     if state[0].startswith('['): # future expansion
         raise error.Abort('unknown subrepo source %s' % state[0])
