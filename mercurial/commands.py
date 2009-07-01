@@ -665,6 +665,7 @@ def commit(ui, repo, *pats, **opts):
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
+        ui.status(_("nothing changed\n"))
         return
     cl = repo.changelog
     rev = cl.rev(node)

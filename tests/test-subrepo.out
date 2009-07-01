@@ -3,13 +3,11 @@ adding a
 % add first sub
 adding a
 committing subrepository s
-nothing changed
 % add sub sub
 committing subrepository s
 committing subrepository ss
 % bump sub rev
 committing subrepository s
-nothing changed
 % leave sub dirty
 committing subrepository s
 changeset:   3:1c833a7a9e3a

@@ -860,7 +860,6 @@ class localrepository(repo.repository):
             if (not force and not extra.get("close") and p2 == nullid
                 and not (changes[0] or changes[1] or changes[2])
                 and self[None].branch() == self['.'].branch()):
-                self.ui.status(_("nothing changed\n"))
                 return None
 
             ms = merge_.mergestate(self)

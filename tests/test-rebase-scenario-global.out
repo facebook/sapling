@@ -52,7 +52,6 @@ o |  2: D
 o  0: A
 
 % C onto F - skip of E
-nothing changed
 saving bundle to 
 adding branch
 adding changesets
@@ -71,7 +70,6 @@ o  2: D
 o  0: A
 
 % D onto C - rebase of a branching point (skip E)
-nothing changed
 saving bundle to 
 adding branch
 adding changesets
