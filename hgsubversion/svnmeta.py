@@ -480,7 +480,8 @@ class SVNMeta(object):
             for op, tag, r in sorted(tags, reverse=True):
                 if op == 'add':
                     if fromtag:
-                        tagged = node.hex(self.tags[fromtag])
+                        if fromtag in self.tags:
+                            tagged = node.hex(self.tags[fromtag])
                     else:
                         tagged = node.hex(self.revmap[
                             self.get_parent_svn_branch_and_rev(r+1, b)])
