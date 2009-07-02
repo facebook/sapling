@@ -349,7 +349,7 @@ class SVNMeta(object):
                         added_tags[t_name] = branch, src_rev
                     elif file:
                         t_name = t_name[:-(len(file)+1)]
-                        if src_rev > added_tags[t_name][1]:
+                        if t_name in added_tags and src_rev > added_tags[t_name][1]:
                             added_tags[t_name] = branch, src_rev
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
