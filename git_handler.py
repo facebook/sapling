@@ -1,7 +1,10 @@
 import os, sys, math, urllib, re
 import toposort
+
+from dulwich.index import commit_tree
+from dulwich.objects import Blob, Commit, Tag, Tree
 from dulwich.repo import Repo
-from dulwich.client import SimpleFetchGraphWalker
+
 from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
@@ -11,15 +14,6 @@ try:
     from mercurial.error import RepoError
 except ImportError:
     from mercurial.repo import RepoError
-
-from dulwich.misc import make_sha
-from dulwich.objects import (
-    Blob,
-    Commit,
-    Tag,
-    Tree,
-    format_timezone,
-    )
 
 
 class GitHandler(object):
@@ -154,8 +148,6 @@ class GitHandler(object):
     ## CHANGESET CONVERSION METHODS
 
     def export_git_objects(self):
-        self.previous_entries = {}
-        self.written_trees = {}
         self.ui.status(_("importing Hg objects into Git\n"))
         nodes = [self.repo.lookup(n) for n in self.repo]
         export = [node for node in nodes if not hex(node) in self._map_hg]
@@ -209,10 +201,15 @@ class GitHandler(object):
             if p_node != nullid and not hex(p_node) in self._map_hg:
                 self.export_hg_commit(p_rev)
 
-        tree_sha, renames = self.write_git_tree(ctx)
+        tree_sha = commit_tree(self.git.object_store, self.iterblobs(ctx))
+        renames = []
+        for f in ctx:
+            rename = ctx.filectx(f).renamed()
+            if rename:
+                renames.append((rename[0], f))
 
-        commit = {}
-        commit['tree'] = tree_sha
+        commit = Commit()
+        commit.tree = tree_sha
         (time, timezone) = ctx.date()
 
         if 'author' in extra:
@@ -234,24 +231,34 @@ class GitHandler(object):
             else:
                 author = author + ' <none@none>'
 
-        commit['author'] = author + ' ' + str(int(time)) + ' ' + format_timezone(-timezone)
+        commit.author = author
+        commit.author_time = int(time)
+        commit.author_timezone = -timezone
 
         if 'message' in extra:
-            commit['message'] = extra['message']
+            commit.message = extra['message']
         else:
-            message = ctx.description()
-            commit['message'] = ctx.description() + "\n"
+            commit.message = ctx.description() + "\n"
 
         if 'committer' in extra:
             # fixup timezone
-            (name_timestamp, timezone) = extra['committer'].rsplit(' ', 1)
+            (name, timestamp, timezone) = extra['committer'].rsplit(' ', 2)
             try:
-                timezone = format_timezone(-int(timezone))
-                commit['committer'] = '%s %s' % (name_timestamp, timezone)
+                commit.committer = name
+                commit.commit_time = timestamp
+                commit.commit_timezone = -int(timezone)
             except ValueError: #pragma: no cover
                 self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%d: '%s'.\n") % (ctx, timezone))
+                commit.committer = commit.author
+                commit.commit_time = commit.author_time
+                commit.commit_timezone = commit.author_timezone
+        else:
+            commit.committer = commit.author
+            commit.commit_time = commit.author_time
+            commit.commit_timezone = commit.author_timezone
+
         if 'encoding' in extra:
-            commit['encoding'] = extra['encoding']
+            commit.encoding = extra['encoding']
 
         # HG EXTRA INFORMATION
         add_extras = False
@@ -273,131 +280,34 @@ class GitHandler(object):
                 extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
 
         if add_extras:
-            commit['message'] += "\n--HG--\n" + extra_message
+            commit.message += "\n--HG--\n" + extra_message
 
-        commit['parents'] = []
+        commit.parents = []
         for parent in parents:
             hgsha = hex(parent.node())
             git_sha = self.map_git_get(hgsha)
             if git_sha:
-                commit['parents'].append(git_sha)
+                commit.parents.append(git_sha)
 
-        commit_sha = self.git.write_commit_hash(commit) # writing new blobs to git
-        self.map_set(commit_sha, ctx.hex())
+        self.git.object_store.add_object(commit)
+        self.map_set(commit.id, ctx.hex())
 
         self.swap_out_encoding(oldenc)
+        return commit.id
 
-        return commit_sha
-
-    def write_git_tree(self, ctx):
-        trees = {}
-        man = ctx.manifest()
-        ctx_id = hex(ctx.node())
-
-        renames = []
-        for filenm, nodesha in man.iteritems():
-            file_id = hex(nodesha)
-            if ctx_id not in self.previous_entries:
-                self.previous_entries[ctx_id] = {}
-            self.previous_entries[ctx_id][filenm] = file_id
-
-            # write blob if not in our git database
-            fctx = ctx.filectx(filenm)
-
-            same_as_last = False
-            for par in ctx.parents():
-                par_id = hex(par.node())
-                if par_id in self.previous_entries:
-                    if filenm in self.previous_entries[par_id]:
-                        if self.previous_entries[par_id][filenm] == file_id:
-                            same_as_last = True
-            if not same_as_last:
-                rename = fctx.renamed()
-                if rename:
-                    filerename, sha = rename
-                    renames.append((filerename, filenm))
-            is_exec = 'x' in fctx.flags()
-            is_link = 'l' in fctx.flags()
-            blob_sha = self.map_git_get(file_id)
-            if not blob_sha:
-                blob_sha = self.git.write_blob(fctx.data()) # writing new blobs to git
-                self.map_set(blob_sha, file_id)
-
-            parts = filenm.split('/')
-            if len(parts) > 1:
-                # get filename and path for leading subdir
-                filepath = parts[-1:][0]
-                dirpath = "/".join([v for v in parts[0:-1]]) + '/'
-
-                # get subdir name and path for parent dir
-                parpath = '/'
-                nparpath = '/'
-                for part in parts[0:-1]:
-                    if nparpath == '/':
-                        nparpath = part + '/'
-                    else:
-                        nparpath += part + '/'
-
-                    treeentry = ['tree', part + '/', nparpath]
-
-                    if parpath not in trees:
-                        trees[parpath] = []
-                    if treeentry not in trees[parpath]:
-                        trees[parpath].append( treeentry )
-
-                    parpath = nparpath
-
-                # set file entry
-                fileentry = ['blob', filepath, blob_sha, is_exec, is_link]
-                if dirpath not in trees:
-                    trees[dirpath] = []
-                trees[dirpath].append(fileentry)
-
+    def iterblobs(self, ctx):
+        for f in ctx:
+            blob = Blob()
+            blob.data = ctx[f].data()
+            if not blob.id in self.git.object_store:
+                self.git.object_store.add_object(blob)
+            if 'l' in ctx.flags(f):
+                mode = 0120000
+            elif 'x' in ctx.flags(f):
+                mode = 0100755
             else:
-                fileentry = ['blob', parts[0], blob_sha, is_exec, is_link]
-                if '/' not in trees:
-                    trees['/'] = []
-                trees['/'].append(fileentry)
-
-        dirs = trees.keys()
-        if dirs:
-            # sort by tree depth, so we write the deepest trees first
-            dirs.sort(lambda a, b: len(b.split('/'))-len(a.split('/')))
-            dirs.remove('/')
-            dirs.append('/')
-        else:
-            # manifest is empty => make empty root tree
-            trees['/'] = []
-            dirs = ['/']
-
-        # write all the trees
-        tree_sha = None
-        tree_shas = {}
-        for dirnm in dirs:
-            tree_data = []
-            sha_group = []
-
-            # calculating a sha for the tree, so we don't write it twice
-            listsha = make_sha()
-            for entry in trees[dirnm]:
-                # replace tree path with tree SHA
-                if entry[0] == 'tree':
-                    sha = tree_shas[entry[2]]
-                    entry[2] = sha
-                listsha.update(entry[1])
-                listsha.update(entry[2])
-                tree_data.append(entry)
-            listsha = listsha.hexdigest()
-
-            if listsha in self.written_trees:
-                tree_sha = self.written_trees[listsha]
-                tree_shas[dirnm] = tree_sha
-            else:
-                tree_sha = self.git.write_tree_array(tree_data) # writing new trees to git
-                tree_shas[dirnm] = tree_sha
-                self.written_trees[listsha] = tree_sha
-
-        return (tree_sha, renames) # should be the last root tree sha
+                mode = 0100644
+            yield f, blob.id, mode
 
     def import_git_objects(self, remote_name=None, refs=None):
         self.ui.status(_("importing Git objects into Hg\n"))
@@ -410,10 +320,8 @@ class GitHandler(object):
         if refs:
           for head, sha in refs.iteritems():
               todo.append(sha)
-        elif remote_name:
-            todo = self.git.remote_refs(remote_name).values()[:]
         else:
-            todo = self.git.heads().values()[:]
+            todo = self.git.refs.values()[:]
 
         # traverse the heads getting a list of all the unique commits
         while todo:
@@ -457,7 +365,7 @@ class GitHandler(object):
         (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
 
         # get a list of the changed, added, removed files
-        files = self.git.get_files_changed(commit)
+        files = self.get_files_changed(commit)
 
         date = (commit.author_time, -commit.author_timezone)
         text = strip_message
@@ -466,7 +374,7 @@ class GitHandler(object):
             text.decode('utf-8')
         except UnicodeDecodeError:
             extra['message'] = text
-            text = self.decode_guess(text, commit._encoding)
+            text = self.decode_guess(text, commit.encoding)
 
         author = commit.author
 
@@ -487,15 +395,15 @@ class GitHandler(object):
             author.decode('utf-8')
         except UnicodeDecodeError:
             extra['author'] = author
-            author = self.decode_guess(author, commit._encoding)
+            author = self.decode_guess(author, commit.encoding)
 
         oldenc = self.swap_out_encoding()
 
         def getfilectx(repo, memctx, f):
             try:
-                (mode, sha, data) = self.git.get_file(commit, f)
+                (mode, sha, data) = self.get_file(commit, f)
                 e = self.convert_git_int_mode(mode)
-            except TypeError:
+            except (TypeError, KeyError):
                 raise IOError()
             if f in hg_renames:
                 copied_path = hg_renames[f]
@@ -537,11 +445,13 @@ class GitHandler(object):
             extra['branch'] = hg_branch
 
         # if committer is different than author, add it to extra
-        if not commit._author_raw == commit._committer_raw:
+        if commit.author != commit.committer \
+               or commit.author_time != commit.commit_time \
+               or commit.author_timezone != commit.commit_timezone:
             extra['committer'] = "%s %d %d" % (commit.committer, commit.commit_time, -commit.commit_timezone)
 
-        if commit._encoding:
-            extra['encoding'] = commit._encoding
+        if commit.encoding:
+            extra['encoding'] = commit.encoding
 
         if hg_branch:
             extra['branch'] = hg_branch
@@ -565,7 +475,7 @@ class GitHandler(object):
     def upload_pack(self, remote):
         client, path = self.get_transport_and_path(remote)
         changed = self.get_changed_refs
-        genpack = self.generate_pack_contents
+        genpack = self.git.object_store.generate_pack_contents
         try:
             self.ui.status(_("creating and sending data\n"))
             changed_refs = client.send_pack(path, changed, genpack)
@@ -627,62 +537,15 @@ class GitHandler(object):
 
         return changed
 
-    # takes a list of shas the server wants and shas the server has
-    # and generates a list of commit shas we need to push up
-    def generate_pack_contents(self, want, have):
-        graph_walker = SimpleFetchGraphWalker(want, self.git.get_parents)
-        next = graph_walker.next()
-        shas = set()
-        while next:
-            if next in have:
-                graph_walker.ack(next)
-            else:
-                shas.add(next)
-            next = graph_walker.next()
-
-        seen = []
-
-        # so now i have the shas, need to turn them into a list of
-        # tuples (sha, path) for ALL the objects i'm sending
-        # TODO: don't send blobs or trees they already have
-        def get_objects(tree, path):
-            changes = list()
-            changes.append((tree, path))
-            for (mode, name, sha) in tree.entries():
-                if mode == 0160000: # TODO: properly handle submodules and document what 57344 means
-                    continue
-                if sha in seen:
-                    continue
-
-                obj = self.git.get_object(sha)
-                seen.append(sha)
-                if isinstance (obj, Blob):
-                    changes.append((obj, path + name))
-                elif isinstance(obj, Tree):
-                    changes.extend(get_objects(obj, path + name + '/'))
-            return changes
-
-        objects = []
-        for commit_sha in shas:
-            commit = self.git.commit(commit_sha)
-            objects.append((commit, 'commit'))
-            tree = self.git.get_object(commit.tree)
-            objects.extend( get_objects(tree, '/') )
-
-        return objects
-
     def fetch_pack(self, remote_name):
         client, path = self.get_transport_and_path(remote_name)
-        graphwalker = SimpleFetchGraphWalker(self.git.heads().values(), self.git.get_parents)
+        graphwalker = self.git.get_graph_walker()
+        determine_wants = self.git.object_store.determine_wants_all
         f, commit = self.git.object_store.add_pack()
         try:
-            determine_wants = self.git.object_store.determine_wants_all
-            refs = client.fetch_pack(path, determine_wants, graphwalker, f.write, sys.stdout.write)
-            f.close()
-            commit()
-            return refs
+            return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
         finally:
-            f.close()
+            commit()
 
     ## REFERENCES HANDLING
 
@@ -692,12 +555,12 @@ class GitHandler(object):
         # Create a local Git branch name for each
         # Mercurial bookmark.
         for key in heads:
-            self.git.set_ref('refs/heads/' + key, heads[key])
+            self.git.refs['refs/heads/' + key] = heads[key]
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
             if self.repo.tagtype(tag) in ('global', 'git'):
-                self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
+                self.git.refs['refs/tags/' + tag] = self.map_git_get(hex(sha))
                 self.tags[tag] = hex(sha)
 
     def local_heads(self):
@@ -765,7 +628,12 @@ class GitHandler(object):
             tag = '%s/%s' % (remote_name, head)
             self.repo.tag(tag, hgsha, '', True, None, None)
 
-        self.git.set_remote_refs(refs, remote_name)
+        for ref_name in refs:
+            if ref_name.startswith('refs/heads'):
+                new_ref = 'refs/remotes/%s/%s' % (remote_name, ref_name[10:])
+                self.git.refs[new_ref] = refs[ref_name]
+            elif ref_name.startswith('refs/tags'):
+                self.git.refs[ref_name] = refs[ref_name]
 
 
     ## UTILITY FUNCTIONS
@@ -803,6 +671,70 @@ class GitHandler(object):
                     before, after = data.split(" : ", 1)
                     extra[before] = urllib.unquote(after)
         return (message, renames, branch, extra)
+
+    def get_file(self, commit, f):
+        otree = self.git.tree(commit.tree)
+        parts = f.split('/')
+        for part in parts:
+            (mode, sha) = otree[part]
+            obj = self.git.get_object(sha)
+            if isinstance (obj, Blob):
+                return (mode, sha, obj._text)
+            elif isinstance(obj, Tree):
+                otree = obj
+
+    def get_files_changed(self, commit):
+        def filenames(basetree, comptree, prefix):
+            basefiles = set()
+            changes = list()
+            csha = None
+            cmode = None
+            if basetree:
+                for (bmode, bname, bsha) in basetree.entries():
+                    if bmode == 0160000: # TODO: properly handle submodules
+                        continue
+                    basefiles.add(bname)
+                    bobj = self.git.get_object(bsha)
+                    if comptree:
+                        if bname in comptree:
+                            (cmode, csha) = comptree[bname]
+                        else:
+                            (cmode, csha) = (None, None)
+                    if not ((csha == bsha) and (cmode == bmode)):
+                        if isinstance (bobj, Blob):
+                            changes.append (prefix + bname)
+                        elif isinstance(bobj, Tree):
+                            ctree = None
+                            if csha:
+                                ctree = self.git.get_object(csha)
+                            changes.extend(filenames(bobj,
+                                                     ctree,
+                                                     prefix + bname + '/'))
+
+            # handle removals
+            if comptree:
+                for (bmode, bname, bsha) in comptree.entries():
+                    if bmode == 0160000: # TODO: handle submodles
+                        continue
+                    if bname not in basefiles:
+                        bobj = self.git.get_object(bsha)
+                        if isinstance(bobj, Blob):
+                            changes.append(prefix + bname)
+                        elif isinstance(bobj, Tree):
+                            changes.extend(filenames(None, bobj,
+                                                     prefix + bname + '/'))
+            return changes
+
+        all_changes = list()
+        otree = self.git.tree(commit.tree)
+        if len(commit.parents) == 0:
+            all_changes = filenames(otree, None, '')
+        for parent in commit.parents:
+            pcommit = self.git.commit(parent)
+            ptree = self.git.tree(pcommit.tree)
+            all_changes.extend(filenames(otree, ptree, ''))
+
+        return all_changes
 
     def remote_name(self, remote):
         names = [name for name, path in self.paths if path == remote]
