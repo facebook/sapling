@@ -562,6 +562,7 @@ class GitHandler(object):
         try:
             self.ui.status(_("creating and sending data\n"))
             changed_refs = client.send_pack(path, changed, genpack)
+            return changed_refs
         except:
             # TODO : remove try/except or do something useful here
             raise
