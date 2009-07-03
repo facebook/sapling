@@ -17,7 +17,7 @@ importing Git objects into Hg
 at: 0/4
 updating working directory
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  changeset:   3:4194aac3187933e5859d85d8f572234e41f79f3d
+@  changeset:   3:983a70eb26960008c2d503306d2c2b047e1b2c0c
 |  tag:         master
 |  tag:         default/master
 |  tag:         tip
@@ -31,7 +31,7 @@ updating working directory
 |  extra:       branch=default
 |  extra:       committer=test <test@example.org> 1167609613 0
 |  extra:       encoding=latin-1
-|  extra:       message=\nadd d\xe9lt\xe0\n
+|  extra:       message=add d\xe9lt\xe0\n
 |  description:
 |  add déltà
 |
