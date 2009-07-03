@@ -609,8 +609,7 @@ class Commit(ShaFile):
                      "%s must be followed by space not %s" % (ENCODING_ID, text[count])
                 count += 1
                 self._encoding = text[count:].split("\n", 1)[0]
-                while text[count] != "\n":
-                    count += 1
+                count += len(self._encoding) + 1
         count += 1
         self._message = text[count:]
         self._needs_parsing = False
