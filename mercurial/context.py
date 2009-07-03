@@ -199,7 +199,9 @@ class filectx(object):
 
         assert (changeid is not None
                 or fileid is not None
-                or changectx is not None)
+                or changectx is not None), \
+                ("bad args: changeid=%r, fileid=%r, changectx=%r"
+                 % (changeid, fileid, changectx))
 
         if filelog:
             self._filelog = filelog
