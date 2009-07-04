@@ -166,10 +166,6 @@ def disabled():
 
 def enabled():
     '''return a dict of {name: desc} of extensions, and the max name length'''
-
-    if not enabled:
-        return {}, 0
-
     exts = {}
     maxlength = 0
     exthelps = []
