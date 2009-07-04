@@ -103,7 +103,9 @@ def show_doc(ui):
         underlined(gettext(section).upper())
         if callable(doc):
             doc = doc()
-        ui.write(gettext(doc))
+        else:
+            doc = gettext(doc)
+        ui.write(doc)
         ui.write("\n")
 
 if __name__ == "__main__":
