@@ -78,7 +78,7 @@ from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
 from mercurial import patch, localrepo, templater, templatefilters, util, match
 from mercurial.hgweb import webcommands
 from mercurial.lock import release
-from mercurial.node import nullid, hex
+from mercurial.node import nullid
 from mercurial.i18n import _
 import re, shutil, tempfile, time
 
