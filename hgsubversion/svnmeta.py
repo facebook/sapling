@@ -393,7 +393,7 @@ class SVNMeta(object):
             if paths[p].action == 'D':
                 for known in self.branches:
                     if self.remotename(known).startswith(p):
-                        self.current.closebranches.add(known) # case 5
+                        self.closebranches.add(known) # case 5
             parent = self._determine_parent_branch(
                 p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
             if not parent and paths[p].copyfrom_path:

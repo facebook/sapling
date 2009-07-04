@@ -116,6 +116,12 @@ class TestFetchBranches(test_util.TestBase):
     def test_branches_weird_moves_stupid(self):
         self.test_branches_weird_moves(True)
 
+    def test_branch_delete_parent_dir(self, stupid=False):
+        repo = self._load_fixture_and_fetch('branch_delete_parent_dir.svndump',
+                                            stupid)
+        self.assertEqual(node.hex(repo['tip'].node()),
+                         '4108a81a82c7925d5551091165dc54c41b06a8a8')
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
           ]
