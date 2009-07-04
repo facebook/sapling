@@ -8,7 +8,7 @@
 import errno, os
 from i18n import _
 import config, util, node, error
-localrepo = hg = None
+hg = None
 
 nullstate = ('', '')
 
@@ -117,9 +117,8 @@ def subrepo(ctx, path):
     # because it wants to make repo objects from deep inside the stack
     # so we manually delay the circular imports to not break
     # scripts that don't use our demand-loading
-    global localrepo, hg
-    import localrepo as l, hg as h
-    localrepo = l
+    global hg
+    import hg as h
     hg = h
 
     util.path_auditor(ctx._repo.root)(path)
@@ -135,10 +134,10 @@ class hgsubrepo(object):
         r = ctx._repo
         root = r.wjoin(path)
         if os.path.exists(os.path.join(root, '.hg')):
-            self._repo = localrepo.localrepository(r.ui, root)
+            self._repo = hg.repository(r.ui, root)
         else:
             util.makedirs(root)
-            self._repo = localrepo.localrepository(r.ui, root, create=True)
+            self._repo = hg.repository(r.ui, root, create=True)
         self._repo._subparent = r
         self._repo._subsource = state[0]
 
