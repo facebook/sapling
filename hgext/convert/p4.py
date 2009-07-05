@@ -92,7 +92,7 @@ class p4_source(converter_source):
 
         # list with depot pathnames, longest first
         vieworder = views.keys()
-        vieworder.sort(key=lambda x: -len(x))
+        vieworder.sort(key=len, reverse=True)
 
         # handle revision limiting
         startrev = self.ui.config('convert', 'p4.startrev', default=0)
