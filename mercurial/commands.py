@@ -8,9 +8,9 @@
 from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, subprocess, difflib, time
+import os, re, sys, subprocess, difflib, time, tempfile
 import hg, util, revlog, bundlerepo, extensions, copies, context, error
-import patch, help, mdiff, tempfile, url, encoding
+import patch, help, mdiff, url, encoding
 import archival, changegroup, cmdutil, sshserver, hbisect
 from hgweb import server
 import merge as merge_
