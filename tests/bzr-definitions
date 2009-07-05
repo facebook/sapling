@@ -2,7 +2,7 @@
 
 "$TESTDIR/hghave" bzr || exit 80
 
-export TERM=dumb
+TERM=dumb; export TERM
 echo '[extensions]' >> $HGRCPATH
 echo 'convert = ' >> $HGRCPATH
 echo 'hgext.graphlog = ' >> $HGRCPATH
