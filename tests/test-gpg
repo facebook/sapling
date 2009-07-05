@@ -7,7 +7,7 @@ cat <<EOF >> $HGRCPATH
 gpg=
 
 [gpg]
-cmd=gpg --no-permission-warning --homedir $TESTDIR/gpg
+cmd=gpg --no-permission-warning --no-secmem-warning --homedir $TESTDIR/gpg
 EOF
 
 hg init r
