@@ -288,7 +288,7 @@ def applyupdates(repo, action, wctx, mctx):
                 continue
             f2, fd, flags, move = a[2:]
             r = ms.resolve(fd, wctx, mctx)
-            if r > 0:
+            if r is not None and r > 0:
                 unresolved += 1
             else:
                 if r is None:
