@@ -14,17 +14,13 @@ project that is in Git.  A bridger of worlds, this plugin be.
 
 '''
 
-from mercurial import commands
-from mercurial import hg
-from mercurial import util
-from mercurial import bundlerepo
+from mercurial import commands, extensions, hg
 from mercurial.i18n import _
-import os
+import gitrepo, hgrepo
 from git_handler import GitHandler
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
 # also hg clone git+ssh://git@github.com/schacon/simplegit.git
-import gitrepo, hgrepo
 hg.schemes['git'] = gitrepo
 hg.schemes['git+ssh'] = gitrepo
 
@@ -45,7 +41,6 @@ def gclear(ui, repo):
     git = GitHandler(repo, ui)
     git.clear()
 
-commands.norepo += " gclone"
 cmdtable = {
   "gimport":
         (gimport, [], _('hg gimport')),

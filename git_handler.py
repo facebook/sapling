@@ -689,7 +689,7 @@ class GitHandler(object):
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
-            if self.repo.tagtype(tag) == 'git':
+            if self.repo.tagtype(tag) in ('global', 'git'):
                 self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
 
     def local_heads(self):
