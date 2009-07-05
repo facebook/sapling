@@ -70,7 +70,7 @@ that the patchbomb extension can automatically send patchbombs
 directly from the commandline. See the [email] and [smtp] sections in
 hgrc(5) for details.'''
 
-import os, errno, socket, tempfile, cStringIO
+import os, errno, socket, tempfile, cStringIO, time
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
 from mercurial import cmdutil, commands, hg, mail, patch, util
@@ -446,7 +446,7 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.status(_('Writing '), subj, ' ...\n')
             fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
             generator = email.Generator.Generator(fp, mangle_from_=True)
-            date = util.datestr(start_time, '%a %b %d %H:%M:%S %Y')
+            date = time.ctime(start_time[0])
             fp.write('From %s %s\n' % (sender_addr, date))
             generator.flatten(m, 0)
             fp.write('\n\n')
