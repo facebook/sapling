@@ -1457,7 +1457,10 @@ def help_(ui, name=None, with_version=False):
         try:
             aliases, i = cmdutil.findcmd(name, table, False)
         except error.AmbiguousCommand, inst:
-            select = lambda c: c.lstrip('^').startswith(inst.args[0])
+            # py3k fix: except vars can't be used outside the scope of the
+            # except block, nor can be used inside a lambda. python issue4617
+            prefix = inst.args[0]
+            select = lambda c: c.lstrip('^').startswith(prefix)
             helplist(_('list of commands:\n\n'), select)
             return
 
