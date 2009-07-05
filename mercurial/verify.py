@@ -147,7 +147,7 @@ def _verify(repo):
     if havemf:
         for c,m in sorted([(c, m) for m in mflinkrevs for c in mflinkrevs[m]]):
             err(c, _("changeset refers to unknown manifest %s") % short(m))
-        del mflinkrevs
+        mflinkrevs = None # del is bad here due to scope issues
 
         for f in sorted(filelinkrevs):
             if f not in filenodes:
