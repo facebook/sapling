@@ -41,7 +41,7 @@ def age(date):
 
     delta = max(1, int(now - then))
     for t, s in agescales:
-        n = delta / s
+        n = delta // s
         if n >= 2 or s == 1:
             return fmt(t, n)
 

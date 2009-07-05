@@ -937,8 +937,8 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     t, tz = date or makedate()
     if "%1" in format or "%2" in format:
         sign = (tz > 0) and "-" or "+"
-        minutes = abs(tz) / 60
-        format = format.replace("%1", "%c%02d" % (sign, minutes / 60))
+        minutes = abs(tz) // 60
+        format = format.replace("%1", "%c%02d" % (sign, minutes // 60))
         format = format.replace("%2", "%02d" % (minutes % 60))
     s = time.strftime(format, time.gmtime(float(t) - tz))
     return s

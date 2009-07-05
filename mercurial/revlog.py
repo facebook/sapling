@@ -879,7 +879,7 @@ class revlog(object):
         if len(id) < 40:
             try:
                 # hex(node)[:...]
-                l = len(id) / 2  # grab an even number of digits
+                l = len(id) // 2  # grab an even number of digits
                 bin_id = bin(id[:l*2])
                 nl = [n for n in self.nodemap if n[:l] == bin_id]
                 nl = [n for n in nl if hex(n).startswith(id)]
@@ -1354,7 +1354,7 @@ class revlog(object):
             f.seek(0, 2)
             actual = f.tell()
             s = self._io.size
-            i = max(0, actual / s)
+            i = max(0, actual // s)
             di = actual - (i * s)
             if self._inline:
                 databytes = 0

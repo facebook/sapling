@@ -1422,8 +1422,8 @@ def diffstat(lines, width=80):
         # If diffstat runs out of room it doesn't print anything, which
         # isn't very useful, so always print at least one + or - if there
         # were at least some changes
-        pluses = '+' * max(adds/factor, int(bool(adds)))
-        minuses = '-' * max(removes/factor, int(bool(removes)))
+        pluses = '+' * max(adds // factor, int(bool(adds)))
+        minuses = '-' * max(removes // factor, int(bool(removes)))
         output.append(' %-*s |  %*.d %s%s\n' % (maxname, filename, countwidth,
                                                 adds+removes, pluses, minuses))
 
