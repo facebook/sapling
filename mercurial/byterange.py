@@ -208,7 +208,7 @@ class FileRangeHandler(urllib2.FileHandler):
     """
     def open_local_file(self, req):
         import mimetypes
-        import mimetools
+        import email
         host = req.get_host()
         file = req.get_selector()
         localfile = urllib.url2pathname(file)
@@ -232,9 +232,9 @@ class FileRangeHandler(urllib2.FileHandler):
                 raise RangeError('Requested Range Not Satisfiable')
             size = (lb - fb)
             fo = RangeableFileObject(fo, (fb, lb))
-        headers = mimetools.Message(StringIO(
+        headers = email.message_from_string(
             'Content-Type: %s\nContent-Length: %d\nLast-Modified: %s\n' %
-            (mtype or 'text/plain', size, modified)))
+            (mtype or 'text/plain', size, modified))
         return urllib.addinfourl(fo, headers, 'file:'+file)
 
 
@@ -251,7 +251,7 @@ import ftplib
 import socket
 import sys
 import mimetypes
-import mimetools
+import email
 
 class FTPRangeHandler(urllib2.FTPHandler):
     def ftp_open(self, req):
@@ -325,8 +325,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
                 headers += "Content-Type: %s\n" % mtype
             if retrlen is not None and retrlen >= 0:
                 headers += "Content-Length: %d\n" % retrlen
-            sf = StringIO(headers)
-            headers = mimetools.Message(sf)
+            headers = email.message_from_string(headers)
             return addinfourl(fp, headers, req.get_full_url())
         except ftplib.all_errors, msg:
             raise IOError('ftp error', msg), sys.exc_info()[2]
