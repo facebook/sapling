@@ -143,8 +143,8 @@ def churn(ui, repo, *pats, **opts):
     if not rate:
         return
 
-    sortfn = ((not opts.get('sort')) and (lambda a, b: cmp(b[1], a[1])) or None)
-    rate.sort(sortfn)
+    sortkey = ((not opts.get('sort')) and (lambda x: -x[1]) or None)
+    rate.sort(key=sortkey)
 
     maxcount = float(max([v for k, v in rate]))
     maxname = max([len(k) for k, v in rate])

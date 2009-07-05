@@ -1709,14 +1709,14 @@ class localrepository(repo.repository):
 
         # A function generating function.  Sets up an environment for the
         # inner function.
-        def cmp_by_rev_func(revlog):
-            # Compare two nodes by their revision number in the environment's
+        def revkey(revlog):
+            # Key to sort a node by it's revision number in the environment's
             # revision history.  Since the revision number both represents the
             # most efficient order to read the nodes in, and represents a
             # topological sorting of the nodes, this function is often useful.
-            def cmp_by_rev(a, b):
-                return cmp(revlog.rev(a), revlog.rev(b))
-            return cmp_by_rev
+            def revlog_sort_key(x):
+                return revlog.rev(x)
+            return revlog_sort_key
 
         # If we determine that a particular file or manifest node must be a
         # node that the recipient of the changegroup will already have, we can
@@ -1724,7 +1724,7 @@ class localrepository(repo.repository):
         # prunes them from the set of missing nodes.
         def prune_parents(revlog, hasset, msngset):
             haslst = list(hasset)
-            haslst.sort(cmp_by_rev_func(revlog))
+            haslst.sort(key=revkey(revlog))
             for node in haslst:
                 parentlst = [p for p in revlog.parents(node) if p != nullid]
                 while parentlst:
@@ -1874,7 +1874,7 @@ class localrepository(repo.repository):
             add_extra_nodes(1, msng_mnfst_set)
             msng_mnfst_lst = msng_mnfst_set.keys()
             # Sort the manifestnodes by revision number.
-            msng_mnfst_lst.sort(cmp_by_rev_func(mnfst))
+            msng_mnfst_lst.sort(key=revkey(mnfst))
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
             group = mnfst.group(msng_mnfst_lst, lookup_manifest_link,
@@ -1912,7 +1912,7 @@ class localrepository(repo.repository):
                     yield changegroup.chunkheader(len(fname))
                     yield fname
                     # Sort the filenodes by their revision #
-                    msng_filenode_lst.sort(cmp_by_rev_func(filerevlog))
+                    msng_filenode_lst.sort(key=revkey(filerevlog))
                     # Create a group generator and only pass in a changenode
                     # lookup function as we need to collect no information
                     # from filenodes.

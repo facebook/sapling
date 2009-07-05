@@ -26,12 +26,10 @@ class Stats(object):
         """XXX docstring"""
         if crit not in profiler_entry.__dict__:
             raise ValueError("Can't sort by %s" % crit)
-        self.data.sort(lambda b, a: cmp(getattr(a, crit),
-                                        getattr(b, crit)))
+        self.data.sort(key=lambda x: getattr(x, crit), reverse=True)
         for e in self.data:
             if e.calls:
-                e.calls.sort(lambda b, a: cmp(getattr(a, crit),
-                                              getattr(b, crit)))
+                e.calls.sort(key=lambda x: getattr(x, crit), reverse=True)
 
     def pprint(self, top=None, file=None, limit=None, climit=None):
         """XXX docstring"""

@@ -1541,7 +1541,7 @@ class queue(object):
                 raise util.Abort(_('option "-r" not valid when importing '
                                    'files'))
             rev = cmdutil.revrange(repo, rev)
-            rev.sort(lambda x, y: cmp(y, x))
+            rev.sort(reverse=True)
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
                                'patches'))
@@ -2334,7 +2334,7 @@ def select(ui, repo, *args, **opts):
         if ui.verbose:
             guards['NONE'] = noguards
         guards = guards.items()
-        guards.sort(lambda a, b: cmp(a[0][1:], b[0][1:]))
+        guards.sort(key=lambda x: x[0][1:])
         if guards:
             ui.note(_('guards in series file:\n'))
             for guard, count in guards:

@@ -12,13 +12,6 @@ import cPickle as pickle
 from mercurial import util
 from mercurial.i18n import _
 
-def listsort(list, key):
-    "helper to sort by key in Python 2.3"
-    try:
-        list.sort(key=key)
-    except TypeError:
-        list.sort(lambda l, r: cmp(key(l), key(r)))
-
 class logentry(object):
     '''Class logentry has the following attributes:
         .author    - author name as CVS knows it
@@ -419,7 +412,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             if len(log) % 100 == 0:
                 ui.status(util.ellipsis('%d %s' % (len(log), e.file), 80)+'\n')
 
-    listsort(log, key=lambda x:(x.rcs, x.revision))
+    log.sort(key=lambda x: (x.rcs, x.revision))
 
     # find parent revisions of individual files
     versions = {}
@@ -435,7 +428,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     if cache:
         if log:
             # join up the old and new logs
-            listsort(log, key=lambda x:x.date)
+            log.sort(key=lambda x: x.date)
 
             if oldlog and oldlog[-1].date >= log[0].date:
                 raise logerror('Log cache overlaps with new log entries,'
@@ -484,7 +477,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
     # Merge changesets
 
-    listsort(log, key=lambda x:(x.comment, x.author, x.branch, x.date))
+    log.sort(key=lambda x: (x.comment, x.author, x.branch, x.date))
 
     changesets = []
     files = set()

@@ -325,10 +325,6 @@ class patchfile(object):
         # looks through the hash and finds candidate lines.  The
         # result is a list of line numbers sorted based on distance
         # from linenum
-        def sorter(a, b):
-            vala = abs(a - linenum)
-            valb = abs(b - linenum)
-            return cmp(vala, valb)
 
         try:
             cand = self.hash[l]
@@ -337,7 +333,7 @@ class patchfile(object):
 
         if len(cand) > 1:
             # resort our list of potentials forward then back.
-            cand.sort(sorter)
+            cand.sort(key=lambda x: abs(x - linenum))
         return cand
 
     def hashlines(self):
