@@ -9,7 +9,7 @@ from i18n import _
 import osutil
 import os, sys, errno, stat, getpass, pwd, grp
 
-posixfile = file
+posixfile = open
 nulldev = '/dev/null'
 normpath = os.path.normpath
 samestat = os.path.samestat
@@ -70,20 +70,20 @@ def set_flags(f, l, x):
     if l:
         if not stat.S_ISLNK(s):
             # switch file to link
-            data = file(f).read()
+            data = open(f).read()
             os.unlink(f)
             try:
                 os.symlink(data, f)
             except:
                 # failed to make a link, rewrite file
-                file(f, "w").write(data)
+                open(f, "w").write(data)
         # no chmod needed at this point
         return
     if stat.S_ISLNK(s):
         # switch link to file
         data = os.readlink(f)
         os.unlink(f)
-        file(f, "w").write(data)
+        open(f, "w").write(data)
         s = 0666 & ~umask # avoid restatting for chmod
 
     sx = s & 0100

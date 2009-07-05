@@ -419,7 +419,7 @@ def runone(options, test, skips, fails):
     vlog("# Test", test)
 
     # create a fresh hgrc
-    hgrc = file(HGRCPATH, 'w+')
+    hgrc = open(HGRCPATH, 'w+')
     hgrc.write('[ui]\n')
     hgrc.write('slash = True\n')
     hgrc.write('[defaults]\n')
@@ -525,7 +525,7 @@ def runone(options, test, skips, fails):
 
     # Kill off any leftover daemon processes
     try:
-        fp = file(DAEMON_PIDS)
+        fp = open(DAEMON_PIDS)
         for line in fp:
             try:
                 pid = int(line)

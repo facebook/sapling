@@ -38,8 +38,8 @@ class convert_cvs(converter_source):
         self.lastbranch = {}
         self.parent = {}
         self.socket = None
-        self.cvsroot = file(os.path.join(cvs, "Root")).read()[:-1]
-        self.cvsrepo = file(os.path.join(cvs, "Repository")).read()[:-1]
+        self.cvsroot = open(os.path.join(cvs, "Root")).read()[:-1]
+        self.cvsrepo = open(os.path.join(cvs, "Repository")).read()[:-1]
         self.encoding = locale.getpreferredencoding()
 
         self._connect()

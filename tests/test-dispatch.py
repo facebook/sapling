@@ -15,14 +15,14 @@ testdispatch("init test1")
 os.chdir('test1')
 
 # create file 'foo', add and commit
-f = file('foo', 'wb')
+f = open('foo', 'wb')
 f.write('foo\n')
 f.close()
 testdispatch("add foo")
 testdispatch("commit -m commit1 -d 2000-01-01 foo")
 
 # append to file 'foo' and commit
-f = file('foo', 'ab')
+f = open('foo', 'ab')
 f.write('bar\n')
 f.close()
 testdispatch("commit -m commit2 -d 2000-01-02 foo")

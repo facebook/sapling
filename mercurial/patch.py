@@ -1139,7 +1139,7 @@ def internalpatch(patchobj, ui, strip, cwd, files={}, eolmode='strict'):
         raise util.Abort(_('Unsupported line endings type: %s') % eolmode)
 
     try:
-        fp = file(patchobj, 'rb')
+        fp = open(patchobj, 'rb')
     except TypeError:
         fp = patchobj
     if cwd:

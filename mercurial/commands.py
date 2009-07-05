@@ -750,7 +750,7 @@ def debugcomplete(ui, cmd='', **opts):
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))
 
 def debugfsinfo(ui, path = "."):
-    file('.debugfsinfo', 'w').write('')
+    open('.debugfsinfo', 'w').write('')
     ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
     ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
     ui.write('case-sensitive: %s\n' % (util.checkcase('.debugfsinfo')
@@ -983,7 +983,7 @@ def debuginstall(ui):
         if list(files) != [os.path.basename(fa)]:
             ui.write(_(" unexpected patch output!\n"))
             patchproblems += 1
-        a = file(fa).read()
+        a = open(fa).read()
         if a != b:
             ui.write(_(" patch test failed!\n"))
             patchproblems += 1
