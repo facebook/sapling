@@ -340,13 +340,13 @@ class SVNMeta(object):
                     file, branch = self.split_branch_path(src_p)[:2]
                     if file is None:
                         # some crazy people make tags from other tags
-                        file = ''
                         from_tag = self.is_path_tag(src_p)
                         if not from_tag:
                             continue
                         if from_tag in self.tags:
                             ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
                             src_rev, branch, = self.parse_converted_revision(ci)
+                            file = ''
                     if t_name not in added_tags and file is '':
                         added_tags[t_name] = branch, src_rev
                     elif file:
