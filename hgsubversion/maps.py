@@ -119,7 +119,7 @@ class TagMap(dict):
         f = open(self.path)
         ver = int(f.readline())
         if ver < self.VERSION:
-            repo.ui.warn('tag map outdated, running rebuildmeta...')
+            repo.ui.warn('tag map outdated, running rebuildmeta...\n')
             f.close()
             os.unlink(self.path)
             svncommands.rebuildmeta(repo.ui, repo, os.path.dirname(repo.path), ())
