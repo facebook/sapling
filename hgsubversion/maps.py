@@ -101,9 +101,13 @@ class TagMap(dict):
 
     VERSION = 2
 
+    @classmethod
+    def filepath(cls, repo):
+        return os.path.join(repo.path, 'svn', 'tagmap')
+
     def __init__(self, repo, endrev=None):
         dict.__init__(self)
-        self.path = os.path.join(repo.path, 'svn', 'tagmap')
+        self.path = self.filepath(repo)
         self.seen = 0
         self.endrev=endrev
         if os.path.isfile(self.path):

@@ -87,6 +87,9 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     last_rev = -1
     branchinfo = {}
     noderevnums = {}
+    tagfile = os.path.join(svnmetadir, 'tagmap')
+    if os.path.exists(maps.TagMap.filepath(repo)):
+        os.unlink(maps.TagMap.filepath(repo))
     tags = maps.TagMap(repo)
 
     skipped = set()
