@@ -291,6 +291,7 @@ class filectx(object):
 
     def linkrev(self): return self._filelog.linkrev(self._filerev)
     def node(self): return self._changectx.node()
+    def hex(self): return hex(self.node())
     def user(self): return self._changectx.user()
     def date(self): return self._changectx.date()
     def files(self): return self._changectx.files()
