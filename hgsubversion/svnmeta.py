@@ -262,7 +262,7 @@ class SVNMeta(object):
             src_tag = self.is_path_tag(src_path)
             if src_tag != False or src_file == '': # case 2
                 ln = self.localname(p)
-                if src_tag != False:
+                if src_tag != False and src_tag in self.tags:
                     ci = self.repo[self.tags[src_tag]].extra()['convert_revision']
                     src_rev, src_branch, = self.parse_converted_revision(ci)
                 return {ln: (src_branch, src_rev, revnum)}
@@ -311,8 +311,9 @@ class SVNMeta(object):
         '''Get the parent revision hash for a commit on a specific branch.
         '''
         tag = self.is_path_tag(self.remotename(branch))
-        if tag and tag in self.tags:
-            ha = self.tags[tag]
+        limitedtags = maps.TagMap(self.repo, endrev=number-1)
+        if tag and tag in limitedtags:
+            ha = limitedtags[tag]
             return ha
         r, br = self.get_parent_svn_branch_and_rev(number, branch)
         if r is not None:
@@ -343,8 +344,9 @@ class SVNMeta(object):
                         from_tag = self.is_path_tag(src_p)
                         if not from_tag:
                             continue
-                        ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
-                        src_rev, branch, = self.parse_converted_revision(ci)
+                        if from_tag in self.tags:
+                            ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
+                            src_rev, branch, = self.parse_converted_revision(ci)
                     if t_name not in added_tags and file is '':
                         added_tags[t_name] = branch, src_rev
                     elif file:
@@ -455,7 +457,7 @@ class SVNMeta(object):
         if not newparent:
             assert self.revmap[revnum, branch] == parentctx.node()
             self.revmap[revnum, branch] = new_hash
-        self.tags[tag] = hash
+        self.tags[tag] = hash, rev.revnum
         util.describe_commit(self.ui, new_hash, branch)
 
     def committags(self, delta, rev, endbranches):
@@ -488,7 +490,7 @@ class SVNMeta(object):
                 elif op == 'rm':
                     tagged = node.hex(node.nullid)
                 src += '%s %s\n' % (tagged, tag)
-                self.tags[tag] = node.bin(tagged)
+                self.tags[tag] = node.bin(tagged), rev.revnum
 
             # add new changeset containing updated .hgtags
             def fctxfun(repo, memctx, path):

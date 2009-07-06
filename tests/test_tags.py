@@ -1,5 +1,7 @@
+import os
 import unittest
 
+from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
@@ -92,28 +94,30 @@ class TestTags(test_util.TestBase):
     def test_edited_tag(self, stupid=False):
        repo = self._load_fixture_and_fetch('commit-to-tag.svndump',
                                            stupid=stupid)
-       self.assertEqual(len(repo.heads()), 4)
+       self.assertEqual(len(repo.heads()), 5)
        heads = repo.heads()
        openheads = [h for h in heads if not repo[h].extra().get('close', False)]
        closedheads = set(heads) - set(openheads)
-       self.assertEqual(len(openheads), 0)
+       self.assertEqual(len(openheads), 1)
        self.assertEqual(len(closedheads), 4)
-       closedheads = sorted(list(closedheads), cmp=lambda x,y: cmp(repo[x].rev(),
-                                                                   repo[y].rev()))
+       closedheads = sorted(list(closedheads),
+                            cmp=lambda x,y: cmp(repo[x].rev(), repo[y].rev()))
+
        # closeme has no open heads
        for h in openheads:
            self.assertNotEqual('closeme', repo[openheads[0]].branch())
 
        self.assertEqual(1, len(self.repo.branchheads('magic')))
 
-       willedit, alsoedit, editlater, closeme = closedheads
+       alsoedit, editlater, closeme, willedit, = closedheads
        self.assertEqual(
            repo[willedit].extra(),
            {'close': '1',
             'branch': 'magic',
-            'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/will-edit@9'})
+            'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/will-edit@19'})
        self.assertEqual(willedit, repo.tags()['will-edit'])
-       self.assertEqual(repo['will-edit'].manifest().keys(), ['beta',
+       self.assertEqual(repo['will-edit'].manifest().keys(), ['alpha',
+                                                              'beta',
                                                               'gamma',
                                                               ])
        self.assertEqual(
@@ -153,6 +157,14 @@ class TestTags(test_util.TestBase):
             {'magic': '\xa2b\xb9\x03\xc6\xbd\x903\x95\xf5\x0f\x94\xcey\xc4E\xfaE6\xaa',
              'magic2': '\xa3\xa2D\x86aM\xc0v\xb9\xb0\x18\x14\xad\xacwBUi}\xe2',
              })
+
+    def test_old_tag_map_rebuilds(self):
+        repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')
+        tm = os.path.join(repo.path, 'svn', 'tagmap')
+        open(tm, 'w').write('1\n')
+        commands.pull(repo.ui, repo)
+        self.assertEqual(open(tm).read().splitlines()[0], '2')
+
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(TestTags)

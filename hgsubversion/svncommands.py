@@ -67,11 +67,12 @@ def verify(ui, repo, *args, **opts):
 def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
-    if len(args) != 1:
+    dest = None
+    if len(args) == 1:
         dest = args[0]
-        url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
-    else:
-        url = args[0]
+    elif len(args) > 1:
+        raise hgutil.Abort('rebuildmeta takes 1 or no arguments')
+    url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     uuid = None
     url = util.normalize_url(url.rstrip('/'))
     user, passwd = util.getuserpass(opts)
@@ -104,7 +105,18 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             newdata = ctx.filectx('.hgtags').data()
             for newtag in newdata[len(parentdata):-1].split('\n'):
                 ha, tag = newtag.split(' ', 1)
-                tags[tag] = node.bin(ha)
+                tagged = repo[ha].extra().get('convert_revision', None)
+                if tagged is None:
+                    tagged = -1
+                else:
+                    tagged = int(tagged[40:].split('@')[1])
+                # This is max(tagged rev, tagging rev) because if it is a normal
+                # tag, the tagging revision has the right rev number. However, if it
+                # was an edited tag, then the tagged revision has the correct revision
+                # number.
+                tagging = int(convinfo[40:].split('@')[1])
+                tagrev = max(tagged, tagging)
+                tags[tag] = node.bin(ha), tagrev
 
         # check that the conversion metadata matches expectations
         assert convinfo.startswith('svn:')
