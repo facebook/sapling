@@ -52,10 +52,10 @@ class GitHandler(object):
         self._map_hg[hgsha] = gitsha
 
     def map_hg_get(self, gitsha):
-	return self._map_git.get(gitsha)
+        return self._map_git.get(gitsha)
 
     def map_git_get(self, hgsha):
-	return self._map_hg.get(hgsha)
+        return self._map_hg.get(hgsha)
 
     def load_map(self):
         self._map_git = {}
@@ -445,7 +445,7 @@ class GitHandler(object):
 
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
-        # TODO : Do something less coarse-grained than try/except on the
+        # TODO: Do something less coarse-grained than try/except on the
         #        get_file call for removed files
 
         (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
@@ -565,10 +565,10 @@ class GitHandler(object):
             changed_refs = client.send_pack(path, changed, genpack)
             return changed_refs
         except:
-            # TODO : remove try/except or do something useful here
+            # TODO: remove try/except or do something useful here
             raise
 
-    # TODO : for now, we'll just push all heads that match remote heads
+    # TODO: for now, we'll just push all heads that match remote heads
     #        * we should have specified push, tracking branches and --all
     # takes a dict of refs:shas from the server and returns what should be
     # pushed up
@@ -579,7 +579,7 @@ class GitHandler(object):
         if not keys:
             return None
 
-        # TODO : this is a huge hack
+        # TODO: this is a huge hack
         if keys[0] == 'capabilities^{}':
             # nothing on the server yet - first push
             if not 'master' in self.repo.tags():
@@ -638,12 +638,12 @@ class GitHandler(object):
 
         # so now i have the shas, need to turn them into a list of
         # tuples (sha, path) for ALL the objects i'm sending
-        # TODO : don't send blobs or trees they already have
+        # TODO: don't send blobs or trees they already have
         def get_objects(tree, path):
             changes = list()
             changes.append((tree, path))
             for (mode, name, sha) in tree.entries():
-                if mode == 0160000: # TODO : properly handle submodules and document what 57344 means
+                if mode == 0160000: # TODO: properly handle submodules and document what 57344 means
                     continue
                 if sha in seen:
                     continue
@@ -765,7 +765,7 @@ class GitHandler(object):
     ## UTILITY FUNCTIONS
 
     def convert_git_int_mode(self, mode):
-	# TODO : make these into constants
+        # TODO: make these into constants
         convert = {
          0100644: '',
          0100755: 'x',
@@ -826,10 +826,6 @@ class GitHandler(object):
             return string.decode('latin-1').encode('utf-8')
         except UnicodeDecodeError:
             return string.decode('ascii', 'replace').encode('utf-8')
-
-    def check_bookmarks(self):
-        if self.ui.config('extensions', 'hgext.bookmarks') is not None:
-            self.ui.warn("YOU NEED TO SETUP BOOKMARKS\n")
 
     def get_transport_and_path(self, uri):
         from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
