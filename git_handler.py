@@ -245,7 +245,7 @@ class GitHandler(object):
             try:
                 timezone = format_timezone(-int(timezone))
                 commit['committer'] = '%s %s' % (name_timestamp, timezone)
-            except ValueError:
+            except ValueError: #pragma: no cover
                 self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%d: '%s'.\n") % (ctx, timezone))
         if 'encoding' in extra:
             commit['encoding'] = extra['encoding']
@@ -608,7 +608,7 @@ class GitHandler(object):
                         else:
                             # XXX: maybe abort completely
                             ui.warn('not pushing branch %s, please merge'% head)
-                except RepoError:
+                except RepoError: #pragma: no cover
                     # remote_ref is not here
                     pass
 
@@ -698,7 +698,7 @@ class GitHandler(object):
         try:
             bms = bookmarks.parse(self.repo)
             return dict([(bm, self.map_git_get(hex(bms[bm]))) for bm in bms])
-        except AttributeError:
+        except AttributeError: #pragma: no cover
             return {}
 
     def import_tags(self, refs):
@@ -831,11 +831,7 @@ class GitHandler(object):
         from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
         for handler, transport in (("git://", TCPGitClient), ("git@", SSHGitClient), ("git+ssh://", SSHGitClient)):
             if uri.startswith(handler):
-                if handler == 'git@':
-                    host, path = uri[len(handler):].split(":", 1)
-                    host = 'git@' + host
-                else:
-                    host, path = uri[len(handler):].split("/", 1)
+                host, path = uri[len(handler):].split("/", 1)
                 return transport(host), '/' + path
         # if its not git or git+ssh, try a local url..
         return SubprocessGitClient(), uri

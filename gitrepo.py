@@ -4,7 +4,7 @@ from git_handler import GitHandler
 class gitrepo(repo.repository):
     capabilities = []
     def __init__(self, ui, path, create):
-        if create:
+        if create: # pragma: no cover
             raise util.Abort('Cannot create a git repository.')
         self.path = path
 
