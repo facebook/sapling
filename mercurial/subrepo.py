@@ -82,7 +82,7 @@ def submerge(repo, wctx, mctx, actx):
             if repo.ui.promptchoice(
                 _(' local changed subrepository %s which remote removed\n'
                   'use (c)hanged version or (d)elete?') % s,
-                  (_('&Changed'), _('&Delete')), 0):
+                (_('&Changed'), _('&Delete')), 0):
                 wctx.sub(s).remove()
 
     for s, r in s2.items():
@@ -95,7 +95,7 @@ def submerge(repo, wctx, mctx, actx):
             if repo.ui.promptchoice(
                 _(' remote changed subrepository %s which local removed\n'
                   'use (c)hanged version or (d)elete?') % s,
-                  (_('&Changed'), _('&Delete')), 0) == 0:
+                (_('&Changed'), _('&Delete')), 0) == 0:
                 wctx.sub(s).get(r)
                 sm[s] = r
 
