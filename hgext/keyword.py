@@ -28,15 +28,15 @@
 
 '''expand keywords in tracked files
 
-This extension expands RCS/CVS-like or self-customized $Keywords$ in
-tracked text files selected by your configuration.
+This extension expands RCS/CVS-like or self-customized $Keywords$ in tracked
+text files selected by your configuration.
 
-Keywords are only expanded in local repositories and not stored in the
-change history. The mechanism can be regarded as a convenience for the
-current user or for archive distribution.
+Keywords are only expanded in local repositories and not stored in the change
+history. The mechanism can be regarded as a convenience for the current user
+or for archive distribution.
 
-Configuration is done in the [keyword] and [keywordmaps] sections of
-hgrc files.
+Configuration is done in the [keyword] and [keywordmaps] sections of hgrc
+files.
 
 Example:
 
@@ -45,33 +45,32 @@ Example:
     **.py =
     x*    = ignore
 
-Note: the more specific you are in your filename patterns
-      the less you lose speed in huge repositories.
+Note: the more specific you are in your filename patterns the less you lose
+      speed in huge repositories.
 
-For [keywordmaps] template mapping and expansion demonstration and
-control run "hg kwdemo".
+For [keywordmaps] template mapping and expansion demonstration and control run
+"hg kwdemo".
 
 An additional date template filter {date|utcdate} is provided.
 
-The default template mappings (view with "hg kwdemo -d") can be
-replaced with customized keywords and templates. Again, run "hg
-kwdemo" to control the results of your config changes.
+The default template mappings (view with "hg kwdemo -d") can be replaced with
+customized keywords and templates. Again, run "hg kwdemo" to control the
+results of your config changes.
 
-Before changing/disabling active keywords, run "hg kwshrink" to avoid
-the risk of inadvertently storing expanded keywords in the change
-history.
+Before changing/disabling active keywords, run "hg kwshrink" to avoid the risk
+of inadvertently storing expanded keywords in the change history.
 
-To force expansion after enabling it, or a configuration change, run
-"hg kwexpand".
+To force expansion after enabling it, or a configuration change, run "hg
+kwexpand".
 
-Also, when committing with the record extension or using mq's qrecord,
-be aware that keywords cannot be updated. Again, run "hg kwexpand" on
-the files in question to update keyword expansions after all changes
-have been checked in.
+Also, when committing with the record extension or using mq's qrecord, be
+aware that keywords cannot be updated. Again, run "hg kwexpand" on the files
+in question to update keyword expansions after all changes have been checked
+in.
 
-Expansions spanning more than one line and incremental expansions,
-like CVS' $Log$, are not supported. A keyword template map
-"Log = {desc}" expands to the first line of the changeset description.
+Expansions spanning more than one line and incremental expansions, like CVS'
+$Log$, are not supported. A keyword template map "Log = {desc}" expands to the
+first line of the changeset description.
 '''
 
 from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
@@ -362,20 +361,19 @@ def expand(ui, repo, *pats, **opts):
 def files(ui, repo, *pats, **opts):
     '''show files configured for keyword expansion
 
-    List which files in the working directory are matched by the
-    [keyword] configuration patterns.
+    List which files in the working directory are matched by the [keyword]
+    configuration patterns.
 
-    Useful to prevent inadvertent keyword expansion and to speed up
-    execution by including only files that are actual candidates
-    for expansion.
+    Useful to prevent inadvertent keyword expansion and to speed up execution
+    by including only files that are actual candidates for expansion.
 
-    See "hg help keyword" on how to construct patterns both for
-    inclusion and exclusion of files.
+    See "hg help keyword" on how to construct patterns both for inclusion and
+    exclusion of files.
 
     Use -u/--untracked to list untracked files as well.
 
-    With -a/--all and -v/--verbose the codes used to show the status
-    of files are:
+    With -a/--all and -v/--verbose the codes used to show the status of files
+    are:
     K = keyword expansion candidate
     k = keyword expansion candidate (untracked)
     I = ignored
