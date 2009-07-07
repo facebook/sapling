@@ -7,12 +7,12 @@
 
 '''discover and advertise repositories on the local network
 
-Zeroconf enabled repositories will be announced in a network without
-the need to configure a server or a service. They can be discovered
-without knowing their actual IP address.
+Zeroconf enabled repositories will be announced in a network without the need
+to configure a server or a service. They can be discovered without knowing
+their actual IP address.
 
-To allow other people to discover your repository using run "hg serve"
-in your repository.
+To allow other people to discover your repository using run "hg serve" in your
+repository.
 
  $ cd test
  $ hg serve
