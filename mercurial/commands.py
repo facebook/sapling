@@ -20,11 +20,10 @@ import merge as merge_
 def add(ui, repo, *pats, **opts):
     """add the specified files on the next commit
 
-    Schedule files to be version controlled and added to the
-    repository.
+    Schedule files to be version controlled and added to the repository.
 
-    The files will be added to the repository at the next commit. To
-    undo an add before that, see hg forget.
+    The files will be added to the repository at the next commit. To undo an
+    add before that, see hg forget.
 
     If no names are given, add all files to the repository.
     """
@@ -49,19 +48,16 @@ def add(ui, repo, *pats, **opts):
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files
 
-    Add all new files and remove all missing files from the
-    repository.
+    Add all new files and remove all missing files from the repository.
 
-    New files are ignored if they match any of the patterns in
-    .hgignore. As with add, these changes take effect at the next
-    commit.
+    New files are ignored if they match any of the patterns in .hgignore. As
+    with add, these changes take effect at the next commit.
 
-    Use the -s/--similarity option to detect renamed files. With a
-    parameter > 0, this compares every removed file with every added
-    file and records those similar enough as renames. This option
-    takes a percentage between 0 (disabled) and 100 (files must be
-    identical) as its parameter. Detecting renamed files this way can
-    be expensive.
+    Use the -s/--similarity option to detect renamed files. With a parameter >
+    0, this compares every removed file with every added file and records
+    those similar enough as renames. This option takes a percentage between 0
+    (disabled) and 100 (files must be identical) as its parameter. Detecting
+    renamed files this way can be expensive.
     """
     try:
         sim = float(opts.get('similarity') or 0)
@@ -74,16 +70,13 @@ def addremove(ui, repo, *pats, **opts):
 def annotate(ui, repo, *pats, **opts):
     """show changeset information by line for each file
 
-    List changes in files, showing the revision id responsible for
-    each line
+    List changes in files, showing the revision id responsible for each line
 
-    This command is useful for discovering when a change was made and
-    by whom.
+    This command is useful for discovering when a change was made and by whom.
 
-    Without the -a/--text option, annotate will avoid processing files
-    it detects as binary. With -a, annotate will annotate the file
-    anyway, although the results will probably be neither useful
-    nor desirable.
+    Without the -a/--text option, annotate will avoid processing files it
+    detects as binary. With -a, annotate will annotate the file anyway,
+    although the results will probably be neither useful nor desirable.
     """
     datefunc = ui.quiet and util.shortdate or util.datestr
     getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
@@ -137,11 +130,10 @@ def annotate(ui, repo, *pats, **opts):
 def archive(ui, repo, dest, **opts):
     '''create an unversioned archive of a repository revision
 
-    By default, the revision used is the parent of the working
-    directory; use -r/--rev to specify a different revision.
+    By default, the revision used is the parent of the working directory; use
+    -r/--rev to specify a different revision.
 
-    To specify the type of archive to create, use -t/--type. Valid
-    types are:
+    To specify the type of archive to create, use -t/--type. Valid types are:
 
     "files" (default): a directory full of files
     "tar": tar archive, uncompressed
@@ -150,13 +142,12 @@ def archive(ui, repo, dest, **opts):
     "uzip": zip archive, uncompressed
     "zip": zip archive, compressed using deflate
 
-    The exact name of the destination archive or directory is given
-    using a format string; see 'hg help export' for details.
+    The exact name of the destination archive or directory is given using a
+    format string; see 'hg help export' for details.
 
-    Each member added to an archive file has a directory prefix
-    prepended. Use -p/--prefix to specify a format string for the
-    prefix. The default is the basename of the archive, with suffixes
-    removed.
+    Each member added to an archive file has a directory prefix prepended. Use
+    -p/--prefix to specify a format string for the prefix. The default is the
+    basename of the archive, with suffixes removed.
     '''
 
     ctx = repo[opts.get('rev')]
@@ -181,17 +172,17 @@ def archive(ui, repo, dest, **opts):
 def backout(ui, repo, node=None, rev=None, **opts):
     '''reverse effect of earlier changeset
 
-    Commit the backed out changes as a new changeset. The new
-    changeset is a child of the backed out changeset.
+    Commit the backed out changes as a new changeset. The new changeset is a
+    child of the backed out changeset.
 
-    If you backout a changeset other than the tip, a new head is
-    created. This head will be the new tip and you should merge this
-    backout changeset with another head.
+    If you backout a changeset other than the tip, a new head is created. This
+    head will be the new tip and you should merge this backout changeset with
+    another head.
 
-    The --merge option remembers the parent of the working directory
-    before starting the backout, then merges the new head with that
-    changeset afterwards. This saves you from doing the merge by hand.
-    The result of this merge is not committed, as with a normal merge.
+    The --merge option remembers the parent of the working directory before
+    starting the backout, then merges the new head with that changeset
+    afterwards. This saves you from doing the merge by hand. The result of
+    this merge is not committed, as with a normal merge.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     '''
@@ -268,23 +259,22 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                reset=None, good=None, bad=None, skip=None, noupdate=None):
     """subdivision search of changesets
 
-    This command helps to find changesets which introduce problems. To
-    use, mark the earliest changeset you know exhibits the problem as
-    bad, then mark the latest changeset which is free from the problem
-    as good. Bisect will update your working directory to a revision
-    for testing (unless the -U/--noupdate option is specified). Once
-    you have performed tests, mark the working directory as good or
-    bad, and bisect will either update to another candidate changeset
-    or announce that it has found the bad revision.
+    This command helps to find changesets which introduce problems. To use,
+    mark the earliest changeset you know exhibits the problem as bad, then
+    mark the latest changeset which is free from the problem as good. Bisect
+    will update your working directory to a revision for testing (unless the
+    -U/--noupdate option is specified). Once you have performed tests, mark
+    the working directory as good or bad, and bisect will either update to
+    another candidate changeset or announce that it has found the bad
+    revision.
 
-    As a shortcut, you can also use the revision argument to mark a
-    revision as good or bad without checking it out first.
+    As a shortcut, you can also use the revision argument to mark a revision
+    as good or bad without checking it out first.
 
-    If you supply a command, it will be used for automatic bisection.
-    Its exit status will be used to mark revisions as good or bad:
-    status 0 means good, 125 means to skip the revision, 127
-    (command not found) will abort the bisection, and any other
-    non-zero exit status means the revision is bad.
+    If you supply a command, it will be used for automatic bisection. Its exit
+    status will be used to mark revisions as good or bad: status 0 means good,
+    125 means to skip the revision, 127 (command not found) will abort the
+    bisection, and any other non-zero exit status means the revision is bad.
     """
     def print_result(nodes, good):
         displayer = cmdutil.show_changeset(ui, repo, {})
@@ -406,21 +396,19 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 def branch(ui, repo, label=None, **opts):
     """set or show the current branch name
 
-    With no argument, show the current branch name. With one argument,
-    set the working directory branch name (the branch will not exist
-    in the repository until the next commit). Standard practice
-    recommends that primary development take place on the 'default'
-    branch.
+    With no argument, show the current branch name. With one argument, set the
+    working directory branch name (the branch will not exist in the repository
+    until the next commit). Standard practice recommends that primary
+    development take place on the 'default' branch.
 
-    Unless -f/--force is specified, branch will not let you set a
-    branch name that already exists, even if it's inactive.
+    Unless -f/--force is specified, branch will not let you set a branch name
+    that already exists, even if it's inactive.
 
-    Use -C/--clean to reset the working directory branch to that of
-    the parent of the working directory, negating a previous branch
-    change.
+    Use -C/--clean to reset the working directory branch to that of the parent
+    of the working directory, negating a previous branch change.
 
-    Use the command 'hg update' to switch to an existing branch. Use
-    'hg commit --close-branch' to mark this branch as closed.
+    Use the command 'hg update' to switch to an existing branch. Use 'hg
+    commit --close-branch' to mark this branch as closed.
     """
 
     if opts.get('clean'):
@@ -440,12 +428,12 @@ def branch(ui, repo, label=None, **opts):
 def branches(ui, repo, active=False, closed=False):
     """list repository named branches
 
-    List the repository's named branches, indicating which ones are
-    inactive. If -c/--closed is specified, also list branches which have
-    been marked closed (see hg commit --close-branch).
+    List the repository's named branches, indicating which ones are inactive.
+    If -c/--closed is specified, also list branches which have been marked
+    closed (see hg commit --close-branch).
 
-    If -a/--active is specified, only show active branches. A branch
-    is considered active if it contains repository heads.
+    If -a/--active is specified, only show active branches. A branch is
+    considered active if it contains repository heads.
 
     Use the command 'hg update' to switch to an existing branch.
     """
@@ -482,25 +470,24 @@ def branches(ui, repo, active=False, closed=False):
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
 
-    Generate a compressed changegroup file collecting changesets not
-    known to be in another repository.
+    Generate a compressed changegroup file collecting changesets not known to
+    be in another repository.
 
-    If no destination repository is specified the destination is
-    assumed to have all the nodes specified by one or more --base
-    parameters. To create a bundle containing all changesets, use
-    -a/--all (or --base null).
+    If no destination repository is specified the destination is assumed to
+    have all the nodes specified by one or more --base parameters. To create a
+    bundle containing all changesets, use -a/--all (or --base null).
 
-    You can change compression method with the -t/--type option.
-    The available compression methods are: none, bzip2, and
-    gzip (by default, bundles are compressed using bzip2).
+    You can change compression method with the -t/--type option. The available
+    compression methods are: none, bzip2, and gzip (by default, bundles are
+    compressed using bzip2).
 
-    The bundle file can then be transferred using conventional means
-    and applied to another repository with the unbundle or pull
-    command. This is useful when direct push and pull are not
-    available or when exporting an entire repository is undesirable.
+    The bundle file can then be transferred using conventional means and
+    applied to another repository with the unbundle or pull command. This is
+    useful when direct push and pull are not available or when exporting an
+    entire repository is undesirable.
 
-    Applying bundles preserves all changeset contents including
-    permissions, copy/rename information, and revision history.
+    Applying bundles preserves all changeset contents including permissions,
+    copy/rename information, and revision history.
     """
     revs = opts.get('rev') or None
     if revs:
@@ -557,13 +544,13 @@ def bundle(ui, repo, fname, dest=None, **opts):
 def cat(ui, repo, file1, *pats, **opts):
     """output the current or given revision of files
 
-    Print the specified files as they were at the given revision. If
-    no revision is given, the parent of the working directory is used,
-    or tip if no revision is checked out.
+    Print the specified files as they were at the given revision. If no
+    revision is given, the parent of the working directory is used, or tip if
+    no revision is checked out.
 
-    Output may be to a file, in which case the name of the file is
-    given using a format string. The formatting rules are the same as
-    for the export command, with the following additions:
+    Output may be to a file, in which case the name of the file is given using
+    a format string. The formatting rules are the same as for the export
+    command, with the following additions:
 
     %s   basename of file being printed
     %d   dirname of file being printed, or '.' if in repository root
@@ -586,47 +573,42 @@ def clone(ui, source, dest=None, **opts):
 
     Create a copy of an existing repository in a new directory.
 
-    If no destination directory name is specified, it defaults to the
-    basename of the source.
+    If no destination directory name is specified, it defaults to the basename
+    of the source.
 
-    The location of the source is added to the new repository's
-    .hg/hgrc file, as the default to be used for future pulls.
+    The location of the source is added to the new repository's .hg/hgrc file,
+    as the default to be used for future pulls.
 
-    If you use the -r/--rev option to clone up to a specific revision,
-    no subsequent revisions (including subsequent tags) will be
-    present in the cloned repository. This option implies --pull, even
-    on local repositories.
+    If you use the -r/--rev option to clone up to a specific revision, no
+    subsequent revisions (including subsequent tags) will be present in the
+    cloned repository. This option implies --pull, even on local repositories.
 
-    By default, clone will check out the head of the 'default' branch.
-    If the -U/--noupdate option is used, the new clone will contain
-    only a repository (.hg) and no working copy (the working copy
-    parent is the null revision).
+    By default, clone will check out the head of the 'default' branch. If the
+    -U/--noupdate option is used, the new clone will contain only a repository
+    (.hg) and no working copy (the working copy parent is the null revision).
 
     See 'hg help urls' for valid source format details.
 
     It is possible to specify an ssh:// URL as the destination, but no
-    .hg/hgrc and working directory will be created on the remote side.
-    Please see 'hg help urls' for important details about ssh:// URLs.
+    .hg/hgrc and working directory will be created on the remote side. Please
+    see 'hg help urls' for important details about ssh:// URLs.
 
-    For efficiency, hardlinks are used for cloning whenever the source
-    and destination are on the same filesystem (note this applies only
-    to the repository data, not to the checked out files). Some
-    filesystems, such as AFS, implement hardlinking incorrectly, but
-    do not report errors. In these cases, use the --pull option to
-    avoid hardlinking.
+    For efficiency, hardlinks are used for cloning whenever the source and
+    destination are on the same filesystem (note this applies only to the
+    repository data, not to the checked out files). Some filesystems, such as
+    AFS, implement hardlinking incorrectly, but do not report errors. In these
+    cases, use the --pull option to avoid hardlinking.
 
-    In some cases, you can clone repositories and checked out files
-    using full hardlinks with
+    In some cases, you can clone repositories and checked out files using full
+    hardlinks with
 
       $ cp -al REPO REPOCLONE
 
-    This is the fastest way to clone, but it is not always safe. The
-    operation is not atomic (making sure REPO is not modified during
-    the operation is up to you) and you have to make sure your editor
-    breaks hardlinks (Emacs and most Linux Kernel tools do so). Also,
-    this is not compatible with certain extensions that place their
-    metadata under the .hg directory, such as mq.
-
+    This is the fastest way to clone, but it is not always safe. The operation
+    is not atomic (making sure REPO is not modified during the operation is up
+    to you) and you have to make sure your editor breaks hardlinks (Emacs and
+    most Linux Kernel tools do so). Also, this is not compatible with certain
+    extensions that place their metadata under the .hg directory, such as mq.
     """
     hg.clone(cmdutil.remoteui(ui, opts), source, dest,
              pull=opts.get('pull'),
@@ -638,17 +620,17 @@ def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
 
     Commit changes to the given files into the repository. Unlike a
-    centralized RCS, this operation is a local operation. See hg push
-    for a way to actively distribute your changes.
+    centralized RCS, this operation is a local operation. See hg push for a
+    way to actively distribute your changes.
 
-    If a list of files is omitted, all changes reported by "hg status"
-    will be committed.
+    If a list of files is omitted, all changes reported by "hg status" will be
+    committed.
 
-    If you are committing the result of a merge, do not provide any
-    filenames or -I/-X filters.
+    If you are committing the result of a merge, do not provide any filenames
+    or -I/-X filters.
 
-    If no commit message is specified, the configured editor is
-    started to prompt you for a message.
+    If no commit message is specified, the configured editor is started to
+    prompt you for a message.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
@@ -686,16 +668,16 @@ def commit(ui, repo, *pats, **opts):
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
 
-    Mark dest as having copies of source files. If dest is a
-    directory, copies are put in that directory. If dest is a file,
-    the source must be a single file.
+    Mark dest as having copies of source files. If dest is a directory, copies
+    are put in that directory. If dest is a file, the source must be a single
+    file.
 
-    By default, this command copies the contents of files as they
-    exist in the working directory. If invoked with -A/--after, the
-    operation is recorded, but no copying is performed.
+    By default, this command copies the contents of files as they exist in the
+    working directory. If invoked with -A/--after, the operation is recorded,
+    but no copying is performed.
 
-    This command takes effect with the next commit. To undo a copy
-    before that, see hg revert.
+    This command takes effect with the next commit. To undo a copy before
+    that, see hg revert.
     """
     wlock = repo.wlock(False)
     try:
@@ -798,14 +780,14 @@ def showconfig(ui, repo, *values, **opts):
 
     With no arguments, print names and values of all config items.
 
-    With one argument of the form section.name, print just the value
-    of that config item.
+    With one argument of the form section.name, print just the value of that
+    config item.
 
-    With multiple arguments, print names and values of all config
-    items with matching section names.
+    With multiple arguments, print names and values of all config items with
+    matching section names.
 
-    With --debug, the source (filename and line number) is printed
-    for each config item.
+    With --debug, the source (filename and line number) is printed for each
+    config item.
     """
 
     untrusted = bool(opts.get('untrusted'))
@@ -832,8 +814,8 @@ def showconfig(ui, repo, *values, **opts):
 def debugsetparents(ui, repo, rev1, rev2=None):
     """manually set the parents of the current working directory
 
-    This is useful for writing repository conversion tools, but should
-    be used with care.
+    This is useful for writing repository conversion tools, but should be used
+    with care.
     """
 
     if not rev2:
@@ -1067,22 +1049,21 @@ def diff(ui, repo, *pats, **opts):
 
     Differences between files are shown using the unified diff format.
 
-    NOTE: diff may generate unexpected results for merges, as it will
-    default to comparing against the working directory's first parent
-    changeset if no revisions are specified.
+    NOTE: diff may generate unexpected results for merges, as it will default
+    to comparing against the working directory's first parent changeset if no
+    revisions are specified.
 
-    When two revision arguments are given, then changes are shown
-    between those revisions. If only one revision is specified then
-    that revision is compared to the working directory, and, when no
-    revisions are specified, the working directory files are compared
-    to its parent.
+    When two revision arguments are given, then changes are shown between
+    those revisions. If only one revision is specified then that revision is
+    compared to the working directory, and, when no revisions are specified,
+    the working directory files are compared to its parent.
 
-    Without the -a/--text option, diff will avoid generating diffs of
-    files it detects as binary. With -a, diff will generate a diff
-    anyway, probably with undesirable results.
+    Without the -a/--text option, diff will avoid generating diffs of files it
+    detects as binary. With -a, diff will generate a diff anyway, probably
+    with undesirable results.
 
-    Use the -g/--git option to generate diffs in the git extended diff
-    format. For more information, read 'hg help diffs'.
+    Use the -g/--git option to generate diffs in the git extended diff format.
+    For more information, read 'hg help diffs'.
     """
 
     revs = opts.get('rev')
@@ -1107,15 +1088,14 @@ def export(ui, repo, *changesets, **opts):
 
     Print the changeset header and diffs for one or more revisions.
 
-    The information shown in the changeset header is: author,
-    changeset hash, parent(s) and commit comment.
+    The information shown in the changeset header is: author, changeset hash,
+    parent(s) and commit comment.
 
-    NOTE: export may generate unexpected diff output for merge
-    changesets, as it will compare the merge changeset against its
-    first parent only.
+    NOTE: export may generate unexpected diff output for merge changesets, as
+    it will compare the merge changeset against its first parent only.
 
-    Output may be to a file, in which case the name of the file is
-    given using a format string. The formatting rules are as follows:
+    Output may be to a file, in which case the name of the file is given using
+    a format string. The formatting rules are as follows:
 
     %%   literal "%" character
     %H   changeset hash (40 bytes of hexadecimal)
@@ -1126,15 +1106,15 @@ def export(ui, repo, *changesets, **opts):
     %n   zero-padded sequence number, starting at 1
     %r   zero-padded changeset revision number
 
-    Without the -a/--text option, export will avoid generating diffs
-    of files it detects as binary. With -a, export will generate a
-    diff anyway, probably with undesirable results.
+    Without the -a/--text option, export will avoid generating diffs of files
+    it detects as binary. With -a, export will generate a diff anyway,
+    probably with undesirable results.
 
-    Use the -g/--git option to generate diffs in the git extended diff
-    format. See 'hg help diffs' for more information.
+    Use the -g/--git option to generate diffs in the git extended diff format.
+    See 'hg help diffs' for more information.
 
-    With the --switch-parent option, the diff will be against the
-    second parent. It can be useful to review a merge.
+    With the --switch-parent option, the diff will be against the second
+    parent. It can be useful to review a merge.
     """
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
@@ -1150,12 +1130,11 @@ def export(ui, repo, *changesets, **opts):
 def forget(ui, repo, *pats, **opts):
     """forget the specified files on the next commit
 
-    Mark the specified files so they will no longer be tracked
-    after the next commit.
+    Mark the specified files so they will no longer be tracked after the next
+    commit.
 
-    This only removes files from the current branch, not from the
-    entire project history, and it does not delete them from the
-    working directory.
+    This only removes files from the current branch, not from the entire
+    project history, and it does not delete them from the working directory.
 
     To undo a forget before the next commit, see hg add.
     """
@@ -1184,15 +1163,13 @@ def grep(ui, repo, pattern, *pats, **opts):
     Search revisions of files for a regular expression.
 
     This command behaves differently than Unix grep. It only accepts
-    Python/Perl regexps. It searches repository history, not the
-    working directory. It always prints the revision number in which a
-    match appears.
+    Python/Perl regexps. It searches repository history, not the working
+    directory. It always prints the revision number in which a match appears.
 
-    By default, grep only prints output for the first revision of a
-    file in which it finds a match. To get it to print every revision
-    that contains a change in match status ("-" for a match that
-    becomes a non-match, or "+" for a non-match that becomes a match),
-    use the --all flag.
+    By default, grep only prints output for the first revision of a file in
+    which it finds a match. To get it to print every revision that contains a
+    change in match status ("-" for a match that becomes a non-match, or "+"
+    for a non-match that becomes a match), use the --all flag.
     """
     reflags = 0
     if opts.get('ignore_case'):
@@ -1366,23 +1343,23 @@ def heads(ui, repo, *branchrevs, **opts):
 
     With no arguments, show all repository head changesets.
 
-    Repository "heads" are changesets that don't have child
-    changesets. They are where development generally takes place and
-    are the usual targets for update and merge operations.
+    Repository "heads" are changesets that don't have child changesets. They
+    are where development generally takes place and are the usual targets for
+    update and merge operations.
 
-    If one or more REV is given, the "branch heads" will be shown for
-    the named branch associated with that revision. The name of the
-    branch is called the revision's branch tag.
+    If one or more REV is given, the "branch heads" will be shown for the
+    named branch associated with that revision. The name of the branch is
+    called the revision's branch tag.
 
-    Branch heads are revisions on a given named branch that do not have
-    any descendants on the same branch. A branch head could be a true head
-    or it could be the last changeset on a branch before a new branch
-    was created. If none of the branch heads are true heads, the branch
-    is considered inactive. If -c/--closed is specified, also show branch
-    heads marked closed (see hg commit --close-branch).
+    Branch heads are revisions on a given named branch that do not have any
+    descendants on the same branch. A branch head could be a true head or it
+    could be the last changeset on a branch before a new branch was created.
+    If none of the branch heads are true heads, the branch is considered
+    inactive. If -c/--closed is specified, also show branch heads marked
+    closed (see hg commit --close-branch).
 
-    If STARTREV is specified only those heads (or branch heads) that
-    are descendants of STARTREV will be displayed.
+    If STARTREV is specified only those heads (or branch heads) that are
+    descendants of STARTREV will be displayed.
     """
     if opts.get('rev'):
         start = repo.lookup(opts['rev'])
@@ -1428,8 +1405,8 @@ def help_(ui, name=None, with_version=False):
 
     With no arguments, print a list of commands with short help messages.
 
-    Given a topic, extension, or command name, print help for that
-    topic."""
+    Given a topic, extension, or command name, print help for that topic.
+    """
     option_lists = []
 
     def addglobalopts(aliases):
@@ -1637,16 +1614,15 @@ def identify(ui, repo, source=None,
              rev=None, num=None, id=None, branch=None, tags=None):
     """identify the working copy or specified revision
 
-    With no revision, print a summary of the current state of the
-    repository.
+    With no revision, print a summary of the current state of the repository.
 
-    Specifying a path to a repository root or Mercurial bundle will
-    cause lookup to operate on that repository/bundle.
+    Specifying a path to a repository root or Mercurial bundle will cause
+    lookup to operate on that repository/bundle.
 
-    This summary identifies the repository state using one or two
-    parent hash identifiers, followed by a "+" if there are
-    uncommitted changes in the working directory, a list of tags for
-    this revision and a branch name for non-default branches.
+    This summary identifies the repository state using one or two parent hash
+    identifiers, followed by a "+" if there are uncommitted changes in the
+    working directory, a list of tags for this revision and a branch name for
+    non-default branches.
     """
 
     if not repo and not source:
@@ -1713,33 +1689,31 @@ def import_(ui, repo, patch1, *patches, **opts):
 
     Import a list of patches and commit them individually.
 
-    If there are outstanding changes in the working directory, import
-    will abort unless given the -f/--force flag.
+    If there are outstanding changes in the working directory, import will
+    abort unless given the -f/--force flag.
 
-    You can import a patch straight from a mail message. Even patches
-    as attachments work (to use the body part, it must have type
-    text/plain or text/x-patch). From and Subject headers of email
-    message are used as default committer and commit message. All
-    text/plain body parts before first diff are added to commit
-    message.
+    You can import a patch straight from a mail message. Even patches as
+    attachments work (to use the body part, it must have type text/plain or
+    text/x-patch). From and Subject headers of email message are used as
+    default committer and commit message. All text/plain body parts before
+    first diff are added to commit message.
 
-    If the imported patch was generated by hg export, user and
-    description from patch override values from message headers and
-    body. Values given on command line with -m/--message and -u/--user
-    override these.
+    If the imported patch was generated by hg export, user and description
+    from patch override values from message headers and body. Values given on
+    command line with -m/--message and -u/--user override these.
 
-    If --exact is specified, import will set the working directory to
-    the parent of each patch before applying it, and will abort if the
-    resulting changeset has a different ID than the one recorded in
-    the patch. This may happen due to character set problems or other
-    deficiencies in the text patch format.
+    If --exact is specified, import will set the working directory to the
+    parent of each patch before applying it, and will abort if the resulting
+    changeset has a different ID than the one recorded in the patch. This may
+    happen due to character set problems or other deficiencies in the text
+    patch format.
 
-    With -s/--similarity, hg will attempt to discover renames and
-    copies in the patch in the same way as 'addremove'.
+    With -s/--similarity, hg will attempt to discover renames and copies in
+    the patch in the same way as 'addremove'.
 
-    To read a patch from standard input, use "-" as the patch name. If
-    a URL is specified, the patch will be downloaded from it.
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    To read a patch from standard input, use "-" as the patch name. If a URL
+    is specified, the patch will be downloaded from it. See 'hg help dates'
+    for a list of formats valid for -d/--date.
     """
     patches = (patch1,) + patches
 
@@ -1839,12 +1813,12 @@ def import_(ui, repo, patch1, *patches, **opts):
 def incoming(ui, repo, source="default", **opts):
     """show new changesets found in source
 
-    Show new changesets found in the specified path/URL or the default
-    pull location. These are the changesets that would have been pulled
-    if a pull at the time you issued this command.
+    Show new changesets found in the specified path/URL or the default pull
+    location. These are the changesets that would have been pulled if a pull
+    at the time you issued this command.
 
-    For remote repository, using --bundle avoids downloading the
-    changesets twice if the incoming is followed by a pull.
+    For remote repository, using --bundle avoids downloading the changesets
+    twice if the incoming is followed by a pull.
 
     See pull for valid source format details.
     """
@@ -1908,33 +1882,33 @@ def incoming(ui, repo, source="default", **opts):
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory
 
-    Initialize a new repository in the given directory. If the given
-    directory does not exist, it will be created.
+    Initialize a new repository in the given directory. If the given directory
+    does not exist, it will be created.
 
     If no directory is given, the current directory is used.
 
-    It is possible to specify an ssh:// URL as the destination.
-    See 'hg help urls' for more information.
+    It is possible to specify an ssh:// URL as the destination. See 'hg help
+    urls' for more information.
     """
     hg.repository(cmdutil.remoteui(ui, opts), dest, create=1)
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns
 
-    Print files under Mercurial control in the working directory whose
-    names match the given patterns.
+    Print files under Mercurial control in the working directory whose names
+    match the given patterns.
 
     By default, this command searches all directories in the working
-    directory. To search just the current directory and its
-    subdirectories, use "--include .".
+    directory. To search just the current directory and its subdirectories,
+    use "--include .".
 
-    If no patterns are given to match, this command prints the names
-    of all files under Mercurial control in the working directory.
+    If no patterns are given to match, this command prints the names of all
+    files under Mercurial control in the working directory.
 
-    If you want to feed the output of this command into the "xargs"
-    command, use the -0 option to both this command and "xargs". This
-    will avoid the problem of "xargs" treating single filenames that
-    contain whitespace as multiple filenames.
+    If you want to feed the output of this command into the "xargs" command,
+    use the -0 option to both this command and "xargs". This will avoid the
+    problem of "xargs" treating single filenames that contain whitespace as
+    multiple filenames.
     """
     end = opts.get('print0') and '\0' or '\n'
     rev = opts.get('rev') or None
@@ -1956,30 +1930,29 @@ def locate(ui, repo, *pats, **opts):
 def log(ui, repo, *pats, **opts):
     """show revision history of entire repository or files
 
-    Print the revision history of the specified files or the entire
-    project.
+    Print the revision history of the specified files or the entire project.
 
-    File history is shown without following rename or copy history of
-    files. Use -f/--follow with a filename to follow history across
-    renames and copies. --follow without a filename will only show
-    ancestors or descendants of the starting revision. --follow-first
-    only follows the first parent of merge revisions.
+    File history is shown without following rename or copy history of files.
+    Use -f/--follow with a filename to follow history across renames and
+    copies. --follow without a filename will only show ancestors or
+    descendants of the starting revision. --follow-first only follows the
+    first parent of merge revisions.
 
-    If no revision range is specified, the default is tip:0 unless
-    --follow is set, in which case the working directory parent is
-    used as the starting revision.
+    If no revision range is specified, the default is tip:0 unless --follow is
+    set, in which case the working directory parent is used as the starting
+    revision.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
 
-    By default this command prints revision number and changeset id,
-    tags, non-trivial parents, user, date and time, and a summary for
-    each commit. When the -v/--verbose switch is used, the list of
-    changed files and full commit message are shown.
+    By default this command prints revision number and changeset id, tags,
+    non-trivial parents, user, date and time, and a summary for each commit.
+    When the -v/--verbose switch is used, the list of changed files and full
+    commit message are shown.
 
     NOTE: log -p/--patch may generate unexpected diff output for merge
-    changesets, as it will only compare the merge changeset against
-    its first parent. Also, only files different from BOTH parents
-    will appear in files:.
+    changesets, as it will only compare the merge changeset against its first
+    parent. Also, only files different from BOTH parents will appear in
+    files:.
     """
 
     get = util.cachefunc(lambda r: repo[r].changeset())
@@ -2082,9 +2055,9 @@ def log(ui, repo, *pats, **opts):
 def manifest(ui, repo, node=None, rev=None):
     """output the current or given revision of the project manifest
 
-    Print a list of version controlled files for the given revision.
-    If no revision is given, the first parent of the working directory
-    is used, or the null revision if no revision is checked out.
+    Print a list of version controlled files for the given revision. If no
+    revision is given, the first parent of the working directory is used, or
+    the null revision if no revision is checked out.
 
     With -v, print file permissions, symlink and executable bits.
     With --debug, print file revision hashes.
@@ -2108,18 +2081,17 @@ def manifest(ui, repo, node=None, rev=None):
 def merge(ui, repo, node=None, **opts):
     """merge working directory with another revision
 
-    The current working directory is updated with all changes made in
-    the requested revision since the last common predecessor revision.
+    The current working directory is updated with all changes made in the
+    requested revision since the last common predecessor revision.
 
-    Files that changed between either parent are marked as changed for
-    the next commit and a commit must be performed before any further
-    updates to the repository are allowed. The next commit will have
-    two parents.
+    Files that changed between either parent are marked as changed for the
+    next commit and a commit must be performed before any further updates to
+    the repository are allowed. The next commit will have two parents.
 
-    If no revision is specified, the working directory's parent is a
-    head revision, and the current branch contains exactly one other
-    head, the other head is merged with by default. Otherwise, an
-    explicit revision with which to merge with must be provided.
+    If no revision is specified, the working directory's parent is a head
+    revision, and the current branch contains exactly one other head, the
+    other head is merged with by default. Otherwise, an explicit revision with
+    which to merge with must be provided.
     """
 
     if opts.get('rev') and node:
@@ -2166,9 +2138,9 @@ def merge(ui, repo, node=None, **opts):
 def outgoing(ui, repo, dest=None, **opts):
     """show changesets not found in destination
 
-    Show changesets not found in the specified destination repository
-    or the default push location. These are the changesets that would
-    be pushed if a push was requested.
+    Show changesets not found in the specified destination repository or the
+    default push location. These are the changesets that would be pushed if a
+    push was requested.
 
     See pull for valid destination format details.
     """
@@ -2201,11 +2173,10 @@ def outgoing(ui, repo, dest=None, **opts):
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision
 
-    Print the working directory's parent revisions. If a revision is
-    given via -r/--rev, the parent of that revision will be printed.
-    If a file argument is given, the revision in which the file was
-    last changed (before the working directory revision or the
-    argument to --rev if given) is printed.
+    Print the working directory's parent revisions. If a revision is given via
+    -r/--rev, the parent of that revision will be printed. If a file argument
+    is given, the revision in which the file was last changed (before the
+    working directory revision or the argument to --rev if given) is printed.
     """
     rev = opts.get('rev')
     if rev:
@@ -2241,11 +2212,11 @@ def parents(ui, repo, file_=None, **opts):
 def paths(ui, repo, search=None):
     """show aliases for remote repositories
 
-    Show definition of symbolic path name NAME. If no name is given,
-    show definition of all available names.
+    Show definition of symbolic path name NAME. If no name is given, show
+    definition of all available names.
 
-    Path names are defined in the [paths] section of /etc/mercurial/hgrc
-    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.
+    Path names are defined in the [paths] section of /etc/mercurial/hgrc and
+    $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.
 
     See 'hg help urls' for more information.
     """
@@ -2278,18 +2249,18 @@ def pull(ui, repo, source="default", **opts):
 
     Pull changes from a remote repository to a local one.
 
-    This finds all changes from the repository at the specified path
-    or URL and adds them to a local repository (the current one unless
-    -R is specified). By default, this does not update the copy of the
-    project in the working directory.
+    This finds all changes from the repository at the specified path or URL
+    and adds them to a local repository (the current one unless -R is
+    specified). By default, this does not update the copy of the project in
+    the working directory.
 
-    Use hg incoming if you want to see what would have been added by a
-    pull at the time you issued this command. If you then decide to
-    added those changes to the repository, you should use pull -r X
-    where X is the last changeset listed by hg incoming.
+    Use hg incoming if you want to see what would have been added by a pull at
+    the time you issued this command. If you then decide to added those
+    changes to the repository, you should use pull -r X where X is the last
+    changeset listed by hg incoming.
 
-    If SOURCE is omitted, the 'default' path will be used.
-    See 'hg help urls' for more information.
+    If SOURCE is omitted, the 'default' path will be used. See 'hg help urls'
+    for more information.
     """
     source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
     other = hg.repository(cmdutil.remoteui(repo, opts), source)
@@ -2310,20 +2281,19 @@ def push(ui, repo, dest=None, **opts):
 
     Push changes from the local repository to the given destination.
 
-    This is the symmetrical operation for pull. It moves changes from
-    the current repository to a different one. If the destination is
-    local this is identical to a pull in that directory from the
-    current one.
+    This is the symmetrical operation for pull. It moves changes from the
+    current repository to a different one. If the destination is local this is
+    identical to a pull in that directory from the current one.
 
     By default, push will refuse to run if it detects the result would
-    increase the number of remote heads. This generally indicates the
-    user forgot to pull and merge before pushing.
+    increase the number of remote heads. This generally indicates the user
+    forgot to pull and merge before pushing.
 
-    If -r/--rev is used, the named revision and all its ancestors will
-    be pushed to the remote repository.
+    If -r/--rev is used, the named revision and all its ancestors will be
+    pushed to the remote repository.
 
-    Please see 'hg help urls' for important details about ssh://
-    URLs. If DESTINATION is omitted, a default path will be used.
+    Please see 'hg help urls' for important details about ssh:// URLs. If
+    DESTINATION is omitted, a default path will be used.
     """
     dest, revs, checkout = hg.parseurl(
         ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
@@ -2346,9 +2316,8 @@ def recover(ui, repo):
 
     Recover from an interrupted commit or pull.
 
-    This command tries to fix the repository status after an
-    interrupted operation. It should only be necessary when Mercurial
-    suggests it.
+    This command tries to fix the repository status after an interrupted
+    operation. It should only be necessary when Mercurial suggests it.
     """
     if repo.recover():
         return hg.verify(repo)
@@ -2359,17 +2328,16 @@ def remove(ui, repo, *pats, **opts):
 
     Schedule the indicated files for removal from the repository.
 
-    This only removes files from the current branch, not from the
-    entire project history. -A/--after can be used to remove only
-    files that have already been deleted, -f/--force can be used to
-    force deletion, and -Af can be used to remove files from the next
-    revision without deleting them from the working directory.
+    This only removes files from the current branch, not from the entire
+    project history. -A/--after can be used to remove only files that have
+    already been deleted, -f/--force can be used to force deletion, and -Af
+    can be used to remove files from the next revision without deleting them
+    from the working directory.
 
-    The following table details the behavior of remove for different
-    file states (columns) and option combinations (rows). The file
-    states are Added [A], Clean [C], Modified [M] and Missing [!]
-    (as reported by hg status). The actions are Warn, Remove (from
-    branch) and Delete (from disk).
+    The following table details the behavior of remove for different file
+    states (columns) and option combinations (rows). The file states are Added
+    [A], Clean [C], Modified [M] and Missing [!] (as reported by hg status).
+    The actions are Warn, Remove (from branch) and Delete (from disk).
 
            A  C  M  !
     none   W  RD W  R
@@ -2377,8 +2345,8 @@ def remove(ui, repo, *pats, **opts):
     -A     W  W  W  R
     -Af    R  R  R  R
 
-    This command schedules the files to be removed at the next commit.
-    To undo a remove before that, see hg revert.
+    This command schedules the files to be removed at the next commit. To undo
+    a remove before that, see hg revert.
     """
 
     after, force = opts.get('after'), opts.get('force')
@@ -2418,16 +2386,16 @@ def remove(ui, repo, *pats, **opts):
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove
 
-    Mark dest as copies of sources; mark sources for deletion. If dest
-    is a directory, copies are put in that directory. If dest is a
-    file, there can only be one source.
+    Mark dest as copies of sources; mark sources for deletion. If dest is a
+    directory, copies are put in that directory. If dest is a file, there can
+    only be one source.
 
-    By default, this command copies the contents of files as they
-    exist in the working directory. If invoked with -A/--after, the
-    operation is recorded, but no copying is performed.
+    By default, this command copies the contents of files as they exist in the
+    working directory. If invoked with -A/--after, the operation is recorded,
+    but no copying is performed.
 
-    This command takes effect at the next commit. To undo a rename
-    before that, see hg revert.
+    This command takes effect at the next commit. To undo a rename before
+    that, see hg revert.
     """
     wlock = repo.wlock(False)
     try:
@@ -2439,16 +2407,16 @@ def resolve(ui, repo, *pats, **opts):
     """retry file merges from a merge or update
 
     This command will cleanly retry unresolved file merges using file
-    revisions preserved from the last update or merge. To attempt to
-    resolve all unresolved files, use the -a/--all switch.
+    revisions preserved from the last update or merge. To attempt to resolve
+    all unresolved files, use the -a/--all switch.
 
-    If a conflict is resolved manually, please note that the changes
-    will be overwritten if the merge is retried with resolve. The
-    -m/--mark switch should be used to mark the file as resolved.
+    If a conflict is resolved manually, please note that the changes will be
+    overwritten if the merge is retried with resolve. The -m/--mark switch
+    should be used to mark the file as resolved.
 
-    This command also allows listing resolved files and manually
-    indicating whether or not files are resolved. All files must be
-    marked as resolved before a commit is permitted.
+    This command also allows listing resolved files and manually indicating
+    whether or not files are resolved. All files must be marked as resolved
+    before a commit is permitted.
 
     The codes used to show the status of files are:
     U = unresolved
@@ -2493,35 +2461,33 @@ def resolve(ui, repo, *pats, **opts):
 def revert(ui, repo, *pats, **opts):
     """restore individual files or directories to an earlier state
 
-    (Use update -r to check out earlier revisions, revert does not
-    change the working directory parents.)
+    (Use update -r to check out earlier revisions, revert does not change the
+    working directory parents.)
 
-    With no revision specified, revert the named files or directories
-    to the contents they had in the parent of the working directory.
-    This restores the contents of the affected files to an unmodified
-    state and unschedules adds, removes, copies, and renames. If the
-    working directory has two parents, you must explicitly specify the
-    revision to revert to.
+    With no revision specified, revert the named files or directories to the
+    contents they had in the parent of the working directory. This restores
+    the contents of the affected files to an unmodified state and unschedules
+    adds, removes, copies, and renames. If the working directory has two
+    parents, you must explicitly specify the revision to revert to.
 
-    Using the -r/--rev option, revert the given files or directories
-    to their contents as of a specific revision. This can be helpful
-    to "roll back" some or all of an earlier change. See 'hg help
-    dates' for a list of formats valid for -d/--date.
+    Using the -r/--rev option, revert the given files or directories to their
+    contents as of a specific revision. This can be helpful to "roll back"
+    some or all of an earlier change. See 'hg help dates' for a list of
+    formats valid for -d/--date.
 
-    Revert modifies the working directory. It does not commit any
-    changes, or change the parent of the working directory. If you
-    revert to a revision other than the parent of the working
-    directory, the reverted files will thus appear modified
-    afterwards.
+    Revert modifies the working directory. It does not commit any changes, or
+    change the parent of the working directory. If you revert to a revision
+    other than the parent of the working directory, the reverted files will
+    thus appear modified afterwards.
 
-    If a file has been deleted, it is restored. If the executable mode
-    of a file was changed, it is reset.
+    If a file has been deleted, it is restored. If the executable mode of a
+    file was changed, it is reset.
 
-    If names are given, all files matching the names are reverted.
-    If no arguments are given, no files are reverted.
+    If names are given, all files matching the names are reverted. If no
+    arguments are given, no files are reverted.
 
-    Modified files are saved with a .orig suffix before reverting.
-    To disable these backups, use --no-backup.
+    Modified files are saved with a .orig suffix before reverting. To disable
+    these backups, use --no-backup.
     """
 
     if opts["date"]:
@@ -2710,15 +2676,14 @@ def rollback(ui, repo):
     """roll back the last transaction
 
     This command should be used with care. There is only one level of
-    rollback, and there is no way to undo a rollback. It will also
-    restore the dirstate at the time of the last transaction, losing
-    any dirstate changes since that time. This command does not alter
-    the working directory.
+    rollback, and there is no way to undo a rollback. It will also restore the
+    dirstate at the time of the last transaction, losing any dirstate changes
+    since that time. This command does not alter the working directory.
 
-    Transactions are used to encapsulate the effects of all commands
-    that create new changesets or propagate existing changesets into a
-    repository. For example, the following commands are transactional,
-    and their effects can be rolled back:
+    Transactions are used to encapsulate the effects of all commands that
+    create new changesets or propagate existing changesets into a repository.
+    For example, the following commands are transactional, and their effects
+    can be rolled back:
 
       commit
       import
@@ -2726,12 +2691,12 @@ def rollback(ui, repo):
       push (with this repository as destination)
       unbundle
 
-    This command is not intended for use on public repositories. Once
-    changes are visible for pull by other users, rolling a transaction
-    back locally is ineffective (someone else may already have pulled
-    the changes). Furthermore, a race is possible with readers of the
-    repository; for example an in-progress pull from the repository
-    may fail if a rollback is performed.
+    This command is not intended for use on public repositories. Once changes
+    are visible for pull by other users, rolling a transaction back locally is
+    ineffective (someone else may already have pulled the changes).
+    Furthermore, a race is possible with readers of the repository; for
+    example an in-progress pull from the repository may fail if a rollback is
+    performed.
     """
     repo.rollback()
 
@@ -2747,9 +2712,8 @@ def serve(ui, repo, **opts):
 
     Start a local HTTP repository browser and pull server.
 
-    By default, the server logs accesses to stdout and errors to
-    stderr. Use the -A/--accesslog and -E/--errorlog options to log to
-    files.
+    By default, the server logs accesses to stdout and errors to stderr. Use
+    the -A/--accesslog and -E/--errorlog options to log to files.
     """
 
     if opts["stdio"]:
@@ -2810,24 +2774,22 @@ def serve(ui, repo, **opts):
 def status(ui, repo, *pats, **opts):
     """show changed files in the working directory
 
-    Show status of files in the repository. If names are given, only
-    files that match are shown. Files that are clean or ignored or
-    the source of a copy/move operation, are not listed unless
-    -c/--clean, -i/--ignored, -C/--copies or -A/--all are given.
-    Unless options described with "show only ..." are given, the
-    options -mardu are used.
+    Show status of files in the repository. If names are given, only files
+    that match are shown. Files that are clean or ignored or the source of a
+    copy/move operation, are not listed unless -c/--clean, -i/--ignored,
+    -C/--copies or -A/--all are given. Unless options described with "show
+    only ..." are given, the options -mardu are used.
 
-    Option -q/--quiet hides untracked (unknown and ignored) files
-    unless explicitly requested with -u/--unknown or -i/--ignored.
+    Option -q/--quiet hides untracked (unknown and ignored) files unless
+    explicitly requested with -u/--unknown or -i/--ignored.
 
-    NOTE: status may appear to disagree with diff if permissions have
-    changed or a merge has occurred. The standard diff format does not
-    report permission changes and diff only reports changes relative
-    to one merge parent.
+    NOTE: status may appear to disagree with diff if permissions have changed
+    or a merge has occurred. The standard diff format does not report
+    permission changes and diff only reports changes relative to one merge
+    parent.
 
-    If one revision is given, it is used as the base revision.
-    If two revisions are given, the differences between them are
-    shown.
+    If one revision is given, it is used as the base revision. If two
+    revisions are given, the differences between them are shown.
 
     The codes used to show the status of files are:
     M = modified
@@ -2885,18 +2847,17 @@ def tag(ui, repo, name1, *names, **opts):
 
     Name a particular revision using <name>.
 
-    Tags are used to name particular revisions of the repository and are
-    very useful to compare different revisions, to go back to significant
-    earlier versions or to mark branch points as releases, etc.
+    Tags are used to name particular revisions of the repository and are very
+    useful to compare different revisions, to go back to significant earlier
+    versions or to mark branch points as releases, etc.
 
-    If no revision is given, the parent of the working directory is
-    used, or tip if no revision is checked out.
+    If no revision is given, the parent of the working directory is used, or
+    tip if no revision is checked out.
 
-    To facilitate version control, distribution, and merging of tags,
-    they are stored as a file named ".hgtags" which is managed
-    similarly to other project files and can be hand-edited if
-    necessary. The file '.hg/localtags' is used for local tags (not
-    shared among repositories).
+    To facilitate version control, distribution, and merging of tags, they are
+    stored as a file named ".hgtags" which is managed similarly to other
+    project files and can be hand-edited if necessary. The file
+    '.hg/localtags' is used for local tags (not shared among repositories).
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
@@ -2949,8 +2910,8 @@ def tag(ui, repo, name1, *names, **opts):
 def tags(ui, repo):
     """list repository tags
 
-    This lists both regular and local tags. When the -v/--verbose
-    switch is used, a third column "local" is printed for local tags.
+    This lists both regular and local tags. When the -v/--verbose switch is
+    used, a third column "local" is printed for local tags.
     """
 
     hexfunc = ui.debugflag and hex or short
@@ -2978,22 +2939,22 @@ def tags(ui, repo):
 def tip(ui, repo, **opts):
     """show the tip revision
 
-    The tip revision (usually just called the tip) is the changeset
-    most recently added to the repository (and therefore the most
-    recently changed head).
+    The tip revision (usually just called the tip) is the changeset most
+    recently added to the repository (and therefore the most recently changed
+    head).
 
-    If you have just made a commit, that commit will be the tip. If
-    you have just pulled changes from another repository, the tip of
-    that repository becomes the current tip. The "tip" tag is special
-    and cannot be renamed or assigned to a different changeset.
+    If you have just made a commit, that commit will be the tip. If you have
+    just pulled changes from another repository, the tip of that repository
+    becomes the current tip. The "tip" tag is special and cannot be renamed or
+    assigned to a different changeset.
     """
     cmdutil.show_changeset(ui, repo, opts).show(repo[len(repo) - 1])
 
 def unbundle(ui, repo, fname1, *fnames, **opts):
     """apply one or more changegroup files
 
-    Apply one or more compressed changegroup files generated by the
-    bundle command.
+    Apply one or more compressed changegroup files generated by the bundle
+    command.
     """
     fnames = (fname1,) + fnames
 
@@ -3011,31 +2972,27 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     """update working directory
 
-    Update the repository's working directory to the specified
-    revision, or the tip of the current branch if none is specified.
-    Use null as the revision to remove the working copy (like 'hg
-    clone -U').
+    Update the repository's working directory to the specified revision, or
+    the tip of the current branch if none is specified. Use null as the
+    revision to remove the working copy (like 'hg clone -U').
 
-    When the working directory contains no uncommitted changes, it
-    will be replaced by the state of the requested revision from the
-    repository. When the requested revision is on a different branch,
-    the working directory will additionally be switched to that
-    branch.
+    When the working directory contains no uncommitted changes, it will be
+    replaced by the state of the requested revision from the repository. When
+    the requested revision is on a different branch, the working directory
+    will additionally be switched to that branch.
 
-    When there are uncommitted changes, use option -C/--clean to
-    discard them, forcibly replacing the state of the working
-    directory with the requested revision. Alternately, use -c/--check
-    to abort.
+    When there are uncommitted changes, use option -C/--clean to discard them,
+    forcibly replacing the state of the working directory with the requested
+    revision. Alternately, use -c/--check to abort.
 
-    When there are uncommitted changes and option -C/--clean is not
-    used, and the parent revision and requested revision are on the
-    same branch, and one of them is an ancestor of the other, then the
-    new working directory will contain the requested revision merged
-    with the uncommitted changes. Otherwise, the update will fail with
-    a suggestion to use 'merge' or 'update -C' instead.
+    When there are uncommitted changes and option -C/--clean is not used, and
+    the parent revision and requested revision are on the same branch, and one
+    of them is an ancestor of the other, then the new working directory will
+    contain the requested revision merged with the uncommitted changes.
+    Otherwise, the update will fail with a suggestion to use 'merge' or
+    'update -C' instead.
 
-    If you want to update just one file to an older revision, use
-    revert.
+    If you want to update just one file to an older revision, use revert.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
@@ -3066,10 +3023,10 @@ def verify(ui, repo):
 
     Verify the integrity of the current repository.
 
-    This will perform an extensive check of the repository's
-    integrity, validating the hashes and checksums of each entry in
-    the changelog, manifest, and tracked files, as well as the
-    integrity of their crosslinks and indices.
+    This will perform an extensive check of the repository's integrity,
+    validating the hashes and checksums of each entry in the changelog,
+    manifest, and tracked files, as well as the integrity of their crosslinks
+    and indices.
     """
     return hg.verify(repo)
 
