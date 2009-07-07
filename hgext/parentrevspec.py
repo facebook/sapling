@@ -7,8 +7,8 @@
 
 '''interpret suffixes to refer to ancestor revisions
 
-This extension allows you to use git-style suffixes to refer to the
-ancestors of a specific revision.
+This extension allows you to use git-style suffixes to refer to the ancestors
+of a specific revision.
 
 For example, if you can refer to a revision as "foo", then:
 
