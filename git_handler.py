@@ -83,7 +83,8 @@ class GitHandler(object):
     def save_tags(self):
         file = self.repo.opener(self.tagsfile, 'w+', atomictemp=True)
         for name, sha in sorted(self.tags.iteritems()):
-            file.write("%s %s\n" % (sha, name))
+            if not self.repo.tagtype(name) == 'global':
+                file.write("%s %s\n" % (sha, name))
         file.rename()
 
     ## END FILE LOAD AND SAVE METHODS
@@ -691,6 +692,7 @@ class GitHandler(object):
         for tag, sha in self.repo.tags().iteritems():
             if self.repo.tagtype(tag) in ('global', 'git'):
                 self.git.set_ref('refs/tags/' + tag, self.map_git_get(hex(sha)))
+                self.tags[tag] = hex(sha)
 
     def local_heads(self):
         try:
