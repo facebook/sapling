@@ -124,9 +124,8 @@ class kwtemplater(object):
 
         kwmaps = self.ui.configitems('keywordmaps')
         if kwmaps: # override default templates
-            kwmaps = [(k, templater.parsestring(v, False))
-                      for (k, v) in kwmaps]
-            self.templates = dict(kwmaps)
+            self.templates = dict((k, templater.parsestring(v, False))
+                                  for k, v in kwmaps)
         escaped = map(re.escape, self.templates.keys())
         kwpat = r'\$(%s)(: [^$\n\r]*? )??\$' % '|'.join(escaped)
         self.re_kw = re.compile(kwpat)
