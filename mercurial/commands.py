@@ -53,11 +53,11 @@ def addremove(ui, repo, *pats, **opts):
     New files are ignored if they match any of the patterns in .hgignore. As
     with add, these changes take effect at the next commit.
 
-    Use the -s/--similarity option to detect renamed files. With a parameter >
-    0, this compares every removed file with every added file and records
-    those similar enough as renames. This option takes a percentage between 0
-    (disabled) and 100 (files must be identical) as its parameter. Detecting
-    renamed files this way can be expensive.
+    Use the -s/--similarity option to detect renamed files. With a parameter
+    greater than 0, this compares every removed file with every added file and
+    records those similar enough as renames. This option takes a percentage
+    between 0 (disabled) and 100 (files must be identical) as its parameter.
+    Detecting renamed files this way can be expensive.
     """
     try:
         sim = float(opts.get('similarity') or 0)
