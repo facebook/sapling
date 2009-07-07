@@ -20,7 +20,7 @@ EOF
 
 hg init test
 echo '[extensions]' > test/.hg/hgrc
-echo "engine = $PWD/engine.py" >> test/.hg/hgrc
+echo "engine = `pwd`/engine.py" >> test/.hg/hgrc
 
 cd test
 cat > mymap << EOF
