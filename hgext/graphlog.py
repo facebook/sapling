@@ -8,8 +8,8 @@
 '''command to view revision graphs from a shell
 
 This extension adds a --graph option to the incoming, outgoing and log
-commands. When this options is given, an ASCII representation of the
-revision graph is also shown.
+commands. When this options is given, an ASCII representation of the revision
+graph is also shown.
 '''
 
 import os, sys
@@ -236,11 +236,10 @@ def check_unsupported_flags(opts):
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
 
-    Print a revision history alongside a revision graph drawn with
-    ASCII characters.
+    Print a revision history alongside a revision graph drawn with ASCII
+    characters.
 
-    Nodes printed as an @ character are parents of the working
-    directory.
+    Nodes printed as an @ character are parents of the working directory.
     """
 
     check_unsupported_flags(opts)
@@ -298,11 +297,10 @@ def goutgoing(ui, repo, dest=None, **opts):
 def gincoming(ui, repo, source="default", **opts):
     """show the incoming changesets alongside an ASCII revision graph
 
-    Print the incoming changesets alongside a revision graph drawn with
-    ASCII characters.
+    Print the incoming changesets alongside a revision graph drawn with ASCII
+    characters.
 
-    Nodes printed as an @ character are parents of the working
-    directory.
+    Nodes printed as an @ character are parents of the working directory.
     """
 
     check_unsupported_flags(opts)
