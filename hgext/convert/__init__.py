@@ -107,7 +107,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     instance) move code in one repository from "default" to a named branch.
 
     Mercurial Source
-    -----------------
+    ----------------
 
     --config convert.hg.ignoreerrors=False    (boolean)
         ignore integrity errors when reading. Use it to fix Mercurial
