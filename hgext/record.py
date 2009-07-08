@@ -410,7 +410,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
 
-        It's job is to interactively filter local changes, and accordingly
+        Its job is to interactively filter local changes, and accordingly
         prepare working dir into a state, where the job can be delegated to
         non-interactive commit command such as 'commit' or 'qrefresh'.
 
