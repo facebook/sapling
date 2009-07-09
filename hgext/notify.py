@@ -12,56 +12,56 @@ messages to stdout, for testing and configuring.
 
 To use, configure the notify extension and enable it in hgrc like this:
 
-   [extensions]
-   hgext.notify =
+  [extensions]
+  hgext.notify =
 
-   [hooks]
-   # one email for each incoming changeset
-   incoming.notify = python:hgext.notify.hook
-   # batch emails when many changesets incoming at one time
-   changegroup.notify = python:hgext.notify.hook
+  [hooks]
+  # one email for each incoming changeset
+  incoming.notify = python:hgext.notify.hook
+  # batch emails when many changesets incoming at one time
+  changegroup.notify = python:hgext.notify.hook
 
-   [notify]
-   # config items go here
+  [notify]
+  # config items go here
 
- Required configuration items:
+Required configuration items:
 
-   config = /path/to/file # file containing subscriptions
+  config = /path/to/file # file containing subscriptions
 
- Optional configuration items:
+Optional configuration items:
 
-   test = True            # print messages to stdout for testing
-   strip = 3              # number of slashes to strip for url paths
-   domain = example.com   # domain to use if committer missing domain
-   style = ...            # style file to use when formatting email
-   template = ...         # template to use when formatting email
-   incoming = ...         # template to use when run as incoming hook
-   changegroup = ...      # template when run as changegroup hook
-   maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
-   maxsubject = 67        # truncate subject line longer than this
-   diffstat = True        # add a diffstat before the diff content
-   sources = serve        # notify if source of incoming changes in this list
-                          # (serve == ssh or http, push, pull, bundle)
-   [email]
-   from = user@host.com   # email address to send as if none given
-   [web]
-   baseurl = http://hgserver/... # root of hg web site for browsing commits
+  test = True            # print messages to stdout for testing
+  strip = 3              # number of slashes to strip for url paths
+  domain = example.com   # domain to use if committer missing domain
+  style = ...            # style file to use when formatting email
+  template = ...         # template to use when formatting email
+  incoming = ...         # template to use when run as incoming hook
+  changegroup = ...      # template when run as changegroup hook
+  maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
+  maxsubject = 67        # truncate subject line longer than this
+  diffstat = True        # add a diffstat before the diff content
+  sources = serve        # notify if source of incoming changes in this list
+                         # (serve == ssh or http, push, pull, bundle)
+  [email]
+  from = user@host.com   # email address to send as if none given
+  [web]
+  baseurl = http://hgserver/... # root of hg web site for browsing commits
 
- The notify config file has same format as a regular hgrc file. It has two
- sections so you can express subscriptions in whatever way is handier for you.
+The notify config file has same format as a regular hgrc file. It has two
+sections so you can express subscriptions in whatever way is handier for you.
 
-   [usersubs]
-   # key is subscriber email, value is ","-separated list of glob patterns
-   user@host = pattern
+  [usersubs]
+  # key is subscriber email, value is ","-separated list of glob patterns
+  user@host = pattern
 
-   [reposubs]
-   # key is glob pattern, value is ","-separated list of subscriber emails
-   pattern = user@host
+  [reposubs]
+  # key is glob pattern, value is ","-separated list of subscriber emails
+  pattern = user@host
 
- Glob patterns are matched against path to repository root.
+Glob patterns are matched against path to repository root.
 
- If you like, you can put notify config file in repository that users can push
- changes to, they can manage their own subscriptions.
+If you like, you can put notify config file in repository that users can push
+changes to, they can manage their own subscriptions.
 '''
 
 from mercurial.i18n import _
