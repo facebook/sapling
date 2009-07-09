@@ -190,3 +190,20 @@ updating working directory
 pulling from ../ib1
 searching for changes
 no changes found
+% test issue1726
+adding a
+updating working directory
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+pulling from ../i1726r1
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+updating to 2:7837755a2789
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+merging with 1:d1f0c6c48ebd
+merging a
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+new changeset 3 merges remote changes with local
+3
