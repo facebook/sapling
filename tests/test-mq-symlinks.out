@@ -1,9 +1,11 @@
 a -> a not a symlink
 a -> b
+popping symlink.patch
 now at: base.patch
 applying symlink.patch
 now at: symlink.patch
 a -> b
+popping removesl.patch
 now at: symlink.patch
 applying removesl.patch
 now at: removesl.patch

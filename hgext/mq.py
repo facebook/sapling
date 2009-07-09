@@ -1080,6 +1080,8 @@ class queue(object):
                     except: pass
                     repo.dirstate.forget(f)
                 repo.dirstate.setparents(qp, nullid)
+            for patch in reversed(self.applied[start:end]):
+                self.ui.warn(_("popping %s\n") % patch.name)
             del self.applied[start:end]
             self.strip(repo, rev, update=False, backup='strip')
             if len(self.applied):

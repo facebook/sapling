@@ -26,6 +26,7 @@ diff -r 67e992f2c4f3 base
 +patched
 % revert
 % qpop
+popping mqbase
 patch queue now empty
 % qdelete mqbase
 % commit 2

@@ -1,4 +1,5 @@
 adding b
+popping changeb
 patch queue now empty
 % push patch with missing target
 applying changeb
@@ -26,6 +27,7 @@ c
 +c
 +c
 adding b
+popping changeb
 patch queue now empty
 % push git patch with missing target
 applying changeb
@@ -48,6 +50,7 @@ Jc${No0000400IC2
 
 % test push creating directory during git copy or rename
 adding a
+popping patch
 patch queue now empty
 applying patch
 now at: patch

@@ -79,6 +79,8 @@ diff -r x -r y f
 +mq1r1mq2
 
 % Adding one git-style patch and one normal
+popping f2.patch
+popping f.patch
 patch queue now empty
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % Git patch

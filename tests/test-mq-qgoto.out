@@ -1,17 +1,24 @@
 adding a
+popping c.patch
+popping b.patch
 now at: a.patch
 applying b.patch
 applying c.patch
 now at: c.patch
+popping c.patch
 now at: b.patch
 
 % Using index
+popping b.patch
 now at: a.patch
 applying b.patch
 applying c.patch
 now at: c.patch
 
 % No warnings when using index
+popping bug141421
+popping bug314159
+popping c.patch
 now at: b.patch
 applying c.patch
 applying bug314159

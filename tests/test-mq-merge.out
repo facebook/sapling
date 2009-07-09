@@ -10,6 +10,8 @@ merging with queue at: .hg/patches.1
 applying rm_a
 now at: rm_a
 b
+popping rm_a
+popping .hg.patches.merge.marker
 patch queue now empty
 
 % init t2

@@ -42,6 +42,7 @@ diff -r ... 2
 +2
 1: [mq]: 2.patch - test
 0: [mq]: 1.patch - test
+popping 2.patch
 now at: 1.patch
 ==== qnew -d -m
 # HG changeset patch
@@ -127,8 +128,10 @@ diff -r ... 4
 2: Four - test
 1: Three (again) - test
 0: [mq]: 1.patch - test
+popping 4.patch
 now at: 3.patch
 ==== qnew with HG header
+popping 5.patch
 now at: 3.patch
 # HG changeset patch
 # Date 10 0
@@ -185,6 +188,7 @@ diff -r ... 6
 2: [mq]: 5.patch - test
 1: Three (again) - test
 0: [mq]: 1.patch - test
+popping 6.patch
 now at: 5.patch
 ==== qnew -d
 adding 7
@@ -240,6 +244,7 @@ diff -r ... 8
 2: [mq]: 5.patch - test
 1: Three (again) - test
 0: [mq]: 1.patch - test
+popping 8.patch
 now at: 7.patch
 ==== qnew -m
 adding 9
@@ -270,8 +275,13 @@ diff -r ... 9
 2: [mq]: 5.patch - test
 1: Three (again) - test
 0: [mq]: 1.patch - test
+popping 9.patch
 now at: 7.patch
 ==== qpop -a / qpush -a
+popping 7.patch
+popping 5.patch
+popping 3.patch
+popping 1.patch
 patch queue now empty
 applying 1.patch
 applying 3.patch

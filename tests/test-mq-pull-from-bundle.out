@@ -13,6 +13,7 @@ comparing with bundle:fresh+main.hg
 1: main: one updated.
 ====== Setup queue
 adding two
+popping two.patch
 patch queue now empty
 ====== Bundle queue
 1 changesets found
