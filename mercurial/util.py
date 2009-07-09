@@ -115,6 +115,33 @@ def cachefunc(func):
 
     return f
 
+def lrucachefunc(func):
+    '''cache most recent results of function calls'''
+    cache = {}
+    order = []
+    if func.func_code.co_argcount == 1:
+        def f(arg):
+            if arg not in cache:
+                if len(cache) > 20:
+                    del cache[order.pop(0)]
+                cache[arg] = func(arg)
+            else:
+                order.remove(arg)
+            order.append(arg)
+            return cache[arg]
+    else:
+        def f(*args):
+            if args not in cache:
+                if len(cache) > 20:
+                    del cache[order.pop(0)]
+                cache[args] = func(*args)
+            else:
+                order.remove(args)
+            order.append(args)
+            return cache[args]
+
+    return f
+
 class propertycache(object):
     def __init__(self, func):
         self.func = func

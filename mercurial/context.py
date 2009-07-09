@@ -379,11 +379,11 @@ class filectx(object):
                 child[0][b1:b2] = parent[0][a1:a2]
             return child
 
-        getlog = util.cachefunc(lambda x: self._repo.file(x))
+        getlog = util.lrucachefunc(lambda x: self._repo.file(x))
         def getctx(path, fileid):
             log = path == self._path and self._filelog or getlog(path)
             return filectx(self._repo, path, fileid=fileid, filelog=log)
-        getctx = util.cachefunc(getctx)
+        getctx = util.lrucachefunc(getctx)
 
         def parents(f):
             # we want to reuse filectx objects as much as possible
