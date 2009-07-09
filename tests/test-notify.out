@@ -1,9 +1,9 @@
 notify extension - hooks for sending email notifications at commit/push time
 
-Subscriptions can be managed through hgrc. Default mode is to print messages
-to stdout, for testing and configuring.
+Subscriptions can be managed through a hgrc file. Default mode is to print
+messages to stdout, for testing and configuring.
 
-To use, configure notify extension and enable in hgrc like this:
+To use, configure the notify extension and enable it in hgrc like this:
 
    [extensions]
    hgext.notify =
@@ -15,14 +15,14 @@ To use, configure notify extension and enable in hgrc like this:
    changegroup.notify = python:hgext.notify.hook
 
    [notify]
-   # config items go in here
+   # config items go here
 
- config items:
+ Required configuration items:
 
- REQUIRED:
    config = /path/to/file # file containing subscriptions
 
- OPTIONAL:
+ Optional configuration items:
+
    test = True            # print messages to stdout for testing
    strip = 3              # number of slashes to strip for url paths
    domain = example.com   # domain to use if committer missing domain
@@ -40,8 +40,8 @@ To use, configure notify extension and enable in hgrc like this:
    [web]
    baseurl = http://hgserver/... # root of hg web site for browsing commits
 
- notify config file has same format as regular hgrc. it has two sections so
- you can express subscriptions in whatever way is handier for you.
+ The notify config file has same format as a regular hgrc file. It has two
+ sections so you can express subscriptions in whatever way is handier for you.
 
    [usersubs]
    # key is subscriber email, value is ","-separated list of glob patterns
@@ -51,9 +51,9 @@ To use, configure notify extension and enable in hgrc like this:
    # key is glob pattern, value is ","-separated list of subscriber emails
    pattern = user@host
 
- glob patterns are matched against path to repository root.
+ Glob patterns are matched against path to repository root.
 
- if you like, you can put notify config file in repository that users can push
+ If you like, you can put notify config file in repository that users can push
  changes to, they can manage their own subscriptions.
 
 no commands defined
