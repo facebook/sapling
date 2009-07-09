@@ -282,7 +282,9 @@ class convert_cvs(converter_source):
         self.writep.flush()
         r = self.readp.readline()
         if not r.startswith("Valid-requests"):
-            raise util.Abort(_("server sucks"))
+            raise util.Abort(_("unexpected response from CVS server "
+                               "(expected \"Valid-requests\", but got %r)")
+                             % r)
         if "UseUnchanged" in r:
             self.writep.write("UseUnchanged\n")
             self.writep.flush()
