@@ -52,6 +52,9 @@ def decode(arg):
         return tuple(map(decode, arg))
     elif isinstance(arg, list):
         return map(decode, arg)
+    elif isinstance(arg, dict):
+        for k, v in arg.items():
+            arg[k] = decode(v)
     return arg
 
 def encode(arg):
@@ -61,17 +64,20 @@ def encode(arg):
         return tuple(map(encode, arg))
     elif isinstance(arg, list):
         return map(encode, arg)
+    elif isinstance(arg, dict):
+        for k, v in arg.items():
+            arg[k] = encode(v)
     return arg
 
-def wrapper(func, args):
+def wrapper(func, args, kwds):
     # check argument is unicode, then call original
     for arg in args:
         if isinstance(arg, unicode):
-            return func(*args)
+            return func(*args, **kwds)
 
     try:
         # convert arguments to unicode, call func, then convert back
-        return encode(func(*decode(args)))
+        return encode(func(*decode(args), **decode(kwds)))
     except UnicodeError:
         # If not encoded with encoding.encoding, report it then
         # continue with calling original function.
@@ -82,8 +88,8 @@ def wrapname(name):
     module, name = name.rsplit('.', 1)
     module = sys.modules[module]
     func = getattr(module, name)
-    def f(*args):
-        return wrapper(func, args)
+    def f(*args, **kwds):
+        return wrapper(func, args, kwds)
     try:
         f.__name__ = func.__name__                # fail with python23
     except Exception:
