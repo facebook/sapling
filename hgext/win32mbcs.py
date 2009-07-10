@@ -35,7 +35,7 @@ Path encoding conversion are done between Unicode and encoding.encoding which
 is decided by Mercurial from current locale setting or HGENCODING.
 '''
 
-import os
+import os, sys
 from mercurial.i18n import _
 from mercurial import util, encoding
 
@@ -76,10 +76,8 @@ def wrapper(func, args):
                          " %s encoding\n") % (encoding.encoding))
 
 def wrapname(name):
-    idx = name.rfind('.')
-    module = name[:idx]
-    name = name[idx+1:]
-    module = globals()[module]
+    module, name = name.rsplit('.', 1)
+    module = sys.modules[module]
     func = getattr(module, name)
     def f(*args):
         return wrapper(func, args)
@@ -94,7 +92,8 @@ def wrapname(name):
 #       they use result of os.path.split()
 funcs = '''os.path.join os.path.split os.path.splitext
  os.path.splitunc os.path.normpath os.path.normcase os.makedirs
- util.endswithsep util.splitpath util.checkcase util.fspath'''
+ mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
+ mercurial.util.fspath mercurial.windows.pconvert'''
 
 # codec and alias names of sjis and big5 to be faked.
 problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs

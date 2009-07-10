@@ -456,13 +456,14 @@ def reposetup(ui, repo):
             data = super(kwrepo, self).wread(filename)
             return kwt.wread(filename, data)
 
-        def commit(self, text='', user=None, date=None, match=None,
-                   force=False, editor=None, extra={}):
+        def commit(self, *args, **opts):
             # use custom commitctx for user commands
             # other extensions can still wrap repo.commitctx directly
-            repo.commitctx = self.kwcommitctx
-            return super(kwrepo, self).commit(text, user, date, match, force,
-                         editor, extra)
+            self.commitctx = self.kwcommitctx
+            try:
+                return super(kwrepo, self).commit(*args, **opts)
+            finally:
+                del self.commitctx
 
         def kwcommitctx(self, ctx, error=False):
             wlock = lock = None
@@ -486,7 +487,7 @@ def reposetup(ui, repo):
                 if commithooks:
                     for name, cmd in commithooks.iteritems():
                         ui.setconfig('hooks', name, cmd)
-                    repo.hook('commit', node=n, parent1=xp1, parent2=xp2)
+                    self.hook('commit', node=n, parent1=xp1, parent2=xp2)
                 return n
             finally:
                 release(lock, wlock)

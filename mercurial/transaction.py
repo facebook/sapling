@@ -35,7 +35,7 @@ def _playback(journal, report, opener, entries, unlink=True):
             try:
                 fn = opener(f).name
                 os.unlink(fn)
-            except OSError, inst:
+            except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
     os.unlink(journal)
