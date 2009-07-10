@@ -555,7 +555,7 @@ class queue(object):
             if not pushable:
                 self.explain_pushable(patchname, all_patches=True)
                 continue
-            self.ui.warn(_("applying %s\n") % patchname)
+            self.ui.status(_("applying %s\n") % patchname)
             pf = os.path.join(patchdir, patchname)
 
             try:
@@ -1081,7 +1081,7 @@ class queue(object):
                     repo.dirstate.forget(f)
                 repo.dirstate.setparents(qp, nullid)
             for patch in reversed(self.applied[start:end]):
-                self.ui.warn(_("popping %s\n") % patch.name)
+                self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
             self.strip(repo, rev, update=False, backup='strip')
             if len(self.applied):
