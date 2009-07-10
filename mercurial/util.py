@@ -842,11 +842,9 @@ class opener(object):
             self.audit_path = always
         self.createmode = None
 
-    def __getattr__(self, name):
-        if name == '_can_symlink':
-            self._can_symlink = checklink(self.base)
-            return self._can_symlink
-        raise AttributeError(name)
+    @propertycache
+    def _can_symlink(self):
+        return checklink(self.base)
 
     def _fixfilemode(self, name):
         if self.createmode is None:
