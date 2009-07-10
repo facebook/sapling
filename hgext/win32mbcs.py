@@ -69,6 +69,16 @@ def encode(arg):
             arg[k] = encode(v)
     return arg
 
+def appendsep(s):
+    # ensure the path ends with os.sep, appending it if necessary.
+    try:
+        us = decode(s)
+    except UnicodeError:
+        us = s
+    if us and us[-1] not in ':/\\':
+        s += os.sep
+    return s
+
 def wrapper(func, args, kwds):
     # check argument is unicode, then call original
     for arg in args:
@@ -79,12 +89,20 @@ def wrapper(func, args, kwds):
         # convert arguments to unicode, call func, then convert back
         return encode(func(*decode(args), **decode(kwds)))
     except UnicodeError:
-        # If not encoded with encoding.encoding, report it then
-        # continue with calling original function.
-        raise util.Abort(_("[win32mbcs] filename conversion fail with"
+        raise util.Abort(_("[win32mbcs] filename conversion failed with"
                          " %s encoding\n") % (encoding.encoding))
 
-def wrapname(name):
+def wrapperforlistdir(func, args, kwds):
+    # Ensure 'path' argument ends with os.sep to avoids
+    # misinterpreting last 0x5c of MBCS 2nd byte as path separator.
+    if args:
+        args = list(args)
+        args[0] = appendsep(args[0])
+    if kwds.has_key('path'):
+        kwds['path'] = appendsep(kwds['path'])
+    return func(*args, **kwds)
+
+def wrapname(name, wrapper):
     module, name = name.rsplit('.', 1)
     module = sys.modules[module]
     func = getattr(module, name)
@@ -119,7 +137,8 @@ def reposetup(ui, repo):
     # fake is only for relevant environment.
     if encoding.encoding.lower() in problematic_encodings.split():
         for f in funcs.split():
-            wrapname(f)
+            wrapname(f, wrapper)
+        wrapname("mercurial.osutil.listdir", wrapperforlistdir)
         ui.debug(_("[win32mbcs] activated with encoding: %s\n")
                  % encoding.encoding)
 
