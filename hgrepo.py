@@ -1,5 +1,7 @@
+import weakref
+
 from mercurial import localrepo, lock, node
-from mercurial import changelog, dirstate, filelog, manifest, context, weakref
+from mercurial import changelog, dirstate, filelog, manifest, context
 from mercurial.node import bin, hex, nullid, nullrev, short
 
 from git_handler import GitHandler
@@ -108,7 +110,7 @@ def generate_repo_subclass(baseclass):
                     text = text[:-1]
 
                 file_list = changed + removed
-            
+
                 self.changelog.delayupdate()
                 n = self.changelog.add(mn, file_list, text, trp, p1, p2,
                                        user, wctx.date(), extra)
