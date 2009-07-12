@@ -12,21 +12,27 @@ SYNOPSIS
 --------
 
 The Mercurial system uses a file called `.hgignore` in the root
-directory of a repository to control its behavior when it finds files
-that it is not currently managing.
+directory of a repository to control its behavior when it searches
+for files that it is not currently tracking.
 
 DESCRIPTION
 -----------
 
-Mercurial ignores every unmanaged file that matches any pattern in an
-ignore file. The patterns in an ignore file do not apply to files
-managed by Mercurial. To control Mercurial's handling of files that it
-manages, see the hg(1) man page. Look for the "-I" and "-X" options.
+An untracked file is ignored if its path relative to the repository
+root directory, or any prefix path of that path, is matched against
+any pattern in `.hgignore`.
 
-In addition, a Mercurial configuration file can point to a set of
+For example, say we have an an untracked file, `file.c`, at 
+`a/b/file.c` inside our repository. Mercurial will ignore `file.c` if
+any pattern in `.hgignore` matches `a/b/file.c`, `a/b` or `a`.
+
+In addition, a Mercurial configuration file can reference a set of
 per-user or global ignore files. See the hgrc(5) man page for details
 of how to configure these files. Look for the "ignore" entry in the
 "ui" section.
+
+To control Mercurial's handling of files that it manages, see the
+hg(1) man page. Look for the "-I" and "-X" options.
 
 SYNTAX
 ------
