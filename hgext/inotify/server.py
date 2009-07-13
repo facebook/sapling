@@ -89,7 +89,11 @@ def walk(repo, root):
             yield fullpath, dirs, files
 
         except OSError, err:
-            if err.errno not in walk_ignored_errors:
+            if err.errno == errno.ENOTDIR:
+                # fullpath was a directory, but has since been replaced
+                # by a file.
+                yield fullpath, dirs, files
+            elif err.errno not in walk_ignored_errors:
                 raise
 
     return walkit(root, root == '')

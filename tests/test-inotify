@@ -35,4 +35,19 @@ cd dir
 hg status .
 cd ..
 
+#issue 1375
+#Testing that we can remove a folder and then add a file with the same name
+echo % issue 1375
+
+mkdir h
+echo h > h/h
+hg ci -Am t
+hg rm h
+
+echo h >h
+hg add h
+
+hg status
+hg ci -m0
+
 kill `cat hg.pid`
