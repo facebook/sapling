@@ -50,4 +50,24 @@ hg add h
 hg status
 hg ci -m0
 
+# Test for issue1735: inotify watches files in .hg/merge
+hg st
+
+echo a > a
+
+hg ci -Am a
+hg st
+
+echo b >> a
+hg ci -m ab
+hg st
+
+echo c >> a
+hg st
+
+hg up 0
+hg st
+
+HGMERGE=internal:local hg up
+hg st
 kill `cat hg.pid`

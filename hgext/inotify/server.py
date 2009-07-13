@@ -636,6 +636,12 @@ class repowatcher(pollable):
             assert evt.fullpath.startswith(self.wprefix)
             wpath = evt.fullpath[len(self.wprefix):]
 
+            # paths have been normalized, wpath never ends with a '/'
+
+            if wpath.startswith('.hg/') and evt.mask & inotify.IN_ISDIR:
+                # ignore subdirectories of .hg/ (merge, patches...)
+                continue
+
             if evt.mask & inotify.IN_UNMOUNT:
                 self.process_unmount(wpath, evt)
             elif evt.mask & (inotify.IN_MODIFY | inotify.IN_ATTRIB):
