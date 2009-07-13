@@ -65,7 +65,7 @@ def _filerevision(web, tmpl, fctx):
         text = '(binary:%s)' % mt
 
     def lines():
-        for lineno, t in enumerate(text.splitlines(1)):
+        for lineno, t in enumerate(text.splitlines(True)):
             yield {"line": t,
                    "lineid": "l%d" % (lineno + 1),
                    "linenumber": "% 6d" % (lineno + 1),

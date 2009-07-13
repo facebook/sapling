@@ -205,7 +205,7 @@ class hgcia(object):
         msg['From'] = self.emailfrom
         msg['Subject'] = 'DeliverXML'
         msg['Content-type'] = 'text/xml'
-        msgtext = msg.as_string(0)
+        msgtext = msg.as_string()
 
         self.ui.status(_('hgcia: sending update to %s\n') % address)
         mail.sendmail(self.ui, util.email(self.emailfrom),

@@ -443,7 +443,7 @@ class filectx(object):
                         del hist[p]
             hist[f] = curr
 
-        return zip(hist[f][0], hist[f][1].splitlines(1))
+        return zip(hist[f][0], hist[f][1].splitlines(True))
 
     def ancestor(self, fc2):
         """

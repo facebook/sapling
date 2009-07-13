@@ -221,7 +221,7 @@ class notifier(object):
                                   hash(self.repo.root), socket.getfqdn()))
         msg['To'] = ', '.join(self.subs)
 
-        msgtext = msg.as_string(0)
+        msgtext = msg.as_string()
         if self.test:
             self.ui.write(msgtext)
             if not msgtext.endswith('\n'):

@@ -1448,7 +1448,7 @@ def help_(ui, name=None, with_version=False):
         if not doc:
             doc = _("(no help text available)")
         if ui.quiet:
-            doc = doc.splitlines(0)[0]
+            doc = doc.splitlines()[0]
         ui.write("\n%s\n" % doc.rstrip())
 
         if not ui.quiet:
@@ -1476,7 +1476,7 @@ def help_(ui, name=None, with_version=False):
             doc = gettext(e[0].__doc__)
             if not doc:
                 doc = _("(no help text available)")
-            h[f] = doc.splitlines(0)[0].rstrip()
+            h[f] = doc.splitlines()[0].rstrip()
             cmds[f] = c.lstrip("^")
 
         if not h:
@@ -1523,7 +1523,7 @@ def help_(ui, name=None, with_version=False):
             raise error.UnknownCommand(name)
 
         doc = gettext(mod.__doc__) or _('no help text available')
-        doc = doc.splitlines(0)
+        doc = doc.splitlines()
         ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
         for d in doc[1:]:
             ui.write(d, '\n')

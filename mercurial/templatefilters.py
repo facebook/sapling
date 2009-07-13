@@ -73,7 +73,7 @@ def fill(text, width):
 def firstline(text):
     '''return the first line of text'''
     try:
-        return text.splitlines(1)[0].rstrip('\r\n')
+        return text.splitlines(True)[0].rstrip('\r\n')
     except IndexError:
         return ''
 
