@@ -388,6 +388,7 @@ class httphandler(keepalive.HTTPHandler):
             if urlparts[0] == 'https': # only use CONNECT for HTTPS
                 if ':' in urlparts[1]:
                     realhost, realport = urlparts[1].split(':')
+                    realport = int(realport)
                 else:
                     realhost = urlparts[1]
                     realport = 443
