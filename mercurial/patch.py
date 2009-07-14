@@ -1246,12 +1246,21 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
     if not node1:
         node1 = repo.dirstate.parents()[0]
 
-    flcache = {}
-    def getfilectx(f, ctx):
-        flctx = ctx.filectx(f, filelog=flcache.get(f))
-        if f not in flcache:
-            flcache[f] = flctx._filelog
-        return flctx
+    def lrugetfilectx():
+        cache = {}
+        order = []
+        def getfilectx(f, ctx):
+            fctx = ctx.filectx(f, filelog=cache.get(f))
+            if f not in cache:
+                if len(cache) > 20:
+                    del cache[order.pop(0)]
+                cache[f] = fctx._filelog
+            else:
+                order.remove(f)
+            order.append(f)
+            return fctx
+        return getfilectx
+    getfilectx = lrugetfilectx()
 
     ctx1 = repo[node1]
     ctx2 = repo[node2]
