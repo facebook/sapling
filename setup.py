@@ -248,6 +248,8 @@ if sys.platform == 'linux2' and os.uname()[2] > '2.6':
 datafiles = []
 for root in ('templates', 'i18n'):
     for dir, dirs, files in os.walk(root):
+        dirs[:] = [x for x in dirs if not x.startswith('.')]
+        files = [x for x in files if not x.startswith('.')]
         datafiles.append((os.path.join('mercurial', dir),
                           [os.path.join(dir, file_) for file_ in files]))
 
