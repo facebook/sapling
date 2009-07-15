@@ -112,7 +112,6 @@ def strip(ui, repo, node, backup="all"):
         chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',
                             extranodes)
 
-    fs = [repo.file(name) for name in files]
     mfst = repo.manifest
 
     tr = repo.transaction()
@@ -121,8 +120,8 @@ def strip(ui, repo, node, backup="all"):
     tr.startgroup()
     cl.strip(striprev, tr)
     mfst.strip(striprev, tr)
-    for f in fs:
-        f.strip(striprev, tr)
+    for fn in files:
+        repo.file(fn).strip(striprev, tr)
     tr.endgroup()
 
     try:
