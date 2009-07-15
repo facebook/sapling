@@ -36,5 +36,5 @@ print "fred.sub =", f(fred.sub)
 print "fred =", f(fred)
 
 print "re =", f(re)
-print "re.stdout =", f(re.stdout)
+print "re.stderr =", f(re.stderr)
 print "re =", f(re)
