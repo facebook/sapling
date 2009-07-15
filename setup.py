@@ -62,7 +62,7 @@ def has_function(cc, funcname):
             devnull = open('/dev/null', 'w')
             oldstderr = os.dup(sys.stderr.fileno())
             os.dup2(devnull.fileno(), sys.stderr.fileno())
-            objects = cc.compile([fname])
+            objects = cc.compile([fname], output_dir=tmpdir)
             cc.link_executable(objects, os.path.join(tmpdir, "a.out"))
         except:
             return False
