@@ -1473,7 +1473,10 @@ def help_(ui, name=None, with_version=False):
             f = f.lstrip("^")
             if not ui.debugflag and f.startswith("debug"):
                 continue
-            doc = gettext(e[0].__doc__)
+            doc = e[0].__doc__
+            if doc and 'DEPRECATED' in doc and not ui.verbose:
+                continue
+            doc = gettext(doc)
             if not doc:
                 doc = _("(no help text available)")
             h[f] = doc.splitlines()[0].rstrip()
