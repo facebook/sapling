@@ -43,10 +43,11 @@ def listexts(header, exts, maxlength):
     '''return a text listing of the given extensions'''
     if not exts:
         return ''
-    result = '\n%s\n\n' % header
+    # TODO: literal block is wrong, should be a field list or a simple table.
+    result = '\n%s\n\n ::\n\n' % header
     for name, desc in sorted(exts.iteritems()):
-        desc = util.wrap(desc, maxlength + 4)
-        result += ' %s   %s\n' % (name.ljust(maxlength), desc)
+        desc = util.wrap(desc, maxlength + 5)
+        result += '  %s   %s\n' % (name.ljust(maxlength), desc)
     return result
 
 def extshelp():
@@ -63,18 +64,18 @@ def extshelp():
     to activate extensions as needed.
 
     To enable the "foo" extension, either shipped with Mercurial or in the
-    Python search path, create an entry for it in your hgrc, like this:
+    Python search path, create an entry for it in your hgrc, like this::
 
       [extensions]
       foo =
 
-    You may also specify the full path to an extension:
+    You may also specify the full path to an extension::
 
       [extensions]
       myfeature = ~/.hgext/myfeature.py
 
     To explicitly disable an extension enabled in an hgrc of broader scope,
-    prepend its path with !:
+    prepend its path with !::
 
       [extensions]
       # disabling extension bar residing in /path/to/extension/bar.py
@@ -95,24 +96,25 @@ helptable = (
     (["dates"], _("Date Formats"),
      _(r'''
     Some commands allow the user to specify a date, e.g.:
-    * backout, commit, import, tag: Specify the commit date.
-    * log, revert, update: Select revision(s) by date.
 
-    Many date formats are valid. Here are some examples:
+    - backout, commit, import, tag: Specify the commit date.
+    - log, revert, update: Select revision(s) by date.
 
-    "Wed Dec 6 13:18:29 2006" (local timezone assumed)
-    "Dec 6 13:18 -0600" (year assumed, time offset provided)
-    "Dec 6 13:18 UTC" (UTC and GMT are aliases for +0000)
-    "Dec 6" (midnight)
-    "13:18" (today assumed)
-    "3:39" (3:39AM assumed)
-    "3:39pm" (15:39)
-    "2006-12-06 13:18:29" (ISO 8601 format)
-    "2006-12-6 13:18"
-    "2006-12-6"
-    "12-6"
-    "12/6"
-    "12/6/6" (Dec 6 2006)
+    Many date formats are valid. Here are some examples::
+
+      "Wed Dec 6 13:18:29 2006" (local timezone assumed)
+      "Dec 6 13:18 -0600" (year assumed, time offset provided)
+      "Dec 6 13:18 UTC" (UTC and GMT are aliases for +0000)
+      "Dec 6" (midnight)
+      "13:18" (today assumed)
+      "3:39" (3:39AM assumed)
+      "3:39pm" (15:39)
+      "2006-12-06 13:18:29" (ISO 8601 format)
+      "2006-12-6 13:18"
+      "2006-12-6"
+      "12-6"
+      "12/6"
+      "12/6/6" (Dec 6 2006)
 
     Lastly, there is Mercurial's internal format:
 
@@ -123,12 +125,12 @@ helptable = (
     offset of the local timezone, in seconds west of UTC (negative if the
     timezone is east of UTC).
 
-    The log command also accepts date ranges:
+    The log command also accepts date ranges::
 
-    "<{datetime}" - at or before a given date/time
-    ">{datetime}" - on or after a given date/time
-    "{datetime} to {datetime}" - a date range, inclusive
-    "-{days}" - within a given number of days of today
+      "<{datetime}" - at or before a given date/time
+      ">{datetime}" - on or after a given date/time
+      "{datetime} to {datetime}" - a date range, inclusive
+      "-{days}" - within a given number of days of today
     ''')),
 
     (["patterns"], _("File Name Patterns"),
@@ -155,100 +157,101 @@ helptable = (
     To use a Perl/Python regular expression, start a name with "re:". Regexp
     pattern matching is anchored at the root of the repository.
 
-    Plain examples:
+    Plain examples::
 
-    path:foo/bar   a name bar in a directory named foo in the root of
-                   the repository
-    path:path:name a file or directory named "path:name"
+      path:foo/bar   a name bar in a directory named foo in the root of
+                     the repository
+      path:path:name a file or directory named "path:name"
 
-    Glob examples:
+    Glob examples::
 
-    glob:*.c       any name ending in ".c" in the current directory
-    *.c            any name ending in ".c" in the current directory
-    **.c           any name ending in ".c" in any subdirectory of the current
-                   directory including itself.
-    foo/*.c        any name ending in ".c" in the directory foo
-    foo/**.c       any name ending in ".c" in any subdirectory of foo
-                   including itself.
+      glob:*.c       any name ending in ".c" in the current directory
+      *.c            any name ending in ".c" in the current directory
+      **.c           any name ending in ".c" in any subdirectory of the
+                     current directory including itself.
+      foo/*.c        any name ending in ".c" in the directory foo
+      foo/**.c       any name ending in ".c" in any subdirectory of foo
+                     including itself.
 
-    Regexp examples:
+    Regexp examples::
 
-    re:.*\.c$      any name ending in ".c", anywhere in the repository
+      re:.*\.c$      any name ending in ".c", anywhere in the repository
 
     ''')),
 
     (['environment', 'env'], _('Environment Variables'),
      _(r'''
-HG::
+HG
     Path to the 'hg' executable, automatically passed when running hooks,
     extensions or external tools. If unset or empty, this is the hg
     executable's name if it's frozen, or an executable named 'hg' (with
     %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on Windows) is
     searched.
 
-HGEDITOR::
+HGEDITOR
     This is the name of the editor to run when committing. See EDITOR.
 
     (deprecated, use .hgrc)
 
-HGENCODING::
+HGENCODING
     This overrides the default locale setting detected by Mercurial. This
     setting is used to convert data including usernames, changeset
     descriptions, tag names, and branches. This setting can be overridden with
     the --encoding command-line option.
 
-HGENCODINGMODE::
+HGENCODINGMODE
     This sets Mercurial's behavior for handling unknown characters while
     transcoding user input. The default is "strict", which causes Mercurial to
     abort if it can't map a character. Other settings include "replace", which
     replaces unknown characters, and "ignore", which drops them. This setting
     can be overridden with the --encodingmode command-line option.
 
-HGMERGE::
+HGMERGE
     An executable to use for resolving merge conflicts. The program will be
     executed with three arguments: local file, remote file, ancestor file.
 
     (deprecated, use .hgrc)
 
-HGRCPATH::
+HGRCPATH
     A list of files or directories to search for hgrc files. Item separator is
     ":" on Unix, ";" on Windows. If HGRCPATH is not set, platform default
     search path is used. If empty, only the .hg/hgrc from the current
     repository is read.
 
     For each element in HGRCPATH:
-    * if it's a directory, all files ending with .rc are added
-    * otherwise, the file itself will be added
 
-HGUSER::
+    - if it's a directory, all files ending with .rc are added
+    - otherwise, the file itself will be added
+
+HGUSER
     This is the string used as the author of a commit. If not set, available
     values will be considered in this order:
 
-    * HGUSER (deprecated)
-    * hgrc files from the HGRCPATH
-    * EMAIL
-    * interactive prompt
-    * LOGNAME (with '@hostname' appended)
+    - HGUSER (deprecated)
+    - hgrc files from the HGRCPATH
+    - EMAIL
+    - interactive prompt
+    - LOGNAME (with '@hostname' appended)
 
     (deprecated, use .hgrc)
 
-EMAIL::
+EMAIL
     May be used as the author of a commit; see HGUSER.
 
-LOGNAME::
+LOGNAME
     May be used as the author of a commit; see HGUSER.
 
-VISUAL::
+VISUAL
     This is the name of the editor to use when committing. See EDITOR.
 
-EDITOR::
+EDITOR
     Sometimes Mercurial needs to open a text file in an editor for a user to
     modify, for example when writing commit messages. The editor it uses is
     determined by looking at the environment variables HGEDITOR, VISUAL and
     EDITOR, in that order. The first non-empty one is chosen. If all of them
     are empty, the editor defaults to 'vi'.
 
-PYTHONPATH::
+PYTHONPATH
     This is used by Python to find imported modules and may need to be set
     appropriately if this Mercurial is not installed system-wide.
     ''')),
@@ -431,7 +434,7 @@ PYTHONPATH::
 
     (['urls'], _('URL Paths'),
      _(r'''
-    Valid URLs are of the form:
+    Valid URLs are of the form::
 
       local/filesystem/path[#revision]
       file://local/filesystem/path[#revision]
@@ -450,26 +453,32 @@ PYTHONPATH::
     server.
 
     Some notes about using SSH with Mercurial:
+
     - SSH requires an accessible shell account on the destination machine and
       a copy of hg in the remote path or specified with as remotecmd.
     - path is relative to the remote user's home directory by default. Use an
-      extra slash at the start of a path to specify an absolute path:
+      extra slash at the start of a path to specify an absolute path::
+
         ssh://example.com//tmp/repository
+
     - Mercurial doesn't use its own compression via SSH; the right thing to do
-      is to configure it in your ~/.ssh/config, e.g.:
+      is to configure it in your ~/.ssh/config, e.g.::
+
         Host *.mylocalnetwork.example.com
           Compression no
         Host *
           Compression yes
+
       Alternatively specify "ssh -C" as your ssh command in your hgrc or with
       the --ssh command line option.
 
     These URLs can all be stored in your hgrc with path aliases under the
-    [paths] section like so:
-    [paths]
-    alias1 = URL1
-    alias2 = URL2
-    ...
+    [paths] section like so::
+
+      [paths]
+      alias1 = URL1
+      alias2 = URL2
+      ...
 
     You can then use the alias for any command that uses a URL (for example
     'hg pull alias1' would pull from the 'alias1' path).

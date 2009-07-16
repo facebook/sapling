@@ -10,7 +10,7 @@
 Subscriptions can be managed through a hgrc file. Default mode is to print
 messages to stdout, for testing and configuring.
 
-To use, configure the notify extension and enable it in hgrc like this:
+To use, configure the notify extension and enable it in hgrc like this::
 
   [extensions]
   hgext.notify =
@@ -24,11 +24,11 @@ To use, configure the notify extension and enable it in hgrc like this:
   [notify]
   # config items go here
 
-Required configuration items:
+Required configuration items::
 
   config = /path/to/file # file containing subscriptions
 
-Optional configuration items:
+Optional configuration items::
 
   test = True            # print messages to stdout for testing
   strip = 3              # number of slashes to strip for url paths
@@ -49,6 +49,8 @@ Optional configuration items:
 
 The notify config file has same format as a regular hgrc file. It has two
 sections so you can express subscriptions in whatever way is handier for you.
+
+::
 
   [usersubs]
   # key is subscriber email, value is ","-separated list of glob patterns

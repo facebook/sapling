@@ -14,6 +14,7 @@ import patch, help, mdiff, url, encoding
 import archival, changegroup, cmdutil, sshserver, hbisect
 from hgweb import server
 import merge as merge_
+import minirst
 
 # Commands start here, listed alphabetically
 
@@ -133,14 +134,14 @@ def archive(ui, repo, dest, **opts):
     By default, the revision used is the parent of the working directory; use
     -r/--rev to specify a different revision.
 
-    To specify the type of archive to create, use -t/--type. Valid types are:
+    To specify the type of archive to create, use -t/--type. Valid types are::
 
-    "files" (default): a directory full of files
-    "tar": tar archive, uncompressed
-    "tbz2": tar archive, compressed using bzip2
-    "tgz": tar archive, compressed using gzip
-    "uzip": zip archive, uncompressed
-    "zip": zip archive, compressed using deflate
+      "files" (default): a directory full of files
+      "tar": tar archive, uncompressed
+      "tbz2": tar archive, compressed using bzip2
+      "tgz": tar archive, compressed using gzip
+      "uzip": zip archive, uncompressed
+      "zip": zip archive, compressed using deflate
 
     The exact name of the destination archive or directory is given using a
     format string; see 'hg help export' for details.
@@ -550,11 +551,11 @@ def cat(ui, repo, file1, *pats, **opts):
 
     Output may be to a file, in which case the name of the file is given using
     a format string. The formatting rules are the same as for the export
-    command, with the following additions:
+    command, with the following additions::
 
-    %s   basename of file being printed
-    %d   dirname of file being printed, or '.' if in repository root
-    %p   root-relative path name of file being printed
+      %s   basename of file being printed
+      %d   dirname of file being printed, or '.' if in repository root
+      %p   root-relative path name of file being printed
     """
     ctx = repo[opts.get('rev')]
     err = 1
@@ -600,7 +601,7 @@ def clone(ui, source, dest=None, **opts):
     cases, use the --pull option to avoid hardlinking.
 
     In some cases, you can clone repositories and checked out files using full
-    hardlinks with
+    hardlinks with ::
 
       $ cp -al REPO REPOCLONE
 
@@ -1095,16 +1096,16 @@ def export(ui, repo, *changesets, **opts):
     it will compare the merge changeset against its first parent only.
 
     Output may be to a file, in which case the name of the file is given using
-    a format string. The formatting rules are as follows:
+    a format string. The formatting rules are as follows::
 
-    %%   literal "%" character
-    %H   changeset hash (40 bytes of hexadecimal)
-    %N   number of patches being generated
-    %R   changeset revision number
-    %b   basename of the exporting repository
-    %h   short-form changeset hash (12 bytes of hexadecimal)
-    %n   zero-padded sequence number, starting at 1
-    %r   zero-padded changeset revision number
+      %%   literal "%" character
+      %H   changeset hash (40 bytes of hexadecimal)
+      %N   number of patches being generated
+      %R   changeset revision number
+      %b   basename of the exporting repository
+      %h   short-form changeset hash (12 bytes of hexadecimal)
+      %n   zero-padded sequence number, starting at 1
+      %r   zero-padded changeset revision number
 
     Without the -a/--text option, export will avoid generating diffs of files
     it detects as binary. With -a, export will generate a diff anyway,
@@ -1397,6 +1398,7 @@ def help_(ui, name=None, with_version=False):
     Given a topic, extension, or command name, print help for that topic.
     """
     option_lists = []
+    textwidth = util.termwidth() - 2
 
     def addglobalopts(aliases):
         if ui.verbose:
@@ -1449,7 +1451,7 @@ def help_(ui, name=None, with_version=False):
             doc = _("(no help text available)")
         if ui.quiet:
             doc = doc.splitlines()[0]
-        ui.write("\n%s\n" % doc.rstrip())
+        ui.write("\n%s\n" % minirst.format(doc, textwidth))
 
         if not ui.quiet:
             # options
@@ -1498,7 +1500,9 @@ def help_(ui, name=None, with_version=False):
 
         if name != 'shortlist':
             exts, maxlength = extensions.enabled()
-            ui.write(help.listexts(_('enabled extensions:'), exts, maxlength))
+            text = help.listexts(_('enabled extensions:'), exts, maxlength)
+            if text:
+                ui.write("\n%s\n" % minirst.format(text, textwidth))
 
         if not ui.quiet:
             addglobalopts(True)
@@ -1516,8 +1520,8 @@ def help_(ui, name=None, with_version=False):
         if hasattr(doc, '__call__'):
             doc = doc()
 
-        ui.write("%s\n" % header)
-        ui.write("%s\n" % doc.rstrip())
+        ui.write("%s\n\n" % header)
+        ui.write("%s\n" % minirst.format(doc, textwidth))
 
     def helpext(name):
         try:
@@ -1526,12 +1530,11 @@ def help_(ui, name=None, with_version=False):
             raise error.UnknownCommand(name)
 
         doc = gettext(mod.__doc__) or _('no help text available')
-        doc = doc.splitlines()
-        ui.write(_('%s extension - %s\n') % (name.split('.')[-1], doc[0]))
-        for d in doc[1:]:
-            ui.write(d, '\n')
-
-        ui.status('\n')
+        head, tail = doc.split('\n', 1)
+        ui.write(_('%s extension - %s\n\n') % (name.split('.')[-1], head))
+        if tail:
+            ui.write(minirst.format(tail, textwidth))
+            ui.status('\n\n')
 
         try:
             ct = mod.cmdtable
@@ -2329,13 +2332,13 @@ def remove(ui, repo, *pats, **opts):
     The following table details the behavior of remove for different file
     states (columns) and option combinations (rows). The file states are Added
     [A], Clean [C], Modified [M] and Missing [!] (as reported by hg status).
-    The actions are Warn, Remove (from branch) and Delete (from disk).
+    The actions are Warn, Remove (from branch) and Delete (from disk)::
 
-           A  C  M  !
-    none   W  RD W  R
-    -f     R  RD RD R
-    -A     W  W  W  R
-    -Af    R  R  R  R
+             A  C  M  !
+      none   W  RD W  R
+      -f     R  RD RD R
+      -A     W  W  W  R
+      -Af    R  R  R  R
 
     This command schedules the files to be removed at the next commit. To undo
     a remove before that, see hg revert.
@@ -2410,9 +2413,10 @@ def resolve(ui, repo, *pats, **opts):
     whether or not files are resolved. All files must be marked as resolved
     before a commit is permitted.
 
-    The codes used to show the status of files are:
-    U = unresolved
-    R = resolved
+    The codes used to show the status of files are::
+
+      U = unresolved
+      R = resolved
     """
 
     all, mark, unmark, show = [opts.get(o) for o in 'all mark unmark list'.split()]
@@ -2675,7 +2679,7 @@ def rollback(ui, repo):
     Transactions are used to encapsulate the effects of all commands that
     create new changesets or propagate existing changesets into a repository.
     For example, the following commands are transactional, and their effects
-    can be rolled back:
+    can be rolled back::
 
       commit
       import
@@ -2783,15 +2787,16 @@ def status(ui, repo, *pats, **opts):
     If one revision is given, it is used as the base revision. If two
     revisions are given, the differences between them are shown.
 
-    The codes used to show the status of files are:
-    M = modified
-    A = added
-    R = removed
-    C = clean
-    ! = missing (deleted by non-hg command, but still tracked)
-    ? = not tracked
-    I = ignored
-      = origin of the previous file listed as A (added)
+    The codes used to show the status of files are::
+
+      M = modified
+      A = added
+      R = removed
+      C = clean
+      ! = missing (deleted by non-hg command, but still tracked)
+      ? = not tracked
+      I = ignored
+        = origin of the previous file listed as A (added)
     """
 
     node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
