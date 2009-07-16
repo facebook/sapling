@@ -48,7 +48,7 @@ FILES
 ``.hgignore``
     This file contains regular expressions (one per line) that
     describe file names that should be ignored by **hg**. For details,
-    see *hgignore(5)*.
+    see |hgignore(5)|_.
 
 ``.hgtags``
     This file contains changeset hash values and text tag names (one
@@ -59,7 +59,7 @@ FILES
     This file contains defaults and configuration. Values in
     ``.hg/hgrc`` override those in ``$HOME/.hgrc``, and these override
     settings made in the global ``/etc/mercurial/hgrc`` configuration.
-    See *hgrc(5)* for details of the contents and format of these
+    See |hgrc(5)|_ for details of the contents and format of these
     files.
 
 Some commands (e.g. revert) produce backup files ending in ``.orig``,
@@ -73,7 +73,7 @@ below) when you find them.
 
 SEE ALSO
 --------
-*hgignore(5)*, *hgrc(5)*
+|hgignore(5)|_, |hgrc(5)|_
 
 AUTHOR
 ------
@@ -92,3 +92,5 @@ COPYING
 Copyright \(C) 2005-2009 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
 Public License (GPL).
+
+.. include:: common.txt
