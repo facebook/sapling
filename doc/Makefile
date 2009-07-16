@@ -21,8 +21,11 @@ hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 	${PYTHON} gendoc.py > $@
 
 %: %.txt
-	# add newline after all literal blocks
-	$(RST2MAN) $*.txt | sed -e 's/^\.fi$$/.fi\n/' > $*
+	# add newline after all literal blocks and fix backslash escape
+	$(RST2MAN) $*.txt \
+	  | sed -e 's/^\.fi$$/.fi\n/' \
+	  | sed -e 's/\\fB\\\\fP/\\fB\\e\\fP/' \
+	  > $*
 
 %.html: %.txt
 	$(RST2HTML) $*.txt > $*.html

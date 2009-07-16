@@ -23,7 +23,7 @@ FILES
 
 Mercurial reads configuration data from several files, if they exist.
 The names of these files depend on the system on which Mercurial is
-installed. `*.rc` files from a single directory are read in
+installed. ``*.rc`` files from a single directory are read in
 alphabetical order, later ones overriding earlier ones. Where multiple
 paths are given below, settings from later paths override earlier
 ones.
@@ -32,10 +32,10 @@ ones.
 | (Unix) ``<install-root>/etc/mercurial/hgrc``
 
     Per-installation configuration files, searched for in the
-    directory where Mercurial is installed. `<install-root>` is the
-    parent directory of the hg executable (or symlink) being run. For
-    example, if installed in `/shared/tools/bin/hg`, Mercurial will look
-    in `/shared/tools/etc/mercurial/hgrc`. Options in these files apply
+    directory where Mercurial is installed. ``<install-root>`` is the
+    parent directory of the **hg** executable (or symlink) being run. For
+    example, if installed in ``/shared/tools/bin/hg``, Mercurial will look
+    in ``/shared/tools/etc/mercurial/hgrc``. Options in these files apply
     to all Mercurial commands executed by any user in any directory.
 
 | (Unix) ``/etc/mercurial/hgrc.d/*.rc``
@@ -54,7 +54,7 @@ ones.
     which Mercurial is running. Options in these files apply to all
     Mercurial commands executed by any user in any directory. Registry
     keys contain PATH-like strings, every part of which must reference
-    a `Mercurial.ini` file or be a directory where `*.rc` files will
+    a ``Mercurial.ini`` file or be a directory where ``*.rc`` files will
     be read.
 
 | (Unix) ``$HOME/.hgrc``
@@ -64,7 +64,7 @@ ones.
 | (Windows) ``%USERPROFILE%\.hgrc``
 
     Per-user configuration file(s), for the user running Mercurial. On
-    Windows 9x, `%HOME%` is replaced by `%APPDATA%`. Options in these
+    Windows 9x, ``%HOME%`` is replaced by ``%APPDATA%``. Options in these
     files apply to all Mercurial commands executed by this user in any
     directory. Options in these files override per-installation and
     per-system options.
@@ -82,8 +82,8 @@ ones.
 SYNTAX
 ------
 
-A configuration file consists of sections, led by a "`[section]`" header
-and followed by "`name: value`" entries; "`name=value`" is also accepted.
+A configuration file consists of sections, led by a "``[section]``" header
+and followed by "``name: value``" entries; "``name=value``" is also accepted.
 
 ::
 
@@ -121,7 +121,7 @@ For example, this definition::
 
     latest = log --limit 5
 
-creates a new command `latest` that shows only the five most recent
+creates a new command ``latest`` that shows only the five most recent
 changesets. You can define subsequent aliases using earlier ones::
 
     stable5 = latest -b stable
@@ -154,9 +154,9 @@ Example::
 Supported arguments:
 
 ``prefix``
-    Either "\*" or a URI prefix with or without the scheme part.
+    Either "``*``" or a URI prefix with or without the scheme part.
     The authentication entry with the longest matching prefix is used
-    (where "*" matches everything and counts as a match of length
+    (where "``*``" matches everything and counts as a match of length
     1). If the prefix doesn't include a scheme, the match is performed
     against the URI with its scheme stripped as well, and the schemes
     argument, q.v., is then subsequently consulted.
@@ -191,9 +191,9 @@ localization/canonicalization of files.
 
 Filters consist of a filter pattern followed by a filter command.
 Filter patterns are globs by default, rooted at the repository root.
-For example, to match any file ending in "`.txt`" in the root
-directory only, use the pattern "`*.txt`". To match any file ending
-in "`.c`" anywhere in the repository, use the pattern "`**.c`".
+For example, to match any file ending in "``.txt``" in the root
+directory only, use the pattern "``*.txt``". To match any file ending
+in "``.c``" anywhere in the repository, use the pattern "``**.c``".
 
 The filter command can start with a specifier, either "pipe:" or
 "tempfile:". If no specifier is given, "pipe:" is used by default.
@@ -307,7 +307,7 @@ Settings for extensions that send email messages.
     convenient for recipients. Addresses, headers, and parts not
     containing patches of outgoing messages will be encoded in the
     first character set to which conversion from local encoding
-    (`$HGENCODING`, `ui.fallbackencoding`) succeeds. If correct
+    (``$HGENCODING``, ``ui.fallbackencoding``) succeeds. If correct
     conversion fails, the text in question is sent as is. Defaults to
     empty (explicit) list.
 
@@ -336,19 +336,19 @@ Mercurial has an extension mechanism for adding new features. To
 enable an extension, create an entry for it in this section.
 
 If you know that the extension is already in Python's search path,
-you can give the name of the module, followed by "`=`", with nothing
-after the "`=`".
+you can give the name of the module, followed by "``=``", with nothing
+after the "``=``".
 
-Otherwise, give a name that you choose, followed by "`=`", followed by
-the path to the "`.py`" file (including the file name extension) that
+Otherwise, give a name that you choose, followed by "``=``", followed by
+the path to the "``.py``" file (including the file name extension) that
 defines the extension.
 
 To explicitly disable an extension that is enabled in an hgrc of
-broader scope, prepend its path with "`!`", as in
-"`hgext.foo = !/ext/path`" or "`hgext.foo = !`"  when path is not
+broader scope, prepend its path with "``!``", as in
+"``hgext.foo = !/ext/path``" or "``hgext.foo = !``"  when path is not
 supplied.
 
-Example for `~/.hgrc`::
+Example for ``~/.hgrc``::
 
   [extensions]
   # (the mq extension will get loaded from Mercurial's path)
@@ -396,7 +396,7 @@ Example::
 This section configures external merge tools to use for file-level
 merges.
 
-Example `~/.hgrc`::
+Example ``~/.hgrc``::
 
   [merge-tools]
   # Override stock tool location
@@ -422,8 +422,8 @@ Supported arguments:
 ``args``
   The arguments to pass to the tool executable. You can refer to the
   files being merged as well as the output file through these
-  variables: `$base`, `$local`, `$other`, `$output`.
-  Default: `$local $base $other`
+  variables: ``$base``, ``$local``, ``$other``, ``$output``.
+  Default: ``$local $base $other``
 ``premerge``
   Attempt to run internal non-interactive 3-way merge tool before
   launching external tool.
@@ -450,7 +450,7 @@ Supported arguments:
 ``regkey``
   Windows registry key which describes install location of this
   tool. Mercurial will search for this key first under
-  `HKEY_CURRENT_USER` and then under `HKEY_LOCAL_MACHINE`.
+  ``HKEY_CURRENT_USER`` and then under ``HKEY_LOCAL_MACHINE``.
   Default: None
 ``regname``
   Name of value to read from specified registry key. Defaults to the
@@ -469,7 +469,7 @@ hooks can be run for the same action by appending a suffix to the
 action. Overriding a site-wide hook can be done by changing its
 value or setting it to an empty string.
 
-Example `.hg/hgrc`::
+Example ``.hg/hgrc``::
 
   [hooks]
   # do not use the site-wide hook
@@ -483,82 +483,82 @@ variables it is passed are listed with names of the form "$HG_foo".
 
 ``changegroup``
   Run after a changegroup has been added via push, pull or unbundle.
-  ID of the first new changeset is in `$HG_NODE`. URL from which
-  changes came is in `$HG_URL`.
+  ID of the first new changeset is in ``$HG_NODE``. URL from which
+  changes came is in ``$HG_URL``.
 ``commit``
   Run after a changeset has been created in the local repository. ID
-  of the newly created changeset is in `$HG_NODE`. Parent changeset
-  IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
+  of the newly created changeset is in ``$HG_NODE``. Parent changeset
+  IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
 ``incoming``
   Run after a changeset has been pulled, pushed, or unbundled into
   the local repository. The ID of the newly arrived changeset is in
-  `$HG_NODE`. URL that was source of changes came is in `$HG_URL`.
+  ``$HG_NODE``. URL that was source of changes came is in ``$HG_URL``.
 ``outgoing``
   Run after sending changes from local repository to another. ID of
-  first changeset sent is in `$HG_NODE`. Source of operation is in
-  `$HG_SOURCE`; see "preoutgoing" hook for description.
+  first changeset sent is in ``$HG_NODE``. Source of operation is in
+  ``$HG_SOURCE``; see "preoutgoing" hook for description.
 ``post-<command>``
   Run after successful invocations of the associated command. The
-  contents of the command line are passed as `$HG_ARGS` and the result
-  code in `$HG_RESULT`. Hook failure is ignored.
+  contents of the command line are passed as ``$HG_ARGS`` and the result
+  code in ``$HG_RESULT``. Hook failure is ignored.
 ``pre-<command>``
   Run before executing the associated command. The contents of the
-  command line are passed as `$HG_ARGS`. If the hook returns failure,
+  command line are passed as ``$HG_ARGS``. If the hook returns failure,
   the command doesn't execute and Mercurial returns the failure
   code.
 ``prechangegroup``
   Run before a changegroup is added via push, pull or unbundle. Exit
   status 0 allows the changegroup to proceed. Non-zero status will
   cause the push, pull or unbundle to fail. URL from which changes
-  will come is in `$HG_URL`.
+  will come is in ``$HG_URL``.
 ``precommit``
   Run before starting a local commit. Exit status 0 allows the
   commit to proceed. Non-zero status will cause the commit to fail.
-  Parent changeset IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
+  Parent changeset IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
 ``preoutgoing``
   Run before collecting changes to send from the local repository to
   another. Non-zero status will cause failure. This lets you prevent
   pull over HTTP or SSH. Also prevents against local pull, push
   (outbound) or bundle commands, but not effective, since you can
   just copy files instead then. Source of operation is in
-  `$HG_SOURCE`. If "serve", operation is happening on behalf of remote
+  ``$HG_SOURCE``. If "serve", operation is happening on behalf of remote
   SSH or HTTP repository. If "push", "pull" or "bundle", operation
   is happening on behalf of repository on same system.
 ``pretag``
   Run before creating a tag. Exit status 0 allows the tag to be
   created. Non-zero status will cause the tag to fail. ID of
-  changeset to tag is in `$HG_NODE`. Name of tag is in `$HG_TAG`. Tag is
-  local if `$HG_LOCAL=1`, in repository if `$HG_LOCAL=0`.
+  changeset to tag is in ``$HG_NODE``. Name of tag is in ``$HG_TAG``. Tag is
+  local if ``$HG_LOCAL=1``, in repository if ``$HG_LOCAL=0``.
 ``pretxnchangegroup``
   Run after a changegroup has been added via push, pull or unbundle,
   but before the transaction has been committed. Changegroup is
   visible to hook program. This lets you validate incoming changes
   before accepting them. Passed the ID of the first new changeset in
-  `$HG_NODE`. Exit status 0 allows the transaction to commit. Non-zero
+  ``$HG_NODE``. Exit status 0 allows the transaction to commit. Non-zero
   status will cause the transaction to be rolled back and the push,
   pull or unbundle will fail. URL that was source of changes is in
-  `$HG_URL`.
+  ``$HG_URL``.
 ``pretxncommit``
   Run after a changeset has been created but the transaction not yet
   committed. Changeset is visible to hook program. This lets you
   validate commit message and changes. Exit status 0 allows the
   commit to proceed. Non-zero status will cause the transaction to
-  be rolled back. ID of changeset is in `$HG_NODE`. Parent changeset
-  IDs are in `$HG_PARENT1` and `$HG_PARENT2`.
+  be rolled back. ID of changeset is in ``$HG_NODE``. Parent changeset
+  IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
 ``preupdate``
   Run before updating the working directory. Exit status 0 allows
   the update to proceed. Non-zero status will prevent the update.
-  Changeset ID of first new parent is in `$HG_PARENT1`. If merge, ID
-  of second new parent is in `$HG_PARENT2`.
+  Changeset ID of first new parent is in ``$HG_PARENT1``. If merge, ID
+  of second new parent is in ``$HG_PARENT2``.
 ``tag``
-  Run after a tag is created. ID of tagged changeset is in `$HG_NODE`.
-  Name of tag is in `$HG_TAG`. Tag is local if `$HG_LOCAL=1`, in
-  repository if `$HG_LOCAL=0`.
+  Run after a tag is created. ID of tagged changeset is in ``$HG_NODE``.
+  Name of tag is in ``$HG_TAG``. Tag is local if ``$HG_LOCAL=1``, in
+  repository if ``$HG_LOCAL=0``.
 ``update``
   Run after updating the working directory. Changeset ID of first
-  new parent is in `$HG_PARENT1`. If merge, ID of second new parent is
-  in `$HG_PARENT2`. If the update succeeded, `$HG_ERROR=0`. If the
-  update failed (e.g. because conflicts not resolved), `$HG_ERROR=1`.
+  new parent is in ``$HG_PARENT1``. If merge, ID of second new parent is
+  in ``$HG_PARENT2``. If the update succeeded, ``$HG_ERROR=0``. If the
+  update failed (e.g. because conflicts not resolved), ``$HG_ERROR=1``.
 
 NOTE: it is generally better to use standard hooks rather than the
 generic pre- and post- command hooks as they are guaranteed to be
@@ -567,7 +567,7 @@ Also, hooks like "commit" will be called in all contexts that
 generate a commit (e.g. tag) and not just the commit command.
 
 NOTE: Environment variables with empty values may not be passed to
-hooks on platforms such as Windows. As an example, `$HG_PARENT2` will
+hooks on platforms such as Windows. As an example, ``$HG_PARENT2`` will
 have an empty value under Unix-like platforms for non-merge
 changesets, while it will not be available at all under Windows.
 
@@ -581,7 +581,7 @@ called with at least three keyword arguments: a ui object (keyword
 "ui"), a repository object (keyword "repo"), and a "hooktype"
 keyword that tells what kind of hook is used. Arguments listed as
 environment variables above are passed as keyword arguments, with no
-"`HG_`" prefix, and names in lower case.
+"``HG_``" prefix, and names in lower case.
 
 If a Python hook returns a "true" value or raises an exception, this
 is treated as a failure.
@@ -699,14 +699,14 @@ Controls generic server settings.
 ``trusted``
 """""""""""
 For security reasons, Mercurial will not use the settings in the
-`.hg/hgrc` file from a repository if it doesn't belong to a trusted
+``.hg/hgrc`` file from a repository if it doesn't belong to a trusted
 user or to a trusted group. The main exception is the web interface,
 which automatically uses some safe settings, since it's common to
 serve repositories from different users.
 
 This section specifies what users and groups are trusted. The
 current user is always trusted. To trust everybody, list a user or a
-group with name "`*`".
+group with name "``*``".
 
 ``users``
   Comma-separated list of trusted users.
@@ -726,14 +726,14 @@ User interface controls.
     Default is true.
 ``askusername``
     Whether to prompt for a username when committing. If True, and
-    neither `$HGUSER` nor `$EMAIL` has been specified, then the user will
+    neither ``$HGUSER`` nor ``$EMAIL`` has been specified, then the user will
     be prompted to enter a username. If no username is entered, the
     default USER@HOST is used instead.
     Default is False.
 ``debug``
     Print debugging information. True or False. Default is False.
 ``editor``
-    The editor to use during a commit. Default is `$EDITOR` or "vi".
+    The editor to use during a commit. Default is ``$EDITOR`` or "vi".
 ``fallbackencoding``
     Encoding to try if it's not possible to decode the changelog using
     UTF-8. Default is ISO-8859-1.
@@ -742,7 +742,7 @@ User interface controls.
     in the same format as a repository-wide .hgignore file. This
     option supports hook syntax, so if you want to specify multiple
     ignore files, you can do so by setting something like
-    "ignore.other = ~/.hgignore2". For details of the ignore file
+    "``ignore.other = ~/.hgignore2``". For details of the ignore file
     format, see the hgignore(5) man page.
 ``interactive``
     Allow to prompt the user. True or False. Default is True.
@@ -772,13 +772,13 @@ merge-tools section.
 ``remotecmd``
     remote command to use for clone/push/pull operations. Default is 'hg'.
 ``report_untrusted``
-    Warn if a `.hg/hgrc` file is ignored due to not being owned by a
+    Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
     trusted user or group. True or False. Default is True.
 ``slash``
-    Display paths using a slash ("`/`") as the path separator. This
+    Display paths using a slash ("``/``") as the path separator. This
     only makes a difference on systems where the default path
     separator is not the slash character (e.g. Windows uses the
-    backslash character ("`\\`")).
+    backslash character ("``\``")).
     Default is False.
 ``ssh``
     command to use for SSH connections. Default is 'ssh'.
@@ -793,9 +793,9 @@ merge-tools section.
 ``username``
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. "Fred Widget
-    <fred@example.com>". Default is `$EMAIL` or username@hostname. If
+    <fred@example.com>". Default is ``$EMAIL`` or username@hostname. If
     the username in hgrc is empty, it has to be specified manually or
-    in a different hgrc file (e.g. `$HOME/.hgrc`, if the admin set
+    in a different hgrc file (e.g. ``$HOME/.hgrc``, if the admin set
     "username =" in the system hgrc).
 ``verbose``
     Increase the amount of output printed. True or False. Default is False.
@@ -824,7 +824,7 @@ Web interface configuration.
     Whether to allow pulling from the repository. Default is true.
 ``allow_push``
     Whether to allow pushing to the repository. If empty or not set,
-    push is not allowed. If the special value "`*`", any remote user can
+    push is not allowed. If the special value "``*``", any remote user can
     push, including unauthenticated users. Otherwise, the remote user
     must have been authenticated, and the authenticated user name must
     be present in this list (separated by whitespace or ","). The
@@ -837,7 +837,7 @@ Web interface configuration.
     user is unauthenticated or not present in the list (separated by
     whitespace or ","), then access is denied for the user. If the
     list is empty or not set, then access is permitted to all users by
-    default. Setting allow_read to the special value "`*`" is equivalent
+    default. Setting allow_read to the special value "``*``" is equivalent
     to it not being set (i.e. access is permitted to all users). The
     contents of the allow_read list are examined after the deny_read
     list.
@@ -850,10 +850,10 @@ Web interface configuration.
     URLs. Example: "http://hgserver/repos/"
 ``contact``
     Name or email address of the person in charge of the repository.
-    Defaults to ui.username or `$EMAIL` or "unknown" if unset or empty.
+    Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.
 ``deny_push``
     Whether to deny pushing to the repository. If empty or not set,
-    push is not denied. If the special value "`*`", all remote users are
+    push is not denied. If the special value "``*``", all remote users are
     denied push. Otherwise, unauthenticated users are all denied, and
     any authenticated user name present in this list (separated by
     whitespace or ",") is also denied. The contents of the deny_push
@@ -863,7 +863,7 @@ Web interface configuration.
     not empty, unauthenticated users are all denied, and any
     authenticated user name present in this list (separated by
     whitespace or ",") is also denied access to the repository. If set
-    to the special value "`*`", all remote users are denied access
+    to the special value "``*``", all remote users are denied access
     (rarely needed ;). If deny_read is empty or not set, the
     determination of repository access depends on the presence and
     content of the allow_read list (see description). If both
