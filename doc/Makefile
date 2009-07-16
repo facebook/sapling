@@ -5,7 +5,8 @@ PREFIX=/usr/local
 MANDIR=$(PREFIX)/share/man
 INSTALL=install -c -m 644
 PYTHON=python
-ASCIIDOC=asciidoc
+RST2HTML=rst2html
+RST2MAN=rst2man
 
 all: man html
 
@@ -19,16 +20,11 @@ hg.1.txt: hg.1.gendoc.txt
 hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 	${PYTHON} gendoc.py > $@
 
-%: %.xml
-	xmlto man $*.xml && \
-	sed -e 's/^\.hg/\\\&.hg/' $* > $*~ && \
-	mv $*~ $*
-
-%.xml: %.txt
-	$(ASCIIDOC) -d manpage -b docbook $*.txt
+%: %.txt
+	$(RST2MAN) $*.txt > $*
 
 %.html: %.txt
-	$(ASCIIDOC) -b html4 $*.txt || $(ASCIIDOC) -b html $*.txt
+	$(RST2HTML) $*.txt > $*.html
 
 MANIFEST: man html
 	# tracked files are already in the main MANIFEST
@@ -45,4 +41,4 @@ install: man
 	done
 
 clean:
-	$(RM) $(MAN) $(MAN:%=%.xml) $(MAN:%=%.html) *.[0-9].gendoc.txt MANIFEST
+	$(RM) $(MAN) $(MAN:%=%.html) *.[0-9].gendoc.txt MANIFEST

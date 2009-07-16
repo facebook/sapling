@@ -1,17 +1,20 @@
-HGIGNORE(5)
-===========
-Vadim Gelfer <vadim.gelfer@gmail.com>
-:man source: Mercurial
-:man manual: Mercurial Manual
+==========
+ hgignore
+==========
 
-NAME
-----
-hgignore - syntax for Mercurial ignore files
+---------------------------------
+syntax for Mercurial ignore files
+---------------------------------
+
+:Author:         Vadim Gelfer <vadim.gelfer@gmail.com>
+:Organization:   Mercurial
+:Manual section: 5
+:Manual group:   Mercurial Manual
 
 SYNOPSIS
 --------
 
-The Mercurial system uses a file called `.hgignore` in the root
+The Mercurial system uses a file called ``.hgignore`` in the root
 directory of a repository to control its behavior when it searches
 for files that it is not currently tracking.
 
@@ -38,36 +41,36 @@ SYNTAX
 ------
 
 An ignore file is a plain text file consisting of a list of patterns,
-with one pattern per line. Empty lines are skipped. The "`#`"
-character is treated as a comment character, and the "`\`" character
+with one pattern per line. Empty lines are skipped. The "``#``"
+character is treated as a comment character, and the "``\``" character
 is treated as an escape character.
 
 Mercurial supports several pattern syntaxes. The default syntax used
 is Python/Perl-style regular expressions.
 
-To change the syntax used, use a line of the following form:
+To change the syntax used, use a line of the following form::
 
-syntax: NAME
+  syntax: NAME
 
-where NAME is one of the following:
+where ``NAME`` is one of the following:
 
-regexp::
+``regexp``
   Regular expression, Python/Perl syntax.
-glob::
+``glob``
   Shell-style glob.
 
 The chosen syntax stays in effect when parsing all patterns that
 follow, until another syntax is selected.
 
 Neither glob nor regexp patterns are rooted. A glob-syntax pattern of
-the form "`*.c`" will match a file ending in "`.c`" in any directory,
-and a regexp pattern of the form "`\.c$`" will do the same. To root a
-regexp pattern, start it with "`^`".
+the form "``*.c``" will match a file ending in "``.c``" in any directory,
+and a regexp pattern of the form "``\.c$``" will do the same. To root a
+regexp pattern, start it with "``^``".
 
 EXAMPLE
 -------
 
-Here is an example ignore file.
+Here is an example ignore file. ::
 
   # use glob syntax.
   syntax: glob

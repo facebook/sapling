@@ -148,10 +148,10 @@ helptable = (
     repository root.
 
     To use an extended glob, start a name with "glob:". Globs are rooted at
-    the current directory; a glob such as "*.c" will only match files in the
+    the current directory; a glob such as "``*.c``" will only match files in the
     current directory ending with ".c".
 
-    The supported glob syntax extensions are "**" to match any string across
+    The supported glob syntax extensions are "``**``" to match any string across
     path separators and "{a,b}" to mean "a or b".
 
     To use a Perl/Python regular expression, start a name with "re:". Regexp
