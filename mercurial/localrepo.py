@@ -612,6 +612,7 @@ class localrepository(repo.repository):
                                  % encoding.tolocal(self.dirstate.branch()))
                 self.invalidate()
                 self.dirstate.invalidate()
+                self.destroyed()
             else:
                 self.ui.warn(_("no rollback information available\n"))
         finally:
@@ -909,6 +910,16 @@ class localrepository(repo.repository):
         finally:
             del tr
             lock.release()
+
+    def destroyed(self):
+        '''Inform the repository that nodes have been destroyed.
+        Intended for use by strip and rollback, so there's a common
+        place for anything that has to be done after destroying history.'''
+        # Do nothing for now: this is a placeholder that will be used
+        # when we add tag caching.
+        # XXX it might be nice if we could take the list of destroyed
+        # nodes, but I don't see an easy way for rollback() to do that
+        pass
 
     def walk(self, match, node=None):
         '''
