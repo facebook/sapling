@@ -1,7 +1,10 @@
 % setup
+no tag cache
 000000000000 tip
+no tag cache
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 acb14030fe0a tip
+tag cache exists
 % create local tag with long name
 tip                                0:acb14030fe0a
 This is a local tag with a really long name!     0:acb14030fe0a
@@ -9,6 +12,7 @@ This is a local tag with a really long name!     0:acb14030fe0a
 acb14030fe0a21b60322c440ad2d20cf7685a376 first
 tip                                1:b9154636be93
 first                              0:acb14030fe0a
+b9154636be93 tip
 b9154636be93 tip
 % create a branch
 M a
@@ -73,7 +77,9 @@ bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
 rev 4: .hgtags:
 bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
 .hg/tags.cache:
-no such file
+4 0c192d7d5e6b78a714de54a2e9627952a877e25a 0c04f2a8af31de17fab7422878ee5a2dadbc943d
+3 6fa450212aeb2a21ed616a54aea39a4a27894cd7 7d3b718c964ef37b89e550ebdafd5789e76ce1b0
+2 7a94127795a33c10a370c93f731fd9fea0b79af6 0c04f2a8af31de17fab7422878ee5a2dadbc943d
 % test tag removal
 changeset:   5:5f6e8655b1c7
 tag:         tip

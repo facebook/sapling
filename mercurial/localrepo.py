@@ -915,11 +915,20 @@ class localrepository(repo.repository):
         '''Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
         place for anything that has to be done after destroying history.'''
-        # Do nothing for now: this is a placeholder that will be used
-        # when we add tag caching.
         # XXX it might be nice if we could take the list of destroyed
         # nodes, but I don't see an easy way for rollback() to do that
-        pass
+
+        # Ensure the persistent tag cache is updated.  Doing it now
+        # means that the tag cache only has to worry about destroyed
+        # heads immediately after a strip/rollback.  That in turn
+        # guarantees that "cachetip == currenttip" (comparing both rev
+        # and node) always means no nodes have been added or destroyed.
+
+        # XXX this is suboptimal when qrefresh'ing: we strip the current
+        # head, refresh the tag cache, then immediately add a new head.
+        # But I think doing it this way is necessary for the "instant
+        # tag cache retrieval" case to work.
+        tags_.findglobaltags(self.ui, self, {}, {})
 
     def walk(self, match, node=None):
         '''

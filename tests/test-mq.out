@@ -110,9 +110,13 @@ working dir diff:
 % qpop
 popping test.patch
 patch queue now empty
-% qpush
+% qpush with dump of tag cache
+.hg/tags.cache (pre qpush):
+1
 applying test.patch
 now at: test.patch
+.hg/tags.cache (post qpush):
+2
 % pop/push outside repo
 popping test.patch
 patch queue now empty

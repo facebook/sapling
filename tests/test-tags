@@ -1,15 +1,22 @@
 #!/bin/sh
 
+cacheexists() {
+    [ -f .hg/tags.cache ] && echo "tag cache exists" || echo "no tag cache"
+}
+
 echo "% setup"
 mkdir t
 cd t
 hg init
+cacheexists
 hg id
+cacheexists
 echo a > a
 hg add a
 hg commit -m "test"
 hg co
 hg identify
+cacheexists
 
 echo "% create local tag with long name"
 T=`hg identify --debug --id`
@@ -23,6 +30,10 @@ cat .hgtags
 hg add .hgtags
 hg commit -m "add tags"
 hg tags
+hg identify
+
+# repeat with cold tag cache
+rm -f .hg/tags.cache
 hg identify
 
 echo "% create a branch"
