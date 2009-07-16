@@ -21,7 +21,8 @@ hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 	${PYTHON} gendoc.py > $@
 
 %: %.txt
-	$(RST2MAN) $*.txt > $*
+	# add newline after all literal blocks
+	$(RST2MAN) $*.txt | sed -e 's/^\.fi$$/.fi\n/' > $*
 
 %.html: %.txt
 	$(RST2HTML) $*.txt > $*.html
