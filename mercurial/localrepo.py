@@ -13,6 +13,7 @@ import lock, transaction, store, encoding
 import util, extensions, hook, error
 import match as match_
 import merge as merge_
+import tags as tags_
 from lock import release
 import weakref, stat, errno, os, time, inspect
 propertycache = util.propertycache
@@ -258,102 +259,11 @@ class localrepository(repo.repository):
         # be one tagtype for all such "virtual" tags?  Or is the status
         # quo fine?
 
-        def readtags(lines, fn):
-            '''Read tag definitions from a file (or any source of
-            lines).  Return a mapping from tag name to (node, hist):
-            node is the node id from the last line read for that name,
-            and hist is the list of node ids previously associated with
-            it (in file order).  All node ids are binary, not hex.'''
-
-            filetags = {}               # map tag name to (node, hist)
-            count = 0
-
-            def warn(msg):
-                self.ui.warn(_("%s, line %s: %s\n") % (fn, count, msg))
-
-            for line in lines:
-                count += 1
-                if not line:
-                    continue
-                try:
-                    (nodehex, name) = line.split(" ", 1)
-                except ValueError:
-                    warn(_("cannot parse entry"))
-                    continue
-                name = encoding.tolocal(name.strip()) # stored in UTF-8
-                try:
-                    nodebin = bin(nodehex)
-                except TypeError:
-                    warn(_("node '%s' is not well formed") % nodehex)
-                    continue
-                if nodebin not in self.changelog.nodemap:
-                    # silently ignore as pull -r might cause this
-                    continue
-
-                # update filetags
-                hist = []
-                if name in filetags:
-                    n, hist = filetags[name]
-                    hist.append(n)
-                filetags[name] = (nodebin, hist)
-            return filetags
-
         alltags = {}                    # map tag name to (node, hist)
         tagtypes = {}
 
-        def updatetags(filetags, tagtype):
-            '''Incorporate the tag info read from one file into the two
-            dictionaries, alltags and tagtypes, that contain all tag
-            info (global across all heads plus local).'''
-
-            for name, nodehist in filetags.iteritems():
-                if name not in alltags:
-                    alltags[name] = nodehist
-                    tagtypes[name] = tagtype
-                    continue
-
-                # we prefer alltags[name] if:
-                #  it supercedes us OR
-                #  mutual supercedes and it has a higher rank
-                # otherwise we win because we're tip-most
-                anode, ahist = nodehist
-                bnode, bhist = alltags[name]
-                if (bnode != anode and anode in bhist and
-                    (bnode not in ahist or len(bhist) > len(ahist))):
-                    anode = bnode
-                ahist.extend([n for n in bhist if n not in ahist])
-                alltags[name] = anode, ahist
-                tagtypes[name] = tagtype
-
-        seen = set()
-        fctx = None
-        ctxs = []                       # list of filectx
-        for node in self.heads():
-            try:
-                fnode = self[node].filenode('.hgtags')
-            except error.LookupError:
-                continue
-            if fnode not in seen:
-                seen.add(fnode)
-                if not fctx:
-                    fctx = self.filectx('.hgtags', fileid=fnode)
-                else:
-                    fctx = fctx.filectx(fnode)
-                ctxs.append(fctx)
-
-        # read the tags file from each head, ending with the tip
-        for fctx in reversed(ctxs):
-            filetags = readtags(fctx.data().splitlines(), fctx)
-            updatetags(filetags, "global")
-
-        try:
-            data = encoding.fromlocal(self.opener("localtags").read())
-            # localtags are stored in the local character set
-            # while the internal tag table is stored in UTF-8
-            filetags = readtags(data.splitlines(), "localtags")
-            updatetags(filetags, "local")
-        except IOError:
-            pass
+        tags_.findglobaltags(self.ui, self, alltags, tagtypes)
+        tags_.readlocaltags(self.ui, self, alltags, tagtypes)
 
         tags = {}
         for (name, (node, hist)) in alltags.iteritems():
