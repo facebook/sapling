@@ -90,15 +90,37 @@ hg up -C 1
 echo >> foo
 hg ci -m 'change foo 2' # rev 4
 hg tags
+hg tags         # repeat in case of cache effects
+
+dumptags() {
+    rev=$1
+    echo "rev $rev: .hgtags:"
+    hg cat -r$rev .hgtags
+}
+
+echo "% detailed dump of tag info"
+echo "heads:"
+hg heads -q             # expect 4, 3, 2
+dumptags 2
+dumptags 3
+dumptags 4
+echo ".hg/tags.cache:"
+[ -f .hg/tags.cache ] && cat .hg/tags.cache || echo "no such file"
 
 echo "% test tag removal"
 hg tag --remove bar     # rev 5
 hg tip -vp
 hg tags
+hg tags                 # again, try to expose cache bugs
 
 echo '% remove nonexistent tag'
 hg tag --remove foobar
 hg tip
+
+echo "% rollback undoes tag operation"
+hg rollback             # destroy rev 5 (restore bar)
+hg tags
+hg tags
 
 echo "% test tag rank"
 cd ..
@@ -121,6 +143,16 @@ hg tags
 echo "% don't allow moving tag without -f"
 hg tag -r 3 bar
 hg tags
+
+echo "% strip 1: expose an old head"
+hg --config extensions.mq= strip 5 > /dev/null 2>&1
+hg tags                  # partly stale cache
+hg tags                  # up-to-date cache
+echo "% strip 2: destroy whole branch, no old head exposed"
+hg --config extensions.mq= strip 4 > /dev/null 2>&1 
+hg tags                  # partly stale
+rm -f .hg/tags.cache
+hg tags                  # cold cache
 
 echo "% test tag rank with 3 heads"
 cd ..

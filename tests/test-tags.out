@@ -57,6 +57,23 @@ summary:     head
 created new head
 tip                                4:0c192d7d5e6b
 bar                                1:78391a272241
+tip                                4:0c192d7d5e6b
+bar                                1:78391a272241
+% detailed dump of tag info
+heads:
+4:0c192d7d5e6b
+3:6fa450212aeb
+2:7a94127795a3
+rev 2: .hgtags:
+bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
+rev 3: .hgtags:
+bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
+bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
+78391a272241d70354aa14c874552cad6b51bb42 bar
+rev 4: .hgtags:
+bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
+.hg/tags.cache:
+no such file
 % test tag removal
 changeset:   5:5f6e8655b1c7
 tag:         tip
@@ -76,6 +93,7 @@ diff -r 0c192d7d5e6b -r 5f6e8655b1c7 .hgtags
 +0000000000000000000000000000000000000000 bar
 
 tip                                5:5f6e8655b1c7
+tip                                5:5f6e8655b1c7
 % remove nonexistent tag
 abort: tag 'foobar' does not exist
 changeset:   5:5f6e8655b1c7
@@ -84,6 +102,12 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Removed tag bar
 
+% rollback undoes tag operation
+rolling back last transaction
+tip                                4:0c192d7d5e6b
+bar                                1:78391a272241
+tip                                4:0c192d7d5e6b
+bar                                1:78391a272241
 % test tag rank
 tip                                5:85f05169d91d
 bar                                0:bbd179dfa0a7
@@ -94,6 +118,16 @@ bar                                0:bbd179dfa0a7
 % don't allow moving tag without -f
 abort: tag 'bar' already exists (use -f to force)
 tip                                6:735c3ca72986
+bar                                0:bbd179dfa0a7
+% strip 1: expose an old head
+tip                                5:735c3ca72986
+bar                                1:78391a272241
+tip                                5:735c3ca72986
+bar                                1:78391a272241
+% strip 2: destroy whole branch, no old head exposed
+tip                                4:735c3ca72986
+bar                                0:bbd179dfa0a7
+tip                                4:735c3ca72986
 bar                                0:bbd179dfa0a7
 % test tag rank with 3 heads
 adding foo
