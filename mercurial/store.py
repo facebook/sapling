@@ -284,16 +284,17 @@ class fncachestore(basicstore):
         self.pathjoiner = pathjoiner
         self.path = self.pathjoiner(path, 'store')
         self.createmode = _calcmode(self.path)
-        self._op = opener(self.path)
-        self._op.createmode = self.createmode
-        self.fncache = fncache(self._op)
+        op = opener(self.path)
+        op.createmode = self.createmode
+        fnc = fncache(op)
+        self.fncache = fnc
 
         def fncacheopener(path, mode='r', *args, **kw):
             if (mode not in ('r', 'rb')
                 and path.startswith('data/')
-                and path not in self.fncache):
-                    self.fncache.add(path)
-            return self._op(hybridencode(path), mode, *args, **kw)
+                and path not in fnc):
+                    fnc.add(path)
+            return op(hybridencode(path), mode, *args, **kw)
         self.opener = fncacheopener
 
     def join(self, f):
