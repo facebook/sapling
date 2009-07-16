@@ -89,8 +89,14 @@ class localrepository(repo.repository):
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
 
-        self.tagscache = None
-        self._tagstypecache = None
+        # These two define the set of tags for this repository.  _tags
+        # maps tag name to node; _tagtypes maps tag name to 'global' or
+        # 'local'.  (Global tags are defined by .hgtags across all
+        # heads, and local tags are defined in .hg/localtags.)  They
+        # constitute the in-memory cache of tags.
+        self._tags = None
+        self._tagtypes = None
+
         self.branchcache = None
         self._ubranchcache = None  # UTF-8 version of branchcache
         self._branchcachetip = None
@@ -160,8 +166,8 @@ class localrepository(repo.repository):
                 fp.write('\n')
             for name in names:
                 m = munge and munge(name) or name
-                if self._tagstypecache and name in self._tagstypecache:
-                    old = self.tagscache.get(name, nullid)
+                if self._tagtypes and name in self._tagtypes:
+                    old = self._tags.get(name, nullid)
                     fp.write('%s %s\n' % (hex(old), m))
                 fp.write('%s %s\n' % (hex(node), m))
             fp.close()
@@ -233,10 +239,10 @@ class localrepository(repo.repository):
 
     def tags(self):
         '''return a mapping of tag to node'''
-        if self.tagscache is None:
-            (self.tagscache, self._tagstypecache) = self._findtags()
+        if self._tags is None:
+            (self._tags, self._tagtypes) = self._findtags()
 
-        return self.tagscache
+        return self._tags
 
     def _findtags(self):
         '''Do the hard work of finding tags.  Return a pair of dicts
@@ -353,7 +359,7 @@ class localrepository(repo.repository):
 
         self.tags()
 
-        return self._tagstypecache.get(tagname)
+        return self._tagtypes.get(tagname)
 
     def tagslist(self):
         '''return a list of tags ordered by revision'''
@@ -691,8 +697,8 @@ class localrepository(repo.repository):
         for a in "changelog manifest".split():
             if a in self.__dict__:
                 delattr(self, a)
-        self.tagscache = None
-        self._tagstypecache = None
+        self._tags = None
+        self._tagtypes = None
         self.nodetagscache = None
         self.branchcache = None
         self._ubranchcache = None
