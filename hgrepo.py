@@ -139,14 +139,14 @@ def generate_repo_subclass(baseclass):
                 git = GitHandler(self, self.ui)
                 git.fetch(remote.path)
             else: #pragma: no cover
-                super(hgrepo, self).pull(remote, heads, force)
+                return super(hgrepo, self).pull(remote, heads, force)
 
         def push(self, remote, force=False, revs=None):
             if isinstance(remote, gitrepo):
                 git = GitHandler(self, self.ui)
                 git.push(remote.path)
             else: #pragma: no cover
-                super(hgrepo, self).push(remote, force, revs)
+                return super(hgrepo, self).push(remote, force, revs)
 
         def tags(self):
             if self.tagscache:
