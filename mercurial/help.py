@@ -362,18 +362,18 @@ PYTHONPATH
 
     - author: String. The unmodified author of the changeset.
     - branches: String. The name of the branch on which the changeset was
-          committed. Will be empty if the branch name was default.
+      committed. Will be empty if the branch name was default.
     - date: Date information. The date when the changeset was committed.
     - desc: String. The text of the changeset description.
     - diffstat: String. Statistics of changes with the following format:
-          "modified files: +added/-removed lines"
+      "modified files: +added/-removed lines"
     - files: List of strings. All files modified, added, or removed by this
-          changeset.
+      changeset.
     - file_adds: List of strings. Files added by this changeset.
     - file_mods: List of strings. Files modified by this changeset.
     - file_dels: List of strings. Files removed by this changeset.
     - node: String. The changeset identification hash, as a 40-character
-          hexadecimal string.
+      hexadecimal string.
     - parents: List of strings. The parents of the changeset.
     - rev: Integer. The repository-local changeset revision number.
     - tags: List of strings. Any tags associated with the changeset.
@@ -389,46 +389,45 @@ PYTHONPATH
     List of filters:
 
     - addbreaks: Any text. Add an XHTML "<br />" tag before the end of every
-          line except the last.
+      line except the last.
     - age: Date. Returns a human-readable date/time difference between the
-          given date/time and the current date/time.
+      given date/time and the current date/time.
     - basename: Any text. Treats the text as a path, and returns the last
-          component of the path after splitting by the path separator
-          (ignoring trailing separators). For example, "foo/bar/baz" becomes
-          "baz" and "foo/bar//" becomes "bar".
+      component of the path after splitting by the path separator (ignoring
+      trailing separators). For example, "foo/bar/baz" becomes "baz" and
+      "foo/bar//" becomes "bar".
     - stripdir: Treat the text as path and strip a directory level, if
-          possible. For example, "foo" and "foo/bar" becomes "foo".
+      possible. For example, "foo" and "foo/bar" becomes "foo".
     - date: Date. Returns a date in a Unix date format, including the
-          timezone: "Mon Sep 04 15:13:13 2006 0700".
+      timezone: "Mon Sep 04 15:13:13 2006 0700".
     - domain: Any text. Finds the first string that looks like an email
-          address, and extracts just the domain component. Example: 'User
-          <user@example.com>' becomes 'example.com'.
+      address, and extracts just the domain component. Example: 'User
+      <user@example.com>' becomes 'example.com'.
     - email: Any text. Extracts the first string that looks like an email
-          address. Example: 'User <user@example.com>' becomes
-          'user@example.com'.
+      address. Example: 'User <user@example.com>' becomes 'user@example.com'.
     - escape: Any text. Replaces the special XML/XHTML characters "&", "<" and
-          ">" with XML entities.
+      ">" with XML entities.
     - fill68: Any text. Wraps the text to fit in 68 columns.
     - fill76: Any text. Wraps the text to fit in 76 columns.
     - firstline: Any text. Returns the first line of text.
     - nonempty: Any text. Returns '(none)' if the string is empty.
     - hgdate: Date. Returns the date as a pair of numbers: "1157407993 25200"
-          (Unix timestamp, timezone offset).
+      (Unix timestamp, timezone offset).
     - isodate: Date. Returns the date in ISO 8601 format.
     - localdate: Date. Converts a date to local date.
     - obfuscate: Any text. Returns the input text rendered as a sequence of
-          XML entities.
+      XML entities.
     - person: Any text. Returns the text before an email address.
     - rfc822date: Date. Returns a date using the same format used in email
-          headers.
+      headers.
     - short: Changeset hash. Returns the short form of a changeset hash, i.e.
-          a 12-byte hexadecimal string.
+      a 12-byte hexadecimal string.
     - shortdate: Date. Returns a date like "2006-09-18".
     - strip: Any text. Strips all leading and trailing whitespace.
     - tabindent: Any text. Returns the text, with every line except the first
-          starting with a tab character.
+      starting with a tab character.
     - urlescape: Any text. Escapes all "special" characters. For example, "foo
-          bar" becomes "foo%20bar".
+      bar" becomes "foo%20bar".
     - user: Any text. Returns the user portion of an email address.
     ''')),
 
