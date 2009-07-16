@@ -258,63 +258,67 @@ class localrepository(repo.repository):
         # be one tagtype for all such "virtual" tags?  Or is the status
         # quo fine?
 
-        globaltags = {}
+        alltags = {}                    # map tag name to (node, hist)
         tagtypes = {}
 
         def readtags(lines, fn, tagtype):
-            filetags = {}
+            filetags = {}               # map tag name to (node, hist)
             count = 0
 
             def warn(msg):
                 self.ui.warn(_("%s, line %s: %s\n") % (fn, count, msg))
 
-            for l in lines:
+            for line in lines:
                 count += 1
-                if not l:
+                if not line:
                     continue
-                s = l.split(" ", 1)
-                if len(s) != 2:
+                try:
+                    (nodehex, name) = line.split(" ", 1)
+                except ValueError:
                     warn(_("cannot parse entry"))
                     continue
-                node, key = s
-                key = encoding.tolocal(key.strip()) # stored in UTF-8
+                name = encoding.tolocal(name.strip()) # stored in UTF-8
                 try:
-                    bin_n = bin(node)
+                    nodebin = bin(nodehex)
                 except TypeError:
-                    warn(_("node '%s' is not well formed") % node)
+                    warn(_("node '%s' is not well formed") % nodehex)
                     continue
-                if bin_n not in self.changelog.nodemap:
+                if nodebin not in self.changelog.nodemap:
                     # silently ignore as pull -r might cause this
                     continue
 
-                h = []
-                if key in filetags:
-                    n, h = filetags[key]
-                    h.append(n)
-                filetags[key] = (bin_n, h)
+                # update filetags: map tag name to (node, hist) where
+                # node is the node from the latest line read with
+                # 'name', and hist is the list of nodes previously
+                # associated with 'name'
+                hist = []
+                if name in filetags:
+                    n, hist = filetags[name]
+                    hist.append(n)
+                filetags[name] = (nodebin, hist)
 
-            for k, nh in filetags.iteritems():
-                if k not in globaltags:
-                    globaltags[k] = nh
-                    tagtypes[k] = tagtype
+            for name, nodehist in filetags.iteritems():
+                if name not in alltags:
+                    alltags[name] = nodehist
+                    tagtypes[name] = tagtype
                     continue
 
-                # we prefer the global tag if:
+                # we prefer alltags[name] if:
                 #  it supercedes us OR
                 #  mutual supercedes and it has a higher rank
                 # otherwise we win because we're tip-most
-                an, ah = nh
-                bn, bh = globaltags[k]
-                if (bn != an and an in bh and
-                    (bn not in ah or len(bh) > len(ah))):
-                    an = bn
-                ah.extend([n for n in bh if n not in ah])
-                globaltags[k] = an, ah
-                tagtypes[k] = tagtype
+                anode, ahist = nodehist
+                bnode, bhist = alltags[name]
+                if (bnode != anode and anode in bhist and
+                    (bnode not in ahist or len(bhist) > len(ahist))):
+                    anode = bnode
+                ahist.extend([n for n in bhist if n not in ahist])
+                alltags[name] = anode, ahist
+                tagtypes[name] = tagtype
 
         seen = set()
-        f = None
-        ctxs = []
+        fctx = None
+        ctxs = []                       # list of filectx
         for node in self.heads():
             try:
                 fnode = self[node].filenode('.hgtags')
@@ -322,15 +326,15 @@ class localrepository(repo.repository):
                 continue
             if fnode not in seen:
                 seen.add(fnode)
-                if not f:
-                    f = self.filectx('.hgtags', fileid=fnode)
+                if not fctx:
+                    fctx = self.filectx('.hgtags', fileid=fnode)
                 else:
-                    f = f.filectx(fnode)
-                ctxs.append(f)
+                    fctx = fctx.filectx(fnode)
+                ctxs.append(fctx)
 
         # read the tags file from each head, ending with the tip
-        for f in reversed(ctxs):
-            readtags(f.data().splitlines(), f, "global")
+        for fctx in reversed(ctxs):
+            readtags(fctx.data().splitlines(), fctx, "global")
 
         try:
             data = encoding.fromlocal(self.opener("localtags").read())
@@ -341,10 +345,9 @@ class localrepository(repo.repository):
             pass
 
         tags = {}
-        for k, nh in globaltags.iteritems():
-            n = nh[0]
-            if n != nullid:
-                tags[k] = n
+        for (name, (node, hist)) in alltags.iteritems():
+            if node != nullid:
+                tags[name] = node
         tags['tip'] = self.changelog.tip()
         return (tags, tagtypes)
 
