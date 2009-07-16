@@ -258,10 +258,13 @@ class localrepository(repo.repository):
         # be one tagtype for all such "virtual" tags?  Or is the status
         # quo fine?
 
-        alltags = {}                    # map tag name to (node, hist)
-        tagtypes = {}
+        def readtags(lines, fn):
+            '''Read tag definitions from a file (or any source of
+            lines).  Return a mapping from tag name to (node, hist):
+            node is the node id from the last line read for that name,
+            and hist is the list of node ids previously associated with
+            it (in file order).  All node ids are binary, not hex.'''
 
-        def readtags(lines, fn, tagtype):
             filetags = {}               # map tag name to (node, hist)
             count = 0
 
@@ -287,15 +290,21 @@ class localrepository(repo.repository):
                     # silently ignore as pull -r might cause this
                     continue
 
-                # update filetags: map tag name to (node, hist) where
-                # node is the node from the latest line read with
-                # 'name', and hist is the list of nodes previously
-                # associated with 'name'
+                # update filetags
                 hist = []
                 if name in filetags:
                     n, hist = filetags[name]
                     hist.append(n)
                 filetags[name] = (nodebin, hist)
+            return filetags
+
+        alltags = {}                    # map tag name to (node, hist)
+        tagtypes = {}
+
+        def updatetags(filetags, tagtype):
+            '''Incorporate the tag info read from one file into the two
+            dictionaries, alltags and tagtypes, that contain all tag
+            info (global across all heads plus local).'''
 
             for name, nodehist in filetags.iteritems():
                 if name not in alltags:
@@ -334,13 +343,15 @@ class localrepository(repo.repository):
 
         # read the tags file from each head, ending with the tip
         for fctx in reversed(ctxs):
-            readtags(fctx.data().splitlines(), fctx, "global")
+            filetags = readtags(fctx.data().splitlines(), fctx)
+            updatetags(filetags, "global")
 
         try:
             data = encoding.fromlocal(self.opener("localtags").read())
             # localtags are stored in the local character set
             # while the internal tag table is stored in UTF-8
-            readtags(data.splitlines(), "localtags", "local")
+            filetags = readtags(data.splitlines(), "localtags")
+            updatetags(filetags, "local")
         except IOError:
             pass
 
