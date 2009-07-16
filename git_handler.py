@@ -6,6 +6,7 @@ from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import context
+from mercurial.error import RepoError
 from dulwich.misc import make_sha
 from dulwich.objects import (
     Blob,
@@ -610,7 +611,7 @@ class GitHandler(object):
                             changed[ref_name] = self.map_git_get(hex(local_ref))
                         else:
                             # XXX: maybe abort completely
-                            ui.warn('not pushing branch %s, please merge'% head)
+                            self.ui.warn('not pushing branch %s, please merge\n'% head)
                 except RepoError: #pragma: no cover
                     # remote_ref is not here
                     pass
