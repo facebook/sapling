@@ -449,17 +449,19 @@ PYTHONPATH::
      _(r'''
     Valid URLs are of the form:
 
-      local/filesystem/path (or file://local/filesystem/path)
-      http://[user[:pass]@]host[:port]/[path]
-      https://[user[:pass]@]host[:port]/[path]
-      ssh://[user[:pass]@]host[:port]/[path]
+      local/filesystem/path[#revision]
+      file://local/filesystem/path[#revision]
+      http://[user[:pass]@]host[:port]/[path][#revision]
+      https://[user[:pass]@]host[:port]/[path][#revision]
+      ssh://[user[:pass]@]host[:port]/[path][#revision]
 
     Paths in the local filesystem can either point to Mercurial
     repositories or to bundle files (as created by 'hg bundle' or
     'hg incoming --bundle').
 
     An optional identifier after # indicates a particular branch, tag,
-    or changeset to use from the remote repository.
+    or changeset to use from the remote repository. See also 'hg help
+    revisions'.
 
     Some features, such as pushing to http:// and https:// URLs are
     only possible if the feature is explicitly enabled on the remote

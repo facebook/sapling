@@ -39,11 +39,16 @@ def _fastsha1(s):
 import subprocess
 closefds = os.name == 'posix'
 def popen2(cmd):
-    p = subprocess.Popen(cmd, shell=True, close_fds=closefds,
+    # Setting bufsize to -1 lets the system decide the buffer size.
+    # The default for bufsize is 0, meaning unbuffered. This leads to
+    # poor performance on Mac OS X: http://bugs.python.org/issue4194
+    p = subprocess.Popen(cmd, shell=True, bufsize=-1,
+                         close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     return p.stdin, p.stdout
 def popen3(cmd):
-    p = subprocess.Popen(cmd, shell=True, close_fds=closefds,
+    p = subprocess.Popen(cmd, shell=True, bufsize=-1,
+                         close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     return p.stdin, p.stdout, p.stderr
@@ -106,6 +111,33 @@ def cachefunc(func):
         def f(*args):
             if args not in cache:
                 cache[args] = func(*args)
+            return cache[args]
+
+    return f
+
+def lrucachefunc(func):
+    '''cache most recent results of function calls'''
+    cache = {}
+    order = []
+    if func.func_code.co_argcount == 1:
+        def f(arg):
+            if arg not in cache:
+                if len(cache) > 20:
+                    del cache[order.pop(0)]
+                cache[arg] = func(arg)
+            else:
+                order.remove(arg)
+            order.append(arg)
+            return cache[arg]
+    else:
+        def f(*args):
+            if args not in cache:
+                if len(cache) > 20:
+                    del cache[order.pop(0)]
+                cache[args] = func(*args)
+            else:
+                order.remove(args)
+            order.append(args)
             return cache[args]
 
     return f

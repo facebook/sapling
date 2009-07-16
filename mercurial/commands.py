@@ -1206,18 +1206,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     if opts.get('print0'):
         sep = eol = '\0'
 
-    fcache = {}
-    forder = []
-    def getfile(fn):
-        if fn not in fcache:
-            if len(fcache) > 20:
-                del fcache[forder.pop(0)]
-            fcache[fn] = repo.file(fn)
-        else:
-            forder.remove(fn)
-
-        forder.append(fn)
-        return fcache[fn]
+    getfile = util.lrucachefunc(repo.file)
 
     def matchlines(body):
         begin = 0

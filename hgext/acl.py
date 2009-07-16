@@ -84,7 +84,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if source == 'serve' and 'url' in kwargs:
         url = kwargs['url'].split(':')
         if url[0] == 'remote' and url[1].startswith('http'):
-            user = urllib.unquote(url[2])
+            user = urllib.unquote(url[3])
 
     if user is None:
         user = getpass.getuser()

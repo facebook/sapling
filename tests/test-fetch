@@ -185,6 +185,18 @@ echo % fetch should succeed
 hg --cwd ib2 fetch ../ib1
 rm -fr ib1 ib2
 
+echo % test issue1726
+hg init i1726r1
+echo a > i1726r1/a
+hg --cwd i1726r1 ci -Am base
+hg clone i1726r1 i1726r2
+echo b > i1726r1/a
+hg --cwd i1726r1 ci -m second
+echo c > i1726r2/a
+hg --cwd i1726r2 ci -m third
+HGMERGE=true hg --cwd i1726r2 fetch ../i1726r1 | sed 's/new changeset 3:[0-9a-zA-Z]\+/new changeset 3/'
+hg --cwd i1726r2 heads default --template '{rev}\n'
+
 "$TESTDIR/killdaemons.py"
 
 true

@@ -441,6 +441,7 @@ if has_https:
             # let host port take precedence
             if ':' in host and '[' not in host or ']:' in host:
                 host, port = host.rsplit(':', 1)
+                port = int(port)
                 if '[' in host:
                     host = host[1:-1]
 

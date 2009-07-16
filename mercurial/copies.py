@@ -120,8 +120,8 @@ def copies(repo, c1, c2, ca, checkdirs=False):
                 return c1.filectx(f)
             return c2.filectx(f)
         return repo.filectx(f, fileid=n)
-    ctx = util.cachefunc(makectx)
 
+    ctx = util.lrucachefunc(makectx)
     copy = {}
     fullcopy = {}
     diverge = {}

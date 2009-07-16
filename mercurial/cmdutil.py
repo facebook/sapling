@@ -242,7 +242,10 @@ def expandpats(pats):
     for p in pats:
         kind, name = _match._patsplit(p, None)
         if kind is None:
-            globbed = glob.glob(name)
+            try:
+                globbed = glob.glob(name)
+            except re.error:
+                globbed = [name]
             if globbed:
                 ret.extend(globbed)
                 continue
