@@ -4,6 +4,10 @@ cacheexists() {
     [ -f .hg/tags.cache ] && echo "tag cache exists" || echo "no tag cache"
 }
 
+# XXX need to test that the tag cache works when we strip an old head
+# and add a new one rooted off non-tip: i.e. node and rev of tip are the
+# same, but stuff has changed behind tip.
+
 echo "% setup"
 mkdir t
 cd t

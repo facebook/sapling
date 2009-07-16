@@ -59,7 +59,19 @@ def findglobaltags1(ui, repo, alltags, tagtypes):
 
 def findglobaltags2(ui, repo, alltags, tagtypes):
     '''Same as findglobaltags1(), but with caching.'''
-    (heads, tagfnode, shouldwrite) = _readtagcache(ui, repo)
+    # This is so we can be lazy and assume alltags contains only global
+    # tags when we pass it to _writetagcache().
+    assert len(alltags) == len(tagtypes) == 0, \
+           "findglobaltags() should be called first"
+
+    (heads, tagfnode, cachetags, shouldwrite) = _readtagcache(ui, repo)
+    if cachetags is not None:
+        assert not shouldwrite
+        # XXX is this really 100% correct?  are there oddball special
+        # cases where a global tag should outrank a local tag but won't,
+        # because cachetags does not contain rank info?
+        _updatetags(cachetags, 'global', alltags, tagtypes)
+        return
 
     _debug(ui, "reading tags from %d head(s): %s\n"
            % (len(heads), map(short, reversed(heads))))
@@ -82,7 +94,7 @@ def findglobaltags2(ui, repo, alltags, tagtypes):
 
     # and update the cache (if necessary)
     if shouldwrite:
-        _writetagcache(ui, repo, heads, tagfnode)
+        _writetagcache(ui, repo, heads, tagfnode, alltags)
 
 # Set this to findglobaltags1 to disable tag caching.
 findglobaltags = findglobaltags2
@@ -90,16 +102,17 @@ findglobaltags = findglobaltags2
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo.  Update alltags and tagtypes.'''
     try:
-        data = encoding.fromlocal(repo.opener("localtags").read())
-        # localtags are stored in the local character set
-        # while the internal tag table is stored in UTF-8
+        # localtags is in the local encoding; re-encode to UTF-8 on
+        # input for consistency with the rest of this module.
+        data = repo.opener("localtags").read()
         filetags = _readtags(
-            ui, repo, data.splitlines(), "localtags")
+            ui, repo, data.splitlines(), "localtags",
+            recode=encoding.fromlocal)
         _updatetags(filetags, "local", alltags, tagtypes)
     except IOError:
         pass
 
-def _readtags(ui, repo, lines, fn):
+def _readtags(ui, repo, lines, fn, recode=None):
     '''Read tag definitions from a file (or any source of lines).
     Return a mapping from tag name to (node, hist): node is the node id
     from the last line read for that name, and hist is the list of node
@@ -121,7 +134,9 @@ def _readtags(ui, repo, lines, fn):
         except ValueError:
             warn(_("cannot parse entry"))
             continue
-        name = encoding.tolocal(name.strip()) # stored in UTF-8
+        name = name.strip()
+        if recode:
+            name = recode(name)
         try:
             nodebin = bin(nodehex)
         except TypeError:
@@ -173,11 +188,13 @@ def _updatetags(filetags, tagtype, alltags, tagtypes):
 # the repo.
 
 def _readtagcache(ui, repo):
-    '''Read the tag cache and return a tuple (heads, fnodes,
-    shouldwrite).  heads is the list of all heads currently in the
-    repository (ordered from tip to oldest) and fnodes is a mapping from
-    head to .hgtags filenode.  Caller is responsible for reading tag
-    info from each head.'''
+    '''Read the tag cache and return a tuple (heads, fnodes, cachetags,
+    shouldwrite).  If the cache is completely up-to-date, cachetags is a
+    dict of the form returned by _readtags(); otherwise, it is None and
+    heads and fnodes are set.  In that case, heads is the list of all
+    heads currently in the repository (ordered from tip to oldest) and
+    fnodes is a mapping from head to .hgtags filenode.  If those two are
+    set, caller is responsible for reading tag info from each head.'''
 
     try:
         cachefile = repo.opener('tags.cache', 'r')
@@ -202,6 +219,8 @@ def _readtagcache(ui, repo):
     cachefnode = {}                     # map headnode to filenode
     if cachefile:
         for line in cachefile:
+            if line == "\n":
+                break
             line = line.rstrip().split()
             cacherevs.append(int(line[0]))
             headnode = bin(line[1])
@@ -209,8 +228,6 @@ def _readtagcache(ui, repo):
             if len(line) == 3:
                 fnode = bin(line[2])
                 cachefnode[headnode] = fnode
-
-        cachefile.close()
 
     tipnode = repo.changelog.tip()
     tiprev = len(repo.changelog) - 1
@@ -221,14 +238,18 @@ def _readtagcache(ui, repo):
     # have been destroyed by strip or rollback.)
     if cacheheads and cacheheads[0] == tipnode and cacherevs[0] == tiprev:
         _debug(ui, "tag cache: tip unchanged\n")
-        return (cacheheads, cachefnode, False)
+        tags = _readtags(ui, repo, cachefile, cachefile.name)
+        cachefile.close()
+        return (None, None, tags, False)
+    if cachefile:
+        cachefile.close()               # ignore rest of file
         
     repoheads = repo.heads()
 
     # Case 2 (uncommon): empty repo; get out quickly and don't bother
     # writing an empty cache.
     if repoheads == [nullid]:
-        return ([], {}, False)
+        return ([], {}, {}, False)
 
     # Case 3 (uncommon): cache file missing or empty.
     if not cacheheads:
@@ -277,9 +298,9 @@ def _readtagcache(ui, repo):
 
     # Caller has to iterate over all heads, but can use the filenodes in
     # cachefnode to get to each .hgtags revision quickly.
-    return (repoheads, cachefnode, True)
+    return (repoheads, cachefnode, None, True)
 
-def _writetagcache(ui, repo, heads, tagfnode):
+def _writetagcache(ui, repo, heads, tagfnode, cachetags):
 
     cachefile = repo.opener('tags.cache', 'w', atomictemp=True)
     _debug(ui, 'writing cache file %s\n' % cachefile.name)
@@ -305,6 +326,14 @@ def _writetagcache(ui, repo, heads, tagfnode):
             cachefile.write('%d %s %s\n' % (rev, hex(head), hex(fnode)))
         else:
             cachefile.write('%d %s\n' % (rev, hex(head)))
+
+    # Tag names in the cache are in UTF-8 -- which is the whole reason
+    # we keep them in UTF-8 throughout this module.  If we converted
+    # them local encoding on input, we would lose info writing them to
+    # the cache.
+    cachefile.write('\n')
+    for (name, (node, hist)) in cachetags.iteritems():
+        cachefile.write("%s %s\n" % (hex(node), name))
 
     cachefile.rename()
     cachefile.close()

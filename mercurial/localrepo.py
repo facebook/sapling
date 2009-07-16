@@ -265,11 +265,17 @@ class localrepository(repo.repository):
         tags_.findglobaltags(self.ui, self, alltags, tagtypes)
         tags_.readlocaltags(self.ui, self, alltags, tagtypes)
 
+        # Build the return dicts.  Have to re-encode tag names because
+        # the tags module always uses UTF-8 (in order not to lose info
+        # writing to the cache), but the rest of Mercurial wants them in
+        # local encoding.
         tags = {}
         for (name, (node, hist)) in alltags.iteritems():
             if node != nullid:
-                tags[name] = node
+                tags[encoding.tolocal(name)] = node
         tags['tip'] = self.changelog.tip()
+        tagtypes = dict([(encoding.tolocal(name), value)
+                         for (name, value) in tagtypes.iteritems()])
         return (tags, tagtypes)
 
     def tagtype(self, tagname):

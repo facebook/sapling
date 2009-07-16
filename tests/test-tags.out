@@ -46,9 +46,6 @@ created new head
 tip                                8:c4be69a18c11
 first                              0:acb14030fe0a
 changeset:   8:c4be69a18c11
-.hgtags@75d9f02dfe28, line 2: cannot parse entry
-.hgtags@75d9f02dfe28, line 4: node 'foo' is not well formed
-.hgtags@c4be69a18c11, line 2: node 'x' is not well formed
 tag:         tip
 parent:      3:ac5e980c4dc0
 user:        test
@@ -80,6 +77,8 @@ bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
 4 0c192d7d5e6b78a714de54a2e9627952a877e25a 0c04f2a8af31de17fab7422878ee5a2dadbc943d
 3 6fa450212aeb2a21ed616a54aea39a4a27894cd7 7d3b718c964ef37b89e550ebdafd5789e76ce1b0
 2 7a94127795a33c10a370c93f731fd9fea0b79af6 0c04f2a8af31de17fab7422878ee5a2dadbc943d
+
+78391a272241d70354aa14c874552cad6b51bb42 bar
 % test tag removal
 changeset:   5:5f6e8655b1c7
 tag:         tip
