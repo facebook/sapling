@@ -233,8 +233,24 @@ class localrepository(repo.repository):
 
     def tags(self):
         '''return a mapping of tag to node'''
-        if self.tagscache:
-            return self.tagscache
+        if self.tagscache is None:
+            (self.tagscache, self._tagstypecache) = self._findtags()
+
+        return self.tagscache
+
+    def _findtags(self):
+        '''Do the hard work of finding tags.  Return a pair of dicts
+        (tags, tagtypes) where tags maps tag name to node, and tagtypes
+        maps tag name to a string like \'global\' or \'local\'.
+        Subclasses or extensions are free to add their own tags, but
+        should be aware that the returned dicts will be retained for the
+        duration of the localrepo object.'''
+
+        # XXX what tagtype should subclasses/extensions use?  Currently
+        # mq and bookmarks add tags, but do not set the tagtype at all.
+        # Should each extension invent its own tag type?  Should there
+        # be one tagtype for all such "virtual" tags?  Or is the status
+        # quo fine?
 
         globaltags = {}
         tagtypes = {}
@@ -318,15 +334,13 @@ class localrepository(repo.repository):
         except IOError:
             pass
 
-        self.tagscache = {}
-        self._tagstypecache = {}
+        tags = {}
         for k, nh in globaltags.iteritems():
             n = nh[0]
             if n != nullid:
-                self.tagscache[k] = n
-            self._tagstypecache[k] = tagtypes[k]
-        self.tagscache['tip'] = self.changelog.tip()
-        return self.tagscache
+                tags[k] = n
+        tags['tip'] = self.changelog.tip()
+        return (tags, tagtypes)
 
     def tagtype(self, tagname):
         '''
