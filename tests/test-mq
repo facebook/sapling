@@ -107,9 +107,18 @@ echo % qpop
 hg qpop
 checkundo qpop
 
-echo % qpush
+echo % qpush with dump of tag cache
 
+# Dump the tag cache to ensure that it has exactly one head after qpush.
+rm -f .hg/tags.cache
+hg tags > /dev/null
+echo ".hg/tags.cache (pre qpush):"
+sed 's/ [0-9a-f]*//' .hg/tags.cache
 hg qpush
+hg tags > /dev/null
+echo ".hg/tags.cache (post qpush):"
+sed 's/ [0-9a-f]*//' .hg/tags.cache
+
 checkundo qpush
 
 cd ..

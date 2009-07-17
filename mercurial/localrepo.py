@@ -13,6 +13,7 @@ import lock, transaction, store, encoding
 import util, extensions, hook, error
 import match as match_
 import merge as merge_
+import tags as tags_
 from lock import release
 import weakref, stat, errno, os, time, inspect
 propertycache = util.propertycache
@@ -89,8 +90,14 @@ class localrepository(repo.repository):
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
 
-        self.tagscache = None
-        self._tagstypecache = None
+        # These two define the set of tags for this repository.  _tags
+        # maps tag name to node; _tagtypes maps tag name to 'global' or
+        # 'local'.  (Global tags are defined by .hgtags across all
+        # heads, and local tags are defined in .hg/localtags.)  They
+        # constitute the in-memory cache of tags.
+        self._tags = None
+        self._tagtypes = None
+
         self.branchcache = None
         self._ubranchcache = None  # UTF-8 version of branchcache
         self._branchcachetip = None
@@ -160,8 +167,8 @@ class localrepository(repo.repository):
                 fp.write('\n')
             for name in names:
                 m = munge and munge(name) or name
-                if self._tagstypecache and name in self._tagstypecache:
-                    old = self.tagscache.get(name, nullid)
+                if self._tagtypes and name in self._tagtypes:
+                    old = self._tags.get(name, nullid)
                     fp.write('%s %s\n' % (hex(old), m))
                 fp.write('%s %s\n' % (hex(node), m))
             fp.close()
@@ -233,100 +240,43 @@ class localrepository(repo.repository):
 
     def tags(self):
         '''return a mapping of tag to node'''
-        if self.tagscache:
-            return self.tagscache
+        if self._tags is None:
+            (self._tags, self._tagtypes) = self._findtags()
 
-        globaltags = {}
+        return self._tags
+
+    def _findtags(self):
+        '''Do the hard work of finding tags.  Return a pair of dicts
+        (tags, tagtypes) where tags maps tag name to node, and tagtypes
+        maps tag name to a string like \'global\' or \'local\'.
+        Subclasses or extensions are free to add their own tags, but
+        should be aware that the returned dicts will be retained for the
+        duration of the localrepo object.'''
+
+        # XXX what tagtype should subclasses/extensions use?  Currently
+        # mq and bookmarks add tags, but do not set the tagtype at all.
+        # Should each extension invent its own tag type?  Should there
+        # be one tagtype for all such "virtual" tags?  Or is the status
+        # quo fine?
+
+        alltags = {}                    # map tag name to (node, hist)
         tagtypes = {}
 
-        def readtags(lines, fn, tagtype):
-            filetags = {}
-            count = 0
+        tags_.findglobaltags(self.ui, self, alltags, tagtypes)
+        tags_.readlocaltags(self.ui, self, alltags, tagtypes)
 
-            def warn(msg):
-                self.ui.warn(_("%s, line %s: %s\n") % (fn, count, msg))
-
-            for l in lines:
-                count += 1
-                if not l:
-                    continue
-                s = l.split(" ", 1)
-                if len(s) != 2:
-                    warn(_("cannot parse entry"))
-                    continue
-                node, key = s
-                key = encoding.tolocal(key.strip()) # stored in UTF-8
-                try:
-                    bin_n = bin(node)
-                except TypeError:
-                    warn(_("node '%s' is not well formed") % node)
-                    continue
-                if bin_n not in self.changelog.nodemap:
-                    # silently ignore as pull -r might cause this
-                    continue
-
-                h = []
-                if key in filetags:
-                    n, h = filetags[key]
-                    h.append(n)
-                filetags[key] = (bin_n, h)
-
-            for k, nh in filetags.iteritems():
-                if k not in globaltags:
-                    globaltags[k] = nh
-                    tagtypes[k] = tagtype
-                    continue
-
-                # we prefer the global tag if:
-                #  it supercedes us OR
-                #  mutual supercedes and it has a higher rank
-                # otherwise we win because we're tip-most
-                an, ah = nh
-                bn, bh = globaltags[k]
-                if (bn != an and an in bh and
-                    (bn not in ah or len(bh) > len(ah))):
-                    an = bn
-                ah.extend([n for n in bh if n not in ah])
-                globaltags[k] = an, ah
-                tagtypes[k] = tagtype
-
-        seen = set()
-        f = None
-        ctxs = []
-        for node in self.heads():
-            try:
-                fnode = self[node].filenode('.hgtags')
-            except error.LookupError:
-                continue
-            if fnode not in seen:
-                seen.add(fnode)
-                if not f:
-                    f = self.filectx('.hgtags', fileid=fnode)
-                else:
-                    f = f.filectx(fnode)
-                ctxs.append(f)
-
-        # read the tags file from each head, ending with the tip
-        for f in reversed(ctxs):
-            readtags(f.data().splitlines(), f, "global")
-
-        try:
-            data = encoding.fromlocal(self.opener("localtags").read())
-            # localtags are stored in the local character set
-            # while the internal tag table is stored in UTF-8
-            readtags(data.splitlines(), "localtags", "local")
-        except IOError:
-            pass
-
-        self.tagscache = {}
-        self._tagstypecache = {}
-        for k, nh in globaltags.iteritems():
-            n = nh[0]
-            if n != nullid:
-                self.tagscache[k] = n
-            self._tagstypecache[k] = tagtypes[k]
-        self.tagscache['tip'] = self.changelog.tip()
-        return self.tagscache
+        # Build the return dicts.  Have to re-encode tag names because
+        # the tags module always uses UTF-8 (in order not to lose info
+        # writing to the cache), but the rest of Mercurial wants them in
+        # local encoding.
+        tags = {}
+        for (name, (node, hist)) in alltags.iteritems():
+            if node != nullid:
+                tags[encoding.tolocal(name)] = node
+        tags['tip'] = self.changelog.tip()
+        tagtypes = dict([(encoding.tolocal(name), value)
+                         for (name, value) in tagtypes.iteritems()])
+        return (tags, tagtypes)
 
     def tagtype(self, tagname):
         '''
@@ -339,7 +289,7 @@ class localrepository(repo.repository):
 
         self.tags()
 
-        return self._tagstypecache.get(tagname)
+        return self._tagtypes.get(tagname)
 
     def tagslist(self):
         '''return a list of tags ordered by revision'''
@@ -668,6 +618,7 @@ class localrepository(repo.repository):
                                  % encoding.tolocal(self.dirstate.branch()))
                 self.invalidate()
                 self.dirstate.invalidate()
+                self.destroyed()
             else:
                 self.ui.warn(_("no rollback information available\n"))
         finally:
@@ -677,8 +628,8 @@ class localrepository(repo.repository):
         for a in "changelog manifest".split():
             if a in self.__dict__:
                 delattr(self, a)
-        self.tagscache = None
-        self._tagstypecache = None
+        self._tags = None
+        self._tagtypes = None
         self.nodetagscache = None
         self.branchcache = None
         self._ubranchcache = None
@@ -965,6 +916,25 @@ class localrepository(repo.repository):
         finally:
             del tr
             lock.release()
+
+    def destroyed(self):
+        '''Inform the repository that nodes have been destroyed.
+        Intended for use by strip and rollback, so there's a common
+        place for anything that has to be done after destroying history.'''
+        # XXX it might be nice if we could take the list of destroyed
+        # nodes, but I don't see an easy way for rollback() to do that
+
+        # Ensure the persistent tag cache is updated.  Doing it now
+        # means that the tag cache only has to worry about destroyed
+        # heads immediately after a strip/rollback.  That in turn
+        # guarantees that "cachetip == currenttip" (comparing both rev
+        # and node) always means no nodes have been added or destroyed.
+
+        # XXX this is suboptimal when qrefresh'ing: we strip the current
+        # head, refresh the tag cache, then immediately add a new head.
+        # But I think doing it this way is necessary for the "instant
+        # tag cache retrieval" case to work.
+        tags_.findglobaltags(self.ui, self, {}, {})
 
     def walk(self, match, node=None):
         '''

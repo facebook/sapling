@@ -2415,34 +2415,33 @@ def reposetup(ui, repo):
                 raise util.Abort(_('source has mq patches applied'))
             return super(mqrepo, self).push(remote, force, revs)
 
-        def tags(self):
-            if self.tagscache:
-                return self.tagscache
-
-            tagscache = super(mqrepo, self).tags()
+        def _findtags(self):
+            '''augment tags from base class with patch tags'''
+            result = super(mqrepo, self)._findtags()
 
             q = self.mq
             if not q.applied:
-                return tagscache
+                return result
 
             mqtags = [(bin(patch.rev), patch.name) for patch in q.applied]
 
             if mqtags[-1][0] not in self.changelog.nodemap:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
-                return tagscache
+                return result
 
             mqtags.append((mqtags[-1][0], 'qtip'))
             mqtags.append((mqtags[0][0], 'qbase'))
             mqtags.append((self.changelog.parents(mqtags[0][0])[0], 'qparent'))
+            tags = result[0]
             for patch in mqtags:
-                if patch[1] in tagscache:
+                if patch[1] in tags:
                     self.ui.warn(_('Tag %s overrides mq patch of the same name\n')
                                  % patch[1])
                 else:
-                    tagscache[patch[1]] = patch[0]
+                    tags[patch[1]] = patch[0]
 
-            return tagscache
+            return result
 
         def _branchtags(self, partial, lrev):
             q = self.mq

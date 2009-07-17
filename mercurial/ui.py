@@ -349,3 +349,33 @@ class ui(object):
                 self.config("ui", "editor") or
                 os.environ.get("VISUAL") or
                 os.environ.get("EDITOR", "vi"))
+
+    def progress(self, topic, pos, item="", unit="", total=None):
+        '''show a progress message
+
+        With stock hg, this is simply a debug message that is hidden
+        by default, but with extensions or GUI tools it may be
+        visible. 'topic' is the current operation, 'item' is a
+        non-numeric marker of the current position (ie the currently
+        in-process file), 'pos' is the current numeric position (ie
+        revision, bytes, etc.), units is a corresponding unit label,
+        and total is the highest expected pos.
+
+        Multiple nested topics may be active at a time. All topics
+        should be marked closed by setting pos to None at termination.
+        '''
+
+        if pos == None or not self.debugflag:
+            return
+
+        if units:
+            units = ' ' + units
+        if item:
+            item = ' ' + item
+
+        if total:
+            pct = 100.0 * pos / total
+            ui.debug('%s:%s %s/%s%s (%4.2g%%)\n'
+                     % (topic, item, pos, total, units, pct))
+        else:
+            ui.debug('%s:%s %s%s\n' % (topic, item, pos, units))
