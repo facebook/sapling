@@ -4648,75 +4648,78 @@ msgid "premature EOF reading chunk (got %d bytes, expected %d)"
 msgstr ""
 
 msgid "empty username"
-msgstr ""
+msgstr "le nom d'utilisateur est vide"
 
 #, python-format
 msgid "username %s contains a newline"
-msgstr ""
+msgstr "le nom d'utilisateur %s contient un saut de ligne"
 
 msgid "options --message and --logfile are mutually exclusive"
-msgstr ""
+msgstr "les options --message et --logfile s'excluent mutuellement"
 
 #, python-format
 msgid "can't read commit message '%s': %s"
 msgstr ""
 
 msgid "limit must be a positive integer"
-msgstr ""
+msgstr "la limite spécifiée doit être un entier positif"
 
 msgid "limit must be positive"
-msgstr ""
+msgstr "la limite doit être positive"
 
 msgid "too many revisions specified"
-msgstr ""
+msgstr "trop de révisions spécifiées"
 
 #, python-format
 msgid "invalid format spec '%%%s' in output filename"
 msgstr ""
+"'%%%s'spécification de format invalide dans le nom du fichier de sortie"
 
 #, python-format
 msgid "adding %s\n"
-msgstr ""
+msgstr "ajout de %s\n"
 
 #, python-format
 msgid "removing %s\n"
-msgstr ""
+msgstr "suppression de %s\n"
 
 #, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr ""
+"suppression de %s plannifiée, en tant que renommage de %s (similaire à %d%"
+"%)\n"
 
 #, python-format
 msgid "%s: not copying - file is not managed\n"
-msgstr ""
+msgstr "%s: le fichier n'est pas suivi, pas de copie\n"
 
 #, python-format
 msgid "%s: not copying - file has been marked for remove\n"
-msgstr ""
+msgstr "%s: le fichier a été marqué pour suppression, pas de copie\n"
 
 #, python-format
 msgid "%s: not overwriting - %s collides with %s\n"
-msgstr ""
+msgstr "%s: %s entre en collision avec %s, pas d'écrasement\n"
 
 #, python-format
 msgid "%s: not overwriting - file exists\n"
-msgstr ""
+msgstr "%s: le fichier existe, pas d'écrasement\n"
 
 #, python-format
 msgid "%s: deleted in working copy\n"
-msgstr ""
+msgstr "%s: supprimé dans la copie de travail\n"
 
 #, python-format
 msgid "%s: cannot copy - %s\n"
-msgstr ""
+msgstr "%s: impossible de copier - %s\n"
 
 #, python-format
 msgid "moving %s to %s\n"
-msgstr ""
+msgstr "déplacement de %s vers %s\n"
 
 #, python-format
 msgid "copying %s to %s\n"
-msgstr ""
+msgstr "copie de %s vers %s\n"
 
 #, python-format
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
@@ -7063,13 +7066,13 @@ msgstr ""
 
 #, python-format
 msgid "config error at %s:%d: '%s'"
-msgstr ""
+msgstr "erreur de configuration à %s:%d : '%s'"
 
 msgid "not found in manifest"
 msgstr ""
 
 msgid "branch name not in UTF-8!"
-msgstr ""
+msgstr "le nom de la branche n'est pas en UTF-8 !"
 
 #, python-format
 msgid "  searching for copies back to rev %d\n"
