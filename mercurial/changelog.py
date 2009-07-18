@@ -87,6 +87,16 @@ class appender(object):
         self.data.append(str(s))
         self.offset += len(s)
 
+def delayopener(opener, target, divert, buf):
+    def o(name, mode='r'):
+        if name != target:
+            return opener(name, mode)
+        if divert:
+            return opener(name + ".a", mode.replace('a', 'w'))
+        # otherwise, divert to memory
+        return appender(opener(name, mode), buf)
+    return o
+
 class changelog(revlog.revlog):
     def __init__(self, opener):
         revlog.revlog.__init__(self, opener, "00changelog.i")
@@ -99,7 +109,8 @@ class changelog(revlog.revlog):
         self._delayed = True
         self._divert = (len(self) == 0)
         self._delaybuf = []
-        self.opener = self._delayopener
+        self.opener = delayopener(self._realopener, self.indexfile,
+                                  self._divert, self._delaybuf)
 
     def finalize(self, tr):
         "finalize index updates"
@@ -107,8 +118,8 @@ class changelog(revlog.revlog):
         self.opener = self._realopener
         # move redirected index data back into place
         if self._divert:
-            n = self._realopener(self.indexfile).name
-            util.rename(n + ".a", n)
+            n = self.opener(self.indexfile + ".a").name
+            util.rename(n, n[:-2])
         elif self._delaybuf:
             fp = self.opener(self.indexfile, 'a')
             fp.write("".join(self._delaybuf))
@@ -116,20 +127,6 @@ class changelog(revlog.revlog):
             self._delaybuf = []
         # split when we're done
         self.checkinlinesize(tr)
-
-    def _delayopener(self, name, mode='r'):
-        fp = self._realopener(name, mode)
-        # only divert the index
-        if not name == self.indexfile:
-            return fp
-        # if we're doing an initial clone, divert to another file
-        if self._divert:
-            if not len(self):
-                # make sure to truncate the file
-                mode = mode.replace('a', 'w')
-            return self._realopener(name + ".a", mode)
-        # otherwise, divert to memory
-        return appender(fp, self._delaybuf)
 
     def readpending(self, file):
         r = revlog.revlog(self.opener, file)
