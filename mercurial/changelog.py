@@ -91,12 +91,14 @@ class changelog(revlog.revlog):
     def __init__(self, opener):
         self._realopener = opener
         self._delayed = False
+        self._divert = False
         revlog.revlog.__init__(self, self._delayopener, "00changelog.i")
+
 
     def delayupdate(self):
         "delay visibility of index updates to other readers"
         self._delayed = True
-        self._delaycount = len(self)
+        self._divert = (len(self) == 0)
         self._delaybuf = []
         self._delayname = None
 
@@ -120,7 +122,7 @@ class changelog(revlog.revlog):
         if not self._delayed or not name == self.indexfile:
             return fp
         # if we're doing an initial clone, divert to another file
-        if self._delaycount == 0:
+        if self._divert:
             self._delayname = fp.name
             if not len(self):
                 # make sure to truncate the file
