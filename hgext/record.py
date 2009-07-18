@@ -364,19 +364,19 @@ def record(ui, repo, *pats, **opts):
 
     You will be prompted for whether to record changes to each modified file,
     and for files with multiple changes, for each change to use. For each
-    query, the following responses are possible:
+    query, the following responses are possible::
 
-    y - record this change
-    n - skip this change
+      y - record this change
+      n - skip this change
 
-    s - skip remaining changes to this file
-    f - record remaining changes to this file
+      s - skip remaining changes to this file
+      f - record remaining changes to this file
 
-    d - done, skip remaining changes and files
-    a - record all changes to all remaining files
-    q - quit, recording no changes
+      d - done, skip remaining changes and files
+      a - record all changes to all remaining files
+      q - quit, recording no changes
 
-    ? - display help'''
+      ? - display help'''
 
     def record_committer(ui, repo, pats, opts):
         commands.commit(ui, repo, *pats, **opts)

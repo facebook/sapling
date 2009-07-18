@@ -1,64 +1,70 @@
-HG(1)
-=====
-Matt Mackall <mpm@selenic.com>
-:man source: Mercurial
-:man manual: Mercurial Manual
+====
+ hg
+====
 
-NAME
-----
-hg - Mercurial source code management system
+---------------------------------------
+Mercurial source code management system
+---------------------------------------
+
+:Author:         Matt Mackall <mpm@selenic.com>
+:Organization:   Mercurial
+:Manual section: 1
+:Manual group:   Mercurial Manual
+
 
 SYNOPSIS
 --------
-*hg* 'command' ['option']... ['argument']...
+**hg** *command* [*option*]... [*argument*]...
 
 DESCRIPTION
 -----------
-The *hg* command provides a command line interface to the Mercurial
+The **hg** command provides a command line interface to the Mercurial
 system.
 
 COMMAND ELEMENTS
 ----------------
 
-files ...::
+files...
     indicates one or more filename or relative path filenames; see
     "FILE NAME PATTERNS" for information on pattern matching
 
-path::
+path
     indicates a path on the local machine
 
-revision::
+revision
     indicates a changeset which can be specified as a changeset
     revision number, a tag, or a unique substring of the changeset
     hash value
 
-repository path::
+repository path
     either the pathname of a local repository or the URI of a remote
     repository.
 
-include::hg.1.gendoc.txt[]
+.. include:: hg.1.gendoc.txt
 
 FILES
 -----
- `.hgignore`::
-    This file contains regular expressions (one per line) that
-    describe file names that should be ignored by *hg*. For details,
-    see *hgignore(5)*.
 
- `.hgtags`::
+``.hgignore``
+    This file contains regular expressions (one per line) that
+    describe file names that should be ignored by **hg**. For details,
+    see |hgignore(5)|_.
+
+``.hgtags``
     This file contains changeset hash values and text tag names (one
     of each separated by spaces) that correspond to tagged versions of
     the repository contents.
 
- `/etc/mercurial/hgrc`, `$HOME/.hgrc`, `.hg/hgrc`::
-    This file contains defaults and configuration. Values in `.hg/hgrc`
-    override those in `$HOME/.hgrc`, and these override settings made in
-    the global `/etc/mercurial/hgrc` configuration. See *hgrc(5)* for
-    details of the contents and format of these files.
+``/etc/mercurial/hgrc``, ``$HOME/.hgrc``, ``.hg/hgrc``
+    This file contains defaults and configuration. Values in
+    ``.hg/hgrc`` override those in ``$HOME/.hgrc``, and these override
+    settings made in the global ``/etc/mercurial/hgrc`` configuration.
+    See |hgrc(5)|_ for details of the contents and format of these
+    files.
 
-Some commands (e.g. revert) produce backup files ending in `.orig`, if
-the `.orig` file already exists and is not tracked by Mercurial, it will
-be overwritten.
+Some commands (e.g. revert) produce backup files ending in ``.orig``,
+if the ``.orig`` file already exists and is not tracked by Mercurial,
+it will be overwritten.
 
 BUGS
 ----
@@ -67,7 +73,7 @@ below) when you find them.
 
 SEE ALSO
 --------
-*hgignore(5)*, *hgrc(5)*
+|hgignore(5)|_, |hgrc(5)|_
 
 AUTHOR
 ------
@@ -75,14 +81,16 @@ Written by Matt Mackall <mpm@selenic.com>
 
 RESOURCES
 ---------
-http://mercurial.selenic.com/[Main Web Site]
+Main Web Site: http://mercurial.selenic.com/
 
-http://selenic.com/hg[Source code repository]
+Source code repository: http://selenic.com/hg
 
-http://selenic.com/mailman/listinfo/mercurial[Mailing list]
+Mailing list: http://selenic.com/mailman/listinfo/mercurial
 
 COPYING
 -------
 Copyright \(C) 2005-2009 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
 Public License (GPL).
+
+.. include:: common.txt

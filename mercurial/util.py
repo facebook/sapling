@@ -1272,7 +1272,9 @@ def termwidth():
         pass
     return 80
 
-def wrap(line, hangindent, width=78):
+def wrap(line, hangindent, width=None):
+    if width is None:
+        width = termwidth() - 2
     padding = '\n' + ' ' * hangindent
     return padding.join(textwrap.wrap(line, width=width - hangindent))
 

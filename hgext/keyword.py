@@ -38,7 +38,7 @@ or for archive distribution.
 Configuration is done in the [keyword] and [keywordmaps] sections of hgrc
 files.
 
-Example:
+Example::
 
     [keyword]
     # expand keywords in every python file except those matching "x*"

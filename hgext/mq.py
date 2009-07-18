@@ -14,19 +14,19 @@ patches (subset of known patches).
 Known patches are represented as patch files in the .hg/patches directory.
 Applied patches are both patch files and changesets.
 
-Common tasks (use "hg help command" for more details):
+Common tasks (use "hg help command" for more details)::
 
-prepare repository to work with patches   qinit
-create new patch                          qnew
-import existing patch                     qimport
+  prepare repository to work with patches   qinit
+  create new patch                          qnew
+  import existing patch                     qimport
 
-print patch series                        qseries
-print applied patches                     qapplied
-print name of top applied patch           qtop
+  print patch series                        qseries
+  print applied patches                     qapplied
+  print name of top applied patch           qtop
 
-add known patch to applied stack          qpush
-remove patch from applied stack           qpop
-refresh contents of top applied patch     qrefresh
+  add known patch to applied stack          qpush
+  remove patch from applied stack           qpop
+  refresh contents of top applied patch     qrefresh
 '''
 
 from mercurial.i18n import _

@@ -267,6 +267,7 @@ show changed files in the working directory
     revisions are given, the differences between them are shown.
 
     The codes used to show the status of files are:
+
     M = modified
     A = added
     R = removed
