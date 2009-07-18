@@ -5036,50 +5036,79 @@ msgid ""
 "    non-zero exit status means the revision is bad.\n"
 "    "
 msgstr ""
+"recherche de \"changesets\" par dichotomie\n"
+"\n"
+"    Cette commande aide à trouver les \"changesets\" étant à\n"
+"    l'origine de problèmes. Pour l'utiliser, marquez comme étant\n"
+"    mauvaise la première révision pour laquelle vous avez relevé les\n"
+"    symptômes, puis comme bonne la dernière révision connue pour\n"
+"    être exempte du problème. Bisect va alors mettre à jour votre\n"
+"    répertoire de travail à une révision à tester (à moins que\n"
+"    -U/--noupdate n'ait été spécifié). Une fois vos tests réalisés,\n"
+"    indiquez si le problème était présent ou non. Bisect\n"
+"    recommencera alors pour une autre révision candidate jusqu'à\n"
+"    être en mesure d'annoncer la révision fautive.\n"
+"\n"
+"    Vous pouvez aussi passer une révision en argument lors du\n"
+"    marquage afin d'éviter l'étape manuelle de mise à jour du\n"
+"    répertoire de travail à cette révision.\n"
+"\n"
+"    Vous pouvez fournir une commande pour automatiser la recherche\n"
+"    par dichotomie. Son code de retour sera utilisé pour marquer les\n"
+"    révisions : 0 indique une révision sans problème, 125 qu'il ne\n"
+"    faut pas prendre cette révision en compte, 127 (commande\n"
+"    introuvable) cause l'abandon du processus de recherche, et tout\n"
+"    autre code de retour non nul désigne une révision affectée par\n"
+"    le problème.\n"
+"    "
 
 msgid "The first good revision is:\n"
-msgstr ""
+msgstr "La première révision exempte du problème est :\n"
 
 msgid "The first bad revision is:\n"
-msgstr ""
+msgstr "La première révision présentant le problème est :\n"
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
 msgstr ""
+"Certaines révisions n'ayant pas été considérées, la première révision\n"
+"exempte du problème pourrait être parmi :\n"
 
 msgid "Due to skipped revisions, the first bad revision could be any of:\n"
 msgstr ""
+"Certaines révisions n'ayant pas été considérées, la première révision\n"
+"présentant le problème pourrait être parmi :\n"
 
 msgid "cannot bisect (no known good revisions)"
-msgstr ""
+msgstr "dichotomie impossible (pas de bonne révision connue)"
 
 msgid "cannot bisect (no known bad revisions)"
-msgstr ""
+msgstr "dichotomie impossible (pas de mauvaise révision connue)"
 
 msgid "(use of 'hg bisect <cmd>' is deprecated)\n"
-msgstr ""
+msgstr "('hg bisect <cmd>' ne devrait plus être utilisé)\n"
 
 msgid "incompatible arguments"
-msgstr ""
+msgstr "arguments incompatibles"
 
 #, python-format
 msgid "cannot find executable: %s"
-msgstr ""
+msgstr "exécutable %s introuvable"
 
 #, python-format
 msgid "failed to execute %s"
-msgstr ""
+msgstr "impossible d'exécuter %s"
 
 #, python-format
 msgid "%s killed"
-msgstr ""
+msgstr "%s a été tué"
 
 #, python-format
 msgid "Changeset %d:%s: %s\n"
-msgstr ""
+msgstr "\"Changeset\" %d:%s: %s\n"
 
 #, python-format
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
-msgstr ""
+msgstr "Test du \"changeset\" %s:%s (%s \"changesets\" restant, ~%s tests)\n"
 
 msgid ""
 "set or show the current branch name\n"
@@ -6527,25 +6556,25 @@ msgid "[OPTION]... [-r] REV"
 msgstr ""
 
 msgid "reset bisect state"
-msgstr ""
+msgstr "réinitialiser l'état de la recherche par dichotomie"
 
 msgid "mark changeset good"
-msgstr ""
+msgstr "marquer la révision comme \"bonne\""
 
 msgid "mark changeset bad"
-msgstr ""
+msgstr "marquer la révision comme \"mauvaise\""
 
 msgid "skip testing changeset"
-msgstr ""
+msgstr "ne pas considérer la révision"
 
 msgid "use command to check changeset state"
-msgstr ""
+msgstr "utiliser une commande pour tester l'état des révisions"
 
 msgid "do not update to target"
-msgstr ""
+msgstr "ne pas mettre à jour à la révision cible"
 
 msgid "[-gbsr] [-c CMD] [REV]"
-msgstr ""
+msgstr "[-gbsr] [-c CMD] [REV]"
 
 msgid "set branch name even if it shadows an existing branch"
 msgstr ""
@@ -7317,11 +7346,11 @@ msgstr ""
 
 #, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
-msgstr ""
+msgstr "État incohérent, %s:%s est à la fois \"bon\" et \"mauvais\""
 
 #, python-format
 msgid "unknown bisect kind %s"
-msgstr ""
+msgstr "type inconnu pour dichotomie : %s"
 
 msgid ""
 "\n"
