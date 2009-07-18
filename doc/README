@@ -1,23 +1,17 @@
-Mercurial's documentation is currently kept in ASCIIDOC format, which
-is a simple plain text format that's easy to read and edit. It's also
-convertible to a variety of other formats including standard UNIX man
-page format and HTML.
+Mercurial's documentation is kept in reStructuredText format, which is
+a simple plain text format that's easy to read and edit:
 
-To do this, you'll need to install ASCIIDOC:
+  http://docutils.sourceforge.net/rst.html
 
- http://www.methods.co.nz/asciidoc/
+It's also convertible to a variety of other formats including standard
+UNIX man page format and HTML.
 
-To generate the man page:
+To do this, you'll need to install the rst2html and rst2man tools,
+which are part of Docutils:
 
- asciidoc -d manpage -b docbook hg.1.txt
- xmlto man hg.1.xml
+  http://docutils.sourceforge.net/
 
-To display:
+The rst2man tool is still in their so-called "sandbox". The above page
+has links to tarballs of both Docutils and their sandbox.
 
- groff -mandoc -Tascii hg.1 | more
-
-To create the html page (without stylesheets):
-
- asciidoc -b html4 hg.1.txt
-
-(older asciidoc may want html instead of html4 above)
+Use the Makefile in this directory to generate the man and HTML pages.
