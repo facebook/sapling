@@ -7147,21 +7147,23 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s\n"
-msgstr ""
+msgstr "abandon : %s\n"
 
 #, python-format
 msgid ""
 "hg: command '%s' is ambiguous:\n"
 "    %s\n"
 msgstr ""
+"hg: la commande '%s' est ambiguë :\n"
+"    %s\n"
 
 #, python-format
 msgid "hg: %s\n"
-msgstr ""
+msgstr "hg: %s\n"
 
 #, python-format
 msgid "timed out waiting for lock held by %s"
-msgstr ""
+msgstr "attendu trop longtemps le verrou détenu par %s"
 
 #, python-format
 msgid "lock held by %s"
@@ -7169,78 +7171,84 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s: %s\n"
-msgstr ""
+msgstr "abandon : %s : %s\n"
 
 #, python-format
 msgid "abort: could not lock %s: %s\n"
-msgstr ""
+msgstr "abandon : impossible de verrouiller %s : %s\n"
 
 #, python-format
 msgid "hg %s: %s\n"
-msgstr ""
+msgstr "hg %s: %s\n"
 
 #, python-format
 msgid "abort: %s!\n"
-msgstr ""
+msgstr "abandon : %s !\n"
 
 #, python-format
 msgid "abort: %s"
-msgstr ""
+msgstr "abandon : %s"
 
 msgid " empty string\n"
-msgstr ""
+msgstr " chaîne vide\n"
 
 msgid "killed!\n"
-msgstr ""
+msgstr "tué !\n"
 
 #, python-format
 msgid "hg: unknown command '%s'\n"
-msgstr ""
+msgstr "hg: commande inconnue : '%s'\n"
 
 #, python-format
 msgid "abort: could not import module %s!\n"
-msgstr ""
+msgstr "abandon : impossible d'importer le module %s !\n"
 
 msgid "(did you forget to compile extensions?)\n"
-msgstr ""
+msgstr "(avez-vous oublié de compiler les extensions ?)\n"
 
 msgid "(is your Python install correct?)\n"
-msgstr ""
+msgstr "(votre installation de Python est-elle correcte ?)\n"
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr ""
+msgstr "abandon : erreur : %s\n"
 
+# traduction utilisée par la glibc...
 msgid "broken pipe\n"
-msgstr ""
+msgstr "relais brisé (pipe)\n"
 
 msgid "interrupted!\n"
-msgstr ""
+msgstr "interrompu !\n"
 
+# traduction utilisée par la glibc...
 msgid ""
 "\n"
 "broken pipe\n"
 msgstr ""
+"\n"
+"relais brisé (pipe)\n"
 
 msgid "abort: out of memory\n"
-msgstr ""
+msgstr "abandon : plus de mémoire libre\n"
 
 msgid "** unknown exception encountered, details follow\n"
-msgstr ""
+msgstr "** exception inconnue rencontrée, détails ci-dessous\n"
 
 msgid "** report bug details to http://mercurial.selenic.com/bts/\n"
 msgstr ""
+"** veuillez signaler le problème en détails sur http://www.selenic.com/"
+"mercurial/bts\n"
 
 msgid "** or mercurial@selenic.com\n"
-msgstr ""
+msgstr "** ou mercurial@selenic.com\n"
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
-msgstr ""
+msgstr "** Mercurial version %s, système de gestion de sources distribué\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
-msgstr ""
+msgstr "** Extensions chargées : %s\n"
 
 #, python-format
 msgid "no definition for alias '%s'\n"
@@ -7260,22 +7268,24 @@ msgstr ""
 
 #, python-format
 msgid "malformed --config option: %s"
-msgstr ""
+msgstr "option incorrecte pour --config : %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
-msgstr ""
+msgstr "l'extension '%s' redéfinit ces commandes : %s\n"
 
 msgid "Option --config may not be abbreviated!"
-msgstr ""
+msgstr "L'option --config ne peut être abrégée !"
 
 msgid "Option --cwd may not be abbreviated!"
-msgstr ""
+msgstr "L'option --cwd ne peut être abrégée !"
 
 msgid ""
 "Option -R has to be separated from other options (e.g. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
+"L'option -R doit être séparée des autres options (autrement dit -qR est "
+"invalide) et --repository ne peut être abrégé qu'en --repo !"
 
 #, python-format
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
@@ -7283,10 +7293,10 @@ msgstr ""
 
 #, python-format
 msgid "repository '%s' is not local"
-msgstr ""
+msgstr "le dépôt '%s' n'est pas local"
 
 msgid "invalid arguments"
-msgstr ""
+msgstr "arguments invalides"
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
