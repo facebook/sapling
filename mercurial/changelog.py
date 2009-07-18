@@ -94,20 +94,19 @@ class changelog(revlog.revlog):
         self._divert = False
         revlog.revlog.__init__(self, self._delayopener, "00changelog.i")
 
-
     def delayupdate(self):
         "delay visibility of index updates to other readers"
         self._delayed = True
         self._divert = (len(self) == 0)
         self._delaybuf = []
-        self._delayname = None
 
     def finalize(self, tr):
         "finalize index updates"
         self._delayed = False
         # move redirected index data back into place
-        if self._delayname:
-            util.rename(self._delayname + ".a", self._delayname)
+        if self._divert:
+            n = self._realopener(self.indexfile).name
+            util.rename(n + ".a", n)
         elif self._delaybuf:
             fp = self.opener(self.indexfile, 'a')
             fp.write("".join(self._delaybuf))
@@ -123,7 +122,6 @@ class changelog(revlog.revlog):
             return fp
         # if we're doing an initial clone, divert to another file
         if self._divert:
-            self._delayname = fp.name
             if not len(self):
                 # make sure to truncate the file
                 mode = mode.replace('a', 'w')
@@ -149,9 +147,9 @@ class changelog(revlog.revlog):
             fp2.close()
             # switch modes so finalize can simply rename
             self._delaybuf = []
-            self._delayname = fp1.name
+            self._divert = True
 
-        if self._delayname:
+        if self._divert:
             return True
 
         return False
