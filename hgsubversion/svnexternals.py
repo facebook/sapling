@@ -242,9 +242,13 @@ class externalsupdater:
         args = ['svn'] + args
         self.ui.debug(_('updating externals: %r, cwd=%s\n') % (args, cwd))
         shell = os.name == 'nt'
-        r = subprocess.call(args, cwd=cwd, shell=shell,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        if r != 0: raise hgutil.Abort("subprocess '%s' failed" % ' '.join(args))
+        p = subprocess.Popen(args, cwd=cwd, shell=shell,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        for line in p.stdout:
+            self.ui.note(line)
+        p.wait()
+        if p.returncode != 0:
+            raise hgutil.Abort("subprocess '%s' failed" % ' '.join(args))
 
 def updateexternals(ui, args, repo, **opts):
     """update repository externals
