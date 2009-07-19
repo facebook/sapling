@@ -76,18 +76,24 @@ class svnremoterepo(mercurial.repo.repository):
         self.capabilities = set(['lookup', 'subversion'])
 
     @propertycache
-    def svnurl(self):
-        return util.normalize_url(self.path)
-
-    @propertycache
-    def svn(self):
+    def svnauth(self):
         # DO NOT default the user to hg's getuser(). If you provide
         # *any* default username to Subversion, it won't use any remembered
         # username for the desired realm, breaking OS X Keychain support,
         # GNOME keyring support, and all similar tools.
         user = self.ui.config('hgsubversion', 'username')
         passwd = self.ui.config('hgsubversion', 'password')
-        return svnwrap.SubversionRepo(self.svnurl, user, passwd)
+        url = util.normalize_url(self.path)
+        user, passwd, url = svnwrap.parse_url(url, user, passwd)
+        return url, user, passwd
+
+    @property
+    def svnurl(self):
+        return self.svnauth[0]
+
+    @propertycache
+    def svn(self):
+        return svnwrap.SubversionRepo(*self.svnauth)
 
     @property
     def svnuuid(self):

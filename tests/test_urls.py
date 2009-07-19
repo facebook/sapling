@@ -1,6 +1,7 @@
 import test_util
 import unittest
 from hgsubversion.svnwrap.svn_swig_wrapper import parse_url
+from hgsubversion import svnrepo
 
 class TestSubversionUrls(test_util.TestBase):
     def test_standard_url(self):
@@ -45,6 +46,12 @@ class TestSubversionUrls(test_util.TestBase):
             ('bob', '123abc', 'https://svn.testurl.com/repo'),
             parse_url('https://joe:t3stpw@svn.testurl.com/repo', 'bob', '123abc'))
 
+class TestSvnRepo(test_util.TestBase):
+    def test_url_rewriting(self):
+        ui = test_util.ui.ui()
+        ui.setconfig('hgsubversion', 'username', 'bob')
+        repo = svnrepo.svnremoterepo(ui, 'svn+ssh://joe@foo/bar')
+        self.assertEqual('svn+ssh://bob@foo/bar', repo.svnurl)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestSubversionUrls)]
