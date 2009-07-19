@@ -8,6 +8,7 @@ from mercurial import ui
 
 import test_util
 
+from hgsubversion import svncommands
 from hgsubversion import svnrepo
 
 class TestTags(test_util.TestBase):
@@ -87,6 +88,28 @@ class TestTags(test_util.TestBase):
             {'blah/trunktag': '\xd3$@\xd7\xd8Nu\xce\xa6%\xf1u\xd9b\x1a\xb2\x81\xc2\xb0\xb1',
              'versions/branch_version': 'I\x89\x1c>z#\xfc._K#@:\xd6\x1f\x96\xd6\x83\x1b|',
              })
+
+    def test_most_recent_is_edited_stupid(self):
+        self.test_most_recent_is_edited(True)
+
+    def test_most_recent_is_edited(self, stupid=False):
+        repo = self._load_fixture_and_fetch('most-recent-is-edit-tag.svndump',
+                                            stupid=stupid)
+        self.repo.ui.status(
+            "Note: this test failing may be because of a rebuildmeta failure.\n"
+            "You should check that before assuming issues with this test.\n")
+        wc2_path = self.wc_path + '2'
+        src, dest = hg.clone(repo.ui, self.wc_path, wc2_path, update=False)
+        svncommands.rebuildmeta(repo.ui,
+                               dest,
+                               os.path.dirname(dest.path),
+                               args=[test_util.fileurl(self.repo_path), ])
+        commands.pull(self.repo.ui, self.repo, stupid=stupid)
+        dtags, srctags = dest.tags(), self.repo.tags()
+        dtags.pop('tip')
+        srctags.pop('tip')
+        self.assertEqual(dtags, srctags)
+        self.assertEqual(dest.heads(), self.repo.heads())
 
     def test_edited_tag_stupid(self):
         self.test_edited_tag(True)

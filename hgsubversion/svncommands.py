@@ -27,7 +27,7 @@ def verify(ui, repo, *args, **opts):
     srev = int(srev.split('@')[1])
     ui.write('verifying %s against r%i\n' % (ctx, srev))
 
-    
+
     url = repo.ui.expandpath('default')
     if args:
         url = args[0]
@@ -176,9 +176,14 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
             branchinfo[branch] = (parentbranch,
                                   noderevnums.get(parent.node(), 0),
                                   revision)
-
+        droprev = lambda x: x.rsplit('@', 1)[0]
         for cctx in ctx.children():
-            if cctx.extra().get('close'):
+            # check if a child of this change closes this branch
+            # that's true if the close flag is set and the svn revision
+            # path is the same. droprev removes the revnumber so we
+            # can verify it is the same branch easily
+            if (cctx.extra().get('close')
+                and droprev(cctx.extra().get('convert_revision', '@')) == droprev(convinfo)):
                 branchinfo.pop(branch, None)
                 break
 

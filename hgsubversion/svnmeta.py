@@ -418,6 +418,8 @@ class SVNMeta(object):
         self.branches.update(tbdelta['branches'][0])
 
     def movetag(self, tag, hash, branch, rev, date):
+        if self.tags[tag] == hash:
+            return
         if branch == 'default':
             branch = None
         parentctx = self.repo[self.get_parent_revision(rev.revnum+1, branch)]
