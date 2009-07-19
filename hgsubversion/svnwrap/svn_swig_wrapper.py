@@ -116,24 +116,22 @@ def _create_auth_baton(pool):
     return core.svn_auth_open(providers, pool)
 
 
-def parse_url(url):
+def parse_url(url, user=None, passwd=None):
     """Parse a URL and return a tuple (username, password, url)
     """
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-    user, passwd = None, None
     if '@' in netloc:
         userpass, netloc = netloc.split('@')
-        if ':' in userpass:
-            user, passwd = userpass.split(':')
-            user, passwd = (urllib.unquote(user) or None,
-                            urllib.unquote(passwd) or None,
-                            )
-        else:
-            user = urllib.unquote(userpass) or None
-        if user and scheme == 'svn+ssh':
-            netloc = '@'.join((user, netloc, ))
+        if not user and not passwd:
+            if ':' in userpass:
+                user, passwd = userpass.split(':')
+            else:
+                user, passwd = userpass, ''
+            user, passwd = urllib.unquote(user), urllib.unquote(passwd)
+    if user and scheme == 'svn+ssh':
+        netloc = '@'.join((user, netloc, ))
     url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
-    return (user, passwd, url)
+    return (user or None, passwd or None, url)
 
 
 class Revision(tuple):
@@ -184,10 +182,10 @@ class SubversionRepo(object):
     It takes a required param, the URL.
     """
     def __init__(self, url='', username='', password='', head=None):
-        parsed = parse_url(url)
+        parsed = parse_url(url, username, password)
         # --username and --password override URL credentials
-        self.username = username or parsed[0]
-        self.password = password or parsed[1]
+        self.username = parsed[0]
+        self.password = parsed[1]
         self.svn_url = parsed[2]
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool)
