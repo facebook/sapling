@@ -21,6 +21,9 @@ It has the following prerequisites, at least as I build it:
   The py2exe distutils extension
       http://sourceforge.net/projects/py2exe/
 
+  GnuWin32 gettext utility
+      http://gnuwin32.sourceforge.net/packages/gettext.htm
+
   Inno Setup
       http://www.jrsoftware.org/isinfo.php
 
