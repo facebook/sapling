@@ -10,11 +10,11 @@ from mercurial import i18n
 from svn import core
 from svn import delta
 
-import svnmeta
 import replay
 import pushmod
 import stupid as stupidmod
 import svnwrap
+import svnrepo
 import util
 
 pullfuns = {
@@ -34,7 +34,7 @@ def parents(orig, ui, repo, *args, **opts):
     """
     if not opts.get('svn', False):
         return orig(ui, repo, *args, **opts)
-    meta = svnmeta.SVNMeta(repo)
+    meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
     ha = util.parentrev(ui, repo, meta, hashes)
     if ha.node() == node.nullid:
@@ -53,12 +53,10 @@ def incoming(orig, ui, repo, source='default', **opts):
     if 'subversion' not in other.capabilities:
         return orig(ui, repo, source, **opts)
 
-    user, passwd = util.getuserpass(ui)
-    svn = svnwrap.SubversionRepo(other.svnurl, user, passwd)
-    meta = svnmeta.SVNMeta(repo)
+    meta = repo.svnmeta()
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    for r in svn.revisions(start=meta.revmap.seen):
+    for r in other.svn.revisions(start=meta.revmap.seen):
         ui.status('\n')
         for label, attr in revmeta:
             l1 = label + ':'
@@ -75,7 +73,7 @@ def outgoing(repo, dest=None, heads=None, force=False):
 
     # split off #rev; TODO implement --revision/#rev support
     svnurl, revs, checkout = hg.parseurl(dest.svnurl, heads)
-    meta = svnmeta.SVNMeta(repo)
+    meta = repo.svnmeta()
     parent = repo.parents()[0].node()
     hashes = meta.revmap.hashes()
     return util.outgoing_revisions(repo, hashes, parent)
@@ -86,7 +84,7 @@ def diff(orig, ui, repo, *args, **opts):
     """
     if not opts.get('svn', False) or opts.get('change', None):
         return orig(ui, repo, *args, **opts)
-    meta = svnmeta.SVNMeta(repo)
+    meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
     if not opts.get('rev', None):
         parent = repo.parents()[0]
@@ -119,9 +117,8 @@ def push(repo, dest, force, revs):
     # split of #rev; TODO: implement --rev/#rev support
     svnurl, revs, checkout = hg.parseurl(svnurl, revs)
     # TODO: do credentials specified in the URL still work?
-    user, passwd = util.getuserpass(ui)
-    svn = svnwrap.SubversionRepo(svnurl, user, passwd)
-    meta = svnmeta.SVNMeta(repo, svn.uuid)
+    svn = svnrepo.svnremoterepo(repo.ui, svnurl).svn
+    meta = repo.svnmeta(svn.uuid)
 
     # Strategy:
     # 1. Find all outgoing commits from this head
@@ -156,7 +153,7 @@ def push(repo, dest, force, revs):
         base_revision = hashes[base_n][0]
         try:
             pushmod.commit(ui, repo, old_ctx, meta, svnurl,
-                           base_revision, user, passwd)
+                           base_revision, svn.username, svn.password)
         except pushmod.NoFilesException:
             ui.warn("Could not push revision %s because it had no changes in svn.\n" %
                      old_ctx)
@@ -194,7 +191,7 @@ def push(repo, dest, force, revs):
                             child = children[0]
                         rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
         # TODO: stop constantly creating the SVNMeta instances.
-        meta = svnmeta.SVNMeta(meta.repo, svn.uuid)
+        meta = repo.svnmeta(svn.uuid)
         hashes = meta.revmap.hashes()
     util.swap_out_encoding(old_encoding)
     return 0
@@ -230,9 +227,8 @@ def pull(repo, source, heads=[], force=False):
         repo.ui.note('fetching stupidly...\n')
 
     # TODO: do credentials specified in the URL still work?
-    user, passwd = util.getuserpass(repo.ui)
-    svn = svnwrap.SubversionRepo(svn_url, user, passwd)
-    meta = svnmeta.SVNMeta(repo, svn.uuid, svn.subdir)
+    svn = svnrepo.svnremoterepo(repo.ui, svn_url).svn
+    meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     start = max(meta.revmap.seen, skipto_rev)
     initializing_repo = meta.revmap.seen <= 0
@@ -320,7 +316,7 @@ def rebase(orig, ui, repo, **opts):
         extra['branch'] = ctx.branch()
     extrafn = opts.get('svnextrafn', extrafn2)
     sourcerev = opts.get('svnsourcerev', repo.parents()[0].node())
-    meta = svnmeta.SVNMeta(repo)
+    meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
     o_r = util.outgoing_revisions(repo, hashes, sourcerev=sourcerev)
     if not o_r:

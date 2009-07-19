@@ -7,7 +7,7 @@ from mercurial import util as hgutil
 
 import maps
 import svnwrap
-import svnmeta
+import svnrepo
 import util
 import utility_commands
 import svnexternals
@@ -16,12 +16,6 @@ import svnexternals
 def verify(ui, repo, *args, **opts):
     '''verify current revision against Subversion repository
     '''
-
-    if not args:
-        url = repo.ui.expandpath('default')
-    else:
-        url = args[0]
-
     ctx = repo[opts.get('rev', '.')]
     if 'close' in ctx.extra():
         ui.write('cannot verify closed branch')
@@ -33,9 +27,11 @@ def verify(ui, repo, *args, **opts):
     srev = int(srev.split('@')[1])
     ui.write('verifying %s against r%i\n' % (ctx, srev))
 
-    url = util.normalize_url(url.rstrip('/'))
-    user, passwd = util.getuserpass(ui)
-    svn = svnwrap.SubversionRepo(url, user, passwd)
+    
+    url = repo.ui.expandpath('default')
+    if args:
+        url = args[0]
+    svn = svnrepo.svnremoterepo(ui, url).svn
 
     btypes = {'default': 'trunk'}
     branchpath = btypes.get(ctx.branch(), 'branches/%s' % ctx.branch())
@@ -72,11 +68,9 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
         dest = args[0]
     elif len(args) > 1:
         raise hgutil.Abort('rebuildmeta takes 1 or no arguments')
-    url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     uuid = None
-    url = util.normalize_url(url.rstrip('/'))
-    user, passwd = util.getuserpass(ui)
-    svn = svnwrap.SubversionRepo(url, user, passwd)
+    url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
+    svn = svnrepo.svnremoterepo(ui, url).svn
     subdir = svn.subdir
     svnmetadir = os.path.join(repo.path, 'svn')
     if not os.path.exists(svnmetadir):
@@ -224,7 +218,7 @@ def update(ui, args, repo, clean=False, **opts):
 
     assert len(args) == 1
     rev = int(args[0])
-    meta = svnmeta.SVNMeta(repo)
+    meta = repo.svnmeta()
 
     answers = []
     for k, v in meta.revmap.iteritems():

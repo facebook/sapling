@@ -21,6 +21,10 @@ import mercurial.repo
 
 import util
 import wrappers
+import svnwrap
+import svnmeta
+
+propertycache = hgutil.propertycache
 
 def generate_repo_class(ui, repo):
     """ This function generates the local repository wrapper. """
@@ -56,19 +60,38 @@ def generate_repo_class(ui, repo):
         def findoutgoing(self, remote, base=None, heads=None, force=False):
             return wrappers.outgoing(repo, remote, heads, force)
 
+        def svnmeta(self, uuid=None, subdir=''):
+            return svnmeta.SVNMeta(self, uuid, subdir)
+
     repo.__class__ = svnlocalrepo
 
 class svnremoterepo(mercurial.repo.repository):
     """ the dumb wrapper for actual Subversion repositories """
 
-    def __init__(self, ui, path):
+    def __init__(self, ui, path=None):
         self.ui = ui
+        if path is None:
+            path = self.ui.config('paths', 'default')
         self.path = path
         self.capabilities = set(['lookup', 'subversion'])
 
-    @property
+    @propertycache
     def svnurl(self):
         return util.normalize_url(self.path)
+
+    @propertycache
+    def svn(self):
+        # DO NOT default the user to hg's getuser(). If you provide
+        # *any* default username to Subversion, it won't use any remembered
+        # username for the desired realm, breaking OS X Keychain support,
+        # GNOME keyring support, and all similar tools.
+        user = self.ui.config('hgsubversion', 'username')
+        passwd = self.ui.config('hgsubversion', 'password')
+        return svnwrap.SubversionRepo(self.svnurl, user, passwd)
+
+    @property
+    def svnuuid(self):
+        return self.svn.uuid
 
     def url(self):
         return self.path

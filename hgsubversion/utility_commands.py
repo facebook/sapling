@@ -2,8 +2,8 @@ import os
 
 from mercurial import util as hgutil
 
-import svnmeta
 import svnwrap
+import svnrepo
 import util
 
 def genignore(ui, repo, force=False, **opts):
@@ -12,16 +12,15 @@ def genignore(ui, repo, force=False, **opts):
     ignpath = repo.wjoin('.hgignore')
     if not force and os.path.exists(ignpath):
         raise hgutil.Abort('not overwriting existing .hgignore, try --force?')
-    url = util.normalize_url(repo.ui.config('paths', 'default'))
-    user, passwd = util.getuserpass(ui)
-    svn = svnwrap.SubversionRepo(url, user, passwd)
-    meta = svnmeta.SVNMeta(repo, svn.uuid)
+    svn = svnrepo.svnremoterepo(repo.ui).svn
+    meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
     parent = util.parentrev(ui, repo, meta, hashes)
     r, br = hashes[parent.node()]
     branchpath = br and ('branches/%s' % br) or 'trunk'
     ignorelines = ['.hgignore', 'syntax:glob']
-    dirs = [''] + [d[0] for d in svn.list_files(branchpath, r) if d[1] == 'd']
+    dirs = [''] + [d[0] for d in svn.list_files(branchpath, r)
+                   if d[1] == 'd']
     for dir in dirs:
         props = svn.list_props('%s/%s/' % (branchpath, dir), r)
         if 'svn:ignore' not in props:
@@ -35,10 +34,7 @@ def genignore(ui, repo, force=False, **opts):
 def info(ui, repo, hg_repo_path, **opts):
     """show Subversion details similar to `svn info'
     """
-    url = util.normalize_url(repo.ui.config('paths', 'default'))
-    user, passwd = util.getuserpass(ui)
-    svn = svnwrap.SubversionRepo(url, user, passwd)
-    meta = svnmeta.SVNMeta(repo, svn.uuid)
+    meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
     parent = util.parentrev(ui, repo, meta, hashes)
     pn = parent.node()
@@ -54,10 +50,8 @@ def info(ui, repo, hg_repo_path, **opts):
         subdir = subdir.replace('branches/../', '')
     else:
         branchpath = '/branches/%s' % br
-    url = util.normalize_url(repo.ui.config('paths', 'default'))
-    if url[-1] == '/':
-        url = url[:-1]
-    url = '%s%s' % (url, branchpath)
+    remoterepo = svnrepo.svnremoterepo(repo.ui)
+    url = '%s%s' % (remoterepo.svnurl, branchpath)
     author = meta.authors.reverselookup(parent.user())
     # cleverly figure out repo root w/o actually contacting the server
     reporoot = url[:len(url)-len(subdir)]
@@ -86,7 +80,7 @@ def listauthors(ui, args, authors=None, **opts):
     if not len(args):
         ui.status('No repository specified.\n')
         return
-    svn = svnwrap.SubversionRepo(util.normalize_url(args[0]))
+    svn = svnrepo.svnremoterepo(ui, args[0]).svn
     author_set = set()
     for rev in svn.revisions():
         author_set.add(str(rev.author)) # So None becomes 'None'
