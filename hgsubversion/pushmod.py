@@ -92,12 +92,10 @@ def _externals(ctx):
     return ext
 
 
-def commit(ui, repo, rev_ctx, meta, svn_url, base_revision,
-           username, password):
+def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     """Build and send a commit from Mercurial to Subversion.
     """
     file_data = {}
-    svn = svnwrap.SubversionRepo(svn_url, username, password)
     parent = rev_ctx.parents()[0]
     parent_branch = rev_ctx.parents()[0].branch()
     branch_path = 'trunk'

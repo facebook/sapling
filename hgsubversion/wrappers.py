@@ -112,11 +112,10 @@ def push(repo, dest, force, revs):
     assert not revs, 'designated revisions for push remains unimplemented.'
     cmdutil.bail_if_changed(repo)
     ui = repo.ui
-    svnurl = util.normalize_url(repo.ui.expandpath(dest.svnurl))
     old_encoding = util.swap_out_encoding()
-    # split of #rev; TODO: implement --rev/#rev support
-    svnurl, revs, checkout = hg.parseurl(svnurl, revs)
+    # TODO: implement --rev/#rev support
     # TODO: do credentials specified in the URL still work?
+    svnurl = repo.ui.expandpath(dest.svnurl)
     svn = svnrepo.svnremoterepo(repo.ui, svnurl).svn
     meta = repo.svnmeta(svn.uuid)
 
@@ -152,8 +151,7 @@ def push(repo, dest, force, revs):
         # 2. Commit oldest revision that needs to be pushed
         base_revision = hashes[base_n][0]
         try:
-            pushmod.commit(ui, repo, old_ctx, meta, svnurl,
-                           base_revision, svn.username, svn.password)
+            pushmod.commit(ui, repo, old_ctx, meta, base_revision, svn)
         except pushmod.NoFilesException:
             ui.warn("Could not push revision %s because it had no changes in svn.\n" %
                      old_ctx)
