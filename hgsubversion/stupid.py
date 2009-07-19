@@ -547,7 +547,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             deleted_branches[branch] = closed
 
     date = meta.fixdate(r.date)
-    check_deleted_branches = set()
+    check_deleted_branches = set(tbdelta['branches'][1])
     for b in branches:
 
         parentctx = meta.repo[meta.get_parent_revision(r.revnum, b)]
