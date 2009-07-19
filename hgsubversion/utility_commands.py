@@ -6,14 +6,12 @@ import svnmeta
 import svnwrap
 import util
 
-def genignore(ui, repo, hg_repo_path, force=False, **opts):
+def genignore(ui, repo, force=False, **opts):
     """generate .hgignore from svn:ignore properties.
     """
-    ignpath = os.path.join(hg_repo_path, '.hgignore')
+    ignpath = repo.wjoin('.hgignore')
     if not force and os.path.exists(ignpath):
         raise hgutil.Abort('not overwriting existing .hgignore, try --force?')
-    ignorefile = open(ignpath, 'w')
-    ignorefile.write('.hgignore\nsyntax:glob\n')
     url = util.normalize_url(repo.ui.config('paths', 'default'))
     user, passwd = util.getuserpass(opts)
     svn = svnwrap.SubversionRepo(url, user, passwd)
@@ -21,22 +19,17 @@ def genignore(ui, repo, hg_repo_path, force=False, **opts):
     hashes = meta.revmap.hashes()
     parent = util.parentrev(ui, repo, meta, hashes)
     r, br = hashes[parent.node()]
-    if br == None:
-        branchpath = 'trunk'
-    else:
-        branchpath = 'branches/%s' % br
-    if url[-1] == '/':
-        url = url[:-1]
+    branchpath = br and ('branches/%s' % br) or 'trunk'
+    ignorelines = ['.hgignore', 'syntax:glob']
     dirs = [''] + [d[0] for d in svn.list_files(branchpath, r) if d[1] == 'd']
     for dir in dirs:
-        props = svn.list_props('%s/%s/' % (branchpath,dir), r)
-        if 'svn:ignore' in props:
-            lines = props['svn:ignore'].strip().split('\n')
-            for prop in lines:
-                if dir:
-                    ignorefile.write('%s/%s\n' % (dir, prop))
-                else:
-                    ignorefile.write('%s\n' % prop)
+        props = svn.list_props('%s/%s/' % (branchpath, dir), r)
+        if 'svn:ignore' not in props:
+            continue
+        lines = props['svn:ignore'].strip().split('\n')
+        ignorelines += [dir and (dir + '/' + prop) or prop for prop in lines]
+
+    repo.wopener('.hgignore', 'w').write('\n'.join(ignorelines) + '\n')
 
 
 def info(ui, repo, hg_repo_path, **opts):
