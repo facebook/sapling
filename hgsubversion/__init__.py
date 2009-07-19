@@ -146,7 +146,8 @@ def _lookup(url):
 
 # install scheme handlers
 hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,
-                    'svn': svnrepo, 'svn+ssh': svnrepo })
+                    'svn': svnrepo, 'svn+ssh': svnrepo, 'svn+http': svnrepo,
+                    'svn+https': svnrepo})
 
 cmdtable = {
     "svn":

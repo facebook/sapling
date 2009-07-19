@@ -53,6 +53,9 @@ class TestSvnRepo(test_util.TestBase):
         repo = svnrepo.svnremoterepo(ui, 'svn+ssh://joe@foo/bar')
         self.assertEqual('svn+ssh://bob@foo/bar', repo.svnurl)
 
+        repo = svnrepo.svnremoterepo(ui, 'svn+http://joe@foo/bar')
+        self.assertEqual(('http://foo/bar', 'bob', None), repo.svnauth)
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestSubversionUrls)]
     return unittest.TestSuite(all)

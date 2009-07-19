@@ -70,8 +70,10 @@ def version(ui):
     return node.hex(ver)[:12]
 
 
-def normalize_url(svnurl):
-    url, revs, checkout = hg.parseurl(svnurl)
+def normalize_url(url):
+    if url.startswith('svn+http://'):
+        url = url[4:]
+    url, revs, checkout = hg.parseurl(url)
     url = url.rstrip('/')
     if checkout:
         url = '%s#%s' % (url, checkout)
