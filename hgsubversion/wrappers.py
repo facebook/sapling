@@ -112,6 +112,7 @@ def push(repo, dest, force, revs):
     """push revisions starting at a specified head back to Subversion.
     """
     assert not revs, 'designated revisions for push remains unimplemented.'
+    cmdutil.bail_if_changed(repo)
     ui = repo.ui
     svnurl = util.normalize_url(repo.ui.expandpath(dest.svnurl))
     old_encoding = util.swap_out_encoding()

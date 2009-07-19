@@ -50,6 +50,31 @@ class PushTests(test_util.TestBase):
         tip = self.repo['tip']
         self.assertEqual(tip.node(), old_tip)
 
+    def test_cant_push_with_changes(self):
+        repo = self.repo
+        def file_callback(repo, memctx, path):
+            return context.memfilectx(
+                path=path, data='foo', islink=False, 
+                isexec=False, copied=False)
+        ctx = context.memctx(repo,
+                             (repo['default'].node(), node.nullid),
+                             'automated test',
+                             ['adding_file'],
+                             file_callback,
+                             'an_author',
+                             '2008-10-07 20:59:48 -0500',
+                             {'branch': 'default',})
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        # Touch an existing file
+        repo.wwrite('beta', 'something else', '')
+        try:
+            self.pushrevisions()
+        except hgutil.Abort:
+            pass
+        tip = self.repo['tip']
+        self.assertEqual(new_hash, tip.node())
+
     def test_push_over_svnserve(self, commit=True):
         test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
         open(os.path.join(self.repo_path, 'conf', 'svnserve.conf'),
