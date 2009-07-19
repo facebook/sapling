@@ -106,6 +106,11 @@ def svn(ui, repo, subcommand, *args, **opts):
         if len(candidates) == 1:
             subcommand = candidates[0]
 
+    # override subversion credentials
+    for key in ('username', 'password'):
+        if key in opts:
+            ui.setconfig('hgsubversion', key, opts[key])
+
     path = os.path.dirname(repo.path)
     try:
         commandfunc = svncommands.table[subcommand]

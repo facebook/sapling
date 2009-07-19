@@ -53,7 +53,7 @@ def incoming(orig, ui, repo, source='default', **opts):
     if 'subversion' not in other.capabilities:
         return orig(ui, repo, source, **opts)
 
-    user, passwd = util.getuserpass(opts)
+    user, passwd = util.getuserpass(ui)
     svn = svnwrap.SubversionRepo(other.svnurl, user, passwd)
     meta = svnmeta.SVNMeta(repo)
 
@@ -119,8 +119,7 @@ def push(repo, dest, force, revs):
     # split of #rev; TODO: implement --rev/#rev support
     svnurl, revs, checkout = hg.parseurl(svnurl, revs)
     # TODO: do credentials specified in the URL still work?
-    user = repo.ui.config('hgsubversion', 'username')
-    passwd = repo.ui.config('hgsubversion', 'password')
+    user, passwd = util.getuserpass(ui)
     svn = svnwrap.SubversionRepo(svnurl, user, passwd)
     meta = svnmeta.SVNMeta(repo, svn.uuid)
 
@@ -231,8 +230,7 @@ def pull(repo, source, heads=[], force=False):
         repo.ui.note('fetching stupidly...\n')
 
     # TODO: do credentials specified in the URL still work?
-    user = repo.ui.config('hgsubversion', 'username')
-    passwd = repo.ui.config('hgsubversion', 'password')
+    user, passwd = util.getuserpass(repo.ui)
     svn = svnwrap.SubversionRepo(svn_url, user, passwd)
     meta = svnmeta.SVNMeta(repo, svn.uuid, svn.subdir)
 

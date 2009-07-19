@@ -13,7 +13,7 @@ def genignore(ui, repo, force=False, **opts):
     if not force and os.path.exists(ignpath):
         raise hgutil.Abort('not overwriting existing .hgignore, try --force?')
     url = util.normalize_url(repo.ui.config('paths', 'default'))
-    user, passwd = util.getuserpass(opts)
+    user, passwd = util.getuserpass(ui)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     meta = svnmeta.SVNMeta(repo, svn.uuid)
     hashes = meta.revmap.hashes()
@@ -36,7 +36,7 @@ def info(ui, repo, hg_repo_path, **opts):
     """show Subversion details similar to `svn info'
     """
     url = util.normalize_url(repo.ui.config('paths', 'default'))
-    user, passwd = util.getuserpass(opts)
+    user, passwd = util.getuserpass(ui)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     meta = svnmeta.SVNMeta(repo, svn.uuid)
     hashes = meta.revmap.hashes()

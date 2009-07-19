@@ -34,7 +34,7 @@ def verify(ui, repo, *args, **opts):
     ui.write('verifying %s against r%i\n' % (ctx, srev))
 
     url = util.normalize_url(url.rstrip('/'))
-    user, passwd = util.getuserpass(opts)
+    user, passwd = util.getuserpass(ui)
     svn = svnwrap.SubversionRepo(url, user, passwd)
 
     btypes = {'default': 'trunk'}
@@ -75,7 +75,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
     url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     uuid = None
     url = util.normalize_url(url.rstrip('/'))
-    user, passwd = util.getuserpass(opts)
+    user, passwd = util.getuserpass(ui)
     svn = svnwrap.SubversionRepo(url, user, passwd)
     subdir = svn.subdir
     svnmetadir = os.path.join(repo.path, 'svn')
