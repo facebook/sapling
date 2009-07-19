@@ -169,6 +169,6 @@ echo % incoming and outgoing
 cd ..
 hg clone -U -r31 repo repo2
 cd repo2
-hg incoming -q --graph
+hg incoming --graph ../repo
 cd ..
 hg -R repo outgoing --graph repo2
