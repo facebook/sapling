@@ -29,7 +29,13 @@ from mercurial import extensions
 from mercurial import hg
 from mercurial import util as hgutil
 from mercurial import demandimport
-demandimport.ignore.append('svn')
+demandimport.ignore.extend([
+    'svn',
+    'svn.client',
+    'svn.core',
+    'svn.delta',
+    'svn.ra',
+    ])
 
 from svn import core
 
