@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-07-20 23:05+0200\n"
-"PO-Revision-Date: 2009-07-20 23:22+0200\n"
+"PO-Revision-Date: 2009-07-20 23:55+0200\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -1555,6 +1555,13 @@ msgid ""
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
+"tilføj en underskrift til den aktuelle eller en given revision\n"
+"\n"
+"    Hvis der ikke angives en revision, så bruges forældren til\n"
+"    arbejdskataloget, eller tip, hvis der ikke er hentet en revision.\n"
+"\n"
+"    Se 'hg help dates' for en liste af gyldige formater til -d/--date.\n"
+"    "
 
 msgid "uncommitted merge - please provide a specific revision"
 msgstr "udeponeret sammenføjning - angiv venligst en specifik revision"
@@ -1819,6 +1826,18 @@ msgid ""
 "\n"
 "The default is 'colorful'.\n"
 msgstr ""
+"syntaksfarvelægning til hgweb (kræver Pygments)\n"
+"\n"
+"Det afhænger af Pygments biblioteket til syntaksfarvelægning:\n"
+"http://pygments.org/\n"
+"\n"
+"Der er en enkelt konfigurationsmulighed:\n"
+"\n"
+"[web]\n"
+"pygments_style = <stil>\n"
+"\n"
+"Standardstilen er 'colorful'.\n"
+"\n"
 
 msgid "accelerate status report using Linux's inotify service"
 msgstr "accelerer statusreporter ved brug af Linux's inotify service"
@@ -1832,6 +1851,11 @@ msgid ""
 "    Prints the list of directories being watched by the inotify server.\n"
 "    "
 msgstr ""
+"fejlsøgningsinformation til inotify udvidelsen\n"
+"\n"
+"    Udskriver listen af kataloger som bliver overvåget af inotify\n"
+"    serveren.\n"
+"    "
 
 msgid "directories being watched:\n"
 msgstr "kataloger som bliver overvåget:\n"
@@ -2013,11 +2037,11 @@ msgstr ""
 
 #, python-format
 msgid "interhg: invalid pattern for %s: %s\n"
-msgstr ""
+msgstr "interhg: ugyldigt mønster for %s: %s\n"
 
 #, python-format
 msgid "interhg: invalid regexp for %s: %s\n"
-msgstr ""
+msgstr "interhg: ugyldig regexp for %s: %s\n"
 
 msgid ""
 "expand keywords in tracked files\n"
@@ -2070,11 +2094,11 @@ msgstr ""
 
 #, python-format
 msgid "overwriting %s expanding keywords\n"
-msgstr ""
+msgstr "overskriver %s og udvider nøgleord\n"
 
 #, python-format
 msgid "overwriting %s shrinking keywords\n"
-msgstr ""
+msgstr "overskriver %s og formindsker nøgleord\n"
 
 msgid "[keyword] patterns cannot match"
 msgstr "[keyword] mønstre kan ikke matche"
@@ -2109,7 +2133,7 @@ msgstr ""
 msgid ""
 "\n"
 "%s keywords written to %s:\n"
-msgstr ""
+msgstr "\n%s nøgleord skrevet til %s:\n"
 
 msgid "unhooked all commit hooks\n"
 msgstr ""
@@ -2441,7 +2465,7 @@ msgid "all patches are currently applied\n"
 msgstr "alle lapper er i øjeblikket anvendt\n"
 
 msgid "patch series already fully applied\n"
-msgstr ""
+msgstr "serien af lapper er allerede anvendt fuldt ud\n"
 
 msgid "cleaning up working directory..."
 msgstr "rydder op i arbejdskataloget..."
@@ -2824,7 +2848,7 @@ msgid ""
 msgstr ""
 
 msgid "qfold requires at least one patch name"
-msgstr ""
+msgstr "qfold kræver navnet på mindst én lap"
 
 msgid "No patches applied"
 msgstr "Der er ikke anvendt nogen lapper"
@@ -2863,10 +2887,10 @@ msgid ""
 msgstr ""
 
 msgid "cannot mix -l/--list with options or arguments"
-msgstr ""
+msgstr "kan ikke blande -l/--list med tilvalg eller argumenter"
 
 msgid "no patch to work with"
-msgstr ""
+msgstr "ingen lap at arbejde med"
 
 #, python-format
 msgid "no patch named %s"
@@ -2889,11 +2913,11 @@ msgstr ""
 "    "
 
 msgid "no saved queues found, please use -n\n"
-msgstr ""
+msgstr "fandt ingen gemte køer, brug venligst -r\n"
 
 #, python-format
 msgid "merging with queue at: %s\n"
-msgstr ""
+msgstr "sammenføjer med kø ved: %s\n"
 
 msgid ""
 "pop the current patch off the stack\n"
@@ -2912,7 +2936,7 @@ msgstr ""
 
 #, python-format
 msgid "using patch queue: %s\n"
-msgstr ""
+msgstr "bruger lap-kø: %s\n"
 
 msgid ""
 "rename a patch\n"
@@ -2920,6 +2944,10 @@ msgid ""
 "    With one argument, renames the current patch to PATCH1.\n"
 "    With two arguments, renames PATCH1 to PATCH2."
 msgstr ""
+"omdøb en lap\n"
+"\n"
+"    Med et argument omdøbes den nuværende lap til LAP1. Med to\n"
+"    argumenter omdøbes LAP1 til LAP2."
 
 #, python-format
 msgid "%s already exists"
@@ -2927,13 +2955,13 @@ msgstr "%s eksisterer allerede"
 
 #, python-format
 msgid "A patch named %s already exists in the series file"
-msgstr ""
+msgstr "En lap ved navn %s eksisterer allerede i serien"
 
 msgid "restore the queue state saved by a revision"
 msgstr ""
 
 msgid "save current queue state"
-msgstr ""
+msgstr "gem tilstanden for den nuværende kø"
 
 #, python-format
 msgid "destination %s exists and is not a directory"
@@ -3044,13 +3072,13 @@ msgid ""
 msgstr ""
 
 msgid "no revisions specified"
-msgstr ""
+msgstr "ingen revisioner specificeret"
 
 msgid "cannot commit over an applied mq patch"
-msgstr ""
+msgstr "kan ikke deponere henover en anvendt mq lap"
 
 msgid "source has mq patches applied"
-msgstr ""
+msgstr "målet har mq lapper anvendt"
 
 #, python-format
 msgid "mq status file refers to unknown node %s\n"
@@ -3058,10 +3086,10 @@ msgstr ""
 
 #, python-format
 msgid "Tag %s overrides mq patch of the same name\n"
-msgstr ""
+msgstr "Mærkaten %s overstyrer mq lap med samme navn\n"
 
 msgid "cannot import over an applied patch"
-msgstr ""
+msgstr "kan ikke importere henover en anvendt lap"
 
 msgid "print first line of patch header"
 msgstr ""
@@ -3073,13 +3101,13 @@ msgid "use pull protocol to copy metadata"
 msgstr "brug træk-protokol til at kopiere metadata"
 
 msgid "do not update the new working directories"
-msgstr ""
+msgstr "undlad at opdatere det nye arbejdskatalog"
 
 msgid "use uncompressed transfer (fast over LAN)"
-msgstr ""
+msgstr "brug ukomprimeret overførsel (hurtig over LAN)"
 
 msgid "location of source patch repository"
-msgstr ""
+msgstr "placering af kilde lap-depotet"
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
 msgstr "hg qclone [TILVALG]... KILDE [MÅL]"
@@ -3109,7 +3137,7 @@ msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 msgstr "hg qfold [-e] [-k] [-m TEKST] [-l FIL] LAP..."
 
 msgid "overwrite any local changes"
-msgstr ""
+msgstr "overskrive eventuelle lokale ændringer"
 
 msgid "hg qgoto [OPTION]... PATCH"
 msgstr "hg qgoto [TILVALG]... LAP"
@@ -3133,16 +3161,16 @@ msgid "name of patch file"
 msgstr "navn på lap"
 
 msgid "overwrite existing files"
-msgstr ""
+msgstr "overskriv eksisterende filer"
 
 msgid "place existing revisions under mq control"
-msgstr ""
+msgstr "placer eksisterende revisioner under mq-kontrol"
 
 msgid "use git extended diff format"
-msgstr ""
+msgstr "brug git udvidet diff-format"
 
 msgid "qpush after importing"
-msgstr ""
+msgstr "qpush efter import"
 
 msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
 msgstr "hg qimport [-e] [-n NAVN] [-f] [-g] [-P] [-r REV]... FIL..."
@@ -3157,16 +3185,16 @@ msgid "import uncommitted changes into patch"
 msgstr ""
 
 msgid "add \"From: <current user>\" to patch"
-msgstr ""
+msgstr "tilføj \"From: <aktuel bruger>\" til lappen"
 
 msgid "add \"From: <given user>\" to patch"
-msgstr ""
+msgstr "tilføj \"From: <given bruger>\" til lappen"
 
 msgid "add \"Date: <current date>\" to patch"
-msgstr ""
+msgstr "tilføj \"Date: <aktuel dato>\" til lappen"
 
 msgid "add \"Date: <given date>\" to patch"
-msgstr ""
+msgstr "tilføj \"Date: <given dato>\" til lappen"
 
 msgid "hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]..."
 msgstr "hg qnew [-e] [-m TEKST] [-l FIL] [-f] LAP [FIL]..."
@@ -3178,13 +3206,13 @@ msgid "hg qprev [-s]"
 msgstr "hg qprev [-s]"
 
 msgid "pop all patches"
-msgstr ""
+msgstr "fjern alle lapper"
 
 msgid "queue name to pop"
 msgstr ""
 
 msgid "forget any local changes"
-msgstr ""
+msgstr "glem eventuelle lokale ændringer"
 
 msgid "hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]"
 msgstr "hg qpop [-a] [-n NAVN] [-f] [LAP | INDEKS]"
@@ -3196,7 +3224,7 @@ msgid "list patch name in commit text"
 msgstr ""
 
 msgid "apply all patches"
-msgstr ""
+msgstr "anvend alle lapper"
 
 msgid "merge from another queue"
 msgstr ""
@@ -3211,16 +3239,16 @@ msgid "refresh only files already in the patch and specified files"
 msgstr ""
 
 msgid "add/update \"From: <current user>\" in patch"
-msgstr ""
+msgstr "tilføj/opdater \"From: <aktuel bruger>\" i lappen"
 
 msgid "add/update \"From: <given user>\" in patch"
-msgstr ""
+msgstr "tilføj/opdater \"From: <given bruger>\" i lappen"
 
 msgid "update \"Date: <current date>\" in patch (if present)"
-msgstr ""
+msgstr "opdater \"Date: <aktuel dato>\" i lappen (hvis tilstede)"
 
 msgid "update \"Date: <given date>\" in patch (if present)"
-msgstr ""
+msgstr "opdater \"Date: <given dato>\" i lappen (hvis tilstede)"
 
 msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
 msgstr "hg qrefresh [-I] [-X] [-e] [-m TEKST] [-l FIL] [-s] [FIL]..."
@@ -3280,7 +3308,7 @@ msgid "bundle unrelated changesets"
 msgstr ""
 
 msgid "no backups"
-msgstr ""
+msgstr "ingen backupper"
 
 msgid "hg strip [-f] [-b] [-n] REV"
 msgstr "hg strip [-f] [-b] [-n] REV"
