@@ -4359,7 +4359,7 @@ msgstr "Änderung:        %d:%s\n"
 
 #, python-format
 msgid "branch:      %s\n"
-msgstr "Zweig    :       %s\n"
+msgstr "Zweig:           %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
