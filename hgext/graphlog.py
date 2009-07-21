@@ -22,9 +22,11 @@ from mercurial import hg, url, util, graphmod
 
 ASCIIDATA = 'ASC'
 
-def asciiformat(ui, repo, revdag, opts):
+def asciiformat(ui, repo, revdag, opts, parentrepo=None):
     """formats a changelog DAG walk for ASCII output"""
-    showparents = [ctx.node() for ctx in repo[None].parents()]
+    if parentrepo is None:
+        parentrepo = repo
+    showparents = [ctx.node() for ctx in parentrepo[None].parents()]
     displayer = show_changeset(ui, repo, opts, buffered=True)
     for (id, type, ctx, parentids) in revdag:
         if type != graphmod.CHANGESET:
@@ -341,7 +343,7 @@ def gincoming(ui, repo, source="default", **opts):
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
         revdag = graphrevs(other, chlist, opts)
-        fmtdag = asciiformat(ui, repo, revdag, opts)
+        fmtdag = asciiformat(ui, other, revdag, opts, parentrepo=repo)
         ascii(ui, asciiedges(fmtdag))
 
     finally:

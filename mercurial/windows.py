@@ -41,6 +41,7 @@ class winstdout(object):
             limit = 16000
             l = len(s)
             start = 0
+            self.softspace = 0;
             while start < l:
                 end = start + limit
                 self.fp.write(s[start:end])

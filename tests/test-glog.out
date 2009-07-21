@@ -581,13 +581,33 @@ adding changesets
 adding manifests
 adding file changes
 added 31 changesets with 31 changes to 1 files
-o  34:fea3ac5810e0
+comparing with ../repo
+searching for changes
+o  changeset:   34:fea3ac5810e0
+|  tag:         tip
+|  parent:      32:d06dffa21a31
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
 |
-| o  33:68608f5145f9
+| o  changeset:   33:68608f5145f9
+|    parent:      18:1aa84d96232a
+|    user:        test
+|    date:        Thu Jan 01 00:00:33 1970 +0000
+|    summary:     (33) head
 |
-o  32:d06dffa21a31
+o  changeset:   32:d06dffa21a31
+|  parent:      27:886ed638191b
+|  parent:      31:621d83e11f67
+|  user:        test
+|  date:        Thu Jan 01 00:00:32 1970 +0000
+|  summary:     (32) expand
 |
-o  27:886ed638191b
+o  changeset:   27:886ed638191b
+   parent:      21:d42a756af44d
+   user:        test
+   date:        Thu Jan 01 00:00:27 1970 +0000
+   summary:     (27) collapse
 
 comparing with repo2
 searching for changes
