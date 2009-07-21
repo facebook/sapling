@@ -21,6 +21,14 @@ for files that it is not currently tracking.
 DESCRIPTION
 -----------
 
+The working directory of a Mercurial repository will often contain
+files that should not be tracked by Mercurial. These include backup
+files created by editors and build products created by compilers.
+These files can be ignored by listing them in a `.hgignore` file in
+the root of the working directory. The `.hgignore` file must be
+created manually. It is typically put under version control, so that
+the settings will propagate to other repositories with push and pull.
+
 An untracked file is ignored if its path relative to the repository
 root directory, or any prefix path of that path, is matched against
 any pattern in `.hgignore`.
