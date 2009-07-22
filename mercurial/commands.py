@@ -3045,7 +3045,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
             raise util.Abort(_("you can't specify a revision and a date"))
         rev = cmdutil.finddate(ui, repo, date)
 
-    if clean:
+    if clean or check:
         return hg.clean(repo, rev)
     else:
         return hg.update(repo, rev)
