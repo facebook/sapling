@@ -246,7 +246,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
     commit_opts = opts.copy()
     commit_opts['addremove'] = False
     if not commit_opts['message'] and not commit_opts['logfile']:
-        commit_opts['message'] = _("Backed out changeset %s") % (short(node))
+        # we don't translate commit messages
+        commit_opts['message'] = "Backed out changeset %s" % (short(node))
         commit_opts['force_editor'] = True
     commit(ui, repo, **commit_opts)
     def nice(node):
@@ -2914,7 +2915,8 @@ def tag(ui, repo, name1, *names, **opts):
                     raise util.Abort(_('tag \'%s\' is not a local tag') % n)
         rev_ = nullid
         if not message:
-            message = _('Removed tag %s') % ', '.join(names)
+            # we don't translate commit messages
+            message = 'Removed tag %s' % ', '.join(names)
     elif not opts.get('force'):
         for n in names:
             if n in repo.tags():
@@ -2926,7 +2928,8 @@ def tag(ui, repo, name1, *names, **opts):
     r = repo[rev_].node()
 
     if not message:
-        message = (_('Added tag %s for changeset %s') %
+        # we don't translate commit messages
+        message = ('Added tag %s for changeset %s' %
                    (', '.join(names), short(r)))
 
     date = opts.get('date')
