@@ -88,7 +88,8 @@ cat > collections.conf <<EOF
 $root=$root
 EOF
 
-hg serve -p $HGPORT2 -d --pid-file=hg.pid --webdir-conf collections.conf \
+hg serve --config web.baseurl=http://hg.example.com:8080/ -p $HGPORT2 -d \
+    --pid-file=hg.pid --webdir-conf collections.conf \
     -A access-collections.log -E error-collections.log
 cat hg.pid >> $DAEMON_PIDS
 

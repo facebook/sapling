@@ -311,10 +311,10 @@ d
 200 Script output follows
 
 
-/a/
-/a/.hg/patches/
-/b/
-/c/
+http://hg.example.com:8080/a/
+http://hg.example.com:8080/a/.hg/patches/
+http://hg.example.com:8080/b/
+http://hg.example.com:8080/c/
 
 200 Script output follows
 
