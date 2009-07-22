@@ -7,30 +7,30 @@
 
 '''perform automatic newline conversion
 
-To perform automatic newline conversion, use:
+To perform automatic newline conversion, use::
 
-[extensions]
-hgext.win32text =
-[encode]
-** = cleverencode:
-# or ** = macencode:
+  [extensions]
+  hgext.win32text =
+  [encode]
+  ** = cleverencode:
+  # or ** = macencode:
 
-[decode]
-** = cleverdecode:
-# or ** = macdecode:
+  [decode]
+  ** = cleverdecode:
+  # or ** = macdecode:
 
-If not doing conversion, to make sure you do not commit CRLF/CR by accident:
+If not doing conversion, to make sure you do not commit CRLF/CR by accident::
 
-[hooks]
-pretxncommit.crlf = python:hgext.win32text.forbidcrlf
-# or pretxncommit.cr = python:hgext.win32text.forbidcr
+  [hooks]
+  pretxncommit.crlf = python:hgext.win32text.forbidcrlf
+  # or pretxncommit.cr = python:hgext.win32text.forbidcr
 
 To do the same check on a server to prevent CRLF/CR from being
-pushed or pulled:
+pushed or pulled::
 
-[hooks]
-pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
-# or pretxnchangegroup.cr = python:hgext.win32text.forbidcr
+  [hooks]
+  pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
+  # or pretxnchangegroup.cr = python:hgext.win32text.forbidcr
 '''
 
 from mercurial.i18n import _
