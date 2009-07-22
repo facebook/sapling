@@ -15,7 +15,7 @@ automatically expanded into links or any other arbitrary expression, much like
 InterWiki does.
 
 A few example patterns (link to bug tracking, etc.) that may be used in your
-hgrc:
+hgrc::
 
   [interhg]
   issues = s!issue(\\d+)!<a href="http://bts/issue\\1">issue\\1</a>!
