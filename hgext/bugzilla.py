@@ -20,58 +20,82 @@ prior to 2.18 is replaced in 2.18 and subsequent versions by
 pushing the change; you will need to ensure the Bugzilla install file
 permissions are set appropriately.
 
-Configuring the extension:
+The extension is configured through three different configuration sections.
+These keys are recognized in the [bugzilla] section:
 
-    [bugzilla]
+host
+  Hostname of the MySQL server holding the Bugzilla database.
 
-    host       Hostname of the MySQL server holding the Bugzilla database.
-    db         Name of the Bugzilla database in MySQL. Default 'bugs'.
-    user       Username to use to access MySQL server. Default 'bugs'.
-    password   Password to use to access MySQL server.
-    timeout    Database connection timeout (seconds). Default 5.
-    version    Bugzilla version. Specify '3.0' for Bugzilla versions 3.0 and
-               later, '2.18' for Bugzilla versions from 2.18 and '2.16' for
-               versions prior to 2.18.
-    bzuser     Fallback Bugzilla user name to record comments with, if
-               changeset committer cannot be found as a Bugzilla user.
-    bzdir      Bugzilla install directory. Used by default notify. Default
-               '/var/www/html/bugzilla'.
-    notify     The command to run to get Bugzilla to send bug change
-               notification emails. Substitutes from a map with 3 keys,
-               'bzdir', 'id' (bug id) and 'user' (committer bugzilla email).
-               Default depends on version; from 2.18 it is "cd %(bzdir)s &&
-               perl -T contrib/sendbugmail.pl %(id)s %(user)s".
-    regexp     Regular expression to match bug IDs in changeset commit
-               message. Must contain one "()" group. The default expression
-               matches 'Bug 1234', 'Bug no. 1234', 'Bug number 1234', 'Bugs
-               1234,5678', 'Bug 1234 and 5678' and variations thereof.
-               Matching is case insensitive.
-    style      The style file to use when formatting comments.
-    template   Template to use when formatting comments. Overrides style if
-               specified. In addition to the usual Mercurial keywords, the
-               extension specifies:
-                   {bug}       The Bugzilla bug ID.
-                   {root}      The full pathname of the Mercurial repository.
-                   {webroot}   Stripped pathname of the Mercurial repository.
-                   {hgweb}     Base URL for browsing Mercurial repositories.
-               Default 'changeset {node|short} in repo {root} refers '
-                       'to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}'
-    strip      The number of slashes to strip from the front of {root} to
-               produce {webroot}. Default 0.
-    usermap    Path of file containing Mercurial committer ID to Bugzilla user
-               ID mappings. If specified, the file should contain one mapping
-               per line, "committer"="Bugzilla user". See also the [usermap]
-               section.
+db
+  Name of the Bugzilla database in MySQL. Default 'bugs'.
 
-    [usermap]
-    Any entries in this section specify mappings of Mercurial committer ID to
-    Bugzilla user ID. See also [bugzilla].usermap. "committer"="Bugzilla user"
+user
+  Username to use to access MySQL server. Default 'bugs'.
 
-    [web]
-    baseurl    Base URL for browsing Mercurial repositories. Reference from
-               templates as {hgweb}.
+password
+  Password to use to access MySQL server.
 
-Activating the extension:
+timeout
+  Database connection timeout (seconds). Default 5.
+
+version
+  Bugzilla version. Specify '3.0' for Bugzilla versions 3.0 and later, '2.18'
+  for Bugzilla versions from 2.18 and '2.16' for versions prior to 2.18.
+
+bzuser
+  Fallback Bugzilla user name to record comments with, if changeset committer
+  cannot be found as a Bugzilla user.
+
+bzdir
+   Bugzilla install directory. Used by default notify. Default
+   '/var/www/html/bugzilla'.
+
+notify
+  The command to run to get Bugzilla to send bug change notification emails.
+  Substitutes from a map with 3 keys, 'bzdir', 'id' (bug id) and 'user'
+  (committer bugzilla email). Default depends on version; from 2.18 it is "cd
+  %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s".
+
+regexp
+  Regular expression to match bug IDs in changeset commit message. Must
+  contain one "()" group. The default expression matches 'Bug 1234', 'Bug no.
+  1234', 'Bug number 1234', 'Bugs 1234,5678', 'Bug 1234 and 5678' and
+  variations thereof. Matching is case insensitive.
+
+style
+  The style file to use when formatting comments.
+
+template
+  Template to use when formatting comments. Overrides style if specified. In
+  addition to the usual Mercurial keywords, the extension specifies::
+
+    {bug}       The Bugzilla bug ID.
+    {root}      The full pathname of the Mercurial repository.
+    {webroot}   Stripped pathname of the Mercurial repository.
+    {hgweb}     Base URL for browsing Mercurial repositories.
+
+  Default 'changeset {node|short} in repo {root} refers '
+          'to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}'
+
+strip
+  The number of slashes to strip from the front of {root} to produce
+  {webroot}. Default 0.
+
+usermap
+  Path of file containing Mercurial committer ID to Bugzilla user ID mappings.
+  If specified, the file should contain one mapping per line,
+  "committer"="Bugzilla user". See also the [usermap] section.
+
+The [usermap] section is used to specify mappings of Mercurial committer ID to
+Bugzilla user ID. See also [bugzilla].usermap. "committer"="Bugzilla user"
+
+Finally, the [web] section supports one entry:
+
+baseurl
+  Base URL for browsing Mercurial repositories. Reference from templates as
+  {hgweb}.
+
+Activating the extension::
 
     [extensions]
     hgext.bugzilla =
@@ -84,7 +108,7 @@ Example configuration:
 
 This example configuration is for a collection of Mercurial repositories in
 /var/local/hg/repos/ used with a local Bugzilla 3.2 installation in
-/opt/bugzilla-3.2.
+/opt/bugzilla-3.2. ::
 
     [bugzilla]
     host=localhost
@@ -101,7 +125,7 @@ This example configuration is for a collection of Mercurial repositories in
     [usermap]
     user@emaildomain.com=user.name@bugzilladomain.com
 
-Commits add a comment to the Bugzilla bug record of the form:
+Commits add a comment to the Bugzilla bug record of the form::
 
     Changeset 3b16791d6642 in repository-name.
     http://dev.domain.com/hg/repository-name/rev/3b16791d6642
