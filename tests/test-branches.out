@@ -63,26 +63,7 @@ a branch name much longer than the default justification used by branches 7:10ff
 c                              6:589736a22561 (inactive)
 a                              5:d8cbc61dbaa6 (inactive)
 default                        0:19709c5a4e75 (inactive)
-changeset:   10:bfbe841b666e
-branch:      b
-tag:         tip
-user:        test
-date:        Thu Jan 01 00:00:09 1970 +0000
-summary:     adding another cset to branch b
-
-changeset:   8:eebb944467c9
-branch:      b
-parent:      4:aee39cd168d0
-user:        test
-date:        Thu Jan 01 00:00:07 1970 +0000
-summary:     adding cset to branch b
-
-changeset:   7:10ff5895aa57
-branch:      a branch name much longer than the default justification used by branches
-user:        test
-date:        Thu Jan 01 00:00:06 1970 +0000
-summary:     Adding d branch
-
+abort: you must specify a branch to use --closed
 changeset:   10:bfbe841b666e
 branch:      b
 tag:         tip
