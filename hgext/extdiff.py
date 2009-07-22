@@ -13,7 +13,7 @@ programs are called with a configurable set of options and two non-option
 arguments: paths to directories containing snapshots of files to compare.
 
 The `extdiff' extension also allows to configure new diff commands, so you do
-not need to type "hg extdiff -p kdiff3" always.
+not need to type "hg extdiff -p kdiff3" always. ::
 
   [extdiff]
   # add new command that runs GNU diff(1) in 'context diff' mode
