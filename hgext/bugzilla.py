@@ -116,7 +116,9 @@ This example configuration is for a collection of Mercurial repositories in
     version=3.0
     bzuser=unknown@domain.com
     bzdir=/opt/bugzilla-3.2
-    template=Changeset {node|short} in {root|basename}.\\n{hgweb}/{webroot}/rev/{node|short}\\n\\n{desc}\\n
+    template=Changeset {node|short} in {root|basename}.
+             {hgweb}/{webroot}/rev/{node|short}\\n
+             {desc}\\n
     strip=5
 
     [web]
