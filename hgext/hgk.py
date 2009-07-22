@@ -18,13 +18,13 @@ and the extension is shipped in the hgext repository, and needs to be enabled.
 
 The hg view command will launch the hgk Tcl script. For this command to work,
 hgk must be in your search path. Alternately, you can specify the path to hgk
-in your .hgrc file:
+in your .hgrc file::
 
   [hgk]
   path=/location/of/hgk
 
 hgk can make use of the extdiff extension to visualize revisions. Assuming you
-had already configured extdiff vdiff command, just add:
+had already configured extdiff vdiff command, just add::
 
   [hgk]
   vdiff=vdiff
