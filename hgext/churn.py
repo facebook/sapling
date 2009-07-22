@@ -102,7 +102,7 @@ def churn(ui, repo, *pats, **opts):
     Statistics are based on the number of changed lines, or alternatively the
     number of matching revisions if the --changesets option is specified.
 
-    Examples:
+    Examples::
 
       # display count of changed lines for every committer
       hg churn -t '{author|email}'
@@ -117,9 +117,9 @@ def churn(ui, repo, *pats, **opts):
       hg churn -f '%Y' -s
 
     It is possible to map alternate email addresses to a main address by
-    providing a file using the following format:
+    providing a file using the following format::
 
-    <alias email> <actual email>
+      <alias email> <actual email>
 
     Such a file may be specified with the --aliases option, otherwise a
     .hgchurn file will be looked for in the working directory root.
