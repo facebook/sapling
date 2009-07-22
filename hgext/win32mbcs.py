@@ -18,18 +18,21 @@ used to fix the issue with those encodings by wrapping some functions to
 convert to Unicode string before path operation.
 
 This extension is useful for:
- * Japanese Windows users using shift_jis encoding.
- * Chinese Windows users using big5 encoding.
- * All users who use a repository with one of problematic encodings on
-   case-insensitive file system.
+
+- Japanese Windows users using shift_jis encoding.
+- Chinese Windows users using big5 encoding.
+- All users who use a repository with one of problematic encodings on
+  case-insensitive file system.
 
 This extension is not needed for:
- * Any user who use only ASCII chars in path.
- * Any user who do not use any of problematic encodings.
+
+- Any user who use only ASCII chars in path.
+- Any user who do not use any of problematic encodings.
 
 Note that there are some limitations on using this extension:
- * You should use single encoding in one repository.
- * You should set same encoding for the repository by locale or HGENCODING.
+
+- You should use single encoding in one repository.
+- You should set same encoding for the repository by locale or HGENCODING.
 
 Path encoding conversion are done between Unicode and encoding.encoding which
 is decided by Mercurial from current locale setting or HGENCODING.
