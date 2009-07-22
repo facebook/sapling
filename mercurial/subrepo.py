@@ -107,7 +107,12 @@ def _abssource(repo, push=False):
         source = repo._subsource
         if source.startswith('/') or '://' in source:
             return source
-        return os.path.join(_abssource(repo._subparent), repo._subsource)
+        parent = _abssource(repo._subparent)
+        if '://' in parent:
+            if parent[-1] == '/':
+                parent = parent[:-1]
+            return parent + '/' + source
+        return os.path.join(parent, repo._subsource)
     if push and repo.ui.config('paths', 'default-push'):
         return repo.ui.config('paths', 'default-push', repo.root)
     return repo.ui.config('paths', 'default', repo.root)
