@@ -95,7 +95,7 @@ def draw_edges(edges, nodeline, interline):
         else:
             nodeline[2 * end] = "+"
             if start > end:
-                (start, end) = (end,start)
+                (start, end) = (end, start)
             for i in range(2 * start + 1, 2 * end):
                 if nodeline[i] != "+":
                     nodeline[i] = "-"

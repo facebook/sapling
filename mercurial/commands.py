@@ -663,9 +663,9 @@ def commit(ui, repo, *pats, **opts):
         ui.status(_('created new head\n'))
 
     if ui.debugflag:
-        ui.write(_('committed changeset %d:%s\n') % (rev,hex(node)))
+        ui.write(_('committed changeset %d:%s\n') % (rev, hex(node)))
     elif ui.verbose:
-        ui.write(_('committed changeset %d:%s\n') % (rev,short(node)))
+        ui.write(_('committed changeset %d:%s\n') % (rev, short(node)))
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit

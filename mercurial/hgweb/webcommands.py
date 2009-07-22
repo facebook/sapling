@@ -339,7 +339,7 @@ def tags(web, req, tmpl):
     i.reverse()
     parity = paritygen(web.stripecount)
 
-    def entries(notip=False,limit=0, **map):
+    def entries(notip=False, limit=0, **map):
         count = 0
         for k, n in i:
             if notip and k == "tip":

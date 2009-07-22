@@ -78,7 +78,7 @@ def _verify(repo):
                 msg = _("rev %d points to unexpected changeset %d")
             err(None, msg % (i, lr), f)
             if linkrevs:
-                warn(_(" (expected %s)") % " ".join(map(str,linkrevs)))
+                warn(_(" (expected %s)") % " ".join(map(str, linkrevs)))
             lr = None # can't be trusted
 
         try:

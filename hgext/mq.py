@@ -1850,7 +1850,7 @@ def prev(ui, repo, **opts):
                      summary=opts.get('summary'))
 
 def setupheaderopts(ui, opts):
-    def do(opt,val):
+    def do(opt, val):
         if not opts[opt] and opts['current' + opt]:
             opts[opt] = val
     do('user', ui.username())
