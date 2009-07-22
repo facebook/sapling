@@ -372,11 +372,12 @@ def files(ui, repo, *pats, **opts):
     Use -u/--untracked to list untracked files as well.
 
     With -a/--all and -v/--verbose the codes used to show the status of files
-    are:
-    K = keyword expansion candidate
-    k = keyword expansion candidate (untracked)
-    I = ignored
-    i = ignored (untracked)
+    are::
+
+      K = keyword expansion candidate
+      k = keyword expansion candidate (untracked)
+      I = ignored
+      i = ignored (untracked)
     '''
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
