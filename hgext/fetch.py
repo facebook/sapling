@@ -120,8 +120,9 @@ def fetch(ui, repo, source='default', **opts):
             err = hg.merge(repo, secondparent, remind=False)
 
         if not err:
+            # we don't translate commit messages
             message = (cmdutil.logmessage(opts) or
-                       (_('Automated merge with %s') %
+                       ('Automated merge with %s' %
                         url.removeauth(other.url())))
             editor = cmdutil.commiteditor
             if opts.get('force_editor') or opts.get('edit'):

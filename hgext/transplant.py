@@ -206,6 +206,7 @@ class transplanter(object):
             (user, date, message) = self.filter(filter, cl, patchfile)
 
         if log:
+            # we don't translate messages inserted into commits
             message += '\n(transplanted from %s)' % revlog.hex(node)
 
         self.ui.status(_('applying %s\n') % revlog.short(node))

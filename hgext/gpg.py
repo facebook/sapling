@@ -251,7 +251,8 @@ def sign(ui, repo, *revs, **opts):
 
     message = opts['message']
     if not message:
-        message = "\n".join([_("Added signature for changeset %s")
+        # we don't translate commit messages
+        message = "\n".join(["Added signature for changeset %s"
                              % hgnode.short(n)
                              for n in nodes])
     try:
