@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import os, time
+import os, re, time
 from mercurial.i18n import _
 from mercurial import ui, hg, util, templater
 from mercurial import error, encoding
@@ -225,7 +225,9 @@ class hgwebdir(object):
                     parts.insert(0, req.env['PATH_INFO'].rstrip('/'))
                 if req.env['SCRIPT_NAME']:
                     parts.insert(0, req.env['SCRIPT_NAME'])
-                url = ('/'.join(parts).replace("//", "/")) + '/'
+                m = re.match('((?:https?://)?)(.*)', '/'.join(parts))
+                # squish repeated slashes out of the path component
+                url = m.group(1) + re.sub('/+', '/', m.group(2)) + '/'
 
                 # update time with local timezone
                 try:
