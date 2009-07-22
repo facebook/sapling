@@ -163,6 +163,7 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped=None,
     newrev = nullrev
     try:
         if last:
+            # we don't translate commit messages
             commitmsg = 'Collapsed revision'
             for rebased in state:
                 if rebased not in skipped:
