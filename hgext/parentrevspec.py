@@ -10,15 +10,15 @@
 This extension allows you to use git-style suffixes to refer to the ancestors
 of a specific revision.
 
-For example, if you can refer to a revision as "foo", then:
+For example, if you can refer to a revision as "foo", then::
 
-- foo^N = Nth parent of foo
+  foo^N = Nth parent of foo
   foo^0 = foo
   foo^1 = first parent of foo
   foo^2 = second parent of foo
   foo^  = foo^1
 
-- foo~N = Nth first grandparent of foo
+  foo~N = Nth first grandparent of foo
   foo~0 = foo
   foo~1 = foo^1 = foo^ = first parent of foo
   foo~2 = foo^1^1 = foo^^ = first parent of first parent of foo
