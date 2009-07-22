@@ -28,33 +28,33 @@ available. Effects are rendered with the ECMA-48 SGR control function (aka
 ANSI escape codes). This module also provides the render_text function, which
 can be used to add effects to any text.
 
-Default effects may be overridden from the .hgrc file:
+Default effects may be overridden from the .hgrc file::
 
-[color]
-status.modified = blue bold underline red_background
-status.added = green bold
-status.removed = red bold blue_background
-status.deleted = cyan bold underline
-status.unknown = magenta bold underline
-status.ignored = black bold
+  [color]
+  status.modified = blue bold underline red_background
+  status.added = green bold
+  status.removed = red bold blue_background
+  status.deleted = cyan bold underline
+  status.unknown = magenta bold underline
+  status.ignored = black bold
 
-# 'none' turns off all effects
-status.clean = none
-status.copied = none
+  # 'none' turns off all effects
+  status.clean = none
+  status.copied = none
 
-qseries.applied = blue bold underline
-qseries.unapplied = black bold
-qseries.missing = red bold
+  qseries.applied = blue bold underline
+  qseries.unapplied = black bold
+  qseries.missing = red bold
 
-diff.diffline = bold
-diff.extended = cyan bold
-diff.file_a = red bold
-diff.file_b = green bold
-diff.hunk = magenta
-diff.deleted = red
-diff.inserted = green
-diff.changed = white
-diff.trailingwhitespace = bold red_background
+  diff.diffline = bold
+  diff.extended = cyan bold
+  diff.file_a = red bold
+  diff.file_b = green bold
+  diff.hunk = magenta
+  diff.deleted = red
+  diff.inserted = green
+  diff.changed = white
+  diff.trailingwhitespace = bold red_background
 '''
 
 import os, sys
