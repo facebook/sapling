@@ -439,9 +439,9 @@ def transplant(ui, repo, *revs, **opts):
 
     Selected changesets will be applied on top of the current working
     directory with the log of the original changeset. If --log is specified,
-    log messages will have a comment appended of the form:
+    log messages will have a comment appended of the form::
 
-    (transplanted from CHANGESETHASH)
+      (transplanted from CHANGESETHASH)
 
     You can rewrite the changelog message with the --filter option. Its
     argument will be invoked with the current changelog message as $1 and the
