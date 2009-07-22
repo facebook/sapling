@@ -16,7 +16,7 @@ hg update).
 
 By default, when several bookmarks point to the same changeset, they will all
 move forward together. It is possible to obtain a more git-like experience by
-adding the following configuration option to your .hgrc:
+adding the following configuration option to your .hgrc::
 
   [bookmarks]
   track.current = True
