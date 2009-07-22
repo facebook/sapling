@@ -14,7 +14,7 @@
 
 '''browse command output with an external pager
 
-To set the pager that should be used, set the application variable:
+To set the pager that should be used, set the application variable::
 
   [pager]
   pager = LESS='FSRX' less
@@ -22,18 +22,18 @@ To set the pager that should be used, set the application variable:
 If no pager is set, the pager extensions uses the environment variable $PAGER.
 If neither pager.pager, nor $PAGER is set, no pager is used.
 
-If you notice "BROKEN PIPE" error messages, you can disable them by setting:
+If you notice "BROKEN PIPE" error messages, you can disable them by setting::
 
   [pager]
   quiet = True
 
 You can disable the pager for certain commands by adding them to the
-pager.ignore list:
+pager.ignore list::
 
   [pager]
   ignore = version, help, update
 
-You can also enable the pager only for certain commands using pager.attend:
+You can also enable the pager only for certain commands using pager.attend::
 
   [pager]
   attend = log
