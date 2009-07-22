@@ -28,7 +28,7 @@ With the -d/--diffstat option, you will be prompted for each changeset with a
 diffstat summary and the changeset summary, so you can be sure you are sending
 the right changes.
 
-To configure other defaults, add a section like this to your hgrc file:
+To configure other defaults, add a section like this to your hgrc file::
 
   [email]
   from = My Name <my@email>
@@ -49,13 +49,13 @@ up once for each patchbomb message, so you can verify everything is alright.
 The -m/--mbox option is also very useful. Instead of previewing each patchbomb
 message in a pager or sending the messages directly, it will create a UNIX
 mailbox file with the patch emails. This mailbox file can be previewed with
-any mail user agent which supports UNIX mbox files, e.g. with mutt:
+any mail user agent which supports UNIX mbox files, e.g. with mutt::
 
   % mutt -R -f mbox
 
 When you are previewing the patchbomb messages, you can use `formail' (a
 utility that is commonly installed as part of the procmail package), to send
-each message out:
+each message out::
 
   % formail -s sendmail -bm -t < mbox
 
