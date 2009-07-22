@@ -4,37 +4,37 @@
 """hooks for integrating with the CIA.vc notification service
 
 This is meant to be run as a changegroup or incoming hook. To configure it,
-set the following options in your hgrc:
+set the following options in your hgrc::
 
-[cia]
-# your registered CIA user name
-user = foo
-# the name of the project in CIA
-project = foo
-# the module (subproject) (optional)
-#module = foo
-# Append a diffstat to the log message (optional)
-#diffstat = False
-# Template to use for log messages (optional)
-#template = {desc}\\n{baseurl}/rev/{node}-- {diffstat}
-# Style to use (optional)
-#style = foo
-# The URL of the CIA notification service (optional)
-# You can use mailto: URLs to send by email, eg
-# mailto:cia@cia.vc
-# Make sure to set email.from if you do this.
-#url = http://cia.vc/
-# print message instead of sending it (optional)
-#test = False
+  [cia]
+  # your registered CIA user name
+  user = foo
+  # the name of the project in CIA
+  project = foo
+  # the module (subproject) (optional)
+  #module = foo
+  # Append a diffstat to the log message (optional)
+  #diffstat = False
+  # Template to use for log messages (optional)
+  #template = {desc}\\n{baseurl}/rev/{node}-- {diffstat}
+  # Style to use (optional)
+  #style = foo
+  # The URL of the CIA notification service (optional)
+  # You can use mailto: URLs to send by email, eg
+  # mailto:cia@cia.vc
+  # Make sure to set email.from if you do this.
+  #url = http://cia.vc/
+  # print message instead of sending it (optional)
+  #test = False
 
-[hooks]
-# one of these:
-changegroup.cia = python:hgcia.hook
-#incoming.cia = python:hgcia.hook
+  [hooks]
+  # one of these:
+  changegroup.cia = python:hgcia.hook
+  #incoming.cia = python:hgcia.hook
 
-[web]
-# If you want hyperlinks (optional)
-baseurl = http://server/path/to/repo
+  [web]
+  # If you want hyperlinks (optional)
+  baseurl = http://server/path/to/repo
 """
 
 from mercurial.i18n import _
