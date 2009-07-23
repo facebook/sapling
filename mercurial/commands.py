@@ -1359,6 +1359,8 @@ def heads(ui, repo, *branchrevs, **opts):
     closed = opts.get('closed')
     hideinactive, _heads = opts.get('active'), None
     if not branchrevs:
+        if closed:
+            raise error.Abort(_('you must specify a branch to use --closed'))
         # Assume we're looking repo-wide heads if no revs were specified.
         heads = repo.heads(start)
     else:
@@ -3013,7 +3015,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
             raise util.Abort(_("you can't specify a revision and a date"))
         rev = cmdutil.finddate(ui, repo, date)
 
-    if clean:
+    if clean or check:
         return hg.clean(repo, rev)
     else:
         return hg.update(repo, rev)
@@ -3175,7 +3177,7 @@ table = {
          [('a', 'active', False,
            _('show only branches that have unmerged heads')),
           ('c', 'closed', False,
-           _('show normal and closed heads'))],
+           _('show normal and closed branches'))],
          _('[-a]')),
     "bundle":
         (bundle,
@@ -3292,9 +3294,9 @@ table = {
         (heads,
          [('r', 'rev', '', _('show only heads which are descendants of REV')),
           ('a', 'active', False,
-           _('show only the active heads from open branches')),
+           _('show only the active branch heads from open branches')),
           ('c', 'closed', False,
-           _('show normal and closed heads')),
+           _('show normal and closed branch heads')),
          ] + templateopts,
          _('[-r STARTREV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),
