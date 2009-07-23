@@ -37,20 +37,11 @@ echo beta > beta
 git add beta
 commit -m 'add beta'
 
-# dulwich does not presently support local git repos, workaround
 cd ..
-git daemon --base-path="$(pwd)"\
- --listen=localhost\
- --export-all\
- --pid-file=gitdaemon.pid \
- --detach --reuseaddr
 
-hg clone git://localhost/gitrepo hgrepo
+hg clone gitrepo hgrepo
 cd hgrepo
 hg log --graph
 
 echo % we should have some bookmarks
 hg book
-
-cd ..
-kill `cat gitdaemon.pid`

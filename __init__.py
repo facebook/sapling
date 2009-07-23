@@ -14,8 +14,12 @@ project that is in Git.  A bridger of worlds, this plugin be.
 
 '''
 
-from mercurial import commands, extensions, hg
+from mercurial import commands, extensions, hg, util
 from mercurial.i18n import _
+
+from dulwich.repo import Repo
+from dulwich.errors import NotGitRepository
+
 import gitrepo, hgrepo
 from git_handler import GitHandler
 
@@ -23,6 +27,18 @@ from git_handler import GitHandler
 # also hg clone git+ssh://git@github.com/schacon/simplegit.git
 hg.schemes['git'] = gitrepo
 hg.schemes['git+ssh'] = gitrepo
+
+_oldlocal = hg.schemes['file']
+
+def _local(path):
+    p = util.drop_scheme('file', path)
+    try:
+        Repo(p)
+        return gitrepo
+    except NotGitRepository:
+        return _oldlocal(path)
+
+hg.schemes['file'] = _local
 
 def reposetup(ui, repo):
     klass = hgrepo.generate_repo_subclass(repo.__class__)
