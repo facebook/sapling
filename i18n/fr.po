@@ -86,7 +86,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-07-01 08:41+0200\n"
+"POT-Creation-Date: 2009-07-18 22:46+0200\n"
 "PO-Revision-Date: 2009-05-14 13:06+0200\n"
 "Last-Translator: Cedric Duval <cedricduval@free.fr>\n"
 "Language-Team: French\n"
@@ -1026,7 +1026,9 @@ msgstr ""
 msgid "CVS pserver authentication failed"
 msgstr ""
 
-msgid "server sucks"
+#, python-format
+msgid ""
+"unexpected response from CVS server (expected \"Valid-requests\", but got %r)"
 msgstr ""
 
 #, python-format
@@ -2611,7 +2613,6 @@ msgid ""
 "\n"
 "    To stop managing a patch and move it into permanent history,\n"
 "    use the qfinish command."
-
 msgstr ""
 "supprime des patchs de la pile\n"
 "\n"
@@ -4607,14 +4608,16 @@ msgstr ""
 " zc-test = http://example.com:8000/test\n"
 
 msgid "archive prefix contains illegal components"
-msgstr ""
+msgstr "le préfixe donné pour l'archive contient des composants non autorisés"
 
 msgid "cannot give prefix when archiving to files"
 msgstr ""
+"impossible de donner un préfixe pour une création d'archive vers un "
+"répertoire (de type \"files\")"
 
 #, python-format
 msgid "unknown archive type '%s'"
-msgstr ""
+msgstr "type d'archive inconnu : '%s'"
 
 msgid "invalid changegroup"
 msgstr ""
@@ -4646,75 +4649,78 @@ msgid "premature EOF reading chunk (got %d bytes, expected %d)"
 msgstr ""
 
 msgid "empty username"
-msgstr ""
+msgstr "le nom d'utilisateur est vide"
 
 #, python-format
 msgid "username %s contains a newline"
-msgstr ""
+msgstr "le nom d'utilisateur %s contient un saut de ligne"
 
 msgid "options --message and --logfile are mutually exclusive"
-msgstr ""
+msgstr "les options --message et --logfile s'excluent mutuellement"
 
 #, python-format
 msgid "can't read commit message '%s': %s"
 msgstr ""
 
 msgid "limit must be a positive integer"
-msgstr ""
+msgstr "la limite spécifiée doit être un entier positif"
 
 msgid "limit must be positive"
-msgstr ""
+msgstr "la limite doit être positive"
 
 msgid "too many revisions specified"
-msgstr ""
+msgstr "trop de révisions spécifiées"
 
 #, python-format
 msgid "invalid format spec '%%%s' in output filename"
 msgstr ""
+"'%%%s'spécification de format invalide dans le nom du fichier de sortie"
 
 #, python-format
 msgid "adding %s\n"
-msgstr ""
+msgstr "ajout de %s\n"
 
 #, python-format
 msgid "removing %s\n"
-msgstr ""
+msgstr "suppression de %s\n"
 
 #, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr ""
+"suppression de %s plannifiée, en tant que renommage de %s (similaire à %d%"
+"%)\n"
 
 #, python-format
 msgid "%s: not copying - file is not managed\n"
-msgstr ""
+msgstr "%s: le fichier n'est pas suivi, pas de copie\n"
 
 #, python-format
 msgid "%s: not copying - file has been marked for remove\n"
-msgstr ""
+msgstr "%s: le fichier a été marqué pour suppression, pas de copie\n"
 
 #, python-format
 msgid "%s: not overwriting - %s collides with %s\n"
-msgstr ""
+msgstr "%s: %s entre en collision avec %s, pas d'écrasement\n"
 
 #, python-format
 msgid "%s: not overwriting - file exists\n"
-msgstr ""
+msgstr "%s: le fichier existe, pas d'écrasement\n"
 
 #, python-format
 msgid "%s: deleted in working copy\n"
-msgstr ""
+msgstr "%s: supprimé dans la copie de travail\n"
 
 #, python-format
 msgid "%s: cannot copy - %s\n"
-msgstr ""
+msgstr "%s: impossible de copier - %s\n"
 
 #, python-format
 msgid "moving %s to %s\n"
-msgstr ""
+msgstr "déplacement de %s vers %s\n"
 
 #, python-format
 msgid "copying %s to %s\n"
-msgstr ""
+msgstr "copie de %s vers %s\n"
 
 #, python-format
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
@@ -4839,6 +4845,10 @@ msgid "HG: branch '%s'"
 msgstr ""
 
 #, python-format
+msgid "HG: subrepo %s"
+msgstr ""
+
+#, python-format
 msgid "HG: added %s"
 msgstr ""
 
@@ -4945,15 +4955,41 @@ msgid ""
 "    removed.\n"
 "    "
 msgstr ""
+"crée une archive du dépôt à une révision donnée, sans conserver "
+"l'historique\n"
+"\n"
+"    Par défaut l'archive est créée à partir de la révision parente\n"
+"    du répertoire de travail. Une autre révision peut être spécifiée\n"
+"    à l'aide de -r/--rev.\n"
+"\n"
+"    -t/--type permet de spécifier le type d'archive à créer, parmi :\n"
+"\n"
+"     \"files\" (par défaut) : un répertoire rempli de fichiers\n"
+"     \"tar\" : une archive tar non compressée\n"
+"     \"tbz2\" : une archive tar compressée avec bzip2\n"
+"     \"tgz\" : une archive tar compressée avec gzip\n"
+"     \"uzip\" : une archive zip non compressée\n"
+"     \"zip\" : une archive zip compressée avec l'algorithme deflate\n"
+"\n"
+"    Le nom exact de l'archive ou du répertoire de destination est\n"
+"    donné à l'aide d'une chaîne de format. Consulter 'hg help export'\n"
+"    pour plus de détails.\n"
+"\n"
+"    Un chemin relatif est ajouté devant chaque membre de l'archive,\n"
+"    par défaut le nom du fichier d'archive (sans répertoires ni\n"
+"    suffixes). Un préfixe différent peut être spécifié avec\n"
+"    -p/--prefix.\n"
+"    "
 
 msgid "no working directory: please specify a revision"
-msgstr ""
+msgstr "pas de répertoire de travail, veuillez spécifier une révision"
 
 msgid "repository root cannot be destination"
-msgstr ""
+msgstr "le répertoire racine ne peut servir de destination"
 
 msgid "cannot archive plain files to stdout"
 msgstr ""
+"impossible d'envoyer une archive de simples fichiers vers la sortie standard"
 
 msgid ""
 "reverse effect of earlier changeset\n"
@@ -5036,50 +5072,79 @@ msgid ""
 "    non-zero exit status means the revision is bad.\n"
 "    "
 msgstr ""
+"recherche de \"changesets\" par dichotomie\n"
+"\n"
+"    Cette commande aide à trouver les \"changesets\" étant à\n"
+"    l'origine de problèmes. Pour l'utiliser, marquez comme étant\n"
+"    mauvaise la première révision pour laquelle vous avez relevé les\n"
+"    symptômes, puis comme bonne la dernière révision connue pour\n"
+"    être exempte du problème. Bisect va alors mettre à jour votre\n"
+"    répertoire de travail à une révision à tester (à moins que\n"
+"    -U/--noupdate n'ait été spécifié). Une fois vos tests réalisés,\n"
+"    indiquez si le problème était présent ou non. Bisect\n"
+"    recommencera alors pour une autre révision candidate jusqu'à\n"
+"    être en mesure d'annoncer la révision fautive.\n"
+"\n"
+"    Vous pouvez aussi passer une révision en argument lors du\n"
+"    marquage afin d'éviter l'étape manuelle de mise à jour du\n"
+"    répertoire de travail à cette révision.\n"
+"\n"
+"    Vous pouvez fournir une commande pour automatiser la recherche\n"
+"    par dichotomie. Son code de retour sera utilisé pour marquer les\n"
+"    révisions : 0 indique une révision sans problème, 125 qu'il ne\n"
+"    faut pas prendre cette révision en compte, 127 (commande\n"
+"    introuvable) cause l'abandon du processus de recherche, et tout\n"
+"    autre code de retour non nul désigne une révision affectée par\n"
+"    le problème.\n"
+"    "
 
 msgid "The first good revision is:\n"
-msgstr ""
+msgstr "La première révision exempte du problème est :\n"
 
 msgid "The first bad revision is:\n"
-msgstr ""
+msgstr "La première révision présentant le problème est :\n"
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
 msgstr ""
+"Certaines révisions n'ayant pas été considérées, la première révision\n"
+"exempte du problème pourrait être parmi :\n"
 
 msgid "Due to skipped revisions, the first bad revision could be any of:\n"
 msgstr ""
+"Certaines révisions n'ayant pas été considérées, la première révision\n"
+"présentant le problème pourrait être parmi :\n"
 
 msgid "cannot bisect (no known good revisions)"
-msgstr ""
+msgstr "dichotomie impossible (pas de bonne révision connue)"
 
 msgid "cannot bisect (no known bad revisions)"
-msgstr ""
+msgstr "dichotomie impossible (pas de mauvaise révision connue)"
 
 msgid "(use of 'hg bisect <cmd>' is deprecated)\n"
-msgstr ""
+msgstr "('hg bisect <cmd>' ne devrait plus être utilisé)\n"
 
 msgid "incompatible arguments"
-msgstr ""
+msgstr "arguments incompatibles"
 
 #, python-format
 msgid "cannot find executable: %s"
-msgstr ""
+msgstr "exécutable %s introuvable"
 
 #, python-format
 msgid "failed to execute %s"
-msgstr ""
+msgstr "impossible d'exécuter %s"
 
 #, python-format
 msgid "%s killed"
-msgstr ""
+msgstr "%s a été tué"
 
 #, python-format
 msgid "Changeset %d:%s: %s\n"
-msgstr ""
+msgstr "\"Changeset\" %d:%s: %s\n"
 
 #, python-format
 msgid "Testing changeset %s:%s (%s changesets remaining, ~%s tests)\n"
-msgstr ""
+msgstr "Test du \"changeset\" %s:%s (%s \"changesets\" restant, ~%s tests)\n"
 
 msgid ""
 "set or show the current branch name\n"
@@ -5097,7 +5162,8 @@ msgid ""
 "    the parent of the working directory, negating a previous branch\n"
 "    change.\n"
 "\n"
-"    Use the command 'hg update' to switch to an existing branch.\n"
+"    Use the command 'hg update' to switch to an existing branch. Use\n"
+"    'hg commit --close-branch' to mark this branch as closed.\n"
 "    "
 msgstr ""
 
@@ -5116,9 +5182,11 @@ msgid ""
 "list repository named branches\n"
 "\n"
 "    List the repository's named branches, indicating which ones are\n"
-"    inactive. If -a/--active is specified, only show active branches.\n"
+"    inactive. If -c/--closed is specified, also list branches which have\n"
+"    been marked closed (see hg commit --close-branch).\n"
 "\n"
-"    A branch is considered active if it contains repository heads.\n"
+"    If -a/--active is specified, only show active branches. A branch\n"
+"    is considered active if it contains repository heads.\n"
 "\n"
 "    Use the command 'hg update' to switch to an existing branch.\n"
 "    "
@@ -5239,6 +5307,9 @@ msgid ""
 "\n"
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
+msgstr ""
+
+msgid "nothing changed\n"
 msgstr ""
 
 msgid "created new head\n"
@@ -5569,7 +5640,8 @@ msgid ""
 "    any descendants on the same branch. A branch head could be a true head\n"
 "    or it could be the last changeset on a branch before a new branch\n"
 "    was created. If none of the branch heads are true heads, the branch\n"
-"    is considered inactive.\n"
+"    is considered inactive. If -c/--closed is specified, also show branch\n"
+"    heads marked closed (see hg commit --close-branch).\n"
 "\n"
 "    If STARTREV is specified only those heads (or branch heads) that\n"
 "    are descendants of STARTREV will be displayed.\n"
@@ -6503,16 +6575,16 @@ msgid "do not pass files through decoders"
 msgstr ""
 
 msgid "directory prefix for files in archive"
-msgstr ""
+msgstr "chemin préfixé aux fichiers de l'archive"
 
 msgid "revision to distribute"
-msgstr ""
+msgstr "révision à distribuer"
 
 msgid "type of distribution to create"
-msgstr ""
+msgstr "type de distribution à créer"
 
 msgid "[OPTION]... DEST"
-msgstr ""
+msgstr "[OPTION]... DEST"
 
 msgid "merge with old dirstate parent after backout"
 msgstr ""
@@ -6527,25 +6599,25 @@ msgid "[OPTION]... [-r] REV"
 msgstr ""
 
 msgid "reset bisect state"
-msgstr ""
+msgstr "réinitialiser l'état de la recherche par dichotomie"
 
 msgid "mark changeset good"
-msgstr ""
+msgstr "marquer la révision comme \"bonne\""
 
 msgid "mark changeset bad"
-msgstr ""
+msgstr "marquer la révision comme \"mauvaise\""
 
 msgid "skip testing changeset"
-msgstr ""
+msgstr "ne pas considérer la révision"
 
 msgid "use command to check changeset state"
-msgstr ""
+msgstr "utiliser une commande pour tester l'état des révisions"
 
 msgid "do not update to target"
-msgstr ""
+msgstr "ne pas mettre à jour à la révision cible"
 
 msgid "[-gbsr] [-c CMD] [REV]"
-msgstr ""
+msgstr "[-gbsr] [-c CMD] [REV]"
 
 msgid "set branch name even if it shadows an existing branch"
 msgstr ""
@@ -6557,6 +6629,9 @@ msgid "[-fC] [NAME]"
 msgstr ""
 
 msgid "show only branches that have unmerged heads"
+msgstr ""
+
+msgid "show normal and closed heads"
 msgstr ""
 
 msgid "[-a]"
@@ -6704,9 +6779,6 @@ msgid "show only heads which are descendants of REV"
 msgstr ""
 
 msgid "show only the active heads from open branches"
-msgstr ""
-
-msgid "show normal and closed heads"
 msgstr ""
 
 msgid "[-r STARTREV] [REV]..."
@@ -7007,13 +7079,13 @@ msgstr ""
 
 #, python-format
 msgid "config error at %s:%d: '%s'"
-msgstr ""
+msgstr "erreur de configuration à %s:%d : '%s'"
 
 msgid "not found in manifest"
 msgstr ""
 
 msgid "branch name not in UTF-8!"
-msgstr ""
+msgstr "le nom de la branche n'est pas en UTF-8 !"
 
 #, python-format
 msgid "  searching for copies back to rev %d\n"
@@ -7088,21 +7160,23 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s\n"
-msgstr ""
+msgstr "abandon : %s\n"
 
 #, python-format
 msgid ""
 "hg: command '%s' is ambiguous:\n"
 "    %s\n"
 msgstr ""
+"hg: la commande '%s' est ambiguë :\n"
+"    %s\n"
 
 #, python-format
 msgid "hg: %s\n"
-msgstr ""
+msgstr "hg: %s\n"
 
 #, python-format
 msgid "timed out waiting for lock held by %s"
-msgstr ""
+msgstr "attendu trop longtemps le verrou détenu par %s"
 
 #, python-format
 msgid "lock held by %s"
@@ -7110,78 +7184,84 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s: %s\n"
-msgstr ""
+msgstr "abandon : %s : %s\n"
 
 #, python-format
 msgid "abort: could not lock %s: %s\n"
-msgstr ""
+msgstr "abandon : impossible de verrouiller %s : %s\n"
 
 #, python-format
 msgid "hg %s: %s\n"
-msgstr ""
+msgstr "hg %s: %s\n"
 
 #, python-format
 msgid "abort: %s!\n"
-msgstr ""
+msgstr "abandon : %s !\n"
 
 #, python-format
 msgid "abort: %s"
-msgstr ""
+msgstr "abandon : %s"
 
 msgid " empty string\n"
-msgstr ""
+msgstr " chaîne vide\n"
 
 msgid "killed!\n"
-msgstr ""
+msgstr "tué !\n"
 
 #, python-format
 msgid "hg: unknown command '%s'\n"
-msgstr ""
+msgstr "hg: commande inconnue : '%s'\n"
 
 #, python-format
 msgid "abort: could not import module %s!\n"
-msgstr ""
+msgstr "abandon : impossible d'importer le module %s !\n"
 
 msgid "(did you forget to compile extensions?)\n"
-msgstr ""
+msgstr "(avez-vous oublié de compiler les extensions ?)\n"
 
 msgid "(is your Python install correct?)\n"
-msgstr ""
+msgstr "(votre installation de Python est-elle correcte ?)\n"
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr ""
+msgstr "abandon : erreur : %s\n"
 
+# traduction utilisée par la glibc...
 msgid "broken pipe\n"
-msgstr ""
+msgstr "relais brisé (pipe)\n"
 
 msgid "interrupted!\n"
-msgstr ""
+msgstr "interrompu !\n"
 
+# traduction utilisée par la glibc...
 msgid ""
 "\n"
 "broken pipe\n"
 msgstr ""
+"\n"
+"relais brisé (pipe)\n"
 
 msgid "abort: out of memory\n"
-msgstr ""
+msgstr "abandon : plus de mémoire libre\n"
 
 msgid "** unknown exception encountered, details follow\n"
-msgstr ""
+msgstr "** exception inconnue rencontrée, détails ci-dessous\n"
 
 msgid "** report bug details to http://mercurial.selenic.com/bts/\n"
 msgstr ""
+"** veuillez signaler le problème en détails sur http://www.selenic.com/"
+"mercurial/bts\n"
 
 msgid "** or mercurial@selenic.com\n"
-msgstr ""
+msgstr "** ou mercurial@selenic.com\n"
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
-msgstr ""
+msgstr "** Mercurial version %s, système de gestion de sources distribué\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
-msgstr ""
+msgstr "** Extensions chargées : %s\n"
 
 #, python-format
 msgid "no definition for alias '%s'\n"
@@ -7201,22 +7281,24 @@ msgstr ""
 
 #, python-format
 msgid "malformed --config option: %s"
-msgstr ""
+msgstr "option incorrecte pour --config : %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
-msgstr ""
+msgstr "l'extension '%s' redéfinit ces commandes : %s\n"
 
 msgid "Option --config may not be abbreviated!"
-msgstr ""
+msgstr "L'option --config ne peut être abrégée !"
 
 msgid "Option --cwd may not be abbreviated!"
-msgstr ""
+msgstr "L'option --cwd ne peut être abrégée !"
 
 msgid ""
 "Option -R has to be separated from other options (e.g. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
+"L'option -R doit être séparée des autres options (autrement dit -qR est "
+"invalide) et --repository ne peut être abrégé qu'en --repo !"
 
 #, python-format
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
@@ -7224,10 +7306,10 @@ msgstr ""
 
 #, python-format
 msgid "repository '%s' is not local"
-msgstr ""
+msgstr "le dépôt '%s' n'est pas local"
 
 msgid "invalid arguments"
-msgstr ""
+msgstr "arguments invalides"
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
@@ -7317,11 +7399,11 @@ msgstr ""
 
 #, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
-msgstr ""
+msgstr "État incohérent, %s:%s est à la fois \"bon\" et \"mauvais\""
 
 #, python-format
 msgid "unknown bisect kind %s"
-msgstr ""
+msgstr "type inconnu pour dichotomie : %s"
 
 msgid ""
 "\n"
@@ -7791,17 +7873,19 @@ msgid ""
 "\n"
 "    Valid URLs are of the form:\n"
 "\n"
-"      local/filesystem/path (or file://local/filesystem/path)\n"
-"      http://[user[:pass]@]host[:port]/[path]\n"
-"      https://[user[:pass]@]host[:port]/[path]\n"
-"      ssh://[user[:pass]@]host[:port]/[path]\n"
+"      local/filesystem/path[#revision]\n"
+"      file://local/filesystem/path[#revision]\n"
+"      http://[user[:pass]@]host[:port]/[path][#revision]\n"
+"      https://[user[:pass]@]host[:port]/[path][#revision]\n"
+"      ssh://[user[:pass]@]host[:port]/[path][#revision]\n"
 "\n"
 "    Paths in the local filesystem can either point to Mercurial\n"
 "    repositories or to bundle files (as created by 'hg bundle' or\n"
 "    'hg incoming --bundle').\n"
 "\n"
 "    An optional identifier after # indicates a particular branch, tag,\n"
-"    or changeset to use from the remote repository.\n"
+"    or changeset to use from the remote repository. See also 'hg help\n"
+"    revisions'.\n"
 "\n"
 "    Some features, such as pushing to http:// and https:// URLs are\n"
 "    only possible if the feature is explicitly enabled on the remote\n"
@@ -8152,9 +8236,6 @@ msgid "no match under directory!"
 msgstr ""
 
 msgid "file not tracked!"
-msgstr ""
-
-msgid "nothing changed\n"
 msgstr ""
 
 msgid "unresolved merge conflicts (see hg resolve)"
@@ -9055,7 +9136,7 @@ msgid "empty or missing copy source revlog %s:%s"
 msgstr ""
 
 #, python-format
-msgid "warning: %s@%s: copy source revision is nullid %s:%s"
+msgid "warning: %s@%s: copy source revision is nullid %s:%s\n"
 msgstr ""
 
 #, python-format
