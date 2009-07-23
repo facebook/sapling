@@ -1,6 +1,5 @@
 Initialized empty Git repository in gitrepo/.git/
 
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
@@ -9,20 +8,14 @@ at: 0/1
 updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to git://localhost/gitrepo
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 at: 0/1
-importing Git objects into Hg
-pushing to : git://localhost/gitrepo
 creating and sending data
     default::refs/heads/master => GIT:05c2bcbe
 marked working directory as branch gamma
 pushing to git://localhost/gitrepo
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 at: 0/1
-importing Git objects into Hg
-pushing to : git://localhost/gitrepo
 creating and sending data
     default::refs/heads/master => GIT:296802ef
 @  changeset:   2:698615204564
@@ -44,7 +37,6 @@ o  changeset:   0:3442585be8a6
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
 
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 6, done.
 Compressing objects:  33% (1/3)   Compressing objects:  66% (2/3)   Compressing objects: 100% (3/3)   Compressing objects: 100% (3/3), done.

@@ -6,7 +6,6 @@ rm 'foo/bar'
 beta
 Initialized empty Git repository in gitrepo2/.git/
 
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 14, done.
 Compressing objects:  12% (1/8)   Compressing objects:  25% (2/8)   Compressing objects:  37% (3/8)   Compressing objects:  50% (4/8)   Compressing objects:  62% (5/8)   Compressing objects:  75% (6/8)   Compressing objects:  87% (7/8)   Compressing objects: 100% (8/8)   Compressing objects: 100% (8/8), done.
@@ -52,11 +51,8 @@ foo/bar
 beta
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
-fetching from : git://localhost/gitrepo2
 importing Hg objects into Git
 at: 0/5
-nothing new on the server
-pushing to : git://localhost/gitrepo2
 creating and sending data
 commit b991de8952c482a7cd51162674ffff8474862218
 Author: test <test@example.org>

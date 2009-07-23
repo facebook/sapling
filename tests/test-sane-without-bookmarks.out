@@ -1,6 +1,5 @@
 Initialized empty Git repository in gitrepo/.git/
 
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 6, done.
 Compressing objects:  33% (1/3)   Compressing objects:  66% (2/3)   Compressing objects: 100% (3/3)   Compressing objects: 100% (3/3), done.

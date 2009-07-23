@@ -97,7 +97,6 @@ class GitHandler(object):
         self.save_map()
 
     def fetch(self, remote):
-        self.ui.status(_("fetching from : %s\n") % remote)
         self.export_git_objects()
         refs = self.fetch_pack(remote)
         remote_name = self.remote_name(remote)
@@ -124,9 +123,7 @@ class GitHandler(object):
         self.save_map()
 
     def push(self, remote):
-        self.fetch(remote) # get and convert objects if they already exist
-        self.ui.status(_("pushing to : %s\n") % remote)
-        self.export_commits(False)
+        self.export_commits()
         changed_refs = self.upload_pack(remote)
         remote_name = self.remote_name(remote)
 

@@ -9,7 +9,6 @@ Created commit a2e8665: rename
  rename {d1 => d2}/f2 (100%)
 Initialized empty Git repository in gitrepo2/.git/
 
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 8, done.
 Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
@@ -22,11 +21,8 @@ adds: d2/f2
 dels: d1/f2
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
-fetching from : git://localhost/gitrepo2
 importing Hg objects into Git
 at: 0/2
-nothing new on the server
-pushing to : git://localhost/gitrepo2
 creating and sending data
 commit a2e8665d117167742ceb040f1669a73289d79ac8
 Author: test <test@example.org>

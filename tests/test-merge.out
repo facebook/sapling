@@ -8,7 +8,6 @@ Merge made by recursive.
  create mode 100644 beta
 Initialized empty Git repository in gitrepo2/.git/
 
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 11, done.
 Compressing objects:  14% (1/7)   Compressing objects:  28% (2/7)   Compressing objects:  42% (3/7)   Compressing objects:  57% (4/7)   Compressing objects:  71% (5/7)   Compressing objects:  85% (6/7)   Compressing objects: 100% (7/7)   Compressing objects: 100% (7/7), done.
@@ -20,11 +19,8 @@ updating working directory
 % clear the cache to be sure it is regenerated correctly
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
-fetching from : git://localhost/gitrepo2
 importing Hg objects into Git
 at: 0/4
-nothing new on the server
-pushing to : git://localhost/gitrepo2
 creating and sending data
 commit 5806851511aaf3bfe813ae3a86c5027165fa9b96
 Merge: e5023f9... 9497a4e...

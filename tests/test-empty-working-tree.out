@@ -3,7 +3,6 @@ Initialized empty Git repository in gitrepo/.git/
 Created initial commit 6782568: empty
 Initialized empty Git repository in gitrepo2/.git/
 
-fetching from : git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 2, done.
 Total 2 (delta 0), reused 0 (delta 0)
@@ -14,11 +13,8 @@ updating working directory
 files: 
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
-fetching from : git://localhost/gitrepo2
 importing Hg objects into Git
 at: 0/1
-nothing new on the server
-pushing to : git://localhost/gitrepo2
 creating and sending data
 commit 678256865a8c85ae925bf834369264193c88f8de
 Author: test <test@example.org>
