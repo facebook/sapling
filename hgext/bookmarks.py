@@ -285,10 +285,16 @@ def reposetup(ui, repo):
             node = self.changelog.tip()
             marks = parse(self)
             update = False
-            for mark, n in marks.items():
-                if n in parents:
+            if ui.configbool('bookmarks', 'track.current'):
+                mark = current(self)
+                if mark and marks[mark] in parents:
                     marks[mark] = node
                     update = True
+            else:
+                for mark, n in marks.items():
+                    if n in parents:
+                        marks[mark] = node
+                        update = True
             if update:
                 write(self, marks)
             return result
