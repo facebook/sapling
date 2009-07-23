@@ -259,12 +259,13 @@ def reposetup(ui, repo):
                     parents = (parents[0],)
                 marks = parse(self)
                 update = False
-                for mark, n in marks.items():
-                    if ui.configbool('bookmarks', 'track.current'):
-                        if mark == current(self) and n in parents:
-                            marks[mark] = node
-                            update = True
-                    else:
+                if ui.configbool('bookmarks', 'track.current'):
+                    mark = current(self)
+                    if mark and marks[mark] in parents:
+                        marks[mark] = node
+                        update = True
+                else:
+                    for mark, n in marks.items():
                         if n in parents:
                             marks[mark] = node
                             update = True
