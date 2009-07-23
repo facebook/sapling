@@ -5,8 +5,13 @@ from dulwich.client import SimpleFetchGraphWalker
 from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
-from mercurial import context
-from mercurial.error import RepoError
+from mercurial import context, util as hgutil
+
+try:
+    from mercurial.error import RepoError
+except ImportError:
+    from mercurial.repo import RepoError
+
 from dulwich.misc import make_sha
 from dulwich.objects import (
     Blob,
