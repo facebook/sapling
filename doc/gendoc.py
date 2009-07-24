@@ -5,7 +5,7 @@ sys.path.insert(0, "..")
 sys.path.append(os.path.join('..', 'mercurial', 'pure'))
 from mercurial import demandimport; demandimport.enable()
 from mercurial.commands import table, globalopts
-from mercurial.i18n import gettext, _
+from mercurial.i18n import _
 from mercurial.help import helptable
 
 def get_desc(docstr):
@@ -102,11 +102,9 @@ def show_doc(ui):
 
     # print topics
     for names, section, doc in helptable:
-        underlined(gettext(section).upper())
+        underlined(section.upper())
         if callable(doc):
             doc = doc()
-        else:
-            doc = gettext(doc)
         ui.write(doc)
         ui.write("\n")
 
