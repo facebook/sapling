@@ -3,6 +3,7 @@ import toposort
 
 from dulwich.index import commit_tree
 from dulwich.objects import Blob, Commit, Tag, Tree
+from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
 
 from hgext import bookmarks
@@ -212,33 +213,32 @@ class GitHandler(object):
         commit.tree = tree_sha
         (time, timezone) = ctx.date()
 
-        if 'author' in extra:
-            author = extra['author']
+        # hg authors might not have emails
+        author = ctx.user()
+
+        # check for git author pattern compliance
+        regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
+        a = regex.match(author)
+
+        if a:
+            name = a.group(1)
+            email = a.group(2)
+            if len(a.group(3)) > 0:
+                name += ' ext:(' + urllib.quote(a.group(3)) + ')'
+            author = name + ' <' + email + '>'
         else:
-            # hg authors might not have emails
-            author = ctx.user()
+            author = author + ' <none@none>'
 
-            # check for git author pattern compliance
-            regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
-            a = regex.match(author)
-
-            if a:
-                name = a.group(1)
-                email = a.group(2)
-                if len(a.group(3)) > 0:
-                    name += ' ext:(' + urllib.quote(a.group(3)) + ')'
-                author = name + ' <' + email + '>'
-            else:
-                author = author + ' <none@none>'
+        if 'author' in extra:
+            author = apply_delta(author, extra['author'])
 
         commit.author = author
         commit.author_time = int(time)
         commit.author_timezone = -timezone
 
+        commit.message = ctx.description() + "\n"
         if 'message' in extra:
-            commit.message = extra['message']
-        else:
-            commit.message = ctx.description() + "\n"
+            commit.message = apply_delta(commit.message, extra['message'])
 
         if 'committer' in extra:
             # fixup timezone
@@ -373,8 +373,9 @@ class GitHandler(object):
         try:
             text.decode('utf-8')
         except UnicodeDecodeError:
-            extra['message'] = text
+            origtext = text
             text = self.decode_guess(text, commit.encoding)
+            extra['message'] = create_delta(text, origtext)
 
         author = commit.author
 
@@ -394,8 +395,9 @@ class GitHandler(object):
         try:
             author.decode('utf-8')
         except UnicodeDecodeError:
-            extra['author'] = author
+            origauthor = author
             author = self.decode_guess(author, commit.encoding)
+            extra['author'] = create_delta(author, origauthor)
 
         oldenc = self.swap_out_encoding()
 
