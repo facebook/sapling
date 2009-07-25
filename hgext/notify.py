@@ -7,10 +7,11 @@
 
 '''hooks for sending email notifications at commit/push time
 
-Subscriptions can be managed through a hgrc file. Default mode is to print
-messages to stdout, for testing and configuring.
+Subscriptions can be managed through a hgrc file. Default mode is to
+print messages to stdout, for testing and configuring.
 
-To use, configure the notify extension and enable it in hgrc like this::
+To use, configure the notify extension and enable it in hgrc like
+this::
 
   [extensions]
   hgext.notify =
@@ -47,8 +48,9 @@ Optional configuration items::
   [web]
   baseurl = http://hgserver/... # root of hg web site for browsing commits
 
-The notify config file has same format as a regular hgrc file. It has two
-sections so you can express subscriptions in whatever way is handier for you.
+The notify config file has same format as a regular hgrc file. It has
+two sections so you can express subscriptions in whatever way is
+handier for you.
 
 ::
 
@@ -62,8 +64,8 @@ sections so you can express subscriptions in whatever way is handier for you.
 
 Glob patterns are matched against path to repository root.
 
-If you like, you can put notify config file in repository that users can push
-changes to, they can manage their own subscriptions.
+If you like, you can put notify config file in repository that users
+can push changes to, they can manage their own subscriptions.
 '''
 
 from mercurial.i18n import _
