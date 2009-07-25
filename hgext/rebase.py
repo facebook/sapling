@@ -7,7 +7,8 @@
 
 '''command to move sets of revisions to a different ancestor
 
-This extension lets you rebase changesets in an existing Mercurial repository.
+This extension lets you rebase changesets in an existing Mercurial
+repository.
 
 For more information:
 http://mercurial.selenic.com/wiki/RebaseProject
@@ -41,9 +42,9 @@ def rebasemerge(repo, rev, first=False):
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
 
-    Rebase uses repeated merging to graft changesets from one part of history
-    onto another. This can be useful for linearizing local changes relative to
-    a master development tree.
+    Rebase uses repeated merging to graft changesets from one part of
+    history onto another. This can be useful for linearizing local
+    changes relative to a master development tree.
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
