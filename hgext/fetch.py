@@ -15,17 +15,18 @@ from mercurial.lock import release
 def fetch(ui, repo, source='default', **opts):
     '''pull changes from a remote repository, merge new changes if needed.
 
-    This finds all changes from the repository at the specified path or URL
-    and adds them to the local repository.
+    This finds all changes from the repository at the specified path
+    or URL and adds them to the local repository.
 
-    If the pulled changes add a new branch head, the head is automatically
-    merged, and the result of the merge is committed. Otherwise, the working
-    directory is updated to include the new changes.
+    If the pulled changes add a new branch head, the head is
+    automatically merged, and the result of the merge is committed.
+    Otherwise, the working directory is updated to include the new
+    changes.
 
     When a merge occurs, the newly pulled changes are assumed to be
-    "authoritative". The head of the new changes is used as the first parent,
-    with local changes as the second. To switch the merge order, use
-    --switch-parent.
+    "authoritative". The head of the new changes is used as the first
+    parent, with local changes as the second. To switch the merge
+    order, use --switch-parent.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     '''
