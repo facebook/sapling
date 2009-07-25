@@ -7,21 +7,22 @@
 
 '''hooks for integrating with the Bugzilla bug tracker
 
-This hook extension adds comments on bugs in Bugzilla when changesets that
-refer to bugs by Bugzilla ID are seen. The hook does not change bug status.
+This hook extension adds comments on bugs in Bugzilla when changesets
+that refer to bugs by Bugzilla ID are seen. The hook does not change
+bug status.
 
-The hook updates the Bugzilla database directly. Only Bugzilla installations
-using MySQL are supported.
+The hook updates the Bugzilla database directly. Only Bugzilla
+installations using MySQL are supported.
 
-The hook relies on a Bugzilla script to send bug change notification emails.
-That script changes between Bugzilla versions; the 'processmail' script used
-prior to 2.18 is replaced in 2.18 and subsequent versions by
-'config/sendbugmail.pl'. Note that these will be run by Mercurial as the user
-pushing the change; you will need to ensure the Bugzilla install file
-permissions are set appropriately.
+The hook relies on a Bugzilla script to send bug change notification
+emails. That script changes between Bugzilla versions; the
+'processmail' script used prior to 2.18 is replaced in 2.18 and
+subsequent versions by 'config/sendbugmail.pl'. Note that these will
+be run by Mercurial as the user pushing the change; you will need to
+ensure the Bugzilla install file permissions are set appropriately.
 
-The extension is configured through three different configuration sections.
-These keys are recognized in the [bugzilla] section:
+The extension is configured through three different configuration
+sections. These keys are recognized in the [bugzilla] section:
 
 host
   Hostname of the MySQL server holding the Bugzilla database.
@@ -39,35 +40,38 @@ timeout
   Database connection timeout (seconds). Default 5.
 
 version
-  Bugzilla version. Specify '3.0' for Bugzilla versions 3.0 and later, '2.18'
-  for Bugzilla versions from 2.18 and '2.16' for versions prior to 2.18.
+  Bugzilla version. Specify '3.0' for Bugzilla versions 3.0 and later,
+  '2.18' for Bugzilla versions from 2.18 and '2.16' for versions prior
+  to 2.18.
 
 bzuser
-  Fallback Bugzilla user name to record comments with, if changeset committer
-  cannot be found as a Bugzilla user.
+  Fallback Bugzilla user name to record comments with, if changeset
+  committer cannot be found as a Bugzilla user.
 
 bzdir
    Bugzilla install directory. Used by default notify. Default
    '/var/www/html/bugzilla'.
 
 notify
-  The command to run to get Bugzilla to send bug change notification emails.
-  Substitutes from a map with 3 keys, 'bzdir', 'id' (bug id) and 'user'
-  (committer bugzilla email). Default depends on version; from 2.18 it is "cd
-  %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s".
+  The command to run to get Bugzilla to send bug change notification
+  emails. Substitutes from a map with 3 keys, 'bzdir', 'id' (bug id)
+  and 'user' (committer bugzilla email). Default depends on version;
+  from 2.18 it is "cd %(bzdir)s && perl -T contrib/sendbugmail.pl
+  %(id)s %(user)s".
 
 regexp
-  Regular expression to match bug IDs in changeset commit message. Must
-  contain one "()" group. The default expression matches 'Bug 1234', 'Bug no.
-  1234', 'Bug number 1234', 'Bugs 1234,5678', 'Bug 1234 and 5678' and
-  variations thereof. Matching is case insensitive.
+  Regular expression to match bug IDs in changeset commit message.
+  Must contain one "()" group. The default expression matches 'Bug
+  1234', 'Bug no. 1234', 'Bug number 1234', 'Bugs 1234,5678', 'Bug
+  1234 and 5678' and variations thereof. Matching is case insensitive.
 
 style
   The style file to use when formatting comments.
 
 template
-  Template to use when formatting comments. Overrides style if specified. In
-  addition to the usual Mercurial keywords, the extension specifies::
+  Template to use when formatting comments. Overrides style if
+  specified. In addition to the usual Mercurial keywords, the
+  extension specifies::
 
     {bug}       The Bugzilla bug ID.
     {root}      The full pathname of the Mercurial repository.
@@ -82,18 +86,19 @@ strip
   {webroot}. Default 0.
 
 usermap
-  Path of file containing Mercurial committer ID to Bugzilla user ID mappings.
-  If specified, the file should contain one mapping per line,
-  "committer"="Bugzilla user". See also the [usermap] section.
+  Path of file containing Mercurial committer ID to Bugzilla user ID
+  mappings. If specified, the file should contain one mapping per
+  line, "committer"="Bugzilla user". See also the [usermap] section.
 
-The [usermap] section is used to specify mappings of Mercurial committer ID to
-Bugzilla user ID. See also [bugzilla].usermap. "committer"="Bugzilla user"
+The [usermap] section is used to specify mappings of Mercurial
+committer ID to Bugzilla user ID. See also [bugzilla].usermap.
+"committer"="Bugzilla user"
 
 Finally, the [web] section supports one entry:
 
 baseurl
-  Base URL for browsing Mercurial repositories. Reference from templates as
-  {hgweb}.
+  Base URL for browsing Mercurial repositories. Reference from
+  templates as {hgweb}.
 
 Activating the extension::
 
@@ -106,9 +111,9 @@ Activating the extension::
 
 Example configuration:
 
-This example configuration is for a collection of Mercurial repositories in
-/var/local/hg/repos/ used with a local Bugzilla 3.2 installation in
-/opt/bugzilla-3.2. ::
+This example configuration is for a collection of Mercurial
+repositories in /var/local/hg/repos/ used with a local Bugzilla 3.2
+installation in /opt/bugzilla-3.2. ::
 
     [bugzilla]
     host=localhost
