@@ -3,8 +3,8 @@
 
 """hooks for integrating with the CIA.vc notification service
 
-This is meant to be run as a changegroup or incoming hook. To configure it,
-set the following options in your hgrc::
+This is meant to be run as a changegroup or incoming hook. To
+configure it, set the following options in your hgrc::
 
   [cia]
   # your registered CIA user name
