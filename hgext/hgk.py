@@ -7,30 +7,31 @@
 
 '''browse the repository in a graphical way
 
-The hgk extension allows browsing the history of a repository in a graphical
-way. It requires Tcl/Tk version 8.4 or later. (Tcl/Tk is not distributed with
-Mercurial.)
+The hgk extension allows browsing the history of a repository in a
+graphical way. It requires Tcl/Tk version 8.4 or later. (Tcl/Tk is not
+distributed with Mercurial.)
 
-hgk consists of two parts: a Tcl script that does the displaying and querying
-of information, and an extension to Mercurial named hgk.py, which provides
-hooks for hgk to get information. hgk can be found in the contrib directory,
-and the extension is shipped in the hgext repository, and needs to be enabled.
+hgk consists of two parts: a Tcl script that does the displaying and
+querying of information, and an extension to Mercurial named hgk.py,
+which provides hooks for hgk to get information. hgk can be found in
+the contrib directory, and the extension is shipped in the hgext
+repository, and needs to be enabled.
 
-The hg view command will launch the hgk Tcl script. For this command to work,
-hgk must be in your search path. Alternately, you can specify the path to hgk
-in your .hgrc file::
+The hg view command will launch the hgk Tcl script. For this command
+to work, hgk must be in your search path. Alternately, you can specify
+the path to hgk in your .hgrc file::
 
   [hgk]
   path=/location/of/hgk
 
-hgk can make use of the extdiff extension to visualize revisions. Assuming you
-had already configured extdiff vdiff command, just add::
+hgk can make use of the extdiff extension to visualize revisions.
+Assuming you had already configured extdiff vdiff command, just add::
 
   [hgk]
   vdiff=vdiff
 
-Revisions context menu will now display additional entries to fire vdiff on
-hovered and selected revisions.
+Revisions context menu will now display additional entries to fire
+vdiff on hovered and selected revisions.
 '''
 
 import os
