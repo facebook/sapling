@@ -89,7 +89,7 @@ i18n/hg.pot: $(PYTHON_FILES)
         # Extracting with an explicit encoding of ISO-8859-1 will make
         # xgettext "parse" and ignore them.
 	echo $^ | xargs \
-	  xgettext --width 82 --package-name "Mercurial" \
+	  xgettext --package-name "Mercurial" \
 	  --msgid-bugs-address "<mercurial-devel@selenic.com>" \
 	  --copyright-holder "Matt Mackall <mpm@selenic.com> and others" \
 	  --from-code ISO-8859-1 --join --sort-by-file \
