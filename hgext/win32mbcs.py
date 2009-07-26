@@ -11,11 +11,12 @@
 
 '''allow the use of MBCS paths with problematic encodings
 
-Some MBCS encodings are not good for some path operations (i.e. splitting
-path, case conversion, etc.) with its encoded bytes. We call such a encoding
-(i.e. shift_jis and big5) as "problematic encoding". This extension can be
-used to fix the issue with those encodings by wrapping some functions to
-convert to Unicode string before path operation.
+Some MBCS encodings are not good for some path operations (i.e.
+splitting path, case conversion, etc.) with its encoded bytes. We call
+such a encoding (i.e. shift_jis and big5) as "problematic encoding".
+This extension can be used to fix the issue with those encodings by
+wrapping some functions to convert to Unicode string before path
+operation.
 
 This extension is useful for:
 
@@ -32,10 +33,12 @@ This extension is not needed for:
 Note that there are some limitations on using this extension:
 
 - You should use single encoding in one repository.
-- You should set same encoding for the repository by locale or HGENCODING.
+- You should set same encoding for the repository by locale or
+  HGENCODING.
 
-Path encoding conversion are done between Unicode and encoding.encoding which
-is decided by Mercurial from current locale setting or HGENCODING.
+Path encoding conversion are done between Unicode and
+encoding.encoding which is decided by Mercurial from current locale
+setting or HGENCODING.
 '''
 
 import os, sys
