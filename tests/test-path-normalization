@@ -1,0 +1,4 @@
+#!/bin/sh
+
+hg clone --quiet $TESTDIR/test-path-normalization.hg t
+exec hg st -R t
