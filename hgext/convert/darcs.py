@@ -36,6 +36,10 @@ class darcs_source(converter_source, commandline):
             raise NoRepo("%s does not look like a darcs repo" % path)
 
         checktool('darcs')
+        version = self.run0('--version').splitlines()[0].strip()
+        if version < '2.1':
+            raise util.Abort(_('darcs version 2.1 or newer needed (found %r)') %
+                             version)
 
         if ElementTree is None:
             raise util.Abort(_("Python ElementTree module is not available"))
