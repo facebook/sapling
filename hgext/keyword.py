@@ -276,10 +276,10 @@ def demo(ui, repo, *args, **opts):
     Show current, custom, or default keyword template maps and their
     expansions.
 
-    Extend current configuration by specifying maps as arguments and
-    optionally by reading from an additional hgrc file.
+    Extend the current configuration by specifying maps as arguments
+    and using -f/--rcfile to source an external hgrc file.
 
-    Override current keyword template maps with "default" option.
+    Use -d/--default to disable current configuration.
     '''
     def demoitems(section, items):
         ui.write('[%s]\n' % section)
@@ -287,40 +287,47 @@ def demo(ui, repo, *args, **opts):
             ui.write('%s = %s\n' % (k, v))
 
     msg = 'hg keyword config and expansion example'
-    kwstatus = 'current'
     fn = 'demo.txt'
     branchname = 'demobranch'
     tmpdir = tempfile.mkdtemp('', 'kwdemo.')
     ui.note(_('creating temporary repository at %s\n') % tmpdir)
     repo = localrepo.localrepository(ui, tmpdir, True)
     ui.setconfig('keyword', fn, '')
+
+    uikwmaps = ui.configitems('keywordmaps')
     if args or opts.get('rcfile'):
-        kwstatus = 'custom'
-    if opts.get('rcfile'):
-        ui.readconfig(opts.get('rcfile'))
-    if opts.get('default'):
-        kwstatus = 'default'
+        ui.status(_('\n\tconfiguration using custom keyword template maps\n'))
+        if uikwmaps:
+            ui.status(_('\textending current template maps\n'))
+        if opts.get('default') or not uikwmaps:
+            ui.status(_('\toverriding default template maps\n'))
+        if opts.get('rcfile'):
+            ui.readconfig(opts.get('rcfile'))
+        if args:
+            # simulate hgrc parsing
+            rcmaps = ['[keywordmaps]\n'] + [a + '\n' for a in args]
+            fp = repo.opener('hgrc', 'w')
+            fp.writelines(rcmaps)
+            fp.close()
+            ui.readconfig(repo.join('hgrc'))
+        kwmaps = dict(ui.configitems('keywordmaps'))
+    elif opts.get('default'):
+        ui.status(_('\n\tconfiguration using default keyword template maps\n'))
         kwmaps = kwtemplater.templates
-        if ui.configitems('keywordmaps'):
-            # override maps from optional rcfile
+        if uikwmaps:
+            ui.status(_('\tdisabling current template maps\n'))
             for k, v in kwmaps.iteritems():
                 ui.setconfig('keywordmaps', k, v)
-    elif args:
-        # simulate hgrc parsing
-        rcmaps = ['[keywordmaps]\n'] + [a + '\n' for a in args]
-        fp = repo.opener('hgrc', 'w')
-        fp.writelines(rcmaps)
-        fp.close()
-        ui.readconfig(repo.join('hgrc'))
-    if not opts.get('default'):
-        kwmaps = dict(ui.configitems('keywordmaps')) or kwtemplater.templates
+    else:
+        ui.status(_('\n\tconfiguration using current keyword template maps\n'))
+        kwmaps = dict(uikwmaps) or kwtemplater.templates
+
     uisetup(ui)
     reposetup(ui, repo)
     for k, v in ui.configitems('extensions'):
         if k.endswith('keyword'):
             extension = '%s = %s' % (k, v)
             break
-    ui.status(_('\n\tconfig using %s keyword template maps\n') % kwstatus)
     ui.write('[extensions]\n%s\n' % extension)
     demoitems('keyword', ui.configitems('keyword'))
     demoitems('keywordmaps', kwmaps.iteritems())
@@ -328,7 +335,7 @@ def demo(ui, repo, *args, **opts):
     repo.wopener(fn, 'w').write(keywords)
     repo.add([fn])
     path = repo.wjoin(fn)
-    ui.note(_('\n%s keywords written to %s:\n') % (kwstatus, path))
+    ui.note(_('\nkeywords written to %s:\n') % path)
     ui.note(keywords)
     ui.note('\nhg -R "%s" branch "%s"\n' % (tmpdir, branchname))
     # silence branch command if not verbose
@@ -342,8 +349,7 @@ def demo(ui, repo, *args, **opts):
     ui.note(_('unhooked all commit hooks\n'))
     ui.note('hg -R "%s" ci -m "%s"\n' % (tmpdir, msg))
     repo.commit(text=msg)
-    fmt = ui.verbose and ' in %s' % path or ''
-    ui.status(_('\n\t%s keywords expanded%s\n') % (kwstatus, fmt))
+    ui.status(_('\n\tkeywords expanded\n'))
     ui.write(repo.wread(fn))
     ui.debug(_('\nremoving temporary repository %s\n') % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
