@@ -11,11 +11,11 @@ from mercurial import hg, commands
 def share(ui, source, dest=None, noupdate=False):
     """create a new shared repository (experimental)
 
-    Initialize a new repository and working directory that shares its history
-    with another repository.
+    Initialize a new repository and working directory that shares its
+    history with another repository.
 
-    NOTE: actions that change history such as rollback or moving the source
-    may confuse sharers.
+    NOTE: actions that change history such as rollback or moving the
+    source may confuse sharers.
     """
 
     return hg.share(ui, source, dest, not noupdate)
