@@ -39,7 +39,7 @@ def has_bzr114():
     try:
         import bzrlib
         return (bzrlib.__doc__ != None
-                and bzrlib.version_info[:2] == (1, 14))
+                and bzrlib.version_info[:2] >= (1, 14))
     except ImportError:
         return False
 

@@ -138,7 +138,7 @@ def share(ui, source, dest=None, update=True):
             try:
                 uprev = r.lookup(test)
                 break
-            except:
+            except LookupError:
                 continue
         _update(r, uprev)
 
