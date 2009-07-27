@@ -1555,7 +1555,10 @@ def help_(ui, name=None, with_version=False):
             raise error.UnknownCommand(name)
 
         doc = gettext(mod.__doc__) or _('no help text available')
-        head, tail = doc.split('\n', 1)
+        if '\n' not in doc:
+            head, tail = doc, ""
+        else:
+            head, tail = doc.split('\n', 1)
         ui.write(_('%s extension - %s\n\n') % (name.split('.')[-1], head))
         if tail:
             ui.write(minirst.format(tail, textwidth))
