@@ -27,6 +27,38 @@ cd repo
 echo % qimport non-existing-file
 hg qimport non-existing-file
 
+echo % import email
+hg qimport --push -n email - <<EOF
+From: Username in email <test@example.net>
+Subject: [PATCH] Message in email
+Date: Fri, 02 Jan 1970 00:00:00 +0000
+
+Text before patch.
+
+# HG changeset patch
+# User Username in patch <test@example.net>
+# Date 0 0
+# Node ID 1a706973a7d84cb549823634a821d9bdf21c6220
+# Parent  0000000000000000000000000000000000000000
+First line of commit message.
+
+More text in commit message.
+
+diff --git a/x b/x
+new file mode 100644
+--- /dev/null
++++ b/x
+@@ -0,0 +1,1 @@
++new file
+Text after patch.
+
+EOF
+
+echo % hg tip -v
+hg tip -v
+hg qpop
+hg qdelete email
+
 echo % import URL
 echo foo >> foo
 hg add foo

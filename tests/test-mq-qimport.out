@@ -1,5 +1,25 @@
 % qimport non-existing-file
 abort: unable to read non-existing-file
+% import email
+adding email to series file
+applying email
+now at: email
+% hg tip -v
+changeset:   0:1a706973a7d8
+tag:         qtip
+tag:         tip
+tag:         email
+tag:         qbase
+user:        Username in patch <test@example.net>
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       x
+description:
+First line of commit message.
+
+More text in commit message.
+
+
+patch queue now empty
 % import URL
 adding url.diff to series file
 url.diff

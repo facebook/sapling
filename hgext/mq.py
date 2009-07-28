@@ -105,6 +105,7 @@ class patchheader(object):
                     message.append(line)
                     format = None
             elif line == '# HG changeset patch':
+                message = []
                 format = "hgpatch"
             elif (format != "tagdone" and (line.startswith("Subject: ") or
                                            line.startswith("subject: "))):
