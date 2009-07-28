@@ -370,12 +370,15 @@ class GitHandler(object):
         date = (commit.author_time, -commit.author_timezone)
         text = strip_message
 
+        origtext = text
         try:
             text.decode('utf-8')
         except UnicodeDecodeError:
-            origtext = text
             text = self.decode_guess(text, commit.encoding)
-            extra['message'] = create_delta(text, origtext)
+
+        text = '\n'.join([l.rstrip() for l in text.splitlines()]).strip('\n')
+        if text + '\n' != origtext:
+            extra['message'] = create_delta(text +'\n', origtext)
 
         author = commit.author
 
@@ -464,7 +467,7 @@ class GitHandler(object):
         ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
                              author, date, extra)
 
-        node = self.repo.commit_import_ctx(ctx, pa)
+        node = self.repo.commitctx(ctx)
 
         self.swap_out_encoding(oldenc)
 
