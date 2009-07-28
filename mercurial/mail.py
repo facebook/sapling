@@ -36,7 +36,10 @@ def _smtp(ui):
     if username and password:
         ui.note(_('(authenticating to mail server as %s)\n') %
                   (username))
-        s.login(username, password)
+        try:
+            s.login(username, password)
+        except smtplib.SMTPException, inst:
+            raise util.Abort(inst)
 
     def send(sender, recipients, msg):
         try:

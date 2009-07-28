@@ -182,6 +182,7 @@ def readgitpatch(lr):
     lineno = 0
     for line in lr:
         lineno += 1
+        line = line.rstrip(' \r\n')
         if line.startswith('diff --git'):
             m = gitre.match(line)
             if m:
@@ -200,23 +201,23 @@ def readgitpatch(lr):
                 continue
             if line.startswith('rename from '):
                 gp.op = 'RENAME'
-                gp.oldpath = line[12:].rstrip()
+                gp.oldpath = line[12:]
             elif line.startswith('rename to '):
-                gp.path = line[10:].rstrip()
+                gp.path = line[10:]
             elif line.startswith('copy from '):
                 gp.op = 'COPY'
-                gp.oldpath = line[10:].rstrip()
+                gp.oldpath = line[10:]
             elif line.startswith('copy to '):
-                gp.path = line[8:].rstrip()
+                gp.path = line[8:]
             elif line.startswith('deleted file'):
                 gp.op = 'DELETE'
                 # is the deleted file a symlink?
-                gp.setmode(int(line.rstrip()[-6:], 8))
+                gp.setmode(int(line[-6:], 8))
             elif line.startswith('new file mode '):
                 gp.op = 'ADD'
-                gp.setmode(int(line.rstrip()[-6:], 8))
+                gp.setmode(int(line[-6:], 8))
             elif line.startswith('new mode '):
-                gp.setmode(int(line.rstrip()[-6:], 8))
+                gp.setmode(int(line[-6:], 8))
             elif line.startswith('GIT binary patch'):
                 dopatch |= GP_BINARY
                 gp.binary = True

@@ -249,12 +249,12 @@ def reposetup(ui, repo):
                 key = self._bookmarks[key]
             return super(bookmark_repo, self).lookup(key)
 
-        def commit(self, *k, **kw):
+        def commitctx(self, ctx, error=False):
             """Add a revision to the repository and
             move the bookmark"""
             wlock = self.wlock() # do both commit and bookmark with lock held
             try:
-                node  = super(bookmark_repo, self).commit(*k, **kw)
+                node  = super(bookmark_repo, self).commitctx(ctx, error)
                 if node is None:
                     return None
                 parents = self.changelog.parents(node)
@@ -262,12 +262,13 @@ def reposetup(ui, repo):
                     parents = (parents[0],)
                 marks = parse(self)
                 update = False
-                for mark, n in marks.items():
-                    if ui.configbool('bookmarks', 'track.current'):
-                        if mark == current(self) and n in parents:
-                            marks[mark] = node
-                            update = True
-                    else:
+                if ui.configbool('bookmarks', 'track.current'):
+                    mark = current(self)
+                    if mark and marks[mark] in parents:
+                        marks[mark] = node
+                        update = True
+                else:
+                    for mark, n in marks.items():
                         if n in parents:
                             marks[mark] = node
                             update = True
@@ -288,10 +289,16 @@ def reposetup(ui, repo):
             node = self.changelog.tip()
             marks = parse(self)
             update = False
-            for mark, n in marks.items():
-                if n in parents:
+            if ui.configbool('bookmarks', 'track.current'):
+                mark = current(self)
+                if mark and marks[mark] in parents:
                     marks[mark] = node
                     update = True
+            else:
+                for mark, n in marks.items():
+                    if n in parents:
+                        marks[mark] = node
+                        update = True
             if update:
                 write(self, marks)
             return result

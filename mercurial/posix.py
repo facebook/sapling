@@ -7,7 +7,7 @@
 
 from i18n import _
 import osutil
-import os, sys, errno, stat, getpass, pwd, grp
+import os, sys, errno, stat, getpass, pwd, grp, fcntl
 
 posixfile = open
 nulldev = '/dev/null'
@@ -103,6 +103,44 @@ def pconvert(path):
 
 def localpath(path):
     return path
+
+if sys.platform == 'darwin':
+    def realpath(path):
+        '''
+        Returns the true, canonical file system path equivalent to the given
+        path.
+
+        Equivalent means, in this case, resulting in the same, unique
+        file system link to the path. Every file system entry, whether a file,
+        directory, hard link or symbolic link or special, will have a single
+        path preferred by the system, but may allow multiple, differing path
+        lookups to point to it.
+
+        Most regular UNIX file systems only allow a file system entry to be
+        looked up by its distinct path. Obviously, this does not apply to case
+        insensitive file systems, whether case preserving or not. The most
+        complex issue to deal with is file systems transparently reencoding the
+        path, such as the non-standard Unicode normalisation required for HFS+
+        and HFSX.
+        '''
+        # Constants copied from /usr/include/sys/fcntl.h
+        F_GETPATH = 50
+        O_SYMLINK = 0x200000
+
+        try:
+            fd = os.open(path, O_SYMLINK)
+        except OSError, err:
+            if err.errno is errno.ENOENT:
+                return path
+            raise
+
+        try:
+            return fcntl.fcntl(fd, F_GETPATH, '\0' * 1024).rstrip('\0')
+        finally:
+            os.close(fd)
+else:
+    # Fallback to the likely inadequate Python builtin function.
+    realpath = os.path.realpath
 
 def shellquote(s):
     if os.sys.platform == 'OpenVMS':
