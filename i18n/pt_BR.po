@@ -1507,7 +1507,9 @@ msgstr "autenticação pserver do CVS falhou"
 
 #, python-format
 msgid "unexpected response from CVS server (expected \"Valid-requests\", but got %r)"
-msgstr "resposta inesperada do servidor CVS (\"Valid-requests\" esperada, %r recebida)"
+msgstr ""
+"resposta inesperada do servidor CVS (\"Valid-requests\" esperada, %r "
+"recebida)"
 
 #, python-format
 msgid "%d bytes missing from remote file"
@@ -1585,6 +1587,10 @@ msgstr ""
 #, python-format
 msgid "%d changeset entries\n"
 msgstr "%d entradas de changeset\n"
+
+#, python-format
+msgid "darcs version 2.1 or newer needed (found %r)"
+msgstr "necessária versão do darcs 2.1 ou posterior (%r encontrada)"
 
 msgid "Python ElementTree module is not available"
 msgstr "módulo ElementTree do Python não está disponível"
@@ -2071,10 +2077,6 @@ msgid "merging with %d:%s\n"
 msgstr "mesclando com %d:%s\n"
 
 #, python-format
-msgid "Automated merge with %s"
-msgstr "Mesclagem automática com %s"
-
-#, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
 msgstr "novo changeset %d:%s mescla alterações remotas com local\n"
 
@@ -2158,10 +2160,6 @@ msgid ""
 msgstr ""
 "a cópia de trabalho de .hgsigs foi mudada (por favor consolide .hgsigs "
 "manualmente ou use --force)"
-
-#, python-format
-msgid "Added signature for changeset %s"
-msgstr "Adicionada assinatura para o changeset %s"
 
 msgid "unknown signature version"
 msgstr "versão de assinatura desconhecida"
@@ -5577,8 +5575,8 @@ msgstr ""
 "configurações de locale atuais ou HGENCODING.\n"
 
 #, python-format
-msgid "[win32mbcs] filename conversion fail with %s encoding\n"
-msgstr "[win32mbcs] conversão de nome de arquivo falha com codificação %s\n"
+msgid "[win32mbcs] filename conversion failed with %s encoding\n"
+msgstr "[win32mbcs] conversão de nome de arquivo falhou com codificação %s\n"
 
 msgid "[win32mbcs] cannot activate on this platform.\n"
 msgstr "[win32mbcs] não se pode ativar nesta plataforma.\n"
@@ -6218,10 +6216,6 @@ msgstr "%s não é um pai de %s"
 
 msgid "cannot use --parent on non-merge changeset"
 msgstr "não se pode usar --parent num changeset que não seja uma mesclagem"
-
-#, python-format
-msgid "Backed out changeset %s"
-msgstr "Changeset %s anulado"
 
 #, python-format
 msgid "changeset %s backs out changeset %s\n"
@@ -7121,6 +7115,9 @@ msgstr ""
 "    Se REVINICIAL for especificada, serão mostradas apenas cabeças\n"
 "    (ou cabeças de ramo) descendentes de REVINICIAL.\n"
 "    "
+
+msgid "you must specify a branch to use --closed"
+msgstr "você deve especificar um ramo para usar --closed"
 
 #, python-format
 msgid "no open branch heads on branch %s\n"
@@ -8236,16 +8233,8 @@ msgid "tag '%s' is not a local tag"
 msgstr "etiqueta '%s' não é uma etiqueta local"
 
 #, python-format
-msgid "Removed tag %s"
-msgstr "Etiqueta %s removida"
-
-#, python-format
 msgid "tag '%s' already exists (use -f to force)"
 msgstr "etiqueta '%s' já existe (use -f para forçar)"
-
-#, python-format
-msgid "Added tag %s for changeset %s"
-msgstr "Adicionada etiqueta %s para o changeset %s"
 
 msgid ""
 "list repository tags\n"
@@ -8598,8 +8587,8 @@ msgstr "[-fC] [NOME]"
 msgid "show only branches that have unmerged heads"
 msgstr "mostra apenas ramos que possuem cabeças não mescladas"
 
-msgid "show normal and closed heads"
-msgstr "mostra cabeças normais e fechadas"
+msgid "show normal and closed branches"
+msgstr "mostra ramos normais e fechados"
 
 msgid "[-a]"
 msgstr "[-a]"
@@ -8749,8 +8738,11 @@ msgstr "[OPÇÃO]... PADRÃO [ARQUIVO]..."
 msgid "show only heads which are descendants of REV"
 msgstr "mostra apenas cabeças descendentes de REV"
 
-msgid "show only the active heads from open branches"
-msgstr "mostra apenas as cabeças ativas de ramos abertos"
+msgid "show only the active branch heads from open branches"
+msgstr "mostra apenas as cabeças de ramo ativas de ramos abertos"
+
+msgid "show normal and closed branch heads"
+msgstr "mostra cabeças de ramo normais e fechadas"
 
 msgid "[-r STARTREV] [REV]..."
 msgstr "[-r REVINICIAL] [REV]..."
