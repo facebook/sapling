@@ -654,7 +654,7 @@ class GitHandler(object):
         return ''
 
     def extract_hg_metadata(self, message):
-        split = message.split("\n\n--HG--\n", 1)
+        split = message.split("\n--HG--\n", 1)
         renames = {}
         extra = {}
         branch = False
