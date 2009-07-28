@@ -2,7 +2,7 @@ import os, sys, math, urllib, re
 import toposort
 
 from dulwich.index import commit_tree
-from dulwich.objects import Blob, Commit, Tag, Tree
+from dulwich.objects import Blob, Commit, Tag, Tree, format_timezone
 from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
 
@@ -247,6 +247,8 @@ class GitHandler(object):
                 commit.committer = name
                 commit.commit_time = timestamp
                 commit.commit_timezone = -int(timezone)
+                # work around a timezone format change
+                format_timezone(-int(timezone))
             except ValueError: #pragma: no cover
                 self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%d: '%s'.\n") % (ctx, timezone))
                 commit.committer = commit.author
