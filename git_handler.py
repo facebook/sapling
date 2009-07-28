@@ -696,13 +696,13 @@ class GitHandler(object):
             changes = list()
             csha = None
             cmode = None
-            if basetree:
+            if basetree is not None:
                 for (bmode, bname, bsha) in basetree.entries():
                     if bmode == 0160000: # TODO: properly handle submodules
                         continue
                     basefiles.add(bname)
                     bobj = self.git.get_object(bsha)
-                    if comptree:
+                    if comptree is not None:
                         if bname in comptree:
                             (cmode, csha) = comptree[bname]
                         else:
@@ -719,7 +719,7 @@ class GitHandler(object):
                                                      prefix + bname + '/'))
 
             # handle removals
-            if comptree:
+            if comptree is not None:
                 for (bmode, bname, bsha) in comptree.entries():
                     if bmode == 0160000: # TODO: handle submodles
                         continue
