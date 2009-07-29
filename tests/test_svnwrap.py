@@ -22,7 +22,7 @@ class TestBasicRepoLayout(unittest.TestCase):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
         assert proc == 0
-        self.repo = svnwrap.SubversionRepo('file://%s' % self.repo_path)
+        self.repo = svnwrap.SubversionRepo(test_util.fileurl(self.repo_path))
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -68,8 +68,10 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
                               stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
         assert ret == 0
-        self.repo = svnwrap.SubversionRepo('file://%s/dummyproj' %
-                                           self.repo_path)
+        self.repo = svnwrap.SubversionRepo(test_util.fileurl(
+            self.repo_path + '/dummyproj'
+        ))
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
            unittest.TestLoader().loadTestsFromTestCase(TestRootAsSubdirOfRepo)]
