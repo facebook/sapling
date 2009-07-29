@@ -9,6 +9,15 @@ import test_util
 
 from hgsubversion import svnwrap
 
+import os
+import stat
+def force_rm(path):
+    os.chmod(
+        path,
+        os.stat(path).st_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH
+    )
+    os.remove(path)
+
 class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
@@ -25,7 +34,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.repo = svnwrap.SubversionRepo(test_util.fileurl(self.repo_path))
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.tmpdir, onerror=lambda func, path, e: force_rm(path))
 
 
     def test_num_revs(self):
