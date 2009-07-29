@@ -46,7 +46,7 @@ crosschecking files in changesets and manifests
 checking files
 3 files, 4 changesets, 4 total revisions
 % journal contents
-cat: .hg/store/journal: No such file or directory
+(no journal)
 % before update 0, strip 2
 changeset:   0:cb9a9f314b8b
 user:        test
