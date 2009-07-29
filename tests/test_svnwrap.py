@@ -13,8 +13,7 @@ class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
-        os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create',
-                                           self.repo_path,])
+        subprocess.call(['svnadmin', 'create', self.repo_path,])
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_at_repo_root.svndump'))
         proc = subprocess.call(['svnadmin', 'load', self.repo_path,],
@@ -59,8 +58,7 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
-        os.spawnvp(os.P_WAIT, 'svnadmin', ['svnadmin', 'create',
-                                           self.repo_path,])
+        subprocess.call(['svnadmin', 'create', self.repo_path,])
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_not_repo_root.svndump'))
         ret = subprocess.call(['svnadmin', 'load', self.repo_path,],
