@@ -19,6 +19,13 @@ from mercurial import ui
 
 from hgsubversion import util
 
+import sys
+# Documentation for Subprocess.Popen() says:
+#   "Note that on Windows, you cannot set close_fds to true and
+#   also redirect the standard handles by setting stdin, stdout or
+#   stderr."
+canCloseFds='win32' not in sys.platform
+
 # Fixtures that need to be pulled at a subdirectory of the repo path
 subdir = {'truncatedhistory.svndump': '/project2',
           'fetch_missing_files_subdir.svndump': '/foo',

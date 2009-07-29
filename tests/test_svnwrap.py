@@ -17,7 +17,8 @@ class TestBasicRepoLayout(unittest.TestCase):
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_at_repo_root.svndump'))
         proc = subprocess.call(['svnadmin', 'load', self.repo_path,],
-                                stdin=inp, close_fds=True,
+                                stdin=inp,
+                                close_fds=test_util.canCloseFds,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
         assert proc == 0
@@ -62,7 +63,8 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_not_repo_root.svndump'))
         ret = subprocess.call(['svnadmin', 'load', self.repo_path,],
-                              stdin=inp, close_fds=True,
+                              stdin=inp,
+                              close_fds=test_util.canCloseFds,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
         assert ret == 0
