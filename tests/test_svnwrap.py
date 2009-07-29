@@ -34,6 +34,7 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.repo = svnwrap.SubversionRepo(test_util.fileurl(self.repo_path))
 
     def tearDown(self):
+        del self.repo
         shutil.rmtree(self.tmpdir, onerror=lambda func, path, e: force_rm(path))
 
 
