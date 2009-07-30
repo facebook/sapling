@@ -56,7 +56,7 @@ files, e.g. with mutt::
 
   % mutt -R -f mbox
 
-When you are previewing the patchbomb messages, you can use `formail'
+When you are previewing the patchbomb messages, you can use ``formail``
 (a utility that is commonly installed as part of the procmail
 package), to send each message out::
 

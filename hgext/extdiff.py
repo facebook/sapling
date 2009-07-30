@@ -7,13 +7,13 @@
 
 '''command to allow external programs to compare revisions
 
-The `extdiff' Mercurial extension allows you to use external programs
+The extdiff Mercurial extension allows you to use external programs
 to compare revisions, or revision with working directory. The external
 diff programs are called with a configurable set of options and two
 non-option arguments: paths to directories containing snapshots of
 files to compare.
 
-The `extdiff' extension also allows to configure new diff commands, so
+The extdiff extension also allows to configure new diff commands, so
 you do not need to type "hg extdiff -p kdiff3" always. ::
 
   [extdiff]
@@ -36,7 +36,7 @@ you do not need to type "hg extdiff -p kdiff3" always. ::
   vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
 
 You can use -I/-X and list of file or directory names like normal "hg
-diff" command. The `extdiff' extension makes snapshots of only needed
+diff" command. The extdiff extension makes snapshots of only needed
 files, so running the external diff program will actually be pretty
 fast (at least faster than having to compare the entire tree).
 '''
