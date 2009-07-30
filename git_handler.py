@@ -1,6 +1,7 @@
 import os, sys, math, urllib, re
 import toposort
 
+from dulwich.errors import HangupException
 from dulwich.index import commit_tree
 from dulwich.objects import Blob, Commit, Tag, Tree, format_timezone
 from dulwich.pack import create_delta, apply_delta
@@ -122,9 +123,9 @@ class GitHandler(object):
         self.update_references()
         self.save_map()
 
-    def push(self, remote):
+    def push(self, remote, revs, force):
         self.export_commits()
-        changed_refs = self.upload_pack(remote)
+        changed_refs = self.upload_pack(remote, revs, force)
         remote_name = self.remote_name(remote)
 
         if remote_name and changed_refs:
@@ -479,70 +480,54 @@ class GitHandler(object):
 
     ## PACK UPLOADING AND FETCHING
 
-    def upload_pack(self, remote):
+    def upload_pack(self, remote, revs, force):
         client, path = self.get_transport_and_path(remote)
-        changed = self.get_changed_refs
+        def changed(refs):
+            to_push = revs or set(self.local_heads().values() + self.tags.values())
+            if not to_push and refs.keys()[0] == 'capabilities^{}':
+                to_push = [self.repo.lookup('tip')]
+            return self.get_changed_refs(refs, to_push, force)
+
         genpack = self.git.object_store.generate_pack_contents
         try:
             self.ui.status(_("creating and sending data\n"))
             changed_refs = client.send_pack(path, changed, genpack)
             return changed_refs
-        except:
-            # TODO: remove try/except or do something useful here
-            raise
+        except HangupException:
+            raise hgutil.Abort("the remote end hung up unexpectedly")
 
-    # TODO: for now, we'll just push all heads that match remote heads
-    #        * we should have specified push, tracking branches and --all
-    # takes a dict of refs:shas from the server and returns what should be
-    # pushed up
-    def get_changed_refs(self, refs):
-        keys = refs.keys()
+    def get_changed_refs(self, refs, revs, force):
+        new_refs = refs.copy()
+        for rev in revs:
+            ctx = self.repo[rev]
+            heads = [t for t in ctx.tags() if t in self.local_heads()]
+            tags = [t for t in ctx.tags() if t in self.tags]
 
-        changed = {}
-        if not keys:
-            return None
+            if not (heads or tags):
+                raise hgutil.Abort("revision %s cannot be pushed since"
+                                   " it doesn't have a ref" % ctx)
 
-        # TODO: this is a huge hack
-        if keys[0] == 'capabilities^{}':
-            # nothing on the server yet - first push
-            if not 'master' in self.repo.tags():
-                tip = self.repo.lookup('tip')
-                changed['refs/heads/master'] = self.map_git_get(hex(tip))
+            for r in heads + tags:
+                if r in heads:
+                    ref = 'refs/heads/'+r
+                else:
+                    ref = 'refs/tags/'+r
 
-        for tag, sha in self.tags.iteritems():
-            tag_name = 'refs/tags/' + tag
-            if tag_name not in refs:
-                changed[tag_name] = self.map_git_get(sha)
+                if ref not in refs:
+                    new_refs[ref] = self.map_git_get(ctx.hex())
+                elif new_refs[ref] in self._map_git:
+                    rctx = self.repo[self.map_hg_get(new_refs[ref])]
+                    if rctx.ancestor(ctx) == rctx or force:
+                        new_refs[ref] = self.map_git_get(ctx.hex())
+                    else:
+                        raise hgutil.Abort("pushing %s overwrites %s"
+                                           % (ref, ctx))
+                else:
+                    raise hgutil.Abort("%s changed on the server, please pull "
+                                       "and merge before pushing" % ref)
 
-        for ref_name in keys:
-            parts = ref_name.split('/')
-            if parts[0] == 'refs' and parts[1] == 'heads':
-                # strip off 'refs/heads'
-                head = "/".join([v for v in parts[2:]])
-                try:
-                    local_ref = self.repo.lookup(head)
-                    remote_ref = self.map_hg_get(refs[ref_name])
-                    if remote_ref:
-                        remotectx = self.repo[remote_ref]
-                        localctx = self.repo[local_ref]
-                        if remotectx.ancestor(localctx) == remotectx:
-                            # fast forward push
-                            changed[ref_name] = self.map_git_get(hex(local_ref))
-                        else:
-                            # XXX: maybe abort completely
-                            self.ui.warn('not pushing branch %s, please merge\n'% head)
-                except RepoError: #pragma: no cover
-                    # remote_ref is not here
-                    pass
+        return new_refs
 
-        # Also push any local branches not on the server yet
-        for head in self.local_heads():
-            ref = 'refs/heads/' + head
-            if not ref in refs:
-                node = self.repo.lookup(head)
-                changed[ref] = self.map_git_get(hex(node))
-
-        return changed
 
     def fetch_pack(self, remote_name):
         client, path = self.get_transport_and_path(remote_name)
@@ -551,6 +536,8 @@ class GitHandler(object):
         f, commit = self.git.object_store.add_pack()
         try:
             return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
+        except HangupException:
+            raise hgutil.Abort("the remote end hung up unexpectedly")
         finally:
             commit()
 
@@ -562,7 +549,7 @@ class GitHandler(object):
         # Create a local Git branch name for each
         # Mercurial bookmark.
         for key in heads:
-            self.git.refs['refs/heads/' + key] = heads[key]
+            self.git.refs['refs/heads/' + key] = self.map_git_get(heads[key])
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
@@ -573,7 +560,7 @@ class GitHandler(object):
     def local_heads(self):
         try:
             bms = bookmarks.parse(self.repo)
-            return dict([(bm, self.map_git_get(hex(bms[bm]))) for bm in bms])
+            return dict([(bm, hex(bms[bm])) for bm in bms])
         except AttributeError: #pragma: no cover
             return {}
 

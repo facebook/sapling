@@ -20,7 +20,7 @@ def generate_repo_subclass(baseclass):
         def push(self, remote, force=False, revs=None):
             if isinstance(remote, gitrepo):
                 git = GitHandler(self, self.ui)
-                git.push(remote.path)
+                git.push(remote.path, revs, force)
             else: #pragma: no cover
                 return super(hgrepo, self).push(remote, force, revs)
 

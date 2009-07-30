@@ -1,0 +1,55 @@
+Initialized empty Git repository in gitrepo/.git/
+
+importing Hg objects into Git
+Counting objects: 3, done.
+Total 3 (delta 0), reused 0 (delta 0)
+importing Git objects into Hg
+at: 0/1
+updating working directory
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+pushing to git://localhost/gitrepo
+importing Hg objects into Git
+at: 0/2
+creating and sending data
+    default::refs/heads/beta => GIT:cffa0e8d
+    default::refs/heads/master => GIT:7eeab2ea
+% should have two different branches
+  beta   cffa0e8 add beta
+* master 7eeab2e add alpha
+% some more work on master from git
+Already on "master"
+% this should fail
+pushing to git://localhost/gitrepo
+importing Hg objects into Git
+creating and sending data
+abort: refs/heads/master changed on the server, please pull and merge before pushing
+% ... even with -f
+pushing to git://localhost/gitrepo
+importing Hg objects into Git
+creating and sending data
+abort: refs/heads/master changed on the server, please pull and merge before pushing
+pulling from git://localhost/gitrepo
+importing Hg objects into Git
+Counting objects: 4, done.
+Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
+Total 3 (delta 0), reused 0 (delta 0)
+importing Git objects into Hg
+at: 0/1
+(run 'hg update' to get a working copy)
+% master and default/master should be diferent
+tip                                3:1436150b86c2
+default/master                     3:1436150b86c2
+master                             2:72f56395749d
+default/beta                       1:0564f526fb0f
+beta                               1:0564f526fb0f
+% this should also fail
+pushing to git://localhost/gitrepo
+importing Hg objects into Git
+creating and sending data
+abort: pushing refs/heads/master overwrites 72f56395749d
+% ... but succeed with -f
+pushing to git://localhost/gitrepo
+importing Hg objects into Git
+creating and sending data
+    default::refs/heads/beta => GIT:cffa0e8d
+    default::refs/heads/master => GIT:cc119202
