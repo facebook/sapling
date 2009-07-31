@@ -202,22 +202,22 @@ def patchbomb(ui, repo, *revs, **opts):
     single email containing a binary Mercurial bundle as an attachment
     will be sent.
 
-    Examples:
+    Examples::
 
-    hg email -r 3000          # send patch 3000 only
-    hg email -r 3000 -r 3001  # send patches 3000 and 3001
-    hg email -r 3000:3005     # send patches 3000 through 3005
-    hg email 3000             # send patch 3000 (deprecated)
+      hg email -r 3000          # send patch 3000 only
+      hg email -r 3000 -r 3001  # send patches 3000 and 3001
+      hg email -r 3000:3005     # send patches 3000 through 3005
+      hg email 3000             # send patch 3000 (deprecated)
 
-    hg email -o               # send all patches not in default
-    hg email -o DEST          # send all patches not in DEST
-    hg email -o -r 3000       # send all ancestors of 3000 not in default
-    hg email -o -r 3000 DEST  # send all ancestors of 3000 not in DEST
+      hg email -o               # send all patches not in default
+      hg email -o DEST          # send all patches not in DEST
+      hg email -o -r 3000       # send all ancestors of 3000 not in default
+      hg email -o -r 3000 DEST  # send all ancestors of 3000 not in DEST
 
-    hg email -b               # send bundle of all patches not in default
-    hg email -b DEST          # send bundle of all patches not in DEST
-    hg email -b -r 3000       # bundle of all ancestors of 3000 not in default
-    hg email -b -r 3000 DEST  # bundle of all ancestors of 3000 not in DEST
+      hg email -b               # send bundle of all patches not in default
+      hg email -b DEST          # send bundle of all patches not in DEST
+      hg email -b -r 3000       # bundle of all ancestors of 3000 not in default
+      hg email -b -r 3000 DEST  # bundle of all ancestors of 3000 not in DEST
 
     Before using this command, you will need to enable email in your
     hgrc. See the [email] section in hgrc(5) for details.
