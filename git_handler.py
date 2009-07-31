@@ -70,7 +70,7 @@ class GitHandler(object):
 
     def save_map(self):
         file = self.repo.opener(self.mapfile, 'w+', atomictemp=True)
-        for gitsha, hgsha in sorted(self._map_git.iteritems()):
+        for hgsha, gitsha in sorted(self._map_hg.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
         file.rename()
 
