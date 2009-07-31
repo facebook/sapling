@@ -123,6 +123,29 @@ class GitHandler(object):
         self.update_references()
         self.save_map()
 
+    def get_refs(self, remote):
+        self.export_commits()
+        client, path = self.get_transport_and_path(remote)
+        old_refs = {}
+        new_refs = {}
+        def changed(refs):
+            old_refs.update(refs)
+            to_push = set(self.local_heads().values() + self.tags.values())
+            if not to_push and refs.keys()[0] == 'capabilities^{}':
+                to_push = [self.repo.lookup('tip')]
+            new_refs.update(self.get_changed_refs(refs, to_push, True))
+            # don't push anything
+            return {}
+
+        try:
+            client.send_pack(path, changed, None)
+            new = [bin(self.map_hg_get(r)) for r in new_refs.values()]
+            old = dict((bin(self.map_hg_get(r)), 1) for r in old_refs.values())
+
+            return old, new
+        except HangupException:
+            raise hgutil.Abort("the remote end hung up unexpectedly")
+
     def push(self, remote, revs, force):
         self.export_commits()
         changed_refs = self.upload_pack(remote, revs, force)
@@ -133,7 +156,6 @@ class GitHandler(object):
                 self.ui.status("    "+ remote_name + "::" + ref + " => GIT:" + sha[0:8] + "\n")
 
             self.update_remote_branches(remote_name, changed_refs)
-
 
     def clear(self):
         mapfile = self.repo.join(self.mapfile)

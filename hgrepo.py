@@ -24,6 +24,15 @@ def generate_repo_subclass(baseclass):
             else: #pragma: no cover
                 return super(hgrepo, self).push(remote, force, revs)
 
+        def findoutgoing(self, remote, base=None, heads=None, force=False):
+            if isinstance(remote, gitrepo):
+                git = GitHandler(self, self.ui)
+                base, heads = git.get_refs(remote.path)
+                out, h = super(hgrepo, self).findoutgoing(remote, base, heads, force)
+                return out
+            else: #pragma: no cover
+                return super(hgrepo, self).findoutgoing(remote, base, heads, force)
+
         def tags(self):
             if self.tagscache:
                 return self.tagscache
