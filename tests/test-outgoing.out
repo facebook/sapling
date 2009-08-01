@@ -55,7 +55,7 @@ abort: refs/heads/master changed on the server, please pull and merge before pus
 % let's pull and try again
 pulling from git://localhost/gitrepo
 importing Hg objects into Git
-Counting objects: 4, done.
+Counting objects: 3, done.
 Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
 Total 3 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
