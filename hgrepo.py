@@ -13,7 +13,7 @@ def generate_repo_subclass(baseclass):
         def pull(self, remote, heads=None, force=False):
             if isinstance(remote, gitrepo):
                 git = GitHandler(self, self.ui)
-                git.fetch(remote.path)
+                git.fetch(remote.path, heads)
             else: #pragma: no cover
                 return super(hgrepo, self).pull(remote, heads, force)
 

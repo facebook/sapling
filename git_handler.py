@@ -97,9 +97,9 @@ class GitHandler(object):
         self.import_git_objects(remote_name)
         self.save_map()
 
-    def fetch(self, remote):
+    def fetch(self, remote, heads):
         self.export_git_objects()
-        refs = self.fetch_pack(remote)
+        refs = self.fetch_pack(remote, heads)
         remote_name = self.remote_name(remote)
 
         if refs:
@@ -344,7 +344,10 @@ class GitHandler(object):
         # get a list of all the head shas
         if refs:
           for head, sha in refs.iteritems():
-              todo.append(sha)
+              # refs contains all the refs in the server, not just the ones
+              # we are pulling
+              if sha in self.git.object_store:
+                  todo.append(sha)
         else:
             todo = self.git.refs.values()[:]
 
@@ -551,10 +554,24 @@ class GitHandler(object):
         return new_refs
 
 
-    def fetch_pack(self, remote_name):
+    def fetch_pack(self, remote_name, heads):
         client, path = self.get_transport_and_path(remote_name)
         graphwalker = self.git.get_graph_walker()
-        determine_wants = self.git.object_store.determine_wants_all
+        def determine_wants(refs):
+            if heads:
+                want = []
+                for h in heads:
+                    r = [ref for ref in refs if ref.endswith('/'+h)]
+                    if not r:
+                        raise hgutil.Abort("ref %s not found on remote server")
+                    elif len(r) == 1:
+                        want.append(refs[r[0]])
+                    else:
+                        raise hgutil.Abort("ambiguous reference %s: %r"%(h, r))
+            else:
+                want = [sha for ref, sha in refs.iteritems()
+                        if not ref.endswith('^{}')]
+            return want
         f, commit = self.git.object_store.add_pack()
         try:
             return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
@@ -595,6 +612,10 @@ class GitHandler(object):
             parts = k.split('/')
             if parts[0] == 'refs' and parts[1] == 'tags':
                 ref_name = "/".join([v for v in parts[2:]])
+                # refs contains all the refs in the server, not just
+                # the ones we are pulling
+                if refs[k] not in self.git.object_store:
+                    continue
                 if ref_name[-3:] == '^{}':
                     ref_name = ref_name[:-3]
                 if not ref_name in self.repo.tags():
@@ -619,6 +640,10 @@ class GitHandler(object):
                           if ref.startswith('refs/heads/')])
 
             for head, sha in heads.iteritems():
+                # refs contains all the refs in the server, not just
+                # the ones we are pulling
+                if sha not in self.git.object_store:
+                    continue
                 hgsha = bin(self.map_hg_get(sha))
                 if not head in bms:
                     # new branch
@@ -640,6 +665,10 @@ class GitHandler(object):
                       if ref.startswith('refs/heads/')])
 
         for head, sha in heads.iteritems():
+            # refs contains all the refs in the server, not just the ones
+            # we are pulling
+            if sha not in self.git.object_store:
+                continue
             hgsha = bin(self.map_hg_get(sha))
             tag = '%s/%s' % (remote_name, head)
             self.repo.tag(tag, hgsha, '', True, None, None)
