@@ -43,11 +43,9 @@ def listexts(header, exts, maxlength):
     '''return a text listing of the given extensions'''
     if not exts:
         return ''
-    # TODO: literal block is wrong, should be a field list or a simple table.
-    result = '\n%s\n\n ::\n\n' % header
+    result = '\n%s\n\n' % header
     for name, desc in sorted(exts.iteritems()):
-        desc = util.wrap(desc, maxlength + 5)
-        result += '  %s   %s\n' % (name.ljust(maxlength), desc)
+        result += ' %-*s %s\n' % (maxlength + 2, ':%s:' % name, desc)
     return result
 
 def extshelp():

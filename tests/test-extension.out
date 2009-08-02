@@ -33,7 +33,7 @@ list of commands:
 
 enabled extensions:
 
-   debugextension   only debugcommands
+ debugextension   only debugcommands
 
 global options:
  -R --repository      repository root directory or symbolic path name
@@ -63,7 +63,7 @@ list of commands:
 
 enabled extensions:
 
-   debugextension   only debugcommands
+ debugextension   only debugcommands
 
 global options:
  -R --repository      repository root directory or symbolic path name

@@ -53,7 +53,7 @@ list of commands:
 
 enabled extensions:
 
-   mq   manage a stack of patches
+ mq   manage a stack of patches
 
 use "hg -v help mq" to show aliases and global options
 adding a
