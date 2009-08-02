@@ -225,7 +225,6 @@ class GitHandler(object):
             if p_node != nullid and not hex(p_node) in self._map_hg:
                 self.export_hg_commit(p_rev)
 
-        tree_sha = commit_tree(self.git.object_store, self.iterblobs(ctx))
         renames = []
         for f in ctx:
             rename = ctx.filectx(f).renamed()
@@ -233,8 +232,6 @@ class GitHandler(object):
                 renames.append((rename[0], f))
 
         commit = Commit()
-        commit.tree = tree_sha
-        (time, timezone) = ctx.date()
 
         # hg authors might not have emails
         author = ctx.user()
@@ -254,6 +251,8 @@ class GitHandler(object):
 
         if 'author' in extra:
             author = apply_delta(author, extra['author'])
+
+        (time, timezone) = ctx.date()
 
         commit.author = author
         commit.author_time = int(time)
@@ -313,6 +312,9 @@ class GitHandler(object):
             git_sha = self.map_git_get(hgsha)
             if git_sha:
                 commit.parents.append(git_sha)
+
+        tree_sha = commit_tree(self.git.object_store, self.iterblobs(ctx))
+        commit.tree = tree_sha
 
         self.git.object_store.add_object(commit)
         self.map_set(commit.id, ctx.hex())
