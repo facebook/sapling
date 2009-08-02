@@ -119,9 +119,9 @@ helptable = (
       "12/6"
       "12/6/6" (Dec 6 2006)
 
-    Lastly, there is Mercurial's internal format:
+    Lastly, there is Mercurial's internal format::
 
-    "1165432709 0" (Wed Dec 6 13:18:29 2006 UTC)
+      "1165432709 0" (Wed Dec 6 13:18:29 2006 UTC)
 
     This is the internal representation format for dates. unixtime is
     the number of seconds since the epoch (1970-01-01 00:00 UTC).
@@ -361,12 +361,12 @@ PYTHONPATH
 
     Three styles are packaged with Mercurial: default (the style used
     when no explicit preference is passed), compact and changelog.
-    Usage:
+    Usage::
 
         $ hg log -r1 --style changelog
 
     A template is a piece of text, with markup to invoke variable
-    expansion:
+    expansion::
 
         $ hg log -r1 --template "{node}\n"
         b56ce7b07c52de7d5fd79fb89701ea538af65746
@@ -398,7 +398,7 @@ PYTHONPATH
     want to use a date in your output, you can use a filter to process
     it. Filters are functions which return a string based on the input
     variable. You can also use a chain of filters to get the desired
-    output:
+    output::
 
        $ hg tip --template "{date|isodate}\n"
        2008-08-21 18:22 +0000
