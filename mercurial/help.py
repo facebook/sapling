@@ -347,7 +347,7 @@ PYTHONPATH
     option when importing diffs in this format or using them in the mq
     extension.
     ''')),
-    (['templating'], _('Template Usage'),
+    (['templating', 'templates'], _('Template Usage'),
      _(r'''
     Mercurial allows you to customize output of commands through
     templates. You can either pass in a template from the command
