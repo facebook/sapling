@@ -323,10 +323,10 @@ PYTHONPATH
     While this standard format is often enough, it does not encode the
     following information:
 
-     - executable status and other permission bits
-     - copy or rename information
-     - changes in binary files
-     - creation or deletion of empty files
+    - executable status and other permission bits
+    - copy or rename information
+    - changes in binary files
+    - creation or deletion of empty files
 
     Mercurial also supports the extended diff format from the git VCS
     which addresses these limitations. The git diff format is not
