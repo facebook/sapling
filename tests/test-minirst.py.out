@@ -209,3 +209,31 @@ normal paragraph:
 --foo bar baz
 ----------------------------------------------------------------------
 
+fields formatted to fit within 60 characters:
+----------------------------------------------------------------------
+Field lists give a simple two-column layout:
+
+key           The whitespace following the key is
+              significant for the wrapping of this text.
+another key   More text. The indentation on the following
+              lines is not significant.
+----------------------------------------------------------------------
+
+fields formatted to fit within 30 characters:
+----------------------------------------------------------------------
+Field lists give a simple two-
+column layout:
+
+key           The whitespace
+              following the
+              key is
+              significant for
+              the wrapping of
+              this text.
+another key   More text. The
+              indentation on
+              the following
+              lines is not
+              significant.
+----------------------------------------------------------------------
+

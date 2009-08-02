@@ -137,3 +137,17 @@ marker after the option. It is treated as a normal paragraph:
 
 debugformat('options', options, 60)
 debugformat('options', options, 30)
+
+
+fields = """
+Field lists give a simple two-column layout:
+
+:key:         The whitespace following the key is
+  significant for the wrapping of this text.
+:another key: More text.
+    The indentation on the following
+    lines is not significant.
+"""
+
+debugformat('fields', fields, 60)
+debugformat('fields', fields, 30)
