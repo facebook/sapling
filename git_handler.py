@@ -322,17 +322,23 @@ class GitHandler(object):
 
     def iterblobs(self, ctx):
         for f in ctx:
-            blob = Blob()
-            blob.data = ctx[f].data()
-            if not blob.id in self.git.object_store:
+            fctx = ctx[f]
+            blobid = self.map_git_get(hex(fctx.filenode()))
+
+            if not blobid:
+                blob = Blob.from_string(fctx.data())
                 self.git.object_store.add_object(blob)
+                self.map_set(blob.id, hex(fctx.filenode()))
+                blobid = blob.id
+
             if 'l' in ctx.flags(f):
                 mode = 0120000
             elif 'x' in ctx.flags(f):
                 mode = 0100755
             else:
                 mode = 0100644
-            yield f, blob.id, mode
+
+            yield f, blobid, mode
 
     def import_git_objects(self, remote_name=None, refs=None):
         self.ui.status(_("importing Git objects into Hg\n"))
