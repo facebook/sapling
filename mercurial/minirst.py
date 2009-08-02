@@ -145,7 +145,7 @@ def findbulletlists(blocks):
             for line in blocks[i]['lines']:
                 if line.startswith('- '):
                     items.append(dict(type='bullet', lines=[],
-                                      indent=blocks[i]['indent'] + 2))
+                                      indent=blocks[i]['indent']))
                     line = line[2:]
                 items[-1]['lines'].append(line)
             blocks[i:i+1] = items
@@ -259,8 +259,8 @@ def formatblock(block, width):
         initindent = subindent = indent
         text = ' '.join(map(str.strip, block['lines']))
         if block['type'] == 'bullet':
-            initindent = indent[:-2] + '- '
-            subindent = indent
+            initindent = indent + '- '
+            subindent = indent + '  '
         elif block['type'] == 'option':
             subindent = indent + block['width'] * ' '
 
