@@ -11,7 +11,7 @@ This extension lets you rebase changesets in an existing Mercurial
 repository.
 
 For more information:
-http://mercurial.selenic.com/wiki/RebaseProject
+http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import util, repair, merge, cmdutil, commands, error
