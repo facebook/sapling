@@ -102,6 +102,9 @@ def show_doc(ui):
 
     # print topics
     for names, sec, doc in helptable:
+        for name in names:
+            ui.write(".. _%s:\n" % name)
+        ui.write("\n")
         section(sec.upper())
         if callable(doc):
             doc = doc()
