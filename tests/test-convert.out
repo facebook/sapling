@@ -45,7 +45,7 @@ convert a foreign SCM repository to a Mercurial one.
     maps each source commit ID to the destination ID for that revision, like
     so:
 
-    <source ID> <destination ID>
+      <source ID> <destination ID>
 
     If the file doesn't exist, it's automatically created. It's updated on
     each commit copied, so convert-repo can be interrupted and can be run
@@ -60,11 +60,11 @@ convert a foreign SCM repository to a Mercurial one.
     directories. Comment lines start with '#'. Each line can contain one of
     the following directives:
 
-    include path/to/file
+      include path/to/file
 
-    exclude path/to/file
+      exclude path/to/file
 
-    rename from/file to/file
+      rename from/file to/file
 
     The 'include' directive causes a file, or all files under a directory, to
     be included in the destination repository, and the exclusion of all other
@@ -122,7 +122,7 @@ convert a foreign SCM repository to a Mercurial one.
     its internal changeset merging code by default but can be configured to
     call the external 'cvsps' program by setting:
 
-    --config convert.cvsps='cvsps -A -u --cvs-direct -q'
+      --config convert.cvsps='cvsps -A -u --cvs-direct -q'
 
     This option is deprecated and will be removed in Mercurial 1.4.
 
@@ -130,7 +130,7 @@ convert a foreign SCM repository to a Mercurial one.
 
     Internal cvsps is selected by setting
 
-    --config convert.cvsps=builtin
+      --config convert.cvsps=builtin
 
     and has a few more configurable options:
 

@@ -106,7 +106,8 @@ We can have indented lists:
 
 ::
 
-  Literal block with no indentation.
+  Literal block with no indentation (apart from
+  the two spaces added to all literal blocks).
 """
 
 debugformat('lists', lists, 60)

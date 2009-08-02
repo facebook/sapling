@@ -10,17 +10,17 @@ Applied patches are both patch files and changesets.
 
 Common tasks (use "hg help command" for more details):
 
-prepare repository to work with patches   qinit
-create new patch                          qnew
-import existing patch                     qimport
+  prepare repository to work with patches   qinit
+  create new patch                          qnew
+  import existing patch                     qimport
 
-print patch series                        qseries
-print applied patches                     qapplied
-print name of top applied patch           qtop
+  print patch series                        qseries
+  print applied patches                     qapplied
+  print name of top applied patch           qtop
 
-add known patch to applied stack          qpush
-remove patch from applied stack           qpop
-refresh contents of top applied patch     qrefresh
+  add known patch to applied stack          qpush
+  remove patch from applied stack           qpop
+  refresh contents of top applied patch     qrefresh
 
 list of commands:
 
@@ -53,7 +53,7 @@ list of commands:
 
 enabled extensions:
 
- mq   manage a stack of patches
+   mq   manage a stack of patches
 
 use "hg -v help mq" to show aliases and global options
 adding a

@@ -13,10 +13,10 @@ files.
 
 Example:
 
-[keyword]
-# expand keywords in every python file except those matching "x*"
-**.py =
-x*    = ignore
+  [keyword]
+  # expand keywords in every python file except those matching "x*"
+  **.py =
+  x*    = ignore
 
 NOTE: the more specific you are in your filename patterns the less you lose
 speed in huge repositories.
@@ -54,9 +54,9 @@ list of commands:
 
 enabled extensions:
 
- keyword   expand keywords in tracked files
- mq        manage a stack of patches
- notify    hooks for sending email notifications at commit/push time
+   keyword   expand keywords in tracked files
+   mq        manage a stack of patches
+   notify    hooks for sending email notifications at commit/push time
 
 use "hg -v help keyword" to show aliases and global options
 % hg kwdemo

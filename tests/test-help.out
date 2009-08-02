@@ -268,14 +268,14 @@ show changed files in the working directory
 
     The codes used to show the status of files are:
 
-    M = modified
-    A = added
-    R = removed
-    C = clean
-    ! = missing (deleted by non-hg command, but still tracked)
-    ? = not tracked
-    I = ignored
-      = origin of the previous file listed as A (added)
+      M = modified
+      A = added
+      R = removed
+      C = clean
+      ! = missing (deleted by non-hg command, but still tracked)
+      ? = not tracked
+      I = ignored
+        = origin of the previous file listed as A (added)
 
 options:
 

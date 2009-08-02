@@ -243,7 +243,10 @@ def formatblock(block, width):
     indent = ' ' * block['indent']
     if block['type'] == 'margin':
         return ''
-    elif block['type'] in ('literal', 'section'):
+    elif block['type'] == 'literal':
+        indent += '  '
+        return indent + ('\n' + indent).join(block['lines'])
+    elif block['type'] == 'section':
         return indent + ('\n' + indent).join(block['lines'])
     elif block['type'] == 'definition':
         term = indent + block['lines'][0]

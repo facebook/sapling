@@ -66,20 +66,20 @@ literals formatted to fit within 60 characters:
 ----------------------------------------------------------------------
 The fully minimized form is the most convenient form:
 
-Hello
-  literal
-    world
+  Hello
+    literal
+      world
 
 In the partially minimized form a paragraph simply ends with
 space-double-colon.
 
-////////////////////////////////////////
-long un-wrapped line in a literal block
-\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  ////////////////////////////////////////
+  long un-wrapped line in a literal block
+  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-This literal block is started with '::',
-  the so-called expanded form. The paragraph
-    with '::' disappears in the final output.
+  This literal block is started with '::',
+    the so-called expanded form. The paragraph
+      with '::' disappears in the final output.
 ----------------------------------------------------------------------
 
 literals formatted to fit within 30 characters:
@@ -87,21 +87,21 @@ literals formatted to fit within 30 characters:
 The fully minimized form is
 the most convenient form:
 
-Hello
-  literal
-    world
+  Hello
+    literal
+      world
 
 In the partially minimized
 form a paragraph simply ends
 with space-double-colon.
 
-////////////////////////////////////////
-long un-wrapped line in a literal block
-\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  ////////////////////////////////////////
+  long un-wrapped line in a literal block
+  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-This literal block is started with '::',
-  the so-called expanded form. The paragraph
-    with '::' disappears in the final output.
+  This literal block is started with '::',
+    the so-called expanded form. The paragraph
+      with '::' disappears in the final output.
 ----------------------------------------------------------------------
 
 lists formatted to fit within 60 characters:
@@ -118,12 +118,13 @@ We can have indented lists:
   - This is an indented list item
   - Another indented list item:
 
-    - A literal block in the middle
-          of an indented list.
+      - A literal block in the middle
+            of an indented list.
 
-    (The above is not a list item since we are in the literal block.)
+      (The above is not a list item since we are in the literal block.)
 
-Literal block with no indentation.
+  Literal block with no indentation (apart from
+  the two spaces added to all literal blocks).
 ----------------------------------------------------------------------
 
 lists formatted to fit within 30 characters:
@@ -145,12 +146,13 @@ We can have indented lists:
   - Another indented list
     item:
 
-    - A literal block in the middle
-          of an indented list.
+      - A literal block in the middle
+            of an indented list.
 
-    (The above is not a list item since we are in the literal block.)
+      (The above is not a list item since we are in the literal block.)
 
-Literal block with no indentation.
+  Literal block with no indentation (apart from
+  the two spaces added to all literal blocks).
 ----------------------------------------------------------------------
 
 options formatted to fit within 60 characters:
