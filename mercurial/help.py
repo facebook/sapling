@@ -264,22 +264,21 @@ PYTHONPATH::
     Mercurial supports several ways to specify individual revisions.
 
     A plain integer is treated as a revision number. Negative integers
-    are treated as topological offsets from the tip, with -1 denoting
-    the tip. As such, negative numbers are only useful if you've
-    memorized your local tree numbers and want to save typing a single
-    digit. This editor suggests copy and paste.
+    are treated as sequential offsets from the tip, with -1 denoting
+    the tip, -2 denoting the revision prior to the tip, and so forth.
 
     A 40-digit hexadecimal string is treated as a unique revision
     identifier.
 
     A hexadecimal string less than 40 characters long is treated as a
-    unique revision identifier, and referred to as a short-form
+    unique revision identifier and is referred to as a short-form
     identifier. A short-form identifier is only valid if it is the
     prefix of exactly one full-length identifier.
 
-    Any other string is treated as a tag name, which is a symbolic
-    name associated with a revision identifier. Tag names may not
-    contain the ":" character.
+    Any other string is treated as a tag or branch name. A tag name is
+    a symbolic name associated with a revision identifier. A branch
+    name denotes the tipmost revision of that branch. Tag and branch
+    names must not contain the ":" character.
 
     The reserved name "tip" is a special tag that always identifies
     the most recent revision.
