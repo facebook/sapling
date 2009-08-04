@@ -98,7 +98,7 @@ class GitHandler(object):
         self.save_map()
 
     def fetch(self, remote, heads):
-        self.export_git_objects()
+        self.export_commits()
         refs = self.fetch_pack(remote, heads)
         remote_name = self.remote_name(remote)
 
@@ -116,12 +116,13 @@ class GitHandler(object):
 
         self.save_map()
 
-    def export_commits(self, export_objects=True):
-        if export_objects:
+    def export_commits(self):
+        try:
             self.export_git_objects()
-        self.export_hg_tags()
-        self.update_references()
-        self.save_map()
+            self.export_hg_tags()
+            self.update_references()
+        finally:
+            self.save_map()
 
     def get_refs(self, remote):
         self.export_commits()
@@ -190,7 +191,6 @@ class GitHandler(object):
                 self.ui.debug("revision %d is a part of octopus explosion\n" % ctx.rev())
                 continue
             self.export_hg_commit(rev)
-            self.save_map()
 
     # convert this commit into git objects
     # go through the manifest, convert all blobs/trees we don't have
