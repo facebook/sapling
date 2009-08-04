@@ -196,71 +196,19 @@ class GitHandler(object):
     # go through the manifest, convert all blobs/trees we don't have
     # write the commit object (with metadata info)
     def export_hg_commit(self, rev):
-        def is_octopus_part(ctx):
-            return ctx.extra().get('hg-git', None) in set(['octopus', 'octopus-done'])
-
         self.ui.note(_("converting revision %s\n") % rev)
 
         oldenc = self.swap_out_encoding()
 
-        # make sure parents are converted first
         ctx = self.repo.changectx(rev)
         extra = ctx.extra()
 
-        parents = []
-        if extra.get('hg-git', None) == 'octopus-done':
-            # implode octopus parents
-            part = ctx
-            while is_octopus_part(part):
-                (p1, p2) = part.parents()
-                assert not is_octopus_part(p1)
-                parents.append(p1)
-                part = p2
-            parents.append(p2)
-        else:
-            parents = ctx.parents()
-
-        for parent in parents:
-            p_node = parent.node()
-            if p_node != nullid and not hex(p_node) in self._map_hg:
-                self.export_hg_commit(p_rev)
-
-        renames = []
-        for f in ctx:
-            rename = ctx.filectx(f).renamed()
-            if rename:
-                renames.append((rename[0], f))
-
         commit = Commit()
 
-        # hg authors might not have emails
-        author = ctx.user()
-
-        # check for git author pattern compliance
-        regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
-        a = regex.match(author)
-
-        if a:
-            name = a.group(1)
-            email = a.group(2)
-            if len(a.group(3)) > 0:
-                name += ' ext:(' + urllib.quote(a.group(3)) + ')'
-            author = name + ' <' + email + '>'
-        else:
-            author = author + ' <none@none>'
-
-        if 'author' in extra:
-            author = apply_delta(author, extra['author'])
-
         (time, timezone) = ctx.date()
-
-        commit.author = author
+        commit.author = self.get_git_author(ctx)
         commit.author_time = int(time)
         commit.author_timezone = -timezone
-
-        commit.message = ctx.description() + "\n"
-        if 'message' in extra:
-            commit.message = apply_delta(commit.message, extra['message'])
 
         if 'committer' in extra:
             # fixup timezone
@@ -279,8 +227,74 @@ class GitHandler(object):
             commit.commit_time = commit.author_time
             commit.commit_timezone = commit.author_timezone
 
+        commit.parents = []
+        for parent in self.get_git_parents(ctx):
+            hgsha = hex(parent.node())
+            git_sha = self.map_git_get(hgsha)
+            if git_sha:
+                commit.parents.append(git_sha)
+
+        commit.message = self.get_git_message(ctx)
+
         if 'encoding' in extra:
             commit.encoding = extra['encoding']
+
+        tree_sha = commit_tree(self.git.object_store, self.iterblobs(ctx))
+        commit.tree = tree_sha
+
+        self.git.object_store.add_object(commit)
+        self.map_set(commit.id, ctx.hex())
+
+        self.swap_out_encoding(oldenc)
+        return commit.id
+
+    def get_git_author(self, ctx):
+        # hg authors might not have emails
+        author = ctx.user()
+
+        # check for git author pattern compliance
+        regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
+        a = regex.match(author)
+
+        if a:
+            name = a.group(1)
+            email = a.group(2)
+            if len(a.group(3)) > 0:
+                name += ' ext:(' + urllib.quote(a.group(3)) + ')'
+            author = name + ' <' + email + '>'
+        else:
+            author = author + ' <none@none>'
+
+        if 'author' in ctx.extra():
+            author = apply_delta(author, ctx.extra()['author'])
+
+        return author
+
+    def get_git_parents(self, ctx):
+        def is_octopus_part(ctx):
+            return ctx.extra().get('hg-git', None) in ('octopus', 'octopus-done')
+
+        parents = []
+        if ctx.extra().get('hg-git', None) == 'octopus-done':
+            # implode octopus parents
+            part = ctx
+            while is_octopus_part(part):
+                (p1, p2) = part.parents()
+                assert not is_octopus_part(p1)
+                parents.append(p1)
+                part = p2
+            parents.append(p2)
+        else:
+            parents = ctx.parents()
+
+        return parents
+
+    def get_git_message(self, ctx):
+        extra = ctx.extra()
+
+        message = ctx.description() + "\n"
+        if 'message' in extra:
+            message = apply_delta(message, extra['message'])
 
         # HG EXTRA INFORMATION
         add_extras = False
@@ -288,6 +302,12 @@ class GitHandler(object):
         if not ctx.branch() == 'default':
             add_extras = True
             extra_message += "branch : " + ctx.branch() + "\n"
+
+        renames = []
+        for f in ctx:
+            rename = ctx.filectx(f).renamed()
+            if rename:
+                renames.append((rename[0], f))
 
         if renames:
             add_extras = True
@@ -302,23 +322,9 @@ class GitHandler(object):
                 extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
 
         if add_extras:
-            commit.message += "\n--HG--\n" + extra_message
+            message += "\n--HG--\n" + extra_message
 
-        commit.parents = []
-        for parent in parents:
-            hgsha = hex(parent.node())
-            git_sha = self.map_git_get(hgsha)
-            if git_sha:
-                commit.parents.append(git_sha)
-
-        tree_sha = commit_tree(self.git.object_store, self.iterblobs(ctx))
-        commit.tree = tree_sha
-
-        self.git.object_store.add_object(commit)
-        self.map_set(commit.id, ctx.hex())
-
-        self.swap_out_encoding(oldenc)
-        return commit.id
+        return message
 
     def iterblobs(self, ctx):
         for f in ctx:
