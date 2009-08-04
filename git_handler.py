@@ -3,7 +3,7 @@ import toposort
 
 from dulwich.errors import HangupException
 from dulwich.index import commit_tree
-from dulwich.objects import Blob, Commit, Tag, Tree, format_timezone
+from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
 from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
 
@@ -265,17 +265,15 @@ class GitHandler(object):
         if 'committer' in extra:
             # fixup timezone
             (name, timestamp, timezone) = extra['committer'].rsplit(' ', 2)
-            try:
-                commit.committer = name
-                commit.commit_time = timestamp
-                commit.commit_timezone = -int(timezone)
-                # work around a timezone format change
-                format_timezone(-int(timezone))
-            except ValueError: #pragma: no cover
-                self.ui.warn(_("Ignoring committer in extra, invalid timezone in r%d: '%s'.\n") % (ctx, timezone))
-                commit.committer = commit.author
-                commit.commit_time = commit.author_time
-                commit.commit_timezone = commit.author_timezone
+            commit.committer = name
+            commit.commit_time = timestamp
+
+            # work around a timezone format change
+            if int(timezone) % 60 != 0: #pragma: no cover
+                timezone = parse_timezone(timezone)
+            else:
+                timezone = -int(timezone)
+            commit.commit_timezone = timezone
         else:
             commit.committer = commit.author
             commit.commit_time = commit.author_time
