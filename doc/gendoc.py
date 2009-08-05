@@ -7,7 +7,6 @@ from mercurial import demandimport; demandimport.enable()
 from mercurial.commands import table, globalopts
 from mercurial.i18n import _
 from mercurial.help import helptable
-from mercurial import extensions
 
 def get_desc(docstr):
     if not docstr:
@@ -111,16 +110,6 @@ def show_doc(ui):
             doc = doc()
         ui.write(doc)
         ui.write("\n")
-
-    # print extensions
-    underlined(_("EXTENSIONS"))
-    ui.write('\n')
-    for name in sorted(extensions.listexts('../hgext')):
-        ui.write('.. _%s:\n\n' % name)
-        doc = extensions.doc(name).splitlines()
-        synopsis, rest = doc[0], doc[1:]
-        ui.write("``%s: %s``" % (name, synopsis))
-        ui.write('%s\n\n' % '\n    '.join(rest))
 
 if __name__ == "__main__":
     show_doc(sys.stdout)
