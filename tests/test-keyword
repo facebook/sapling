@@ -13,9 +13,6 @@ commit=
 commit.test=cp a hooktest
 EOF
 
-echo % help
-hg help keyword
-
 echo % hg kwdemo
 hg --quiet kwdemo --default \
 | sed -e 's![^ ][^ ]*demo.txt,v!/TMP/demo.txt,v!' \
