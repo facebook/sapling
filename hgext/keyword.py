@@ -82,7 +82,7 @@ from mercurial.hgweb import webcommands
 from mercurial.lock import release
 from mercurial.node import nullid
 from mercurial.i18n import _
-import re, shutil, tempfile, time
+import re, shutil, tempfile
 
 commands.optionalrepo += ' kwdemo'
 
@@ -95,9 +95,8 @@ nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
 # not when reading filelog, and unexpand when reading from working dir
 restricted = 'merge record resolve qfold qimport qnew qpush qrefresh qrecord'
 
-def utcdate(date):
-    '''Returns hgdate in cvs-like UTC format.'''
-    return time.strftime('%Y/%m/%d %H:%M:%S', time.gmtime(date[0]))
+# provide cvs-like UTC date filter
+utcdate = lambda x: util.datestr(x, '%Y/%m/%d %H:%M:%S')
 
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': '', 'inc': [], 'exc': ['.hg*']}
