@@ -59,6 +59,7 @@ Default effects may be overridden from the .hgrc file::
 '''
 
 import os, sys
+import itertools
 
 from mercurial import cmdutil, commands, extensions, error
 from mercurial.i18n import _
@@ -142,14 +143,10 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
     '''run the qseries command with colored output'''
     ui.pushbuffer()
     retval = orig(ui, repo, **opts)
-    patches = ui.popbuffer().splitlines()
-    for patch in patches:
-        patchname = patch
-        if opts['summary']:
-            patchname = patchname.split(': ', 1)[0]
-        if ui.verbose:
-            patchname = patchname.lstrip().split(' ', 2)[-1]
+    patchlines = ui.popbuffer().splitlines()
+    patchnames = repo.mq.series
 
+    for patch, patchname in itertools.izip(patchlines, patchnames):
         if opts['missing']:
             effects = _patch_effects['missing']
         # Determine if patch is applied.
