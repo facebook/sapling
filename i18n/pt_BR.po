@@ -119,7 +119,7 @@ msgstr ""
 "\n"
 "A autorização é feita com relação ao nome de usuário local no sistema\n"
 "onde o gancho é executado, e não ao autor do changeset original (já\n"
-"que este pode ser alterado facilmente).\n"
+"que este é meramente informativo).\n"
 "\n"
 "O gancho acl funciona melhor se você usar um shell restrito (como\n"
 "por exemplo o hgsh), impedindo que usuários autenticados usem outros\n"
@@ -137,14 +137,14 @@ msgstr ""
 "  pretxnchangegroup.acl = python:hgext.acl.hook\n"
 "\n"
 "  [acl]\n"
-"  # verifica se a origem de changesets # está nessa lista\n"
+"  # verifica se a origem de changesets está nessa lista\n"
 "  # (\"serve\" == ssh ou http, \"push\", \"pull\", \"bundle\")\n"
 "  sources = serve\n"
 "\n"
 "As seções allow (permissões) e deny (restrições) usam um padrão de\n"
 "sub-árvore como chave (a sintaxe padrão é a glob), e uma lista de\n"
 "usuários separada por vírgulas como valor correspondente. A lista de\n"
-"restrição é verificada antes da lista de permissão.\n"
+"restrições é verificada antes da lista de permissões.\n"
 "\n"
 "  [acl.allow]\n"
 "  # Se acl.allow não estiver presente, todos os usuários são\n"
@@ -685,7 +685,7 @@ msgid ""
 "    .hgchurn file will be looked for in the working directory root.\n"
 "    "
 msgstr ""
-"Histograma de mudanças do repositório\n"
+"histograma de mudanças do repositório\n"
 "\n"
 "    Este comando exibe um histograma representando o número de linhas\n"
 "    alteradas ou revisões, agrupadas de acordo com o modelo pedido.\n"
@@ -707,6 +707,9 @@ msgstr ""
 "\n"
 "      # exibe atividades dos desenvolvedores por mês\n"
 "      hg churn -f '%Y-%m' -s -c\n"
+"\n"
+"      # exibe a contagem de linhas modificadas a cada ano\n"
+"      hg churn -f '%Y' -s\n"
 "\n"
 "    É possível mapear endereços de email alternativos para um\n"
 "    endereço principal provendo um arquivo usando o seguinte\n"
@@ -1264,7 +1267,7 @@ msgstr ""
 "    uma especificação de cliente como origem. Ele irá converter todos\n"
 "    os arquivos da origem para um repositório achatado do Mercurial,\n"
 "    ignorando labels, branches e integrações. Note que quando é dado\n"
-"    um caminho de depot path você precisa tipicamente especificar um\n"
+"    um caminho de depot você precisa tipicamente especificar um\n"
 "    diretório de destino, caso contrário o destino pode ser chamado\n"
 "    ...-hg.\n"
 "\n"
@@ -1320,7 +1323,7 @@ msgid "remap file names using contents of file"
 msgstr "arquivo de mapeamento de nomes de arquivo"
 
 msgid "import up to target revision REV"
-msgstr "importa até a revisão REV do alvo."
+msgstr "importa até a revisão REV do alvo"
 
 msgid "source repository type"
 msgstr "tipo de repositório de origem"
@@ -2127,7 +2130,7 @@ msgstr ""
 
 #, python-format
 msgid "No valid signature for %s\n"
-msgstr "Assinatura inválida para %s \n"
+msgstr "Assinatura inválida para %s\n"
 
 msgid ""
 "add a signature for the current or given revision\n"
@@ -2138,7 +2141,7 @@ msgid ""
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
-"adiciona uma assinatura para a versão atual ou uma informada\n"
+"adiciona uma assinatura para a revisão atual ou pedida\n"
 "\n"
 "    Se não for dada uma versão, será usado o pai do diretório de\n"
 "    trabalho, ou a tip se o diretório de trabalho não estiver em\n"
@@ -3234,7 +3237,7 @@ msgstr "nenhuma guarda com nome semelhante"
 
 #, python-format
 msgid "cannot push '%s' - %s\n"
-msgstr "não se pode empilhar %s - %s\n"
+msgstr "não se pode empilhar '%s' - %s\n"
 
 msgid "all patches are currently applied\n"
 msgstr "todos os patches estão aplicados nesse momento\n"
@@ -5030,7 +5033,7 @@ msgid " update to %d:%s\n"
 msgstr " atualização para %d:%s\n"
 
 msgid " already in target\n"
-msgstr "já no alvo\n"
+msgstr " já no alvo\n"
 
 #, python-format
 msgid " merge against %d:%s\n"
@@ -5743,7 +5746,7 @@ msgstr "não é possível fornecer prefixo ao arquivar para arquivos"
 
 #, python-format
 msgid "unknown archive type '%s'"
-msgstr "tipo de arquivo %s desconhecido"
+msgstr "tipo de arquivo '%s' desconhecido"
 
 msgid "invalid changegroup"
 msgstr "changegroup inválido"
@@ -5936,7 +5939,7 @@ msgstr "%s: %s"
 
 #, python-format
 msgid "Found revision %s from %s\n"
-msgstr "encontrada revisão %s de %s\n"
+msgstr "Encontrada revisão %s de %s\n"
 
 msgid "revision matching date not found"
 msgstr "revisão com data equivalente não encontrada"
@@ -6801,10 +6804,10 @@ msgid "Checking patch...\n"
 msgstr "Verificando patch...\n"
 
 msgid " patch call failed:\n"
-msgstr "chamada de patch falhou:\n"
+msgstr " chamada de patch falhou:\n"
 
 msgid " unexpected patch output!\n"
-msgstr "saída de patch inesperada!\n"
+msgstr " saída de patch inesperada!\n"
 
 msgid " patch test failed!\n"
 msgstr " patch de teste falhou!\n"
@@ -8402,7 +8405,7 @@ msgid "change working directory"
 msgstr "muda o diretório de trabalho"
 
 msgid "do not prompt, assume 'yes' for any required answers"
-msgstr "não solicita entrada, assume \"sim\" para qualquer resposta necessária"
+msgstr "não solicita entrada, assume 'sim' para qualquer resposta necessária"
 
 msgid "suppress output"
 msgstr "suprime saída"
@@ -9191,7 +9194,7 @@ msgid "(did you forget to compile extensions?)\n"
 msgstr "(você esqueceu de compilar extensões?)\n"
 
 msgid "(is your Python install correct?)\n"
-msgstr "(Sua instalação do Python está correta?)\n"
+msgstr "(sua instalação do Python está correta?)\n"
 
 #, python-format
 msgid "abort: error: %s\n"
@@ -10360,7 +10363,7 @@ msgstr "o destino '%s' já existe"
 
 #, python-format
 msgid "destination '%s' is not empty"
-msgstr "o destino %s não está vazio"
+msgstr "o destino '%s' não está vazio"
 
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
@@ -10591,7 +10594,7 @@ msgstr "diretório de trabalho tem pai desconhecido '%s'!"
 
 #, python-format
 msgid "unknown revision '%s'"
-msgstr "revisão desconhecida %s"
+msgstr "revisão desconhecida '%s'"
 
 #, python-format
 msgid "filtering %s through %s\n"
@@ -10827,7 +10830,7 @@ msgid "updating the branch cache\n"
 msgstr "atualizando o cache de ramos\n"
 
 msgid "Unexpected response from remote server:"
-msgstr "resposta inesperada do servidor:"
+msgstr "Resposta inesperada do servidor remoto:"
 
 msgid "operation forbidden by server"
 msgstr "operação não permitida pelo servidor"
@@ -10937,11 +10940,11 @@ msgstr "examinando manifestos\n"
 
 #, python-format
 msgid " overwrite %s partial %s\n"
-msgstr "sobrescrito %s parcial %s\n"
+msgstr " sobrescrito %s parcial %s\n"
 
 #, python-format
 msgid " ancestor %s local %s remote %s\n"
-msgstr "ancestral %s local %s remoto %s\n"
+msgstr " ancestral %s local %s remoto %s\n"
 
 #, python-format
 msgid ""
@@ -11311,7 +11314,7 @@ msgstr "Ignorado: %s\n"
 
 #, python-format
 msgid "ignoring untrusted configuration option %s.%s = %s\n"
-msgstr "Ignorando opção de configuração não confiável %s.%s = %s\n"
+msgstr "ignorando opção de configuração não confiável %s.%s = %s\n"
 
 #, python-format
 msgid "%s.%s not a boolean ('%s')"
@@ -11325,7 +11328,7 @@ msgid "No username found, using '%s' instead\n"
 msgstr "Nome de usuário não encontrado, usando '%s'\n"
 
 msgid "Please specify a username."
-msgstr "Por favor, especifique o nome de usuário"
+msgstr "Por favor, especifique um nome de usuário."
 
 #, python-format
 msgid "username %s contains a newline\n"
@@ -11463,7 +11466,7 @@ msgstr "comprimento dos dados difere de %d bytes"
 
 #, python-format
 msgid "index contains %d extra bytes"
-msgstr "Índice contém %d bytes extras"
+msgstr "índice contém %d bytes extras"
 
 #, python-format
 msgid "warning: `%s' uses revlog format 1"
@@ -11483,7 +11486,7 @@ msgstr "revisão %d aponta para changeset inesperado %d"
 
 #, python-format
 msgid " (expected %s)"
-msgstr "(esperado %s)"
+msgstr " (esperado %s)"
 
 #, python-format
 msgid "unknown parent 1 %s of %s"
@@ -11567,7 +11570,7 @@ msgstr "descompactando %s"
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
-msgstr "Revlog de origem %s:%s vazio ou faltando"
+msgstr "revlog de origem %s:%s vazio ou faltando"
 
 #, python-format
 msgid "warning: %s@%s: copy source revision is nullid %s:%s\n"
@@ -11583,7 +11586,7 @@ msgstr "%s não encontrado no manifesto"
 
 #, python-format
 msgid "warning: orphan revlog '%s'"
-msgstr "atenção: Revlog '%s' órfão"
+msgstr "atenção: revlog '%s' órfão"
 
 #, python-format
 msgid "%d files, %d changesets, %d total revisions\n"
