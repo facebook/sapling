@@ -36,15 +36,16 @@ def gettext(message):
     if message is None:
         return message
 
+    u = t.ugettext(message)
     try:
         # encoding.tolocal cannot be used since it will first try to
         # decode the Unicode string. Calling u.decode(enc) really
         # means u.encode(sys.getdefaultencoding()).decode(enc). Since
         # the Python encoding defaults to 'ascii', this fails if the
         # translated string use non-ASCII characters.
-        u = t.ugettext(message)
         return u.encode(encoding.encoding, "replace")
     except LookupError:
+        # An unknown encoding results in a LookupError.
         return message
 
 _ = gettext
