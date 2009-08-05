@@ -49,9 +49,11 @@ NOTE: the more specific you are in your filename patterns the less you
 lose speed in huge repositories.
 
 For [keywordmaps] template mapping and expansion demonstration and
-control run "hg kwdemo".
+control run "hg kwdemo". See "hg help templates" for a list of
+available templates and filters.
 
-An additional date template filter {date|utcdate} is provided.
+An additional date template filter {date|utcdate} is provided. It
+returns a date like "2006/09/18 15:13:13".
 
 The default template mappings (view with "hg kwdemo -d") can be
 replaced with customized keywords and templates. Again, run "hg
@@ -280,6 +282,8 @@ def demo(ui, repo, *args, **opts):
     and using -f/--rcfile to source an external hgrc file.
 
     Use -d/--default to disable current configuration.
+
+    See "hg help templates" for information on templates and filters.
     '''
     def demoitems(section, items):
         ui.write('[%s]\n' % section)
