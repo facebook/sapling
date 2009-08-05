@@ -288,7 +288,7 @@ class ui(object):
         """Prompt user with msg, read response, and ensure it matches
         one of the provided choices. The index of the choice is returned.
         choices is a sequence of acceptable responses with the format:
-        ('&None', 'E&xec', 'Sym&link') Responses are case insensitive. 
+        ('&None', 'E&xec', 'Sym&link') Responses are case insensitive.
         If ui is not interactive, the default is returned.
         """
         resps = [s[s.index('&')+1].lower() for s in choices]

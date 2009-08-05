@@ -210,7 +210,7 @@ def _readtagcache(ui, repo):
     # have no <tagnode>.  The cache is ordered from tip to oldest (which
     # is part of why <headrev> is there: a quick visual check is all
     # that's required to ensure correct order).
-    # 
+    #
     # This information is enough to let us avoid the most expensive part
     # of finding global tags, which is looking up <tagnode> in the
     # manifest for each head.
@@ -243,9 +243,8 @@ def _readtagcache(ui, repo):
         return (None, None, tags, False)
     if cachefile:
         cachefile.close()               # ignore rest of file
-        
-    repoheads = repo.heads()
 
+    repoheads = repo.heads()
     # Case 2 (uncommon): empty repo; get out quickly and don't bother
     # writing an empty cache.
     if repoheads == [nullid]:

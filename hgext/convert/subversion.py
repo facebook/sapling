@@ -311,7 +311,7 @@ class svn_source(converter_source):
             self.module += '/' + trunk
             self.head = self.latest(self.module, self.last_changed)
             if not self.head:
-                raise util.Abort(_('no revision found in module %s') 
+                raise util.Abort(_('no revision found in module %s')
                                  % self.module)
 
         # First head in the list is the module's head
@@ -454,8 +454,8 @@ class svn_source(converter_source):
                 # Here/tags/tag.1 discarded as well as its children.
                 # It happens with tools like cvs2svn. Such tags cannot
                 # be represented in mercurial.
-                addeds = dict((p, e.copyfrom_path) for p, e 
-                              in origpaths.iteritems() 
+                addeds = dict((p, e.copyfrom_path) for p, e
+                              in origpaths.iteritems()
                               if e.action == 'A' and e.copyfrom_path)
                 badroots = set()
                 for destroot in addeds:
