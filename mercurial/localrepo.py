@@ -651,6 +651,9 @@ class localrepository(repo.repository):
         return l
 
     def lock(self, wait=True):
+        '''Lock the repository store (.hg/store) and return a weak reference
+        to the lock. Use this before modifying the store (e.g. committing or
+        stripping). If you are opening a transaction, get a lock as well.)'''
         l = self._lockref and self._lockref()
         if l is not None and l.held:
             l.lock()
@@ -662,6 +665,9 @@ class localrepository(repo.repository):
         return l
 
     def wlock(self, wait=True):
+        '''Lock the non-store parts of the repository (everything under
+        .hg except .hg/store) and return a weak reference to the lock.
+        Use this before modifying files in .hg.'''
         l = self._wlockref and self._wlockref()
         if l is not None and l.held:
             l.lock()
