@@ -70,7 +70,7 @@ can push changes to, they can manage their own subscriptions.
 
 from mercurial.i18n import _
 from mercurial import patch, cmdutil, templater, util, mail
-import email.Parser, fnmatch, socket, time
+import email.Parser, email.Errors, fnmatch, socket, time
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -180,20 +180,25 @@ class notifier(object):
         '''send message.'''
 
         p = email.Parser.Parser()
-        msg = p.parsestr(data)
+        try:
+            msg = p.parsestr(data)
+        except email.Errors.MessageParseError, inst:
+            raise util.Abort(inst)
 
         # store sender and subject
         sender, subject = msg['From'], msg['Subject']
         del msg['From'], msg['Subject']
-        # store remaining headers
-        headers = msg.items()
-        # create fresh mime message from msg body
-        text = msg.get_payload()
-        # for notification prefer readability over data precision
-        msg = mail.mimeencode(self.ui, text, self.charsets, self.test)
-        # reinstate custom headers
-        for k, v in headers:
-            msg[k] = v
+
+        if not msg.is_multipart():
+            # create fresh mime message from scratch
+            # (multipart templates must take care of this themselves)
+            headers = msg.items()
+            payload = msg.get_payload()
+            # for notification prefer readability over data precision
+            msg = mail.mimeencode(self.ui, payload, self.charsets, self.test)
+            # reinstate custom headers
+            for k, v in headers:
+                msg[k] = v
 
         msg['Date'] = util.datestr(format="%a, %d %b %Y %H:%M:%S %1%2")
 

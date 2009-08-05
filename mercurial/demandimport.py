@@ -81,7 +81,10 @@ class _demandmod(object):
 def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
     if not locals or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
-        return _origimport(name, globals, locals, fromlist)
+        if level is None:
+            return _origimport(name, globals, locals, fromlist)
+        else:
+            return _origimport(name, globals, locals, fromlist, level)
     elif not fromlist:
         # import a [as b]
         if '.' in name: # a.b
