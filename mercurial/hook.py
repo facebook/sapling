@@ -27,6 +27,13 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             raise util.Abort(_('%s hook is invalid ("%s" not in '
                                'a module)') % (hname, funcname))
         modname = funcname[:d]
+        oldpaths = sys.path[:]
+        if hasattr(sys, "frozen"):
+            # binary installs require sys.path manipulation
+            path, name = os.path.split(modname)
+            if path and name:
+                sys.path.append(path)
+                modname = name
         try:
             obj = __import__(modname)
         except ImportError:
@@ -37,6 +44,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                 raise util.Abort(_('%s hook is invalid '
                                    '(import of "%s" failed)') %
                                  (hname, modname))
+        sys.path = oldpaths
         try:
             for p in funcname.split('.')[1:]:
                 obj = getattr(obj, p)
@@ -110,9 +118,9 @@ def hook(ui, repo, name, throw=False, **args):
             if hasattr(cmd, '__call__'):
                 r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
             elif cmd.startswith('python:'):
-                if cmd.count(':') == 2:
-                    path, cmd = cmd[7:].split(':')
-                    mod = extensions.loadpath(path, 'hgkook.%s' % hname)
+                if cmd.count(':') >= 2:
+                    path, cmd = cmd[7:].rsplit(':', 1)
+                    mod = extensions.loadpath(path, 'hghook.%s' % hname)
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
