@@ -24,7 +24,7 @@ def maketemplater(ui, repo, tmpl):
 
 def changedlines(ui, repo, ctx1, ctx2, fns):
     lines = 0
-    fmatch = cmdutil.match(repo, pats=fns)
+    fmatch = cmdutil.matchfiles(repo, fns)
     diff = ''.join(patch.diff(repo, ctx1.node(), ctx2.node(), fmatch))
     for l in diff.split('\n'):
         if (l.startswith("+") and not l.startswith("+++ ") or

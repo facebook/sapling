@@ -28,11 +28,13 @@ echo def > d/g/f2.txt
 hg ci -Am "add d/g/f2.txt" -u user1 -d 13:00 d/g/f2.txt
 
 echo % churn separate directories
-hg churn d/e
+cd d
+hg churn e
 echo % churn all
 hg churn
 echo % churn up to rev 2
 hg churn -r :2
+cd ..
 echo % churn with aliases
 cat > ../aliases <<EOF
 user1 alias1
