@@ -59,7 +59,7 @@ class dirstate(object):
     def _foldmap(self):
         f = {}
         for name in self._map:
-            f[util.realpath(self._join(name))] = name
+            f[os.path.normcase(name)] = name
         return f
 
     @propertycache
@@ -340,7 +340,7 @@ class dirstate(object):
             self._ui.warn(_("not in dirstate: %s\n") % f)
 
     def _normalize(self, path, knownpath):
-        norm_path = util.realpath(self._join(path))
+        norm_path = os.path.normcase(path)
         fold_path = self._foldmap.get(norm_path, None)
         if fold_path is None:
             if knownpath or not os.path.exists(os.path.join(self._root, path)):
