@@ -5,6 +5,7 @@ Finished recording patch 'p1.1'
 % update source
 Finished recording patch 'p1.2'
 % merge branch
+Backing up ./a(-darcs-backup0)
 We have conflicts in the following files:
 ./a
 Finished pulling and applying.

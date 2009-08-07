@@ -1,19 +1,13 @@
 #!/bin/sh
 
 "$TESTDIR/hghave" darcs || exit 80
-if darcs --version 2>&1 | grep '^2\.' > /dev/null; then
-    # FIXME: darcs 2 will fail with
-    ### Abort: timeout after 180 seconds.
-    echo 'skipped: test currently disabled for darcs 2'
-    exit 80
-fi
 
 echo "[extensions]" >> $HGRCPATH
 echo "convert=" >> $HGRCPATH
 echo 'hgext.graphlog =' >> $HGRCPATH
 
 DARCS_EMAIL='test@example.org'; export DARCS_EMAIL
-HOME=do_not_use_HOME_darcs; export HOME
+HOME=`pwd`/do_not_use_HOME_darcs; export HOME
 
 # skip if we can't import elementtree
 mkdir dummy
@@ -47,6 +41,7 @@ darcs record -a -l -m p1.2
 
 echo % merge branch
 darcs pull -a ../darcs-clone
+sleep 1
 echo e > a
 darcs record -a -l -m p2
 cd ..
@@ -56,7 +51,7 @@ glog()
     hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
 }
 
-hg convert darcs-repo darcs-repo-hg 2>&1 | grep -v hGetLine | grep -v '^$'
+hg convert darcs-repo darcs-repo-hg
 # The converter does not currently handle patch conflicts very well.
 # When they occur, it reverts *all* changes and moves forward,
 # letting the conflict resolving patch fix collisions.
