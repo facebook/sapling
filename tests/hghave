@@ -78,7 +78,7 @@ def has_executablebit():
 
 def has_icasefs():
     # Stolen from mercurial.util
-    fd, path = tempfile.mkstemp(prefix=tempprefix)
+    fd, path = tempfile.mkstemp(prefix=tempprefix, dir='.')
     os.close(fd)
     try:
         s1 = os.stat(path)
