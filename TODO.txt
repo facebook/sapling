@@ -1,10 +1,5 @@
 GENERAL
 ==========
-* fully integrate as native protocol handler (see hgsubversion)
-  - hg push git@...
-  - hg fetch [remote] (remote is url, hg alias or hg-git remote)
-  - hg clone url
-* file:/// support
 * work fine with eclipse plugin or tortoise-hg
 
 MAPPING ISSUES
@@ -14,13 +9,8 @@ MAPPING ISSUES
 
 REMOTE/BRANCH STUFF
 =====================
-* push with branch names (w/ proper error messages)
 * explain what branch mapping policy determined when updating refs
-
-* add a warning for a non-fast forward push
 * error nicer if pushing to remote without push access (over git://)
-* fail nicely when the remote_name is not there
-
 
 WEBSITE
 ===========
@@ -30,12 +20,11 @@ WEBSITE
 
 SPEED/EFFICIENCY
 ================
-* cache rename detection on push (seems to be very expensive)
-* switch object mapping to hg->git since the many to one is that direction
-* don't send blobs/trees already on server (thin pack)
-* packfile creation benchmarking (seems to take a while sometimes)
+* dulwich improvements
+  - don't send blobs/trees already on server
+  - thin packs
+  - packfile creation benchmarking (seems to take a while sometimes)
   - at least provide status output
-
 
 MAYBE
 ==========
