@@ -170,11 +170,10 @@ hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
-    Schedule files to be version controlled and added to the
-    repository.
+    Schedule files to be version controlled and added to the repository.
 
-    The files will be added to the repository at the next commit. To
-    undo an add before that, see hg forget.
+    The files will be added to the repository at the next commit. To undo an
+    add before that, see hg forget.
 
     If no names are given, add all files to the repository.
 
@@ -190,11 +189,10 @@ hg add [OPTION]... [FILE]...
 
 add the specified files on the next commit
 
-    Schedule files to be version controlled and added to the
-    repository.
+    Schedule files to be version controlled and added to the repository.
 
-    The files will be added to the repository at the next commit. To
-    undo an add before that, see hg forget.
+    The files will be added to the repository at the next commit. To undo an
+    add before that, see hg forget.
 
     If no names are given, add all files to the repository.
 
@@ -213,22 +211,21 @@ diff repository (or selected files)
 
     Differences between files are shown using the unified diff format.
 
-    NOTE: diff may generate unexpected results for merges, as it will
-    default to comparing against the working directory's first parent
-    changeset if no revisions are specified.
+    NOTE: diff may generate unexpected results for merges, as it will default
+    to comparing against the working directory's first parent changeset if no
+    revisions are specified.
 
-    When two revision arguments are given, then changes are shown
-    between those revisions. If only one revision is specified then
-    that revision is compared to the working directory, and, when no
-    revisions are specified, the working directory files are compared
-    to its parent.
+    When two revision arguments are given, then changes are shown between
+    those revisions. If only one revision is specified then that revision is
+    compared to the working directory, and, when no revisions are specified,
+    the working directory files are compared to its parent.
 
-    Without the -a/--text option, diff will avoid generating diffs of
-    files it detects as binary. With -a, diff will generate a diff
-    anyway, probably with undesirable results.
+    Without the -a/--text option, diff will avoid generating diffs of files it
+    detects as binary. With -a, diff will generate a diff anyway, probably
+    with undesirable results.
 
-    Use the -g/--git option to generate diffs in the git extended diff
-    format. For more information, read 'hg help diffs'.
+    Use the -g/--git option to generate diffs in the git extended diff format.
+    For more information, read 'hg help diffs'.
 
 options:
 
@@ -252,26 +249,25 @@ aliases: st
 
 show changed files in the working directory
 
-    Show status of files in the repository. If names are given, only
-    files that match are shown. Files that are clean or ignored or
-    the source of a copy/move operation, are not listed unless
-    -c/--clean, -i/--ignored, -C/--copies or -A/--all are given.
-    Unless options described with "show only ..." are given, the
-    options -mardu are used.
+    Show status of files in the repository. If names are given, only files
+    that match are shown. Files that are clean or ignored or the source of a
+    copy/move operation, are not listed unless -c/--clean, -i/--ignored,
+    -C/--copies or -A/--all are given. Unless options described with "show
+    only ..." are given, the options -mardu are used.
 
-    Option -q/--quiet hides untracked (unknown and ignored) files
-    unless explicitly requested with -u/--unknown or -i/--ignored.
+    Option -q/--quiet hides untracked (unknown and ignored) files unless
+    explicitly requested with -u/--unknown or -i/--ignored.
 
-    NOTE: status may appear to disagree with diff if permissions have
-    changed or a merge has occurred. The standard diff format does not
-    report permission changes and diff only reports changes relative
-    to one merge parent.
+    NOTE: status may appear to disagree with diff if permissions have changed
+    or a merge has occurred. The standard diff format does not report
+    permission changes and diff only reports changes relative to one merge
+    parent.
 
-    If one revision is given, it is used as the base revision.
-    If two revisions are given, the differences between them are
-    shown.
+    If one revision is given, it is used as the base revision. If two
+    revisions are given, the differences between them are shown.
 
     The codes used to show the status of files are:
+
     M = modified
     A = added
     R = removed

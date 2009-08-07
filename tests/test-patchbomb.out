@@ -10,7 +10,7 @@ Subject: [PATCH] a
 X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
 Message-Id: <8580ff50825a50c8f716.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -42,7 +42,7 @@ Content-Transfer-Encoding: 7bit
 Subject: [PATCH 0 of 2] test
 Message-Id: <patchbomb.120@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:02:00 -0000
+Date: Thu, 01 Jan 1970 00:02:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -58,7 +58,7 @@ Message-Id: <8580ff50825a50c8f716.121@
 In-Reply-To: <patchbomb.120@
 References: <patchbomb.120@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:02:01 -0000
+Date: Thu, 01 Jan 1970 00:02:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -86,7 +86,7 @@ Message-Id: <97d72e5f12c7e84f8506.122@
 In-Reply-To: <patchbomb.120@
 References: <patchbomb.120@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:02:02 -0000
+Date: Thu, 01 Jan 1970 00:02:02 +0000
 From: quux
 To: foo
 Cc: bar
@@ -124,7 +124,7 @@ MIME-Version: 1.0
 Subject: test
 Message-Id: <patchbomb.180@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:03:00 -0000
+Date: Thu, 01 Jan 1970 00:03:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -157,13 +157,13 @@ adding description
 adding utf
 % no mime encoding for email --test
 % md5sum of 8-bit output
-1b28ee86c937a1f9e2bf6fc5eabd00a5  mailtest
+e726c29b3008e77994c7572563e57c34  mailtest
 % mime encoded mbox (base64)
 This patch series consists of 1 patches.
 
 
 Writing [PATCH] charset=utf-8; content-transfer-encoding: base64 ...
-From quux Thu Jan 01 00:04:01 1970
+From quux Thu Jan  1 00:04:01 1970
 Content-Type: text/plain; charset="utf-8"
 MIME-Version: 1.0
 Content-Transfer-Encoding: base64
@@ -171,7 +171,7 @@ Subject: [PATCH] charset=utf-8; content-transfer-encoding: base64
 X-Mercurial-Node: c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
 Message-Id: <c3c9e37db9f4fe4882cd.240@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:04:00 -0000
+Date: Thu, 01 Jan 1970 00:04:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -192,13 +192,13 @@ LTAsMCArMSwxIEBACitow7ZtbWEhCg==
 adding qp
 % no mime encoding for email --test
 % md5sum of qp output
-7b5f11d50349b32eff4a9b2daaa82e7f  mailtest
+0402c7d033e04044e423bb04816f9dae  mailtest
 % mime encoded mbox (quoted-printable)
 This patch series consists of 1 patches.
 
 
 Writing [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable ...
-From quux Thu Jan 01 00:04:01 1970
+From quux Thu Jan  1 00:04:01 1970
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
@@ -206,7 +206,7 @@ Subject: [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable
 X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
 Message-Id: <c655633f8c87700bb38c.240@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:04:00 -0000
+Date: Thu, 01 Jan 1970 00:04:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -249,7 +249,7 @@ This patch series consists of 1 patches.
 
 Writing [PATCH] charset=us-ascii; content-transfer-encoding: 8bit ...
 % md5sum of 8-bit output
-e61684fc0bcccba4204714be37951893  mboxfix
+0920ef519c29b6a1742047ad9f203fc5  mboxfix
 % test diffstat for single patch
 This patch series consists of 1 patches.
 
@@ -267,7 +267,7 @@ Subject: [PATCH] test
 X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
 Message-Id: <ff2c9fa2018b15fa74b3.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -319,7 +319,7 @@ Content-Transfer-Encoding: 7bit
 Subject: [PATCH 0 of 2] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -339,7 +339,7 @@ Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:01 -0000
+Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -371,7 +371,7 @@ Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:02 -0000
+Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
 Cc: bar
@@ -404,7 +404,7 @@ Subject: [PATCH] test
 X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
 Message-Id: <ff2c9fa2018b15fa74b3.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -440,7 +440,7 @@ Subject: [PATCH] test
 X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
 Message-Id: <c655633f8c87700bb38c.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -495,7 +495,7 @@ Content-Transfer-Encoding: 7bit
 Subject: [PATCH 0 of 3] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -510,7 +510,7 @@ Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:01 -0000
+Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -544,7 +544,7 @@ Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:02 -0000
+Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
 Cc: bar
@@ -579,7 +579,7 @@ Message-Id: <c655633f8c87700bb38c.63@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:03 -0000
+Date: Thu, 01 Jan 1970 00:01:03 +0000
 From: quux
 To: foo
 Cc: bar
@@ -631,7 +631,7 @@ Subject: [PATCH] test
 X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
 Message-Id: <ff2c9fa2018b15fa74b3.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -676,7 +676,7 @@ Subject: [PATCH] test
 X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
 Message-Id: <c655633f8c87700bb38c.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -740,7 +740,7 @@ Content-Transfer-Encoding: 7bit
 Subject: [PATCH 0 of 3] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -755,7 +755,7 @@ Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:01 -0000
+Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -798,7 +798,7 @@ Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:02 -0000
+Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
 Cc: bar
@@ -842,7 +842,7 @@ Message-Id: <c655633f8c87700bb38c.63@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:03 -0000
+Date: Thu, 01 Jan 1970 00:01:03 +0000
 From: quux
 To: foo
 Cc: bar
@@ -906,7 +906,7 @@ Content-Transfer-Encoding: 7bit
 Subject: [PATCH 0 of 1] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -922,7 +922,7 @@ Message-Id: <ff2c9fa2018b15fa74b3.61@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:01 -0000
+Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -954,7 +954,7 @@ Content-Transfer-Encoding: 7bit
 Subject: [PATCH 0 of 2] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -970,7 +970,7 @@ Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:01 -0000
+Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -998,7 +998,7 @@ Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:02 -0000
+Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1028,7 +1028,7 @@ Subject: [PATCH] test
 X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
 Message-Id: <ff2c9fa2018b15fa74b3.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1067,7 +1067,7 @@ Content-Transfer-Encoding: 7bit
 Subject: [PATCH 0 of 2] test
 Message-Id: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1082,7 +1082,7 @@ Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:01 -0000
+Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1116,7 +1116,7 @@ Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:02 -0000
+Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1155,7 +1155,7 @@ Message-Id: <e317db6a6f288748d1f6.60@
 In-Reply-To: <baz>
 References: <baz>
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1192,7 +1192,7 @@ Message-Id: <patchbomb.60@
 In-Reply-To: <baz>
 References: <baz>
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:00 -0000
+Date: Thu, 01 Jan 1970 00:01:00 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1208,7 +1208,7 @@ Message-Id: <8580ff50825a50c8f716.61@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:01 -0000
+Date: Thu, 01 Jan 1970 00:01:01 +0000
 From: quux
 To: foo
 Cc: bar
@@ -1236,7 +1236,7 @@ Message-Id: <97d72e5f12c7e84f8506.62@
 In-Reply-To: <patchbomb.60@
 References: <patchbomb.60@
 User-Agent: Mercurial-patchbomb
-Date: Thu, 01 Jan 1970 00:01:02 -0000
+Date: Thu, 01 Jan 1970 00:01:02 +0000
 From: quux
 To: foo
 Cc: bar

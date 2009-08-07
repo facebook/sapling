@@ -35,4 +35,39 @@ cd dir
 hg status .
 cd ..
 
+#issue 1375
+#Testing that we can remove a folder and then add a file with the same name
+echo % issue 1375
+
+mkdir h
+echo h > h/h
+hg ci -Am t
+hg rm h
+
+echo h >h
+hg add h
+
+hg status
+hg ci -m0
+
+# Test for issue1735: inotify watches files in .hg/merge
+hg st
+
+echo a > a
+
+hg ci -Am a
+hg st
+
+echo b >> a
+hg ci -m ab
+hg st
+
+echo c >> a
+hg st
+
+hg up 0
+hg st
+
+HGMERGE=internal:local hg up
+hg st
 kill `cat hg.pid`

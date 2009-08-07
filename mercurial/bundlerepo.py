@@ -160,7 +160,7 @@ class bundlerepository(localrepo.localrepository):
             localrepo.localrepository.__init__(self, ui, path)
         except error.RepoError:
             self._tempparent = tempfile.mkdtemp()
-            localrepo.instance(ui,self._tempparent,1)
+            localrepo.instance(ui, self._tempparent, 1)
             localrepo.localrepository.__init__(self, ui, self._tempparent)
 
         if path:

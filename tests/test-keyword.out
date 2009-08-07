@@ -1,50 +1,49 @@
 % help
 keyword extension - expand keywords in tracked files
 
-This extension expands RCS/CVS-like or self-customized $Keywords$ in
-tracked text files selected by your configuration.
+This extension expands RCS/CVS-like or self-customized $Keywords$ in tracked
+text files selected by your configuration.
 
-Keywords are only expanded in local repositories and not stored in the
-change history. The mechanism can be regarded as a convenience for the
-current user or for archive distribution.
+Keywords are only expanded in local repositories and not stored in the change
+history. The mechanism can be regarded as a convenience for the current user
+or for archive distribution.
 
-Configuration is done in the [keyword] and [keywordmaps] sections of
-hgrc files.
+Configuration is done in the [keyword] and [keywordmaps] sections of hgrc
+files.
 
 Example:
 
-    [keyword]
-    # expand keywords in every python file except those matching "x*"
-    **.py =
-    x*    = ignore
+[keyword]
+# expand keywords in every python file except those matching "x*"
+**.py =
+x*    = ignore
 
-Note: the more specific you are in your filename patterns
-      the less you lose speed in huge repositories.
+NOTE: the more specific you are in your filename patterns the less you lose
+speed in huge repositories.
 
-For [keywordmaps] template mapping and expansion demonstration and
-control run "hg kwdemo".
+For [keywordmaps] template mapping and expansion demonstration and control run
+"hg kwdemo".
 
 An additional date template filter {date|utcdate} is provided.
 
-The default template mappings (view with "hg kwdemo -d") can be
-replaced with customized keywords and templates. Again, run "hg
-kwdemo" to control the results of your config changes.
+The default template mappings (view with "hg kwdemo -d") can be replaced with
+customized keywords and templates. Again, run "hg kwdemo" to control the
+results of your config changes.
 
-Before changing/disabling active keywords, run "hg kwshrink" to avoid
-the risk of inadvertently storing expanded keywords in the change
-history.
+Before changing/disabling active keywords, run "hg kwshrink" to avoid the risk
+of inadvertently storing expanded keywords in the change history.
 
-To force expansion after enabling it, or a configuration change, run
-"hg kwexpand".
+To force expansion after enabling it, or a configuration change, run "hg
+kwexpand".
 
-Also, when committing with the record extension or using mq's qrecord,
-be aware that keywords cannot be updated. Again, run "hg kwexpand" on
-the files in question to update keyword expansions after all changes
-have been checked in.
+Also, when committing with the record extension or using mq's qrecord, be
+aware that keywords cannot be updated. Again, run "hg kwexpand" on the files
+in question to update keyword expansions after all changes have been checked
+in.
 
-Expansions spanning more than one line and incremental expansions,
-like CVS' $Log$, are not supported. A keyword template map
-"Log = {desc}" expands to the first line of the changeset description.
+Expansions spanning more than one line and incremental expansions, like CVS'
+$Log$, are not supported. A keyword template map "Log = {desc}" expands to the
+first line of the changeset description.
 
 list of commands:
 
@@ -211,6 +210,7 @@ diff -r ef63ca68695b -r 40a904bbbe4c c
 +$Id$
 +tests for different changenodes
 % qpop
+popping mqtest.diff
 patch queue now empty
 % qgoto - should imply qpush
 applying mqtest.diff
@@ -219,6 +219,7 @@ now at: mqtest.diff
 $Id: c,v 40a904bbbe4c 1970/01/01 00:00:01 user $
 tests for different changenodes
 % qpop and move on
+popping mqtest.diff
 patch queue now empty
 % copy
 % kwfiles added

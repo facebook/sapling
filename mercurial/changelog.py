@@ -87,25 +87,39 @@ class appender(object):
         self.data.append(str(s))
         self.offset += len(s)
 
+def delayopener(opener, target, divert, buf):
+    def o(name, mode='r'):
+        if name != target:
+            return opener(name, mode)
+        if divert:
+            return opener(name + ".a", mode.replace('a', 'w'))
+        # otherwise, divert to memory
+        return appender(opener(name, mode), buf)
+    return o
+
 class changelog(revlog.revlog):
     def __init__(self, opener):
+        revlog.revlog.__init__(self, opener, "00changelog.i")
         self._realopener = opener
         self._delayed = False
-        revlog.revlog.__init__(self, self._delayopener, "00changelog.i")
+        self._divert = False
 
     def delayupdate(self):
         "delay visibility of index updates to other readers"
         self._delayed = True
-        self._delaycount = len(self)
+        self._divert = (len(self) == 0)
         self._delaybuf = []
-        self._delayname = None
+        self.opener = delayopener(self._realopener, self.indexfile,
+                                  self._divert, self._delaybuf)
 
     def finalize(self, tr):
         "finalize index updates"
         self._delayed = False
+        self.opener = self._realopener
         # move redirected index data back into place
-        if self._delayname:
-            util.rename(self._delayname + ".a", self._delayname)
+        if self._divert:
+            n = self.opener(self.indexfile + ".a").name
+            util.rename(n, n[:-2])
         elif self._delaybuf:
             fp = self.opener(self.indexfile, 'a')
             fp.write("".join(self._delaybuf))
@@ -113,21 +127,6 @@ class changelog(revlog.revlog):
             self._delaybuf = []
         # split when we're done
         self.checkinlinesize(tr)
-
-    def _delayopener(self, name, mode='r'):
-        fp = self._realopener(name, mode)
-        # only divert the index
-        if not self._delayed or not name == self.indexfile:
-            return fp
-        # if we're doing an initial clone, divert to another file
-        if self._delaycount == 0:
-            self._delayname = fp.name
-            if not len(self):
-                # make sure to truncate the file
-                mode = mode.replace('a', 'w')
-            return self._realopener(name + ".a", mode)
-        # otherwise, divert to memory
-        return appender(fp, self._delaybuf)
 
     def readpending(self, file):
         r = revlog.revlog(self.opener, file)
@@ -147,17 +146,16 @@ class changelog(revlog.revlog):
             fp2.close()
             # switch modes so finalize can simply rename
             self._delaybuf = []
-            self._delayname = fp1.name
+            self._divert = True
 
-        if self._delayname:
+        if self._divert:
             return True
 
         return False
 
     def checkinlinesize(self, tr, fp=None):
-        if self.opener == self._delayopener:
-            return
-        return revlog.revlog.checkinlinesize(self, tr, fp)
+        if not self._delayed:
+            revlog.revlog.checkinlinesize(self, tr, fp)
 
     def read(self, node):
         """

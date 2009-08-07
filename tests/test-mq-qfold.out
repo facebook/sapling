@@ -1,6 +1,8 @@
 % init
 adding a
 % fold in the middle of the queue
+popping p3
+popping p2
 now at: p1
 --- a/a
 +++ b/a

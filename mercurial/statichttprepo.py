@@ -114,7 +114,7 @@ class statichttprepository(localrepo.localrepository):
 
         self.manifest = manifest.manifest(self.sopener)
         self.changelog = changelog.changelog(self.sopener)
-        self.tagscache = None
+        self._tags = None
         self.nodetagscache = None
         self.encodepats = None
         self.decodepats = None

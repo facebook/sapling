@@ -32,3 +32,15 @@ M dir/x
 ? hg.pid
 M dir/x
 M x
+% issue 1375
+adding h/h
+adding hg.pid
+removing h/h
+A h
+R h/h
+M a
+merging a
+1 files updated, 1 files merged, 2 files removed, 0 files unresolved
+M a
+3 files updated, 1 files merged, 0 files removed, 0 files unresolved
+M a

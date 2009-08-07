@@ -82,7 +82,7 @@ class config(object):
         line = 0
         cont = 0
 
-        for l in data.splitlines(1):
+        for l in data.splitlines(True):
             line += 1
             if cont:
                 m = contre.match(l)

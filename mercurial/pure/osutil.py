@@ -8,7 +8,7 @@
 import os
 import stat as _stat
 
-posixfile = file
+posixfile = open
 
 def _mode_to_kind(mode):
     if _stat.S_ISREG(mode): return _stat.S_IFREG

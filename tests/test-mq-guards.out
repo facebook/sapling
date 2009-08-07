@@ -1,4 +1,7 @@
 adding x
+popping c.patch
+popping b.patch
+popping a.patch
 patch queue now empty
 % should fail
 abort: no patch named does-not-exist.patch
@@ -9,6 +12,7 @@ now at: a.patch
 % should guard a.patch
 % should print +a
 a.patch: +a
+popping a.patch
 patch queue now empty
 % should fail
 cannot push 'a.patch' - guarded by ['+a']
@@ -16,6 +20,7 @@ a.patch: +a
 % should push b.patch
 applying b.patch
 now at: b.patch
+popping b.patch
 patch queue now empty
 % test selection of an empty guard
 abort: guard cannot be an empty string
@@ -34,6 +39,9 @@ b.patch
 % should push c.patch
 applying c.patch
 now at: c.patch
+popping c.patch
+popping b.patch
+popping a.patch
 patch queue now empty
 guards deactivated
 number of unguarded, unapplied patches has changed from 3 to 2
@@ -41,6 +49,8 @@ number of unguarded, unapplied patches has changed from 3 to 2
 applying b.patch
 applying c.patch
 now at: c.patch
+popping c.patch
+popping b.patch
 patch queue now empty
 number of unguarded, unapplied patches has changed from 1 to 2
 % should push a.patch, not b.patch
@@ -48,6 +58,8 @@ applying a.patch
 now at: a.patch
 applying c.patch
 now at: c.patch
+popping c.patch
+popping a.patch
 patch queue now empty
 % should push b.patch
 applying b.patch
@@ -55,6 +67,8 @@ now at: b.patch
 applying c.patch
 now at: c.patch
 c.patch
+popping c.patch
+popping b.patch
 patch queue now empty
 number of unguarded, unapplied patches has changed from 2 to 3
 % should push a.patch, b.patch
@@ -62,6 +76,8 @@ applying a.patch
 now at: a.patch
 applying b.patch
 now at: b.patch
+popping b.patch
+popping a.patch
 patch queue now empty
 number of unguarded, unapplied patches has changed from 3 to 2
 % list patches and guards
@@ -83,6 +99,8 @@ applying c.patch
 now at: c.patch
 guards deactivated
 popping guarded patches
+popping c.patch
+popping b.patch
 patch queue now empty
 reapplying unguarded patches
 applying c.patch
@@ -100,6 +118,7 @@ c.patch
 new.patch: +1 +2 -3
 b.patch: +2
 c.patch: unguarded
+popping d.patch
 now at: c.patch
 % should show new.patch and b.patch as Guarded, c.patch as Applied
 % and d.patch as Unapplied
@@ -112,6 +131,7 @@ now at: c.patch
 1 G b.patch
 2 A c.patch
 3 G d.patch
+popping c.patch
 patch queue now empty
 new.patch: +1 +2 -3
 b.patch: +2

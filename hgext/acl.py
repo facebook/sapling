@@ -8,21 +8,20 @@
 
 '''hooks for controlling repository access
 
-This hook makes it possible to allow or deny write access to portions
-of a repository when receiving incoming changesets.
+This hook makes it possible to allow or deny write access to portions of a
+repository when receiving incoming changesets.
 
-The authorization is matched based on the local user name on the
-system where the hook runs, and not the committer of the original
-changeset (since the latter is merely informative).
+The authorization is matched based on the local user name on the system where
+the hook runs, and not the committer of the original changeset (since the
+latter is merely informative).
 
-The acl hook is best used along with a restricted shell like hgsh,
-preventing authenticating users from doing anything other than
-pushing or pulling. The hook is not safe to use if users have
-interactive shell access, as they can then disable the hook.
-Nor is it safe if remote users share an account, because then there
-is no way to distinguish them.
+The acl hook is best used along with a restricted shell like hgsh, preventing
+authenticating users from doing anything other than pushing or pulling. The
+hook is not safe to use if users have interactive shell access, as they can
+then disable the hook. Nor is it safe if remote users share an account,
+because then there is no way to distinguish them.
 
-To use this hook, configure the acl extension in your hgrc like this:
+To use this hook, configure the acl extension in your hgrc like this::
 
   [extensions]
   hgext.acl =
@@ -35,10 +34,9 @@ To use this hook, configure the acl extension in your hgrc like this:
   # ("serve" == ssh or http, "push", "pull", "bundle")
   sources = serve
 
-The allow and deny sections take a subtree pattern as key (with a
-glob syntax by default), and a comma separated list of users as
-the corresponding value. The deny list is checked before the allow
-list is.
+The allow and deny sections take a subtree pattern as key (with a glob syntax
+by default), and a comma separated list of users as the corresponding value.
+The deny list is checked before the allow list is. ::
 
   [acl.allow]
   # If acl.allow is not present, all users are allowed by default.

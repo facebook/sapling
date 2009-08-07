@@ -59,7 +59,7 @@ class sshserver(object):
         try:
             r = hex(self.repo.lookup(key))
             success = 1
-        except Exception,inst:
+        except Exception, inst:
             r = str(inst)
             success = 0
         self.respond("%s %s\n" % (success, r))

@@ -7,25 +7,22 @@
 
 '''track a line of development with movable markers
 
-Bookmarks are local movable markers to changesets. Every bookmark
-points to a changeset identified by its hash. If you commit a
-changeset that is based on a changeset that has a bookmark on it,
-the bookmark shifts to the new changeset.
+Bookmarks are local movable markers to changesets. Every bookmark points to a
+changeset identified by its hash. If you commit a changeset that is based on a
+changeset that has a bookmark on it, the bookmark shifts to the new changeset.
 
-It is possible to use bookmark names in every revision lookup
-(e.g. hg merge, hg update).
+It is possible to use bookmark names in every revision lookup (e.g. hg merge,
+hg update).
 
-By default, when several bookmarks point to the same changeset, they
-will all move forward together. It is possible to obtain a more
-git-like experience by adding the following configuration option to
-your .hgrc:
+By default, when several bookmarks point to the same changeset, they will all
+move forward together. It is possible to obtain a more git-like experience by
+adding the following configuration option to your .hgrc::
 
   [bookmarks]
   track.current = True
 
-This will cause Mercurial to track the bookmark that you are currently
-using, and only update it. This is similar to git's approach to
-branching.
+This will cause Mercurial to track the bookmark that you are currently using,
+and only update it. This is similar to git's approach to branching.
 '''
 
 from mercurial.i18n import _
@@ -124,15 +121,15 @@ def setcurrent(repo, mark):
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
     '''track a line of development with movable markers
 
-    Bookmarks are pointers to certain commits that move when
-    committing. Bookmarks are local. They can be renamed, copied and
-    deleted. It is possible to use bookmark names in 'hg merge' and
-    'hg update' to merge and update respectively to a given bookmark.
+    Bookmarks are pointers to certain commits that move when committing.
+    Bookmarks are local. They can be renamed, copied and deleted. It is
+    possible to use bookmark names in 'hg merge' and 'hg update' to merge and
+    update respectively to a given bookmark.
 
     You can use 'hg bookmark NAME' to set a bookmark on the working
-    directory's parent revision with the given name. If you specify
-    a revision using -r REV (where REV may be an existing bookmark),
-    the bookmark is assigned to that revision.
+    directory's parent revision with the given name. If you specify a revision
+    using -r REV (where REV may be an existing bookmark), the bookmark is
+    assigned to that revision.
     '''
     hexfn = ui.debugflag and hex or short
     marks = parse(repo)
@@ -249,12 +246,12 @@ def reposetup(ui, repo):
                 key = self._bookmarks[key]
             return super(bookmark_repo, self).lookup(key)
 
-        def commit(self, *k, **kw):
+        def commitctx(self, ctx, error=False):
             """Add a revision to the repository and
             move the bookmark"""
             wlock = self.wlock() # do both commit and bookmark with lock held
             try:
-                node  = super(bookmark_repo, self).commit(*k, **kw)
+                node  = super(bookmark_repo, self).commitctx(ctx, error)
                 if node is None:
                     return None
                 parents = self.changelog.parents(node)
@@ -262,12 +259,13 @@ def reposetup(ui, repo):
                     parents = (parents[0],)
                 marks = parse(self)
                 update = False
-                for mark, n in marks.items():
-                    if ui.configbool('bookmarks', 'track.current'):
-                        if mark == current(self) and n in parents:
-                            marks[mark] = node
-                            update = True
-                    else:
+                if ui.configbool('bookmarks', 'track.current'):
+                    mark = current(self)
+                    if mark and marks[mark] in parents:
+                        marks[mark] = node
+                        update = True
+                else:
+                    for mark, n in marks.items():
                         if n in parents:
                             marks[mark] = node
                             update = True
@@ -288,22 +286,25 @@ def reposetup(ui, repo):
             node = self.changelog.tip()
             marks = parse(self)
             update = False
-            for mark, n in marks.items():
-                if n in parents:
+            if ui.configbool('bookmarks', 'track.current'):
+                mark = current(self)
+                if mark and marks[mark] in parents:
                     marks[mark] = node
                     update = True
+            else:
+                for mark, n in marks.items():
+                    if n in parents:
+                        marks[mark] = node
+                        update = True
             if update:
                 write(self, marks)
             return result
 
-        def tags(self):
+        def _findtags(self):
             """Merge bookmarks with normal tags"""
-            if self.tagscache:
-                return self.tagscache
-
-            tagscache = super(bookmark_repo, self).tags()
-            tagscache.update(parse(self))
-            return tagscache
+            (tags, tagtypes) = super(bookmark_repo, self)._findtags()
+            tags.update(parse(self))
+            return (tags, tagtypes)
 
     repo.__class__ = bookmark_repo
 

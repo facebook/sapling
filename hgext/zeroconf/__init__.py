@@ -7,20 +7,20 @@
 
 '''discover and advertise repositories on the local network
 
-Zeroconf enabled repositories will be announced in a network without
-the need to configure a server or a service. They can be discovered
-without knowing their actual IP address.
+Zeroconf enabled repositories will be announced in a network without the need
+to configure a server or a service. They can be discovered without knowing
+their actual IP address.
 
-To allow other people to discover your repository using run "hg serve"
-in your repository.
+To allow other people to discover your repository using run "hg serve" in your
+repository::
 
- $ cd test
- $ hg serve
+  $ cd test
+  $ hg serve
 
-You can discover zeroconf enabled repositories by running "hg paths".
+You can discover zeroconf enabled repositories by running "hg paths"::
 
- $ hg paths
- zc-test = http://example.com:8000/test
+  $ hg paths
+  zc-test = http://example.com:8000/test
 '''
 
 import Zeroconf, socket, time, os

@@ -145,9 +145,9 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
 
     if not tool or tool == 'internal:prompt':
         tool = "internal:local"
-        if ui.prompt(_(" no tool found to merge %s\n"
-                       "keep (l)ocal or take (o)ther?") % fd,
-                     (_("&Local"), _("&Other")), _("l")) != _("l"):
+        if ui.promptchoice(_(" no tool found to merge %s\n"
+                             "keep (l)ocal or take (o)ther?") % fd,
+                           (_("&Local"), _("&Other")), 0):
             tool = "internal:other"
     if tool == "internal:local":
         return 0
@@ -213,9 +213,9 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
 
     if not r and _toolbool(ui, tool, "checkchanged"):
         if filecmp.cmp(repo.wjoin(fd), back):
-            if ui.prompt(_(" output file %s appears unchanged\n"
-                "was merge successful (yn)?") % fd,
-                (_("&Yes"), _("&No")), _("n")) != _("y"):
+            if ui.promptchoice(_(" output file %s appears unchanged\n"
+                                 "was merge successful (yn)?") % fd,
+                               (_("&Yes"), _("&No")), 1):
                 r = 1
 
     if _toolbool(ui, tool, "fixeol"):

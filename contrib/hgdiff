@@ -38,13 +38,13 @@ def buildlist(names, top):
 
 def diff_files(file1, file2):
     if file1 is None:
-        b = file(file2).read().splitlines(1)
+        b = file(file2).read().splitlines(True)
         l1 = "--- %s\n" % (file2)
         l2 = "+++ %s\n" % (file2)
         l3 = "@@ -0,0 +1,%d @@\n" % len(b)
         l = [l1, l2, l3] + ["+" + e for e in b]
     elif file2 is None:
-        a = file(file1).read().splitlines(1)
+        a = file(file1).read().splitlines(True)
         l1 = "--- %s\n" % (file1)
         l2 = "+++ %s\n" % (file1)
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
@@ -52,8 +52,8 @@ def diff_files(file1, file2):
     else:
         t1 = file(file1).read()
         t2 = file(file2).read()
-        l1 = t1.splitlines(1)
-        l2 = t2.splitlines(1)
+        l1 = t1.splitlines(True)
+        l2 = t2.splitlines(True)
         if options.difflib:
             l = difflib.unified_diff(l1, l2, file1, file2)
         else:

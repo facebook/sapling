@@ -2,11 +2,11 @@
 mq extension - manage a stack of patches
 
 This extension lets you work with a stack of patches in a Mercurial
-repository. It manages two stacks of patches - all known patches, and
-applied patches (subset of known patches).
+repository. It manages two stacks of patches - all known patches, and applied
+patches (subset of known patches).
 
-Known patches are represented as patch files in the .hg/patches
-directory. Applied patches are both patch files and changesets.
+Known patches are represented as patch files in the .hg/patches directory.
+Applied patches are both patch files and changesets.
 
 Common tasks (use "hg help command" for more details):
 
@@ -108,16 +108,26 @@ working dir diff:
  a
 +a
 % qpop
+popping test.patch
 patch queue now empty
-% qpush
+% qpush with dump of tag cache
+.hg/tags.cache (pre qpush):
+1
+
 applying test.patch
 now at: test.patch
+.hg/tags.cache (post qpush):
+2
+
 % pop/push outside repo
+popping test.patch
 patch queue now empty
 applying test.patch
 now at: test.patch
 % qrefresh in subdir
 % pop/push -a in subdir
+popping test2.patch
+popping test.patch
 patch queue now empty
 applying test.patch
 applying test2.patch
@@ -125,6 +135,7 @@ now at: test2.patch
 % qseries
 test.patch
 test2.patch
+popping test2.patch
 now at: test.patch
 0 A test.patch: foo bar
 1 U test2.patch: 
@@ -140,6 +151,7 @@ test.patch
 % qnext
 all patches applied
 % pop, qnext, qprev, qapplied
+popping test2.patch
 now at: test.patch
 test2.patch
 only one patch applied
@@ -156,17 +168,24 @@ test2.patch
 % qpush/qpop with index
 applying test2.patch
 now at: test2.patch
+popping test2.patch
+popping test1b.patch
 now at: test.patch
 applying test1b.patch
 now at: test1b.patch
 applying test2.patch
 now at: test2.patch
+popping test2.patch
 now at: test1b.patch
+popping test1b.patch
 now at: test.patch
 applying test1b.patch
 applying test2.patch
 now at: test2.patch
 % push should succeed
+popping test2.patch
+popping test1b.patch
+popping test.patch
 patch queue now empty
 pushing to ../../k
 searching for changes
@@ -180,6 +199,9 @@ applying test1b.patch
 applying test2.patch
 now at: test2.patch
   % pops all patches and succeeds
+popping test2.patch
+popping test1b.patch
+popping test.patch
 patch queue now empty
   qpop -a succeeds
   % does nothing and succeeds
@@ -193,6 +215,7 @@ applying test.patch
 now at: test.patch
   qpush succeeds
   % pops a patch and succeeds
+popping test.patch
 patch queue now empty
   qpop succeeds
   % pushes up to test1b.patch and succeeds
@@ -213,6 +236,7 @@ abort: cannot push to a previous patch: test.patch
 abort: patch test2.patch is not applied
   qpop test2.patch fails
   % pops up to test.patch and succeeds
+popping test1b.patch
 now at: test.patch
   qpop test.patch succeeds
   % pushes all patches and succeeds
@@ -269,6 +293,8 @@ diff -r cb9a9f314b8b b/f
 +f
 M a
 % qpush failure
+popping bar
+popping foo
 patch queue now empty
 applying foo
 applying bar
@@ -284,6 +310,7 @@ errors during apply, please fix and refresh bar
 1 qbase foo
 2 qtip bar tip
 % bad node in status
+popping bar
 now at: foo
 changeset:   0:cb9a9f314b8b
 mq status file refers to unknown node
@@ -308,6 +335,7 @@ copy file
 diff --git a/new b/copy
 copy from new
 copy to copy
+popping copy
 now at: new
 applying copy
 now at: copy
@@ -320,6 +348,7 @@ copy to copy
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 created new head
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+popping bar
 adding branch
 adding changesets
 adding manifests
@@ -354,6 +383,7 @@ diff --git a/foo b/baz
 
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+popping bar
 adding branch
 adding changesets
 adding manifests
@@ -386,6 +416,7 @@ new file mode 100644
 % refresh omitting an added file
 C newfile
 A newfile
+popping baz
 now at: bar
 % create a git patch
 diff --git a/alexander b/alexander
@@ -393,6 +424,7 @@ diff --git a/alexander b/alexander
 8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 diff --git a/bucephalus b/bucephalus
 % check binary patches can be popped and pushed
+popping addbucephalus
 now at: addalexander
 applying addbucephalus
 now at: addbucephalus
@@ -461,6 +493,7 @@ main repo:
     rev 0: add foo
 patch repo:
     rev 0: checkpoint
+popping patch1
 patch queue now empty
 main repo:
     rev 0: add foo
@@ -475,12 +508,14 @@ patch repo:
     rev 0: checkpoint
 % test applying on an empty file (issue 1033)
 adding a
+popping changea
 patch queue now empty
 applying changea
 now at: changea
 % test qpush with --force, issue1087
 adding bye.txt
 adding hello.txt
+popping empty
 patch queue now empty
 % qpush should fail, local changes
 abort: local changes found, refresh first
@@ -510,6 +545,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     imported patch empty
 
 
+popping empty
 patch queue now empty
 % qpush should fail, local changes
 abort: local changes found, refresh first
@@ -539,4 +575,5 @@ diff -r 9ecee4f634e3 hello.txt
 % test popping revisions not in working dir ancestry
 0 A empty
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+popping empty
 patch queue now empty

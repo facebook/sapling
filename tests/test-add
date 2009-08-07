@@ -20,7 +20,7 @@ echo % should fail
 hg add b
 hg st
 
-hg ci -m 0
+hg ci -m 0 --traceback
 echo % should fail
 hg add a
 

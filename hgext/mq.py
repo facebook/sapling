@@ -8,25 +8,25 @@
 '''manage a stack of patches
 
 This extension lets you work with a stack of patches in a Mercurial
-repository. It manages two stacks of patches - all known patches, and
-applied patches (subset of known patches).
+repository. It manages two stacks of patches - all known patches, and applied
+patches (subset of known patches).
 
-Known patches are represented as patch files in the .hg/patches
-directory. Applied patches are both patch files and changesets.
+Known patches are represented as patch files in the .hg/patches directory.
+Applied patches are both patch files and changesets.
 
-Common tasks (use "hg help command" for more details):
+Common tasks (use "hg help command" for more details)::
 
-prepare repository to work with patches   qinit
-create new patch                          qnew
-import existing patch                     qimport
+  prepare repository to work with patches   qinit
+  create new patch                          qnew
+  import existing patch                     qimport
 
-print patch series                        qseries
-print applied patches                     qapplied
-print name of top applied patch           qtop
+  print patch series                        qseries
+  print applied patches                     qapplied
+  print name of top applied patch           qtop
 
-add known patch to applied stack          qpush
-remove patch from applied stack           qpop
-refresh contents of top applied patch     qrefresh
+  add known patch to applied stack          qpush
+  remove patch from applied stack           qpop
+  refresh contents of top applied patch     qrefresh
 '''
 
 from mercurial.i18n import _
@@ -556,7 +556,7 @@ class queue(object):
             if not pushable:
                 self.explain_pushable(patchname, all_patches=True)
                 continue
-            self.ui.warn(_("applying %s\n") % patchname)
+            self.ui.status(_("applying %s\n") % patchname)
             pf = os.path.join(patchdir, patchname)
 
             try:
@@ -1081,6 +1081,8 @@ class queue(object):
                     except: pass
                     repo.dirstate.forget(f)
                 repo.dirstate.setparents(qp, nullid)
+            for patch in reversed(self.applied[start:end]):
+                self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
             self.strip(repo, rev, update=False, backup='strip')
             if len(self.applied):
@@ -1344,19 +1346,24 @@ class queue(object):
 
     def qseries(self, repo, missing=None, start=0, length=None, status=None,
                 summary=False):
-        def displayname(patchname):
+        def displayname(pfx, patchname):
             if summary:
                 ph = patchheader(self.join(patchname))
                 msg = ph.message
                 msg = msg and ': ' + msg[0] or ': '
             else:
                 msg = ''
-            return '%s%s' % (patchname, msg)
+            msg = "%s%s%s" % (pfx, patchname, msg)
+            if self.ui.interactive():
+                msg = util.ellipsis(msg, util.termwidth())
+            self.ui.write(msg + '\n')
 
         applied = set([p.name for p in self.applied])
         if length is None:
             length = len(self.series) - start
         if not missing:
+            if self.ui.verbose:
+                idxwidth = len(str(start+length - 1))
             for i in xrange(start, start+length):
                 patch = self.series[i]
                 if patch in applied:
@@ -1367,10 +1374,10 @@ class queue(object):
                     stat = 'G'
                 pfx = ''
                 if self.ui.verbose:
-                    pfx = '%d %s ' % (i, stat)
+                    pfx = '%*d %s ' % (idxwidth, i, stat)
                 elif status and status != stat:
                     continue
-                self.ui.write('%s%s\n' % (pfx, displayname(patch)))
+                displayname(pfx, patch)
         else:
             msng_list = []
             for root, dirs, files in os.walk(self.path):
@@ -1384,7 +1391,7 @@ class queue(object):
                         msng_list.append(fl)
             for x in sorted(msng_list):
                 pfx = self.ui.verbose and ('D ') or ''
-                self.ui.write("%s%s\n" % (pfx, displayname(x)))
+                displayname(pfx, x)
 
     def issaveline(self, l):
         if l.name == '.hg.patches.save.line':
@@ -1537,7 +1544,7 @@ class queue(object):
                 raise util.Abort(_('option "-r" not valid when importing '
                                    'files'))
             rev = cmdutil.revrange(repo, rev)
-            rev.sort(lambda x, y: cmp(y, x))
+            rev.sort(reverse=True)
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
                                'patches'))
@@ -1677,29 +1684,26 @@ def unapplied(ui, repo, patch=None, **opts):
 def qimport(ui, repo, *filename, **opts):
     """import a patch
 
-    The patch is inserted into the series after the last applied
-    patch. If no patches have been applied, qimport prepends the patch
-    to the series.
+    The patch is inserted into the series after the last applied patch. If no
+    patches have been applied, qimport prepends the patch to the series.
 
-    The patch will have the same name as its source file unless you
-    give it a new one with -n/--name.
+    The patch will have the same name as its source file unless you give it a
+    new one with -n/--name.
 
-    You can register an existing patch inside the patch directory with
-    the -e/--existing flag.
+    You can register an existing patch inside the patch directory with the
+    -e/--existing flag.
 
-    With -f/--force, an existing patch of the same name will be
-    overwritten.
+    With -f/--force, an existing patch of the same name will be overwritten.
 
-    An existing changeset may be placed under mq control with -r/--rev
-    (e.g. qimport --rev tip -n patch will place tip under mq control).
-    With -g/--git, patches imported with --rev will use the git diff
-    format. See the diffs help topic for information on why this is
-    important for preserving rename/copy information and permission
-    changes.
+    An existing changeset may be placed under mq control with -r/--rev (e.g.
+    qimport --rev tip -n patch will place tip under mq control). With
+    -g/--git, patches imported with --rev will use the git diff format. See
+    the diffs help topic for information on why this is important for
+    preserving rename/copy information and permission changes.
 
-    To import a patch from standard input, pass - as the patch file.
-    When importing from standard input, a patch name must be specified
-    using the --name flag.
+    To import a patch from standard input, pass - as the patch file. When
+    importing from standard input, a patch name must be specified using the
+    --name flag.
     """
     q = repo.mq
     q.qimport(repo, filename, patchname=opts['name'],
@@ -1714,11 +1718,12 @@ def qimport(ui, repo, *filename, **opts):
 def init(ui, repo, **opts):
     """init a new queue repository
 
-    The queue repository is unversioned by default. If
-    -c/--create-repo is specified, qinit will create a separate nested
-    repository for patches (qinit -c may also be run later to convert
-    an unversioned patch repository into a versioned one). You can use
-    qcommit to commit changes to this queue repository."""
+    The queue repository is unversioned by default. If -c/--create-repo is
+    specified, qinit will create a separate nested repository for patches
+    (qinit -c may also be run later to convert an unversioned patch repository
+    into a versioned one). You can use qcommit to commit changes to this queue
+    repository.
+    """
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
@@ -1740,17 +1745,16 @@ def init(ui, repo, **opts):
 def clone(ui, source, dest=None, **opts):
     '''clone main and patch repository at same time
 
-    If source is local, destination will have no patches applied. If
-    source is remote, this command can not check if patches are
-    applied in source, so cannot guarantee that patches are not
-    applied in destination. If you clone remote repository, be sure
-    before that it has no patches applied.
+    If source is local, destination will have no patches applied. If source is
+    remote, this command can not check if patches are applied in source, so
+    cannot guarantee that patches are not applied in destination. If you clone
+    remote repository, be sure before that it has no patches applied.
 
-    Source patch repository is looked for in <src>/.hg/patches by
-    default. Use -p <url> to change.
+    Source patch repository is looked for in <src>/.hg/patches by default. Use
+    -p <url> to change.
 
-    The patch directory must be a nested Mercurial repository, as
-    would be created by qinit -c.
+    The patch directory must be a nested Mercurial repository, as would be
+    created by qinit -c.
     '''
     def patchdir(repo):
         url = repo.url()
@@ -1847,7 +1851,7 @@ def prev(ui, repo, **opts):
                      summary=opts.get('summary'))
 
 def setupheaderopts(ui, opts):
-    def do(opt,val):
+    def do(opt, val):
         if not opts[opt] and opts['current' + opt]:
             opts[opt] = val
     do('user', ui.username())
@@ -1856,26 +1860,24 @@ def setupheaderopts(ui, opts):
 def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
-    qnew creates a new patch on top of the currently-applied patch (if
-    any). It will refuse to run if there are any outstanding changes
-    unless -f/--force is specified, in which case the patch will be
-    initialized with them. You may also use -I/--include,
-    -X/--exclude, and/or a list of files after the patch name to add
-    only changes to matching files to the new patch, leaving the rest
-    as uncommitted modifications.
+    qnew creates a new patch on top of the currently-applied patch (if any).
+    It will refuse to run if there are any outstanding changes unless
+    -f/--force is specified, in which case the patch will be initialized with
+    them. You may also use -I/--include, -X/--exclude, and/or a list of files
+    after the patch name to add only changes to matching files to the new
+    patch, leaving the rest as uncommitted modifications.
 
-    -u/--user and -d/--date can be used to set the (given) user and
-    date, respectively. -U/--currentuser and -D/--currentdate set user
-    to current user and date to current date.
+    -u/--user and -d/--date can be used to set the (given) user and date,
+    respectively. -U/--currentuser and -D/--currentdate set user to current
+    user and date to current date.
 
-    -e/--edit, -m/--message or -l/--logfile set the patch header as
-    well as the commit message. If none is specified, the header is
-    empty and the commit message is '[mq]: PATCH'.
+    -e/--edit, -m/--message or -l/--logfile set the patch header as well as
+    the commit message. If none is specified, the header is empty and the
+    commit message is '[mq]: PATCH'.
 
-    Use the -g/--git option to keep the patch in the git extended diff
-    format. Read the diffs help topic for more information on why this
-    is important for preserving permission changes and copy/rename
-    information.
+    Use the -g/--git option to keep the patch in the git extended diff format.
+    Read the diffs help topic for more information on why this is important
+    for preserving permission changes and copy/rename information.
     """
     msg = cmdutil.logmessage(opts)
     def getmsg(): return ui.edit(msg, ui.username())
@@ -1893,17 +1895,16 @@ def new(ui, repo, patch, *args, **opts):
 def refresh(ui, repo, *pats, **opts):
     """update the current patch
 
-    If any file patterns are provided, the refreshed patch will
-    contain only the modifications that match those patterns; the
-    remaining modifications will remain in the working directory.
+    If any file patterns are provided, the refreshed patch will contain only
+    the modifications that match those patterns; the remaining modifications
+    will remain in the working directory.
 
-    If -s/--short is specified, files currently included in the patch
-    will be refreshed just like matched files and remain in the patch.
+    If -s/--short is specified, files currently included in the patch will be
+    refreshed just like matched files and remain in the patch.
 
-    hg add/remove/copy/rename work as usual, though you might want to
-    use git-style patches (-g/--git or [diff] git=1) to track copies
-    and renames. See the diffs help topic for more information on the
-    git diff format.
+    hg add/remove/copy/rename work as usual, though you might want to use
+    git-style patches (-g/--git or [diff] git=1) to track copies and renames.
+    See the diffs help topic for more information on the git diff format.
     """
     q = repo.mq
     message = cmdutil.logmessage(opts)
@@ -1924,15 +1925,13 @@ def refresh(ui, repo, *pats, **opts):
 def diff(ui, repo, *pats, **opts):
     """diff of the current patch and subsequent modifications
 
-    Shows a diff which includes the current patch as well as any
-    changes which have been made in the working directory since the
-    last refresh (thus showing what the current patch would become
-    after a qrefresh).
+    Shows a diff which includes the current patch as well as any changes which
+    have been made in the working directory since the last refresh (thus
+    showing what the current patch would become after a qrefresh).
 
-    Use 'hg diff' if you only want to see the changes made since the
-    last qrefresh, or 'hg export qtip' if you want to see changes made
-    by the current patch without including changes made since the
-    qrefresh.
+    Use 'hg diff' if you only want to see the changes made since the last
+    qrefresh, or 'hg export qtip' if you want to see changes made by the
+    current patch without including changes made since the qrefresh.
     """
     repo.mq.diff(repo, pats, opts)
     return 0
@@ -1940,15 +1939,15 @@ def diff(ui, repo, *pats, **opts):
 def fold(ui, repo, *files, **opts):
     """fold the named patches into the current patch
 
-    Patches must not yet be applied. Each patch will be successively
-    applied to the current patch in the order given. If all the
-    patches apply successfully, the current patch will be refreshed
-    with the new cumulative patch, and the folded patches will be
-    deleted. With -k/--keep, the folded patch files will not be
-    removed afterwards.
+    Patches must not yet be applied. Each patch will be successively applied
+    to the current patch in the order given. If all the patches apply
+    successfully, the current patch will be refreshed with the new cumulative
+    patch, and the folded patches will be deleted. With -k/--keep, the folded
+    patch files will not be removed afterwards.
 
-    The header for each folded patch will be concatenated with the
-    current patch header, separated by a line of '* * *'."""
+    The header for each folded patch will be concatenated with the current
+    patch header, separated by a line of '* * *'.
+    """
 
     q = repo.mq
 
@@ -2014,14 +2013,13 @@ def goto(ui, repo, patch, **opts):
 def guard(ui, repo, *args, **opts):
     '''set or print guards for a patch
 
-    Guards control whether a patch can be pushed. A patch with no
-    guards is always pushed. A patch with a positive guard ("+foo") is
-    pushed only if the qselect command has activated it. A patch with
-    a negative guard ("-foo") is never pushed if the qselect command
-    has activated it.
+    Guards control whether a patch can be pushed. A patch with no guards is
+    always pushed. A patch with a positive guard ("+foo") is pushed only if
+    the qselect command has activated it. A patch with a negative guard
+    ("-foo") is never pushed if the qselect command has activated it.
 
-    With no arguments, print the currently active guards.
-    With arguments, set guards for the named patch.
+    With no arguments, print the currently active guards. With arguments, set
+    guards for the named patch.
     NOTE: Specifying negative guards now requires '--'.
 
     To set guards on another patch:
@@ -2098,8 +2096,8 @@ def savename(path):
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
 
-    When -f/--force is applied, all local changes in patched files
-    will be lost.
+    When -f/--force is applied, all local changes in patched files will be
+    lost.
     """
     q = repo.mq
     mergeq = None
@@ -2121,9 +2119,9 @@ def push(ui, repo, patch=None, **opts):
 def pop(ui, repo, patch=None, **opts):
     """pop the current patch off the stack
 
-    By default, pops off the top of the patch stack. If given a patch
-    name, keeps popping off patches until the named patch is at the
-    top of the stack.
+    By default, pops off the top of the patch stack. If given a patch name,
+    keeps popping off patches until the named patch is at the top of the
+    stack.
     """
     localupdate = True
     if opts['name']:
@@ -2240,8 +2238,7 @@ def strip(ui, repo, rev, **opts):
     """strip a revision and all its descendants from the repository
 
     If one of the working directory's parent revisions is stripped, the
-    working directory will be updated to the parent of the stripped
-    revision.
+    working directory will be updated to the parent of the stripped revision.
     """
     backup = 'all'
     if opts['backup']:
@@ -2266,35 +2263,33 @@ def strip(ui, repo, rev, **opts):
 def select(ui, repo, *args, **opts):
     '''set or print guarded patches to push
 
-    Use the qguard command to set or print guards on patch, then use
-    qselect to tell mq which guards to use. A patch will be pushed if
-    it has no guards or any positive guards match the currently
-    selected guard, but will not be pushed if any negative guards
-    match the current guard. For example:
+    Use the qguard command to set or print guards on patch, then use qselect
+    to tell mq which guards to use. A patch will be pushed if it has no guards
+    or any positive guards match the currently selected guard, but will not be
+    pushed if any negative guards match the current guard. For example:
 
         qguard foo.patch -stable    (negative guard)
         qguard bar.patch +stable    (positive guard)
         qselect stable
 
-    This activates the "stable" guard. mq will skip foo.patch (because
-    it has a negative match) but push bar.patch (because it has a
-    positive match).
+    This activates the "stable" guard. mq will skip foo.patch (because it has
+    a negative match) but push bar.patch (because it has a positive match).
 
-    With no arguments, prints the currently active guards.
-    With one argument, sets the active guard.
+    With no arguments, prints the currently active guards. With one argument,
+    sets the active guard.
 
-    Use -n/--none to deactivate guards (no other arguments needed).
-    When no guards are active, patches with positive guards are
-    skipped and patches with negative guards are pushed.
+    Use -n/--none to deactivate guards (no other arguments needed). When no
+    guards are active, patches with positive guards are skipped and patches
+    with negative guards are pushed.
 
-    qselect can change the guards on applied patches. It does not pop
-    guarded patches by default. Use --pop to pop back to the last
-    applied patch that is not guarded. Use --reapply (which implies
-    --pop) to push back to the current patch afterwards, but skip
-    guarded patches.
+    qselect can change the guards on applied patches. It does not pop guarded
+    patches by default. Use --pop to pop back to the last applied patch that
+    is not guarded. Use --reapply (which implies --pop) to push back to the
+    current patch afterwards, but skip guarded patches.
 
-    Use -s/--series to print a list of all guards in the series file
-    (no other arguments needed). Use -v for more information.'''
+    Use -s/--series to print a list of all guards in the series file (no other
+    arguments needed). Use -v for more information.
+    '''
 
     q = repo.mq
     guards = q.active()
@@ -2330,7 +2325,7 @@ def select(ui, repo, *args, **opts):
         if ui.verbose:
             guards['NONE'] = noguards
         guards = guards.items()
-        guards.sort(lambda a, b: cmp(a[0][1:], b[0][1:]))
+        guards.sort(key=lambda x: x[0][1:])
         if guards:
             ui.note(_('guards in series file:\n'))
             for guard, count in guards:
@@ -2369,18 +2364,16 @@ def select(ui, repo, *args, **opts):
 def finish(ui, repo, *revrange, **opts):
     """move applied patches into repository history
 
-    Finishes the specified revisions (corresponding to applied
-    patches) by moving them out of mq control into regular repository
-    history.
+    Finishes the specified revisions (corresponding to applied patches) by
+    moving them out of mq control into regular repository history.
 
-    Accepts a revision range or the -a/--applied option. If --applied
-    is specified, all applied mq revisions are removed from mq
-    control. Otherwise, the given revisions must be at the base of the
-    stack of applied patches.
+    Accepts a revision range or the -a/--applied option. If --applied is
+    specified, all applied mq revisions are removed from mq control.
+    Otherwise, the given revisions must be at the base of the stack of applied
+    patches.
 
-    This can be especially useful if your changes have been applied to
-    an upstream repository, or if you are about to push your changes
-    to upstream.
+    This can be especially useful if your changes have been applied to an
+    upstream repository, or if you are about to push your changes to upstream.
     """
     if not opts['applied'] and not revrange:
         raise util.Abort(_('no revisions specified'))
@@ -2423,34 +2416,33 @@ def reposetup(ui, repo):
                 raise util.Abort(_('source has mq patches applied'))
             return super(mqrepo, self).push(remote, force, revs)
 
-        def tags(self):
-            if self.tagscache:
-                return self.tagscache
-
-            tagscache = super(mqrepo, self).tags()
+        def _findtags(self):
+            '''augment tags from base class with patch tags'''
+            result = super(mqrepo, self)._findtags()
 
             q = self.mq
             if not q.applied:
-                return tagscache
+                return result
 
             mqtags = [(bin(patch.rev), patch.name) for patch in q.applied]
 
             if mqtags[-1][0] not in self.changelog.nodemap:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
-                return tagscache
+                return result
 
             mqtags.append((mqtags[-1][0], 'qtip'))
             mqtags.append((mqtags[0][0], 'qbase'))
             mqtags.append((self.changelog.parents(mqtags[0][0])[0], 'qparent'))
+            tags = result[0]
             for patch in mqtags:
-                if patch[1] in tagscache:
+                if patch[1] in tags:
                     self.ui.warn(_('Tag %s overrides mq patch of the same name\n')
                                  % patch[1])
                 else:
-                    tagscache[patch[1]] = patch[0]
+                    tags[patch[1]] = patch[0]
 
-            return tagscache
+            return result
 
         def _branchtags(self, partial, lrev):
             q = self.mq

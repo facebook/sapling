@@ -18,7 +18,7 @@ import win32api
 import errno, os, sys, pywintypes, win32con, win32file, win32process
 import winerror
 import osutil, encoding
-from win32com.shell import shell,shellcon
+from win32com.shell import shell, shellcon
 
 def os_link(src, dst):
     try:

@@ -230,4 +230,22 @@ hg ci --debug -m 'change foo' | sed -e 's/ at .*>/>/'
 
 hg showconfig hooks | sed -e 's/ at .*>/>/'
 
+echo '# test python hook configured with python:[file]:[hook] syntax'
+cd ..
+mkdir d
+cd d
+hg init repo
+mkdir hooks
+
+cd hooks
+cat > testhooks.py <<EOF
+def testhook(**args):
+    print 'hook works'
+EOF
+echo '[hooks]' > ../repo/.hg/hgrc
+echo "pre-commit.test = python:`pwd`/testhooks.py:testhook" >> ../repo/.hg/hgrc
+
+cd ../repo
+hg commit
+
 exit 0

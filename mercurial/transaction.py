@@ -118,6 +118,7 @@ class transaction(object):
 
     @active
     def close(self):
+        '''commit the transaction'''
         self.count -= 1
         if self.count != 0:
             return
@@ -131,6 +132,9 @@ class transaction(object):
 
     @active
     def abort(self):
+        '''abort the transaction (generally called on error, or when the
+        transaction is not explicitly committed before going out of
+        scope)'''
         self._abort()
 
     def _abort(self):

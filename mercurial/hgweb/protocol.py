@@ -26,7 +26,7 @@ def lookup(repo, req):
     try:
         r = hex(repo.lookup(req.form['key'][0]))
         success = 1
-    except Exception,inst:
+    except Exception, inst:
         r = str(inst)
         success = 0
     resp = "%s %s\n" % (success, r)

@@ -35,7 +35,7 @@ class _error_logger(object):
         for msg in seq:
             self.handler.log_error("HG error:  %s", msg)
 
-class _hgwebhandler(object, BaseHTTPServer.BaseHTTPRequestHandler):
+class _hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     url_scheme = 'http'
 

@@ -183,7 +183,7 @@ class mercurial_sink(converter_sink):
             tagparent = nullid
 
         try:
-            oldlines = sorted(parentctx['.hgtags'].data().splitlines(1))
+            oldlines = sorted(parentctx['.hgtags'].data().splitlines(True))
         except:
             oldlines = []
 

@@ -5,6 +5,7 @@ tip: 0
 No branch cache
 
 # some regular revisions
+popping p1
 patch queue now empty
 tip: 1
 3f910abad313ff802d3a23a7529433872df9b3ae 1
@@ -43,6 +44,9 @@ branch bar: 2
 qbase: 1
 
 # detect an invalid cache
+popping p2
+popping p1
+popping p0
 patch queue now empty
 applying p0
 applying p1

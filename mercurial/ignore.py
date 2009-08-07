@@ -11,8 +11,16 @@ import re
 
 _commentre = None
 
-def _parselines(fp):
-    for line in fp:
+def ignorepats(lines):
+    '''parse lines (iterable) of .hgignore text, returning a tuple of
+    (patterns, parse errors). These patterns should be given to compile()
+    to be validated and converted into a match function.'''
+    syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
+    syntax = 'relre:'
+    patterns = []
+    warnings = []
+
+    for line in lines:
         if "#" in line:
             global _commentre
             if not _commentre:
@@ -22,11 +30,30 @@ def _parselines(fp):
             # fixup properly escaped comments that survived the above
             line = line.replace("\\#", "#")
         line = line.rstrip()
-        if line:
-            yield line
+        if not line:
+            continue
+
+        if line.startswith('syntax:'):
+            s = line[7:].strip()
+            try:
+                syntax = syntaxes[s]
+            except KeyError:
+                warnings.append(_("ignoring invalid syntax '%s'") % s)
+            continue
+        pat = syntax + line
+        for s, rels in syntaxes.iteritems():
+            if line.startswith(rels):
+                pat = line
+                break
+            elif line.startswith(s+':'):
+                pat = rels + line[len(s)+1:]
+                break
+        patterns.append(pat)
+
+    return patterns, warnings
 
 def ignore(root, files, warn):
-    '''return the contents of .hgignore files as a list of patterns.
+    '''return matcher covering patterns in 'files'.
 
     the files parsed for patterns include:
     .hgignore in the repository root
@@ -45,30 +72,14 @@ def ignore(root, files, warn):
     glob:pattern   # non-rooted glob
     pattern        # pattern of the current default type'''
 
-    syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
     pats = {}
     for f in files:
         try:
             pats[f] = []
             fp = open(f)
-            syntax = 'relre:'
-            for line in _parselines(fp):
-                if line.startswith('syntax:'):
-                    s = line[7:].strip()
-                    try:
-                        syntax = syntaxes[s]
-                    except KeyError:
-                        warn(_("%s: ignoring invalid syntax '%s'\n") % (f, s))
-                    continue
-                pat = syntax + line
-                for s, rels in syntaxes.iteritems():
-                    if line.startswith(rels):
-                        pat = line
-                        break
-                    elif line.startswith(s+':'):
-                        pat = rels + line[len(s)+1:]
-                        break
-                pats[f].append(pat)
+            pats[f], warnings = ignorepats(fp)
+            for warning in warnings:
+                warn("%s: %s\n" % (f, warning))
         except IOError, inst:
             if f != files[0]:
                 warn(_("skipping unreadable ignore file '%s': %s\n") %

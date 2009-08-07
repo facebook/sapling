@@ -51,7 +51,7 @@ def perftags(ui, repo):
     def t():
         repo.changelog = mercurial.changelog.changelog(repo.sopener)
         repo.manifest = mercurial.manifest.manifest(repo.sopener)
-        repo.tagscache = None
+        repo._tags = None
         return len(repo.tags())
     timer(t)
 

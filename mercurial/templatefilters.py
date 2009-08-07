@@ -41,7 +41,7 @@ def age(date):
 
     delta = max(1, int(now - then))
     for t, s in agescales:
-        n = delta / s
+        n = delta // s
         if n >= 2 or s == 1:
             return fmt(t, n)
 
@@ -73,7 +73,7 @@ def fill(text, width):
 def firstline(text):
     '''return the first line of text'''
     try:
-        return text.splitlines(1)[0].rstrip('\r\n')
+        return text.splitlines(True)[0].rstrip('\r\n')
     except IndexError:
         return ''
 

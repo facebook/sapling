@@ -119,6 +119,8 @@ def parseargs():
         help="shortcut for --with-hg=<testdir>/../hg")
     parser.add_option("--pure", action="store_true",
         help="use pure Python code instead of C extensions")
+    parser.add_option("-3", "--py3k-warnings", action="store_true",
+        help="enable Py3k warnings on Python 2.6+")
 
     for option, default in defaults.items():
         defaults[option] = int(os.environ.get(*default))
@@ -171,6 +173,10 @@ def parseargs():
     if options.interactive and options.jobs > 1:
         print '(--interactive overrides --jobs)'
         options.jobs = 1
+    if options.py3k_warnings:
+        if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
+            print 'ERROR: Py3k warnings switch can only be used on Python 2.6+'
+            sys.exit(1)
 
     return (options, args)
 
@@ -299,6 +305,17 @@ def installhg(options):
     f.close()
     os.chmod(os.path.join(BINDIR, 'diffstat'), 0700)
 
+    if options.py3k_warnings and not options.anycoverage:
+        vlog("# Updating hg command to enable Py3k Warnings switch")
+        f = open(os.path.join(BINDIR, 'hg'), 'r')
+        lines = [line.rstrip() for line in f]
+        lines[0] += ' -3'
+        f.close()
+        f = open(os.path.join(BINDIR, 'hg'), 'w')
+        for line in lines:
+            f.write(line + '\n')
+        f.close()
+
     if options.anycoverage:
         vlog("# Installing coverage wrapper")
         os.environ['COVERAGE_FILE'] = COVERAGE_FILE
@@ -402,7 +419,7 @@ def runone(options, test, skips, fails):
     vlog("# Test", test)
 
     # create a fresh hgrc
-    hgrc = file(HGRCPATH, 'w+')
+    hgrc = open(HGRCPATH, 'w+')
     hgrc.write('[ui]\n')
     hgrc.write('slash = True\n')
     hgrc.write('[defaults]\n')
@@ -432,7 +449,8 @@ def runone(options, test, skips, fails):
     lctest = test.lower()
 
     if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
-        cmd = '%s "%s"' % (PYTHON, testpath)
+        py3kswitch = options.py3k_warnings and ' -3' or ''
+        cmd = '%s%s "%s"' % (PYTHON, py3kswitch, testpath)
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
         if os.name != 'nt':
@@ -507,7 +525,7 @@ def runone(options, test, skips, fails):
 
     # Kill off any leftover daemon processes
     try:
-        fp = file(DAEMON_PIDS)
+        fp = open(DAEMON_PIDS)
         for line in fp:
             try:
                 pid = int(line)

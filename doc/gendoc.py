@@ -62,7 +62,7 @@ def show_doc(ui):
     # print options
     underlined(_("OPTIONS"))
     for optstr, desc in get_opts(globalopts):
-        ui.write("%s::\n    %s\n\n" % (optstr, desc))
+        ui.write("%s\n    %s\n\n" % (optstr, desc))
 
     # print cmds
     underlined(_("COMMANDS"))
@@ -78,15 +78,15 @@ def show_doc(ui):
         if f.startswith("debug"): continue
         d = get_cmd(h[f])
         # synopsis
-        ui.write("[[%s]]\n" % d['cmd'])
-        ui.write("%s::\n" % d['synopsis'].replace("hg ","", 1))
+        ui.write(".. _%s:\n\n" % d['cmd'])
+        ui.write("``%s``\n" % d['synopsis'].replace("hg ","", 1))
         # description
         ui.write("%s\n\n" % d['desc'][1])
         # options
         opt_output = list(d['opts'])
         if opt_output:
             opts_len = max([len(line[0]) for line in opt_output])
-            ui.write(_("    options:\n"))
+            ui.write(_("    options:\n\n"))
             for optstr, desc in opt_output:
                 if desc:
                     s = "%-*s  %s" % (opts_len, optstr, desc)

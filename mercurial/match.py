@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import util, re
+import re
+import util
 
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],

@@ -160,3 +160,6 @@ calling hook commit.auto: <function autohook>
 Automatically installed hook
 committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708
 hooks.commit.auto=<function autohook>
+# test python hook configured with python:[file]:[hook] syntax
+hook works
+nothing changed

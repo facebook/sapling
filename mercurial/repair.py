@@ -142,3 +142,4 @@ def strip(ui, repo, node, backup="all"):
         if backup != "strip":
             os.unlink(chgrpfile)
 
+    repo.destroyed()

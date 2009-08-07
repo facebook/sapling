@@ -42,7 +42,7 @@ def _findoldnames(fctx, limit):
         seen.add(s)
         if fc.path() != orig and fc.path() not in old:
             old[fc.path()] = (depth, fc.path()) # remember depth
-        if fc.rev() < limit and fc.rev() is not None:
+        if fc.rev() is not None and fc.rev() < limit:
             continue
         visit += [(p, depth - 1) for p in fc.parents()]
 
