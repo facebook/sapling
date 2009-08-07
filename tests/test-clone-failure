@@ -62,4 +62,7 @@ echo $?
 test -d d && echo "dir is still here" || echo "dir is gone"
 test -d d/.hg && echo "repo is still here" || echo "repo is gone"
 
+# reenable perm to allow deletion
+chmod +rx c/.hg/store/data
+
 true
