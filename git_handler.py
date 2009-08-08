@@ -132,8 +132,6 @@ class GitHandler(object):
         def changed(refs):
             old_refs.update(refs)
             to_push = set(self.local_heads().values() + self.tags.values())
-            if not to_push and refs.keys()[0] == 'capabilities^{}':
-                to_push = [self.repo.lookup('tip')]
             new_refs.update(self.get_changed_refs(refs, to_push, True))
             # don't push anything
             return {}
@@ -521,8 +519,6 @@ class GitHandler(object):
         client, path = self.get_transport_and_path(remote)
         def changed(refs):
             to_push = revs or set(self.local_heads().values() + self.tags.values())
-            if not to_push and refs.keys()[0] == 'capabilities^{}':
-                to_push = [self.repo.lookup('tip')]
             return self.get_changed_refs(refs, to_push, force)
 
         genpack = self.git.object_store.generate_pack_contents
@@ -535,6 +531,15 @@ class GitHandler(object):
 
     def get_changed_refs(self, refs, revs, force):
         new_refs = refs.copy()
+
+        #The remote repo is empty and the local one doesn't have bookmarks/tags
+        if not revs and refs.keys()[0] == 'capabilities^{}':
+            del new_refs['capabilities^{}']
+            tip = hex(self.repo.lookup('tip'))
+            bookmarks.bookmark(self.ui, self.repo, 'master', tip)
+            new_refs['refs/heads/master'] = self.map_git_get(tip)
+            return new_refs
+
         for rev in revs:
             ctx = self.repo[rev]
             heads = [t for t in ctx.tags() if t in self.local_heads()]
