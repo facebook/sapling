@@ -131,7 +131,8 @@ class PushTests(test_util.TestBase):
             self.assertNotEqual('an_author', tip.user())
             self.assertEqual('None', tip.user().rsplit('@', 1)[0])
         finally:
-            os.kill(self.svnserve_pid, 9)
+            # TODO: use svnserve.kill() in Python >2.5
+            test_util.kill_process(svnserve)
 
     def test_push_to_default(self, commit=True):
         repo = self.repo

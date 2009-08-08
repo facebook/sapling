@@ -19,6 +19,57 @@ from mercurial import ui
 
 from hgsubversion import util
 
+import sys
+# Documentation for Subprocess.Popen() says:
+#   "Note that on Windows, you cannot set close_fds to true and
+#   also redirect the standard handles by setting stdin, stdout or
+#   stderr."
+canCloseFds='win32' not in sys.platform
+
+if not 'win32' in sys.platform:
+    def kill_process(popen_obj):
+        os.kill(popen_obj.pid, 9)
+else:
+    import ctypes
+    from ctypes.wintypes import BOOL, DWORD, HANDLE, UINT
+
+    def win_status_check(result, func, args):
+        if result == 0:
+            raise ctypes.WinError()
+        return args
+
+    def WINAPI(returns, func, *params):
+        assert len(params) % 2 == 0
+    
+        func.argtypes = tuple(params[0::2])
+        func.resvalue = returns
+        func.errcheck = win_status_check
+
+        return func
+
+    # dwDesiredAccess
+    PROCESS_TERMINATE = 0x0001
+
+    OpenProcess = WINAPI(HANDLE, ctypes.windll.kernel32.OpenProcess,
+        DWORD, 'dwDesiredAccess',
+        BOOL, 'bInheritHandle',
+        DWORD, 'dwProcessId',
+    )
+
+    CloseHandle =  WINAPI(BOOL, ctypes.windll.kernel32.CloseHandle,
+        HANDLE, 'hObject'
+    )
+
+    TerminateProcess = WINAPI(BOOL, ctypes.windll.kernel32.TerminateProcess,
+        HANDLE, 'hProcess',
+        UINT, 'uExitCode'
+    )
+
+    def kill_process(popen_obj):
+        phnd = OpenProcess(PROCESS_TERMINATE, False, popen_obj.pid)
+        TerminateProcess(phnd, 1)
+        CloseHandle(phnd)
+
 # Fixtures that need to be pulled at a subdirectory of the repo path
 subdir = {'truncatedhistory.svndump': '/project2',
           'fetch_missing_files_subdir.svndump': '/foo',
