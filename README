@@ -26,8 +26,7 @@ the UsingExtensions_ page in the Mercurial wiki. Look at the example
 for specifying an absolute path near the bottom of the page. You want
 to give the path to the top level of your clone of this repository.
 
-.. _UsingExtensions: http://www.selenic.com/mercurial/wiki/index.cgi/
-                     UsingExtensions
+.. _UsingExtensions: http://mercurial.selenic.com/wiki/UsingExtensions
 
 Before using hgsubversion, I *strongly* encourage you to run the
 automated tests. Just use nose_ if you have it (or ``easy_install
