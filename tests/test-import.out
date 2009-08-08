@@ -292,3 +292,6 @@ R a
 % add empty file from the end of patch (issue 1495)
 adding a
 applying a.patch
+% create file when source is not /dev/null
+applying ../create.patch
+a

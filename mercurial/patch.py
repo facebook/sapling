@@ -793,6 +793,17 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
     if reverse:
         createfunc = hunk.rmfile
     missing = not goodb and not gooda and not createfunc()
+
+    # some diff programs apparently produce create patches where the
+    # afile is not /dev/null, but rather the same name as the bfile
+    if missing and afile == bfile:
+        # this isn't very pretty
+        hunk.create = True
+        if createfunc():
+            missing = False
+        else:
+            hunk.create = False
+
     # If afile is "a/b/foo" and bfile is "a/b/foo.orig" we assume the
     # diff is between a file and its backup. In this case, the original
     # file should be patched (see original mpatch code).
