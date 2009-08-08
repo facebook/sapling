@@ -138,8 +138,12 @@ class GitHandler(object):
 
         try:
             client.send_pack(path, changed, None)
-            new = [bin(self.map_hg_get(r)) for r in new_refs.values()]
-            old = dict((bin(self.map_hg_get(r)), 1) for r in old_refs.values())
+
+            changed_refs = [ref for ref, sha in new_refs.iteritems()
+                            if sha != old_refs.get(ref)]
+            new = [bin(self.map_hg_get(new_refs[ref])) for ref in changed_refs]
+            old = dict( (bin(self.map_hg_get(old_refs[r])), 1)
+                       for r in changed_refs)
 
             return old, new
         except HangupException:
