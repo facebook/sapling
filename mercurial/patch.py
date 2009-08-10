@@ -1448,7 +1448,7 @@ def diffstat(lines, width=80):
                                                 adds+removes, pluses, minuses))
 
     if stats:
-        output.append(' %d files changed, %d insertions(+), %d deletions(-)\n'
+        output.append(_(' %d files changed, %d insertions(+), %d deletions(-)\n')
                       % (len(stats), totaladds, totalremoves))
 
     return ''.join(output)
