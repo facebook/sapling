@@ -143,7 +143,7 @@ class GitHandler(object):
                             if sha != old_refs.get(ref)]
             new = [bin(self.map_hg_get(new_refs[ref])) for ref in changed_refs]
             old = dict( (bin(self.map_hg_get(old_refs[r])), 1)
-                       for r in changed_refs)
+                       for r in changed_refs if r in old_refs)
 
             return old, new
         except HangupException:
