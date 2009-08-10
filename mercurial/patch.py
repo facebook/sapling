@@ -9,7 +9,7 @@
 from i18n import _
 from node import hex, nullid, short
 import base85, cmdutil, mdiff, util, diffhelpers, copies
-import cStringIO, email.Parser, os, re, math
+import cStringIO, email.Parser, os, re
 import sys, tempfile, zlib
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
@@ -1429,18 +1429,21 @@ def diffstat(lines, width=80):
         maxtotal = max(maxtotal, adds+removes)
 
     countwidth = len(str(maxtotal))
-    graphwidth = width - countwidth - maxname
+    graphwidth = width - countwidth - maxname - 6
     if graphwidth < 10:
         graphwidth = 10
 
-    factor = max(int(math.ceil(float(maxtotal) / graphwidth)), 1)
+    def scale(i):
+        if maxtotal <= graphwidth:
+            return i
+        # If diffstat runs out of room it doesn't print anything,
+        # which isn't very useful, so always print at least one + or -
+        # if there were at least some changes.
+        return max(i * graphwidth // maxtotal, int(bool(i)))
 
     for filename, adds, removes in stats:
-        # If diffstat runs out of room it doesn't print anything, which
-        # isn't very useful, so always print at least one + or - if there
-        # were at least some changes
-        pluses = '+' * max(adds // factor, int(bool(adds)))
-        minuses = '-' * max(removes // factor, int(bool(removes)))
+        pluses = '+' * scale(adds)
+        minuses = '-' * scale(removes)
         output.append(' %-*s |  %*.d %s%s\n' % (maxname, filename, countwidth,
                                                 adds+removes, pluses, minuses))
 
