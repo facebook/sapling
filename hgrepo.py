@@ -1,8 +1,4 @@
-import weakref
-
-from mercurial import localrepo, lock, node
-from mercurial import changelog, dirstate, filelog, manifest, context
-from mercurial.node import bin, hex, nullid, nullrev, short
+from mercurial.node import bin
 
 from git_handler import GitHandler
 from gitrepo import gitrepo
