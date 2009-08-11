@@ -487,6 +487,8 @@ def getauthinfo(path):
         authinfo = None
     return url, authinfo
 
+handlerfuncs = []
+
 def opener(ui, authinfo=None):
     '''
     construct an opener suitable for urllib2
@@ -507,6 +509,7 @@ def opener(ui, authinfo=None):
 
     handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),
                      httpdigestauthhandler(passmgr)))
+    handlers.extend([h(ui, passmgr) for h in handlerfuncs])
     opener = urllib2.build_opener(*handlers)
 
     # 1.0 here is the _protocol_ version
