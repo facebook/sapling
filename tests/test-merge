@@ -34,18 +34,18 @@ echo alpha > alpha
 git add alpha
 commit -m 'add alpha'
 
-git checkout -b beta
+git checkout -b beta 2>&1 | sed s/\'/\"/g
 echo beta > beta
 git add beta
 commit -m 'add beta'
 
-git checkout master
+git checkout master 2>&1 | sed s/\'/\"/g
 echo gamma > gamma
 git add gamma
 commit -m 'add gamma'
 
 # clean merge
-git merge beta
+git merge beta | sed 's/\.{3}//'
 
 cd ..
 mkdir gitrepo2

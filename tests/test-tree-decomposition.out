@@ -1,10 +1,10 @@
 Initialized empty Git repository in gitrepo/.git/
 
-Created initial commit 60fd61f: initial
+Commit 60fd61f initial
  0 files changed, 0 insertions(+), 0 deletions(-)
  create mode 100644 d1/f1
  create mode 100644 d1/f2
-Created commit a2e8665: rename
+Commit a2e8665 rename
  1 files changed, 0 insertions(+), 0 deletions(-)
  rename {d1 => d2}/f2 (100%)
 Initialized empty Git repository in gitrepo2/.git/
