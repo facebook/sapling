@@ -89,6 +89,8 @@ def share(ui, source, dest=None, update=True):
 
     if not dest:
         dest = os.path.basename(source)
+    else:
+        dest = ui.expandpath(dest)
 
     if isinstance(source, str):
         origsource = ui.expandpath(source)
@@ -189,6 +191,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     if dest is None:
         dest = defaultdest(source)
         ui.status(_("destination directory: %s\n") % dest)
+    else:
+        dest = ui.expandpath(dest)
 
     dest = localpath(dest)
     source = localpath(source)
