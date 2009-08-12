@@ -32,7 +32,8 @@ diff -r ... 2
 1: [mq]: 2.patch - test
 0: [mq]: 1.patch - mary
 ==== qref -u
-From: jane
+# HG changeset patch
+# User jane
 
 
 diff -r ... 2
@@ -117,7 +118,8 @@ diff -r ... 4
 1: [mq]: 2.patch - jane
 0: [mq]: 1.patch - mary
 ==== qref -u
-From: jane
+# HG changeset patch
+# User jane
 
 Four
 

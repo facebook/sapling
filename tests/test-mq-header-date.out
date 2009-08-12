@@ -231,7 +231,8 @@ diff -r ... 8
 1: Three (again) - test
 0: [mq]: 1.patch - test
 ==== qref -u -d
-From: john
+# HG changeset patch
+# User john
 
 
 diff -r ... 8
@@ -261,7 +262,8 @@ diff -r ... 9
 1: Three (again) - test
 0: [mq]: 1.patch - test
 ==== qref -u -d
-From: john
+# HG changeset patch
+# User john
 
 Nine
 

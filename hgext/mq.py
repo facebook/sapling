@@ -145,7 +145,11 @@ class patchheader(object):
                 patchheaderat = self.comments.index('# HG changeset patch')
                 self.comments.insert(patchheaderat + 1, '# User ' + user)
             except ValueError:
-                self.comments = ['From: ' + user, ''] + self.comments
+                if self._hasheader(['Date: ']):
+                    self.comments = ['From: ' + user] + self.comments
+                else:
+                    tmp = ['# HG changeset patch', '# User ' + user, '']
+                    self.comments = tmp + self.comments
         self.user = user
 
     def setdate(self, date):
