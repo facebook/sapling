@@ -42,7 +42,7 @@ else:
 
     def WINAPI(returns, func, *params):
         assert len(params) % 2 == 0
-    
+
         func.argtypes = tuple(params[0::2])
         func.resvalue = returns
         func.errcheck = win_status_check
