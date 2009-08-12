@@ -153,8 +153,17 @@ class patchheader(object):
         self.user = user
 
     def setdate(self, date):
-        if self.updateheader(['# Date '], date):
-            self.date = date
+        if not self.updateheader(['Date: ', '# Date '], date):
+            try:
+                patchheaderat = self.comments.index('# HG changeset patch')
+                self.comments.insert(patchheaderat + 1, '# Date ' + date)
+            except ValueError:
+                if self._hasheader(['From: ']):
+                    self.comments = ['Date: ' + date] + self.comments
+                else:
+                    tmp = ['# HG changeset patch', '# Date ' + date, '']
+                    self.comments = tmp + self.comments
+        self.date = date
 
     def setmessage(self, message):
         if self.comments:
@@ -2599,8 +2608,8 @@ cmdtable = {
           ('s', 'short', None, _('refresh only files already in the patch and specified files')),
           ('U', 'currentuser', None, _('add/update "From: <current user>" in patch')),
           ('u', 'user', '', _('add/update "From: <given user>" in patch')),
-          ('D', 'currentdate', None, _('update "Date: <current date>" in patch (if present)')),
-          ('d', 'date', '', _('update "Date: <given date>" in patch (if present)'))
+          ('D', 'currentdate', None, _('add/update "Date: <current date>" in patch')),
+          ('d', 'date', '', _('add/update "Date: <given date>" in patch'))
           ] + commands.walkopts + commands.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     'qrename|qmv':

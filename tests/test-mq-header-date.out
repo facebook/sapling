@@ -35,6 +35,10 @@ diff -r ... 2
 1: [mq]: 2.patch - test
 0: [mq]: 1.patch - test
 ==== qref -d
+# HG changeset patch
+# Date 5 0
+
+
 diff -r ... 2
 --- /dev/null
 +++ b/2
@@ -118,6 +122,9 @@ diff -r ... 4
 1: Three (again) - test
 0: [mq]: 1.patch - test
 ==== qref -d
+# HG changeset patch
+# Date 9 0
+
 Four
 
 diff -r ... 4
@@ -177,6 +184,7 @@ diff -r ... 6
 1: Three (again) - test
 0: [mq]: 1.patch - test
 ==== qref -d
+Date: 12 0
 From: jane
 
 diff -r ... 6
@@ -232,6 +240,7 @@ diff -r ... 8
 0: [mq]: 1.patch - test
 ==== qref -u -d
 # HG changeset patch
+# Date 14 0
 # User john
 
 
@@ -263,6 +272,7 @@ diff -r ... 9
 0: [mq]: 1.patch - test
 ==== qref -u -d
 # HG changeset patch
+# Date 15 0
 # User john
 
 Nine
