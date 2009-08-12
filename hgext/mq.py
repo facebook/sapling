@@ -170,6 +170,14 @@ class patchheader(object):
                     break
         return res
 
+    def _hasheader(self, prefixes):
+        '''Check if a header starts with any of the given prefixes.'''
+        for prefix in prefixes:
+            for comment in self.comments:
+                if comment.startswith(prefix):
+                    return True
+        return False
+
     def __str__(self):
         if not self.comments:
             return ''
