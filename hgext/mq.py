@@ -2606,10 +2606,10 @@ cmdtable = {
          [('e', 'edit', None, _('edit commit message')),
           ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None, _('refresh only files already in the patch and specified files')),
-          ('U', 'currentuser', None, _('add/update "From: <current user>" in patch')),
-          ('u', 'user', '', _('add/update "From: <given user>" in patch')),
-          ('D', 'currentdate', None, _('add/update "Date: <current date>" in patch')),
-          ('d', 'date', '', _('add/update "Date: <given date>" in patch'))
+          ('U', 'currentuser', None, _('add/update author field in patch with current user')),
+          ('u', 'user', '', _('add/update author field in patch with given user')),
+          ('D', 'currentdate', None, _('add/update date field in patch with current date')),
+          ('d', 'date', '', _('add/update date field in patch with given date'))
           ] + commands.walkopts + commands.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     'qrename|qmv':
