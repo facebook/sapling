@@ -143,7 +143,7 @@ class patchheader(object):
         if not self.updateheader(['From: ', '# User '], user):
             try:
                 patchheaderat = self.comments.index('# HG changeset patch')
-                self.comments.insert(patchheaderat + 1,'# User ' + user)
+                self.comments.insert(patchheaderat + 1, '# User ' + user)
             except ValueError:
                 self.comments = ['From: ' + user, ''] + self.comments
         self.user = user
