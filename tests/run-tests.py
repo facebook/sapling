@@ -167,6 +167,14 @@ def parseargs():
     else:
         vlog = lambda *msg: None
 
+    if options.tmpdir:
+        options.tmpdir = os.path.expanduser(options.tmpdir)
+        try:
+            os.makedirs(options.tmpdir)
+        except OSError, err:
+            if err.errno != errno.EEXIST:
+                raise
+
     if options.jobs < 1:
         print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
         sys.exit(1)
