@@ -306,7 +306,9 @@ class GitHandler(object):
             extra_message += "branch : " + ctx.branch() + "\n"
 
         renames = []
-        for f in ctx:
+        for f in ctx.files():
+            if f not in ctx.manifest():
+                continue
             rename = ctx.filectx(f).renamed()
             if rename:
                 renames.append((rename[0], f))
