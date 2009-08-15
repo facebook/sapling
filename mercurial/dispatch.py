@@ -360,7 +360,12 @@ def _dispatch(ui, args):
     for name, module in exts:
         extsetup = getattr(module, 'extsetup', None)
         if extsetup:
-            extsetup()
+            try:
+                extsetup(ui)
+            except TypeError:
+                if extsetup.func_code.co_argcount != 0:
+                    raise
+                extsetup() # old extsetup with no ui argument
 
     for name, module in exts:
         cmdtable = getattr(module, 'cmdtable', {})
