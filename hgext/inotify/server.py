@@ -7,7 +7,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from mercurial.i18n import _
-from mercurial import osutil, util
+from mercurial import cmdutil, osutil, util
 import common
 import errno, os, select, socket, stat, struct, sys, tempfile, time
 
@@ -823,52 +823,29 @@ class master(object):
             sys.exit(0)
         pollable.run()
 
-def start(ui, dirstate, root):
-    def closefds(ignore):
-        # (from python bug #1177468)
-        # close all inherited file descriptors
-        # Python 2.4.1 and later use /dev/urandom to seed the random module's RNG
-        # a file descriptor is kept internally as os._urandomfd (created on demand
-        # the first time os.urandom() is called), and should not be closed
-        try:
-            os.urandom(4)
-            urandom_fd = getattr(os, '_urandomfd', None)
-        except AttributeError:
-            urandom_fd = None
-        ignore.append(urandom_fd)
-        for fd in range(3, 256):
-            if fd in ignore:
-                continue
+def start(ui, dirstate, root, opts):
+    timeout = opts.get('timeout')
+    if timeout:
+        timeout = float(timeout) * 1e3
+
+    class service(object):
+        def init(self):
             try:
-                os.close(fd)
-            except OSError:
-                pass
+                self.master = master(ui, dirstate, root, timeout)
+            except AlreadyStartedException, inst:
+                raise util.Abort(str(inst))
 
-    m = master(ui, dirstate, root)
-    sys.stdout.flush()
-    sys.stderr.flush()
+        def run(self):
+            try:
+                self.master.run()
+            finally:
+                self.master.shutdown()
 
-    pid = os.fork()
-    if pid:
-        return pid
+    runargs = None
+    if 'inserve' not in sys.argv:
+        runargs = [sys.argv[0], 'inserve', '-R', root]
 
-    closefds(pollable.instances.keys())
-    os.setsid()
-
-    fd = os.open('/dev/null', os.O_RDONLY)
-    os.dup2(fd, 0)
-    if fd > 0:
-        os.close(fd)
-
-    fd = os.open(ui.config('inotify', 'log', '/dev/null'),
-                 os.O_RDWR | os.O_CREAT | os.O_TRUNC)
-    os.dup2(fd, 1)
-    os.dup2(fd, 2)
-    if fd > 2:
-        os.close(fd)
-
-    try:
-        m.run()
-    finally:
-        m.shutdown()
-        os._exit(0)
+    service = service()
+    logfile = ui.config('inotify', 'log')
+    cmdutil.service(opts, initfn=service.init, runfn=service.run,
+                    logfile=logfile, runargs=runargs)

@@ -34,7 +34,8 @@ def start_server(function):
                 self.ui.debug('(starting inotify server)\n')
                 try:
                     try:
-                        server.start(self.ui, self.dirstate, self.root)
+                        server.start(self.ui, self.dirstate, self.root,
+                                     dict(daemon=True, daemon_pipefds=''))
                     except server.AlreadyStartedException, inst:
                         # another process may have started its own
                         # inotify server while this one was starting.
