@@ -539,12 +539,13 @@ class GitHandler(object):
         new_refs = refs.copy()
 
         #The remote repo is empty and the local one doesn't have bookmarks/tags
-        if not revs and refs.keys()[0] == 'capabilities^{}':
+        if refs.keys()[0] == 'capabilities^{}':
             del new_refs['capabilities^{}']
-            tip = hex(self.repo.lookup('tip'))
-            bookmarks.bookmark(self.ui, self.repo, 'master', tip)
-            new_refs['refs/heads/master'] = self.map_git_get(tip)
-            return new_refs
+            if not self.local_heads():
+                tip = hex(self.repo.lookup('tip'))
+                bookmarks.bookmark(self.ui, self.repo, 'master', tip)
+                bookmarks.setcurrent(self.repo, 'master')
+                new_refs['refs/heads/master'] = self.map_git_get(tip)
 
         for rev in revs:
             ctx = self.repo[rev]
