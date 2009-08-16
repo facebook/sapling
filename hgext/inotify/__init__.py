@@ -13,7 +13,6 @@
 from mercurial.i18n import _
 from mercurial import cmdutil, util
 import server
-from weakref import proxy
 from client import client, QueryFailed
 
 def serve(ui, repo, **opts):
