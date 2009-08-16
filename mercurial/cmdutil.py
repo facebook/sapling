@@ -546,24 +546,26 @@ def copy(ui, repo, pats, opts, rename=False):
 
     return errors
 
-def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None):
+def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
+    runargs=None):
     '''Run a command as a service.'''
 
     if opts['daemon'] and not opts['daemon_pipefds']:
         rfd, wfd = os.pipe()
-        args = sys.argv[:]
-        args.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
+        if not runargs:
+            runargs = sys.argv[:]
+        runargs.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
         # Don't pass --cwd to the child process, because we've already
         # changed directory.
-        for i in xrange(1,len(args)):
-            if args[i].startswith('--cwd='):
-                del args[i]
+        for i in xrange(1,len(runargs)):
+            if runargs[i].startswith('--cwd='):
+                del runargs[i]
                 break
-            elif args[i].startswith('--cwd'):
-                del args[i:i+2]
+            elif runargs[i].startswith('--cwd'):
+                del runargs[i:i+2]
                 break
         pid = os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
-                         args[0], args)
+                         runargs[0], runargs)
         os.close(wfd)
         os.read(rfd, 1)
         if parentfn:
