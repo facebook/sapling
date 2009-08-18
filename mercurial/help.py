@@ -426,17 +426,19 @@ PYTHONPATH::
     - nonempty: Any text. Returns '(none)' if the string is empty.
     - hgdate: Date. Returns the date as a pair of numbers:
           "1157407993 25200" (Unix timestamp, timezone offset).
-    - isodate: Date. Returns the date in ISO 8601 format.
+    - isodate: Date. Returns the date in ISO 8601 format: "2009-08-18
+          13:00 +0200".
     - isodatesec: Date. Returns the date in ISO 8601 format, including
-          seconds. See also the rfc3339date filter.
+          seconds: "2009-08-18 13:00:13 +0200". See also the
+          rfc3339date filter.
     - localdate: Date. Converts a date to local date.
     - obfuscate: Any text. Returns the input text rendered as a
           sequence of XML entities.
     - person: Any text. Returns the text before an email address.
     - rfc822date: Date. Returns a date using the same format used
-          in email headers.
+          in email headers: "Tue, 18 Aug 2009 13:00:13 +0200".
     - rfc3339date: Date. Returns a date using the Internet date format
-          specified in RFC 3339.
+          specified in RFC 3339: "2009-08-18T13:00:13+02:00".
     - short: Changeset hash. Returns the short form of a changeset
           hash, i.e. a 12-byte hexadecimal string.
     - shortdate: Date. Returns a date like "2006-09-18".
