@@ -46,12 +46,9 @@ if url.startswith("file:"):
 elif url.startswith("remote:http"):
     os.environ["HG_URL"] = "remote:http"
 
-if "HG_PENDING" in os.environ:
-    os.environ["HG_PENDING"] = os.environ["HG_PENDING"] and "true"
-
 out.write("%s hook: " % name)
 for v in env:
-    out.write("%s=%s " % (v, os.environ[v]))
+    out.write("%s=%s " % (v, os.environ[v].replace(os.environ["HGTMP"], '$HGTMP')))
 out.write("\n")
 out.close()
 
