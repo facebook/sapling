@@ -301,7 +301,10 @@ def _readtagcache(ui, repo):
 
 def _writetagcache(ui, repo, heads, tagfnode, cachetags):
 
-    cachefile = repo.opener('tags.cache', 'w', atomictemp=True)
+    try:
+        cachefile = repo.opener('tags.cache', 'w', atomictemp=True)
+    except (OSError, IOError):
+        return
     _debug(ui, 'writing cache file %s\n' % cachefile.name)
 
     realheads = repo.heads()            # for sanity checks below
