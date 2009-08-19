@@ -146,16 +146,12 @@ test.patch
 test2.patch
 % qtop
 test2.patch
-% qprev
+% prev
 test.patch
-% qnext
+% next
 all patches applied
-% pop, qnext, qprev, qapplied
 popping test2.patch
 now at: test.patch
-test2.patch
-only one patch applied
-test.patch
 % commit should fail
 abort: cannot commit over an applied mq patch
 % push should fail
@@ -182,9 +178,48 @@ now at: test.patch
 applying test1b.patch
 applying test2.patch
 now at: test2.patch
-% push should succeed
+% pop, qapplied, qunapplied
+0 A test.patch
+1 A test1b.patch
+2 A test2.patch
+% qapplied -1 test.patch
+only one patch applied
+% qapplied -1 test1b.patch
+test.patch
+% qapplied -1 test2.patch
+test1b.patch
+% qapplied -1
+test1b.patch
+% qapplied
+test.patch
+test1b.patch
+test2.patch
+% qapplied test1b.patch
+test.patch
+test1b.patch
+% qunapplied -1
+all patches applied
+% qunapplied
+% popping
 popping test2.patch
+now at: test1b.patch
+% qunapplied -1
+test2.patch
+% qunapplied
+test2.patch
+% qunapplied test2.patch
+% qunapplied -1 test2.patch
+all patches applied
+% popping -a
 popping test1b.patch
+popping test.patch
+patch queue now empty
+% qapplied
+% qapplied -1
+no patches applied
+applying test.patch
+now at: test.patch
+% push should succeed
 popping test.patch
 patch queue now empty
 pushing to ../../k

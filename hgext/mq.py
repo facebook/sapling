@@ -1682,17 +1682,35 @@ def delete(ui, repo, *patches, **opts):
 
 def applied(ui, repo, patch=None, **opts):
     """print the patches already applied"""
+
     q = repo.mq
+    l = len(q.applied)
+
     if patch:
         if patch not in q.series:
             raise util.Abort(_("patch %s is not in series file") % patch)
         end = q.series.index(patch) + 1
     else:
         end = q.series_end(True)
-    return q.qseries(repo, length=end, status='A', summary=opts.get('summary'))
+
+    if opts.get('last') and not end:
+        ui.write(_("no patches applied\n"))
+        return 1
+    elif opts.get('last') and end == 1:
+        ui.write(_("only one patch applied\n"))
+        return 1
+    elif opts.get('last'):
+        start = end - 2
+        end = 1
+    else:
+        start = 0
+
+    return q.qseries(repo, length=end, start=start, status='A',
+                     summary=opts.get('summary'))
 
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied"""
+
     q = repo.mq
     if patch:
         if patch not in q.series:
@@ -1700,7 +1718,14 @@ def unapplied(ui, repo, patch=None, **opts):
         start = q.series.index(patch) + 1
     else:
         start = q.series_end(True)
-    q.qseries(repo, start=start, status='U', summary=opts.get('summary'))
+
+    if start == len(q.series) and opts.get('first'):
+        ui.write(_("all patches applied\n"))
+        return 1
+
+    length = opts.get('first') and 1 or None
+    return q.qseries(repo, start=start, length=length, status='U',
+                     summary=opts.get('summary'))
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch
@@ -2522,7 +2547,10 @@ def uisetup(ui):
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
 cmdtable = {
-    "qapplied": (applied, [] + seriesopts, _('hg qapplied [-s] [PATCH]')),
+    "qapplied":
+        (applied,
+         [('1', 'last', None, _('show only the last patch'))] + seriesopts,
+         _('hg qapplied [-s] [PATCH]')),
     "qclone":
         (clone,
          [('', 'pull', None, _('use pull protocol to copy metadata')),
@@ -2645,7 +2673,10 @@ cmdtable = {
           ('n', 'nobackup', None, _('no backups'))],
          _('hg strip [-f] [-b] [-n] REV')),
     "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
-    "qunapplied": (unapplied, [] + seriesopts, _('hg qunapplied [-s] [PATCH]')),
+    "qunapplied":
+        (unapplied,
+         [('1', 'first', None, _('show only the first patch'))] + seriesopts,
+         _('hg qunapplied [-s] [PATCH]')),
     "qfinish":
         (finish,
          [('a', 'applied', None, _('finish all applied changesets'))],

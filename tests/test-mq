@@ -155,18 +155,13 @@ hg qapplied
 echo % qtop
 hg qtop
 
-echo % qprev
-hg qprev
+echo % prev
+hg qapp -1
 
-echo % qnext
-hg qnext
+echo % next
+hg qunapp -1
 
-echo % pop, qnext, qprev, qapplied
 hg qpop
-hg qnext
-hg qprev
-hg qapplied
-
 echo % commit should fail
 hg commit
 
@@ -196,6 +191,42 @@ hg qpush test.patch+2
 hg qpop test2.patch-1
 hg qpop test2.patch-2
 hg qpush test1b.patch+1
+
+echo % pop, qapplied, qunapplied
+hg qseries -v
+echo % qapplied -1 test.patch
+hg qapplied -1 test.patch
+echo % qapplied -1 test1b.patch
+hg qapplied -1 test1b.patch
+echo % qapplied -1 test2.patch
+hg qapplied -1 test2.patch
+echo % qapplied -1
+hg qapplied -1
+echo % qapplied
+hg qapplied
+echo % qapplied test1b.patch
+hg qapplied test1b.patch
+echo % qunapplied -1
+hg qunapplied -1
+echo % qunapplied
+hg qunapplied
+echo % popping
+hg qpop
+echo % qunapplied -1
+hg qunapplied -1
+echo % qunapplied
+hg qunapplied
+echo % qunapplied test2.patch
+hg qunapplied test2.patch
+echo % qunapplied -1 test2.patch
+hg qunapplied -1 test2.patch
+echo % popping -a
+hg qpop -a
+echo % qapplied
+hg qapplied
+echo % qapplied -1
+hg qapplied -1
+hg qpush
 
 echo % push should succeed
 hg qpop -a
