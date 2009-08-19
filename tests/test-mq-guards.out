@@ -34,8 +34,6 @@ c.patch: -a
 applying b.patch
 skipping c.patch - guarded by '-a'
 now at: b.patch
-% should display b.patch
-b.patch
 % should push c.patch
 applying c.patch
 now at: c.patch
@@ -66,7 +64,6 @@ applying b.patch
 now at: b.patch
 applying c.patch
 now at: c.patch
-c.patch
 popping c.patch
 popping b.patch
 patch queue now empty

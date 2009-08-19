@@ -1866,39 +1866,6 @@ def series(ui, repo, **opts):
     repo.mq.qseries(repo, missing=opts['missing'], summary=opts['summary'])
     return 0
 
-def top(ui, repo, **opts):
-    """print the name of the current patch"""
-    q = repo.mq
-    t = q.applied and q.series_end(True) or 0
-    if t:
-        return q.qseries(repo, start=t-1, length=1, status='A',
-                         summary=opts.get('summary'))
-    else:
-        ui.write(_("no patches applied\n"))
-        return 1
-
-def next(ui, repo, **opts):
-    """print the name of the next patch"""
-    q = repo.mq
-    end = q.series_end()
-    if end == len(q.series):
-        ui.write(_("all patches applied\n"))
-        return 1
-    return q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
-
-def prev(ui, repo, **opts):
-    """print the name of the previous patch"""
-    q = repo.mq
-    l = len(q.applied)
-    if l == 1:
-        ui.write(_("only one patch applied\n"))
-        return 1
-    if not l:
-        ui.write(_("no patches applied\n"))
-        return 1
-    return q.qseries(repo, start=l-2, length=1, status='A',
-                     summary=opts.get('summary'))
-
 def setupheaderopts(ui, opts):
     def do(opt, val):
         if not opts[opt] and opts['current' + opt]:
@@ -2613,8 +2580,6 @@ cmdtable = {
           ('d', 'date', '', _('add "Date: <given date>" to patch'))
           ] + commands.walkopts + commands.commitopts,
          _('hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]...')),
-    "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
-    "qprev": (prev, [] + seriesopts, _('hg qprev [-s]')),
     "^qpop":
         (pop,
          [('a', 'all', None, _('pop all patches')),
@@ -2672,7 +2637,6 @@ cmdtable = {
           ('b', 'backup', None, _('bundle unrelated changesets')),
           ('n', 'nobackup', None, _('no backups'))],
          _('hg strip [-f] [-b] [-n] REV')),
-    "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied":
         (unapplied,
          [('1', 'first', None, _('show only the first patch'))] + seriesopts,
