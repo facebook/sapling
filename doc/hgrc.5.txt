@@ -873,6 +873,10 @@ Web interface configuration.
     the list of repositories. The contents of the deny_read list have
     priority over (are examined before) the contents of the allow_read
     list.
+``descend``
+    hgwebdir indexes will not descend into subdirectories. Only repositories
+    directly in the current path will be shown (other repositories are still
+    available from the index corresponding to their containing path).
 ``description``
     Textual description of the repository's purpose or contents.
     Default is "unknown".

@@ -29,6 +29,7 @@ hg --cwd c ci -Amc -d'3 0'
 root=`pwd`
 cd ..
 
+
 cat > paths.conf <<EOF
 [paths]
 a=$root/a
@@ -49,6 +50,7 @@ echo % should succeed
 
 echo % should give a 404 - repo is not published
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/c/file/tip/c?style=raw'
+
 
 cat > paths.conf <<EOF
 [paths]
@@ -83,6 +85,24 @@ echo % should succeed, slashy names
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/b/d/file/tip/d?style=raw'
 
 
+"$TESTDIR/killdaemons.py"
+cat > paths.conf <<EOF
+[paths]
+t/a = $root/a
+t/b = $root/b
+c = $root/c
+[web]
+descend=false
+EOF
+
+hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
+    -A access-paths.log -E error-paths-3.log
+cat hg.pid >> $DAEMON_PIDS
+echo % test descend = False
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/?style=raw'
+
+
 cat > collections.conf <<EOF
 [collections]
 $root=$root
@@ -99,9 +119,12 @@ echo % collections: should succeed
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/b/file/tip/b?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/c/file/tip/c?style=raw'
 
+
 echo % paths errors 1
 cat error-paths-1.log
 echo % paths errors 2
 cat error-paths-2.log
+echo % paths errors 3
+cat error-paths-3.log
 echo % collections errors
 cat error-collections.log

@@ -198,12 +198,17 @@ class hgwebdir(object):
 
         sortdefault = 'name', False
         def entries(sortcolumn="", descending=False, subdir="", **map):
+
             rows = []
             parity = paritygen(self.stripecount)
+            descend = self.ui.configbool('web', 'descend', True)
             for name, path in self.repos:
+
                 if not name.startswith(subdir):
                     continue
                 name = name[len(subdir):]
+                if not descend and '/' in name:
+                    continue
 
                 u = self.ui.copy()
                 try:
