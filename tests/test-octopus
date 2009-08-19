@@ -35,17 +35,17 @@ echo alpha > alpha
 git add alpha
 commit -m 'add alpha'
 
-git checkout -b branch1
+git checkout -b branch1 2>&1 | sed s/\'/\"/g
 echo beta > beta
 git add beta
 commit -m 'add beta'
 
-git checkout -b branch2 master
+git checkout -b branch2 master 2>&1 | sed s/\'/\"/g
 echo gamma > gamma
 git add gamma
 commit -m 'add gamma'
 
-git checkout master
+git checkout master 2>&1 | sed s/\'/\"/g
 echo delta > delta
 git add delta
 commit -m 'add delta'
@@ -74,7 +74,7 @@ hg gclear
 hg push git://localhost/gitrepo2
 
 cd ../gitrepo2
-git log
+git log | sed s/\\.\\.\\.//g
 
 cd ..
 kill `cat gitdaemon.pid`

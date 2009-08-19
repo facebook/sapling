@@ -33,11 +33,11 @@ git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pw
 mkdir d1
 touch d1/f1 d1/f2
 git add d1/f1 d1/f2
-git commit -m initial
+commit -m initial
 
 mkdir d2
 git mv d1/f2 d2/f2
-git commit -m 'rename'
+commit -m 'rename'
 
 cd ..
 mkdir gitrepo2

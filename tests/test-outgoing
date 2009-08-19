@@ -73,7 +73,7 @@ cd ..
 echo % some more work on master from git
 cd gitrepo
 
-git checkout master
+git checkout master 2>&1 | sed s/\'/\"/g
 echo delta > delta
 git add delta
 commit -m "add delta"
