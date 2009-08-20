@@ -5,8 +5,8 @@ PREFIX=/usr/local
 MANDIR=$(PREFIX)/share/man
 INSTALL=install -c -m 644
 PYTHON=python
-RST2HTML=rst2html
-RST2MAN=rst2man
+RST2HTML=$(shell which rst2html 2> /dev/null || which rst2html.py)
+RST2MAN=$(shell which rst2man 2> /dev/null || which rst2man.py)
 
 all: man html
 
