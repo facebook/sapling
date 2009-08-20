@@ -22,7 +22,7 @@ hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 
 %: %.txt common.txt
 	$(RST2MAN) $*.txt > $*.tmp
-	# add newline after all literal blocks and fix backslash escape
+# add newline after all literal blocks and fix backslash escape
 	sed \
 	  -e 's/^\.fi$$/.fi\n/' \
 	  -e 's/\\fB\\\\fP/\\fB\\e\\fP/' \
@@ -33,7 +33,7 @@ hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 	$(RST2HTML) $*.txt > $*.html
 
 MANIFEST: man html
-	# tracked files are already in the main MANIFEST
+# tracked files are already in the main MANIFEST
 	$(RM) $@
 	for i in $(MAN) $(HTML) hg.1.gendoc.txt; do \
 	  echo "doc/$$i" >> $@ ; \
