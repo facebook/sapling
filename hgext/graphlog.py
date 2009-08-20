@@ -22,18 +22,14 @@ from mercurial import hg, url, util, graphmod
 
 ASCIIDATA = 'ASC'
 
-def asciiformat(ui, repo, revdag, opts, parentrepo=None):
+def asciiformat(revdag, displayer, parents):
     """formats a changelog DAG walk for ASCII output"""
-    if parentrepo is None:
-        parentrepo = repo
-    showparents = [ctx.node() for ctx in parentrepo[None].parents()]
-    displayer = show_changeset(ui, repo, opts, buffered=True)
     for (id, type, ctx, parentids) in revdag:
         if type != graphmod.CHANGESET:
             continue
         displayer.show(ctx)
         lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
-        char = ctx.node() in showparents and '@' or 'o'
+        char = ctx.node() in parents and '@' or 'o'
         yield (id, ASCIIDATA, (char, lines), parentids)
 
 def asciiedges(nodes):
@@ -259,7 +255,9 @@ def graphlog(ui, repo, path=None, **opts):
     else:
         revdag = graphmod.revisions(repo, start, stop)
 
-    fmtdag = asciiformat(ui, repo, revdag, opts)
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    showparents = [ctx.node() for ctx in repo[None].parents()]
+    fmtdag = asciiformat(revdag, displayer, showparents)
     ascii(ui, asciiedges(fmtdag))
 
 def graphrevs(repo, nodes, opts):
@@ -294,7 +292,9 @@ def goutgoing(ui, repo, dest=None, **opts):
 
     o = repo.changelog.nodesbetween(o, revs)[0]
     revdag = graphrevs(repo, o, opts)
-    fmtdag = asciiformat(ui, repo, revdag, opts)
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    showparents = [ctx.node() for ctx in repo[None].parents()]
+    fmtdag = asciiformat(revdag, displayer, showparents)
     ascii(ui, asciiedges(fmtdag))
 
 def gincoming(ui, repo, source="default", **opts):
@@ -343,7 +343,9 @@ def gincoming(ui, repo, source="default", **opts):
 
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
         revdag = graphrevs(other, chlist, opts)
-        fmtdag = asciiformat(ui, other, revdag, opts, parentrepo=repo)
+        displayer = show_changeset(ui, other, opts, buffered=True)
+        showparents = [ctx.node() for ctx in repo[None].parents()]
+        fmtdag = asciiformat(revdag, displayer, showparents)
         ascii(ui, asciiedges(fmtdag))
 
     finally:
