@@ -22,44 +22,31 @@ from mercurial import hg, url, util, graphmod
 
 ASCIIDATA = 'ASC'
 
-def asciiformat(revdag, displayer, parents):
-    """formats a changelog DAG walk for ASCII output"""
-    for (id, type, ctx, parentids) in revdag:
-        if type != graphmod.CHANGESET:
-            continue
-        displayer.show(ctx)
-        lines = displayer.hunk.pop(ctx.rev()).split('\n')[:-1]
-        char = ctx.node() in parents and '@' or 'o'
-        yield (id, ASCIIDATA, (char, lines), parentids)
-
-def asciiedges(nodes):
+def asciiedges(seen, rev, parents):
     """adds edge info to changelog DAG walk suitable for ascii()"""
-    seen = []
-    for node, type, data, parents in nodes:
-        if node not in seen:
-            seen.append(node)
-        nodeidx = seen.index(node)
+    if rev not in seen:
+        seen.append(rev)
+    nodeidx = seen.index(rev)
 
-        knownparents = []
-        newparents = []
-        for parent in parents:
-            if parent in seen:
-                knownparents.append(parent)
-            else:
-                newparents.append(parent)
+    knownparents = []
+    newparents = []
+    for parent in parents:
+        if parent in seen:
+            knownparents.append(parent)
+        else:
+            newparents.append(parent)
 
-        ncols = len(seen)
-        nextseen = seen[:]
-        nextseen[nodeidx:nodeidx + 1] = newparents
-        edges = [(nodeidx, nextseen.index(p)) for p in knownparents]
+    ncols = len(seen)
+    seen[nodeidx:nodeidx + 1] = newparents
+    edges = [(nodeidx, seen.index(p)) for p in knownparents]
 
-        if len(newparents) > 0:
-            edges.append((nodeidx, nodeidx))
-        if len(newparents) > 1:
-            edges.append((nodeidx, nodeidx + 1))
-        nmorecols = len(nextseen) - ncols
-        seen = nextseen
-        yield (nodeidx, type, data, edges, ncols, nmorecols)
+    if len(newparents) > 0:
+        edges.append((nodeidx, nodeidx))
+    if len(newparents) > 1:
+        edges.append((nodeidx, nodeidx + 1))
+
+    nmorecols = len(seen) - ncols
+    return nodeidx, edges, ncols, nmorecols
 
 def fix_long_right_edges(edges):
     for (i, (start, end)) in enumerate(edges):
@@ -231,6 +218,15 @@ def check_unsupported_flags(opts):
         if op in opts and opts[op]:
             raise util.Abort(_("--graph option is incompatible with --%s") % op)
 
+def generate(dag, displayer, showparents, edgefn):
+    seen = []
+    for rev, type, ctx, parents in dag:
+        char = ctx.node() in showparents and '@' or 'o'
+        displayer.show(ctx)
+        lines = displayer.hunk.pop(rev).split('\n')[:-1]
+        cols = edgefn(seen, rev, parents)
+        yield cols[0], type, (char, lines), cols[1], cols[2], cols[3]
+
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
 
@@ -257,8 +253,8 @@ def graphlog(ui, repo, path=None, **opts):
 
     displayer = show_changeset(ui, repo, opts, buffered=True)
     showparents = [ctx.node() for ctx in repo[None].parents()]
-    fmtdag = asciiformat(revdag, displayer, showparents)
-    ascii(ui, asciiedges(fmtdag))
+    gen = generate(revdag, displayer, showparents, asciiedges)
+    ascii(ui, gen)
 
 def graphrevs(repo, nodes, opts):
     limit = cmdutil.loglimit(opts)
@@ -294,8 +290,8 @@ def goutgoing(ui, repo, dest=None, **opts):
     revdag = graphrevs(repo, o, opts)
     displayer = show_changeset(ui, repo, opts, buffered=True)
     showparents = [ctx.node() for ctx in repo[None].parents()]
-    fmtdag = asciiformat(revdag, displayer, showparents)
-    ascii(ui, asciiedges(fmtdag))
+    gen = generate(revdag, displayer, showparents, asciiedges)
+    ascii(ui, gen)
 
 def gincoming(ui, repo, source="default", **opts):
     """show the incoming changesets alongside an ASCII revision graph
@@ -345,8 +341,8 @@ def gincoming(ui, repo, source="default", **opts):
         revdag = graphrevs(other, chlist, opts)
         displayer = show_changeset(ui, other, opts, buffered=True)
         showparents = [ctx.node() for ctx in repo[None].parents()]
-        fmtdag = asciiformat(revdag, displayer, showparents)
-        ascii(ui, asciiedges(fmtdag))
+        gen = generate(revdag, displayer, showparents, asciiedges)
+        ascii(ui, gen)
 
     finally:
         if hasattr(other, 'close'):
