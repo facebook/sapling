@@ -118,12 +118,12 @@ def ascii(ui, dag):
         in the current revision. That is: -1 means one column removed;
         0 means no columns added or removed; 1 means one column added.
     """
-    prev_n_columns_diff = 0
-    prev_node_index = 0
-    for (node_index, type, (node_ch, node_lines), edges, n_columns, n_columns_diff) in dag:
 
-        assert -2 < n_columns_diff < 2
-        if n_columns_diff == -1:
+    base = [0, 0]
+    for idx, type, (char, text), edges, ncols, coldiff in dag:
+
+        assert -2 < coldiff < 2
+        if coldiff == -1:
             # Transform
             #
             #     | | |        | | |
@@ -139,8 +139,8 @@ def ascii(ui, dag):
         #     |  / /         |   | |  # <--- padding line
         #     o | |          |  / /
         #                    o | |
-        add_padding_line = (len(node_lines) > 2 and
-                            n_columns_diff == -1 and
+        add_padding_line = (len(text) > 2 and
+                            coldiff == -1 and
                             [x for (x, y) in edges if x + 1 < y])
 
         # fix_nodeline_tail says whether to rewrite
@@ -150,31 +150,30 @@ def ascii(ui, dag):
         #     | o | |    into  | o / /   # <--- fixed nodeline tail
         #     | |/ /           | |/ /
         #     o | |            o | |
-        fix_nodeline_tail = len(node_lines) <= 2 and not add_padding_line
+        fix_nodeline_tail = len(text) <= 2 and not add_padding_line
 
         # nodeline is the line containing the node character (typically o)
-        nodeline = ["|", " "] * node_index
-        nodeline.extend([node_ch, " "])
+        nodeline = ["|", " "] * idx
+        nodeline.extend([char, " "])
 
         nodeline.extend(
-            get_nodeline_edges_tail(
-                node_index, prev_node_index, n_columns, n_columns_diff,
-                prev_n_columns_diff, fix_nodeline_tail))
+            get_nodeline_edges_tail(idx, base[1], ncols, coldiff,
+                                    base[0], fix_nodeline_tail))
 
         # shift_interline is the line containing the non-vertical
         # edges between this entry and the next
-        shift_interline = ["|", " "] * node_index
-        if n_columns_diff == -1:
+        shift_interline = ["|", " "] * idx
+        if coldiff == -1:
             n_spaces = 1
             edge_ch = "/"
-        elif n_columns_diff == 0:
+        elif coldiff == 0:
             n_spaces = 2
             edge_ch = "|"
         else:
             n_spaces = 3
             edge_ch = "\\"
         shift_interline.extend(n_spaces * [" "])
-        shift_interline.extend([edge_ch, " "] * (n_columns - node_index - 1))
+        shift_interline.extend([edge_ch, " "] * (ncols - idx - 1))
 
         # draw edges from the current node to its parents
         draw_edges(edges, nodeline, shift_interline)
@@ -182,27 +181,27 @@ def ascii(ui, dag):
         # lines is the list of all graph lines to print
         lines = [nodeline]
         if add_padding_line:
-            lines.append(get_padding_line(node_index, n_columns, edges))
+            lines.append(get_padding_line(idx, ncols, edges))
         lines.append(shift_interline)
 
         # make sure that there are as many graph lines as there are
         # log strings
-        while len(node_lines) < len(lines):
-            node_lines.append("")
-        if len(lines) < len(node_lines):
-            extra_interline = ["|", " "] * (n_columns + n_columns_diff)
-            while len(lines) < len(node_lines):
+        while len(text) < len(lines):
+            text.append("")
+        if len(lines) < len(text):
+            extra_interline = ["|", " "] * (ncols + coldiff)
+            while len(lines) < len(text):
                 lines.append(extra_interline)
 
         # print lines
-        indentation_level = max(n_columns, n_columns + n_columns_diff)
-        for (line, logstr) in zip(lines, node_lines):
+        indentation_level = max(ncols, ncols + coldiff)
+        for (line, logstr) in zip(lines, text):
             ln = "%-*s %s" % (2 * indentation_level, "".join(line), logstr)
             ui.write(ln.rstrip() + '\n')
 
         # ... and start over
-        prev_node_index = node_index
-        prev_n_columns_diff = n_columns_diff
+        base[0] = coldiff
+        base[1] = idx
 
 def get_revs(repo, rev_opt):
     if rev_opt:
