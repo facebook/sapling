@@ -22,7 +22,6 @@ Common tasks (use "hg help command" for more details)::
 
   print patch series                        qseries
   print applied patches                     qapplied
-  print name of top applied patch           qtop
 
   add known patch to applied stack          qpush
   remove patch from applied stack           qpop
