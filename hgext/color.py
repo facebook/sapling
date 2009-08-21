@@ -59,7 +59,6 @@ Default effects may be overridden from the .hgrc file::
 '''
 
 import os, sys
-import itertools
 
 from mercurial import cmdutil, commands, extensions, error
 from mercurial.i18n import _
@@ -146,7 +145,7 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
     patchlines = ui.popbuffer().splitlines()
     patchnames = repo.mq.series
 
-    for patch, patchname in itertools.izip(patchlines, patchnames):
+    for patch, patchname in zip(patchlines, patchnames):
         if opts['missing']:
             effects = _patch_effects['missing']
         # Determine if patch is applied.
