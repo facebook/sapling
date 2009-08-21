@@ -239,6 +239,12 @@ diff --git a/b1 b/b1
 abort: 00changelog.i@: ambiguous identifier!
 % log -r <some unknown node id>
 abort: unknown revision '1000000000000000000000000000000000000000'!
+% log -k r1
+changeset:   1:3d5bf5654eda
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     r1
+
 adding a
 adding b
 changeset:   0:29a4c94f1924

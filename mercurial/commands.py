@@ -2052,7 +2052,7 @@ def log(ui, repo, *pats, **opts):
                 for k in [kw.lower() for kw in opts['keyword']]:
                     if not (k in ctx.user().lower() or
                             k in ctx.description().lower() or
-                            k in " ".join(ctx.files()[3]).lower()):
+                            k in " ".join(ctx.files()).lower()):
                         miss = 1
                         break
                 if miss:
