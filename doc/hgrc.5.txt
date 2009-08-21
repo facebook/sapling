@@ -100,6 +100,12 @@ Leading whitespace is removed from values. Empty lines are skipped.
 Lines beginning with "``#``" or "``;``" are ignored and may be used to provide
 comments.
 
+A line of the form "``%include file``" will include ``file`` into the
+current configuration file. The inclusion is recursive, which means
+that included files can include other files. Filenames are relative to
+the configuration file in which the ``%include`` directive is found.
+
+
 SECTIONS
 --------
 
