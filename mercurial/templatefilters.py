@@ -105,13 +105,14 @@ def indent(text, prefix):
     '''indent each non-empty line of text after first with prefix.'''
     lines = text.splitlines()
     num_lines = len(lines)
+    endswithnewline = text[-1:] == '\n'
     def indenter():
         for i in xrange(num_lines):
             l = lines[i]
             if i and l.strip():
                 yield prefix
             yield l
-            if i < num_lines - 1 or text.endswith('\n'):
+            if i < num_lines - 1 or endswithnewline:
                 yield '\n'
     return "".join(indenter())
 
