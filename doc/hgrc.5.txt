@@ -105,6 +105,9 @@ current configuration file. The inclusion is recursive, which means
 that included files can include other files. Filenames are relative to
 the configuration file in which the ``%include`` directive is found.
 
+A line with "``%unset name``" will remove ``name`` from the current
+section, if it has been set previously.
+
 
 SECTIONS
 --------
