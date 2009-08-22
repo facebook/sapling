@@ -266,9 +266,7 @@ def pathto(root, n1, n2):
 
 def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
-    if root == os.sep:
-        rootsep = os.sep
-    elif endswithsep(root):
+    if endswithsep(root):
         rootsep = root
     else:
         rootsep = root + os.sep
