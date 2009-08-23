@@ -84,7 +84,7 @@ defaultdateformats = (
     '%b %d %Y',
     '%b %d',
     '%H:%M:%S',
-    '%I:%M:%SP',
+    '%I:%M:%S%p',
     '%H:%M',
     '%I:%M%p',
 )
