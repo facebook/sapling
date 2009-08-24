@@ -165,11 +165,11 @@ class notifier(object):
     def url(self, path=None):
         return self.ui.config('web', 'baseurl') + (path or self.root)
 
-    def node(self, ctx):
+    def node(self, ctx, **props):
         '''format one changeset.'''
         self.t.show(ctx, changes=ctx.changeset(),
                     baseurl=self.ui.config('web', 'baseurl'),
-                    root=self.repo.root, webroot=self.root)
+                    root=self.repo.root, webroot=self.root, **props)
 
     def skipsource(self, source):
         '''true if incoming changes from this source should be skipped.'''
