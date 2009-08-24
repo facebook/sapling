@@ -101,7 +101,7 @@ def wrapperforlistdir(func, args, kwds):
     if args:
         args = list(args)
         args[0] = appendsep(args[0])
-    if kwds.has_key('path'):
+    if 'path' in kwds:
         kwds['path'] = appendsep(kwds['path'])
     return func(*args, **kwds)
 

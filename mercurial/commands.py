@@ -1323,11 +1323,11 @@ def grep(ui, repo, pattern, *pats, **opts):
                     continue
                 files.append(fn)
 
-                if not matches[rev].has_key(fn):
+                if fn not in matches[rev]:
                     grepbody(fn, rev, flog.read(fnode))
 
                 pfn = copy or fn
-                if not matches[parent].has_key(pfn):
+                if pfn not in matches[parent]:
                     try:
                         fnode = pctx.filenode(pfn)
                         grepbody(pfn, parent, flog.read(fnode))
