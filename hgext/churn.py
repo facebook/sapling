@@ -146,7 +146,8 @@ def churn(ui, repo, *pats, **opts):
     sortfn = ((not opts.get('sort')) and (lambda a, b: cmp(b[1], a[1])) or None)
     rate.sort(sortfn)
 
-    maxcount = float(max([v for k, v in rate]))
+    # Be careful not to have a zero maxcount (issue833)
+    maxcount = float(max([v for k, v in rate])) or 1.0
     maxname = max([len(k) for k, v in rate])
 
     ttywidth = util.termwidth()
