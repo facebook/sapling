@@ -188,7 +188,7 @@ def readgitpatch(lr):
             if m:
                 if gp:
                     gitpatches.append(gp)
-                src, dst = m.group(1, 2)
+                dst = m.group(2)
                 gp = patchmeta(dst)
                 gp.lineno = lineno
         elif gp:
