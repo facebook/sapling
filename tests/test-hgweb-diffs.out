@@ -95,6 +95,28 @@ files, or words in the commit message</div>
 </body>
 </html>
 
+% raw revision
+200 Script output follows
+
+
+# HG changeset patch
+# User test
+# Date 0 0
+# Node ID 0cd96de13884b090099512d4794ae87ad067ea8e
+
+a
+
+diff -r 000000000000 -r 0cd96de13884 a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++a
+diff -r 000000000000 -r 0cd96de13884 b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
 % diff removed file
 200 Script output follows
 
@@ -278,6 +300,30 @@ files, or words in the commit message</div>
 
 </body>
 </html>
+
+% revision
+200 Script output follows
+
+
+# HG changeset patch
+# User test
+# Date 0 0
+# Node ID 0cd96de13884b090099512d4794ae87ad067ea8e
+
+a
+
+diff --git a/a b/a
+new file mode 100644
+--- /dev/null
++++ b/a
+@@ -0,0 +1,1 @@
++a
+diff --git a/b b/b
+new file mode 100644
+--- /dev/null
++++ b/b
+@@ -0,0 +1,1 @@
++b
 
 % diff removed file
 200 Script output follows

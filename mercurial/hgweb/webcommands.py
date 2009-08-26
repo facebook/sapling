@@ -236,7 +236,11 @@ def changeset(web, req, tmpl):
                           parity=parity.next()))
 
     parity = paritygen(web.stripecount)
-    diffs = webutil.diffs(web.repo, tmpl, ctx, None, parity)
+    style = web.config('web', 'style', 'paper')
+    if 'style' in req.form:
+        style = req.form['style'][0]
+
+    diffs = webutil.diffs(web.repo, tmpl, ctx, None, parity, style)
     return tmpl('changeset',
                 diff=diffs,
                 rev=ctx.rev(),
@@ -474,7 +478,11 @@ def filediff(web, req, tmpl):
         # path already defined in except clause
 
     parity = paritygen(web.stripecount)
-    diffs = webutil.diffs(web.repo, tmpl, fctx or ctx, [path], parity)
+    style = web.config('web', 'style', 'paper')
+    if 'style' in req.form:
+        style = req.form['style'][0]
+
+    diffs = webutil.diffs(web.repo, tmpl, fctx or ctx, [path], parity, style)
     rename = fctx and webutil.renamelink(fctx) or []
     ctx = fctx and fctx or ctx
     return tmpl("filediff",

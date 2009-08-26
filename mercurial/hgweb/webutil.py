@@ -153,7 +153,7 @@ def listfilediffs(tmpl, files, node, max):
     if len(files) > max:
         yield tmpl('fileellipses')
 
-def diffs(repo, tmpl, ctx, files, parity):
+def diffs(repo, tmpl, ctx, files, parity, style):
 
     def countgen():
         start = 1
@@ -195,7 +195,7 @@ def diffs(repo, tmpl, ctx, files, parity):
             yield tmpl('diffblock', parity=parity.next(),
                        lines=prettyprintlines(''.join(block)))
             block = []
-        if chunk.startswith('diff'):
+        if chunk.startswith('diff') and style != 'raw':
             chunk = ''.join(chunk.splitlines(True)[1:])
         block.append(chunk)
     yield tmpl('diffblock', parity=parity.next(),
