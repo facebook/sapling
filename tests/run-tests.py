@@ -176,15 +176,13 @@ def parseargs():
                 raise
 
     if options.jobs < 1:
-        print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
-        sys.exit(1)
+        parser.error('-j/--jobs must be positive')
     if options.interactive and options.jobs > 1:
         print '(--interactive overrides --jobs)'
         options.jobs = 1
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
-            print 'ERROR: Py3k warnings switch can only be used on Python 2.6+'
-            sys.exit(1)
+            parser.error('Py3k warnings switch can only be used on Python 2.6+')
 
     return (options, args)
 
