@@ -349,19 +349,20 @@ def _dispatch(ui, args):
         lui = ui.copy()
         lui.readconfig(os.path.join(path, ".hg", "hgrc"))
 
+    # Configure extensions in phases: uisetup, extsetup, cmdtable, and
+    # reposetup. Programs like TortoiseHg will call _dispatch several
+    # times so we keep track of configured extensions in _loaded.
     extensions.loadall(lui)
-    for name, module in extensions.extensions():
-        if name in _loaded:
-            continue
+    exts = [ext for ext in extensions.extensions() if ext[0] not in _loaded]
 
-        # setup extensions
-        # TODO this should be generalized to scheme, where extensions can
-        #      redepend on other extensions.  then we should toposort them, and
-        #      do initialization in correct order
+    # (uisetup is handled in extensions.loadall)
+
+    for name, module in exts:
         extsetup = getattr(module, 'extsetup', None)
         if extsetup:
             extsetup()
 
+    for name, module in exts:
         cmdtable = getattr(module, 'cmdtable', {})
         overrides = [cmd for cmd in cmdtable if cmd in commands.table]
         if overrides:
@@ -369,6 +370,8 @@ def _dispatch(ui, args):
                     % (name, " ".join(overrides)))
         commands.table.update(cmdtable)
         _loaded.add(name)
+
+    # (reposetup is handled in hg.repository)
 
     addaliases(lui, commands.table)
 
