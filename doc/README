@@ -11,7 +11,9 @@ which are part of Docutils:
 
   http://docutils.sourceforge.net/
 
-The rst2man tool is still in their so-called "sandbox". The above page
-has links to tarballs of both Docutils and their sandbox.
+The rst2man tool is not yet in a stable Docutils release, you have to
+install their snapshot, which is what they recommend you run anyway:
+
+  http://docutils.sourceforge.net/docutils-snapshot.tgz
 
 Use the Makefile in this directory to generate the man and HTML pages.
