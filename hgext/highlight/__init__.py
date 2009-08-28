@@ -53,8 +53,9 @@ def generate_css(web, req, tmpl):
     req.respond(common.HTTP_OK, 'text/css')
     return ['/* pygments_style = %s */\n\n' % pg_style, fmter.get_style_defs('')]
 
-# monkeypatch in the new version
-extensions.wrapfunction(webcommands, '_filerevision', filerevision_highlight)
-extensions.wrapfunction(webcommands, 'annotate', annotate_highlight)
-webcommands.highlightcss = generate_css
-webcommands.__all__.append('highlightcss')
+def extsetup():
+    # monkeypatch in the new version
+    extensions.wrapfunction(webcommands, '_filerevision', filerevision_highlight)
+    extensions.wrapfunction(webcommands, 'annotate', annotate_highlight)
+    webcommands.highlightcss = generate_css
+    webcommands.__all__.append('highlightcss')
