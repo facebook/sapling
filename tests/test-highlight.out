@@ -538,3 +538,16 @@ title="3e1445510fe7: a">test@0</a>
 /* pygments_style = fruity */
 
 % errors encountered
+adding eucjp.txt
+% HGENCODING=euc-jp hg serve
+% hgweb filerevision, html
+<div class="parity0 source"><a href="#l1" id="l1">     1</a> \xb5\xfe</div>
+% errors encountered
+% HGENCODING=utf-8 hg serve
+% hgweb filerevision, html
+<div class="parity0 source"><a href="#l1" id="l1">     1</a> \xef\xbf\xbd\xef\xbf\xbd</div>
+% errors encountered
+% HGENCODING=us-ascii hg serve
+% hgweb filerevision, html
+<div class="parity0 source"><a href="#l1" id="l1">     1</a> ??</div>
+% errors encountered
