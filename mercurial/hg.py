@@ -137,10 +137,12 @@ def share(ui, source, dest=None, update=True):
         if update is not True:
             checkout = update
         for test in (checkout, 'default', 'tip'):
+            if test is None:
+                continue
             try:
                 uprev = r.lookup(test)
                 break
-            except LookupError:
+            except error.RepoLookupError:
                 continue
         _update(r, uprev)
 
@@ -309,10 +311,12 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 if update is not True:
                     checkout = update
                 for test in (checkout, 'default', 'tip'):
+                    if test is None:
+                        continue
                     try:
                         uprev = dest_repo.lookup(test)
                         break
-                    except:
+                    except error.RepoLookupError:
                         continue
                 _update(dest_repo, uprev)
 
