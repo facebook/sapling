@@ -24,8 +24,7 @@ class manifestdict(dict):
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
-        self.mapcache = None
-        self.listcache = None
+        self._mancache = None
         revlog.revlog.__init__(self, opener, "00manifest.i")
 
     def parse(self, lines):
@@ -40,12 +39,12 @@ class manifest(revlog.revlog):
     def read(self, node):
         if node == revlog.nullid:
             return manifestdict() # don't upset local cache
-        if self.mapcache and self.mapcache[0] == node:
-            return self.mapcache[1]
+        if self._mancache and self._mancache[0] == node:
+            return self._mancache[1]
         text = self.revision(node)
-        self.listcache = array.array('c', text)
+        arraytext = array.array('c', text)
         mapping = self.parse(text)
-        self.mapcache = (node, mapping)
+        self._mancache = (node, mapping, arraytext)
         return mapping
 
     def _search(self, m, s, lo=0, hi=None):
@@ -93,8 +92,8 @@ class manifest(revlog.revlog):
     def find(self, node, f):
         '''look up entry for a single file efficiently.
         return (node, flags) pair if found, (None, None) if not.'''
-        if self.mapcache and node == self.mapcache[0]:
-            return self.mapcache[1].get(f), self.mapcache[1].flags(f)
+        if self._mancache and self._mancache[0] == node:
+            return self._mancache[1].get(f), self._mancache[1].flags(f)
         text = self.revision(node)
         start, end = self._search(text, f)
         if start == end:
@@ -124,9 +123,9 @@ class manifest(revlog.revlog):
                     raise error.RevlogError(
                         _("'\\n' and '\\r' disallowed in filenames: %r") % f)
 
-        # if we're using the listcache, make sure it is valid and
+        # if we're using the cache, make sure it is valid and
         # parented by the same node we're diffing against
-        if not (changed and self.listcache and p1 and self.mapcache[0] == p1):
+        if not (changed and self._mancache and p1 and self._mancache[0] == p1):
             files = sorted(map)
             checkforbidden(files)
 
@@ -135,10 +134,10 @@ class manifest(revlog.revlog):
             hex, flags = revlog.hex, map.flags
             text = ["%s\000%s%s\n" % (f, hex(map[f]), flags(f))
                     for f in files]
-            self.listcache = array.array('c', "".join(text))
+            arraytext = array.array('c', "".join(text))
             cachedelta = None
         else:
-            addlist = self.listcache
+            addlist = self._mancache[2]
 
             checkforbidden(changed[0])
             # combine the changed lists into one list for sorting
@@ -186,12 +185,12 @@ class manifest(revlog.revlog):
             cachedelta = addlistdelta(addlist, delta)
 
             # the delta is only valid if we've been processing the tip revision
-            if self.mapcache[0] != self.tip():
+            if p1 != self.tip():
                 cachedelta = None
-            self.listcache = addlist
+            arraytext = addlist
 
-        n = self.addrevision(buffer(self.listcache), transaction, link,
+        n = self.addrevision(buffer(arraytext), transaction, link,
                              p1, p2, cachedelta)
-        self.mapcache = (n, map)
+        self._mancache = (n, map, arraytext)
 
         return n
