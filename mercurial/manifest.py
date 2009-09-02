@@ -110,17 +110,13 @@ class manifest(revlog.revlog):
         def addlistdelta(addlist, x):
             # start from the bottom up
             # so changes to the offsets don't mess things up.
-            i = len(x)
-            while i > 0:
-                i -= 1
-                start = x[i][0]
-                end = x[i][1]
-                if x[i][2]:
-                    addlist[start:end] = array.array('c', x[i][2])
+            for start, end, content in reversed(x):
+                if content:
+                    addlist[start:end] = array.array('c', content)
                 else:
                     del addlist[start:end]
-            return "".join([struct.pack(">lll", d[0], d[1], len(d[2])) + d[2]
-                            for d in x ])
+            return "".join(struct.pack(">lll", start, end, len(content)) + content
+                           for start, end, content in x)
 
         def checkforbidden(l):
             for f in l:
