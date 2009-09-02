@@ -137,12 +137,15 @@ class manifest(revlog.revlog):
             arraytext = array.array('c', "".join(text))
             cachedelta = None
         else:
+            added, removed = changed
             addlist = self._mancache[2]
 
-            checkforbidden(changed[0])
+            checkforbidden(added)
             # combine the changed lists into one list for sorting
-            work = [[x, 0] for x in changed[0]]
-            work[len(work):] = [[x, 1] for x in changed[1]]
+            work = [(x, False) for x in added]
+            work.extend((x, True) for x in removed)
+            # this could use heapq.merge() (from python2.6+) or equivalent
+            # since the lists are already sorted
             work.sort()
 
             delta = []
@@ -155,18 +158,17 @@ class manifest(revlog.revlog):
 
             # start with a readonly loop that finds the offset of
             # each line and creates the deltas
-            for w in work:
-                f = w[0]
+            for f, todelete in work:
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
-                if w[1] == 0:
+                if not todelete:
                     l = "%s\000%s%s\n" % (f, revlog.hex(map[f]), map.flags(f))
                 else:
+                    if start == end:
+                        # item we want to delete was not found, error out
+                        raise AssertionError(
+                                _("failed to remove %s from manifest") % f)
                     l = ""
-                if start == end and w[1] == 1:
-                    # item we want to delete was not found, error out
-                    raise AssertionError(
-                            _("failed to remove %s from manifest") % f)
                 if dstart != None and dstart <= start and dend >= start:
                     if dend < end:
                         dend = end
