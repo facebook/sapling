@@ -20,7 +20,7 @@ class manifestdict(dict):
     def set(self, f, flags):
         self._flags[f] = flags
     def copy(self):
-        return manifestdict(dict.copy(self), dict.copy(self._flags))
+        return manifestdict(self, dict.copy(self._flags))
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
