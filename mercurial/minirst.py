@@ -279,6 +279,8 @@ def addmargins(blocks):
 
 def formatblock(block, width):
     """Format a block according to width."""
+    if width <= 0:
+        width = 78
     indent = ' ' * block['indent']
     if block['type'] == 'margin':
         return ''

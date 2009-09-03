@@ -1274,6 +1274,9 @@ def termwidth():
 def wrap(line, hangindent, width=None):
     if width is None:
         width = termwidth() - 2
+    if width <= hangindent:
+        # adjust for weird terminal size
+        width = max(78, hangindent + 1)
     padding = '\n' + ' ' * hangindent
     return padding.join(textwrap.wrap(line, width=width - hangindent))
 
