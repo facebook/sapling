@@ -6,7 +6,6 @@ MANDIR=$(PREFIX)/share/man
 INSTALL=install -c -m 644
 PYTHON=python
 RST2HTML=$(shell which rst2html 2> /dev/null || which rst2html.py)
-RST2MAN=$(shell which rst2man 2> /dev/null || which rst2man.py)
 
 all: man html
 
@@ -21,13 +20,7 @@ hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 	${PYTHON} gendoc.py > $@
 
 %: %.txt common.txt
-	$(RST2MAN) $*.txt > $*.tmp
-# add newline after all literal blocks and fix backslash escape
-	sed \
-	  -e 's/^\.fi$$/.fi\n/' \
-	  -e 's/\\fB\\\\fP/\\fB\\e\\fP/' \
-	  $*.tmp > $*
-	rm $*.tmp
+	$(PYTHON) rst2man.py $*.txt > $*
 
 %.html: %.txt common.txt
 	$(RST2HTML) $*.txt > $*.html
