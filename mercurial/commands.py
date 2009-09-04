@@ -2044,7 +2044,7 @@ def log(ui, repo, *pats, **opts):
             if only_branches and ctx.branch() not in only_branches:
                 continue
 
-            if df and not df(ctx.date()):
+            if df and not df(ctx.date()[0]):
                 continue
 
             if opts.get('keyword'):

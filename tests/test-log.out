@@ -245,6 +245,7 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     r1
 
+% log -d -1
 adding a
 adding b
 changeset:   0:29a4c94f1924
