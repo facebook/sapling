@@ -973,7 +973,7 @@ class revlog(object):
         if node == nullid:
             return ""
         if self._cache and self._cache[0] == node:
-            return str(self._cache[2])
+            return self._cache[2]
 
         # look up what we need to read
         text = None
@@ -988,7 +988,7 @@ class revlog(object):
         # do we have useful data cached?
         if self._cache and self._cache[1] >= base and self._cache[1] < rev:
             base = self._cache[1]
-            text = str(self._cache[2])
+            text = self._cache[2]
 
         self._loadindex(base, rev + 1)
         self._chunkraw(base, rev)
@@ -1111,7 +1111,8 @@ class revlog(object):
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-        self._cache = (node, curr, text)
+        if type(text) == str: # only accept immutable objects
+            self._cache = (node, curr, text)
         return node
 
     def ancestor(self, a, b):

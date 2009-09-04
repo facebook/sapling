@@ -132,9 +132,9 @@ class manifest(revlog.revlog):
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
             hex, flags = revlog.hex, map.flags
-            text = ["%s\000%s%s\n" % (f, hex(map[f]), flags(f))
-                    for f in files]
-            arraytext = array.array('c', "".join(text))
+            text = ''.join("%s\000%s%s\n" % (f, hex(map[f]), flags(f))
+                           for f in files)
+            arraytext = array.array('c', text)
             cachedelta = None
         else:
             added, removed = changed
@@ -190,9 +190,9 @@ class manifest(revlog.revlog):
             if p1 != self.tip():
                 cachedelta = None
             arraytext = addlist
+            text = buffer(arraytext)
 
-        n = self.addrevision(buffer(arraytext), transaction, link,
-                             p1, p2, cachedelta)
+        n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
         self._mancache = (n, map, arraytext)
 
         return n
