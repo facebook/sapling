@@ -20,7 +20,7 @@ hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 	${PYTHON} gendoc.py > $@
 
 %: %.txt common.txt
-	$(PYTHON) rst2man.py $*.txt > $*
+	$(PYTHON) rst2man.py --strip-elements-with-class htmlonly $*.txt > $*
 
 %.html: %.txt common.txt
 	$(RST2HTML) $*.txt > $*.html

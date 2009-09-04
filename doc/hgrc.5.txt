@@ -11,6 +11,10 @@ configuration files for Mercurial
 :Manual section: 5
 :Manual group:   Mercurial Manual
 
+.. contents::
+   :backlinks: top
+   :class: htmlonly
+
 
 SYNOPSIS
 --------
