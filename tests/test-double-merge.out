@@ -1,9 +1,4 @@
 created new head
-changeset:   0:310fd17130da
-user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     add foo
-
 changeset:   1:7731dad1c2b9
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000

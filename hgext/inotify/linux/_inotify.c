@@ -106,13 +106,12 @@ PyDoc_STRVAR(
 
 static PyObject *remove_watch(PyObject *self, PyObject *args)
 {
-    PyObject *ret = NULL;
     uint32_t wd;
     int fd;
     int r;
 
     if (!PyArg_ParseTuple(args, "iI:remove_watch", &fd, &wd))
-	goto bail;
+	return NULL;
 
     Py_BEGIN_ALLOW_THREADS
     r = inotify_rm_watch(fd, wd);
@@ -120,18 +119,11 @@ static PyObject *remove_watch(PyObject *self, PyObject *args)
 
     if (r == -1) {
 	PyErr_SetFromErrno(PyExc_OSError);
-	goto bail;
+	return NULL;
     }
 
     Py_INCREF(Py_None);
-
-    goto done;
-
-bail:
-    Py_CLEAR(ret);
-
-done:
-    return ret;
+    return Py_None;
 }
 
 PyDoc_STRVAR(
