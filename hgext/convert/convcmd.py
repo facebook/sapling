@@ -336,11 +336,14 @@ class converter(object):
                     ctags[k] = self.map[v]
 
             if c and ctags:
-                nrev = self.dest.puttags(ctags)
-                # write another hash correspondence to override the previous
-                # one so we don't end up with extra tag heads
-                if nrev:
-                    self.map[c] = nrev
+                nrev, tagsparent = self.dest.puttags(ctags)
+                if nrev and tagsparent:
+                    # write another hash correspondence to override the previous
+                    # one so we don't end up with extra tag heads
+                    tagsparents = [e for e in self.map.iteritems()
+                                   if e[1] == tagsparent]
+                    if tagsparents:
+                        self.map[tagsparents[0][0]] = nrev
 
             self.writeauthormap()
         finally:

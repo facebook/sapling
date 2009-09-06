@@ -18,12 +18,12 @@ marked working directory as branch branch3
 % incremental conversion
 2 c1
 pulling from branch0 into branch1
-2 changesets found
+4 changesets found
 1 c2
 pulling from branch0 into branch2
-2 changesets found
+4 changesets found
 0 c3
 pulling from branch2 into branch3
-3 changesets found
+5 changesets found
 pulling from branch1 into branch3
 1 changesets found
