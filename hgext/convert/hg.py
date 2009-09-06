@@ -189,7 +189,7 @@ class mercurial_sink(converter_sink):
 
         newlines = sorted([("%s %s\n" % (tags[tag], tag)) for tag in tags])
         if newlines == oldlines:
-            return None
+            return None, None
         data = "".join(newlines)
         def getfilectx(repo, memctx, f):
             return context.memfilectx(f, data, False, False, None)
@@ -201,7 +201,7 @@ class mercurial_sink(converter_sink):
                              [".hgtags"], getfilectx, "convert-repo", date,
                              extra)
         self.repo.commitctx(ctx)
-        return hex(self.repo.changelog.tip())
+        return hex(self.repo.changelog.tip()), hex(tagparent)
 
     def setfilemapmode(self, active):
         self.filemapmode = active

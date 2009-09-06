@@ -203,6 +203,8 @@ class converter_sink(object):
         """Put tags into sink.
 
         tags: {tagname: sink_rev_id, ...} where tagname is an UTF-8 string.
+        Return a pair (tag_revision, tag_parent_revision), or (None, None)
+        if nothing was changed.
         """
         raise NotImplementedError()
 
