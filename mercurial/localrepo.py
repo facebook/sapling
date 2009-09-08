@@ -509,7 +509,7 @@ class localrepository(repo.repository):
                 key = hex(key)
         except:
             pass
-        raise error.RepoError(_("unknown revision '%s'") % key)
+        raise error.RepoLookupError(_("unknown revision '%s'") % key)
 
     def local(self):
         return True
