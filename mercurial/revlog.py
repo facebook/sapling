@@ -1128,7 +1128,8 @@ class revlog(object):
         return self.node(c)
 
     def group(self, nodelist, lookup, infocollect=None):
-        """calculate a delta group
+        """Calculate a delta group, yielding a sequence of changegroup chunks
+        (strings).
 
         Given a list of changeset revs, return a set of deltas and
         metadata corresponding to nodes. the first delta is

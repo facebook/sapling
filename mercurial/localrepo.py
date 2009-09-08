@@ -1457,6 +1457,12 @@ class localrepository(repo.repository):
         return self.push_addchangegroup(remote, force, revs)
 
     def prepush(self, remote, force, revs):
+        '''Analyze the local and remote repositories and determine which
+        changesets need to be pushed to the remote.  Return a tuple
+        (changegroup, remoteheads).  changegroup is a readable file-like
+        object whose read() returns successive changegroup chunks ready to
+        be sent over the wire.  remoteheads is the list of remote heads.
+        '''
         common = {}
         remote_heads = remote.heads()
         inc = self.findincoming(remote, common, remote_heads, force=force)
@@ -1601,9 +1607,10 @@ class localrepository(repo.repository):
                 self.ui.debug("%s\n" % hex(node))
 
     def changegroupsubset(self, bases, heads, source, extranodes=None):
-        """This function generates a changegroup consisting of all the nodes
-        that are descendents of any of the bases, and ancestors of any of
-        the heads.
+        """Compute a changegroup consisting of all the nodes that are
+        descendents of any of the bases and ancestors of any of the heads.
+        Return a chunkbuffer object whose read() method will return
+        successive changegroup chunks.
 
         It is fairly complex as determining which filenodes and which
         manifest nodes need to be included for the changeset to be complete
@@ -1902,8 +1909,9 @@ class localrepository(repo.repository):
         return self.changegroupsubset(basenodes, self.heads(), source)
 
     def _changegroup(self, common, source):
-        """Generate a changegroup of all nodes that we have that a recipient
-        doesn't.
+        """Compute the changegroup of all nodes that we have that a recipient
+        doesn't.  Return a chunkbuffer object whose read() method will return
+        successive changegroup chunks.
 
         This is much easier than the previous function as we can assume that
         the recipient has any changenode we aren't sending them.
@@ -1937,6 +1945,7 @@ class localrepository(repo.repository):
             return lookuprevlink
 
         def gengroup():
+            '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
             changedfiles = set()
 
