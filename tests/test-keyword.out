@@ -359,6 +359,7 @@ user@2: $Xinfo$
 # Parent  bb948857c743469b22bbf51f7ec8112279ca5d83
 xa
 
+diff -r bb948857c743 -r cfa68229c116 x/a
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/x/a	Thu Jan 01 00:00:03 1970 +0000
 @@ -0,0 +1,4 @@
@@ -371,6 +372,7 @@ xa
 200 Script output follows
 
 
+diff -r ef63ca68695b -r bb948857c743 a
 --- a/a	Thu Jan 01 00:00:00 1970 +0000
 +++ b/a	Thu Jan 01 00:00:02 1970 +0000
 @@ -1,3 +1,4 @@

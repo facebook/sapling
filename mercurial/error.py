@@ -36,6 +36,9 @@ class ConfigError(Exception):
 class RepoError(Exception):
     pass
 
+class RepoLookupError(RepoError):
+    pass
+
 class CapabilityError(RepoError):
     pass
 

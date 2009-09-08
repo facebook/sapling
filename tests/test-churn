@@ -50,3 +50,13 @@ COLUMNS=40 hg churn
 echo % churn by hour
 hg churn -f '%H' -s
 
+cd ..
+
+# issue 833: ZeroDivisionError
+hg init issue-833
+cd issue-833
+touch foo
+hg ci -Am foo
+# this was failing with a ZeroDivisionError
+hg churn
+cd ..

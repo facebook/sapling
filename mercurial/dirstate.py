@@ -377,9 +377,9 @@ class dirstate(object):
             gran = int(self._ui.config('dirstate', 'granularity', 1))
         except ValueError:
             gran = 1
-        limit = sys.maxint
         if gran > 0:
-            limit = util.fstat(st).st_mtime - gran
+            hlimit = util.fstat(st).st_mtime
+            llimit = hlimit - gran
 
         cs = cStringIO.StringIO()
         copymap = self._copymap
@@ -389,7 +389,8 @@ class dirstate(object):
         for f, e in self._map.iteritems():
             if f in copymap:
                 f = "%s\0%s" % (f, copymap[f])
-            if e[3] > limit and e[0] == 'n':
+            if gran > 0 and e[0] == 'n' and llimit < e[3] <= hlimit:
+                # file was updated too recently, ignore stat data
                 e = (e[0], 0, -1, -1)
             e = pack(_format, e[0], e[1], e[2], e[3], len(f))
             write(e)

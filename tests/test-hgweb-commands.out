@@ -337,6 +337,7 @@ files, or words in the commit message</div>
 # Parent  2ef0ac749a14e4f57a5a822464a0902c6f7f448f
 Added tag 1.0 for changeset 2ef0ac749a14
 
+diff -r 2ef0ac749a14 -r a4f92ed23982 .hgtags
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
 @@ -0,0 +1,1 @@
@@ -451,6 +452,7 @@ files, or words in the commit message</div>
 200 Script output follows
 
 
+diff -r 000000000000 -r a4f92ed23982 foo
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
 @@ -0,0 +1,1 @@

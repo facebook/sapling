@@ -25,7 +25,10 @@ It has the following prerequisites, at least as I build it:
       http://gnuwin32.sourceforge.net/packages/gettext.htm
 
   Inno Setup
-      http://www.jrsoftware.org/isinfo.php
+      http://www.jrsoftware.org/isdl.php#qsp
+
+      Get and install ispack-5.3.4.exe which includes Inno Setup Processor,
+      which is necessary to package Mercurial.
 
   ISTool - optional
       http://www.istool.org/default.aspx/
@@ -94,11 +97,14 @@ Then build the documentation with:
 If you use ISTool, you open the C:\hg\hg-release\contrib\win32\mercurial.iss
 file and type Ctrl-F9 to compile the installer file.
 
-Otherwise you run the Inno Setup compiler.  Assuming it's on the path you run:
+Otherwise you run the Inno Setup compiler.  Assuming it's in the path
+you should execute:
 
-  iscc contrib\win32\mercurial.iss
+  iscc contrib\win32\mercurial.iss /DVERSION=foo
 
-The actual installer will be in the C:\hg\hg-release\Output directory.
+Where 'foo' is the version number you would like to see in the
+'Add/Remove Applications' tool.  The installer will be placed into
+a directory named Output/ at the root of your repository.
 
 To automate the steps above you may want to create a batchfile based on the
 following:
@@ -109,6 +115,6 @@ following:
   cd doc
   mingw32-make RST2HTML=rst2html.bat html
   cd ..
-  iscc contrib\win32\mercurial.iss
+  iscc contrib\win32\mercurial.iss /DVERSION=snapshot
 
 and run it from the root of the hg repository (c:\hg\hg-release).
