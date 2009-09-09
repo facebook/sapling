@@ -335,7 +335,7 @@ def _dispatch(ui, args):
     path = _findrepo(os.getcwd()) or ""
     if not path:
         lui = ui
-    if path:
+    else:
         try:
             lui = ui.copy()
             lui.readconfig(os.path.join(path, ".hg", "hgrc"))
