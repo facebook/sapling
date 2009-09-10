@@ -182,7 +182,7 @@ class transplanter(object):
         fp.write("# HG changeset patch\n")
         fp.write("# User %s\n" % user)
         fp.write("# Date %d %d\n" % date)
-        fp.write(changelog[4])
+        fp.write(msg + '\n')
         fp.close()
 
         try:
