@@ -2516,7 +2516,7 @@ cmdtable = {
     "qapplied":
         (applied,
          [('1', 'last', None, _('show only the last patch'))] + seriesopts,
-         _('hg qapplied [-s] [PATCH]')),
+         _('hg qapplied [-1] [-s] [PATCH]')),
     "qclone":
         (clone,
          [('', 'pull', None, _('use pull protocol to copy metadata')),
@@ -2639,7 +2639,7 @@ cmdtable = {
     "qunapplied":
         (unapplied,
          [('1', 'first', None, _('show only the first patch'))] + seriesopts,
-         _('hg qunapplied [-s] [PATCH]')),
+         _('hg qunapplied [-1] [-s] [PATCH]')),
     "qfinish":
         (finish,
          [('a', 'applied', None, _('finish all applied changesets'))],
