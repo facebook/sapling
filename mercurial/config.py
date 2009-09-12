@@ -93,6 +93,7 @@ class config(object):
                     self.set(section, item, v, "%s:%d" % (src, line))
                     continue
                 item = None
+                cont = False
             m = includere.match(l)
             if m:
                 inc = m.group(1)
