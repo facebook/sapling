@@ -101,17 +101,20 @@ class hgwebzc(hgweb_mod.hgweb):
     def __init__(self, repo, name=None):
         super(hgwebzc, self).__init__(repo, name)
         name = self.reponame or os.path.basename(repo.root)
+        path = self.repo.ui.config("web", "prefix", "").strip('/')
         desc = self.repo.ui.config("web", "description", name)
-        publish(name, desc, name, int(repo.ui.config("web", "port", 8000)))
+        publish(name, desc, path, int(repo.ui.config("web", "port", 8000)))
 
 class hgwebdirzc(hgwebdir_mod.hgwebdir):
-    def run(self):
+    def __init__(self, conf, baseui=None):
+        super(hgwebdirzc, self).__init__(conf, baseui)
+        prefix = self.ui.config("web", "prefix", "").strip('/') + '/'
         for r, p in self.repos:
             u = self.ui.copy()
             u.readconfig(os.path.join(p, '.hg', 'hgrc'))
             n = os.path.basename(r)
-            publish(n, "hgweb", p, int(u.config("web", "port", 8000)))
-        return super(hgwebdirzc, self).run()
+            path = (prefix + r).strip('/')
+            publish(n, "hgweb", path, int(u.config("web", "port", 8000)))
 
 # listen
 

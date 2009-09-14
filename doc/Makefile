@@ -17,13 +17,15 @@ hg.1.txt: hg.1.gendoc.txt
 	touch hg.1.txt
 
 hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
-	${PYTHON} gendoc.py > $@
+	${PYTHON} gendoc.py > $@.tmp
+	mv $@.tmp $@
 
 %: %.txt common.txt
-	$(PYTHON) rst2man.py --strip-elements-with-class htmlonly $*.txt > $*
+	$(PYTHON) rst2man.py --halt warning \
+	  --strip-elements-with-class htmlonly $*.txt $*
 
 %.html: %.txt common.txt
-	$(RST2HTML) $*.txt > $*.html
+	$(RST2HTML) --halt warning $*.txt $*.html
 
 MANIFEST: man html
 # tracked files are already in the main MANIFEST
