@@ -152,6 +152,9 @@ hg qpush
 echo % qapplied
 hg qapplied
 
+echo % qtop
+hg qtop
+
 echo % prev
 hg qapp -1
 
