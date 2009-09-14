@@ -327,12 +327,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dir_cleanup.cleanup()
 
 def _showstats(repo, stats):
-    stats = ((stats[0], _("updated")),
-             (stats[1], _("merged")),
-             (stats[2], _("removed")),
-             (stats[3], _("unresolved")))
-    note = ", ".join([_("%d files %s") % s for s in stats])
-    repo.ui.status("%s\n" % note)
+    repo.ui.status(_("%d files updated, %d files merged, "
+                     "%d files removed, %d files unresolved\n") % stats)
 
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
