@@ -585,7 +585,7 @@ class SubversionRepo(object):
         """
         self.init_ra_and_client()
         rev = optrev(revision)
-        rpath = (self.svn_url + '/' + path.strip('/')).strip('/')
+        rpath = self.path2url(path)
         try:
             pl = client.proplist2(rpath, rev, rev, False,
                                   self.client_context, self.pool)
@@ -612,9 +612,8 @@ class SubversionRepo(object):
         directory. Raise IOError if the directory cannot be found at given
         revision.
         """
-        dirpath = dirpath.strip('/')
+        rpath = self.path2url(dirpath)
         pool = core.Pool()
-        rpath = '/'.join([self.svn_url, dirpath]).strip('/')
         rev = optrev(revision)
         try:
             entries = client.ls(rpath, rev, True, self.client_context, pool)
@@ -632,3 +631,10 @@ class SubversionRepo(object):
         """
         kind = ra.check_path(self.ra, path.strip('/'), revision)
         return _svntypes.get(kind)
+
+    def path2url(self, dirpath):
+        """Join svn url with dirpath, URI-escaping dirpath.
+        """
+        return '/'.join((self.svn_url,
+                         urllib.quote(dirpath).strip('/'),
+                         ))
