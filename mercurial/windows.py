@@ -17,7 +17,7 @@ def posixfile(name, mode='r', buffering=-1):
     try:
         return osutil.posixfile(name, mode, buffering)
     except WindowsError, err:
-        raise IOError(err.errno, err.strerror)
+        raise IOError(err.errno, '%s: %s' % (name, err.strerror))
 posixfile.__doc__ = osutil.posixfile.__doc__
 
 class winstdout(object):
