@@ -522,14 +522,14 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     for br, bp in branches.iteritems():
         bad_branch_paths[br] = []
 
-        # This next block might be needed, but for now I'm omitting it until it can be
-        # proven necessary.
+        # This next block might be needed, but for now I'm omitting it until it
+        # can be proven necessary.
         # for bad in brpaths:
         #     if bad.startswith(bp) and len(bad) > len(bp):
         #         bad_branch_paths[br].append(bad[len(bp)+1:])
 
-        # We've go a branch that contains other branches. We have to be careful to
-        # get results similar to real replay in this case.
+        # We've go a branch that contains other branches. We have to be careful
+        # to get results similar to real replay in this case.
         for existingbr in meta.branches:
             bad = meta.remotename(existingbr)
             if bad.startswith(bp) and len(bad) > len(bp):
