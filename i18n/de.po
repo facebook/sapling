@@ -1495,7 +1495,7 @@ msgid "revision %s is not a patchset number or date"
 msgstr "Revision %s ist weder ein Satz von Patchnummern noch ein Datum"
 
 msgid "using builtin cvsps\n"
-msgstr "Nutze internes cvsps"
+msgstr "Nutze internes cvsps\n"
 
 #, python-format
 msgid "connecting to %s\n"
@@ -1563,7 +1563,7 @@ msgstr "Synthetische Revision gefunden in %s: %r\n"
 
 #, python-format
 msgid "writing cvs log cache %s\n"
-msgstr "Schreibe CVS Logbuch-Zwischenspeicher"
+msgstr "Schreibe CVS Logbuch-Zwischenspeicher %s\n"
 
 #, python-format
 msgid "%d log entries\n"
