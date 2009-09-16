@@ -509,11 +509,9 @@ class SubversionRepo(object):
         # in an svnserve from the 1.2 era)
         self.init_ra_and_client()
 
-        assert path[0] != '/'
-        url = self.svn_url + '/' + path
+        url = self.path2url(path)
         url2 = url
-        if other_path is not None:
-            url2 = self.svn_url + '/' + other_path
+        url2 = (other_path and self.path2url(other_path) or url)
         if other_rev is None:
             other_rev = revision - 1
         old_cwd = os.getcwd()
@@ -632,9 +630,10 @@ class SubversionRepo(object):
         kind = ra.check_path(self.ra, path.strip('/'), revision)
         return _svntypes.get(kind)
 
-    def path2url(self, dirpath):
-        """Join svn url with dirpath, URI-escaping dirpath.
+    def path2url(self, path):
+        """Build svn URL for path, URL-escaping path.
         """
+        assert path[0] != '/'
         return '/'.join((self.svn_url,
-                         urllib.quote(dirpath).strip('/'),
+                         urllib.quote(path).rstrip('/'),
                          ))
