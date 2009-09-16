@@ -55,6 +55,29 @@ cd a
 hg foo
 echo 'barfoo = !' >> $HGRCPATH
 
+# check that extensions are loaded in phases
+cat > foo.py <<EOF
+import os
+name = os.path.basename(__file__).rsplit('.', 1)[0]
+print "1) %s imported" % name
+def uisetup(ui):
+    print "2) %s uisetup" % name
+def extsetup():
+    print "3) %s extsetup" % name
+def reposetup(ui, repo):
+    print "4) %s reposetup" % name
+EOF
+
+cp foo.py bar.py
+echo 'foo = foo.py' >> $HGRCPATH
+echo 'bar = bar.py' >> $HGRCPATH
+
+# command with no output, we just want to see the extensions loaded
+hg paths
+
+echo 'foo = !' >> $HGRCPATH
+echo 'bar = !' >> $HGRCPATH
+
 cd ..
 cat > empty.py <<EOF
 '''empty cmdtable

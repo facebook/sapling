@@ -987,12 +987,12 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
     df = util.matchdate(date)
-    get = util.cachefunc(lambda r: repo[r].changeset())
+    get = util.cachefunc(lambda r: repo[r])
     changeiter, matchfn = walkchangerevs(ui, repo, [], get, {'rev':None})
     results = {}
     for st, rev, fns in changeiter:
         if st == 'add':
-            d = get(rev)[2]
+            d = get(rev).date()
             if df(d[0]):
                 results[rev] = d
         elif st == 'iter':
@@ -1118,13 +1118,13 @@ def walkchangerevs(ui, repo, pats, change, opts):
         def changerevgen():
             for i, window in increasing_windows(len(repo) - 1, nullrev):
                 for j in xrange(i - window, i + 1):
-                    yield j, change(j)[3]
+                    yield change(j)
 
-        for rev, changefiles in changerevgen():
-            matches = filter(m, changefiles)
+        for ctx in changerevgen():
+            matches = filter(m, ctx.files())
             if matches:
-                fncache[rev] = matches
-                wanted.add(rev)
+                fncache[ctx.rev()] = matches
+                wanted.add(ctx.rev())
 
     class followfilter(object):
         def __init__(self, onlyfirst=False):
@@ -1189,7 +1189,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 fns = fncache.get(rev)
                 if not fns:
                     def fns_generator():
-                        for f in change(rev)[3]:
+                        for f in change(rev).files():
                             if m(f):
                                 yield f
                     fns = fns_generator()

@@ -1275,9 +1275,9 @@ def grep(ui, repo, pattern, *pats, **opts):
             if opts.get('all'):
                 cols.append(change)
             if opts.get('user'):
-                cols.append(ui.shortuser(get(r)[1]))
+                cols.append(ui.shortuser(get(r).user()))
             if opts.get('date'):
-                cols.append(datefunc(get(r)[2]))
+                cols.append(datefunc(get(r).date()))
             if opts.get('files_with_matches'):
                 c = (fn, r)
                 if c in filerevmatches:
@@ -1291,7 +1291,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     skip = {}
     revfiles = {}
-    get = util.cachefunc(lambda r: repo[r].changeset())
+    get = util.cachefunc(lambda r: repo[r])
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
     found = False
     follow = opts.get('follow')
@@ -1300,7 +1300,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             matches.clear()
             revfiles.clear()
         elif st == 'add':
-            ctx = repo[rev]
+            ctx = get(rev)
             pctx = ctx.parents()[0]
             parent = pctx.rev()
             matches.setdefault(rev, {})
@@ -1323,18 +1323,18 @@ def grep(ui, repo, pattern, *pats, **opts):
                     continue
                 files.append(fn)
 
-                if not matches[rev].has_key(fn):
+                if fn not in matches[rev]:
                     grepbody(fn, rev, flog.read(fnode))
 
                 pfn = copy or fn
-                if not matches[parent].has_key(pfn):
+                if pfn not in matches[parent]:
                     try:
                         fnode = pctx.filenode(pfn)
                         grepbody(pfn, parent, flog.read(fnode))
                     except error.LookupError:
                         pass
         elif st == 'iter':
-            parent = repo[rev].parents()[0].rev()
+            parent = get(rev).parents()[0].rev()
             for fn in sorted(revfiles.get(rev, [])):
                 states = matches[rev][fn]
                 copy = copies.get(rev, {}).get(fn)
@@ -1982,7 +1982,7 @@ def log(ui, repo, *pats, **opts):
     will appear in files:.
     """
 
-    get = util.cachefunc(lambda r: repo[r].changeset())
+    get = util.cachefunc(lambda r: repo[r])
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
 
     limit = cmdutil.loglimit(opts)
@@ -2040,40 +2040,37 @@ def log(ui, repo, *pats, **opts):
             if opts.get('only_merges') and len(parents) != 2:
                 continue
 
-            if only_branches:
-                revbranch = get(rev)[5]['branch']
-                if revbranch not in only_branches:
-                    continue
+            ctx = get(rev)
+            if only_branches and ctx.branch() not in only_branches:
+                continue
 
-            if df:
-                changes = get(rev)
-                if not df(changes[2][0]):
-                    continue
+            if df and not df(ctx.date()[0]):
+                continue
 
             if opts.get('keyword'):
-                changes = get(rev)
                 miss = 0
                 for k in [kw.lower() for kw in opts['keyword']]:
-                    if not (k in changes[1].lower() or
-                            k in changes[4].lower() or
-                            k in " ".join(changes[3]).lower()):
+                    if not (k in ctx.user().lower() or
+                            k in ctx.description().lower() or
+                            k in " ".join(ctx.files()).lower()):
                         miss = 1
                         break
                 if miss:
                     continue
 
             if opts['user']:
-                changes = get(rev)
-                if not [k for k in opts['user'] if k in changes[1]]:
+                if not [k for k in opts['user'] if k in ctx.user()]:
                     continue
 
             copies = []
             if opts.get('copies') and rev:
-                for fn in get(rev)[3]:
+                for fn in ctx.files():
                     rename = getrenamed(fn, rev)
                     if rename:
                         copies.append((fn, rename[0]))
-            displayer.show(context.changectx(repo, rev), copies=copies)
+
+            displayer.show(ctx, copies=copies)
+
         elif st == 'iter':
             if count == limit: break
             if displayer.flush(rev):
@@ -2158,7 +2155,8 @@ def merge(ui, repo, node=None, **opts):
         roots, heads = [common.node()], [p2.node()]
         displayer = cmdutil.show_changeset(ui, repo, opts)
         for node in repo.changelog.nodesbetween(roots=roots, heads=heads)[0]:
-            displayer.show(repo[node])
+            if node not in roots:
+                displayer.show(repo[node])
         return 0
 
     return hg.merge(repo, node, force=opts.get('force'))

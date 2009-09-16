@@ -13,7 +13,6 @@
 from mercurial.i18n import _
 from mercurial import cmdutil, util
 import server
-from weakref import proxy
 from client import client, QueryFailed
 
 def serve(ui, repo, **opts):
@@ -25,7 +24,8 @@ def serve(ui, repo, **opts):
     class service(object):
         def init(self):
             try:
-                self.master = server.master(ui, repo, timeout)
+                self.master = server.master(ui, repo.dirstate,
+                                            repo.root, timeout)
             except server.AlreadyStartedException, inst:
                 raise util.Abort(str(inst))
 
@@ -55,9 +55,6 @@ def debuginotify(ui, repo, **opts):
 def reposetup(ui, repo):
     if not hasattr(repo, 'dirstate'):
         return
-
-    # XXX: weakref until hg stops relying on __del__
-    repo = proxy(repo)
 
     class inotifydirstate(repo.dirstate.__class__):
 

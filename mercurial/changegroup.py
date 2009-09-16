@@ -10,7 +10,7 @@ import util
 import struct, os, bz2, zlib, tempfile
 
 def getchunk(source):
-    """get a chunk from a changegroup"""
+    """return the next chunk from changegroup 'source' as a string"""
     d = source.read(4)
     if not d:
         return ""
@@ -25,7 +25,8 @@ def getchunk(source):
     return d
 
 def chunkiter(source):
-    """iterate through the chunks in source"""
+    """iterate through the chunks in source, yielding a sequence of chunks
+    (strings)"""
     while 1:
         c = getchunk(source)
         if not c:
@@ -33,10 +34,11 @@ def chunkiter(source):
         yield c
 
 def chunkheader(length):
-    """build a changegroup chunk header"""
+    """return a changegroup chunk header (string)"""
     return struct.pack(">l", length + 4)
 
 def closechunk():
+    """return a changegroup chunk header (string) for a zero-length chunk"""
     return struct.pack(">l", 0)
 
 class nocompress(object):

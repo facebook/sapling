@@ -42,7 +42,7 @@ class engine(object):
     filter uses function to transform value. syntax is
     {key|filter1|filter2|...}.'''
 
-    template_re = re.compile(r'{([\w\|%]+)}|#([\w\|%]+)#')
+    template_re = re.compile(r'{([\w\|%]+)}')
 
     def __init__(self, loader, filters={}, defaults={}):
         self.loader = loader

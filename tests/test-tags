@@ -37,8 +37,16 @@ hg tags
 hg identify
 
 # repeat with cold tag cache
+echo "% identify with cold cache"
 rm -f .hg/tags.cache
 hg identify
+
+# and again, but now unable to write tag cache
+echo "% identify with unwritable cache"
+rm -f .hg/tags.cache
+chmod 555 .hg
+hg identify
+chmod 755 .hg
 
 echo "% create a branch"
 echo bb > a

@@ -307,6 +307,18 @@ a
 200 Script output follows
 
 d
+% test descend = False
+200 Script output follows
+
+
+/c/
+
+200 Script output follows
+
+
+/t/a/
+/t/b/
+
 % collections: should succeed
 200 Script output follows
 
@@ -327,4 +339,5 @@ b
 c
 % paths errors 1
 % paths errors 2
+% paths errors 3
 % collections errors

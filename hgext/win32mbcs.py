@@ -101,7 +101,7 @@ def wrapperforlistdir(func, args, kwds):
     if args:
         args = list(args)
         args[0] = appendsep(args[0])
-    if kwds.has_key('path'):
+    if 'path' in kwds:
         kwds['path'] = appendsep(kwds['path'])
     return func(*args, **kwds)
 
@@ -123,7 +123,7 @@ def wrapname(name, wrapper):
 funcs = '''os.path.join os.path.split os.path.splitext
  os.path.splitunc os.path.normpath os.path.normcase os.makedirs
  mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
- mercurial.util.fspath mercurial.windows.pconvert'''
+ mercurial.util.fspath mercurial.util.pconvert'''
 
 # codec and alias names of sjis and big5 to be faked.
 problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs

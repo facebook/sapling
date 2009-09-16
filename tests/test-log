@@ -104,6 +104,12 @@ hg log -r ''
 echo '% log -r <some unknown node id>'
 hg log -r 1000000000000000000000000000000000000000
 
+echo '% log -k r1'
+hg log -k r1
+
+echo '% log -d -1'
+hg log -d -1
+
 cd ..
 
 hg init usertest

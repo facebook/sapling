@@ -53,15 +53,17 @@ def countrate(ui, repo, amap, *pats, **opts):
     if opts.get('date'):
         df = util.matchdate(opts['date'])
 
-    get = util.cachefunc(lambda r: repo[r].changeset())
+    get = util.cachefunc(lambda r: repo[r])
     changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
     for st, rev, fns in changeiter:
+
         if not st == 'add':
             continue
-        if df and not df(get(rev)[2][0]): # doesn't match date format
+
+        ctx = get(rev)
+        if df and not df(ctx.date()[0]): # doesn't match date format
             continue
 
-        ctx = repo[rev]
         key = getkey(ctx)
         key = amap.get(key, key) # alias remap
         if opts.get('changesets'):
@@ -147,8 +149,8 @@ def churn(ui, repo, *pats, **opts):
     rate.sort(key=sortkey)
 
     # Be careful not to have a zero maxcount (issue833)
-    maxcount = float(max([v for k, v in rate])) or 1.0
-    maxname = max([len(k) for k, v in rate])
+    maxcount = float(max(v for k, v in rate)) or 1.0
+    maxname = max(len(k) for k, v in rate)
 
     ttywidth = util.termwidth()
     ui.debug(_("assuming %i character terminal\n") % ttywidth)

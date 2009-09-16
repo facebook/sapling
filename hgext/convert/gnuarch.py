@@ -284,7 +284,7 @@ class gnuarch_source(converter_source, commandline):
             self.changes[rev].summary = self.recode(self.changes[rev].summary)
 
             # Commit revision origin when dealing with a branch or tag
-            if catlog.has_key('Continuation-of'):
+            if 'Continuation-of' in catlog:
                 self.changes[rev].continuationof = self.recode(catlog['Continuation-of'])
         except Exception:
             raise util.Abort(_('could not parse cat-log of %s') % rev)

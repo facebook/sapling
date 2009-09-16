@@ -78,7 +78,7 @@ def has_executablebit():
 
 def has_icasefs():
     # Stolen from mercurial.util
-    fd, path = tempfile.mkstemp(prefix=tempprefix)
+    fd, path = tempfile.mkstemp(prefix=tempprefix, dir='.')
     os.close(fd)
     try:
         s1 = os.stat(path)
@@ -122,6 +122,10 @@ def has_lsprof():
 
 def has_git():
     return matchoutput('git --version 2>&1', r'^git version')
+
+def has_rst2html():
+    return matchoutput('rst2html --version', r'^rst2html \(Docutils') or \
+        matchoutput('rst2html.py --version', r'^rst2html.py \(Docutils')
 
 def has_svn():
     return matchoutput('svn --version 2>&1', r'^svn, version') and \
@@ -195,6 +199,7 @@ checks = {
     "outer-repo": (has_outer_repo, "outer repo"),
     "p4": (has_p4, "Perforce server and client"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
+    "rst2html": (has_rst2html, "Docutils rst2html tool"),
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),

@@ -40,4 +40,5 @@ class repository(object):
         url = self.url()
         if url.endswith('/'):
             return url + path
-        return url + '/' + path
+        else:
+            return url + '/' + path

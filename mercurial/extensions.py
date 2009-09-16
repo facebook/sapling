@@ -40,6 +40,7 @@ def loadpath(path, module_name):
         return imp.load_source(module_name, path)
 
 def load(ui, name, path):
+    # unused ui argument kept for backwards compatibility
     if name.startswith('hgext.') or name.startswith('hgext/'):
         shortname = name[6:]
     else:
@@ -66,12 +67,9 @@ def load(ui, name, path):
     _extensions[shortname] = mod
     _order.append(shortname)
 
-    uisetup = getattr(mod, 'uisetup', None)
-    if uisetup:
-        uisetup(ui)
-
 def loadall(ui):
     result = ui.configitems("extensions")
+    newindex = len(_order)
     for (name, path) in result:
         if path:
             if path[0] == '!':
@@ -89,6 +87,11 @@ def loadall(ui):
                         % (name, inst))
             if ui.traceback():
                 return 1
+
+    for name in _order[newindex:]:
+        uisetup = getattr(_extensions[name], 'uisetup', None)
+        if uisetup:
+            uisetup(ui)
 
 def wrapcommand(table, command, wrapper):
     aliases, entry = cmdutil.findcmd(command, table)

@@ -47,9 +47,6 @@ if __name__ == "__main__":
     print "The first %d primes: %s" % (n, list(islice(p, n)))
 EOF
 
-# check for UnicodeDecodeError with iso-8859-1 file contents
-python -c 'fp = open("isolatin.txt", "w"); fp.write("h\xFCbsch\n"); fp.close();'
-
 hg ci -Ama
 
 echo % hg serve
@@ -59,10 +56,6 @@ cat hg.pid >> $DAEMON_PIDS
 echo % hgweb filerevision, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/primes.py') \
     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mf\"/class=\"mi\"/g"
-
-echo % hgweb filerevision, html
-("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/isolatin.txt') \
-    | sed "s/class=\"k\"/class=\"kn\"/g"
 
 echo % hgweb fileannotate, html
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/annotate/tip/primes.py') \
@@ -121,3 +114,28 @@ rm out
 
 echo % errors encountered
 cat errors.log
+
+cd ..
+hg init eucjp
+cd eucjp
+
+printf '\265\376\n' >> eucjp.txt  # Japanese kanji "Kyo"
+
+hg ci -Ama
+
+hgserveget () {
+    "$TESTDIR/killdaemons.py"
+    echo % HGENCODING="$1" hg serve
+    HGENCODING="$1" hg serve -p $HGPORT -d -n test --pid-file=hg.pid -E errors.log
+    cat hg.pid >> $DAEMON_PIDS
+
+    echo % hgweb filerevision, html
+    "$TESTDIR/get-with-headers.py" localhost:$HGPORT "/file/tip/$2" \
+        | grep '<div class="parity0 source">' | $TESTDIR/printrepr.py
+    echo % errors encountered
+    cat errors.log
+}
+
+hgserveget euc-jp eucjp.txt
+hgserveget utf-8 eucjp.txt
+hgserveget us-ascii eucjp.txt

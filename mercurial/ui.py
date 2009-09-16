@@ -199,7 +199,7 @@ class ui(object):
     def _path(self, loc):
         p = self.config('paths', loc)
         if p and '%%' in p:
-            self.warn('(deprecated \'%%\' in path %s=%s from %s)\n' %
+            self.warn("(deprecated '%%' in path %s=%s from %s)\n" %
                     (loc, p, self.configsource('paths', loc)))
             p = p.replace('%%', '%')
         return p
@@ -358,7 +358,7 @@ class ui(object):
         visible. 'topic' is the current operation, 'item' is a
         non-numeric marker of the current position (ie the currently
         in-process file), 'pos' is the current numeric position (ie
-        revision, bytes, etc.), units is a corresponding unit label,
+        revision, bytes, etc.), unit is a corresponding unit label,
         and total is the highest expected pos.
 
         Multiple nested topics may be active at a time. All topics
@@ -368,14 +368,14 @@ class ui(object):
         if pos == None or not self.debugflag:
             return
 
-        if units:
-            units = ' ' + units
+        if unit:
+            unit = ' ' + unit
         if item:
             item = ' ' + item
 
         if total:
             pct = 100.0 * pos / total
             ui.debug('%s:%s %s/%s%s (%4.2g%%)\n'
-                     % (topic, item, pos, total, units, pct))
+                     % (topic, item, pos, total, unit, pct))
         else:
-            ui.debug('%s:%s %s%s\n' % (topic, item, pos, units))
+            ui.debug('%s:%s %s%s\n' % (topic, item, pos, unit))

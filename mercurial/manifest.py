@@ -20,12 +20,11 @@ class manifestdict(dict):
     def set(self, f, flags):
         self._flags[f] = flags
     def copy(self):
-        return manifestdict(dict.copy(self), dict.copy(self._flags))
+        return manifestdict(self, dict.copy(self._flags))
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
-        self.mapcache = None
-        self.listcache = None
+        self._mancache = None
         revlog.revlog.__init__(self, opener, "00manifest.i")
 
     def parse(self, lines):
@@ -40,12 +39,12 @@ class manifest(revlog.revlog):
     def read(self, node):
         if node == revlog.nullid:
             return manifestdict() # don't upset local cache
-        if self.mapcache and self.mapcache[0] == node:
-            return self.mapcache[1]
+        if self._mancache and self._mancache[0] == node:
+            return self._mancache[1]
         text = self.revision(node)
-        self.listcache = array.array('c', text)
+        arraytext = array.array('c', text)
         mapping = self.parse(text)
-        self.mapcache = (node, mapping)
+        self._mancache = (node, mapping, arraytext)
         return mapping
 
     def _search(self, m, s, lo=0, hi=None):
@@ -93,8 +92,8 @@ class manifest(revlog.revlog):
     def find(self, node, f):
         '''look up entry for a single file efficiently.
         return (node, flags) pair if found, (None, None) if not.'''
-        if self.mapcache and node == self.mapcache[0]:
-            return self.mapcache[1].get(f), self.mapcache[1].flags(f)
+        if self._mancache and self._mancache[0] == node:
+            return self._mancache[1].get(f), self._mancache[1].flags(f)
         text = self.revision(node)
         start, end = self._search(text, f)
         if start == end:
@@ -110,17 +109,13 @@ class manifest(revlog.revlog):
         def addlistdelta(addlist, x):
             # start from the bottom up
             # so changes to the offsets don't mess things up.
-            i = len(x)
-            while i > 0:
-                i -= 1
-                start = x[i][0]
-                end = x[i][1]
-                if x[i][2]:
-                    addlist[start:end] = array.array('c', x[i][2])
+            for start, end, content in reversed(x):
+                if content:
+                    addlist[start:end] = array.array('c', content)
                 else:
                     del addlist[start:end]
-            return "".join([struct.pack(">lll", d[0], d[1], len(d[2])) + d[2]
-                            for d in x ])
+            return "".join(struct.pack(">lll", start, end, len(content)) + content
+                           for start, end, content in x)
 
         def checkforbidden(l):
             for f in l:
@@ -128,26 +123,29 @@ class manifest(revlog.revlog):
                     raise error.RevlogError(
                         _("'\\n' and '\\r' disallowed in filenames: %r") % f)
 
-        # if we're using the listcache, make sure it is valid and
+        # if we're using the cache, make sure it is valid and
         # parented by the same node we're diffing against
-        if not (changed and self.listcache and p1 and self.mapcache[0] == p1):
+        if not (changed and self._mancache and p1 and self._mancache[0] == p1):
             files = sorted(map)
             checkforbidden(files)
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
             hex, flags = revlog.hex, map.flags
-            text = ["%s\000%s%s\n" % (f, hex(map[f]), flags(f))
-                    for f in files]
-            self.listcache = array.array('c', "".join(text))
+            text = ''.join("%s\000%s%s\n" % (f, hex(map[f]), flags(f))
+                           for f in files)
+            arraytext = array.array('c', text)
             cachedelta = None
         else:
-            addlist = self.listcache
+            added, removed = changed
+            addlist = self._mancache[2]
 
-            checkforbidden(changed[0])
+            checkforbidden(added)
             # combine the changed lists into one list for sorting
-            work = [[x, 0] for x in changed[0]]
-            work[len(work):] = [[x, 1] for x in changed[1]]
+            work = [(x, False) for x in added]
+            work.extend((x, True) for x in removed)
+            # this could use heapq.merge() (from python2.6+) or equivalent
+            # since the lists are already sorted
             work.sort()
 
             delta = []
@@ -160,18 +158,17 @@ class manifest(revlog.revlog):
 
             # start with a readonly loop that finds the offset of
             # each line and creates the deltas
-            for w in work:
-                f = w[0]
+            for f, todelete in work:
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
-                if w[1] == 0:
+                if not todelete:
                     l = "%s\000%s%s\n" % (f, revlog.hex(map[f]), map.flags(f))
                 else:
+                    if start == end:
+                        # item we want to delete was not found, error out
+                        raise AssertionError(
+                                _("failed to remove %s from manifest") % f)
                     l = ""
-                if start == end and w[1] == 1:
-                    # item we want to delete was not found, error out
-                    raise AssertionError(
-                            _("failed to remove %s from manifest") % f)
                 if dstart != None and dstart <= start and dend >= start:
                     if dend < end:
                         dend = end
@@ -190,12 +187,12 @@ class manifest(revlog.revlog):
             cachedelta = addlistdelta(addlist, delta)
 
             # the delta is only valid if we've been processing the tip revision
-            if self.mapcache[0] != self.tip():
+            if p1 != self.tip():
                 cachedelta = None
-            self.listcache = addlist
+            arraytext = addlist
+            text = buffer(arraytext)
 
-        n = self.addrevision(buffer(self.listcache), transaction, link,
-                             p1, p2, cachedelta)
-        self.mapcache = (n, map)
+        n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
+        self._mancache = (n, map, arraytext)
 
         return n

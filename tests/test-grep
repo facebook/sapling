@@ -22,14 +22,14 @@ hg grep '**test**'
 echo % simple
 hg grep port port
 echo % all
-hg grep --all -nu port port
+hg grep --traceback --all -nu port port
 echo % other
 hg grep import port
 
 hg cp port port2
 hg commit -m 4 -u spam -d '5 0'
-echo '% follow'
-hg grep -f 'import$' port2
+echo % follow
+hg grep --traceback -f 'import$' port2
 echo deport >> port2
 hg commit -m 5 -u eggs -d '6 0'
 hg grep -f --all -nu port port2

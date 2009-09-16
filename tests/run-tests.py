@@ -167,16 +167,22 @@ def parseargs():
     else:
         vlog = lambda *msg: None
 
+    if options.tmpdir:
+        options.tmpdir = os.path.expanduser(options.tmpdir)
+        try:
+            os.makedirs(options.tmpdir)
+        except OSError, err:
+            if err.errno != errno.EEXIST:
+                raise
+
     if options.jobs < 1:
-        print >> sys.stderr, 'ERROR: -j/--jobs must be positive'
-        sys.exit(1)
+        parser.error('--jobs must be positive')
     if options.interactive and options.jobs > 1:
         print '(--interactive overrides --jobs)'
         options.jobs = 1
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
-            print 'ERROR: Py3k warnings switch can only be used on Python 2.6+'
-            sys.exit(1)
+            parser.error('--py3k-warnings can only be used on Python 2.6+')
 
     return (options, args)
 

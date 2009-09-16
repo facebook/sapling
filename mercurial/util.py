@@ -266,9 +266,7 @@ def pathto(root, n1, n2):
 
 def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root"""
-    if root == os.sep:
-        rootsep = os.sep
-    elif endswithsep(root):
+    if endswithsep(root):
         rootsep = root
     else:
         rootsep = root + os.sep
@@ -663,8 +661,9 @@ def fspath(name, root):
         contents = _fspathcache[dir]
 
         lpart = part.lower()
+        lenp = len(part)
         for n in contents:
-            if n.lower() == lpart:
+            if lenp == len(n) and n.lower() == lpart:
                 result.append(n)
                 break
         else:
@@ -1275,6 +1274,9 @@ def termwidth():
 def wrap(line, hangindent, width=None):
     if width is None:
         width = termwidth() - 2
+    if width <= hangindent:
+        # adjust for weird terminal size
+        width = max(78, hangindent + 1)
     padding = '\n' + ' ' * hangindent
     return padding.join(textwrap.wrap(line, width=width - hangindent))
 

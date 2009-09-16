@@ -188,7 +188,7 @@ def readgitpatch(lr):
             if m:
                 if gp:
                     gitpatches.append(gp)
-                src, dst = m.group(1, 2)
+                dst = m.group(2)
                 gp = patchmeta(dst)
                 gp.lineno = lineno
         elif gp:
@@ -378,15 +378,13 @@ class patchfile(object):
         self.write()
         self.write_rej()
 
-    def apply(self, h, reverse):
+    def apply(self, h):
         if not h.complete():
             raise PatchError(_("bad hunk #%d %s (%d %d %d %d)") %
                             (h.number, h.desc, len(h.a), h.lena, len(h.b),
                             h.lenb))
 
         self.hunks += 1
-        if reverse:
-            h.reverse()
 
         if self.missing:
             self.rej.append(h)
@@ -600,31 +598,6 @@ class hunk(object):
                                              self.startb, self.lenb)
         self.hunk[0] = self.desc
 
-    def reverse(self):
-        self.create, self.remove = self.remove, self.create
-        origlena = self.lena
-        origstarta = self.starta
-        self.lena = self.lenb
-        self.starta = self.startb
-        self.lenb = origlena
-        self.startb = origstarta
-        self.a = []
-        self.b = []
-        # self.hunk[0] is the @@ description
-        for x in xrange(1, len(self.hunk)):
-            o = self.hunk[x]
-            if o.startswith('-'):
-                n = '+' + o[1:]
-                self.b.append(o[1:])
-            elif o.startswith('+'):
-                n = '-' + o[1:]
-                self.a.append(n)
-            else:
-                n = o
-                self.b.append(o[1:])
-                self.a.append(o)
-            self.hunk[x] = o
-
     def fix_newline(self):
         diffhelpers.fix_newline(self.hunk, self.a, self.b)
 
@@ -762,7 +735,7 @@ def parsefilename(str):
             return s
     return s[:i]
 
-def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
+def selectfile(afile_orig, bfile_orig, hunk, strip):
     def pathstrip(path, count=1):
         pathlen = len(path)
         i = 0
@@ -790,8 +763,6 @@ def selectfile(afile_orig, bfile_orig, hunk, strip, reverse):
     else:
         goodb = not nullb and os.path.exists(bfile)
     createfunc = hunk.createfile
-    if reverse:
-        createfunc = hunk.rmfile
     missing = not goodb and not gooda and not createfunc()
 
     # some diff programs apparently produce create patches where the
@@ -977,8 +948,7 @@ def iterhunks(ui, fp, sourcefile=None, textmode=False):
     if hunknum == 0 and dopatch and not gitworkdone:
         raise NoHunks
 
-def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
-              eol=None):
+def applydiff(ui, fp, changed, strip=1, sourcefile=None, eol=None):
     """
     Reads a patch from fp and tries to apply it.
 
@@ -1008,7 +978,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
             if not current_file:
                 continue
             current_hunk = values
-            ret = current_file.apply(current_hunk, reverse)
+            ret = current_file.apply(current_hunk)
             if ret >= 0:
                 changed.setdefault(current_file.fname, None)
                 if ret > 0:
@@ -1021,7 +991,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, reverse=False,
                     current_file = patchfile(ui, sourcefile, opener, eol=eol)
                 else:
                     current_file, missing = selectfile(afile, bfile, first_hunk,
-                                            strip, reverse)
+                                            strip)
                     current_file = patchfile(ui, current_file, opener, missing, eol)
             except PatchError, err:
                 ui.warn(str(err) + '\n')

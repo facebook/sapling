@@ -4,14 +4,8 @@ a simple plain text format that's easy to read and edit:
   http://docutils.sourceforge.net/rst.html
 
 It's also convertible to a variety of other formats including standard
-UNIX man page format and HTML.
-
-To do this, you'll need to install the rst2html and rst2man tools,
-which are part of Docutils:
+UNIX man page format and HTML. You'll need to install Docutils:
 
   http://docutils.sourceforge.net/
-
-The rst2man tool is still in their so-called "sandbox". The above page
-has links to tarballs of both Docutils and their sandbox.
 
 Use the Makefile in this directory to generate the man and HTML pages.

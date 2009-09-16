@@ -42,7 +42,7 @@ commit -m t3
 echo b >> a
 commit -a -m t4.1
 
-git checkout -b other HEAD^ >/dev/null 2>/dev/null
+git checkout -b other HEAD~ >/dev/null 2>/dev/null
 echo c > a
 echo a >> a
 commit -a -m t4.2
@@ -68,7 +68,7 @@ commit -a -m 'add foo'
 echo >> foo
 commit -a -m 'change foo'
 
-git checkout -b Bar HEAD^ >/dev/null 2>/dev/null
+git checkout -b Bar HEAD~ >/dev/null 2>/dev/null
 echo quux >> quux
 git add quux
 commit -a -m 'add quux'
@@ -77,7 +77,7 @@ echo bar > bar
 git add bar
 commit -a -m 'add bar'
 
-git checkout -b Baz HEAD^ >/dev/null 2>/dev/null
+git checkout -b Baz HEAD~ >/dev/null 2>/dev/null
 echo baz > baz
 git add baz
 commit -a -m 'add baz'
@@ -89,7 +89,7 @@ commit -m 'Octopus merge'
 echo bar >> bar
 commit -a -m 'change bar'
 
-git checkout -b Foo HEAD^ >/dev/null 2>/dev/null
+git checkout -b Foo HEAD~ >/dev/null 2>/dev/null
 echo >> foo
 commit -a -m 'change foo'
 

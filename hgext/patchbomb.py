@@ -162,12 +162,16 @@ def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
         body += '\n'.join(patch)
         msg = mail.mimetextpatch(body, display=opts.get('test'))
 
+    flag = ' '.join(opts.get('flag'))
+    if flag:
+        flag = ' ' + flag
+
     subj = desc[0].strip().rstrip('. ')
     if total == 1 and not opts.get('intro'):
-        subj = '[PATCH] ' + (opts.get('subject') or subj)
+        subj = '[PATCH%s] %s' % (flag, opts.get('subject') or subj)
     else:
         tlen = len(str(total))
-        subj = '[PATCH %0*d of %d] %s' % (tlen, idx, total, subj)
+        subj = '[PATCH %0*d of %d%s] %s' % (tlen, idx, total, flag, subj)
     msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
     msg['X-Mercurial-Node'] = node
     return msg, subj
@@ -322,11 +326,13 @@ def patchbomb(ui, repo, *revs, **opts):
         if len(patches) > 1 or opts.get('intro'):
             tlen = len(str(len(patches)))
 
-            subj = '[PATCH %0*d of %d] %s' % (
-                tlen, 0, len(patches),
-                opts.get('subject') or
-                prompt(ui, 'Subject:',
-                       rest=' [PATCH %0*d of %d] ' % (tlen, 0, len(patches))))
+            flag = ' '.join(opts.get('flag'))
+            if flag:
+                subj = '[PATCH %0*d of %d %s] ' % (tlen, 0, len(patches), flag)
+            else:
+                subj = '[PATCH %0*d of %d] ' % (tlen, 0, len(patches))
+            subj += opts.get('subject') or prompt(ui, 'Subject:', rest=subj,
+                                                    default='None')
 
             body = ''
             if opts.get('diffstat'):
@@ -477,6 +483,7 @@ emailopts = [
            _('subject of first message (intro or single patch)')),
           ('', 'in-reply-to', '',
            _('message identifier to reply to')),
+          ('', 'flag', [], _('flags to add in subject prefixes')),
           ('t', 'to', [], _('email addresses of recipients')),
          ]
 

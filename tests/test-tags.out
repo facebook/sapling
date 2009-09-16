@@ -13,6 +13,9 @@ acb14030fe0a21b60322c440ad2d20cf7685a376 first
 tip                                1:b9154636be93
 first                              0:acb14030fe0a
 b9154636be93 tip
+% identify with cold cache
+b9154636be93 tip
+% identify with unwritable cache
 b9154636be93 tip
 % create a branch
 M a

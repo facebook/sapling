@@ -11,6 +11,10 @@ Mercurial source code management system
 :Manual section: 1
 :Manual group:   Mercurial Manual
 
+.. contents::
+   :backlinks: top
+   :class: htmlonly
+
 
 SYNOPSIS
 --------
