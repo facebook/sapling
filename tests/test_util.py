@@ -1,27 +1,27 @@
-import gettext
+import StringIO
 import errno
+import gettext
 import imp
 import os
-import subprocess
 import shutil
-import StringIO
 import stat
+import subprocess
+import sys
 import tempfile
 import unittest
 import urllib
 
 import __init__
 
-from mercurial import context
 from mercurial import commands
+from mercurial import context
 from mercurial import hg
+from mercurial import i18n
 from mercurial import node
 from mercurial import ui
-from mercurial import i18n
 
 from hgsubversion import util
 
-import sys
 # Documentation for Subprocess.Popen() says:
 #   "Note that on Windows, you cannot set close_fds to true and
 #   also redirect the standard handles by setting stdin, stdout or
