@@ -1,3 +1,4 @@
+import gettext
 import errno
 import imp
 import os
@@ -16,6 +17,7 @@ from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
+from mercurial import i18n
 
 from hgsubversion import util
 
@@ -128,8 +130,15 @@ def rmtree(path):
                 os.chmod(f, s.st_mode | stat.S_IWRITE)
     shutil.rmtree(path)
 
+
 class TestBase(unittest.TestCase):
     def setUp(self):
+        self.oldenv = dict([(k, os.environ.get(k, None), ) for k in
+                           ('LANG', 'LC_ALL', 'HGRCPATH', )])
+        self.oldt = i18n.t
+        os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+        i18n.t = gettext.translation('hg', i18n.localedir, fallback=True)
+
         self.oldwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp(
             'svnwrap_test', dir=os.environ.get('HGSUBVERSION_TEST_TEMP', None))
@@ -151,6 +160,12 @@ class TestBase(unittest.TestCase):
         setattr(ui.ui, self.patch[0].func_name, self.patch[1])
 
     def tearDown(self):
+        for var, val in self.oldenv.iteritems():
+            if val is None:
+                del os.environ[var]
+            else:
+                os.environ[var] = val
+        i18n.t = self.oldt
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
