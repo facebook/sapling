@@ -127,6 +127,8 @@ ignore = [
     # imported by profile, itself imported by hotshot.stats,
     # not available under Windows
     'resource',
+    # this trips up many extension authors
+    'gtk',
     ]
 
 def enable():
