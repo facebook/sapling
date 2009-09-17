@@ -3041,7 +3041,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
         rev = node
 
     if check and clean:
-        raise util.Abort(_("cannot specify both -c and -C"))
+        raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
 
     if check:
         # we could use dirty() but we can ignore merge and branch trivia
