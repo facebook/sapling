@@ -3047,7 +3047,10 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     if not rev:
         rev = node
 
-    if not clean and check:
+    if check and clean:
+        raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
+
+    if check:
         # we could use dirty() but we can ignore merge and branch trivia
         c = repo[None]
         if c.modified() or c.added() or c.removed():
