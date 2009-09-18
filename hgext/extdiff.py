@@ -142,13 +142,13 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         cmdline = ('%s %s %s %s' %
                    (util.shellquote(diffcmd), ' '.join(diffopts),
                     util.shellquote(dir1), util.shellquote(dir2)))
-        ui.debug(_('running %r in %s\n') % (cmdline, tmproot))
+        ui.debug('running %r in %s\n' % (cmdline, tmproot))
         util.system(cmdline, cwd=tmproot)
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
             if os.path.getmtime(copy_fn) != mtime:
-                ui.debug(_('file changed while diffing. '
-                         'Overwriting: %s (src: %s)\n') % (working_fn, copy_fn))
+                ui.debug('file changed while diffing. '
+                         'Overwriting: %s (src: %s)\n' % (working_fn, copy_fn))
                 util.copyfile(copy_fn, working_fn)
 
         return 1

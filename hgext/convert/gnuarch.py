@@ -125,7 +125,7 @@ class gnuarch_source(converter_source, commandline):
                     break
 
     def after(self):
-        self.ui.debug(_('cleaning up %s\n') % self.tmppath)
+        self.ui.debug('cleaning up %s\n' % self.tmppath)
         shutil.rmtree(self.tmppath, ignore_errors=True)
 
     def getheads(self):
@@ -195,7 +195,7 @@ class gnuarch_source(converter_source, commandline):
         return os.system(cmdline)
 
     def _update(self, rev):
-        self.ui.debug(_('applying revision %s...\n') % rev)
+        self.ui.debug('applying revision %s...\n' % rev)
         changeset, status = self.runlines('replay', '-d', self.tmppath,
                                               rev)
         if status:
@@ -205,7 +205,7 @@ class gnuarch_source(converter_source, commandline):
             self._obtainrevision(rev)
         else:
             old_rev = self.parents[rev][0]
-            self.ui.debug(_('computing changeset between %s and %s...\n')
+            self.ui.debug('computing changeset between %s and %s...\n'
                           % (old_rev, rev))
             self._parsechangeset(changeset, rev)
 
@@ -254,10 +254,10 @@ class gnuarch_source(converter_source, commandline):
         return changes, copies
 
     def _obtainrevision(self, rev):
-        self.ui.debug(_('obtaining revision %s...\n') % rev)
+        self.ui.debug('obtaining revision %s...\n' % rev)
         output = self._execute('get', rev, self.tmppath)
         self.checkexit(output)
-        self.ui.debug(_('analyzing revision %s...\n') % rev)
+        self.ui.debug('analyzing revision %s...\n' % rev)
         files = self._readcontents(self.tmppath)
         self.changes[rev].add_files += files
 

@@ -31,7 +31,7 @@ def start_server(function):
                                'removing it)\n'))
                 os.unlink(os.path.join(self.root, '.hg', 'inotify.sock'))
             if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
-                self.ui.debug(_('(starting inotify server)\n'))
+                self.ui.debug('(starting inotify server)\n')
                 try:
                     try:
                         server.start(self.ui, self.dirstate, self.root)
@@ -50,7 +50,7 @@ def start_server(function):
                                        'server: %s\n') % err[-1])
             elif err[0] in (errno.ECONNREFUSED, errno.ENOENT):
                 # silently ignore normal errors if autostart is False
-                self.ui.debug(_('(inotify server not running)\n'))
+                self.ui.debug('(inotify server not running)\n')
             else:
                 self.ui.warn(_('failed to contact inotify server: %s\n')
                          % err[-1])

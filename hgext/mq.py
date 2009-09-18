@@ -321,7 +321,7 @@ class queue(object):
             if bad:
                 raise util.Abort(bad)
         guards = sorted(set(guards))
-        self.ui.debug(_('active guards: %s\n') % ' '.join(guards))
+        self.ui.debug('active guards: %s\n' % ' '.join(guards))
         self.active_guards = guards
         self.guards_dirty = True
 

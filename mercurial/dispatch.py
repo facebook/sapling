@@ -214,7 +214,7 @@ class cmdalias(object):
 
     def __call__(self, ui, *args, **opts):
         if self.shadows:
-            ui.debug(_("alias '%s' shadows command\n") % self.name)
+            ui.debug("alias '%s' shadows command\n" % self.name)
 
         return self.fn(ui, *args, **opts)
 

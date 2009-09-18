@@ -197,7 +197,7 @@ class proxyhandler(urllib2.ProxyHandler):
                                                 proxyuser, proxypasswd or ''),
                 proxypath, proxyquery, proxyfrag))
             proxies = {'http': proxyurl, 'https': proxyurl}
-            ui.debug(_('proxying through http://%s:%s\n') %
+            ui.debug('proxying through http://%s:%s\n' %
                       (proxyhost, proxyport))
         else:
             proxies = {}
@@ -504,7 +504,7 @@ def opener(ui, authinfo=None):
     if authinfo is not None:
         passmgr.add_password(*authinfo)
         user, passwd = authinfo[2:4]
-        ui.debug(_('http auth: user %s, password %s\n') %
+        ui.debug('http auth: user %s, password %s\n' %
                  (user, passwd and '*' * len(passwd) or 'not set'))
 
     handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),

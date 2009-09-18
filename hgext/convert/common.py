@@ -266,7 +266,7 @@ class commandline(object):
 
     def _run(self, cmd, *args, **kwargs):
         cmdline = self._cmdline(cmd, *args, **kwargs)
-        self.ui.debug(_('running: %s\n') % (cmdline,))
+        self.ui.debug('running: %s\n' % (cmdline,))
         self.prerun()
         try:
             return util.popen(cmdline)

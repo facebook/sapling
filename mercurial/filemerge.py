@@ -140,7 +140,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     binary = isbin(fcd) or isbin(fco) or isbin(fca)
     symlink = 'l' in fcd.flags() + fco.flags()
     tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
-    ui.debug(_("picked tool '%s' for %s (binary %s symlink %s)\n") %
+    ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %
                (tool, fd, binary, symlink))
 
     if not tool or tool == 'internal:prompt':
@@ -170,13 +170,13 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     else:
         ui.status(_("merging %s\n") % fd)
 
-    ui.debug(_("my %s other %s ancestor %s\n") % (fcd, fco, fca))
+    ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
     # do we attempt to simplemerge first?
     if _toolbool(ui, tool, "premerge", not (binary or symlink)):
         r = simplemerge.simplemerge(ui, a, b, c, quiet=True)
         if not r:
-            ui.debug(_(" premerge successful\n"))
+            ui.debug(" premerge successful\n")
             os.unlink(back)
             os.unlink(b)
             os.unlink(c)

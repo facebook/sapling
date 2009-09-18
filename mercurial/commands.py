@@ -1789,7 +1789,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 else:
                     # launch the editor
                     message = None
-                ui.debug(_('message:\n%s\n') % message)
+                ui.debug('message:\n%s\n' % message)
 
                 wp = repo.parents()
                 if opts.get('exact'):

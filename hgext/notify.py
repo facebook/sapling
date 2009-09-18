@@ -276,10 +276,10 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     ctx = repo[node]
 
     if not n.subs:
-        ui.debug(_('notify: no subscribers to repository %s\n') % n.root)
+        ui.debug('notify: no subscribers to repository %s\n' % n.root)
         return
     if n.skipsource(source):
-        ui.debug(_('notify: changes have source "%s" - skipping\n') % source)
+        ui.debug('notify: changes have source "%s" - skipping\n' % source)
         return
 
     ui.pushbuffer()

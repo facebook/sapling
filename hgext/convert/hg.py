@@ -55,12 +55,12 @@ class mercurial_sink(converter_sink):
         self.filemapmode = False
 
     def before(self):
-        self.ui.debug(_('run hg sink pre-conversion action\n'))
+        self.ui.debug('run hg sink pre-conversion action\n')
         self.wlock = self.repo.wlock()
         self.lock = self.repo.lock()
 
     def after(self):
-        self.ui.debug(_('run hg sink post-conversion action\n'))
+        self.ui.debug('run hg sink post-conversion action\n')
         self.lock.release()
         self.wlock.release()
 
@@ -348,10 +348,10 @@ class mercurial_source(converter_source):
         self.convertfp.flush()
 
     def before(self):
-        self.ui.debug(_('run hg source pre-conversion action\n'))
+        self.ui.debug('run hg source pre-conversion action\n')
 
     def after(self):
-        self.ui.debug(_('run hg source post-conversion action\n'))
+        self.ui.debug('run hg source post-conversion action\n')
 
     def hasnativeorder(self):
         return True

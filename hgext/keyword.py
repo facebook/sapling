@@ -354,7 +354,7 @@ def demo(ui, repo, *args, **opts):
     repo.commit(text=msg)
     ui.status(_('\n\tkeywords expanded\n'))
     ui.write(repo.wread(fn))
-    ui.debug(_('\nremoving temporary repository %s\n') % tmpdir)
+    ui.debug('\nremoving temporary repository %s\n' % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 def expand(ui, repo, *pats, **opts):

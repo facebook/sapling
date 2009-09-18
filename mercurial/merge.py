@@ -161,8 +161,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             act("divergent renames", "dr", of, fl)
 
     repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(_(" overwrite %s partial %s\n") % (overwrite, bool(partial)))
-    repo.ui.debug(_(" ancestor %s local %s remote %s\n") % (pa, p1, p2))
+    repo.ui.debug(" overwrite %s partial %s\n" % (overwrite, bool(partial)))
+    repo.ui.debug(" ancestor %s local %s remote %s\n" % (pa, p1, p2))
 
     m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
     copied = set(copy.values())
@@ -252,7 +252,7 @@ def applyupdates(repo, action, wctx, mctx):
             f2, fd, flags, move = a[2:]
             if f == '.hgsubstate': # merged internally
                 continue
-            repo.ui.debug(_("preserving %s for resolve of %s\n") % (f, fd))
+            repo.ui.debug("preserving %s for resolve of %s\n" % (f, fd))
             fcl = wctx[f]
             fco = mctx[f2]
             fca = fcl.ancestor(fco) or repo.filectx(f, fileid=nullrev)
@@ -263,7 +263,7 @@ def applyupdates(repo, action, wctx, mctx):
     # remove renamed files after safely stored
     for f in moves:
         if util.lexists(repo.wjoin(f)):
-            repo.ui.debug(_("removing %s\n") % f)
+            repo.ui.debug("removing %s\n" % f)
             os.unlink(repo.wjoin(f))
 
     audit_path = util.path_auditor(repo.root)
@@ -299,7 +299,7 @@ def applyupdates(repo, action, wctx, mctx):
                     merged += 1
             util.set_flags(repo.wjoin(fd), 'l' in flags, 'x' in flags)
             if f != fd and move and util.lexists(repo.wjoin(f)):
-                repo.ui.debug(_("removing %s\n") % f)
+                repo.ui.debug("removing %s\n" % f)
                 os.unlink(repo.wjoin(f))
         elif m == "g": # get
             flags = a[2]
