@@ -9,7 +9,7 @@ line 3
 created new head
 # merge using internal:fail tool
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
 line 1
 line 2
 third line
