@@ -278,6 +278,22 @@ complete -o bashdefault -o default -F _hg hg 2>/dev/null \
 
 # Completion for commands provided by extensions
 
+# bookmarks
+_hg_bookmarks()
+{
+    local bookmarks="$("$hg" bookmarks --quiet 2>/dev/null )"
+    local IFS=$'\n'
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$bookmarks' -- "$cur"))
+}
+
+_hg_cmd_bookmarks()
+{
+    if [[ "$prev" = @(-d|--delete|-m|--rename) ]]; then
+        _hg_bookmarks
+        return
+    fi
+}
+
 # mq
 _hg_ext_mq_patchlist()
 {
