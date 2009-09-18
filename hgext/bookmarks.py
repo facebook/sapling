@@ -193,8 +193,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
                 else:
                     prefix = (n == cur) and '*' or ' '
 
-                ui.write(" %s %-25s %d:%s\n" % (
-                    prefix, bmark, repo.changelog.rev(n), hexfn(n)))
+                if ui.quiet:
+                    ui.write("%s\n" % bmark)
+                else:
+                    ui.write(" %s %-25s %d:%s\n" % (
+                        prefix, bmark, repo.changelog.rev(n), hexfn(n)))
         return
 
 def _revstostrip(changelog, node):
