@@ -24,6 +24,9 @@ def dispatch(args):
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
+    except error.ConfigError, inst:
+        sys.stderr.write(_("hg: %s\n") % inst)
+        return -1
     return _runcatch(u, args)
 
 def _runcatch(ui, args):
