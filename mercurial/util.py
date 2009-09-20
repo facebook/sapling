@@ -357,41 +357,26 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         if val is True:
             return '1'
         return str(val)
-    oldenv = {}
-    for k in environ:
-        oldenv[k] = os.environ.get(k)
-    if cwd is not None:
-        oldcwd = os.getcwd()
     origcmd = cmd
     if os.name == 'nt':
         cmd = '"%s"' % cmd
-    try:
-        for k, v in environ.iteritems():
-            os.environ[k] = py2shell(v)
-        os.environ['HG'] = hgexecutable()
-        if cwd is not None and oldcwd != cwd:
-            os.chdir(cwd)
-        rc = os.system(cmd)
-        if sys.platform == 'OpenVMS' and rc & 1:
-            rc = 0
-        if rc and onerr:
-            errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
-                                explain_exit(rc)[0])
-            if errprefix:
-                errmsg = '%s: %s' % (errprefix, errmsg)
-            try:
-                onerr.warn(errmsg + '\n')
-            except AttributeError:
-                raise onerr(errmsg)
-        return rc
-    finally:
-        for k, v in oldenv.iteritems():
-            if v is None:
-                del os.environ[k]
-            else:
-                os.environ[k] = v
-        if cwd is not None and oldcwd != cwd:
-            os.chdir(oldcwd)
+    env = dict(os.environ)
+    env.update((k, py2shell(v)) for k, v in environ.iteritems())
+    env['HG'] = hgexecutable()
+    rc = subprocess.call(cmd, shell=True, close_fds=closefds,
+                         env=env, cwd=cwd)
+    if sys.platform == 'OpenVMS' and rc & 1:
+        rc = 0
+    if rc and onerr:
+        errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
+                            explain_exit(rc)[0])
+        if errprefix:
+            errmsg = '%s: %s' % (errprefix, errmsg)
+        try:
+            onerr.warn(errmsg + '\n')
+        except AttributeError:
+            raise onerr(errmsg)
+    return rc
 
 def checksignature(func):
     '''wrap a function with code to check for calling errors'''
