@@ -178,9 +178,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         add the most recent revision on the branch indicated in the
         regex as the second parent of the changeset.
 
-    The hgext/convert/cvsps wrapper script allows the builtin
+    An additional "debugcvsps" Mercurial command allows the builtin
     changeset merging code to be run without doing a conversion. Its
-    parameters and output are similar to that of cvsps 2.1.
+    parameters and output are similar to that of cvsps 2.1. Please see
+    the command help for more details.
 
     Subversion Source
     -----------------
