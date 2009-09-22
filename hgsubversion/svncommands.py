@@ -1,4 +1,5 @@
 import os
+import posixpath
 import cPickle as pickle
 
 from mercurial import hg
@@ -27,7 +28,6 @@ def verify(ui, repo, *args, **opts):
     srev = int(srev.split('@')[1])
     ui.write('verifying %s against r%i\n' % (ctx, srev))
 
-
     url = repo.ui.expandpath('default')
     if args:
         url = args[0]
@@ -35,6 +35,7 @@ def verify(ui, repo, *args, **opts):
 
     btypes = {'default': 'trunk'}
     branchpath = btypes.get(ctx.branch(), 'branches/%s' % ctx.branch())
+    branchpath = posixpath.normpath(branchpath)
     svnfiles = set()
     result = 0
     for fn, type in svn.list_files(branchpath, srev):
@@ -141,8 +142,9 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
 
         # find commitpath, write to revmap
         commitpath = revpath[len(subdir)+1:]
-        if commitpath.startswith('branches'):
-            commitpath = commitpath[len('branches/'):]
+        bp = posixpath.normpath('/'.join([subdir, 'branches', ctx.branch()]))
+        if revpath == bp:
+            commitpath = ctx.branch()
         elif commitpath == 'trunk':
             commitpath = ''
         elif commitpath.startswith('tags'):
@@ -150,7 +152,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
                 continue
             commitpath = '../' + commitpath
         else:
-            assert False, 'Unhandled case in rebuildmeta'
+            assert False, 'unhandled rev %s: %s' % (rev, convinfo)
         revmap.write('%s %s %s\n' % (revision, ctx.hex(), commitpath))
 
         revision = int(revision)
