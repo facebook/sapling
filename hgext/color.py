@@ -256,7 +256,7 @@ def _setupcmd(ui, cmd, table, func, effectsmap):
     entry = extensions.wrapcommand(table, cmd, nocolor)
     entry[1].extend([
         ('', 'color', 'auto', _("when to colorize (always, auto, or never)")),
-        ('', 'no-color', None, _("don't colorize output")),
+        ('', 'no-color', None, _("don't colorize output (DEPRECATED)")),
     ])
 
     for status in effectsmap:
