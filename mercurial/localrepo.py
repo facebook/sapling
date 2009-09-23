@@ -1493,19 +1493,16 @@ class localrepository(repo.repository):
         inc = self.findincoming(remote, common, remote_heads, force=force)
 
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
-        if revs is not None:
-            msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
-        else:
-            bases, heads = update, self.changelog.heads()
+        msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
 
-        def checkbranch(lheads, rheads, updatelh):
+        def checkbranch(lheads, rheads, updatelb):
             '''
             check whether there are more local heads than remote heads on
             a specific branch.
 
             lheads: local branch heads
             rheads: remote branch heads
-            updatelh: outgoing local branch heads
+            updatelb: outgoing local branch bases
             '''
 
             warn = 0
@@ -1513,13 +1510,15 @@ class localrepository(repo.repository):
             if not revs and len(lheads) > len(rheads):
                 warn = 1
             else:
+                # add local heads involved in the push
                 updatelheads = [self.changelog.heads(x, lheads)
-                                for x in updatelh]
+                                for x in updatelb]
                 newheads = set(sum(updatelheads, [])) & set(lheads)
 
                 if not newheads:
                     return True
 
+                # add heads we don't have or that are not involved in the push
                 for r in rheads:
                     if r in self.changelog.nodemap:
                         desc = self.changelog.heads(r, heads)
@@ -1535,7 +1534,7 @@ class localrepository(repo.repository):
                 if not rheads: # new branch requires --force
                     self.ui.warn(_("abort: push creates new"
                                    " remote branch '%s'!\n") %
-                                   self[updatelh[0]].branch())
+                                   self[updatelb[0]].branch())
                 else:
                     self.ui.warn(_("abort: push creates new remote heads!\n"))
 
@@ -1578,11 +1577,11 @@ class localrepository(repo.repository):
                         else:
                             rheads = []
                         lheads = localhds[lh]
-                        updatelh = [upd for upd in update
+                        updatelb = [upd for upd in update
                                     if self[upd].branch() == lh]
-                        if not updatelh:
+                        if not updatelb:
                             continue
-                        if not checkbranch(lheads, rheads, updatelh):
+                        if not checkbranch(lheads, rheads, updatelb):
                             return None, 0
                 else:
                     if not checkbranch(heads, remote_heads, update):
