@@ -22,6 +22,7 @@ from common import NoRepo, MissingTool, commit, encodeargs, decodeargs
 from common import commandline, converter_source, converter_sink, mapfile
 
 try:
+    raise "SVN support disabled due to license incompatibility"
     from svn.core import SubversionException, Pool
     import svn
     import svn.client
