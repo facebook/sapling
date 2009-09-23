@@ -1159,17 +1159,24 @@ class localrepository(repo.repository):
         return [n for (r, n) in sorted(heads)]
 
     def branchheads(self, branch=None, start=None, closed=False):
+        '''return a (possibly filtered) list of heads for the given branch
+
+        Heads are returned in topological order, from newest to oldest.
+        If branch is None, use the dirstate branch.
+        If start is not None, return only heads reachable from start.
+        If closed is True, return heads that are marked as closed as well.
+        '''
         if branch is None:
             branch = self[None].branch()
         branches = self.branchmap()
         if branch not in branches:
             return []
-        bheads = branches[branch]
         # the cache returns heads ordered lowest to highest
-        bheads.reverse()
+        bheads = list(reversed(branches[branch]))
         if start is not None:
             # filter out the heads that cannot be reached from startrev
-            bheads = self.changelog.nodesbetween([start], bheads)[2]
+            fbheads = set(self.changelog.nodesbetween([start], bheads)[2])
+            bheads = [h for h in bheads if h in fbheads]
         if not closed:
             bheads = [h for h in bheads if
                       ('close' not in self.changelog.read(h)[5])]
