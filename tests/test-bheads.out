@@ -68,8 +68,8 @@ no changes on branch c containing . are reachable from 3
 3: Adding b branch head 1
 0
 -------
-3: Adding b branch head 1
 6: Merging b branch head 2 and b branch head 3
+3: Adding b branch head 1
 0
 -------
 no changes on branch b containing . are reachable from 7
