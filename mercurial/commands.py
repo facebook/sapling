@@ -3093,7 +3093,7 @@ def version_(ui):
 
 globalopts = [
     ('R', 'repository', '',
-     _('repository root directory or symbolic path name')),
+     _('repository root directory or name of overlay bundle file')),
     ('', 'cwd', '', _('change working directory')),
     ('y', 'noninteractive', None,
      _('do not prompt, assume \'yes\' for any required answers')),
