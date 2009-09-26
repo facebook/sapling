@@ -74,7 +74,7 @@ hg gclear
 hg push git://localhost/gitrepo2
 
 cd ../gitrepo2
-git log
+git log | sed s/\\.\\.\\.//g
 
 cd ..
 kill `cat gitdaemon.pid`

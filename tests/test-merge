@@ -70,8 +70,8 @@ hg push git://localhost/gitrepo2
 
 cd ..
 cd gitrepo2
-git log master
-git log beta
+git log master | sed 's/\.\.\.//g'
+git log beta | sed 's/\.\.\.//g'
 
 cd ..
 kill `cat gitdaemon.pid`
