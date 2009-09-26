@@ -1,7 +1,7 @@
 # git.py - git server bridge
 #
 # Copyright 2008 Scott Chacon <schacon at gmail dot com>
-#   also some code (and help) borrowed from durin42  
+#   also some code (and help) borrowed from durin42
 #
 # This software may be used and distributed according to the terms
 # of the GNU General Public License, incorporated herein by reference.
@@ -9,9 +9,10 @@
 '''push and pull from a Git server
 
 This extension lets you communicate (push and pull) with a Git server.
-This way you can use Git hosting for your project or collaborate with a 
+This way you can use Git hosting for your project or collaborate with a
 project that is in Git.  A bridger of worlds, this plugin be.
 
+Try hg clone git:// or hg clone git+ssh://
 '''
 
 from mercurial import commands, extensions, hg, util
