@@ -23,7 +23,7 @@ importing Hg objects into Git
 at: 0/4
 creating and sending data
 commit 5806851511aaf3bfe813ae3a86c5027165fa9b96
-Merge: e5023f9... 9497a4e...
+Merge: e5023f9 9497a4e
 Author: test <test@example.org>
 Date:   Mon Jan 1 00:00:12 2007 +0000
 

@@ -36,7 +36,7 @@ commit -m 'add alpha'
 
 git tag alpha
 
-git checkout -b beta
+git checkout -b beta  2>&1 | sed s/\'/\"/g
 echo beta > beta
 git add beta
 commit -m 'add beta'

@@ -21,7 +21,7 @@ mkdir gitrepo
 cd gitrepo
 git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
 
-git commit --allow-empty -m empty
+git commit --allow-empty -m empty | sed -E 's/.*([0-9a-f]{7})[]:]/Commit \1/'
 
 cd ..
 mkdir gitrepo2
