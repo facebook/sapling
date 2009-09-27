@@ -4,6 +4,7 @@ sys.path.insert(0, "..")
 # fall back to pure modules if required C extensions are not available
 sys.path.append(os.path.join('..', 'mercurial', 'pure'))
 from mercurial import demandimport; demandimport.enable()
+from mercurial import encoding
 from mercurial.commands import table, globalopts
 from mercurial.i18n import _
 from mercurial.help import helptable
@@ -55,9 +56,9 @@ def get_cmd(cmd):
 
 def show_doc(ui):
     def section(s):
-        ui.write("%s\n%s\n\n" % (s, "-" * len(s)))
+        ui.write("%s\n%s\n\n" % (s, "-" * encoding.colwidth(s)))
     def subsection(s):
-        ui.write("%s\n%s\n\n" % (s, '"' * len(s)))
+        ui.write("%s\n%s\n\n" % (s, '"' * encoding.colwidth(s)))
 
     # print options
     section(_("OPTIONS"))
