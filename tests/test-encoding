@@ -29,30 +29,31 @@ HGENCODING=latin-1 hg branch `cat latin-1-tag`
 HGENCODING=latin-1 hg ci -d "1000000 0" -m 'latin1 branch'
 rm .hg/branch
 
-echo % ascii
+echo "% hg log (ascii)"
 hg --encoding ascii log
-echo % latin-1
+echo "% hg log (latin-1)"
 hg --encoding latin-1 log
-echo % utf-8
+echo "% hg log (utf-8)"
 hg --encoding utf-8 log
-echo % ascii
+echo "% hg tags (ascii)"
 HGENCODING=ascii hg tags
-echo % latin-1
+echo "% hg tags (latin-1)"
 HGENCODING=latin-1 hg tags
-echo % utf-8
+echo "% hg tags (utf-8)"
 HGENCODING=utf-8 hg tags
-echo % ascii
+echo "% hg branches (ascii)"
 HGENCODING=ascii hg branches
-echo % latin-1
+echo "% hg branches (latin-1)"
 HGENCODING=latin-1 hg branches
-echo % utf-8
+echo "% hg branches (utf-8)"
 HGENCODING=utf-8 hg branches
 
 echo '[ui]' >> .hg/hgrc
 echo 'fallbackencoding = koi8-r' >> .hg/hgrc
-echo % utf-8
+echo "% hg log (utf-8)"
 HGENCODING=utf-8 hg log
 
+echo "% hg log (dolphin)"
 HGENCODING=dolphin hg log
 
 HGENCODING=ascii hg branch `cat latin-1-tag`
