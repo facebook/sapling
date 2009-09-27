@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-07-20 23:05+0200\n"
-"PO-Revision-Date: 2009-07-21 00:18+0200\n"
+"POT-Creation-Date: 2009-09-27 23:53+0200\n"
+"PO-Revision-Date: 2009-09-27 23:55+0200\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -1007,7 +1007,8 @@ msgstr "CVS pserver godkendelse fejlede"
 #, python-format
 msgid ""
 "unexpected response from CVS server (expected \"Valid-requests\", but got %r)"
-msgstr "uventet svar fra CVS serveren (forventede \"Valid-requests\", men fik %r)"
+msgstr ""
+"uventet svar fra CVS serveren (forventede \"Valid-requests\", men fik %r)"
 
 #, python-format
 msgid "%d bytes missing from remote file"
@@ -1085,6 +1086,10 @@ msgstr ""
 #, python-format
 msgid "%d changeset entries\n"
 msgstr "%d ændringer\n"
+
+#, python-format
+msgid "darcs version 2.1 or newer needed (found %r)"
+msgstr ""
 
 msgid "Python ElementTree module is not available"
 msgstr "Python ElementTree modulet er ikke tilstede"
@@ -1492,10 +1497,6 @@ msgid "merging with %d:%s\n"
 msgstr "sammenføjer med %d:%s\n"
 
 #, python-format
-msgid "Automated merge with %s"
-msgstr "Automatisk sammenføjning med %s"
-
-#, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
 msgstr "ny ændring %d:%s fletter fjernændringer sammen med lokale\n"
 
@@ -1575,10 +1576,6 @@ msgid ""
 msgstr ""
 "arbejdskopien af .hgsigs er ændret (deponer venligst .hgsigs manuelt eller "
 "brug --force)"
-
-#, python-format
-msgid "Added signature for changeset %s"
-msgstr "Tilføjede underskrift af ændring %s"
 
 msgid "unknown signature version"
 msgstr "ukendt underskrift-version"
@@ -2133,7 +2130,9 @@ msgstr ""
 msgid ""
 "\n"
 "%s keywords written to %s:\n"
-msgstr "\n%s nøgleord skrevet til %s:\n"
+msgstr ""
+"\n"
+"%s nøgleord skrevet til %s:\n"
 
 msgid "unhooked all commit hooks\n"
 msgstr ""
@@ -4275,7 +4274,7 @@ msgid ""
 msgstr ""
 
 #, python-format
-msgid "[win32mbcs] filename conversion fail with %s encoding\n"
+msgid "[win32mbcs] filename conversion failed with %s encoding\n"
 msgstr ""
 
 msgid "[win32mbcs] cannot activate on this platform.\n"
@@ -4806,10 +4805,6 @@ msgid "%s is not a parent of %s"
 msgstr "%s er ikke forælder til %s"
 
 msgid "cannot use --parent on non-merge changeset"
-msgstr ""
-
-#, python-format
-msgid "Backed out changeset %s"
 msgstr ""
 
 #, python-format
@@ -5543,6 +5538,9 @@ msgid ""
 "    If STARTREV is specified only those heads (or branch heads) that\n"
 "    are descendants of STARTREV will be displayed.\n"
 "    "
+msgstr ""
+
+msgid "you must specify a branch to use --closed"
 msgstr ""
 
 #, python-format
@@ -6403,16 +6401,8 @@ msgid "tag '%s' is not a local tag"
 msgstr "mærkaten '%s' er ikke en lokal mærkat"
 
 #, python-format
-msgid "Removed tag %s"
-msgstr "Mærke %s er fjernet"
-
-#, python-format
 msgid "tag '%s' already exists (use -f to force)"
 msgstr "mærkaten '%s' eksisterer allerede (brug -f for at gennemtvinge)"
-
-#, python-format
-msgid "Added tag %s for changeset %s"
-msgstr "Tilføjede mærkat %s til ændring %s"
 
 msgid ""
 "list repository tags\n"
@@ -6732,8 +6722,8 @@ msgstr "[-fC] [NAVN]"
 msgid "show only branches that have unmerged heads"
 msgstr "vil kun grene som har usammenføjne hoveder"
 
-msgid "show normal and closed heads"
-msgstr "vis normale og lukkede hoveder"
+msgid "show normal and closed branches"
+msgstr "vis normale og lukkede grene"
 
 msgid "[-a]"
 msgstr "[-a]"
@@ -6879,8 +6869,11 @@ msgstr "[TILVALG]... MØNSTER [FIL]..."
 msgid "show only heads which are descendants of REV"
 msgstr "vis kun hoveder som er efterkommere af REV"
 
-msgid "show only the active heads from open branches"
-msgstr "vis kun aktive hoveder fra åbne grene"
+msgid "show only the active branch heads from open branches"
+msgstr "vis kun de aktive grenhoveder fra åbne grene"
+
+msgid "show normal and closed branch heads"
+msgstr "vis normale og lukkede grenhoveder"
 
 msgid "[-r STARTREV] [REV]..."
 msgstr "[-r STARTREV] [REV]..."
@@ -7766,22 +7759,21 @@ msgid ""
 "    Mercurial supports several ways to specify individual revisions.\n"
 "\n"
 "    A plain integer is treated as a revision number. Negative integers\n"
-"    are treated as topological offsets from the tip, with -1 denoting\n"
-"    the tip. As such, negative numbers are only useful if you've\n"
-"    memorized your local tree numbers and want to save typing a single\n"
-"    digit. This editor suggests copy and paste.\n"
+"    are treated as sequential offsets from the tip, with -1 denoting\n"
+"    the tip, -2 denoting the revision prior to the tip, and so forth.\n"
 "\n"
 "    A 40-digit hexadecimal string is treated as a unique revision\n"
 "    identifier.\n"
 "\n"
 "    A hexadecimal string less than 40 characters long is treated as a\n"
-"    unique revision identifier, and referred to as a short-form\n"
+"    unique revision identifier and is referred to as a short-form\n"
 "    identifier. A short-form identifier is only valid if it is the\n"
 "    prefix of exactly one full-length identifier.\n"
 "\n"
-"    Any other string is treated as a tag name, which is a symbolic\n"
-"    name associated with a revision identifier. Tag names may not\n"
-"    contain the \":\" character.\n"
+"    Any other string is treated as a tag or branch name. A tag name is\n"
+"    a symbolic name associated with a revision identifier. A branch\n"
+"    name denotes the tipmost revision of that branch. Tag and branch\n"
+"    names must not contain the \":\" character.\n"
 "\n"
 "    The reserved name \"tip\" is a special tag that always identifies\n"
 "    the most recent revision.\n"
@@ -7943,13 +7935,19 @@ msgid ""
 "    - nonempty: Any text. Returns '(none)' if the string is empty.\n"
 "    - hgdate: Date. Returns the date as a pair of numbers:\n"
 "          \"1157407993 25200\" (Unix timestamp, timezone offset).\n"
-"    - isodate: Date. Returns the date in ISO 8601 format.\n"
+"    - isodate: Date. Returns the date in ISO 8601 format: \"2009-08-18\n"
+"          13:00 +0200\".\n"
+"    - isodatesec: Date. Returns the date in ISO 8601 format, including\n"
+"          seconds: \"2009-08-18 13:00:13 +0200\". See also the\n"
+"          rfc3339date filter.\n"
 "    - localdate: Date. Converts a date to local date.\n"
 "    - obfuscate: Any text. Returns the input text rendered as a\n"
 "          sequence of XML entities.\n"
 "    - person: Any text. Returns the text before an email address.\n"
 "    - rfc822date: Date. Returns a date using the same format used\n"
-"          in email headers.\n"
+"          in email headers: \"Tue, 18 Aug 2009 13:00:13 +0200\".\n"
+"    - rfc3339date: Date. Returns a date using the Internet date format\n"
+"          specified in RFC 3339: \"2009-08-18T13:00:13+02:00\".\n"
 "    - short: Changeset hash. Returns the short form of a changeset\n"
 "          hash, i.e. a 12-byte hexadecimal string.\n"
 "    - shortdate: Date. Returns a date like \"2006-09-18\".\n"
