@@ -1,4 +1,4 @@
-import os, sys, textwrap
+import os, sys
 # import from the live mercurial repo
 sys.path.insert(0, "..")
 # fall back to pure modules if required C extensions are not available
@@ -92,9 +92,7 @@ def show_doc(ui):
                     s = "%-*s  %s" % (opts_len, optstr, desc)
                 else:
                     s = optstr
-                s = textwrap.fill(s, initial_indent=4 * " ",
-                                  subsequent_indent=(6 + opts_len) * " ")
-                ui.write("%s\n" % s)
+                ui.write("    %s\n" % s)
             ui.write("\n")
         # aliases
         if d['aliases']:
