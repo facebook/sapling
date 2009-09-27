@@ -44,7 +44,7 @@ enabled extensions:
  debugextension   only debugcommands
 
 global options:
- -R --repository      repository root directory or symbolic path name
+ -R --repository      repository root directory or name of overlay bundle file
     --cwd             change working directory
  -y --noninteractive  do not prompt, assume 'yes' for any required answers
  -q --quiet           suppress output
@@ -74,7 +74,7 @@ enabled extensions:
  debugextension   only debugcommands
 
 global options:
- -R --repository      repository root directory or symbolic path name
+ -R --repository      repository root directory or name of overlay bundle file
     --cwd             change working directory
  -y --noninteractive  do not prompt, assume 'yes' for any required answers
  -q --quiet           suppress output
