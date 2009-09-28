@@ -92,8 +92,6 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 			goto bail;
 
 		if (nlen > 40) {
-			PyObject *flags;
-
 			flags = PyString_FromStringAndSize(zero + 41,
 							   nlen - 40);
 			if (!flags)
