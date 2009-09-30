@@ -382,8 +382,6 @@ def files(ui, repo, *pats, **opts):
     See "hg help keyword" on how to construct patterns both for
     inclusion and exclusion of files.
 
-    Use -u/--unknown to list unknown (not tracked) files as well.
-
     With -a/--all and -v/--verbose the codes used to show the status
     of files are::
 
@@ -394,18 +392,22 @@ def files(ui, repo, *pats, **opts):
     '''
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, *pats, **opts)
+    cwd = pats and repo.getcwd() or ''
     modified, added, removed, deleted, unknown, ignored, clean = status
-    files = sorted(modified + added + clean)
+    files = []
+    if not (opts.get('unknown') or opts.get('untracked')) or opts.get('all'):
+        files = sorted(modified + added + clean)
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
     kwunknown = [f for f in unknown if kwt.iskwfile(f, wctx.flags)]
-    cwd = pats and repo.getcwd() or ''
-    kwfstats = (not opts.get('ignore') and
-                (('K', kwfiles), ('k', kwunknown),) or ())
+    if not opts.get('ignore') or opts.get('all'):
+        showfiles = kwfiles, kwunknown
+    else:
+        showfiles = [], []
     if opts.get('all') or opts.get('ignore'):
-        kwfstats += (('I', [f for f in files if f not in kwfiles]),
-                     ('i', [f for f in unknown if f not in kwunknown]),)
-    for char, filenames in kwfstats:
+        showfiles += ([f for f in files if f not in kwfiles],
+                      [f for f in unknown if f not in kwunknown])
+    for char, filenames in zip('KkIi', showfiles):
         fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
         for f in filenames:
             ui.write(fmt % repo.pathto(f, cwd))
@@ -549,10 +551,8 @@ cmdtable = {
         (files,
          [('a', 'all', None, _('show keyword status flags of all files')),
           ('i', 'ignore', None, _('show files excluded from expansion')),
-          ('u', 'unknown', None,
-           _('additionally show unknown (not tracked) files')),
-          ('u', 'untracked', None,
-           _('additionally show untracked files (DEPRECATED)')),
+          ('u', 'unknown', None, _('only show unknown (not tracked) files')),
+          ('u', 'untracked', None, _('only show untracked files (DEPRECATED)')),
          ] + commands.walkopts,
          _('hg kwfiles [OPTION]... [FILE]...')),
     'kwshrink': (shrink, commands.walkopts,
