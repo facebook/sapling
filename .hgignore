@@ -1,4 +1,6 @@
 syntax: glob
-
 *.pyc
 tests/*.err
+build
+dist
+*.egg-info
