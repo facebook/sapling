@@ -248,7 +248,8 @@ def _status(ui, repo, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
-        unknown = opts.get('unknown') or opts.get('untracked')
+        unknown = (opts.get('unknown') or opts.get('all')
+                   or opts.get('untracked'))
         return repo.status(match=cmdutil.match(repo, pats, opts), clean=True,
                            unknown=unknown)
     if ui.configitems('keyword'):
