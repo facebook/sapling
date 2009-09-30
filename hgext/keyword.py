@@ -244,12 +244,13 @@ class kwfilelog(filelog.filelog):
             return t2 != text
         return revlog.revlog.cmp(self, node, text)
 
-def _status(ui, repo, kwt, unknown, *pats, **opts):
+def _status(ui, repo, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
-        match = cmdutil.match(repo, pats, opts)
-        return repo.status(match=match, unknown=unknown, clean=True)
+        unknown = opts.get('unknown') or opts.get('untracked')
+        return repo.status(match=cmdutil.match(repo, pats, opts), clean=True,
+                           unknown=unknown)
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
@@ -259,7 +260,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     if repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, False, *pats, **opts)
+    status = _status(ui, repo, kwt, *pats, **opts)
     modified, added, removed, deleted = status[:4]
     if modified or added or removed or deleted:
         raise util.Abort(_('outstanding uncommitted changes'))
@@ -380,29 +381,29 @@ def files(ui, repo, *pats, **opts):
     See "hg help keyword" on how to construct patterns both for
     inclusion and exclusion of files.
 
-    Use -u/--untracked to list untracked files as well.
+    Use -u/--unknown to list unknown (not tracked) files as well.
 
     With -a/--all and -v/--verbose the codes used to show the status
     of files are::
 
       K = keyword expansion candidate
-      k = keyword expansion candidate (untracked)
+      k = keyword expansion candidate (not tracked)
       I = ignored
-      i = ignored (untracked)
+      i = ignored (not tracked)
     '''
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, opts.get('untracked'), *pats, **opts)
+    status = _status(ui, repo, kwt, *pats, **opts)
     modified, added, removed, deleted, unknown, ignored, clean = status
     files = sorted(modified + added + clean)
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
-    kwuntracked = [f for f in unknown if kwt.iskwfile(f, wctx.flags)]
+    kwunknown = [f for f in unknown if kwt.iskwfile(f, wctx.flags)]
     cwd = pats and repo.getcwd() or ''
     kwfstats = (not opts.get('ignore') and
-                (('K', kwfiles), ('k', kwuntracked),) or ())
+                (('K', kwfiles), ('k', kwunknown),) or ())
     if opts.get('all') or opts.get('ignore'):
         kwfstats += (('I', [f for f in files if f not in kwfiles]),
-                     ('i', [f for f in unknown if f not in kwuntracked]),)
+                     ('i', [f for f in unknown if f not in kwunknown]),)
     for char, filenames in kwfstats:
         fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
         for f in filenames:
@@ -547,7 +548,10 @@ cmdtable = {
         (files,
          [('a', 'all', None, _('show keyword status flags of all files')),
           ('i', 'ignore', None, _('show files excluded from expansion')),
-          ('u', 'untracked', None, _('additionally show untracked files')),
+          ('u', 'unknown', None,
+           _('additionally show unknown (not tracked) files')),
+          ('u', 'untracked', None,
+           _('additionally show untracked files (DEPRECATED)')),
          ] + commands.walkopts,
          _('hg kwfiles [OPTION]... [FILE]...')),
     'kwshrink': (shrink, commands.walkopts,
