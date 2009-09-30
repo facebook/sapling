@@ -128,8 +128,10 @@ def has_rst2html():
         matchoutput('rst2html.py --version', r'^rst2html.py \(Docutils')
 
 def has_svn():
-    return matchoutput('svn --version 2>&1', r'^svn, version') and \
-        matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
+    #return matchoutput('svn --version 2>&1', r'^svn, version') and \
+        #matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
+    # disabled until licensing issue is resolved
+    return False
 
 def has_svn_bindings():
     try:
