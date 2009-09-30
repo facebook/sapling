@@ -5,6 +5,11 @@ cp "$TESTDIR"/printenv.py .
 hg init test
 cd test
 echo foo>foo
+mkdir foo.d foo.d/bAr.hg.d foo.d/baR.d.hg
+echo foo>foo.d/foo
+echo bar>foo.d/bAr.hg.d/BaR
+echo bar>foo.d/baR.d.hg/bAR
+
 hg commit -A -m 1
 hg --config server.uncompressed=True serve -p $HGPORT -d --pid-file=../hg1.pid
 hg serve -p $HGPORT1 -d --pid-file=../hg2.pid
