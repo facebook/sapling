@@ -16,3 +16,9 @@ cd foobar
 cat .hg/hgrc |sed -e "s:$p:...:"
 hg paths |sed -e "s:$p:...:"
 hg showconfig |sed -e "s:$p:...:"
+
+# issue1829: wrong indentation
+cd ..
+echo '[foo]' >> $HGRCPATH
+echo '  x = y' >> $HGRCPATH
+hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
