@@ -382,7 +382,7 @@ def files(ui, repo, *pats, **opts):
     See "hg help keyword" on how to construct patterns both for
     inclusion and exclusion of files.
 
-    With -a/--all and -v/--verbose the codes used to show the status
+    With -A/--all and -v/--verbose the codes used to show the status
     of files are::
 
       K = keyword expansion candidate
@@ -549,9 +549,11 @@ cmdtable = {
                  _('hg kwexpand [OPTION]... [FILE]...')),
     'kwfiles':
         (files,
-         [('a', 'all', None, _('show keyword status flags of all files')),
+         [('A', 'all', None, _('show keyword status flags of all files')),
           ('i', 'ignore', None, _('show files excluded from expansion')),
           ('u', 'unknown', None, _('only show unknown (not tracked) files')),
+          ('a', 'all', None,
+           _('show keyword status flags of all files (DEPRECATED)')),
           ('u', 'untracked', None, _('only show untracked files (DEPRECATED)')),
          ] + commands.walkopts,
          _('hg kwfiles [OPTION]... [FILE]...')),
