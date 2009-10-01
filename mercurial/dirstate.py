@@ -38,6 +38,9 @@ def _decdirs(dirs, path):
 class dirstate(object):
 
     def __init__(self, opener, ui, root):
+        '''Create a new dirstate object.  opener is an open()-like callable
+        that can be used to open the dirstate file; root is the root of the
+        directory tracked by the dirstate.'''
         self._opener = opener
         self._root = root
         self._rootdir = os.path.join(root, '')
@@ -47,6 +50,8 @@ class dirstate(object):
 
     @propertycache
     def _map(self):
+        '''Return the dirstate contents as a map from filename to
+        (state, mode, size, time).'''
         self._read()
         return self._map
 
@@ -169,12 +174,14 @@ class dirstate(object):
         return path
 
     def __getitem__(self, key):
-        ''' current states:
-        n  normal
-        m  needs merging
-        r  marked for removal
-        a  marked for addition
-        ?  not tracked'''
+        '''Return the current state of key (a filename) in the dirstate.
+        States are:
+          n  normal
+          m  needs merging
+          r  marked for removal
+          a  marked for addition
+          ?  not tracked
+        '''
         return self._map.get(key, ("?",))[0]
 
     def __contains__(self, key):
@@ -417,11 +424,11 @@ class dirstate(object):
 
     def walk(self, match, unknown, ignored):
         '''
-        walk recursively through the directory tree, finding all files
-        matched by the match function
+        Walk recursively through the directory tree, finding all files
+        matched by match.
 
-        results are yielded in a tuple (filename, stat), where stat
-        and st is the stat result if the file was found in the directory.
+        Return a dict mapping filename to stat-like object (either
+        mercurial.osutil.stat instance or return value of os.stat()).
         '''
 
         def fwarn(f, msg):
@@ -559,12 +566,38 @@ class dirstate(object):
         return results
 
     def status(self, match, ignored, clean, unknown):
+        '''Determine the status of the working copy relative to the
+        dirstate and return a tuple of lists (unsure, modified, added,
+        removed, deleted, unknown, ignored, clean), where:
+
+          unsure:
+            files that might have been modified since the dirstate was
+            written, but need to be read to be sure (size is the same
+            but mtime differs)
+          modified:
+            files that have definitely been modified since the dirstate
+            was written (different size or mode)
+          added:
+            files that have been explicitly added with hg add
+          removed:
+            files that have been explicitly removed with hg remove
+          deleted:
+            files that have been deleted through other means ("missing")
+          unknown:
+            files not in the dirstate that are not ignored
+          ignored:
+            files not in the dirstate that are ignored
+            (by _dirignore())
+          clean:
+            files that have definitely not been modified since the
+            dirstate was written
+        '''
         listignored, listclean, listunknown = ignored, clean, unknown
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
         dmap = self._map
-        ladd = lookup.append
+        ladd = lookup.append            # aka "unsure"
         madd = modified.append
         aadd = added.append
         uadd = unknown.append
