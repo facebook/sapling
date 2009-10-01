@@ -373,13 +373,9 @@ class dirstate(object):
             return
         st = self._opener("dirstate", "w", atomictemp=True)
 
-        try:
-            gran = int(self._ui.config('dirstate', 'granularity', 1))
-        except ValueError:
-            gran = 1
-        if gran > 0:
-            hlimit = util.fstat(st).st_mtime
-            llimit = hlimit - gran
+        # use the modification time of the newly created temporary file as the
+        # filesystem's notion of 'now'
+        now = int(util.fstat(st).st_mtime)
 
         cs = cStringIO.StringIO()
         copymap = self._copymap
@@ -389,9 +385,19 @@ class dirstate(object):
         for f, e in self._map.iteritems():
             if f in copymap:
                 f = "%s\0%s" % (f, copymap[f])
-            if gran > 0 and e[0] == 'n' and llimit < e[3] <= hlimit:
-                # file was updated too recently, ignore stat data
-                e = (e[0], 0, -1, -1)
+
+            if e[0] == 'n' and e[3] == now:
+                # The file was last modified "simultaneously" with the current
+                # write to dirstate (i.e. within the same second for file-
+                # systems with a granularity of 1 sec). This commonly happens
+                # for at least a couple of files on 'update'.
+                # The user could change the file without changing its size
+                # within the same second. Invalidate the file's stat data in
+                # dirstate, forcing future 'status' calls to compare the
+                # contents of the file. This prevents mistakenly treating such
+                # files as clean.
+                e = (e[0], 0, -1, -1)   # mark entry as 'unset'
+
             e = pack(_format, e[0], e[1], e[2], e[3], len(f))
             write(e)
             write(f)
