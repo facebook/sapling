@@ -1356,23 +1356,25 @@ def heads(ui, repo, *branchrevs, **opts):
 
     With no arguments, show all repository head changesets.
 
-    Repository "heads" are changesets that don't have child
-    changesets. They are where development generally takes place and
-    are the usual targets for update and merge operations.
+    Repository "heads" are changesets with no child changesets. They are
+    where development generally takes place and are the usual targets
+    for update and merge operations.
 
     If one or more REV is given, the "branch heads" will be shown for
-    the named branch associated with that revision. The name of the
-    branch is called the revision's branch tag.
+    the named branch associated with the specified changeset(s).
 
-    Branch heads are revisions on a given named branch that do not have
-    any descendants on the same branch. A branch head could be a true head
-    or it could be the last changeset on a branch before a new branch
-    was created. If none of the branch heads are true heads, the branch
-    is considered inactive. If -c/--closed is specified, also show branch
-    heads marked closed (see hg commit --close-branch).
+    Branch heads are changesets on a named branch with no descendants on
+    the same branch. A branch head could be a "true" (repository) head,
+    or it could be the last changeset on that branch before it was
+    merged into another branch, or it could be the last changeset on the
+    branch before a new branch was created. If none of the branch heads
+    are true heads, the branch is considered inactive.
 
-    If STARTREV is specified only those heads (or branch heads) that
-    are descendants of STARTREV will be displayed.
+    If -c/--closed is specified, also show branch heads marked closed
+    (see hg commit --close-branch).
+
+    If STARTREV is specified, only those heads that are descendants of
+    STARTREV will be displayed.
     """
     if opts.get('rev'):
         start = repo.lookup(opts['rev'])

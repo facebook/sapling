@@ -1280,9 +1280,12 @@ def wrap(line, hangindent, width=None):
     padding = '\n' + ' ' * hangindent
     # To avoid corrupting multi-byte characters in line, we must wrap
     # a Unicode string instead of a bytestring.
-    u = line.decode(encoding.encoding)
-    w = padding.join(textwrap.wrap(u, width=width - hangindent))
-    return w.encode(encoding.encoding)
+    try:
+        u = line.decode(encoding.encoding)
+        w = padding.join(textwrap.wrap(u, width=width - hangindent))
+        return w.encode(encoding.encoding)
+    except UnicodeDecodeError:
+        return padding.join(textwrap.wrap(line, width=width - hangindent))
 
 def iterlines(iterator):
     for chunk in iterator:
