@@ -42,6 +42,9 @@ expand $Id$
 do not process $Id:
 xxx $
 ignore $Id$
+% no kwfiles
+% untracked candidates
+k a
 % addremove
 adding a
 adding b
@@ -181,6 +184,14 @@ xxx $
 % kwfiles
 a
 c
+% ignored files
+I b
+I sym
+% all files
+K a
+K c
+I b
+I sym
 % diff --rev
 diff -r ef63ca68695b c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000

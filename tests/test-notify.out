@@ -35,6 +35,7 @@ Optional configuration items:
   diffstat = True        # add a diffstat before the diff content
   sources = serve        # notify if source of incoming changes in this list
                          # (serve == ssh or http, push, pull, bundle)
+  merge = False          # send notification for merges (default True)
   [email]
   from = user@host.com   # email address to send as if none given
   [web]

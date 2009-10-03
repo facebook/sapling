@@ -95,6 +95,6 @@ COPYING
 -------
 Copyright \(C) 2005-2009 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
-Public License (GPL).
+Public License version 2.
 
 .. include:: common.txt

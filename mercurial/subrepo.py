@@ -167,7 +167,7 @@ class hgsubrepo(object):
         self._repo.ui.note(_('removing subrepo %s\n') % self._path)
         hg.clean(self._repo, node.nullid, False)
 
-    def get(self, state):
+    def _get(self, state):
         source, revision = state
         try:
             self._repo.lookup(revision)
@@ -178,9 +178,13 @@ class hgsubrepo(object):
             other = hg.repository(self._repo.ui, srcurl)
             self._repo.pull(other)
 
+    def get(self, state):
+        self._get(state)
+        source, revision = state
         hg.clean(self._repo, revision, False)
 
     def merge(self, state):
+        self._get(state)
         hg.merge(self._repo, state[1], remind=False)
 
     def push(self, force):

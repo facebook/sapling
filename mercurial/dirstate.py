@@ -38,6 +38,9 @@ def _decdirs(dirs, path):
 class dirstate(object):
 
     def __init__(self, opener, ui, root):
+        '''Create a new dirstate object.  opener is an open()-like callable
+        that can be used to open the dirstate file; root is the root of the
+        directory tracked by the dirstate.'''
         self._opener = opener
         self._root = root
         self._rootdir = os.path.join(root, '')
@@ -47,6 +50,8 @@ class dirstate(object):
 
     @propertycache
     def _map(self):
+        '''Return the dirstate contents as a map from filename to
+        (state, mode, size, time).'''
         self._read()
         return self._map
 
@@ -169,12 +174,14 @@ class dirstate(object):
         return path
 
     def __getitem__(self, key):
-        ''' current states:
-        n  normal
-        m  needs merging
-        r  marked for removal
-        a  marked for addition
-        ?  not tracked'''
+        '''Return the current state of key (a filename) in the dirstate.
+        States are:
+          n  normal
+          m  needs merging
+          r  marked for removal
+          a  marked for addition
+          ?  not tracked
+        '''
         return self._map.get(key, ("?",))[0]
 
     def __contains__(self, key):
@@ -373,13 +380,9 @@ class dirstate(object):
             return
         st = self._opener("dirstate", "w", atomictemp=True)
 
-        try:
-            gran = int(self._ui.config('dirstate', 'granularity', 1))
-        except ValueError:
-            gran = 1
-        if gran > 0:
-            hlimit = util.fstat(st).st_mtime
-            llimit = hlimit - gran
+        # use the modification time of the newly created temporary file as the
+        # filesystem's notion of 'now'
+        now = int(util.fstat(st).st_mtime)
 
         cs = cStringIO.StringIO()
         copymap = self._copymap
@@ -389,9 +392,19 @@ class dirstate(object):
         for f, e in self._map.iteritems():
             if f in copymap:
                 f = "%s\0%s" % (f, copymap[f])
-            if gran > 0 and e[0] == 'n' and llimit < e[3] <= hlimit:
-                # file was updated too recently, ignore stat data
-                e = (e[0], 0, -1, -1)
+
+            if e[0] == 'n' and e[3] == now:
+                # The file was last modified "simultaneously" with the current
+                # write to dirstate (i.e. within the same second for file-
+                # systems with a granularity of 1 sec). This commonly happens
+                # for at least a couple of files on 'update'.
+                # The user could change the file without changing its size
+                # within the same second. Invalidate the file's stat data in
+                # dirstate, forcing future 'status' calls to compare the
+                # contents of the file. This prevents mistakenly treating such
+                # files as clean.
+                e = (e[0], 0, -1, -1)   # mark entry as 'unset'
+
             e = pack(_format, e[0], e[1], e[2], e[3], len(f))
             write(e)
             write(f)
@@ -411,11 +424,11 @@ class dirstate(object):
 
     def walk(self, match, unknown, ignored):
         '''
-        walk recursively through the directory tree, finding all files
-        matched by the match function
+        Walk recursively through the directory tree, finding all files
+        matched by match.
 
-        results are yielded in a tuple (filename, stat), where stat
-        and st is the stat result if the file was found in the directory.
+        Return a dict mapping filename to stat-like object (either
+        mercurial.osutil.stat instance or return value of os.stat()).
         '''
 
         def fwarn(f, msg):
@@ -553,12 +566,38 @@ class dirstate(object):
         return results
 
     def status(self, match, ignored, clean, unknown):
+        '''Determine the status of the working copy relative to the
+        dirstate and return a tuple of lists (unsure, modified, added,
+        removed, deleted, unknown, ignored, clean), where:
+
+          unsure:
+            files that might have been modified since the dirstate was
+            written, but need to be read to be sure (size is the same
+            but mtime differs)
+          modified:
+            files that have definitely been modified since the dirstate
+            was written (different size or mode)
+          added:
+            files that have been explicitly added with hg add
+          removed:
+            files that have been explicitly removed with hg remove
+          deleted:
+            files that have been deleted through other means ("missing")
+          unknown:
+            files not in the dirstate that are not ignored
+          ignored:
+            files not in the dirstate that are ignored
+            (by _dirignore())
+          clean:
+            files that have definitely not been modified since the
+            dirstate was written
+        '''
         listignored, listclean, listunknown = ignored, clean, unknown
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
 
         dmap = self._map
-        ladd = lookup.append
+        ladd = lookup.append            # aka "unsure"
         madd = modified.append
         aadd = added.append
         uadd = unknown.append
