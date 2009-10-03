@@ -151,7 +151,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	}
 
 	/* compute popularity threshold */
-	t = (bn >= 4000) ? bn / 1000 : bn + 1;
+	t = (bn >= 31000) ? bn / 1000 : 1000000 / (bn + 1);
 
 	/* match items in a to their equivalence class in b */
 	for (i = 0; i < an; i++) {
