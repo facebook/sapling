@@ -745,6 +745,9 @@ class changeset_templater(changeset_printer):
                                          'parent': '{rev}:{node|formatnode} ',
                                          'manifest': '{rev}:{node|formatnode}',
                                          'filecopy': '{name} ({source})'})
+        # Cache mapping from rev to a tuple with tag date, tag
+        # distance and tag name
+        self._latesttagcache = {-1: (0, 0, 'null')}
 
     def use_template(self, t):
         '''set template string to use'''
@@ -761,6 +764,30 @@ class changeset_templater(changeset_printer):
         if parents[0].rev() >= ctx.rev() - 1:
             return []
         return parents
+
+    def _latesttaginfo(self, rev):
+        '''return date, distance and name for the latest tag of rev'''
+        todo = [rev]
+        while todo:
+            rev = todo.pop()
+            if rev in self._latesttagcache:
+                continue
+            ctx = self.repo[rev]
+            tags = [t for t in ctx.tags() if self.repo.tagtype(t) == 'global']
+            if tags:
+                self._latesttagcache[rev] = ctx.date()[0], 0, ':'.join(sorted(tags))
+                continue
+            try:
+                # The tuples are laid out so the right one can be found by comparison.
+                pdate, pdist, ptag = max(
+                    self._latesttagcache[p.rev()] for p in ctx.parents())
+            except KeyError:
+                # Cache miss - recurse
+                todo.append(rev)
+                todo.extend(p.rev() for p in ctx.parents())
+                continue
+            self._latesttagcache[rev] = pdate, pdist + 1, ptag
+        return self._latesttagcache[rev]
 
     def _show(self, ctx, copies, props):
         '''show a single changeset or file revision'''
@@ -879,6 +906,11 @@ class changeset_templater(changeset_printer):
                 removes += i[2]
             return '%s: +%s/-%s' % (files, adds, removes)
 
+        def showlatesttag(**args):
+            return self._latesttaginfo(ctx.rev())[2]
+        def showlatesttagdistance(**args):
+            return self._latesttaginfo(ctx.rev())[1]
+
         defprops = {
             'author': ctx.user(),
             'branches': showbranches,
@@ -896,6 +928,8 @@ class changeset_templater(changeset_printer):
             'tags': showtags,
             'extras': showextras,
             'diffstat': showdiffstat,
+            'latesttag': showlatesttag,
+            'latesttagdistance': showlatesttagdistance,
             }
         props = props.copy()
         props.update(defprops)

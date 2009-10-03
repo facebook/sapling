@@ -393,6 +393,9 @@ PYTHONPATH
                 number.
     :tags:      List of strings. Any tags associated with the
                 changeset.
+    :latesttag: String. Most recent global tag in the ancestors of this
+                changeset.
+    :latesttagdistance: Integer. Longest path to the latest tag.
 
     The "date" keyword does not produce human-readable output. If you
     want to use a date in your output, you can use a filter to process
