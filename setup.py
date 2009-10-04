@@ -246,7 +246,7 @@ if sys.platform == 'linux2' and os.uname()[2] > '2.6':
         packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
 
 datafiles = []
-for root in ('templates', 'i18n'):
+for root in ('templates', 'i18n', 'help'):
     for dir, dirs, files in os.walk(root):
         dirs[:] = [x for x in dirs if not x.startswith('.')]
         files = [x for x in files if not x.startswith('.')]
