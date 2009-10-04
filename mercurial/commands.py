@@ -1619,9 +1619,7 @@ def help_(ui, name=None, with_version=False):
         ui.write(_("\nadditional help topics:\n\n"))
         topics = []
         for names, header, doc in help.helptable:
-            names = [(-len(name), name) for name in names]
-            names.sort()
-            topics.append((names[0][1], header))
+            topics.append((sorted(names, key=len, reverse=True)[0], header))
         topics_len = max([len(s[0]) for s in topics])
         for t, desc in topics:
             ui.write(" %-*s  %s\n" % (topics_len, t, desc))
