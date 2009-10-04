@@ -246,3 +246,33 @@ much too large
             own line.
 ----------------------------------------------------------------------
 
+containers (normal) formatted to fit within 60 characters:
+----------------------------------------------------------------------
+Normal output.
+----------------------------------------------------------------------
+
+containers (verbose) formatted to fit within 60 characters:
+----------------------------------------------------------------------
+Normal output.
+
+Verbose output.
+----------------------------------------------------------------------
+
+containers (debug) formatted to fit within 60 characters:
+----------------------------------------------------------------------
+Normal output.
+
+Initial debug output.
+----------------------------------------------------------------------
+
+containers (verbose debug) formatted to fit within 60 characters:
+----------------------------------------------------------------------
+Normal output.
+
+Initial debug output.
+
+Verbose output.
+
+Debug output.
+----------------------------------------------------------------------
+

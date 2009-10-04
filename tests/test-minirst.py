@@ -2,10 +2,10 @@
 
 from mercurial import minirst
 
-def debugformat(title, text, width):
+def debugformat(title, text, width, **kwargs):
     print "%s formatted to fit within %d characters:" % (title, width)
     print "-" * 70
-    print minirst.format(text, width)
+    print minirst.format(text, width, **kwargs)
     print "-" * 70
     print
 
@@ -143,3 +143,25 @@ Next list:
 
 debugformat('fields', fields, 60)
 debugformat('fields', fields, 30)
+
+containers = """
+Normal output.
+
+.. container:: debug
+
+   Initial debug output.
+
+.. container:: verbose
+
+   Verbose output.
+
+   .. container:: debug
+
+      Debug output.
+"""
+
+debugformat('containers (normal)', containers, 60)
+debugformat('containers (verbose)', containers, 60, keep=['verbose'])
+debugformat('containers (debug)', containers, 60, keep=['debug'])
+debugformat('containers (verbose debug)', containers, 60,
+            keep=['verbose', 'debug'])

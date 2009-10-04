@@ -1,6 +1,6 @@
 # minirst.py - minimal reStructuredText parser
 #
-# Copyright 2009 Matt Mackall <mpm@selenic.com> and others
+# Copyright 2009, 2010 Matt Mackall <mpm@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
@@ -186,6 +186,42 @@ def updatefieldlists(blocks):
     return blocks
 
 
+def prunecontainers(blocks, keep):
+    """Prune unwanted containers.
+
+    The blocks must have a 'type' field, i.e., they should have been
+    run through findliteralblocks first.
+    """
+    i = 0
+    while i + 1 < len(blocks):
+        # Searching for a block that looks like this:
+        #
+        # +-------+---------------------------+
+        # | ".. container ::" type            |
+        # +---+                               |
+        #     | blocks                        |
+        #     +-------------------------------+
+        if (blocks[i]['type'] == 'paragraph' and
+            blocks[i]['lines'][0].startswith('.. container::')):
+            indent = blocks[i]['indent']
+            adjustment = blocks[i + 1]['indent'] - indent
+            containertype = blocks[i]['lines'][0][15:]
+            prune = containertype not in keep
+
+            # Always delete "..container:: type" block
+            del blocks[i]
+            j = i
+            while j < len(blocks) and blocks[j]['indent'] > indent:
+                if prune:
+                    del blocks[j]
+                    i -= 1 # adjust outer index
+                else:
+                    blocks[j]['indent'] -= adjustment
+                    j += 1
+        i += 1
+    return blocks
+
+
 def findsections(blocks):
     """Finds sections.
 
@@ -281,12 +317,13 @@ def formatblock(block, width):
                          subsequent_indent=subindent)
 
 
-def format(text, width, indent=0):
+def format(text, width, indent=0, keep=[]):
     """Parse and format the text according to width."""
     blocks = findblocks(text)
     for b in blocks:
         b['indent'] += indent
     blocks = findliteralblocks(blocks)
+    blocks = prunecontainers(blocks, keep)
     blocks = inlineliterals(blocks)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
@@ -298,8 +335,8 @@ def format(text, width, indent=0):
 if __name__ == "__main__":
     from pprint import pprint
 
-    def debug(func, blocks):
-        blocks = func(blocks)
+    def debug(func, *args):
+        blocks = func(*args)
         print "*** after %s:" % func.__name__
         pprint(blocks)
         print
@@ -308,6 +345,7 @@ if __name__ == "__main__":
     text = open(sys.argv[1]).read()
     blocks = debug(findblocks, text)
     blocks = debug(findliteralblocks, blocks)
+    blocks = debug(prunecontainers, blocks, sys.argv[2:])
     blocks = debug(inlineliterals, blocks)
     blocks = debug(splitparagraphs, blocks)
     blocks = debug(updatefieldlists, blocks)
