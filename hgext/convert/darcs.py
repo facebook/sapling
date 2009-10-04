@@ -116,7 +116,8 @@ class darcs_source(converter_source, commandline):
                 continue
             if elt.tag == 'move':
                 changes.append((elt.get('from'), rev))
-                copies[elt.get('from')] = elt.get('to')
+                changes.append((elt.get('to'), rev))
+                copies[elt.get('to')] = elt.get('from')
             else:
                 changes.append((elt.text.strip(), rev))
         self.lastrev = rev
