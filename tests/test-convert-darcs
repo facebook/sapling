@@ -43,7 +43,19 @@ echo % merge branch
 darcs pull -a ../darcs-clone
 sleep 1
 echo e > a
+echo f > f
+mkdir dir
+echo d > dir/d
+echo d > dir/d2
 darcs record -a -l -m p2
+
+echo % test file and directory move
+darcs mv f ff
+# Test remove + move
+darcs remove dir/d2
+rm dir/d2
+darcs mv dir dir2
+darcs record -a -l -m p3
 cd ..
 
 glog()
