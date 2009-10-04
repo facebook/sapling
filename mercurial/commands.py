@@ -1548,7 +1548,7 @@ def help_(ui, name=None, with_version=False):
             doc = doc()
 
         ui.write("%s\n\n" % header)
-        ui.write("%s\n" % minirst.format(doc, textwidth))
+        ui.write("%s\n" % minirst.format(doc, textwidth, indent=4))
 
     def helpext(name):
         try:

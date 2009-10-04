@@ -310,9 +310,11 @@ def formatblock(block, width):
                              subsequent_indent=subindent)
 
 
-def format(text, width):
+def format(text, width, indent=0):
     """Parse and format the text according to width."""
     blocks = findblocks(text)
+    for b in blocks:
+        b['indent'] += indent
     blocks = findliteralblocks(blocks)
     blocks = findsections(blocks)
     blocks = findbulletlists(blocks)
