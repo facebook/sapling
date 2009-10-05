@@ -47,9 +47,6 @@ def has_cvs():
     re = r'Concurrent Versions System.*?server'
     return matchoutput('cvs --version 2>&1', re)
 
-def has_cvsps():
-    return matchoutput('cvsps -h -q 2>&1', r'cvsps version', True)
-
 def has_darcs():
     return matchoutput('darcs --version', r'2\.[2-9]', True)
 
@@ -186,7 +183,6 @@ checks = {
     "bzr": (has_bzr, "Canonical's Bazaar client"),
     "bzr114": (has_bzr114, "Canonical's Bazaar client >= 1.14"),
     "cvs": (has_cvs, "cvs client/server"),
-    "cvsps": (has_cvsps, "cvsps utility"),
     "darcs": (has_darcs, "darcs client"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),

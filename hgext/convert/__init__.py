@@ -142,22 +142,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     converted, and that any directory reorganization in the CVS
     sandbox is ignored.
 
-    Because CVS does not have changesets, it is necessary to collect
-    individual commits to CVS and merge them into changesets. CVS
-    source uses its internal changeset merging code by default but can
-    be configured to call the external 'cvsps' program by setting::
-
-      --config convert.cvsps='cvsps -A -u --cvs-direct -q'
-
-    This option is deprecated and will be removed in Mercurial 1.4.
-
     The options shown are the defaults.
-
-    Internal cvsps is selected by setting ::
-
-      --config convert.cvsps=builtin
-
-    and has a few more configurable options:
 
     --config convert.cvsps.cache=True         (boolean)
         Set to False to disable remote log caching, for testing and

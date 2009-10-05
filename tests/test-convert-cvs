@@ -1,10 +1,10 @@
 #!/bin/sh
 
-"$TESTDIR/hghave" cvs cvsps || exit 80
+"$TESTDIR/hghave" cvs || exit 80
 
 cvscall()
 {
-    cvs -f $@
+    cvs -f "$@"
 }
 
 hgcat()
@@ -12,12 +12,9 @@ hgcat()
     hg --cwd src-hg cat -r tip "$1"
 }
 
-# Test legacy configuration with external cvsps
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 echo "graphlog = " >> $HGRCPATH
-echo "[convert]" >> $HGRCPATH
-echo "cvsps=cvsps -A -u --cvs-direct -q" >> $HGRCPATH
 
 echo % create cvs repository
 mkdir cvsrepo
@@ -95,11 +92,29 @@ cd ..
 
 echo % convert again
 hg convert src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
-hgcat a
 hgcat b/c
 
 echo % convert again with --filemap
 hg convert --filemap filemap src src-filemap | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
 hgcat b/c
 hg -R src-filemap log --template '{rev} {desc} files: {files}\n'
+
+echo % commit a new revision with funny log message
+cd src
+sleep 1
+echo e >> a
+cvscall -q commit -m'funny
+----------------------------
+log message' . | grep '<--' |\
+    sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
+cd ..
+
+echo % convert again
+hg convert src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+
+echo "graphlog = " >> $HGRCPATH
 hg -R src-hg glog --template '{rev} ({branches}) {desc} files: {files}\n'
+
+echo % testing debugcvsps
+cd src
+hg debugcvsps | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/' 

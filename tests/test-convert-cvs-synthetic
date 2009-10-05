@@ -8,8 +8,6 @@ set -e
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 echo "graphlog = " >> $HGRCPATH
-echo "[convert]" >> $HGRCPATH
-echo "cvsps=builtin" >> $HGRCPATH
 
 echo % create cvs repository with one project
 mkdir cvsrepo
