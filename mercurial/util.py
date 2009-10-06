@@ -427,7 +427,14 @@ def rename(src, dst):
 
         temp = tempname(dst)
         os.rename(dst, temp)
-        os.unlink(temp)
+        try:
+            os.unlink(temp)
+        except:
+            # Some rude AV-scanners on Windows may cause the unlink to
+            # fail. Not aborting here just leaks the temp file, whereas
+            # aborting at this point may leave serious inconsistencies.
+            # Ideally, we would notify the user here.
+            pass
         os.rename(src, dst)
 
 def unlink(f):
