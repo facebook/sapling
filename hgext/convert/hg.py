@@ -248,8 +248,7 @@ class mercurial_source(converter_source):
         return self.lastctx
 
     def parents(self, ctx):
-        return [p.node() for p in ctx.parents()
-                if p and self.keep(p.node())]
+        return [p for p in ctx.parents() if p and self.keep(p.node())]
 
     def getheads(self):
         if self.rev:
@@ -280,7 +279,7 @@ class mercurial_source(converter_source):
         if self._changescache and self._changescache[0] == rev:
             m, a, r = self._changescache[1]
         else:
-            m, a, r = self.repo.status(parents[0], ctx.node())[:3]
+            m, a, r = self.repo.status(parents[0].node(), ctx.node())[:3]
         # getcopies() detects missing revlogs early, run it before
         # filtering the changes.
         copies = self.getcopies(ctx, m + a)
@@ -309,7 +308,7 @@ class mercurial_source(converter_source):
 
     def getcommit(self, rev):
         ctx = self.changectx(rev)
-        parents = [hex(p) for p in self.parents(ctx)]
+        parents = [p.hex() for p in self.parents(ctx)]
         if self.saverev:
             crev = rev
         else:
@@ -332,7 +331,7 @@ class mercurial_source(converter_source):
             changes = [], ctx.manifest().keys(), []
         else:
             i = i or 0
-            changes = self.repo.status(parents[i], ctx.node())[:3]
+            changes = self.repo.status(parents[i].node(), ctx.node())[:3]
         changes = [[f for f in l if f not in self.ignored] for l in changes]
 
         if i == 0:
