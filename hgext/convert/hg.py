@@ -274,7 +274,7 @@ class mercurial_source(converter_source):
             if self.ignoreerrors:
                 # calling getcopies() is a simple way to detect missing
                 # revlogs and populate self.ignored
-                self.getcopies(ctx, files)
+                self.getcopies(ctx, parents, files)
             return [(f, rev) for f in files if f not in self.ignored], {}
         if self._changescache and self._changescache[0] == rev:
             m, a, r = self._changescache[1]
@@ -282,12 +282,12 @@ class mercurial_source(converter_source):
             m, a, r = self.repo.status(parents[0].node(), ctx.node())[:3]
         # getcopies() detects missing revlogs early, run it before
         # filtering the changes.
-        copies = self.getcopies(ctx, m + a)
+        copies = self.getcopies(ctx, parents, m + a)
         changes = [(name, rev) for name in m + a + r
                    if name not in self.ignored]
         return sorted(changes), copies
 
-    def getcopies(self, ctx, files):
+    def getcopies(self, ctx, parents, files):
         copies = {}
         for name in files:
             if name in self.ignored:
@@ -295,6 +295,14 @@ class mercurial_source(converter_source):
             try:
                 copysource, copynode = ctx.filectx(name).renamed()
                 if copysource in self.ignored or not self.keep(copynode):
+                    continue
+                # Ignore copy sources not in parent revisions
+                found = False
+                for p in parents:
+                    if copysource in p:
+                        found = True
+                        break
+                if not found:
                     continue
                 copies[name] = copysource
             except TypeError:
