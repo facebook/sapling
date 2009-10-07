@@ -400,7 +400,7 @@ def lexists(filename):
     return True
 
 def rename(src, dst):
-    """forcibly rename a file"""
+    '''atomically rename file src to dst, replacing dst if it exists'''
     try:
         os.rename(src, dst)
     except OSError, err: # FIXME: check err (EEXIST ?)
