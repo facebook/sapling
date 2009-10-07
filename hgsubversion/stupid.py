@@ -252,7 +252,7 @@ def makecopyfinder(r, branchpath, rootdir):
     directory copies return the copied source directory in "source".
     """
     # filter copy information for current branch
-    branchpath = branchpath + '/'
+    branchpath = (branchpath and branchpath + '/') or ''
     fullbranchpath = rootdir + branchpath
     copies = []
     for path, e in r.paths.iteritems():
