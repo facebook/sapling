@@ -551,7 +551,6 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     for b in branches:
 
         parentctx = meta.repo[meta.get_parent_revision(r.revnum, b)]
-        print parentctx
         if parentctx.branch() != (b or 'default'):
             check_deleted_branches.add(b)
 
@@ -593,7 +592,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             files_touched.remove(f)
 
         if parentctx.node() == node.nullid and not files_touched:
-            print 'skipping commit since parent is null and no files touched.'
+            meta.repo.ui.debug('skipping commit since parent is null and no files touched.\n')
             continue
 
         for f in files_touched:
@@ -629,7 +628,6 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         if not tag:
             if (not branch in meta.branches
                 and not meta.is_path_tag(meta.remotename(branch))):
-                print tag, 'madebranch', branch
                 meta.branches[branch] = None, 0, r.revnum
             meta.revmap[r.revnum, b] = ha
         else:
