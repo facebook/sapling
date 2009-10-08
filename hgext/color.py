@@ -234,6 +234,13 @@ def uisetup(ui):
         # The mq extension is not enabled
         pass
 
+    try:
+        rec = extensions.find('record')
+        _setupcmd(ui, 'record', rec.cmdtable, colordiff, _diff_effects)
+    except KeyError:
+        # The record extension is not enabled
+        pass
+
 def _setupcmd(ui, cmd, table, func, effectsmap):
     '''patch in command to command table and load effect map'''
     def nocolor(orig, *args, **opts):
