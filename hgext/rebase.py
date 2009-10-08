@@ -401,6 +401,10 @@ def buildstate(repo, dest, src, base, collapse):
             return None
 
         cwdancestors = set(repo.changelog.ancestors(cwd))
+        if dest in cwdancestors:
+            repo.ui.debug('source is descendant of destination\n')
+            return None
+
         cwdancestors.add(cwd)
         rebasingbranch = cwdancestors - targetancestors
         source = min(rebasingbranch)

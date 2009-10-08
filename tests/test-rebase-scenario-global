@@ -70,7 +70,7 @@ echo '% D onto B - E maintains C as parent'
 hg rebase -s 3 -d 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 hg glog  --template '{rev}: {desc}\n'
 
-echo '% These will fail'
+echo '% These will fail (using --source)'
 createrepo > /dev/null 2>&1
 echo '% E onto D - rebase onto an ancestor'
 hg rebase -s 4 -d 3
@@ -78,5 +78,14 @@ echo '% D onto E - rebase onto a descendant'
 hg rebase -s 3 -d 4
 echo '% E onto B - merge revision with both parents not in ancestors of target'
 hg rebase -s 4 -d 1
+
+echo
+echo '% These will abort gracefully (using --base)'
+echo '% E onto E - rebase onto same changeset'
+hg rebase -b 4 -d 4
+echo '% E onto D - rebase onto an ancestor'
+hg rebase -b 4 -d 3
+echo '% D onto E - rebase onto a descendant'
+hg rebase -b 3 -d 4
 
 exit 0
