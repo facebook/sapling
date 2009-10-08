@@ -129,8 +129,8 @@ o  0: A
 
 % These will fail
 % E onto D - rebase onto an ancestor
-abort: cannot rebase a descendant
+abort: source is descendant of destination
 % D onto E - rebase onto a descendant
-abort: cannot rebase an ancestor
+abort: source is ancestor of destination
 % E onto B - merge revision with both parents not in ancestors of target
 abort: cannot use revision 4 as base, result would have 3 parents
