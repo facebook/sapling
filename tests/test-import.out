@@ -295,3 +295,16 @@ applying a.patch
 % create file when source is not /dev/null
 applying ../create.patch
 a
+% first line mistaken for email headers (issue 1859)
+applying a.patch
+changeset:   0:5a681217c0ad
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       a
+description:
+module: summary
+
+description
+
+

@@ -63,6 +63,10 @@ def extract(ui, fileobj):
 
         subject = msg['Subject']
         user = msg['From']
+        if not subject and not user:
+            # Not an email, restore parsed headers if any
+            subject = '\n'.join(': '.join(h) for h in msg.items()) + '\n'
+
         gitsendmail = 'git-send-email' in msg.get('X-Mailer', '')
         # should try to parse msg['Date']
         date = None
