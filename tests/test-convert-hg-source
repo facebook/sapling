@@ -38,6 +38,25 @@ cd new
 hg out ../orig
 cd ..
 
+echo '% check shamap LF and CRLF handling'
+cat > rewrite.py <<EOF
+import sys
+# Interlace LF and CRLF
+lines = [(l.rstrip() + ((i % 2) and '\n' or '\r\n'))
+         for i, l in enumerate(file(sys.argv[1]))]
+file(sys.argv[1], 'wb').write(''.join(lines))
+EOF
+python rewrite.py new/.hg/shamap
+cd orig
+hg up -qC 1
+echo foo >> foo
+hg ci -qm 'change foo again'
+hg up -qC 2
+echo foo >> foo
+hg ci -qm 'change foo again again'
+cd ..
+hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
+
 echo % init broken repository
 hg init broken
 cd broken
