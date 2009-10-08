@@ -292,3 +292,16 @@ R a
 % add empty file from the end of patch (issue 1495)
 adding a
 applying a.patch
+% first line mistaken for email headers (issue 1859)
+applying a.patch
+changeset:   0:5a681217c0ad
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       a
+description:
+module: summary
+
+description
+
+
