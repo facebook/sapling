@@ -299,6 +299,7 @@ class filectx(object):
     def files(self): return self._changectx.files()
     def description(self): return self._changectx.description()
     def branch(self): return self._changectx.branch()
+    def extra(self): return self._changectx.extra()
     def manifest(self): return self._changectx.manifest()
     def changectx(self): return self._changectx
 

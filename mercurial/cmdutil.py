@@ -652,9 +652,8 @@ class changeset_printer(object):
             return
 
         log = self.repo.changelog
-        changes = log.read(changenode)
-        date = util.datestr(changes[2])
-        extra = changes[5]
+        date = util.datestr(ctx.date())
+        extra = ctx.extra()
         branch = extra.get("branch")
 
         hexfunc = self.ui.debugflag and hex or short
@@ -674,9 +673,10 @@ class changeset_printer(object):
             self.ui.write(_("parent:      %d:%s\n") % parent)
 
         if self.ui.debugflag:
+            mnode = ctx.manifestnode()
             self.ui.write(_("manifest:    %d:%s\n") %
-                          (self.repo.manifest.rev(changes[0]), hex(changes[0])))
-        self.ui.write(_("user:        %s\n") % changes[1])
+                          (self.repo.manifest.rev(mnode), hex(mnode)))
+        self.ui.write(_("user:        %s\n") % ctx.user())
         self.ui.write(_("date:        %s\n") % date)
 
         if self.ui.debugflag:
@@ -685,8 +685,8 @@ class changeset_printer(object):
                                   files):
                 if value:
                     self.ui.write("%-12s %s\n" % (key, " ".join(value)))
-        elif changes[3] and self.ui.verbose:
-            self.ui.write(_("files:       %s\n") % " ".join(changes[3]))
+        elif ctx.files() and self.ui.verbose:
+            self.ui.write(_("files:       %s\n") % " ".join(ctx.files()))
         if copies and self.ui.verbose:
             copies = ['%s (%s)' % c for c in copies]
             self.ui.write(_("copies:      %s\n") % ' '.join(copies))
@@ -696,7 +696,7 @@ class changeset_printer(object):
                 self.ui.write(_("extra:       %s=%s\n")
                               % (key, value.encode('string_escape')))
 
-        description = changes[4].strip()
+        description = ctx.description().strip()
         if description:
             if self.ui.verbose:
                 self.ui.write(_("description:\n"))

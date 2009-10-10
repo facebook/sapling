@@ -162,22 +162,24 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
 _patch_effects = { 'applied': ['blue', 'bold', 'underline'],
                     'missing': ['red', 'bold'],
                     'unapplied': ['black', 'bold'], }
-def colorwrap(orig, s):
+def colorwrap(orig, *args):
     '''wrap ui.write for colored diff output'''
-    lines = s.split('\n')
-    for i, line in enumerate(lines):
-        stripline = line
-        if line and line[0] in '+-':
-            # highlight trailing whitespace, but only in changed lines
-            stripline = line.rstrip()
-        for prefix, style in _diff_prefixes:
-            if stripline.startswith(prefix):
-                lines[i] = render_effects(stripline, _diff_effects[style])
-                break
-        if line != stripline:
-            lines[i] += render_effects(
-                line[len(stripline):], _diff_effects['trailingwhitespace'])
-    orig('\n'.join(lines))
+    def _colorize(s):
+        lines = s.split('\n')
+        for i, line in enumerate(lines):
+            stripline = line
+            if line and line[0] in '+-':
+                # highlight trailing whitespace, but only in changed lines
+                stripline = line.rstrip()
+            for prefix, style in _diff_prefixes:
+                if stripline.startswith(prefix):
+                    lines[i] = render_effects(stripline, _diff_effects[style])
+                    break
+            if line != stripline:
+                lines[i] += render_effects(
+                    line[len(stripline):], _diff_effects['trailingwhitespace'])
+        return '\n'.join(lines)
+    orig(*[_colorize(s) for s in args])
 
 def colorshowpatch(orig, self, node):
     '''wrap cmdutil.changeset_printer.showpatch with colored output'''
@@ -232,6 +234,13 @@ def uisetup(ui):
         _setupcmd(ui, 'qseries', mq.cmdtable, colorqseries, _patch_effects)
     except KeyError:
         # The mq extension is not enabled
+        pass
+
+    try:
+        rec = extensions.find('record')
+        _setupcmd(ui, 'record', rec.cmdtable, colordiff, _diff_effects)
+    except KeyError:
+        # The record extension is not enabled
         pass
 
 def _setupcmd(ui, cmd, table, func, effectsmap):

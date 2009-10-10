@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil, encoding
 import cStringIO, errno, re, shutil, sys, tempfile, traceback
-import os, stat, time, calendar, random, textwrap
+import os, stat, time, calendar, textwrap
 import imp
 
 # Python compatibility
@@ -398,44 +398,6 @@ def lexists(filename):
     except:
         return False
     return True
-
-def rename(src, dst):
-    """forcibly rename a file"""
-    try:
-        os.rename(src, dst)
-    except OSError, err: # FIXME: check err (EEXIST ?)
-
-        # On windows, rename to existing file is not allowed, so we
-        # must delete destination first. But if a file is open, unlink
-        # schedules it for delete but does not delete it. Rename
-        # happens immediately even for open files, so we rename
-        # destination to a temporary name, then delete that. Then
-        # rename is safe to do.
-        # The temporary name is chosen at random to avoid the situation
-        # where a file is left lying around from a previous aborted run.
-        # The usual race condition this introduces can't be avoided as
-        # we need the name to rename into, and not the file itself. Due
-        # to the nature of the operation however, any races will at worst
-        # lead to the rename failing and the current operation aborting.
-
-        def tempname(prefix):
-            for tries in xrange(10):
-                temp = '%s-%08x' % (prefix, random.randint(0, 0xffffffff))
-                if not os.path.exists(temp):
-                    return temp
-            raise IOError, (errno.EEXIST, "No usable temporary filename found")
-
-        temp = tempname(dst)
-        os.rename(dst, temp)
-        try:
-            os.unlink(temp)
-        except:
-            # Some rude AV-scanners on Windows may cause the unlink to
-            # fail. Not aborting here just leaks the temp file, whereas
-            # aborting at this point may leave serious inconsistencies.
-            # Ideally, we would notify the user here.
-            pass
-        os.rename(src, dst)
 
 def unlink(f):
     """unlink and remove the directory if it is empty"""
@@ -1259,6 +1221,11 @@ def termwidth():
                 return array.array('h', arri)[1]
             except ValueError:
                 pass
+            except IOError, e: 
+                if e[0] == errno.EINVAL: 
+                    pass 
+                else: 
+                    raise 
     except ImportError:
         pass
     return 80
