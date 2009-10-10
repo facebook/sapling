@@ -48,8 +48,7 @@ def stream_out(repo, untrusted=False):
         try:
             repo.ui.debug(_('scanning\n'))
             for name, ename, size in repo.store.walk():
-                # for backwards compat, name was partially encoded
-                entries.append((store.encodedir(name), size))
+                entries.append((name, size))
                 total_bytes += size
         finally:
             lock.release()
@@ -62,6 +61,7 @@ def stream_out(repo, untrusted=False):
     yield '%d %d\n' % (len(entries), total_bytes)
     for name, size in entries:
         repo.ui.debug(_('sending %s (%d bytes)\n') % (name, size))
-        yield '%s\0%d\n' % (name, size)
+        # partially encode name over the wire for backwards compat
+        yield '%s\0%d\n' % (store.encodedir(name), size)
         for chunk in util.filechunkiter(repo.sopener(name), limit=size):
             yield chunk

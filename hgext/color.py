@@ -162,9 +162,8 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
     return retval
 
 _patch_effects = { 'applied': ['blue', 'bold', 'underline'],
-                   'missing': ['red', 'bold'],
-                   'unapplied': ['black', 'bold'], }
-
+                    'missing': ['red', 'bold'],
+                    'unapplied': ['black', 'bold'], }
 def colorwrap(orig, s):
     '''wrap ui.write for colored diff output'''
     lines = s.split('\n')
