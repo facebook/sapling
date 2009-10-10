@@ -16,7 +16,9 @@ try:
         # On darwin, getpreferredencoding ignores the locale environment and
         # always returns mac-roman. We override this if the environment is
         # not C (has been customized by the user).
-        locale.setlocale(locale.LC_CTYPE, '')
+        lc = locale.setlocale(locale.LC_CTYPE, '')
+        if lc == 'UTF-8':
+            locale.setlocale(locale.LC_CTYPE, 'en_US.UTF-8')
         encoding = locale.getlocale()[1]
     if not encoding:
         encoding = locale.getpreferredencoding() or 'ascii'
