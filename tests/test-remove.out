@@ -111,3 +111,8 @@ R test/foo
 ./foo
 ./test/foo
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+test remove dropping empty trees (issue1861)
+adding issue1861/b/c/y
+adding issue1861/x
+removing issue1861/b/c/y
+x

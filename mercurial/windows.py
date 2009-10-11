@@ -267,7 +267,7 @@ def _removedirs(name):
         head, tail = os.path.split(head)
     while head and tail:
         try:
-            if osutil.listdir(name):
+            if osutil.listdir(head):
                 return
             os.rmdir(head)
         except:
