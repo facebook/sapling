@@ -381,9 +381,9 @@ def buildstate(repo, dest, src, base, collapse):
     if src:
         commonbase = repo[src].ancestor(repo[dest])
         if commonbase == repo[src]:
-            raise util.Abort(_('cannot rebase an ancestor'))
+            raise util.Abort(_('source is ancestor of destination'))
         if commonbase == repo[dest]:
-            raise util.Abort(_('cannot rebase a descendant'))
+            raise util.Abort(_('source is descendant of destination'))
         source = repo[src].rev()
     else:
         if base:
@@ -392,15 +392,19 @@ def buildstate(repo, dest, src, base, collapse):
             cwd = repo['.'].rev()
 
         if cwd == dest:
-            repo.ui.debug('already working on current\n')
+            repo.ui.debug('source and destination are the same\n')
             return None
 
         targetancestors = set(repo.changelog.ancestors(dest))
         if cwd in targetancestors:
-            repo.ui.debug('already working on the current branch\n')
+            repo.ui.debug('source is ancestor of destination\n')
             return None
 
         cwdancestors = set(repo.changelog.ancestors(cwd))
+        if dest in cwdancestors:
+            repo.ui.debug('source is descendant of destination\n')
+            return None
+
         cwdancestors.add(cwd)
         rebasingbranch = cwdancestors - targetancestors
         source = min(rebasingbranch)

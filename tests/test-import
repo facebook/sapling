@@ -345,7 +345,6 @@ hg init oddcreate
 cd oddcreate
 hg import --no-commit ../create.patch
 cat foo
-cd ..
 
 echo % 'first line mistaken for email headers (issue 1859)'
 hg init emailconfusion
