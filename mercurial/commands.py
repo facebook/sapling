@@ -340,14 +340,11 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     state = hbisect.load_state(repo)
 
     if command:
-        commandpath = util.find_exe(command)
-        if commandpath is None:
-            raise util.Abort(_("cannot find executable: %s") % command)
         changesets = 1
         try:
             while changesets:
                 # update state
-                status = subprocess.call([commandpath])
+                status = util.system(command)
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
@@ -370,7 +367,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 hg.clean(repo, nodes[0], show_stats=False)
         finally:
             hbisect.save_state(repo, state)
-        return print_result(nodes, not status)
+        return print_result(nodes, good)
 
     # update state
     node = repo.lookup(rev or '.')
