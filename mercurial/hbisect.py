@@ -31,8 +31,16 @@ def bisect(changelog, state):
         # only the earliest bad revision matters
         badrev = min([changelog.rev(n) for n in bad])
         goodrevs = [changelog.rev(n) for n in good]
-        # build ancestors array
-        ancestors = [[]] * (len(changelog) + 1) # an extra for [-1]
+        goodrev = min(goodrevs)
+        # build visit array
+        ancestors = [None] * (len(changelog) + 1) # an extra for [-1]
+
+        # set nodes descended from goodrev
+        ancestors[goodrev] = []
+        for rev in xrange(goodrev + 1, len(changelog)):
+            for prev in clparents(rev):
+                if ancestors[prev] == []:
+                    ancestors[rev] = []
 
         # clear good revs from array
         for node in goodrevs:
