@@ -90,6 +90,8 @@ def parseargs():
     parser.add_option("-j", "--jobs", type="int",
         help="number of jobs to run in parallel"
              " (default: $%s or %d)" % defaults['jobs'])
+    parser.add_option("-k", "--keywords",
+        help="run tests matching keywords")
     parser.add_option("--keep-tmpdir", action="store_true",
         help="keep temporary directory after running tests"
              " (best used with --tmpdir)")
@@ -688,10 +690,21 @@ def runtests(options, tests):
 
         skips = []
         fails = []
+
         for test in tests:
             if options.retest and not os.path.exists(test + ".err"):
                 skipped += 1
                 continue
+
+            if options.keywords:
+                t = open(test).read().lower() + test.lower()
+                for k in options.keywords.lower().split():
+                    if k in t:
+                        break
+                else:
+                    skipped +=1
+                    continue
+
             ret = runone(options, test, skips, fails)
             if ret is None:
                 skipped += 1
