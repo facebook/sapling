@@ -460,9 +460,9 @@ cmdtable = {
         ('s', 'source', '', _('rebase from a given revision')),
         ('b', 'base', '', _('rebase from the base of a given revision')),
         ('d', 'dest', '', _('rebase onto a given revision')),
-        ('', 'collapse', False, _('collapse the rebased revisions')),
-        ('', 'keep', False, _('keep original revisions')),
-        ('', 'keepbranches', False, _('keep original branches')),
+        ('', 'collapse', False, _('collapse the rebased changesets')),
+        ('', 'keep', False, _('keep original changesets')),
+        ('', 'keepbranches', False, _('keep original branch names')),
         ('c', 'continue', False, _('continue an interrupted rebase')),
         ('a', 'abort', False, _('abort an interrupted rebase')),] +
          templateopts,
