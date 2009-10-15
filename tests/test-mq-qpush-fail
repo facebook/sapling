@@ -53,4 +53,10 @@ rm .hg/patches/patch2
 echo '% now we expect the push to fail, but it should NOT complain about patch1'
 hg qpush
 
+echo '% preparing qpush of missing patch with no patch applied'
+hg qpop -a
+rm .hg/patches/patch1
+echo '% qpush should fail the same way as below'
+hg qpush
+
 true # happy ending

@@ -977,6 +977,8 @@ class queue(object):
                 self.ui.warn(_('done\n'))
                 raise
 
+            if not self.applied:
+                return ret[0]
             top = self.applied[-1].name
             if ret[0] and ret[0] > 1:
                 msg = _("errors during apply, please fix and refresh %s\n")
