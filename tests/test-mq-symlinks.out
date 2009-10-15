@@ -1,9 +1,11 @@
 a -> a not a symlink
+% test replacing a file with a symlink
 a -> b
 now at: base.patch
 applying symlink.patch
 now at: symlink.patch
 a -> b
+% test symlink removal
 now at: symlink.patch
 applying removesl.patch
 now at: removesl.patch
