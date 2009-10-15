@@ -33,19 +33,16 @@ class GitHandler(object):
 
         self.paths = ui.configitems('paths')
 
-        self.init_if_missing()
-        self.load_git()
         self.load_map()
         self.load_tags()
 
     # make the git data directory
     def init_if_missing(self):
-        if not os.path.exists(self.gitdir):
+        if os.path.exists(self.gitdir):
+            self.git = Repo(self.gitdir)
+        else:
             os.mkdir(self.gitdir)
-            Repo.init_bare(self.gitdir)
-
-    def load_git(self):
-        self.git = Repo(self.gitdir)
+            self.git = Repo.init_bare(self.gitdir)
 
     ## FILE LOAD AND SAVE METHODS
 
@@ -176,6 +173,8 @@ class GitHandler(object):
 
     def export_git_objects(self):
         self.ui.status(_("importing Hg objects into Git\n"))
+        self.init_if_missing()
+
         nodes = [self.repo.lookup(n) for n in self.repo]
         export = [node for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
@@ -352,6 +351,8 @@ class GitHandler(object):
 
     def import_git_objects(self, remote_name=None, refs=None):
         self.ui.status(_("importing Git objects into Hg\n"))
+        self.init_if_missing()
+
         # import heads and fetched tags as remote references
         todo = []
         done = set()
