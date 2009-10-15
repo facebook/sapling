@@ -18,9 +18,9 @@ options:
  -s --source        rebase from a given revision
  -b --base          rebase from the base of a given revision
  -d --dest          rebase onto a given revision
-    --collapse      collapse the rebased revisions
-    --keep          keep original revisions
-    --keepbranches  keep original branches
+    --collapse      collapse the rebased changesets
+    --keep          keep original changesets
+    --keepbranches  keep original branch names
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
@@ -46,9 +46,9 @@ options:
  -s --source        rebase from a given revision
  -b --base          rebase from the base of a given revision
  -d --dest          rebase onto a given revision
-    --collapse      collapse the rebased revisions
-    --keep          keep original revisions
-    --keepbranches  keep original branches
+    --collapse      collapse the rebased changesets
+    --keep          keep original changesets
+    --keepbranches  keep original branch names
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
@@ -74,9 +74,9 @@ options:
  -s --source        rebase from a given revision
  -b --base          rebase from the base of a given revision
  -d --dest          rebase onto a given revision
-    --collapse      collapse the rebased revisions
-    --keep          keep original revisions
-    --keepbranches  keep original branches
+    --collapse      collapse the rebased changesets
+    --keep          keep original changesets
+    --keepbranches  keep original branch names
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
@@ -102,9 +102,9 @@ options:
  -s --source        rebase from a given revision
  -b --base          rebase from the base of a given revision
  -d --dest          rebase onto a given revision
-    --collapse      collapse the rebased revisions
-    --keep          keep original revisions
-    --keepbranches  keep original branches
+    --collapse      collapse the rebased changesets
+    --keep          keep original changesets
+    --keepbranches  keep original branch names
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
