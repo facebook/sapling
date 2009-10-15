@@ -301,7 +301,14 @@ class patchfile(object):
             fp.close()
 
     def writelines(self, fname, lines):        
-        fp = self.opener(fname, 'w')
+        # Ensure supplied data ends in fname, being a regular file or
+        # a symlink. updatedir() will -too magically- take care of
+        # setting it to the proper type afterwards.
+        islink = os.path.islink(fname)
+        if islink:
+            fp = cStringIO.StringIO()
+        else:
+            fp = self.opener(fname, 'w')
         try:
             if self.eol and self.eol != '\n':
                 for l in lines:
@@ -310,6 +317,8 @@ class patchfile(object):
                     fp.write(l)
             else:
                 fp.writelines(lines)
+            if islink:
+                self.opener.symlink(fp.getvalue(), fname)
         finally:
             fp.close()
 
