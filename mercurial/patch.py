@@ -292,14 +292,23 @@ class patchfile(object):
         self.hunks = 0
 
     def readlines(self, fname):
+        if os.path.islink(fname):
+            return [os.readlink(fname)]
         fp = self.opener(fname, 'r')
         try:
             return list(linereader(fp, self.eol is not None))
         finally:
             fp.close()
 
-    def writelines(self, fname, lines):
-        fp = self.opener(fname, 'w')
+    def writelines(self, fname, lines):        
+        # Ensure supplied data ends in fname, being a regular file or
+        # a symlink. updatedir() will -too magically- take care of
+        # setting it to the proper type afterwards.
+        islink = os.path.islink(fname)
+        if islink:
+            fp = cStringIO.StringIO()
+        else:
+            fp = self.opener(fname, 'w')
         try:
             if self.eol and self.eol != '\n':
                 for l in lines:
@@ -308,6 +317,8 @@ class patchfile(object):
                     fp.write(l)
             else:
                 fp.writelines(lines)
+            if islink:
+                self.opener.symlink(fp.getvalue(), fname)
         finally:
             fp.close()
 
@@ -399,7 +410,7 @@ class patchfile(object):
             self.rej.append(h)
             return -1
 
-        if isinstance(h, githunk):
+        if isinstance(h, binhunk):
             if h.rmfile():
                 self.unlink(self.fname)
             else:
@@ -665,12 +676,12 @@ class hunk(object):
     def new(self, fuzz=0, toponly=False):
         return self.fuzzit(self.b, fuzz, toponly)
 
-class githunk(object):
-    """A git hunk"""
+class binhunk:
+    'A binary patch file. Only understands literals so far.'
     def __init__(self, gitpatch):
         self.gitpatch = gitpatch
         self.text = None
-        self.hunk = []
+        self.hunk = ['GIT binary patch\n']
 
     def createfile(self):
         return self.gitpatch.op in ('ADD', 'RENAME', 'COPY')
@@ -683,12 +694,6 @@ class githunk(object):
 
     def new(self):
         return [self.text]
-
-class binhunk(githunk):
-    'A binary patch file. Only understands literals so far.'
-    def __init__(self, gitpatch):
-        super(binhunk, self).__init__(gitpatch)
-        self.hunk = ['GIT binary patch\n']
 
     def extract(self, lr):
         line = lr.readline()
@@ -716,18 +721,6 @@ class binhunk(githunk):
             raise PatchError(_('binary patch is %d bytes, not %d') %
                              len(text), size)
         self.text = text
-
-class symlinkhunk(githunk):
-    """A git symlink hunk"""
-    def __init__(self, gitpatch, hunk):
-        super(symlinkhunk, self).__init__(gitpatch)
-        self.hunk = hunk
-
-    def complete(self):
-        return True
-
-    def fix_newline(self):
-        return
 
 def parsefilename(str):
     # --- filename \t|space stuff
@@ -875,10 +868,6 @@ def iterhunks(ui, fp, sourcefile=None, textmode=False):
                 create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
                 remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
                 current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
-                if remove:
-                    gpatch = changed.get(afile[2:])
-                    if gpatch and gpatch.mode[0]:
-                        current_hunk = symlinkhunk(gpatch, current_hunk)
             except PatchError, err:
                 ui.debug(err)
                 current_hunk = None

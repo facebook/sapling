@@ -8,12 +8,14 @@ echo "mq=" >> $HGRCPATH
 hg init
 hg qinit
 hg qnew base.patch
-echo a > a
-echo b > b
-hg add a b
+echo aaa > a
+echo bbb > b
+echo ccc > c
+hg add a b c
 hg qrefresh
 $TESTDIR/readlink.py a
 
+echo '% test replacing a file with a symlink'
 hg qnew symlink.patch
 rm a
 ln -s b a
@@ -24,6 +26,29 @@ hg qpop
 hg qpush
 $TESTDIR/readlink.py a
 
+echo '% test updating a symlink'
+rm a
+ln -s c a
+hg qnew --git -f updatelink
+$TESTDIR/readlink.py a
+hg qpop
+hg qpush --debug
+$TESTDIR/readlink.py a
+hg st
+
+echo '% test replacing a symlink with a file'
+ln -s c s
+hg add s
+hg qnew --git -f addlink
+rm s
+echo sss > s
+hg qnew --git -f replacelinkwithfile
+hg qpop
+hg qpush
+cat s
+hg st
+
+echo '% test symlink removal' 
 hg qnew removesl.patch
 hg rm a
 hg qrefresh --git

@@ -115,7 +115,11 @@ class logstream(object):
 
     def __iter__(self):
         while True:
-            entry = pickle.load(self._stdout)
+            try:
+                entry = pickle.load(self._stdout)
+            except EOFError:
+                raise util.Abort(_('Mercurial failed to run itself, check'
+                                   ' hg executable is in PATH'))
             try:
                 orig_paths, revnum, author, date, message = entry
             except:
