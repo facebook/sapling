@@ -2,8 +2,6 @@
 [extensions]
 hgext.keyword = 
 [keyword]
-* = 
-b = ignore
 demo.txt = 
 [keywordmaps]
 RCSFile = {file|basename},v
@@ -23,8 +21,6 @@ $Revision: xxxxxxxxxxxx $
 [extensions]
 hgext.keyword = 
 [keyword]
-* = 
-b = ignore
 demo.txt = 
 [keywordmaps]
 Branch = {branches}

@@ -5,6 +5,20 @@ cat <<EOF >> $HGRCPATH
 hgext.keyword =
 hgext.mq =
 hgext.notify =
+EOF
+
+# demo before [keyword] files are set up
+# would succeed without uisetup otherwise
+echo % hg kwdemo
+hg --quiet kwdemo \
+| sed -e 's![^ ][^ ]*demo.txt,v!/TMP/demo.txt,v!' \
+ -e 's/,v [a-z0-9][a-z0-9]* /,v xxxxxxxxxxxx /' \
+ -e '/[$]Revision/ s/: [a-z0-9][a-z0-9]* /: xxxxxxxxxxxx /' \
+ -e 's! 20[0-9][0-9]/[01][0-9]/[0-3][0-9] [0-2][0-9]:[0-6][0-9]:[0-6][0-9]! 2000/00/00 00:00:00!'
+
+hg --quiet kwdemo "Branch = {branches}"
+
+cat <<EOF >> $HGRCPATH
 [keyword]
 * =
 b = ignore
@@ -12,15 +26,6 @@ b = ignore
 commit=
 commit.test=cp a hooktest
 EOF
-
-echo % hg kwdemo
-hg --quiet kwdemo --default \
-| sed -e 's![^ ][^ ]*demo.txt,v!/TMP/demo.txt,v!' \
- -e 's/,v [a-z0-9][a-z0-9]* /,v xxxxxxxxxxxx /' \
- -e '/[$]Revision/ s/: [a-z0-9][a-z0-9]* /: xxxxxxxxxxxx /' \
- -e 's! 20[0-9][0-9]/[01][0-9]/[0-3][0-9] [0-2][0-9]:[0-6][0-9]:[0-6][0-9]! 2000/00/00 00:00:00!'
-
-hg --quiet kwdemo "Branch = {branches}"
 
 hg init Test-bndl
 cd Test-bndl
