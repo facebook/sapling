@@ -35,7 +35,7 @@ class RevisionData(object):
     __slots__ = [
         'file', 'files', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
         'copies', 'missing', 'emptybranches', 'base', 'externals', 'ui',
-        'exception',
+        'exception', 'maybeedits',
     ]
 
     def __init__(self, ui):
@@ -57,6 +57,7 @@ class RevisionData(object):
         self.base = None
         self.externals = {}
         self.exception = None
+        self.maybeedits = set()
 
     def set(self, path, data, isexec=False, islink=False):
         if islink:
@@ -280,6 +281,7 @@ class HgEditor(delta.Editor):
                 parentctx = self.repo.changectx(parentid)
                 for k, v in copies.iteritems():
                     if util.issamefile(parentctx, cp_f_ctx, v):
+                        self.current.maybeedits.add(k)
                         self.current.copies.update({k: v})
         return path
 
@@ -326,6 +328,11 @@ class HgEditor(delta.Editor):
                 or self.current.file in self.current.missing), '%s not found' % self.current.file
         if self.current.file in self.current.missing:
             return lambda x: None
+        # If we apply a textdelta, the body of the file is going to change.
+        # There's little reason to check and see if it matches the parent, because
+        # that's extremely unlikely. If we see cases where that happens,
+        # maybe this line can go, but until then, it stays.
+        self.current.maybeedits.discard(self.current.file)
         base = self.current.files[self.current.file]
         source = cStringIO.StringIO(base)
         target = cStringIO.StringIO()
