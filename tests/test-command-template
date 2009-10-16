@@ -127,4 +127,49 @@ echo '# error on syntax'
 echo 'x = "f' >> t
 hg log
 
+cd ..
+
+echo '# latesttag'
+hg init latesttag
+cd latesttag
+
+echo a > file
+hg ci -Am a -d '0 0'
+
+echo b >> file
+hg ci -m b -d '1 0'
+
+echo c >> head1
+hg ci -Am h1c -d '2 0'
+
+hg update -q 1
+echo d >> head2
+hg ci -Am h2d -d '3 0'
+
+echo e >> head2
+hg ci -m h2e -d '4 0'
+
+hg merge -q
+hg ci -m merge -d '5 0'
+
+echo '# No tag set'
+hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
+
+echo '# one common tag: longuest path wins'
+hg tag -r 1 -m t1 -d '6 0' t1
+hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
+
+echo '# one ancestor tag: more recent wins'
+hg tag -r 2 -m t2 -d '7 0' t2
+hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
+
+echo '# two branch tags: more recent wins'
+hg tag -r 3 -m t3 -d '8 0' t3
+hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
+
+echo '# merged tag overrides'
+hg tag -r 5 -m t5 -d '9 0' t5
+hg tag -r 3 -m at3 -d '10 0' at3
+hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
+
 echo '# done'

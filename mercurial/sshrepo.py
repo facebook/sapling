@@ -75,7 +75,7 @@ class sshrepository(repo.repository):
             if lines[-1] == "1\n" and l == "\n":
                 break
             if l:
-                ui.debug(_("remote: "), l)
+                ui.debug("remote: ", l)
             lines.append(l)
             max_noise -= 1
         else:
@@ -113,7 +113,7 @@ class sshrepository(repo.repository):
     __del__ = cleanup
 
     def do_cmd(self, cmd, **args):
-        self.ui.debug(_("sending %s command\n") % cmd)
+        self.ui.debug("sending %s command\n" % cmd)
         self.pipeo.write("%s\n" % cmd)
         for k, v in args.iteritems():
             self.pipeo.write("%s %d\n" % (k, len(v)))

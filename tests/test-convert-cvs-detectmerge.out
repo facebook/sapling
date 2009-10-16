@@ -77,7 +77,6 @@ fix file1 [MERGE from v1-1]
 initializing destination proj.hg repository
 connecting to *REPO*
 scanning source...
-using builtin cvsps
 collecting CVS rlog
 12 log entries
 creating changesets

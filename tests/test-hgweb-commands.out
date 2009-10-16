@@ -17,7 +17,7 @@ marked working directory as branch stable
  <entry>
   <title>branch</title>
   <id>http://127.0.0.1/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id>
-  <link href="http://127.0.0.1/rev/1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe"/>
+  <link href="http://127.0.0.1/rev/1d22e65f027e"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -33,7 +33,7 @@ marked working directory as branch stable
  <entry>
   <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
   <id>http://127.0.0.1/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
-  <link href="http://127.0.0.1/rev/a4f92ed23982be056b9852de5dfe873eaac7f0de"/>
+  <link href="http://127.0.0.1/rev/a4f92ed23982"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -49,7 +49,7 @@ marked working directory as branch stable
  <entry>
   <title>base</title>
   <id>http://127.0.0.1/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
-  <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <link href="http://127.0.0.1/rev/2ef0ac749a14"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -78,7 +78,7 @@ marked working directory as branch stable
  <entry>
   <title>branch</title>
   <id>http://127.0.0.1/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id>
-  <link href="http://127.0.0.1/rev/1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe"/>
+  <link href="http://127.0.0.1/rev/1d22e65f027e"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -94,7 +94,7 @@ marked working directory as branch stable
  <entry>
   <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
   <id>http://127.0.0.1/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id>
-  <link href="http://127.0.0.1/rev/a4f92ed23982be056b9852de5dfe873eaac7f0de"/>
+  <link href="http://127.0.0.1/rev/a4f92ed23982"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -110,7 +110,7 @@ marked working directory as branch stable
  <entry>
   <title>base</title>
   <id>http://127.0.0.1/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
-  <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <link href="http://127.0.0.1/rev/2ef0ac749a14"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -137,7 +137,7 @@ marked working directory as branch stable
  <entry>
   <title>base</title>
   <id>http://127.0.0.1/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
-  <link href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <link href="http://127.0.0.1/rev/2ef0ac749a14"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -476,7 +476,7 @@ diff -r 000000000000 -r a4f92ed23982 foo
 
  <entry>
   <title>1.0</title>
-  <link rel="alternate" href="http://127.0.0.1/rev/2ef0ac749a14e4f57a5a822464a0902c6f7f448f"/>
+  <link rel="alternate" href="http://127.0.0.1/rev/2ef0ac749a14"/>
   <id>http://127.0.0.1/#tag-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
   <updated>1970-01-01T00:00:00+00:00</updated>
   <published>1970-01-01T00:00:00+00:00</published>

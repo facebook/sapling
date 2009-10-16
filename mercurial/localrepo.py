@@ -527,7 +527,7 @@ class localrepository(repo.repository):
 
         for mf, fn, cmd in self.filterpats[filter]:
             if mf(filename):
-                self.ui.debug(_("filtering %s through %s\n") % (filename, cmd))
+                self.ui.debug("filtering %s through %s\n" % (filename, cmd))
                 data = fn(data, cmd, ui=self.ui, repo=self, filename=filename)
                 break
 
@@ -724,14 +724,14 @@ class localrepository(repo.repository):
 
             # find source in nearest ancestor if we've lost track
             if not crev:
-                self.ui.debug(_(" %s: searching for copy revision for %s\n") %
+                self.ui.debug(" %s: searching for copy revision for %s\n" %
                               (fname, cfname))
                 for ancestor in self['.'].ancestors():
                     if cfname in ancestor:
                         crev = ancestor[cfname].filenode()
                         break
 
-            self.ui.debug(_(" %s: copy %s:%s\n") % (fname, cfname, hex(crev)))
+            self.ui.debug(" %s: copy %s:%s\n" % (fname, cfname, hex(crev)))
             meta["copy"] = cfname
             meta["copyrev"] = hex(crev)
             fparent1, fparent2 = nullid, newfparent
@@ -1159,17 +1159,24 @@ class localrepository(repo.repository):
         return [n for (r, n) in sorted(heads)]
 
     def branchheads(self, branch=None, start=None, closed=False):
+        '''return a (possibly filtered) list of heads for the given branch
+
+        Heads are returned in topological order, from newest to oldest.
+        If branch is None, use the dirstate branch.
+        If start is not None, return only heads reachable from start.
+        If closed is True, return heads that are marked as closed as well.
+        '''
         if branch is None:
             branch = self[None].branch()
         branches = self.branchmap()
         if branch not in branches:
             return []
-        bheads = branches[branch]
         # the cache returns heads ordered lowest to highest
-        bheads.reverse()
+        bheads = list(reversed(branches[branch]))
         if start is not None:
             # filter out the heads that cannot be reached from startrev
-            bheads = self.changelog.nodesbetween([start], bheads)[2]
+            fbheads = set(self.changelog.nodesbetween([start], bheads)[2])
+            bheads = [h for h in bheads if h in fbheads]
         if not closed:
             bheads = [h for h in bheads if
                       ('close' not in self.changelog.read(h)[5])]
@@ -1287,22 +1294,22 @@ class localrepository(repo.repository):
                 if n[0] in seen:
                     continue
 
-                self.ui.debug(_("examining %s:%s\n")
+                self.ui.debug("examining %s:%s\n"
                               % (short(n[0]), short(n[1])))
                 if n[0] == nullid: # found the end of the branch
                     pass
                 elif n in seenbranch:
-                    self.ui.debug(_("branch already found\n"))
+                    self.ui.debug("branch already found\n")
                     continue
                 elif n[1] and n[1] in m: # do we know the base?
-                    self.ui.debug(_("found incomplete branch %s:%s\n")
+                    self.ui.debug("found incomplete branch %s:%s\n"
                                   % (short(n[0]), short(n[1])))
                     search.append(n[0:2]) # schedule branch range for scanning
                     seenbranch.add(n)
                 else:
                     if n[1] not in seen and n[1] not in fetch:
                         if n[2] in m and n[3] in m:
-                            self.ui.debug(_("found new changeset %s\n") %
+                            self.ui.debug("found new changeset %s\n" %
                                           short(n[1]))
                             fetch.add(n[1]) # earliest unknown
                         for p in n[2:4]:
@@ -1317,11 +1324,11 @@ class localrepository(repo.repository):
 
             if r:
                 reqcnt += 1
-                self.ui.debug(_("request %d: %s\n") %
+                self.ui.debug("request %d: %s\n" %
                             (reqcnt, " ".join(map(short, r))))
                 for p in xrange(0, len(r), 10):
                     for b in remote.branches(r[p:p+10]):
-                        self.ui.debug(_("received %s:%s\n") %
+                        self.ui.debug("received %s:%s\n" %
                                       (short(b[0]), short(b[1])))
                         unknown.append(b)
 
@@ -1334,15 +1341,15 @@ class localrepository(repo.repository):
                 p = n[0]
                 f = 1
                 for i in l:
-                    self.ui.debug(_("narrowing %d:%d %s\n") % (f, len(l), short(i)))
+                    self.ui.debug("narrowing %d:%d %s\n" % (f, len(l), short(i)))
                     if i in m:
                         if f <= 2:
-                            self.ui.debug(_("found new branch changeset %s\n") %
+                            self.ui.debug("found new branch changeset %s\n" %
                                               short(p))
                             fetch.add(p)
                             base[i] = 1
                         else:
-                            self.ui.debug(_("narrowed branch search to %s:%s\n")
+                            self.ui.debug("narrowed branch search to %s:%s\n"
                                           % (short(p), short(i)))
                             newsearch.append((p, i))
                         break
@@ -1361,10 +1368,10 @@ class localrepository(repo.repository):
             else:
                 raise util.Abort(_("repository is unrelated"))
 
-        self.ui.debug(_("found new changesets starting at ") +
+        self.ui.debug("found new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
 
-        self.ui.debug(_("%d total queries\n") % reqcnt)
+        self.ui.debug("%d total queries\n" % reqcnt)
 
         return base.keys(), list(fetch), heads
 
@@ -1381,7 +1388,7 @@ class localrepository(repo.repository):
             base = {}
             self.findincoming(remote, base, heads, force=force)
 
-        self.ui.debug(_("common changesets up to ")
+        self.ui.debug("common changesets up to "
                       + " ".join(map(short, base.keys())) + "\n")
 
         remain = set(self.changelog.nodemap)
@@ -1468,19 +1475,16 @@ class localrepository(repo.repository):
         inc = self.findincoming(remote, common, remote_heads, force=force)
 
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
-        if revs is not None:
-            msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
-        else:
-            bases, heads = update, self.changelog.heads()
+        msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
 
-        def checkbranch(lheads, rheads, updatelh):
+        def checkbranch(lheads, rheads, updatelb):
             '''
             check whether there are more local heads than remote heads on
             a specific branch.
 
             lheads: local branch heads
             rheads: remote branch heads
-            updatelh: outgoing local branch heads
+            updatelb: outgoing local branch bases
             '''
 
             warn = 0
@@ -1488,13 +1492,15 @@ class localrepository(repo.repository):
             if not revs and len(lheads) > len(rheads):
                 warn = 1
             else:
+                # add local heads involved in the push
                 updatelheads = [self.changelog.heads(x, lheads)
-                                for x in updatelh]
+                                for x in updatelb]
                 newheads = set(sum(updatelheads, [])) & set(lheads)
 
                 if not newheads:
                     return True
 
+                # add heads we don't have or that are not involved in the push
                 for r in rheads:
                     if r in self.changelog.nodemap:
                         desc = self.changelog.heads(r, heads)
@@ -1510,7 +1516,7 @@ class localrepository(repo.repository):
                 if not rheads: # new branch requires --force
                     self.ui.warn(_("abort: push creates new"
                                    " remote branch '%s'!\n") %
-                                   self[updatelh[0]].branch())
+                                   self[updatelb[0]].branch())
                 else:
                     self.ui.warn(_("abort: push creates new remote heads!\n"))
 
@@ -1553,11 +1559,11 @@ class localrepository(repo.repository):
                         else:
                             rheads = []
                         lheads = localhds[lh]
-                        updatelh = [upd for upd in update
+                        updatelb = [upd for upd in update
                                     if self[upd].branch() == lh]
-                        if not updatelh:
+                        if not updatelb:
                             continue
-                        if not checkbranch(lheads, rheads, updatelh):
+                        if not checkbranch(lheads, rheads, updatelb):
                             return None, 0
                 else:
                     if not checkbranch(heads, remote_heads, update):
@@ -1602,7 +1608,7 @@ class localrepository(repo.repository):
         if self.ui.verbose or source == 'bundle':
             self.ui.status(_("%d changesets found\n") % len(nodes))
         if self.ui.debugflag:
-            self.ui.debug(_("list of changesets:\n"))
+            self.ui.debug("list of changesets:\n")
             for node in nodes:
                 self.ui.debug("%s\n" % hex(node))
 
@@ -1988,7 +1994,7 @@ class localrepository(repo.repository):
         - number of heads stays the same: 1
         """
         def csmap(x):
-            self.ui.debug(_("add changeset %s\n") % short(x))
+            self.ui.debug("add changeset %s\n" % short(x))
             return len(cl)
 
         def revmap(x):
@@ -2034,7 +2040,7 @@ class localrepository(repo.repository):
                 f = changegroup.getchunk(source)
                 if not f:
                     break
-                self.ui.debug(_("adding %s revisions\n") % f)
+                self.ui.debug("adding %s revisions\n" % f)
                 fl = self.file(f)
                 o = len(fl)
                 chunkiter = changegroup.chunkiter(source)
@@ -2067,7 +2073,7 @@ class localrepository(repo.repository):
 
         if changesets > 0:
             # forcefully update the on-disk branch cache
-            self.ui.debug(_("updating the branch cache\n"))
+            self.ui.debug("updating the branch cache\n")
             self.branchtags()
             self.hook("changegroup", node=hex(cl.node(clstart)),
                       source=srctype, url=url)
@@ -2116,7 +2122,7 @@ class localrepository(repo.repository):
             except (ValueError, TypeError):
                 raise error.ResponseError(
                     _('Unexpected response from remote server:'), l)
-            self.ui.debug(_('adding %s (%s)\n') % (name, util.bytecount(size)))
+            self.ui.debug('adding %s (%s)\n' % (name, util.bytecount(size)))
             # for backwards compat, name was partially encoded
             ofp = self.sopener(store.decodedir(name), 'w')
             for chunk in util.filechunkiter(fp, limit=size):

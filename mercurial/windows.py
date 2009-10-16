@@ -7,7 +7,7 @@
 
 from i18n import _
 import osutil, error
-import errno, msvcrt, os, re, sys
+import errno, msvcrt, os, re, sys, random
 
 nulldev = 'NUL:'
 umask = 002
@@ -267,7 +267,7 @@ def _removedirs(name):
         head, tail = os.path.split(head)
     while head and tail:
         try:
-            if osutil.listdir(name):
+            if osutil.listdir(head):
                 return
             os.rmdir(head)
         except:
@@ -282,6 +282,44 @@ def unlink(f):
         _removedirs(os.path.dirname(f))
     except OSError:
         pass
+
+def rename(src, dst):
+    '''atomically rename file src to dst, replacing dst if it exists'''
+    try:
+        os.rename(src, dst)
+    except OSError, err: # FIXME: check err (EEXIST ?)
+
+        # On windows, rename to existing file is not allowed, so we
+        # must delete destination first. But if a file is open, unlink
+        # schedules it for delete but does not delete it. Rename
+        # happens immediately even for open files, so we rename
+        # destination to a temporary name, then delete that. Then
+        # rename is safe to do.
+        # The temporary name is chosen at random to avoid the situation
+        # where a file is left lying around from a previous aborted run.
+        # The usual race condition this introduces can't be avoided as
+        # we need the name to rename into, and not the file itself. Due
+        # to the nature of the operation however, any races will at worst
+        # lead to the rename failing and the current operation aborting.
+
+        def tempname(prefix):
+            for tries in xrange(10):
+                temp = '%s-%08x' % (prefix, random.randint(0, 0xffffffff))
+                if not os.path.exists(temp):
+                    return temp
+            raise IOError, (errno.EEXIST, "No usable temporary filename found")
+
+        temp = tempname(dst)
+        os.rename(dst, temp)
+        try:
+            os.unlink(temp)
+        except:
+            # Some rude AV-scanners on Windows may cause the unlink to
+            # fail. Not aborting here just leaks the temp file, whereas
+            # aborting at this point may leave serious inconsistencies.
+            # Ideally, we would notify the user here.
+            pass
+        os.rename(src, dst)
 
 try:
     # override functions with win32 versions if possible

@@ -24,6 +24,9 @@ def dispatch(args):
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
+    except error.ConfigError, inst:
+        sys.stderr.write(_("hg: %s\n") % inst)
+        return -1
     return _runcatch(u, args)
 
 def _runcatch(ui, args):
@@ -214,7 +217,7 @@ class cmdalias(object):
 
     def __call__(self, ui, *args, **opts):
         if self.shadows:
-            ui.debug(_("alias '%s' shadows command\n") % self.name)
+            ui.debug("alias '%s' shadows command\n" % self.name)
 
         return self.fn(ui, *args, **opts)
 

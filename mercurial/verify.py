@@ -173,6 +173,7 @@ def _verify(repo):
         elif size > 0:
             storefiles.add(f)
 
+    lrugetctx = util.lrucachefunc(repo.changectx)
     files = sorted(set(filenodes) | set(filelinkrevs))
     for f in files:
         try:
@@ -224,6 +225,16 @@ def _verify(repo):
             # check renames
             try:
                 if rp:
+                    if lr is not None and ui.verbose:
+                        ctx = lrugetctx(lr)
+                        found = False
+                        for pctx in ctx.parents():
+                            if rp[0] in pctx:
+                                found = True
+                                break
+                        if not found:
+                            warn(_("warning: copy source of '%s' not"
+                                   " in parents of %s") % (f, ctx))
                     fl2 = repo.file(rp[0])
                     if not len(fl2):
                         err(lr, _("empty or missing copy source revlog %s:%s")

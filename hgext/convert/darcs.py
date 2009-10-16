@@ -75,7 +75,7 @@ class darcs_source(converter_source, commandline):
         self.parents[child] = []
 
     def after(self):
-        self.ui.debug(_('cleaning up %s\n') % self.tmppath)
+        self.ui.debug('cleaning up %s\n' % self.tmppath)
         shutil.rmtree(self.tmppath, ignore_errors=True)
 
     def xml(self, cmd, **kwargs):
@@ -84,6 +84,17 @@ class darcs_source(converter_source, commandline):
         etree.parse(fp)
         self.checkexit(fp.close())
         return etree.getroot()
+
+    def manifest(self):
+        man = []
+        output, status = self.run('show', 'files', no_directories=True,
+                                  repodir=self.tmppath)
+        self.checkexit(status)
+        for line in output.split('\n'):
+            path = line[2:]
+            if path:
+                man.append(path)
+        return man
 
     def getheads(self):
         return self.parents[None]
@@ -107,18 +118,35 @@ class darcs_source(converter_source, commandline):
             output, status = self.run('revert', all=True, repodir=self.tmppath)
             self.checkexit(status, output)
 
-    def getchanges(self, rev):
-        self.pull(rev)
+    def getchanges(self, rev):        
         copies = {}
         changes = []
+        man = None
         for elt in self.changes[rev].find('summary').getchildren():
             if elt.tag in ('add_directory', 'remove_directory'):
                 continue
             if elt.tag == 'move':
-                changes.append((elt.get('from'), rev))
-                copies[elt.get('from')] = elt.get('to')
+                if man is None:
+                    man = self.manifest()
+                source, dest = elt.get('from'), elt.get('to')
+                if source in man:
+                    # File move
+                    changes.append((source, rev))
+                    changes.append((dest, rev))
+                    copies[dest] = source
+                else:
+                    # Directory move, deduce file moves from manifest
+                    source = source + '/'
+                    for f in man:
+                        if not f.startswith(source):
+                            continue
+                        fdest = dest + '/' + f[len(source):]
+                        changes.append((f, rev))
+                        changes.append((fdest, rev))
+                        copies[fdest] = f
             else:
                 changes.append((elt.text.strip(), rev))
+        self.pull(rev)
         self.lastrev = rev
         return sorted(changes), copies
 

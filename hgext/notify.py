@@ -43,6 +43,7 @@ Optional configuration items::
   diffstat = True        # add a diffstat before the diff content
   sources = serve        # notify if source of incoming changes in this list
                          # (serve == ssh or http, push, pull, bundle)
+  merge = False          # send notification for merges (default True)
   [email]
   from = user@host.com   # email address to send as if none given
   [web]
@@ -111,6 +112,7 @@ class notifier(object):
         self.test = self.ui.configbool('notify', 'test', True)
         self.charsets = mail._charsets(self.ui)
         self.subs = self.subscribers()
+        self.merge = self.ui.configbool('notify', 'merge', True)
 
         mapfile = self.ui.config('notify', 'style')
         template = (self.ui.config('notify', hooktype) or
@@ -165,11 +167,14 @@ class notifier(object):
     def url(self, path=None):
         return self.ui.config('web', 'baseurl') + (path or self.root)
 
-    def node(self, ctx):
-        '''format one changeset.'''
+    def node(self, ctx, **props):
+        '''format one changeset, unless it is a suppressed merge.'''
+        if not self.merge and len(ctx.parents()) > 1:
+            return False
         self.t.show(ctx, changes=ctx.changeset(),
                     baseurl=self.ui.config('web', 'baseurl'),
-                    root=self.repo.root, webroot=self.root)
+                    root=self.repo.root, webroot=self.root, **props)
+        return True
 
     def skipsource(self, source):
         '''true if incoming changes from this source should be skipped.'''
@@ -276,23 +281,36 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     ctx = repo[node]
 
     if not n.subs:
-        ui.debug(_('notify: no subscribers to repository %s\n') % n.root)
+        ui.debug('notify: no subscribers to repository %s\n' % n.root)
         return
     if n.skipsource(source):
-        ui.debug(_('notify: changes have source "%s" - skipping\n') % source)
+        ui.debug('notify: changes have source "%s" - skipping\n' % source)
         return
 
     ui.pushbuffer()
+    data = ''
+    count = 0
     if hooktype == 'changegroup':
         start, end = ctx.rev(), len(repo)
-        count = end - start
         for rev in xrange(start, end):
-            n.node(repo[rev])
-        n.diff(ctx, repo['tip'])
+            if n.node(repo[rev]):
+                count += 1
+            else:
+                data += ui.popbuffer()
+                ui.note(_('notify: suppressing notification for merge %d:%s\n') %
+                        (rev, repo[rev].hex()[:12]))
+                ui.pushbuffer()
+        if count:
+            n.diff(ctx, repo['tip'])
     else:
-        count = 1
-        n.node(ctx)
+        if not n.node(ctx):
+            ui.popbuffer()
+            ui.note(_('notify: suppressing notification for merge %d:%s\n') %
+                    (ctx.rev(), ctx.hex()[:12]))
+            return
+        count += 1
         n.diff(ctx)
 
-    data = ui.popbuffer()
-    n.send(ctx, count, data)
+    data += ui.popbuffer()
+    if count:
+        n.send(ctx, count, data)

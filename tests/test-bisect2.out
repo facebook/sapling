@@ -201,12 +201,12 @@ date:        Thu Jan 01 00:00:15 1970 +0000
 summary:     merge 10,13
 
 % complex bisect test 4
-Testing changeset 10:429fcd26f52d (13 changesets remaining, ~3 tests)
-0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-Testing changeset 13:b0a32c86eb31 (6 changesets remaining, ~2 tests)
+Testing changeset 13:b0a32c86eb31 (8 changesets remaining, ~3 tests)
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+Testing changeset 10:429fcd26f52d (5 changesets remaining, ~2 tests)
 3 files updated, 0 files merged, 1 files removed, 0 files unresolved
 Testing changeset 15:857b178a7cf3 (3 changesets remaining, ~1 tests)
-3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Testing changeset 16:609d82a7ebae (3 changesets remaining, ~1 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 Due to skipped revisions, the first good revision could be any of:

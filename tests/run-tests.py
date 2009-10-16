@@ -90,6 +90,8 @@ def parseargs():
     parser.add_option("-j", "--jobs", type="int",
         help="number of jobs to run in parallel"
              " (default: $%s or %d)" % defaults['jobs'])
+    parser.add_option("-k", "--keywords",
+        help="run tests matching keywords")
     parser.add_option("--keep-tmpdir", action="store_true",
         help="keep temporary directory after running tests"
              " (best used with --tmpdir)")
@@ -102,6 +104,8 @@ def parseargs():
         help="retest failed tests")
     parser.add_option("-s", "--cover_stdlib", action="store_true",
         help="print a test coverage report inc. standard libraries")
+    parser.add_option("-S", "--noskips", action="store_true",
+        help="don't report skip tests verbosely")
     parser.add_option("-t", "--timeout", type="int",
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
@@ -640,8 +644,9 @@ def runchildren(options, tests):
         vlog('pid %d exited, status %d' % (pid, status))
         failures |= status
     print
-    for s in skips:
-        print "Skipped %s: %s" % (s[0], s[1])
+    if not options.noskips:
+        for s in skips:
+            print "Skipped %s: %s" % (s[0], s[1])
     for s in fails:
         print "Failed %s: %s" % (s[0], s[1])
 
@@ -685,10 +690,21 @@ def runtests(options, tests):
 
         skips = []
         fails = []
+
         for test in tests:
             if options.retest and not os.path.exists(test + ".err"):
                 skipped += 1
                 continue
+
+            if options.keywords:
+                t = open(test).read().lower() + test.lower()
+                for k in options.keywords.lower().split():
+                    if k in t:
+                        break
+                else:
+                    skipped +=1
+                    continue
+
             ret = runone(options, test, skips, fails)
             if ret is None:
                 skipped += 1

@@ -34,3 +34,17 @@ hg diff --nodates --color=always
 
 echo '% --unified=2'
 hg diff --nodates -U 2  --color=always
+
+echo "record=" >> $HGRCPATH
+echo "[ui]" >> $HGRCPATH
+echo "interactive=true" >> $HGRCPATH
+echo "[diff]" >> $HGRCPATH
+echo "git=True" >> $HGRCPATH
+
+echo % record
+chmod 0755 a
+hg record --color=always -m moda a <<EOF
+y
+y
+EOF
+echo

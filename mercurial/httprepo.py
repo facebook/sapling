@@ -35,7 +35,7 @@ class httprepository(repo.repository):
         self._url, authinfo = url.getauthinfo(path)
 
         self.ui = ui
-        self.ui.debug(_('using %s\n') % self._url)
+        self.ui.debug('using %s\n' % self._url)
 
         self.urlopener = url.opener(ui, authinfo)
 
@@ -56,7 +56,7 @@ class httprepository(repo.repository):
                 self.caps = set(self.do_read('capabilities').split())
             except error.RepoError:
                 self.caps = set()
-            self.ui.debug(_('capabilities: %s\n') %
+            self.ui.debug('capabilities: %s\n' %
                           (' '.join(self.caps or ['none'])))
         return self.caps
 
@@ -68,21 +68,21 @@ class httprepository(repo.repository):
     def do_cmd(self, cmd, **args):
         data = args.pop('data', None)
         headers = args.pop('headers', {})
-        self.ui.debug(_("sending %s command\n") % cmd)
+        self.ui.debug("sending %s command\n" % cmd)
         q = {"cmd": cmd}
         q.update(args)
         qs = '?%s' % urllib.urlencode(q)
         cu = "%s%s" % (self._url, qs)
         try:
             if data:
-                self.ui.debug(_("sending %s bytes\n") % len(data))
+                self.ui.debug("sending %s bytes\n" % len(data))
             resp = self.urlopener.open(urllib2.Request(cu, data, headers))
         except urllib2.HTTPError, inst:
             if inst.code == 401:
                 raise util.Abort(_('authorization failed'))
             raise
         except httplib.HTTPException, inst:
-            self.ui.debug(_('http error while sending %s command\n') % cmd)
+            self.ui.debug('http error while sending %s command\n' % cmd)
             self.ui.traceback()
             raise IOError(None, inst)
         except IndexError:
@@ -105,7 +105,7 @@ class httprepository(repo.repository):
         if not (proto.startswith('application/mercurial-') or
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
-            self.ui.debug(_("requested URL: '%s'\n") % url.hidepassword(cu))
+            self.ui.debug("requested URL: '%s'\n" % url.hidepassword(cu))
             raise error.RepoError(_("'%s' does not appear to be an hg repository")
                                   % safeurl)
 

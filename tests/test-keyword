@@ -53,6 +53,11 @@ echo 'ignore $Id$' > b
 echo % cat
 cat a b
 
+echo % no kwfiles
+hg kwfiles
+echo % untracked candidates
+hg -v kwfiles --unknown
+
 echo % addremove
 hg addremove
 echo % status
@@ -167,6 +172,10 @@ hg status
 
 echo % kwfiles
 hg kwfiles
+echo % ignored files
+hg -v kwfiles --ignore
+echo % all files
+hg kwfiles --all
 
 echo % diff --rev
 hg diff --rev 1 | grep -v 'b/c'

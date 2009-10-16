@@ -13,6 +13,7 @@ posixfile = open
 nulldev = '/dev/null'
 normpath = os.path.normpath
 samestat = os.path.samestat
+rename = os.rename
 expandglobs = False
 
 umask = os.umask(0)
@@ -165,17 +166,11 @@ def testpid(pid):
         return inst.errno != errno.ESRCH
 
 def explain_exit(code):
-    """return a 2-tuple (desc, code) describing a process's status"""
-    if os.WIFEXITED(code):
-        val = os.WEXITSTATUS(code)
-        return _("exited with status %d") % val, val
-    elif os.WIFSIGNALED(code):
-        val = os.WTERMSIG(code)
-        return _("killed by signal %d") % val, val
-    elif os.WIFSTOPPED(code):
-        val = os.WSTOPSIG(code)
-        return _("stopped by signal %d") % val, val
-    raise ValueError(_("invalid exit code"))
+    """return a 2-tuple (desc, code) describing a subprocess status
+    (codes from kill are negative - not os.system/wait encoding)"""
+    if code >= 0:
+        return _("exited with status %d") % code, code
+    return _("killed by signal %d") % -code, -code
 
 def isowner(st):
     """Return True if the stat object st is from the current user."""

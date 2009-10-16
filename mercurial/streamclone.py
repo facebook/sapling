@@ -46,10 +46,9 @@ def stream_out(repo, untrusted=False):
         # get consistent snapshot of repo, lock during scan
         lock = repo.lock()
         try:
-            repo.ui.debug(_('scanning\n'))
+            repo.ui.debug('scanning\n')
             for name, ename, size in repo.store.walk():
-                # for backwards compat, name was partially encoded
-                entries.append((store.encodedir(name), size))
+                entries.append((name, size))
                 total_bytes += size
         finally:
             lock.release()
@@ -57,11 +56,12 @@ def stream_out(repo, untrusted=False):
         raise StreamException(2)
 
     yield '0\n'
-    repo.ui.debug(_('%d files, %d bytes to transfer\n') %
+    repo.ui.debug('%d files, %d bytes to transfer\n' %
                   (len(entries), total_bytes))
     yield '%d %d\n' % (len(entries), total_bytes)
     for name, size in entries:
-        repo.ui.debug(_('sending %s (%d bytes)\n') % (name, size))
-        yield '%s\0%d\n' % (name, size)
+        repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+        # partially encode name over the wire for backwards compat
+        yield '%s\0%d\n' % (store.encodedir(name), size)
         for chunk in util.filechunkiter(repo.sopener(name), limit=size):
             yield chunk

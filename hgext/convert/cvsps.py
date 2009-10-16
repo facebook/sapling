@@ -199,7 +199,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
     cmd = [util.shellquote(arg) for arg in cmd]
     ui.note(_("running %s\n") % (' '.join(cmd)))
-    ui.debug(_("prefix=%r directory=%r root=%r\n") % (prefix, directory, root))
+    ui.debug("prefix=%r directory=%r root=%r\n" % (prefix, directory, root))
 
     pfp = util.popen(' '.join(cmd))
     peek = pfp.readline()
@@ -378,7 +378,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
               e.revision[-1] == 1 and      # 1.1 or 1.1.x.1
               len(e.comment) == 1 and
               file_added_re.match(e.comment[0])):
-            ui.debug(_('found synthetic revision in %s: %r\n')
+            ui.debug('found synthetic revision in %s: %r\n'
                      % (e.rcs, e.comment[0]))
             e.synthetic = True
 

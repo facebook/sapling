@@ -14,9 +14,9 @@ hide platform-specific details from the core.
 """
 
 from i18n import _
-import error, osutil
+import error, osutil, encoding
 import cStringIO, errno, re, shutil, sys, tempfile, traceback
-import os, stat, time, calendar, random, textwrap
+import os, stat, time, calendar, textwrap
 import imp
 
 # Python compatibility
@@ -357,41 +357,26 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
         if val is True:
             return '1'
         return str(val)
-    oldenv = {}
-    for k in environ:
-        oldenv[k] = os.environ.get(k)
-    if cwd is not None:
-        oldcwd = os.getcwd()
     origcmd = cmd
     if os.name == 'nt':
         cmd = '"%s"' % cmd
-    try:
-        for k, v in environ.iteritems():
-            os.environ[k] = py2shell(v)
-        os.environ['HG'] = hgexecutable()
-        if cwd is not None and oldcwd != cwd:
-            os.chdir(cwd)
-        rc = os.system(cmd)
-        if sys.platform == 'OpenVMS' and rc & 1:
-            rc = 0
-        if rc and onerr:
-            errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
-                                explain_exit(rc)[0])
-            if errprefix:
-                errmsg = '%s: %s' % (errprefix, errmsg)
-            try:
-                onerr.warn(errmsg + '\n')
-            except AttributeError:
-                raise onerr(errmsg)
-        return rc
-    finally:
-        for k, v in oldenv.iteritems():
-            if v is None:
-                del os.environ[k]
-            else:
-                os.environ[k] = v
-        if cwd is not None and oldcwd != cwd:
-            os.chdir(oldcwd)
+    env = dict(os.environ)
+    env.update((k, py2shell(v)) for k, v in environ.iteritems())
+    env['HG'] = hgexecutable()
+    rc = subprocess.call(cmd, shell=True, close_fds=closefds,
+                         env=env, cwd=cwd)
+    if sys.platform == 'OpenVMS' and rc & 1:
+        rc = 0
+    if rc and onerr:
+        errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
+                            explain_exit(rc)[0])
+        if errprefix:
+            errmsg = '%s: %s' % (errprefix, errmsg)
+        try:
+            onerr.warn(errmsg + '\n')
+        except AttributeError:
+            raise onerr(errmsg)
+    return rc
 
 def checksignature(func):
     '''wrap a function with code to check for calling errors'''
@@ -413,37 +398,6 @@ def lexists(filename):
     except:
         return False
     return True
-
-def rename(src, dst):
-    """forcibly rename a file"""
-    try:
-        os.rename(src, dst)
-    except OSError, err: # FIXME: check err (EEXIST ?)
-
-        # On windows, rename to existing file is not allowed, so we
-        # must delete destination first. But if a file is open, unlink
-        # schedules it for delete but does not delete it. Rename
-        # happens immediately even for open files, so we rename
-        # destination to a temporary name, then delete that. Then
-        # rename is safe to do.
-        # The temporary name is chosen at random to avoid the situation
-        # where a file is left lying around from a previous aborted run.
-        # The usual race condition this introduces can't be avoided as
-        # we need the name to rename into, and not the file itself. Due
-        # to the nature of the operation however, any races will at worst
-        # lead to the rename failing and the current operation aborting.
-
-        def tempname(prefix):
-            for tries in xrange(10):
-                temp = '%s-%08x' % (prefix, random.randint(0, 0xffffffff))
-                if not os.path.exists(temp):
-                    return temp
-            raise IOError, (errno.EEXIST, "No usable temporary filename found")
-
-        temp = tempname(dst)
-        os.rename(dst, temp)
-        os.unlink(temp)
-        os.rename(src, dst)
 
 def unlink(f):
     """unlink and remove the directory if it is empty"""
@@ -1267,6 +1221,11 @@ def termwidth():
                 return array.array('h', arri)[1]
             except ValueError:
                 pass
+            except IOError, e: 
+                if e[0] == errno.EINVAL: 
+                    pass 
+                else: 
+                    raise 
     except ImportError:
         pass
     return 80
@@ -1278,7 +1237,14 @@ def wrap(line, hangindent, width=None):
         # adjust for weird terminal size
         width = max(78, hangindent + 1)
     padding = '\n' + ' ' * hangindent
-    return padding.join(textwrap.wrap(line, width=width - hangindent))
+    # To avoid corrupting multi-byte characters in line, we must wrap
+    # a Unicode string instead of a bytestring.
+    try:
+        u = line.decode(encoding.encoding)
+        w = padding.join(textwrap.wrap(u, width=width - hangindent))
+        return w.encode(encoding.encoding)
+    except UnicodeDecodeError:
+        return padding.join(textwrap.wrap(line, width=width - hangindent))
 
 def iterlines(iterator):
     for chunk in iterator:

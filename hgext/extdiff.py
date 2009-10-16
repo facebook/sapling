@@ -42,9 +42,9 @@ fast (at least faster than having to compare the entire tree).
 '''
 
 from mercurial.i18n import _
-from mercurial.node import short
+from mercurial.node import short, nullid
 from mercurial import cmdutil, util, commands
-import os, shlex, shutil, tempfile
+import os, shlex, shutil, tempfile, re
 
 def snapshot(ui, repo, files, node, tmproot):
     '''snapshot files as of some revision
@@ -69,7 +69,7 @@ def snapshot(ui, repo, files, node, tmproot):
     for fn in files:
         wfn = util.pconvert(fn)
         if not wfn in ctx:
-            # skipping new file after a merge ?
+            # File doesn't exist; could be a bogus modify
             continue
         ui.note('  %s\n' % wfn)
         dest = os.path.join(base, wfn)
@@ -96,59 +96,102 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
 
     revs = opts.get('rev')
     change = opts.get('change')
+    args = ' '.join(diffopts)
+    do3way = '$parent2' in args
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
         raise util.Abort(msg)
     elif change:
         node2 = repo.lookup(change)
-        node1 = repo[node2].parents()[0].node()
+        node1a, node1b = repo.changelog.parents(node2)
     else:
-        node1, node2 = cmdutil.revpair(repo, revs)
+        node1a, node2 = cmdutil.revpair(repo, revs)
+        if not revs:
+            node1b = repo.dirstate.parents()[1]
+        else:
+            node1b = nullid
+
+    # Disable 3-way merge if there is only one parent
+    if do3way:
+        if node1b == nullid:
+            do3way = False
 
     matcher = cmdutil.match(repo, pats, opts)
-    modified, added, removed = repo.status(node1, node2, matcher)[:3]
-    if not (modified or added or removed):
-        return 0
+    mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher)[:3])
+    if do3way:
+        mod_b, add_b, rem_b = map(set, repo.status(node1b, node2, matcher)[:3])
+    else:
+        mod_b, add_b, rem_b = set(), set(), set()
+    modadd = mod_a | add_a | mod_b | add_b
+    common = modadd | rem_a | rem_b
+    if not common:
+       return 0
 
     tmproot = tempfile.mkdtemp(prefix='extdiff.')
-    dir2root = ''
     try:
-        # Always make a copy of node1
-        dir1 = snapshot(ui, repo, modified + removed, node1, tmproot)[0]
-        changes = len(modified) + len(removed) + len(added)
+        # Always make a copy of node1a (and node1b, if applicable)
+        dir1a_files = mod_a | rem_a | ((mod_b | add_b) - add_a)
+        dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot)[0]
+        if do3way:
+            dir1b_files = mod_b | rem_b | ((mod_a | add_a) - add_b)
+            dir1b = snapshot(ui, repo, dir1b_files, node1b, tmproot)[0]
+        else:
+            dir1b = None
+
+        fns_and_mtime = []
 
         # If node2 in not the wc or there is >1 change, copy it
-        if node2 or changes > 1:
-            dir2, fns_and_mtime = snapshot(ui, repo, modified + added, node2, tmproot)
+        dir2root = ''
+        if node2:
+            dir2 = snapshot(ui, repo, modadd, node2, tmproot)[0]
+        elif len(common) > 1:
+            #we only actually need to get the files to copy back to the working
+            #dir in this case (because the other cases are: diffing 2 revisions
+            #or single file -- in which case the file is already directly passed
+            #to the diff tool).
+            dir2, fns_and_mtime = snapshot(ui, repo, modadd, None, tmproot)
         else:
             # This lets the diff tool open the changed file directly
             dir2 = ''
             dir2root = repo.root
-            fns_and_mtime = []
 
         # If only one change, diff the files instead of the directories
-        if changes == 1 :
-            if len(modified):
-                dir1 = os.path.join(dir1, util.localpath(modified[0]))
-                dir2 = os.path.join(dir2root, dir2, util.localpath(modified[0]))
-            elif len(removed) :
-                dir1 = os.path.join(dir1, util.localpath(removed[0]))
-                dir2 = os.devnull
-            else:
-                dir1 = os.devnull
-                dir2 = os.path.join(dir2root, dir2, util.localpath(added[0]))
+        # Handle bogus modifies correctly by checking if the files exist
+        if len(common) == 1:
+            common_file = util.localpath(common.pop())
+            dir1a = os.path.join(dir1a, common_file)
+            if not os.path.isfile(os.path.join(tmproot, dir1a)):
+                dir1a = os.devnull
+            if do3way:
+                dir1b = os.path.join(dir1b, common_file)
+                if not os.path.isfile(os.path.join(tmproot, dir1b)):
+                    dir1b = os.devnull
+            dir2 = os.path.join(dir2root, dir2, common_file)
 
-        cmdline = ('%s %s %s %s' %
-                   (util.shellquote(diffcmd), ' '.join(diffopts),
-                    util.shellquote(dir1), util.shellquote(dir2)))
-        ui.debug(_('running %r in %s\n') % (cmdline, tmproot))
+        # Function to quote file/dir names in the argument string
+        # When not operating in 3-way mode, an empty string is returned for parent2
+        replace = dict(parent=dir1a, parent1=dir1a, parent2=dir1b, child=dir2)
+        def quote(match):
+            key = match.group()[1:]
+            if not do3way and key == 'parent2':
+                return ''
+            return util.shellquote(replace[key])
+
+        # Match parent2 first, so 'parent1?' will match both parent1 and parent
+        regex = '\$(parent2|parent1?|child)'
+        if not do3way and not re.search(regex, args):
+            args += ' $parent1 $child'
+        args = re.sub(regex, quote, args)
+        cmdline = util.shellquote(diffcmd) + ' ' + args
+
+        ui.debug('running %r in %s\n' % (cmdline, tmproot))
         util.system(cmdline, cwd=tmproot)
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
             if os.path.getmtime(copy_fn) != mtime:
-                ui.debug(_('file changed while diffing. '
-                         'Overwriting: %s (src: %s)\n') % (working_fn, copy_fn))
+                ui.debug('file changed while diffing. '
+                         'Overwriting: %s (src: %s)\n' % (working_fn, copy_fn))
                 util.copyfile(copy_fn, working_fn)
 
         return 1
@@ -173,11 +216,11 @@ def extdiff(ui, repo, *pats, **opts):
     that revision is compared to the working directory, and, when no
     revisions are specified, the working directory files are compared
     to its parent.'''
-    program = opts['program'] or 'diff'
-    if opts['program']:
-        option = opts['option']
-    else:
-        option = opts['option'] or ['-Npru']
+    program = opts.get('program')
+    option = opts.get('option')
+    if not program:
+        program = 'diff'
+        option = option or ['-Npru']
     return dodiff(ui, repo, program, option, pats, opts)
 
 cmdtable = {

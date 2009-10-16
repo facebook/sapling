@@ -353,7 +353,7 @@ def merge(repo, node, force=None, remind=True):
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges "
-                         "or 'hg up --clean' to abandon\n"))
+                         "or 'hg update -C' to abandon\n"))
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3] > 0

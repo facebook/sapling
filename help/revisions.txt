@@ -1,0 +1,29 @@
+Mercurial supports several ways to specify individual revisions.
+
+A plain integer is treated as a revision number. Negative integers are
+treated as sequential offsets from the tip, with -1 denoting the tip,
+-2 denoting the revision prior to the tip, and so forth.
+
+A 40-digit hexadecimal string is treated as a unique revision
+identifier.
+
+A hexadecimal string less than 40 characters long is treated as a
+unique revision identifier and is referred to as a short-form
+identifier. A short-form identifier is only valid if it is the prefix
+of exactly one full-length identifier.
+
+Any other string is treated as a tag or branch name. A tag name is a
+symbolic name associated with a revision identifier. A branch name
+denotes the tipmost revision of that branch. Tag and branch names must
+not contain the ":" character.
+
+The reserved name "tip" is a special tag that always identifies the
+most recent revision.
+
+The reserved name "null" indicates the null revision. This is the
+revision of an empty repository, and the parent of revision 0.
+
+The reserved name "." indicates the working directory parent. If no
+working directory is checked out, it is equivalent to null. If an
+uncommitted merge is in progress, "." is the revision of the first
+parent.

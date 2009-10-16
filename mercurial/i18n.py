@@ -16,7 +16,7 @@ else:
 
 base = os.path.dirname(module)
 for dir in ('.', '..'):
-    localedir = os.path.normpath(os.path.join(base, dir, 'locale'))
+    localedir = os.path.join(base, dir, 'locale')
     if os.path.isdir(localedir):
         break
 

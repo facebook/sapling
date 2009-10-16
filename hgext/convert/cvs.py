@@ -22,21 +22,11 @@ class convert_cvs(converter_source):
             raise NoRepo("%s does not look like a CVS checkout" % path)
 
         checktool('cvs')
-        self.cmd = ui.config('convert', 'cvsps', 'builtin')
-        cvspsexe = self.cmd.split(None, 1)[0]
-        self.builtin = cvspsexe == 'builtin'
-        if not self.builtin:
-            ui.warn(_('warning: support for external cvsps is deprecated and '
-                      'will be removed in Mercurial 1.4\n'))
-
-        if not self.builtin:
-            checktool(cvspsexe)
 
         self.changeset = None
         self.files = {}
         self.tags = {}
         self.lastbranch = {}
-        self.parent = {}
         self.socket = None
         self.cvsroot = open(os.path.join(cvs, "Root")).read()[:-1]
         self.cvsrepo = open(os.path.join(cvs, "Repository")).read()[:-1]
@@ -50,19 +40,13 @@ class convert_cvs(converter_source):
         self.changeset = {}
 
         maxrev = 0
-        cmd = self.cmd
         if self.rev:
             # TODO: handle tags
             try:
                 # patchset number?
                 maxrev = int(self.rev)
             except ValueError:
-                try:
-                    # date
-                    util.parsedate(self.rev, ['%Y/%m/%d %H:%M:%S'])
-                    cmd = '%s -d "1970/01/01 00:00:01" -d "%s"' % (cmd, self.rev)
-                except util.Abort:
-                    raise util.Abort(_('revision %s is not a patchset number or date') % self.rev)
+                raise util.Abort(_('revision %s is not a patchset number') % self.rev)
 
         d = os.getcwd()
         try:
@@ -71,116 +55,36 @@ class convert_cvs(converter_source):
             state = 0
             filerevids = {}
 
-            if self.builtin:
-                # builtin cvsps code
-                self.ui.status(_('using builtin cvsps\n'))
+            cache = 'update'
+            if not self.ui.configbool('convert', 'cvsps.cache', True):
+                cache = None
+            db = cvsps.createlog(self.ui, cache=cache)
+            db = cvsps.createchangeset(self.ui, db,
+                fuzz=int(self.ui.config('convert', 'cvsps.fuzz', 60)),
+                mergeto=self.ui.config('convert', 'cvsps.mergeto', None),
+                mergefrom=self.ui.config('convert', 'cvsps.mergefrom', None))
 
-                cache = 'update'
-                if not self.ui.configbool('convert', 'cvsps.cache', True):
-                    cache = None
-                db = cvsps.createlog(self.ui, cache=cache)
-                db = cvsps.createchangeset(self.ui, db,
-                      fuzz=int(self.ui.config('convert', 'cvsps.fuzz', 60)),
-                      mergeto=self.ui.config('convert', 'cvsps.mergeto', None),
-                      mergefrom=self.ui.config('convert', 'cvsps.mergefrom', None))
+            for cs in db:
+                if maxrev and cs.id>maxrev:
+                    break
+                id = str(cs.id)
+                cs.author = self.recode(cs.author)
+                self.lastbranch[cs.branch] = id
+                cs.comment = self.recode(cs.comment)
+                date = util.datestr(cs.date)
+                self.tags.update(dict.fromkeys(cs.tags, id))
 
-                for cs in db:
-                    if maxrev and cs.id>maxrev:
-                        break
-                    id = str(cs.id)
-                    cs.author = self.recode(cs.author)
-                    self.lastbranch[cs.branch] = id
-                    cs.comment = self.recode(cs.comment)
-                    date = util.datestr(cs.date)
-                    self.tags.update(dict.fromkeys(cs.tags, id))
+                files = {}
+                for f in cs.entries:
+                    files[f.file] = "%s%s" % ('.'.join([str(x) for x in f.revision]),
+                                              ['', '(DEAD)'][f.dead])
 
-                    files = {}
-                    for f in cs.entries:
-                        files[f.file] = "%s%s" % ('.'.join([str(x) for x in f.revision]),
-                                                  ['', '(DEAD)'][f.dead])
-
-                    # add current commit to set
-                    c = commit(author=cs.author, date=date,
-                             parents=[str(p.id) for p in cs.parents],
-                             desc=cs.comment, branch=cs.branch or '')
-                    self.changeset[id] = c
-                    self.files[id] = files
-            else:
-                # external cvsps
-                for l in util.popen(cmd):
-                    if state == 0: # header
-                        if l.startswith("PatchSet"):
-                            id = l[9:-2]
-                            if maxrev and int(id) > maxrev:
-                                # ignore everything
-                                state = 3
-                        elif l.startswith("Date:"):
-                            date = util.parsedate(l[6:-1], ["%Y/%m/%d %H:%M:%S"])
-                            date = util.datestr(date)
-                        elif l.startswith("Branch:"):
-                            branch = l[8:-1]
-                            self.parent[id] = self.lastbranch.get(branch, 'bad')
-                            self.lastbranch[branch] = id
-                        elif l.startswith("Ancestor branch:"):
-                            ancestor = l[17:-1]
-                            # figure out the parent later
-                            self.parent[id] = self.lastbranch[ancestor]
-                        elif l.startswith("Author:"):
-                            author = self.recode(l[8:-1])
-                        elif l.startswith("Tag:") or l.startswith("Tags:"):
-                            t = l[l.index(':')+1:]
-                            t = [ut.strip() for ut in t.split(',')]
-                            if (len(t) > 1) or (t[0] and (t[0] != "(none)")):
-                                self.tags.update(dict.fromkeys(t, id))
-                        elif l.startswith("Log:"):
-                            # switch to gathering log
-                            state = 1
-                            log = ""
-                    elif state == 1: # log
-                        if l == "Members: \n":
-                            # switch to gathering members
-                            files = {}
-                            oldrevs = []
-                            log = self.recode(log[:-1])
-                            state = 2
-                        else:
-                            # gather log
-                            log += l
-                    elif state == 2: # members
-                        if l == "\n": # start of next entry
-                            state = 0
-                            p = [self.parent[id]]
-                            if id == "1":
-                                p = []
-                            if branch == "HEAD":
-                                branch = ""
-                            if branch:
-                                latest = 0
-                                # the last changeset that contains a base
-                                # file is our parent
-                                for r in oldrevs:
-                                    latest = max(filerevids.get(r, 0), latest)
-                                if latest:
-                                    p = [latest]
-
-                            # add current commit to set
-                            c = commit(author=author, date=date, parents=p,
-                                       desc=log, branch=branch)
-                            self.changeset[id] = c
-                            self.files[id] = files
-                        else:
-                            colon = l.rfind(':')
-                            file = l[1:colon]
-                            rev = l[colon+1:-2]
-                            oldrev, rev = rev.split("->")
-                            files[file] = rev
-
-                            # save some information for identifying branch points
-                            oldrevs.append("%s:%s" % (oldrev, file))
-                            filerevids["%s:%s" % (rev, file)] = id
-                    elif state == 3:
-                        # swallow all input
-                        continue
+                # add current commit to set
+                c = commit(author=cs.author, date=date,
+                           parents=[str(p.id) for p in cs.parents],
+                           desc=cs.comment, branch=cs.branch or '')
+                self.changeset[id] = c
+                self.files[id] = files
 
             self.heads = self.lastbranch.values()
         finally:

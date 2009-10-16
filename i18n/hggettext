@@ -112,6 +112,11 @@ def docstrings(path):
             print poentry(path, lineno, func.__doc__)
 
 
+def rawtext(path):
+    src = open(path).read()
+    print poentry(path, 1, src)
+
+
 if __name__ == "__main__":
     # It is very important that we import the Mercurial modules from
     # the source tree where hggettext is executed. Otherwise we might
@@ -120,4 +125,7 @@ if __name__ == "__main__":
     sys.path.insert(0, os.getcwd())
     from mercurial import demandimport; demandimport.enable()
     for path in sys.argv[1:]:
-        docstrings(path)
+        if path.endswith('.txt'):
+            rawtext(path)
+        else:
+            docstrings(path)

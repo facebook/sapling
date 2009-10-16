@@ -4,7 +4,7 @@ merging a
 warning: conflicts during merge.
 merging a failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
 e7fe8eb3e180+0d24b7662d3e+ tip
 <<<<<<< local
 something else

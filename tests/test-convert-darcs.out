@@ -10,15 +10,20 @@ We have conflicts in the following files:
 ./a
 Finished pulling and applying.
 Finished recording patch 'p2'
+% test file and directory move
+Finished recording patch 'p3'
 initializing destination darcs-repo-hg repository
 scanning source...
 sorting...
 converting...
-3 p0
-2 p1.2
-1 p1.1
-0 p2
-o  3 "p2" files: a
+4 p0
+3 p1.2
+2 p1.1
+1 p2
+0 p3
+o  4 "p3" files: dir/d dir/d2 dir2/d f ff
+|
+o  3 "p2" files: a dir/d dir/d2 f
 |
 o  2 "p1.1" files:
 |
@@ -28,3 +33,5 @@ o  0 "p0" files: a
 
 7225b30cdf38257d5cc7780772c051b6f33e6d6b 644   a
 1e88685f5ddec574a34c70af492f95b6debc8741 644   b
+d278f41640da5fc303a4cf9894af31c2983fc11d 644   dir2/d
+ef5c76581d78340f568d5f48d679bf307452cbc9 644   ff

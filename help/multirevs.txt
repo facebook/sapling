@@ -1,0 +1,13 @@
+When Mercurial accepts more than one revision, they may be specified
+individually, or provided as a topologically continuous range,
+separated by the ":" character.
+
+The syntax of range notation is [BEGIN]:[END], where BEGIN and END are
+revision identifiers. Both BEGIN and END are optional. If BEGIN is not
+specified, it defaults to revision number 0. If END is not specified,
+it defaults to the tip. The range ":" thus means "all revisions".
+
+If BEGIN is greater than END, revisions are treated in reverse order.
+
+A range acts as a closed interval. This means that a range of 3:5
+gives 3, 4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.

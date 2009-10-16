@@ -142,6 +142,6 @@ def reposetup(ui, repo):
         for f in funcs.split():
             wrapname(f, wrapper)
         wrapname("mercurial.osutil.listdir", wrapperforlistdir)
-        ui.debug(_("[win32mbcs] activated with encoding: %s\n")
+        ui.debug("[win32mbcs] activated with encoding: %s\n"
                  % encoding.encoding)
 

@@ -28,3 +28,7 @@ hg glog --template 'branch={branches} {rev} {desc|firstline} files: {files}\n'
 hg branches | sed 's/:.*/:/'
 hg tags -q
 cd ..
+
+echo '% test hg failing to call itself'
+HG=foobar hg convert svn-repo B-hg 2>&1 | grep -v foobar
+

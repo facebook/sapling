@@ -144,16 +144,16 @@ def copies(repo, c1, c2, ca, checkdirs=False):
             elif of in ma:
                 diverge.setdefault(of, []).append(f)
 
-    repo.ui.debug(_("  searching for copies back to rev %d\n") % limit)
+    repo.ui.debug("  searching for copies back to rev %d\n" % limit)
 
     u1 = _nonoverlap(m1, m2, ma)
     u2 = _nonoverlap(m2, m1, ma)
 
     if u1:
-        repo.ui.debug(_("  unmatched files in local:\n   %s\n")
+        repo.ui.debug("  unmatched files in local:\n   %s\n"
                       % "\n   ".join(u1))
     if u2:
-        repo.ui.debug(_("  unmatched files in other:\n   %s\n")
+        repo.ui.debug("  unmatched files in other:\n   %s\n"
                       % "\n   ".join(u2))
 
     for f in u1:
@@ -169,7 +169,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
             diverge2.update(fl) # reverse map for below
 
     if fullcopy:
-        repo.ui.debug(_("  all copies found (* = to merge, ! = divergent):\n"))
+        repo.ui.debug("  all copies found (* = to merge, ! = divergent):\n")
         for f in fullcopy:
             note = ""
             if f in copy: note += "*"
@@ -180,7 +180,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
     if not fullcopy or not checkdirs:
         return copy, diverge
 
-    repo.ui.debug(_("  checking for directory renames\n"))
+    repo.ui.debug("  checking for directory renames\n")
 
     # generate a directory move map
     d1, d2 = _dirs(m1), _dirs(m2)
@@ -216,7 +216,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
         return copy, diverge
 
     for d in dirmove:
-        repo.ui.debug(_("  dir %s -> %s\n") % (d, dirmove[d]))
+        repo.ui.debug("  dir %s -> %s\n" % (d, dirmove[d]))
 
     # check unaccounted nonoverlapping files against directory moves
     for f in u1 + u2:
@@ -227,7 +227,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
                     df = dirmove[d] + f[len(d):]
                     if df not in copy:
                         copy[f] = df
-                        repo.ui.debug(_("  file %s -> %s\n") % (f, copy[f]))
+                        repo.ui.debug("  file %s -> %s\n" % (f, copy[f]))
                     break
 
     return copy, diverge

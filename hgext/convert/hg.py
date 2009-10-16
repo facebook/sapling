@@ -55,12 +55,12 @@ class mercurial_sink(converter_sink):
         self.filemapmode = False
 
     def before(self):
-        self.ui.debug(_('run hg sink pre-conversion action\n'))
+        self.ui.debug('run hg sink pre-conversion action\n')
         self.wlock = self.repo.wlock()
         self.lock = self.repo.lock()
 
     def after(self):
-        self.ui.debug(_('run hg sink post-conversion action\n'))
+        self.ui.debug('run hg sink post-conversion action\n')
         self.lock.release()
         self.wlock.release()
 
@@ -248,8 +248,7 @@ class mercurial_source(converter_source):
         return self.lastctx
 
     def parents(self, ctx):
-        return [p.node() for p in ctx.parents()
-                if p and self.keep(p.node())]
+        return [p for p in ctx.parents() if p and self.keep(p.node())]
 
     def getheads(self):
         if self.rev:
@@ -275,20 +274,20 @@ class mercurial_source(converter_source):
             if self.ignoreerrors:
                 # calling getcopies() is a simple way to detect missing
                 # revlogs and populate self.ignored
-                self.getcopies(ctx, files)
+                self.getcopies(ctx, parents, files)
             return [(f, rev) for f in files if f not in self.ignored], {}
         if self._changescache and self._changescache[0] == rev:
             m, a, r = self._changescache[1]
         else:
-            m, a, r = self.repo.status(parents[0], ctx.node())[:3]
+            m, a, r = self.repo.status(parents[0].node(), ctx.node())[:3]
         # getcopies() detects missing revlogs early, run it before
         # filtering the changes.
-        copies = self.getcopies(ctx, m + a)
+        copies = self.getcopies(ctx, parents, m + a)
         changes = [(name, rev) for name in m + a + r
                    if name not in self.ignored]
         return sorted(changes), copies
 
-    def getcopies(self, ctx, files):
+    def getcopies(self, ctx, parents, files):
         copies = {}
         for name in files:
             if name in self.ignored:
@@ -296,6 +295,14 @@ class mercurial_source(converter_source):
             try:
                 copysource, copynode = ctx.filectx(name).renamed()
                 if copysource in self.ignored or not self.keep(copynode):
+                    continue
+                # Ignore copy sources not in parent revisions
+                found = False
+                for p in parents:
+                    if copysource in p:
+                        found = True
+                        break
+                if not found:
                     continue
                 copies[name] = copysource
             except TypeError:
@@ -309,7 +316,7 @@ class mercurial_source(converter_source):
 
     def getcommit(self, rev):
         ctx = self.changectx(rev)
-        parents = [hex(p) for p in self.parents(ctx)]
+        parents = [p.hex() for p in self.parents(ctx)]
         if self.saverev:
             crev = rev
         else:
@@ -332,7 +339,7 @@ class mercurial_source(converter_source):
             changes = [], ctx.manifest().keys(), []
         else:
             i = i or 0
-            changes = self.repo.status(parents[i], ctx.node())[:3]
+            changes = self.repo.status(parents[i].node(), ctx.node())[:3]
         changes = [[f for f in l if f not in self.ignored] for l in changes]
 
         if i == 0:
@@ -348,10 +355,10 @@ class mercurial_source(converter_source):
         self.convertfp.flush()
 
     def before(self):
-        self.ui.debug(_('run hg source pre-conversion action\n'))
+        self.ui.debug('run hg source pre-conversion action\n')
 
     def after(self):
-        self.ui.debug(_('run hg source post-conversion action\n'))
+        self.ui.debug('run hg source post-conversion action\n')
 
     def hasnativeorder(self):
         return True

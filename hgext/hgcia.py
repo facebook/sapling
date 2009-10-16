@@ -229,10 +229,10 @@ def hook(ui, repo, hooktype, node=None, url=None, **kwargs):
     n = bin(node)
     cia = hgcia(ui, repo)
     if not cia.user:
-        ui.debug(_('cia: no user specified'))
+        ui.debug('cia: no user specified')
         return
     if not cia.project:
-        ui.debug(_('cia: no project specified'))
+        ui.debug('cia: no project specified')
         return
     if hooktype == 'changegroup':
         start = repo.changelog.rev(n)

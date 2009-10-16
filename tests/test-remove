@@ -108,3 +108,12 @@ remove -A test
 echo % dir, options -Af
 rm test/bar
 remove -Af test
+
+echo 'test remove dropping empty trees (issue1861)'
+mkdir -p issue1861/b/c
+echo x > issue1861/x
+echo y > issue1861/b/c/y
+hg ci -Am add
+hg rm issue1861/b
+hg ci -m remove
+ls issue1861

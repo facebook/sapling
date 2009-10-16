@@ -25,7 +25,6 @@ assuming destination src-hg
 initializing destination src-hg repository
 connecting to cvsrepo
 scanning source...
-using builtin cvsps
 collecting CVS rlog
 7 log entries
 creating changesets

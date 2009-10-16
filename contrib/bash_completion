@@ -546,3 +546,20 @@ _hg_cmd_transplant()
     return
 }
 
+# shelve
+_hg_shelves()
+{
+    local shelves="$("$hg" unshelve -l . 2>/dev/null)"
+    local IFS=$'\n'
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$shelves' -- "$cur"))
+}
+
+_hg_cmd_shelve()
+{
+    _hg_status "mard"
+}
+
+_hg_cmd_unshelve()
+{
+    _hg_shelves
+}

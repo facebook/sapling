@@ -34,7 +34,6 @@ echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 echo "graphlog = " >> $HGRCPATH
 echo "[convert]" >> $HGRCPATH
-echo "cvsps=builtin" >> $HGRCPATH
 echo "cvsps.cache=0" >> $HGRCPATH
 echo "cvsps.mergefrom=\[MERGE from (\S+)\]" >> $HGRCPATH
 

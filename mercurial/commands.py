@@ -340,14 +340,11 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     state = hbisect.load_state(repo)
 
     if command:
-        commandpath = util.find_exe(command)
-        if commandpath is None:
-            raise util.Abort(_("cannot find executable: %s") % command)
         changesets = 1
         try:
             while changesets:
                 # update state
-                status = subprocess.call([commandpath])
+                status = util.system(command)
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
@@ -370,7 +367,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 hg.clean(repo, nodes[0], show_stats=False)
         finally:
             hbisect.save_state(repo, state)
-        return print_result(nodes, not status)
+        return print_result(nodes, good)
 
     # update state
     node = repo.lookup(rev or '.')
@@ -1356,23 +1353,25 @@ def heads(ui, repo, *branchrevs, **opts):
 
     With no arguments, show all repository head changesets.
 
-    Repository "heads" are changesets that don't have child
-    changesets. They are where development generally takes place and
-    are the usual targets for update and merge operations.
+    Repository "heads" are changesets with no child changesets. They are
+    where development generally takes place and are the usual targets
+    for update and merge operations.
 
     If one or more REV is given, the "branch heads" will be shown for
-    the named branch associated with that revision. The name of the
-    branch is called the revision's branch tag.
+    the named branch associated with the specified changeset(s).
 
-    Branch heads are revisions on a given named branch that do not have
-    any descendants on the same branch. A branch head could be a true head
-    or it could be the last changeset on a branch before a new branch
-    was created. If none of the branch heads are true heads, the branch
-    is considered inactive. If -c/--closed is specified, also show branch
-    heads marked closed (see hg commit --close-branch).
+    Branch heads are changesets on a named branch with no descendants on
+    the same branch. A branch head could be a "true" (repository) head,
+    or it could be the last changeset on that branch before it was
+    merged into another branch, or it could be the last changeset on the
+    branch before a new branch was created. If none of the branch heads
+    are true heads, the branch is considered inactive.
 
-    If STARTREV is specified only those heads (or branch heads) that
-    are descendants of STARTREV will be displayed.
+    If -c/--closed is specified, also show branch heads marked closed
+    (see hg commit --close-branch).
+
+    If STARTREV is specified, only those heads that are descendants of
+    STARTREV will be displayed.
     """
     if opts.get('rev'):
         start = repo.lookup(opts['rev'])
@@ -1546,7 +1545,7 @@ def help_(ui, name=None, with_version=False):
             doc = doc()
 
         ui.write("%s\n\n" % header)
-        ui.write("%s\n" % minirst.format(doc, textwidth))
+        ui.write("%s\n" % minirst.format(doc, textwidth, indent=4))
 
     def helpext(name):
         try:
@@ -1617,9 +1616,7 @@ def help_(ui, name=None, with_version=False):
         ui.write(_("\nadditional help topics:\n\n"))
         topics = []
         for names, header, doc in help.helptable:
-            names = [(-len(name), name) for name in names]
-            names.sort()
-            topics.append((names[0][1], header))
+            topics.append((sorted(names, key=len, reverse=True)[0], header))
         topics_len = max([len(s[0]) for s in topics])
         for t, desc in topics:
             ui.write(" %-*s  %s\n" % (topics_len, t, desc))
@@ -1789,7 +1786,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 else:
                     # launch the editor
                     message = None
-                ui.debug(_('message:\n%s\n') % message)
+                ui.debug('message:\n%s\n' % message)
 
                 wp = repo.parents()
                 if opts.get('exact'):
@@ -3093,7 +3090,7 @@ def version_(ui):
 
 globalopts = [
     ('R', 'repository', '',
-     _('repository root directory or symbolic path name')),
+     _('repository root directory or name of overlay bundle file')),
     ('', 'cwd', '', _('change working directory')),
     ('y', 'noninteractive', None,
      _('do not prompt, assume \'yes\' for any required answers')),

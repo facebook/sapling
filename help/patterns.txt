@@ -1,0 +1,41 @@
+Mercurial accepts several notations for identifying one or more files
+at a time.
+
+By default, Mercurial treats filenames as shell-style extended glob
+patterns.
+
+Alternate pattern notations must be specified explicitly.
+
+To use a plain path name without any pattern matching, start it with
+"path:". These path names must completely match starting at the
+current repository root.
+
+To use an extended glob, start a name with "glob:". Globs are rooted
+at the current directory; a glob such as "``*.c``" will only match
+files in the current directory ending with ".c".
+
+The supported glob syntax extensions are "``**``" to match any string
+across path separators and "{a,b}" to mean "a or b".
+
+To use a Perl/Python regular expression, start a name with "re:".
+Regexp pattern matching is anchored at the root of the repository.
+
+Plain examples::
+
+  path:foo/bar   a name bar in a directory named foo in the root
+                 of the repository
+  path:path:name a file or directory named "path:name"
+
+Glob examples::
+
+  glob:*.c       any name ending in ".c" in the current directory
+  *.c            any name ending in ".c" in the current directory
+  **.c           any name ending in ".c" in any subdirectory of the
+                 current directory including itself.
+  foo/*.c        any name ending in ".c" in the directory foo
+  foo/**.c       any name ending in ".c" in any subdirectory of foo
+                 including itself.
+
+Regexp examples::
+
+  re:.*\.c$      any name ending in ".c", anywhere in the repository

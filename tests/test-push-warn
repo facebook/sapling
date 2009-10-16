@@ -123,4 +123,21 @@ echo 11 > foo
 hg -q ci -d "1000000 0" -m 11
 hg push -r 10 -r 11 ../f; echo $?
 
+echo % checking prepush logic does not allow silently pushing multiple new heads
+cd ..
+hg init g
+echo init > g/init
+hg -R g ci -Am init
+echo a > g/a
+hg -R g ci -Am a
+hg clone g h
+hg -R g up 0
+echo b > g/b
+hg -R g ci -Am b
+hg -R h up 0
+echo c > h/c
+hg -R h ci -Am c
+hg -R h push g
+echo
+
 exit 0

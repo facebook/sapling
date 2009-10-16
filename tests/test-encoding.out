@@ -14,7 +14,7 @@ rollback completed
 abort: decoding near ' encoded: é': 'ascii' codec can't decode byte 0xe9 in position 20: ordinal not in range(128)!
 % these should work
 marked working directory as branch é
-% ascii
+% hg log (ascii)
 changeset:   5:db5520b4645f
 branch:      ?
 tag:         tip
@@ -48,7 +48,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': ? = u'\xe9'
 
-% latin-1
+% hg log (latin-1)
 changeset:   5:db5520b4645f
 branch:      é
 tag:         tip
@@ -82,7 +82,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': é = u'\xe9'
 
-% utf-8
+% hg log (utf-8)
 changeset:   5:db5520b4645f
 branch:      Ã©
 tag:         tip
@@ -116,25 +116,25 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': Ã© = u'\xe9'
 
-% ascii
+% hg tags (ascii)
 tip                                5:db5520b4645f
 ?                                  3:770b9b11621d
-% latin-1
+% hg tags (latin-1)
 tip                                5:db5520b4645f
 é                                  3:770b9b11621d
-% utf-8
+% hg tags (utf-8)
 tip                                5:db5520b4645f
 Ã©                                  3:770b9b11621d
-% ascii
+% hg branches (ascii)
 ?                              5:db5520b4645f
 default                        4:9cff3c980b58 (inactive)
-% latin-1
+% hg branches (latin-1)
 é                              5:db5520b4645f
 default                        4:9cff3c980b58 (inactive)
-% utf-8
+% hg branches (utf-8)
 Ã©                              5:db5520b4645f
 default                        4:9cff3c980b58 (inactive)
-% utf-8
+% hg log (utf-8)
 changeset:   5:db5520b4645f
 branch:      Ã©
 tag:         tip
@@ -168,6 +168,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': Ð˜ = u'\xe9'
 
+% hg log (dolphin)
 abort: unknown encoding: dolphin, please check your locale settings
 abort: decoding near 'é': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)!
 abort: branch name not in UTF-8!

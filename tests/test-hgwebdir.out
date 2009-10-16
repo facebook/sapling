@@ -237,7 +237,7 @@ error: repository c not found
  <entry>
   <title>a</title>
   <id>http://127.0.0.1/t/a/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id>
-  <link href="http://127.0.0.1/t/a/rev/8580ff50825a50c8f716709acdf8de0deddcd6ab"/>
+  <link href="http://127.0.0.1/t/a/rev/8580ff50825a"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>
@@ -266,7 +266,7 @@ error: repository c not found
  <entry>
   <title>a</title>
   <id>http://127.0.0.1/t/a/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id>
-  <link href="http://127.0.0.1/t/a/rev/8580ff50825a50c8f716709acdf8de0deddcd6ab"/>
+  <link href="http://127.0.0.1/t/a/rev/8580ff50825a"/>
   <author>
    <name>test</name>
    <email>&#116;&#101;&#115;&#116;</email>

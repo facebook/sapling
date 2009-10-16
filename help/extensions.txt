@@ -1,0 +1,33 @@
+Mercurial has the ability to add new features through the use of
+extensions. Extensions may add new commands, add options to
+existing commands, change the default behavior of commands, or
+implement hooks.
+
+Extensions are not loaded by default for a variety of reasons:
+they can increase startup overhead; they may be meant for advanced
+usage only; they may provide potentially dangerous abilities (such
+as letting you destroy or modify history); they might not be ready
+for prime time; or they may alter some usual behaviors of stock
+Mercurial. It is thus up to the user to activate extensions as
+needed.
+
+To enable the "foo" extension, either shipped with Mercurial or in
+the Python search path, create an entry for it in your hgrc, like
+this::
+
+  [extensions]
+  foo =
+
+You may also specify the full path to an extension::
+
+  [extensions]
+  myfeature = ~/.hgext/myfeature.py
+
+To explicitly disable an extension enabled in an hgrc of broader
+scope, prepend its path with !::
+
+  [extensions]
+  # disabling extension bar residing in /path/to/extension/bar.py
+  hgext.bar = !/path/to/extension/bar.py
+  # ditto, but no path was supplied for extension baz
+  hgext.baz = !

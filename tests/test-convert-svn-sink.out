@@ -265,7 +265,7 @@ merging b
 warning: conflicts during merge.
 merging b failed!
 2 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
 assuming destination b-hg
 initializing svn repo 'b-hg'
 initializing svn wc 'b-hg-wc'
