@@ -39,7 +39,10 @@ class TestFetchRenames(test_util.TestBase):
             9: {
                 'unchanged2': ('unchanged', 'unchanged\n'),
                 'unchangeddir2/f': ('unchangeddir/f', 'unchanged2\n'),
-                }
+                },
+            10: {
+                 'groupdir2/b': ('groupdir/b', 'b\n')
+                 },
             }
         for rev in repo:
             ctx = repo[rev]

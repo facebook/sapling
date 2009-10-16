@@ -322,10 +322,10 @@ def getcopies(svn, meta, branch, branchpath, r, files, parentctx):
         sourcectx = getctx(rev)
         if sourcectx is None:
             continue
-        sources = [s[1] for s in copies]
-        if not util.aresamefiles(sourcectx, parentctx, sources):
-            continue
-        hgcopies.update(copies)
+        for k, v in copies:
+            if not util.aresamefiles(sourcectx, parentctx, [v]):
+                continue
+            hgcopies.update({k: v})
     return hgcopies
 
 def fetch_externals(svn, branchpath, r, parentctx):
