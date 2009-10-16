@@ -1,4 +1,4 @@
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** rename in working dir **
@@ -120,7 +120,7 @@ new file mode 100644
 +y1
 
 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** copy in working dir **
@@ -259,7 +259,7 @@ new file mode 100644
 +y1
 
 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** single rename **
@@ -396,7 +396,7 @@ new file mode 100644
 +y1
 
 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** single copy **
@@ -568,7 +568,7 @@ new file mode 100644
 +y1
 
 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** rename chain **
@@ -694,7 +694,7 @@ new file mode 100644
 +y1
 
 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** copy chain **
@@ -937,7 +937,7 @@ new file mode 100644
 +y1
 
 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 ** circular rename **
@@ -1061,7 +1061,7 @@ new file mode 100644
 +y1
 
 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 moving x/x to y/x

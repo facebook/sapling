@@ -56,7 +56,7 @@ enabled extensions:
 
 use "hg -v help mq" to show aliases and global options
 adding a
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b/z
 % qinit
@@ -520,7 +520,7 @@ main repo:
     rev 0: add foo
 patch repo:
     rev 0: checkpoint
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 main repo:
@@ -533,7 +533,7 @@ main repo:
     rev 0: add foo
 patch repo:
     rev 0: checkpoint
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 main repo:

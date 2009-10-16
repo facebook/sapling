@@ -6,7 +6,7 @@
 .hg/store/data/b.i
 
 % default operation
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 checking changesets
@@ -25,13 +25,13 @@ checking files
 
 % default destination
 destination directory: a
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 
 % check that we drop the file:// from the path before
 % writing the .hgrc
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 % check that path aliases are expanded
@@ -43,7 +43,7 @@ adding changesets
 adding manifests
 adding file changes
 added 11 changesets with 11 changes to 2 files
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -52,5 +52,5 @@ checking files
 2 files, 11 changesets, 11 total revisions
 
 % clone to .
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
