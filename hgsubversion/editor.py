@@ -218,7 +218,7 @@ class HgEditor(delta.Editor):
                                                      branch)
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
-                if util.aresamefiles(parentctx, ctx, [from_file]):
+                if util.issamefile(parentctx, ctx, from_file):
                     self.current.copies[path] = from_file
 
     @ieditor
@@ -279,7 +279,7 @@ class HgEditor(delta.Editor):
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
                 for k, v in copies.iteritems():
-                    if util.aresamefiles(parentctx, cp_f_ctx, [v]):
+                    if util.issamefile(parentctx, cp_f_ctx, v):
                         self.current.copies.update({k: v})
         return path
 

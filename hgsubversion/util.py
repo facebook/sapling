@@ -121,10 +121,8 @@ def swap_out_encoding(new_encoding="UTF-8"):
     return old
 
 
-def aresamefiles(parentctx, childctx, files):
-    """Assuming all files exist in childctx and parentctx, return True
-    if none of them was changed in-between.
-    """
+def issamefile(parentctx, childctx, f):
+    """Assuming f exists and is the same in childctx and parentctx, return True."""
     if parentctx == childctx:
         return True
     if parentctx.rev() > childctx.rev():
@@ -135,12 +133,10 @@ def aresamefiles(parentctx, childctx, files):
         for ctx in selfctx.ancestors():
             yield ctx
 
-    files = dict.fromkeys(files)
     for pctx in selfandancestors(childctx):
         if pctx.rev() <= parentctx.rev():
             return True
-        for f in pctx.files():
-            if f in files:
-                return False
+        if f in pctx.files():
+            return False
     # parentctx is not an ancestor of childctx, files are unrelated
     return False
