@@ -69,6 +69,13 @@ class SVNMeta(object):
             f.close()
         else:
             self.tag_locations = tag_locations
+        if os.path.exists(self.layoutfile):
+            f = open(self.layoutfile)
+            self._layout = f.read().strip()
+            f.close()
+            self.repo.ui.setconfig('hgsubversion', 'layout', self._layout)
+        else:
+            self._layout = None
         pickle_atomic(self.tag_locations, self.tag_locations_file,
                       self.meta_data_dir)
         # ensure nested paths are handled properly
@@ -81,6 +88,21 @@ class SVNMeta(object):
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.filemap = maps.FileMap(repo)
+
+    @property
+    def layout(self):
+        # this method can't determine the layout, but it needs to be
+        # resolved into something other than auto before this ever
+        # gets called
+        if not self._layout or self._layout == 'auto':
+            lo = self.repo.ui.config('hgsubversion', 'layout', default='auto')
+            if lo == 'auto':
+                raise hgutil.Abort('layout not yet determined')
+            self._layout = lo
+            f = open(self.layoutfile, 'w')
+            f.write(self._layout)
+            f.close()
+        return self._layout
 
     @property
     def editor(self):
@@ -127,6 +149,10 @@ class SVNMeta(object):
     def authors_file(self):
         return os.path.join(self.meta_data_dir, 'authors')
 
+    @property
+    def layoutfile(self):
+        return os.path.join(self.meta_data_dir, 'layout')
+
     def fixdate(self, date):
         if date is not None:
             date = date.replace('T', ' ').replace('Z', '').split('.')[0]
@@ -145,6 +171,8 @@ class SVNMeta(object):
     def localname(self, path):
         """Compute the local name for a branch located at path.
         """
+        if self.layout == 'single':
+            return 'default'
         if path == 'trunk':
             return None
         elif path.startswith('branches/'):
@@ -152,6 +180,8 @@ class SVNMeta(object):
         return  '../%s' % path
 
     def remotename(self, branch):
+        if self.layout == 'single':
+            return ''
         if branch == 'default' or branch is None:
             return 'trunk'
         elif branch.startswith('../'):
@@ -160,23 +190,27 @@ class SVNMeta(object):
 
     def genextra(self, revnum, branch):
         extra = {}
-        branchpath = 'trunk'
-        if branch:
-            extra['branch'] = branch
-            if branch.startswith('../'):
-                branchpath = branch[3:]
-            else:
-                branchpath = 'branches/%s' % branch
-
         subdir = self.subdir
         if subdir and subdir[-1] == '/':
             subdir = subdir[:-1]
         if subdir and subdir[0] != '/':
             subdir = '/' + subdir
 
+        if self.layout == 'single':
+            path = subdir or '/'
+        else:
+            branchpath = 'trunk'
+            if branch:
+                extra['branch'] = branch
+                if branch.startswith('../'):
+                    branchpath = branch[3:]
+                else:
+                    branchpath = 'branches/%s' % branch
+            path = '%s/%s' % (subdir , branchpath)
+
         extra['convert_revision'] = 'svn:%(uuid)s%(path)s@%(rev)s' % {
             'uuid': self.uuid,
-            'path': '%s/%s' % (subdir , branchpath),
+            'path': path,
             'rev': revnum,
         }
         return extra
@@ -185,6 +219,8 @@ class SVNMeta(object):
         '''Normalize a path to strip of leading slashes and our subdir if we
         have one.
         '''
+        if self.subdir and path == self.subdir[:-1]:
+            return ''
         if path and path[0] == '/':
             path = path[1:]
         if path and path.startswith(self.subdir):
@@ -200,6 +236,8 @@ class SVNMeta(object):
         Note that it's only a tag if it was copied from the path '' in a branch
         (or tag) we have, for our purposes.
         """
+        if self.layout == 'single':
+            return False
         path = self.normalize(path)
         for tagspath in self.tag_locations:
             onpath = path.startswith(tagspath)
@@ -217,9 +255,11 @@ class SVNMeta(object):
 
         If existing=True, will return None, None, None if the file isn't on some known
         branch. If existing=False, then it will guess what the branch would be if it were
-        known.
+        known. Server-side branch path should be relative to our subdirectory.
         """
         path = self.normalize(path)
+        if self.layout == 'single':
+            return (path, None, '')
         if self.is_path_tag(path):
             tag = self.is_path_tag(path)
             matched = [t for t in self.tags.iterkeys() if tag.startswith(t+'/')]
@@ -325,6 +365,19 @@ class SVNMeta(object):
         return int(revnum), self.localname(self.normalize(branch))
 
     def update_branch_tag_map_for_rev(self, revision):
+        """Given a revision object, determine changes to branches and tags.
+
+        Returns: a dict of {
+            'tags': (added_tags, rmtags),
+            'branches': (added_branches, self.closebranches),
+        } where adds are dicts where the keys are branch/tag names and
+        values are the place the branch/tag came from. The deletions are
+        sets of the deleted branches.
+        """
+        if self.layout == 'single':
+            return {'tags': ({}, set()),
+                    'branches': ({None: (None, 0, -1), }, set()),
+                    }
         paths = revision.paths
         added_branches = {}
         added_tags = {}

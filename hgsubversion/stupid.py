@@ -103,6 +103,8 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
     error.
     """
     def make_diff_path(branch):
+        if meta.layout == 'single':
+            return ''
         if branch == 'trunk' or branch is None:
             return 'trunk'
         elif branch.startswith('../'):
@@ -203,7 +205,10 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
 
     for p in r.paths:
         if p.startswith(diff_path) and r.paths[p].action == 'D':
-            p2 = p[len(diff_path)+1:].strip('/')
+            if diff_path:
+                p2 = p[len(diff_path)+1:].strip('/')
+            else:
+                p2 = p
             if p2 in parentctx:
                 files_data[p2] = None
                 continue
@@ -221,7 +226,10 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
             raise IOError()
 
         if path in binary_files:
-            data, mode = svn.get_file(diff_path + '/' + path, r.revnum)
+            pa = path
+            if diff_path:
+                pa = diff_path + '/' + path
+            data, mode = svn.get_file(pa, r.revnum)
             isexe = 'x' in mode
             islink = 'l' in mode
         else:
@@ -236,6 +244,10 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
                 data = parentctx[path].data()
 
         copied = copies.get(path)
+        # TODO this branch feels like it should not be required,
+        # and this may actually imply a bug in getcopies
+        if copied not in parentctx.manifest():
+            copied = None
         return context.memfilectx(path=path, data=data, islink=islink,
                                   isexec=isexe, copied=copied)
 
@@ -347,7 +359,7 @@ def fetch_externals(svn, branchpath, r, parentctx):
         dirs.update([p for p,k in svn.list_files(branchpath, r.revnum) if k == 'd'])
         dirs.add('')
     else:
-        branchprefix = branchpath + '/'
+        branchprefix = (branchpath and branchpath + '/') or branchpath
         for path, e in r.paths.iteritems():
             if e.action == 'D':
                 continue
@@ -369,7 +381,8 @@ def fetch_externals(svn, branchpath, r, parentctx):
     # Retrieve new or updated values
     for dir in dirs:
         try:
-            values = svn.list_props(branchpath + '/' + dir, r.revnum)
+            dpath = (branchpath and branchpath + '/' + dir) or dir
+            values = svn.list_props(dpath, r.revnum)
             externals[dir] = values.get('svn:externals', '')
         except IOError:
             externals[dir] = ''
@@ -394,7 +407,7 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
             if kind == 'f':
                 files.append(path)
     else:
-        branchprefix = branchpath + '/'
+        branchprefix = (branchpath and branchpath + '/') or ''
         for path, e in r.paths.iteritems():
             if not path.startswith(branchprefix):
                 continue
@@ -423,7 +436,10 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
     copies = getcopies(svn, meta, branch, branchpath, r, files, parentctx)
 
     def filectxfn(repo, memctx, path):
-        data, mode = svn.get_file(branchpath + '/' + path, r.revnum)
+        svnpath = path
+        if branchpath:
+            svnpath = branchpath + '/' + path
+        data, mode = svn.get_file(svnpath, r.revnum)
         isexec = 'x' in mode
         islink = 'l' in mode
         copied = copies.get(path)
@@ -509,7 +525,6 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
             if branchname and branchname.startswith('../'):
                 continue
             branches[branchname] = branchpath
-
     return branches
 
 def convert_rev(ui, meta, svn, r, tbdelta):
@@ -549,7 +564,6 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     date = meta.fixdate(r.date)
     check_deleted_branches = set(tbdelta['branches'][1])
     for b in branches:
-
         parentctx = meta.repo[meta.get_parent_revision(r.revnum, b)]
         if parentctx.branch() != (b or 'default'):
             check_deleted_branches.add(b)
@@ -570,9 +584,10 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             files_touched, filectxfn2 = fetch_branchrev(
                 svn, meta, b, branches[b], r, parentctx)
 
-        externals = fetch_externals(svn, branches[b], r, parentctx)
-        if externals is not None:
-            files_touched.append('.hgsvnexternals')
+        if meta.layout != 'single':
+            externals = fetch_externals(svn, branches[b], r, parentctx)
+            if externals is not None:
+                files_touched.append('.hgsvnexternals')
 
         def filectxfn(repo, memctx, path):
             if path == '.hgsvnexternals':

@@ -228,6 +228,16 @@ def pull(repo, source, heads=[], force=False):
     svn = svnrepo.svnremoterepo(repo.ui, svn_url).svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
 
+    layout = repo.ui.config('hgsubversion', 'layout', 'auto')
+    if layout == 'auto':
+        rootlist = svn.list_dir('', revision=(stopat_rev or None))
+        if sum(map(lambda x: x in rootlist, ('branches', 'tags', 'trunk'))):
+            layout = 'standard'
+        else:
+            layout = 'single'
+        repo.ui.setconfig('hgsubversion', 'layout', layout)
+        repo.ui.note('using %s layout\n' % layout)
+
     start = max(meta.revmap.seen, skipto_rev)
     initializing_repo = meta.revmap.seen <= 0
     ui = repo.ui
@@ -351,9 +361,10 @@ optionmap = {
     'defaulthost': ('hgsubversion', 'defaulthost'),
     'defaultauthors': ('hgsubversion', 'defaultauthors'),
     'usebranchnames': ('hgsubversion', 'usebranchnames'),
+    'layout': ('hgsubversion', 'layout'),
 }
 
-dontretain = { 'hgsubversion': set(['authormap', 'filemap']) }
+dontretain = { 'hgsubversion': set(['authormap', 'filemap', 'layout', ]) }
 
 def clone(orig, ui, source, dest=None, **opts):
     """

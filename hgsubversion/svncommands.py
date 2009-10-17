@@ -32,17 +32,23 @@ def verify(ui, repo, *args, **opts):
     if args:
         url = args[0]
     svn = svnrepo.svnremoterepo(ui, url).svn
+    meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     btypes = {'default': 'trunk'}
-    branchpath = btypes.get(ctx.branch(), 'branches/%s' % ctx.branch())
-    branchpath = posixpath.normpath(branchpath)
+    if meta.layout == 'standard':
+        branchpath = btypes.get(ctx.branch(), 'branches/%s' % ctx.branch())
+    else:
+        branchpath = ''
     svnfiles = set()
     result = 0
-    for fn, type in svn.list_files(branchpath, srev):
+    for fn, type in svn.list_files(posixpath.normpath(branchpath), srev):
         if type != 'f':
             continue
         svnfiles.add(fn)
-        data, mode = svn.get_file(branchpath + '/'  + fn, srev)
+        fp = fn
+        if branchpath:
+            fp = branchpath + '/'  + fn
+        data, mode = svn.get_file(posixpath.normpath(fp), srev)
         fctx = ctx[fn]
         dmatch = fctx.data() == data
         mmatch = fctx.flags() == mode
@@ -87,6 +93,8 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
         os.unlink(maps.TagMap.filepath(repo))
     tags = maps.TagMap(repo)
 
+    layout = None
+
     skipped = set()
 
     for rev in repo:
@@ -126,6 +134,18 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
         assert revpath.startswith(subdir), ('That does not look like the '
                                             'right location in the repo.')
 
+        if layout is None:
+            if (subdir or '/') == revpath:
+                layout = 'single'
+            else:
+                layout = 'standard'
+            f = open(os.path.join(svnmetadir, 'layout'), 'w')
+            f.write(layout)
+            f.close()
+        elif layout == 'single':
+            assert (subdir or '/') == revpath, ('Possible layout detection'
+                                                ' defect in replay')
+
         # write repository uuid if required
         if uuid is None:
             uuid = convinfo[4:40]
@@ -142,17 +162,17 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
 
         # find commitpath, write to revmap
         commitpath = revpath[len(subdir)+1:]
-        bp = posixpath.normpath('/'.join([subdir, 'branches', ctx.branch()]))
-        if revpath == bp:
-            commitpath = ctx.branch()
-        elif commitpath == 'trunk':
-            commitpath = ''
-        elif commitpath.startswith('tags'):
-            if ctx.extra().get('close'):
-                continue
-            commitpath = '../' + commitpath
+        if layout == 'standard':
+            if commitpath.startswith('branches/'):
+                commitpath = commitpath[len('branches/'):]
+            elif commitpath == 'trunk':
+                commitpath = ''
+            else:
+                if commitpath.startswith('tags/') and ctx.extra().get('close'):
+                    continue
+                commitpath = '../' + commitpath
         else:
-            assert False, 'unhandled rev %s: %s' % (rev, convinfo)
+            commitpath = ''
         revmap.write('%s %s %s\n' % (revision, ctx.hex(), commitpath))
 
         revision = int(revision)

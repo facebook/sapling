@@ -29,14 +29,13 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     current.findmissing(svn)
 
     # update externals
-
-    if current.externals:
+    # TODO fix and re-enable externals for single-directory clones
+    if current.externals and not meta.layout == 'single':
 
         # accumulate externals records for all branches
         revnum = current.rev.revnum
         branches = {}
         for path, entry in current.externals.iteritems():
-
             if not meta.is_path_valid(path):
                 ui.warn('WARNING: Invalid path %s in externals\n' % path)
                 continue
@@ -56,7 +55,9 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
         # register externals file changes
         for bp, external in branches.iteritems():
-            path = bp + '/.hgsvnexternals'
+            if bp and bp[-1] != '/':
+                bp += '/'
+            path = (bp and bp + '.hgsvnexternals') or '.hgsvnexternals'
             if external:
                 current.set(path, external.write(), False, False)
             else:

@@ -66,6 +66,8 @@ wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
          'file mapping Subversion usernames to Mercurial authors'),
         ('', 'filemap', '',
          'file containing rules for remapping Subversion repository paths'),
+        ('', 'layout', 'auto', ('import standard layout or single '
+                                'directory? Can be standard, single, or auto.')),
     ]),
 }
 

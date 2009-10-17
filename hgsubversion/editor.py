@@ -94,7 +94,7 @@ class RevisionData(object):
             self.ui.flush()
             if p[-1] == '/':
                 dir = p[len(root):]
-                new = [dir + f for f, k in svn.list_files(dir, r) if k == 'f']
+                new = [p + f for f, k in svn.list_files(dir, r) if k == 'f']
                 files.update(new)
             else:
                 files.add(p[len(root):])
@@ -107,7 +107,7 @@ class RevisionData(object):
             if i % 50 == 0:
                 svn.init_ra_and_client()
             i += 1
-            data, mode = svn.get_file(p, r)
+            data, mode = svn.get_file(p[len(root):], r)
             self.set(p, data, 'x' in mode, 'l' in mode)
 
         self.missing = set()
@@ -304,7 +304,7 @@ class HgEditor(delta.Editor):
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
         self.current.batons[path] = path
         p_, branch = self.meta.split_branch_path(path)[:2]
-        if p_ == '':
+        if p_ == '' or (self.meta.layout == 'single' and p_):
             self.current.emptybranches[branch] = False
         return path
 

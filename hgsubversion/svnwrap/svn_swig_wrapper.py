@@ -345,7 +345,8 @@ class SubversionRepo(object):
           dir: the directory to list, no leading slash
           rev: the revision at which to list the directory, defaults to HEAD
         """
-        if dir[-1] == '/':
+        # TODO this should just not accept leading slashes like the docstring says
+        if dir and dir[-1] == '/':
             dir = dir[:-1]
         if revision is None:
             revision = self.HEAD
@@ -555,6 +556,7 @@ class SubversionRepo(object):
         otherwise. If the file does not exist at this revision, raise
         IOError.
         """
+        assert not path.startswith('/')
         mode = ''
         try:
             out = cStringIO.StringIO()
@@ -633,7 +635,9 @@ class SubversionRepo(object):
     def path2url(self, path):
         """Build svn URL for path, URL-escaping path.
         """
-        assert path[0] != '/'
+        if not path or path == '.':
+            return self.svn_url
+        assert path[0] != '/', path
         return '/'.join((self.svn_url,
                          urllib.quote(path).rstrip('/'),
                          ))

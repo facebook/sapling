@@ -10,9 +10,12 @@ from mercurial import ui
 from hgsubversion import svncommands
 from hgsubversion import svnmeta
 
-def _do_case(self, name, stupid):
+def _do_case(self, name, stupid, single):
     subdir = test_util.subdir.get(name, '')
-    self._load_fixture_and_fetch(name, subdir=subdir, stupid=stupid)
+    layout = 'auto'
+    if single:
+        layout = 'single'
+    self._load_fixture_and_fetch(name, subdir=subdir, stupid=stupid, layout=layout)
     assert len(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
@@ -27,7 +30,7 @@ def _do_case(self, name, stupid):
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the destination!')
     dest = hg.repository(u, os.path.dirname(dest.path))
-    for tf in ('rev_map', 'uuid', 'tagmap', ):
+    for tf in ('rev_map', 'uuid', 'tagmap', 'layout', ):
         stf = os.path.join(src.path, 'svn', tf)
         self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
         dtf = os.path.join(dest.path, 'svn', tf)
@@ -54,11 +57,15 @@ def _do_case(self, name, stupid):
             self.assertEqual(srcinfo[2], destinfo[2])
 
 
-def buildmethod(case, name, stupid):
-    m = lambda self: self._do_case(case, stupid)
+def buildmethod(case, name, stupid, single):
+    m = lambda self: self._do_case(case, stupid, single)
     m.__name__ = name
-    m.__doc__ = ('Test rebuildmeta on %s with %s replay.' %
-                 (case, (stupid and 'stupid') or 'real'))
+    m.__doc__ = ('Test rebuildmeta on %s with %s replay. (%s)' %
+                 (case,
+                  (stupid and 'stupid') or 'real',
+                  (single and 'single') or 'standard',
+                  )
+                 )
     return m
 
 
@@ -68,10 +75,13 @@ for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     # this fixture results in an empty repository, don't use it
     if case == 'project_root_not_repo_root.svndump':
         continue
-    name = 'test_' + case[:-len('.svndump')]
-    attrs[name] = buildmethod(case, name, False)
-    name += '_stupid'
-    attrs[name] = buildmethod(case, name, True)
+    bname = 'test_' + case[:-len('.svndump')]
+    attrs[bname] = buildmethod(case, bname, False, False)
+    name = bname + '_stupid'
+    attrs[name] = buildmethod(case, name, True, False)
+    name = bname + '_single'
+    attrs[name] = buildmethod(case, name, False, True)
+
 RebuildMetaTests = type('RebuildMetaTests', (test_util.TestBase, ), attrs)
 
 

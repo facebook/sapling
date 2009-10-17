@@ -82,6 +82,10 @@ subdir = {'truncatedhistory.svndump': '/project2',
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
 
+def filtermanifest(manifest):
+    return filter(lambda x: x not in ('.hgtags', '.hgsvnexternals', ),
+                  manifest)
+
 def fileurl(path):
     path = os.path.abspath(path)
     drive, path = os.path.splitdrive(path)
@@ -103,16 +107,21 @@ def load_svndump_fixture(path, fixture_name):
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     proc.communicate()
 
-def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir='', noupdate=True):
+def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir='',
+                           noupdate=True, layout='auto'):
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
 
-    _ui = ui.ui()
-    _ui.setconfig('hgsubversion', 'stupid', str(stupid))
+    confvars = locals()
+    def conf():
+        for var in ('stupid', 'layout'):
+            _ui = ui.ui()
+            _ui.setconfig('hgsubversion', var, confvars[var])
+        return _ui
+    _ui = conf()
     commands.clone(_ui, fileurl(repo_path), wc_path, noupdate=noupdate)
-    _ui = ui.ui()
-    _ui.setconfig('hgsubversion', 'stupid', str(stupid))
+    _ui = conf()
     return hg.repository(_ui, wc_path)
 
 def rmtree(path):
@@ -170,10 +179,15 @@ class TestBase(unittest.TestCase):
         os.chdir(self.oldwd)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
 
-    def _load_fixture_and_fetch(self, fixture_name, subdir='', stupid=False):
+    def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False, layout='auto'):
+        if layout == 'single':
+            if subdir is None:
+                subdir = 'trunk'
+        elif subdir is None:
+            subdir = ''
         return load_fixture_and_fetch(fixture_name, self.repo_path,
                                       self.wc_path, subdir=subdir,
-                                      stupid=stupid)
+                                      stupid=stupid, layout=layout)
 
     # define this as a property so that it reloads anytime we need it
     @property
