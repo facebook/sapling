@@ -20,24 +20,24 @@ Commands
 
 You can clone a Git repository from Hg by running `hg clone [url]`.  For example, if you were to run `hg clone git://github.com/schacon/munger.git` it would clone the repository down into the directory 'munger.git', then convert it to an Hg repository for you.
 
-	hg clone git://github.com/schacon/hg-git.git
+        hg clone git://github.com/schacon/hg-git.git
 
 If you want to clone a github repository for later pushing (or any other repository you access via ssh), you need to convert the ssh url to a format with explicit protocol prefix (mind the switch from colon to slash after the host!):
 
-	git clone git@github.com:schacon/hg-git.git
-	hg clone git+ssh://git@github.com/schacon/hg-git.git
+        git clone git@github.com:schacon/hg-git.git
+        hg clone git+ssh://git@github.com/schacon/hg-git.git
 
 If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as default path or default-push path in your .hg/hgrc and then run `hg push` from within your project.  For example:
 
-	cd hg-git # (an Hg repository)
-	(edit .hg/hgrc and add the target git url in the paths section)
-	hg push
+        cd hg-git # (an Hg repository)
+        (edit .hg/hgrc and add the target git url in the paths section)
+        hg push
 
 This will convert all your Hg data into Git objects and push them up to the Git server.
 
 Now that you have an Hg repository that can push/pull to/from a Git repository, you can fetch updates with `hg pull`.
 
-	$ hg pull
+        $ hg pull
 
 That will pull down any commits that have been pushed to the server in the meantime and give you a new head that you can merge in.
 
@@ -53,9 +53,9 @@ Installing
 
 Clone this repository somewhere and make the 'extensions' section in your `~/.hgrc` file look something like this:
 
-	[extensions]
-	hgext.bookmarks =
-	hgext.hg-git = [path-to]/hg-git
+        [extensions]
+        hgext.bookmarks =
+        hggit = [path-to]/hg-git/hggit
 
 That will enable the Hg-Git extension for you.  The bookmarks section is not compulsory, but it makes some things a bit nicer for you.
 
@@ -63,10 +63,13 @@ Authors
 ========
 
 * Scott Chacon <schacon@gmail.com> - main development
-* Augie Fackler <durin42@gmail.com> - testing and moral support
+* Augie Fackler <durin42@gmail.com> - testing and moral support, janitor
 * Sverre Rabbelier <sverre@rabbelier.nl> - gexport, mode and i18n stuff and misc fixes
+* Abderrahim Kitouni <a.kitouni@gmail.com> - more "mercurialistic" UI
+* Kevin Bullock <kbullock@ringworld.org> - proper packaging for PyPI
+
 * Dulwich Developers - most of this code depends on the awesome work they did.
- 
+
 Sponsorship
 ===========
 
