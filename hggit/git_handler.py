@@ -839,7 +839,24 @@ class GitHandler(object):
         from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
         for handler, transport in (("git://", TCPGitClient), ("git@", SSHGitClient), ("git+ssh://", SSHGitClient)):
             if uri.startswith(handler):
-                host, path = uri[len(handler):].split("/", 1)
-                return transport(host, thin_packs=False), '/' + path
+                # We need to split around : or /, whatever comes first
+                hostpath = uri[len(handler):]
+                if (hostpath.find(':') > 0 and hostpath.find('/') > 0):
+                    # we have both, whatever is first wins.
+                    if hostpath.find(':') < hostpath.find('/'):
+                      hostpath_seper = ':'
+                    else:
+                      hostpath_seper = '/'
+                elif hostpath.find(':') > 0:
+                    hostpath_seper = ':'
+                else:
+                    hostpath_seper = '/'
+
+                host, path = hostpath.split(hostpath_seper, 1)
+                if hostpath_seper == '/':
+                    transportpath = '/' + path
+                else:
+                    transportpath = path
+                return transport(host, thin_packs=False), transportpath
         # if its not git or git+ssh, try a local url..
         return SubprocessGitClient(thin_packs=False), uri
