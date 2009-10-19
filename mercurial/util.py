@@ -1158,6 +1158,7 @@ def rcpath():
             _rcpath = []
             for p in os.environ['HGRCPATH'].split(os.pathsep):
                 if not p: continue
+                p = expandpath(p)
                 if os.path.isdir(p):
                     for f, kind in osutil.listdir(p):
                         if f.endswith('.rc'):
@@ -1250,3 +1251,6 @@ def iterlines(iterator):
     for chunk in iterator:
         for line in chunk.splitlines():
             yield line
+
+def expandpath(path):
+    return os.path.expanduser(os.path.expandvars(path))
