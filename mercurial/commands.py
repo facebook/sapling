@@ -2901,9 +2901,10 @@ def summary(ui, repo):
     st = list(repo.status(unknown=True))[:7]
     ms = merge_.mergestate(repo)
     st.append([f for f in ms if f == 'u'])
-    labels = [_('%d modified'), _('%d added'), _('%d removed'),
-              _('%d deleted'), _('%d unknown'), _('%d ignored'),
-              _('%d unresolved')]
+    labels = [_('%d modified files'), _('%d added files'),
+              _('%d removed files'), _('%d deleted files'),
+              _('%d unknown files'), _('%d ignored files'),
+              _('%d unresolved files')]
     t = []
     for s,l in zip(st, labels):
         if s:
