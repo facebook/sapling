@@ -2901,11 +2901,13 @@ def summary(ui, repo):
     st = list(repo.status(unknown=True))[:7]
     ms = merge_.mergestate(repo)
     st.append([f for f in ms if f == 'u'])
-    labels = _('modified added removed deleted unknown ignored unresolved')
+    labels = [_('%d modified'), _('%d added'), _('%d removed'),
+              _('%d deleted'), _('%d unknown'), _('%d ignored'),
+              _('%d unresolved')]
     t = []
-    for i,l in enumerate(labels.split()):
-        if st[i]:
-            t.append('%d %s' % (len(st[i]), l))
+    for s,l in zip(st, labels):
+        if s:
+            t.append(l % len(s))
 
     t = ', '.join(t)
 
