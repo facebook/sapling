@@ -3328,7 +3328,7 @@ table = {
          ] + walkopts + dryrunopts,
          _('[OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('[INDEX] REV1 REV2')),
-    "debugcheckstate": (debugcheckstate, []),
+    "debugcheckstate": (debugcheckstate, [], ''),
     "debugcommands": (debugcommands, [], _('[COMMAND]')),
     "debugcomplete":
         (debugcomplete,
@@ -3342,7 +3342,7 @@ table = {
     "debugfsinfo": (debugfsinfo, [], _('[PATH]')),
     "debugindex": (debugindex, [], _('FILE')),
     "debugindexdot": (debugindexdot, [], _('FILE')),
-    "debuginstall": (debuginstall, []),
+    "debuginstall": (debuginstall, [], ''),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '', _('revision to rebuild to'))],
@@ -3569,7 +3569,7 @@ table = {
          [('u', 'untrusted', None, _('show untrusted configuration options'))],
          _('[-u] [NAME]...')),
     "^summary|sum":
-        (summary, []),
+        (summary, [], ''),
     "^status|st":
         (status,
          [('A', 'all', None, _('show status of all files')),
@@ -3597,7 +3597,7 @@ table = {
           ('m', 'message', '', _('use <text> as commit message')),
          ] + commitopts2,
          _('[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...')),
-    "tags": (tags, []),
+    "tags": (tags, [], ''),
     "tip":
         (tip,
          [('p', 'patch', None, _('show patch')),
