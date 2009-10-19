@@ -3491,7 +3491,7 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
          ] + logopts + remoteopts,
          _('[-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
-    "^parents":
+    "parents":
         (parents,
          [('r', 'rev', '', _('show parents from the specified revision')),
          ] + templateopts,
