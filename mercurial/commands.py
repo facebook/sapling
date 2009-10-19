@@ -2918,7 +2918,10 @@ def summary(ui, repo):
     elif pnode not in bheads:
         t += _(' (new branch head)')
 
-    ui.write(_('commit: %s\n') % t.strip())
+    if 'clean' in t:
+        ui.status(_('commit: %s\n') % t.strip())
+    else:
+        ui.write(_('commit: %s\n') % t.strip())
 
     # all ancestors of branch heads - all ancestors of parent = new csets
     new = [0] * len(repo)
@@ -2930,7 +2933,7 @@ def summary(ui, repo):
     new = sum(new)
 
     if new == 0:
-        ui.write(_('update: (current)\n'))
+        ui.status(_('update: (current)\n'))
     elif pnode not in bheads:
         ui.write(_('update: %d new changesets (update)\n') % new)
     else:
