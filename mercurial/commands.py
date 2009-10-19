@@ -2877,6 +2877,66 @@ def status(ui, repo, *pats, **opts):
                 if f in copy:
                     ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
 
+def summary(ui, repo):
+    """summarize working directory state
+
+    This generates a brief summary of the working directory state,
+    including parents, branch, commit status, and available updates.
+    """
+
+    ctx = repo[None]
+    parents = ctx.parents()
+    pnode = parents[0].node()
+    tags = repo.tags()
+
+    for p in parents:
+        t = ' '.join([t for t in tags if tags[t] == p.node()])
+        ui.write(_('parent: %d:%s %s\n') % (p.rev(), str(p), t))
+        ui.status(' ' + p.description().splitlines()[0].strip() + '\n')
+
+    branch = ctx.branch()
+    bheads = repo.branchheads(branch)
+    ui.status(_('branch: %s\n') % branch)
+
+    st = list(repo.status(unknown=True))[:7]
+    ms = merge_.mergestate(repo)
+    st.append([f for f in ms if f == 'u'])
+    labels = _('modified added removed deleted unknown ignored unresolved')
+    t = []
+    for i,l in enumerate(labels.split()):
+        if st[i]:
+            t.append('%d %s' % (len(st[i]), l))
+
+    t = ', '.join(t)
+
+    if len(parents) > 1:
+        t += _(' (merge)')
+    elif branch != parents[0].branch():
+        t += _(' (new branch)')
+    elif (not st[0] and not st[1] and not st[2]):
+        t += _(' (clean)')
+    elif pnode not in bheads:
+        t += _(' (new branch head)')
+
+    ui.write(_('commit: %s\n') % t.strip())
+
+    # all ancestors of branch heads - all ancestors of parent = new csets
+    new = [0] * len(repo)
+    cl = repo.changelog
+    for a in cl.ancestors(*[cl.rev(n) for n in bheads]):
+        new[a] = 1
+    for a in cl.ancestors(*[p.rev() for p in parents]):
+        new[a] = 0
+    new = sum(new)
+
+    if new == 0:
+        ui.write(_('update: (current)\n'))
+    elif pnode not in bheads:
+        ui.write(_('update: %d new changesets (update)\n') % new)
+    else:
+        ui.write(_('update: %d new changesets, %d branch heads (merge)\n') %
+                 (new, len(bheads)))
+
 def tag(ui, repo, name1, *names, **opts):
     """add one or more tags for the current or given revision
 
@@ -3508,6 +3568,8 @@ table = {
         (showconfig,
          [('u', 'untrusted', None, _('show untrusted configuration options'))],
          _('[-u] [NAME]...')),
+    "^summary|sum":
+        (summary, []),
     "^status|st":
         (status,
          [('A', 'all', None, _('show status of all files')),

@@ -21,6 +21,7 @@ basic commands:
  remove     remove the specified files on the next commit
  serve      export the repository via HTTP
  status     show changed files in the working directory
+ summary    summarize working directory state
  update     update working directory
 
 use "hg help" for the full list of commands or "hg -v" for details

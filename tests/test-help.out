@@ -18,6 +18,7 @@ basic commands:
  remove     remove the specified files on the next commit
  serve      export the repository via HTTP
  status     show changed files in the working directory
+ summary    summarize working directory state
  update     update working directory
 
 use "hg help" for the full list of commands or "hg -v" for details
@@ -37,6 +38,7 @@ use "hg help" for the full list of commands or "hg -v" for details
  remove     remove the specified files on the next commit
  serve      export the repository via HTTP
  status     show changed files in the working directory
+ summary    summarize working directory state
  update     update working directory
 Mercurial Distributed SCM
 
@@ -84,6 +86,7 @@ list of commands:
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
+ summary      summarize working directory state
  tag          add one or more tags for the current or given revision
  tags         list repository tags
  tip          show the tip revision
@@ -147,6 +150,7 @@ use "hg -v help" to show aliases and global options
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
+ summary      summarize working directory state
  tag          add one or more tags for the current or given revision
  tags         list repository tags
  tip          show the tip revision
@@ -319,6 +323,7 @@ basic commands:
  remove     remove the specified files on the next commit
  serve      export the repository via HTTP
  status     show changed files in the working directory
+ summary    summarize working directory state
  update     update working directory
 
 use "hg help" for the full list of commands or "hg -v" for details
@@ -343,6 +348,7 @@ basic commands:
  remove     remove the specified files on the next commit
  serve      export the repository via HTTP
  status     show changed files in the working directory
+ summary    summarize working directory state
  update     update working directory
 
 use "hg help" for the full list of commands or "hg -v" for details

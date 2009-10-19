@@ -191,6 +191,7 @@ list of commands:
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
+ summary      summarize working directory state
  tag          add one or more tags for the current or given revision
  tags         list repository tags
  tip          show the tip revision
@@ -258,6 +259,7 @@ list of commands:
  serve        export the repository via HTTP
  showconfig   show combined config settings from all hgrc files
  status       show changed files in the working directory
+ summary      summarize working directory state
  tag          add one or more tags for the current or given revision
  tags         list repository tags
  tip          show the tip revision

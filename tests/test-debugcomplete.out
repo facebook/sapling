@@ -41,6 +41,7 @@ root
 serve
 showconfig
 status
+summary
 tag
 tags
 tip
@@ -159,7 +160,7 @@ root
 
 % Show an error if we use --options with an ambiguous abbreviation
 hg: command 's' is ambiguous:
-    serve showconfig status
+    serve showconfig status summary
 
 % Show all commands + options
 add: include, exclude, dry-run
@@ -178,6 +179,7 @@ push: force, rev, ssh, remotecmd
 remove: after, force, include, exclude
 serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, webdir-conf, pid-file, stdio, templates, style, ipv6, certificate
 status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, include, exclude
+summary: 
 update: clean, check, date, rev
 addremove: similarity, include, exclude, dry-run
 archive: no-decode, prefix, rev, type, include, exclude
