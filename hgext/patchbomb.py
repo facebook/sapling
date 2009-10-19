@@ -76,9 +76,11 @@ from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
 
-def prompt(ui, prompt, default=None, rest=': ', empty_ok=False):
+def prompt(ui, prompt, default='', rest=': ', empty_ok=False):
     if not ui.interactive():
-        return default
+        if default or empty_ok:
+            return default
+        raise util.Abort(_("%sPlease enter a valid value" % (prompt+rest)))
     if default:
         prompt += ' [%s]' % default
     prompt += rest
@@ -331,8 +333,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 subj = '[PATCH %0*d of %d %s] ' % (tlen, 0, len(patches), flag)
             else:
                 subj = '[PATCH %0*d of %d] ' % (tlen, 0, len(patches))
-            subj += opts.get('subject') or prompt(ui, 'Subject:', rest=subj,
-                                                    default='None')
+            subj += opts.get('subject') or prompt(ui, 'Subject:', rest=subj)
 
             body = ''
             if opts.get('diffstat'):
