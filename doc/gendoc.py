@@ -50,7 +50,7 @@ def get_cmd(cmd):
             s += ' ' + attr[2]
         else:
             s = attr[2]
-    d['synopsis'] = s
+    d['synopsis'] = s.strip()
 
     return d
 
