@@ -4,7 +4,7 @@ pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
 
 commit should succeed
 
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 commit should fail
 Attempt to commit or push text file(s) using CRLF line endings
@@ -113,7 +113,7 @@ description:
 
 
 
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 adding dupe/a

@@ -7,6 +7,7 @@
 
 from i18n import _
 from node import hex
+import cmdutil
 import util
 import cStringIO, os, stat, tarfile, time, zipfile
 import zlib, gzip
@@ -217,9 +218,25 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     archiver = archivers[kind](dest, prefix, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta", True):
-        write('.hg_archival.txt', 0644, False,
-              lambda: 'repo: %s\nnode: %s\n' % (
-                  hex(repo.changelog.node(0)), hex(node)))
+        def metadata():
+            base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
+                hex(repo.changelog.node(0)), hex(node), ctx.branch())
+
+            tags = ''.join('tag: %s\n' % t for t in ctx.tags()
+                           if repo.tagtype(t) == 'global')
+            if not tags:
+                repo.ui.pushbuffer()
+                opts = {'template': '{latesttag}\n{latesttagdistance}',
+                        'style': '', 'patch': None, 'git': None}
+                cmdutil.show_changeset(repo.ui, repo, opts).show(ctx)
+                ltags, dist = repo.ui.popbuffer().split('\n')
+                tags = ''.join('latesttag: %s\n' % t for t in ltags.split(':'))
+                tags += 'latesttagdistance: %s\n' % dist
+
+            return base + tags
+
+        write('.hg_archival.txt', 0644, False, metadata)
+
     for f in ctx:
         ff = ctx.flags(f)
         write(f, 'x' in ff and 0755 or 0644, 'l' in ff, ctx[f].data)

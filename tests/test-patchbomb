@@ -152,6 +152,9 @@ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar --in-reply-to baz \
 hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar --in-reply-to baz \
   -r 0:1 | fixheaders
 
+hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar --in-reply-to baz \
+  -s test -r 0:1 | fixheaders
+
 echo "% test single flag for single patch"
 hg email --date '1970-1-1 0:1' -n --flag fooFlag -f quux -t foo -c bar -s test \
   -r 2 | fixheaders

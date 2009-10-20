@@ -163,7 +163,7 @@ abort: repository default-push not found!
 6 changesets found
 1 changesets found
 1 changesets found
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 2
 2:d62976ca1e50
@@ -219,7 +219,7 @@ warning: detected divergent renames of afile to:
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 7 changesets found
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding changesets
 adding manifests

@@ -3,7 +3,7 @@ pretxncommit hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0
 0:29b62aeb769f
 commit hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 
 commit.b hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 precommit hook: HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
 pretxncommit hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PENDING=$HGTMP/test-hook/a 
@@ -109,7 +109,7 @@ searching for changes
 abort: preoutgoing.forbid hook exited with status 1
 preoutgoing hook: HG_SOURCE=clone 
 outgoing hook: HG_NODE=0000000000000000000000000000000000000000 HG_SOURCE=clone 
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 preoutgoing hook: HG_SOURCE=clone 
 preoutgoing.forbid hook: HG_SOURCE=clone 

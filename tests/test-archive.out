@@ -57,6 +57,17 @@ test-TIP/bar
 test-TIP/baz/bletch
 test-TIP/foo
 rev-0.tar created
+% test .hg_archival.txt
+repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
+node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
+branch: default
+latesttag: null
+latesttagdistance: 3
+repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
+node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
+branch: default
+tag: anothertag
+tag: mytag
 abort: unknown archive type 'bogus'
 % server errors
 % empty repo
