@@ -2877,11 +2877,14 @@ def status(ui, repo, *pats, **opts):
                 if f in copy:
                     ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
 
-def summary(ui, repo):
+def summary(ui, repo, **opts):
     """summarize working directory state
 
     This generates a brief summary of the working directory state,
     including parents, branch, commit status, and available updates.
+
+    With the --remote option, this will check the default paths for
+    incoming and outgoing changes. This can be time-consuming.
     """
 
     ctx = repo[None]
@@ -2947,6 +2950,34 @@ def summary(ui, repo):
     else:
         ui.write(_('update: %d new changesets, %d branch heads (merge)\n') %
                  (new, len(bheads)))
+
+    if opts.get('remote'):
+        t = []
+        source, revs, checkout = hg.parseurl(ui.expandpath('default'),
+                                             opts.get('rev'))
+        other = hg.repository(cmdutil.remoteui(repo, {}), source)
+        ui.debug('comparing with %s\n' % url.hidepassword(source))
+        repo.ui.pushbuffer()
+        common, incoming, rheads = repo.findcommonincoming(other)
+        repo.ui.popbuffer()
+        if incoming:
+            t.append(_('1 or more incoming'))
+
+        dest, revs, checkout = hg.parseurl(
+            ui.expandpath('default-push', 'default'))
+        other = hg.repository(cmdutil.remoteui(repo, {}), dest)
+        ui.debug('comparing with %s\n' % url.hidepassword(dest))
+        repo.ui.pushbuffer()
+        o = repo.findoutgoing(other)
+        repo.ui.popbuffer()
+        o = repo.changelog.nodesbetween(o, revs)[0]
+        if o:
+            t.append(_('%d outgoing') % len(o))
+
+        if t:
+            ui.write(_('remote: %s\n') % (', '.join(t)))
+        else:
+            ui.status(_('remote: (synced)\n'))
 
 def tag(ui, repo, name1, *names, **opts):
     """add one or more tags for the current or given revision
@@ -3580,7 +3611,8 @@ table = {
          [('u', 'untrusted', None, _('show untrusted configuration options'))],
          _('[-u] [NAME]...')),
     "^summary|sum":
-        (summary, [], ''),
+        (summary,
+         [('', 'remote', None, _('check for push and pull'))], '[-p]'),
     "^status|st":
         (status,
          [('A', 'all', None, _('show status of all files')),
