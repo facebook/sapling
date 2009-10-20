@@ -1930,22 +1930,7 @@ msgid ""
 "    converted, and that any directory reorganization in the CVS\n"
 "    sandbox is ignored.\n"
 "\n"
-"    Because CVS does not have changesets, it is necessary to collect\n"
-"    individual commits to CVS and merge them into changesets. CVS\n"
-"    source uses its internal changeset merging code by default but can\n"
-"    be configured to call the external 'cvsps' program by setting::\n"
-"\n"
-"      --config convert.cvsps='cvsps -A -u --cvs-direct -q'\n"
-"\n"
-"    This option is deprecated and will be removed in Mercurial 1.4.\n"
-"\n"
 "    The options shown are the defaults.\n"
-"\n"
-"    Internal cvsps is selected by setting ::\n"
-"\n"
-"      --config convert.cvsps=builtin\n"
-"\n"
-"    and has a few more configurable options:\n"
 "\n"
 "    --config convert.cvsps.cache=True         (boolean)\n"
 "        Set to False to disable remote log caching, for testing and\n"
@@ -2157,22 +2142,7 @@ msgstr ""
 "    início serão convertidos, e que qualquer reorganização na cópia\n"
 "    local do CVS é ignorada.\n"
 "\n"
-"    Como o CVS não possui changesets, é necessário coletar commits\n"
-"    individuais do CVS e mesclá-los em changesets. A origem CVS usa\n"
-"    seu código interno de mesclagem por padrão, mas pode ser\n"
-"    configurada para chamar o utilitário externo 'cvsps' definindo::\n"
-"\n"
-"      --config convert.cvsps='cvsps -A -u --cvs-direct -q'\n"
-"\n"
-"    Esta opção é obsoleta e será removida no Mercurial 1.4.\n"
-"\n"
 "    As opções exibidas são os valores padrão.\n"
-"\n"
-"    O cvsps interno é selecionado com::\n"
-"\n"
-"      --config convert.cvsps=builtin\n"
-"\n"
-"    e possui algumas outras opções de configuração:\n"
 "\n"
 "    --config convert.cvsps.cache=True         (booleana)\n"
 "        Defina como False para desabilitar o cache do log\n"
@@ -2452,19 +2422,9 @@ msgstr "mais de um modo de ordenação especificado"
 msgid "--sourcesort is not supported by this data source"
 msgstr "--sourcesort não é suportado para esta origem de dados"
 
-msgid ""
-"warning: support for external cvsps is deprecated and will be removed in "
-"Mercurial 1.4\n"
-msgstr ""
-"aviso: o suporte para o cvsps externo é obsoleto e será removido no "
-"Mercurial 1.4\n"
-
 #, python-format
-msgid "revision %s is not a patchset number or date"
-msgstr "revisão %s não é um número de patchset ou data"
-
-msgid "using builtin cvsps\n"
-msgstr "usando cvsps interno\n"
+msgid "revision %s is not a patchset number"
+msgstr "revisão %s não é um número de patchset"
 
 #, python-format
 msgid "connecting to %s\n"
@@ -2632,6 +2592,11 @@ msgstr "lendo 'p4 views'\n"
 
 msgid "collecting p4 changelists\n"
 msgstr "coletando changelists do p4\n"
+
+msgid "Mercurial failed to run itself, check hg executable is in PATH"
+msgstr ""
+"Mercurial falhou ao executar a si próprio, veja se o executável hg está no "
+"PATH"
 
 msgid "Subversion python bindings could not be loaded"
 msgstr "Os módulos Python para o Subversion não puderam ser carregados"
@@ -5027,8 +4992,8 @@ msgstr "desempilha todos os patches"
 msgid "queue name to pop"
 msgstr "nome da fila para desempilhar"
 
-msgid "forget any local changes"
-msgstr "descarta qualquer mudança local"
+msgid "forget any local changes to patched files"
+msgstr "descarta qualquer mudança local a arquivos modificados pelo patch"
 
 msgid "hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]"
 msgstr "hg qpop [-a] [-n NOME] [-f] [PATCH | ÍNDICE]"
@@ -5957,11 +5922,11 @@ msgstr "rebaseamento abortado\n"
 msgid "cannot rebase onto an applied mq patch"
 msgstr "não se pode rebasear para um patch mq aplicado"
 
-msgid "cannot rebase an ancestor"
-msgstr "não se pode rebasear um ancestral"
+msgid "source is ancestor of destination"
+msgstr "origem é ancestral do destino"
 
-msgid "cannot rebase a descendant"
-msgstr "não se pode rebasear um descendente"
+msgid "source is descendant of destination"
+msgstr "origem é descendente do destino"
 
 msgid "unable to collapse, there is more than one external parent"
 msgstr "incapaz de colapsar, há mais de um pai externo"
@@ -5978,14 +5943,14 @@ msgstr "rebaseia a partir da base de uma revisão dada"
 msgid "rebase onto a given revision"
 msgstr "rebaseia para a revisão dada"
 
-msgid "collapse the rebased revisions"
+msgid "collapse the rebased changesets"
 msgstr "colapsa as revisões rebaseadas"
 
-msgid "keep original revisions"
+msgid "keep original changesets"
 msgstr "mantém revisões originais"
 
-msgid "keep original branches"
-msgstr "mantém ramos originais"
+msgid "keep original branch names"
+msgstr "mantém nomes de ramos originais"
 
 msgid "continue an interrupted rebase"
 msgstr "continua um rebaseamento interrompido"
@@ -7139,10 +7104,6 @@ msgstr "(uso 'hg bisect <cmd>' é obsoleto)\n"
 
 msgid "incompatible arguments"
 msgstr "argumentos incompatíveis"
-
-#, python-format
-msgid "cannot find executable: %s"
-msgstr "não foi possível encontrar executável: %s"
 
 #, python-format
 msgid "failed to execute %s"
@@ -9001,6 +8962,52 @@ msgstr ""
 "      I = ignorado\n"
 "        = origem do arquivo anterior listado como A (adicionado)\n"
 "    "
+
+msgid ""
+"summarize working directory state\n"
+"\n"
+"    This generates a brief summary of the working directory state,\n"
+"    including parents, branch, commit status, and available updates.\n"
+"    "
+msgstr ""
+
+#, python-format
+msgid "parent: %d:%s %s\n"
+msgstr ""
+
+#, python-format
+msgid "branch: %s\n"
+msgstr ""
+
+msgid "modified added removed deleted unknown ignored unresolved"
+msgstr ""
+
+msgid " (merge)"
+msgstr ""
+
+msgid " (new branch)"
+msgstr ""
+
+msgid " (clean)"
+msgstr ""
+
+msgid " (new branch head)"
+msgstr ""
+
+#, python-format
+msgid "commit: %s\n"
+msgstr ""
+
+msgid "update: (current)\n"
+msgstr ""
+
+#, python-format
+msgid "update: %d new changesets (update)\n"
+msgstr ""
+
+#, python-format
+msgid "update: %d new changesets, %d branch heads (merge)\n"
+msgstr ""
 
 msgid ""
 "add one or more tags for the current or given revision\n"
@@ -11260,6 +11267,10 @@ msgstr "o tamanho descompactado é %s, esperado %s"
 #, python-format
 msgid "unpacking %s"
 msgstr "descompactando %s"
+
+#, python-format
+msgid "warning: copy source of '%s' not in parents of %s"
+msgstr "aviso: a origem da cópia de '%s' não está nos pais de %s"
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
