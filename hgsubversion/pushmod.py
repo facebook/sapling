@@ -100,7 +100,9 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     parent_branch = rev_ctx.parents()[0].branch()
     branch_path = 'trunk'
 
-    if parent_branch and parent_branch != 'default':
+    if meta.layout == 'single':
+        branch_path = ''
+    elif parent_branch and parent_branch != 'default':
         branch_path = 'branches/%s' % parent_branch
 
     extchanges = list(svnexternals.diff(_externals(parent),
