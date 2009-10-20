@@ -2891,8 +2891,14 @@ def summary(ui, repo):
 
     for p in parents:
         t = ' '.join([t for t in tags if tags[t] == p.node()])
+        if p.rev() == -1:
+            if not len(repo):
+                t += _(' (empty repository)')
+            else:
+                t += _(' (no revision checked out)')
         ui.write(_('parent: %d:%s %s\n') % (p.rev(), str(p), t))
-        ui.status(' ' + p.description().splitlines()[0].strip() + '\n')
+        if p.description():
+            ui.status(' ' + p.description().splitlines()[0].strip() + '\n')
 
     branch = ctx.branch()
     bheads = repo.branchheads(branch)
