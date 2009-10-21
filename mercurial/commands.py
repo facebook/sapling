@@ -2308,6 +2308,8 @@ def pull(ui, repo, source="default", **opts):
             raise util.Abort(err)
 
     modheads = repo.pull(other, heads=revs, force=opts.get('force'))
+    if checkout:
+        checkout = str(repo.changelog.rev(other.lookup(checkout)))
     return postincoming(ui, repo, modheads, opts.get('update'), checkout)
 
 def push(ui, repo, dest=None, **opts):
