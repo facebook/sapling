@@ -3612,7 +3612,7 @@ table = {
          _('[-u] [NAME]...')),
     "^summary|sum":
         (summary,
-         [('', 'remote', None, _('check for push and pull'))], '[-p]'),
+         [('', 'remote', None, _('check for push and pull'))], '[--remote]'),
     "^status|st":
         (status,
          [('A', 'all', None, _('show status of all files')),
