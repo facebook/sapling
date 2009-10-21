@@ -3486,7 +3486,7 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
           ('r', 'rev', [],
-           _('a specific revision up to which you would like to pull')),
+           _('a specific remote revision up to which you would like to pull')),
          ] + logopts + remoteopts,
          _('[-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
@@ -3554,7 +3554,7 @@ table = {
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [],
-           _('a specific revision up to which you would like to pull')),
+           _('a specific remote revision up to which you would like to pull')),
          ] + remoteopts,
          _('[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]')),
     "^push":
