@@ -212,12 +212,12 @@ class Translator(nodes.NodeVisitor):
                 'indent' : ('.INDENT %.1f\n', '.UNINDENT\n'),
                 'definition_list_item' : ('.TP', ''),
                 'field_name' : ('.TP\n.B ', '\n'),
-                'literal' : ('\\fC', '\\fP'),
+                'literal' : ('\\fB', '\\fP'),
                 'literal_block' : ('.sp\n.nf\n.ft C\n', '\n.ft P\n.fi\n'),
 
                 'option_list_item' : ('.TP\n', ''),
                 
-                'reference' : (r'\fI\%', r'\fP'),
+                'reference' : (r'\%', r'\:'),
                 'emphasis': ('\\fI', '\\fP'),
                 'strong' : ('\\fB', '\\fP'),
                 'term' : ('\n.B ', '\n'),
