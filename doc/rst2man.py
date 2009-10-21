@@ -217,7 +217,7 @@ class Translator(nodes.NodeVisitor):
 
                 'option_list_item' : ('.TP\n', ''),
                 
-                'reference' : (r'\fI\%', r'\fP'),
+                'reference' : (r'\%', r'\:'),
                 'emphasis': ('\\fI', '\\fP'),
                 'strong' : ('\\fB', '\\fP'),
                 'term' : ('\n.B ', '\n'),
