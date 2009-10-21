@@ -100,13 +100,17 @@ def get_padding_line(ni, n_columns, edges):
     line.extend(["|", " "] * (n_columns - ni - 1))
     return line
 
-def ascii(ui, base, type, char, text, coldata):
+def asciistate():
+    """returns the initial value for the "state" argument to ascii()"""
+    return [0, 0]
+
+def ascii(ui, state, type, char, text, coldata):
     """prints an ASCII graph of the DAG
 
     takes the following arguments (one call per node in the graph):
 
       - ui to write to
-      - A list we can keep the needed state in
+      - Somewhere to keep the needed state in (init to asciistate())
       - Column of the current node in the set of ongoing edges.
       - Type indicator of node data == ASCIIDATA.
       - Payload: (char, lines):
@@ -156,8 +160,8 @@ def ascii(ui, base, type, char, text, coldata):
     nodeline.extend([char, " "])
 
     nodeline.extend(
-        get_nodeline_edges_tail(idx, base[1], ncols, coldiff,
-                                base[0], fix_nodeline_tail))
+        get_nodeline_edges_tail(idx, state[1], ncols, coldiff,
+                                state[0], fix_nodeline_tail))
 
     # shift_interline is the line containing the non-vertical
     # edges between this entry and the next
@@ -199,8 +203,8 @@ def ascii(ui, base, type, char, text, coldata):
         ui.write(ln.rstrip() + '\n')
 
     # ... and start over
-    base[0] = coldiff
-    base[1] = idx
+    state[0] = coldiff
+    state[1] = idx
 
 def get_revs(repo, rev_opt):
     if rev_opt:
@@ -217,12 +221,12 @@ def check_unsupported_flags(opts):
             raise util.Abort(_("--graph option is incompatible with --%s") % op)
 
 def generate(ui, dag, displayer, showparents, edgefn):
-    seen, base = [], [0, 0]
+    seen, state = [], asciistate()
     for rev, type, ctx, parents in dag:
         char = ctx.node() in showparents and '@' or 'o'
         displayer.show(ctx)
         lines = displayer.hunk.pop(rev).split('\n')[:-1]
-        ascii(ui, base, type, char, lines, edgefn(seen, rev, parents))
+        ascii(ui, state, type, char, lines, edgefn(seen, rev, parents))
 
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
