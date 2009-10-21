@@ -259,6 +259,8 @@ or if you only want to translate certain files::
 ``defaults``
 """"""""""""
 
+(defaults are deprecated. Don't use them. Use aliases instead)
+
 Use the [defaults] section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
 
