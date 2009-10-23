@@ -1604,7 +1604,7 @@ def help_(ui, name=None, with_version=False):
     for title, options in option_lists:
         opt_output.append(("\n%s" % title, None))
         for shortopt, longopt, default, desc in options:
-            if "DEPRECATED" in desc and not ui.verbose: continue
+            if _("DEPRECATED") in desc and not ui.verbose: continue
             opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
                                           longopt and " --%s" % longopt),
                                "%s%s" % (desc,
