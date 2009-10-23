@@ -7,7 +7,7 @@ adding e
 % test invalid splicemap
 abort: syntax error in splicemap(1): key/value pair expected
 % splice repo2 on repo1
-updating working directory
+updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 scanning source...
 sorting...

@@ -86,8 +86,8 @@ ones.
 SYNTAX
 ------
 
-A configuration file consists of sections, led by a "``[section]``" header
-and followed by "``name: value``" entries; "``name=value``" is also accepted.
+A configuration file consists of sections, led by a ``[section]`` header
+and followed by ``name: value`` entries; ``name=value`` is also accepted.
 
 ::
 
@@ -101,15 +101,15 @@ they are treated as continuations of that entry.
 
 Leading whitespace is removed from values. Empty lines are skipped.
 
-Lines beginning with "``#``" or "``;``" are ignored and may be used to provide
+Lines beginning with ``#`` or ``;`` are ignored and may be used to provide
 comments.
 
-A line of the form "``%include file``" will include ``file`` into the
+A line of the form ``%include file`` will include ``file`` into the
 current configuration file. The inclusion is recursive, which means
 that included files can include other files. Filenames are relative to
 the configuration file in which the ``%include`` directive is found.
 
-A line with "``%unset name``" will remove ``name`` from the current
+A line with ``%unset name`` will remove ``name`` from the current
 section, if it has been set previously.
 
 
@@ -167,9 +167,9 @@ Example::
 Supported arguments:
 
 ``prefix``
-    Either "``*``" or a URI prefix with or without the scheme part.
+    Either ``*`` or a URI prefix with or without the scheme part.
     The authentication entry with the longest matching prefix is used
-    (where "``*``" matches everything and counts as a match of length
+    (where ``*`` matches everything and counts as a match of length
     1). If the prefix doesn't include a scheme, the match is performed
     against the URI with its scheme stripped as well, and the schemes
     argument, q.v., is then subsequently consulted.
@@ -204,9 +204,9 @@ localization/canonicalization of files.
 
 Filters consist of a filter pattern followed by a filter command.
 Filter patterns are globs by default, rooted at the repository root.
-For example, to match any file ending in "``.txt``" in the root
-directory only, use the pattern "``*.txt``". To match any file ending
-in "``.c``" anywhere in the repository, use the pattern "``**.c``".
+For example, to match any file ending in ``.txt`` in the root
+directory only, use the pattern ``*.txt``. To match any file ending
+in ``.c`` anywhere in the repository, use the pattern ``**.c``.
 
 The filter command can start with a specifier, either "pipe:" or
 "tempfile:". If no specifier is given, "pipe:" is used by default.
@@ -258,6 +258,8 @@ or if you only want to translate certain files::
 
 ``defaults``
 """"""""""""
+
+(defaults are deprecated. Don't use them. Use aliases instead)
 
 Use the [defaults] section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
@@ -349,16 +351,16 @@ Mercurial has an extension mechanism for adding new features. To
 enable an extension, create an entry for it in this section.
 
 If you know that the extension is already in Python's search path,
-you can give the name of the module, followed by "``=``", with nothing
-after the "``=``".
+you can give the name of the module, followed by ``=``, with nothing
+after the ``=``.
 
-Otherwise, give a name that you choose, followed by "``=``", followed by
-the path to the "``.py``" file (including the file name extension) that
+Otherwise, give a name that you choose, followed by ``=``, followed by
+the path to the ``.py`` file (including the file name extension) that
 defines the extension.
 
 To explicitly disable an extension that is enabled in an hgrc of
-broader scope, prepend its path with "``!``", as in
-"``hgext.foo = !/ext/path``" or "``hgext.foo = !``"  when path is not
+broader scope, prepend its path with ``!``, as in
+``hgext.foo = !/ext/path`` or ``hgext.foo = !``  when path is not
 supplied.
 
 Example for ``~/.hgrc``::
@@ -594,7 +596,7 @@ called with at least three keyword arguments: a ui object (keyword
 "ui"), a repository object (keyword "repo"), and a "hooktype"
 keyword that tells what kind of hook is used. Arguments listed as
 environment variables above are passed as keyword arguments, with no
-"``HG_``" prefix, and names in lower case.
+``HG_`` prefix, and names in lower case.
 
 If a Python hook returns a "true" value or raises an exception, this
 is treated as a failure.
@@ -719,7 +721,7 @@ serve repositories from different users.
 
 This section specifies what users and groups are trusted. The
 current user is always trusted. To trust everybody, list a user or a
-group with name "``*``".
+group with name ``*``.
 
 ``users``
   Comma-separated list of trusted users.
@@ -755,7 +757,7 @@ User interface controls.
     in the same format as a repository-wide .hgignore file. This
     option supports hook syntax, so if you want to specify multiple
     ignore files, you can do so by setting something like
-    "``ignore.other = ~/.hgignore2``". For details of the ignore file
+    ``ignore.other = ~/.hgignore2``. For details of the ignore file
     format, see the |hgignore(5)|_ man page.
 ``interactive``
     Allow to prompt the user. True or False. Default is True.
@@ -788,10 +790,10 @@ merge-tools section.
     Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
     trusted user or group. True or False. Default is True.
 ``slash``
-    Display paths using a slash ("``/``") as the path separator. This
+    Display paths using a slash (``/``) as the path separator. This
     only makes a difference on systems where the default path
     separator is not the slash character (e.g. Windows uses the
-    backslash character ("``\``")).
+    backslash character (``\``)).
     Default is False.
 ``ssh``
     command to use for SSH connections. Default is 'ssh'.
@@ -837,7 +839,7 @@ Web interface configuration.
     Whether to allow pulling from the repository. Default is true.
 ``allow_push``
     Whether to allow pushing to the repository. If empty or not set,
-    push is not allowed. If the special value "``*``", any remote user can
+    push is not allowed. If the special value ``*``, any remote user can
     push, including unauthenticated users. Otherwise, the remote user
     must have been authenticated, and the authenticated user name must
     be present in this list (separated by whitespace or ","). The
@@ -850,7 +852,7 @@ Web interface configuration.
     user is unauthenticated or not present in the list (separated by
     whitespace or ","), then access is denied for the user. If the
     list is empty or not set, then access is permitted to all users by
-    default. Setting allow_read to the special value "``*``" is equivalent
+    default. Setting allow_read to the special value ``*`` is equivalent
     to it not being set (i.e. access is permitted to all users). The
     contents of the allow_read list are examined after the deny_read
     list.
@@ -866,7 +868,7 @@ Web interface configuration.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.
 ``deny_push``
     Whether to deny pushing to the repository. If empty or not set,
-    push is not denied. If the special value "``*``", all remote users are
+    push is not denied. If the special value ``*``, all remote users are
     denied push. Otherwise, unauthenticated users are all denied, and
     any authenticated user name present in this list (separated by
     whitespace or ",") is also denied. The contents of the deny_push
@@ -876,7 +878,7 @@ Web interface configuration.
     not empty, unauthenticated users are all denied, and any
     authenticated user name present in this list (separated by
     whitespace or ",") is also denied access to the repository. If set
-    to the special value "``*``", all remote users are denied access
+    to the special value ``*``, all remote users are denied access
     (rarely needed ;). If deny_read is empty or not set, the
     determination of repository access depends on the presence and
     content of the allow_read list (see description). If both

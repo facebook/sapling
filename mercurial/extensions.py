@@ -30,7 +30,7 @@ def find(name):
 
 def loadpath(path, module_name):
     module_name = module_name.replace('.', '_')
-    path = os.path.expanduser(path)
+    path = util.expandpath(path)
     if os.path.isdir(path):
         # module/__init__.py style
         d, f = os.path.split(path.rstrip('/'))

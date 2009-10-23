@@ -26,7 +26,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 2 changes to 2 files
-updating working directory
+updating to branch br
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 changeset:   2:1630aed6ed2b
 branch:      br
@@ -41,7 +41,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 2 changes to 2 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 changeset:   0:cb9a9f314b8b
 user:        test
@@ -54,7 +54,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 2 changes to 2 files
-updating working directory
+updating to branch br
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 changeset:   1:234f53e6c5ff
 branch:      br

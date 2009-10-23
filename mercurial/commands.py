@@ -2877,11 +2877,14 @@ def status(ui, repo, *pats, **opts):
                 if f in copy:
                     ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
 
-def summary(ui, repo):
+def summary(ui, repo, **opts):
     """summarize working directory state
 
     This generates a brief summary of the working directory state,
     including parents, branch, commit status, and available updates.
+
+    With the --remote option, this will check the default paths for
+    incoming and outgoing changes. This can be time-consuming.
     """
 
     ctx = repo[None]
@@ -2891,8 +2894,14 @@ def summary(ui, repo):
 
     for p in parents:
         t = ' '.join([t for t in tags if tags[t] == p.node()])
+        if p.rev() == -1:
+            if not len(repo):
+                t += _(' (empty repository)')
+            else:
+                t += _(' (no revision checked out)')
         ui.write(_('parent: %d:%s %s\n') % (p.rev(), str(p), t))
-        ui.status(' ' + p.description().splitlines()[0].strip() + '\n')
+        if p.description():
+            ui.status(' ' + p.description().splitlines()[0].strip() + '\n')
 
     branch = ctx.branch()
     bheads = repo.branchheads(branch)
@@ -2901,11 +2910,13 @@ def summary(ui, repo):
     st = list(repo.status(unknown=True))[:7]
     ms = merge_.mergestate(repo)
     st.append([f for f in ms if f == 'u'])
-    labels = _('modified added removed deleted unknown ignored unresolved')
+    labels = [_('%d modified'), _('%d added'), _('%d removed'),
+              _('%d deleted'), _('%d unknown'), _('%d ignored'),
+              _('%d unresolved')]
     t = []
-    for i,l in enumerate(labels.split()):
-        if st[i]:
-            t.append('%d %s' % (len(st[i]), l))
+    for s,l in zip(st, labels):
+        if s:
+            t.append(l % len(s))
 
     t = ', '.join(t)
 
@@ -2918,7 +2929,10 @@ def summary(ui, repo):
     elif pnode not in bheads:
         t += _(' (new branch head)')
 
-    ui.write(_('commit: %s\n') % t.strip())
+    if 'clean' in t:
+        ui.status(_('commit: %s\n') % t.strip())
+    else:
+        ui.write(_('commit: %s\n') % t.strip())
 
     # all ancestors of branch heads - all ancestors of parent = new csets
     new = [0] * len(repo)
@@ -2930,12 +2944,40 @@ def summary(ui, repo):
     new = sum(new)
 
     if new == 0:
-        ui.write(_('update: (current)\n'))
+        ui.status(_('update: (current)\n'))
     elif pnode not in bheads:
         ui.write(_('update: %d new changesets (update)\n') % new)
     else:
         ui.write(_('update: %d new changesets, %d branch heads (merge)\n') %
                  (new, len(bheads)))
+
+    if opts.get('remote'):
+        t = []
+        source, revs, checkout = hg.parseurl(ui.expandpath('default'),
+                                             opts.get('rev'))
+        other = hg.repository(cmdutil.remoteui(repo, {}), source)
+        ui.debug('comparing with %s\n' % url.hidepassword(source))
+        repo.ui.pushbuffer()
+        common, incoming, rheads = repo.findcommonincoming(other)
+        repo.ui.popbuffer()
+        if incoming:
+            t.append(_('1 or more incoming'))
+
+        dest, revs, checkout = hg.parseurl(
+            ui.expandpath('default-push', 'default'))
+        other = hg.repository(cmdutil.remoteui(repo, {}), dest)
+        ui.debug('comparing with %s\n' % url.hidepassword(dest))
+        repo.ui.pushbuffer()
+        o = repo.findoutgoing(other)
+        repo.ui.popbuffer()
+        o = repo.changelog.nodesbetween(o, revs)[0]
+        if o:
+            t.append(_('%d outgoing') % len(o))
+
+        if t:
+            ui.write(_('remote: %s\n') % (', '.join(t)))
+        else:
+            ui.status(_('remote: (synced)\n'))
 
 def tag(ui, repo, name1, *names, **opts):
     """add one or more tags for the current or given revision
@@ -3328,7 +3370,7 @@ table = {
          ] + walkopts + dryrunopts,
          _('[OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('[INDEX] REV1 REV2')),
-    "debugcheckstate": (debugcheckstate, []),
+    "debugcheckstate": (debugcheckstate, [], ''),
     "debugcommands": (debugcommands, [], _('[COMMAND]')),
     "debugcomplete":
         (debugcomplete,
@@ -3342,7 +3384,7 @@ table = {
     "debugfsinfo": (debugfsinfo, [], _('[PATH]')),
     "debugindex": (debugindex, [], _('FILE')),
     "debugindexdot": (debugindexdot, [], _('FILE')),
-    "debuginstall": (debuginstall, []),
+    "debuginstall": (debuginstall, [], ''),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '', _('revision to rebuild to'))],
@@ -3488,7 +3530,7 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
          ] + logopts + remoteopts,
          _('[-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
-    "^parents":
+    "parents":
         (parents,
          [('r', 'rev', '', _('show parents from the specified revision')),
          ] + templateopts,
@@ -3569,7 +3611,8 @@ table = {
          [('u', 'untrusted', None, _('show untrusted configuration options'))],
          _('[-u] [NAME]...')),
     "^summary|sum":
-        (summary, []),
+        (summary,
+         [('', 'remote', None, _('check for push and pull'))], '[--remote]'),
     "^status|st":
         (status,
          [('A', 'all', None, _('show status of all files')),
@@ -3597,7 +3640,7 @@ table = {
           ('m', 'message', '', _('use <text> as commit message')),
          ] + commitopts2,
          _('[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...')),
-    "tags": (tags, []),
+    "tags": (tags, [], ''),
     "tip":
         (tip,
          [('p', 'patch', None, _('show patch')),

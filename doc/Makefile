@@ -25,7 +25,8 @@ hg.1.gendoc.txt: gendoc.py ../mercurial/commands.py ../mercurial/help.py
 	  --strip-elements-with-class htmlonly $*.txt $*
 
 %.html: %.txt common.txt
-	$(RST2HTML) --halt warning $*.txt $*.html
+	$(RST2HTML) --halt warning \
+	  --link-stylesheet --stylesheet-path style.css $*.txt $*.html
 
 MANIFEST: man html
 # tracked files are already in the main MANIFEST

@@ -12,7 +12,6 @@ basic commands:
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -32,7 +31,6 @@ use "hg help" for the full list of commands or "hg -v" for details
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -317,7 +315,6 @@ basic commands:
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
@@ -342,7 +339,6 @@ basic commands:
  init       create a new repository in the given directory
  log        show revision history of entire repository or files
  merge      merge working directory with another revision
- parents    show the parents of the working directory or revision
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit

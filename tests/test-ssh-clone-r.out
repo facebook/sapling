@@ -32,7 +32,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -44,7 +44,7 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -56,7 +56,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 3 changes to 1 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -68,7 +68,7 @@ adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 4 changes to 1 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -80,7 +80,7 @@ adding changesets
 adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -92,7 +92,7 @@ adding changesets
 adding manifests
 adding file changes
 added 3 changesets with 3 changes to 1 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -104,7 +104,7 @@ adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 5 changes to 2 files
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -116,7 +116,7 @@ adding changesets
 adding manifests
 adding file changes
 added 5 changesets with 6 changes to 3 files
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests
@@ -128,7 +128,7 @@ adding changesets
 adding manifests
 adding file changes
 added 5 changesets with 5 changes to 2 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 checking changesets
 checking manifests

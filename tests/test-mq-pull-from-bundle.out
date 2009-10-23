@@ -18,7 +18,7 @@ patch queue now empty
 ====== Bundle queue
 1 changesets found
 ====== Clone base
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 ====== Incoming queue bundle
 >> hg -R .hg/patches incoming ../queue.hgq
@@ -41,7 +41,7 @@ merging series
 >> hg qseries
 two.patch
 ====== Clone base again
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 ====== Unbundle queue bundle
 >> hg -R .hg/patches unbundle --update ../queue.hgq

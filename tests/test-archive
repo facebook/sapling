@@ -108,6 +108,14 @@ if [ -f rev-0.tar ]; then
     echo 'rev-0.tar created'
 fi
 
+echo '% test .hg_archival.txt'
+hg archive ../test-tags
+cat ../test-tags/.hg_archival.txt
+hg tag -r 2 mytag
+hg tag -r 2 anothertag
+hg archive -r 2 ../test-lasttag
+cat ../test-lasttag/.hg_archival.txt
+
 hg archive -t bogus test.bogus
 
 echo % server errors

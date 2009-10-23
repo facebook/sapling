@@ -100,7 +100,7 @@ class dirstate(object):
         files = [self._join('.hgignore')]
         for name, path in self._ui.configitems("ui"):
             if name == 'ignore' or name.startswith('ignore.'):
-                files.append(os.path.expanduser(path))
+                files.append(util.expandpath(path))
         return ignore.ignore(self._root, files, self._ui.warn)
 
     @propertycache

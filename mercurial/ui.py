@@ -179,7 +179,7 @@ class ui(object):
             user = os.environ.get("EMAIL")
         if user is None and self.configbool("ui", "askusername"):
             user = self.prompt(_("enter a commit username:"), default=None)
-        if user is None:
+        if user is None and not self.interactive():
             try:
                 user = '%s@%s' % (util.getuser(), socket.getfqdn())
                 self.warn(_("No username found, using '%s' instead\n") % user)
@@ -198,10 +198,12 @@ class ui(object):
 
     def _path(self, loc):
         p = self.config('paths', loc)
-        if p and '%%' in p:
-            self.warn("(deprecated '%%' in path %s=%s from %s)\n" %
-                    (loc, p, self.configsource('paths', loc)))
-            p = p.replace('%%', '%')
+        if p:
+            if '%%' in p:
+                self.warn("(deprecated '%%' in path %s=%s from %s)\n" %
+                          (loc, p, self.configsource('paths', loc)))
+                p = p.replace('%%', '%')
+            p = util.expandpath(p)
         return p
 
     def expandpath(self, loc, default=None):

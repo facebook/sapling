@@ -307,7 +307,6 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             dest_repo.ui.setconfig('paths', 'default', abspath)
 
             if update:
-                dest_repo.ui.status(_("updating working directory\n"))
                 if update is not True:
                     checkout = update
                 for test in (checkout, 'default', 'tip'):
@@ -318,6 +317,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                         break
                     except error.RepoLookupError:
                         continue
+                bn = dest_repo[uprev].branch()
+                dest_repo.ui.status(_("updating to branch %s\n") % bn)
                 _update(dest_repo, uprev)
 
         return src_repo, dest_repo

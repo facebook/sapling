@@ -1,4 +1,4 @@
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to ../a
 searching for changes
@@ -24,7 +24,7 @@ adding manifests
 adding file changes
 added 2 changesets with 1 changes to 1 files
 adding foo
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
@@ -125,18 +125,17 @@ adding file changes
 added 2 changesets with 2 changes to 1 files
 0
 % checking prepush logic does not allow silently pushing multiple new heads
-abort: repository g already exists!
 adding init
 adding a
-updating working directory
-3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+updating to branch default
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding b
 created new head
-1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding c
 created new head
-pushing to g
+pushing to h
 searching for changes
 abort: push creates new remote heads!
 (did you forget to merge? use push -f to force)

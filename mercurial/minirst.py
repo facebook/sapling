@@ -260,6 +260,13 @@ def finddefinitionlists(blocks):
     return blocks
 
 
+def inlineliterals(blocks):
+    for b in blocks:
+        if b['type'] == 'paragraph':
+            b['lines'] = [l.replace('``', '"') for l in b['lines']]
+    return blocks
+
+
 def addmargins(blocks):
     """Adds empty blocks for vertical spacing.
 
@@ -316,6 +323,7 @@ def format(text, width, indent=0):
     for b in blocks:
         b['indent'] += indent
     blocks = findliteralblocks(blocks)
+    blocks = inlineliterals(blocks)
     blocks = findsections(blocks)
     blocks = findbulletlists(blocks)
     blocks = findoptionlists(blocks)

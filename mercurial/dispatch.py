@@ -248,7 +248,7 @@ def _parse(ui, args):
         args = aliasargs(i[0]) + args
         defaults = ui.config("defaults", cmd)
         if defaults:
-            args = shlex.split(defaults) + args
+            args = map(util.expandpath, shlex.split(defaults)) + args
         c = list(i[1])
     else:
         cmd = None
@@ -477,8 +477,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
         output = ui.config('profiling', 'output')
 
         if output:
-            path = os.path.expanduser(output)
-            path = ui.expandpath(path)
+            path = ui.expandpath(output)
             ostream = open(path, 'wb')
         else:
             ostream = sys.stderr

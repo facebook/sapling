@@ -6,7 +6,7 @@ abort: no suitable response from remote hg!
 streaming all changes
 XXX files to transfer, XXX bytes of data
 transferred XXX bytes in XXX seconds (XXX XB/sec)
-updating working directory
+updating to branch default
 XXX files updated, XXX files merged, XXX files removed, XXX files unresolved
 checking changesets
 checking manifests
@@ -19,7 +19,7 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 2 changes to 2 files
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # verify
 checking changesets

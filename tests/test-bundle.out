@@ -146,9 +146,9 @@ adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 4 changes to 1 files
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 ====== Log -R full.hg in partial
 changeset:   8:836ac62537ab
@@ -269,7 +269,7 @@ adding changesets
 adding manifests
 adding file changes
 added 9 changesets with 7 changes to 4 files (+1 heads)
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 changeset:   8:836ac62537ab
 tag:         tip
@@ -296,7 +296,7 @@ adding file changes
 added 1 changesets with 1 changes to 1 files
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 ====== test for 540d1059c802
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 searching for changes
 1 changesets found

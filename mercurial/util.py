@@ -335,7 +335,8 @@ def hgexecutable():
         elif main_is_frozen():
             set_hgexecutable(sys.executable)
         else:
-            set_hgexecutable(find_exe('hg') or 'hg')
+            exe = find_exe('hg') or os.path.basename(sys.argv[0])
+            set_hgexecutable(exe)
     return _hgexecutable
 
 def set_hgexecutable(path):
@@ -1158,6 +1159,7 @@ def rcpath():
             _rcpath = []
             for p in os.environ['HGRCPATH'].split(os.pathsep):
                 if not p: continue
+                p = expandpath(p)
                 if os.path.isdir(p):
                     for f, kind in osutil.listdir(p):
                         if f.endswith('.rc'):
@@ -1250,3 +1252,6 @@ def iterlines(iterator):
     for chunk in iterator:
         for line in chunk.splitlines():
             yield line
+
+def expandpath(path):
+    return os.path.expanduser(os.path.expandvars(path))

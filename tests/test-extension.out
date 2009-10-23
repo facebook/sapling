@@ -7,7 +7,7 @@ reposetup called for a
 ui == repo.ui
 reposetup called for b
 ui == repo.ui
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 uisetup called
 Bar

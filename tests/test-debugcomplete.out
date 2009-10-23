@@ -173,13 +173,12 @@ forget: include, exclude
 init: ssh, remotecmd
 log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, prune, patch, git, limit, no-merges, style, template, include, exclude
 merge: force, rev, preview
-parents: rev, style, template
 pull: update, force, rev, ssh, remotecmd
 push: force, rev, ssh, remotecmd
 remove: after, force, include, exclude
 serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, webdir-conf, pid-file, stdio, templates, style, ipv6, certificate
 status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, include, exclude
-summary: 
+summary: remote
 update: clean, check, date, rev
 addremove: similarity, include, exclude, dry-run
 archive: no-decode, prefix, rev, type, include, exclude
@@ -215,6 +214,7 @@ incoming: force, newest-first, bundle, rev, patch, git, limit, no-merges, style,
 locate: rev, print0, fullpath, include, exclude
 manifest: rev
 outgoing: force, rev, newest-first, patch, git, limit, no-merges, style, template, ssh, remotecmd
+parents: rev, style, template
 paths: 
 recover: 
 rename: after, force, include, exclude, dry-run

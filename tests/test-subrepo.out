@@ -97,7 +97,7 @@ conflict
 t3
 >>>>>>> other
 % clone
-updating working directory
+updating to branch default
 pulling subrepo s
 requesting all changes
 adding changesets
