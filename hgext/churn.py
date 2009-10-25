@@ -54,8 +54,8 @@ def countrate(ui, repo, amap, *pats, **opts):
         df = util.matchdate(opts['date'])
 
     get = util.cachefunc(lambda r: repo[r])
-    changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
-    for st, rev, fns in changeiter:
+    m = cmdutil.match(repo, pats, opts)
+    for st, rev, fns in cmdutil.walkchangerevs(ui, repo, m, get, opts):
 
         if not st == 'add':
             continue

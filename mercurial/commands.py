@@ -1289,10 +1289,10 @@ def grep(ui, repo, pattern, *pats, **opts):
     skip = {}
     revfiles = {}
     get = util.cachefunc(lambda r: repo[r])
-    changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
+    matchfn = cmdutil.match(repo, pats, opts)
     found = False
     follow = opts.get('follow')
-    for st, rev, fns in changeiter:
+    for st, rev, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
         if st == 'window':
             matches.clear()
             revfiles.clear()
@@ -1980,8 +1980,7 @@ def log(ui, repo, *pats, **opts):
     """
 
     get = util.cachefunc(lambda r: repo[r])
-    changeiter, matchfn = cmdutil.walkchangerevs(ui, repo, pats, get, opts)
-
+    matchfn = cmdutil.match(repo, pats, opts)
     limit = cmdutil.loglimit(opts)
     count = 0
 
@@ -2028,7 +2027,7 @@ def log(ui, repo, *pats, **opts):
     only_branches = opts.get('only_branch')
 
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
-    for st, rev, fns in changeiter:
+    for st, rev, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
         if st == 'add':
             parents = [p for p in repo.changelog.parentrevs(rev)
                        if p != nullrev]
