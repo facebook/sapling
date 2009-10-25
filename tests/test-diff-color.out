@@ -23,6 +23,9 @@ adding a
 [0;32m+dd[0m
  a
  a
+% diffstat
+ a |  2 [0;32m+[0m[0;31m-[0m
+ 1 files changed, 1 insertions(+), 1 deletions(-)
 % record
 [0;1mdiff --git a/a b/a[0m
 [0;36;1mold mode 100644[0m

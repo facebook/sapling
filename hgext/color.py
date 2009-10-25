@@ -189,9 +189,25 @@ def colorshowpatch(orig, self, node):
     finally:
         self.ui.write = oldwrite
 
+def colordiffstat(orig, s):
+    lines = s.split('\n')
+    for i, line in enumerate(lines):
+        if line and line[-1] in '+-':
+            name, graph = line.rsplit(' ', 1)
+            graph = graph.replace('-',
+                        render_effects('-', _diff_effects['deleted']))
+            graph = graph.replace('+',
+                        render_effects('+', _diff_effects['inserted']))
+            lines[i] = ' '.join([name, graph])
+    orig('\n'.join(lines))
+
 def colordiff(orig, ui, repo, *pats, **opts):
     '''run the diff command with colored output'''
-    oldwrite = extensions.wrapfunction(ui, 'write', colorwrap)
+    if opts.get('stat'):
+        wrapper = colordiffstat
+    else:
+        wrapper = colorwrap
+    oldwrite = extensions.wrapfunction(ui, 'write', wrapper)
     try:
         orig(ui, repo, *pats, **opts)
     finally:
