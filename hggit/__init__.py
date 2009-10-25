@@ -15,11 +15,10 @@ project that is in Git.  A bridger of worlds, this plugin be.
 Try hg clone git:// or hg clone git+ssh://
 '''
 
+import os
+
 from mercurial import commands, extensions, hg, util
 from mercurial.i18n import _
-
-from dulwich.repo import Repo
-from dulwich.errors import NotGitRepository
 
 import gitrepo, hgrepo
 from git_handler import GitHandler
@@ -29,15 +28,15 @@ from git_handler import GitHandler
 hg.schemes['git'] = gitrepo
 hg.schemes['git+ssh'] = gitrepo
 
+# support for `hg clone localgitrepo`
 _oldlocal = hg.schemes['file']
 
 def _local(path):
     p = util.drop_scheme('file', path)
-    try:
-        Repo(p)
+    if (os.path.exists(os.path.join(p, '.git')) and 
+        not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
-    except NotGitRepository:
-        return _oldlocal(path)
+    return _oldlocal(path)
 
 hg.schemes['file'] = _local
 
