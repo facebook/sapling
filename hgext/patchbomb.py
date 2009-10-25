@@ -76,9 +76,9 @@ from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
 
-def prompt(ui, prompt, default='', rest=':', empty_ok=False):
+def prompt(ui, prompt, default=None, rest=':'):
     if not ui.interactive():
-        if default or empty_ok:
+        if default is not None:
             return default
         raise util.Abort(_("%s Please enter a valid value" % (prompt+rest)))
     if default:
@@ -90,8 +90,6 @@ def prompt(ui, prompt, default='', rest=':', empty_ok=False):
             return r
         if default is not None:
             return default
-        if empty_ok:
-            return r
         ui.warn(_('Please enter a valid value.\n'))
 
 def cdiffstat(ui, summary, patchlines):
