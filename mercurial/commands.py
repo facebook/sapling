@@ -1718,7 +1718,8 @@ def identify(ui, repo, source=None,
 def import_(ui, repo, patch1, *patches, **opts):
     """import an ordered set of patches
 
-    Import a list of patches and commit them individually.
+    Import a list of patches and commit them individually (unless
+    --no-commit is specified).
 
     If there are outstanding changes in the working directory, import
     will abort unless given the -f/--force flag.

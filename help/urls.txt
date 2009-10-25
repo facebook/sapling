@@ -47,7 +47,7 @@ These URLs can all be stored in your hgrc with path aliases under the
   ...
 
 You can then use the alias for any command that uses a URL (for
-example 'hg pull alias1' would pull from the 'alias1' path).
+example 'hg pull alias1' will be treated as 'hg pull URL1').
 
 Two path aliases are special because they are used as defaults when
 you do not provide the URL to a command:
