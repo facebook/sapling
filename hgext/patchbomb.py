@@ -76,11 +76,11 @@ from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial.i18n import _
 from mercurial.node import bin
 
-def prompt(ui, prompt, default='', rest=': ', empty_ok=False):
+def prompt(ui, prompt, default='', rest=':', empty_ok=False):
     if not ui.interactive():
         if default or empty_ok:
             return default
-        raise util.Abort(_("%sPlease enter a valid value" % (prompt+rest)))
+        raise util.Abort(_("%s Please enter a valid value" % (prompt+rest)))
     if default:
         prompt += ' [%s]' % default
     prompt += rest
@@ -99,7 +99,7 @@ def cdiffstat(ui, summary, patchlines):
     if summary:
         ui.write(summary, '\n')
         ui.write(s, '\n')
-    ans = prompt(ui, _('does the diffstat above look okay? '), 'y')
+    ans = prompt(ui, _('does the diffstat above look okay?'), 'y')
     if not ans.lower().startswith('y'):
         raise util.Abort(_('diffstat rejected'))
     return s
@@ -330,10 +330,11 @@ def patchbomb(ui, repo, *revs, **opts):
 
             flag = ' '.join(opts.get('flag'))
             if flag:
-                subj = '[PATCH %0*d of %d %s] ' % (tlen, 0, len(patches), flag)
+                subj = '[PATCH %0*d of %d %s]' % (tlen, 0, len(patches), flag)
             else:
-                subj = '[PATCH %0*d of %d] ' % (tlen, 0, len(patches))
-            subj += opts.get('subject') or prompt(ui, 'Subject:', rest=subj)
+                subj = '[PATCH %0*d of %d]' % (tlen, 0, len(patches))
+            subj += ' ' + (opts.get('subject') or
+                           prompt(ui, 'Subject: ', rest=subj))
 
             body = ''
             if opts.get('diffstat'):
