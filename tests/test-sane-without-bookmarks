@@ -3,11 +3,14 @@
 # Fails for some reason, need to investigate
 # "$TESTDIR/hghave" git || exit 80
 
+# bail if the user does not have dulwich
+python -c 'import dulwich, dulwich.repo' || exit 80
+
 # bail early if the user is already running git-daemon
 echo hi | nc localhost 9418 2>/dev/null && exit 80
 
 echo "[extensions]" >> $HGRCPATH
-echo "hggit=$(echo $(dirname $(dirname $0)))" >> $HGRCPATH
+echo "hggit=$(echo $(dirname $(dirname $0)))/hggit" >> $HGRCPATH
 echo 'hgext.graphlog =' >> $HGRCPATH
 
 GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
