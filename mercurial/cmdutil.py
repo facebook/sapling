@@ -1217,15 +1217,16 @@ def walkchangerevs(ui, repo, match, change, opts):
             nrevs = [rev for rev in revs[i:i+window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
+                ctx = change(rev)
                 if not fns:
                     def fns_generator():
-                        for f in change(rev).files():
+                        for f in ctx.files():
                             if match(f):
                                 yield f
                     fns = fns_generator()
-                yield 'add', rev, fns
+                yield 'add', ctx, fns
             for rev in nrevs:
-                yield 'iter', rev, None
+                yield 'iter', change(rev), None
     return iterate()
 
 def commit(ui, repo, commitfunc, pats, opts):

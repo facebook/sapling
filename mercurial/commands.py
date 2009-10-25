@@ -1292,9 +1292,9 @@ def grep(ui, repo, pattern, *pats, **opts):
     matchfn = cmdutil.match(repo, pats, opts)
     found = False
     follow = opts.get('follow')
-    for st, rev, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
+    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
         if st == 'add':
-            ctx = get(rev)
+            rev = ctx.rev()
             pctx = ctx.parents()[0]
             parent = pctx.rev()
             matches.setdefault(rev, {})
@@ -1328,6 +1328,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                     except error.LookupError:
                         pass
         elif st == 'iter':
+            rev = ctx.rev()
             parent = get(rev).parents()[0].rev()
             for fn in sorted(revfiles.get(rev, [])):
                 states = matches[rev][fn]
@@ -2026,8 +2027,9 @@ def log(ui, repo, *pats, **opts):
     only_branches = opts.get('only_branch')
 
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
-    for st, rev, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
+    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
         if st == 'add':
+            rev = ctx.rev()
             parents = [p for p in repo.changelog.parentrevs(rev)
                        if p != nullrev]
             if opts.get('no_merges') and len(parents) == 2:
@@ -2035,7 +2037,6 @@ def log(ui, repo, *pats, **opts):
             if opts.get('only_merges') and len(parents) != 2:
                 continue
 
-            ctx = get(rev)
             if only_branches and ctx.branch() not in only_branches:
                 continue
 
@@ -2068,7 +2069,7 @@ def log(ui, repo, *pats, **opts):
 
         elif st == 'iter':
             if count == limit: break
-            if displayer.flush(rev):
+            if displayer.flush(ctx.rev()):
                 count += 1
 
 def manifest(ui, repo, node=None, rev=None):
