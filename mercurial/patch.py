@@ -1407,8 +1407,8 @@ def diffstat(lines, width=80):
     for filename, adds, removes in stats:
         pluses = '+' * scale(adds)
         minuses = '-' * scale(removes)
-        output.append(' %-*s |  %*.d %s%s\n' % (maxname, filename, countwidth,
-                                                adds+removes, pluses, minuses))
+        output.append(' %-*s |  %*s %s%s\n' % (maxname, filename, countwidth,
+                                               adds+removes, pluses, minuses))
 
     if stats:
         output.append(_(' %d files changed, %d insertions(+), %d deletions(-)\n')
