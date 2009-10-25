@@ -1053,10 +1053,6 @@ def walkchangerevs(ui, repo, match, change, opts):
     This function returns an iterator. The iterator yields 3-tuples.
     They will be of one of the following forms:
 
-    "window", incrementing, lastrev: stepping through a window,
-    positive if walking forwards through revs, last rev in the
-    sequence iterated over - use to reset state for the current window
-
     "add", rev, fns: out-of-order traversal of the given filenames
     fns, which changed during revision rev - use to gather data for
     possible display
@@ -1218,7 +1214,6 @@ def walkchangerevs(ui, repo, match, change, opts):
                 return rev in wanted
 
         for i, window in increasing_windows(0, len(revs)):
-            yield 'window', revs[0] < revs[-1], revs[-1]
             nrevs = [rev for rev in revs[i:i+window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)

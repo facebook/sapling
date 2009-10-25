@@ -1293,10 +1293,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     found = False
     follow = opts.get('follow')
     for st, rev, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
-        if st == 'window':
-            matches.clear()
-            revfiles.clear()
-        elif st == 'add':
+        if st == 'add':
             ctx = get(rev)
             pctx = ctx.parents()[0]
             parent = pctx.rev()
@@ -1347,6 +1344,8 @@ def grep(ui, repo, pattern, *pats, **opts):
                         skip[fn] = True
                         if copy:
                             skip[copy] = True
+            del matches[rev]
+            del revfiles[rev]
 
 def heads(ui, repo, *branchrevs, **opts):
     """show current repository heads or show branch heads
