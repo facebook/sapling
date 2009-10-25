@@ -218,7 +218,7 @@ parents: rev, style, template
 paths: 
 recover: 
 rename: after, force, include, exclude, dry-run
-resolve: all, list, mark, unmark, include, exclude
+resolve: all, list, mark, unmark, no-status, include, exclude
 revert: all, date, rev, no-backup, include, exclude, dry-run
 rollback: 
 root: 

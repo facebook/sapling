@@ -2445,7 +2445,7 @@ def rename(ui, repo, *pats, **opts):
 def resolve(ui, repo, *pats, **opts):
     """retry file merges from a merge or update
 
-    This command will cleanly retry unresolved file merges using file
+    This command can cleanly retry unresolved file merges using file
     revisions preserved from the last update or merge. To attempt to
     resolve all unresolved files, use the -a/--all switch.
 
@@ -2463,7 +2463,8 @@ def resolve(ui, repo, *pats, **opts):
       R = resolved
     """
 
-    all, mark, unmark, show = [opts.get(o) for o in 'all mark unmark list'.split()]
+    all, mark, unmark, show, nostatus = \
+        [opts.get(o) for o in 'all mark unmark list no_status'.split()]
 
     if (show and (mark or unmark)) or (mark and unmark):
         raise util.Abort(_("too many options specified"))
@@ -2479,7 +2480,10 @@ def resolve(ui, repo, *pats, **opts):
     for f in ms:
         if m(f):
             if show:
-                ui.write("%s %s\n" % (ms[f].upper(), f))
+                if nostatus:
+                    ui.write("%s\n" % f)
+                else:
+                    ui.write("%s %s\n" % (ms[f].upper(), f))
             elif mark:
                 ms.mark(f, "r")
             elif unmark:
@@ -3586,7 +3590,8 @@ table = {
          [('a', 'all', None, _('remerge all unresolved files')),
           ('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
-          ('u', 'unmark', None, _('unmark files as resolved'))]
+          ('u', 'unmark', None, _('unmark files as resolved')),
+          ('n', 'no-status', None, _('hide status prefix'))]
           + walkopts,
           _('[OPTION]... [FILE]...')),
     "revert":
