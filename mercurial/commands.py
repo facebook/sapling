@@ -1085,6 +1085,7 @@ def diff(ui, repo, *pats, **opts):
 
     revs = opts.get('rev')
     change = opts.get('change')
+    stat = opts.get('stat')
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
@@ -1095,10 +1096,17 @@ def diff(ui, repo, *pats, **opts):
     else:
         node1, node2 = cmdutil.revpair(repo, revs)
 
+    if stat:
+        opts['unified'] = '0'
+
     m = cmdutil.match(repo, pats, opts)
     it = patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
-    for chunk in it:
-        ui.write(chunk)
+    if stat:
+        width = ui.interactive() and util.termwidth() or 80
+        ui.write(patch.diffstat(util.iterlines(it), width=width))
+    else:
+        for chunk in it:
+            ui.write(chunk)
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
@@ -3260,7 +3268,8 @@ diffopts2 = [
      _('ignore changes in the amount of white space')),
     ('B', 'ignore-blank-lines', None,
      _('ignore changes whose lines are all blank')),
-    ('U', 'unified', '', _('number of lines of context to show'))
+    ('U', 'unified', '', _('number of lines of context to show')),
+    ('', 'stat', None, _('output diffstat-style summary of changes')),
 ]
 
 similarityopts = [
