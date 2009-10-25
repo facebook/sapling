@@ -29,3 +29,6 @@ hg add b
 
 echo '% binary diffstat'
 hg diff --stat
+
+echo '% binary git diffstat'
+hg diff --stat --git

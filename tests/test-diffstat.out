@@ -8,5 +8,8 @@
  a |  3 +++
  1 files changed, 3 insertions(+), 0 deletions(-)
 % binary diffstat
- b |  0 
+ b |    0 
+ 1 files changed, 0 insertions(+), 0 deletions(-)
+% binary git diffstat
+ b |  Bin 
  1 files changed, 0 insertions(+), 0 deletions(-)

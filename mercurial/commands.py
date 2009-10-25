@@ -1098,12 +1098,14 @@ def diff(ui, repo, *pats, **opts):
 
     if stat:
         opts['unified'] = '0'
+    diffopts = patch.diffopts(ui, opts)
 
     m = cmdutil.match(repo, pats, opts)
-    it = patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
+    it = patch.diff(repo, node1, node2, match=m, opts=diffopts)
     if stat:
         width = ui.interactive() and util.termwidth() or 80
-        ui.write(patch.diffstat(util.iterlines(it), width=width))
+        ui.write(patch.diffstat(util.iterlines(it), width=width,
+                                git=diffopts.git))
     else:
         for chunk in it:
             ui.write(chunk)

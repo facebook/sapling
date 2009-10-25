@@ -429,7 +429,8 @@ class queue(object):
         write = fp is None and repo.ui.write or fp.write
         if stat:
             width = self.ui.interactive() and util.termwidth() or 80
-            write(patch.diffstat(util.iterlines(chunks), width=width))
+            write(patch.diffstat(util.iterlines(chunks), width=width,
+                                 git=self.diffopts().git))
         else:
             for chunk in chunks:
                 write(chunk)
