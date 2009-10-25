@@ -231,7 +231,7 @@ def strip(oldstrip, ui, repo, node, backup="all"):
         write(repo, marks)
 
 def reposetup(ui, repo):
-    if not isinstance(repo, localrepo.localrepository):
+    if not repo.local():
         return
 
     # init a bookmark cache as otherwise we would get a infinite reading
