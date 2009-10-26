@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-10-24 00:19+0200\n"
-"PO-Revision-Date: 2009-10-24 00:37+0200\n"
+"POT-Creation-Date: 2009-10-26 19:40+0100\n"
+"PO-Revision-Date: 2009-10-26 20:52+0100\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -299,17 +299,17 @@ msgid ""
 "Alternate pattern notations must be specified explicitly.\n"
 "\n"
 "To use a plain path name without any pattern matching, start it with\n"
-"\"path:\". These path names must completely match starting at the\n"
+"``path:``. These path names must completely match starting at the\n"
 "current repository root.\n"
 "\n"
-"To use an extended glob, start a name with \"glob:\". Globs are rooted\n"
-"at the current directory; a glob such as \"``*.c``\" will only match\n"
-"files in the current directory ending with \".c\".\n"
+"To use an extended glob, start a name with ``glob:``. Globs are rooted\n"
+"at the current directory; a glob such as ``*.c`` will only match files\n"
+"in the current directory ending with ``.c``.\n"
 "\n"
-"The supported glob syntax extensions are \"``**``\" to match any string\n"
-"across path separators and \"{a,b}\" to mean \"a or b\".\n"
+"The supported glob syntax extensions are ``**`` to match any string\n"
+"across path separators and ``{a,b}`` to mean \"a or b\".\n"
 "\n"
-"To use a Perl/Python regular expression, start a name with \"re:\".\n"
+"To use a Perl/Python regular expression, start a name with ``re:``.\n"
 "Regexp pattern matching is anchored at the root of the repository.\n"
 "\n"
 "Plain examples::\n"
@@ -1071,7 +1071,7 @@ msgstr "farvelæg ikke output (FORÆLDET)"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
-msgstr ""
+msgstr "ignorerer ukendt farve/effekt %r (konfigureret i color.%s)\n"
 
 msgid "import revisions from foreign VCS repositories into Mercurial"
 msgstr "importer revisioner fra fremmede VCS depoter ind i Mercurial"
@@ -1555,7 +1555,7 @@ msgstr "%d ændringer\n"
 
 #, python-format
 msgid "darcs version 2.1 or newer needed (found %r)"
-msgstr ""
+msgstr "kræver darcs version 2.1 eller nyere (fandt %r)"
 
 msgid "Python ElementTree module is not available"
 msgstr "Python ElementTree modulet er ikke tilstede"
@@ -1638,7 +1638,7 @@ msgid "collecting p4 changelists\n"
 msgstr "samler p4 changelists\n"
 
 msgid "Mercurial failed to run itself, check hg executable is in PATH"
-msgstr ""
+msgstr "Mercurial kunne ikke køre sig selv, kontroller om hg er i PATH"
 
 msgid "Subversion python bindings could not be loaded"
 msgstr "Subversion python bindingerne kunne ikke indlæses"
@@ -1720,7 +1720,7 @@ msgid "unable to cope with svn output"
 msgstr "kan ikke håndtere svn output"
 
 msgid "XXX TAGS NOT IMPLEMENTED YET\n"
-msgstr ""
+msgstr "XXX MÆRKATER ER IKKE IMPLEMENTERET ENDNU\n"
 
 msgid ""
 "command to allow external programs to compare revisions\n"
@@ -2129,13 +2129,13 @@ msgid "cat a specific revision"
 msgstr "udskriv en bestemt revision"
 
 msgid "cat-file: type or revision not supplied\n"
-msgstr ""
+msgstr "cat-file: ingen type eller revision angivet\n"
 
 msgid "aborting hg cat-file only understands commits\n"
-msgstr ""
+msgstr "afbryder: hg cat-file forstår kun deponeringer\n"
 
 msgid "parse given revisions"
-msgstr ""
+msgstr "fortolk de givne revisioner"
 
 msgid "print revisions"
 msgstr "udskriv revisioner"
@@ -2180,22 +2180,22 @@ msgid "hg debug-merge-base REV REV"
 msgstr "hg debug-merge-base REV REV"
 
 msgid "ignored"
-msgstr "Ignoreret"
+msgstr "ignoreret"
 
 msgid "hg debug-rev-parse REV"
 msgstr "hg debug-rev-parse REV"
 
 msgid "header"
-msgstr ""
+msgstr "header"
 
 msgid "topo-order"
-msgstr "topologisk ordning"
+msgstr "topo-order"
 
 msgid "parents"
 msgstr "forældre"
 
 msgid "max-count"
-msgstr ""
+msgstr "max-count"
 
 msgid "hg debug-rev-list [OPTION]... REV..."
 msgstr "hg debug-rev-list [TILVALG]... REV..."
@@ -2293,10 +2293,10 @@ msgstr "dette system ser ikke ud til at understøtte inotify"
 
 #, python-format
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
-msgstr ""
+msgstr "*** den nuværende grænse pr bruger for antallet af inotify overvågninger er %s\n"
 
 msgid "*** this limit is too low to watch every directory in this repository\n"
-msgstr ""
+msgstr "*** denne grænse er for lille til at overvåge alle biblioteker i dette depot\n"
 
 msgid "*** counting directories: "
 msgstr "*** tæller kataloger: "
@@ -2307,23 +2307,23 @@ msgstr "fandt %d\n"
 
 #, python-format
 msgid "*** to raise the limit from %d to %d (run as root):\n"
-msgstr ""
+msgstr "*** for at hæve grænsen fra %d til %d (kør som root):\n"
 
 #, python-format
 msgid "***  echo %d > %s\n"
-msgstr ""
+msgstr "***  echo %d > %s\n"
 
 #, python-format
 msgid "cannot watch %s until inotify watch limit is raised"
-msgstr ""
+msgstr "kan ikke overvåge %s før inotify overvågningsgrænsen er hævet"
 
 #, python-format
 msgid "inotify service not available: %s"
-msgstr ""
+msgstr "inotify service er ikke tilgængelig: %s"
 
 #, python-format
 msgid "watching %r\n"
-msgstr "overvåget %r\n"
+msgstr "overvåger %r\n"
 
 #, python-format
 msgid "watching directories under %r\n"
@@ -2832,7 +2832,7 @@ msgstr "rettelsen \"%s\" er tvetydigt:\n"
 
 #, python-format
 msgid "patch %s not in series"
-msgstr ""
+msgstr "rettelsen %s er ikke i serien"
 
 msgid "(working directory not at a head)\n"
 msgstr "(arbejdskatalog er ikke ved et hoved)\n"
@@ -2846,11 +2846,11 @@ msgstr ""
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
-msgstr ""
+msgstr "qpush: %s er allerede ved toppen\n"
 
 #, python-format
 msgid "guarded by %r"
-msgstr ""
+msgstr "beskyttet af %r"
 
 msgid "no matching guards"
 msgstr ""
@@ -2870,7 +2870,7 @@ msgstr "rydder op i arbejdskataloget..."
 
 #, python-format
 msgid "errors during apply, please fix and refresh %s\n"
-msgstr ""
+msgstr "der opstod fejl ved anvendelsen, ret dem venligst og genopfrisk %s\n"
 
 #, python-format
 msgid "now at: %s\n"
@@ -2888,11 +2888,11 @@ msgid "qpop: %s is already at the top\n"
 msgstr "qpop: %s er allerede ved toppen\n"
 
 msgid "qpop: forcing dirstate update\n"
-msgstr ""
+msgstr "qpop: gennemtvinger opdatering af dirstate\n"
 
 #, python-format
 msgid "trying to pop unknown node %s"
-msgstr ""
+msgstr "prøver at fjerne ukendt knude %s"
 
 msgid "popping would remove a revision not managed by this patch queue"
 msgstr ""
@@ -2908,7 +2908,7 @@ msgid "patch queue now empty\n"
 msgstr "køen af rettelser er nu tom\n"
 
 msgid "cannot refresh a revision with children"
-msgstr ""
+msgstr "kan ikke genopfriske en revision som har børn"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -2916,7 +2916,7 @@ msgid ""
 msgstr ""
 
 msgid "patch queue directory already exists"
-msgstr ""
+msgstr "rettelsesdepotet findes allerede"
 
 #, python-format
 msgid "patch %s is not in series file"
@@ -2941,7 +2941,7 @@ msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
 msgid "queue directory updating\n"
-msgstr ""
+msgstr "opdaterer rettelsesdepotet\n"
 
 msgid "Unable to load queue repository\n"
 msgstr ""
@@ -2950,13 +2950,13 @@ msgid "save: no patches applied, exiting\n"
 msgstr ""
 
 msgid "status is already saved\n"
-msgstr ""
+msgstr "status er allerede gemt\n"
 
 msgid "hg patches saved state"
 msgstr ""
 
 msgid "repo commit failed\n"
-msgstr ""
+msgstr "deponering fejlede\n"
 
 #, python-format
 msgid "patch %s is already in the series file"
@@ -2978,7 +2978,7 @@ msgstr "revision %d er allerede håndteret"
 
 #, python-format
 msgid "revision %d is not the parent of the queue"
-msgstr ""
+msgstr "revision %d er ikke forfaren til køen"
 
 #, python-format
 msgid "revision %d has unmanaged children"
@@ -2990,7 +2990,7 @@ msgstr "kan ikke importere sammenføjningsrevision %d"
 
 #, python-format
 msgid "revision %d is not the parent of %d"
-msgstr ""
+msgstr "revision %d er ikke forældren til %d"
 
 msgid "-e is incompatible with import from -"
 msgstr "-e er ikke kompatibelt med importering fra -"
@@ -3128,13 +3128,13 @@ msgid "cloning patch repository\n"
 msgstr "kloner depotet til rettelser\n"
 
 msgid "stripping applied patches from destination repository\n"
-msgstr ""
+msgstr "stripper anvendte rettelser fra destinationsdepotet\n"
 
 msgid "updating destination repository\n"
-msgstr ""
+msgstr "opdaterer destinationsdepotet\n"
 
 msgid "commit changes in the queue repository"
-msgstr ""
+msgstr "deponerer ændringer i kødepotet"
 
 msgid "print the entire series file"
 msgstr "udskriver hele series filen"
@@ -3257,18 +3257,18 @@ msgstr "Der er ikke anvendt nogen rettelser"
 
 #, python-format
 msgid "Skipping already folded patch %s"
-msgstr ""
+msgstr "Springer allerede foldet rettelse %s over"
 
 #, python-format
 msgid "qfold cannot fold already applied patch %s"
-msgstr ""
+msgstr "qfold kan ikke folde allerede anvendt rettelse %s"
 
 #, python-format
 msgid "Error folding patch %s"
-msgstr ""
+msgstr "Fejl ved foldning af rettelse %s"
 
 msgid "push or pop patches until named patch is at top of stack"
-msgstr ""
+msgstr "tilføj eller fjern rettelser indtil den navngivne rettelser er på toppen af stakken"
 
 msgid ""
 "set or print guards for a patch\n"
@@ -3299,7 +3299,7 @@ msgid "no patch named %s"
 msgstr "ingen patch ved navn %s"
 
 msgid "print the header of the topmost or specified patch"
-msgstr ""
+msgstr "udskriv hovedet af den øverste eller den angivne rettelse"
 
 msgid ""
 "push the next patch onto the stack\n"
@@ -3494,7 +3494,7 @@ msgid "cannot import over an applied patch"
 msgstr "kan ikke importere henover en anvendt rettelse"
 
 msgid "print first line of patch header"
-msgstr ""
+msgstr "udskriv første linie i rettelsens hoved"
 
 msgid "show only the last patch"
 msgstr "vis kun den sidste rettelse"
@@ -3524,7 +3524,7 @@ msgid "hg qdiff [OPTION]... [FILE]..."
 msgstr "hg qdiff [TILVALG]... [FIL]..."
 
 msgid "keep patch file"
-msgstr ""
+msgstr "behold rettelsesfil"
 
 msgid "stop managing a revision (DEPRECATED)"
 msgstr ""
@@ -3533,10 +3533,10 @@ msgid "hg qdelete [-k] [-r REV]... [PATCH]..."
 msgstr "hg qdelete [-k] [-r REV]... [RETTELSE]..."
 
 msgid "edit patch header"
-msgstr ""
+msgstr "rediger rettelsens hoved"
 
 msgid "keep folded patch files"
-msgstr ""
+msgstr "behold foldede rettelsesfiler"
 
 msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 msgstr "hg qfold [-e] [-k] [-m TEKST] [-l FIL] RETTELSE..."
@@ -3560,7 +3560,7 @@ msgid "hg qheader [PATCH]"
 msgstr "hg qheader [RETTELSE]"
 
 msgid "import file in patch directory"
-msgstr ""
+msgstr "importer en fil i rettelsesbiblioteket"
 
 msgid "name of patch file"
 msgstr "navn på rettelse"
@@ -3587,7 +3587,7 @@ msgid "hg qinit [-c]"
 msgstr "hg qinit [-c]"
 
 msgid "import uncommitted changes into patch"
-msgstr ""
+msgstr "importer ikke-deponerede ændringer ind i rettelse"
 
 msgid "add \"From: <current user>\" to patch"
 msgstr "tilføj \"From: <aktuel bruger>\" til rettelsen"
@@ -3641,13 +3641,13 @@ msgid "hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]"
 msgstr "hg qpush [-f] [-l] [-a] [-m] [-n NAVN] [RETTELSE | INDEKS]"
 
 msgid "refresh only files already in the patch and specified files"
-msgstr ""
+msgstr "genopfrisk kun filer som allerede findes i rettelsen og angivne filer"
 
 msgid "add/update author field in patch with current user"
-msgstr ""
+msgstr "tilføj/opdater forfatterfeltet i rettelsen med den aktuelle bruger"
 
 msgid "add/update author field in patch with given user"
-msgstr ""
+msgstr "tilføj/opdater forfatterfeltet i rettelsen med den angivne bruger"
 
 msgid "add/update date field in patch with current date"
 msgstr "tilføj/opdater datofeltet i rettelsen med den aktuelle dato"
@@ -3680,7 +3680,7 @@ msgid "clear queue status file"
 msgstr ""
 
 msgid "force copy"
-msgstr ""
+msgstr "gennemtving kopiering"
 
 msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
 msgstr "hg qsave [-m TEKST] [-l FIL] [-c] [-n NAVN] [-e] [-f]"
@@ -3701,7 +3701,7 @@ msgid "hg qselect [OPTION]... [GUARD]..."
 msgstr "hg qselect [TILVALG]... [VAGT]..."
 
 msgid "print patches not in series"
-msgstr ""
+msgstr "udskriv rettelser som ikke er i serien"
 
 msgid "hg qseries [-ms]"
 msgstr "hg qseries [-ms]"
@@ -3812,18 +3812,18 @@ msgid ""
 "\n"
 "diffs (truncated from %d to %d lines):\n"
 "\n"
-msgstr ""
+msgstr "\nændringer (afkortet fra %d til %d linier):\n\n"
 
 #, python-format
 msgid ""
 "\n"
 "diffs (%d lines):\n"
 "\n"
-msgstr ""
+msgstr "\nændringer (%d linier):\n\n"
 
 #, python-format
 msgid "notify: suppressing notification for merge %d:%s\n"
-msgstr ""
+msgstr "notify: udelader notifikation for sammenføjning %d:%s\n"
 
 msgid ""
 "browse command output with an external pager\n"
@@ -3945,11 +3945,15 @@ msgid ""
 "hgrc(5) for details.\n"
 msgstr ""
 
+#, python-format
+msgid "%sPlease enter a valid value"
+msgstr "%sAngiv venligst en gyldig værdi."
+
 msgid "Please enter a valid value.\n"
 msgstr "Angiv venligst en gyldig værdi.\n"
 
 msgid "does the diffstat above look okay? "
-msgstr ""
+msgstr "ser det ovenstående diffstat okay ud? "
 
 msgid "diffstat rejected"
 msgstr "diffstat afvist"
@@ -4022,16 +4026,16 @@ msgid ""
 "\n"
 "Write the introductory message for the patch series.\n"
 "\n"
-msgstr ""
+msgstr "\nSkriv introduktionsbeskeden for rettelsesserien.\n\n"
 
 #, python-format
 msgid ""
 "This patch series consists of %d patches.\n"
 "\n"
-msgstr ""
+msgstr "Denne rettelsesserie består af %d rettelser.\n\n"
 
 msgid "Final summary:\n"
-msgstr ""
+msgstr "Endeligt sammendrag:\n"
 
 msgid "Displaying "
 msgstr "Viser "
@@ -4058,46 +4062,46 @@ msgid "add diffstat output to messages"
 msgstr "tilføj diffstat resultat til beskeder"
 
 msgid "use the given date as the sending date"
-msgstr ""
+msgstr "brug den givne dato som afsendelsesdatoen"
 
 msgid "use the given file as the series description"
-msgstr ""
+msgstr "brug den givne fil som seriens beskrivelse"
 
 msgid "email address of sender"
 msgstr ""
 
 msgid "print messages that would be sent"
-msgstr ""
+msgstr "udskriv beskeder som ville være blevet sendt"
 
 msgid "write messages to mbox file instead of sending them"
-msgstr ""
+msgstr "skriv beskeder til mbox-fil i stedet for at sende dem"
 
 msgid "subject of first message (intro or single patch)"
-msgstr ""
+msgstr "emne for den første besked (intro eller en enkelt rettelse)"
 
 msgid "message identifier to reply to"
-msgstr ""
+msgstr "message identifier der skal svares på"
 
 msgid "flags to add in subject prefixes"
-msgstr ""
+msgstr "flag som skal tilføjes i emne-præfixer"
 
 msgid "email addresses of recipients"
 msgstr ""
 
 msgid "omit hg patch header"
-msgstr ""
+msgstr "undlad hg rettelseshoved"
 
 msgid "send changes not found in the target repository"
-msgstr ""
+msgstr "send ændringer som ikke findes i måldepotet"
 
 msgid "send changes not in target as a binary bundle"
-msgstr ""
+msgstr "send de ændringer målet mangler som et binært bundt"
 
 msgid "name of the bundle attachment file"
-msgstr ""
+msgstr "navn på det vedhæftede bundt"
 
 msgid "a revision to send"
-msgstr ""
+msgstr "en revision der skal sendes"
 
 msgid "run even when remote repository is unrelated (with -b/--bundle)"
 msgstr "kør selv hvis fjerndepotet er urelateret (med -b/--bundle)"
@@ -4106,7 +4110,7 @@ msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
 msgstr ""
 
 msgid "send an introduction email for a single patch"
-msgstr ""
+msgstr "send en introduktionsmail for en enkelt rettelse"
 
 msgid "hg email [OPTION]... [DEST]..."
 msgstr "hg email [TILVALG]... [MÅL]..."
@@ -4712,15 +4716,15 @@ msgstr "integritetstjek fejlede på %s:%d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle file"
-msgstr "%s er ikke en Mercurial bundle fil"
+msgstr "%s er ikke et Mercurial bundt"
 
 #, python-format
 msgid "%s: unknown bundle version"
-msgstr "%s: ukendt bundle version"
+msgstr "%s: bundtet har ukendt version"
 
 #, python-format
 msgid "%s: unknown bundle compression type"
-msgstr "%s: ukendt bundle kompressionstype"
+msgstr "%s: bundet har ukendt kompressionstype"
 
 msgid "cannot create new bundle repository"
 msgstr ""
@@ -5327,7 +5331,7 @@ msgid ""
 msgstr ""
 
 msgid "--base is incompatible with specifying a destination"
-msgstr ""
+msgstr "--base er inkompatibelt med at angive en destination"
 
 msgid "unknown bundle type specified with --type"
 msgstr ""
@@ -6726,8 +6730,17 @@ msgid ""
 "\n"
 "    This generates a brief summary of the working directory state,\n"
 "    including parents, branch, commit status, and available updates.\n"
+"\n"
+"    With the --remote option, this will check the default paths for\n"
+"    incoming and outgoing changes. This can be time-consuming.\n"
 "    "
 msgstr ""
+
+msgid " (empty repository)"
+msgstr "(tomt depot)"
+
+msgid " (no revision checked out)"
+msgstr "(ingen revision hentet frem)"
 
 #, python-format
 msgid "parent: %d:%s %s\n"
@@ -6737,8 +6750,33 @@ msgstr "forælder: %d:%s %s\n"
 msgid "branch: %s\n"
 msgstr "gren: %s\n"
 
-msgid "modified added removed deleted unknown ignored unresolved"
-msgstr ""
+#, python-format
+msgid "%d added"
+msgstr "%d tilføjet"
+
+#, python-format
+msgid "%d modified"
+msgstr "%d ændret"
+
+#, python-format
+msgid "%d removed"
+msgstr "%d fjernet"
+
+#, python-format
+msgid "%d deleted"
+msgstr "%d slettet"
+
+#, python-format
+msgid "%d ignored"
+msgstr "%d ignoreret"
+
+#, python-format
+msgid "%d unknown"
+msgstr "%d ukendt"
+
+#, python-format
+msgid "%d unresolved"
+msgstr "%d uløst"
 
 msgid " (merge)"
 msgstr " (sammenføj)"
@@ -6750,22 +6788,36 @@ msgid " (clean)"
 msgstr " (ren)"
 
 msgid " (new branch head)"
-msgstr ""
+msgstr " (nyt hoved på gren)"
 
 #, python-format
 msgid "commit: %s\n"
 msgstr "deponer: %s\n"
 
 msgid "update: (current)\n"
-msgstr ""
+msgstr "opdater: (aktuel)\n"
 
 #, python-format
 msgid "update: %d new changesets (update)\n"
-msgstr ""
+msgstr "opdater: %d nye ændringer (update)\n"
 
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
-msgstr ""
+msgstr "opdater: %d nye ændringer, %d grenhoveder (merge)\n"
+
+msgid "1 or more incoming"
+msgstr "1 eller flere indkomne"
+
+#, python-format
+msgid "%d outgoing"
+msgstr "%d udgående"
+
+#, python-format
+msgid "remote: %s\n"
+msgstr "fjernsystem: %s\n"
+
+msgid "remote: (synced)\n"
+msgstr "fjernsystem: (synkroniseret)\n"
 
 msgid ""
 "add one or more tags for the current or given revision\n"
@@ -7532,6 +7584,9 @@ msgstr "vis ikke-betroede konfigurationsværdier"
 msgid "[-u] [NAME]..."
 msgstr "[-u] [NAVN]..."
 
+msgid "check for push and pull"
+msgstr ""
+
 msgid "show status of all files"
 msgstr "vis status på alle filer"
 
@@ -7931,6 +7986,10 @@ msgstr ""
 
 msgid "clone from remote to remote not supported"
 msgstr "kloning fra fjerndepot til fjerndepot er ikke understøttet"
+
+#, python-format
+msgid "updating to branch %s\n"
+msgstr "opdaterer til gren %s\n"
 
 #, python-format
 msgid ""
