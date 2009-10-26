@@ -36,6 +36,12 @@ def _local(path):
     if (os.path.exists(os.path.join(p, '.git')) and 
         not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
+    # detect a bare repository
+    if (os.path.exists(os.path.join(p, 'HEAD')) and 
+        os.path.exists(os.path.join(p, 'objects')) and 
+        os.path.exists(os.path.join(p, 'refs')) and 
+        not os.path.exists(os.path.join(p, '.hg'))):
+        return gitrepo
     return _oldlocal(path)
 
 hg.schemes['file'] = _local
