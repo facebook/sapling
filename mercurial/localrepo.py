@@ -319,10 +319,23 @@ class localrepository(repo.repository):
 
         return partial
 
-    def branchmap(self):
+    def lbranchmap(self):
         tip = self.changelog.tip()
         if self.branchcache is not None and self._branchcachetip == tip:
             return self.branchcache
+
+        partial = self.branchmap()
+
+        # the branch cache is stored on disk as UTF-8, but in the local
+        # charset internally
+        for k, v in partial.iteritems():
+            self.branchcache[encoding.tolocal(k)] = v
+        return self.branchcache
+
+    def branchmap(self):
+        tip = self.changelog.tip()
+        if self._ubranchcache is not None and self._branchcachetip == tip:
+            return self._ubranchcache
 
         oldtip = self._branchcachetip
         self._branchcachetip = tip
@@ -340,18 +353,13 @@ class localrepository(repo.repository):
         # this private cache holds all heads (not just tips)
         self._ubranchcache = partial
 
-        # the branch cache is stored on disk as UTF-8, but in the local
-        # charset internally
-        for k, v in partial.iteritems():
-            self.branchcache[encoding.tolocal(k)] = v
-        return self.branchcache
-
+        return self._ubranchcache
 
     def branchtags(self):
         '''return a dict where branch names map to the tipmost head of
         the branch, open heads come before closed'''
         bt = {}
-        for bn, heads in self.branchmap().iteritems():
+        for bn, heads in self.lbranchmap().iteritems():
             head = None
             for i in range(len(heads)-1, -1, -1):
                 h = heads[i]
@@ -1168,7 +1176,7 @@ class localrepository(repo.repository):
         '''
         if branch is None:
             branch = self[None].branch()
-        branches = self.branchmap()
+        branches = self.lbranchmap()
         if branch not in branches:
             return []
         # the cache returns heads ordered lowest to highest

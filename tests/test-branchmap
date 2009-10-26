@@ -1,0 +1,23 @@
+#!/bin/sh
+
+hgserve()
+{
+    hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -E errors.log -v $@ \
+        | sed -e 's/:[0-9][0-9]*//g' -e 's/http:\/\/[^/]*\//http:\/\/localhost\//'
+    cat hg.pid >> "$DAEMON_PIDS"
+}
+
+hg init a
+hg --encoding utf-8 -R a branch æ
+echo foo > a/foo
+hg -R a ci -Am foo
+
+hgserve -R a --config web.push_ssl=False --config web.allow_push=* --encoding latin1
+hg clone http://localhost:$HGPORT1 b
+hg --encoding utf-8 -R b log
+echo bar >> b/foo
+hg -R b ci -m bar
+hg --encoding utf-8 -R b push | sed "s/$HGPORT1/PORT/"
+hg -R a --encoding utf-8 log
+
+kill `cat hg.pid`
