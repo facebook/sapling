@@ -2455,12 +2455,14 @@ def resolve(ui, repo, *pats, **opts):
     """retry file merges from a merge or update
 
     This command can cleanly retry unresolved file merges using file
-    revisions preserved from the last update or merge. To attempt to
-    resolve all unresolved files, use the -a/--all switch.
+    revisions preserved from the last update or merge.
 
     If a conflict is resolved manually, please note that the changes
     will be overwritten if the merge is retried with resolve. The
     -m/--mark switch should be used to mark the file as resolved.
+
+    You can specify a set of files to operate on, or use the -a/-all
+    switch to select all unresolved files.
 
     This command also allows listing resolved files and manually
     indicating whether or not files are resolved. All files must be
@@ -3601,7 +3603,7 @@ table = {
          _('[OPTION]... SOURCE... DEST')),
     "resolve":
         (resolve,
-         [('a', 'all', None, _('remerge all unresolved files')),
+         [('a', 'all', None, _('select all unresolved files')),
           ('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
           ('u', 'unmark', None, _('unmark files as resolved')),
