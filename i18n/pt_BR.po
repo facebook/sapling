@@ -485,17 +485,17 @@ msgid ""
 "Alternate pattern notations must be specified explicitly.\n"
 "\n"
 "To use a plain path name without any pattern matching, start it with\n"
-"\"path:\". These path names must completely match starting at the\n"
+"``path:``. These path names must completely match starting at the\n"
 "current repository root.\n"
 "\n"
-"To use an extended glob, start a name with \"glob:\". Globs are rooted\n"
-"at the current directory; a glob such as \"``*.c``\" will only match\n"
-"files in the current directory ending with \".c\".\n"
+"To use an extended glob, start a name with ``glob:``. Globs are rooted\n"
+"at the current directory; a glob such as ``*.c`` will only match files\n"
+"in the current directory ending with ``.c``.\n"
 "\n"
-"The supported glob syntax extensions are \"``**``\" to match any string\n"
-"across path separators and \"{a,b}\" to mean \"a or b\".\n"
+"The supported glob syntax extensions are ``**`` to match any string\n"
+"across path separators and ``{a,b}`` to mean \"a or b\".\n"
 "\n"
-"To use a Perl/Python regular expression, start a name with \"re:\".\n"
+"To use a Perl/Python regular expression, start a name with ``re:``.\n"
 "Regexp pattern matching is anchored at the root of the repository.\n"
 "\n"
 "Plain examples::\n"
@@ -528,20 +528,20 @@ msgstr ""
 "explicitamente.\n"
 "\n"
 "Para usar um nome simples de caminho sem qualquer casamento de\n"
-"padrões, comece o nome com \"path:\". Estes nomes de caminho\n"
+"padrões, comece o nome com ``path:``. Estes nomes de caminho\n"
 "devem bater completamente, a partir da raiz do repositório\n"
 "atual.\n"
 "\n"
-"Para usar um glob estendido, comece um nome com \"glob:\". Globs\n"
-"têm como raiz o diretório corrente; um glob como \"``*.c``\" baterá\n"
-"com arquivos terminados em \".c\" apenas no diretório corrente.\n"
+"Para usar um glob estendido, comece um nome com ``glob:``. Globs\n"
+"têm como raiz o diretório corrente; um glob como ``*.c`` baterá\n"
+"apenas com arquivos terminados em ``.c`` no diretório corrente.\n"
 "\n"
-"As sintaxes de extensão do glob suportadas são \"``**``\" para bater\n"
-"com qualquer string incluindo separadores de caminho, e \"{a,b}\"\n"
+"As sintaxes de extensão do glob suportadas são ``**`` para bater\n"
+"com qualquer string incluindo separadores de caminho, e ``{a,b}``\n"
 "para significar \"a ou b\".\n"
 "\n"
 "Para usar uma expressão regular Perl/Python, comece um nome com\n"
-"\"re:\". O casamento de padrões por expressão regular é feito a\n"
+"``re:``. O casamento de padrões por expressão regular é feito a\n"
 "partir do raiz do repositório.\n"
 "\n"
 "Exemplos de caminhos simples::\n"
@@ -5511,6 +5511,10 @@ msgstr ""
 "Veja as seções [email] e [smtp] na página de manual hgrc(5) para\n"
 "mais detalhes.\n"
 
+#, python-format
+msgid "%sPlease enter a valid value"
+msgstr "%sPor favor forneça um valor válido"
+
 msgid "Please enter a valid value.\n"
 msgstr "Por favor, entre um valor válido.\n"
 
@@ -8968,46 +8972,102 @@ msgid ""
 "\n"
 "    This generates a brief summary of the working directory state,\n"
 "    including parents, branch, commit status, and available updates.\n"
+"\n"
+"    With the --remote option, this will check the default paths for\n"
+"    incoming and outgoing changes. This can be time-consuming.\n"
 "    "
 msgstr ""
+"sumariza o estado do diretório de trabalho\n"
+"\n"
+"    Isto gera um breve sumário do estado do diretório de trabalho,\n"
+"    incluindo pais, ramo, status de consolidação e atualizações disponíveis.\n"
+"\n"
+"    Com a opção --remote, isto verificará no caminho default mudanças ainda\n"
+"    não sincronizadas. Isto pode levar algum tempo.\n"
+"    "
+
+msgid " (empty repository)"
+msgstr " (repositório vazio)"
+
+msgid " (no revision checked out)"
+msgstr " (nenhuma revisão na cópia de trabalho)"
 
 #, python-format
 msgid "parent: %d:%s %s\n"
-msgstr ""
+msgstr "pai: %d:%s %s\n"
 
 #, python-format
 msgid "branch: %s\n"
-msgstr ""
+msgstr "ramo: %s\n"
 
-msgid "modified added removed deleted unknown ignored unresolved"
-msgstr ""
+#, python-format
+msgid "%d added"
+msgstr "%d adicionados"
+
+#, python-format
+msgid "%d modified"
+msgstr "%d modificados"
+
+#, python-format
+msgid "%d removed"
+msgstr "%d removidos"
+
+#, python-format
+msgid "%d deleted"
+msgstr "%d apagados"
+
+#, python-format
+msgid "%d ignored"
+msgstr "%d ignorados"
+
+#, python-format
+msgid "%d unknown"
+msgstr "%d desconhecidos"
+
+#, python-format
+msgid "%d unresolved"
+msgstr "%d não resolvidos"
 
 msgid " (merge)"
-msgstr ""
+msgstr " (mesclagem)"
 
 msgid " (new branch)"
-msgstr ""
+msgstr " (novo ramo)"
 
 msgid " (clean)"
-msgstr ""
+msgstr " (limpo)"
 
 msgid " (new branch head)"
-msgstr ""
+msgstr " (nova cabeça de ramo)"
 
 #, python-format
 msgid "commit: %s\n"
-msgstr ""
+msgstr "consolidação: %s\n"
 
 msgid "update: (current)\n"
-msgstr ""
+msgstr "atualizações: (atual)\n"
 
 #, python-format
 msgid "update: %d new changesets (update)\n"
-msgstr ""
+msgstr "atualizações: %d novas revisões (update)\n"
 
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
-msgstr ""
+msgstr "atualizações: %d novas revisões, %d cabeças de ramo (merge)\n"
+
+msgid "1 or more incoming"
+msgstr "1 ou mais de entrada"
+
+#, python-format
+msgid "%d outgoing"
+msgstr "%d de saída"
+
+#, python-format
+msgid "remote: %s\n"
+msgstr "remoto: %s\n"
+
+msgid "remote: (synced)\n"
+msgstr "remoto: (sincronizado)\n"
 
 msgid ""
 "add one or more tags for the current or given revision\n"
@@ -9564,8 +9624,8 @@ msgstr "imprime todas as revisões que casarem"
 
 msgid "follow changeset history, or file history across copies and renames"
 msgstr ""
-"acompanha histórico de revisões, ou histórico de arquivo através de cópias "
-"e renomeações"
+"acompanha histórico de revisões, ou histórico de arquivo através de cópias e "
+"renomeações"
 
 msgid "ignore case when matching"
 msgstr "ignora maiúsculas/minúsculas ao casar"
@@ -9824,6 +9884,9 @@ msgstr "mostra opções de configuração não confiáveis"
 
 msgid "[-u] [NAME]..."
 msgstr "[-u] [NOME]..."
+
+msgid "check for push and pull"
+msgstr "verifica push e pull"
 
 msgid "show status of all files"
 msgstr "mostra status de todos os arquivos"
@@ -10230,6 +10293,10 @@ msgstr ""
 
 msgid "clone from remote to remote not supported"
 msgstr "clone de origem remota para destino remoto não suportado"
+
+#, python-format
+msgid "updating to branch %s\n"
+msgstr "atualizando para o ramo %s\n"
 
 #, python-format
 msgid "%d files updated, %d files merged, %d files removed, %d files unresolved\n"
