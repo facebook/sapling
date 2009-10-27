@@ -2,7 +2,7 @@
 
 hg init repo
 cd repo
-i=0; while (( $i < 213 )); do echo a >> a; i=$(($i + 1)); done
+i=0; while [ "$i" -lt 213 ]; do echo a >> a; i=$(($i + 1)); done
 hg add a
 
 echo '% wide diffstat'
@@ -24,7 +24,7 @@ hg diff --stat
 
 hg ci -m appenda
 
-printf '%b' '\x00' > b
+printf '\0' > b
 hg add b
 
 echo '% binary diffstat'
