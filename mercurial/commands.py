@@ -1257,7 +1257,8 @@ def grep(ui, repo, pattern, *pats, **opts):
                 for i in xrange(blo, bhi):
                     yield ('+', b[i])
 
-    def display(fn, r, pstates, states):
+    def display(fn, ctx, pstates, states):
+        rev = ctx.rev()
         datefunc = ui.quiet and util.shortdate or util.datestr
         found = False
         filerevmatches = {}
@@ -1266,17 +1267,17 @@ def grep(ui, repo, pattern, *pats, **opts):
         else:
             iter = [('', l) for l in states]
         for change, l in iter:
-            cols = [fn, str(r)]
+            cols = [fn, str(rev)]
             if opts.get('line_number'):
                 cols.append(str(l.linenum))
             if opts.get('all'):
                 cols.append(change)
             if opts.get('user'):
-                cols.append(ui.shortuser(get(r).user()))
+                cols.append(ui.shortuser(ctx.user()))
             if opts.get('date'):
-                cols.append(datefunc(get(r).date()))
+                cols.append(datefunc(ctx.date()))
             if opts.get('files_with_matches'):
-                c = (fn, r)
+                c = (fn, rev)
                 if c in filerevmatches:
                     continue
                 filerevmatches[c] = 1
@@ -1288,11 +1289,10 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     skip = {}
     revfiles = {}
-    get = util.cachefunc(lambda r: repo[r])
     matchfn = cmdutil.match(repo, pats, opts)
     found = False
     follow = opts.get('follow')
-    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
+    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, opts):
         if st == 'add':
             rev = ctx.rev()
             pctx = ctx.parents()[0]
@@ -1329,7 +1329,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                         pass
         elif st == 'iter':
             rev = ctx.rev()
-            parent = get(rev).parents()[0].rev()
+            parent = ctx.parents()[0].rev()
             for fn in sorted(revfiles.get(rev, [])):
                 states = matches[rev][fn]
                 copy = copies.get(rev, {}).get(fn)
@@ -1339,7 +1339,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                     continue
                 pstates = matches.get(parent, {}).get(copy or fn, [])
                 if pstates or states:
-                    r = display(fn, rev, pstates, states)
+                    r = display(fn, ctx, pstates, states)
                     found = found or r
                     if r and not opts.get('all'):
                         skip[fn] = True
@@ -1979,7 +1979,6 @@ def log(ui, repo, *pats, **opts):
     will appear in files:.
     """
 
-    get = util.cachefunc(lambda r: repo[r])
     matchfn = cmdutil.match(repo, pats, opts)
     limit = cmdutil.loglimit(opts)
     count = 0
@@ -2027,9 +2026,9 @@ def log(ui, repo, *pats, **opts):
     only_branches = opts.get('only_branch')
 
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
-    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, get, opts):
+    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, opts):
+        rev = ctx.rev()
         if st == 'add':
-            rev = ctx.rev()
             parents = [p for p in repo.changelog.parentrevs(rev)
                        if p != nullrev]
             if opts.get('no_merges') and len(parents) == 2:
@@ -2069,7 +2068,8 @@ def log(ui, repo, *pats, **opts):
 
         elif st == 'iter':
             if count == limit: break
-            if displayer.flush(ctx.rev()):
+
+            if displayer.flush(rev):
                 count += 1
 
 def manifest(ui, repo, node=None, rev=None):

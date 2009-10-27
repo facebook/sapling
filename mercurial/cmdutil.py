@@ -1039,7 +1039,7 @@ def finddate(ui, repo, date):
 
     raise util.Abort(_("revision matching date not found"))
 
-def walkchangerevs(ui, repo, match, change, opts):
+def walkchangerevs(ui, repo, match, opts):
     '''Iterate over files and the revs in which they changed.
 
     Callers most commonly need to iterate backwards over the history
@@ -1087,6 +1087,7 @@ def walkchangerevs(ui, repo, match, change, opts):
     wanted = set()
     slowpath = match.anypats() or (match.files() and opts.get('removed'))
     fncache = {}
+    change = util.cachefunc(repo.changectx)
 
     if not slowpath and not match.files():
         # No files, no patterns.  Display all revs.
