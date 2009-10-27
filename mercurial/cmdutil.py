@@ -653,8 +653,6 @@ class changeset_printer(object):
 
         log = self.repo.changelog
         date = util.datestr(ctx.date())
-        extra = ctx.extra()
-        branch = extra.get("branch")
 
         hexfunc = self.ui.debugflag and hex or short
 
@@ -663,6 +661,7 @@ class changeset_printer(object):
 
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
+        branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
             branch = encoding.tolocal(branch)
@@ -691,6 +690,7 @@ class changeset_printer(object):
             copies = ['%s (%s)' % c for c in copies]
             self.ui.write(_("copies:      %s\n") % ' '.join(copies))
 
+        extra = ctx.extra()
         if extra and self.ui.debugflag:
             for key, value in sorted(extra.items()):
                 self.ui.write(_("extra:       %s=%s\n")

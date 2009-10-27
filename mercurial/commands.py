@@ -1085,6 +1085,7 @@ def diff(ui, repo, *pats, **opts):
 
     revs = opts.get('rev')
     change = opts.get('change')
+    stat = opts.get('stat')
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
@@ -1095,10 +1096,19 @@ def diff(ui, repo, *pats, **opts):
     else:
         node1, node2 = cmdutil.revpair(repo, revs)
 
+    if stat:
+        opts['unified'] = '0'
+    diffopts = patch.diffopts(ui, opts)
+
     m = cmdutil.match(repo, pats, opts)
-    it = patch.diff(repo, node1, node2, match=m, opts=patch.diffopts(ui, opts))
-    for chunk in it:
-        ui.write(chunk)
+    it = patch.diff(repo, node1, node2, match=m, opts=diffopts)
+    if stat:
+        width = ui.interactive() and util.termwidth() or 80
+        ui.write(patch.diffstat(util.iterlines(it), width=width,
+                                git=diffopts.git))
+    else:
+        for chunk in it:
+            ui.write(chunk)
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
@@ -1604,7 +1614,7 @@ def help_(ui, name=None, with_version=False):
     for title, options in option_lists:
         opt_output.append(("\n%s" % title, None))
         for shortopt, longopt, default, desc in options:
-            if "DEPRECATED" in desc and not ui.verbose: continue
+            if _("DEPRECATED") in desc and not ui.verbose: continue
             opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
                                           longopt and " --%s" % longopt),
                                "%s%s" % (desc,
@@ -1708,7 +1718,8 @@ def identify(ui, repo, source=None,
 def import_(ui, repo, patch1, *patches, **opts):
     """import an ordered set of patches
 
-    Import a list of patches and commit them individually.
+    Import a list of patches and commit them individually (unless
+    --no-commit is specified).
 
     If there are outstanding changes in the working directory, import
     will abort unless given the -f/--force flag.
@@ -2297,6 +2308,8 @@ def pull(ui, repo, source="default", **opts):
             raise util.Abort(err)
 
     modheads = repo.pull(other, heads=revs, force=opts.get('force'))
+    if checkout:
+        checkout = str(repo.changelog.rev(other.lookup(checkout)))
     return postincoming(ui, repo, modheads, opts.get('update'), checkout)
 
 def push(ui, repo, dest=None, **opts):
@@ -2432,7 +2445,7 @@ def rename(ui, repo, *pats, **opts):
 def resolve(ui, repo, *pats, **opts):
     """retry file merges from a merge or update
 
-    This command will cleanly retry unresolved file merges using file
+    This command can cleanly retry unresolved file merges using file
     revisions preserved from the last update or merge. To attempt to
     resolve all unresolved files, use the -a/--all switch.
 
@@ -2450,7 +2463,8 @@ def resolve(ui, repo, *pats, **opts):
       R = resolved
     """
 
-    all, mark, unmark, show = [opts.get(o) for o in 'all mark unmark list'.split()]
+    all, mark, unmark, show, nostatus = \
+        [opts.get(o) for o in 'all mark unmark list no_status'.split()]
 
     if (show and (mark or unmark)) or (mark and unmark):
         raise util.Abort(_("too many options specified"))
@@ -2466,7 +2480,10 @@ def resolve(ui, repo, *pats, **opts):
     for f in ms:
         if m(f):
             if show:
-                ui.write("%s %s\n" % (ms[f].upper(), f))
+                if nostatus:
+                    ui.write("%s\n" % f)
+                else:
+                    ui.write("%s %s\n" % (ms[f].upper(), f))
             elif mark:
                 ms.mark(f, "r")
             elif unmark:
@@ -3259,7 +3276,8 @@ diffopts2 = [
      _('ignore changes in the amount of white space')),
     ('B', 'ignore-blank-lines', None,
      _('ignore changes whose lines are all blank')),
-    ('U', 'unified', '', _('number of lines of context to show'))
+    ('U', 'unified', '', _('number of lines of context to show')),
+    ('', 'stat', None, _('output diffstat-style summary of changes')),
 ]
 
 similarityopts = [
@@ -3474,7 +3492,7 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
           ('r', 'rev', [],
-           _('a specific revision up to which you would like to pull')),
+           _('a specific remote revision up to which you would like to pull')),
          ] + logopts + remoteopts,
          _('[-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
@@ -3542,7 +3560,7 @@ table = {
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [],
-           _('a specific revision up to which you would like to pull')),
+           _('a specific remote revision up to which you would like to pull')),
          ] + remoteopts,
          _('[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]')),
     "^push":
@@ -3572,7 +3590,8 @@ table = {
          [('a', 'all', None, _('remerge all unresolved files')),
           ('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
-          ('u', 'unmark', None, _('unmark files as resolved'))]
+          ('u', 'unmark', None, _('unmark files as resolved')),
+          ('n', 'no-status', None, _('hide status prefix'))]
           + walkopts,
           _('[OPTION]... [FILE]...')),
     "revert":

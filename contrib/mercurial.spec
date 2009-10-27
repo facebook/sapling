@@ -17,7 +17,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 # python-devel provides an adequate python-dev.  The merge tool is a
 # run-time dependency.
 #
-BuildRequires: python >= 2.4, python-devel, make, gcc, asciidoc, xmlto
+BuildRequires: python >= 2.4, python-devel, make, gcc, docutils >= 0.5
 Provides: hg = %{version}-%{release}
 
 %define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')

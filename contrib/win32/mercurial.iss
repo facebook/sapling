@@ -61,6 +61,7 @@ Source: dist\Microsoft.VC*.MFC.manifest; DestDir: {app}; Flags: skipifsourcedoes
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
+Source: doc\style.css; DestDir: {app}\Docs
 Source: locale\*.*; DestDir: {app}\locale; Flags: recursesubdirs createallsubdirs
 Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt

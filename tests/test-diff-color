@@ -35,6 +35,9 @@ hg diff --nodates --color=always
 echo '% --unified=2'
 hg diff --nodates -U 2  --color=always
 
+echo '% diffstat'
+hg diff --stat --color=always
+
 echo "record=" >> $HGRCPATH
 echo "[ui]" >> $HGRCPATH
 echo "interactive=true" >> $HGRCPATH
