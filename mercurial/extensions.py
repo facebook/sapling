@@ -93,6 +93,16 @@ def loadall(ui):
         if uisetup:
             uisetup(ui)
 
+    for name in _order[newindex:]:
+        extsetup = getattr(_extensions[name], 'extsetup', None)
+        if extsetup:
+            try:
+                extsetup(ui)
+            except TypeError:
+                if extsetup.func_code.co_argcount != 0:
+                    raise
+                extsetup() # old extsetup with no ui argument
+
 def wrapcommand(table, command, wrapper):
     aliases, entry = cmdutil.findcmd(command, table)
     for alias, e in table.iteritems():

@@ -358,17 +358,7 @@ def _dispatch(ui, args):
     extensions.loadall(lui)
     exts = [ext for ext in extensions.extensions() if ext[0] not in _loaded]
 
-    # (uisetup is handled in extensions.loadall)
-
-    for name, module in exts:
-        extsetup = getattr(module, 'extsetup', None)
-        if extsetup:
-            try:
-                extsetup(ui)
-            except TypeError:
-                if extsetup.func_code.co_argcount != 0:
-                    raise
-                extsetup() # old extsetup with no ui argument
+    # (uisetup and extsetup are handled in extensions.loadall)
 
     for name, module in exts:
         cmdtable = getattr(module, 'cmdtable', {})
