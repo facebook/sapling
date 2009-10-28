@@ -241,6 +241,7 @@ options:
  -b --ignore-space-change  ignore changes in the amount of white space
  -B --ignore-blank-lines   ignore changes whose lines are all blank
  -U --unified              number of lines of context to show
+    --stat                 output diffstat-style summary of changes
  -I --include              include names matching the given patterns
  -X --exclude              exclude names matching the given patterns
 

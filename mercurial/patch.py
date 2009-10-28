@@ -1364,7 +1364,8 @@ def diffstatdata(lines):
     for line in lines:
         if line.startswith('diff'):
             if filename:
-                yield (filename, adds, removes)
+                isbinary = adds == 0 and removes == 0
+                yield (filename, adds, removes, isbinary)
             # set numbers to 0 anyway when starting new file
             adds, removes = 0, 0
             if line.startswith('diff --git'):
@@ -1377,21 +1378,27 @@ def diffstatdata(lines):
         elif line.startswith('-') and not line.startswith('---'):
             removes += 1
     if filename:
-        yield (filename, adds, removes)
+        isbinary = adds == 0 and removes == 0
+        yield (filename, adds, removes, isbinary)
 
-def diffstat(lines, width=80):
+def diffstat(lines, width=80, git=False):
     output = []
     stats = list(diffstatdata(lines))
 
     maxtotal, maxname = 0, 0
     totaladds, totalremoves = 0, 0
-    for filename, adds, removes in stats:
+    hasbinary = False
+    for filename, adds, removes, isbinary in stats:
         totaladds += adds
         totalremoves += removes
         maxname = max(maxname, len(filename))
         maxtotal = max(maxtotal, adds+removes)
+        if isbinary:
+            hasbinary = True
 
     countwidth = len(str(maxtotal))
+    if hasbinary and countwidth < 3:
+        countwidth = 3
     graphwidth = width - countwidth - maxname - 6
     if graphwidth < 10:
         graphwidth = 10
@@ -1404,11 +1411,15 @@ def diffstat(lines, width=80):
         # if there were at least some changes.
         return max(i * graphwidth // maxtotal, int(bool(i)))
 
-    for filename, adds, removes in stats:
+    for filename, adds, removes, isbinary in stats:
+        if git and isbinary:
+            count = 'Bin'
+        else:
+            count = adds + removes
         pluses = '+' * scale(adds)
         minuses = '-' * scale(removes)
-        output.append(' %-*s |  %*.d %s%s\n' % (maxname, filename, countwidth,
-                                                adds+removes, pluses, minuses))
+        output.append(' %-*s |  %*s %s%s\n' % (maxname, filename, countwidth,
+                                               count, pluses, minuses))
 
     if stats:
         output.append(_(' %d files changed, %d insertions(+), %d deletions(-)\n')

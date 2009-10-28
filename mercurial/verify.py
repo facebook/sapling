@@ -27,6 +27,7 @@ def _verify(repo):
     ui = repo.ui
     cl = repo.changelog
     mf = repo.manifest
+    lrugetctx = util.lrucachefunc(repo.changectx)
 
     if not repo.cancopy():
         raise util.Abort(_("cannot verify bundle or remote repos"))
@@ -78,6 +79,13 @@ def _verify(repo):
                 msg = _("rev %d points to unexpected changeset %d")
             err(None, msg % (i, lr), f)
             if linkrevs:
+                if f and len(linkrevs) > 1:
+                    try:
+                        # attempt to filter down to real linkrevs
+                        linkrevs = [l for l in linkrevs
+                                    if lrugetctx(l)[f].filenode() == node]
+                    except:
+                        pass
                 warn(_(" (expected %s)") % " ".join(map(str, linkrevs)))
             lr = None # can't be trusted
 
@@ -136,9 +144,7 @@ def _verify(repo):
                 if not f:
                     err(lr, _("file without name in manifest"))
                 elif f != "/dev/null":
-                    fns = filenodes.setdefault(f, {})
-                    if fn not in fns:
-                        fns[fn] = i
+                    filenodes.setdefault(f, {}).setdefault(fn, lr)
         except Exception, inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
 
@@ -173,7 +179,6 @@ def _verify(repo):
         elif size > 0:
             storefiles.add(f)
 
-    lrugetctx = util.lrucachefunc(repo.changectx)
     files = sorted(set(filenodes) | set(filelinkrevs))
     for f in files:
         try:
@@ -250,7 +255,7 @@ def _verify(repo):
 
         # cross-check
         if f in filenodes:
-            fns = [(mf.linkrev(l), n) for n,l in filenodes[f].iteritems()]
+            fns = [(lr, n) for n,lr in filenodes[f].iteritems()]
             for lr, node in sorted(fns):
                 err(lr, _("%s in manifests not found") % short(node), f)
 

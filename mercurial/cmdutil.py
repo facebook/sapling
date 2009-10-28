@@ -653,8 +653,6 @@ class changeset_printer(object):
 
         log = self.repo.changelog
         date = util.datestr(ctx.date())
-        extra = ctx.extra()
-        branch = extra.get("branch")
 
         hexfunc = self.ui.debugflag and hex or short
 
@@ -663,6 +661,7 @@ class changeset_printer(object):
 
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
 
+        branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
             branch = encoding.tolocal(branch)
@@ -691,6 +690,7 @@ class changeset_printer(object):
             copies = ['%s (%s)' % c for c in copies]
             self.ui.write(_("copies:      %s\n") % ' '.join(copies))
 
+        extra = ctx.extra()
         if extra and self.ui.debugflag:
             for key, value in sorted(extra.items()):
                 self.ui.write(_("extra:       %s=%s\n")
@@ -1024,9 +1024,9 @@ def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
     df = util.matchdate(date)
     get = util.cachefunc(lambda r: repo[r])
-    changeiter, matchfn = walkchangerevs(ui, repo, [], get, {'rev':None})
+    m = matchall(repo)
     results = {}
-    for st, rev, fns in changeiter:
+    for st, rev, fns in walkchangerevs(ui, repo, m, get, {'rev':None}):
         if st == 'add':
             d = get(rev).date()
             if df(d[0]):
@@ -1039,7 +1039,7 @@ def finddate(ui, repo, date):
 
     raise util.Abort(_("revision matching date not found"))
 
-def walkchangerevs(ui, repo, pats, change, opts):
+def walkchangerevs(ui, repo, match, opts):
     '''Iterate over files and the revs in which they changed.
 
     Callers most commonly need to iterate backwards over the history
@@ -1050,12 +1050,8 @@ def walkchangerevs(ui, repo, pats, change, opts):
     window, we first walk forwards to gather data, then in the desired
     order (usually backwards) to display it.
 
-    This function returns an (iterator, matchfn) tuple. The iterator
-    yields 3-tuples. They will be of one of the following forms:
-
-    "window", incrementing, lastrev: stepping through a window,
-    positive if walking forwards through revs, last rev in the
-    sequence iterated over - use to reset state for the current window
+    This function returns an iterator. The iterator yields 3-tuples.
+    They will be of one of the following forms:
 
     "add", rev, fns: out-of-order traversal of the given filenames
     fns, which changed during revision rev - use to gather data for
@@ -1078,11 +1074,10 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 if windowsize < sizelimit:
                     windowsize *= 2
 
-    m = match(repo, pats, opts)
     follow = opts.get('follow') or opts.get('follow_first')
 
     if not len(repo):
-        return [], m
+        return []
 
     if follow:
         defrange = '%s:0' % repo['.'].rev()
@@ -1090,10 +1085,11 @@ def walkchangerevs(ui, repo, pats, change, opts):
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
     wanted = set()
-    slowpath = m.anypats() or (m.files() and opts.get('removed'))
+    slowpath = match.anypats() or (match.files() and opts.get('removed'))
     fncache = {}
+    change = util.cachefunc(repo.changectx)
 
-    if not slowpath and not m.files():
+    if not slowpath and not match.files():
         # No files, no patterns.  Display all revs.
         wanted = set(revs)
     copies = []
@@ -1117,7 +1113,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                     if rev[0] < cl_count:
                         yield rev
         def iterfiles():
-            for filename in m.files():
+            for filename in match.files():
                 yield filename, None
             for filename_node in copies:
                 yield filename_node
@@ -1157,7 +1153,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                     yield change(j)
 
         for ctx in changerevgen():
-            matches = filter(m, ctx.files())
+            matches = filter(match, ctx.files())
             if matches:
                 fncache[ctx.rev()] = matches
                 wanted.add(ctx.rev())
@@ -1210,7 +1206,7 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 wanted.discard(x)
 
     def iterate():
-        if follow and not m.files():
+        if follow and not match.files():
             ff = followfilter(onlyfirst=opts.get('follow_first'))
             def want(rev):
                 return ff.match(rev) and rev in wanted
@@ -1219,20 +1215,20 @@ def walkchangerevs(ui, repo, pats, change, opts):
                 return rev in wanted
 
         for i, window in increasing_windows(0, len(revs)):
-            yield 'window', revs[0] < revs[-1], revs[-1]
             nrevs = [rev for rev in revs[i:i+window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
+                ctx = change(rev)
                 if not fns:
                     def fns_generator():
-                        for f in change(rev).files():
-                            if m(f):
+                        for f in ctx.files():
+                            if match(f):
                                 yield f
                     fns = fns_generator()
-                yield 'add', rev, fns
+                yield 'add', ctx, fns
             for rev in nrevs:
-                yield 'iter', rev, None
-    return iterate(), m
+                yield 'iter', change(rev), None
+    return iterate()
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''

@@ -103,7 +103,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     revision control system whose parents should be modified (same
     format as a key in .hg/shamap). The values are the revision IDs
     (in either the source or destination revision control system) that
-    should be used as the new parents for that node.
+    should be used as the new parents for that node. For example, if
+    you have merged "release-1.0" into "trunk", then you should
+    specify the revision on "trunk" as the first parent and the one on
+    the "release-1.0" branch as the second.
 
     The branchmap is a file that allows you to rename a branch when it is
     being brought in from whatever external repository. When used in

@@ -50,7 +50,7 @@ class bundlerevlog(revlog.revlog):
                 continue
             for p in (p1, p2):
                 if not p in self.nodemap:
-                    raise error.LookupError(p1, self.indexfile,
+                    raise error.LookupError(p, self.indexfile,
                                             _("unknown parent"))
             if linkmapper is None:
                 link = n

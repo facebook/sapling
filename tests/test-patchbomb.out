@@ -1177,7 +1177,7 @@ diff -r eae5fcf795ee -r e317db6a6f28 .hgtags
 +ff2c9fa2018b15fa74b33363bda9527323e2a99f two
 +ff2c9fa2018b15fa74b33363bda9527323e2a99f two.diff
 
-abort: Subject:[PATCH 0 of 2] Please enter a valid value
+abort: Subject: [PATCH 0 of 2] Please enter a valid value
 This patch series consists of 2 patches.
 
 This patch series consists of 2 patches.
