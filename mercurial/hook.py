@@ -106,10 +106,14 @@ def redirect(state):
 def hook(ui, repo, name, throw=False, **args):
     r = False
 
+    oldstdout = -1
     if _redirect:
-        # temporarily redirect stdout to stderr
-        oldstdout = os.dup(sys.__stdout__.fileno())
-        os.dup2(sys.__stderr__.fileno(), sys.__stdout__.fileno())
+        stdoutno = sys.__stdout__.fileno()
+        stderrno = sys.__stderr__.fileno()
+        # temporarily redirect stdout to stderr, if possible
+        if stdoutno >= 0 and stderrno >= 0:
+            oldstdout = os.dup(stdoutno)
+            os.dup2(stderrno, stdoutno)
 
     try:
         for hname, cmd in ui.configitems('hooks'):
@@ -128,8 +132,8 @@ def hook(ui, repo, name, throw=False, **args):
             else:
                 r = _exthook(ui, repo, hname, cmd, args, throw) or r
     finally:
-        if _redirect:
-            os.dup2(oldstdout, sys.__stdout__.fileno())
+        if _redirect and oldstdout >= 0:
+            os.dup2(oldstdout, stdoutno)
             os.close(oldstdout)
 
     return r
