@@ -19,7 +19,7 @@ Compressing objects:  11% (1/9)   Compressing objects:  22% (2/9)   Compressin
 Total 14 (delta 3), reused 0 (delta 0)
 importing Git objects into Hg
 at: 0/5
-updating working directory
+updating to branch default
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @    changeset:   5:7acfed59bdde
 |\   tag:         master

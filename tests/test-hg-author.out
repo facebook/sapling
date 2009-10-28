@@ -5,7 +5,7 @@ Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 at: 0/1
-updating working directory
+updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to git://localhost/gitrepo
 importing Hg objects into Git
@@ -41,7 +41,7 @@ Compressing objects:  20% (1/5)   Compressing objects:  40% (2/5)   Compressin
 Total 9 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 at: 0/3
-updating working directory
+updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   2:92d33c0dd6e1
 |  tag:         master

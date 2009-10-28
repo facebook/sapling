@@ -8,7 +8,7 @@ Counting objects: 2, done.
 Total 2 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 at: 0/1
-updating working directory
+updating to branch default
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 files: 
 clearing out the git cache data
