@@ -1,0 +1,16 @@
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'git@github.com'
+git@github.com
+% expect 'webjam/webjam.git'
+webjam/webjam.git
+% expect 'git@github.com'
+git@github.com
+% expect 'webjam.git'
+webjam.git
+% expect 'git@heroku.com'
+git@heroku.com
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'github.com'
+github.com
