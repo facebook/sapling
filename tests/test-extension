@@ -75,6 +75,20 @@ echo 'bar = bar.py' >> $HGRCPATH
 # command with no output, we just want to see the extensions loaded
 hg paths
 
+# check hgweb's load order
+echo '% hgweb.cgi'
+cat > hgweb.cgi <<EOF
+#!/usr/bin/env python
+from mercurial import demandimport; demandimport.enable()
+from mercurial.hgweb import hgweb
+from mercurial.hgweb import wsgicgi
+
+application = hgweb('.', 'test repo')
+wsgicgi.launch(application)
+EOF
+SCRIPT_NAME='/' SERVER_PORT='80' SERVER_NAME='localhost' python hgweb.cgi \
+    | grep '^[[:digit:]]) [[:alnum:] ]*$'  # ignores HTML output
+
 echo 'foo = !' >> $HGRCPATH
 echo 'bar = !' >> $HGRCPATH
 

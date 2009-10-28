@@ -24,6 +24,17 @@ Foo
 3) bar extsetup
 4) foo reposetup
 4) bar reposetup
+% hgweb.cgi
+1) foo imported
+1) bar imported
+2) foo uisetup
+2) bar uisetup
+3) foo extsetup
+3) bar extsetup
+4) foo reposetup
+4) bar reposetup
+4) foo reposetup
+4) bar reposetup
 empty extension - empty cmdtable
 
 no commands defined
