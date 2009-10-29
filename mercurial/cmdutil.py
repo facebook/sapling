@@ -1023,12 +1023,12 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
     df = util.matchdate(date)
-    get = util.cachefunc(lambda r: repo[r])
     m = matchall(repo)
     results = {}
-    for st, rev, fns in walkchangerevs(ui, repo, m, get, {'rev':None}):
+    for st, ctx, fns in walkchangerevs(ui, repo, m, {'rev': None}):
+        rev = ctx.rev()
         if st == 'add':
-            d = get(rev).date()
+            d = ctx.date()
             if df(d[0]):
                 results[rev] = d
         elif st == 'iter':
