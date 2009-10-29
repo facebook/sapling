@@ -54,13 +54,10 @@ def countrate(ui, repo, amap, *pats, **opts):
         df = util.matchdate(opts['date'])
 
     m = cmdutil.match(repo, pats, opts)
-    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, m, opts):
-        if not st == 'add':
-            continue
-
+    def prep(ctx, fns):
         rev = ctx.rev()
         if df and not df(ctx.date()[0]): # doesn't match date format
-            continue
+            return
 
         key = getkey(ctx)
         key = amap.get(key, key) # alias remap
@@ -70,7 +67,7 @@ def countrate(ui, repo, amap, *pats, **opts):
             parents = ctx.parents()
             if len(parents) > 1:
                 ui.note(_('Revision %d is a merge, ignoring...\n') % (rev,))
-                continue
+                return
 
             ctx1 = parents[0]
             lines = changedlines(ui, repo, ctx1, ctx, fns)
@@ -83,6 +80,9 @@ def countrate(ui, repo, amap, *pats, **opts):
                 pct = newpct
                 ui.write("\r" + _("generating stats: %d%%") % pct)
                 sys.stdout.flush()
+
+    for ctx in cmdutil.walkchangerevs(ui, repo, m, opts, prep):
+        continue
 
     if opts.get('progress'):
         ui.write("\r")

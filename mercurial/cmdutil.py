@@ -1023,23 +1023,24 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
     df = util.matchdate(date)
-    get = util.cachefunc(lambda r: repo[r])
     m = matchall(repo)
     results = {}
-    for st, rev, fns in walkchangerevs(ui, repo, m, get, {'rev':None}):
-        if st == 'add':
-            d = get(rev).date()
-            if df(d[0]):
-                results[rev] = d
-        elif st == 'iter':
-            if rev in results:
-                ui.status(_("Found revision %s from %s\n") %
-                          (rev, util.datestr(results[rev])))
-                return str(rev)
+
+    def prep(ctx, fns):
+        d = ctx.date()
+        if df(d[0]):
+            results[rev] = d
+
+    for ctx in walkchangerevs(ui, repo, m, {'rev':None}, prep):
+        rev = ctx.rev()
+        if rev in results:
+            ui.status(_("Found revision %s from %s\n") %
+                      (rev, util.datestr(results[rev])))
+            return str(rev)
 
     raise util.Abort(_("revision matching date not found"))
 
-def walkchangerevs(ui, repo, match, opts):
+def walkchangerevs(ui, repo, match, opts, prepare):
     '''Iterate over files and the revs in which they changed.
 
     Callers most commonly need to iterate backwards over the history
@@ -1050,15 +1051,9 @@ def walkchangerevs(ui, repo, match, opts):
     window, we first walk forwards to gather data, then in the desired
     order (usually backwards) to display it.
 
-    This function returns an iterator. The iterator yields 3-tuples.
-    They will be of one of the following forms:
-
-    "add", rev, fns: out-of-order traversal of the given filenames
-    fns, which changed during revision rev - use to gather data for
-    possible display
-
-    "iter", rev, None: in-order traversal of the revs earlier iterated
-    over with "add" - use to display data'''
+    This function returns an iterator yielding contexts. Before
+    yielding each context, the iterator will first call the prepare
+    function on each context in the window in forward order.'''
 
     def increasing_windows(start, end, windowsize=8, sizelimit=512):
         if start < end:
@@ -1225,9 +1220,9 @@ def walkchangerevs(ui, repo, match, opts):
                             if match(f):
                                 yield f
                     fns = fns_generator()
-                yield 'add', ctx, fns
+                prepare(ctx, fns)
             for rev in nrevs:
-                yield 'iter', change(rev), None
+                yield change(rev)
     return iterate()
 
 def commit(ui, repo, commitfunc, pats, opts):
