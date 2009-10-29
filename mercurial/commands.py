@@ -2035,8 +2035,6 @@ def log(ui, repo, *pats, **opts):
     if opts["date"]:
         df = util.matchdate(opts["date"])
 
-    only_branches = opts.get('only_branch')
-
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
     def prep(ctx, fns):
         rev = ctx.rev()
@@ -2046,24 +2044,19 @@ def log(ui, repo, *pats, **opts):
             return
         if opts.get('only_merges') and len(parents) != 2:
             return
-        if only_branches and ctx.branch() not in only_branches:
+        if opts.get('only_branch') and ctx.branch() not in opts['only_branch']:
             return
         if df and not df(ctx.date()[0]):
             return
-
+        if opts['user'] and not [k for k in opts['user'] if k in ctx.user()]:
+            return
         if opts.get('keyword'):
-            miss = 0
             for k in [kw.lower() for kw in opts['keyword']]:
-                if not (k in ctx.user().lower() or
-                        k in ctx.description().lower() or
-                        k in " ".join(ctx.files()).lower()):
-                    miss = 1
+                if (k in ctx.user().lower() or
+                    k in ctx.description().lower() or
+                    k in " ".join(ctx.files()).lower()):
                     break
-            if miss:
-                return
-
-        if opts['user']:
-            if not [k for k in opts['user'] if k in ctx.user()]:
+            else:
                 return
 
         copies = []
