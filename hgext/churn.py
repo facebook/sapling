@@ -23,14 +23,15 @@ def maketemplater(ui, repo, tmpl):
     return t
 
 def changedlines(ui, repo, ctx1, ctx2, fns):
-    lines = 0
+    added, removed = 0, 0
     fmatch = cmdutil.matchfiles(repo, fns)
     diff = ''.join(patch.diff(repo, ctx1.node(), ctx2.node(), fmatch))
     for l in diff.split('\n'):
-        if (l.startswith("+") and not l.startswith("+++ ") or
-            l.startswith("-") and not l.startswith("--- ")):
-            lines += 1
-    return lines
+        if l.startswith("+") and not l.startswith("+++ "):
+            added += 1
+        elif l.startswith("-") and not l.startswith("--- "):
+            removed += 1
+    return (added, removed)
 
 def countrate(ui, repo, amap, *pats, **opts):
     """Calculate stats"""
@@ -71,7 +72,7 @@ def countrate(ui, repo, amap, *pats, **opts):
 
             ctx1 = parents[0]
             lines = changedlines(ui, repo, ctx1, ctx, fns)
-            rate[key] = rate.get(key, 0) + lines
+            rate[key] = [r + l for r, l in zip(rate.get(key, (0, 0)), lines)]
 
         if opts.get('progress'):
             count += 1
@@ -143,20 +144,35 @@ def churn(ui, repo, *pats, **opts):
     if not rate:
         return
 
-    sortkey = ((not opts.get('sort')) and (lambda x: -x[1]) or None)
+    sortkey = ((not opts.get('sort')) and (lambda x: -sum(x[1])) or None)
     rate.sort(key=sortkey)
 
     # Be careful not to have a zero maxcount (issue833)
-    maxcount = float(max(v for k, v in rate)) or 1.0
+    maxcount = float(max(sum(v) for k, v in rate)) or 1.0
     maxname = max(len(k) for k, v in rate)
 
     ttywidth = util.termwidth()
     ui.debug("assuming %i character terminal\n" % ttywidth)
-    width = ttywidth - maxname - 2 - 6 - 2 - 2
+    width = ttywidth - maxname - 2 - 2 - 2
 
-    for date, count in rate:
-        print "%s %6d %s" % (pad(date, maxname), count,
-                             "*" * int(count * width / maxcount))
+    if opts.get('diffstat'):
+        width -= 15
+        def format(name, (added, removed)):
+            return "%s %15s %s%s\n" % (pad(name, maxname),
+                                       '+%d/-%d' % (added, removed),
+                                       '+' * charnum(added),
+                                       '-' * charnum(removed))
+    else:
+        width -= 6
+        def format(name, count):
+            return "%s %6d %s\n" % (pad(name, maxname), sum(count),
+                                    '*' * charnum(sum(count)))
+
+    def charnum(count):
+        return int(round(count*width/maxcount))
+
+    for name, count in rate:
+        ui.write(format(name, count))
 
 
 cmdtable = {
@@ -169,6 +185,7 @@ cmdtable = {
               _('strftime-compatible format for grouping by date')),
           ('c', 'changesets', False, _('count rate by number of changesets')),
           ('s', 'sort', False, _('sort by key (default: sort by count)')),
+          ('', 'diffstat', False, _('display added/removed lines separately')),
           ('', 'aliases', '', _('file with email aliases')),
           ('', 'progress', None, _('show progress'))],
          _("hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]")),

@@ -50,6 +50,11 @@ COLUMNS=40 hg churn
 echo % churn by hour
 hg churn -f '%H' -s
 
+echo % churn with separated added/removed lines
+hg rm d/g/f2.txt
+hg ci -Am "removed d/g/f2.txt" -u user1 -d 14:00 d/g/f2.txt
+hg churn --diffstat
+
 cd ..
 
 # issue 833: ZeroDivisionError
