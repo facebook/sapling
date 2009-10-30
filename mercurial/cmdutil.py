@@ -1031,7 +1031,7 @@ def finddate(ui, repo, date):
         if df(d[0]):
             results[rev] = d
 
-    for ctx in walkchangerevs(ui, repo, m, {'rev':None}, prep):
+    for ctx in walkchangerevs(repo, m, {'rev':None}, prep):
         rev = ctx.rev()
         if rev in results:
             ui.status(_("Found revision %s from %s\n") %
@@ -1040,7 +1040,7 @@ def finddate(ui, repo, date):
 
     raise util.Abort(_("revision matching date not found"))
 
-def walkchangerevs(ui, repo, match, opts, prepare):
+def walkchangerevs(repo, match, opts, prepare):
     '''Iterate over files and the revs in which they changed.
 
     Callers most commonly need to iterate backwards over the history
@@ -1088,6 +1088,7 @@ def walkchangerevs(ui, repo, match, opts, prepare):
         # No files, no patterns.  Display all revs.
         wanted = set(revs)
     copies = []
+
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog, node):
@@ -1124,8 +1125,6 @@ def walkchangerevs(ui, repo, match, opts, prepare):
                     slowpath = True
                     break
                 else:
-                    ui.warn(_('%s:%s copy source revision cannot be found!\n')
-                            % (file_, short(node)))
                     continue
             for rev, copied in filerevgen(filelog, node):
                 if rev <= maxrev:

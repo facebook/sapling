@@ -1338,7 +1338,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 except error.LookupError:
                     pass
 
-    for ctx in cmdutil.walkchangerevs(ui, repo, matchfn, opts, prep):
+    for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
         rev = ctx.rev()
         parent = ctx.parents()[0].rev()
         for fn in sorted(revfiles.get(rev, [])):
@@ -2068,7 +2068,7 @@ def log(ui, repo, *pats, **opts):
 
         displayer.show(ctx, copies=copies)
 
-    for ctx in cmdutil.walkchangerevs(ui, repo, matchfn, opts, prep):
+    for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
         if count != limit:
             if displayer.flush(ctx.rev()):
                 count += 1

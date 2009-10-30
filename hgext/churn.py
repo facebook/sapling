@@ -81,7 +81,7 @@ def countrate(ui, repo, amap, *pats, **opts):
                 ui.write("\r" + _("generating stats: %d%%") % pct)
                 sys.stdout.flush()
 
-    for ctx in cmdutil.walkchangerevs(ui, repo, m, opts, prep):
+    for ctx in cmdutil.walkchangerevs(repo, m, opts, prep):
         continue
 
     if opts.get('progress'):
