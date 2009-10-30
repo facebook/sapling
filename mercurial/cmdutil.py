@@ -1030,7 +1030,7 @@ def finddate(ui, repo, date):
     def prep(ctx, fns):
         d = ctx.date()
         if df(d[0]):
-            results[rev] = d
+            results[ctx.rev()] = d
 
     for ctx in walkchangerevs(repo, m, {'rev': None}, prep):
         rev = ctx.rev()
