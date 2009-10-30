@@ -48,7 +48,7 @@ def countrate(ui, repo, amap, *pats, **opts):
             tmpl.show(ctx)
             return ui.popbuffer()
 
-    count = pct = 0
+    state = {'count': 0, 'pct': 0}
     rate = {}
     df = False
     if opts.get('date'):
@@ -75,11 +75,11 @@ def countrate(ui, repo, amap, *pats, **opts):
             rate[key] = [r + l for r, l in zip(rate.get(key, (0, 0)), lines)]
 
         if opts.get('progress'):
-            count += 1
-            newpct = int(100.0 * count / max(len(repo), 1))
-            if pct < newpct:
-                pct = newpct
-                ui.write("\r" + _("generating stats: %d%%") % pct)
+            state['count'] += 1
+            newpct = int(100.0 * state['count'] / max(len(repo), 1))
+            if state['pct'] < newpct:
+                state['pct'] = newpct
+                ui.write("\r" + _("generating stats: %d%%") % state['pct'])
                 sys.stdout.flush()
 
     for ctx in cmdutil.walkchangerevs(repo, m, opts, prep):
