@@ -450,8 +450,7 @@ def branches(ui, repo, active=False, closed=False):
     """
 
     hexfunc = ui.debugflag and hex or short
-    activebranches = [encoding.tolocal(repo[n].branch())
-                            for n in repo.heads()]
+    activebranches = [repo[n].branch() for n in repo.heads()]
     def testactive(tag, node):
         realhead = tag in activebranches
         open = node in repo.branchheads(tag, closed=False)
@@ -462,8 +461,9 @@ def branches(ui, repo, active=False, closed=False):
 
     for isactive, node, tag in branches:
         if (not active) or isactive:
+            encodedtag = encoding.tolocal(tag)
             if ui.quiet:
-                ui.write("%s\n" % tag)
+                ui.write("%s\n" % encodedtag)
             else:
                 hn = repo.lookup(node)
                 if isactive:
@@ -474,8 +474,8 @@ def branches(ui, repo, active=False, closed=False):
                     notice = ' (closed)'
                 else:
                     notice = ' (inactive)'
-                rev = str(node).rjust(31 - encoding.colwidth(tag))
-                data = tag, rev, hexfunc(hn), notice
+                rev = str(node).rjust(31 - encoding.colwidth(encodedtag))
+                data = encodedtag, rev, hexfunc(hn), notice
                 ui.write("%s %s:%s%s\n" % data)
 
 def bundle(ui, repo, fname, dest=None, **opts):
@@ -1401,21 +1401,22 @@ def heads(ui, repo, *branchrevs, **opts):
         heads = []
         visitedset = set()
         for branchrev in branchrevs:
-            branch = repo[branchrev].branch()
+            branch = repo[encoding.fromlocal(branchrev)].branch()
+            encodedbranch = encoding.tolocal(branch)
             if branch in visitedset:
                 continue
             visitedset.add(branch)
             bheads = repo.branchheads(branch, start, closed=closed)
             if not bheads:
                 if not opts.get('rev'):
-                    ui.warn(_("no open branch heads on branch %s\n") % branch)
+                    ui.warn(_("no open branch heads on branch %s\n") % encodedbranch)
                 elif branch != branchrev:
                     ui.warn(_("no changes on branch %s containing %s are "
                               "reachable from %s\n")
-                            % (branch, branchrev, opts.get('rev')))
+                            % (encodedbranch, branchrev, opts.get('rev')))
                 else:
                     ui.warn(_("no changes on branch %s are reachable from %s\n")
-                            % (branch, opts.get('rev')))
+                            % (encodedbranch, opts.get('rev')))
             if hideinactive:
                 bheads = [bhead for bhead in bheads if bhead in _heads]
             heads.extend(bheads)
