@@ -98,8 +98,7 @@ class localrepository(repo.repository):
         self._tags = None
         self._tagtypes = None
 
-        self.branchcache = None
-        self._ubranchcache = None  # UTF-8 version of branchcache
+        self._branchcache = None  # in UTF-8
         self._branchcachetip = None
         self.nodetagscache = None
         self.filterpats = {}
@@ -320,19 +319,19 @@ class localrepository(repo.repository):
         return partial
 
     def lbranchmap(self):
-        self.branchcache = {}
+        branchcache = {}
         partial = self.branchmap()
 
         # the branch cache is stored on disk as UTF-8, but in the local
         # charset internally
         for k, v in partial.iteritems():
-            self.branchcache[encoding.tolocal(k)] = v
-        return self.branchcache
+            branchcache[encoding.tolocal(k)] = v
+        return branchcache
 
     def branchmap(self):
         tip = self.changelog.tip()
-        if self._ubranchcache is not None and self._branchcachetip == tip:
-            return self._ubranchcache
+        if self._branchcache is not None and self._branchcachetip == tip:
+            return self._branchcache
 
         oldtip = self._branchcachetip
         self._branchcachetip = tip
@@ -340,13 +339,13 @@ class localrepository(repo.repository):
             partial, last, lrev = self._readbranchcache()
         else:
             lrev = self.changelog.rev(oldtip)
-            partial = self._ubranchcache
+            partial = self._branchcache
 
         self._branchtags(partial, lrev)
         # this private cache holds all heads (not just tips)
-        self._ubranchcache = partial
+        self._branchcache = partial
 
-        return self._ubranchcache
+        return self._branchcache
 
     def branchtags(self):
         '''return a dict where branch names map to the tipmost head of
@@ -632,8 +631,7 @@ class localrepository(repo.repository):
         self._tags = None
         self._tagtypes = None
         self.nodetagscache = None
-        self.branchcache = None
-        self._ubranchcache = None
+        self._branchcache = None # in UTF-8
         self._branchcachetip = None
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
@@ -915,7 +913,7 @@ class localrepository(repo.repository):
             self.changelog.finalize(trp)
             tr.close()
 
-            if self.branchcache:
+            if self._branchcache:
                 self.branchtags()
 
             self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
