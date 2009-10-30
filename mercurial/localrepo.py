@@ -320,10 +320,7 @@ class localrepository(repo.repository):
         return partial
 
     def lbranchmap(self):
-        tip = self.changelog.tip()
-        if self.branchcache is not None and self._branchcachetip == tip:
-            return self.branchcache
-
+        self.branchcache = {}
         partial = self.branchmap()
 
         # the branch cache is stored on disk as UTF-8, but in the local
@@ -339,10 +336,6 @@ class localrepository(repo.repository):
 
         oldtip = self._branchcachetip
         self._branchcachetip = tip
-        if self.branchcache is None:
-            self.branchcache = {} # avoid recursion in changectx
-        else:
-            self.branchcache.clear() # keep using the same dict
         if oldtip is None or oldtip not in self.changelog.nodemap:
             partial, last, lrev = self._readbranchcache()
         else:
