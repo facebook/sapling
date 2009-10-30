@@ -63,7 +63,7 @@ def countrate(ui, repo, amap, *pats, **opts):
         key = getkey(ctx)
         key = amap.get(key, key) # alias remap
         if opts.get('changesets'):
-            rate[key] = rate.get(key, 0) + 1
+            rate[key] = (rate.get(key, (0,))[0] + 1, 0)
         else:
             parents = ctx.parents()
             if len(parents) > 1:
