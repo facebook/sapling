@@ -1302,61 +1302,62 @@ def grep(ui, repo, pattern, *pats, **opts):
     matchfn = cmdutil.match(repo, pats, opts)
     found = False
     follow = opts.get('follow')
-    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, opts):
-        if st == 'add':
-            rev = ctx.rev()
-            pctx = ctx.parents()[0]
-            parent = pctx.rev()
-            matches.setdefault(rev, {})
-            matches.setdefault(parent, {})
-            files = revfiles.setdefault(rev, [])
-            for fn in fns:
-                flog = getfile(fn)
-                try:
-                    fnode = ctx.filenode(fn)
-                except error.LookupError:
-                    continue
 
-                copied = flog.renamed(fnode)
-                copy = follow and copied and copied[0]
+    def prep(ctx, fns):
+        rev = ctx.rev()
+        pctx = ctx.parents()[0]
+        parent = pctx.rev()
+        matches.setdefault(rev, {})
+        matches.setdefault(parent, {})
+        files = revfiles.setdefault(rev, [])
+        for fn in fns:
+            flog = getfile(fn)
+            try:
+                fnode = ctx.filenode(fn)
+            except error.LookupError:
+                continue
+
+            copied = flog.renamed(fnode)
+            copy = follow and copied and copied[0]
+            if copy:
+                copies.setdefault(rev, {})[fn] = copy
+            if fn in skip:
                 if copy:
-                    copies.setdefault(rev, {})[fn] = copy
-                if fn in skip:
+                    skip[copy] = True
+                continue
+            files.append(fn)
+
+            if fn not in matches[rev]:
+                grepbody(fn, rev, flog.read(fnode))
+
+            pfn = copy or fn
+            if pfn not in matches[parent]:
+                try:
+                    fnode = pctx.filenode(pfn)
+                    grepbody(pfn, parent, flog.read(fnode))
+                except error.LookupError:
+                    pass
+
+    for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
+        rev = ctx.rev()
+        parent = ctx.parents()[0].rev()
+        for fn in sorted(revfiles.get(rev, [])):
+            states = matches[rev][fn]
+            copy = copies.get(rev, {}).get(fn)
+            if fn in skip:
+                if copy:
+                    skip[copy] = True
+                continue
+            pstates = matches.get(parent, {}).get(copy or fn, [])
+            if pstates or states:
+                r = display(fn, ctx, pstates, states)
+                found = found or r
+                if r and not opts.get('all'):
+                    skip[fn] = True
                     if copy:
                         skip[copy] = True
-                    continue
-                files.append(fn)
-
-                if fn not in matches[rev]:
-                    grepbody(fn, rev, flog.read(fnode))
-
-                pfn = copy or fn
-                if pfn not in matches[parent]:
-                    try:
-                        fnode = pctx.filenode(pfn)
-                        grepbody(pfn, parent, flog.read(fnode))
-                    except error.LookupError:
-                        pass
-        elif st == 'iter':
-            rev = ctx.rev()
-            parent = ctx.parents()[0].rev()
-            for fn in sorted(revfiles.get(rev, [])):
-                states = matches[rev][fn]
-                copy = copies.get(rev, {}).get(fn)
-                if fn in skip:
-                    if copy:
-                        skip[copy] = True
-                    continue
-                pstates = matches.get(parent, {}).get(copy or fn, [])
-                if pstates or states:
-                    r = display(fn, ctx, pstates, states)
-                    found = found or r
-                    if r and not opts.get('all'):
-                        skip[fn] = True
-                        if copy:
-                            skip[copy] = True
-            del matches[rev]
-            del revfiles[rev]
+        del matches[rev]
+        del revfiles[rev]
 
 def heads(ui, repo, *branchrevs, **opts):
     """show current repository heads or show branch heads
@@ -2034,53 +2035,42 @@ def log(ui, repo, *pats, **opts):
     if opts["date"]:
         df = util.matchdate(opts["date"])
 
-    only_branches = opts.get('only_branch')
-
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
-    for st, ctx, fns in cmdutil.walkchangerevs(ui, repo, matchfn, opts):
+    def prep(ctx, fns):
         rev = ctx.rev()
-        if st == 'add':
-            parents = [p for p in repo.changelog.parentrevs(rev)
-                       if p != nullrev]
-            if opts.get('no_merges') and len(parents) == 2:
-                continue
-            if opts.get('only_merges') and len(parents) != 2:
-                continue
+        parents = [p for p in repo.changelog.parentrevs(rev)
+                   if p != nullrev]
+        if opts.get('no_merges') and len(parents) == 2:
+            return
+        if opts.get('only_merges') and len(parents) != 2:
+            return
+        if opts.get('only_branch') and ctx.branch() not in opts['only_branch']:
+            return
+        if df and not df(ctx.date()[0]):
+            return
+        if opts['user'] and not [k for k in opts['user'] if k in ctx.user()]:
+            return
+        if opts.get('keyword'):
+            for k in [kw.lower() for kw in opts['keyword']]:
+                if (k in ctx.user().lower() or
+                    k in ctx.description().lower() or
+                    k in " ".join(ctx.files()).lower()):
+                    break
+            else:
+                return
 
-            if only_branches and ctx.branch() not in only_branches:
-                continue
+        copies = []
+        if opts.get('copies') and rev:
+            for fn in ctx.files():
+                rename = getrenamed(fn, rev)
+                if rename:
+                    copies.append((fn, rename[0]))
 
-            if df and not df(ctx.date()[0]):
-                continue
+        displayer.show(ctx, copies=copies)
 
-            if opts.get('keyword'):
-                miss = 0
-                for k in [kw.lower() for kw in opts['keyword']]:
-                    if not (k in ctx.user().lower() or
-                            k in ctx.description().lower() or
-                            k in " ".join(ctx.files()).lower()):
-                        miss = 1
-                        break
-                if miss:
-                    continue
-
-            if opts['user']:
-                if not [k for k in opts['user'] if k in ctx.user()]:
-                    continue
-
-            copies = []
-            if opts.get('copies') and rev:
-                for fn in ctx.files():
-                    rename = getrenamed(fn, rev)
-                    if rename:
-                        copies.append((fn, rename[0]))
-
-            displayer.show(ctx, copies=copies)
-
-        elif st == 'iter':
-            if count == limit: break
-
-            if displayer.flush(rev):
+    for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
+        if count != limit:
+            if displayer.flush(ctx.rev()):
                 count += 1
 
 def manifest(ui, repo, node=None, rev=None):
