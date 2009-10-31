@@ -480,6 +480,8 @@ class hunk(object):
         self.hunk = [ desc ]
         self.a = []
         self.b = []
+        self.starta = self.lena = None
+        self.startb = self.lenb = None
         if context:
             self.read_context_hunk(lr)
         else:
