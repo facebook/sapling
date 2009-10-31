@@ -198,7 +198,7 @@ class changelog(revlog.revlog):
         return (manifest, user, (time, timezone), files, desc, extra)
 
     def add(self, manifest, files, desc, transaction, p1, p2,
-                  user, date=None, extra={}):
+                  user, date=None, extra=None):
         user = user.strip()
         # An empty username or a username with a "\n" will make the
         # revision text contain two "\n\n" sequences -> corrupt
