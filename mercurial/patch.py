@@ -1005,12 +1005,12 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eol=None):
         return -1
     return err
 
-def diffopts(ui, opts={}, untrusted=False):
+def diffopts(ui, opts=None, untrusted=False):
     def get(key, name=None, getter=ui.configbool):
-        return (opts.get(key) or
+        return ((opts and opts.get(key)) or
                 getter('diff', name or key, None, untrusted=untrusted))
     return mdiff.diffopts(
-        text=opts.get('text'),
+        text=opts and opts.get('text'),
         git=get('git'),
         nodates=get('nodates'),
         showfunc=get('show_function', 'showfunc'),
@@ -1096,10 +1096,12 @@ def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
                          util.explain_exit(code)[0])
     return fuzz
 
-def internalpatch(patchobj, ui, strip, cwd, files={}, eolmode='strict'):
+def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
     """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""
 
+    if files is None:
+        files = {}
     if eolmode is None:
         eolmode = ui.config('patch', 'eol', 'strict')
     try:
@@ -1123,7 +1125,7 @@ def internalpatch(patchobj, ui, strip, cwd, files={}, eolmode='strict'):
         raise PatchError
     return ret > 0
 
-def patch(patchname, ui, strip=1, cwd=None, files={}, eolmode='strict'):
+def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
     """Apply <patchname> to the working directory.
 
     'eolmode' specifies how end of lines should be handled. It can be:
@@ -1137,6 +1139,8 @@ def patch(patchname, ui, strip=1, cwd=None, files={}, eolmode='strict'):
     """
     patcher = ui.config('ui', 'patch')
     args = []
+    if files is None:
+        files = {}
     try:
         if patcher:
             return externalpatch(patcher, args, patchname, ui, strip, cwd,
