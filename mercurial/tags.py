@@ -10,7 +10,6 @@
 # Eventually, it could take care of updating (adding/removing/moving)
 # tags too.
 
-import os
 from node import nullid, bin, hex, short
 from i18n import _
 import encoding

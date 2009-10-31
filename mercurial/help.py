@@ -7,7 +7,7 @@
 
 from i18n import gettext, _
 import sys, os
-import extensions, util
+import extensions
 
 
 def moduledoc(file):

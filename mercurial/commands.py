@@ -8,8 +8,8 @@
 from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, subprocess, difflib, time, tempfile
-import hg, util, revlog, bundlerepo, extensions, copies, context, error
+import os, re, sys, difflib, time, tempfile
+import hg, util, revlog, bundlerepo, extensions, copies, error
 import patch, help, mdiff, url, encoding
 import archival, changegroup, cmdutil, sshserver, hbisect
 from hgweb import server
