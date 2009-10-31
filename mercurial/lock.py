@@ -105,7 +105,7 @@ class lock(object):
             return locker
         try:
             pid = int(pid)
-        except:
+        except ValueError:
             return locker
         if util.testpid(pid):
             return locker
@@ -128,7 +128,8 @@ class lock(object):
                 self.releasefn()
             try:
                 os.unlink(self.f)
-            except: pass
+            except OSError:
+                pass
 
 def release(*locks):
     for lock in locks:
