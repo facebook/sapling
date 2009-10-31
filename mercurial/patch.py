@@ -1227,7 +1227,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
             if f not in cache:
                 if len(cache) > 20:
                     del cache[order.pop(0)]
-                cache[f] = fctx._filelog
+                cache[f] = fctx.filelog()
             else:
                 order.remove(f)
             order.append(f)
