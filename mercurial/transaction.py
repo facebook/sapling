@@ -28,14 +28,14 @@ def _playback(journal, report, opener, entries, unlink=True):
         if o or not unlink:
             try:
                 opener(f, 'a').truncate(o)
-            except:
+            except IOError:
                 report(_("failed to truncate %s\n") % f)
                 raise
         else:
             try:
                 fn = opener(f).name
                 os.unlink(fn)
-            except IOError, inst:
+            except (IOError, OSError), inst:
                 if inst.errno != errno.ENOENT:
                     raise
     os.unlink(journal)
