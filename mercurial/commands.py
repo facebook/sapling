@@ -31,7 +31,6 @@ def add(ui, repo, *pats, **opts):
     """
 
     bad = []
-    exacts = {}
     names = []
     m = cmdutil.match(repo, pats, opts)
     oldbad = m.bad

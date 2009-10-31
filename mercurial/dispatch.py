@@ -194,8 +194,6 @@ class cmdalias(object):
 
         args = shlex.split(self.definition)
         cmd = args.pop(0)
-        opts = []
-        help = ''
 
         try:
             self.fn, self.opts, self.help = cmdutil.findcmd(cmd, cmdtable, False)[1]

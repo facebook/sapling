@@ -181,7 +181,6 @@ def enabled():
     '''return a dict of {name: desc} of extensions, and the max name length'''
     exts = {}
     maxlength = 0
-    exthelps = []
     for ename, ext in extensions():
         doc = (gettext(ext.__doc__) or _('(no help text available)'))
         ename = ename.split('.')[-1]
