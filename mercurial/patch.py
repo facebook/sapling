@@ -342,11 +342,7 @@ class patchfile(object):
         # result is a list of line numbers sorted based on distance
         # from linenum
 
-        try:
-            cand = self.hash[l]
-        except:
-            return []
-
+        cand = self.hash.get(l, [])
         if len(cand) > 1:
             # resort our list of potentials forward then back.
             cand.sort(key=lambda x: abs(x - linenum))
