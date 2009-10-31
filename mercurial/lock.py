@@ -122,7 +122,7 @@ class lock(object):
     def release(self):
         if self.held > 1:
             self.held -= 1
-        elif self.held is 1:
+        elif self.held == 1:
             self.held = 0
             if self.releasefn:
                 self.releasefn()
