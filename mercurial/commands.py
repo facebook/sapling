@@ -370,14 +370,14 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     # update state
     node = repo.lookup(rev or '.')
-    if good:
-        state['good'].append(node)
-    elif bad:
-        state['bad'].append(node)
-    elif skip:
-        state['skip'].append(node)
-
-    hbisect.save_state(repo, state)
+    if good or bad or skip:
+        if good:
+            state['good'].append(node)
+        elif bad:
+            state['bad'].append(node)
+        elif skip:
+            state['skip'].append(node)
+        hbisect.save_state(repo, state)
 
     if not check_state(state):
         return
