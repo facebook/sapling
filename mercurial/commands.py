@@ -2069,9 +2069,10 @@ def log(ui, repo, *pats, **opts):
         displayer.show(ctx, copies=copies)
 
     for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
-        if count != limit:
-            if displayer.flush(ctx.rev()):
-                count += 1
+        if count == limit:
+            break
+        if displayer.flush(ctx.rev()):
+            count += 1
 
 def manifest(ui, repo, node=None, rev=None):
     """output the current or given revision of the project manifest
