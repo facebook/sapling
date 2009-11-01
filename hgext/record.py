@@ -315,6 +315,7 @@ def filterpatch(ui, chunks):
             return ret
     pos, total = 0, len(chunks) - 1
     while chunks:
+        pos = total - len(chunks) + 1
         chunk = chunks.pop()
         if isinstance(chunk, header):
             # new-file mark
@@ -350,7 +351,6 @@ def filterpatch(ui, chunks):
                 applied[chunk.filename()].append(chunk)
             else:
                 fixoffset += chunk.removed - chunk.added
-        pos = pos + 1
     return reduce(operator.add, [h for h in applied.itervalues()
                                  if h[0].special() or len(h) > 1], [])
 
