@@ -1,5 +1,5 @@
 adding a
-abort: journal already exists - run hg recover!
+abort: abandoned transaction found - run hg recover!
 rolling back interrupted transaction
 checking changesets
 checking manifests

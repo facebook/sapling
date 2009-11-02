@@ -556,7 +556,7 @@ class localrepository(repo.repository):
 
         # abort here if the journal already exists
         if os.path.exists(self.sjoin("journal")):
-            raise error.RepoError(_("journal already exists - run hg recover"))
+            raise error.RepoError(_("abandoned transaction found - run hg recover"))
 
         # save dirstate for rollback
         try:
