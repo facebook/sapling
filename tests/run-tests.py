@@ -97,6 +97,9 @@ def parseargs():
     parser.add_option("--tmpdir", type="string",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
+    parser.add_option("-d", "--debug", action="store_true",
+        help="debug mode: write output of test scripts to console"
+             " rather than capturing and diff'ing it (disables timeout)")
     parser.add_option("-R", "--restart", action="store_true",
         help="restart at last error")
     parser.add_option("-p", "--port", type="int",
@@ -168,6 +171,7 @@ def parseargs():
             for m in msg:
                 print m,
             print
+            sys.stdout.flush()
     else:
         vlog = lambda *msg: None
 
@@ -179,6 +183,13 @@ def parseargs():
     if options.interactive and options.jobs > 1:
         print '(--interactive overrides --jobs)'
         options.jobs = 1
+    if options.interactive and options.debug:
+        parser.error("-i/--interactive and -d/--debug are incompatible")
+    if options.debug:
+        if options.timeout != defaults['timeout']:
+            sys.stderr.write(
+                'warning: --timeout option ignored with --debug\n')
+        options.timeout = 0
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
             parser.error('--py3k-warnings can only be used on Python 2.6+')
@@ -374,8 +385,13 @@ def alarmed(signum, frame):
 
 def run(cmd, options):
     """Run command in a sub-process, capturing the output (stdout and stderr).
-    Return the exist code, and output."""
+    Return a tuple (exitcode, output).  output is None in debug mode."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
+    if options.debug:
+        proc = subprocess.Popen(cmd, shell=True)
+        ret = proc.wait()
+        return (ret, None)
+
     if os.name == 'nt' or sys.platform.startswith('java'):
         tochild, fromchild = os.popen4(cmd)
         tochild.close()
@@ -487,16 +503,24 @@ def runone(options, test, skips, fails):
     mark = '.'
 
     skipped = (ret == SKIPPED_STATUS)
-    # If reference output file exists, check test output against it
-    if os.path.exists(ref):
+    # If we're not in --debug mode and reference output file exists,
+    # check test output against it.
+    if options.debug:
+        refout = None                   # to match out == None
+    elif os.path.exists(ref):
         f = open(ref, "r")
         refout = splitnewlines(f.read())
         f.close()
     else:
         refout = []
+
     if skipped:
         mark = 's'
-        missing, failed = parsehghaveoutput(out)
+        if out is None:                 # debug mode: nothing to parse
+            missing = ['unknown']
+            failed = None
+        else:
+            missing, failed = parsehghaveoutput(out)
         if not missing:
             missing = ['irrelevant']
         if failed:
@@ -521,7 +545,7 @@ def runone(options, test, skips, fails):
         sys.stdout.write(mark)
         sys.stdout.flush()
 
-    if ret != 0 and not skipped:
+    if ret != 0 and not skipped and not options.debug:
         # Save errors to a file for diagnosis
         f = open(err, "wb")
         for line in out:
