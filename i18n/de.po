@@ -23,7 +23,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-10-20 12:55+0300\n"
+"POT-Creation-Date: 2009-11-02 16:48+0200\n"
 "PO-Revision-Date: 2009-10-20 18:09+0200\n"
 "Last-Translator: Fabian Kreutz <fabian.kreutz@starnet.fi>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
@@ -57,7 +57,6 @@ msgstr ""
 "    Aliase: %s\n"
 "\n"
 
-#: help/dates.txt:1
 msgid ""
 "Some commands allow the user to specify a date, e.g.:\n"
 "\n"
@@ -133,7 +132,6 @@ msgstr ""
 "  \"{datetime} to {datetime}\" - ein Datumsbereich, inklusive\n"
 "  \"-{tage}\" - innerhalb der angegebenen Anzahl von Tagen vor heute\n"
 
-#: help/diffs.txt:1
 msgid ""
 "Mercurial's default format for showing changes between two versions of\n"
 "a file is compatible with the unified format of GNU diff, which can be\n"
@@ -166,7 +164,6 @@ msgid ""
 "importing diffs in this format or using them in the mq extension.\n"
 msgstr ""
 
-#: help/environment.txt:1
 msgid ""
 "HG\n"
 "    Path to the 'hg' executable, automatically passed when running\n"
@@ -246,7 +243,6 @@ msgid ""
 "    set appropriately if this Mercurial is not installed system-wide.\n"
 msgstr ""
 
-#: help/extensions.txt:1
 msgid ""
 "Mercurial has the ability to add new features through the use of\n"
 "extensions. Extensions may add new commands, add options to\n"
@@ -283,7 +279,6 @@ msgid ""
 "  hgext.baz = !\n"
 msgstr ""
 
-#: help/multirevs.txt:1
 msgid ""
 "When Mercurial accepts more than one revision, they may be specified\n"
 "individually, or provided as a topologically continuous range,\n"
@@ -316,7 +311,6 @@ msgstr ""
 "Bereich 3:5 die Revisionen 3, 4 und 5 enthält. Ebenso enthält der Bereich\n"
 "9:6 die Revisionen 9, 8, 7 und 6.\n"
 
-#: help/patterns.txt:1
 msgid ""
 "Mercurial accepts several notations for identifying one or more files\n"
 "at a time.\n"
@@ -327,17 +321,17 @@ msgid ""
 "Alternate pattern notations must be specified explicitly.\n"
 "\n"
 "To use a plain path name without any pattern matching, start it with\n"
-"\"path:\". These path names must completely match starting at the\n"
+"``path:``. These path names must completely match starting at the\n"
 "current repository root.\n"
 "\n"
-"To use an extended glob, start a name with \"glob:\". Globs are rooted\n"
-"at the current directory; a glob such as \"``*.c``\" will only match\n"
-"files in the current directory ending with \".c\".\n"
+"To use an extended glob, start a name with ``glob:``. Globs are rooted\n"
+"at the current directory; a glob such as ``*.c`` will only match files\n"
+"in the current directory ending with ``.c``.\n"
 "\n"
-"The supported glob syntax extensions are \"``**``\" to match any string\n"
-"across path separators and \"{a,b}\" to mean \"a or b\".\n"
+"The supported glob syntax extensions are ``**`` to match any string\n"
+"across path separators and ``{a,b}`` to mean \"a or b\".\n"
 "\n"
-"To use a Perl/Python regular expression, start a name with \"re:\".\n"
+"To use a Perl/Python regular expression, start a name with ``re:``.\n"
 "Regexp pattern matching is anchored at the root of the repository.\n"
 "\n"
 "Plain examples::\n"
@@ -368,21 +362,21 @@ msgstr ""
 "\n"
 "Andere Schreibweisen von Mustern müssen explizit angegeben werden.\n"
 "\n"
-"Mit dem Prefix \"path:\" wird ein Pfad relativ zur Wurzel des "
+"Mit dem Prefix ``path:`` wird ein Pfad relativ zur Wurzel des "
 "Projektarchivs\n"
 "ohne Mustererkennung angenommen.\n"
 "\n"
-"Für erweiterte Glob-Muster muss das Muster mit \"glob:\" beginnen. Globs\n"
-"sind am aktuellen Verzeichnis verankert; ein Glob-Muster wie \"``*.c``\"\n"
-"stimmt nur mit Dateien im aktuellen Verzeichnis überein, die mit \".c\"\n"
+"Für erweiterte Glob-Muster muss das Muster mit ``glob:`` beginnen. Globs\n"
+"sind am aktuellen Verzeichnis verankert; ein Glob-Muster wie ````*.c````\n"
+"stimmt nur mit Dateien im aktuellen Verzeichnis überein, die mit ``.c``\n"
 "enden.\n"
 "\n"
-"Die unterstützen Erweiterungen der Glob-Syntax sind \"``**``\" für\n"
-"Zeichenketten über Pfadtrenner hinweg und \"{a,b}\" in der Bedeutung \"a\n"
+"Die unterstützen Erweiterungen der Glob-Syntax sind ``**`` für\n"
+"Zeichenketten über Pfadtrenner hinweg und ``{a,b}`` in der Bedeutung \"a\n"
 "oder b\".\n"
 "\n"
 "Zur Nutzung von regulären Ausdrücken (Perl/Python) beginne einen Namen mit\n"
-"\"re:\". Erkennung mit regulären Ausdrücken ist relativ zur Wurzel des\n"
+"``re:``. Erkennung mit regulären Ausdrücken ist relativ zur Wurzel des\n"
 "Projektarchivs.\n"
 "\n"
 "Einfache Beispiele::\n"
@@ -406,7 +400,6 @@ msgstr ""
 "\n"
 "  re:.*\\.c$     jeder Name endend mit \".c\" überall im Projektarchiv\n"
 
-#: help/revisions.txt:1
 msgid ""
 "Mercurial supports several ways to specify individual revisions.\n"
 "\n"
@@ -466,7 +459,6 @@ msgstr ""
 "äquivalent zu \"null\". Falls eine nicht versionierte Zusammenführung\n"
 "in Bearbeitung ist, bezeichnet \".\" die Revision des ersten Vorgängers.\n"
 
-#: help/templates.txt:1
 msgid ""
 "Mercurial allows you to customize output of commands through\n"
 "templates. You can either pass in a template from the command\n"
@@ -583,7 +575,6 @@ msgid ""
 "              address.\n"
 msgstr ""
 
-#: help/urls.txt:1
 msgid ""
 "Valid URLs are of the form::\n"
 "\n"
@@ -634,7 +625,7 @@ msgid ""
 "  ...\n"
 "\n"
 "You can then use the alias for any command that uses a URL (for\n"
-"example 'hg pull alias1' would pull from the 'alias1' path).\n"
+"example 'hg pull alias1' will be treated as 'hg pull URL1').\n"
 "\n"
 "Two path aliases are special because they are used as defaults when\n"
 "you do not provide the URL to a command:\n"
@@ -701,7 +692,7 @@ msgstr ""
 "  ...\n"
 "\n"
 "Diese Aliase können dann bei jedem Befehl genutzt werden der URLs nutzt\n"
-"(beispielsweise 'hg pull alias1' würde vom Pfad URL1 herunterladen).\n"
+"(z.B. 'hg pull alias1' würde als 'hg pull URL1' gewertet werden).\n"
 "\n"
 "Es gibt zwei besondere Pfad-Aliase, die standardmäßig genutzt\n"
 "werden wenn einem Befehl keine URL übergeben wurde:\n"
@@ -1571,7 +1562,10 @@ msgid ""
 "    revision control system whose parents should be modified (same\n"
 "    format as a key in .hg/shamap). The values are the revision IDs\n"
 "    (in either the source or destination revision control system) that\n"
-"    should be used as the new parents for that node.\n"
+"    should be used as the new parents for that node. For example, if\n"
+"    you have merged \"release-1.0\" into \"trunk\", then you should\n"
+"    specify the revision on \"trunk\" as the first parent and the one on\n"
+"    the \"release-1.0\" branch as the second.\n"
 "\n"
 "    The branchmap is a file that allows you to rename a branch when it is\n"
 "    being brought in from whatever external repository. When used in\n"
@@ -1782,8 +1776,10 @@ msgstr ""
 "    Revisions-ID des Quellarchivs, eine Leerstelle und eine oder (mit "
 "Komma)\n"
 "    zwei Revisions-IDs, die als Vorfahren der ersten angenommen werden\n"
-"    sollen. Die Vorfahren-IDs können entweder im Format der Quelle oder des\n"
-"    Ziels angegeben werden.\n"
+"    sollen. Wurde z.B. \"trunk\" mit \"release-1.0\" zusammengeführt, so\n"
+"    sollte die Revision aus \"trunk\" als erster und die aus dem Zweig\n"
+"    \"release-1.0\" als zweiter Vorfahr angegeben werden. Die Vorfahren-IDs\n"
+"    können entweder im Format der Quelle oder des Ziels angegeben werden.\n"
 "\n"
 "    Die Zweig-Abbildungsdatei erlaubt das Umbenennen von Zweigen. Zusammen\n"
 "    mit der Spleißdatei können so auch sehr unorganisierte Archive in\n"
@@ -4417,11 +4413,11 @@ msgstr ""
 
 #, python-format
 msgid "%s: %d new changesets"
-msgstr ""
+msgstr "%s: %d neue Änderungssätze"
 
 #, python-format
 msgid "notify: sending %d subscribers %d changes\n"
-msgstr ""
+msgstr "notify: Sende %d Empfängern %d Änderungen\n"
 
 #, python-format
 msgid ""
@@ -4429,6 +4425,9 @@ msgid ""
 "diffs (truncated from %d to %d lines):\n"
 "\n"
 msgstr ""
+"\n"
+"Unterschiede (Ausschnitt von %d bis %d Zeilen):\n"
+"\n"
 
 #, python-format
 msgid ""
@@ -4436,10 +4435,13 @@ msgid ""
 "diffs (%d lines):\n"
 "\n"
 msgstr ""
+"\n"
+"Unterschiede (%d Zeilen):\n"
+"\n"
 
 #, python-format
 msgid "notify: suppressing notification for merge %d:%s\n"
-msgstr ""
+msgstr "notify: unterdrücke Benachrichtigung über Zusammenführung %d:%s\n"
 
 msgid ""
 "browse command output with an external pager\n"
@@ -4561,14 +4563,18 @@ msgid ""
 "hgrc(5) for details.\n"
 msgstr ""
 
-msgid "Please enter a valid value.\n"
-msgstr ""
+#, python-format
+msgid "%s Please enter a valid value"
+msgstr "%s Bitte einen gültigen Wert angeben"
 
-msgid "does the diffstat above look okay? "
-msgstr ""
+msgid "Please enter a valid value.\n"
+msgstr "Bitte einen gültigen Wert angeben.\n"
+
+msgid "does the diffstat above look okay?"
+msgstr "Ist die obige diffstat-Ausgabe in Ordnung?"
 
 msgid "diffstat rejected"
-msgstr ""
+msgstr "diffstat abgelehnt"
 
 msgid ""
 "send changesets by email\n"
@@ -6821,6 +6827,9 @@ msgstr ""
 "Grundlegende Befehle:\n"
 "\n"
 
+msgid "DEPRECATED"
+msgstr "VERALTET"
+
 msgid ""
 "\n"
 "additional help topics:\n"
@@ -6864,7 +6873,8 @@ msgstr ""
 msgid ""
 "import an ordered set of patches\n"
 "\n"
-"    Import a list of patches and commit them individually.\n"
+"    Import a list of patches and commit them individually (unless\n"
+"    --no-commit is specified).\n"
 "\n"
 "    If there are outstanding changes in the working directory, import\n"
 "    will abort unless given the -f/--force flag.\n"
@@ -7471,7 +7481,7 @@ msgstr ""
 msgid ""
 "retry file merges from a merge or update\n"
 "\n"
-"    This command will cleanly retry unresolved file merges using file\n"
+"    This command can cleanly retry unresolved file merges using file\n"
 "    revisions preserved from the last update or merge. To attempt to\n"
 "    resolve all unresolved files, use the -a/--all switch.\n"
 "\n"
@@ -7787,8 +7797,17 @@ msgid ""
 "\n"
 "    This generates a brief summary of the working directory state,\n"
 "    including parents, branch, commit status, and available updates.\n"
+"\n"
+"    With the --remote option, this will check the default paths for\n"
+"    incoming and outgoing changes. This can be time-consuming.\n"
 "    "
 msgstr ""
+
+msgid " (empty repository)"
+msgstr " (leeres Archiv)"
+
+msgid " (no revision checked out)"
+msgstr " (keine Revision geladen)"
 
 #, python-format
 msgid "parent: %d:%s %s\n"
@@ -7798,10 +7817,33 @@ msgstr "Vorgänger: %d:%s %s\n"
 msgid "branch: %s\n"
 msgstr "Zweig: %s\n"
 
-msgid "modified added removed deleted unknown ignored unresolved"
-msgstr ""
-"verändert hinzugefügt entfernt verschwunden unbekannt ignoriert "
-"konfliktbehaftet"
+#, python-format
+msgid "%d added"
+msgstr "%d hinzugefügt"
+
+#, python-format
+msgid "%d modified"
+msgstr "%d modifiziert"
+
+#, python-format
+msgid "%d removed"
+msgstr "%d entfernt"
+
+#, python-format
+msgid "%d deleted"
+msgstr "%d gelöscht"
+
+#, python-format
+msgid "%d ignored"
+msgstr "%d ignoriert"
+
+#, python-format
+msgid "%d unknown"
+msgstr "%d unbekannt"
+
+#, python-format
+msgid "%d unresolved"
+msgstr "%d konfliktbehaftet"
 
 msgid " (merge)"
 msgstr "(Zusammenführung)"
@@ -7830,6 +7872,20 @@ msgstr "Aktualisiere: %d neue Änderungssätze (Aktualisierung)\n"
 msgid "update: %d new changesets, %d branch heads (merge)\n"
 msgstr ""
 "Aktualisiere: %d neue Änderungssätze, %d neue Zweigköpfe (Zusammenführung)\n"
+
+msgid "1 or more incoming"
+msgstr ""
+
+#, python-format
+msgid "%d outgoing"
+msgstr ""
+
+#, python-format
+msgid "remote: %s\n"
+msgstr "Entfernt: %s\n"
+
+msgid "remote: (synced)\n"
+msgstr "Entfernt: (synchonisiert)\n"
 
 msgid ""
 "add one or more tags for the current or given revision\n"
@@ -8165,6 +8221,9 @@ msgstr "Ignoriert Änderungen, die nur aus Leerzeilen bestehen"
 msgid "number of lines of context to show"
 msgstr "Anzahl der anzuzeigenden Kontextzeilen"
 
+msgid "output diffstat-style summary of changes"
+msgstr "Zusammenfassung der Änderungen im diffstat-Stil"
+
 msgid "guess renamed files by similarity (0<=s<=100)"
 msgstr "Bewertet ähnliche Dateien (0<=s<=100) als Umbenennung"
 
@@ -8465,8 +8524,8 @@ msgstr "Zeigt neuste Änderung zuerst"
 msgid "file to store the bundles into"
 msgstr "Dateiname zum Zwischenspeichern"
 
-msgid "a specific revision up to which you would like to pull"
-msgstr "eine bestimmte Revision bis zu der geholt werden soll"
+msgid "a specific remote revision up to which you would like to pull"
+msgstr "eine bestimmte enfernte Revision bis zu der geholt werden soll"
 
 msgid "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"
 msgstr "[-p] [-n] [-M] [-f] [-r REV]... [--bundle DATEINAME] [QUELLE]"
@@ -8585,6 +8644,9 @@ msgstr "Markiert eine Datei als konfliktfrei"
 msgid "unmark files as resolved"
 msgstr "Markiert eine Datei als konfliktbehaftet"
 
+msgid "hide status prefix"
+msgstr "Verdeckt den Status-Präfix"
+
 msgid "revert all changes when no arguments given"
 msgstr "Nimmt alle lokalen Änderungen zurück (ohne andere Parameter)"
 
@@ -8643,6 +8705,9 @@ msgstr ""
 msgid "[-u] [NAME]..."
 msgstr ""
 
+msgid "check for push and pull"
+msgstr ""
+
 msgid "show status of all files"
 msgstr "Zeigt den Status aller Dateien"
 
@@ -8666,9 +8731,6 @@ msgstr "Zeigt nur unbekannte (nicht überwachte) Dateien"
 
 msgid "show only ignored files"
 msgstr "Zeigt nur ignorierte Dateien"
-
-msgid "hide status prefix"
-msgstr "Verdeckt den Status-Präfix"
 
 msgid "show source of copied files"
 msgstr "Zeigt die Quelle von kopierten Dateien"
@@ -9042,6 +9104,10 @@ msgstr ""
 
 msgid "clone from remote to remote not supported"
 msgstr "Klonen von entferntem Archiv zu entferntem Archiv nicht möglich"
+
+#, python-format
+msgid "updating to branch %s\n"
+msgstr "Aktualisiere auf Zweig %s\n"
 
 #, python-format
 msgid ""
@@ -9799,7 +9865,8 @@ msgid "template file %s: %s"
 msgstr "Vorlagedatei %s: %s"
 
 msgid "cannot use transaction when it is already committed/aborted"
-msgstr "Kann Transaktion nicht verwenden, wenn sie bereits Übernommen/Abgebrochen ist"
+msgstr ""
+"Kann Transaktion nicht verwenden, wenn sie bereits Übernommen/Abgebrochen ist"
 
 #, python-format
 msgid "failed to truncate %s\n"
