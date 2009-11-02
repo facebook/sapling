@@ -30,7 +30,7 @@ COMMAND ELEMENTS
 
 files...
     indicates one or more filename or relative path filenames; see
-    "FILE NAME PATTERNS" for information on pattern matching
+    `File Name Patterns`_ for information on pattern matching
 
 path
     indicates a path on the local machine
@@ -72,7 +72,7 @@ it will be overwritten.
 
 BUGS
 ----
-Probably lots, please post them to the mailing list (See Resources
+Probably lots, please post them to the mailing list (see Resources_
 below) when you find them.
 
 SEE ALSO

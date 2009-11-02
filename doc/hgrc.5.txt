@@ -40,7 +40,7 @@ ones.
     this file override options in all other configuration files. On
     Unix, most of this file will be ignored if it doesn't belong to a
     trusted user or to a trusted group. See the documentation for the
-    trusted section below for more details.
+    trusted_ section below for more details.
 
 | (Unix) ``$HOME/.hgrc``
 | (Windows) ``%USERPROFILE%\.hgrc``
@@ -309,7 +309,7 @@ Settings for extensions that send email messages.
     email addresses. Cannot be set interactively.
 ``method``
     Optional. Method to use to send email messages. If value is "smtp"
-    (default), use SMTP (see section "[smtp]" for configuration).
+    (default), use SMTP (see the SMTP_ section for configuration).
     Otherwise, use as name of program to run that acts like sendmail
     (takes "-f" option for sender, list of recipients on command line,
     message on stdin). Normally, setting this to "sendmail" or
@@ -774,7 +774,7 @@ User interface controls.
         fail to merge
 
 For more information on configuring merge tools see the
-merge-tools section.
+merge-tools_ section.
 
 ``patch``
     command to use to apply patches. Look for 'gpatch' or 'patch' in
