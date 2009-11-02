@@ -93,8 +93,10 @@ def parseargs():
     parser.add_option("-k", "--keywords",
         help="run tests matching keywords")
     parser.add_option("--keep-tmpdir", action="store_true",
-        help="keep temporary directory after running tests"
-             " (best used with --tmpdir)")
+        help="keep temporary directory after running tests")
+    parser.add_option("--tmpdir", type="string",
+        help="run tests in the given temporary directory"
+             " (implies --keep-tmpdir)")
     parser.add_option("-R", "--restart", action="store_true",
         help="restart at last error")
     parser.add_option("-p", "--port", type="int",
@@ -109,8 +111,6 @@ def parseargs():
     parser.add_option("-t", "--timeout", type="int",
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
-    parser.add_option("--tmpdir", type="string",
-        help="run tests in the given temporary directory")
     parser.add_option("-v", "--verbose", action="store_true",
         help="output verbose messages")
     parser.add_option("-n", "--nodiff", action="store_true",
@@ -173,11 +173,6 @@ def parseargs():
 
     if options.tmpdir:
         options.tmpdir = os.path.expanduser(options.tmpdir)
-        try:
-            os.makedirs(options.tmpdir)
-        except OSError, err:
-            if err.errno != errno.EEXIST:
-                raise
 
     if options.jobs < 1:
         parser.error('--jobs must be positive')
@@ -765,8 +760,24 @@ def main():
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
-    HGTMP = os.environ['HGTMP'] = os.path.realpath(tempfile.mkdtemp('', 'hgtests.',
-                                                   options.tmpdir))
+    if options.tmpdir:
+        options.keep_tmpdir = True
+        tmpdir = options.tmpdir
+        if os.path.exists(tmpdir):
+            # Meaning of tmpdir has changed since 1.3: we used to create
+            # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
+            # tmpdir already exists.
+            sys.exit("error: temp dir %r already exists" % tmpdir)
+
+            # Automatically removing tmpdir sounds convenient, but could
+            # really annoy anyone in the habit of using "--tmpdir=/tmp"
+            # or "--tmpdir=$HOME".
+            #vlog("# Removing temp dir", tmpdir)
+            #shutil.rmtree(tmpdir)
+        os.makedirs(tmpdir)
+    else:
+        tmpdir = tempfile.mkdtemp('', 'hgtests.')
+    HGTMP = os.environ['HGTMP'] = os.path.realpath(tmpdir)
     DAEMON_PIDS = None
     HGRCPATH = None
 
