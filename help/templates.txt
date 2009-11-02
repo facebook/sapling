@@ -75,11 +75,11 @@ List of filters:
               the timezone: "Mon Sep 04 15:13:13 2006 0700".
 :domain:      Any text. Finds the first string that looks like an
               email address, and extracts just the domain
-              component. Example: 'User <user@example.com>' becomes
-              'example.com'.
+              component. Example: ``User <user@example.com>`` becomes
+              ``example.com``.
 :email:       Any text. Extracts the first string that looks like
-              an email address. Example: 'User <user@example.com>'
-              becomes 'user@example.com'.
+              an email address. Example: ``User <user@example.com>``
+              becomes ``user@example.com``.
 :escape:      Any text. Replaces the special XML/XHTML characters
               "&", "<" and ">" with XML entities.
 :fill68:      Any text. Wraps the text to fit in 68 columns.

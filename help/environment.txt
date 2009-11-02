@@ -50,7 +50,7 @@ HGUSER
     - hgrc files from the HGRCPATH
     - EMAIL
     - interactive prompt
-    - LOGNAME (with '@hostname' appended)
+    - LOGNAME (with ``@hostname`` appended)
 
     (deprecated, use .hgrc)
 
