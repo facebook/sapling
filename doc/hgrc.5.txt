@@ -805,6 +805,11 @@ merge-tools section.
 ``timeout``
     The timeout used when a lock is held (in seconds), a negative value
     means no timeout. Default is 600.
+``traceback``
+    Mercurial always prints a traceback when an unknown exception
+    occurs. Setting this to True will make Mercurial print a traceback
+    on all exceptions, even those recognized by Mercurial (such as
+    IOError or MemoryError). Default is False.
 ``username``
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. "Fred Widget
