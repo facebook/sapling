@@ -7,6 +7,7 @@
 
 from node import nullid, short
 from i18n import _
+import os
 import revlog, util, error
 
 def verify(repo):
@@ -104,6 +105,9 @@ def _verify(repo):
             err(lr, _("duplicate revision %d (%d)") % (i, seen[n]), f)
         seen[n] = i
         return lr
+
+    if os.path.exists(repo.sjoin("journal")):
+        ui.warn(_("abandoned transaction found - run hg recover\n"))
 
     revlogv1 = cl.version != revlog.REVLOGV0
     if ui.verbose or not revlogv1:

@@ -10,6 +10,14 @@ crosschecking files in changesets and manifests
 checking files
 3 files, 1 changesets, 3 total revisions
 
+% verify with journal
+abandoned transaction found - run hg recover
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+3 files, 1 changesets, 3 total revisions
+
 % introduce some bugs in repo
 
 % verify

@@ -10,6 +10,7 @@ failed to truncate data/b.i
 rollback failed - please run hg recover
 abort: Permission denied .hg/store/data/b.i
 % after update 0, strip 2
+abandoned transaction found - run hg recover
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -59,6 +60,7 @@ failed to truncate 00manifest.i
 rollback failed - please run hg recover
 abort: Permission denied .hg/store/00manifest.i
 % after update 0, strip 2
+abandoned transaction found - run hg recover
 checking changesets
 checking manifests
  manifest@?: rev 2 points to nonexistent changeset 2
