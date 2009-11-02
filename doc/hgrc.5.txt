@@ -97,12 +97,9 @@ and followed by ``name: value`` entries; ``name=value`` is also accepted.
        eggs
 
 Each line contains one entry. If the lines that follow are indented,
-they are treated as continuations of that entry.
-
-Leading whitespace is removed from values. Empty lines are skipped.
-
-Lines beginning with ``#`` or ``;`` are ignored and may be used to provide
-comments.
+they are treated as continuations of that entry. Leading whitespace is
+removed from values. Empty lines are skipped. Lines beginning with
+``#`` or ``;`` are ignored and may be used to provide comments.
 
 A line of the form ``%include file`` will include ``file`` into the
 current configuration file. The inclusion is recursive, which means
