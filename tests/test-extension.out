@@ -65,7 +65,7 @@ global options:
     --debugger        start debugger
     --encoding        set the charset encoding (default: ascii)
     --encodingmode    set the charset encoding mode (default: strict)
-    --traceback       print traceback on exception
+    --traceback       always print a traceback on exception
     --time            time how long the command takes
     --profile         print command execution profile
     --version         output version information and exit
@@ -95,7 +95,7 @@ global options:
     --debugger        start debugger
     --encoding        set the charset encoding (default: ascii)
     --encodingmode    set the charset encoding mode (default: strict)
-    --traceback       print traceback on exception
+    --traceback       always print a traceback on exception
     --time            time how long the command takes
     --profile         print command execution profile
     --version         output version information and exit
