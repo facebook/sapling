@@ -87,7 +87,7 @@ set +e
 
 echo % test invalid command
 hg bisect -r
-hg bisect --command 'foobar'
+hg bisect --command './foobar' 2>&1 | sed 's/: command/:/'
 
 echo % test bisecting command
 cat > script.py <<EOF

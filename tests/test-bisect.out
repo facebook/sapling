@@ -304,8 +304,8 @@ date:        Thu Jan 01 00:00:06 1970 +0000
 summary:     msg 6
 
 % test invalid command
-/bin/sh: foobar: command not found
-abort: failed to execute foobar
+/bin/sh: ./foobar: not found
+abort: failed to execute ./foobar
 % test bisecting command
 Testing changeset 15:e7fa0811edb0 (31 changesets remaining, ~4 tests)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
