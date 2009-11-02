@@ -5,20 +5,20 @@ adding baz/bletch
 % gz allowed should give 200
 200 Script output follows
 % tar.bz2 and zip disallowed should both give 403
-403 Forbidden
-403 Forbidden
+403 Archive type not allowed: bz2
+403 Archive type not allowed: zip
 % bz2 allowed should give 200
 200 Script output follows
 % zip and tar.gz disallowed should both give 403
-403 Forbidden
-403 Forbidden
+403 Archive type not allowed: zip
+403 Archive type not allowed: gz
 % zip allowed should give 200
 200 Script output follows
 % tar.gz and tar.bz2 disallowed should both give 403
-403 Forbidden
-403 Forbidden
+403 Archive type not allowed: gz
+403 Archive type not allowed: bz2
 % invalid arch type should give 404
-404 Not Found
+404 Unsupported archive type: None
 
 test-archive-TIP/.hg_archival.txt
 test-archive-TIP/bar
