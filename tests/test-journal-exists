@@ -3,6 +3,7 @@
 hg init
 echo a > a
 hg ci -Am0
+hg -q clone . foo
 
 touch .hg/store/journal
 
@@ -10,3 +11,10 @@ echo foo > a
 hg ci -Am0
 
 hg recover
+
+echo % check that zero-size journals are correctly aborted
+hg bundle -qa repo.hg
+chmod -w foo/.hg/store/00changelog.i
+hg -R foo unbundle repo.hg 2>&1 | sed 's/\(abort: Permission denied\).*/\1/'
+if test -f foo/.hg/store/journal; then echo 'journal exists :-('; fi
+exit 0

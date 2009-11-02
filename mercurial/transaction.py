@@ -59,8 +59,7 @@ class transaction(object):
 
     def __del__(self):
         if self.journal:
-            if self.entries: self._abort()
-            self.file.close()
+            self._abort()
 
     @active
     def startgroup(self):
@@ -126,7 +125,7 @@ class transaction(object):
         self.entries = []
         if self.after:
             self.after()
-        else:
+        if os.path.isfile(self.journal):
             os.unlink(self.journal)
         self.journal = None
 
@@ -141,7 +140,10 @@ class transaction(object):
         self.count = 0
         self.file.close()
 
-        if not self.entries: return
+        if not self.entries:
+            if self.journal:
+                os.unlink(self.journal)
+            return
 
         self.report(_("transaction abort!\n"))
 
