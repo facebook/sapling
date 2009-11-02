@@ -738,7 +738,7 @@ User interface controls.
     Whether to include the .hg_archival.txt file containing meta data
     (hashes for the repository base and for tip) in archives created
     by the hg archive command or downloaded via hgweb.
-    Default is true.
+    Default is True.
 ``askusername``
     Whether to prompt for a username when committing. If True, and
     neither ``$HGUSER`` nor ``$EMAIL`` has been specified, then the user will
@@ -835,13 +835,13 @@ Web interface configuration.
 ``allowbz2``
     (DEPRECATED) Whether to allow .tar.bz2 downloading of repository
     revisions.
-    Default is false.
+    Default is False.
 ``allowgz``
     (DEPRECATED) Whether to allow .tar.gz downloading of repository
     revisions.
-    Default is false.
+    Default is False.
 ``allowpull``
-    Whether to allow pulling from the repository. Default is true.
+    Whether to allow pulling from the repository. Default is True.
 ``allow_push``
     Whether to allow pushing to the repository. If empty or not set,
     push is not allowed. If the special value ``*``, any remote user can
@@ -863,7 +863,7 @@ Web interface configuration.
     list.
 ``allowzip``
     (DEPRECATED) Whether to allow .zip downloading of repository
-    revisions. Default is false. This feature creates temporary files.
+    revisions. Default is False. This feature creates temporary files.
 ``baseurl``
     Base URL to use when publishing URLs in other locations, so
     third-party tools like email notification hooks can construct
@@ -907,9 +907,9 @@ Web interface configuration.
     Where to output the error log. Default is stderr.
 ``hidden``
     Whether to hide the repository in the hgwebdir index.
-    Default is false.
+    Default is False.
 ``ipv6``
-    Whether to use IPv6. Default is false.
+    Whether to use IPv6. Default is False.
 ``name``
     Repository name to use in the web interface. Default is current
     working directory.
@@ -923,7 +923,7 @@ Web interface configuration.
     Prefix path to serve from. Default is '' (server root).
 ``push_ssl``
     Whether to require that inbound pushes be transported over SSL to
-    prevent password sniffing. Default is true.
+    prevent password sniffing. Default is True.
 ``staticurl``
     Base URL to use for static files. If unset, static files (e.g. the
     hgicon.png favicon) will be served by the CGI script itself. Use
