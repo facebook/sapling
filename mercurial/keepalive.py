@@ -23,6 +23,9 @@
 #  - import md5 function from a local util module
 # Modified by Martin Geisler:
 #  - moved md5 function from local util module to this module
+# Modified by Augie Fackler:
+#  - add safesend method and use it to prevent broken pipe errors
+#    on large POST requests
 
 """An HTTP handler for urllib2 that supports HTTP 1.1 and keepalive.
 
@@ -108,10 +111,11 @@ EXTRA ATTRIBUTES AND METHODS
 
 # $Id: keepalive.py,v 1.14 2006/04/04 21:00:32 mstenner Exp $
 
-import urllib2
+import errno
 import httplib
 import socket
 import thread
+import urllib2
 
 DEBUG = None
 
@@ -495,10 +499,76 @@ class HTTPResponse(httplib.HTTPResponse):
                 break
         return list
 
+def safesend(self, str):
+    """Send `str' to the server.
+
+    Shamelessly ripped off from httplib to patch a bad behavior.
+    """
+    # _broken_pipe_resp is an attribute we set in this function
+    # if the socket is closed while we're sending data but
+    # the server sent us a response before hanging up.
+    # In that case, we want to pretend to send the rest of the
+    # outgoing data, and then let the user use getresponse()
+    # (which we wrap) to get this last response before
+    # opening a new socket.
+    if getattr(self, '_broken_pipe_resp', None) is not None:
+        return
+
+    if self.sock is None:
+        if self.auto_open:
+            self.connect()
+        else:
+            raise httplib.NotConnected()
+
+    # send the data to the server. if we get a broken pipe, then close
+    # the socket. we want to reconnect when somebody tries to send again.
+    #
+    # NOTE: we DO propagate the error, though, because we cannot simply
+    #       ignore the error... the caller will know if they can retry.
+    if self.debuglevel > 0:
+        print "send:", repr(str)
+    try:
+        blocksize=8192
+        if hasattr(str,'read') :
+            if self.debuglevel > 0: print "sendIng a read()able"
+            data=str.read(blocksize)
+            while data:
+                self.sock.sendall(data)
+                data=str.read(blocksize)
+        else:
+            self.sock.sendall(str)
+    except socket.error, v:
+        reraise = True
+        if v[0] == errno.EPIPE:      # Broken pipe
+            if self._HTTPConnection__state == httplib._CS_REQ_SENT:
+                self._broken_pipe_resp = None
+                self._broken_pipe_resp = self.getresponse()
+                reraise = False
+            self.close()
+        if reraise:
+            raise
+
+def wrapgetresponse(cls):
+    """Wraps getresponse in cls with a broken-pipe sane version.
+    """
+    def safegetresponse(self):
+        # In safesend() we might set the _broken_pipe_resp
+        # attribute, in which case the socket has already
+        # been closed and we just need to give them the response
+        # back. Otherwise, we use the normal response path.
+        r = getattr(self, '_broken_pipe_resp', None)
+        if r is not None:
+            return r
+        return cls.getresponse(self)
+    safegetresponse.__doc__ = cls.getresponse.__doc__
+    return safegetresponse
 
 class HTTPConnection(httplib.HTTPConnection):
     # use the modified response class
     response_class = HTTPResponse
+    send = safesend
+    getresponse = wrapgetresponse(httplib.HTTPConnection)
+
 
 #########################################################################
 #####   TEST FUNCTIONS

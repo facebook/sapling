@@ -408,10 +408,14 @@ class httphandler(keepalive.HTTPHandler):
         self.close_all()
 
 if has_https:
-    class httpsconnection(httplib.HTTPSConnection):
+    class BetterHTTPS(httplib.HTTPSConnection):
+        send = keepalive.safesend
+
+    class httpsconnection(BetterHTTPS):
         response_class = keepalive.HTTPResponse
         # must be able to send big bundle as stream.
-        send = _gen_sendfile(httplib.HTTPSConnection)
+        send = _gen_sendfile(BetterHTTPS)
+        getresponse = keepalive.wrapgetresponse(httplib.HTTPSConnection)
 
     class httpshandler(keepalive.KeepAliveHandler, urllib2.HTTPSHandler):
         def __init__(self, ui):
