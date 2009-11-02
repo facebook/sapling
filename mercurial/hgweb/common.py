@@ -31,8 +31,8 @@ def _statusmessage(code):
     responses = BaseHTTPRequestHandler.responses
     return responses.get(code, ('Error', 'Unknown error'))[0]
 
-def statusmessage(code):
-    return '%d %s' % (code, _statusmessage(code))
+def statusmessage(code, message=None):
+    return '%d %s' % (code, message or _statusmessage(code))
 
 def get_mtime(repo_path):
     store_path = os.path.join(repo_path, ".hg")

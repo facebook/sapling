@@ -181,18 +181,19 @@ def unbundle(repo, req):
         except ValueError, inst:
             raise ErrorResponse(HTTP_OK, inst)
         except (OSError, IOError), inst:
-            filename = getattr(inst, 'filename', '')
-            # Don't send our filesystem layout to the client
-            if filename.startswith(repo.root):
-                filename = filename[len(repo.root)+1:]
-            else:
-                filename = ''
             error = getattr(inst, 'strerror', 'Unknown error')
             if inst.errno == errno.ENOENT:
                 code = HTTP_NOT_FOUND
             else:
                 code = HTTP_SERVER_ERROR
-            raise ErrorResponse(code, '%s: %s' % (error, filename))
+            filename = getattr(inst, 'filename', '')
+            # Don't send our filesystem layout to the client
+            if filename and filename.startswith(repo.root):
+                filename = filename[len(repo.root)+1:]
+                text = '%s: %s' % (error, filename)
+            else:
+                text = error.replace(repo.root + os.path.sep, '')
+            raise ErrorResponse(code, text)
     finally:
         fp.close()
         os.unlink(tempname)
