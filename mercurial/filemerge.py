@@ -186,6 +186,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     env = dict(HG_FILE=fd,
                HG_MY_NODE=short(mynode),
                HG_OTHER_NODE=str(fco.changectx()),
+               HG_BASE_NODE=str(fca.changectx()),
                HG_MY_ISLINK='l' in fcd.flags(),
                HG_OTHER_ISLINK='l' in fco.flags(),
                HG_BASE_ISLINK='l' in fca.flags())
