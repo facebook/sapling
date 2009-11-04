@@ -14,7 +14,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-10-25 12:38+0100\n"
-"PO-Revision-Date: 2009-08-21 19:38+0200\n"
+"PO-Revision-Date: 2009-11-04 21:58+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -23,24 +23,28 @@ msgstr ""
 
 #, python-format
 msgid " (default: %s)"
-msgstr ""
+msgstr " (standard: %s)"
 
 msgid "OPTIONS"
-msgstr ""
+msgstr "FLAGGOR"
 
 msgid "COMMANDS"
-msgstr ""
+msgstr "KOMMANDON"
 
 msgid ""
 "    options:\n"
 "\n"
 msgstr ""
+"    flaggor:\n"
+"\n"
 
 #, python-format
 msgid ""
 "    aliases: %s\n"
 "\n"
 msgstr ""
+"    alias: %s\n"
+"\n"
 
 msgid ""
 "Some commands allow the user to specify a date, e.g.:\n"
@@ -978,9 +982,8 @@ msgstr ""
 msgid "when to colorize (always, auto, or never)"
 msgstr "när färgläggning ska ske (always, auto eller never)"
 
-#, fuzzy
 msgid "don't colorize output (DEPRECATED)"
-msgstr "färglägg inte utmatning"
+msgstr "färglägg inte utmatning (FÖRLEGAD)"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
@@ -1920,10 +1923,10 @@ msgstr ""
 
 #, python-format
 msgid "comparing with %s\n"
-msgstr ""
+msgstr "jämför med %s\n"
 
 msgid "no changes found\n"
-msgstr ""
+msgstr "inga ändringar hittades\n"
 
 msgid "show the revision DAG"
 msgstr ""
@@ -2480,16 +2483,14 @@ msgstr ""
 msgid "show files excluded from expansion"
 msgstr ""
 
-#, fuzzy
 msgid "only show unknown (not tracked) files"
 msgstr "visa bara okända (ospårade) filer"
 
-#, fuzzy
 msgid "show keyword status flags of all files (DEPRECATED)"
-msgstr "visa status för alla filer"
+msgstr "visa statusflaggor för alla filer (FÖRLEGAD)"
 
 msgid "only show untracked files (DEPRECATED)"
-msgstr ""
+msgstr "visa bara ospårade filer (FÖRLEGAD)"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr ""
@@ -3263,9 +3264,8 @@ msgstr ""
 msgid "print first line of patch header"
 msgstr ""
 
-#, fuzzy
 msgid "show only the last patch"
-msgstr "visa bara adderade filer"
+msgstr "visa bara den sista patchen"
 
 msgid "hg qapplied [-1] [-s] [PATCH]"
 msgstr ""
@@ -3489,9 +3489,8 @@ msgstr ""
 msgid "hg qtop [-s]"
 msgstr ""
 
-#, fuzzy
 msgid "show only the first patch"
-msgstr "visa bara adderade filer"
+msgstr "visa bara den första patchen"
 
 msgid "hg qunapplied [-1] [-s] [PATCH]"
 msgstr ""
@@ -4043,9 +4042,8 @@ msgstr ""
 msgid "rebase onto a given revision"
 msgstr ""
 
-#, fuzzy
 msgid "collapse the rebased changesets"
-msgstr "visa ändring"
+msgstr ""
 
 msgid "keep original changesets"
 msgstr ""
@@ -4597,31 +4595,31 @@ msgstr ""
 
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr ""
+msgstr "ändring:     %d:%s\n"
 
 #, python-format
 msgid "branch:      %s\n"
-msgstr ""
+msgstr "gren:        %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
-msgstr ""
+msgstr "märke:       %s\n"
 
 #, python-format
 msgid "parent:      %d:%s\n"
-msgstr ""
+msgstr "förälder:    %d:%s\n"
 
 #, python-format
 msgid "manifest:    %d:%s\n"
-msgstr ""
+msgstr "manifest:    %d:%s\n"
 
 #, python-format
 msgid "user:        %s\n"
-msgstr ""
+msgstr "användare:   %s\n"
 
 #, python-format
 msgid "date:        %s\n"
-msgstr ""
+msgstr "datum:       %s\n"
 
 msgid "files+:"
 msgstr ""
@@ -4634,22 +4632,22 @@ msgstr ""
 
 #, python-format
 msgid "files:       %s\n"
-msgstr ""
+msgstr "filer:       %s\n"
 
 #, python-format
 msgid "copies:      %s\n"
-msgstr ""
+msgstr "kopior:      %s\n"
 
 #, python-format
 msgid "extra:       %s=%s\n"
 msgstr ""
 
 msgid "description:\n"
-msgstr ""
+msgstr "beskrivning:\n"
 
 #, python-format
 msgid "summary:     %s\n"
-msgstr ""
+msgstr "kortfattat:  %s\n"
 
 #, python-format
 msgid "%s: no key named '%s'"
@@ -6004,6 +6002,7 @@ msgid ""
 "    "
 msgstr ""
 "dra ändringar från den specificerade källan\n"
+"\n"
 "    Drar ändringar från ett annat arkiv till ett lokalt.\n"
 "\n"
 "    Hittar alla ändringar från arkivet i den specificerade sökvägen eller\n"
@@ -6042,6 +6041,7 @@ msgid ""
 "    "
 msgstr ""
 "tryck ändringar till den specificerade destinationen\n"
+"\n"
 "    Trycker ändringar från det lokala arkivet till den givna destinationen.\n"
 "\n"
 "    Detta är en symmetriska operationen för pull. Den flyttar ändringar\n"
@@ -6388,89 +6388,97 @@ msgid ""
 "    incoming and outgoing changes. This can be time-consuming.\n"
 "    "
 msgstr ""
+"sammanfatta arbetskatalogens tillstånd\n"
+"\n"
+"    Detta skapar en kort sammanfattning av arbetskatalogens tillstånd,\n"
+"    inklusive föräldrar, gren, arkivstatus, och tillgängliga uppdateringar.\n"
+"\n"
+"    Med flaggan --remote kommer också standardsökvägarna att sökas igenom\n"
+"    för att hitta inkommande och utgående ändringar. Detta kan ta lång tid.\n"
+"    "
 
 msgid " (empty repository)"
-msgstr ""
+msgstr " (tomt arkiv)"
 
 msgid " (no revision checked out)"
-msgstr ""
+msgstr " (ingen revision uthämtad)"
 
 #, python-format
 msgid "parent: %d:%s %s\n"
-msgstr ""
+msgstr "förälder: %d:%s %s\n"
 
 #, python-format
 msgid "branch: %s\n"
-msgstr ""
+msgstr "gren: %s\n"
 
 #, python-format
 msgid "%d added"
-msgstr ""
+msgstr "%d tillagd"
 
 #, python-format
 msgid "%d modified"
-msgstr ""
+msgstr "%d modifierad"
 
 #, python-format
 msgid "%d removed"
-msgstr ""
+msgstr "%d borttagen"
 
 #, python-format
 msgid "%d deleted"
-msgstr ""
+msgstr "%d raderad"
 
 #, python-format
 msgid "%d ignored"
-msgstr ""
+msgstr "%d ignorerad"
 
 #, python-format
 msgid "%d unknown"
-msgstr ""
+msgstr "%d okänd"
 
 #, python-format
 msgid "%d unresolved"
-msgstr ""
+msgstr "%d olöst"
 
 msgid " (merge)"
-msgstr ""
+msgstr " (sammanfogning)"
 
 msgid " (new branch)"
-msgstr ""
+msgstr " (ny gren)"
 
 msgid " (clean)"
-msgstr ""
+msgstr " (ren)"
 
 msgid " (new branch head)"
-msgstr ""
+msgstr " (nytt grenhuvud)"
 
 #, python-format
 msgid "commit: %s\n"
-msgstr ""
+msgstr "arkivera: %s"
 
 msgid "update: (current)\n"
-msgstr ""
+msgstr "uppdatera: (aktuell)"
 
-#, fuzzy, python-format
+#, python-format
 msgid "update: %d new changesets (update)\n"
-msgstr "uppdatera till ny topp om ändringar drogs"
+msgstr "uppdatera: %d nya ändringar (uppdatera)\n"
 
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
-msgstr ""
+msgstr "uppdatera: %d nya ändringar, %d grenhuvuden (sammanfoga)"
 
 msgid "1 or more incoming"
-msgstr ""
+msgstr "1 eller fler inkommande"
 
 #, python-format
 msgid "%d outgoing"
-msgstr ""
+msgstr "%d utgående"
 
 #, python-format
 msgid "remote: %s\n"
-msgstr ""
+msgstr "fjärran: %s\n"
 
 msgid "remote: (synced)\n"
-msgstr ""
+msgstr "fjärran: (synkad)"
 
 msgid ""
 "add one or more tags for the current or given revision\n"
@@ -6642,9 +6650,8 @@ msgid ""
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
 
-#, fuzzy
 msgid "repository root directory or name of overlay bundle file"
-msgstr "arkivrotkatalog eller symbolisk sökväg"
+msgstr "arkivrotkatalog eller namn på påläggsbuntfil"
 
 msgid "change working directory"
 msgstr "ändra arbetskatalog"
@@ -7220,7 +7227,7 @@ msgid "[-u] [NAME]..."
 msgstr ""
 
 msgid "check for push and pull"
-msgstr ""
+msgstr "sök efter inkommande och utgående ändringar"
 
 msgid "show status of all files"
 msgstr "visa status för alla filer"
@@ -7882,7 +7889,7 @@ msgid "copy failed: %s is not a file or a symbolic link\n"
 msgstr ""
 
 msgid "searching for changes\n"
-msgstr ""
+msgstr "söker efter ändringar\n"
 
 msgid "already have changeset "
 msgstr ""
@@ -8564,17 +8571,17 @@ msgstr ""
 
 #, python-format
 msgid "repository uses revlog format %d\n"
-msgstr ""
+msgstr "arkivet använder revlog-format %d\n"
 
 msgid "checking changesets\n"
-msgstr ""
+msgstr "kontrollerar ändringar\n"
 
 #, python-format
 msgid "unpacking changeset %s"
 msgstr ""
 
 msgid "checking manifests\n"
-msgstr ""
+msgstr "kontrollerar manifest\n"
 
 #, python-format
 msgid "%s not in changesets"
@@ -8588,7 +8595,7 @@ msgid "reading manifest delta %s"
 msgstr ""
 
 msgid "crosschecking files in changesets and manifests\n"
-msgstr ""
+msgstr "korskontrollerar filer i ändringar och manifest\n"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
@@ -8601,7 +8608,7 @@ msgid "in manifest but not in changeset"
 msgstr ""
 
 msgid "checking files\n"
-msgstr ""
+msgstr "kontrollerar filer\n"
 
 #, python-format
 msgid "cannot decode filename '%s'"
@@ -8652,7 +8659,7 @@ msgstr ""
 
 #, python-format
 msgid "%d files, %d changesets, %d total revisions\n"
-msgstr ""
+msgstr "%d filer, %d ändringar, %d totala revisioner\n"
 
 #, python-format
 msgid "%d warnings encountered!\n"
