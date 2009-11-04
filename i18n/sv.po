@@ -14,7 +14,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-10-25 12:38+0100\n"
-"PO-Revision-Date: 2009-11-04 21:58+0200\n"
+"PO-Revision-Date: 2009-11-04 22:12+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -6453,10 +6453,10 @@ msgstr " (nytt grenhuvud)"
 
 #, python-format
 msgid "commit: %s\n"
-msgstr "arkivera: %s"
+msgstr "arkivera: %s\n"
 
 msgid "update: (current)\n"
-msgstr "uppdatera: (aktuell)"
+msgstr "uppdatera: (aktuell)\n"
 
 #, python-format
 msgid "update: %d new changesets (update)\n"
@@ -6464,7 +6464,7 @@ msgstr "uppdatera: %d nya ändringar (uppdatera)\n"
 
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
-msgstr "uppdatera: %d nya ändringar, %d grenhuvuden (sammanfoga)"
+msgstr "uppdatera: %d nya ändringar, %d grenhuvuden (sammanfoga)\n"
 
 msgid "1 or more incoming"
 msgstr "1 eller fler inkommande"
@@ -6478,7 +6478,7 @@ msgid "remote: %s\n"
 msgstr "fjärran: %s\n"
 
 msgid "remote: (synced)\n"
-msgstr "fjärran: (synkad)"
+msgstr "fjärran: (synkad)\n"
 
 msgid ""
 "add one or more tags for the current or given revision\n"
