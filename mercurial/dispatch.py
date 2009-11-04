@@ -279,7 +279,8 @@ def _parseconfig(ui, config):
                 raise IndexError
             ui.setconfig(section, name, value)
         except (IndexError, ValueError):
-            raise util.Abort(_('malformed --config option: %s') % cfg)
+            raise util.Abort(_('malformed --config option: %r '
+                               '(use --config section.name=value)') % cfg)
 
 def _earlygetopt(aliases, args):
     """Return list of values for an option (or aliases).

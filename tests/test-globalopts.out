@@ -107,11 +107,11 @@ b
 
 %% --config
 quuxfoo
-abort: malformed --config option: 
-abort: malformed --config option: a.b
-abort: malformed --config option: a
-abort: malformed --config option: a.=
-abort: malformed --config option: .b=
+abort: malformed --config option: '' (use --config section.name=value)
+abort: malformed --config option: 'a.b' (use --config section.name=value)
+abort: malformed --config option: 'a' (use --config section.name=value)
+abort: malformed --config option: 'a.=' (use --config section.name=value)
+abort: malformed --config option: '.b=' (use --config section.name=value)
 %% --debug
 changeset:   1:b6c483daf2907ce5825c0bb50f5716226281cc1a
 tag:         tip
