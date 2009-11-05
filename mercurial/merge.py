@@ -412,24 +412,23 @@ def update(repo, node, branchmerge, force, partial):
 
     -c  -C  dirty  rev  |  linear   same  cross
      n   n    n     n   |    ok     (1)     x
-     n   n    n     y   |    ok     (1)    ok
-     n   n    y     *   |   merge   (2)    (3)
+     n   n    n     y   |    ok     ok     ok
+     n   n    y     *   |   merge   (2)    (2)
      n   y    *     *   |    ---  discard  ---
-     y   n    y     *   |    ---    (4)    ---
+     y   n    y     *   |    ---    (3)    ---
      y   n    n     *   |    ---    ok     ---
-     y   y    *     *   |    ---    (5)    ---
+     y   y    *     *   |    ---    (4)    ---
 
     x = can't happen
     * = don't-care
-    1 = abort: crosses branches (use 'hg merge' or 'hg update -C')
-    2 = abort: crosses branches (use 'hg merge' or 'hg update -C'
-                 to discard changes)
-    3 = abort: crosses named branches (use 'hg update -C' to
-                 discard changes)
-    4 = abort: uncommitted local changes
-    5 = incompatible options (checked in commands.py)
+    1 = abort: crosses branches (use 'hg merge' or 'hg update -c')
+    2 = abort: crosses branches (use 'hg merge' to merge or
+                 use 'hg update -C' to discard changes)
+    3 = abort: uncommitted local changes
+    4 = incompatible options (checked in commands.py)
     """
 
+    onode = node
     wlock = repo.wlock()
     try:
         wc = repo[None]
@@ -467,17 +466,14 @@ def update(repo, node, branchmerge, force, partial):
         elif not overwrite:
             if pa == p1 or pa == p2: # linear
                 pass # all good
-            elif p1.branch() == p2.branch():
-                if wc.files() or wc.deleted():
-                    raise util.Abort(_("crosses branches (use 'hg merge' or "
-                                       "'hg update -C' to discard changes)"))
-                raise util.Abort(_("crosses branches (use 'hg merge' "
-                                   "or 'hg update -C')"))
             elif wc.files() or wc.deleted():
-                raise util.Abort(_("crosses named branches (use "
-                                   "'hg update -C' to discard changes)"))
+                raise util.Abort(_("crosses branches (use 'hg merge' to merge "
+                                 "or use 'hg update -C' to discard changes)"))
+            elif onode is None:
+                raise util.Abort(_("crosses branches (use 'hg merge' or use "
+                                   "'hg update -c')"))
             else:
-                # Allow jumping branches if there are no changes
+                # Allow jumping branches if clean and specific rev given
                 overwrite = True
 
         ### calculate phase

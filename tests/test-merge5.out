@@ -2,6 +2,6 @@
 removing b
 created new head
 % should abort
-abort: crosses branches (use 'hg merge' or 'hg update -C' to discard changes)
+abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
 % should succeed
-abort: crosses branches (use 'hg merge' or 'hg update -C')
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved

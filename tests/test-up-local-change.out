@@ -111,7 +111,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     2
 
-abort: crosses branches (use 'hg merge' or 'hg update -C' to discard changes)
+abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
 failed
 abort: outstanding uncommitted changes (use 'hg status' to list changes)
 failed

@@ -16,14 +16,14 @@ o  0:b608b9236435
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 parent=5
 % norevtest none clean same 2
-abort: crosses branches (use 'hg merge' or 'hg update -C')
+abort: crosses branches (use 'hg merge' or use 'hg update -c')
 parent=2
 % revtest none clean linear 1 2
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 parent=2
 % revtest none clean same 2 3
-abort: crosses branches (use 'hg merge' or 'hg update -C')
-parent=2
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+parent=3
 % revtest none clean cross 3 4
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 parent=4
@@ -32,11 +32,11 @@ parent=4
 parent=2
 M foo
 % revtest none dirty same 2 3
-abort: crosses branches (use 'hg merge' or 'hg update -C' to discard changes)
+abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
 parent=2
 M foo
 % revtest none dirty cross 3 4
-abort: crosses named branches (use 'hg update -C' to discard changes)
+abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
 parent=3
 M foo
 % revtest -C dirty linear 1 2
