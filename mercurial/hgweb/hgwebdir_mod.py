@@ -89,7 +89,6 @@ class hgwebdir(object):
                     name = name[len(prefix):]
                 self.repos.append((name.lstrip('/'), repo))
 
-        self.repos.sort()
         self.lastrefresh = time.time()
 
     def run(self):
@@ -196,7 +195,7 @@ class hgwebdir(object):
                     yield {"type" : i[0], "extension": i[1],
                            "node": nodeid, "url": url}
 
-        sortdefault = 'name', False
+        sortdefault = None, False
         def entries(sortcolumn="", descending=False, subdir="", **map):
 
             rows = []
