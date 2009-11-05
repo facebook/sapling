@@ -20,7 +20,7 @@ def cleannames(items):
     return [(util.pconvert(name).strip('/'), path) for name, path in items]
 
 def findrepos(paths):
-    repos = {}
+    repos = []
     for prefix, root in cleannames(paths):
         roothead, roottail = os.path.split(root)
         # "foo = /bar/*" makes every subrepo of /bar/ to be
@@ -30,7 +30,7 @@ def findrepos(paths):
         try:
             recurse = {'*': False, '**': True}[roottail]
         except KeyError:
-            repos[prefix] = root
+            repos.append((prefix, root))
             continue
         roothead = os.path.normpath(roothead)
         for path in util.walkrepos(roothead, followsym=True, recurse=recurse):
@@ -38,8 +38,8 @@ def findrepos(paths):
             name = util.pconvert(path[len(roothead):]).strip('/')
             if prefix:
                 name = prefix + '/' + name
-            repos[name] = path
-    return repos.items()
+            repos.append((name, path))
+    return repos
 
 class hgwebdir(object):
     refreshinterval = 20
