@@ -40,6 +40,9 @@ def age(date):
         return 'in the future'
 
     delta = max(1, int(now - then))
+    if delta > agescales[0][1] * 2:
+        return util.shortdate(date)
+
     for t, s in agescales:
         n = delta // s
         if n >= 2 or s == 1:

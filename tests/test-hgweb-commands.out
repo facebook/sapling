@@ -210,17 +210,17 @@ files, or words in the commit message</div>
   <th class="description">description</th>
  </tr>
  <tr class="parity0">
-  <td class="age">many years ago</td>
+  <td class="age">1970-01-01</td>
   <td class="author">test</td>
   <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> <span class="tag">tip</span> </td>
  </tr>
  <tr class="parity1">
-  <td class="age">many years ago</td>
+  <td class="age">1970-01-01</td>
   <td class="author">test</td>
   <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> </td>
  </tr>
  <tr class="parity0">
-  <td class="age">many years ago</td>
+  <td class="age">1970-01-01</td>
   <td class="author">test</td>
   <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> </td>
  </tr>
@@ -291,7 +291,7 @@ files, or words in the commit message</div>
 </tr>
 <tr>
  <th class="date">date</th>
- <td class="date">Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td></tr>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td></tr>
 <tr>
  <th class="author">parents</th>
  <td class="author"></td>
@@ -422,7 +422,7 @@ files, or words in the commit message</div>
 </tr>
 <tr>
  <th class="date">date</th>
- <td class="date">Thu Jan 01 00:00:00 1970 +0000 (many years ago)</td>
+ <td class="date">Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td>
 </tr>
 <tr>
  <th class="author">parents</th>
@@ -523,7 +523,7 @@ branches |
 <table cellspacing="0">
 
 <tr class="parity0">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
 <td class="open">stable</td>
 <td class="link">
@@ -533,7 +533,7 @@ branches |
 </td>
 </tr>
 <tr class="parity1">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
 <td class="inactive">default</td>
 <td class="link">
@@ -608,7 +608,7 @@ summary |
 <table cellspacing="0">
 
 <tr class="parity0">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><i>test</i></td>
 <td>
 <a class="list" href="/rev/1d22e65f027e?style=gitweb">
@@ -622,7 +622,7 @@ summary |
 </td>
 </tr>
 <tr class="parity1">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><i>test</i></td>
 <td>
 <a class="list" href="/rev/a4f92ed23982?style=gitweb">
@@ -636,7 +636,7 @@ summary |
 </td>
 </tr>
 <tr class="parity0">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><i>test</i></td>
 <td>
 <a class="list" href="/rev/2ef0ac749a14?style=gitweb">
@@ -656,7 +656,7 @@ summary |
 <table cellspacing="0">
 
 <tr class="parity0">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td>
 <td class="link">
 <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
@@ -671,7 +671,7 @@ summary |
 <table cellspacing="0">
 
 <tr class="parity0">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
 <td class="">stable</td>
 <td class="link">
@@ -681,7 +681,7 @@ summary |
 </td>
 </tr>
 <tr class="parity1">
-<td class="age"><i>many years ago</i></td>
+<td class="age"><i>1970-01-01</i></td>
 <td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
 <td class="">default</td>
 <td class="link">
@@ -764,7 +764,7 @@ graph |
 <script>
 <!-- hide script content
 
-var data = [["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "many years ago", ["stable", true], ["tip"]], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "many years ago", ["default", true], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "many years ago", ["default", false], ["1.0"]]];
+var data = [["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "1970-01-01", ["stable", true], ["tip"]], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"]]];
 var graph = new Graph();
 graph.scale(39);
 

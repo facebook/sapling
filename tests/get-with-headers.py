@@ -22,7 +22,6 @@ for h in headers:
         print "%s: %s" % (h, response.getheader(h))
 print
 data = response.read()
-data = re.sub('\d+ years', 'many years', data)
 sys.stdout.write(data)
 
 if 200 <= response.status <= 299:
