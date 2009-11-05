@@ -106,6 +106,53 @@ def findliteralblocks(blocks):
         i += 1
     return blocks
 
+_bulletre = re.compile(r'- ')
+_optionre = re.compile(r'^(--[a-z-]+)((?:[ =][a-zA-Z][\w-]*)?  +)(.*)$')
+_fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):( +)(.*)')
+_definitionre = re.compile(r'[^ ]')
+
+def splitparagraphs(blocks):
+    """Split paragraphs into lists."""
+    # Tuples with (list type, item regexp, single line items?). Order
+    # matters: definition lists has the least specific regexp and must
+    # come last.
+    listtypes = [('bullet', _bulletre, True),
+                 ('option', _optionre, True),
+                 ('field', _fieldre, True),
+                 ('definition', _definitionre, False)]
+
+    def match(lines, i, itemre, singleline):
+        """Does itemre match an item at line i?
+
+        A list item can be followed by an idented line or another list
+        item (but only if singleline is True).
+        """
+        line1 = lines[i]
+        line2 = i+1 < len(lines) and lines[i+1] or ''
+        if not itemre.match(line1):
+            return False
+        if singleline:
+            return line2 == '' or line2[0] == ' ' or itemre.match(line2)
+        else:
+            return line2.startswith(' ')
+
+    i = 0
+    while i < len(blocks):
+        if blocks[i]['type'] == 'paragraph':
+            lines = blocks[i]['lines']
+            for type, itemre, singleline in listtypes:
+                if match(lines, 0, itemre, singleline):
+                    items = []
+                    for j, line in enumerate(lines):
+                        if match(lines, j, itemre, singleline):
+                            items.append(dict(type=type, lines=[],
+                                              indent=blocks[i]['indent']))
+                        items[-1]['lines'].append(line)
+                    blocks[i:i+1] = items
+                    break
+        i += 1
+    return blocks
+
 
 def findsections(blocks):
     """Finds sections.
@@ -124,139 +171,6 @@ def findsections(blocks):
             len(block['lines']) == 2 and
             block['lines'][1] == '-' * len(block['lines'][0])):
             block['type'] = 'section'
-    return blocks
-
-
-def findbulletlists(blocks):
-    """Finds bullet lists.
-
-    The blocks must have a 'type' field, i.e., they should have been
-    run through findliteralblocks first.
-    """
-    i = 0
-    while i < len(blocks):
-        # Searching for a paragraph that looks like this:
-        #
-        # +------+-----------------------+
-        # | "- " | list item             |
-        # +------| (body elements)+      |
-        #        +-----------------------+
-        if (blocks[i]['type'] == 'paragraph' and
-            blocks[i]['lines'][0].startswith('- ')):
-            items = []
-            for line in blocks[i]['lines']:
-                if line.startswith('- '):
-                    items.append(dict(type='bullet', lines=[],
-                                      indent=blocks[i]['indent']))
-                    line = line[2:]
-                items[-1]['lines'].append(line)
-            blocks[i:i+1] = items
-            i += len(items) - 1
-        i += 1
-    return blocks
-
-
-_optionre = re.compile(r'^(--[a-z-]+)((?:[ =][a-zA-Z][\w-]*)?  +)(.*)$')
-def findoptionlists(blocks):
-    """Finds option lists.
-
-    The blocks must have a 'type' field, i.e., they should have been
-    run through findliteralblocks first.
-    """
-    i = 0
-    while i < len(blocks):
-        # Searching for a paragraph that looks like this:
-        #
-        # +----------------------------+-------------+
-        # | "--" option "  "           | description |
-        # +-------+--------------------+             |
-        #         | (body elements)+                 |
-        #         +----------------------------------+
-        if (blocks[i]['type'] == 'paragraph' and
-            _optionre.match(blocks[i]['lines'][0])):
-            options = []
-            for line in blocks[i]['lines']:
-                m = _optionre.match(line)
-                if m:
-                    option, arg, rest = m.groups()
-                    width = len(option) + len(arg)
-                    options.append(dict(type='option', lines=[],
-                                        indent=blocks[i]['indent'],
-                                        width=width))
-                options[-1]['lines'].append(line)
-            blocks[i:i+1] = options
-            i += len(options) - 1
-        i += 1
-    return blocks
-
-
-_fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):( +)(.*)')
-def findfieldlists(blocks):
-    """Finds fields lists.
-
-    The blocks must have a 'type' field, i.e., they should have been
-    run through findliteralblocks first.
-    """
-    i = 0
-    while i < len(blocks):
-        # Searching for a paragraph that looks like this:
-        #
-        #
-        # +--------------------+----------------------+
-        # | ":" field name ":" | field body           |
-        # +-------+------------+                      |
-        #         | (body elements)+                  |
-        #         +-----------------------------------+
-        if (blocks[i]['type'] == 'paragraph' and
-            _fieldre.match(blocks[i]['lines'][0])):
-            indent = blocks[i]['indent']
-            fields = []
-            for line in blocks[i]['lines']:
-                m = _fieldre.match(line)
-                if m:
-                    key, spaces, rest = m.groups()
-                    width = 2 + len(key) + len(spaces)
-                    fields.append(dict(type='field', lines=[],
-                                       indent=indent, width=width))
-                    # Turn ":foo: bar" into "foo   bar".
-                    line = '%s  %s%s' % (key, spaces, rest)
-                fields[-1]['lines'].append(line)
-            blocks[i:i+1] = fields
-            i += len(fields) - 1
-        i += 1
-    return blocks
-
-
-def finddefinitionlists(blocks):
-    """Finds definition lists.
-
-    The blocks must have a 'type' field, i.e., they should have been
-    run through findliteralblocks first.
-    """
-    i = 0
-    while i < len(blocks):
-        # Searching for a paragraph that looks like this:
-        #
-        # +----------------------------+
-        # | term                       |
-        # +--+-------------------------+--+
-        #    | definition                 |
-        #    | (body elements)+           |
-        #    +----------------------------+
-        if (blocks[i]['type'] == 'paragraph' and
-            len(blocks[i]['lines']) > 1 and
-            not blocks[i]['lines'][0].startswith('  ') and
-            blocks[i]['lines'][1].startswith('  ')):
-            definitions = []
-            for line in blocks[i]['lines']:
-                if not line.startswith('  '):
-                    definitions.append(dict(type='definition', lines=[],
-                                            indent=blocks[i]['indent']))
-                definitions[-1]['lines'].append(line)
-                definitions[-1]['hang'] = len(line) - len(line.lstrip())
-            blocks[i:i+1] = definitions
-            i += len(definitions) - 1
-        i += 1
     return blocks
 
 
@@ -298,19 +212,29 @@ def formatblock(block, width):
         return indent + ('\n' + indent).join(block['lines'])
     if block['type'] == 'definition':
         term = indent + block['lines'][0]
-        defindent = indent + block['hang'] * ' '
+        hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
+        defindent = indent + hang * ' '
         text = ' '.join(map(str.strip, block['lines'][1:]))
         return "%s\n%s" % (term, textwrap.fill(text, width=width,
                                                initial_indent=defindent,
                                                subsequent_indent=defindent))
     initindent = subindent = indent
-    text = ' '.join(map(str.strip, block['lines']))
     if block['type'] == 'bullet':
-        initindent = indent + '- '
         subindent = indent + '  '
-    elif block['type'] in ('option', 'field'):
-        subindent = indent + block['width'] * ' '
+    elif block['type'] == 'field':
+        m = _fieldre.match(block['lines'][0])
+        if m:
+            key, spaces, rest = m.groups()
+            # Turn ":foo: bar" into "foo   bar".
+            block['lines'][0] = '%s  %s%s' % (key, spaces, rest)
+            subindent = indent + (2 + len(key) + len(spaces)) * ' '
+    elif block['type'] == 'option':
+        m = _optionre.match(block['lines'][0])
+        if m:
+            option, arg, rest = m.groups()
+            subindent = indent + (len(option) + len(arg)) * ' '
 
+    text = ' '.join(map(str.strip, block['lines']))
     return textwrap.fill(text, width=width,
                          initial_indent=initindent,
                          subsequent_indent=subindent)
@@ -323,11 +247,8 @@ def format(text, width, indent=0):
         b['indent'] += indent
     blocks = findliteralblocks(blocks)
     blocks = inlineliterals(blocks)
+    blocks = splitparagraphs(blocks)
     blocks = findsections(blocks)
-    blocks = findbulletlists(blocks)
-    blocks = findoptionlists(blocks)
-    blocks = findfieldlists(blocks)
-    blocks = finddefinitionlists(blocks)
     blocks = addmargins(blocks)
     return '\n'.join(formatblock(b, width) for b in blocks)
 
@@ -345,10 +266,7 @@ if __name__ == "__main__":
     text = open(sys.argv[1]).read()
     blocks = debug(findblocks, text)
     blocks = debug(findliteralblocks, blocks)
+    blocks = debug(splitparagraphs, blocks)
     blocks = debug(findsections, blocks)
-    blocks = debug(findbulletlists, blocks)
-    blocks = debug(findoptionlists, blocks)
-    blocks = debug(findfieldlists, blocks)
-    blocks = debug(finddefinitionlists, blocks)
     blocks = debug(addmargins, blocks)
     print '\n'.join(formatblock(b, 30) for b in blocks)
