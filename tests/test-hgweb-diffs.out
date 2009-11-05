@@ -149,6 +149,7 @@ diff -r 000000000000 -r 0cd96de13884 b
 </ul>
 <ul>
 <li><a href="/file/78e4ebad7cdf/a">file</a></li>
+<li><a href="/file/tip/a">latest</a></li>
 <li class="active">diff</li>
 <li><a href="/annotate/78e4ebad7cdf/a">annotate</a></li>
 <li><a href="/log/78e4ebad7cdf/a">file log</a></li>
@@ -357,6 +358,7 @@ new file mode 100644
 </ul>
 <ul>
 <li><a href="/file/78e4ebad7cdf/a">file</a></li>
+<li><a href="/file/tip/a">latest</a></li>
 <li class="active">diff</li>
 <li><a href="/annotate/78e4ebad7cdf/a">annotate</a></li>
 <li><a href="/log/78e4ebad7cdf/a">file log</a></li>

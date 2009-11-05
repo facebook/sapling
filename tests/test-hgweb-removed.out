@@ -121,6 +121,7 @@ files, or words in the commit message</div>
 </ul>
 <ul>
 <li><a href="/file/c78f6c5cbea9/a">file</a></li>
+<li><a href="/file/tip/a">latest</a></li>
 <li class="active">diff</li>
 <li><a href="/annotate/c78f6c5cbea9/a">annotate</a></li>
 <li><a href="/log/c78f6c5cbea9/a">file log</a></li>

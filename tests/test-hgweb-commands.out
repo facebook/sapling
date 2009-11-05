@@ -394,6 +394,7 @@ drwxr-xr-x da
 </ul>
 <ul>
 <li class="active">file</li>
+<li><a href="/file/tip/foo">latest</a></li>
 <li><a href="/diff/a4f92ed23982/foo">diff</a></li>
 <li><a href="/annotate/a4f92ed23982/foo">annotate</a></li>
 <li><a href="/log/a4f92ed23982/foo">file log</a></li>
