@@ -590,21 +590,35 @@ def clone(ui, source, dest=None, **opts):
     The location of the source is added to the new repository's
     .hg/hgrc file, as the default to be used for future pulls.
 
-    If you use the -r/--rev option to clone up to a specific revision,
-    no subsequent revisions (including subsequent tags) will be
-    present in the cloned repository. This option implies --pull, even
-    on local repositories.
-
-    By default, clone will check out the head of the 'default' branch.
-    If the -U/--noupdate option is used, the new clone will contain
-    only a repository (.hg) and no working copy (the working copy
-    parent is the null revision).
-
     See 'hg help urls' for valid source format details.
 
     It is possible to specify an ssh:// URL as the destination, but no
     .hg/hgrc and working directory will be created on the remote side.
     Please see 'hg help urls' for important details about ssh:// URLs.
+
+    If the -U/--noupdate option is specified, the new clone will contain
+    only a repository (.hg) and no working copy (the working copy parent
+    will be the null changeset). Otherwise, clone will initially check
+    out (in order of precedence): ::
+
+      a) the changeset, tag or branch specified with -u/--updaterev
+      b) the changeset, tag or branch given with the first -r/--rev
+      c) the head of the default branch
+
+    Use 'hg clone -u . src dst' to checkout the source repository's
+    parent changeset (applicable for local source repositories only).
+
+    A set of changesets (tags, or branch names) to pull may be specified
+    by listing each changeset (tag, or branch name) with -r/--rev.
+    If -r/--rev is used, the cloned repository will contain only a subset
+    of the changesets of the source repository. Only the set of changesets
+    defined by all -r/--rev options (including their direct and indirect
+    parent changesets) will be pulled into the destination repository.
+    No subsequent changesets (including subsequent tags) will be present
+    in the destination.
+
+    Using -r/--rev (or 'clone src#rev dest') implies --pull, even for
+    local source repositories.
 
     For efficiency, hardlinks are used for cloning whenever the source
     and destination are on the same filesystem (note this applies only
@@ -625,11 +639,14 @@ def clone(ui, source, dest=None, **opts):
     this is not compatible with certain extensions that place their
     metadata under the .hg directory, such as mq.
     """
+    if opts.get('noupdate') and opts.get('updaterev'):
+        raise util.Abort(_("cannot specify both --noupdate and --updaterev"))
+
     hg.clone(cmdutil.remoteui(ui, opts), source, dest,
              pull=opts.get('pull'),
              stream=opts.get('uncompressed'),
              rev=opts.get('rev'),
-             update=not opts.get('noupdate'))
+             update=opts.get('updaterev') or not opts.get('noupdate'))
 
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
@@ -3355,6 +3372,8 @@ table = {
         (clone,
          [('U', 'noupdate', None,
           _('the clone will only contain a repository (no working copy)')),
+          ('u', 'updaterev', '',
+           _('revision, tag or branch to check out')),
           ('r', 'rev', [],
            _('a changeset you would like to have after cloning')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),

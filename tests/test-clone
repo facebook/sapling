@@ -67,4 +67,136 @@ cd h
 hg clone ../a .
 cd ..
 
+echo
+echo
+echo % "*** tests for option -u ***"
+echo
+
+
+echo
+echo % "adding some more history to repo a"
+cd a
+echo % "tag ref1"
+hg tag ref1
+echo the quick brown fox >a
+hg ci -m "hacked default"
+echo % "updating back to ref1"
+hg up ref1
+echo
+echo % "add branch 'stable' to repo a for later tests"
+hg branch stable
+echo some text >a
+hg ci -m "starting branch stable"
+echo % "tag ref2"
+hg tag ref2
+echo some more text >a
+hg ci -m "another change for branch stable"
+echo
+echo % "updating back to ref2"
+hg up ref2
+echo
+echo % "parents of repo a"
+hg parents
+echo
+echo % "repo a has two heads"
+hg heads
+cd ..
+
+echo
+echo % "testing clone -U -u 1 a ua (must abort)"
+hg clone -U -u 1 a ua
+
+echo
+echo % "testing clone -u . a ua"
+hg clone -u . a ua
+echo
+echo % "repo ua has both heads"
+hg -R ua heads
+echo
+echo % "same revision checked out in repo a and ua"
+hg -R a parents --template "{node|short}\n"
+hg -R ua parents --template "{node|short}\n"
+rm -r ua
+
+echo
+echo % "testing clone --pull -u . a ua"
+hg clone --pull -u . a ua
+echo
+echo % "repo ua has both heads"
+hg -R ua heads
+echo
+echo % "same revision checked out in repo a and ua"
+hg -R a parents --template "{node|short}\n"
+hg -R ua parents --template "{node|short}\n"
+rm -r ua
+
+echo
+echo % "testing clone -u stable a ua"
+hg clone -u stable a ua
+echo
+echo % "repo ua has both heads"
+hg -R ua heads
+echo
+echo % "branch stable is checked out"
+hg -R ua parents
+rm -r ua
+
+echo
+echo % "testing clone a ua"
+hg clone a ua
+echo
+echo % "repo ua has both heads"
+hg -R ua heads
+echo
+echo % "branch default is checked out"
+hg -R ua parents
+rm -r ua
+
+echo
+echo % "testing clone -u . a#stable ua"
+hg clone -u . a#stable ua
+echo
+echo % "repo ua has only branch stable"
+hg -R ua heads
+echo
+echo % "same revision checked out in repo a and ua"
+hg -R a parents --template "{node|short}\n"
+hg -R ua parents --template "{node|short}\n"
+rm -r ua
+
+echo
+echo % "testing clone -u . -r stable a ua"
+hg clone -u . -r stable a ua
+echo
+echo % "repo ua has only branch stable"
+hg -R ua heads
+echo
+echo % "same revision checked out in repo a and ua"
+hg -R a parents --template "{node|short}\n"
+hg -R ua parents --template "{node|short}\n"
+rm -r ua
+
+echo
+echo % "testing clone -r stable a ua"
+hg clone -r stable a ua
+echo
+echo % "repo ua has only branch stable"
+hg -R ua heads
+echo
+echo % "branch stable is checked out"
+hg -R ua parents
+rm -r ua
+
+echo
+echo % "testing clone -u . -r stable -r default a ua"
+hg clone -u . -r stable -r default a ua
+echo
+echo % "repo ua has two heads"
+hg -R ua heads
+echo
+echo % "same revision checked out in repo a and ua"
+hg -R a parents --template "{node|short}\n"
+hg -R ua parents --template "{node|short}\n"
+rm -r ua
+
 exit 0

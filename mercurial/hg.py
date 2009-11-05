@@ -309,6 +309,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if update:
                 if update is not True:
                     checkout = update
+                    if src_repo.local():
+                        checkout = src_repo.lookup(update)
                 for test in (checkout, 'default', 'tip'):
                     if test is None:
                         continue

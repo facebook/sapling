@@ -54,3 +54,246 @@ checking files
 % clone to .
 updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+
+% *** tests for option -u ***
+
+
+% adding some more history to repo a
+% tag ref1
+% updating back to ref1
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+% add branch 'stable' to repo a for later tests
+marked working directory as branch stable
+created new head
+% tag ref2
+
+% updating back to ref2
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+% parents of repo a
+changeset:   13:e8ece76546a6
+branch:      stable
+tag:         ref2
+parent:      10:a7949464abda
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     starting branch stable
+
+
+% repo a has two heads
+changeset:   15:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+changeset:   12:f21241060d6a
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     hacked default
+
+
+% testing clone -U -u 1 a ua (must abort)
+abort: cannot specify both --noupdate and --updaterev
+
+% testing clone -u . a ua
+updating to branch stable
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has both heads
+changeset:   15:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+changeset:   12:f21241060d6a
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     hacked default
+
+
+% same revision checked out in repo a and ua
+e8ece76546a6
+e8ece76546a6
+
+% testing clone --pull -u . a ua
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 16 changesets with 16 changes to 3 files (+1 heads)
+updating to branch stable
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has both heads
+changeset:   15:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+changeset:   12:f21241060d6a
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     hacked default
+
+
+% same revision checked out in repo a and ua
+e8ece76546a6
+e8ece76546a6
+
+% testing clone -u stable a ua
+updating to branch stable
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has both heads
+changeset:   15:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+changeset:   12:f21241060d6a
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     hacked default
+
+
+% branch stable is checked out
+changeset:   15:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+
+% testing clone a ua
+updating to branch default
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has both heads
+changeset:   15:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+changeset:   12:f21241060d6a
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     hacked default
+
+
+% branch default is checked out
+changeset:   12:f21241060d6a
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     hacked default
+
+
+% testing clone -u . a#stable ua
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 14 changesets with 14 changes to 3 files
+updating to branch stable
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has only branch stable
+changeset:   13:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+
+% same revision checked out in repo a and ua
+e8ece76546a6
+e8ece76546a6
+
+% testing clone -u . -r stable a ua
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 14 changesets with 14 changes to 3 files
+updating to branch stable
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has only branch stable
+changeset:   13:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+
+% same revision checked out in repo a and ua
+e8ece76546a6
+e8ece76546a6
+
+% testing clone -r stable a ua
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 14 changesets with 14 changes to 3 files
+updating to branch stable
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has only branch stable
+changeset:   13:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+
+% branch stable is checked out
+changeset:   13:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+
+% testing clone -u . -r stable -r default a ua
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 16 changesets with 16 changes to 3 files (+1 heads)
+updating to branch stable
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+% repo ua has two heads
+changeset:   15:0aae7cf88f0d
+branch:      stable
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     another change for branch stable
+
+changeset:   12:f21241060d6a
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     hacked default
+
+
+% same revision checked out in repo a and ua
+e8ece76546a6
+e8ece76546a6
