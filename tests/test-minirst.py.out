@@ -2,15 +2,10 @@ paragraphs formatted to fit within 60 characters:
 ----------------------------------------------------------------------
 This is some text in the first paragraph.
 
-  An indented paragraph with just two lines.
+  A small indented paragraph. It is followed by some lines
+  containing random whitespace.
 
-The third paragraph. It is followed by some random lines
-with spurious spaces.
-
-No indention here, despite the uneven left margin.
-
-  Only the left-most line (this line!) is significant for
-  the indentation
+The third and final paragraph.
 ----------------------------------------------------------------------
 
 paragraphs formatted to fit within 30 characters:
@@ -18,19 +13,12 @@ paragraphs formatted to fit within 30 characters:
 This is some text in the first
 paragraph.
 
-  An indented paragraph with
-  just two lines.
+  A small indented paragraph.
+  It is followed by some lines
+  containing random
+  whitespace.
 
-The third paragraph. It is
-followed by some random lines
-with spurious spaces.
-
-No indention here, despite the
-uneven left margin.
-
-  Only the left-most line
-  (this line!) is significant
-  for the indentation
+The third and final paragraph.
 ----------------------------------------------------------------------
 
 definitions formatted to fit within 60 characters:

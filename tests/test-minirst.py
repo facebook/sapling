@@ -12,28 +12,13 @@ def debugformat(title, text, width):
 paragraphs = """
 This is some text in the first paragraph.
 
-  An indented paragraph
-  with just two lines.
-
-
-The third paragraph. It is followed by some
-random lines with spurious spaces.
+  A small indented paragraph.
+  It is followed by some lines
+  containing random whitespace.
  
   
    
-  
- 
-No indention
- here, despite
-the uneven left
- margin.
-
-      Only the
-    left-most line
-  (this line!)
-    is significant
-      for the indentation
-
+The third and final paragraph.
 """
 
 debugformat('paragraphs', paragraphs, 60)
