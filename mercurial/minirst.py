@@ -291,30 +291,29 @@ def formatblock(block, width):
     indent = ' ' * block['indent']
     if block['type'] == 'margin':
         return ''
-    elif block['type'] == 'literal':
+    if block['type'] == 'literal':
         indent += '  '
         return indent + ('\n' + indent).join(block['lines'])
-    elif block['type'] == 'section':
+    if block['type'] == 'section':
         return indent + ('\n' + indent).join(block['lines'])
-    elif block['type'] == 'definition':
+    if block['type'] == 'definition':
         term = indent + block['lines'][0]
         defindent = indent + block['hang'] * ' '
         text = ' '.join(map(str.strip, block['lines'][1:]))
         return "%s\n%s" % (term, textwrap.fill(text, width=width,
                                                initial_indent=defindent,
                                                subsequent_indent=defindent))
-    else:
-        initindent = subindent = indent
-        text = ' '.join(map(str.strip, block['lines']))
-        if block['type'] == 'bullet':
-            initindent = indent + '- '
-            subindent = indent + '  '
-        elif block['type'] in ('option', 'field'):
-            subindent = indent + block['width'] * ' '
+    initindent = subindent = indent
+    text = ' '.join(map(str.strip, block['lines']))
+    if block['type'] == 'bullet':
+        initindent = indent + '- '
+        subindent = indent + '  '
+    elif block['type'] in ('option', 'field'):
+        subindent = indent + block['width'] * ' '
 
-        return textwrap.fill(text, width=width,
-                             initial_indent=initindent,
-                             subsequent_indent=subindent)
+    return textwrap.fill(text, width=width,
+                         initial_indent=initindent,
+                         subsequent_indent=subindent)
 
 
 def format(text, width, indent=0):
