@@ -121,8 +121,8 @@ def has_git():
     return matchoutput('git --version 2>&1', r'^git version')
 
 def has_rst2html():
-    return matchoutput('rst2html --version', r'^rst2html \(Docutils') or \
-        matchoutput('rst2html.py --version', r'^rst2html.py \(Docutils')
+    return matchoutput('rst2html --version 2>&1', r'^rst2html \(Docutils') or \
+        matchoutput('rst2html.py --version 2>&1', r'^rst2html.py \(Docutils')
 
 def has_svn():
     #return matchoutput('svn --version 2>&1', r'^svn, version') and \
