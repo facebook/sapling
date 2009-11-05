@@ -1469,3 +1469,34 @@ diff -r 8580ff50825a -r 97d72e5f12c7 b
 @@ -0,0 +1,1 @@
 +b
 
+% test multi-byte domain parsing
+This patch series consists of 1 patches.
+
+
+Writing [PATCH] test ...
+From quux Tue Jan  1 00:01:01 1980
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH] test
+X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+Message-Id: <8580ff50825a50c8f716.315532860@
+User-Agent: Mercurial-patchbomb
+Date: Tue, 01 Jan 1980 00:01:00 +0000
+From: quux
+To: bar@xn--nicode-2ya.com
+
+# HG changeset patch
+# User test
+# Date 1 0
+# Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+# Parent  0000000000000000000000000000000000000000
+a
+
+diff -r 000000000000 -r 8580ff50825a a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+
