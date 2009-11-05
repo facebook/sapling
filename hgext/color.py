@@ -235,7 +235,7 @@ _diff_effects = {'diffline': ['bold'],
                  'changed': ['white'],
                  'trailingwhitespace': ['bold', 'red_background']}
 
-def uisetup(ui):
+def extsetup(ui):
     '''Initialize the extension.'''
     _setupcmd(ui, 'diff', commands.table, colordiff, _diff_effects)
     _setupcmd(ui, 'incoming', commands.table, None, _diff_effects)
@@ -249,15 +249,17 @@ def uisetup(ui):
         _setupcmd(ui, 'qdiff', mq.cmdtable, colordiff, _diff_effects)
         _setupcmd(ui, 'qseries', mq.cmdtable, colorqseries, _patch_effects)
     except KeyError:
-        # The mq extension is not enabled
-        pass
+        mq = None
 
     try:
         rec = extensions.find('record')
         _setupcmd(ui, 'record', rec.cmdtable, colordiff, _diff_effects)
     except KeyError:
-        # The record extension is not enabled
-        pass
+        rec = None
+
+    if mq and rec:
+        _setupcmd(ui, 'qrecord', rec.cmdtable, colordiff, _diff_effects)
+
 
 def _setupcmd(ui, cmd, table, func, effectsmap):
     '''patch in command to command table and load effect map'''

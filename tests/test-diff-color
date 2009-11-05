@@ -51,3 +51,14 @@ y
 y
 EOF
 echo
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+hg rollback
+echo % qrecord
+hg qrecord --color=always -m moda patch <<EOF
+y
+y
+EOF
+echo
