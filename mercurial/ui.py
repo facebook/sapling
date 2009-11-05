@@ -377,7 +377,7 @@ class ui(object):
 
         if total:
             pct = 100.0 * pos / total
-            ui.debug('%s:%s %s/%s%s (%4.2g%%)\n'
+            self.debug('%s:%s %s/%s%s (%4.2g%%)\n'
                      % (topic, item, pos, total, unit, pct))
         else:
-            ui.debug('%s:%s %s%s\n' % (topic, item, pos, unit))
+            self.debug('%s:%s %s%s\n' % (topic, item, pos, unit))
