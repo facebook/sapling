@@ -1223,11 +1223,11 @@ def termwidth():
                 return array.array('h', arri)[1]
             except ValueError:
                 pass
-            except IOError, e: 
-                if e[0] == errno.EINVAL: 
-                    pass 
-                else: 
-                    raise 
+            except IOError, e:
+                if e[0] == errno.EINVAL:
+                    pass
+                else:
+                    raise
     except ImportError:
         pass
     return 80

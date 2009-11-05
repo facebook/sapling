@@ -118,7 +118,7 @@ class darcs_source(converter_source, commandline):
             output, status = self.run('revert', all=True, repodir=self.tmppath)
             self.checkexit(status, output)
 
-    def getchanges(self, rev):        
+    def getchanges(self, rev):
         copies = {}
         changes = []
         man = None

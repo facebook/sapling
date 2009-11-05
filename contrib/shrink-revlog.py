@@ -87,12 +87,12 @@ def writerevs(r1, r2, order, tr):
             count += 1
     finally:
         write('\n')
-    
+
 def report(olddatafn, newdatafn):
     oldsize = float(os.stat(olddatafn).st_size)
     newsize = float(os.stat(newdatafn).st_size)
 
-    # argh: have to pass an int to %d, because a float >= 2^32 
+    # argh: have to pass an int to %d, because a float >= 2^32
     # blows up under Python 2.5 or earlier
     sys.stdout.write('old file size: %12d bytes (%6.1f MiB)\n'
                      % (int(oldsize), oldsize/1024/1024))

@@ -300,7 +300,7 @@ class patchfile(object):
         finally:
             fp.close()
 
-    def writelines(self, fname, lines):        
+    def writelines(self, fname, lines):
         # Ensure supplied data ends in fname, being a regular file or
         # a symlink. updatedir() will -too magically- take care of
         # setting it to the proper type afterwards.
