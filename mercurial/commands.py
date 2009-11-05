@@ -3137,30 +3137,32 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     """update working directory
 
     Update the repository's working directory to the specified
-    revision, or the tip of the current branch if none is specified.
-    Use null as the revision to remove the working copy (like 'hg
+    changeset.
+
+    If no changeset is specified, attempt to update to the head of the
+    current branch. If this head is a descendant of the working
+    directory's parent, update to it, otherwise abort.
+
+    The following rules apply when the working directory contains
+    uncommitted changes:
+
+    1. If neither -c/--check nor -C/--clean is specified, uncommitted
+    changes are merged into the requested changeset, and the merged result
+    is left uncommitted. Updating and merging will occur only if the
+    requested changeset is an ancestor or descendant of the parent
+    changeset. Otherwise, the update is aborted and the uncommitted changes
+    are preserved.
+
+    2. With the -c/--check option, the update is aborted and the
+    uncommitted changes are preserved.
+
+    3. With the -C/--clean option, uncommitted changes are discarded and
+    the working directory is updated to the requested changeset.
+
+    Use null as the changeset to remove the working directory (like 'hg
     clone -U').
 
-    When the working directory contains no uncommitted changes, it
-    will be replaced by the state of the requested revision from the
-    repository. When the requested revision is on a different branch,
-    the working directory will additionally be switched to that
-    branch.
-
-    When there are uncommitted changes, use option -C/--clean to
-    discard them, forcibly replacing the state of the working
-    directory with the requested revision. Alternately, use -c/--check
-    to abort.
-
-    When there are uncommitted changes and option -C/--clean is not
-    used, and the parent revision and requested revision are on the
-    same branch, and one of them is an ancestor of the other, then the
-    new working directory will contain the requested revision merged
-    with the uncommitted changes. Otherwise, the update will fail with
-    a suggestion to use 'merge' or 'update -C' instead.
-
-    If you want to update just one file to an older revision, use
-    revert.
+    If you want to update just one file to an older changeset, use 'hg revert'.
 
     See 'hg help dates' for a list of formats valid for -d/--date.
     """
@@ -3682,11 +3684,11 @@ table = {
          _('[-u] FILE...')),
     "^update|up|checkout|co":
         (update,
-         [('C', 'clean', None, _('overwrite locally modified files (no backup)')),
+         [('C', 'clean', None, _('discard uncommitted changes (no backup)')),
           ('c', 'check', None, _('check for uncommitted changes')),
           ('d', 'date', '', _('tipmost revision matching date')),
           ('r', 'rev', '', _('revision'))],
-         _('[-C] [-d DATE] [[-r] REV]')),
+         _('[-c] [-C] [-d DATE] [[-r] REV]')),
     "verify": (verify, []),
     "version": (version_, []),
 }
