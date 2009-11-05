@@ -531,7 +531,7 @@ cmdtable = {
 }
 
 
-def extsetup():
+def uisetup(ui):
     try:
         mq = extensions.find('mq')
     except KeyError:
