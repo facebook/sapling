@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import cStringIO, zlib, tempfile, errno, os, sys, urllib
+import cStringIO, zlib, tempfile, errno, os, sys, urllib, copy
 from mercurial import util, streamclone
 from mercurial.node import bin, hex
 from mercurial import changegroup as changegroupmod
@@ -21,6 +21,7 @@ __all__ = [
 ]
 
 HGTYPE = 'application/mercurial-0.1'
+basecaps = 'lookup changegroupsubset branchmap'.split()
 
 def lookup(repo, req):
     try:
@@ -109,7 +110,7 @@ def changegroupsubset(repo, req):
     yield z.flush()
 
 def capabilities(repo, req):
-    caps = ['lookup', 'changegroupsubset', 'branchmap']
+    caps = copy.copy(basecaps)
     if repo.ui.configbool('server', 'uncompressed', untrusted=True):
         caps.append('stream=%d' % repo.changelog.version)
     if changegroupmod.bundlepriority:

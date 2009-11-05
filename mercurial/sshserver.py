@@ -9,9 +9,12 @@
 from i18n import _
 from node import bin, hex
 import streamclone, util, hook
-import os, sys, tempfile, urllib
+import os, sys, tempfile, urllib, copy
 
 class sshserver(object):
+
+    caps = 'unbundle lookup changegroupsubset branchmap'.split()
+
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
@@ -85,8 +88,7 @@ class sshserver(object):
 
         capabilities: space separated list of tokens
         '''
-
-        caps = ['unbundle', 'lookup', 'changegroupsubset', 'branchmap']
+        caps = copy.copy(self.caps)
         if self.ui.configbool('server', 'uncompressed'):
             caps.append('stream=%d' % self.repo.changelog.version)
         self.respond("capabilities: %s\n" % (' '.join(caps),))
