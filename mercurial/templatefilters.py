@@ -43,7 +43,7 @@ def age(date):
     for t, s in agescales:
         n = delta // s
         if n >= 2 or s == 1:
-            return fmt(t, n)
+            return '%s ago' % fmt(t, n)
 
 para_re = None
 space_re = None

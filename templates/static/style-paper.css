@@ -161,7 +161,7 @@ h3 {
   border-bottom: 1px solid #999;
 }
 .bigtable tr { border: none; }
-.bigtable .age { width: 6em; }
+.bigtable .age { width: 7em; }
 .bigtable .author { width: 12em; }
 .bigtable .description { }
 .bigtable .node { width: 5em; font-family: monospace;}
