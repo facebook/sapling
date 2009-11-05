@@ -397,9 +397,37 @@ def update(repo, node, branchmerge, force, partial):
     """
     Perform a merge between the working directory and the given node
 
+    node = the node to update to, or None if unspecified
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
     partial = a function to filter file lists (dirstate not updated)
+
+    The table below shows all the behaviors of the update command
+    given the -c and -C or no options, whether the working directory
+    is dirty, whether a revision is specified, and the relationship of
+    the parent rev to the target rev (linear, on the same named
+    branch, or on another named branch).
+
+    This logic is tested by test-update-branches.
+
+    -c  -C  dirty  rev  |  linear   same  cross
+     n   n    n     n   |    ok     (1)     x
+     n   n    n     y   |    ok     (1)    ok
+     n   n    y     *   |   merge   (2)    (3)
+     n   y    *     *   |    ---  discard  ---
+     y   n    y     *   |    ---    (4)    ---
+     y   n    n     *   |    ---    ok     ---
+     y   y    *     *   |    ---    (5)    ---
+
+    x = can't happen
+    * = don't-care
+    1 = abort: crosses branches (use 'hg merge' or 'hg update -C')
+    2 = abort: crosses branches (use 'hg merge' or 'hg update -C'
+                 to discard changes)
+    3 = abort: crosses named branches (use 'hg update -C' to
+                 discard changes)
+    4 = abort: uncommitted local changes
+    5 = incompatible options (checked in commands.py)
     """
 
     wlock = repo.wlock()

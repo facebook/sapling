@@ -1,0 +1,81 @@
+#!/bin/sh
+
+# Construct the following history tree:
+#
+# @  5:e1bb631146ca  b1
+# |
+# o  4:a4fdb3b883c4 0:b608b9236435  b1
+# |
+# | o  3:4b57d2520816 1:44592833ba9f
+# | |
+# | | o  2:063f31070f65
+# | |/
+# | o  1:44592833ba9f
+# |/
+# o  0:b608b9236435
+
+hg init
+echo foo > foo
+echo zero > a
+hg ci -qAm0
+echo one > a ; hg ci -m1
+echo two > a ; hg ci -m2
+hg up -q 1
+echo three > a ; hg ci -qm3
+hg up -q 0
+hg branch -q b1
+echo four > a ; hg ci -qm4
+echo five > a ; hg ci -qm5
+
+echo % initial repo state
+echo
+hg --config 'extensions.graphlog=' \
+    glog --template '{rev}:{node|short} {parents} {branches}\n'
+
+# Test helper functions.
+
+revtest () {
+    msg=$1
+    dirtyflag=$2   # 'clean' or 'dirty'
+    startrev=$3
+    targetrev=$4
+    opt=$5
+    echo % revtest $msg $startrev $targetrev
+    hg up -qC $startrev
+    test $dirtyflag = dirty && echo dirty > foo
+    hg up $opt $targetrev
+    hg parent --template 'parent={rev}\n'
+    hg stat
+}    
+
+norevtest () {
+    msg=$1
+    dirtyflag=$2   # 'clean' or 'dirty'
+    startrev=$3
+    opt=$4
+    echo % norevtest $msg $startrev
+    hg up -qC $startrev
+    test $dirtyflag = dirty && echo dirty > foo
+    hg up $opt
+    hg parent --template 'parent={rev}\n'
+    hg stat
+}    
+
+# Test cases are documented in a table in the update function of merge.py.
+# Cases are run as shown in that table, row by row.
+
+norevtest 'none clean linear' clean 4
+norevtest 'none clean same'   clean 2
+
+revtest 'none clean linear' clean 1 2
+revtest 'none clean same'   clean 2 3
+revtest 'none clean cross'  clean 3 4
+
+revtest 'none dirty linear' dirty 1 2
+revtest 'none dirty same'   dirty 2 3
+revtest 'none dirty cross'  dirty 3 4
+
+revtest '-C dirty linear'   dirty 1 2 -C
+revtest '-c dirty linear'   dirty 1 2 -c
+norevtest '-c clean same'   clean 2 -c
+revtest '-cC dirty linear'  dirty 1 2 -cC
