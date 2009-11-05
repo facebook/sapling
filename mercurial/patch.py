@@ -1216,7 +1216,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
     if opts is None:
         opts = mdiff.defaultopts
 
-    if not node1:
+    if not node1 and not node2:
         node1 = repo.dirstate.parents()[0]
 
     def lrugetfilectx():

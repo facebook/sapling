@@ -237,6 +237,7 @@ options:
  -g --git                  use git extended diff format
     --nodates              don't include dates in diff headers
  -p --show-function        show which function each change is in
+    --inverse              produce a diff that undoes the changes
  -w --ignore-all-space     ignore white space when comparing lines
  -b --ignore-space-change  ignore changes in the amount of white space
  -B --ignore-blank-lines   ignore changes whose lines are all blank

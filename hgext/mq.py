@@ -1129,8 +1129,12 @@ class queue(object):
             self.ui.write(_("no patches applied\n"))
             return
         qp = self.qparents(repo, top)
+        if opts.get('inverse'):
+            node1, node2 = None, qp
+        else:
+            node1, node2 = qp, None
         self._diffopts = patch.diffopts(self.ui, opts)
-        self.printdiff(repo, qp, files=pats, opts=opts)
+        self.printdiff(repo, node1, node2, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
         if len(self.applied) == 0:

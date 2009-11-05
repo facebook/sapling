@@ -55,5 +55,8 @@ hg qdiff --nodates -b
 echo % qdiff -U 1 -B
 hg qdiff --nodates -U 1 -B
 
-echo qdiff -w
+echo % qdiff -w
 hg qdiff --nodates -w
+
+echo % qdiff --inverse
+hg qdiff --nodates --inverse

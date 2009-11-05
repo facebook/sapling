@@ -1102,6 +1102,7 @@ def diff(ui, repo, *pats, **opts):
     revs = opts.get('rev')
     change = opts.get('change')
     stat = opts.get('stat')
+    inv = opts.get('inverse')
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
@@ -1111,6 +1112,9 @@ def diff(ui, repo, *pats, **opts):
         node1 = repo[node2].parents()[0].node()
     else:
         node1, node2 = cmdutil.revpair(repo, revs)
+
+    if inv:
+        node1, node2 = node2, node1
 
     if stat:
         opts['unified'] = '0'
@@ -3280,6 +3284,7 @@ diffopts = [
 
 diffopts2 = [
     ('p', 'show-function', None, _('show which function each change is in')),
+    ('', 'inverse', None, _('produce a diff that undoes the changes')),
     ('w', 'ignore-all-space', None,
      _('ignore white space when comparing lines')),
     ('b', 'ignore-space-change', None,

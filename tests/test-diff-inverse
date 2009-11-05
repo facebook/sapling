@@ -1,0 +1,24 @@
+#!/bin/sh
+
+hg init
+cat > a <<EOF
+a
+b
+c
+EOF
+hg ci -Am adda
+
+cat > a <<EOF
+d
+e
+f
+EOF
+hg ci -m moda
+
+hg diff --inverse -r0 -r1
+
+cat >> a <<EOF
+g
+h
+EOF
+hg diff --inverse --nodates

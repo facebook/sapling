@@ -76,7 +76,7 @@ diff -r 35fb829491c1 lines
 +hello  world
 +     goodbye world
  7
-qdiff -w
+% qdiff -w
 diff -r 35fb829491c1 lines
 --- a/lines
 +++ b/lines
@@ -86,3 +86,21 @@ diff -r 35fb829491c1 lines
  1
  2
  3
+% qdiff --inverse
+diff -r 35fb829491c1 lines
+--- a/lines
++++ b/lines
+@@ -1,11 +1,9 @@
+-
+-
+ 1
+ 2
+ 3
+ 4
+-hello  world
+-     goodbye world
++hello world
++goodbye world
+ 7
+ 8
+ 9
