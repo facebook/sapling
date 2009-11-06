@@ -9,8 +9,9 @@
 # - Fedora 11
 # - Centos 5.3 (with Fedora EPEL repo for asciidoc)
 
-HG="`dirname $0`/../hg"
-PYTHONPATH="`dirname $0`/../mercurial/pure"
+cd "`dirname $0`/.."
+HG="$PWD/hg"
+PYTHONPATH="$PWD/mercurial/pure"
 export PYTHONPATH
 
 root="`$HG root 2>/dev/null`"
