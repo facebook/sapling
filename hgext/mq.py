@@ -1914,11 +1914,10 @@ def prev(ui, repo, **opts):
                      summary=opts.get('summary'))
 
 def setupheaderopts(ui, opts):
-    def do(opt, val):
-        if not opts[opt] and opts['current' + opt]:
-            opts[opt] = val
-    do('user', ui.username())
-    do('date', "%d %d" % util.makedate())
+    if not opts.get('user') and opts.get('currentuser'):
+        opts['user'] = ui.username()
+    if not opts.get('date') and opts.get('currentdate'):
+        opts['date'] = "%d %d" % util.makedate()
 
 def new(ui, repo, patch, *args, **opts):
     """create a new patch

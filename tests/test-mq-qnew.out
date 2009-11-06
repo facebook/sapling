@@ -32,3 +32,6 @@ diff --git a/d/b b/d/b
 @@ -1,1 +1,2 @@
  b
 +b
+% qnew -u with no username configured
+From: blue
+

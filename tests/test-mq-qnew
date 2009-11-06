@@ -54,3 +54,7 @@ echo b >> b
 hg st
 hg qnew -g -f p
 cat ../.hg/patches/p
+
+echo '% qnew -u with no username configured'
+HGUSER= hg qnew -u blue red
+cat ../.hg/patches/red
