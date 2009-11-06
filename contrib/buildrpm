@@ -34,10 +34,8 @@ fi
 rpmdir="$PWD/rpmbuild"
 
 rm -rf $rpmdir
-mkdir -p $rpmdir/RPMS
-$HG clone -u . . $rpmdir/BUILD
+mkdir -p $rpmdir/SOURCES $rpmdir/SPECS $rpmdir/RPMS $rpmdir/SRPMS $rpmdir/BUILD
 
-tmpspec=/tmp/`basename "$specfile"`.$$ # FIXME: Insecure /tmp handling
 # make setup.py build the version string
 python setup.py build_py -c -d .
 hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
@@ -52,13 +50,14 @@ else
     release='0'
 fi
 
+$HG archive -t tgz $rpmdir/SOURCES/mercurial-$version.tar.gz
+rpmspec=$rpmdir/SPECS/mercurial-$version.spec
+
 sed -e "s,^Version:.*,Version: $version," \
     -e "s,^Release:.*,Release: $release," \
-    -e "s,^%prep.*,\n\0," \
-    -e 's,^%setup.*,,' \
-    $specfile > $tmpspec
+    $specfile > $rpmspec
 
-cat <<EOF >> $tmpspec
+cat <<EOF >> $rpmspec
 %changelog
 * `LANG=en_US date +'%a %b %d %Y'` `$HG showconfig ui.username` $version-$release
 - Automatically built via $0
@@ -69,12 +68,11 @@ $HG log \
      .hgtags \
   | sed -e 's/^\(\* [MTWFS][a-z][a-z]\), \([0-3][0-9]\) \([A-Z][a-z][a-z]\) /\1 \3 \2 /' \
         -e '/^\* [MTWFS][a-z][a-z] /{s/ [012][0-9]:[0-9][0-9]:[0-9][0-9] [+-][0-9]\{4\}//}' \
-   >> $tmpspec
+   >> $rpmspec
 
-rpmbuild --define "_topdir $rpmdir" -bb $tmpspec --clean
+rpmbuild --define "_topdir $rpmdir" -ba $rpmspec --clean
 if [ $? = 0 ]; then
-    mv $rpmdir/RPMS/*/* $rpmdir && rm -r $rpmdir/RPMS
     echo
     echo "Packages are in $rpmdir:"
-    ls -l $rpmdir/*.rpm
+    ls -l $rpmdir/*RPMS/*
 fi
