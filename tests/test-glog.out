@@ -575,6 +575,12 @@ o  changeset:   1:5ac72c0599bf
    date:        Thu Jan 01 00:00:00 1970 +0000
    summary:     two
 
+% file log with explicit style (issue 1896)
+o  changeset:   0:3d578b4a1f53
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     one
+
 % incoming and outgoing
 requesting all changes
 adding changesets

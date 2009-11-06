@@ -165,6 +165,9 @@ echo more >two
 hg commit -mmore
 hg glog two
 
+echo "% file log with explicit style (issue 1896)"
+hg glog --style=default one
+
 echo % incoming and outgoing
 cd ..
 hg clone -U -r31 repo repo2
