@@ -151,6 +151,10 @@ class hgweb(object):
                 if args:
                     req.form['file'] = args
 
+            ua = req.env.get('HTTP_USER_AGENT', '')
+            if cmd == 'rev' and 'mercurial' in ua:
+                req.form['style'] = ['raw']
+
             if cmd == 'archive':
                 fn = req.form['node'][0]
                 for type_, spec in self.archive_specs.iteritems():

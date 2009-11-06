@@ -38,5 +38,11 @@ echo % revision
 echo % diff removed file
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/a'
 
+cd ..
+echo % test import rev as raw-rev
+hg clone -r0 test test1
+cd test1
+hg import --exact http://localhost:$HGPORT/rev/1
+
 echo % errors
-cat errors.log
+cat ../test/errors.log
