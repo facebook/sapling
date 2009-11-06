@@ -2,22 +2,23 @@
 #
 # Build a Mercurial RPM in place.
 #
-# Bryan O'Sullivan <bos@serpentine.com>
-#
 # Tested on
-# - Fedora 10
+# - Fedora 8 (with docutils 0.5)
 # - Fedora 11
-# - Centos 5.3 (with Fedora EPEL repo for asciidoc)
+# - OpenSuse 11.2
 
 cd "`dirname $0`/.."
 HG="$PWD/hg"
 PYTHONPATH="$PWD/mercurial/pure"
 export PYTHONPATH
 
-root="`$HG root 2>/dev/null`"
 specfile=contrib/mercurial.spec
+if [ ! -f $specfile ]; then
+    echo "Cannot find $specfile!" 1>&2
+    exit 1
+fi
 
-if [ -z "$root" ]; then
+if [ ! -d .hg ]; then
     echo 'You are not inside a Mercurial repository!' 1>&2
     exit 1
 fi
@@ -30,17 +31,11 @@ if $HG id -i | grep '+$' > /dev/null 2>&1; then
     fi
 fi
 
-rpmdir=/tmp/"`basename $root | sed 's/ /_/'`"-rpm # FIXME: Insecure /tmp handling
+rpmdir="$PWD/rpmbuild"
 
-cd "$root"
 rm -rf $rpmdir
 mkdir -p $rpmdir/RPMS
-$HG clone -u . "$root" $rpmdir/BUILD
-
-if [ ! -f $specfile ]; then
-    echo "Cannot find $specfile!" 1>&2
-    exit 1
-fi
+$HG clone -u . . $rpmdir/BUILD
 
 tmpspec=/tmp/`basename "$specfile"`.$$ # FIXME: Insecure /tmp handling
 # make setup.py build the version string
@@ -56,13 +51,10 @@ else
     version=`echo $hgversion | sed -e 's/+.*//'`
     release='0'
 fi
-tip=`$HG -q tip`
 
-# Beat up the spec file
-sed -e 's,^Source:.*,Source: /dev/null,' \
-    -e "s,^Version:.*,Version: $version," \
+sed -e "s,^Version:.*,Version: $version," \
     -e "s,^Release:.*,Release: $release," \
-    -e "s,^%prep.*,Changeset: $tip\n\0," \
+    -e "s,^%prep.*,\n\0," \
     -e 's,^%setup.*,,' \
     $specfile > $tmpspec
 
@@ -79,9 +71,8 @@ $HG log \
         -e '/^\* [MTWFS][a-z][a-z] /{s/ [012][0-9]:[0-9][0-9]:[0-9][0-9] [+-][0-9]\{4\}//}' \
    >> $tmpspec
 
-rpmbuild --define "_topdir $rpmdir" -bb $tmpspec
+rpmbuild --define "_topdir $rpmdir" -bb $tmpspec --clean
 if [ $? = 0 ]; then
-    rm -rf $tmpspec $rpmdir/BUILD
     mv $rpmdir/RPMS/*/* $rpmdir && rm -r $rpmdir/RPMS
     echo
     echo "Packages are in $rpmdir:"
