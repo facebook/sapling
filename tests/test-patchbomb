@@ -172,7 +172,7 @@ hg email --date '1970-1-1 0:1' -n --flag fooFlag --flag barFlag -f quux -t foo \
  -c bar -s test -r 0:1 | fixheaders
 
 echo "% test multi-byte domain parsing"
-UUML=`echo -en '\xfc'`
+UUML=`printf '\374'`
 export HGENCODING=iso-8859-1
 hg email --date '1980-1-1 0:1' -m tmp.mbox -f quux -t "bar@${UUML}nicode.com" \
   -s test -r 0
