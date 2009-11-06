@@ -21,6 +21,14 @@ if [ -z "$root" ]; then
     exit 1
 fi
 
+if $HG id -i | grep '+$' > /dev/null 2>&1; then
+    echo -n "Your local changes will NOT be in the RPM. Continue [y/n] ? "
+    read answer
+    if echo $answer | grep -iv '^y'; then
+        exit
+    fi
+fi
+
 rpmdir=/tmp/"`basename $root | sed 's/ /_/'`"-rpm # FIXME: Insecure /tmp handling
 
 cd "$root"
