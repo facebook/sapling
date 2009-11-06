@@ -48,7 +48,7 @@ def filerevs(repo, path, start, stop):
         parents = [f.linkrev() for f in fctx.parents() if f.path() == path]
         rev = fctx.rev()
         if rev <= start:
-            yield (rev, CHANGESET, fctx, sorted(parents))
+            yield (rev, CHANGESET, fctx.changectx(), sorted(parents))
         if rev <= stop:
             break
         filerev -= 1
