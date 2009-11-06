@@ -26,7 +26,7 @@ rpmdir=/tmp/"`basename $root | sed 's/ /_/'`"-rpm # FIXME: Insecure /tmp handlin
 cd "$root"
 rm -rf $rpmdir
 mkdir -p $rpmdir/RPMS
-$HG clone "$root" $rpmdir/BUILD
+$HG clone -u . "$root" $rpmdir/BUILD
 
 if [ ! -f $specfile ]; then
     echo "Cannot find $specfile!" 1>&2
@@ -34,11 +34,19 @@ if [ ! -f $specfile ]; then
 fi
 
 tmpspec=/tmp/`basename "$specfile"`.$$ # FIXME: Insecure /tmp handling
-# Use the most recent tag as the version.
-version=`$HG tags | python -c 'import sys; print [l for l in sys.stdin.readlines() if l[0].isdigit()][0].split()[0]'`
-# Compute the release number as the difference in revision numbers
-# between the tip and the most recent tag.
-release=`$HG tags | python -c 'import sys; l = sys.stdin.readlines(); print int(l[0].split()[1].split(":")[0]) - int([x for x in l if x[0].isdigit()][0].split()[1].split(":")[0])'`
+# make setup.py build the version string
+python setup.py build_py -c -d .
+hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
+
+if echo $hgversion | grep -- '-' > /dev/null 2>&1; then
+    # nightly build case, version is like 1.3.1+250-20b91f91f9ca
+    version=`echo $hgversion | cut -d- -f1`
+    release=`echo $hgversion | cut -d- -f2 | sed -e 's/+.*//'`
+else
+    # official tag, version is like 1.3.1
+    version=`echo $hgversion | sed -e 's/+.*//'`
+    release='0'
+fi
 tip=`$HG -q tip`
 
 # Beat up the spec file
