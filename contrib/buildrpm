@@ -57,18 +57,50 @@ sed -e "s,^Version:.*,Version: $version," \
     -e "s,^Release:.*,Release: $release," \
     $specfile > $rpmspec
 
-cat <<EOF >> $rpmspec
-%changelog
-* `LANG=en_US date +'%a %b %d %Y'` `$HG showconfig ui.username` $version-$release
-- Automatically built via $0
+echo >> $rpmspec
+echo "%changelog" >> $rpmspec
 
-EOF
-$HG log \
-     --template '* {date|rfc822date} {author}\n- {desc|firstline}\n\n' \
-     .hgtags \
-  | sed -e 's/^\(\* [MTWFS][a-z][a-z]\), \([0-3][0-9]\) \([A-Z][a-z][a-z]\) /\1 \3 \2 /' \
-        -e '/^\* [MTWFS][a-z][a-z] /{s/ [012][0-9]:[0-9][0-9]:[0-9][0-9] [+-][0-9]\{4\}//}' \
-   >> $rpmspec
+if echo $version | grep '+' > /dev/null 2>&1; then
+    latesttag="`echo $version | sed -e 's/+.*//'`"
+    $HG log -r .:"$latesttag" -fM \
+        --template '{date|hgdate}\t{author}\t{desc|firstline}\n' | python -c '
+import sys, time
+
+def datestr(date, format):
+    return time.strftime(format, time.gmtime(float(date[0]) - date[1]))
+
+changelog = []
+for l in sys.stdin.readlines():
+    tok = l.split("\t")
+    hgdate = tuple(int(v) for v in tok[0].split())
+    changelog.append((datestr(hgdate, "%F"), tok[1], hgdate, tok[2]))
+prevtitle = ""
+for l in sorted(changelog, reverse=True):
+    title = "* %s %s" % (datestr(l[2], "%a %b %d %Y"), l[1])
+    if prevtitle != title:
+        prevtitle = title
+        print
+        print title
+    print "- %s" % l[3].strip()
+' >> $rpmspec
+
+else
+
+    $HG log \
+         --template '{date|hgdate}\t{author}\t{desc|firstline}\n' \
+         .hgtags | python -c '
+import sys, time
+
+def datestr(date, format):
+    return time.strftime(format, time.gmtime(float(date[0]) - date[1]))
+
+for l in sys.stdin.readlines():
+    tok = l.split("\t")
+    hgdate = tuple(int(v) for v in tok[0].split())
+    print "* %s %s\n- %s" % (datestr(hgdate, "%a %b %d %Y"), tok[1], tok[2])
+' >> $rpmspec
+
+fi
 
 rpmbuild --define "_topdir $rpmdir" -ba $rpmspec --clean
 if [ $? = 0 ]; then
