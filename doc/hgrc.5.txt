@@ -323,13 +323,13 @@ Settings for extensions that send email messages.
     conversion fails, the text in question is sent as is. Defaults to
     empty (explicit) list.
 
-    Order of outgoing email character sets::
+    Order of outgoing email character sets:
 
-      1. us-ascii             always first, regardless of settings
-      2. email.charsets       in order given by user
-      3. ui.fallbackencoding  if not in email.charsets
-      4. $HGENCODING          if not in email.charsets
-      5. utf-8                always last, regardless of settings
+    1. ``us-ascii``: always first, regardless of settings
+    2. ``email.charsets``: in order given by user
+    3. ``ui.fallbackencoding``: if not in email.charsets
+    4. ``$HGENCODING``: if not in email.charsets
+    5. ``utf-8``: always last, regardless of settings
 
 Email example::
 
