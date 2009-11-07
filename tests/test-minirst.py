@@ -93,6 +93,15 @@ We can have indented lists:
 
   Literal block with no indentation (apart from
   the two spaces added to all literal blocks).
+
+1. This is an enumerated list (first item).
+2. Continuing with the second item.
+
+(1) foo
+(2) bar
+
+1) Another
+2) List
 """
 
 debugformat('lists', lists, 60)

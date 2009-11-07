@@ -107,7 +107,7 @@ def findliteralblocks(blocks):
         i += 1
     return blocks
 
-_bulletre = re.compile(r'- ')
+_bulletre = re.compile(r'(-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)) ')
 _optionre = re.compile(r'^(--[a-z-]+)((?:[ =][a-zA-Z][\w-]*)?  +)(.*)$')
 _fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):( +)(.*)')
 _definitionre = re.compile(r'[^ ]')
