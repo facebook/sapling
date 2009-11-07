@@ -169,6 +169,12 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     # Compare manifests
     for f, n in m1.iteritems():
+        if f == '.hgsubstate':
+            # check whether sub state is modified
+            for s in p1.substate:
+                if p1.sub(s).dirty():
+                    n += "+"
+                    break
         if partial and not partial(f):
             continue
         if f in m2:
