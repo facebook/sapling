@@ -16,19 +16,23 @@ on the user to keep the right indentation for the blocks.
 
 It only supports a small subset of reStructuredText:
 
+- sections
+
 - paragraphs
-
-- definition lists (must use '  ' to indent definitions)
-
-- lists (items must start with '-')
-
-- field lists (colons cannot be escaped)
 
 - literal blocks
 
+- definition lists
+
+- bullet lists (items must start with '-')
+
+- enumerated lists (no autonumbering)
+
+- field lists (colons cannot be escaped)
+
 - option lists (supports only long options without arguments)
 
-- inline markup is not recognized at all.
+- inline literals (no other inline markup is not recognized)
 """
 
 import re, sys, textwrap
